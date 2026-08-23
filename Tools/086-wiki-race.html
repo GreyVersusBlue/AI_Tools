@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- DELIBERATE EXCEPTION to CLAUDE.md's shared-boilerplate rule (user-approved):
+     this file is handed to students as a single standalone file (opened via file://
+     or from GitHub Pages), so NOTHING here may reference ../_shared/*, the service
+     worker, or any CDN. All CSS/JS/data/favicon are inline. Do not "fix" this by
+     linking _shared. The game itself requires internet (live Wikipedia API). -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wiki Race</title>
+<meta name="description" content="Classroom Wikipedia race: everyone types the same seed phrase, gets the same start and target article, and races through real Wikipedia links against the clock.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/086-wiki-race.html">
+<meta property="og:title" content="Wiki Race — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Seed-phrase Wikipedia races for the classroom: identical matchups for every student, a live timer and click count, and verifiable finish codes.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Wiki Race — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Seed-phrase Wikipedia races for the classroom: identical matchups for every student, a live timer and click count, and verifiable finish codes.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b6b3a'/%3E%3Cg fill='%23f2b705'%3E%3Crect x='6' y='6' width='5' height='5'/%3E%3Crect x='16' y='6' width='5' height='5'/%3E%3Crect x='11' y='11' width='5' height='5'/%3E%3Crect x='21' y='11' width='5' height='5'/%3E%3Crect x='6' y='16' width='5' height='5'/%3E%3Crect x='16' y='16' width='5' height='5'/%3E%3Crect x='11' y='21' width='5' height='5'/%3E%3Crect x='21' y='21' width='5' height='5'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+/* ---- Race-day palette: East Middle Bulldogs green & gold. One committed light
+   look (no dark branching) — this is a game screen, often projected. ---- */
+:root {
+  --green: #0b6b3a;
+  --green-dark: #08512c;
+  --green-deep: #063d21;
+  --gold: #f2b705;
+  --gold-bright: #ffd23f;
+  --gold-dark: #c79400;
+  --cream: #fdf9ef;
+  --paper: #fffdf7;
+  --ink: #1c2a22;
+  --muted: #5c6b61;
+  --line: #dfd9c8;
+  --danger: #b3372b;
+  --link: #0b6b3a;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--cream);
+  color: var(--ink);
+  line-height: 1.5;
+}
+button { font: inherit; cursor: pointer; }
+input, select, textarea { font: inherit; }
+[hidden] { display: none !important; }
+
+/* ---- shared bits ---- */
+.checker {
+  /* checkered-flag strip */
+  height: 14px;
+  background:
+    repeating-conic-gradient(#111 0% 25%, #fff 0% 50%) 0 0 / 14px 14px;
+}
+.btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-weight: 700;
+  background: var(--green);
+  color: #fff;
+}
+.btn:hover { background: var(--green-dark); }
+.btn-gold {
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  color: var(--green-deep);
+  border: 2px solid var(--gold-dark);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.btn-gold:hover { background: linear-gradient(180deg, #ffe17a, var(--gold)); }
+.btn-ghost {
+  background: transparent;
+  color: var(--green);
+  border: 2px solid var(--green);
+}
+.btn-ghost:hover { background: rgba(11,107,58,.08); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ---- start screen ---- */
+#screenStart { min-height: 100vh; display: flex; flex-direction: column; }
+.masthead {
+  background: var(--green);
+  color: #fff;
+  text-align: center;
+  padding: 34px 16px 26px;
+  position: relative;
+}
+.masthead h1 {
+  margin: 0;
+  font-size: clamp(2.6rem, 8vw, 4.4rem);
+  font-weight: 900;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+  text-shadow: 0 3px 0 var(--green-deep);
+}
+.masthead .sub {
+  margin-top: 6px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-size: .85rem;
+  color: #dff0e5;
+}
+.start-card {
+  background: var(--paper);
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(6,61,33,.12);
+  max-width: 560px;
+  width: calc(100% - 32px);
+  margin: 28px auto;
+  padding: 24px 26px 26px;
+}
+.start-card label { display: block; font-weight: 700; margin: 14px 0 6px; }
+.start-card .help { color: var(--muted); font-size: .85rem; margin: 2px 0 0; }
+#seedInput, #difficultySelect {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 1.15rem;
+}
+#seedInput:focus, #difficultySelect:focus { outline: 3px solid var(--gold); border-color: var(--gold-dark); }
+#startBtn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 16px;
+  font-size: 1.3rem;
+  border-radius: 12px;
+}
+.start-links { text-align: center; margin: 0 0 30px; }
+.start-links button {
+  background: none; border: 0; color: var(--green);
+  text-decoration: underline; font-weight: 600;
+}
+.banner-offline {
+  background: var(--danger); color: #fff; text-align: center;
+  padding: 10px 16px; font-weight: 700;
+}
+
+/* ---- race screen ---- */
+#screenRace { display: flex; flex-direction: column; min-height: 100vh; }
+.scoreboard {
+  position: sticky; top: 0; z-index: 30;
+  background: var(--green-deep);
+  color: #fff;
+  padding: 8px 14px 10px;
+  box-shadow: 0 3px 10px rgba(0,0,0,.25);
+}
+.score-row {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.chip {
+  background: var(--green-dark);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 10px;
+  padding: 4px 12px;
+  text-align: center;
+  min-width: 84px;
+}
+.chip .lbl {
+  display: block; font-size: .62rem; letter-spacing: .14em;
+  text-transform: uppercase; color: #9fc7ad;
+}
+.chip .val {
+  font-size: 1.6rem; font-weight: 800; color: var(--gold-bright);
+  font-variant-numeric: tabular-nums; line-height: 1.15;
+}
+.matchup {
+  flex: 1 1 260px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  min-width: 0;
+}
+.matchup .from { color: #cfe6d6; font-weight: 600; }
+.matchup .arrow { color: var(--gold); font-size: 1.3rem; }
+.matchup .to {
+  background: var(--gold);
+  color: var(--green-deep);
+  font-weight: 900;
+  font-size: 1.25rem;
+  padding: 3px 14px;
+  border-radius: 8px;
+}
+.race-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.race-actions .btn { padding: 6px 12px; font-size: .85rem; }
+#findInput {
+  padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.12); color: #fff; width: 150px;
+}
+#findInput::placeholder { color: #b9d5c3; }
+
+.path-strip {
+  background: var(--green-dark);
+  color: #dff0e5;
+  font-size: .82rem;
+  padding: 5px 14px;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+.path-strip b { color: var(--gold-bright); }
+.path-strip .sep { color: #7fae90; margin: 0 4px; }
+
+.article-wrap {
+  flex: 1;
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px;
+}
+#articleTitle {
+  margin: 4px 0 10px;
+  font-size: 1.9rem;
+  border-bottom: 3px solid var(--gold);
+  padding-bottom: 6px;
+}
+#articleHost {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px 22px;
+  overflow-wrap: break-word;
+}
+/* Wikipedia content arrives stripped of its own stylesheets — give it a sane baseline */
+#articleHost img { max-width: 100%; height: auto; }
+#articleHost table { border-collapse: collapse; font-size: .85rem; max-width: 100%; }
+#articleHost td, #articleHost th { border: 1px solid var(--line); padding: 3px 7px; vertical-align: top; }
+#articleHost .infobox {
+  float: right; clear: right; margin: 0 0 12px 16px;
+  background: #f6f2e4; max-width: 290px;
+}
+#articleHost .thumb, #articleHost figure {
+  float: right; clear: right; margin: 0 0 12px 16px;
+  max-width: 270px; background: #f6f2e4;
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px;
+  font-size: .8rem; color: var(--muted);
+}
+#articleHost h2, #articleHost h3 { border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+#articleHost a[data-wr="nav"] {
+  color: var(--link); font-weight: 600; text-decoration: underline;
+  text-decoration-color: rgba(11,107,58,.4); cursor: pointer;
+}
+#articleHost a[data-wr="nav"]:hover { background: rgba(242,183,5,.35); }
+#articleHost span.wr-locked { color: #9aa39d; }
+#articleHost .wr-find-hit { background: var(--gold-bright); outline: 2px solid var(--gold-dark); border-radius: 2px; }
+.article-toolbar {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 10px;
+}
+
+/* loading + error */
+.overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(6,61,33,.55);
+  display: flex; align-items: center; justify-content: center;
+}
+.overlay .box {
+  background: var(--paper); border-radius: 14px; padding: 26px 34px;
+  text-align: center; font-weight: 700; font-size: 1.1rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,.3);
+  max-width: 420px;
+}
+.spinner {
+  width: 40px; height: 40px; margin: 0 auto 12px;
+  border-radius: 50%;
+  border: 5px solid var(--line);
+  border-top-color: var(--green);
+  animation: wr-spin .8s linear infinite;
+}
+@keyframes wr-spin { to { transform: rotate(360deg); } }
+.error-box { border: 2px solid var(--danger); }
+.error-box p { font-weight: 400; color: var(--muted); }
+
+/* ---- results screen ---- */
+#screenResults { min-height: 100vh; display: flex; flex-direction: column; }
+.results-card {
+  background: var(--paper); border: 2px solid var(--line); border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(6,61,33,.12);
+  max-width: 720px; width: calc(100% - 32px);
+  margin: 26px auto; padding: 24px 28px;
+}
+.results-card h2 { margin: 0 0 4px; color: var(--green); font-size: 2rem; }
+.stat-grid { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+.stat {
+  flex: 1 1 130px; background: var(--green); color: #fff;
+  border-radius: 12px; padding: 10px 14px; text-align: center;
+}
+.stat .lbl { display: block; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: #b8d8c3; }
+.stat .val { font-size: 1.9rem; font-weight: 800; color: var(--gold-bright); font-variant-numeric: tabular-nums; }
+.path-chain { margin: 10px 0; padding: 0; list-style: none; }
+.path-chain li { padding: 3px 0 3px 26px; position: relative; }
+.path-chain li::before {
+  content: ""; position: absolute; left: 8px; top: 12px;
+  width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+}
+.path-chain li:last-child::before { background: var(--gold); outline: 3px solid rgba(242,183,5,.35); }
+
+/* ---- verify screen ---- */
+#screenVerify .results-card h2 { color: var(--green); }
+#verifyInput { width: 100%; min-height: 80px; border: 2px solid var(--line); border-radius: 10px; padding: 10px; }
+.badge { display: inline-block; border-radius: 8px; padding: 4px 14px; font-weight: 800; }
+.badge-ok { background: var(--green); color: var(--gold-bright); }
+.badge-bad { background: var(--danger); color: #fff; }
+
+/* ---- focus & motion ---- */
+:focus-visible { outline: 3px solid var(--gold-dark); outline-offset: 2px; }
+#confettiCanvas {
+  position: fixed; inset: 0; width: 100vw; height: 100vh;
+  pointer-events: none; z-index: 60;
+}
+.results-card h2 .flag { display: inline-block; animation: wr-wave 1.2s ease-in-out infinite; }
+@keyframes wr-wave {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(10deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .results-card h2 .flag { animation: none; }
+  .spinner { animation-duration: 1.6s; }
+}
+
+@media (max-width: 640px) {
+  .chip .val { font-size: 1.25rem; }
+  .matchup .to { font-size: 1rem; }
+  #articleHost { padding: 12px; }
+  #articleHost .infobox, #articleHost .thumb, #articleHost figure {
+    float: none; margin: 10px auto; max-width: 100%;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ================= START SCREEN ================= -->
+<section id="screenStart">
+  <div class="checker" aria-hidden="true"></div>
+  <div class="masthead">
+    <h1>Wiki Race</h1>
+    <div class="sub">East Middle Bulldogs &middot; Social Studies</div>
+  </div>
+  <div class="checker" aria-hidden="true"></div>
+  <div id="offlineBanner" class="banner-offline" role="alert" hidden>&#9888; Wiki Race needs the internet — you appear to be offline.</div>
+  <div class="start-card">
+    <label for="seedInput">Seed phrase (from your teacher)</label>
+    <input id="seedInput" type="text" autocomplete="off" autocapitalize="none" placeholder="e.g. bulldogs1">
+    <p class="help">Everyone who types the same seed gets the exact same race.</p>
+    <label for="difficultySelect">Difficulty</label>
+    <select id="difficultySelect">
+      <option value="easy">Easy — start and target are related topics</option>
+      <option value="medium" selected>Medium — any two topics</option>
+      <option value="hard">Hard — far-apart topics</option>
+    </select>
+    <button id="startBtn" class="btn btn-gold">&#127937; Start your engines</button>
+    <p id="startError" class="help" style="color:var(--danger);font-weight:700" hidden></p>
+  </div>
+  <div class="start-links">
+    <button id="toVerifyBtn" type="button">Teacher: verify a finish code</button>
+  </div>
+</section>
+
+<!-- ================= RACE SCREEN ================= -->
+<section id="screenRace" hidden>
+  <div class="scoreboard">
+    <div class="score-row">
+      <div class="chip"><span class="lbl">Time</span><span class="val" id="timerVal" role="timer" aria-label="race time">0:00</span></div>
+      <div class="chip"><span class="lbl">Clicks</span><span class="val" id="clicksVal">0</span></div>
+      <div class="matchup">
+        <span class="from" id="startLabel"></span>
+        <span class="arrow" aria-hidden="true">&#10142;</span>
+        <span class="to" id="targetLabel"></span>
+      </div>
+      <div class="race-actions">
+        <button id="peekBtn" class="btn btn-ghost" type="button" title="See what the target article is about (free)">&#128064; Peek</button>
+        <button id="hintBtn" class="btn btn-ghost" type="button" title="Get a hint — costs +30 seconds">&#128161; Hint +30s</button>
+        <input id="findInput" type="search" placeholder="Find a link&hellip;" aria-label="Find a link in this article">
+        <span id="findCount" style="font-size:.75rem;color:#b9d5c3" aria-live="polite"></span>
+      </div>
+    </div>
+  </div>
+  <div class="path-strip" id="pathStrip" aria-label="Your path so far"></div>
+  <div class="article-wrap">
+    <div class="article-toolbar">
+      <button id="backBtn" class="btn" type="button" disabled>&#8592; Back (costs a click)</button>
+    </div>
+    <h2 id="articleTitle"></h2>
+    <div id="articleHost"></div>
+  </div>
+</section>
+
+<!-- ================= RESULTS SCREEN ================= -->
+<section id="screenResults" hidden>
+  <div class="checker" aria-hidden="true"></div>
+  <div class="results-card">
+    <h2><span class="flag" aria-hidden="true">&#127937;</span> You made it!</h2>
+    <div id="resultsMatchup" style="font-weight:700"></div>
+    <div class="stat-grid">
+      <div class="stat"><span class="lbl">Final time</span><span class="val" id="resTime"></span></div>
+      <div class="stat"><span class="lbl">Clicks</span><span class="val" id="resClicks"></span></div>
+      <div class="stat"><span class="lbl">Hints</span><span class="val" id="resHints"></span></div>
+    </div>
+    <div id="resPenalty" class="help" style="color:var(--muted)"></div>
+    <h3>Your path</h3>
+    <ol class="path-chain" id="resPath"></ol>
+    <h3>Finish code <span style="font-weight:400;font-size:.8rem;color:var(--muted)">(give this to your teacher)</span></h3>
+    <textarea id="finishCode" readonly rows="3" style="width:100%;border:2px solid var(--line);border-radius:10px;padding:8px;font-family:monospace"></textarea>
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <button id="copyCodeBtn" class="btn" type="button">Copy code</button>
+      <button id="againBtn" class="btn btn-gold" type="button">Race again</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= VERIFY SCREEN ================= -->
+<section id="screenVerify" hidden>
+  <div class="checker" aria-hidden="true"></div>
+  <div class="results-card">
+    <h2>Verify a finish code</h2>
+    <p class="help">Paste a student's finish code to check it and show the race details.</p>
+    <textarea id="verifyInput" placeholder="WR1.xxxxxx.&hellip;"></textarea>
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <button id="verifyBtn" class="btn btn-gold" type="button">Verify</button>
+      <button id="verifyBackBtn" class="btn btn-ghost" type="button">Back to start</button>
+    </div>
+    <div id="verifyResult" style="margin-top:18px"></div>
+  </div>
+</section>
+
+<canvas id="confettiCanvas" hidden></canvas>
+
+<!-- target peek / hint modal -->
+<div id="peekModal" class="overlay" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="peekTitle" style="text-align:left;max-width:520px">
+    <h3 id="peekTitle" style="margin:0 0 8px;color:var(--green)"></h3>
+    <img id="peekImg" alt="" style="float:right;max-width:160px;margin:0 0 10px 12px;border-radius:8px" hidden>
+    <div id="peekBody" style="font-weight:400;font-size:.95rem;max-height:50vh;overflow:auto"></div>
+    <div style="clear:both;text-align:right;margin-top:14px">
+      <button id="peekCloseBtn" class="btn" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- loading / error overlays -->
+<div id="loadingOverlay" class="overlay" hidden>
+  <div class="box"><div class="spinner" aria-hidden="true"></div><span id="loadingMsg">Loading article&hellip;</span></div>
+</div>
+<div id="errorOverlay" class="overlay" hidden>
+  <div class="box error-box" role="alertdialog" aria-labelledby="errorMsg">
+    <strong>&#9888; Couldn&rsquo;t load that article</strong>
+    <p id="errorMsg" aria-live="assertive"></p>
+    <button id="retryBtn" class="btn btn-gold" type="button">Try again</button>
+  </div>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+/* =====================================================================
+   hashing & PRNG
+   xmur3 turns the seed phrase into a 32-bit number; mulberry32 is the
+   same tiny seedable PRNG the rest of the toolkit uses (same seed =
+   same race for the whole class).
+   ===================================================================== */
+function xmur3(str) {
+  var h = 1779033703 ^ str.length;
+  for (var i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return function () {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return (h ^= h >>> 16) >>> 0;
+  };
+}
+function mulberry32(seed) {
+  var state = seed >>> 0;
+  return function () {
+    state = (state + 0x6D2B79F5) >>> 0;
+    var t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* =====================================================================
+   TOPICS — curated from Wikipedia's "Vital Articles, Level 3" list,
+   filtered for 7th-grade appropriateness. Exact article titles (spaces,
+   not underscores). To expand: append titles to any category array —
+   NOTE that inserting (rather than appending) changes which race a
+   given seed produces, since matchups are drawn by index.
+   ===================================================================== */
+var TOPICS = {
+  'History': [
+    'History','Ancient history','Prehistory','Archaeology','Civilization','Stone Age','Bronze Age','Iron Age',
+    'Mesopotamia','Sumer','Babylon','Ancient Egypt','Ancient Greece','Ancient Rome','Roman Empire','Byzantine Empire',
+    'Ottoman Empire','Mongol Empire','Maya civilization','Aztecs','Inca Empire','Silk Road','Middle Ages','Crusades',
+    'Vikings','Renaissance','Reformation','Age of Discovery','Age of Enlightenment','Scientific Revolution',
+    'Industrial Revolution','French Revolution','American Revolution','American Civil War','World War I','World War II',
+    'Cold War','Space Race','Great Depression','Black Death','Hundred Years\' War','British Empire','Spanish Empire',
+    'Achaemenid Empire','Han dynasty','Tang dynasty','Ming dynasty','Qing dynasty','Feudalism','Samurai','Knight',
+    'Pharaoh','Egyptian hieroglyphs','Rosetta Stone','Great Wall of China','Great Pyramid of Giza','Machu Picchu',
+    'Stonehenge','Colosseum','Parthenon','Petra','Angkor Wat','Taj Mahal','Statue of Liberty',
+    'United States Declaration of Independence','Constitution of the United States','Louisiana Purchase','Lewis and Clark Expedition',
+    'Oregon Trail','California Gold Rush','Underground Railroad','Emancipation Proclamation','Civil rights movement',
+    'Women\'s suffrage','Apollo 11'
+  ],
+  'Geography': [
+    'Geography','Continent','Africa','Antarctica','Asia','Europe','North America','South America','Oceania',
+    'Pacific Ocean','Atlantic Ocean','Indian Ocean','Arctic Ocean','Southern Ocean',
+    'United States','Canada','Mexico','Brazil','Argentina','Chile','Peru','Colombia','Cuba','Jamaica','Panama','Guatemala',
+    'United Kingdom','Ireland','France','Germany','Italy','Spain','Portugal','Netherlands','Belgium','Switzerland',
+    'Austria','Poland','Ukraine','Russia','Sweden','Norway','Denmark','Finland','Iceland','Greece','Turkey',
+    'Czech Republic','Hungary','Romania','Egypt','Morocco','Nigeria','Kenya','Ethiopia','South Africa','Ghana','Tanzania',
+    'Madagascar','Saudi Arabia','Israel','Jordan','Iraq','Iran','India','Pakistan','Bangladesh','China','Japan',
+    'South Korea','Vietnam','Thailand','Indonesia','Philippines','Malaysia','Singapore','Australia','New Zealand',
+    'New York City','Los Angeles','Chicago','Washington, D.C.','San Francisco','Boston','New Orleans','Seattle',
+    'London','Paris','Rome','Berlin','Madrid','Moscow','Istanbul','Athens','Vienna','Amsterdam','Venice',
+    'Cairo','Lagos','Nairobi','Beijing','Shanghai','Tokyo','Seoul','Mumbai','Delhi','Hong Kong','Dubai','Jerusalem',
+    'Sydney','Toronto','Mexico City','Rio de Janeiro','Buenos Aires','São Paulo',
+    'Mount Everest','Mount Kilimanjaro','Rocky Mountains','Andes','Alps','Himalayas','Mount Fuji','Mount Vesuvius',
+    'Amazon River','Nile','Mississippi River','Yangtze','Ganges','Danube','Rhine','Congo River','Colorado River',
+    'Great Lakes','Lake Victoria','Caspian Sea','Mediterranean Sea','Caribbean Sea','Red Sea','Black Sea',
+    'Sahara','Gobi Desert','Amazon rainforest','Great Barrier Reef','Grand Canyon','Niagara Falls','Victoria Falls',
+    'Yellowstone National Park','Galápagos Islands','Greenland','Hawaii','Alaska','California','Texas','Florida',
+    'Panama Canal','Suez Canal','Equator','North Pole','South Pole','Arctic','Desert','Island','Mountain','River',
+    'Lake','Ocean','Volcano','Earthquake','Map'
+  ],
+  'People': [
+    'Julius Caesar','Augustus','Cleopatra','Alexander the Great','Genghis Khan','Charlemagne','Joan of Arc',
+    'Elizabeth I','Louis XIV','Napoleon','Queen Victoria','Catherine the Great','Peter the Great','Qin Shi Huang',
+    'Mansa Musa','Moctezuma II','Simón Bolívar','George Washington','Thomas Jefferson','Benjamin Franklin',
+    'Abraham Lincoln','Theodore Roosevelt','Franklin D. Roosevelt','John F. Kennedy','Winston Churchill',
+    'Mahatma Gandhi','Nelson Mandela','Martin Luther King Jr.','Harriet Tubman','Frederick Douglass','Rosa Parks',
+    'Susan B. Anthony','Eleanor Roosevelt','Sitting Bull','Pocahontas','Sacagawea','Malala Yousafzai',
+    'Christopher Columbus','Ferdinand Magellan','Marco Polo','Vasco da Gama','James Cook','Ibn Battuta','Zheng He',
+    'Ernest Shackleton','Neil Armstrong','Yuri Gagarin','Amelia Earhart',
+    'Isaac Newton','Albert Einstein','Galileo Galilei','Charles Darwin','Marie Curie','Nikola Tesla','Thomas Edison',
+    'Leonardo da Vinci','Archimedes','Pythagoras','Euclid','Ada Lovelace','Alan Turing','Louis Pasteur','Gregor Mendel',
+    'Jane Goodall','Stephen Hawking','Katherine Johnson','George Washington Carver','Alexander Graham Bell',
+    'Wright brothers','Johannes Gutenberg','Johannes Kepler','Nicolaus Copernicus','Michael Faraday','Dmitri Mendeleev',
+    'Rachel Carson','Florence Nightingale','Clara Barton','Helen Keller','Anne Frank','Mother Teresa',
+    'William Shakespeare','Homer','Mark Twain','Jane Austen','Charles Dickens','Emily Dickinson','Maya Angelou',
+    'Langston Hughes','Pablo Picasso','Vincent van Gogh','Claude Monet','Michelangelo','Rembrandt','Frida Kahlo',
+    'Georgia O\'Keeffe','Ludwig van Beethoven','Wolfgang Amadeus Mozart','Johann Sebastian Bach','Louis Armstrong',
+    'Elvis Presley','Walt Disney','Jesse Owens','Jackie Robinson','Muhammad Ali','Pelé','Serena Williams',
+    'Michael Jordan','Babe Ruth','Wilma Rudolph'
+  ],
+  'Arts': [
+    'Art','Painting','Sculpture','Architecture','Music','Dance','Theatre','Opera','Ballet','Orchestra',
+    'Piano','Guitar','Violin','Drum','Trumpet','Flute','Musical instrument','Song','Melody','Rhythm','Choir',
+    'Jazz','Blues','Rock music','Hip hop music','Classical music','Folk music','Country music','Pop music',
+    'Literature','Poetry','Novel','Short story','Fiction','Mythology','Greek mythology','Fairy tale','Comics',
+    'Animation','Film','Photography','Museum','Louvre','Mona Lisa','The Starry Night','Sistine Chapel',
+    'Impressionism','Surrealism','Cubism','Origami','Pottery','Mosaic','Calligraphy','Design','Fashion',
+    'Odyssey','Iliad','Romeo and Juliet','Hamlet','Broadway theatre','Hollywood'
+  ],
+  'Philosophy & Religion': [
+    'Philosophy','Ethics','Logic','Knowledge','Truth','Beauty','Justice','Liberty','Religion','God',
+    'Christianity','Catholic Church','Protestantism','Eastern Orthodox Church','Islam','Judaism','Hinduism',
+    'Buddhism','Sikhism','Taoism','Confucianism','Shinto','Bible','Quran','Torah','Church (building)','Mosque',
+    'Synagogue','Temple','Prayer','Meditation','Monk','Pilgrimage','Gautama Buddha','Jesus','Muhammad','Moses',
+    'Abraham','Plato','Socrates','Aristotle','Confucius','Laozi','Stoicism','Golden Rule','Ten Commandments','Soul'
+  ],
+  'Everyday Life': [
+    'Food','Cooking','Bread','Cheese','Rice','Wheat','Maize','Potato','Tomato','Apple','Banana','Orange (fruit)',
+    'Chocolate','Sugar','Salt','Honey','Milk','Meat','Vegetable','Fruit','Soup','Pizza','Pasta','Sandwich',
+    'Hamburger','Ice cream','Tea','Coffee','Breakfast',
+    'Sport','Olympic Games','Association football','Basketball','Baseball','American football','Tennis','Golf',
+    'Swimming','Gymnastics','Track and field','Volleyball','Ice hockey','Cricket','Boxing','Wrestling','Martial arts',
+    'Skateboarding','Surfing','Skiing',
+    'Game','Chess','Board game','Card game','Video game','Toy','Puzzle','Lego','Kite',
+    'Clothing','Shoe','House','Furniture','School','Family','Friendship','Birthday','Holiday','Christmas',
+    'Halloween','Thanksgiving','New Year','Calendar','Week','Pet'
+  ],
+  'Society': [
+    'Society','Culture','Language','English language','Spanish language','French language','Chinese language',
+    'Arabic','Latin','Alphabet','Writing','Communication','Education','University','Library','Book','Newspaper',
+    'Journalism','Money','Currency','Trade','Economics','Economy','Agriculture','Industry','Business','Bank','Tax',
+    'Government','Democracy','Republic','Monarchy','Empire','Law','Constitution','Court','Police','Firefighter',
+    'President of the United States','United States Congress','Supreme Court of the United States','United Nations',
+    'European Union','NATO','Flag','Citizenship','Election','Voting','Human rights','Peace','War','Military','Navy',
+    'Community','City','Village','Country','Nation','Population','Immigration','Slavery','Mail'
+  ],
+  'Science': [
+    'Science','Scientific method','Physics','Chemistry','Astronomy','Geology','Meteorology','Energy','Force',
+    'Gravity','Light','Sound','Heat','Temperature','Electricity','Magnetism','Atom','Molecule','Chemical element',
+    'Periodic table','Oxygen','Hydrogen','Carbon','Nitrogen','Gold','Silver','Iron','Copper','Helium','Water',
+    'Fire','Ice','Metal','Crystal','Acid',
+    'Universe','Galaxy','Milky Way','Solar System','Sun','Moon','Earth','Mercury (planet)','Venus','Mars','Jupiter',
+    'Saturn','Uranus','Neptune','Pluto','Star','Planet','Comet','Asteroid','Black hole',
+    'Season','Weather','Climate','Cloud','Rain','Snow','Wind','Thunderstorm','Tornado','Tropical cyclone',
+    'Lightning','Rainbow','Tide','Rock (geology)','Mineral','Fossil'
+  ],
+  'Biology & Health': [
+    'Biology','Life','Cell (biology)','DNA','Gene','Evolution','Natural selection','Ecology','Ecosystem','Food chain',
+    'Photosynthesis','Bacteria','Virus','Fungus','Plant','Tree','Flower','Grass','Forest','Leaf','Seed','Root',
+    'Animal','Mammal','Bird','Fish','Reptile','Amphibian','Insect','Spider','Dog','Cat','Horse','Cattle','Sheep',
+    'Pig','Chicken','Lion','Tiger','Elephant','Giraffe','Bear','Wolf','Fox','Deer','Rabbit','Mouse','Bat','Whale',
+    'Dolphin','Shark','Octopus','Penguin','Eagle','Owl','Snake','Crocodile','Frog','Turtle','Butterfly','Bee','Ant',
+    'Dinosaur','Tyrannosaurus','Human','Human body','Brain','Heart','Lung','Skeleton','Muscle','Blood','Skin','Eye',
+    'Ear','Tooth','Stomach','Immune system','Health','Medicine','Nutrition','Vitamin','Exercise','Sleep','Disease',
+    'Vaccine','Hospital','Physician','First aid'
+  ],
+  'Technology': [
+    'Technology','Engineering','Invention','Tool','Machine','Wheel','Lever','Engine','Steam engine','Robot',
+    'Computer','Internet','World Wide Web','Email','Smartphone','Telephone','Television','Radio','Camera',
+    'Printing press','Paper','Pencil','Compass','Clock','Calculator','Electric battery','Incandescent light bulb',
+    'Laser','Satellite','Rocket','Spacecraft','International Space Station','Space exploration','Airplane',
+    'Helicopter','Car','Truck','Train','Rail transport','Ship','Sailing ship','Submarine','Bicycle','Motorcycle',
+    'Bridge','Tunnel','Dam','Skyscraper','Road','Canal','Lighthouse','Windmill','Solar panel','Wind power',
+    'Renewable energy','Nuclear power','Plough','Irrigation','Microscope','Telescope','Refrigerator','Elevator',
+    'Global Positioning System','Artificial intelligence','Software','3D printing'
+  ],
+  'Mathematics': [
+    'Mathematics','Arithmetic','Number','Integer','Fraction','Decimal','Percentage','Negative number','Prime number',
+    'Pi','Infinity','Algebra','Geometry','Trigonometry','Calculus','Statistics','Probability','Equation',
+    'Function (mathematics)','Triangle','Square','Circle','Rectangle','Polygon','Angle','Symmetry',
+    'Pythagorean theorem','Measurement','Metric system','Addition','Subtraction','Multiplication',
+    'Division (mathematics)','Ratio','Pattern','Fibonacci sequence','Golden ratio','Roman numerals','Abacus',
+    'Area','Perimeter'
+  ]
+};
+
+/* Hard mode draws from pairs of far-apart categories. Order matters for
+   determinism — append only. */
+var FAR_PAIRS = [
+  ['Arts', 'Science'],
+  ['Mathematics', 'Everyday Life'],
+  ['Technology', 'Philosophy & Religion'],
+  ['Biology & Health', 'History'],
+  ['Geography', 'Arts'],
+  ['People', 'Mathematics'],
+  ['Society', 'Science'],
+  ['Everyday Life', 'History'],
+  ['People', 'Technology'],
+  ['Philosophy & Religion', 'Geography']
+];
+
+/* =====================================================================
+   matchup — seed + difficulty → deterministic (start, target) pair.
+   The draw order below is a contract: changing it (or reordering the
+   topic arrays) changes what every seed produces.
+   ===================================================================== */
+function normSeed(s) { return s.trim().toLowerCase().replace(/\s+/g, ' '); }
+
+function computeMatchup(seed, difficulty) {
+  var rng = mulberry32(xmur3(normSeed(seed) + '\n' + difficulty)());
+  var draw = function (n) { return Math.floor(rng() * n); };
+  var cats = Object.keys(TOPICS);
+  var start, target;
+  if (difficulty === 'easy') {
+    var cat = cats[draw(cats.length)];
+    var pool = TOPICS[cat];
+    start = pool[draw(pool.length)];
+    var rest = pool.filter(function (t) { return t !== start; });
+    target = rest[draw(rest.length)];
+  } else if (difficulty === 'hard') {
+    var pair = FAR_PAIRS[draw(FAR_PAIRS.length)];
+    var flip = draw(2);
+    var fromCat = flip === 0 ? pair[0] : pair[1];
+    var toCat = flip === 0 ? pair[1] : pair[0];
+    start = TOPICS[fromCat][draw(TOPICS[fromCat].length)];
+    target = TOPICS[toCat][draw(TOPICS[toCat].length)];
+  } else { /* medium */
+    var all = [];
+    cats.forEach(function (c) { all = all.concat(TOPICS[c]); });
+    start = all[draw(all.length)];
+    var rest2 = all.filter(function (t) { return t !== start; });
+    target = rest2[draw(rest2.length)];
+  }
+  return { start: start, target: target };
+}
+
+function categoryOf(title) {
+  var cats = Object.keys(TOPICS);
+  for (var i = 0; i < cats.length; i++) {
+    if (TOPICS[cats[i]].indexOf(title) !== -1) return cats[i];
+  }
+  return null;
+}
+
+/* =====================================================================
+   Wikipedia API layer — action API with origin=* (CORS works even from
+   file:// where our origin is "null").
+   ===================================================================== */
+var API_BASE = 'https://en.wikipedia.org/w/api.php';
+
+function api(params) {
+  var qs = new URLSearchParams(Object.assign({
+    format: 'json', formatversion: '2', origin: '*'
+  }, params));
+  var ctrl = new AbortController();
+  var timer = setTimeout(function () { ctrl.abort(); }, 15000);
+  return fetch(API_BASE + '?' + qs.toString(), { signal: ctrl.signal })
+    .then(function (res) {
+      if (!res.ok) throw new Error('Wikipedia answered HTTP ' + res.status);
+      return res.json();
+    })
+    .finally(function () { clearTimeout(timer); });
+}
+
+function fetchArticle(title) {
+  return api({
+    action: 'parse', page: title, prop: 'text',
+    redirects: '1', disableeditsection: '1', disabletoc: '1'
+  }).then(function (data) {
+    if (data.error) {
+      throw new Error(data.error.code === 'missingtitle'
+        ? 'That article doesn’t exist: ' + title
+        : (data.error.info || data.error.code));
+    }
+    return { title: data.parse.title, html: data.parse.text };
+  });
+}
+
+/* Resolve redirects up front so the win check compares canonical titles. */
+function canonicalize(titles) {
+  return api({
+    action: 'query', titles: titles.join('|'), redirects: '1'
+  }).then(function (data) {
+    var out = {};
+    var q = data.query || {};
+    var maps = (q.normalized || []).concat(q.redirects || []);
+    titles.forEach(function (t) {
+      var cur = t, hop = 0;
+      for (var i = 0; i < maps.length && hop < 8; i++) {
+        if (maps[i].from === cur) { cur = maps[i].to; hop++; i = -1; }
+      }
+      out[t] = cur;
+    });
+    return out;
+  });
+}
+
+function fetchTargetPreview(title) {
+  return api({
+    action: 'query', titles: title, redirects: '1',
+    prop: 'extracts|pageimages', exintro: '1', explaintext: '1',
+    piprop: 'thumbnail', pithumbsize: '320'
+  }).then(function (data) {
+    var page = ((data.query || {}).pages || [])[0] || {};
+    return {
+      extract: page.extract || '(No summary available.)',
+      thumb: page.thumbnail ? page.thumbnail.source : null
+    };
+  });
+}
+
+/* =====================================================================
+   sanitizer — Wikipedia HTML → safe, game-controlled DOM.
+   DOMParser documents are inert (scripts never run); we then strip what
+   we don't want and classify every link.
+   ===================================================================== */
+var BLOCKED_NS = /^(File|Image|Media|Special|Help|Category|Portal|Template|Wikipedia|Talk|Draft|Module|Book|TimedText|MOS):/i;
+
+var STRIP_SELECTORS = [
+  'script', 'style', 'link', 'meta', 'iframe', 'object', 'embed', 'form',
+  'input', 'button', 'video', 'audio',
+  '.mw-editsection', 'sup.reference', 'ol.references', '.mw-references-wrap',
+  '.reflist', '.navbox', '.vertical-navbox', '.sidebar', '.metadata',
+  '.ambox', '.mbox-small', '.hatnote', '.noprint', '#coordinates',
+  '.mw-empty-elt', '.mw-kartographer-maplink', '.printfooter'
+].join(',');
+
+function sanitizeArticle(html) {
+  var doc = new DOMParser().parseFromString(html, 'text/html');
+
+  doc.querySelectorAll(STRIP_SELECTORS).forEach(function (el) { el.remove(); });
+
+  // strip event handlers + javascript: URLs everywhere
+  doc.querySelectorAll('*').forEach(function (el) {
+    for (var i = el.attributes.length - 1; i >= 0; i--) {
+      var a = el.attributes[i];
+      if (/^on/i.test(a.name)) el.removeAttribute(a.name);
+      else if (a.name === 'href' && /^\s*javascript:/i.test(a.value)) el.removeAttribute('href');
+    }
+  });
+
+  // images: force https on protocol-relative URLs (file:// would break them)
+  doc.querySelectorAll('img, source').forEach(function (el) {
+    ['src', 'srcset'].forEach(function (attr) {
+      var v = el.getAttribute(attr);
+      if (!v) return;
+      el.setAttribute(attr, v.replace(/(^|,\s*)\/\//g, '$1https://'));
+    });
+    if (el.tagName === 'IMG') el.setAttribute('loading', 'lazy');
+  });
+
+  // classify links
+  doc.querySelectorAll('a').forEach(function (a) {
+    var href = a.getAttribute('href') || '';
+    var title = null;
+    if (href.indexOf('/wiki/') === 0) {
+      var raw = href.slice(6).split('#')[0];
+      if (raw) {
+        try { title = decodeURIComponent(raw).replace(/_/g, ' '); }
+        catch (e) { title = raw.replace(/_/g, ' '); }
+      }
+    }
+    if (title && !BLOCKED_NS.test(title)) {
+      a.setAttribute('data-wr', 'nav');
+      a.setAttribute('data-title', title);
+      a.removeAttribute('href');
+      a.setAttribute('tabindex', '0');
+      a.setAttribute('role', 'link');
+    } else {
+      // external links, other namespaces, fragments, redlinks: inert text
+      var span = doc.createElement('span');
+      span.className = 'wr-locked';
+      span.title = 'Locked during the race';
+      while (a.firstChild) span.appendChild(a.firstChild);
+      a.replaceWith(span);
+    }
+  });
+
+  return doc;
+}
+
+/* =====================================================================
+   game state & navigation
+   ===================================================================== */
+var state = {
+  seed: '', difficulty: 'medium',
+  startTitle: '', targetTitle: '', targetCanonical: '',
+  current: '', path: [], clicks: 0, hints: 0,
+  t0: null, elapsedMs: 0,
+  status: 'idle' // idle | loading | racing | won
+};
+
+var $ = function (id) { return document.getElementById(id); };
+var els = {
+  screens: { start: $('screenStart'), race: $('screenRace'), results: $('screenResults'), verify: $('screenVerify') },
+  seedInput: $('seedInput'), difficultySelect: $('difficultySelect'),
+  startBtn: $('startBtn'), startError: $('startError'), offlineBanner: $('offlineBanner'),
+  timerVal: $('timerVal'), clicksVal: $('clicksVal'),
+  startLabel: $('startLabel'), targetLabel: $('targetLabel'),
+  pathStrip: $('pathStrip'), articleTitle: $('articleTitle'), articleHost: $('articleHost'),
+  backBtn: $('backBtn'), loadingOverlay: $('loadingOverlay'), loadingMsg: $('loadingMsg'),
+  errorOverlay: $('errorOverlay'), errorMsg: $('errorMsg'), retryBtn: $('retryBtn')
+};
+
+function showScreen(name) {
+  Object.keys(els.screens).forEach(function (k) {
+    els.screens[k].hidden = (k !== name);
+  });
+  window.scrollTo(0, 0);
+}
+
+function tnorm(t) {
+  return String(t).replace(/_/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function fmtTime(ms) {
+  var total = Math.floor(ms / 1000);
+  var m = Math.floor(total / 60), s = total % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+/* ---- timer (rAF-throttled display; performance.now() is the base) ---- */
+var timerRaf = null;
+function timerTick() {
+  if (state.status === 'racing') {
+    state.elapsedMs = performance.now() - state.t0;
+    els.timerVal.textContent = fmtTime(state.elapsedMs);
+    timerRaf = requestAnimationFrame(timerTick);
+  }
+}
+function startTimer() {
+  state.t0 = performance.now();
+  state.status = 'racing';
+  timerRaf = requestAnimationFrame(timerTick);
+}
+function stopTimer() {
+  if (timerRaf) cancelAnimationFrame(timerRaf);
+  state.elapsedMs = performance.now() - state.t0;
+}
+
+/* ---- overlays ---- */
+var lastFailedNav = null;
+function setLoading(on, msg) {
+  els.loadingOverlay.hidden = !on;
+  if (msg) els.loadingMsg.textContent = msg;
+}
+function showError(msg, retryFn) {
+  lastFailedNav = retryFn || null;
+  els.errorMsg.textContent = msg;
+  els.errorOverlay.hidden = false;
+}
+
+/* ---- render + navigate ---- */
+function renderArticle(title, doc) {
+  els.articleTitle.textContent = title;
+  var frag = document.createDocumentFragment();
+  while (doc.body.firstChild) frag.appendChild(doc.body.firstChild);
+  els.articleHost.replaceChildren(frag);
+  els.articleHost.scrollTop = 0;
+  window.scrollTo(0, 0);
+  clearFind();
+}
+
+function updateScoreboard() {
+  els.clicksVal.textContent = state.clicks;
+  els.backBtn.disabled = state.path.length < 2 || state.status !== 'racing';
+  // breadcrumb: full journey, scrollable
+  var parts = state.path.map(function (t, i) {
+    return (i === state.path.length - 1) ? '<b>' + escapeHtml(t) + '</b>' : escapeHtml(t);
+  });
+  els.pathStrip.innerHTML = 'Path (' + state.path.length + '): ' +
+    parts.join('<span class="sep">&#10142;</span>');
+  els.pathStrip.scrollLeft = els.pathStrip.scrollWidth;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function navigateTo(title, opts) {
+  opts = opts || {};
+  if (state.status === 'loading' || state.status === 'won') return;
+  var prevStatus = state.status;
+  state.status = 'loading';
+  setLoading(true, 'Loading “' + title + '”…');
+  fetchArticle(title).then(function (art) {
+    setLoading(false);
+    state.current = art.title;
+    if (opts.first) {
+      state.path = [art.title];
+      state.clicks = 0;
+      startTimer();
+    } else {
+      state.status = 'racing';
+      state.clicks++;
+      state.path.push(art.title);
+    }
+    renderArticle(art.title, sanitizeArticle(art.html));
+    updateScoreboard();
+    if (tnorm(art.title) === tnorm(state.targetCanonical)) win();
+  }).catch(function (err) {
+    setLoading(false);
+    state.status = prevStatus === 'loading' ? 'racing' : prevStatus;
+    showError(errText(err), function () { navigateTo(title, opts); });
+  });
+}
+
+function errText(err) {
+  if (err && err.name === 'AbortError') return 'Wikipedia took too long to answer. Check your connection and try again.';
+  return (err && err.message) || 'Something went wrong talking to Wikipedia.';
+}
+
+function win() {
+  stopTimer();
+  state.status = 'won';
+  showResults();
+}
+
+/* =====================================================================
+   start flow
+   ===================================================================== */
+function beginRace() {
+  var seed = els.seedInput.value;
+  if (!normSeed(seed)) {
+    els.startError.textContent = 'Type the seed phrase your teacher gave you.';
+    els.startError.hidden = false;
+    return;
+  }
+  els.startError.hidden = true;
+  state.seed = normSeed(seed);
+  state.difficulty = els.difficultySelect.value;
+  var m = computeMatchup(state.seed, state.difficulty);
+  state.startTitle = m.start;
+  state.targetTitle = m.target;
+  state.hints = 0;
+  targetPreview = null;
+
+  els.startBtn.disabled = true;
+  setLoading(true, 'Setting up your race…');
+  canonicalize([m.start, m.target]).then(function (map) {
+    state.targetCanonical = map[m.target] || m.target;
+    els.startLabel.textContent = map[m.start] || m.start;
+    els.targetLabel.textContent = state.targetCanonical;
+    showScreen('race');
+    navigateTo(m.start, { first: true });
+  }).catch(function (err) {
+    setLoading(false);
+    els.startError.textContent = 'Couldn’t reach Wikipedia: ' + errText(err) +
+      ' — Wiki Race needs the internet.';
+    els.startError.hidden = false;
+  }).finally(function () {
+    els.startBtn.disabled = false;
+  });
+}
+
+/* =====================================================================
+   results (finish code + verify wired in the codec section below)
+   ===================================================================== */
+function showResults() {
+  $('resultsMatchup').textContent = state.path[0] + ' ➞ ' + state.targetCanonical +
+    ' · seed “' + state.seed + '” · ' + state.difficulty;
+  var penaltyMs = state.hints * 30000;
+  $('resTime').textContent = fmtTime(state.elapsedMs + penaltyMs);
+  $('resClicks').textContent = state.clicks;
+  $('resHints').textContent = state.hints;
+  $('resPenalty').textContent = state.hints
+    ? 'Base time ' + fmtTime(state.elapsedMs) + ' + ' + state.hints + ' hint' +
+      (state.hints > 1 ? 's' : '') + ' (+' + fmtTime(penaltyMs) + ') = ' + fmtTime(state.elapsedMs + penaltyMs)
+    : 'No hint penalties. Base time is final time.';
+  var ol = $('resPath');
+  ol.replaceChildren();
+  state.path.forEach(function (t) {
+    var li = document.createElement('li');
+    li.textContent = t;
+    ol.appendChild(li);
+  });
+  $('finishCode').value = 'Generating…';
+  buildFinishCode().then(function (code) {
+    $('finishCode').value = code;
+  }).catch(function () {
+    $('finishCode').value = '(Could not generate a code in this browser.)';
+  });
+  showScreen('results');
+  throwConfetti();
+}
+
+/* =====================================================================
+   finish code — WR1.<checksum>.<base64url deflate JSON>, or WR0 with
+   plain base64url where CompressionStream is unavailable. The checksum
+   is salted FNV-1a: deterrence against edited codes, not cryptography —
+   the salt is readable right here in the source, which is fine for a
+   classroom game.
+   ===================================================================== */
+var CODE_SALT = 'EMS-BULLDOGS-WR-2026';
+
+function fnv1a(str) {
+  var h = 0x811c9dc5;
+  for (var i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+function checksum(prefix, dataB64) {
+  return fnv1a(CODE_SALT + prefix + '.' + dataB64).toString(36).padStart(6, '0').slice(-6);
+}
+function b64urlFromBytes(bytes) {
+  var s = '';
+  for (var i = 0; i < bytes.length; i += 0x8000) {
+    s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function bytesFromB64url(b64) {
+  b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+  var s = atob(b64);
+  var out = new Uint8Array(s.length);
+  for (var i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out;
+}
+function pipeBytes(bytes, TransformCtor, kind) {
+  var stream = new Blob([bytes]).stream().pipeThrough(new TransformCtor(kind));
+  return new Response(stream).arrayBuffer().then(function (buf) { return new Uint8Array(buf); });
+}
+
+function buildFinishCode() {
+  var payload = {
+    v: 1, s: state.seed, d: state.difficulty,
+    t: Math.round(state.elapsedMs), c: state.clicks, h: state.hints,
+    p: state.path
+  };
+  var bytes = new TextEncoder().encode(JSON.stringify(payload));
+  var done = (typeof CompressionStream !== 'undefined')
+    ? pipeBytes(bytes, CompressionStream, 'deflate-raw').then(function (out) {
+        return { prefix: 'WR1', data: b64urlFromBytes(out) };
+      })
+    : Promise.resolve({ prefix: 'WR0', data: b64urlFromBytes(bytes) });
+  return done.then(function (r) {
+    return r.prefix + '.' + checksum(r.prefix, r.data) + '.' + r.data;
+  });
+}
+
+function decodeFinishCode(code) {
+  return Promise.resolve().then(function () {
+    var parts = String(code).trim().split('.');
+    if (parts.length !== 3) throw new Error('That doesn’t look like a finish code (expected three dot-separated parts).');
+    var prefix = parts[0], sum = parts[1], data = parts[2];
+    if (prefix !== 'WR1' && prefix !== 'WR0') throw new Error('Unknown code type “' + prefix + '”.');
+    if (checksum(prefix, data) !== sum) throw new Error('Checksum doesn’t match — the code was mistyped or edited.');
+    var bytes = bytesFromB64url(data);
+    if (prefix === 'WR0') {
+      return JSON.parse(new TextDecoder().decode(bytes));
+    }
+    if (typeof DecompressionStream === 'undefined') {
+      throw new Error('This browser can’t read WR1 codes (no DecompressionStream) — try a current Chrome, Edge, or Firefox.');
+    }
+    return pipeBytes(bytes, DecompressionStream, 'deflate-raw').then(function (out) {
+      return JSON.parse(new TextDecoder().decode(out));
+    });
+  }).then(function (payload) {
+    if (payload.v !== 1 || !Array.isArray(payload.p) || !payload.p.length) {
+      throw new Error('Unsupported or incomplete finish code.');
+    }
+    return payload;
+  });
+}
+
+/* =====================================================================
+   verify mode — teacher pastes a code, we validate and project it
+   ===================================================================== */
+function runVerify() {
+  var box = $('verifyResult');
+  var code = $('verifyInput').value;
+  if (!code.trim()) { box.textContent = ''; return; }
+  box.innerHTML = '<em>Checking…</em>';
+  decodeFinishCode(code).then(function (p) {
+    var penaltyMs = p.h * 30000;
+    var expected = computeMatchup(p.s, p.d);
+    // Soft consistency note: path endpoints are canonical titles, the drawn
+    // matchup is our stored form — compare loosely and only warn.
+    var startOk = tnorm(p.p[0]) === tnorm(expected.start);
+    var endOk = tnorm(p.p[p.p.length - 1]) === tnorm(expected.target);
+    var rows = [
+      ['Seed', p.s], ['Difficulty', p.d],
+      ['Race', p.p[0] + ' ➞ ' + p.p[p.p.length - 1]],
+      ['Base time', fmtTime(p.t)],
+      ['Hints', p.h + (p.h ? ' (+' + fmtTime(penaltyMs) + ')' : '')],
+      ['Final time', fmtTime(p.t + penaltyMs)],
+      ['Clicks', p.c],
+      ['Articles visited', p.p.length]
+    ];
+    var html = '<span class="badge badge-ok">&#10003; VALID CODE</span>';
+    if (!startOk || !endOk) {
+      html += ' <span class="badge badge-bad" title="The path endpoints don’t match what this seed + difficulty produces (a redirect can cause this — spot-check by running the seed).">&#9888; check matchup</span>';
+    }
+    html += '<table style="margin-top:12px;border-collapse:collapse">' + rows.map(function (r) {
+      return '<tr><th style="text-align:left;padding:3px 14px 3px 0;color:var(--muted)">' + r[0] +
+        '</th><td style="padding:3px 0;font-weight:700">' + escapeHtml(String(r[1])) + '</td></tr>';
+    }).join('') + '</table>';
+    html += '<h3 style="margin-bottom:4px">Path</h3><ol class="path-chain">' + p.p.map(function (t) {
+      return '<li>' + escapeHtml(t) + '</li>';
+    }).join('') + '</ol>';
+    box.innerHTML = html;
+  }).catch(function (err) {
+    box.innerHTML = '<span class="badge badge-bad">&#10007; INVALID</span>' +
+      '<p style="color:var(--danger);font-weight:600">' + escapeHtml(err.message) + '</p>';
+  });
+}
+
+/* =====================================================================
+   stuck helpers (peek / hint / find)
+   ===================================================================== */
+var targetPreview = null;
+
+function loadTargetPreview() {
+  if (targetPreview) return Promise.resolve(targetPreview);
+  return fetchTargetPreview(state.targetCanonical).then(function (p) {
+    targetPreview = p;
+    return p;
+  });
+}
+
+function openPeekModal(title, bodyText, thumb) {
+  $('peekTitle').textContent = title;
+  $('peekBody').textContent = bodyText;
+  var img = $('peekImg');
+  if (thumb) { img.src = thumb; img.hidden = false; } else { img.hidden = true; img.removeAttribute('src'); }
+  $('peekModal').hidden = false;
+  $('peekCloseBtn').focus();
+}
+
+function doPeek() { // free: what does the target article look like?
+  $('peekBtn').disabled = true;
+  loadTargetPreview().then(function (p) {
+    openPeekModal('🎯 Target: ' + state.targetCanonical, p.extract, p.thumb);
+  }).catch(function (err) {
+    openPeekModal('🎯 Target: ' + state.targetCanonical, 'Couldn’t load the preview (' + errText(err) + ')', null);
+  }).finally(function () { $('peekBtn').disabled = false; });
+}
+
+function doHint() { // +30s: which direction should I head?
+  if (state.status !== 'racing') return;
+  state.hints++;
+  var cat = categoryOf(state.targetTitle);
+  var base = 'Head toward ' + (cat ? cat.toUpperCase() : 'the target') + ' topics.';
+  loadTargetPreview().then(function (p) {
+    var firstSentence = (p.extract.match(/^[^.!?]*[.!?]/) || [p.extract.slice(0, 160)])[0];
+    openPeekModal('💡 Hint (+30s)', base + '\n\n' + firstSentence, null);
+  }).catch(function () {
+    openPeekModal('💡 Hint (+30s)', base, null);
+  });
+}
+
+function runFind() {
+  var q = $('findInput').value.trim().toLowerCase();
+  els.articleHost.querySelectorAll('.wr-find-hit').forEach(function (el) {
+    el.classList.remove('wr-find-hit');
+  });
+  if (!q) { $('findCount').textContent = ''; return; }
+  var hits = [];
+  els.articleHost.querySelectorAll('a[data-wr="nav"]').forEach(function (a) {
+    if (a.textContent.toLowerCase().indexOf(q) !== -1) {
+      a.classList.add('wr-find-hit');
+      hits.push(a);
+    }
+  });
+  $('findCount').textContent = hits.length + ' link' + (hits.length === 1 ? '' : 's');
+  return hits;
+}
+
+function clearFind() {
+  els.articleHost.querySelectorAll('.wr-find-hit').forEach(function (el) {
+    el.classList.remove('wr-find-hit');
+  });
+  var fc = $('findCount'); if (fc) fc.textContent = '';
+  var fi = $('findInput'); if (fi) fi.value = '';
+}
+
+/* =====================================================================
+   confetti — tiny self-contained burst in Bulldogs colors on win
+   ===================================================================== */
+function throwConfetti() {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var canvas = $('confettiCanvas');
+  var ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.hidden = false;
+  var colors = ['#f2b705', '#ffd23f', '#0b6b3a', '#08512c', '#ffffff'];
+  var bits = [];
+  for (var i = 0; i < 140; i++) {
+    bits.push({
+      x: canvas.width * (0.2 + 0.6 * Math.random()),
+      y: -20 - Math.random() * canvas.height * 0.4,
+      w: 6 + Math.random() * 6, h: 8 + Math.random() * 8,
+      vx: (Math.random() - 0.5) * 2.4,
+      vy: 2 + Math.random() * 3.2,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.25,
+      color: colors[i % colors.length]
+    });
+  }
+  var start = performance.now();
+  (function frame(now) {
+    var elapsed = now - start;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    bits.forEach(function (b) {
+      b.x += b.vx; b.y += b.vy; b.rot += b.vr;
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.rot);
+      ctx.fillStyle = b.color;
+      ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h);
+      ctx.restore();
+    });
+    if (elapsed < 4200) requestAnimationFrame(frame);
+    else { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.hidden = true; }
+  })(start);
+}
+
+/* =====================================================================
+   boot & event wiring
+   ===================================================================== */
+els.startBtn.addEventListener('click', beginRace);
+els.seedInput.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') beginRace();
+});
+
+els.articleHost.addEventListener('click', function (e) {
+  var a = e.target.closest('a');
+  if (!a) return;
+  e.preventDefault();
+  if (a.getAttribute('data-wr') === 'nav' && state.status === 'racing') {
+    navigateTo(a.getAttribute('data-title'));
+  }
+});
+els.articleHost.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter') return;
+  var a = e.target.closest('a[data-wr="nav"]');
+  if (a && state.status === 'racing') {
+    e.preventDefault();
+    navigateTo(a.getAttribute('data-title'));
+  }
+});
+
+els.backBtn.addEventListener('click', function () {
+  if (state.path.length >= 2 && state.status === 'racing') {
+    navigateTo(state.path[state.path.length - 2]);
+  }
+});
+
+els.retryBtn.addEventListener('click', function () {
+  els.errorOverlay.hidden = true;
+  if (lastFailedNav) lastFailedNav();
+});
+
+$('againBtn').addEventListener('click', function () {
+  state.status = 'idle';
+  state.path = []; state.clicks = 0; state.hints = 0;
+  els.articleHost.replaceChildren();
+  showScreen('start');
+});
+
+$('toVerifyBtn').addEventListener('click', function () { showScreen('verify'); });
+$('verifyBackBtn').addEventListener('click', function () { showScreen('start'); });
+$('verifyBtn').addEventListener('click', runVerify);
+
+$('peekBtn').addEventListener('click', doPeek);
+$('hintBtn').addEventListener('click', doHint);
+$('peekCloseBtn').addEventListener('click', function () { $('peekModal').hidden = true; });
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && !$('peekModal').hidden) $('peekModal').hidden = true;
+});
+$('findInput').addEventListener('input', runFind);
+$('findInput').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') {
+    var hit = els.articleHost.querySelector('.wr-find-hit');
+    if (hit) hit.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+});
+
+$('copyCodeBtn').addEventListener('click', function () {
+  var ta = $('finishCode');
+  var done = function () {
+    $('copyCodeBtn').textContent = 'Copied!';
+    setTimeout(function () { $('copyCodeBtn').textContent = 'Copy code'; }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(done).catch(function () {
+      ta.select(); document.execCommand('copy'); done();
+    });
+  } else { // clipboard API can be unavailable on file://
+    ta.select(); document.execCommand('copy'); done();
+  }
+});
+
+function refreshOnline() {
+  els.offlineBanner.hidden = navigator.onLine !== false;
+}
+window.addEventListener('online', refreshOnline);
+window.addEventListener('offline', refreshOnline);
+refreshOnline();
+
+/* tiny debug/test hook (used by the repo's throwaway e2e checks) */
+window.__wr = {
+  state: state, navigateTo: navigateTo, computeMatchup: computeMatchup,
+  TOPICS: TOPICS, buildFinishCode: buildFinishCode, decodeFinishCode: decodeFinishCode
+};
+
+})();
+</script>
+</body>
+</html>

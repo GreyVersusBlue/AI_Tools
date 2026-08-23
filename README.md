@@ -95,6 +95,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Propaganda & Persuasion Analysis Worksheet Generator | `Tools/083-propaganda-analysis-worksheet-generator.html` | Set up a poster, cartoon, or ad once and print a leveled student worksheet — symbols, a propaganda-technique checklist, ethos/pathos/logos, message and audience — plus a matching teacher answer key. |
 | Socratic Seminar Prep & Tracker | `Tools/084-socratic-seminar-prep-organizer.html` | Print a claim/evidence/rebuttal prep sheet for a central question, then run a live speaking-order and participation tracker with shuffle, drag-to-reorder, and an optional inner/outer fishbowl split. |
 | Parent Communication Template Generator | `Tools/085-parent-communication-templates.html` | Fill in the blanks on ready-made letters — positive notes, missing-work notices, conference requests, and more — then copy, print, or email one, or batch-fill the same letter for a whole roster at once. |
+| Wiki Race | `Tools/086-wiki-race.html` | Classroom Wikipedia race: one seed phrase gives the whole class the identical start→target matchup, with a live timer, click count, breadcrumb path, and verifiable finish codes. Fully self-contained single file (needs internet for Wikipedia). |
 
 ## Using these
 
