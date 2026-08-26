@@ -24,6 +24,7 @@ function blankProjectData() {
   return {
     __v: VERSION, mapId: null, view: { x: 0, y: 0, scale: 1 },
     labels: [], markers: [], legendText: {}, legendPos: { x: 12, y: 12 },
+    labelLegendText: {}, labelAutoColor: true, labelColorCursor: 0,
     regions: [], regionLegendText: {},
     lines: [], lineLegendText: {},
     compassEnabled: false, gridEnabled: false, locatorEnabled: false, calibration: null,
@@ -60,6 +61,12 @@ function isValidProjectData(p) {
 /** Backfills project-data fields added after a project was first saved (e.g. legend, calibration, regions, lines). */
 function normalizeProjectData(p) {
   if (!p.legendText || typeof p.legendText !== "object") p.legendText = {};
+  if (!p.labelLegendText || typeof p.labelLegendText !== "object") p.labelLegendText = {};
+  // Give-each-new-label-its-own-colour defaults ON, including for projects
+  // saved before it existed: it only affects labels placed from now on, and
+  // labels already on those maps keep whatever colour (or none) they had.
+  if (typeof p.labelAutoColor !== "boolean") p.labelAutoColor = true;
+  if (!Number.isInteger(p.labelColorCursor) || p.labelColorCursor < 0) p.labelColorCursor = 0;
   if (!p.legendPos || typeof p.legendPos !== "object") p.legendPos = { x: 12, y: 12 };
   if (!Array.isArray(p.regions)) p.regions = [];
   if (!p.regionLegendText || typeof p.regionLegendText !== "object") p.regionLegendText = {};

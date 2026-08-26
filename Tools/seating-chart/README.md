@@ -8,9 +8,29 @@ Everything the tool needs that isn't the page itself. The page stays at
 seating.mjs         pure logic + the save slot. No DOM. Node runs it as-is.
 fonts/              the two vendored families, with licences. See fonts/README.md.
 test/smoke-seating.mjs   Node test of the logic and the save slot
+test/smoke-sub-packet.mjs the whole-day substitute packet
+test/smoke-zoom-pan.mjs  wheel zoom and drag-to-pan on the floor, in a browser
 test/drive-seating.mjs   the same tool in a real browser: build, reload, print, import
 shots/              screenshots and the printed PDF the driver writes (gitignored)
 ```
+
+## Zooming and panning the floor
+
+The floor is a 1280x900 room drawn at `--fscale`, a single CSS variable that
+three things now write: fit-to-window, 100%, and a free zoom level left behind
+by the mouse wheel. `state.zoom` holds `'fit'`, `'full'`, or a number between
+`ZOOM_MIN` and `ZOOM_MAX` (exported from `seating.mjs`, so the wheel, the saved
+level and `repairState` all agree on the limits), and it is saved with the
+chart.
+
+Panning is the stage's own scrollbars, moved by dragging any empty part of the
+floor — deliberately *not* a second transform. The floor already carries the
+`--fscale` scale and `#deskLayer`'s transform (mirror view, print trimming),
+and a third one would have to be unpicked again in the desk-drag maths and in
+`printLayoutFor()`. Scrolling a scroll container composes with all of it for
+free. Drag-to-pan is mouse-only: a touch drag is already a native scroll (and
+a pinch a native zoom), and handling it here as well would move the floor
+twice as far as the finger.
 
 ## Running the tests
 

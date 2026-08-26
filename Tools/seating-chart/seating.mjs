@@ -32,6 +32,13 @@ export const ROOM = {
   neighbor: 142,    // centre-to-centre distance that counts as "next to"
 };
 
+/* How far the floor can be zoomed on screen. Below ZOOM_MIN a desk is too
+   small to aim at; above ZOOM_MAX the room is mostly off-screen and panning
+   stops being navigation. Shared with the page so the wheel, the saved zoom
+   level and the state repair below all agree on the same limits. */
+export const ZOOM_MIN = 0.25;
+export const ZOOM_MAX = 3;
+
 export const uid = (rng = Math.random) => rng().toString(36).slice(2, 9);
 
 /** Today as `YYYY-MM-DD` in the local timezone — a history entry's default
@@ -152,7 +159,7 @@ export function repairState(state, rng = Math.random) {
     sections,
     active,
     theme: state.theme === 'dark' ? 'dark' : 'light',
-    zoom: state.zoom === 'full' ? 'full' : 'fit',
+    zoom: repairZoom(state.zoom),
     lastFirst: bool(state.lastFirst),
     numbered: bool(state.numbered),
     mirror: bool(state.mirror),
@@ -161,6 +168,18 @@ export function repairState(state, rng = Math.random) {
     printViolations: state.printViolations === false ? false : true,
     currentQuarter: str(state.currentQuarter).trim() || suggestQuarter(todayISO()),
   };
+}
+
+/** The saved zoom level: 'fit' (the default), 'full' (100%), or a number left
+    behind by the wheel/pinch zoom. A number outside the usable range — or any
+    other value, including one from a hand-edited file — falls back to 'fit'
+    rather than to a floor nobody can see. */
+function repairZoom(z) {
+  if (z === 'full') return 'full';
+  // typeof, not num(): a JSON round trip keeps a number a number, so anything
+  // arriving as a string or a boolean is not a zoom level this tool wrote.
+  if (typeof z === 'number' && Number.isFinite(z) && z >= ZOOM_MIN && z <= ZOOM_MAX) return z;
+  return 'fit';
 }
 
 /** Shared by a section's live desks and every saved layout's desks. */

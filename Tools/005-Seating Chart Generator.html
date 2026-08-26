@@ -223,9 +223,12 @@
   #saveBar button[data-gvb="reset"]:hover{background:var(--color-danger-bg);}
   #saveBar .gvb-save-msg{font-size:12px; opacity:1; color:var(--teal-deep);}
 
-  .stage{flex:1; overflow:auto; padding:22px; background:
+  /* cursor: the floor is draggable to pan (see wirePan() in the script);
+     desks and chips override it with their own grab cursor. */
+  .stage{flex:1; overflow:auto; padding:22px; cursor:grab; background:
      radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 0) 0 0 / 22px 22px,
      var(--paper);}
+  .stage.panning{cursor:grabbing; user-select:none;}
   .floor-wrap{
     width:calc(1280px * var(--fscale));
     height:calc(900px * var(--fscale));
@@ -365,7 +368,7 @@
   @media print{
     .sidebar,.toolbar,.pool-wrap,.boot-warn,.tools-nav{display:none !important;}
     .app,.main,.stage{display:block; height:auto; overflow:visible;}
-    .stage{padding:0; background:#fff;}
+    .stage{padding:0; background:#fff; cursor:default;}
     .floor-wrap{margin:0 auto;}
     .floor{box-shadow:none; border:none; background:#fff; page-break-inside:avoid;}
     .desk{box-shadow:none; background:#fff;}
@@ -665,7 +668,8 @@
           <span><i class="sw" style="background:var(--teal-soft);border:1px solid var(--teal)" aria-hidden="true"></i> seated</span>
           <span><i class="sw" style="background:var(--card);border:1px solid var(--gold)" aria-hidden="true"></i> flagged</span>
           <span>Tap a name, then tap a desk. On a keyboard: Enter picks up and puts down, R rotates,
-            P pins, Delete removes a desk, arrows nudge it.</span>
+            P pins, Delete removes a desk, arrows nudge it. Scroll over the floor to zoom in and out,
+            and drag any empty part of the floor to move around it.</span>
         </div>
       </div>
       <div class="pool" id="pool" aria-labelledby="poolHead"
@@ -698,7 +702,7 @@
 
 <script type="module">
 import {
-  ROOM, snap, freshState, newSection, newLayout, createSeatingSlot, repairState,
+  ROOM, ZOOM_MIN, ZOOM_MAX, snap, freshState, newSection, newLayout, createSeatingSlot, repairState,
   assignSeats, checkConstraints, pickNext, parseRoster,
   gridDesks, rowDesks, nextSpot, contentBox,
   storageReport, matchPhotoFilenames,
@@ -752,18 +756,132 @@ function undo(){
   renderAll();
 }
 
-/* ---- fit-to-window vs actual size ---- */
+/* ---- zoom and pan --------------------------------------------------------
+   `state.zoom` is 'fit' (the default: the whole room scaled to the window),
+   'full' (100%), or a number the wheel left behind. The number is what makes
+   free zooming work: it is the same `--fscale` the two named modes set, so
+   nothing downstream — the desk-drag math, the print trim, the mirror
+   transform — has to know which of the three it is looking at.
+
+   Panning is the stage's own scrollbars, moved by dragging the floor. That is
+   deliberately not a second transform: the floor is already scaled by
+   `--fscale` and offset by `#deskLayer`'s transform (mirror view, print
+   trimming), and a third one would have to be unpicked in the desk-drag math
+   and in printLayoutFor(). Scrolling a scroll container costs nothing and
+   composes with all of it. */
+
+/** The scale that fits the whole room in the window — never above 1:1, since a small class on a big monitor shouldn't print-preview at 140%. */
+function fitScale(){
+  const room = Math.max(320, el('stage').clientWidth - 44);
+  return Math.min(1, room / ROOM.width);
+}
+function clampZoom(z){ return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)); }
+
 function applyZoom(){
-  const wantFit = state.zoom !== 'full';
-  const stage = el('stage');
-  const room = Math.max(320, stage.clientWidth - 44);
-  scale = wantFit ? Math.min(1, room / ROOM.width) : 1;
+  scale = state.zoom === 'full' ? 1
+        : typeof state.zoom === 'number' ? clampZoom(state.zoom)
+        : fitScale();
   document.documentElement.style.setProperty('--fscale', String(scale));
   const b = el('zoomBtn');
-  if (b) b.textContent = wantFit ? 'Actual size' : 'Fit to window';
+  if (b) {
+    b.textContent = state.zoom === 'full' ? 'Fit to window' : 'Actual size';
+    b.title = zoomButtonTitle();
+  }
+}
+/** The zoom button doubles as the readout: its label is what it will do next, its tooltip is where the floor is now and how to move it. */
+function zoomButtonTitle(){
+  return `Now at ${Math.round(scale * 100)}%. Scroll over the floor to zoom, drag the floor to move around. `
+       + 'This button switches between fitting the room to the window and 100%.';
 }
 function toggleZoom(){ state.zoom = state.zoom === 'full' ? 'fit' : 'full'; applyZoom(); touch(); }
-window.addEventListener('resize', () => { if (state.zoom !== 'full') applyZoom(); });
+window.addEventListener('resize', () => { if (state.zoom === 'fit') applyZoom(); });
+
+/**
+ * Zooms to `next`, keeping whatever is under (clientX, clientY) under it —
+ * the behaviour that makes wheel zoom feel like zooming rather than like the
+ * room jumping somewhere else. Done by measuring the floor before and after
+ * the scale change and correcting the stage's scroll by the difference, which
+ * needs no assumption about how `.floor-wrap` is centred.
+ */
+function zoomAt(next, clientX, clientY){
+  next = clampZoom(next);
+  if (Math.abs(next - scale) < 0.0005) return;
+  const stage = el('stage'), floor = el('floor');
+  const before = floor.getBoundingClientRect();
+  const ax = clientX == null ? stage.getBoundingClientRect().left + stage.clientWidth / 2 : clientX;
+  const ay = clientY == null ? stage.getBoundingClientRect().top + stage.clientHeight / 2 : clientY;
+  // Where the anchor is in room coordinates — the point to keep still.
+  const roomX = (ax - before.left) / scale;
+  const roomY = (ay - before.top) / scale;
+  state.zoom = next;
+  applyZoom();
+  const after = floor.getBoundingClientRect();   // forces layout at the new scale
+  stage.scrollLeft += (after.left + roomX * next) - ax;
+  stage.scrollTop += (after.top + roomY * next) - ay;
+  announceZoom();
+  touch();
+}
+
+/* The status line is aria-live, so a wheel that fires twenty times in a second
+   must not write to it twenty times — that is a screen reader reading twenty
+   zoom levels. The button's own title updates immediately (it is not
+   announced); the spoken/visible line waits until the wheel stops. */
+let zoomSayTimer = null;
+function announceZoom(){
+  const pct = Math.round(scale * 100);
+  const b = el('zoomBtn');
+  if (b) b.title = zoomButtonTitle();
+  if (zoomSayTimer) clearTimeout(zoomSayTimer);
+  zoomSayTimer = setTimeout(() => { zoomSayTimer = null; say(`Zoom ${pct}%`); }, 400);
+}
+
+/* Wheel over the floor zooms rather than scrolls. This is a scroll container,
+   so the default would be a vertical scroll — but a classroom floor is a
+   picture being inspected, not a document being read, and the whole point of
+   adding zoom was to get in close on a crowded corner. Dragging pans, which
+   is the movement scrolling would have given. Trackpad pinch arrives here as
+   ctrl+wheel and needs no separate case. Registered non-passive because it
+   calls preventDefault(). */
+el('stage').addEventListener('wheel', ev => {
+  if (printRestore) return;                     // mid-print layout: leave it alone
+  ev.preventDefault();
+  // deltaMode 1 is lines, 2 is pages; normalise both to something pixel-ish
+  // before turning it into a multiplicative step, so one notch is one notch
+  // on a mouse wheel and on a trackpad.
+  const px = ev.deltaY * (ev.deltaMode === 1 ? 16 : ev.deltaMode === 2 ? 400 : 1);
+  zoomAt(scale * Math.exp(-px * 0.0018), ev.clientX, ev.clientY);
+}, { passive: false });
+
+/* Drag anywhere on the floor (or the space around it) to pan. Desks, chips and
+   controls keep their own drag/click behaviour — this only claims the
+   background. Mouse only: a touch drag is already a scroll gesture the browser
+   handles natively (and pinch-zooms natively too), and handling it here as
+   well would move the floor twice as far as the finger. */
+(function wirePan(){
+  const stage = el('stage');
+  let panning = null;
+  const INTERACTIVE = '.desk, .chip, button, input, select, textarea, a, label';
+  stage.addEventListener('pointerdown', ev => {
+    if (ev.pointerType !== 'mouse' || ev.button !== 0) return;
+    if (ev.target.closest(INTERACTIVE)) return;
+    panning = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, sl: stage.scrollLeft, st: stage.scrollTop };
+    stage.setPointerCapture(ev.pointerId);
+    stage.classList.add('panning');
+  });
+  stage.addEventListener('pointermove', ev => {
+    if (!panning || ev.pointerId !== panning.id) return;
+    stage.scrollLeft = panning.sl - (ev.clientX - panning.x);
+    stage.scrollTop = panning.st - (ev.clientY - panning.y);
+  });
+  function endPan(ev){
+    if (!panning || ev.pointerId !== panning.id) return;
+    if (stage.hasPointerCapture(ev.pointerId)) stage.releasePointerCapture(ev.pointerId);
+    stage.classList.remove('panning');
+    panning = null;
+  }
+  stage.addEventListener('pointerup', endPan);
+  stage.addEventListener('pointercancel', endPan);
+})();
 
 /* ---- mirror view / numbered seats — screen and print share one toggle each ---- */
 function toggleMirror(){ state.mirror = !state.mirror; renderFloor(); refreshToggleButtons(); touch(); }

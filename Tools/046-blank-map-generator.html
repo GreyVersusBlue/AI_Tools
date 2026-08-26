@@ -353,6 +353,13 @@
      read the map at all, not an answer to be filled in. Blanking "1.4M to
      3.2M" would hand a student a shaded map with no way to interpret it. */
   body.student-blank #legendPanel .legend-row[data-legend-key^="choro:"] .legend-input { color: var(--ink); }
+  /* An uncaptioned row shows a *generated* placeholder — the shaded regions'
+     names, or the text of the labels in a colour group — and the browser's
+     own ::placeholder colour ignores the `color` above, so blanking the value
+     alone would leave the answer sitting in the box. Same choropleth
+     exception, for the same reason. */
+  body.student-blank #legendPanel .legend-input::placeholder { color: transparent; }
+  body.student-blank #legendPanel .legend-row[data-legend-key^="choro:"] .legend-input::placeholder { color: var(--muted); }
 
   /* Self-check quiz mode: hides each label's own text until it's clicked,
      so a finished (labeled) map can be used as a click-to-reveal study tool
@@ -517,6 +524,7 @@
       <button id="btnUndo" class="icon" title="Undo (Ctrl+Z)" disabled>&#8630;</button>
       <button id="btnRedo" class="icon" title="Redo (Ctrl+Shift+Z)" disabled>&#8631;</button>
       <button id="btnAddLabel" class="small toggle">+ Add Label</button>
+      <label id="labelAutoColorWrap" class="lineArrowLabel" title="Each label you place takes the next color in the palette, so every color becomes its own row in the key — color-code rivers, mountains and cities without setting each label's color by hand. Turn it off to place every new label in the default ink."><input type="checkbox" id="labelAutoColorCheck" checked data-no-pan> Color each new label</label>
       <button id="btnLabelSets" class="small" title="Drop a ready-made list of places (the 13 colonies, the 50 states, the countries of Europe…) onto this map at once, or reuse a list you saved yourself">Label Sets&hellip;</button>
       <button id="btnTidyLabels" class="small" title="Nudge overlapping labels apart until they're all readable, keeping each as close to where it was as the crowding allows">Tidy Labels</button>
       <button id="btnShrinkLabels" class="small" title="For a map too crowded for Tidy Labels alone: steps overlapping labels' text down one size, then spreads them out. Ctrl+Z undoes the whole pass.">Shrink to Fit</button>
@@ -784,7 +792,7 @@ import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator/bmg-commons.js';
 import { CONTINENTS } from './blank-map-generator/bmg-geography.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
-import { createLabelLayer, labelColorHex, labelFontSizePx } from './blank-map-generator/bmg-labels.js';
+import { createLabelLayer, labelColorHex, labelFontSizePx, labelSwatchSvg, LABEL_COLORS } from './blank-map-generator/bmg-labels.js';
 import {
   createMarkerLayer, markerIconSvg, markerAnchor, markerSizePx, markerColorHex, numberedOrder,
   MARKER_COLORS, MARKER_SIZES, DEFAULT_MARKER_COLOR, DEFAULT_MARKER_SIZE,
@@ -798,7 +806,7 @@ import {
   LINE_TYPES, findLineType,
 } from './blank-map-generator/bmg-lines.js';
 import { BUILT_IN_LABEL_SETS, findBuiltInSet, isValidPlaceList } from './blank-map-generator/bmg-label-sets.js';
-import { createLegendPanel, markerLegendKey, regionLegendKey, lineLegendKey, regionGroupCaption } from './blank-map-generator/bmg-legend.js';
+import { createLegendPanel, markerLegendKey, regionLegendKey, lineLegendKey, labelLegendKey, regionGroupCaption } from './blank-map-generator/bmg-legend.js';
 import {
   buildChoropleth, buildSeries, choroSwatchSvg, RAMPS, MIN_CLASSES, MAX_CLASSES,
   EXAMPLE_US_POPULATION, EXAMPLE_TIME_SLICES, MAX_SLICES,
@@ -849,7 +857,10 @@ const viewer = createViewer(viewport, stage, {
 });
 
 const labelLayer = createLabelLayer(el('labelLayer'), viewer, {
-  onChange(labels) { project.labels = labels; save(); },
+  // Colored labels are key rows now (one per color in use), so a label
+  // edit — a recolor, a retype, a delete — can change the key the same way
+  // a marker edit can, and has to re-render it for the same reason.
+  onChange(labels) { project.labels = labels; save(); renderLegend(); },
   onQuizChange(progress) { renderQuizBar(progress); },
 });
 
@@ -875,6 +886,7 @@ const legendPanel = createLegendPanel(el('legendPanel'), {
   onRegionTextChange(key, text) { project.regionLegendText[key] = text; save(); },
   onLineTextChange(key, text) { project.lineLegendText[key] = text; save(); },
   onChoroTextChange(key, text) { project.choroLegendText[key] = text; save(); },
+  onLabelTextChange(key, text) { project.labelLegendText[key] = text; save(); },
   onMarkerColorChange(style, oldColor, newColor) {
     if (oldColor === newColor) return;
     const oldKey = markerLegendKey(style, oldColor);
@@ -970,6 +982,7 @@ function renderLegend() {
   legendPanel.render({
     markers: project.markers, legendText: project.legendText, iconSvg: markerIconSvg,
     markerColorHex, colorOptions: MARKER_COLORS, sizeOptions: MARKER_SIZES,
+    labels: project.labels, labelLegendText: project.labelLegendText, labelSwatchSvg,
     regions: project.regions, regionLegendText: project.regionLegendText, swatchSvg: regionSwatchSvg,
     lines: project.lines, lineLegendText: project.lineLegendText, lineSwatchSvg,
     choroRows: activeChoroRows(), choroLegendText: project.choroLegendText, choroSwatchSvg,
@@ -1004,7 +1017,7 @@ function snapshotContent() {
   return JSON.stringify({
     labels: project.labels, markers: project.markers, regions: project.regions, lines: project.lines,
     legendText: project.legendText, regionLegendText: project.regionLegendText, lineLegendText: project.lineLegendText,
-    choroLegendText: project.choroLegendText,
+    choroLegendText: project.choroLegendText, labelLegendText: project.labelLegendText,
     legendOrder: project.legendOrder,
   });
 }
@@ -1046,6 +1059,7 @@ function applySnapshot(json) {
   project.regionLegendText = data.regionLegendText;
   project.lineLegendText = data.lineLegendText;
   project.choroLegendText = data.choroLegendText || {};
+  project.labelLegendText = data.labelLegendText || {};
   project.legendOrder = data.legendOrder;
   labelLayer.setLabels(project.labels);
   markerLayer.setMarkers(project.markers);
@@ -1352,6 +1366,8 @@ el('btnApplyCalibration').addEventListener('click', () => {
   renderScaleBar();
   measureLayer.setCalibration(candidate);
   el('calibratePanel').hidden = true;
+  if (!el('labelSetPanel').hidden) syncLabelSetReadiness();
+  if (!el('batchPanel').hidden) syncBatchReadiness();
 });
 
 el('btnClearCalibration').addEventListener('click', () => {
@@ -1367,6 +1383,8 @@ el('btnClearCalibration').addEventListener('click', () => {
   measureLayer.setCalibration(null);
   if (placeMode === 'measure') setPlaceMode('none');
   el('calibratePanel').hidden = true;
+  if (!el('labelSetPanel').hidden) syncLabelSetReadiness();
+  if (!el('batchPanel').hidden) syncBatchReadiness();
 });
 
 // --- Batch marker placement from pasted "name, lat, lon" coordinates ---
@@ -1376,9 +1394,32 @@ el('btnClearCalibration').addEventListener('click', () => {
 // carrying its name, both placed via fromLatLon()'s inverse of the
 // calibration math the lat/long readout and grid already use.
 
+/** Shows/clears the batch panel's own status line. */
+function setBatchStatus(msg, isErr) {
+  const box = el('batchStatus');
+  if (!msg) { box.hidden = true; box.textContent = ''; return; }
+  box.hidden = false;
+  box.className = 'status' + (isErr ? ' err' : '');
+  box.textContent = msg;
+}
+
+/** Same treatment the Label Sets panel gets: the panel opens whether or not the map is calibrated, and says so instead of being silently swapped for the calibrate panel. */
+function syncBatchReadiness() {
+  const ready = isCalibrated(project.calibration) && !!currentSize.width;
+  el('btnBatchPlaceGo').disabled = !ready;
+  if (ready) { setBatchStatus(''); return; }
+  setBatchStatus(!currentSize.width
+    ? 'Open a map first — these coordinates place onto whichever map is on screen.'
+    : "This map's coordinates aren't set yet, so a latitude/longitude has nowhere to land. Set them with \u201cSet Map Coordinates\u2026\u201d below and this panel switches on.",
+    true);
+}
+
 el('btnBatchPlace').addEventListener('click', () => {
-  if (!isCalibrated(project.calibration)) { openCalibratePanel(); return; }
-  el('batchPanel').hidden = !el('batchPanel').hidden;
+  const open = el('batchPanel').hidden;
+  el('batchPanel').hidden = !open;
+  if (!open) return;
+  syncBatchReadiness();
+  el('batchPanel').scrollIntoView({ block: 'nearest' });
 });
 el('btnBatchPlaceClose').addEventListener('click', () => { el('batchPanel').hidden = true; });
 
@@ -1401,6 +1442,12 @@ el('btnBatchPlaceGo').addEventListener('click', () => {
   const color = el('markerColorSelect').value;
   const size = el('markerSizeSelect').value;
   const scale = viewer.getView().scale;
+  // A pasted list is one idea, not one-idea-per-line, so the whole batch
+  // takes a single next color (and so a single key row) rather than
+  // rotating through the palette line by line — see nextLabelColor().
+  // Taken on the first line that actually lands, so a paste where nothing
+  // parses doesn't quietly advance the palette.
+  let batchColor;
   let placed = 0, skipped = 0, offMap = 0;
 
   lines.forEach(line => {
@@ -1413,7 +1460,8 @@ el('btnBatchPlaceGo').addEventListener('click', () => {
     // width, roughly) to the right, in stage units, so it doesn't sit
     // exactly on top of the marker icon at whatever zoom level this is.
     const offset = (markerSizePx(size) / 2 + 4) / scale;
-    labelLayer.addAt(pt.x + offset, pt.y, parsed.name);
+    if (batchColor === undefined) batchColor = nextLabelColor();
+    labelLayer.addAt(pt.x + offset, pt.y, parsed.name, batchColor);
     placed++;
   });
 
@@ -1424,14 +1472,40 @@ el('btnBatchPlaceGo').addEventListener('click', () => {
   project.labels = labelLayer.getLabels();
   save();
 
-  const box = el('batchStatus');
-  box.hidden = false;
-  box.className = 'status' + (skipped ? ' err' : '');
   let msg = `Placed ${placed} marker${placed === 1 ? '' : 's'}.`;
   if (skipped) msg += ` Skipped ${skipped} line${skipped === 1 ? '' : 's'} that didn't parse as "name, lat, lon".`;
   if (offMap) msg += ` ${offMap} landed outside the map's calibrated bounds — pan/zoom out to find ${offMap === 1 ? 'it' : 'them'}.`;
-  box.textContent = msg;
+  setBatchStatus(msg, !!skipped);
   if (placed) el('batchCoordsInput').value = '';
+});
+
+/* --- Give each new label its own color ---------------------------------
+   On (the default), every label placed — by clicking, by pasting a
+   coordinate list, or by dropping a whole label set — takes the next color
+   in the label palette, cycling round when it runs out. That is worth a
+   toggle because of what the key does with it: bmg-legend.js gives every
+   label color in use its own captioned row, so coloring as you go turns
+   "twelve labels" into "rivers / mountains / cities" in the key without a
+   teacher setting twelve colors by hand.
+
+   The cursor lives on the project (rather than in a module variable) so it
+   survives a reload and a project switch: reopening a half-labelled map and
+   adding one more label continues the sequence instead of restarting it at
+   red on top of the red already there.
+
+   Off, labels place in the default ink exactly as they did before, and no
+   label rows appear in the key. */
+
+function nextLabelColor() {
+  if (!project.labelAutoColor) return null;
+  const i = Number.isInteger(project.labelColorCursor) ? project.labelColorCursor : 0;
+  project.labelColorCursor = (i + 1) % LABEL_COLORS.length;
+  return LABEL_COLORS[i % LABEL_COLORS.length].key;
+}
+
+el('labelAutoColorCheck').addEventListener('change', () => {
+  project.labelAutoColor = el('labelAutoColorCheck').checked;
+  save();
 });
 
 // --- Reusable label sets -------------------------------------------------
@@ -1479,17 +1553,50 @@ function syncLabelSetPanel() {
 
 function setLabelSetStatus(msg, isErr) {
   const box = el('labelSetStatus');
-  if (!msg) { box.hidden = true; return; }
+  if (!msg) { box.hidden = true; box.textContent = ''; return; }
   box.hidden = false;
   box.className = 'status' + (isErr ? ' err' : '');
   box.textContent = msg;
 }
 
+/* Whether this map can actually take a label set right now: it needs an
+   image on screen, and that image's real-world coordinates set (placement is
+   fromLatLon() against the calibration, so without one there is nowhere to
+   put anything).
+
+   This used to be a guard on the *button*: clicking "Label Sets…" on an
+   uncalibrated map silently opened the calibrate panel instead and returned,
+   so the panel a teacher asked for never appeared and nothing said why. That
+   read as "the label sets sometimes don't show up when I toggle them" —
+   which is exactly what it was, since an uploaded or Commons map starts
+   uncalibrated and only the built-in base maps arrive calibrated. The panel
+   opens either way now: the half of it that doesn't need coordinates (edit,
+   import, export, rename a set) works regardless, and the half that does is
+   disabled with a message saying what to do about it. */
+function labelSetsReady() {
+  return isCalibrated(project.calibration) && !!currentSize.width;
+}
+
+/** Enables/disables the coordinate-dependent buttons in the Label Sets panel and says why they're off, so an unusable panel explains itself rather than looking broken. */
+function syncLabelSetReadiness() {
+  const ready = labelSetsReady();
+  ['btnPlaceLabelSet', 'btnSaveLabelSet', 'btnToTimeline'].forEach(id => { el(id).disabled = !ready; });
+  if (ready) { setLabelSetStatus(''); return; }
+  setLabelSetStatus(!currentSize.width
+    ? 'Open a map first — a label set drops onto whichever map is on screen.'
+    : "This map's coordinates aren't set yet, so there's nowhere to put these places. Set them with \u201cSet Map Coordinates\u2026\u201d below (or start from a built-in base map, which arrives already calibrated) and this panel switches on.",
+    true);
+}
+
 el('btnLabelSets').addEventListener('click', () => {
-  if (!isCalibrated(project.calibration)) { openCalibratePanel(); return; }
   const open = el('labelSetPanel').hidden;
   el('labelSetPanel').hidden = !open;
-  if (open) { refreshLabelSetSelect(el('labelSetSelect').value); setLabelSetStatus(''); }
+  if (!open) return;
+  refreshLabelSetSelect(el('labelSetSelect').value);
+  syncLabelSetReadiness();
+  // The panel renders between the toolbar and the map, which on a short
+  // window can be below the fold — the other half of "it didn't show up".
+  el('labelSetPanel').scrollIntoView({ block: 'nearest' });
 });
 el('btnLabelSetClose').addEventListener('click', () => { el('labelSetPanel').hidden = true; });
 el('labelSetSelect').addEventListener('change', syncLabelSetPanel);
@@ -1504,6 +1611,11 @@ el('btnPlaceLabelSet').addEventListener('click', () => {
   const color = el('markerColorSelect').value;
   const size = el('markerSizeSelect').value;
   const scale = viewer.getView().scale;
+  // Same rule as the coordinate paste above: "the 13 colonies" is one thing
+  // and gets one color, so its key row reads as one idea. Taken on the first
+  // place that actually lands, so a set entirely outside this map's bounds
+  // doesn't advance the palette for nothing.
+  let setColor;
   let placed = 0, skipped = 0;
 
   set.places.forEach(p => {
@@ -1515,7 +1627,8 @@ el('btnPlaceLabelSet').addEventListener('click', () => {
       markerLayer.addAt(pt.x, pt.y, style, color, size);
       labelX = pt.x + (markerSizePx(size) / 2 + 4) / scale;
     }
-    labelLayer.addAt(labelX, pt.y, p.name);
+    if (setColor === undefined) setColor = nextLabelColor();
+    labelLayer.addAt(labelX, pt.y, p.name, setColor);
     placed++;
   });
 
@@ -2188,7 +2301,7 @@ viewport.addEventListener('pointerup', e => {
   if (moved >= 4 || e.target.closest('[data-no-pan]') || !currentSize.width) return;
   const stagePt = viewer.screenToStage(e.clientX, e.clientY);
   if (placeMode === 'label') {
-    const label = labelLayer.addAt(stagePt.x, stagePt.y);
+    const label = labelLayer.addAt(stagePt.x, stagePt.y, '', nextLabelColor());
     requestAnimationFrame(() => labelLayer.startEditing(label.id));
   } else if (placeMode === 'marker') {
     markerLayer.addAt(stagePt.x, stagePt.y, el('markerStyleSelect').value, el('markerColorSelect').value, el('markerSizeSelect').value);
@@ -2902,6 +3015,8 @@ function displayMap(record, opts = {}) {
     project.lines = [];
     project.lineLegendText = {};
     project.choroLegendText = {};
+    project.labelLegendText = {};
+    project.labelColorCursor = 0;
     project.legendOrder = [];
     project.calibration = null;
     project.gridEnabled = false;
@@ -3238,13 +3353,28 @@ async function drawPngLegend(ctx) {
     seenLineGroup.add(gkey);
     lineGroups.push({ color: l.color, style: l.style });
   });
+  // One row per label color in use, same grouping the on-screen key uses
+  // (bmg-legend.js): uncolored labels earn no row, since they already read
+  // as themselves on the map.
+  const labelGroups = [];
+  const labelGroupIndex = new Map();
+  project.labels.forEach(l => {
+    if (!l.color) return;
+    let group = labelGroupIndex.get(l.color);
+    if (!group) {
+      group = { color: l.color, names: [] };
+      labelGroupIndex.set(l.color, group);
+      labelGroups.push(group);
+    }
+    if (l.text) group.names.push(l.text);
+  });
   const choroRows = activeChoroRows();
-  if (!groups.length && !numbered.length && !regionGroups.length && !lineGroups.length && !choroRows.length) return;
+  if (!groups.length && !numbered.length && !labelGroups.length && !regionGroups.length && !lineGroups.length && !choroRows.length) return;
   const grayscaleMap = buildGrayscalePatternMap();
   const hideText = !!project.studentBlankMode;
   const pos = project.legendPos || { x: 12, y: 12 };
   const padX = 10, padTop = 10, titleH = 16, rowH = 24, iconSize = 18, width = 176;
-  const rows = groups.length + numbered.length + regionGroups.length + lineGroups.length + choroRows.length;
+  const rows = groups.length + numbered.length + labelGroups.length + regionGroups.length + lineGroups.length + choroRows.length;
   const height = padTop + titleH + rows * rowH + 8;
 
   pngRoundRect(ctx, pos.x, pos.y, width, height, 8);
@@ -3261,6 +3391,7 @@ async function drawPngLegend(ctx) {
     ...choroRows.map(r => ({ key: r.key, kind: 'choro', data: r })),
     ...groups.map(g => ({ key: markerLegendKey(g.style, g.color), kind: 'marker', data: g })),
     ...numbered.map((m, i) => ({ key: m.id, kind: 'numbered', data: { m, number: i + 1 } })),
+    ...labelGroups.map(g => ({ key: labelLegendKey(g.color), kind: 'label', data: g })),
     ...regionGroups.map(g => ({ key: regionLegendKey(g.color, g.pattern), kind: 'region', data: g })),
     ...lineGroups.map(g => ({ key: lineLegendKey(g.color, g.style), kind: 'line', data: g })),
   ];
@@ -3283,6 +3414,13 @@ async function drawPngLegend(ctx) {
       img = await svgToImage(choroSwatchSvg(data.hex, iconSize));
       fallback = data.label;
       textVal = project.choroLegendText[key];
+    } else if (kind === 'label') {
+      // On paper an uncaptioned label row says which labels are in it
+      // ("Nile, Congo and Niger") rather than "(green)", for the same
+      // reason a shaded-region row does.
+      img = await svgToImage(labelSwatchSvg(data.color, iconSize));
+      fallback = regionGroupCaption(data.names) || `(${data.color} labels)`;
+      textVal = project.labelLegendText[key];
     } else if (kind === 'region') {
       // The legend text lookup key above stays on the region's real,
       // user-chosen pattern (regionLegendKey) — only the drawn swatch
@@ -4338,6 +4476,7 @@ async function loadActiveProjectIntoUI(opts) {
   syncPageFormatControls();
   applyViewportSize();
   el('grayscaleSafeCheck').checked = project.grayscaleSafePrint !== false;
+  el('labelAutoColorCheck').checked = project.labelAutoColor !== false;
   syncChoroControls();
   syncWorksheetControls();
   refreshLabelSetSelect();
