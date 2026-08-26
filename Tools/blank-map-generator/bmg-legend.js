@@ -1,7 +1,8 @@
 // bmg-legend.js — auto-built key: one row per distinct marker style+color
-// combo in use, one row per shaded-region color+pattern combo, and one row
-// per line color+style combo, each with an editable caption ("star = state
-// capital", "red hatch = deforested area", "blue dashed = trade route").
+// combo in use, one row per shaded-region color+pattern combo, one row per
+// line color+style combo, and one row per *colored* text-label color, each
+// with an editable caption ("star = state capital", "red hatch = deforested
+// area", "blue dashed = trade route", "green text = mountain ranges").
 // Marker rows also carry a color and size <select> so a whole style+color
 // group (e.g. "every blue pin") can be recolored or resized after the
 // fact, letting two colors of the same style stand for two different
@@ -56,6 +57,16 @@ export function lineLegendKey(color, style) {
   return style && style !== "solid" ? `${color}::${style}` : color;
 }
 
+// Text labels only earn a key row once they carry a colour: an uncoloured
+// label is the default look every label had before per-label colour existed,
+// and it already says what it means on the map, so giving it a row would put
+// a meaningless swatch in every existing project's key. The key is namespaced
+// ("label:green") rather than a bare colour so it can never collide with a
+// region or line row's colour key inside the one flat legendOrder array.
+export function labelLegendKey(color) {
+  return `label:${color}`;
+}
+
 // Choropleth class rows are keyed by class index, not by colour: the whole
 // point of a sequential ramp is that the colours are positions in an order,
 // so "the third band" is the stable thing to hang a caption on. Rebuilding
@@ -65,7 +76,7 @@ export function choroLegendKey(classIndex) {
 }
 
 export function createLegendPanel(panelEl, {
-  onMarkerTextChange, onRegionTextChange, onLineTextChange, onChoroTextChange,
+  onMarkerTextChange, onRegionTextChange, onLineTextChange, onChoroTextChange, onLabelTextChange,
   onMarkerColorChange, onMarkerSizeChange, onMove, onReorder,
   onNumberedTextChange, onNumberedColorChange, onNumberedSizeChange,
 } = {}) {
@@ -201,6 +212,7 @@ export function createLegendPanel(panelEl, {
    */
   function render({
     markers, legendText, iconSvg, markerColorHex, colorOptions = [], sizeOptions = [],
+    labels, labelLegendText, labelSwatchSvg: labelSwatch,
     regions, regionLegendText, swatchSvg,
     lines, lineLegendText, lineSwatchSvg: lineSwatch,
     choroRows, choroLegendText, choroSwatchSvg: choroSwatch,
@@ -215,6 +227,21 @@ export function createLegendPanel(panelEl, {
       if (seenGroup.has(gkey)) return;
       seenGroup.add(gkey);
       groups.push({ style: m.style, color: m.color, size: m.size });
+    });
+    // One row per label colour actually in use, in the order the colours were
+    // first placed. Each group collects its labels' own text so an uncaptioned
+    // row can suggest what that colour is being used for.
+    const labelGroups = [];
+    const labelGroupIndex = new Map();
+    (labels || []).forEach(l => {
+      if (!l.color) return;
+      let group = labelGroupIndex.get(l.color);
+      if (!group) {
+        group = { color: l.color, names: [] };
+        labelGroupIndex.set(l.color, group);
+        labelGroups.push(group);
+      }
+      if (l.text) group.names.push(l.text);
     });
     const regionGroups = [];
     const regionGroupIndex = new Map();
@@ -237,7 +264,7 @@ export function createLegendPanel(panelEl, {
       lineGroups.push({ color: l.color, style: l.style });
     });
     const choro = (choroRows || []).filter(r => r && r.hex);
-    if (!groups.length && !numbered.length && !regionGroups.length && !lineGroups.length && !choro.length) { panelEl.hidden = true; return; }
+    if (!groups.length && !numbered.length && !labelGroups.length && !regionGroups.length && !lineGroups.length && !choro.length) { panelEl.hidden = true; return; }
     panelEl.hidden = false;
 
     const items = [];
@@ -250,6 +277,11 @@ export function createLegendPanel(panelEl, {
     }));
     groups.forEach(g => items.push(buildMarkerRow(g, legendText, iconSvg, markerColorHex, colorOptions, sizeOptions)));
     numbered.forEach((m, i) => items.push(buildNumberedRow(m, i + 1, legendText, iconSvg, markerColorHex, colorOptions, sizeOptions)));
+    labelGroups.forEach(g => {
+      const key = labelLegendKey(g.color);
+      const placeholder = regionGroupCaption(g.names) || "What do these labels mean?";
+      items.push({ row: buildCaptionRow(key, labelLegendText, labelSwatch(g.color, 18), placeholder, onLabelTextChange), key });
+    });
     regionGroups.forEach(g => {
       const key = regionLegendKey(g.color, g.pattern);
       const placeholder = regionGroupCaption(g.names) || "What does this shading mean?";

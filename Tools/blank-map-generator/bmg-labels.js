@@ -9,10 +9,14 @@
 // style controls live inline on the label itself while it's being edited
 // rather than in a toolbar or legend row.
 
-import { PALETTE, colorHex } from "./bmg-colors.js";
+import { LABEL_PALETTE, labelPaletteHex } from "./bmg-colors.js";
 
-export const LABEL_COLORS = PALETTE;
-export const labelColorHex = colorHex;
+// Labels draw from the wider palette (see bmg-colors.js): its first six
+// entries are the shared PALETTE, so nothing colored before this existed
+// changed, and the six extras give the auto-color-each-new-label toggle
+// enough distinct colors to keep a dozen key rows apart.
+export const LABEL_COLORS = LABEL_PALETTE;
+export const labelColorHex = labelPaletteHex;
 
 export const LABEL_SIZES = [
   { key: "small", label: "S", rem: 0.7 },
@@ -27,6 +31,15 @@ export function labelFontSizeRem(size) {
 
 export function labelFontSizePx(size) {
   return labelFontSizeRem(size) * 16;
+}
+
+/** The key's swatch for a group of same-coloured labels: the label's anchor dot plus two text rules in the same colour, so a row reads as "text drawn in this colour" rather than as another marker. */
+export function labelSwatchSvg(color, size = 16) {
+  const hex = labelColorHex(color);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 16 16" aria-hidden="true">` +
+    `<circle cx="3.6" cy="8" r="2.6" fill="${hex}"/>` +
+    `<line x1="8.2" y1="5.6" x2="14.6" y2="5.6" stroke="${hex}" stroke-width="1.8" stroke-linecap="round"/>` +
+    `<line x1="8.2" y1="10.4" x2="12.6" y2="10.4" stroke="${hex}" stroke-width="1.8" stroke-linecap="round"/></svg>`;
 }
 
 export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {}) {
@@ -142,8 +155,9 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
 
   function getLabels() { return labels; }
 
-  function addAt(stageX, stageY, text = "") {
-    const label = { id: newId(), x: stageX, y: stageY, text, color: null, bold: false, italic: false, size: DEFAULT_LABEL_SIZE };
+  /** `color` is a LABEL_COLORS key, or null for the default ink — the caller decides (the tool's "give each new label its own color" toggle picks the next one; everything else passes nothing). */
+  function addAt(stageX, stageY, text = "", color = null) {
+    const label = { id: newId(), x: stageX, y: stageY, text, color, bold: false, italic: false, size: DEFAULT_LABEL_SIZE };
     labels.push(label);
     reconcile();
     return label;
