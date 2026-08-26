@@ -53,8 +53,30 @@ if (!fs.existsSync(ZIP_PATH)) {
   fail(`${path.relative(SITE, ZIP_PATH)} not found — run \`npm run offline:build\` first.`);
 }
 
+// Unzip portably. `unzip` is the obvious choice on Linux/macOS but simply
+// doesn't exist on Windows, where this repo is also edited — so fall back to
+// bsdtar (`tar.exe`, shipped in System32 since Windows 10 1803, and on macOS),
+// which reads zip archives natively. GNU tar on Linux does NOT, hence the
+// order: unzip first, tar only as the fallback.
+function unzipTo(zip, dest) {
+  const attempts = [
+    ['unzip', ['-q', zip, '-d', dest]],
+    ['tar', ['-xf', zip, '-C', dest]],
+  ];
+  const failures = [];
+  for (const [cmd, args] of attempts) {
+    try {
+      execFileSync(cmd, args, { stdio: 'pipe' });
+      return;
+    } catch (e) {
+      failures.push(`${cmd}: ${e.code === 'ENOENT' ? 'not installed' : (e.stderr?.toString().trim() || e.message)}`);
+    }
+  }
+  fail('could not unzip the offline copy — no working extractor found.\n    ' + failures.join('\n    '));
+}
+
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'aplp-offline-verify-'));
-execFileSync('unzip', ['-q', ZIP_PATH, '-d', scratch]);
+unzipTo(ZIP_PATH, scratch);
 
 const browser = await launch();
 const errors = [];
