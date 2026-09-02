@@ -29,6 +29,16 @@
 //   3. If an expected failure stops failing, the runner says so and exits
 //      nonzero — the entry cannot outlive the bug it documents.
 //
+// A CRASHED SUITE NAMES ITSELF. A suite that exits nonzero without printing a
+// `FAIL` line died before its own reporter ran — an unhandled rejection, a
+// setup throw, a port already bound, the browser going away. The reason is on
+// its stderr, and in a 17-minute CI log that is a thousand lines above the
+// summary, which is where anyone looks first. So the summary repeats the last
+// lines of a crashed suite's stderr under its name. main's CI run #8 on
+// 2026-09-02 is the case that paid for this: "exited 1 without printing a FAIL
+// line" was all the summary said, and the `route.fetch: read ECONNRESET` that
+// explained it sat unread at position 57 of 121 for a full session.
+//
 // Suites are run one at a time, in the order suites.json lists them. Several
 // drive a real browser and bind a fixed localhost port (drive-seating.mjs takes
 // 8146), so running them concurrently would make them fight over ports; the
@@ -189,11 +199,11 @@ function runOne(suite) {
   return new Promise(resolve => {
     const started = Date.now();
     const child = spawn(process.execPath, [suite], { cwd: SITE, stdio: ['ignore', 'pipe', 'pipe'] });
-    let out = '';
+    let out = '', err = '';
     child.stdout.on('data', d => { out += d; process.stdout.write(d); });
-    child.stderr.on('data', d => { out += d; process.stderr.write(d); });
-    child.on('error', err => resolve({ suite, code: 1, out, err: String(err), ms: Date.now() - started }));
-    child.on('close', code => resolve({ suite, code, out, ms: Date.now() - started }));
+    child.stderr.on('data', d => { out += d; err += d; process.stderr.write(d); });
+    child.on('error', e => resolve({ suite, code: 1, out, err: err + String(e), ms: Date.now() - started }));
+    child.on('close', code => resolve({ suite, code, out, err, ms: Date.now() - started }));
   });
 }
 
@@ -207,6 +217,17 @@ for (let i = 0; i < selected.length; i++) {
 }
 
 /* ── classify ───────────────────────────────────────────────────────────── */
+
+/** The last few meaningful lines of a crashed suite's output — enough to name
+ *  the exception and where it came from, not the whole transcript. */
+function tailOf(text, max = 12) {
+  return String(text || '')
+    .split(/\r?\n/)
+    .map(l => l.trimEnd())
+    .filter(Boolean)
+    .slice(-max)
+    .map(l => (l.length > 200 ? l.slice(0, 197) + '...' : l));
+}
 
 const real = [];        // genuinely failed
 const tolerated = [];   // failed, but only on assertions suites.json expects
@@ -226,7 +247,12 @@ for (const r of results) {
   }
 
   if (!failedLines.length) {
-    real.push({ suite: r.suite, why: `exited ${r.code} without printing a FAIL line (crashed, or a setup step threw)`, lines: [] });
+    real.push({
+      suite: r.suite,
+      why: `exited ${r.code} without printing a FAIL line (crashed, or a setup step threw)`,
+      lines: [],
+      crash: tailOf(r.err || r.out),
+    });
     continue;
   }
 
@@ -266,6 +292,12 @@ if (real.length) {
   for (const f of real) {
     console.log(`  ${f.suite} (${f.why})`);
     for (const l of f.lines) console.log(`    FAIL ${l}`);
+    if (f.crash && f.crash.length) {
+      console.log(`    last ${f.crash.length} line${f.crash.length === 1 ? '' : 's'} the suite wrote before it died:`);
+      for (const l of f.crash) console.log(`      ${l}`);
+    } else if (f.crash) {
+      console.log('    the suite wrote nothing to stderr or stdout before it died.');
+    }
     console.log('');
   }
   console.log('Every suite above ran — this is the complete list, not the first failure.');

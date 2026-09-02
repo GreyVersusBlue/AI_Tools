@@ -285,13 +285,35 @@ caching of same-origin GETs already works, so an on-demand tier is nearly free.
   (it converges once the group shape is read off the live page) and dropped clicks
   (cutting the settle from 220ms to 30ms still lands all 20 generations).
 
-  **Still red on `main`, and not this phase's:** `exit-ticket-generator/test/
-  smoke-prompt-sets.mjs` failed run #8 with "exited 1 without printing a FAIL line
-  (crashed, or a setup step threw)". It passes 8/8 locally and could not be
-  reproduced here, so it is unfixed and needs its own look — most likely runner
-  side. Two different non-deterministic failures in three consecutive CI runs is
-  the real finding: now that Path 2 P1 runs all 121 suites on every push, suite
-  reliability is a live problem and belongs in a Path 2 phase.
+  **Was red on `main` (run #8), root-caused and fixed 2026-09-02:**
+  `exit-ticket-generator/test/smoke-prompt-sets.mjs` failed with "exited 1
+  without printing a FAIL line (crashed, or a setup step threw)" and passed 8/8
+  locally. The run's own log had the answer a thousand lines above the summary:
+  `route.fetch: read ECONNRESET` on `GET /_shared/ink-paper.css`, thrown inside
+  the harness's CSS-rewriting route handler — an unhandled rejection, which
+  Node exits on before the suite's reporter runs. Mechanism, measured rather
+  than guessed: `harness.serve()` answered keep-alive, Playwright's
+  `route.fetch()` pools its connections on a keep-alive agent that never closes
+  them itself, and Node's http server destroys an idle keep-alive socket about
+  6 s after its last response (`keepAliveTimeout` 5 s plus a second of grace —
+  6006 ms observed). The suite's `page.reload()` landed on that instant: first
+  stylesheet load 19:24:18.4, crash 19:24:24.41. Reproduced deterministically
+  by issuing a request in the same event-loop iteration as the server's idle
+  close (5 of 5 `ECONNRESET` against the old harness, 0 of 5 after the fix).
+  Any suite that re-requests a stylesheet ≥6 s after its last one is exposed —
+  most of the 75 that reload or navigate — but the window is one loop
+  iteration, hence rare and unreproducible by rerunning. Fixed in the harness,
+  not the suite: every response now carries `Connection: close`, so no pooled
+  socket exists to lose the race on; the CSS fetch retries once on a fresh
+  connection; and no route-handler failure can escape as an unhandled
+  rejection — it is recorded on `page.__errs`, where the suite's own "no
+  page/console errors" assertion turns it into a named FAIL. `run-suites.mjs`
+  now repeats the last lines of a crashed suite's stderr under its name in the
+  summary, so the next crash explains itself in the CI tail. Two different
+  non-deterministic failures in three consecutive CI runs remains the finding
+  for Path 2: now that P1 runs all 121 suites on every push, suite reliability
+  is a live problem, and nobody has measured the rate for anything but the
+  pairing-history suite.
 - **P3 — Split the precache into tiers.** Shell tier (index, `_shared/*`, vendor,
   icons, manifest) plus the top ~10 tools by daily use, precached at install.
   Everything else stays in `PRECACHE_URLS` but is fetched by a *second*, deferred

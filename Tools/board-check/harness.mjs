@@ -68,9 +68,24 @@ const MIME = {
 };
 
 /** Static server rooted at the repo root. URL paths are percent-decoded, so
- *  `/Tools/005-Seating%20Chart%20Generator.html` finds the file with spaces. */
+ *  `/Tools/005-Seating%20Chart%20Generator.html` finds the file with spaces.
+ *
+ *  Every response carries `Connection: close`. Node's http server otherwise
+ *  answers keep-alive and closes an idle socket about six seconds after its
+ *  last response (keepAliveTimeout 5 s, plus a second of grace), and
+ *  Playwright's route.fetch() below pools its connections on a keep-alive
+ *  agent that never closes them itself. A stylesheet re-requested at that
+ *  exact moment — a page.reload() six seconds after first load is enough —
+ *  is written onto a socket the server has just destroyed, and the fetch
+ *  rejects with `read ECONNRESET`. That is how main's CI run #8 crashed
+ *  exit-ticket-generator/test/smoke-prompt-sets.mjs on 2026-09-02, five
+ *  seconds into a suite that passes locally: the window is one event-loop
+ *  iteration, so it is rare, and it can land on any suite. No pooled socket
+ *  means no idle socket to lose the race on; a fresh loopback connection per
+ *  request costs nothing measurable. */
 export function serve(port) {
   const server = http.createServer((req, res) => {
+    res.setHeader('Connection', 'close');
     let pathname;
     try {
       pathname = decodeURIComponent(new URL(req.url, `http://127.0.0.1:${port}`).pathname);
@@ -158,11 +173,16 @@ export async function prepPage(browser, base, { width, height, dsf = 1, mobile =
   page.__errs = [];
   const abortedByUs = new Set();
 
-  await page.route('**/*', async route => {
+  const handle = async route => {
     const url = route.request().url();
     if (url.startsWith(base)) {
       if (/\.css(\?|$)/.test(url)) {
-        const resp = await route.fetch();
+        // One retry: a failed fetch here is a dead connection, not a dead
+        // file (the server is in this same process), and the retry opens a
+        // fresh one. `Connection: close` in serve() already makes this a
+        // belt-and-braces path — see its header.
+        let resp;
+        try { resp = await route.fetch(); } catch { resp = await route.fetch(); }
         const body = await resp.text();
         if (body.includes('fonts.googleapis.com')) {
           return route.fulfill({
@@ -179,6 +199,26 @@ export async function prepPage(browser, base, { width, height, dsf = 1, mobile =
     abortedByUs.add(url);
     if (!KNOWN_NOISE.test(url)) page.__blocked.push(url);
     return route.abort();
+  };
+
+  // Nothing thrown in here may escape. A rejection from a route handler is an
+  // unhandled promise rejection in the suite's process, and Node's default for
+  // that is to exit 1 on the spot — before the suite's own reporter runs, so
+  // the run shows "exited 1 without printing a FAIL line" and nothing else.
+  // A harness-side failure is recorded on page.__errs instead, where every
+  // suite's "no page/console errors" assertion turns it into a named FAIL.
+  // Errors from a page or context that has already gone away (a suite closing
+  // its browser with a request in flight) are noise, not findings.
+  await page.route('**/*', async route => {
+    try {
+      await handle(route);
+    } catch (e) {
+      const msg = String(e && e.message || e).split('\n')[0];
+      if (!/closed|already handled|detached|Target page/i.test(msg)) {
+        page.__errs.push(`harness route failed: ${route.request().url()} — ${msg}`);
+      }
+      try { await route.continue(); } catch {}
+    }
   });
 
   page.on('pageerror', e => page.__errs.push(String(e)));
