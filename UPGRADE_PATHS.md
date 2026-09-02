@@ -28,7 +28,7 @@ list).
 | Tests | 120 Playwright/Node suites chained with `&&` in one `npm test` string; 62 per-tool `test/` folders; guards `check:dedupe`, `check:social`, `check:tests`. **No CI** (`.github/` does not exist), no linter, no automated a11y check |
 | Known red | one assertion in `Tools/seating-chart/test/drive-seating.mjs` (mobile toolbar pushes the chart ~1050 px down at 375 px) |
 | Storage | ~206 distinct localStorage keys across 69 writing tools, three naming eras; IndexedDB in 3 places (`bmg-maps`, `rgb-audio`, `stviz-recovery`); quota handled in ~17 files |
-| Dead / unlinked | `Tools/Old Designs/`, `Tools/New Designs/`, `index_backup.html`, `v3`–`v4` landing variants, `Other Landing Page ideas/`. **Correction (2026-09-02): `v2-subplans.html` is not dead** — it is linked from `v1-inbox.html`, which `index.html`'s footer links. Neither is precached. |
+| Dead / unlinked | `Tools/Old Designs/`, `Tools/New Designs/`, `index_backup.html`, `Other Landing Page ideas/`. **Correction (2026-09-02): the `v1`–`v4` landing variants are not dead.** They are a reachable chain — `index.html`'s footer links `v1-inbox.html`, which links `v2-subplans.html`, which links `v3-bellboard.html`, which links `v4-riso.html`. None of the four is precached, so all four 404 offline while being reachable. Whether to precache them or cut the chain is a decision for Path 1 P2. |
 
 Concrete defects found during the survey (small, fix opportunistically, listed once
 here so they stop being rediscovered):
@@ -37,14 +37,15 @@ here so they stop being rediscovered):
   but is **not in `PRECACHE_URLS`** — bulk photo import breaks offline.
 - `v1-inbox.html` is linked from `index.html`'s footer ("Prefer a different look?")
   but is **not precached** — it 404s offline while being advertised.
-- **Measured 2026-09-02, during Path 2 P1: the precache gap is 10, not 2.** Beyond
+- **Measured 2026-09-02, during Path 2 P1: the precache gap is 12, not 2.** Beyond
   the two above, four more tool scripts are referenced by a live page and missing
   from `PRECACHE_URLS` — `certificate-award-maker/cam-logo.js` (042),
   `number-talks-board/dot-images.js` (024),
   `vocab-flashcard-generator/vfg-conjdrill-link.js` (040) and
   `writing-prompt-generator/wpg-rubric-link.js` (025) — plus `ideas-backlog.html`
-  and `v2-subplans.html`, and both maskable icons, which `manifest.json` names and
-  nothing precaches, so the install dialog's icon fails offline. The maskable pair
+  and the whole `v1`–`v4` landing chain, and both maskable icons, which
+  `manifest.json` names and nothing precaches, so the install dialog's icon fails
+  offline. The maskable pair
   is a *different class* of miss: the reference lives in JSON, not an HTML
   `src`/`href`, so Path 1 P2's `check-precache.mjs` has to read `manifest.json`
   too or it will not see them. The reverse direction is clean — no listed entry is
