@@ -5,20 +5,32 @@
 // This exists because of a failure that had already happened, silently, for
 // days: `package.json` referenced `Tools/qr-code-generator/test/smoke-roster.mjs`
 // from both the `test` chain and a `test:qr` script, and that file was never
-// committed. The `test` script is `&&`-joined, so `npm test` died on the
+// committed. The `test` script was `&&`-joined, so `npm test` died on the
 // missing file about two-thirds of the way down the list and every suite after
 // it simply never ran — including one carrying a genuinely failing assertion.
 // Nothing anywhere went red in a way that named the cause.
 //
-// Three checks, all of them things a human reviewer would have to hold in
+// The list itself has since moved out of that string and into
+// `Tools/board-check/suites.json`, read by `run-suites.mjs`. That removes the
+// stop-at-the-first-failure half of the original bug but not this half: a path
+// in a JSON file can name a missing suite exactly as easily as a path in a
+// shell string could, and a suite on disk that the list forgets is still a
+// suite nobody runs. So the same three checks apply, now across the JSON list,
+// the `test:*` shortcuts, and the tree.
+//
+// Four checks, all of them things a human reviewer would have to hold in
 // their head across two files:
 //
-//   1. MISSING   — every `node <path>` in the `test` chain, and in every
+//   0. CONFIG    — suites.json parses, lists suites as an array of strings, and
+//                  every expectedFailures entry names a suite that is in it and
+//                  carries the assertion text and reason that make the entry
+//                  auditable.
+//   1. MISSING   — every path in suites.json, and every `node <path>` in a
 //                  `test:*` script, resolves to a file that exists.
 //   2. ORPHAN    — every suite on disk under `Tools/*/test/*.mjs` is named by
-//                  the `test` chain. A suite nobody runs is worse than no
+//                  suites.json. A suite nobody runs is worse than no
 //                  suite: it reads as coverage on the file listing.
-//   3. UNSCRIPTED— every suite in the `test` chain also has its own `test:*`
+//   3. UNSCRIPTED— every suite in suites.json also has its own `test:*`
 //                  script, so a single tool can be re-run without the full
 //                  40-suite pass. This one is advisory and prints a warning
 //                  rather than failing, because the shape of the shortcut
@@ -31,7 +43,7 @@
 // a tool that happens to live in test/" is not something a filename can be
 // trusted to answer.
 //
-// Exit code: 0 all clean, 1 any MISSING or ORPHAN.
+// Exit code: 0 all clean, 1 any CONFIG, MISSING or ORPHAN.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -48,11 +60,56 @@ function suitesIn(script) {
   return [...String(script || '').matchAll(/node\s+([^\s&|]+\.m?js)/g)].map(m => m[1]);
 }
 
-const chain = suitesIn(scripts.test);
 const shortcutNames = Object.keys(scripts).filter(k => k.startsWith('test:'));
 
 const problems = [];
 const warnings = [];
+
+/* ── 0. CONFIG ──────────────────────────────────────────────────────────── */
+/* The suite list lives in JSON now, so it can be malformed in ways a shell
+   string could not be. Check the shape before trusting anything below it. */
+const CONFIG_PATH = 'Tools/board-check/suites.json';
+let config = null;
+try {
+  config = JSON.parse(fs.readFileSync(path.join(SITE, CONFIG_PATH), 'utf8'));
+} catch (e) {
+  console.error(`check-tests: ${CONFIG_PATH} could not be read as JSON — ${e.message}`);
+  process.exit(1);
+}
+
+let chain = [];
+if (!Array.isArray(config.suites) || !config.suites.every(s => typeof s === 'string' && s)) {
+  problems.push(`CONFIG      ${CONFIG_PATH}\n            "suites" must be an array of path strings`);
+} else {
+  chain = config.suites;
+  const seen = new Set();
+  for (const p of chain) {
+    if (seen.has(p)) problems.push(`CONFIG      ${CONFIG_PATH}\n            "${p}" is listed twice`);
+    seen.add(p);
+  }
+}
+
+const expected = config.expectedFailures === undefined ? [] : config.expectedFailures;
+if (!Array.isArray(expected)) {
+  problems.push(`CONFIG      ${CONFIG_PATH}\n            "expectedFailures" must be an array`);
+} else {
+  const inChainSet = new Set(chain);
+  for (const e of expected) {
+    const where = `${CONFIG_PATH} expectedFailures[${expected.indexOf(e)}]`;
+    if (!e || typeof e !== 'object') { problems.push(`CONFIG      ${where}\n            not an object`); continue; }
+    if (!e.suite || !inChainSet.has(e.suite)) {
+      problems.push(`CONFIG      ${where}\n            names suite "${e.suite}", which is not in the list`);
+    }
+    // An expected failure without its assertion text would swallow the whole
+    // suite; without a reason nobody can tell later whether it is still true.
+    if (!e.assertion || typeof e.assertion !== 'string') {
+      problems.push(`CONFIG      ${where}\n            needs "assertion": the exact text of the failing assertion`);
+    }
+    if (!e.reason || typeof e.reason !== 'string') {
+      problems.push(`CONFIG      ${where}\n            needs "reason": why this is red and where the fix belongs`);
+    }
+  }
+}
 
 /* ── 1. MISSING ─────────────────────────────────────────────────────────── */
 const referenced = new Map();   // path -> the script names that name it
@@ -60,7 +117,7 @@ const note = (p, from) => {
   if (!referenced.has(p)) referenced.set(p, []);
   referenced.get(p).push(from);
 };
-chain.forEach(p => note(p, 'test'));
+chain.forEach(p => note(p, CONFIG_PATH));
 for (const name of shortcutNames) suitesIn(scripts[name]).forEach(p => note(p, name));
 
 for (const [p, from] of referenced) {
@@ -126,13 +183,13 @@ if (problems.length) {
   console.error('\ncheck-tests: the test wiring and the test files disagree (' +
     problems.length + ' problem' + (problems.length === 1 ? '' : 's') + '):\n');
   for (const p of problems.sort()) console.error('  ' + p);
-  console.error('\n"npm test" is &&-joined: a missing file stops the run there and every');
-  console.error('suite after it never executes, with nothing naming the cause. Add the');
-  console.error('file, or take the path out of package.json — but do not leave them');
-  console.error('disagreeing.');
+  console.error('\nAdd the file, or take the path out of ' + CONFIG_PATH + ' — but do not');
+  console.error('leave them disagreeing. A path naming a suite that is not there fails the');
+  console.error('run for a reason nobody can act on; a suite on disk that the list forgets');
+  console.error('reads as coverage while running never.');
   process.exit(1);
 }
 
-console.log('check-tests: OK — ' + chain.length + ' suites in the chain, all present; ' +
+console.log('check-tests: OK — ' + chain.length + ' suites in suites.json, all present; ' +
   onDisk.length + ' on disk, all wired up' +
   (warnings.length ? '; ' + warnings.length + ' without a test:* shortcut (advisory).' : '.'));
