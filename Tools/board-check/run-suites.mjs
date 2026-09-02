@@ -88,22 +88,37 @@ const valueOf = name => {
 //       the filename — percent-encoded or not, which is how the suites write it.
 function changedFiles(base) {
   const ref = base || 'origin/main';
+  // -z throughout: half this repo's tool pages have spaces in their filenames
+  // ("Tools/005-Seating Chart Generator.html"), and git's default output quotes
+  // and escapes those, so a newline-split list hands back a path that matches
+  // nothing on disk. NUL-delimited output is the only shape that survives.
   const run = args => execFileSync('git', args, { cwd: SITE, encoding: 'utf8' });
-  let merged = '';
+  const nul = out => out.split('\0').map(s => s.trim()).filter(Boolean);
+
+  let merged = [];
   try {
-    merged = run(['diff', '--name-only', `${ref}...HEAD`]);
+    merged = nul(run(['diff', '--name-only', '-z', `${ref}...HEAD`]));
   } catch {
     try {
-      merged = run(['diff', '--name-only', ref]);
+      merged = nul(run(['diff', '--name-only', '-z', ref]));
     } catch (e) {
       console.error(`run-suites: --changed could not diff against ${ref} — ${e.message}`);
       console.error('Pass an available ref with --base, or run without --changed.');
       process.exit(1);
     }
   }
-  let working = '';
-  try { working = run(['status', '--porcelain']).split('\n').map(l => l.slice(3)).join('\n'); } catch {}
-  return [...new Set((merged + '\n' + working).split('\n').map(s => s.trim()).filter(Boolean))];
+
+  // `status --porcelain -z` emits "XY path\0" per entry (a rename adds a second
+  // \0-terminated field, which we simply also treat as a touched path).
+  let working = [];
+  try {
+    working = run(['status', '--porcelain', '-z'])
+      .split('\0').filter(Boolean)
+      .map(e => (/^[ MADRCU?!]{2} /.test(e) ? e.slice(3) : e).trim())
+      .filter(Boolean);
+  } catch {}
+
+  return [...new Set([...merged, ...working])];
 }
 
 const SITE_WIDE = [/^_shared\//, /^sw\.js$/, /^index\.html$/, /^Tools\/board-check\//, /^package(-lock)?\.json$/];
