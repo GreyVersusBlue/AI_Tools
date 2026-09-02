@@ -1,0 +1,112 @@
+# CI — the guards and the full suite, on every pull request and every push to main.
+#
+# Until this file existed, 120 test suites and three read-only guards ran only
+# when a session remembered to run them. They are all designed to be
+# sandbox-safe (no network, no credentials, a static server on 127.0.0.1), so
+# there was never a reason they could not run here except that nobody had
+# written it down.
+#
+# The known-red seating assertion does NOT fail this workflow: it is recorded in
+# Tools/board-check/suites.json expectedFailures, so run-suites.mjs prints it
+# with its reason on every run and exits 0. That is deliberate and narrow — the
+# same suite failing a second way, or that assertion starting to pass, both turn
+# this red. See run-suites.mjs's header. The alternative, loosening the
+# assertion, is the one thing CLAUDE.md says not to do.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to the same branch makes the first run's answer stale.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # run-suites.mjs --changed diffs against origin/main, and the offline
+          # copy check reads git history. A shallow clone has neither.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dev dependencies
+        run: npm ci
+
+      # Keyed on the resolved Playwright version, so a version bump misses the
+      # cache and downloads the matching browser instead of reusing the old one.
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      # A cache hit restores the browser but not the system libraries it links
+      # against, which live outside ~/.cache and change with the runner image.
+      - name: Install Chromium system dependencies
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # The guards are read-only and fast, so they run first and independently:
+      # `!cancelled()` means one failing guard still lets the others report,
+      # rather than the first one hiding the rest — the same reasoning that
+      # produced run-suites.mjs.
+      #
+      # Not `always()`, which was the first attempt and is wrong here: it runs a
+      # step even when the JOB is cancelled, so it fights the cancel-in-progress
+      # concurrency rule above. Observed live — pushing a second commit queued a
+      # new run but the superseded one kept grinding through the 20-minute suite
+      # instead of stopping. `!cancelled()` keeps the report-everything behaviour
+      # and lets a cancel actually cancel.
+      - name: 'Guard: vendored-library duplication'
+        if: '!cancelled()'
+        run: npm run check:dedupe
+
+      - name: 'Guard: test wiring matches the test files'
+        if: '!cancelled()'
+        run: npm run check:tests
+
+      - name: 'Guard: social/OG meta consistency'
+        if: '!cancelled()'
+        run: npm run check:social
+
+      - name: Test suites
+        if: '!cancelled()'
+        run: npm test
+
+      # Screenshots and printed PDFs the browser suites write as they go. On a
+      # failure these are usually the difference between "a click did nothing"
+      # and knowing which click.
+      - name: Upload suite artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: suite-output
+          path: |
+            Tools/*/shots/**
+          if-no-files-found: ignore
+          retention-days: 7
