@@ -30,6 +30,30 @@ const server = await serve(PORT);
 const browser = await launch();
 const page = await prepPage(browser, BASE, { width: 1280, height: 1200 });
 
+/* Record what the page looked like at the moment window.print() was called,
+   and do not actually print.
+
+   The assertion below used to click the button, wait 400ms and then check that
+   body still carried `printing-slips`. That is a race the test cannot win: the
+   page adds the class, calls window.print(), and removes the class again on
+   `afterprint` — and in a headless browser, with no print dialog to wait on,
+   `afterprint` fires on the browser's own schedule. Chromium 1194 had not got
+   there within 400ms and Chromium 1234 had, so the suite passed locally and
+   failed in CI on the same commit.
+
+   Sampling the state *inside* print() tests what the assertion was always
+   trying to say — the class is applied for the print pass — without depending
+   on when the class comes back off. Not calling through also drops a real
+   headless print from the run. */
+await page.addInitScript(() => {
+  window.__printedWith = null;
+  window.print = function () {
+    window.__printedWith = {
+      printingSlips: document.body.classList.contains('printing-slips'),
+    };
+  };
+});
+
 /* Four students chosen to hit every branch of triageStudent(), matching the
    hand-worked cases in grade-math.test.mjs so the two suites cross-check:
      Ada    Q1 a recorded zero, Q2-4 strong  -> final B, one quarter (Q1,
@@ -130,7 +154,7 @@ ok(/Polo, Marco/.test(slipHtml), 'Marco is on a slip');
 ok(/Not yet entered: Quarter 3/.test(slipHtml), "and it names Q3 as not yet entered");
 ok(/He, Zheng/.test(slipHtml), 'Zheng is on a slip');
 ok(!/Bly, Nellie/.test(slipHtml), 'Nellie — nothing flagged — gets no catch-up slip');
-ok(await page.evaluate(() => document.body.classList.contains('printing-slips')),
+ok(await page.evaluate(() => window.__printedWith && window.__printedWith.printingSlips === true),
   'the printing-slips class is applied for the print pass');
 await page.evaluate(() => document.body.classList.remove('printing-slips'));
 
