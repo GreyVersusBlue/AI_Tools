@@ -340,7 +340,8 @@ the readout must exist. Decide the mid-lesson suppression rule in P1.
 ## 2. CI, a real test runner, automated a11y and sweeps
 
 **Status.** P2 shipped (#159), P1 shipped (#160) — in that order; see the P1 note
-for why they swapped. P3–P5 open.
+for why they swapped. P6 (suite reliability, added after CI's first day) shipped
+2026-09-02. P3–P5 open.
 
 **Why.** 120 suites and three guard scripts exist and are designed to be
 sandbox-safe, and nothing runs them unless a session remembers. The `&&` chain
@@ -438,6 +439,42 @@ and have only ever been found by luck.
 - **P5 — Lint.** A minimal ESLint config for `_shared/*.js`, `Tools/*/*.js` and the
   `.mjs` tooling (no-undef, no-unused-vars, eqeqeq) — not for inline `<script>` in
   HTML, which would be a much larger fight.
+- **P6 — Suite reliability.** Added after P1's first day: 121 suites started
+  running on every push and two different ones failed non-deterministically
+  within three runs. Three deliverables — a crashed suite reports why it
+  crashed, a way to measure which suites are non-deterministic and at what
+  rate, and a written policy for property-style assertions over randomised tool
+  behaviour.
+
+  **Shipped 2026-09-02.** (1) `run-suites.mjs` prints the last lines of a
+  crashed suite's stderr under its name in the summary; the first crash it
+  would have explained (`route.fetch: read ECONNRESET`, run #8) was the
+  harness's own keep-alive socket race, root-caused and fixed in `harness.mjs`
+  — see Path 1 P2's note for the mechanism and the deterministic reproduction.
+  (2) `run-suites.mjs --repeat N [--only <tool>]` runs the selection N times
+  back to back and tallies, per suite, which passes it failed in and on which
+  assertion; a suite with different outcomes in different passes is listed as
+  NON-DETERMINISTIC by name, an expected failure that comes and goes is
+  reported as its own bug, and a suite red in every pass is separated out as
+  deterministic. Verified with flaky, green and always-red fixtures. (3) The
+  policy is in `CLAUDE.md` ("Test tooling"): measure the rate against the
+  parameters read off the running page, then raise the budget until the
+  property holds — never loosen the assertion, never seed `Math.random` in a
+  page-driven suite (pure-logic suites that take an rng parameter, like
+  name-picker's, already seed and are deterministic by construction).
+
+  *Inventory.* Reading every suite for assertions that are probabilistic over
+  the tool's own randomness finds one page-driven case — the pairing-history
+  coverage and spread pair (budget raised to 30 rounds in #162, measured
+  complete in 200,000 of 200,000 simulated trials) — and a handful of
+  pure-logic ones in name-picker's suite (first-pick uniformity over 28,000
+  rounds, 9:1 weighting over 20,000 draws), all driven by a seeded rng.
+  Everything else asserts on deterministic DOM state, so the remaining
+  non-determinism to expect is the harness/timing kind, which `--repeat` still
+  catches and which is a bug to root-cause rather than a rate to tolerate.
+
+  *Measured:* five back-to-back passes of all 121 suites were in flight when
+  this landed; the per-suite tally goes here when it does.
 
 **Model.** Opus throughout.
 

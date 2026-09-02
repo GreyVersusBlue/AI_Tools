@@ -5,6 +5,8 @@
 //   node Tools/board-check/run-suites.mjs --changed
 //   node Tools/board-check/run-suites.mjs --changed --base origin/main
 //   node Tools/board-check/run-suites.mjs --list
+//   node Tools/board-check/run-suites.mjs --repeat 5
+//   node Tools/board-check/run-suites.mjs --repeat 20 --only group-team-generator
 //
 // This replaced the `&&`-joined `npm test` string, whose failure mode is the
 // reason check-tests.mjs exists: the chain stops at the first failing suite and
@@ -28,6 +30,20 @@
 //   2. Every expected failure is printed on every run, with its reason.
 //   3. If an expected failure stops failing, the runner says so and exits
 //      nonzero — the entry cannot outlive the bug it documents.
+//
+// --repeat N runs the selected suites N times back to back — a full pass, then
+// another, not each suite N times — and then reports, per suite, how many
+// passes it failed in and on which assertions. That is the number CI's first
+// day showed was missing: 121 suites started running on every push and two
+// different ones failed non-deterministically within three runs, and nobody
+// could say what rate anything else fails at. One pass tells you a suite is
+// green today; N passes put a bound on how often it is not. A suite that fails
+// in some passes and not others is listed as NON-DETERMINISTIC by name, with
+// the assertion, which is the input the policy in CLAUDE.md ("Test tooling")
+// needs: raise the budget until the property holds, never loosen the
+// assertion. Expected failures are held to the same standard — one that fails
+// in some passes and passes in others is reported too, since an intermittent
+// known-red is a different bug from the one its entry describes.
 //
 // A CRASHED SUITE NAMES ITSELF. A suite that exits nonzero without printing a
 // `FAIL` line died before its own reporter ran — an unhandled rejection, a
@@ -189,6 +205,15 @@ if (flag('--list')) {
   process.exit(0);
 }
 
+let repeat = 1;
+if (flag('--repeat')) {
+  repeat = Number(valueOf('--repeat'));
+  if (!Number.isInteger(repeat) || repeat < 1) {
+    console.error('run-suites: --repeat needs a whole number of passes, e.g. --repeat 5');
+    process.exit(1);
+  }
+}
+
 /* ── run ────────────────────────────────────────────────────────────────── */
 
 /** Assertion text from a suite's own `  FAIL <label>` line — the shape 111 of
@@ -207,13 +232,14 @@ function runOne(suite) {
   });
 }
 
-console.log(`run-suites: ${selectionLabel}\n`);
-
-const results = [];
-for (let i = 0; i < selected.length; i++) {
-  const suite = selected[i];
-  console.log(`[${String(i + 1).padStart(3)}/${selected.length}] ${suite}`);
-  results.push(await runOne(suite));
+async function runAll(passLabel) {
+  const results = [];
+  for (let i = 0; i < selected.length; i++) {
+    const suite = selected[i];
+    console.log(`[${String(i + 1).padStart(3)}/${selected.length}]${passLabel} ${suite}`);
+    results.push(await runOne(suite));
+  }
+  return results;
 }
 
 /* ── classify ───────────────────────────────────────────────────────────── */
@@ -229,44 +255,48 @@ function tailOf(text, max = 12) {
     .map(l => (l.length > 200 ? l.slice(0, 197) + '...' : l));
 }
 
-const real = [];        // genuinely failed
-const tolerated = [];   // failed, but only on assertions suites.json expects
-const stale = [];       // expected to fail, and did not
+function classify(results) {
+  const real = [];        // genuinely failed
+  const tolerated = [];   // failed, but only on assertions suites.json expects
+  const stale = [];       // expected to fail, and did not
 
-for (const r of results) {
-  const expected = expectedFor(r.suite);
-  const failedLines = [...r.out.matchAll(new RegExp(FAIL_LINE.source, 'gm'))]
-    .map(m => m[1].trim())
-    .filter(Boolean);
+  for (const r of results) {
+    const expected = expectedFor(r.suite);
+    const failedLines = [...r.out.matchAll(new RegExp(FAIL_LINE.source, 'gm'))]
+      .map(m => m[1].trim())
+      .filter(Boolean);
 
-  const isExpected = line => expected.find(e => line.startsWith(e.assertion) || line.includes(e.assertion));
+    const isExpected = line => expected.find(e => line.startsWith(e.assertion) || line.includes(e.assertion));
 
-  if (r.code === 0) {
-    if (expected.length) stale.push({ suite: r.suite, expected });
-    continue;
+    if (r.code === 0) {
+      if (expected.length) stale.push({ suite: r.suite, expected });
+      continue;
+    }
+
+    if (!failedLines.length) {
+      real.push({
+        suite: r.suite,
+        why: `exited ${r.code} without printing a FAIL line (crashed, or a setup step threw)`,
+        lines: [],
+        crash: tailOf(r.err || r.out),
+      });
+      continue;
+    }
+
+    const unexpected = failedLines.filter(l => !isExpected(l));
+    if (unexpected.length) real.push({ suite: r.suite, why: `exited ${r.code}`, lines: unexpected });
+    else tolerated.push({ suite: r.suite, lines: failedLines, expected });
   }
-
-  if (!failedLines.length) {
-    real.push({
-      suite: r.suite,
-      why: `exited ${r.code} without printing a FAIL line (crashed, or a setup step threw)`,
-      lines: [],
-      crash: tailOf(r.err || r.out),
-    });
-    continue;
-  }
-
-  const unexpected = failedLines.filter(l => !isExpected(l));
-  if (unexpected.length) real.push({ suite: r.suite, why: `exited ${r.code}`, lines: unexpected });
-  else tolerated.push({ suite: r.suite, lines: failedLines, expected });
+  return { real, tolerated, stale };
 }
 
 /* ── report ─────────────────────────────────────────────────────────────── */
 
+function report(results, { real, tolerated, stale }, passLabel = '') {
 const totalMs = results.reduce((a, r) => a + r.ms, 0);
 const mins = (totalMs / 60000).toFixed(1);
 console.log('\n' + '─'.repeat(72));
-console.log(`run-suites: ${results.length} suite${results.length === 1 ? '' : 's'} in ${mins} min`);
+console.log(`run-suites:${passLabel} ${results.length} suite${results.length === 1 ? '' : 's'} in ${mins} min`);
 
 if (tolerated.length) {
   console.log('\nEXPECTED FAILURES (recorded in suites.json, not counted against the run):\n');
@@ -307,5 +337,87 @@ if (!real.length && !stale.length) {
   console.log(`PASS — ${results.length - tolerated.length} green` +
     (tolerated.length ? `, ${tolerated.length} expected-fail` : '') + '.');
 }
+}
 
-process.exit(real.length || stale.length ? 1 : 0);
+/* ── run ────────────────────────────────────────────────────────────────── */
+
+console.log(`run-suites: ${selectionLabel}${repeat > 1 ? `, ${repeat} passes` : ''}\n`);
+
+if (repeat === 1) {
+  const results = await runAll('');
+  const verdict = classify(results);
+  report(results, verdict);
+  process.exit(verdict.real.length || verdict.stale.length ? 1 : 0);
+}
+
+/* ── --repeat: N passes, then the per-suite tally ───────────────────────── */
+
+const passes = [];
+for (let n = 1; n <= repeat; n++) {
+  const passLabel = ` pass ${n}/${repeat}`;
+  const results = await runAll(passLabel);
+  const verdict = classify(results);
+  report(results, verdict, passLabel);
+  passes.push({ n, results, verdict });
+}
+
+// Per suite: which passes it failed in (real), was tolerated in, or went stale
+// in — a suite whose outcome differs between passes is non-deterministic.
+const tally = new Map(selected.map(s => [s, { real: [], tolerated: [], stale: [], lines: new Map() }]));
+for (const p of passes) {
+  for (const f of p.verdict.real) {
+    const t = tally.get(f.suite);
+    t.real.push(p.n);
+    for (const l of (f.lines.length ? f.lines : [f.why])) t.lines.set(l, (t.lines.get(l) || 0) + 1);
+  }
+  for (const f of p.verdict.tolerated) tally.get(f.suite).tolerated.push(p.n);
+  for (const f of p.verdict.stale) tally.get(f.suite).stale.push(p.n);
+}
+
+const totalMins = (passes.flatMap(p => p.results).reduce((a, r) => a + r.ms, 0) / 60000).toFixed(1);
+console.log('\n' + '═'.repeat(72));
+console.log(`run-suites: ${repeat} passes of ${selected.length} suite${selected.length === 1 ? '' : 's'} in ${totalMins} min\n`);
+
+const varied = [...tally].filter(([, t]) => {
+  const outcomes = new Set();
+  for (let n = 1; n <= repeat; n++) {
+    outcomes.add(t.real.includes(n) ? 'fail' : t.stale.includes(n) ? 'stale' : t.tolerated.includes(n) ? 'expected' : 'pass');
+  }
+  return outcomes.size > 1;
+});
+const alwaysRed = [...tally].filter(([, t]) => t.real.length === repeat);
+
+if (varied.length) {
+  console.log(`NON-DETERMINISTIC — ${varied.length} suite${varied.length === 1 ? '' : 's'} with a different outcome in different passes:\n`);
+  for (const [suite, t] of varied) {
+    const bits = [];
+    if (t.real.length) bits.push(`failed ${t.real.length}/${repeat} (pass${t.real.length === 1 ? '' : 'es'} ${t.real.join(', ')})`);
+    if (t.stale.length) bits.push(`expected failure passed in ${t.stale.length}/${repeat} (pass${t.stale.length === 1 ? '' : 'es'} ${t.stale.join(', ')})`);
+    if (t.tolerated.length && t.tolerated.length < repeat) bits.push(`expected-fail in ${t.tolerated.length}/${repeat}`);
+    console.log(`  ${suite} — ${bits.join('; ')}`);
+    for (const [l, c] of t.lines) console.log(`    ${c}× FAIL ${l}`);
+    console.log('');
+  }
+  console.log('  Measure before deciding: a property assertion over randomised behaviour gets a');
+  console.log('  bigger budget until it is deterministic, never a looser assertion (CLAUDE.md,');
+  console.log('  "Test tooling"). A crash or a timing race is a harness or tool bug to root-cause.');
+}
+
+if (alwaysRed.length) {
+  console.log(`\nFAILED IN EVERY PASS — ${alwaysRed.length} suite${alwaysRed.length === 1 ? '' : 's'} (deterministically red, not flaky):\n`);
+  for (const [suite, t] of alwaysRed) {
+    console.log(`  ${suite}`);
+    for (const [l, c] of t.lines) console.log(`    ${c}× FAIL ${l}`);
+  }
+}
+
+const anyRed = passes.some(p => p.verdict.real.length || p.verdict.stale.length);
+if (!varied.length && !alwaysRed.length && !anyRed) {
+  const tol = [...tally].filter(([, t]) => t.tolerated.length === repeat).length;
+  console.log(`PASS — every suite had the same outcome in all ${repeat} passes: ${selected.length - tol} green` +
+    (tol ? `, ${tol} expected-fail` : '') + '.');
+} else if (!varied.length && !alwaysRed.length) {
+  console.log('Some pass went red — see the per-pass summaries above.');
+}
+
+process.exit(anyRed ? 1 : 0);
