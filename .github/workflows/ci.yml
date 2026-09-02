@@ -72,23 +72,30 @@ jobs:
         run: npx playwright install-deps chromium
 
       # The guards are read-only and fast, so they run first and independently:
-      # `if: always()` means one failing guard still lets the others report,
+      # `!cancelled()` means one failing guard still lets the others report,
       # rather than the first one hiding the rest — the same reasoning that
       # produced run-suites.mjs.
+      #
+      # Not `always()`, which was the first attempt and is wrong here: it runs a
+      # step even when the JOB is cancelled, so it fights the cancel-in-progress
+      # concurrency rule above. Observed live — pushing a second commit queued a
+      # new run but the superseded one kept grinding through the 20-minute suite
+      # instead of stopping. `!cancelled()` keeps the report-everything behaviour
+      # and lets a cancel actually cancel.
       - name: 'Guard: vendored-library duplication'
-        if: always()
+        if: '!cancelled()'
         run: npm run check:dedupe
 
       - name: 'Guard: test wiring matches the test files'
-        if: always()
+        if: '!cancelled()'
         run: npm run check:tests
 
       - name: 'Guard: social/OG meta consistency'
-        if: always()
+        if: '!cancelled()'
         run: npm run check:social
 
       - name: Test suites
-        if: always()
+        if: '!cancelled()'
         run: npm test
 
       # Screenshots and printed PDFs the browser suites write as they go. On a
