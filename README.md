@@ -112,6 +112,10 @@ Planned-but-not-built tools (subject-specific ones included) are tracked in [`ID
 and shown as "coming soon" entries on the [live toolkit page](index.html) and on
 [`ideas-backlog.html`](ideas-backlog.html).
 
+Larger, multi-phase upgrades — platform work and major overhauls of existing tools — are planned in
+[`UPGRADE_PATHS.md`](UPGRADE_PATHS.md) (top 20, each with a phase list), alongside the four original big swings in
+[`PLATFORM_PLAN.md`](PLATFORM_PLAN.md).
+
 ## Feedback
 
 Found a bug, or want something a tool doesn't do yet? Reach out directly — feedback's always welcome.

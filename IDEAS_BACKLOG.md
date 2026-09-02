@@ -120,8 +120,11 @@ no `index.html` "coming soon" row for these, since there's no single new tool pa
 all still within GitHub Pages' static-hosting limits (no server, no accounts, no database) — several lean on
 browser APIs the toolkit doesn't use yet.
 
-The original four rows have a phased implementation roadmap in [`PLATFORM_PLAN.md`](PLATFORM_PLAN.md); the rows
-below them, added in the 2026-08-11 review pass, do not have one yet. Rows still come off this list only when each
+The original four rows have a phased implementation roadmap in [`PLATFORM_PLAN.md`](PLATFORM_PLAN.md). The
+2026-09-02 survey in [`UPGRADE_PATHS.md`](UPGRADE_PATHS.md) gives phase lists for the rows below them too (dark /
+projector mode → Path 5, share links → Path 6, device pairing → Path 8, export layer and print audit → Path 7,
+phone-sized layouts → Paths 5 and 14, first-run sample data → folded into each tool path), plus the major tool
+overhauls. Rows still come off this list only when each
 swing actually ships, per "Picking one up" below.
 
 | Idea | What it would do |
