@@ -265,7 +265,8 @@ caching of same-origin GETs already works, so an on-demand tier is nearly free.
   the finished `sw.js` (a bogus entry → DEAD, a repeated entry → DUPLICATE, a
   removed `scg-photo.js` → MISSING, a removed maskable icon → MANIFEST), then
   green on the real tree at 234 entries. `check:dedupe`, `check:tests`,
-  `check:social` green.
+  `check:social` green; `npm test` 121 suites, 19.6 min, 120 green, 1
+  expected-fail (the known-red seating assertion, now measuring 1132px), exit 0.
 - **P3 — Split the precache into tiers.** Shell tier (index, `_shared/*`, vendor,
   icons, manifest) plus the top ~10 tools by daily use, precached at install.
   Everything else stays in `PRECACHE_URLS` but is fetched by a *second*, deferred
