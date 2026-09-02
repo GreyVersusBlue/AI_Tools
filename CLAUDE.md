@@ -107,7 +107,21 @@ files must be added there too.
   must never appear in `sw.js` `PRECACHE_URLS`.** Keep `dependencies` empty
   forever — anything a tool ships must be vendored in `_shared/vendor/`.
 - One-time setup: `npm ci && npx playwright install chromium`. Then
-  `npm test` runs all five suites, or `npm run test:<name>` individually.
+  `npm test` runs every suite, or `npm run test:<name>` individually.
+- **`npm test` is `Tools/board-check/run-suites.mjs`, reading its ordered suite
+  list from `Tools/board-check/suites.json`** — not an `&&`-joined string any
+  more. It runs every suite even after one fails and names all the failures at
+  once; the old chain stopped at the first, which meant the assertion that has
+  been red since 2026-08-11 (position 95 of 120) hid the last 25 suites from
+  every run. Adding a suite means adding it to `suites.json` **and** giving it a
+  `test:<name>` shortcut — `npm run check:tests` fails if either is missing, or
+  if a suite exists on disk that the list forgets. `--only <tool>` runs one
+  tool's suites; `--changed` runs the suites covering your working-tree diff.
+- A known-red assertion goes in `suites.json`'s `expectedFailures` with its exact
+  text and a reason — **never** by loosening the assertion. The runner prints
+  every expected failure on every run, still goes red if the same suite fails a
+  *second* way, and goes red if an expected failure starts passing, so the entry
+  cannot outlive the bug.
 - `Tools/board-check/harness.mjs` is the shared browser-test harness
   (static server, Playwright launch, offsite-request blocking). It was
   written from scratch in Round 1c — the original board-check folder was
