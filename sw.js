@@ -35,7 +35,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v133';
+const CACHE_VERSION = 'v134';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -86,6 +86,7 @@ const PRECACHE_URLS = [
   "Tools/bracket-tournament-generator/bt-store.js",
   "Tools/042-certificate-award-maker.html",
   "Tools/certificate-award-maker/cam-borders.js",
+  "Tools/certificate-award-maker/cam-logo.js",
   "Tools/certificate-award-maker/cam-store.js",
   "Tools/082-citation-generator.html",
   "Tools/050-civics-role-card-generator.html",
@@ -173,6 +174,7 @@ const PRECACHE_URLS = [
   "Tools/name-picker/np-store.js",
   "Tools/027-novel-study-circles-manager.html",
   "Tools/024-number-talks-board.html",
+  "Tools/number-talks-board/dot-images.js",
   "Tools/085-parent-communication-templates.html",
   "Tools/068-parent-contact-log.html",
   "Tools/021-pe-tournament-stations.html",
@@ -216,6 +218,7 @@ const PRECACHE_URLS = [
   "Tools/school-calendar/scv-store.js",
   "Tools/073-science-fair-project-tracker.html",
   "Tools/074-science-safety-label-maker.html",
+  "Tools/seating-chart/scg-photo.js",
   "Tools/seating-chart/seating.mjs",
   "Tools/084-socratic-seminar-prep-organizer.html",
   "Tools/075-staff-directory-builder.html",
@@ -236,6 +239,7 @@ const PRECACHE_URLS = [
   "Tools/080-virtual-manipulatives-board.html",
   "Tools/039-vocab-conjugation-drill.html",
   "Tools/040-vocab-flashcard-generator.html",
+  "Tools/vocab-flashcard-generator/vfg-conjdrill-link.js",
   "Tools/vocab-flashcard-generator/vfg-layout.js",
   "Tools/vocab-flashcard-generator/vfg-printables.js",
   "Tools/vocab-flashcard-generator/vfg-store.js",
@@ -243,6 +247,7 @@ const PRECACHE_URLS = [
   "Tools/081-word-problem-warmup-generator.html",
   "Tools/025-writing-prompt-generator.html",
   "Tools/writing-prompt-generator/wpg-prompts.js",
+  "Tools/writing-prompt-generator/wpg-rubric-link.js",
   "Tools/writing-prompt-generator/wpg-store.js",
   "_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css",
   "_shared/a11y.css",
@@ -265,9 +270,16 @@ const PRECACHE_URLS = [
   "_shared/vendor/jszip/jszip.min.js",
   "assets/icons/icon-192.png",
   "assets/icons/icon-512.png",
+  "assets/icons/icon-maskable-192.png",
+  "assets/icons/icon-maskable-512.png",
   "assets/js/gvb-save.js",
+  "ideas-backlog.html",
   "index.html",
-  "manifest.json"
+  "manifest.json",
+  "v1-inbox.html",
+  "v2-subplans.html",
+  "v3-bellboard.html",
+  "v4-riso.html"
 ];
 
 self.addEventListener('install', (event) => {
