@@ -13,7 +13,9 @@
 //   launch()                           headless Chromium via Playwright
 //   prepPage(browser, base, opts)      a page in its own context, with offsite
 //                                      requests blocked and bookkeeping on
-//                                      page.__blocked / page.__errs
+//                                      page.__blocked / page.__errs. Service
+//                                      workers are blocked unless opts passes
+//                                      serviceWorkers: 'allow'.
 //   settle(page, ms)                   wait for timers/animation to coalesce
 //   SITE                               absolute path to the repo root
 //
@@ -127,7 +129,7 @@ const KNOWN_NOISE = /^https:\/\/fonts\.(googleapis|gstatic)\.com\//;
  * page.__blocked. Page errors, console errors, failed requests and >=400
  * responses land in page.__errs.
  */
-export async function prepPage(browser, base, { width, height, dsf = 1, mobile = false, permissions } = {}) {
+export async function prepPage(browser, base, { width, height, dsf = 1, mobile = false, permissions, serviceWorkers = 'block' } = {}) {
   const context = await browser.newContext({
     viewport: { width, height },
     deviceScaleFactor: dsf,
@@ -143,7 +145,13 @@ export async function prepPage(browser, base, { width, height, dsf = 1, mobile =
     // entirely (the CSS strip, the offsite abort, the __blocked bookkeeping
     // all silently stop working from the second load on). Tests here are
     // about the tools, not the service worker, so keep it out of the loop.
-    serviceWorkers: 'block',
+    //
+    // 'block' unless a suite asks otherwise, so every existing call site is
+    // unaffected. The one suite that passes 'allow' is the service worker's
+    // own (Tools/service-worker/test/), which is about the update flow rather
+    // than about a tool — and which therefore has to accept that the caveats
+    // above apply to it.
+    serviceWorkers,
   });
   const page = await context.newPage();
   page.__blocked = [];

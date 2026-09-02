@@ -2,7 +2,7 @@
   "name": "east-middle-staff-toolkit",
   "private": true,
   "type": "module",
-  "description": "Dev-only test tooling for the East Middle Staff Toolkit. The site itself is static, has no build step, and is never served from node_modules — see CLAUDE.md. After cloning: npm ci && npx playwright install chromium",
+  "description": "Dev-only test tooling for the East Middle Staff Toolkit. The site itself is static, has no build step, and is never served from node_modules \u2014 see CLAUDE.md. After cloning: npm ci && npx playwright install chromium",
   "scripts": {
     "test": "node Tools/board-check/run-suites.mjs",
     "test:name-picker": "node Tools/name-picker/test/smoke.mjs && node Tools/name-picker/test/drive-weighting.mjs",
@@ -76,7 +76,8 @@
     "test:civics-kit": "node Tools/civics-role-card-generator/test/smoke-simulation-kit.mjs",
     "test:civics-file": "node Tools/civics-role-card-generator/test/smoke-file-transfer.mjs",
     "test:timeline": "node Tools/timeline-builder/test/label-packing.test.mjs && node Tools/timeline-builder/test/smoke-map-print.mjs && node Tools/timeline-builder/test/smoke-story-worksheet.mjs",
-    "test:changed": "node Tools/board-check/run-suites.mjs --changed"
+    "test:changed": "node Tools/board-check/run-suites.mjs --changed",
+    "test:sw-update": "node Tools/service-worker/test/smoke-sw-update.mjs"
   },
   "devDependencies": {
     "archiver": "^8.0.0",

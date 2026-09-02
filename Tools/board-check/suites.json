@@ -134,7 +134,8 @@
     "Tools/geography-bee-quiz-generator/test/smoke-regions.mjs",
     "Tools/primary-source-analysis-generator/test/smoke-crop.mjs",
     "Tools/blank-map-generator/test/smoke-timeline-handoff.mjs",
-    "Tools/blank-map-generator/test/smoke-label-colors.mjs"
+    "Tools/blank-map-generator/test/smoke-label-colors.mjs",
+    "Tools/service-worker/test/smoke-sw-update.mjs"
   ],
   "expectedFailures": [
     {
