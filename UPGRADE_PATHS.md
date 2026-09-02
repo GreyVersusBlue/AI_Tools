@@ -28,7 +28,7 @@ list).
 | Tests | 120 Playwright/Node suites chained with `&&` in one `npm test` string; 62 per-tool `test/` folders; guards `check:dedupe`, `check:social`, `check:tests`. **No CI** (`.github/` does not exist), no linter, no automated a11y check |
 | Known red | one assertion in `Tools/seating-chart/test/drive-seating.mjs` (mobile toolbar pushes the chart ~1050 px down at 375 px) |
 | Storage | ~206 distinct localStorage keys across 69 writing tools, three naming eras; IndexedDB in 3 places (`bmg-maps`, `rgb-audio`, `stviz-recovery`); quota handled in ~17 files |
-| Dead / unlinked | `Tools/Old Designs/`, `Tools/New Designs/`, `index_backup.html`, `v2`–`v4` landing variants, `Other Landing Page ideas/` |
+| Dead / unlinked | `Tools/Old Designs/`, `Tools/New Designs/`, `index_backup.html`, `v3`–`v4` landing variants, `Other Landing Page ideas/`. **Correction (2026-09-02): `v2-subplans.html` is not dead** — it is linked from `v1-inbox.html`, which `index.html`'s footer links. Neither is precached. |
 
 Concrete defects found during the survey (small, fix opportunistically, listed once
 here so they stop being rediscovered):
@@ -37,6 +37,19 @@ here so they stop being rediscovered):
   but is **not in `PRECACHE_URLS`** — bulk photo import breaks offline.
 - `v1-inbox.html` is linked from `index.html`'s footer ("Prefer a different look?")
   but is **not precached** — it 404s offline while being advertised.
+- **Measured 2026-09-02, during Path 2 P1: the precache gap is 10, not 2.** Beyond
+  the two above, four more tool scripts are referenced by a live page and missing
+  from `PRECACHE_URLS` — `certificate-award-maker/cam-logo.js` (042),
+  `number-talks-board/dot-images.js` (024),
+  `vocab-flashcard-generator/vfg-conjdrill-link.js` (040) and
+  `writing-prompt-generator/wpg-rubric-link.js` (025) — plus `ideas-backlog.html`
+  and `v2-subplans.html`, and both maskable icons, which `manifest.json` names and
+  nothing precaches, so the install dialog's icon fails offline. The maskable pair
+  is a *different class* of miss: the reference lives in JSON, not an HTML
+  `src`/`href`, so Path 1 P2's `check-precache.mjs` has to read `manifest.json`
+  too or it will not see them. The reverse direction is clean — no listed entry is
+  dead or duplicated, which fits: a missing entry is invisible until a teacher is
+  offline, while a dead one would surface as a console warning.
 - `_ds/industry-…/styles.css` opens with an `@import` of Google Fonts. Five live
   tools (005, 011, 029, 031, 036) make an offsite request on every load and lose their
   typeface offline. `Tools/schedule/fonts/fonts.css` is the self-hosting template.
@@ -176,6 +189,9 @@ the readout must exist. Decide the mid-lesson suppression rule in P1.
 
 ## 2. CI, a real test runner, automated a11y and sweeps
 
+**Status.** P2 shipped (#159), P1 shipped (#160) — in that order; see the P1 note
+for why they swapped. P3–P5 open.
+
 **Why.** 120 suites and three guard scripts exist and are designed to be
 sandbox-safe, and nothing runs them unless a session remembers. The `&&` chain
 means the first failure hides every suite after it (`check-tests.mjs` exists
@@ -192,11 +208,73 @@ and have only ever been found by luck.
   failure. Mark the one known-red seating assertion as expected-fail *by name* in
   the runner (never by loosening the assertion), so CI is green on day one and the
   bug stays visible.
+
+  **Shipped 2026-09-02 (#160), after P2.** The order swapped for a measured
+  reason: `drive-seating.mjs` — the known-red suite — is position **95 of 120** in
+  the `&&` chain, so a workflow running that chain would have stopped there and
+  never executed the last 25 suites. CI reporting less than a local run is worse
+  than no CI. P1's own instruction to mark the assertion expected-fail "in the
+  runner" presumes P2, so P2 went first and this landed on top of it.
+
+  `.github/workflows/ci.yml`, on `pull_request` and `push: main`. Every guard step
+  and the test step carry `if: always()`, so one failing guard does not hide the
+  others — the same reasoning as the runner itself. The browser cache is keyed on
+  the *resolved* Playwright version so a bump misses the cache rather than reusing
+  a stale browser; a cache hit still runs `install-deps`, because the system
+  libraries Chromium links against live outside `~/.cache` and change with the
+  runner image. `check:precache` is not wired yet — it does not exist until Path 1
+  P2, which adds it here.
+
+  *Surprise:* `check:social` was already red, so CI would have been red on its
+  first run. `019-escape-room-builder.html` had a partial `og:image` group missing
+  only `og:image:alt`. Fixed by transcribing the alt text `index.html` already uses
+  for the same `toolbook.png` — not the branding decision `CLAUDE.md` warns against
+  guessing at. The generation-drift report (11 tools old branding, 29 new, 46 with
+  no block) still prints as information and still waits on a real decision.
+
+  *Verified:* full local run 120 suites / 19.4 min / 119 green / 1 expected-fail /
+  exit 0; all three guards green; `ci.yml` parses, 12 steps; `timeout-minutes: 60`
+  sized from that 19.4 minutes plus install. CACHE_VERSION v131 → v132 for the 019
+  content change.
+
+  *Left open:* whether CI should also run `offline:build` + `offline:verify` on
+  `main`. Deferred deliberately — it belongs after Path 1 P3 changes precache
+  tiering, which would invalidate any baseline established now.
 - **P2 — `run-suites.mjs`.** Replace the one-line `&&` chain with a runner that
   reads the suite list from a JSON file, runs every suite, reports all failures at
   once, supports `--only <tool>` and a `--changed` mode that maps touched
   `Tools/<x>/` paths to their suites. Keep the `test:<name>` shortcuts. Update
   `check-tests.mjs` to validate the JSON instead of the string.
+
+  **Shipped 2026-09-02 (#159), first.** `Tools/board-check/suites.json` +
+  `run-suites.mjs`; `npm test` now points at the runner and all 66 `test:<name>`
+  shortcuts are unchanged, plus a new `test:changed`. Suites stay serial and in the
+  existing order — several bind fixed localhost ports (`drive-seating.mjs` takes
+  8146), so concurrency would make them fight; that is a correctness property, not
+  laziness. `check-tests.mjs` keeps MISSING/ORPHAN/UNSCRIPTED and gains a CONFIG
+  check over the JSON (shape, duplicate paths, and `expectedFailures` entries that
+  name an unlisted suite or omit their assertion text or reason).
+
+  Known-red assertions live in `expectedFailures` by exact assertion text plus a
+  reason. Three properties keep that from becoming a place to hide bugs, all three
+  verified with fixtures rather than assumed: matching is on the *assertion*, so a
+  second unrelated failure in the same suite still turns the run red; every
+  expected failure prints on every run with its reason; and an expected failure
+  that starts passing fails the run, so the entry cannot outlive the bug.
+
+  *Surprises:* (1) The known-red seating bug has got **worse** — `CLAUDE.md`
+  recorded 1052px on 2026-08-11, it measures **1132px** now; the toolbar is still
+  growing. (2) `--changed` was silently broken by git quoting any path containing a
+  space, which is half the tool pages here (`Tools/005-Seating Chart
+  Generator.html`); fixed with `-z` on both `diff` and `status`. (3) The 25 suites
+  the chain had been skipping are all green — the reassuring answer, but not one
+  anybody had.
+
+  *Verified:* full run 120 suites / 19.4 min / 119 green / 1 expected-fail / exit 0;
+  `check:tests` and `check:dedupe` green; `--changed` maps a touched
+  `005-Seating Chart Generator.html` to exactly the three suites that open that page
+  and correctly leaves out the pure-logic one. No `PRECACHE_URLS`/`CACHE_VERSION`
+  change: `Tools/board-check/` is dev tooling and is not precached.
 - **P3 — axe-core in `prepPage`.** Inject a vendored axe build into the harness
   (dev-only, under `node_modules`, never precached) and add an `a11yScan(page)`
   helper. Add one site-wide smoke that opens all 86 tools and fails on serious
