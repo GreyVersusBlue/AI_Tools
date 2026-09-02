@@ -267,6 +267,31 @@ caching of same-origin GETs already works, so an on-demand tier is nearly free.
   green on the real tree at 234 entries. `check:dedupe`, `check:tests`,
   `check:social` green; `npm test` 121 suites, 19.6 min, 120 green, 1
   expected-fail (the known-red seating assertion, now measuring 1132px), exit 0.
+
+  *CI then found a second thing, which is the phase paying for itself.* The run
+  went red on `group-team-generator/test/smoke-pairing-history.mjs` — a suite this
+  PR cannot reach — while passing 12/12 locally on the same commit. It is a real
+  flake with a measurable rate, not noise: `splitValue` 4 in `count` mode means
+  *four* groups, so that 8-name roster shuffles into 4 pairs and each generation
+  covers only 4 of the 28 possible pairs. `assignCoverage` is greedy over a
+  shuffled pool with randomised tie-breaks, so over 200,000 simulated trials of
+  the real shape, 20 generations leaves a pair uncovered 0.276% of the time
+  (~1 run in 362, always landing on exactly 27 of 28 — what CI reported), while
+  30 and 40 generations were complete in 200,000 of 200,000. Fixed by giving the
+  strategy 30 rounds instead of 20; the assertion itself is untouched, since
+  relaxing it to 27 would delete the test. 30 over 40 because the neighbouring
+  `spread <= 6` assertion has to keep holding, and the spread never exceeded 6 at
+  either count. Two hypotheses were tested and discarded first — a weak algorithm
+  (it converges once the group shape is read off the live page) and dropped clicks
+  (cutting the settle from 220ms to 30ms still lands all 20 generations).
+
+  **Still red on `main`, and not this phase's:** `exit-ticket-generator/test/
+  smoke-prompt-sets.mjs` failed run #8 with "exited 1 without printing a FAIL line
+  (crashed, or a setup step threw)". It passes 8/8 locally and could not be
+  reproduced here, so it is unfixed and needs its own look — most likely runner
+  side. Two different non-deterministic failures in three consecutive CI runs is
+  the real finding: now that Path 2 P1 runs all 121 suites on every push, suite
+  reliability is a live problem and belongs in a Path 2 phase.
 - **P3 — Split the precache into tiers.** Shell tier (index, `_shared/*`, vendor,
   icons, manifest) plus the top ~10 tools by daily use, precached at install.
   Everything else stays in `PRECACHE_URLS` but is fetched by a *second*, deferred
