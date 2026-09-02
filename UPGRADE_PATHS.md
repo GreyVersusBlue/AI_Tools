@@ -473,8 +473,43 @@ and have only ever been found by luck.
   non-determinism to expect is the harness/timing kind, which `--repeat` still
   catches and which is a bug to root-cause rather than a rate to tolerate.
 
-  *Measured:* five back-to-back passes of all 121 suites were in flight when
-  this landed; the per-suite tally goes here when it does.
+  *Measured:* five back-to-back full passes of all 121 suites on this
+  container's Chromium (2026-09-02, 17.8–18.1 min each). Passes 1–4 were
+  identical: 120 green, 1 expected-fail. Pass 5 failed three suites, and none
+  of the three was random:
+
+  - `command-center/test/smoke-seating-panel.mjs` and
+    `smoke-remote-commands.mjs` build their bell-schedule fixtures as HH:MM
+    offsets around the real clock. Suite 45 of 121 landed at 23:28 UTC, where
+    a `+40 min` end time wraps past midnight, sorts before its own start, and
+    no period is current. Deterministic given the wall clock — `TZ=UTC` at
+    23:41 reproduced every failure line on demand — invisible at any other time
+    of day, and a real CI hazard: a push at 23:30 UTC is 4:30 pm Pacific. Fixed
+    by pinning the page's clock to 10:00 today (`page.clock.setFixedTime`,
+    timers keep running) and deriving every fixture time from that instant;
+    verified green under `TZ=UTC` inside the failing window, `Etc/GMT+1` and
+    `Asia/Kathmandu`.
+  - `qr-scavenger-hunt-builder/test/smoke-paper-mode.mjs`: "regenerating
+    Library's code word changed it (was MERIDIAN, now MERIDIAN)" — the same
+    assertion CI run #6 failed with HOLLOW. That one is the tool, not the
+    test: 018's regenerate handler removed the station's own word from the
+    exclusion list before drawing, so a four-station hunt got the same word
+    back 1 time in 27 and the button looked dead. Fixed in 018 (the current
+    word stays excluded; only a hunt using all 30 words falls through to
+    STATIONn), `CACHE_VERSION` v134 → v135. Measured by clicking regenerate 200
+    times on a three-station hunt: 7 unchanged on the previous tool, 0 on this
+    one; `--repeat 30 --only smoke-paper-mode` 30/30 green. (A first 20-pass
+    run showed one failure while a separate check had the tool file stashed
+    mid-run — the same "never two things on one suite at once" rule, in a new
+    shape; the clean run is the number.)
+
+  So the five-pass number is: 121 suites, 605 suite-runs, 3 failures, all
+  three root-caused and fixed, none by loosening an assertion. Two were
+  clock-of-day, which `--repeat` only finds if a pass happens to straddle the
+  window; the policy in `CLAUDE.md` now names that kind. Five passes bound the
+  random-flake rate at roughly "no worse than 1 in 5 per suite", which would
+  not catch a 1-in-362 flake like pairing-history's; a suspect suite gets a
+  high-N single-tool run (`--repeat 20 --only <tool>`, ~10 min).
 
 **Model.** Opus throughout.
 

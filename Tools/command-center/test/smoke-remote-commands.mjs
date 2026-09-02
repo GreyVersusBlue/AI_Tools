@@ -41,10 +41,20 @@ const server = await serve(PORT);
 const browser = await launch();
 const page = await prepPage(browser, BASE, { width: 1400, height: 1100 });
 
+/* The page's clock is pinned to 10:00 today, and every fixture time below is
+   derived from the same NOW. The bell-schedule fixtures are HH:MM offsets
+   around "now" (up to +80 min), and HH:MM cannot express a period that crosses
+   midnight: after 22:40 local the period's end wraps to 00:xx, sorts before its
+   start, and the "already current" baseline never applies its roster. Pass 5
+   of the first five-pass measurement hit it (suite 46 of 121 at ~23:28 UTC);
+   TZ=UTC at 23:41 reproduces it on demand. Pinned Date, real timers. */
+const NOW = new Date(); NOW.setHours(10, 0, 0, 0);
+await page.clock.setFixedTime(NOW);
+
 console.log('Command Center — remote command dispatch');
 
 const todayKey = () => {
-  const d = new Date();
+  const d = NOW;
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
@@ -58,7 +68,7 @@ const ROSTER = ['Ana Diaz', 'Beto Cruz', 'Cara Nunez'];
 const hallPassSeed = () => ({
   sets: {
     [ROSTER_NAME]: {
-      outNow: [{ id: 's1', name: 'Ana Diaz', destId: 'd1', destLabel: 'Restroom', outMs: Date.now() - 5 * 60000, outStr: '9:00 AM' }],
+      outNow: [{ id: 's1', name: 'Ana Diaz', destId: 'd1', destLabel: 'Restroom', outMs: NOW.getTime() - 5 * 60000, outStr: '9:00 AM' }],
       destinations: [{ id: 'd1', label: 'Restroom', overtimeMin: 10 }],
       log: [],
     },
@@ -176,7 +186,7 @@ eq(unchanged.sets[ROSTER_NAME].log.length, 1, 'and the log is untouched by the r
    itself — a period that is *already current* when the page loads triggers
    onPeriodChange() and switches to its mapped roster automatically. */
 const at = (offsetMin) => {
-  const d = new Date(Date.now() + offsetMin * 60000);
+  const d = new Date(NOW.getTime() + offsetMin * 60000);
   const pad = (n) => String(n).padStart(2, '0');
   return pad(d.getHours()) + ':' + pad(d.getMinutes());
 };

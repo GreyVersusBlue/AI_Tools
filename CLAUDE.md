@@ -145,6 +145,17 @@ files must be added there too.
     stderr lines under its name) or a *timing race* is a harness or tool bug to
     root-cause; a re-run is not a diagnosis. The 2026-09-02 `ECONNRESET` crash
     was the harness's keep-alive socket race, fixed in `harness.mjs`.
+  - A *fixture built around the real clock* (a bell schedule as HH:MM offsets
+    from "now") is deterministic given the time of day and fails only in a
+    window nobody tests in — both command-center suites failed after 23:20
+    local, when a `+40 min` end time wraps past midnight. `--repeat` cannot
+    find this one; run the suite under a `TZ` that puts local time in the
+    window (`TZ=UTC` at 23:41 reproduced both). Fix it by pinning the page's
+    clock (`page.clock.setFixedTime`) and deriving every fixture time from that
+    same instant, never by widening the offsets.
+  - When the failing property is one a *teacher* would notice — "new code
+    word" handing back the same word 1 time in 28 — the fix is in the tool,
+    with a `CACHE_VERSION` bump, not in the test.
 - **Environment notes that have cost sessions time.** Suites bind fixed
   localhost ports, so never run two copies of a suite at once — a collision
   reports failures that are not real; if a suite exits 1 with no FAIL line,
