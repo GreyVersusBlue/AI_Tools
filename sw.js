@@ -23,8 +23,19 @@
 //
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
+//
+// UPDATES. This worker deliberately does NOT call skipWaiting() at install. A
+// new version installs and then waits, and _shared/sw-register.js offers the
+// teacher a "new version is ready" bar; only when they accept does it post
+// SKIP_WAITING, handled below. The reason is that install-time skipWaiting()
+// plus clients.claim() at activate means a deploy takes effect inside an
+// already-open tab — a teacher three minutes into a timer, or mid-way through a
+// projected activity, gets a different version's assets under their feet with
+// no notice and no way back. clients.claim() stays: once a worker HAS been
+// accepted (or is the first one, with no page to disrupt), it should control
+// the page immediately.
 
-const CACHE_VERSION = 'v132';
+const CACHE_VERSION = 'v133';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -271,8 +282,16 @@ self.addEventListener('install', (event) => {
           })
         )
       );
-    }).then(() => self.skipWaiting())
+    })
+    // No skipWaiting() here — see the UPDATES note at the top of this file. The
+    // worker installs, waits, and sw-register.js asks before it takes over.
   );
+});
+
+// The other half of that contract. sw-register.js posts this when the teacher
+// accepts the update; nothing else sends it.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {

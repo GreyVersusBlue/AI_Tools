@@ -133,6 +133,8 @@ data-driven `index.html` (86 hand-written rows and three hand-maintained counts)
 
 ## 1. Service worker: update UX, precache split, precache guard
 
+**Status.** P1 shipped. P2–P4 open.
+
 **Why.** `sw.js` reaches every teacher on every visit. Today it calls
 `skipWaiting()` unconditionally at install and `clients.claim()` at activate, so a
 deploy swaps page assets underneath an open tab mid-lesson, with no notice. Every
@@ -158,6 +160,60 @@ caching of same-origin GETs already works, so an on-demand tier is nearly free.
   this needs one explicit allow-SW test) across a v→v+1 bump: old tab keeps working,
   bar appears, reload gets the new version. *Fable because a wrong call here
   breaks every page silently and the failure only shows up on a real second deploy.*
+
+  **Shipped 2026-09-02 (Opus, with the contract decisions called out).**
+  `sw.js` drops `skipWaiting()` at install and gains a `SKIP_WAITING` message
+  listener; `clients.claim()` stays, because a worker that has been accepted (or
+  is the first, with no page to disrupt) should control the page at once.
+  `_shared/sw-register.js` goes from 5 lines to the registration + update
+  detector. `prepPage` gains an opt-in `serviceWorkers` option, defaulting to
+  `'block'` so all 120 existing suites are untouched.
+
+  *Suppression rule, as decided:* the bar is withheld while
+  `document.fullscreenElement` is set — the projector case, which covers ten
+  tools without one of them changing a line — or while a page sets
+  `window.TOOL_BUSY === true`. Suppression is not dismissal: the worker stays
+  waiting and the offer returns next load. "Not now" is also per-load and
+  persists nothing; a teacher who dismisses once should not stop being offered
+  updates. Nothing sets `TOOL_BUSY` yet — it is the hook for the timer tools,
+  and forgetting to clear it fails safe (the teacher keeps the version they had).
+
+  *Two real bugs, both found by the new suite rather than by reading:*
+  (1) `controllerchange` also fires on a **first** install, when the controller
+  goes from null to the first worker — so the first draft reloaded the page on a
+  teacher's first ever visit. (2) That spurious reload then consumed the
+  rate-limit window, so the teacher's *actual* accepted update took over the
+  worker but never reloaded the page — leaving it on old assets under a new
+  controller, the precise failure the reload guard was written to prevent. The
+  fix separates the three reasons a controller changes: a first claim (do not
+  reload), an accepted update (reload, no rate limit — we asked for it), and an
+  unsolicited change from another tab (reload, rate-limited). Conflating the
+  middle with the last was the bug.
+
+  *A third problem was in the test, not the code:* one check passed or failed
+  depending on timing, and adding a diagnostic made it pass. The bar is drawn
+  from the `load` handler after `register()` resolves, so a fixed 800 ms wait was
+  usually but not always enough. Every assertion is now condition-based,
+  including the negative ones — "no bar appears" waits until a worker is
+  genuinely waiting, so the offer *could* have been made, before asserting
+  absence. A suite that fails one run in five teaches people to re-run instead of
+  to read, which would undermine the CI of the previous phase.
+
+  *Verified:* `Tools/service-worker/test/smoke-sw-update.mjs`, 18 assertions,
+  three consecutive clean runs, then the full pass — **121 suites, 17.5 min, 120
+  green, 1 expected-fail, exit 0**. It stages a scratch site whose `sw.js` bytes
+  change between loads, so the version bump is real rather than simulated. Guards
+  green. `CACHE_VERSION` v132 → v133 for the `sw-register.js` content change.
+  The new suite lives at `Tools/service-worker/test/` — no tool page beside it —
+  because `check-tests.mjs`'s orphan scan walks `Tools/<dir>/test/` and exempts
+  only `board-check`; putting it under `board-check` would have made it the one
+  suite nothing checks is still wired up. Confirmed: it was picked up with no
+  guard change.
+
+  *Not done here, deliberately:* the manual two-deploy test on the live site that
+  this phase's Verification line asks for. It cannot be done from a session — it
+  needs a real deploy, a real second deploy, and a person watching a tab in
+  between. Worth doing on the next two merges to `main`.
 - **P2 — `check-precache.mjs`.** Walks the tree, diffs against `PRECACHE_URLS`,
   fails on: any file referenced by a live page's `src`/`href` that isn't listed
   (this catches `scg-photo.js`); any listed URL that doesn't resolve; any listed
