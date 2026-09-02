@@ -94,6 +94,10 @@ jobs:
         if: '!cancelled()'
         run: npm run check:social
 
+      - name: 'Guard: PRECACHE_URLS matches the tree'
+        if: '!cancelled()'
+        run: npm run check:precache
+
       - name: Test suites
         if: '!cancelled()'
         run: npm test

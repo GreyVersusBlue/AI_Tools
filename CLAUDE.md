@@ -63,6 +63,12 @@ every edit. The deduplication work that established them is tracked in
   `CACHE_VERSION`** (the `const CACHE_VERSION = 'vNN'` at the top). Both, in
   the same commit. A stale list silently breaks offline use for teachers.
 - URL-encode spaces in precache paths (`%20`), matching the existing entries.
+- **`npm run check:precache` enforces this.** It fails if a live page's
+  `src`/`href`, or a local file `manifest.json` names, is missing from
+  `PRECACHE_URLS`, or if a listed URL is dead or duplicated. It runs in CI. It
+  does *not* check that you bumped `CACHE_VERSION` — no honest guard can (see the
+  header of `Tools/board-check/check-precache.mjs`), so that stays on you and on
+  review.
 
 ## New tools link shared boilerplate — don't inline it
 

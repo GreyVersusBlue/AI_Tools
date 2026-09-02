@@ -2,21 +2,23 @@
 //
 //   node Tools/board-check/check-precache.mjs      (or: npm run check:precache)
 //
-// PRECACHE_URLS is 222 hand-maintained lines and nothing has ever checked it.
+// PRECACHE_URLS is 234 hand-maintained lines and nothing had ever checked it.
 // The cost of a miss is invisible in every environment a developer works in: the
 // file is on disk, the dev server serves it, the runtime cache picks it up the
 // first time anyone loads it online. It only fails for a teacher who is offline,
 // which is the one case the whole service worker exists for.
 //
-// Measured on 2026-09-02, before this guard existed: TEN entries were missing.
-// UPGRADE_PATHS.md knew about two of them.
+// Measured on 2026-09-02, before this guard existed: TWELVE entries were
+// missing. UPGRADE_PATHS.md knew about two of them. All twelve were added to
+// PRECACHE_URLS in the commit that wired this guard up (CACHE_VERSION v134).
 //
 //   Tools/certificate-award-maker/cam-logo.js            (042 — logo upload)
 //   Tools/number-talks-board/dot-images.js               (024)
 //   Tools/seating-chart/scg-photo.js                     (005 — the known one)
 //   Tools/vocab-flashcard-generator/vfg-conjdrill-link.js(040)
 //   Tools/writing-prompt-generator/wpg-rubric-link.js    (025)
-//   ideas-backlog.html, v1-inbox.html, v2-subplans.html  (linked pages, 404 offline)
+//   ideas-backlog.html, v1-inbox.html, v2-subplans.html,
+//   v3-bellboard.html, v4-riso.html                      (linked pages, 404 offline)
 //   assets/icons/icon-maskable-192.png, -512.png         (the install dialog's icon)
 //
 // Four checks:

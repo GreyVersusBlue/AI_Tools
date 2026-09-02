@@ -133,7 +133,7 @@ data-driven `index.html` (86 hand-written rows and three hand-maintained counts)
 
 ## 1. Service worker: update UX, precache split, precache guard
 
-**Status.** P1 shipped. P2–P4 open.
+**Status.** P1 and P2 shipped. P3–P4 open.
 
 **Why.** `sw.js` reaches every teacher on every visit. Today it calls
 `skipWaiting()` unconditionally at install and `clients.claim()` at activate, so a
@@ -221,6 +221,51 @@ caching of same-origin GETs already works, so an on-demand tier is nearly free.
   `CACHE_VERSION` bump (compare against `git show main:sw.js`). Wire as
   `npm run check:precache`; add to Path 2's CI. Fix the two known gaps in the same
   PR (add `scg-photo.js`; either precache `v1-inbox.html` or drop the footer link).
+
+  **Shipped 2026-09-02 (#162).** `Tools/board-check/check-precache.mjs`, wired as
+  `npm run check:precache` and as a fourth `if: '!cancelled()'` guard step in
+  `.github/workflows/ci.yml`, and all twelve gaps closed in `sw.js` at
+  `CACHE_VERSION` v134 (222 → 234 entries).
+
+  *The gap was 12, not the 2 this file recorded.* Beyond `scg-photo.js` and
+  `v1-inbox.html`: four more per-tool scripts a live page loads
+  (`certificate-award-maker/cam-logo.js` 042, `number-talks-board/dot-images.js`
+  024, `vocab-flashcard-generator/vfg-conjdrill-link.js` 040,
+  `writing-prompt-generator/wpg-rubric-link.js` 025), the rest of the landing
+  chain (`ideas-backlog.html`, `v2-subplans.html`, `v3-bellboard.html`,
+  `v4-riso.html`), and both maskable icons. Total added payload 173 KB — 140 KB
+  of it the landing chain and the backlog page, ~1.4% of the ~10 MB precache.
+  **Devon's decision:** precache all four `v1`–`v4` variants plus
+  `ideas-backlog.html` rather than cut `index.html`'s "Prefer a different look?"
+  footer link. Reversible either way; nothing else links them.
+
+  *The maskable icons are the interesting miss.* They are named by
+  `manifest.json`, not by an HTML `src`/`href`, so the obvious
+  scan-the-pages guard would never have seen them — which is exactly how they
+  went missing in the first place. MANIFEST is a separate check for that reason,
+  reading `icons`, `screenshots` and `shortcuts[].icons`. Path 1 P4 adds
+  `shortcuts`, and this guard will demand their icons be precached on the day
+  they are added.
+
+  *The reverse direction was already clean* — no DEAD entry, no DUPLICATE — which
+  fits: a dead entry logs a warning at every install, so it gets noticed, while a
+  missing one is invisible until a teacher is offline.
+
+  *Deliberately not built, and raised rather than shipped:* the phase brief's
+  fourth check, "a precached file's content changed without a `CACHE_VERSION`
+  bump", by diffing against `git show main:sw.js`. It cannot be made honest in
+  that shape — it fires when you *did* bump, two commits ago; it is wrong on a
+  first push; and CI's clone would need full history for it. A guard that cries
+  wolf gets ignored, which costs more than the check buys. If it is wanted, the
+  honest shape is a separate opt-in check taking an explicit base ref. Left as a
+  TODO in the guard's header. Until then this remains a code-review
+  responsibility, as `CLAUDE.md` already states.
+
+  *Verified:* all four checks fired by name against deliberately broken copies of
+  the finished `sw.js` (a bogus entry → DEAD, a repeated entry → DUPLICATE, a
+  removed `scg-photo.js` → MISSING, a removed maskable icon → MANIFEST), then
+  green on the real tree at 234 entries. `check:dedupe`, `check:tests`,
+  `check:social` green.
 - **P3 — Split the precache into tiers.** Shell tier (index, `_shared/*`, vendor,
   icons, manifest) plus the top ~10 tools by daily use, precached at install.
   Everything else stays in `PRECACHE_URLS` but is fetched by a *second*, deferred
@@ -1116,9 +1161,10 @@ A session picking up a phase should:
 3. Do one phase per PR. Bump `CACHE_VERSION` and update `PRECACHE_URLS` in the same
    commit as any file add/rename/delete or content change to a precached file.
    Register new storage keys in 009 (or, after Path 4 P2, in the registry).
-4. Run `npm run check:dedupe`, `check:tests`, `check:social` (for head edits), and
-   the `test:<name>` suites of every touched tool. Record what was actually
-   verified in the phase's write-up here, `REFACTOR_PLAN.md` style.
+4. Run `npm run check:dedupe`, `check:tests`, `check:precache`, `check:social`
+   (the last for head edits), and the `test:<name>` suites of every touched tool.
+   Record what was actually verified in the phase's write-up here,
+   `REFACTOR_PLAN.md` style.
 5. Update this file: tick the phase, note surprises, and move anything cut to the
    tool's improvement file so it isn't lost.
 
