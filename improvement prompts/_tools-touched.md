@@ -192,7 +192,8 @@ here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| `_shared/` theme architecture (Path 5 P1) | `n3p2vh` | 2026-09-03 10:40 UTC | `claude/new-session-n3p2vh` |
+| Digital Hall Pass / Sign-Out Log | `n3p2vh` | 2026-09-03 10:40 UTC | `claude/new-session-n3p2vh` |
 
 ---
 
