@@ -214,9 +214,10 @@ was taken from **Not yet touched**; no other tool was touched.
 `_shared/ink-paper.css` carries a real `[data-theme="dark"]` palette gated on
 `:not(.a11y-filter-dark)`, so the 73 ink-paper tools that have not adopted are
 byte-for-byte unaffected and keep the CSS-filter fallback. The rollout is
-Path 5 P3 and is a real piece of work, not a flag flip: every one of those 74
-tools hardcodes light colours in its own `<style>` (17–45 occurrences each,
-measured), and each has to separate chrome that should follow the theme from a
+Path 5 P3 and is a real piece of work, not a flag flip: those 74 tools
+hardcode 907 white and near-white literals in their own screen CSS (2–32 per
+tool, median 10 — `npm run path5:next`), and each has to
+separate chrome that should follow the theme from a
 *sheet of paper* that must not, before it can opt in. Read
 `_shared/ink-paper.css`'s header and copy 001.
 

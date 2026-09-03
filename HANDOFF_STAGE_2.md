@@ -4,6 +4,12 @@
 `UPGRADE_PATHS.md`, human or model. Read `CLAUDE.md` first, this second,
 then the path section you are about to work.*
 
+> **A1 has since shipped (#167).** This file is still the Stage 2 plan and is
+> still accurate except where `HANDOFF_STAGE_2_A1.md` corrects it — read that
+> third. The short version: Path 5 P3 is a real rollout rather than a flag
+> flip, and it is now sized and scripted (`npm run path5:next`). Nothing about
+> A1 moved the Wave B/C dependency graph; **B1 is still the critical path**.
+
 ## 1. Where Stage 1 left the site
 
 Stage 1 was the two infrastructure paths, and both are complete:
@@ -55,7 +61,7 @@ Sonnet for batches once a pattern exists.
 
 | # | Phase | Model | Size | Touches `_shared/`? |
 |---|---|---|---|---|
-| A1 | **Path 5 P1 — theme architecture decision.** Decide that `a11y.js` owns theme, add a real `data-theme="dark"` token set to `ink-paper.css` (71 tools), fold `theme.css`'s five Industry tools into the same mechanism, archive the never-loaded `theme-toggle.js`, respect `prefers-color-scheme`. Write the decision down; do not roll it out in the same PR. | Opus | ½ | **Yes** |
+| ~~A1~~ | **SHIPPED (#167, `CACHE_VERSION` v139) — see `HANDOFF_STAGE_2_A1.md`.** ~~Path 5 P1 — theme architecture decision.~~ Decide that `a11y.js` owns theme, add a real `data-theme="dark"` token set to `ink-paper.css` (71 tools), fold `theme.css`'s five Industry tools into the same mechanism, archive the never-loaded `theme-toggle.js`, respect `prefers-color-scheme`. Write the decision down; do not roll it out in the same PR. | Opus | ½ | **Yes** |
 | A2 | **Accessibility label round.** The 41 `select-name` and 23 `label` allowances in `Tools/a11y-sweep/allowlist.json`. One accessible name each, delete the line, `npm run test:a11y -- --only <nnn>` per page. Leave `color-contrast` for after A1. | Sonnet | 1–2 | No |
 | A3 | **Live-site checks Stage 1 could not do.** After #165 deploys: confirm the app bar reaches "Offline: all 86 tools ready"; on the next deploy confirm the update bar appears and Reload takes it; if a phone or Chromebook has the toolkit installed, share a CSV into it. Record under Path 1 in `UPGRADE_PATHS.md`. | Devon | ¼ | No |
 
@@ -98,7 +104,7 @@ allowlist is below 30 entries and none are `select-name` or `label`.
 
 | Needed by | Decision | Recommendation |
 |---|---|---|
-| A1 | Who owns theme: `a11y.js` (already persists prefs, syncs tabs) or a new module. | `a11y.js`. Retire `theme-toggle.js`. |
+| ~~A1~~ | ~~Who owns theme: `a11y.js` or a new module.~~ | **Answered and shipped in #167: `a11y.js` owns theme; `theme-toggle.js` deleted.** |
 | B1 | Whether a quota error may ever be silent. | Never. Visible message, names the tool, points at Backup & Restore. |
 | B3 | Staff rosters (058, 075): same namespace as student rosters, or a `Staff —` prefix. | Prefix convention; do not fork the store. |
 | B3 | Whether skill/level values (002's balancing) go on the shared student record. | **No.** The platform themes call it the most sensitive thing the site would store; keep it tool-local. |

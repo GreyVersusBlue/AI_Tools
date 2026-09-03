@@ -30,10 +30,11 @@
    ─────────────────────────────────────────────────────────────────────────
    ADOPTING (Path 5 P3) — the flag alone is not enough
    ─────────────────────────────────────────────────────────────────────────
-   Every one of these 74 tools hardcodes light colours in its own <style>
-   (17–45 occurrences each; measured, not estimated). A remap of the tokens
-   below leaves those literals light while the text on them goes pale, so
-   adopting is three steps, in this order:
+   Every one of these 74 tools hardcodes white and near-white literals in its
+   own screen CSS — 907 of them across the 73 that have not adopted, 2 to 32
+   per tool, median 10 (`npm run path5:next` prints the current
+   list). A remap of the tokens below leaves those literals light while the
+   text on them goes pale, so adopting is three steps, in this order:
 
      1. Chrome that should follow the theme — a card, a panel, a button face,
         a form control, a hover fill — swaps its literal for a token:

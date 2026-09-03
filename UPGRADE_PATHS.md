@@ -894,8 +894,11 @@ subtree, so live controls must live inside it).
   on paper regardless of the screen.
 
   *The paper problem, which is the real reason the rollout is a separate
-  phase.* All 74 ink-paper tools hardcode light colours in their own `<style>`
-  — 17 to 45 occurrences each, measured. Some are chrome that should follow the
+  phase.* All 74 ink-paper tools hardcode white and near-white literals in
+  their own screen CSS — 907 across the 73 unadopted, 2 to 32 per tool, median
+  10, counted by `npm run path5:next` (an earlier figure of "17 to
+  45 each" in this file was wrong: it counted `white-space`, `@media print`
+  blocks and inline script). Some are chrome that should follow the
   theme; some are a *sheet of paper* (a print preview, a hall pass, a
   certificate) that must stay white with dark ink. So `ink-paper.css` ships a
   `.paper-sheet` class that restores the light tokens inside a subtree, applied
