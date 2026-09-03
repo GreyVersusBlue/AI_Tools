@@ -126,6 +126,10 @@ allowlist is below 30 entries and none are `select-name` or `label`.
    improvement file.
 6. Squash-merged to main after CI is green; merge confirmed before the
    session ends.
+7. **`HANDOFF_NEXT.md` rewritten after that merge is confirmed**, with the
+   state you are handing over — your phase marked shipped, refreshed numbers,
+   what to start next, and what you found or got wrong. Committed and merged
+   too. See `HANDOFF_NEXT.md` §6 and `CLAUDE.md`'s handoff section.
 
 ## 6. What Stage 1 learned that Stage 2 should not relearn
 
