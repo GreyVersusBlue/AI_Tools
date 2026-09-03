@@ -183,7 +183,7 @@
       <button class="secondary small" id="rescanBtn" type="button">Rescan</button>
     </div>
     <table class="scan" id="scanTable">
-      <thead><tr><th class="chk"><input type="checkbox" id="scanSelectAll" checked title="Select / deselect all"></th><th>Tool</th><th>Holds</th><th class="num">Items</th><th class="num">Size</th></tr></thead>
+      <thead><tr><th class="chk"><input type="checkbox" id="scanSelectAll" checked aria-label="Select or deselect every tool" title="Select / deselect all"></th><th>Tool</th><th>Holds</th><th class="num">Items</th><th class="num">Size</th></tr></thead>
       <tbody id="scanBody"></tbody>
     </table>
 
@@ -204,7 +204,7 @@
     <div class="card-title">Restore from a backup</div>
     <p class="hint">Pick a backup file downloaded from this page. Nothing is written until you have seen what it contains and pressed Restore.</p>
     <div class="btn-row">
-      <input type="file" id="fileInput" accept="application/json,.json">
+      <input type="file" id="fileInput" accept="application/json,.json" aria-label="Backup file to restore">
     </div>
 
     <div class="preview" id="preview">

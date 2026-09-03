@@ -180,7 +180,7 @@
     els.eventsWrap.innerHTML = state.events.map(function (ev) {
       return '<div class="event-row" data-id="' + ev.id + '">' +
         '<input type="text" data-ename="' + ev.id + '" value="' + escapeAttr(ev.name) + '" placeholder="Event name">' +
-        '<select data-etype="' + ev.id + '"><option value="count"' + (ev.type === 'count' ? ' selected' : '') + '>Count (higher = better)</option>' +
+        '<select data-etype="' + ev.id + '" aria-label="Scoring type for ' + escapeAttr(ev.name) + '"><option value="count"' + (ev.type === 'count' ? ' selected' : '') + '>Count (higher = better)</option>' +
         '<option value="time"' + (ev.type === 'time' ? ' selected' : '') + '>Time (e.g. mm:ss)</option></select>' +
         '<button type="button" class="danger small" data-del-event="' + ev.id + '">&times;</button></div>';
     }).join('');

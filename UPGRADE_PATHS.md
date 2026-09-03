@@ -554,6 +554,75 @@ and have only ever been found by luck.
   `select-name` and `label` classes are mostly one `aria-label` each and would
   make a good mechanical round; contrast needs a palette decision per tool.
 
+  **That mechanical round ran, 2026-09-03 (Stage 2 Wave A2, Opus).** All 69
+  `select-name` / `label` / `label-title-only` allowances are gone: **91
+  page-rule pairs on 59 pages → 22 on 22 pages, and the 22 left are 21
+  `color-contrast` plus 034's one `aria-required-children`.** That already
+  clears Stage 2's "below 30 entries and none are `select-name` or `label`"
+  bar. 274 controls on 52 pages were named; the allowlist diff is
+  deletion-only.
+
+  *What the round actually was, since "one `aria-label` each" undersold it.*
+  The 274 controls fell into three kinds, and only the third is what the note
+  above described:
+
+  - **A visible `<label>` already sat next to the control and simply had no
+    `for`** (35 controls, 19 pages) — a copy-pasted toolbar idiom,
+    `<label style="margin:0;font-weight:600;font-size:.85rem;">Rubric:</label>`
+    followed by `<select id="rubricSwitch">`. Wiring `for=` is strictly better
+    than an `aria-label`: it keeps one name instead of two that can drift, and
+    it makes the visible text a click target. Done with a script that only
+    touches a `for`-less label directly followed by a control whose id is
+    unique in the file; it also picked up 9 controls behind a click that the
+    sweep never saw.
+  - **A `<span>` was doing a label's job** (4: 007's MODE/THEME/SPEED, 046's
+    "Page shape"). Promoted to `<label for=…>`. Checked first that no CSS rule
+    or query selects those elements *as spans* — `.pageFormatLabel` and
+    `.control-group` are class/descendant rules, so the promotion is invisible.
+  - **A control rendered from a JS template, in a repeated row** (the rest,
+    and the bulk). These are the ones that needed an `aria-label`, and a
+    constant one would have been close to useless: 058's duty grid is 15
+    identical `—` selects, so each got `aria-label="<duty name>, <day>"` built
+    from the row it is in; 056's rubric cells got `"<criterion>, <level>"`;
+    008's points and category got `"… for <behavior>"`. Where the row's own
+    value is the distinguishing text (a destination name, a prompt), a
+    constant name like "Destination name" is correct — a screen reader reads
+    the value too.
+
+  *What this round did not do.* Contrast, deliberately — it is the whole
+  remaining allowlist and it needs a palette decision per tool, and Path 5 P1
+  has since recorded (§5 P1) that light's `--line-strong` misses 3:1 on
+  non-text borders, which axe's `color-contrast` rule cannot see anyway. 034's
+  `aria-required-children` is a structural fix in one tool. Neither is a
+  labeling problem.
+
+  *Verified:* `npm run test:a11y` 174/174 green over 87 pages with the 69
+  allowances **removed** — which is the load-bearing half, since the sweep also
+  fails when an allowed rule stops firing, so a green run with the lines gone
+  proves the violations are gone rather than re-silenced. Every other guard
+  green (`check:dedupe`, `check:tests`, `check:social`, `check:entities`,
+  `check:hidden-flex`, `check:print-clip`, `lint`, `check:precache -- --base
+  origin/main`), and the full suite run. `CACHE_VERSION` v139 → v140 for the 52
+  changed pages; no file added, moved or deleted, so `PRECACHE_URLS` is
+  unchanged.
+
+  *One thing to know before anyone works the contrast half.* `index.html`'s
+  `color-contrast` count is **not stable between runs** — the same tree
+  reported ×8 at baseline, then ×24 and ×35 on two runs during this round,
+  with index.html untouched. It is an *allowed* rule so nothing fails, and the
+  allowlist stores no counts, so this is latent rather than broken; the likely
+  cause is that the landing page paints its per-tool category counts and the
+  "Offline: N of 86 tools ready" readout as the service worker reports
+  progress, so how much muted text exists when axe runs depends on timing.
+  Whoever fixes index's contrast should pin that state first (or scan a
+  settled page) — otherwise a partial fix and a slow run look the same.
+
+  *Not verified:* nothing was driven with an actual screen reader. The claim
+  this round can defend is the axe one — every control now has a programmatic
+  accessible name — not that each name is the best wording a NVDA or
+  VoiceOver user would want. The contextual names (058, 056, 008, 019, 047)
+  are the ones most worth a human ear.
+
 - **P4 — Sweeps as guards.** `check-entities.mjs`: HTML entity names inside JS
   string literals in `<script>` blocks. `check-hidden-flex.mjs`: elements toggled
   with `hidden` whose class sets `display:flex|grid` without a `[hidden]` rule

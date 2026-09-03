@@ -245,7 +245,7 @@
     <div class="card">
       <div class="card-title">1 · Roster</div>
       <div class="roster-load-row">
-        <select id="roster-select"><option value="">Load a saved Name Picker roster&hellip;</option></select>
+        <select id="roster-select" aria-label="Saved Name Picker roster to load"><option value="">Load a saved Name Picker roster&hellip;</option></select>
         <button class="btn-secondary btn-small" id="load-roster-btn">Load</button>
       </div>
       <div class="control-group">
@@ -296,9 +296,9 @@
     <div class="card">
       <div class="card-title">3 · Keep Apart (optional)</div>
       <div class="pair-row">
-        <select id="pair-a"></select>
+        <select id="pair-a" aria-label="Keep apart: first student"></select>
         <span style="color:var(--text-dim);font-size:0.8rem;">&amp;</span>
-        <select id="pair-b"></select>
+        <select id="pair-b" aria-label="Keep apart: second student"></select>
         <button class="btn-secondary btn-small" id="add-pair-btn">Add</button>
       </div>
       <div class="hint">Pairs listed here will be kept in different groups whenever possible.</div>
@@ -308,9 +308,9 @@
     <div class="card">
       <div class="card-title">4 · Keep Together (optional)</div>
       <div class="pair-row">
-        <select id="together-a"></select>
+        <select id="together-a" aria-label="Keep together: first student"></select>
         <span style="color:var(--text-dim);font-size:0.8rem;">&amp;</span>
-        <select id="together-b"></select>
+        <select id="together-b" aria-label="Keep together: second student"></select>
         <button class="btn-secondary btn-small" id="add-together-btn">Add</button>
       </div>
       <div class="hint">Pairs listed here will be placed in the same group whenever possible.</div>

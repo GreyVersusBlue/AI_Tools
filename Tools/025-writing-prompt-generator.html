@@ -412,7 +412,7 @@
       <div class="pill active" data-band="ms">Middle School</div>
       <div class="pill active" data-band="hs">High School</div>
     </div>
-    <select id="genreSelect"></select>
+    <select id="genreSelect" aria-label="Genre"></select>
   </div>
 
   <div class="mode-tabs" id="modeTabs">
@@ -510,7 +510,7 @@
     <div class="prompt-sets-header">
       <h2>Prompt Sets</h2>
       <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
-        <select id="setSelect"><option value="">+ New set&hellip;</option></select>
+        <select id="setSelect" aria-label="Saved prompt set"><option value="">+ New set&hellip;</option></select>
         <button type="button" class="toggle-btn" id="deleteSetBtn" disabled>Delete set</button>
       </div>
     </div>
@@ -543,7 +543,7 @@
   <div class="roster-sheet">
     <div class="roster-sheet-header">
       <h2>Roster Assignment Sheet</h2>
-      <select id="rosterLoadSelect"><option value="">Load a saved roster&hellip;</option></select>
+      <select id="rosterLoadSelect" aria-label="Saved roster to load onto the assignment sheet"><option value="">Load a saved roster&hellip;</option></select>
     </div>
     <p class="hint">Paste a class list (one name per line) to randomly pair each student with a distinct prompt from the grade band / genre filters above, then print a one-page assignment sheet for independent writing stations &mdash; each student gets a different prompt instead of the whole class getting the same one.</p>
     <textarea id="rosterNamesInput" placeholder="Paste names, one per line&hellip;"></textarea>
@@ -560,7 +560,7 @@
   <div class="writing-record">
     <div class="writing-record-header">
       <h2>Writing Record</h2>
-      <select id="recordRosterLoadSelect"><option value="">Load a saved roster&hellip;</option></select>
+      <select id="recordRosterLoadSelect" aria-label="Saved roster to load into the writing record"><option value="">Load a saved roster&hellip;</option></select>
     </div>
     <p class="hint">A teacher-kept log of which prompt each student wrote to, with your notes &mdash; the artifact for a conference. Nothing here is submitted by students; you type it.</p>
     <div class="record-entry-form">

@@ -183,7 +183,7 @@
     </div>
 
     <div class="control-group">
-      <label>Page size</label>
+      <label for="page-size">Page size</label>
       <select class="input" id="page-size">
         <option value="letter" selected>Letter (8.5 × 11")</option>
         <option value="a4">A4 (210 × 297 mm)</option>
@@ -206,7 +206,7 @@
     </div>
 
     <div class="control-group">
-      <label>Layout</label>
+      <label for="grid-density">Layout</label>
       <select class="input" id="grid-density">
         <option value="1" selected>One image per page</option>
         <option value="2">Contact sheet — 2 per page</option>
@@ -218,7 +218,7 @@
     </div>
 
     <div class="control-group">
-      <label>Quality</label>
+      <label for="quality">Quality</label>
       <select class="input" id="quality">
         <option value="standard" selected>Standard — smaller file, best for email/Schoology</option>
         <option value="high">High — larger file, less compression</option>
@@ -227,7 +227,7 @@
     </div>
 
     <div class="control-group">
-      <label>Target output size (MB, optional)</label>
+      <label for="target-size">Target output size (MB, optional)</label>
       <input class="input" type="number" id="target-size" min="0.5" step="0.5" placeholder="off">
     </div>
 
@@ -256,7 +256,7 @@
     </div>
 
     <div class="control-group">
-      <label>Output filename</label>
+      <label for="filename">Output filename</label>
       <input class="input" type="text" id="filename" value="assembled.pdf" placeholder="assembled.pdf">
     </div>
 
@@ -273,16 +273,16 @@
       <label><input type="checkbox" id="opt-titlepage"> Add a title page</label>
     </div>
     <div class="control-group" id="titlepage-fields" style="display:none;">
-      <label>Title</label>
+      <label for="titlepage-title">Title</label>
       <input class="input" type="text" id="titlepage-title" placeholder="e.g. Room 204 — Lab Photos">
     </div>
     <div class="control-group" id="titlepage-fields-2" style="display:none;">
-      <label>Subtitle (optional)</label>
+      <label for="titlepage-subtitle">Subtitle (optional)</label>
       <input class="input" type="text" id="titlepage-subtitle" placeholder="e.g. Ms. Rivera — Period 3">
     </div>
 
     <div class="control-group" style="flex-basis:100%;">
-      <label>Running header (printed at the top of every page, optional)</label>
+      <label for="header-text">Running header (printed at the top of every page, optional)</label>
       <input class="input" type="text" id="header-text" placeholder="e.g. Chapter 12 — Lab Photos">
     </div>
 

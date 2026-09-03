@@ -297,13 +297,13 @@
   function renderSteps() {
     els.stepsWrap.innerHTML = state.steps.map(function (step, i) {
       var subs = step.subs.map(function (sub) {
-        return '<div class="sub-row" data-step="' + step.key + '"><input type="text" data-sub="' + sub.id + '" value="' + escapeAttr(sub.text) + '">' +
+        return '<div class="sub-row" data-step="' + step.key + '"><input type="text" data-sub="' + sub.id + '" value="' + escapeAttr(sub.text) + '" aria-label="Follow-up question for ' + escapeAttr(step.label) + '">' +
           '<button type="button" class="danger small" data-del-sub="' + sub.id + '" data-del-step="' + step.key + '">&times;</button></div>';
       }).join('');
       return '<div class="card step-block" data-step-key="' + step.key + '">' +
         '<h3><span class="step-num">' + (i + 1) + '</span>' + escapeHtml(step.label) + '</h3>' +
         '<label>Main prompt</label>' +
-        '<textarea data-prompt="' + step.key + '">' + escapeHtml(step.prompt) + '</textarea>' +
+        '<textarea data-prompt="' + step.key + '" aria-label="Main prompt for ' + escapeAttr(step.label) + '">' + escapeHtml(step.prompt) + '</textarea>' +
         '<label>Follow-up questions</label>' + subs +
         '<button type="button" class="secondary small" data-add-sub="' + step.key + '">+ Add follow-up question</button>' +
         '</div>';

@@ -297,7 +297,7 @@
         <div class="card-title"><span>Player link</span></div>
         <div class="hint">This is the same link/QR code for every station — what changes is each student's own saved progress. Project it, or print a station-specific code below.</div>
         <div class="link-box">
-          <input type="text" id="playerLink" readonly>
+          <input type="text" id="playerLink" readonly aria-label="Student link for this room">
           <button class="secondary" id="copyLinkBtn" type="button">Copy</button>
         </div>
         <a class="secondary" id="monitorLink" href="escape-room-builder/monitor.html" target="_blank" rel="noopener"
@@ -602,7 +602,7 @@
         '</div>' +
         '<div class="row2">' +
           '<div class="field-row"><label>Puzzle type</label>' +
-            '<select class="f-type">' +
+            '<select class="f-type" aria-label="Puzzle type for station ' + (i + 1) + '">' +
               '<option value="text"' + (type === 'text' ? ' selected' : '') + '>Text answer</option>' +
               '<option value="digits"' + (type === 'digits' ? ' selected' : '') + '>Digit lock (numeric code)</option>' +
               '<option value="cipher"' + (type === 'cipher' ? ' selected' : '') + '>Caesar cipher</option>' +
@@ -616,7 +616,7 @@
           '<div class="station-image-row">' +
             (s.image
               ? '<div class="station-image-thumb"><img src="' + escapeAttr(s.image) + '" alt=""><button type="button" class="icon-btn danger" data-remove-image title="Remove image">&#10005;</button></div>'
-              : '<input type="file" class="f-image" accept="image/*">') +
+              : '<input type="file" class="f-image" accept="image/*" aria-label="Image for station ' + (i + 1) + '">') +
           '</div>' +
           '<div class="hint" style="margin:-.4rem 0 .6rem;">Shrunk automatically before it\'s saved. Adding a photo makes every station\'s QR code bigger — if a code stops scanning, remove the image or lower error correction.</div></div>' +
         (type === 'cipher'
@@ -637,11 +637,11 @@
           '<div class="field-row"><label>Hint (optional)</label>' +
             '<div style="display:flex;gap:.4rem;align-items:center;">' +
               '<input type="text" class="f-hint" style="flex:1;margin-bottom:.6rem;" value="' + escapeAttr(s.hint) + '" placeholder="' + (Number(s.hintCost) > 0 ? 'Shown when spent' : 'Free — shown after 2 misses') + '">' +
-              '<input type="number" class="f-hint-cost" min="0" step="5" style="width:4.4rem;margin-bottom:.6rem;" value="' + (Number(s.hintCost) || 0) + '" title="Points deducted when a student reveals this hint (0 = free)">' +
+              '<input type="number" class="f-hint-cost" min="0" step="5" style="width:4.4rem;margin-bottom:.6rem;" value="' + (Number(s.hintCost) || 0) + '" aria-label="Hint cost in points for station ' + (i + 1) + '" title="Points deducted when a student reveals this hint (0 = free)">' +
               '<span style="font-size:.68rem;color:var(--muted);margin-bottom:.6rem;">pts</span>' +
             '</div></div>' +
           '<div class="field-row"><label>Next station on success</label>' +
-            '<select class="f-next">' + nextOptionsHtml(i, s.next) + '</select></div>' +
+            '<select class="f-next" aria-label="Next station after station ' + (i + 1) + '">' + nextOptionsHtml(i, s.next) + '</select></div>' +
         '</div>' +
         '<div class="row2">' +
           '<div class="field-row"><label>Attempt limit before lockout (optional)</label>' +

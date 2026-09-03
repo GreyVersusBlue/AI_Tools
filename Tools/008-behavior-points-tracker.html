@@ -248,7 +248,7 @@
 
         <div class="card-title" style="margin-top:.6rem;"><span>Roster</span></div>
         <div class="roster-load-row">
-          <select id="rosterSelect"><option value="">Load a saved Name Picker roster&hellip;</option></select>
+          <select id="rosterSelect" aria-label="Saved Name Picker roster to load"><option value="">Load a saved Name Picker roster&hellip;</option></select>
           <button class="secondary" id="loadRosterBtn" type="button">Load</button>
         </div>
         <label for="namesInput">One name per line</label>
@@ -277,7 +277,7 @@
         <div class="card-title"><span>Daily goals</span></div>
         <div class="hint">A behaviour plan is usually written as &ldquo;at or above <em>N</em> points, 4 days out of 5&rdquo;. Set a daily target and this tool counts the days met &mdash; on the board, in the trends below, and on the printed summary.</div>
         <div class="roster-load-row" style="align-items:center;">
-          <select id="goalStudent"><option value="">Pick a student&hellip;</option></select>
+          <select id="goalStudent" aria-label="Student to set a goal for"><option value="">Pick a student&hellip;</option></select>
           <input type="number" id="goalValue" step="1" placeholder="target" style="max-width:6rem;">
           <button class="secondary" id="setGoalBtn" type="button">Set</button>
         </div>
@@ -289,7 +289,7 @@
         <div class="hint">Every archived day, per student. The bars run oldest to newest &mdash; a run of red on the right is the thing worth catching early.</div>
         <div id="trendWrap"></div>
         <div class="btn-row">
-          <select id="summaryStudent" style="max-width:16rem;"><option value="">Student summary for&hellip;</option></select>
+          <select id="summaryStudent" aria-label="Student to print a summary for" style="max-width:16rem;"><option value="">Student summary for&hellip;</option></select>
           <button class="secondary" id="printSummaryBtn" type="button">Print student summary</button>
         </div>
       </div>
@@ -786,9 +786,9 @@
         return '<option value="' + c + '"' + (t.cat === c ? ' selected' : '') + '>' + CAT_LABELS[c] + '</option>';
       }).join('');
       return '<div class="tag-row" data-id="' + escapeAttr(t.id) + '">' +
-        '<input type="text" class="tag-label" value="' + escapeAttr(t.label) + '">' +
-        '<input type="number" class="tag-delta" value="' + t.delta + '" step="1">' +
-        '<select class="tag-cat" title="Category — groups this behavior on the printed report">' + catOpts + '</select>' +
+        '<input type="text" class="tag-label" value="' + escapeAttr(t.label) + '" aria-label="Behavior name">' +
+        '<input type="number" class="tag-delta" value="' + t.delta + '" step="1" aria-label="Points for ' + escapeAttr(t.label) + '">' +
+        '<select class="tag-cat" aria-label="Category for ' + escapeAttr(t.label) + '" title="Category — groups this behavior on the printed report">' + catOpts + '</select>' +
         '<button type="button" class="remove-row-btn" data-remove-tag="' + escapeAttr(t.id) + '" title="Remove behavior">&#10005;</button>' +
         '</div>';
     }).join('');

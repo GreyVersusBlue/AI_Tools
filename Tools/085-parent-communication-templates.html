@@ -303,7 +303,7 @@
     var html = '';
     used.forEach(function (f) {
       if (batchOn && f === 'Student') return; // filled per-student in batch mode
-      html += '<div class="field"><label>' + esc(f) + '</label><input type="text" data-field="' + escAttr(f) + '" value="' + escAttr(values[f] || '') + '"></div>';
+      html += '<div class="field"><label>' + esc(f) + '</label><input type="text" data-field="' + escAttr(f) + '" value="' + escAttr(values[f] || '') + '" aria-label="' + escAttr(f) + '"></div>';
     });
     els.blanksWrap.innerHTML = html || '<p class="hint">This template has no fill-in fields — edit the body directly.</p>';
     var inputs = els.blanksWrap.querySelectorAll('input[data-field]');

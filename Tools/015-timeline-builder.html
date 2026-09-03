@@ -408,7 +408,7 @@
   </div>
 
   <div class="toolbar" id="toolbar" style="display:none;">
-    <label style="margin:0;font-weight:600;font-size:.85rem;">Timeline:</label>
+    <label for="timelineSwitch" style="margin:0;font-weight:600;font-size:.85rem;">Timeline:</label>
     <select id="timelineSwitch"></select>
     <button class="secondary" style="width:auto;" id="newTimelineBtn">New timeline</button>
     <button class="danger" style="width:auto;" id="deleteTimelineBtn">Delete</button>
@@ -519,7 +519,7 @@
 
         <input type="text" id="evDisplayDate" placeholder="Display label override (optional), e.g. Late Bronze Age">
         <textarea id="evDescription" placeholder="Short description (optional)"></textarea>
-        <input type="file" id="evPhoto" accept="image/*">
+        <input type="file" id="evPhoto" aria-label="Event photo" accept="image/*">
         <div class="photo-preview" id="evPhotoPreview" style="display:none;">
           <img id="evPhotoImg" alt="">
           <button type="button" class="secondary small" id="evPhotoRemove">Remove photo</button>

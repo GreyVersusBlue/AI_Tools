@@ -221,7 +221,7 @@
 
   <div class="card">
     <h2>Start from a template</h2>
-    <select id="templateSelect"></select>
+    <select id="templateSelect" aria-label="Simulation template to start from"></select>
     <button class="secondary" id="loadTemplateBtn">Load template (replaces this simulation)</button>
     <p class="hint" style="margin:.5rem 0 0;">Every template arrives complete: roles with private case files, an agenda
       with time boxes, ballots, a scoring rubric, and a reflection sheet.</p>
@@ -232,7 +232,7 @@
     <p class="hint">Loads a class list saved by Name Picker or Class Roster Hub, and prints each card with its
       student's name already on it. Cards with nobody assigned print a blank name line as before.</p>
     <div class="assign-row">
-      <select id="rosterSelect"></select>
+      <select id="rosterSelect" aria-label="Saved class list to assign from"></select>
       <button id="assignBtn">Assign students</button>
       <button type="button" class="secondary" id="clearAssignBtn">Clear names</button>
     </div>

@@ -121,7 +121,7 @@
     <div>
       <div class="card">
         <h2>Start from a template</h2>
-        <select id="templateSelect">
+        <select id="templateSelect" aria-label="Checklist template to start from">
           <option value="narrative">Narrative Writing</option>
           <option value="argumentative">Argumentative / Persuasive</option>
           <option value="informative">Informative / Expository</option>
@@ -255,7 +255,7 @@
       var itemsHtml = cat.items.map(function (item, ii) {
         return '<div class="item-row" data-cat="' + cat.id + '" data-item="' + item.id + '">' +
           '<span class="drag-handle">&bull;</span>' +
-          '<input type="text" data-field="item" value="' + escapeAttr(item.text) + '">' +
+          '<input type="text" data-field="item" value="' + escapeAttr(item.text) + '" aria-label="Checklist item">' +
           '<div class="item-move">' +
             '<button type="button" class="secondary icon-btn" data-item-up="' + item.id + '" data-item-up-cat="' + cat.id + '"' + (ii === 0 ? ' disabled' : '') + ' title="Move item up">&uarr;</button>' +
             '<button type="button" class="secondary icon-btn" data-item-down="' + item.id + '" data-item-down-cat="' + cat.id + '"' + (ii === lastItem ? ' disabled' : '') + ' title="Move item down">&darr;</button>' +
@@ -265,7 +265,7 @@
       }).join('');
       return '<div class="category" data-cat-id="' + cat.id + '">' +
         '<div class="category-head">' +
-          '<input type="text" data-field="catname" data-cat="' + cat.id + '" value="' + escapeAttr(cat.name) + '">' +
+          '<input type="text" data-field="catname" data-cat="' + cat.id + '" value="' + escapeAttr(cat.name) + '" aria-label="Category name">' +
           '<div class="cat-move">' +
             '<button type="button" class="secondary icon-btn" data-cat-up="' + cat.id + '"' + (ci === 0 ? ' disabled' : '') + ' title="Move category up">&uarr;</button>' +
             '<button type="button" class="secondary icon-btn" data-cat-down="' + cat.id + '"' + (ci === lastCat ? ' disabled' : '') + ' title="Move category down">&darr;</button>' +

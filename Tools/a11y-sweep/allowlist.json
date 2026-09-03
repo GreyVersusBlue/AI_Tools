@@ -10,211 +10,68 @@
     "index.html": {
       "color-contrast": "baseline 2026-09-03: 8 × elements must meet minimum color contrast ratio thresholds (e.g. a[data-tool=\"seating-chart\"] > .per > .lbl); fix in the tool, then remove this line"
     },
-    "Tools/001-hall-pass-log.html": {
-      "label": "baseline 2026-09-03: 12 × form elements must have labels (e.g. input[value=\"Restroom\"]); fix in the tool, then remove this line",
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #rosterSelect); fix in the tool, then remove this line"
-    },
     "Tools/002-group-team-generator.html": {
-      "select-name": "baseline 2026-09-03: 5 × select element must have an accessible name (e.g. #roster-select); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 18 × elements must meet minimum color contrast ratio thresholds (e.g. .col-left > .card:nth-child(1) > .card-title); fix in the tool, then remove this line"
     },
     "Tools/003-rubric-builder.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #rubricSwitch); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
     },
     "Tools/005-Seating Chart Generator.html": {
       "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. #status > b); fix in the tool, then remove this line"
     },
-    "Tools/006-class-roster-hub.html": {
-      "select-name": "baseline 2026-09-03: 4 × select element must have an accessible name (e.g. #printFormat); fix in the tool, then remove this line"
-    },
     "Tools/007-Name Picker.html": {
-      "label": "baseline 2026-09-03: 1 × form elements must have labels (e.g. #speed); fix in the tool, then remove this line",
-      "select-name": "baseline 2026-09-03: 2 × select element must have an accessible name (e.g. #mode); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. #emptyStateBtn); fix in the tool, then remove this line"
     },
-    "Tools/008-behavior-points-tracker.html": {
-      "label": "baseline 2026-09-03: 16 × form elements must have labels (e.g. input[value=\"On Task\"]); fix in the tool, then remove this line",
-      "select-name": "baseline 2026-09-03: 3 × select element must have an accessible name (e.g. #rosterSelect); fix in the tool, then remove this line",
-      "label-title-only": "baseline 2026-09-03: 8 × form elements should have a visible label (e.g. div[data-id=\"t1\"] > .tag-cat); fix in the tool, then remove this line"
-    },
-    "Tools/009-backup-restore.html": {
-      "label": "baseline 2026-09-03: 1 × form elements must have labels (e.g. #fileInput); fix in the tool, then remove this line",
-      "label-title-only": "baseline 2026-09-03: 1 × form elements should have a visible label (e.g. #scanSelectAll); fix in the tool, then remove this line"
-    },
-    "Tools/010-command-center-dashboard.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #rosterSelect); fix in the tool, then remove this line"
-    },
-    "Tools/011-image-to-pdf.html": {
-      "select-name": "baseline 2026-09-03: 3 × select element must have an accessible name (e.g. #page-size); fix in the tool, then remove this line"
-    },
     "Tools/012-graph-paper-generator.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #presetSwitch); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. .preview-note); fix in the tool, then remove this line"
-    },
-    "Tools/013-lab-safety-contract-tracker.html": {
-      "label": "baseline 2026-09-03: 1 × form elements must have labels (e.g. .doc-label); fix in the tool, then remove this line"
-    },
-    "Tools/014-roleplay-scenario-generator.html": {
-      "select-name": "baseline 2026-09-03: 4 × select element must have an accessible name (e.g. #categorySelect); fix in the tool, then remove this line"
-    },
-    "Tools/015-timeline-builder.html": {
-      "label": "baseline 2026-09-03: 1 × form elements must have labels (e.g. #evPhoto); fix in the tool, then remove this line",
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #timelineSwitch); fix in the tool, then remove this line"
     },
     "Tools/016-qr-code-generator.html": {
       "color-contrast": "baseline 2026-09-03: 26 × elements must meet minimum color contrast ratio thresholds (e.g. .col-left > .card:nth-child(1) > .card-title); fix in the tool, then remove this line"
     },
     "Tools/018-qr-scavenger-hunt-builder.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. .f-qtype); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 14 × elements must meet minimum color contrast ratio thresholds (e.g. label[for=\"hunt-name\"]); fix in the tool, then remove this line"
     },
-    "Tools/019-escape-room-builder.html": {
-      "label": "baseline 2026-09-03: 2 × form elements must have labels (e.g. .f-image); fix in the tool, then remove this line",
-      "select-name": "baseline 2026-09-03: 2 × select element must have an accessible name (e.g. .f-type); fix in the tool, then remove this line",
-      "label-title-only": "baseline 2026-09-03: 1 × form elements should have a visible label (e.g. .f-hint-cost); fix in the tool, then remove this line"
-    },
-    "Tools/020-bracket-tournament-generator.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #rosterSelect); fix in the tool, then remove this line"
-    },
-    "Tools/021-pe-tournament-stations.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #bracketSource); fix in the tool, then remove this line"
-    },
     "Tools/022-lab-group-role-randomizer.html": {
-      "label": "baseline 2026-09-03: 4 × form elements must have labels (e.g. input[value=\"Recorder\"]); fix in the tool, then remove this line",
-      "select-name": "baseline 2026-09-03: 3 × select element must have an accessible name (e.g. #rosterSwitch); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. .empty-hint); fix in the tool, then remove this line"
-    },
-    "Tools/023-exit-ticket-generator.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #setSelect); fix in the tool, then remove this line"
-    },
-    "Tools/025-writing-prompt-generator.html": {
-      "select-name": "baseline 2026-09-03: 4 × select element must have an accessible name (e.g. #genreSelect); fix in the tool, then remove this line"
     },
     "Tools/026-math-drill-generator.html": {
       "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
     },
     "Tools/027-novel-study-circles-manager.html": {
-      "label": "baseline 2026-09-03: 6 × form elements must have labels (e.g. input[data-role-idx=\"0\"]); fix in the tool, then remove this line",
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #projectSwitch); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. #resultsArea > .empty-hint); fix in the tool, then remove this line"
     },
     "Tools/028-primary-source-analysis-generator.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #sheetSwitch); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. .preview-note); fix in the tool, then remove this line"
     },
     "Tools/029-prompt-builder.html": {
       "color-contrast": "baseline 2026-09-03: 23 × elements must meet minimum color contrast ratio thresholds (e.g. .privacy-banner); fix in the tool, then remove this line"
     },
-    "Tools/032-School Calendar Visualizer.html": {
-      "label": "baseline 2026-09-03: 18 × form elements must have labels (e.g. input[value=\"Holiday / No School\"]); fix in the tool, then remove this line",
-      "select-name": "baseline 2026-09-03: 6 × select element must have an accessible name (e.g. select[data-i=\"0\"][data-f=\"pattern\"]); fix in the tool, then remove this line",
-      "label-title-only": "baseline 2026-09-03: 2 × form elements should have a visible label (e.g. #jumpMonth); fix in the tool, then remove this line"
-    },
-    "Tools/033-ssr-log-tracker.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #sectionSwitch); fix in the tool, then remove this line"
-    },
     "Tools/034-schedule-browser.html": {
       "aria-required-children": "baseline 2026-09-03: 1 × certain aria roles must contain particular children (e.g. .mode); fix in the tool, then remove this line"
     },
     "Tools/035-schedule-visualizer.html": {
-      "label": "baseline 2026-09-03: 1 × form elements must have labels (e.g. #trace-image-file); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 6 × elements must meet minimum color contrast ratio thresholds (e.g. #tool-classroom); fix in the tool, then remove this line"
     },
-    "Tools/037-grade-distribution-visualizer.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #listSwitch); fix in the tool, then remove this line"
-    },
     "Tools/038-data-chart-builder.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #saved-datasets-select); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 9 × elements must meet minimum color contrast ratio thresholds (e.g. .col-left > .card:nth-child(1) > .card-title); fix in the tool, then remove this line"
     },
     "Tools/039-vocab-conjugation-drill.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #setSwitch); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
     },
     "Tools/040-vocab-flashcard-generator.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #listSwitch); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
     },
     "Tools/041-formula-sheet-builder.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #sheetSwitch); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. .preview-note); fix in the tool, then remove this line"
     },
     "Tools/042-certificate-award-maker.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #presetSwitch); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
     },
     "Tools/043-field-trip-permission-slip.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #tripSwitch); fix in the tool, then remove this line",
       "color-contrast": "baseline 2026-09-03: 5 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
-    },
-    "Tools/044-Sub Plan Builder.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #behaviorVariant); fix in the tool, then remove this line"
-    },
-    "Tools/046-blank-map-generator.html": {
-      "select-name": "baseline 2026-09-03: 4 × select element must have an accessible name (e.g. #baseMapSelect); fix in the tool, then remove this line"
-    },
-    "Tools/047-art-critique-worksheet-generator.html": {
-      "label": "baseline 2026-09-03: 12 × form elements must have labels (e.g. textarea[data-prompt=\"describe\"]); fix in the tool, then remove this line"
-    },
-    "Tools/050-civics-role-card-generator.html": {
-      "select-name": "baseline 2026-09-03: 2 × select element must have an accessible name (e.g. #templateSelect); fix in the tool, then remove this line"
-    },
-    "Tools/054-current-events-discussion-guide-generator.html": {
-      "label": "baseline 2026-09-03: 1 × form elements must have labels (e.g. #summaryText); fix in the tool, then remove this line"
-    },
-    "Tools/056-dbq-source-packet-builder.html": {
-      "label": "baseline 2026-09-03: 32 × form elements must have labels (e.g. input[data-rlevel=\"0\"]); fix in the tool, then remove this line",
-      "select-name": "baseline 2026-09-03: 3 × select element must have an accessible name (e.g. select[data-field=\"type\"][data-src$=\"xmtl02r07zx6r\"]); fix in the tool, then remove this line"
-    },
-    "Tools/057-dichotomous-key-builder.html": {
-      "select-name": "baseline 2026-09-03: 4 × select element must have an accessible name (e.g. .choice-row[data-step=\"smtl02rxrwzwa\"][data-choice=\"a\"] > div:nth-child(3) > select); fix in the tool, then remove this line"
-    },
-    "Tools/058-duty-roster-builder.html": {
-      "label": "baseline 2026-09-03: 3 × form elements must have labels (e.g. input[value=\"Hallway (2nd floor)\"]); fix in the tool, then remove this line",
-      "select-name": "baseline 2026-09-03: 15 × select element must have an accessible name (e.g. select[data-day=\"Monday\"][data-duty=\"dmtl02sqmm5x0\"]); fix in the tool, then remove this line"
-    },
-    "Tools/060-fitness-skill-assessment-tracker.html": {
-      "select-name": "baseline 2026-09-03: 3 × select element must have an accessible name (e.g. select[data-etype=\"emtl02ud8dkqu\"]); fix in the tool, then remove this line"
-    },
-    "Tools/064-historical-trading-card-maker.html": {
-      "select-name": "baseline 2026-09-03: 2 × select element must have an accessible name (e.g. #deckSelect); fix in the tool, then remove this line"
-    },
-    "Tools/065-lab-report-template-builder.html": {
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #templateSelect); fix in the tool, then remove this line"
-    },
-    "Tools/068-parent-contact-log.html": {
-      "select-name": "baseline 2026-09-03: 2 × select element must have an accessible name (e.g. #filterMethod); fix in the tool, then remove this line",
-      "label-title-only": "baseline 2026-09-03: 2 × form elements should have a visible label (e.g. #filterFrom); fix in the tool, then remove this line"
-    },
-    "Tools/070-peer-feedback-checklist-generator.html": {
-      "label": "baseline 2026-09-03: 12 × form elements must have labels (e.g. input[value=\"Story Elements\"]); fix in the tool, then remove this line",
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #templateSelect); fix in the tool, then remove this line"
-    },
-    "Tools/071-picture-prompt-generator.html": {
-      "label": "baseline 2026-09-03: 6 × form elements must have labels (e.g. input[data-prompt=\"imtl033w5gxmu\"]); fix in the tool, then remove this line"
-    },
-    "Tools/073-science-fair-project-tracker.html": {
-      "label": "baseline 2026-09-03: 12 × form elements must have labels (e.g. input[data-mname=\"mmtl035m2cqaj\"]); fix in the tool, then remove this line"
     },
     "Tools/074-science-safety-label-maker.html": {
       "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. .selected > span); fix in the tool, then remove this line"
-    },
-    "Tools/076-sub-note-feedback-slip-generator.html": {
-      "label": "baseline 2026-09-03: 4 × form elements must have labels (e.g. input[data-prompt=\"pmtl0385c2bof\"]); fix in the tool, then remove this line"
-    },
-    "Tools/077-testing-accommodations-card-generator.html": {
-      "label": "baseline 2026-09-03: 6 × form elements must have labels (e.g. input[data-type=\"tmtl038yepg6y\"]); fix in the tool, then remove this line"
-    },
-    "Tools/079-verb-conjugation-poster-generator.html": {
-      "label": "baseline 2026-09-03: 24 × form elements must have labels (e.g. input[data-person=\"0\"]); fix in the tool, then remove this line",
-      "select-name": "baseline 2026-09-03: 1 × select element must have an accessible name (e.g. #templateSelect); fix in the tool, then remove this line"
-    },
-    "Tools/084-socratic-seminar-prep-organizer.html": {
-      "label": "baseline 2026-09-03: 1 × form elements must have labels (e.g. #blankCount); fix in the tool, then remove this line"
-    },
-    "Tools/085-parent-communication-templates.html": {
-      "label": "baseline 2026-09-03: 4 × form elements must have labels (e.g. input[data-field=\"Student\"]); fix in the tool, then remove this line"
     }
   }
 }

@@ -338,7 +338,7 @@
 
         <div class="card-title" style="margin-top:.6rem;"><span>Roster</span></div>
         <div class="roster-load-row">
-          <select id="rosterSelect"><option value="">Load a saved Name Picker roster&hellip;</option></select>
+          <select id="rosterSelect" aria-label="Saved Name Picker roster to load"><option value="">Load a saved Name Picker roster&hellip;</option></select>
           <button class="secondary" id="loadRosterBtn" type="button">Load</button>
         </div>
         <label for="namesInput">One name per line</label>
@@ -797,9 +797,9 @@
   function renderDestsEditor() {
     els.destsEditor.innerHTML = state.destinations.map(function (d) {
       return '<div class="tag-row" data-id="' + escapeAttr(d.id) + '">' +
-        '<input type="text" class="dest-label" value="' + escapeAttr(d.label) + '">' +
+        '<input type="text" class="dest-label" value="' + escapeAttr(d.label) + '" aria-label="Destination name">' +
         '<span class="dest-overtime-wrap"><label>Over after</label>' +
-        '<input type="number" class="dest-overtime" min="1" max="120" value="' + d.overtimeMin + '">' +
+        '<input type="number" class="dest-overtime" min="1" max="120" value="' + d.overtimeMin + '" aria-label="Minutes before a pass to ' + escapeAttr(d.label) + ' is overdue">' +
         '<label>min</label></span>' +
         '<span class="dest-note-wrap"><label><input type="checkbox" class="dest-note-toggle"' + (d.requiresNote ? ' checked' : '') + '>Note at sign-out</label></span>' +
         '<button type="button" class="remove-row-btn" data-remove-dest="' + escapeAttr(d.id) + '" title="Remove destination">&#10005;</button>' +

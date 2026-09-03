@@ -4847,7 +4847,7 @@
         Assign a shared label to the <strong id="corridor-label-count">0</strong> selected hallway tile(s). This label appears in congestion hotspot reports.
       </p>
       <div style="margin-bottom:var(--sp-4);">
-        <label style="display:block;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">Corridor Name</label>
+        <label for="corridor-label-input" style="display:block;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">Corridor Name</label>
         <input type="text" id="corridor-label-input" class="rp-input" placeholder="e.g. North Corridor, Main Hall…" maxlength="40" style="width:100%;" />
       </div>
       <p style="font-size:11px;color:var(--slate-400);line-height:1.5;margin-bottom:var(--sp-4);">Leave blank to clear the label from selected tiles.</p>
@@ -4880,7 +4880,7 @@
         instead of placing every room from a blank grid. Applies only to this floor.
       </p>
       <div style="margin-bottom:var(--sp-4);">
-        <label style="display:block;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">Image File</label>
+        <label for="trace-image-file" style="display:block;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">Image File</label>
         <input type="file" id="trace-image-file" accept="image/*" style="width:100%;">
       </div>
       <div id="trace-image-controls" style="display:none;">
@@ -4898,11 +4898,11 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);margin-bottom:var(--sp-4);">
           <div>
-            <label style="display:block;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">Offset X (px)</label>
+            <label for="trace-image-offset-x" style="display:block;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">Offset X (px)</label>
             <input type="number" id="trace-image-offset-x" class="rp-input" value="0" style="width:100%;">
           </div>
           <div>
-            <label style="display:block;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">Offset Y (px)</label>
+            <label for="trace-image-offset-y" style="display:block;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">Offset Y (px)</label>
             <input type="number" id="trace-image-offset-y" class="rp-input" value="0" style="width:100%;">
           </div>
         </div>

@@ -229,7 +229,7 @@
   <button type="button" class="secondary" id="exitPresentBtn">Exit presentation</button>
 
   <div class="toolbar" id="toolbar" style="display:none;">
-    <label style="margin:0;font-weight:600;font-size:.85rem;">Bracket:</label>
+    <label for="bracketSwitch" style="margin:0;font-weight:600;font-size:.85rem;">Bracket:</label>
     <select id="bracketSwitch"></select>
     <button class="secondary" id="newBracketBtn">New bracket</button>
     <button class="secondary" id="resetPicksBtn">Reset picks</button>
@@ -256,7 +256,7 @@
         <label for="contestants">Names or teams</label>
         <p class="hint">One per line, or separated by commas. Byes are added automatically if the count isn't a power of 2.</p>
         <div class="roster-load-row">
-          <select id="rosterSelect"><option value="">Load a saved Name Picker roster&hellip;</option></select>
+          <select id="rosterSelect" aria-label="Saved Name Picker roster to load"><option value="">Load a saved Name Picker roster&hellip;</option></select>
           <button type="button" class="secondary" id="loadRosterBtn">Load</button>
         </div>
         <textarea id="contestants" placeholder="Team A&#10;Team B&#10;Team C&#10;Team D"></textarea>

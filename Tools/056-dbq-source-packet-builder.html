@@ -935,12 +935,12 @@
     var r = state.rubric;
     var head = '<thead><tr><th style="width:16%;">Criterion</th>' +
       r.levels.map(function (l, li) {
-        return '<th><input type="text" data-rlevel="' + li + '" value="' + escapeAttr(l) + '"></th>';
+        return '<th><input type="text" data-rlevel="' + li + '" value="' + escapeAttr(l) + '" aria-label="Level ' + (li + 1) + ' name"></th>';
       }).join('') + '<th style="width:3%;"></th></tr></thead>';
     var body = '<tbody>' + r.rows.map(function (row) {
-      return '<tr><td><input type="text" data-rcrit="' + row.id + '" value="' + escapeAttr(row.criterion) + '"></td>' +
+      return '<tr><td><input type="text" data-rcrit="' + row.id + '" value="' + escapeAttr(row.criterion) + '" aria-label="Criterion name"></td>' +
         row.cells.map(function (c, ci) {
-          return '<td><textarea data-rcell="' + row.id + '" data-rci="' + ci + '">' + escapeHtml(c) + '</textarea></td>';
+          return '<td><textarea data-rcell="' + row.id + '" data-rci="' + ci + '" aria-label="' + escapeAttr(row.criterion || 'Criterion') + ', ' + escapeAttr(r.levels[ci] || 'level ' + (ci + 1)) + '">' + escapeHtml(c) + '</textarea></td>';
         }).join('') +
         '<td><button type="button" class="danger small" data-rdel="' + row.id + '" aria-label="Remove this criterion">&times;</button></td></tr>';
     }).join('') + '</tbody>';
@@ -1313,7 +1313,7 @@
 
   function renderSharedQ() {
     els.sharedQWrap.innerHTML = state.sharedQuestions.map(function (q) {
-      return '<div class="qrow" data-id="' + q.id + '"><input type="text" data-sq="' + q.id + '" value="' + escapeAttr(q.text) + '">' +
+      return '<div class="qrow" data-id="' + q.id + '"><input type="text" data-sq="' + q.id + '" value="' + escapeAttr(q.text) + '" aria-label="Shared question text">' +
         '<button type="button" class="danger small" data-del-sq="' + q.id + '">&times;</button></div>';
     }).join('');
   }
@@ -1376,10 +1376,10 @@
         '<button type="button" class="secondary small" data-move-up="' + src.id + '"' + (i === 0 ? ' disabled' : '') + '>&uarr; Move up</button>' +
         '<button type="button" class="secondary small" data-move-down="' + src.id + '"' + (i === state.sources.length - 1 ? ' disabled' : '') + '>&darr; Move down</button>' +
         '</span></div>' +
-        '<label>Source title</label><input type="text" data-field="title" data-src="' + src.id + '" value="' + escapeAttr(src.title) + '">' +
-        '<label>Type</label><select data-field="type" data-src="' + src.id + '"><option value="text"' + (src.type === 'text' ? ' selected' : '') + '>Text</option><option value="image"' + (src.type === 'image' ? ' selected' : '') + '>Image</option></select>' +
+        '<label>Source title</label><input type="text" data-field="title" data-src="' + src.id + '" value="' + escapeAttr(src.title) + '" aria-label="Title of ' + escapeAttr(label) + '">' +
+        '<label>Type</label><select data-field="type" data-src="' + src.id + '" aria-label="Type of ' + escapeAttr(label) + '"><option value="text"' + (src.type === 'text' ? ' selected' : '') + '>Text</option><option value="image"' + (src.type === 'image' ? ' selected' : '') + '>Image</option></select>' +
         (src.type === 'text'
-          ? '<label>Source text</label><textarea data-field="text" data-src="' + src.id + '">' + escapeHtml(src.text) + '</textarea>'
+          ? '<label>Source text</label><textarea data-field="text" data-src="' + src.id + '" aria-label="Text of ' + escapeAttr(label) + '">' + escapeHtml(src.text) + '</textarea>'
           : imgMissingHint + imgPreview + '<label>Upload image</label><input type="file" accept="image/*" data-field="image" data-src="' + src.id + '">') +
         '<label>Citation</label><input type="text" data-field="citation" data-src="' + src.id + '" value="' + escapeAttr(src.citation) + '" placeholder="e.g. Letter from John Adams, 1776">' +
         '<label>Source-specific questions</label>' + questions +
