@@ -229,9 +229,20 @@ The most valuable paragraphs in the retired documents. Every one of these cost a
 
 ## What was retired on 2026-09-03, and where it went
 
-One documentation consolidation replaced ~130 files and 34,184 lines with `BACKLOG.md`
-(open work, in full) and this file. Everything below is in git history at `94dc004` and
-earlier.
+**#171, `CACHE_VERSION` v141.** One documentation consolidation replaced ~130 files and
+34,614 lines with `BACKLOG.md` (open work, in full) and this file. Everything below is in
+git history at `94dc004` and earlier.
+
+The version bump was not cosmetic: pointing `ideas-backlog.html`, `index.html` and four
+tool-page comments at the surviving files changed six precached pages, and
+`check:precache -- --base origin/main` fails without it. Of the ~1,320 recorded per-tool
+ideas, 904 came across and 417 were dropped as already shipped — 24 of those 417 turned
+out to describe residual open work inside a bullet whose lead said "Done", and were kept
+in place instead. **What was not done:** those 417 were classified by their own status
+marker, cross-checked against the code only where the claim was structural (the missing
+`list-dark-candidates.mjs`, the deleted `theme-toggle.js`, `phase4:next` reporting zero,
+the absent `assets/fonts/`, the retired `.row.soon` rows). If one of them turns out to be
+open after all, it is in git history, and this is the paragraph that says where to look.
 
 | Retired | What it was | Where it went |
 |---|---|---|

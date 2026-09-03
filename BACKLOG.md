@@ -11,7 +11,7 @@ summarised on the way in.
 
 ## Where things stand — start here
 
-*Current as of `main` after PR #169, 2026-09-03. Rewrite this header when your phase
+*Current as of `main` after PR #171, 2026-09-03. Rewrite this header when your phase
 merges — that is step 7 of the definition of done, and it is not optional.*
 
 **Last shipped.** Stage 2 Wave A2, the accessibility label round (#168,
@@ -23,7 +23,7 @@ site's one known-red assertion green.
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v140` |
+| `CACHE_VERSION` | `v141` (v140 → v141 in #171: consolidating the planning docs changed six precached pages) |
 | Precache entries | 249 in `PRECACHE_URLS`, 77 of them in the `SHELL_URLS` install tier |
 | Suites | **125** in `Tools/board-check/suites.json`, green, ~20 min; `expectedFailures` **empty** |
 | Accessibility allowlist | **22 page-rule pairs on 22 pages** — 21 `color-contrast`, 1 `aria-required-children` (034) |
