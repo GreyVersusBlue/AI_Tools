@@ -4,9 +4,9 @@ This is the East Middle Staff Toolkit (aspermylessonplan.com): a static GitHub
 Pages PWA of small, self-contained classroom tools. No build step, no server,
 no accounts — every tool runs entirely in the browser and must keep working
 offline once the site has been visited. These conventions exist to stop
-copy-paste drift across the ~114 tools; follow them for every new tool and
-every edit. The deduplication work that established them is tracked in
-`REFACTOR_PLAN.md`.
+copy-paste drift across the 86 tools; follow them for every new tool and
+every edit. The deduplication work that established them is summarised in
+`HISTORY.md`.
 
 ## Layout
 
@@ -33,9 +33,9 @@ every edit. The deduplication work that established them is tracked in
   version visible in the file header if possible), not in the tool's folder,
   and give it a README recording version, source URL, SHA-256, and consumers —
   see `_shared/vendor/README.md`.
-- Phases 1 and 1b of `REFACTOR_PLAN.md` have landed: **jsPDF (+ AutoTable),
-  SheetJS (`xlsx`), jsQR, qrcode.js, and jszip.min.js now live only in
-  `_shared/vendor/`.** Nothing vendored is left duplicated in a per-tool
+- The vendored-library consolidation has landed (`HISTORY.md`): **jsPDF
+  (+ AutoTable), SheetJS (`xlsx`), jsQR, qrcode.js, and jszip.min.js now live
+  only in `_shared/vendor/`.** Nothing vendored is left duplicated in a per-tool
   `lib/` folder. `_shared/vendor/qrcode/` is the QR *encoder*;
   `_shared/vendor/jsqr/` is the *decoder* — easy to confuse by name.
 - When comparing two copies of a library to see whether they're really
@@ -135,8 +135,8 @@ copy of the boilerplate:
   key, was deleted in Path 5 P1 — its key is still migrated once by a11y.js.
   Read `_shared/ink-paper.css`'s header before touching any of this.)
 - `<script src="../_shared/sw-register.js" defer></script>` — service-worker
-  registration. This file is created in Phase 2 of `REFACTOR_PLAN.md`; if it
-  doesn't exist yet, create it (and precache it) containing exactly:
+  registration. It exists and is precached; link it rather than inlining
+  its body, which is exactly:
 
   ```js
   if ('serviceWorker' in navigator) {
@@ -145,8 +145,6 @@ copy of the boilerplate:
     });
   }
   ```
-
-  rather than inlining that snippet in the tool's HTML.
 
 Remember: every shared file a new tool references must already be in
 `PRECACHE_URLS` (the `_shared/` files above are), and the new tool's own
@@ -259,18 +257,27 @@ files must be added there too.
   button; `CACHE_VERSION` v136), the assertion was not touched, and
   `suites.json`'s `expectedFailures` is empty again. Keep it that way.
 
-## Handoffs — start and end every phase here
+## The backlog — start and end every phase here
 
-- **`HANDOFF_NEXT.md` is the entry point.** Read `CLAUDE.md` first and that
-  second, before the path section you are about to work. It carries the current
-  state, what to start, and any live blocker. The dated `HANDOFF_STAGE_2_A*.md`
-  files are history — read one only for the detail behind a claim.
-- **A phase is not done until you have rewritten `HANDOFF_NEXT.md`,** after your
-  PR is merged and the merge is confirmed — not before, so it records what
-  landed rather than what you hoped would. Replace its contents with the state
-  you are handing over: your phase marked shipped with its `CACHE_VERSION`,
-  refreshed numbers, what the next session should start, and anything you found
-  or got wrong. Commit and merge that too.
+- **`BACKLOG.md` is the entry point.** Read `CLAUDE.md` first and that second,
+  before the section you are about to work. Its header carries the current
+  state, what to start and any live blocker; Tier 1 is the ranked index of every
+  open item; Tier 2 carries each idea in full. `HISTORY.md` is what already
+  shipped and what past phases got wrong — read it for the detail behind a
+  claim, and add to it when you ship. There is no other planning file, and there
+  should not be one: the last time planning sprawled it reached ~130 files and
+  the same work appeared in four of them with different ranks.
+- **Claim your row in `BACKLOG.md` before you write any code**, in the Claimed
+  column, pushed by itself — that table is the concurrency mechanism two
+  parallel sessions use to avoid collision, and it has already failed once when
+  it was skipped. See "How to work this list".
+- **A phase is not done until you have rewritten `BACKLOG.md`'s header and
+  re-ranked,** after your PR is merged and the merge is confirmed — not before,
+  so it records what landed rather than what you hoped would. Mark your item
+  shipped with its `CACHE_VERSION`, refresh the numbers, say what the next
+  session should start and anything you found or got wrong, delete the rows that
+  shipped and renumber so ranks stay a contiguous 1..N. Add the `HISTORY.md`
+  entry in the same commit, and merge that too.
 - **Write down what did not work.** The most valuable line in any of these
   documents has consistently been the one recording a tool that was never
   committed, a number that was 3× too high, or a check that would have passed on
@@ -303,8 +310,8 @@ files must be added there too.
   has its own `@media print` block, breaks printing. Both files' headers spell
   this out. `npm run phase4:next` (read-only) lists which tools still have
   duplicated rules and flags the ones that must not get print-area.css.
-- `improvement prompts/_platform-themes.md` is read-only reference material;
-  `improvement prompts/_tools-touched.md` explains how improvement-round
-  sessions claim work. Follow both.
+- The site-wide platform themes **P1–P15** are a section of `BACKLOG.md`, and
+  the per-tool sections cite them by ID. Do not renumber one; the IDs are
+  load-bearing. Add a new theme at the end.
 - Nothing leaves the browser: no analytics, no uploads, no external form
   posts. localStorage (or IndexedDB for big blobs) is the persistence layer.

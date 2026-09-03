@@ -23,7 +23,7 @@ This is the LF copy.
 
 Not to be confused with `qrcode.js` (a QR *encoder*, MIT, Kazuhiko Arase),
 which several tools still keep in their own `lib/` folders and which is a
-separate consolidation job — see `REFACTOR_PLAN.md`.
+separate consolidation job — see `HISTORY.md`.
 
 ## Consumers
 

@@ -9,7 +9,7 @@ This replaces the older per-tool convention (each tool kept its own copy under
 `lib/` or `libs/`, on the reasoning that a duplicated file beat a cross-tool
 dependency). That produced five copies of jsPDF, four of jsQR, and two of
 SheetJS — about 2.5 MB of duplicate minified JS, at three different jsPDF
-versions, with no way to tell which was current. Phase 1 of `REFACTOR_PLAN.md`
+versions, with no way to tell which was current. The vendored-library consolidation (`HISTORY.md`)
 consolidated them.
 
 ## What's here
@@ -39,6 +39,6 @@ by name — jsQR *reads* QR codes, qrcode.js *draws* them.
   vendored library with a wrong path or a breaking API change loads silently and
   fails at the moment of use — which reads to a teacher as a broken button.
 
-Phase 1b of `REFACTOR_PLAN.md` consolidated the last two duplicated libraries
+That same consolidation later folded in the last two duplicated libraries
 (`qrcode.js`, 14 copies; `jszip.min.js`, 2 copies) into this folder — nothing
 is left living in a per-tool `lib/` folder any more.

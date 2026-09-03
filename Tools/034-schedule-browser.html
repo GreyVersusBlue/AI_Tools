@@ -1035,7 +1035,7 @@ function brSubCoverageHTML(n, day) {
    room is the correct crop target for "the rooms that teacher uses that
    day"; a teacher whose own room varies by period isn't representable in
    the currently-published data, so this can't yet crop around more than one
-   room per teacher. See improvement prompts/034-schedule-browser.md. */
+   room per teacher. See BACKLOG.md's section for tool 034. */
 function brSubMapHTML(n) {
   const t = BR_TEACHERS[n]; if (!t) return '';
   const loc = brGeoFindRoom(t.room);

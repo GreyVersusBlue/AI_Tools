@@ -12,7 +12,7 @@
 | Upstream | https://github.com/Stuk/jszip |
 
 `031-docx-merger.html` used to load this from cdnjs directly (see
-`improvement prompts/031-docx-merger.md`, P5). A teacher on school wifi behind a
+the 031 notes, P5 — now in `BACKLOG.md`). A teacher on school wifi behind a
 filter that blocks cdnjs got a tool that loaded, looked completely fine, and
 then silently failed the moment they clicked "Merge". Vendoring it removed that
 failure mode and let `sw.js` precache it for genuine offline use, same as
@@ -21,7 +21,7 @@ change only, not a version bump.
 
 `044-Sub Plan Builder.html` carried its own separately-vendored copy of the
 same 3.10.1 build in `Tools/sub-plan-builder/lib/jszip.min.js`. This round
-(Phase 1b of `REFACTOR_PLAN.md`) confirmed the two copies were byte-identical
+(the vendored-library consolidation; `HISTORY.md`) confirmed the two copies were byte-identical
 (normalizing CRLF→LF) and consolidated them here — one canonical copy for both
 consumers, matching the treatment jsPDF/SheetJS/jsQR got in Phase 1.
 
