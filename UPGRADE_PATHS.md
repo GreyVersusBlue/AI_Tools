@@ -845,7 +845,7 @@ subtree, so live controls must live inside it).
   dead) and fold `theme.css`'s Industry tokens into the same mechanism for the five
   `_ds` tools. Respect `prefers-color-scheme` on first visit.
 
-  **Shipped 2026-09-03 (Opus), CACHE_VERSION v139.** The decision is written
+  **Shipped 2026-09-03 (#167, Opus), CACHE_VERSION v139.** The decision is written
   where the next person will hit it: the header of `_shared/ink-paper.css`, with
   pointers from `a11y.css`, `theme.css`, `a11y.js` and `CLAUDE.md`.
 

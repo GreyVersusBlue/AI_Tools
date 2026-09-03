@@ -192,8 +192,7 @@ here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| `_shared/` theme architecture (Path 5 P1) | `n3p2vh` | 2026-09-03 10:40 UTC | `claude/new-session-n3p2vh` |
-| Digital Hall Pass / Sign-Out Log | `n3p2vh` | 2026-09-03 10:40 UTC | `claude/new-session-n3p2vh` |
+| *(none)* | | | |
 
 ---
 
@@ -201,6 +200,35 @@ here.
 
 Counted from the start of the improvement-prompts programme. A tool may have
 had unrelated fixes before that; those are not rounds.
+
+### Path 5 P1 — theme architecture — 2026-09-03 10:40 UTC — session `n3p2vh` — PR #167
+
+Not a free-pick improvement round: this is a platform phase assigned by
+`UPGRADE_PATHS.md` / `HANDOFF_STAGE_2.md` (Stage 2, Wave A1), so it claimed
+`_shared/` — `ink-paper.css`, `theme.css`, `a11y.js`, `a11y.css` and the
+deleted `theme-toggle.js` — plus exactly one tool as the adopter, per the
+handoff's "a new `_shared/` module ships with at most one adopter" rule. 001
+was taken from **Not yet touched**; no other tool was touched.
+
+`_shared/a11y.js` is now the site's only owner of theme, and
+`_shared/ink-paper.css` carries a real `[data-theme="dark"]` palette gated on
+`:not(.a11y-filter-dark)`, so the 73 ink-paper tools that have not adopted are
+byte-for-byte unaffected and keep the CSS-filter fallback. The rollout is
+Path 5 P3 and is a real piece of work, not a flag flip: every one of those 74
+tools hardcodes light colours in its own `<style>` (17–45 occurrences each,
+measured), and each has to separate chrome that should follow the theme from a
+*sheet of paper* that must not, before it can opt in. Read
+`_shared/ink-paper.css`'s header and copy 001.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Digital Hall Pass / Sign-Out Log | `001-hall-pass-log.md` | The reference adopter for native dark: every `#fff` in its stylesheet swapped for a token (`--card`, the new `--card-2` and `--accent-ink`), status tints given light/dark pairs, the carried hall pass marked `.paper-sheet` so paper stays paper, and the projector view's buttons given an explicit light ink. Its pairing QR renders true now instead of being inverted and counter-inverted. |
+
+New suite `Tools/theme/test/smoke-theme.mjs` (`npm run test:theme`) guards the
+mechanism site-wide, including the check Path 5 asks for — no page may ship a
+native palette and the invert filter at once. It also turned up that
+`035-schedule-visualizer.html` is a third theme owner (no `a11y.js`, its own
+four-palette `data-theme` system); not a bug today, recorded for Path 5 P4.
 
 ### Devon-assigned round — tools 015/028/046/050/054/056/062/064 — 2026-08-14 07:08 UTC onward — session `c1jqjp` — branch `claude/tool-improvement-merge-status-c1jqjp`
 
@@ -1507,7 +1535,6 @@ sense for a round (by subject, by shared machinery, by print-heavy vs
 data-heavy), and say why in the PR. Skip anything already listed in
 **Currently claimed**.
 
-- Digital Hall Pass / Sign-Out Log — `001-hall-pass-log.md`
 - Classroom Timer — `004-classroom-timer.md`
 - Seating Chart Generator — `005-seating-chart-generator.md`
 - Name Picker — `007-name-picker.md`
