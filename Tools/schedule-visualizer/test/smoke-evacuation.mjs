@@ -23,6 +23,7 @@
 //
 // Exits 1 on any failure.
 
+/* global applyFullProject, roomRegistry, AppState, getPathfindingGraph, printEvacuationDoorCards -- page globals read inside page.evaluate() */
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
 import { fixtureProject } from '../../schedule/test/fixture-northwind.mjs';
 

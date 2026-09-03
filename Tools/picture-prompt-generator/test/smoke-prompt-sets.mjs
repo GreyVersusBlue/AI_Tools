@@ -62,7 +62,6 @@ const stageTask = () => page.evaluate(() => {
   const el = document.querySelector('#stageCard .task-text');
   return el ? el.textContent : '';
 });
-const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('ppg_prompt_sets_v1') || 'null'));
 const storedImages = () => page.evaluate(() => JSON.parse(localStorage.getItem('ppg_images_v1') || '[]'));
 
 const png = makeSolidPng(80, 60, [30, 90, 160]);

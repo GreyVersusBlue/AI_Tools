@@ -104,6 +104,28 @@ jobs:
         if: '!cancelled()'
         run: npm run check:precache
 
+      # Path 2 P4's sweeps: each names a bug class that had only ever been found
+      # by eye (entities in JS strings, `hidden` beaten by a display rule, a
+      # print rule that clips). Read-only, fast, same !cancelled() reasoning.
+      - name: 'Guard: HTML entities in JavaScript strings'
+        if: '!cancelled()'
+        run: npm run check:entities
+
+      - name: 'Guard: hidden attribute beaten by a display rule'
+        if: '!cancelled()'
+        run: npm run check:hidden-flex
+
+      - name: 'Guard: print rules that clip content'
+        if: '!cancelled()'
+        run: npm run check:print-clip
+
+      # Path 2 P5: ESLint over the standalone scripts (no-undef, no-unused-vars,
+      # eqeqeq and the recommended set). Inline <script> in tool pages is out
+      # of scope — see eslint.config.js.
+      - name: 'Guard: lint (_shared, tool modules, tooling)'
+        if: '!cancelled()'
+        run: npm run lint
+
       # The CACHE_VERSION bump is an opt-in fifth check, pull requests only: it
       # compares against the merge-base of the PR's base branch, which needs the
       # full history fetched above and a base to name. A push to main has no

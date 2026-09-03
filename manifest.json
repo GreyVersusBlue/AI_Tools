@@ -15,5 +15,67 @@
     { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "assets/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
     { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Name Picker",
+      "short_name": "Picker",
+      "description": "Pick a student at random from a saved roster.",
+      "url": "./Tools/007-Name%20Picker.html",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Classroom Timer",
+      "short_name": "Timer",
+      "description": "A projected countdown with bell-schedule presets.",
+      "url": "./Tools/004-Classroom%20Timer.html",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Seating Chart",
+      "short_name": "Seating",
+      "description": "Build, shuffle and print a seating chart.",
+      "url": "./Tools/005-Seating%20Chart%20Generator.html",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Command Center",
+      "short_name": "Command",
+      "description": "Today's schedule, seating and quick tools on one screen.",
+      "url": "./Tools/010-command-center-dashboard.html",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "assets/screenshots/landing-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "The toolkit's landing page: every tool in one filterable list."
+    },
+    {
+      "src": "assets/screenshots/name-picker-narrow.png",
+      "sizes": "540x960",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Name Picker on a phone."
+    }
+  ],
+  "share_target": {
+    "action": "./Tools/006-class-roster-hub.html",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "roster",
+          "accept": [".csv", "text/csv", ".tsv", "text/tab-separated-values", ".txt", "text/plain"]
+        }
+      ]
+    }
+  }
 }

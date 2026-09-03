@@ -1519,6 +1519,15 @@ data-heavy), and say why in the PR. Skip anything already listed in
 Not a queue, and not a reason to re-open a finished tool — but if one of these
 lands naturally inside a tool you are already working on, take it.
 
+- **The accessibility baseline.** `Tools/a11y-sweep/allowlist.json` (Path 2
+  P3, 2026-09-03) records every serious/critical axe-core finding on first
+  load, per page and rule: 59 pages, 91 pairs — 41 unlabeled `<select>`s
+  (`select-name`), 23 unlabeled inputs (`label`), 21 contrast failures on
+  muted text, 5 title-only labels, 1 `aria-required-children`. If you are in
+  a tool that has a line there, fix it and delete the line; `npm run test:a11y
+  -- --only <nnn>` confirms, and the suite goes red if the line outlives the
+  bug. The `select-name`/`label` classes are one `aria-label` each and would
+  make a clean mechanical round on their own.
 - **Adopt the shared student record.** Class Roster Hub owns
   `crh_students_v1` (stable ids, preferred name, pronunciation) and Name
   Picker reads it via `Tools/name-picker/np-details.js`, which is the pattern

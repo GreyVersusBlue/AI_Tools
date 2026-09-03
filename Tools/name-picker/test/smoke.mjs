@@ -17,7 +17,7 @@
 // Every name in here is fabricated. No real student names go in this repo.
 
 import {
-  createStore, KEYS, OPTION_DEFAULTS, liftLegacyBackup, fixBundle, memoryStorage
+  createStore, KEYS, OPTION_DEFAULTS, liftLegacyBackup, fixBundle
 } from "../np-store.js";
 import {
   shuffle, freshRotation, fairPick, uniformPick, pickOne, pickMany, makeGroups, leastPicked,

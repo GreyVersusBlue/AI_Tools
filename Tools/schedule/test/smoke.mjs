@@ -20,6 +20,7 @@
 //   - the published file still renders a teacher's day after being reloaded
 //     from disk with no generator anywhere near it
 
+/* global TOOL_VERSION, BR_TEACHERS, BR_SECTIONS, BR_GEOM, brChoose, brSetMode -- page globals read inside page.evaluate() */
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';

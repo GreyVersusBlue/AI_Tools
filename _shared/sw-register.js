@@ -18,6 +18,10 @@
 // it, but forgetting to fails in the safe direction: the teacher keeps the
 // version they already had.
 //
+// THE DEFERRED TIER. Since v138 sw.js installs only a shell; this file asks
+// for the rest a few seconds after load and relays the worker's progress to
+// the page — see "the deferred precache tier" below.
+//
 // Everything here degrades to the old behaviour if anything is missing: no
 // service worker support, a file:// page (the offline copy), blocked storage,
 // or a browser that never fires the events. In each case the page simply does
@@ -210,7 +214,77 @@
 
   navigator.serviceWorker.addEventListener('controllerchange', reloadOnce);
 
+  /* ── the deferred precache tier ─────────────────────────────────────────
+     sw.js installs only its shell tier (the landing page, _shared/, and the
+     ten front-of-room tools); the rest of the site is fetched by a second
+     pass that this page asks for once it has been quiet for a few seconds.
+     REST_DELAY_MS is a floor, not a guess at idleness: the page's own
+     requests and first paint always come first, and a page a teacher leaves
+     within four seconds (index → a tool) simply hands the job to the next
+     page, which asks the same way. The worker deduplicates, so several open
+     tabs asking is harmless.
+
+     Progress comes back as PRECACHE_PROGRESS messages — after every dozen
+     files and once at the end, plus one reply to the PRECACHE_STATUS asked on
+     load — and is surfaced two ways: a `gvb-sw-progress` CustomEvent on
+     window (detail = the message) for any page that wants it, and the text of
+     any element carrying data-sw-offline-status, which is how index.html's
+     "N of M tools ready" readout is drawn. The readout element starts hidden
+     and is shown on the first status, so a page with no worker (file://, an
+     unsupported browser) shows nothing rather than a stale claim. */
+  var REST_DELAY_MS = 4000;
+
+  function offlineStatusText(s) {
+    var tools = s.tools || { cached: 0, total: 0 };
+    if (s.done) return 'Offline: all ' + tools.total + ' tools ready';
+    return 'Offline: ' + tools.cached + ' of ' + tools.total + ' tools ready' +
+      (s.inProgress ? ' — caching the rest in the background…' : '');
+  }
+
+  function onProgress(status) {
+    var nodes = document.querySelectorAll('[data-sw-offline-status]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = offlineStatusText(status);
+      nodes[i].hidden = false;
+    }
+    try {
+      window.dispatchEvent(new CustomEvent('gvb-sw-progress', { detail: status }));
+    } catch (e) {}
+  }
+
+  navigator.serviceWorker.addEventListener('message', function (event) {
+    var data = event.data;
+    if (data && data.type === 'PRECACHE_PROGRESS') onProgress(data);
+  });
+
+  function post(reg, message) {
+    var target = reg.active || navigator.serviceWorker.controller;
+    if (!target) return;
+    try { target.postMessage(message); } catch (e) {}
+  }
+
+  function requestRest(reg) {
+    // Only a worker that is active can fill its own cache; a waiting one is
+    // not this page's version and gets its turn after the teacher accepts it.
+    if (!reg || !reg.active) return;
+    post(reg, { type: 'PRECACHE_STATUS' });
+    setTimeout(function () {
+      var go = function () { post(reg, { type: 'PRECACHE_REST' }); };
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(go, { timeout: 5000 });
+      } else {
+        go();
+      }
+    }, REST_DELAY_MS);
+  }
+
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register(swUrl).then(watch).catch(function () {});
+    navigator.serviceWorker.register(swUrl).then(function (reg) {
+      watch(reg);
+      // .ready resolves with the registration once a worker is active — on a
+      // first visit that is after install + activate, which is exactly when
+      // the shell is in place and the rest can start.
+      navigator.serviceWorker.ready.then(requestRest).catch(function () {});
+    }).catch(function () {});
   });
 }());

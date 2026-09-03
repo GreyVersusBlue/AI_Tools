@@ -223,6 +223,8 @@
   .app-bar b{color:var(--ink);font-weight:500;}
   .app-bar .rhs{color:var(--faint);display:flex;align-items:center;gap:.6rem;}
   .app-bar .dot{width:6px;height:6px;border-radius:50%;background:var(--good);display:inline-block;}
+  .app-bar .offline-status{color:var(--faint);}
+  .app-bar .offline-status::before{content:"·";margin-right:.6rem;}
   .wordmark{color:var(--ink);font-weight:500;letter-spacing:.055em;}
   .wordmark .tld{color:var(--faint);font-weight:400;}
 
@@ -750,7 +752,7 @@
 
   <div class="app-bar ink" style="--d:40ms">
     <span><span class="wordmark">ASPERMYLESSONPLAN<span class="tld">.COM</span></span> · Unofficial Toolbook · Term 2026–27 · Q1</span>
-    <span class="rhs"><span class="dot" aria-hidden="true"></span>85 records · local only · nothing syncs<button type="button" class="cmdk-hint" id="cmdkOpenBtn" aria-haspopup="dialog" aria-controls="cmdkOverlay" aria-label="Open quick jump search (Control or Command plus K)"><span aria-hidden="true">&#8984;K</span> Quick jump</button></span>
+    <span class="rhs"><span class="dot" aria-hidden="true"></span>86 records · local only · nothing syncs<span class="offline-status" id="offlineStatus" data-sw-offline-status role="status" aria-live="polite" hidden></span><button type="button" class="cmdk-hint" id="cmdkOpenBtn" aria-haspopup="dialog" aria-controls="cmdkOverlay" aria-label="Open quick jump search (Control or Command plus K)"><span aria-hidden="true">&#8984;K</span> Quick jump</button></span>
   </div>
 
   <div class="letterhead ink" style="--d:90ms" aria-hidden="true">
@@ -772,9 +774,9 @@
         <dl class="memo ink" style="--d:100ms">
           <dt>To</dt><dd>All staff</dd>
           <dt>From</dt><dd>D. Moore</dd>
-          <dt>Date</dt><dd id="memo-date">2026-08-15</dd>
+          <dt>Date</dt><dd id="memo-date">2026-09-03</dd>
           <dt>CC</dt><dd>Whoever asked for the link again</dd>
-          <dt>Attach</dt><dd>85 files <span class="note">(browser-only, nothing to install)</span></dd>
+          <dt>Attach</dt><dd>86 files <span class="note">(browser-only, nothing to install)</span></dd>
         </dl>
       </div>
     </div>
@@ -2323,9 +2325,13 @@
         <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       <h2>Progress report</h2>
-      <span class="tally">60 recent entries</span>
+      <span class="tally">61 recent entries</span>
     </summary>
     <ul class="log">
+      <li>
+        <time datetime="2026-09-03">Sep 3, 2026</time>
+        <span><b>Faster first visit, and it says when you&rsquo;re offline-ready.</b> The service worker now installs the shell and the ten front-of-room tools first and quietly caches the rest in the background; the app bar shows &ldquo;Offline: N of 86 tools ready.&rdquo; Installed as an app, the home screen gets shortcuts to Name Picker, Timer, Seating Chart and Command Center, and a shared CSV lands in Class Roster Hub.</span>
+      </li>
       <li>
         <time datetime="2026-08-23">Aug 23, 2026</time>
         <span><b>New tool: Wiki Race.</b> Seed-phrase Wikipedia races for social studies &mdash; the whole class gets the identical start&rarr;target matchup, with a live timer, click count, and verifiable finish codes. Ships as a single standalone file you can hand straight to students.</span>
@@ -2581,7 +2587,7 @@
     </div>
     <div class="meta">
       <span>Questions, bugs, contributions &mdash; email <span class="handle">@dsmoore</span>. Please advise.</span>
-      <span class="rhs">Built by D. Moore + Claude · rev <span id="rev">2026-08-15</span></span>
+      <span class="rhs">Built by D. Moore + Claude · rev <span id="rev">2026-09-03</span></span>
     </div>
   </footer>
 
@@ -3179,12 +3185,10 @@
 })();
 </script>
 
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js').catch(function () {});
-  });
-}
-</script>
+<!-- Service worker registration, the "new version is ready" bar, and the
+     deferred-precache trigger all live in the shared file — the same one
+     every tool page loads. Until v138 this page registered the worker inline
+     and so was the one page on the site that never offered an update. -->
+<script src="_shared/sw-register.js" defer></script>
 </body>
 </html>

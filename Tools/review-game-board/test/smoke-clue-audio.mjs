@@ -22,6 +22,7 @@
 //
 // Exits 1 on any failure.
 
+/* global ReviewBoardStore -- page global read inside page.evaluate() */
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
 
 const PORT = 8174;

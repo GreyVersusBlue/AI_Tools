@@ -42,7 +42,6 @@ const ok = (cond, label) => {
   failed++; fails.push(label); console.log('  FAIL ' + label); return false;
 };
 const eq = (a, b, label) => ok(a === b, `${label} (got ${JSON.stringify(a)}, want ${JSON.stringify(b)})`);
-const near = (a, b, tol, label) => ok(Math.abs(a - b) <= tol, `${label} (got ${a}, want ${b} ±${tol})`);
 
 const server = await serve(PORT);
 const browser = await launch();

@@ -21,7 +21,7 @@ list).
 | Fact | Value |
 |---|---|
 | Tool pages under `Tools/` | 86 (`001`–`086`); next free number is **087** |
-| `sw.js` | `CACHE_VERSION = 'v131'`, 222 precache entries, ~10.1 MB resolved payload, cache-first, unconditional `skipWaiting()` + `clients.claim()`, no update notification |
+| `sw.js` | `CACHE_VERSION = 'v131'`, 222 precache entries, ~10.1 MB resolved payload, cache-first, unconditional `skipWaiting()` + `clients.claim()`, no update notification. *(2026-09-03: v138, 249 entries in two tiers — 77 at install, the rest deferred — ~10.8 MB, update bar, stable Wikimedia cache.)* |
 | Shared-file adoption (of 86) | `a11y.js` 77 · `ink-paper.css` 71 · `base.css` 68 · `print-area.css` 20 · `state-link.js` 17 · `qr-scan.js` 10 · `webrtc-pair.js` 7 · `theme.css` 5 · `theme-toggle.js` **0** · `duplex-print.js` 1 · `student-details.js` 1 |
 | Vendored libs (`_shared/vendor/`) | jsPDF 2.5.2 (+AutoTable 3.6.0), SheetJS 0.18.5, JSZip 3.10.1, qrcode.js, jsQR |
 | Rosters | `np_rosters` read by 28 tools (plain name strings); `crh_students_v1` (stable ids, preferred name, pronunciation) written by 006, read by 008, 009 and Name Picker's `np-details.js` only. `_shared/roster.js` from `PLATFORM_PLAN.md` Track R **does not exist yet** |
@@ -137,7 +137,7 @@ data-driven `index.html` (86 hand-written rows and three hand-maintained counts)
 
 ## 1. Service worker: update UX, precache split, precache guard
 
-**Status.** P1 and P2 shipped. P3–P4 open.
+**Status.** P1–P4 shipped. **Path complete** (2026-09-03).
 
 **Why.** `sw.js` reaches every teacher on every visit. Today it calls
 `skipWaiting()` unconditionally at install and `clients.claim()` at activate, so a
@@ -341,18 +341,100 @@ caching of same-origin GETs already works, so an on-demand tier is nearly free.
   whole site after the deferred pass completes; a "N of M tools cached for offline"
   readout on `index.html` makes the state visible. Give runtime and Wikimedia caches
   stable names so a version bump doesn't evict them.
+  **Shipped 2026-09-03 (Opus), CACHE_VERSION v138.** Devon's call, recorded: yes
+  to "visit once, wait a minute in the background", with the readout required.
+
+  *As built.* `sw.js` gains `SHELL_URLS`, a hand-listed subset of `PRECACHE_URLS`:
+  `./`, `index.html`, `manifest.json`, everything under `_shared/` (vendored
+  libraries and the Barlow faces included), `assets/`, and ten tools with their
+  support files — 001 Hall Pass, 002 Group Generator, 004 Timer, 005 Seating
+  Chart, 006 Class Roster Hub, 007 Name Picker, 008 Behavior Points, 010 Command
+  Center, 032 School Calendar, 044 Sub Plan Builder. That is 77 of 249 entries
+  and ~3.6 of ~10.8 MB; the vendored libraries are half of it (xlsx alone is 0.9
+  MB) and none of the ten tools use jsPDF or SheetJS, so the shell could shrink by
+  1.3 MB more by moving those two to the deferred tier — left as-is because the
+  plan said "vendor in the shell" and because it means every other tool then
+  needs only its own page. Install caches the shell; `_shared/sw-register.js`
+  posts `PRECACHE_REST` four seconds after `load` (a floor, then
+  `requestIdleCallback`), the worker fills whatever the precache lacks, four
+  fetches at a time, and broadcasts `PRECACHE_PROGRESS` every dozen files and at
+  the end. The pass is idempotent and single-flight, so several open tabs asking
+  is harmless, and a killed worker resumes from the cache on the next ask.
+  `index.html` now loads `sw-register.js` like every tool (it had registered the
+  worker inline, and so was the one page on the site that never offered an
+  update) and shows "Offline: N of 86 tools ready — caching the rest in the
+  background…" / "Offline: all 86 tools ready" in the app bar, drawn by
+  sw-register into any `[data-sw-offline-status]` element and hidden until the
+  worker has reported (so `file://` shows nothing). The Wikimedia cache is
+  `aplp-wiki` with no version and survives a bump; the same-origin runtime cache
+  keeps its version on purpose, because a stale same-origin byte outliving a
+  deploy is the bug the bump exists to prevent, and that cache holds nothing a
+  teacher waited for.
+
+  *Guard.* `check-precache.mjs` gains SHELL: every `SHELL_URLS` entry must be in
+  `PRECACHE_URLS` and none twice — `PRECACHE_URLS` stays the one list of what
+  works offline; the shell is only the order of arrival.
+
+  *Verified.* New suite `Tools/service-worker/test/smoke-sw-tiers.mjs`
+  (`npm run test:sw-tiers`, 22 assertions) stages a copy of the REAL `sw.js` with
+  only the two arrays swapped, so the install, the deferred pass, the status
+  messages, the cache names and the fetch handler under test are the shipped
+  code. It proves: install holds the shell tier and nothing else; the rest
+  arrives without a reload and the page hears `done:true` with the right counts;
+  the readout goes hidden → partial → "all N tools ready" and was never a lie;
+  offline, a deferred-tier page is served from the cache; a bump evicts the old
+  precache and keeps `aplp-wiki` with the map image still in it; the new version
+  trickles its own tier after the reload; a repeat ask on a full cache is a no-op
+  that still answers. `smoke-sw-update.mjs` still 18/18. One assertion was
+  rewritten during the run: "the readout stays hidden until the worker has
+  reported" raced the status reply (which can land within milliseconds of the
+  controller) and is now asserted as the invariant it is — hidden iff nothing
+  reported. The `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` sandbox had the wrong Chromium
+  build for the pinned Playwright; every suite this session ran with
+  `PW_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium`, the documented escape
+  hatch. Not done: the manual two-deploy test on the live site — that needs a
+  deploy, and is the one thing to watch after this merges (open the site, wait
+  a minute, confirm the readout reaches "all 86").
+
 - **P4 — Manifest polish.** `shortcuts` for Name Picker, Timer, Seating Chart,
   Command Center; `rel="manifest"` on tool pages (currently only `index.html`);
   `screenshots` for the install dialog; a `share_target` that lands a shared CSV in
   Class Roster Hub (pairs with Path 3).
 
-**Verification.** Harness runs for P1/P3 that actually register the worker; `npm
-run check:precache` green; a manual two-deploy test on the live site recorded in
-this file.
+  **Shipped 2026-09-03 (Opus).** `manifest.json` gains the four `shortcuts`
+  (reusing `icon-192.png`; no bespoke shortcut icons drawn), two `screenshots`
+  (`assets/screenshots/landing-wide.png` 1280×720 and `name-picker-narrow.png`
+  540×960, made by `Tools/board-check/make-manifest-screenshots.mjs` at a pinned
+  clock so a regeneration does not churn the bytes; both precached in the
+  deferred tier, 142 KB together) and a `share_target` (POST, multipart, a
+  `roster` file accepting CSV/TSV/text plus title/text/url). All 86 tool pages
+  now carry `<link rel="manifest" href="../manifest.json">` after the viewport
+  meta; `check:social` unchanged before and after. The share target: there is
+  no server, so `sw.js` answers the POST itself — reads the form, parks the text
+  in a stable `aplp-share` cache under `share/roster` (with the filename in a
+  header), and 303s to `006-class-roster-hub.html?shared=roster`; 006 collects
+  it on load, clears the slot, strips the flag from the URL, and opens its own
+  column-mapping import dialog labelled with the filename. A flag with an empty
+  slot (a refresh, a file the worker could not read) opens nothing. Nothing
+  leaves the device. *Verified:* the worker half is checks 7 of
+  `smoke-sw-tiers.mjs` (a real multipart POST from the page lands on the hub
+  page with the flag, text and filename parked); the page half is the new
+  `Tools/class-roster-hub/test/smoke-share-target.mjs` (`npm run test:roster-hub`,
+  10 assertions: dialog opens with the name, URL cleaned, slot consumed once,
+  confirming lands the three students, empty slot is quiet). Not verified: an
+  actual OS share sheet on an installed Android/ChromeOS PWA — no device in the
+  sandbox; the contract (POST shape from the manifest → 303 → page) is what the
+  suites cover.
+
+**Verification.** Harness runs for P1/P3 that actually register the worker
+(done: `smoke-sw-update.mjs`, `smoke-sw-tiers.mjs`); `npm run check:precache`
+green (done, with the SHELL check); a manual two-deploy test on the live site
+recorded in this file (**still open** — do it after the P3 merge deploys).
 
 **Risks / decisions for Devon.** P3 changes the "visit once, everything works
 offline" promise to "visit once, wait a minute in the background" — acceptable, but
-the readout must exist. Decide the mid-lesson suppression rule in P1.
+the readout must exist. *Decided yes on 2026-09-03; readout shipped.* The
+mid-lesson suppression rule was decided in P1 (fullscreen or `TOOL_BUSY`).
 
 ---
 
@@ -360,7 +442,7 @@ the readout must exist. Decide the mid-lesson suppression rule in P1.
 
 **Status.** P2 shipped (#159), P1 shipped (#160) — in that order; see the P1 note
 for why they swapped. P6 (suite reliability, added after CI's first day) shipped
-2026-09-02. P3–P5 open.
+2026-09-02. P3, P4 and P5 shipped 2026-09-03. **Path complete.**
 
 **Why.** 120 suites and three guard scripts exist and are designed to be
 sandbox-safe, and nothing runs them unless a session remembers. The `&&` chain
@@ -449,15 +531,102 @@ and have only ever been found by luck.
   (dev-only, under `node_modules`, never precached) and add an `a11yScan(page)`
   helper. Add one site-wide smoke that opens all 86 tools and fails on serious
   violations, with a per-tool allowlist file so adoption can be incremental.
+  **Shipped 2026-09-03 (Opus).** `axe-core` 4.13 is a devDependency;
+  `harness.mjs` exports `a11yScan(page, {impact, rules, include})`, which injects
+  `node_modules/axe-core/axe.min.js` (never served, never precached) and returns
+  violations at or above the impact floor, most severe first, with the first
+  four selectors each. The sweep is `Tools/a11y-sweep/test/smoke-a11y-sweep.mjs`
+  (`npm run test:a11y`; `--only 046`, `--all-impacts`, `--baseline`): index plus
+  all 86 tool pages at 1280 px, first load, no data, failing on serious/critical
+  that `Tools/a11y-sweep/allowlist.json` does not allow for that page — and
+  failing when an allowed rule stops firing, so the list can only shrink. ~105 s
+  for 87 pages.
+
+  *First run, the honest number:* 59 of 87 pages had at least one serious or
+  critical violation — 41 pages with an unlabeled `<select>` (`select-name`), 23
+  with an unlabeled input (`label`), 21 with a contrast failure
+  (`color-contrast`, mostly muted hint text and the landing page's category
+  counts), 5 with a title-only label, 1 with `aria-required-children`. 91
+  page-rule pairs in all. Fixing those is per-tool work and is NOT done here:
+  `--baseline` recorded each one into the allowlist with the date, the count, an
+  example selector and "fix in the tool, then remove this line". The suite is
+  green against that baseline (174/174) and red on anything new. The
+  `select-name` and `label` classes are mostly one `aria-label` each and would
+  make a good mechanical round; contrast needs a palette decision per tool.
+
 - **P4 — Sweeps as guards.** `check-entities.mjs`: HTML entity names inside JS
   string literals in `<script>` blocks. `check-hidden-flex.mjs`: elements toggled
   with `hidden` whose class sets `display:flex|grid` without a `[hidden]` rule
   (found in 046). `check-print-clip.mjs`: `height:` + `overflow:hidden` inside
   `@media print` (the half-sheet clipping bug, fixed three different ways in 047,
   070, 076). Each prints offenders; fix them in the same PR.
+
+  **Shipped 2026-09-03 (Opus).** Three read-only scripts under
+  `Tools/board-check/`, wired as `check:entities`, `check:hidden-flex`,
+  `check:print-clip` and as CI steps. What each actually found, and what was
+  fixed in this PR:
+
+  - `check-entities` — the first draft flagged every entity in any JS string
+    (618) and was useless; the second (any string not obviously markup, 176)
+    was still mostly data tables rendered later through `innerHTML`. What
+    shipped reports only a string whose statement has a visible **text sink**
+    (`textContent`, `.value`, `placeholder`, `title`, `alert(`, `createTextNode`,
+    a `setAttribute('aria-label'…)`, a same-file helper whose body writes
+    `textContent` and never `innerHTML`, or a variable the file later hands to
+    one of those), and counts the rest as an advisory total (325). Three real
+    bugs, all teacher-visible literal `&rsquo;`/`&mdash;`: 021's two pairing
+    status messages, 039's quiz-mode preview note. Fixed with the characters.
+  - `check-hidden-flex` — reads each page's inline and linked CSS, the
+    class→display map, and the `hidden` toggles (markup attribute, or
+    `.hidden =` / `toggleAttribute('hidden')` resolved through the page's own
+    lookups to an id, nearest binding wins), and reports an element with both
+    and no covering `[hidden]` rule. Found 8 on 6 pages; every one was then
+    confirmed in a browser as displayed while carrying `hidden`: 004's
+    "until" row, 015's story category, 024's two answer keys, 036's results
+    box, 046's load-more row — plus `#mapImg` and `#scaleBar` on 046, which are
+    id-styled and outside the static check's reach but showed up in the same
+    browser pass. Fixed with one rule per page, `[hidden]{display:none
+    !important}`, on 004, 015, 024, 036, 046. Two false positives were fixed
+    in the check instead (a chained `el('id').querySelector(…)` binding a
+    variable to the wrong element; a name-wide variable map picking the wrong
+    `b` on 005). `DEBUG_HIDDEN_FLEX=1` prints every toggle it resolves.
+  - `check-print-clip` — walks `@media print` blocks (linked sheets too) and
+    reports a rule with both a clipping height (`height`/`max-height`, not
+    `min-height`, not `auto`/`100%`/`0`) and `overflow: hidden|clip`, or one
+    half in print and the other in the same selector's screen rule. One
+    offender: 017 Gallery Walk's print card instructions (`max-height: 150px;
+    overflow: hidden`). Removed; `page-break-inside: avoid` on the card keeps a
+    long one whole.
+
+  *Verified:* all three green; the suites of every tool touched by a fix
+  (blank-map ×5, timer ×2, timeline ×3, number-talks ×2, final-grade ×3,
+  gallery-walk ×2, pe-stations ×2) green afterwards; 039 has no suite.
+
 - **P5 — Lint.** A minimal ESLint config for `_shared/*.js`, `Tools/*/*.js` and the
   `.mjs` tooling (no-undef, no-unused-vars, eqeqeq) — not for inline `<script>` in
   HTML, which would be a much larger fight.
+
+  **Shipped 2026-09-03 (Opus).** `eslint.config.js` (flat config; ESLint 10,
+  `@eslint/js` recommended plus the three rules), `npm run lint`, a CI step.
+  Scope is exactly as specified: `_shared/*.js`, `Tools/*/*.js|mjs` (and the odd
+  nested folder), `assets/js/`, `sw.js` (serviceworker globals), the
+  `board-check` tooling and every suite (node + browser globals, because a
+  suite's `page.evaluate` callbacks are browser code); inline `<script>` in the
+  86 pages is not linted. Browser files are parsed as modules whether or not
+  they are (a classic IIFE parses the same; it saved a list of which is which).
+  Cross-file site globals (`StateLink`, `A11y`, `XLSX`, …) are declared once in
+  the config as an inventory; a tool-private page global a suite reaches for
+  (`roomRegistry`, `BR_TEACHERS`, `HtcmThemes`) is declared in that file with
+  `/* global … */`. Two recommended rules are tuned rather than fought:
+  `no-useless-assignment` off (it fires on the site's `var raw = null; try {…}`
+  storage idiom) and `no-irregular-whitespace` skipping regexes (a BOM written
+  literally in `/^\uFEFF/`). First run: 1,456 findings, of which 1,397 were
+  `document`/`window` inside suites and 36 were the parse errors from calling
+  modules scripts — configuration, not code. What was left and fixed: 16 dead
+  declarations removed (imports never used, a `swatchId` counter nothing read,
+  a `naturalH` nothing read, five unused constants in suites), one async
+  Promise executor in `drive-seating.mjs` rewritten without `async`. No `eqeqeq`
+  finding anywhere. Lint exits 0.
 - **P6 — Suite reliability.** Added after P1's first day: 121 suites started
   running on every push and two different ones failed non-deterministically
   within three runs. Three deliverables — a crashed suite reports why it

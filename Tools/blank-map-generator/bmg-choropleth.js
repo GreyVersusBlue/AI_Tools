@@ -638,11 +638,8 @@ export const EXAMPLE_TIME_SLICES = [
 
 /* ── legend swatch ─────────────────────────────────────────────────────── */
 
-let swatchId = 0;
-
 /** A plain filled square for one class. Unlike a region swatch this takes a raw hex (ramp colours aren't in the 6-colour palette) and fills solid, because the *depth of the fill* is the whole message. */
 export function choroSwatchSvg(hex, size = 16) {
-  swatchId++;
   return `<svg width="${size}" height="${size}" viewBox="0 0 16 16" aria-hidden="true">` +
     `<rect x="1" y="1" width="14" height="14" rx="3" fill="${hex}" stroke="#7a776e" stroke-width="1"/></svg>`;
 }
