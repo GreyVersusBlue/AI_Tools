@@ -35,7 +35,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v136';
+const CACHE_VERSION = 'v137';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -268,6 +268,19 @@ const PRECACHE_URLS = [
   "_shared/vendor/jsqr/jsqr.js",
   "_shared/vendor/qrcode/qrcode.js",
   "_shared/vendor/jszip/jszip.min.js",
+  "_shared/vendor/barlow/barlow.css",
+  "_shared/vendor/barlow/barlow-condensed-latin-600-normal.woff2",
+  "_shared/vendor/barlow/barlow-condensed-latin-700-normal.woff2",
+  "_shared/vendor/barlow/barlow-condensed-latin-ext-600-normal.woff2",
+  "_shared/vendor/barlow/barlow-condensed-latin-ext-700-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-400-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-500-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-600-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-700-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-ext-400-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-ext-500-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-ext-600-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-ext-700-normal.woff2",
   "assets/icons/icon-192.png",
   "assets/icons/icon-512.png",
   "assets/icons/icon-maskable-192.png",

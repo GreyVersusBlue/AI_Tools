@@ -1,5 +1,8 @@
 /* Industry design system — base tokens + components for the classroom tools suite. */
-@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap');
+/* Barlow and Barlow Condensed are vendored — nothing on this site may reach
+   off-site, and the tools have to keep their typeface offline. Same faces and
+   weights the old fonts.googleapis.com import served; see the vendor README. */
+@import url('../../_shared/vendor/barlow/barlow.css');
 
 :root {
   --font-body: 'Barlow', system-ui, sans-serif;

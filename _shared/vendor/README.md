@@ -21,6 +21,7 @@ consolidated them.
 | `jsqr/` | [jsQR](https://github.com/cozmo/jsQR) (QR *decoder*) | unversioned build — identified by SHA-256 | Apache-2.0 |
 | `qrcode/` | [qrcode.js](https://github.com/kazuhikoarase/qrcode-generator) (QR *encoder*) | unversioned build — identified by SHA-256 | MIT |
 | `jszip/` | [JSZip](https://github.com/Stuk/jszip) | 3.10.1 | MIT / GPLv3 |
+| `barlow/` | [Barlow + Barlow Condensed](https://tribby.com/fonts/barlow/) (web fonts, not a script — `@import`ed by `_ds/…/styles.css`) | Google Fonts v13 build — identified by SHA-256 | OFL-1.1 |
 
 Each folder has its own README with the exact file size, SHA-256, source URL,
 consumers, and update instructions. `jsqr/` and `qrcode/` are easy to confuse

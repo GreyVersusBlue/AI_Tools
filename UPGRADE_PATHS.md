@@ -54,6 +54,10 @@ here so they stop being rediscovered):
 - `_ds/industry-…/styles.css` opens with an `@import` of Google Fonts. Five live
   tools (005, 011, 029, 031, 036) make an offsite request on every load and lose their
   typeface offline. `Tools/schedule/fonts/fonts.css` is the self-hosting template.
+  *Fixed 2026-09-03:* the six faces are vendored under `_shared/vendor/barlow/`
+  (latin + latin-ext, `CACHE_VERSION` v137), the `@import` points there, and the
+  harness no longer strips a Google Fonts import out of served CSS — an offsite
+  font request is now a finding like any other.
 - `assets/js/gvb-save.js` (save bar + storage probe, used by 005 and 007) is shared
   code living outside `_shared/`, contra `CLAUDE.md`.
 - `Tools/seating-chart/fonts/*.woff2` (~167 KB, three faces) appear unreferenced by

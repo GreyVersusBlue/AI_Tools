@@ -72,17 +72,18 @@ const MIME = {
  *
  *  Every response carries `Connection: close`. Node's http server otherwise
  *  answers keep-alive and closes an idle socket about six seconds after its
- *  last response (keepAliveTimeout 5 s, plus a second of grace), and
- *  Playwright's route.fetch() below pools its connections on a keep-alive
- *  agent that never closes them itself. A stylesheet re-requested at that
- *  exact moment — a page.reload() six seconds after first load is enough —
- *  is written onto a socket the server has just destroyed, and the fetch
- *  rejects with `read ECONNRESET`. That is how main's CI run #8 crashed
- *  exit-ticket-generator/test/smoke-prompt-sets.mjs on 2026-09-02, five
- *  seconds into a suite that passes locally: the window is one event-loop
- *  iteration, so it is rare, and it can land on any suite. No pooled socket
- *  means no idle socket to lose the race on; a fresh loopback connection per
- *  request costs nothing measurable. */
+ *  last response (keepAliveTimeout 5 s, plus a second of grace), and a client
+ *  that pools its connections on a keep-alive agent never closes them itself.
+ *  A stylesheet re-requested at that exact moment — a page.reload() six
+ *  seconds after first load is enough — is written onto a socket the server
+ *  has just destroyed, and the request fails with `read ECONNRESET`. That is
+ *  how main's CI run #8 crashed exit-ticket-generator/test/smoke-prompt-sets.mjs
+ *  on 2026-09-02, five seconds into a suite that passes locally: the client
+ *  was Playwright's route.fetch() in prepPage's CSS-rewriting branch (since
+ *  removed — see prepPage), the window is one event-loop iteration, so it is
+ *  rare, and it can land on any suite. No pooled socket means no idle socket
+ *  to lose the race on, for Chromium's own pool as much as Playwright's; a
+ *  fresh loopback connection per request costs nothing measurable. */
 export function serve(port) {
   const server = http.createServer((req, res) => {
     res.setHeader('Connection', 'close');
@@ -125,17 +126,14 @@ export async function launch(opts = {}) {
   return chromium.launch(base);
 }
 
-// The shared _ds stylesheet @imports Google Fonts over HTTPS on every page
-// that links it. That is a pre-existing, site-wide gap, not a property of the
-// tool under test, and image-to-pdf's suite already documents the same
-// reasoning: counting it would make every suite permanently red for a cause
-// no tool controls. Stripping the @import out of served CSS stops the request
-// from ever being issued — which matters because drive-seating.mjs keeps its
-// own page.on('request') log and asserts nothing left the site; an abort
-// would still show up there. The CDN abort below stays as a second fence
-// (silent, not counted in __blocked) in case fonts get pulled some other way.
-const GOOGLE_FONTS_IMPORT = /@import\s+url\(\s*['"]?https:\/\/fonts\.googleapis\.com[^)]*\)\s*;?/g;
-const KNOWN_NOISE = /^https:\/\/fonts\.(googleapis|gstatic)\.com\//;
+// Until 2026-09-03 the shared _ds stylesheet @imported Google Fonts over
+// HTTPS on every page that linked it, and prepPage fetched every same-origin
+// stylesheet through route.fetch() to strip that @import before the browser
+// saw it — a test working around a site bug, and the code path that lost the
+// keep-alive race described above serve(). The faces are vendored now
+// (_shared/vendor/barlow/), the strip is gone, and a request to
+// fonts.googleapis.com or fonts.gstatic.com is an offsite request like any
+// other: aborted, and counted in page.__blocked.
 
 /**
  * A fresh page in its own context. `base` is the origin the test considers
@@ -157,8 +155,8 @@ export async function prepPage(browser, base, { width, height, dsf = 1, mobile =
     permissions,
     // Every tool registers sw.js, and a controlled page gets its responses
     // from the SW's precache — which bypasses the route() interception below
-    // entirely (the CSS strip, the offsite abort, the __blocked bookkeeping
-    // all silently stop working from the second load on). Tests here are
+    // entirely (the offsite abort and the __blocked bookkeeping both
+    // silently stop working from the second load on). Tests here are
     // about the tools, not the service worker, so keep it out of the loop.
     //
     // 'block' unless a suite asks otherwise, so every existing call site is
@@ -175,29 +173,10 @@ export async function prepPage(browser, base, { width, height, dsf = 1, mobile =
 
   const handle = async route => {
     const url = route.request().url();
-    if (url.startsWith(base)) {
-      if (/\.css(\?|$)/.test(url)) {
-        // One retry: a failed fetch here is a dead connection, not a dead
-        // file (the server is in this same process), and the retry opens a
-        // fresh one. `Connection: close` in serve() already makes this a
-        // belt-and-braces path — see its header.
-        let resp;
-        try { resp = await route.fetch(); } catch { resp = await route.fetch(); }
-        const body = await resp.text();
-        if (body.includes('fonts.googleapis.com')) {
-          return route.fulfill({
-            status: 200,
-            headers: { 'content-type': 'text/css; charset=utf-8' },
-            body: body.replace(GOOGLE_FONTS_IMPORT, ''),
-          });
-        }
-        return route.fulfill({ response: resp });
-      }
-      return route.continue();
-    }
+    if (url.startsWith(base)) return route.continue();
     if (/^(file|data|blob|about|chrome):/.test(url)) return route.continue();
     abortedByUs.add(url);
-    if (!KNOWN_NOISE.test(url)) page.__blocked.push(url);
+    page.__blocked.push(url);
     return route.abort();
   };
 
