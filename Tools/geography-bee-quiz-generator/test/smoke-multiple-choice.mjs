@@ -22,9 +22,7 @@ import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
 const PORT = 8221;
 const BASE = `http://127.0.0.1:${PORT}`;
 const URL_PAGE = BASE + '/Tools/062-geography-bee-quiz-generator.html';
-const CUSTOM_KEY = 'gbq_custom_v1';
 const DISABLED_KEY = 'gbq_disabled_v1';
-const SETTINGS_KEY = 'gbq_settings_v1';
 
 let passed = 0, failed = 0;
 const fails = [];

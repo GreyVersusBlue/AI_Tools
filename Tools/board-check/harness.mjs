@@ -17,6 +17,11 @@
 //                                      workers are blocked unless opts passes
 //                                      serviceWorkers: 'allow'.
 //   settle(page, ms)                   wait for timers/animation to coalesce
+//   a11yScan(page, opts)               run axe-core in the page; resolves to
+//                                      the violations at or above opts.impact
+//                                      ('serious' by default), each with the
+//                                      rule id, impact, help text and the
+//                                      first few offending selectors
 //   SITE                               absolute path to the repo root
 //
 // Playwright comes from the repo-root package.json (devDependencies only —
@@ -222,3 +227,51 @@ export async function prepPage(browser, base, { width, height, dsf = 1, mobile =
 
 /** Let timers, autosave debounces and animation frames coalesce. */
 export const settle = (page, ms = 200) => page.waitForTimeout(ms);
+
+/* ── accessibility ─────────────────────────────────────────────────────── */
+
+// axe-core is a dev dependency (package.json), injected into the page from
+// node_modules at scan time. It is never served by the site and must never be
+// precached: it exists only inside a test. The a11y widget (_shared/a11y.js)
+// is on 77 tools with no automated check behind it; this is the check.
+const AXE_PATH = path.join(SITE, 'node_modules', 'axe-core', 'axe.min.js');
+const IMPACT_RANK = { minor: 0, moderate: 1, serious: 2, critical: 3 };
+
+/**
+ * Run axe-core against the page's current document.
+ *   opts.impact   lowest impact to report ('minor' | 'moderate' | 'serious' |
+ *                 'critical'); 'serious' by default, which is where a screen
+ *                 reader user is actually blocked rather than inconvenienced.
+ *   opts.rules    axe run options' `rules` map, to switch rules on or off.
+ *   opts.include  a selector to scope the scan to.
+ * Resolves to an array of { id, impact, help, helpUrl, nodes: [selector…],
+ * count } sorted most severe first. Throws if axe-core is not installed.
+ */
+export async function a11yScan(page, { impact = 'serious', rules, include } = {}) {
+  if (!fs.existsSync(AXE_PATH)) {
+    throw new Error('axe-core is not installed. From the repo root, run: npm ci');
+  }
+  const already = await page.evaluate(() => typeof window.axe !== 'undefined');
+  if (!already) await page.addScriptTag({ path: AXE_PATH });
+  const results = await page.evaluate(async ({ rules, include }) => {
+    const context = include ? { include: [include] } : document;
+    const r = await window.axe.run(context, {
+      resultTypes: ['violations'],
+      rules: rules || {},
+      // The colour-contrast rule is kept; iframes are none of ours.
+      iframes: false,
+    });
+    return r.violations.map(v => ({
+      id: v.id,
+      impact: v.impact,
+      help: v.help,
+      helpUrl: v.helpUrl,
+      count: v.nodes.length,
+      nodes: v.nodes.slice(0, 4).map(n => (n.target || []).join(' ')),
+    }));
+  }, { rules, include });
+  const floor = IMPACT_RANK[impact] ?? IMPACT_RANK.serious;
+  return results
+    .filter(v => (IMPACT_RANK[v.impact] ?? 0) >= floor)
+    .sort((a, b) => (IMPACT_RANK[b.impact] ?? 0) - (IMPACT_RANK[a.impact] ?? 0) || a.id.localeCompare(b.id));
+}

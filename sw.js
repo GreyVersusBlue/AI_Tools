@@ -5,8 +5,26 @@
 // Strategy:
 //   - PRECACHE_URLS below is a hand-curated list of every page + JS/CSS/font
 //     asset the site currently ships (index.html, every Tools/*.html file,
-//     and their vendored scripts/styles/fonts). It's installed cache-first
-//     up front so a first visit makes the whole toolkit available offline.
+//     and their vendored scripts/styles/fonts). It is cached in TWO TIERS:
+//       * SHELL_URLS — a subset of PRECACHE_URLS — is cached at install: the
+//         landing page, everything under _shared/ (the vendored libraries and
+//         fonts included), the icons and manifest, and the ten tools a teacher
+//         reaches for standing in the room, with their support files. This is
+//         what "installed" means: 77 of 249 entries, ~3.6 of ~10.8 MB,
+//         of which the vendored libraries are half.
+//       * Everything else in PRECACHE_URLS is fetched by a second, deferred
+//         pass that never blocks install. _shared/sw-register.js posts
+//         PRECACHE_REST once the page has been idle for a few seconds; the
+//         handler below fills in whatever the precache does not hold yet. It
+//         is idempotent (skips what is cached, runs once at a time) and it
+//         reports progress to every open page as PRECACHE_PROGRESS, which
+//         index.html shows as "N of M tools ready".
+//     Until 2026-09-03 (CACHE_VERSION v137) install fetched all ~11 MB up
+//     front, so a first visit on the school network paid the whole cost before
+//     the worker settled. The offline promise after the deferred pass is the
+//     same as before; the promise during it is narrower ("the shell and the
+//     ten tools, and every tool you have already opened"), which is why the
+//     readout exists.
 //   - Any same-origin GET request that lands anyway (a file missed above, or
 //     one added later without updating this list) is cached opportunistically
 //     the first time it succeeds online, so it still works offline next time.
@@ -24,6 +42,13 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 //
+// CACHE NAMES. The precache and the same-origin runtime cache carry the
+// version, so a deploy evicts every same-origin byte the old worker served —
+// that is the point of a bump. The Wikimedia cache does NOT: it holds map
+// images a teacher waited on the school network for, none of which change
+// when this site does, and until v138 every bump threw them away. It has a
+// stable name and is trimmed by count instead.
+//
 // UPDATES. This worker deliberately does NOT call skipWaiting() at install. A
 // new version installs and then waits, and _shared/sw-register.js offers the
 // teacher a "new version is ready" bar; only when they accept does it post
@@ -35,15 +60,113 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v137';
+const CACHE_VERSION = 'v138';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
-const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
+const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
 const WIKI_CACHE_MAX_ENTRIES = 50;
-const CURRENT_CACHES = [PRECACHE, RUNTIME, WIKI_CACHE];
+const SHARE_CACHE = 'aplp-share'; // the hand-off slot for the manifest share_target — see SHARE below
+const CURRENT_CACHES = [PRECACHE, RUNTIME, WIKI_CACHE, SHARE_CACHE];
+
+// SHARE. manifest.json declares a share_target: on a phone or Chromebook where
+// the toolkit is installed, "Share" from a spreadsheet app or a mail client
+// can send a CSV/TSV/text file to Class Roster Hub. The OS delivers it as a
+// multipart POST to Tools/006-class-roster-hub.html — and there is no server
+// to receive it, so this worker does. It reads the form, parks the text in
+// SHARE_CACHE under one fixed key, and answers 303 to the same page with
+// ?shared=roster; the page collects the text from the cache on load, deletes
+// it, and opens its own column-mapping import dialog. Nothing leaves the
+// device. The slot holds one share at a time and is cleared once consumed.
+const SHARE_TARGET_PAGE = /\/Tools\/006-class-roster-hub\.html$/;
+const SHARE_KEY = 'share/roster';
 
 const WIKI_HOSTS = ['upload.wikimedia.org', 'commons.wikimedia.org'];
 const CDN_ALLOWLIST = ['cdnjs.cloudflare.com'];
+
+// The install tier. Every entry here MUST also appear in PRECACHE_URLS —
+// check-precache.mjs fails otherwise — because PRECACHE_URLS stays the one
+// list of "what works offline"; this is only the order of arrival. Keep it to
+// the shell plus the handful of tools used from the front of the room: each
+// entry here is downloaded before the worker is considered installed.
+const SHELL_URLS = [
+  "./",
+  "Tools/004-Classroom%20Timer.html",
+  "Tools/007-Name%20Picker.html",
+  "Tools/032-School%20Calendar%20Visualizer.html",
+  "Tools/005-Seating%20Chart%20Generator.html",
+  "Tools/044-Sub%20Plan%20Builder.html",
+  "Tools/008-behavior-points-tracker.html",
+  "Tools/behavior-points-tracker/seating-layout.js",
+  "Tools/006-class-roster-hub.html",
+  "Tools/classroom-timer/ct-app.js",
+  "Tools/classroom-timer/ct-mirror.js",
+  "Tools/classroom-timer/ct-sounds.js",
+  "Tools/classroom-timer/ct-store.js",
+  "Tools/classroom-timer/mirror.html",
+  "Tools/010-command-center-dashboard.html",
+  "Tools/command-center/cc-remote.js",
+  "Tools/command-center/remote.html",
+  "Tools/002-group-team-generator.html",
+  "Tools/001-hall-pass-log.html",
+  "Tools/name-picker/fonts/bungee-latin-400-normal.woff2",
+  "Tools/name-picker/fonts/bungee-latin-ext-400-normal.woff2",
+  "Tools/name-picker/fonts/outfit-latin-400-normal.woff2",
+  "Tools/name-picker/fonts/outfit-latin-600-normal.woff2",
+  "Tools/name-picker/fonts/outfit-latin-700-normal.woff2",
+  "Tools/name-picker/fonts/outfit-latin-ext-400-normal.woff2",
+  "Tools/name-picker/fonts/outfit-latin-ext-600-normal.woff2",
+  "Tools/name-picker/fonts/outfit-latin-ext-700-normal.woff2",
+  "Tools/name-picker/fonts/press-start-2p-latin-400-normal.woff2",
+  "Tools/name-picker/np-details.js",
+  "Tools/name-picker/np-equity.js",
+  "Tools/name-picker/np-pick.js",
+  "Tools/name-picker/np-seat-equity.js",
+  "Tools/name-picker/np-store.js",
+  "Tools/school-calendar/scv-pacing.js",
+  "Tools/school-calendar/scv-seed.js",
+  "Tools/school-calendar/scv-store.js",
+  "Tools/seating-chart/scg-photo.js",
+  "Tools/seating-chart/seating.mjs",
+  "_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css",
+  "_shared/a11y.css",
+  "_shared/a11y.js",
+  "_shared/base.css",
+  "_shared/duplex-print.js",
+  "_shared/ink-paper.css",
+  "_shared/print-area.css",
+  "_shared/qr-scan.js",
+  "_shared/state-link.js",
+  "_shared/student-details.js",
+  "_shared/sw-register.js",
+  "_shared/theme.css",
+  "_shared/webrtc-pair.js",
+  "_shared/vendor/jspdf/jspdf.umd.min.js",
+  "_shared/vendor/jspdf/jspdf.plugin.autotable.min.js",
+  "_shared/vendor/xlsx/xlsx.full.min.js",
+  "_shared/vendor/jsqr/jsqr.js",
+  "_shared/vendor/qrcode/qrcode.js",
+  "_shared/vendor/jszip/jszip.min.js",
+  "_shared/vendor/barlow/barlow.css",
+  "_shared/vendor/barlow/barlow-condensed-latin-600-normal.woff2",
+  "_shared/vendor/barlow/barlow-condensed-latin-700-normal.woff2",
+  "_shared/vendor/barlow/barlow-condensed-latin-ext-600-normal.woff2",
+  "_shared/vendor/barlow/barlow-condensed-latin-ext-700-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-400-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-500-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-600-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-700-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-ext-400-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-ext-500-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-ext-600-normal.woff2",
+  "_shared/vendor/barlow/barlow-latin-ext-700-normal.woff2",
+  "assets/icons/icon-192.png",
+  "assets/icons/icon-512.png",
+  "assets/icons/icon-maskable-192.png",
+  "assets/icons/icon-maskable-512.png",
+  "assets/js/gvb-save.js",
+  "index.html",
+  "manifest.json",
+];
 
 const PRECACHE_URLS = [
   "./",
@@ -286,6 +409,8 @@ const PRECACHE_URLS = [
   "assets/icons/icon-maskable-192.png",
   "assets/icons/icon-maskable-512.png",
   "assets/js/gvb-save.js",
+  "assets/screenshots/landing-wide.png",
+  "assets/screenshots/name-picker-narrow.png",
   "ideas-backlog.html",
   "index.html",
   "manifest.json",
@@ -295,28 +420,114 @@ const PRECACHE_URLS = [
   "v4-riso.html"
 ];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(PRECACHE).then((cache) => {
-      // best-effort: one missing/renamed file shouldn't sink the whole
-      // install (cache.addAll is all-or-nothing, so add() individually)
-      return Promise.allSettled(
-        PRECACHE_URLS.map((url) =>
-          cache.add(new Request(url, { cache: 'reload' })).catch((err) => {
-            console.warn('[sw] precache miss, skipping:', url, err && err.message);
-          })
-        )
-      );
-    })
-    // No skipWaiting() here — see the UPDATES note at the top of this file. The
-    // worker installs, waits, and sw-register.js asks before it takes over.
+/* ── install: the shell tier only ─────────────────────────────────────── */
+
+// Best-effort: one missing/renamed file shouldn't sink the whole install
+// (cache.addAll is all-or-nothing, so add() individually).
+function addAllSettled(cache, urls, label) {
+  return Promise.allSettled(
+    urls.map((url) =>
+      cache.add(new Request(url, { cache: 'reload' })).catch((err) => {
+        console.warn(`[sw] ${label} miss, skipping:`, url, err && err.message);
+      })
+    )
   );
+}
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(caches.open(PRECACHE).then((cache) => addAllSettled(cache, SHELL_URLS, 'precache')));
+  // No skipWaiting() here — see the UPDATES note at the top of this file. The
+  // worker installs, waits, and sw-register.js asks before it takes over.
 });
 
-// The other half of that contract. sw-register.js posts this when the teacher
-// accepts the update; nothing else sends it.
+/* ── the deferred tier ────────────────────────────────────────────────── */
+
+const TOOL_PAGE = /^Tools\/\d{3}-[^/]+\.html$/;
+const absolute = (url) => new URL(url, self.location.href).href;
+
+/** What the precache holds, as counts a page can show. `tools` counts the
+ *  Tools/NNN-*.html pages themselves; a tool whose page is cached but whose
+ *  support files are still arriving reads as cached for a few seconds, which
+ *  is the honest granularity for a one-line readout. */
+async function precacheStatus() {
+  const cache = await caches.open(PRECACHE);
+  const have = new Set((await cache.keys()).map((r) => r.url));
+  const files = { cached: 0, total: PRECACHE_URLS.length };
+  const tools = { cached: 0, total: 0 };
+  for (const url of PRECACHE_URLS) {
+    const hit = have.has(absolute(url));
+    if (hit) files.cached++;
+    if (TOOL_PAGE.test(url)) { tools.total++; if (hit) tools.cached++; }
+  }
+  return {
+    type: 'PRECACHE_PROGRESS',
+    version: CACHE_VERSION,
+    files,
+    tools,
+    inProgress: !!restInFlight,
+    done: files.cached >= files.total,
+  };
+}
+
+function broadcast(message) {
+  return self.clients.matchAll({ includeUncontrolled: true }).then((clients) => {
+    for (const client of clients) client.postMessage(message);
+  });
+}
+
+// One pass at a time. Every open page posts PRECACHE_REST a few seconds after
+// it loads, so with three tabs open the second and third requests join the
+// pass already running instead of starting their own. The worker can be shut
+// down between messages; the next request simply resumes with whatever is
+// still missing, because the pass starts from what the cache already holds.
+let restInFlight = null;
+
+function precacheRest() {
+  if (restInFlight) return restInFlight;
+  restInFlight = (async () => {
+    const cache = await caches.open(PRECACHE);
+    const have = new Set((await cache.keys()).map((r) => r.url));
+    const todo = PRECACHE_URLS.filter((url) => !have.has(absolute(url)));
+    if (!todo.length) return;
+    let fetched = 0;
+    // A few at a time: enough to finish in a minute or so on a school
+    // connection, not so many that the page the teacher is actually using
+    // has to compete for the socket pool.
+    const lanes = Array.from({ length: 4 }, async () => {
+      while (todo.length) {
+        const url = todo.shift();
+        try {
+          await cache.add(new Request(url, { cache: 'reload' }));
+        } catch (err) {
+          console.warn('[sw] deferred precache miss, skipping:', url, err && err.message);
+        }
+        fetched++;
+        if (fetched % 12 === 0) await broadcast(await precacheStatus());
+      }
+    });
+    await Promise.all(lanes);
+  })().catch((err) => {
+    console.warn('[sw] deferred precache pass stopped:', err && err.message);
+  }).then(async () => {
+    restInFlight = null;
+    await broadcast(await precacheStatus());
+  });
+  return restInFlight;
+}
+
+/* ── messages from sw-register.js ─────────────────────────────────────── */
+
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  const type = event.data && event.data.type;
+  // The other half of the update contract. sw-register.js posts this when the
+  // teacher accepts the update; nothing else sends it.
+  if (type === 'SKIP_WAITING') { self.skipWaiting(); return; }
+  if (type === 'PRECACHE_REST') { event.waitUntil(precacheRest()); return; }
+  if (type === 'PRECACHE_STATUS') {
+    event.waitUntil(precacheStatus().then((status) => {
+      if (event.source) event.source.postMessage(status);
+    }));
+  }
 });
 
 self.addEventListener('activate', (event) => {
@@ -351,11 +562,45 @@ async function cacheFirst(request, cacheName, { trim } = {}) {
   return response;
 }
 
+/** The share_target POST (see SHARE above): stash the shared text, redirect
+ *  to the page as a plain GET. Anything unreadable falls through to the page
+ *  with ?shared=roster and nothing in the slot, which it treats as "no share". */
+async function receiveShare(request) {
+  try {
+    const form = await request.formData();
+    const file = form.get('roster');
+    let text = '';
+    let name = '';
+    if (file && typeof file.text === 'function') {
+      text = await file.text();
+      name = file.name || '';
+    }
+    if (!text) text = String(form.get('text') || '');
+    if (!name) name = String(form.get('title') || 'shared roster');
+    if (text) {
+      const cache = await caches.open(SHARE_CACHE);
+      await cache.put(
+        new Request(new URL(SHARE_KEY, self.registration.scope).href),
+        new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Share-Name': encodeURIComponent(name), 'X-Share-At': String(Date.now()) } })
+      );
+    }
+  } catch (err) {
+    console.warn('[sw] could not read shared file:', err && err.message);
+  }
+  const target = new URL(request.url);
+  target.search = '?shared=roster';
+  return Response.redirect(target.href, 303);
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.method !== 'GET') return;
-
   const url = new URL(request.url);
+
+  if (request.method === 'POST' && url.origin === self.location.origin && SHARE_TARGET_PAGE.test(url.pathname)) {
+    event.respondWith(receiveShare(request));
+    return;
+  }
+  if (request.method !== 'GET') return;
 
   // Wikimedia map lookups/images: capped runtime cache, never precached.
   if (WIKI_HOSTS.includes(url.hostname)) {

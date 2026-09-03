@@ -21,7 +21,7 @@
 //   v3-bellboard.html, v4-riso.html                      (linked pages, 404 offline)
 //   assets/icons/icon-maskable-192.png, -512.png         (the install dialog's icon)
 //
-// Four checks always, and a fifth with `--base <ref>`:
+// Five checks always, and a sixth with `--base <ref>`:
 //
 //   1. MISSING   — every same-origin src/href on a live page resolves to a file
 //                  that exists AND is listed in PRECACHE_URLS.
@@ -34,11 +34,16 @@
 //                  2026-09-02, and cheap to keep clean: a dead entry makes every
 //                  install log a warning.)
 //   4. DUPLICATE — no URL listed twice.
+//   5. SHELL     — every entry of SHELL_URLS (the install tier, since v138) is
+//                  also in PRECACHE_URLS, and none is listed twice. PRECACHE_URLS
+//                  stays the one list of what works offline; the shell only
+//                  decides what arrives first, so a shell entry the full list
+//                  forgot would be cached at install and then never counted.
 //
-// A fifth check is opt-in, because it needs git history and a base to compare
+// A sixth check is opt-in, because it needs git history and a base to compare
 // against, and a guess at either is how a guard learns to cry wolf:
 //
-//   5. BUMP      — `--base <ref>` only. If any precached file's content differs
+//   6. BUMP      — `--base <ref>` only. If any precached file's content differs
 //                  between the merge-base of <ref> and HEAD and the working
 //                  tree, or PRECACHE_URLS itself does, then CACHE_VERSION must
 //                  differ from what it was at that merge-base. Otherwise every
@@ -61,7 +66,6 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const rel = p => path.relative(SITE, p).split(path.sep).join('/');
 
 /* Pages that are shipped and reachable. Archived design folders are excluded:
    they are kept for reference, are not linked from anywhere live, and precaching
@@ -89,6 +93,25 @@ if (!block) {
 }
 const listed = [...block[1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
 const listedSet = new Set(listed.map(u => decodeURIComponent(u)));
+
+/* ── 5. SHELL ───────────────────────────────────────────────────────────── */
+const shellBlock = /const SHELL_URLS = \[([\s\S]*?)\n\];/.exec(swSrc);
+if (!shellBlock) {
+  console.error('check-precache: could not find the SHELL_URLS array in sw.js (the install tier, added in v138).');
+  process.exit(1);
+}
+const shell = [...shellBlock[1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
+{
+  const listedRaw = new Set(listed);
+  const seenShell = new Set();
+  for (const u of shell) {
+    if (seenShell.has(u)) problems.push(`SHELL       ${u}\n            listed twice in SHELL_URLS`);
+    seenShell.add(u);
+    if (!listedRaw.has(u)) {
+      problems.push(`SHELL       ${u}\n            in SHELL_URLS but not in PRECACHE_URLS — the install tier must be a subset of the full list`);
+    }
+  }
+}
 
 /* ── 4. DUPLICATE ───────────────────────────────────────────────────────── */
 const seen = new Set();
@@ -175,7 +198,7 @@ if (fs.existsSync(manifestPath)) {
   }
 }
 
-/* ── 5. BUMP (opt-in: --base <ref>) ────────────────────────────────────── */
+/* ── 6. BUMP (opt-in: --base <ref>) ────────────────────────────────────── */
 
 let bumpNote = '';
 if (BASE_REF) {
@@ -245,5 +268,5 @@ if (problems.length) {
   process.exit(1);
 }
 
-console.log(`check-precache: OK — ${listed.length} entries, all present; every file a live page or manifest.json references is listed.${bumpNote}`);
+console.log(`check-precache: OK — ${listed.length} entries (${shell.length} in the install tier), all present; every file a live page or manifest.json references is listed.${bumpNote}`);
 if (!BASE_REF) console.log('check-precache: (CACHE_VERSION bump not checked — pass --base <ref>, e.g. --base origin/main, to compare against a merge-base.)');

@@ -194,7 +194,6 @@ ok(countTags(clipped.svg, 'polyline') >= 1, 'at least one polyline segment is dr
 const ptNums = [...clipped.svg.matchAll(/points="([^"]+)"/g)]
   .flatMap(m => m[1].trim().split(/\s+/).map(pair => pair.split(',').map(Number)));
 ok(ptNums.length > 0, 'the polyline has plotted points');
-const pageP = R.renderWorksheet({ orientation: 'portrait', copies: 1, problems: [''], showAnswer: false });
 const [pw, ph] = [8.5, 11];
 ok(ptNums.every(([x, y]) => x >= -1e-6 && x <= pw + 1e-6 && y >= -1e-6 && y <= ph + 1e-6),
   'every plotted point stays on the physical page (nothing drawn past the edge)');

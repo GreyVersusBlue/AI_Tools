@@ -62,7 +62,43 @@ every edit. The deduplication work that established them is tracked in
   moved, or deleted, update `PRECACHE_URLS` to match and bump
   `CACHE_VERSION`** (the `const CACHE_VERSION = 'vNN'` at the top). Both, in
   the same commit. A stale list silently breaks offline use for teachers.
+- Since v138 the precache is **two tiers** (Path 1 P3): `SHELL_URLS` — the
+  landing page, `_shared/`, icons/manifest, and ten front-of-room tools with
+  their support files — is cached at install; everything else in
+  `PRECACHE_URLS` is fetched by a deferred pass that `_shared/sw-register.js`
+  asks for a few seconds after load (`PRECACHE_REST`), and `index.html` shows
+  "Offline: N of 86 tools ready" from the worker's `PRECACHE_PROGRESS`
+  messages. A new file goes in `PRECACHE_URLS`; add it to `SHELL_URLS` **too**
+  only if it belongs to one of those ten tools or to `_shared/`. `SHELL_URLS`
+  must stay a subset of `PRECACHE_URLS` — `check:precache` fails otherwise.
+  The Wikimedia map cache (`aplp-wiki`) has no version on purpose and survives
+  a bump; the precache and same-origin runtime cache do not, on purpose.
+- `manifest.json` names shortcuts, screenshots and a `share_target` (Path 1
+  P4). Every tool page links it (`<link rel="manifest" href="../manifest.json">`
+  after the viewport meta) — keep that on a new tool. The share target is a
+  POST that `sw.js` answers itself (there is no server), parking the shared
+  file in the `aplp-share` cache for Class Roster Hub to collect; the two
+  halves are covered by `test:sw-tiers` and `test:roster-hub`. Regenerate the
+  screenshots with `node Tools/board-check/make-manifest-screenshots.mjs` after
+  a visible redesign.
 - URL-encode spaces in precache paths (`%20`), matching the existing entries.
+- **Three more read-only sweeps run in CI (Path 2 P4)** and should run before
+  a commit that touches a page: `npm run check:entities` (an HTML entity in a
+  JS string that reaches a text sink — `textContent`, a placeholder, `alert`,
+  a same-file helper that writes `textContent`; use the character itself),
+  `npm run check:hidden-flex` (an element toggled with `hidden` whose own class
+  sets `display`, on a page with no `[hidden]{display:none!important}` rule —
+  add that rule to the page's `<style>`; `DEBUG_HIDDEN_FLEX=1` shows every
+  toggle it resolves), and `npm run check:print-clip` (a fixed `height` /
+  `max-height` plus `overflow:hidden` inside `@media print` — size print boxes
+  with `min-height` and let overflow be visible). Each is a floor: it reports
+  only what it can see statically, and everything it prints is real.
+- **`npm run lint`** (ESLint, Path 2 P5) covers `_shared/*.js`, the per-tool
+  modules, `sw.js`, the tooling and every suite — not inline `<script>` in the
+  tool pages. Rules that matter: `no-undef`, `no-unused-vars`, `eqeqeq`. A new
+  `_shared/` global is declared once in `eslint.config.js`'s `SITE_GLOBALS`; a
+  tool-private page global a suite reads inside `page.evaluate()` is declared
+  at the top of that suite with `/* global name -- why */`. It runs in CI.
 - **`npm run check:precache` enforces this.** It fails if a live page's
   `src`/`href`, or a local file `manifest.json` names, is missing from
   `PRECACHE_URLS`, or if a listed URL is dead or duplicated. It runs in CI.
@@ -168,10 +204,25 @@ files must be added there too.
   `npx playwright install chromium` can't reach its download host, run browser
   suites with `PW_CHROMIUM_EXECUTABLE=<path to a chrome binary>`; that browser
   may be older than the pinned Playwright's, and that difference has caught real
-  bugs both ways, so CI is the authority. A full `npm test` is ~20 minutes; run
-  it in the background.
+  bugs both ways, so CI is the authority. (The Claude Code web sandbox is one
+  such machine: `/opt/pw-browsers/chromium` is present but not the build the
+  pinned Playwright wants, and `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` makes
+  `playwright install` a no-op — `PW_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium`
+  is the fix there.) A full `npm test` is ~20 minutes; run it in the background.
+- **`npm run test:a11y` is the site-wide axe-core sweep (Path 2 P3):**
+  `Tools/a11y-sweep/test/smoke-a11y-sweep.mjs` opens index and all 86 tool
+  pages and fails on any serious/critical violation that
+  `Tools/a11y-sweep/allowlist.json` does not allow for that page, and fails
+  again when an allowed rule stops firing (so the list only shrinks). The
+  allowlist was written by `--baseline` on 2026-09-03: 59 pages, 91 page-rule
+  pairs, mostly unlabeled `<select>`s and inputs and muted-text contrast. A new
+  tool must come in clean — do not add it to the allowlist; when you fix an
+  allowed violation in a tool, delete its line. `harness.mjs` exports
+  `a11yScan(page, {impact})` for a per-tool suite that wants to scan a state
+  behind a click. `--only 046` scans one page; `--all-impacts` also prints
+  moderate/minor as advisory.
 - `Tools/board-check/harness.mjs` is the shared browser-test harness
-  (static server, Playwright launch, offsite-request blocking). It was
+  (static server, Playwright launch, offsite-request blocking, `a11yScan`). It was
   written from scratch in Round 1c — the original board-check folder was
   never committed to this repo (verified with `git log --all`). Its exports
   are shaped to match the existing suites' call sites; don't change its

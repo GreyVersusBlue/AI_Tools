@@ -28,6 +28,7 @@
     "Tools/hall-pass-log/test/smoke-export.mjs",
     "Tools/hall-pass-log/test/smoke-hallway-sync.mjs",
     "Tools/class-roster-hub/test/smoke-export.mjs",
+    "Tools/class-roster-hub/test/smoke-share-target.mjs",
     "Tools/backup-restore/test/smoke-restore-diff.mjs",
     "Tools/backup-restore/test/smoke-transfer.mjs",
     "Tools/behavior-points-tracker/test/smoke-shared-record.mjs",
@@ -135,7 +136,9 @@
     "Tools/primary-source-analysis-generator/test/smoke-crop.mjs",
     "Tools/blank-map-generator/test/smoke-timeline-handoff.mjs",
     "Tools/blank-map-generator/test/smoke-label-colors.mjs",
-    "Tools/service-worker/test/smoke-sw-update.mjs"
+    "Tools/service-worker/test/smoke-sw-update.mjs",
+    "Tools/service-worker/test/smoke-sw-tiers.mjs",
+    "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs"
   ],
   "expectedFailures": []
 }

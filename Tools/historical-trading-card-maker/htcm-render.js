@@ -3,6 +3,7 @@
    PNG/PDF exporter all build cards through these two functions, so what the
    teacher sees on screen is byte-for-byte the markup that prints. Entries are
    schema-v2 card objects (see htcm-store.js). */
+/* global HtcmThemes, HtcmFrames, HtcmPhoto -- classic script; these come from the sibling htcm-*.js files the page loads first */
 (function () {
   'use strict';
 

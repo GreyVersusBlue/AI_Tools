@@ -23,6 +23,7 @@
 // Exits 1 on any failure. Teacher names come from the tool's own published
 // sample data.
 
+/* global BR_TEACHERS, BR_MODCOUNT, BR_GEOM -- page globals read inside page.evaluate() */
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
 
 const PORT = 8206;
@@ -71,7 +72,7 @@ const cov = await page.evaluate((name) => {
     for (let i = 0; i < BR_MODCOUNT; i++) {
       const sec = arr[i];
       if (!sec || sec === 'Planning') continue;
-      const listed = window.brSubCoverageHTML(name, day);
+      window.brSubCoverageHTML(name, day); // exercised for throw-safety; the coverage text itself is asserted elsewhere
       out.periods.push({ day, i, sec, expectedFree: window.brFreeTeachersFor(day, i).filter(f => f !== name) });
     }
   }

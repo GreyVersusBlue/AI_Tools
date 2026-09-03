@@ -253,7 +253,6 @@ for (const [key, count] of [['addition', 30], ['multiplication', 30], ['fraction
 {
   // Degenerate case: a tiny, narrow-range set with very few distinct
   // answers still returns something sane (truncated) rather than throwing.
-  const t = T.byKey('addition');
   const tiny = G.generateProblems({ key: 'tiny', label: 'Tiny', operation: 'add', operand1: { min: 1, max: 1 }, operand2: { min: 1, max: 1 } }, 5, { seed: 1 });
   const r = S.buildRiddle(tiny);
   ok(!!r, 'a degenerate (one distinct answer) set still returns a riddle');

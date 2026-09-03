@@ -69,7 +69,6 @@ await clueRows[0].$eval('.clue-question', el => { el.value = 'Which river is hig
 await clueRows[0].$eval('.clue-answer', el => { el.value = 'The Nile'; });
 
 // Feed the file input the way a picked file would arrive.
-const buffer = Buffer.from(bigPng.split(',')[1], 'base64');
 await clueRows[0].$eval('input[type="file"]', (input, b64) => {
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);

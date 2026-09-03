@@ -16,7 +16,7 @@
 // Exits 1 on any failure.
 
 import {
-  SEATING_KEY, DESK_W, DESK_H,
+  SEATING_KEY,
   parseSeatingState, loosely, sameClass, pickSeatingSection, layoutSeats,
 } from '../seating-layout.js';
 

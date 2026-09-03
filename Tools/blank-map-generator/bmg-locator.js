@@ -8,11 +8,10 @@
 const MAX_DIM = 150;
 
 export function createLocatorInset(containerEl, imgEl, rectEl, viewport, viewer) {
-  let naturalW = 0, naturalH = 0;
+  let naturalW = 0;
 
   function setImage(objectUrl, w, h) {
     naturalW = w;
-    naturalH = h;
     imgEl.src = objectUrl;
     const s = MAX_DIM / Math.max(w, h);
     containerEl.style.width = `${Math.round(w * s)}px`;

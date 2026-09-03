@@ -296,13 +296,12 @@ async function buildChart(page) {
   eq(Object.keys(bothSaved.sections[1].assign).length, 4, 'with its own seating');
 
   /* ------------------------------------------------------- export a file - */
-  const exported = await new Promise(async (resolve, reject) => {
-    page.once('download', async d => {
+  const exported = await new Promise((resolve, reject) => {
+    page.once('download', d => {
       const to = path.join(SHOTS, 'exported-chart.json');
-      await d.saveAs(to);
-      resolve({ name: d.suggestedFilename(), path: to });
+      d.saveAs(to).then(() => resolve({ name: d.suggestedFilename(), path: to }), reject);
     });
-    await page.click('#saveBar [data-gvb="export"]');
+    page.click('#saveBar [data-gvb="export"]').catch(reject);
     setTimeout(() => reject(new Error('no download event')), 8000);
   });
   ok(/^seating-chart-save-\d{4}-\d{2}-\d{2}\.json$/.test(exported.name),
