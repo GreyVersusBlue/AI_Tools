@@ -244,6 +244,15 @@ marker, cross-checked against the code only where the claim was structural (the 
 the absent `assets/fonts/`, the retired `.row.soon` rows). If one of them turns out to be
 open after all, it is in git history, and this is the paragraph that says where to look.
 
+**One item was already lost and recovered this way, within the hour.** The survey's
+Baseline table carried a "Dead / unlinked" row — `index_backup.html`, `Tools/Old Designs/`,
+`Tools/New Designs/`, `Other Landing Page ideas/`, ~590 KB unreferenced by anything. The
+consolidation extracted the survey's *path sections* and hand-copied its *defect bullets*,
+and missed that one row of the table sitting between them. Devon spotted the files in a
+directory listing and asked why they still existed; it is now rank 104. The lesson is not
+"be more careful" — it is that a table row above a bulleted list is exactly the shape an
+extraction pass skips, and that the recovery worked because the originals are still in git.
+
 | Retired | What it was | Where it went |
 |---|---|---|
 | `improvement prompts/` (84 files, 1.8 M) | 81 per-tool wishlists plus the platform themes, the site-wide request list and the round tracker | Open ideas → `BACKLOG.md` Tier 2 per-tool sections; themes → its Platform themes section; site requests and the tracker's open threads → its cross-cutting section; the round tracker's own history → above |
