@@ -21,7 +21,7 @@
 //   v3-bellboard.html, v4-riso.html                      (linked pages, 404 offline)
 //   assets/icons/icon-maskable-192.png, -512.png         (the install dialog's icon)
 //
-// Four checks:
+// Four checks always, and a fifth with `--base <ref>`:
 //
 //   1. MISSING   — every same-origin src/href on a live page resolves to a file
 //                  that exists AND is listed in PRECACHE_URLS.
@@ -35,18 +35,29 @@
 //                  install log a warning.)
 //   4. DUPLICATE — no URL listed twice.
 //
-// Deliberately NOT checked: whether a content change to an already-listed file
-// came with a CACHE_VERSION bump. That was in the phase brief, and it cannot be
-// done honestly here — the guard would have to diff against `git show main:sw.js`,
-// which is wrong on a branch that legitimately holds several commits, wrong on a
-// first push, and wrong in a shallow CI clone. Getting a "you forgot to bump"
-// error when you did bump, two commits ago, trains people to ignore the guard.
-// TODO: decide whether this belongs as a separate opt-in check with an explicit
-//       base ref, or in code review. Raise it in the PR rather than shipping a
-//       check that cries wolf.
+// A fifth check is opt-in, because it needs git history and a base to compare
+// against, and a guess at either is how a guard learns to cry wolf:
+//
+//   5. BUMP      — `--base <ref>` only. If any precached file's content differs
+//                  between the merge-base of <ref> and HEAD and the working
+//                  tree, or PRECACHE_URLS itself does, then CACHE_VERSION must
+//                  differ from what it was at that merge-base. Otherwise every
+//                  teacher who already has the worker installed keeps serving
+//                  the old bytes: the worker only reinstalls when its own text
+//                  changes, and a bumped version string is how it changes.
+//
+// The merge-base is what makes this honest. Comparing against `main` directly
+// would be wrong on a branch that legitimately holds several commits (a bump
+// two commits ago is still a bump), and comparing HEAD~1 would be wrong on a
+// squash. In CI this runs only in the pull-request job, where the checkout has
+// full history and `origin/<base branch>` is known; a push to main has nothing
+// sensible to compare against and does not run it. With no `--base` the check
+// is skipped and says so. A base that git cannot resolve (a shallow clone, a
+// typo) is an error, not a pass.
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -59,6 +70,14 @@ const PAGE_EXEMPT = ['Tools/Old Designs/', 'Tools/New Designs/', 'index_backup.h
 
 const problems = [];
 const warnings = [];
+
+const argv = process.argv.slice(2);
+const baseIdx = argv.indexOf('--base');
+const BASE_REF = baseIdx >= 0 ? argv[baseIdx + 1] : null;
+if (baseIdx >= 0 && !BASE_REF) {
+  console.error('check-precache: --base needs a git ref (e.g. --base origin/main).');
+  process.exit(2);
+}
 
 /* ── read PRECACHE_URLS ─────────────────────────────────────────────────── */
 
@@ -156,6 +175,62 @@ if (fs.existsSync(manifestPath)) {
   }
 }
 
+/* ── 5. BUMP (opt-in: --base <ref>) ────────────────────────────────────── */
+
+let bumpNote = '';
+if (BASE_REF) {
+  const git = (...args) => execFileSync('git', args, { cwd: SITE, encoding: 'utf8' }).trim();
+  let mergeBase;
+  try {
+    mergeBase = git('merge-base', BASE_REF, 'HEAD');
+  } catch (e) {
+    console.error(`check-precache: cannot resolve --base ${BASE_REF} against HEAD (${String(e.message || e).split('\n')[0]}).`);
+    console.error('A shallow clone has no history to compare; fetch the base branch (in CI, actions/checkout with fetch-depth: 0).');
+    process.exit(2);
+  }
+  const versionOf = src => (/const CACHE_VERSION = '([^']+)'/.exec(src) || [])[1];
+  const listOf = src => {
+    const b = /const PRECACHE_URLS = \[([\s\S]*?)\n\];/.exec(src);
+    return b ? [...b[1].matchAll(/"([^"]+)"/g)].map(m => m[1]) : [];
+  };
+  const baseSw = git('show', `${mergeBase}:sw.js`);
+  const baseVersion = versionOf(baseSw), headVersion = versionOf(swSrc);
+  if (!baseVersion || !headVersion) {
+    console.error('check-precache: could not read CACHE_VERSION from sw.js at the merge-base and in the working tree.');
+    process.exit(2);
+  }
+  // Committed and uncommitted changes alike: what a teacher's browser would
+  // fetch is whatever is on disk when this is deployed, so compare the
+  // merge-base against the working tree, not against HEAD.
+  const changed = git('diff', '--name-only', '-z', mergeBase, '--').split('\0').filter(Boolean);
+  const changedSet = new Set(changed);
+  const cachedChanged = listed
+    .map(u => decodeURIComponent(u))
+    .filter(p => p !== './' && changedSet.has(p))
+    .sort();
+  const listChanged = listOf(baseSw).join('\n') !== listed.join('\n');
+  const needsBump = cachedChanged.length > 0 || listChanged;
+  const short = mergeBase.slice(0, 7);
+  if (needsBump && baseVersion === headVersion) {
+    const why = [
+      ...cachedChanged.slice(0, 12).map(p => `            ${p}`),
+      cachedChanged.length > 12 ? `            (+${cachedChanged.length - 12} more)` : '',
+      listChanged ? '            (and PRECACHE_URLS itself changed)' : '',
+    ].filter(Boolean).join('\n');
+    problems.push(
+      `BUMP        CACHE_VERSION is still ${headVersion}, as it was at ${short} (merge-base of ${BASE_REF} and HEAD),\n` +
+      `            but precached content changed since then:\n${why}\n` +
+      `            An installed worker only reinstalls when sw.js changes; bump CACHE_VERSION.`
+    );
+  } else if (needsBump) {
+    bumpNote = ` CACHE_VERSION ${baseVersion} → ${headVersion} covers the ${cachedChanged.length} precached file${cachedChanged.length === 1 ? '' : 's'} changed since ${short}${listChanged ? ' and the list change' : ''}.`;
+  } else if (baseVersion !== headVersion) {
+    bumpNote = ` CACHE_VERSION ${baseVersion} → ${headVersion} with no precached content changed since ${short} (harmless: one extra reinstall).`;
+  } else {
+    bumpNote = ` No precached content changed since ${short}; CACHE_VERSION ${headVersion} stands.`;
+  }
+}
+
 /* ── report ─────────────────────────────────────────────────────────────── */
 
 for (const w of warnings.sort()) console.warn('check-precache: ' + w);
@@ -170,4 +245,5 @@ if (problems.length) {
   process.exit(1);
 }
 
-console.log(`check-precache: OK — ${listed.length} entries, all present; every file a live page or manifest.json references is listed.`);
+console.log(`check-precache: OK — ${listed.length} entries, all present; every file a live page or manifest.json references is listed.${bumpNote}`);
+if (!BASE_REF) console.log('check-precache: (CACHE_VERSION bump not checked — pass --base <ref>, e.g. --base origin/main, to compare against a merge-base.)');

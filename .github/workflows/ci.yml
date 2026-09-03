@@ -35,13 +35,18 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to the current majors (checkout v7, setup-node v7, cache v6,
+      # upload-artifact v7, all node24) — the v4 line was being forced onto
+      # Node 24 with a deprecation warning on every run.
+      - uses: actions/checkout@v7
         with:
-          # run-suites.mjs --changed diffs against origin/main, and the offline
-          # copy check reads git history. A shallow clone has neither.
+          # run-suites.mjs --changed diffs against origin/main, the offline
+          # copy check reads git history, and the CACHE_VERSION guard below
+          # needs the merge-base with the PR's base branch. A shallow clone
+          # has none of them.
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -57,7 +62,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: pw-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
@@ -99,6 +104,16 @@ jobs:
         if: '!cancelled()'
         run: npm run check:precache
 
+      # The CACHE_VERSION bump is an opt-in fifth check, pull requests only: it
+      # compares against the merge-base of the PR's base branch, which needs the
+      # full history fetched above and a base to name. A push to main has no
+      # base to compare against (its own parent would be wrong for a squash), so
+      # it does not run there. See check-precache.mjs's header for why this was
+      # not made unconditional.
+      - name: 'Guard: CACHE_VERSION bumped when precached content changed'
+        if: "!cancelled() && github.event_name == 'pull_request'"
+        run: npm run check:precache -- --base "origin/${{ github.base_ref }}"
+
       - name: Test suites
         if: '!cancelled()'
         run: npm test
@@ -108,7 +123,7 @@ jobs:
       # and knowing which click.
       - name: Upload suite artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: suite-output
           path: |

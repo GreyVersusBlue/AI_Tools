@@ -265,6 +265,21 @@ caching of same-origin GETs already works, so an on-demand tier is nearly free.
   TODO in the guard's header. Until then this remains a code-review
   responsibility, as `CLAUDE.md` already states.
 
+  *Built 2026-09-03, in that honest shape:* `check-precache.mjs --base <ref>`
+  (BUMP, the fifth check). It diffs the working tree against the *merge-base*
+  of the ref and HEAD, so a bump anywhere on the branch counts; if any
+  precached file or `PRECACHE_URLS` itself changed since that merge-base and
+  `CACHE_VERSION` did not, it fails naming the files; an unresolvable ref (a
+  shallow clone) is exit 2, not a pass; and without `--base` it says the bump
+  was not checked. `ci.yml` runs it in the pull-request job only, against
+  `origin/<base branch>`, where `fetch-depth: 0` already exists. Exercised
+  against a bumped branch (pass, naming the 15 files it covers), the same
+  branch with the bump reverted (BUMP, exit 1), a bad ref and a missing ref
+  (exit 2). The same `ci.yml` change moved the actions to their current majors
+  (checkout v7, setup-node v7, cache v6, upload-artifact v7 — all node24, and
+  the inputs this workflow uses exist unchanged in each), ending the
+  forced-onto-Node-24 deprecation warning.
+
   *Verified:* all four checks fired by name against deliberately broken copies of
   the finished `sw.js` (a bogus entry → DEAD, a repeated entry → DUPLICATE, a
   removed `scg-photo.js` → MISSING, a removed maskable icon → MANIFEST), then
