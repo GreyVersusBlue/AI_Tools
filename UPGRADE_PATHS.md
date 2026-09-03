@@ -26,7 +26,7 @@ list).
 | Vendored libs (`_shared/vendor/`) | jsPDF 2.5.2 (+AutoTable 3.6.0), SheetJS 0.18.5, JSZip 3.10.1, qrcode.js, jsQR |
 | Rosters | `np_rosters` read by 28 tools (plain name strings); `crh_students_v1` (stable ids, preferred name, pronunciation) written by 006, read by 008, 009 and Name Picker's `np-details.js` only. `_shared/roster.js` from `PLATFORM_PLAN.md` Track R **does not exist yet** |
 | Tests | 120 Playwright/Node suites chained with `&&` in one `npm test` string; 62 per-tool `test/` folders; guards `check:dedupe`, `check:social`, `check:tests`. **No CI** (`.github/` does not exist), no linter, no automated a11y check |
-| Known red | one assertion in `Tools/seating-chart/test/drive-seating.mjs` (mobile toolbar pushes the chart ~1050 px down at 375 px) |
+| Known red | one assertion in `Tools/seating-chart/test/drive-seating.mjs` (mobile toolbar pushes the chart ~1050 px down at 375 px) — fixed 2026-09-03, Path 14 P1 |
 | Storage | ~206 distinct localStorage keys across 69 writing tools, three naming eras; IndexedDB in 3 places (`bmg-maps`, `rgb-audio`, `stviz-recovery`); quota handled in ~17 files |
 | Dead / unlinked | `Tools/Old Designs/`, `Tools/New Designs/`, `index_backup.html`, `Other Landing Page ideas/`. **Correction (2026-09-02): the `v1`–`v4` landing variants are not dead.** They are a reachable chain — `index.html`'s footer links `v1-inbox.html`, which links `v2-subplans.html`, which links `v3-bellboard.html`, which links `v4-riso.html`. None of the four is precached, so all four 404 offline while being reachable. Whether to precache them or cut the chain is a decision for Path 1 P2. |
 
@@ -1032,11 +1032,27 @@ un-extracted.
   `_shared/undo.js` and adopt it in the tools whose undo is a single in-memory
   snapshot (002, 003, 018, 020, 021, 022, 024, 027, 043).
 
+**Status.** P1 shipped 2026-09-03. P2–P5 open.
+
+- *P1 as built.* Below 900px the toolbar is one sideways-scrolling row of the
+  controls a teacher uses standing in the room (Auto-assign, Shuffle, Clear
+  seats, Remove desks, Undo, Pick a student, Actual size, Mirror view, Seat
+  numbers) with a **More** button pinned at its right edge that unfolds the
+  desk-building and printing groups underneath it. Folded, the bar is 70px
+  tall and the chart sits 740px down a 812px screen (it was 1132px); unfolded
+  it is 328px. On a desktop the two wrappers are `display:contents`, so the
+  toolbar is the same flat flex row it always was. `drive-seating.mjs`'s
+  assertion is unchanged; its phone block now taps More before building the
+  grid, checks the folded/unfolded states and that nothing spills sideways in
+  either, and the `expectedFailures` entry is gone. `CACHE_VERSION` v136.
+  Left alone on purpose: the nav header (140px of the 812 at 375px, seven
+  links wrapping onto three lines) is a site-wide header, not this tool's.
+
 **Model.** Fable for P3; Opus otherwise.
 
-**Verification.** All four `test:seating` suites green including the currently
-red one; a solver fixture with a known-feasible constraint set and a known-infeasible
-one asserting the explanation.
+**Verification.** All four `test:seating` suites green including the formerly
+red one (done for P1); a solver fixture with a known-feasible constraint set and
+a known-infeasible one asserting the explanation.
 
 ---
 

@@ -6,12 +6,13 @@
 # there was never a reason they could not run here except that nobody had
 # written it down.
 #
-# The known-red seating assertion does NOT fail this workflow: it is recorded in
-# Tools/board-check/suites.json expectedFailures, so run-suites.mjs prints it
-# with its reason on every run and exits 0. That is deliberate and narrow — the
-# same suite failing a second way, or that assertion starting to pass, both turn
-# this red. See run-suites.mjs's header. The alternative, loosening the
-# assertion, is the one thing CLAUDE.md says not to do.
+# A known-red assertion does NOT fail this workflow if it is recorded in
+# Tools/board-check/suites.json expectedFailures: run-suites.mjs prints it with
+# its reason on every run and exits 0. That is deliberate and narrow — the same
+# suite failing a second way, or that assertion starting to pass, both turn this
+# red. See run-suites.mjs's header. The alternative, loosening the assertion,
+# is the one thing CLAUDE.md says not to do. (The list has been empty since
+# 2026-09-03, when the seating toolbar bug it carried was fixed in the tool.)
 
 name: CI
 

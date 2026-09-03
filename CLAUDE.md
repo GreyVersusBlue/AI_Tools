@@ -174,11 +174,13 @@ files must be added there too.
 - Test suites: schedule, seating-chart (a pure-logic suite and a browser
   suite), name-picker, image-to-pdf. Run them when touching those tools.
   `final-grade-checker` has no `test/` folder, despite older notes claiming
-  otherwise. **Known red as of 2026-08-11:** one assertion in
-  `Tools/seating-chart/test/drive-seating.mjs` ("the chart is within one
-  swipe of the top") fails for real — the toolbar has grown to ~15 controls
-  with no mobile cap, so at 375px it wraps to ~380px tall and pushes the
-  chart 1052px down. That's a tool bug to fix, not a test to loosen.
+  otherwise. **The one known-red assertion was fixed on 2026-09-03** (Path 14
+  P1): `drive-seating.mjs`'s "the chart is within one swipe of the top" had
+  failed since 2026-08-11 because the toolbar's ~25 controls wrapped to 460px
+  at 375px and pushed the chart 1132px down. The fix was in the tool (the
+  phone toolbar folds its desk-building and printing groups behind a More
+  button; `CACHE_VERSION` v136), the assertion was not touched, and
+  `suites.json`'s `expectedFailures` is empty again. Keep it that way.
 
 ## Other guardrails
 

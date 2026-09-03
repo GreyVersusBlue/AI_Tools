@@ -80,6 +80,7 @@ async function buildChart(page) {
   ok(await page.isHidden('#bootWarn'), 'the modules loaded, so the boot warning stays hidden');
   eq((await page.$$('.sec-tab')).length, 3, 'three section tabs on a first visit');
   eq(await page.textContent('#rosterCount'), '0', 'a first visit has an empty roster');
+  ok(await page.isHidden('#moreBtn'), 'the toolbar\'s More button is a phone-only control');
 
   // Fonts: vendored, and nothing reached out for them.
   const fontsUsed = await page.evaluate(async () => {
@@ -420,9 +421,25 @@ async function buildChart(page) {
   await settle(page, 400);
   await page.evaluate(names => { document.getElementById('nameInput').value = names.join('\n'); }, NAMES);
   await page.click('button[onclick="addNames()"]');
+  // Building a room is desk work, so at 375px the desk-building and printing
+  // groups sit folded behind the toolbar's More button (Path 14 P1). A teacher
+  // who does build one on a phone taps More first; the reading controls
+  // (assign, undo, pick, view) stay in the always-visible row.
+  const moreBtn = page.locator('#moreBtn');
+  ok(await moreBtn.isVisible(), 'at 375px the toolbar shows its More button');
+  eq(await moreBtn.getAttribute('aria-expanded'), 'false', 'and it starts folded');
+  ok(await page.isHidden('button[onclick="makeGrid()"]'), 'with the desk-building controls out of the way');
+  ok(await page.isVisible('button[onclick="autoAssign()"]'), 'and Auto-assign still in reach');
+  await moreBtn.click();
+  eq(await moreBtn.getAttribute('aria-expanded'), 'true', 'tapping More unfolds them');
   await page.click('button[onclick="makeGrid()"]');
   await page.click('button[onclick="autoAssign()"]');
   await settle(page, 400);
+  const unfolded = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  eq(unfolded, 0, `nothing spills sideways with the toolbar unfolded either (overflow ${unfolded}px)`);
+  await page.screenshot({ path: path.join(SHOTS, 'phone-unfolded.png'), fullPage: true });
+  await moreBtn.click();
+  eq(await moreBtn.getAttribute('aria-expanded'), 'false', 'tapping it again folds them back');
   const phone = await page.evaluate(() => ({
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     fscale: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fscale')),

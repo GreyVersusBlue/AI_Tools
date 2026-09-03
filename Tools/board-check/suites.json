@@ -137,12 +137,5 @@
     "Tools/blank-map-generator/test/smoke-label-colors.mjs",
     "Tools/service-worker/test/smoke-sw-update.mjs"
   ],
-  "expectedFailures": [
-    {
-      "suite": "Tools/seating-chart/test/drive-seating.mjs",
-      "assertion": "the chart is within one swipe of the top",
-      "reason": "Real tool bug, not a flaky test: the mobile toolbar has grown to ~15 controls with no cap, so at 375px it wraps and pushes the chart off the bottom of the screen (measured 1052px when CLAUDE.md recorded it on 2026-08-11, 1132px as of 2026-09-02 — it is still growing). CLAUDE.md is explicit that this is a tool bug to fix, not a test to loosen. Path 14 (Seating Chart: room model, constraint solver, phone toolbar) is where the fix belongs.",
-      "since": "2026-08-11"
-    }
-  ]
+  "expectedFailures": []
 }
