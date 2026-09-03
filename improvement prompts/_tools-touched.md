@@ -192,7 +192,17 @@ here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| *Stage 2 A2 — accessibility label round (`Tools/a11y-sweep/allowlist.json`, the 41 `select-name` + 23 `label` allowances)* | `x2ymcz` | 2026-09-03 12:48 UTC | `claude/handoff-document-x2ymcz` |
+
+The A2 row above is a **path-assigned platform phase**, not a free-pick
+improvement round, so it does not take tools from **Not yet touched** and does
+not give them a round. It is a single narrow change — one accessible name per
+unlabeled control — applied to whichever pages the allowlist names, and it
+touches nothing else in them. Claiming one row per affected page would have put
+52 rows here; the pages are listed in the round entry when it ships. A
+concurrent session picking any of those tools for a real round will not
+conflict, but should rebase rather than resolve overlapping edits in the same
+`<style>`/markup by hand.
 
 ---
 
