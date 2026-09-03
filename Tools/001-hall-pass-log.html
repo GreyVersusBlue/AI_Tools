@@ -15,6 +15,10 @@
 <meta name="twitter:title" content="Hall Pass Log — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Tap a destination, then tap a student, to sign kids out of the room with a timestamp — see who's out and for how long, then print a daily hall-pass log.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='7' y='6' width='12' height='20' rx='1.5' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Ccircle cx='15.4' cy='16' r='1.3' fill='%232A6DB0'/%3E%3Cpath d='M20 16h6M23.2 12.8L26.4 16l-3.2 3.2' stroke='%23C43A2F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -24,7 +28,25 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <style>
-  :root { --good: #2f7d4f; }
+  /* Tool-local semantic tints. ink-paper.css owns the 11 palette tokens; the
+     status surfaces below are still per-tool, because only a handful of tools
+     have been looked at so far — Path 5 P3 promotes them to the shared file if
+     the same four pairs turn up everywhere, with the evidence in hand. Every
+     text-on-tint pair here clears WCAG AA in both themes. */
+  :root {
+    --good: #2f7d4f;
+    --err-bg: #fbecea;  --err-line: #e6c6c1;
+    --info-bg: #eaf1f5; --info-line: #c9dbe3;
+    --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
+    --good-bg: #e4f5ea;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --good: #63c08e;
+    --err-bg: #3a201c;  --err-line: #6d3a33;
+    --info-bg: #1b2a35; --info-line: #33505f;
+    --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
+    --good-bg: #173021;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -37,7 +59,7 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
   .toolbar label { margin: 0; font-weight: 600; font-size: .85rem; }
 
   .layout { display: grid; grid-template-columns: minmax(300px, 400px) 1fr; gap: 1.4rem; align-items: start; }
@@ -48,7 +70,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
   input[type="text"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { min-height: 8rem; resize: vertical; font-family: Consolas, monospace; font-size: .85rem; }
@@ -59,14 +81,14 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: .2rem 0; font-size: .78rem; }
   button.link-btn:hover { background: transparent; color: var(--accent); }
   button:disabled { opacity: .4; cursor: not-allowed; }
@@ -75,17 +97,17 @@
   .btn-row button { width: auto; }
 
   .remove-row-btn {
-    background: #fff; border: 1px solid var(--line-strong); color: var(--muted);
+    background: var(--card); border: 1px solid var(--line-strong); color: var(--muted);
     width: 1.9rem; height: 1.9rem; flex-shrink: 0; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer;
   }
-  .remove-row-btn:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .remove-row-btn:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
 
   #msg { font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-top: .7rem; white-space: pre-line; }
-  #msg.error { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
-  #msg.info { display: block; background: #eaf1f5; color: var(--accent-2); border: 1px solid #c9dbe3; }
-  #msg.warn { display: block; background: #fdf0dc; color: #8a5a13; border: 1px solid #eecda0; font-weight: 600; }
+  #msg.error { display: block; background: var(--err-bg); color: var(--err); border: 1px solid var(--err-line); }
+  #msg.info { display: block; background: var(--info-bg); color: var(--accent-2); border: 1px solid var(--info-line); }
+  #msg.warn { display: block; background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); font-weight: 600; }
 
-  .flyer-flag { color: #a3372b; font-weight: 700; white-space: nowrap; }
+  .flyer-flag { color: var(--err); font-weight: 700; white-space: nowrap; }
   .flyer-threshold-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .7rem; font-size: .85rem; }
   .flyer-threshold-row input[type="number"] {
     width: 3.4rem; margin-bottom: 0; text-align: center; padding: .4rem .3rem;
@@ -100,7 +122,7 @@
   .tag-row .dest-overtime-wrap label { margin: 0; font-weight: 400; font-size: .74rem; color: var(--muted); white-space: nowrap; }
   .tag-row input[type="number"].dest-overtime {
     width: 3.4rem; font-family: inherit; font-size: .85rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .4rem .3rem; text-align: center;
   }
   .tag-row .dest-note-wrap { flex-shrink: 0; margin-bottom: .5rem; }
@@ -116,7 +138,7 @@
   .approval-list label:last-child { margin-bottom: 0; }
 
   /* ── Undo bar ─────────────────────────────────────────────────────── */
-  .undo-bar { display: none; align-items: center; gap: .6rem; background: #fdf0dc; border: 1px solid #eecda0; color: #8a5a13; border-radius: 7px; padding: .5rem .8rem; margin-bottom: .8rem; font-size: .85rem; font-weight: 600; }
+  .undo-bar { display: none; align-items: center; gap: .6rem; background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-ink); border-radius: 7px; padding: .5rem .8rem; margin-bottom: .8rem; font-size: .85rem; font-weight: 600; }
   .undo-bar.show { display: flex; }
   .undo-bar button { padding: .3rem .7rem; font-size: .8rem; }
 
@@ -129,8 +151,11 @@
     align-items: center; justify-content: center; z-index: 600; padding: 1rem;
   }
   .pass-overlay.show { display: flex; }
+  /* The pass a student carries is a sheet of paper, so it keeps its white
+     card and dark ink in dark mode; `paper-sheet` in the markup below is what
+     ink-paper.css keys the light-token restoration off. */
   .pass-card {
-    background: #fff; border-radius: 14px; padding: 1.6rem 1.8rem; max-width: 380px; width: 100%;
+    background: var(--card); border-radius: 14px; padding: 1.6rem 1.8rem; max-width: 380px; width: 100%;
     text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.35);
   }
   .pass-card .pass-code { font-size: 2.6rem; font-weight: 800; letter-spacing: .12em; color: var(--accent); }
@@ -163,7 +188,9 @@
   .proj-sync-note { font-size: .85rem; color: #9aa3b0; margin: -0.8rem 0 1rem; }
   .proj-sync-note.paired { color: #7fd6a3; font-weight: 600; }
   .proj-sync-note.stale { color: #e0a85c; font-weight: 600; }
-  .projector-view button { background: #2e3948; border-color: #2e3948; }
+  /* The projector view is its own dark surface in both themes, so its buttons
+     opt out of --accent-ink (near-black in dark) and name their own light ink. */
+  .projector-view button { background: #2e3948; border-color: #2e3948; color: #f4f4f0; }
   .projector-view button:hover { background: #3d4b5e; border-color: #3d4b5e; }
 
   /* ── Hallway Sync (two-teacher peer pairing) ─────────────────────────── */
@@ -175,7 +202,7 @@
 
   .sync-overlay { display: flex; position: fixed; inset: 0; background: rgba(20,20,18,.55); align-items: center; justify-content: center; z-index: 800; padding: 1rem; }
   .sync-overlay[hidden] { display: none; }
-  .sync-modal { background: #fff; border-radius: 12px; max-width: 420px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,.35); }
+  .sync-modal { background: var(--card); border-radius: 12px; max-width: 420px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,.35); }
   .sync-head { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.2rem; border-bottom: 1px solid var(--line); }
   .sync-head h2 { font-size: 1.05rem; margin: 0; }
   .sync-close { background: transparent; border: none; color: var(--muted); font-size: 1.3rem; line-height: 1; cursor: pointer; padding: .2rem .4rem; }
@@ -192,13 +219,13 @@
   .sync-status-msg.good { color: var(--good); }
 
   /* ── Live board ───────────────────────────────────────────────────── */
-  .board-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
+  .board-wrap { background: var(--card-2); border-radius: 10px; padding: 1.2rem; }
   .dest-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
   .dest-chip {
     cursor: pointer; border-radius: 999px; padding: .45rem .95rem; font-size: .85rem; font-weight: 700;
-    border: 1.5px solid var(--line-strong); background: #fff; color: var(--ink); user-select: none;
+    border: 1.5px solid var(--line-strong); background: var(--card); color: var(--ink); user-select: none;
   }
-  .dest-chip.armed { background: var(--accent-2); color: #fff; border-color: var(--accent-2); box-shadow: 0 0 0 2px rgba(0,0,0,.12); }
+  .dest-chip.armed { background: var(--accent-2); color: var(--accent-ink); border-color: var(--accent-2); box-shadow: 0 0 0 2px rgba(0,0,0,.12); }
 
   .board-controls { display: flex; align-items: center; gap: .6rem; margin-bottom: .9rem; flex-wrap: wrap; }
   .board-controls label { margin: 0; }
@@ -207,24 +234,24 @@
 
   .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: .6rem; margin-bottom: 1.3rem; }
   .student-card {
-    background: #fff; border: 2px solid var(--line); border-radius: 10px; padding: .7rem .5rem; text-align: center;
+    background: var(--card); border: 2px solid var(--line); border-radius: 10px; padding: .7rem .5rem; text-align: center;
     cursor: pointer; user-select: none; transition: transform .08s ease, background .25s, border-color .25s;
   }
   .student-card:hover { border-color: var(--accent-2); }
   .student-card:active { transform: scale(0.96); }
   .student-card .s-name { font-weight: 700; font-size: .85rem; overflow-wrap: anywhere; margin-bottom: .3rem; }
   .student-card .s-status { font-size: .72rem; color: var(--muted); }
-  .student-card.is-out { border-color: var(--err); background: #fbeceA; cursor: pointer; }
+  .student-card.is-out { border-color: var(--err); background: var(--err-bg); cursor: pointer; }
   .student-card.is-out .s-status { color: var(--err); font-weight: 700; }
   .student-card.locked { opacity: .5; cursor: not-allowed; }
-  .student-card.flash { background: #e4f5ea; border-color: var(--good); }
+  .student-card.flash { background: var(--good-bg); border-color: var(--good); }
 
   .live-board { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1.3rem; }
   .out-row {
     display: flex; align-items: center; gap: .8rem; flex-wrap: wrap;
-    background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem;
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem;
   }
-  .out-row.over-time { border-color: var(--err); background: #fbeceA; animation: overtimePulse 1.6s ease-in-out infinite; }
+  .out-row.over-time { border-color: var(--err); background: var(--err-bg); animation: overtimePulse 1.6s ease-in-out infinite; }
   @keyframes overtimePulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(163,55,43,.45); }
     50% { box-shadow: 0 0 0 7px rgba(163,55,43,0); }
@@ -240,7 +267,7 @@
   .out-elapsed { font-size: .85rem; font-weight: 700; }
   .out-row.over-time .out-elapsed { color: var(--err); }
 
-  .activity-feed { max-height: 260px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: .3rem .8rem; }
+  .activity-feed { max-height: 260px; overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .3rem .8rem; }
   .activity-item { display: flex; justify-content: space-between; gap: .6rem; font-size: .82rem; padding: .35rem 0; border-bottom: 1px dashed var(--line); flex-wrap: wrap; }
   .activity-item:last-child { border-bottom: none; }
   .a-who { font-weight: 600; }
@@ -251,7 +278,7 @@
 
   /* ── History ──────────────────────────────────────────────────────── */
   .history-entry { border: 1px solid var(--line); border-radius: 7px; margin-bottom: .5rem; overflow: hidden; }
-  .history-entry summary { cursor: pointer; padding: .5rem .7rem; font-size: .83rem; background: #f4f3ee; list-style: none; }
+  .history-entry summary { cursor: pointer; padding: .5rem .7rem; font-size: .83rem; background: var(--card-2); list-style: none; }
   .history-entry summary::-webkit-details-marker { display: none; }
   .history-entry summary b { color: var(--accent); }
   .history-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
@@ -416,7 +443,7 @@
 </div>
 
 <div class="pass-overlay" id="passOverlay">
-  <div class="pass-card">
+  <div class="pass-card paper-sheet">
     <div class="pass-code" id="passCode"></div>
     <div class="pass-name" id="passName"></div>
     <div class="pass-dest" id="passDest"></div>
