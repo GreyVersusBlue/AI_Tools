@@ -245,7 +245,7 @@
   </div>
 
   <div class="toolbar" id="toolbar" style="display:none;">
-    <label style="margin:0;font-weight:600;font-size:.85rem;">Rubric:</label>
+    <label for="rubricSwitch" style="margin:0;font-weight:600;font-size:.85rem;">Rubric:</label>
     <select id="rubricSwitch"></select>
     <button class="secondary" id="newRubricBtn">New rubric</button>
     <button class="secondary" id="duplicateRubricBtn">Duplicate</button>
@@ -370,10 +370,10 @@
 
   <div class="card" id="classMode" style="display:none;">
     <div class="class-controls">
-      <label style="margin:0;">Roster:</label>
+      <label for="classRosterSelect" style="margin:0;">Roster:</label>
       <select id="classRosterSelect"></select>
       <button type="button" class="secondary" id="classRosterLoadBtn">Add roster to grid</button>
-      <label style="margin:0;">Add one student:</label>
+      <label for="classAddStudentInput" style="margin:0;">Add one student:</label>
       <input type="text" id="classAddStudentInput" placeholder="Student name">
       <button type="button" class="secondary" id="classAddStudentBtn">Add</button>
       <button type="button" class="secondary" id="exportClassCsvBtn">Export scores as CSV</button>

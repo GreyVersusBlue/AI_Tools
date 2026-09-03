@@ -388,7 +388,7 @@
 
   function renderPrompts() {
     els.promptsWrap.innerHTML = activePrompts().map(function (p) {
-      return '<div class="prompt-row" data-id="' + p.id + '"><input type="text" data-prompt="' + p.id + '" value="' + escapeAttr(p.text) + '">' +
+      return '<div class="prompt-row" data-id="' + p.id + '"><input type="text" data-prompt="' + p.id + '" value="' + escapeAttr(p.text) + '" aria-label="Prompt text">' +
         '<button type="button" class="danger small" data-del-prompt="' + p.id + '">&times;</button></div>';
     }).join('');
   }

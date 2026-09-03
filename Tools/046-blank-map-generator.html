@@ -460,8 +460,8 @@
     <div class="baseMapStrip">
       <div class="baseMapRow">
         <strong class="baseMapTitle">Built-in base maps</strong>
-        <select id="baseMapSelect" class="styleSelect" data-no-pan></select>
-        <select id="baseMapStyleSelect" class="styleSelect" data-no-pan></select>
+        <select id="baseMapSelect" class="styleSelect" data-no-pan aria-label="Built-in base map"></select>
+        <select id="baseMapStyleSelect" class="styleSelect" data-no-pan aria-label="Base map style"></select>
         <label class="baseMapCheck"><input type="checkbox" id="baseMapBorders" checked data-no-pan> Show borders</label>
         <button id="btnBaseMap" class="small primary">Use this base map</button>
         <button id="btnChoroToggle" class="small toggle" title="Shade each state or country according to a number you paste in — population, rainfall, votes, anything with one value per place.">Shade by data&hellip;</button>
@@ -491,7 +491,7 @@
       <button id="btnSearch" class="primary">Search Wikimedia Commons</button>
     </div>
     <div class="regionRow">
-      <select id="continentSelect" class="styleSelect" data-no-pan>
+      <select id="continentSelect" class="styleSelect" data-no-pan aria-label="Browse regions by continent">
         <option value="">Browse by continent&hellip;</option>
       </select>
       <select id="countrySelect" class="styleSelect" data-no-pan hidden></select>
@@ -596,7 +596,7 @@
       <label class="lineArrowLabel" title="Bump label text up to a size that reads from the back of the room"><input type="checkbox" id="quizBigText" data-no-pan> Projector text</label>
     </div>
     <div class="viewerToolbar no-print">
-      <span class="pageFormatLabel">Page shape</span>
+      <label class="pageFormatLabel" for="pageFormatSelect">Page shape</label>
       <select id="pageFormatSelect" class="styleSelect">
         <option value="letter">US Letter 8.5 &times; 11 (printing)</option>
         <option value="widescreen">Widescreen 16:9 (PowerPoint)</option>

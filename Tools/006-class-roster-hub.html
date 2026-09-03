@@ -429,7 +429,7 @@
 
         <div class="btn-row">
           <button id="saveBtn" type="button">Save roster</button>
-          <select id="printFormat" style="width:auto;margin:0;">
+          <select id="printFormat" aria-label="Print format" style="width:auto;margin:0;">
             <option value="numbered">Numbered class list</option>
             <option value="checklist">Blank checklist</option>
             <option value="blank">Blank name grid (seating quiz)</option>
@@ -438,7 +438,7 @@
           <button class="secondary" id="printBtn" type="button">Print</button>
         </div>
         <div class="btn-row" style="margin-top:.6rem;">
-          <select id="exportScope" style="width:auto;margin:0;">
+          <select id="exportScope" aria-label="Export scope" style="width:auto;margin:0;">
             <option value="one">This roster</option>
             <option value="all">Every roster</option>
           </select>
@@ -452,12 +452,12 @@
         <div class="card-title">Move or merge students</div>
         <p class="hint">Tick students in the list above to move them to another roster &mdash; mid-year section changes, or splitting one big list into two. Merging pulls another roster&rsquo;s names into this one without touching the original.</p>
         <div class="btn-row" style="margin-bottom:.6rem;">
-          <select id="moveTarget" style="width:auto;margin:0;max-width:260px;"></select>
+          <select id="moveTarget" aria-label="Roster to move ticked students to" style="width:auto;margin:0;max-width:260px;"></select>
           <button class="secondary small" id="moveBtn" type="button">Move ticked students</button>
           <span class="n" id="selCount" style="font-size:.8rem;color:var(--muted);"></span>
         </div>
         <div class="btn-row">
-          <select id="mergeSource" style="width:auto;margin:0;max-width:260px;"></select>
+          <select id="mergeSource" aria-label="Roster to merge into this one" style="width:auto;margin:0;max-width:260px;"></select>
           <button class="secondary small" id="mergeBtn" type="button">Merge into this roster</button>
         </div>
       </div>

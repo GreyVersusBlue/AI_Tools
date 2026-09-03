@@ -217,7 +217,7 @@
         <h2>Contact history</h2>
         <div class="toolbar">
           <input type="text" id="filterStudent" placeholder="Filter by student name&hellip;">
-          <select id="filterMethod">
+          <select id="filterMethod" aria-label="Filter by contact method">
             <option value="">All methods</option>
             <option>Phone call</option>
             <option>Email</option>
@@ -226,12 +226,10 @@
             <option>Text message</option>
             <option>Other</option>
           </select>
-          <select id="filterReason"></select>
-          <label for="filterFrom" class="sr-only" style="display:none;">From date</label>
-          <input type="date" id="filterFrom" title="From date">
+          <select id="filterReason" aria-label="Filter by reason"></select>
+          <input type="date" id="filterFrom" aria-label="From date" title="From date">
           <span class="date-sep">&ndash;</span>
-          <label for="filterTo" class="sr-only" style="display:none;">To date</label>
-          <input type="date" id="filterTo" title="To date">
+          <input type="date" id="filterTo" aria-label="To date" title="To date">
           <button type="button" class="secondary small" id="clearDateRangeBtn">Clear dates</button>
           <div class="spacer"></div>
           <button class="secondary small" id="exportCsvBtn">Export CSV</button>

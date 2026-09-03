@@ -638,7 +638,7 @@
   }
 
   function renderQTypeSelect(s, i) {
-    return '<select class="f-qtype" data-idx="' + i + '">' + Q_TYPES.map(function (t) {
+    return '<select class="f-qtype" data-idx="' + i + '" aria-label="Answer type for station ' + (i + 1) + '">' + Q_TYPES.map(function (t) {
       return '<option value="' + t + '"' + (s.qType === t ? ' selected' : '') + '>' + Q_TYPE_LABELS[t] + '</option>';
     }).join('') + '</select>';
   }

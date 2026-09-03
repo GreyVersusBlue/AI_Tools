@@ -118,7 +118,7 @@
     <div>
       <div class="card">
         <h2>Start from a template</h2>
-        <select id="templateSelect">
+        <select id="templateSelect" aria-label="Poster template to start from">
           <option value="es_present">Spanish &mdash; Present Tense (-AR/-ER/-IR)</option>
           <option value="es_preterite">Spanish &mdash; Preterite (-AR/-ER/-IR)</option>
           <option value="es_imperfect">Spanish &mdash; Imperfect (-AR/-ER/-IR)</option>
@@ -331,7 +331,7 @@
 
   function renderPersons() {
     els.personsWrap.innerHTML = state.persons.map(function (p, i) {
-      return '<div class="person-row"><input type="text" data-person="' + i + '" value="' + escapeAttr(p) + '"></div>';
+      return '<div class="person-row"><input type="text" data-person="' + i + '" value="' + escapeAttr(p) + '" aria-label="Person ' + (i + 1) + '"></div>';
     }).join('');
   }
   els.personsWrap.addEventListener('input', function (ev) {
@@ -345,7 +345,7 @@
     els.panelsWrap.innerHTML = state.panels.map(function (panel, pi) {
       var rows = state.persons.map(function (person, i) {
         return '<div class="form-row"><span class="plabel">' + escapeHtml(person || '—') + '</span>' +
-          '<input type="text" data-panel="' + panel.id + '" data-idx="' + i + '" value="' + escapeAttr(panel.forms[i] || '') + '"></div>';
+          '<input type="text" data-panel="' + panel.id + '" data-idx="' + i + '" value="' + escapeAttr(panel.forms[i] || '') + '" aria-label="' + escapeAttr(panel.name + ', ' + (person || 'person ' + (i + 1))) + '"></div>';
       }).join('');
       var c = panelColor(panel, pi);
       var options = [{ id: 'auto', name: 'Auto' }].concat(PALETTE, [{ id: 'none', name: 'No color' }]).map(function (o) {

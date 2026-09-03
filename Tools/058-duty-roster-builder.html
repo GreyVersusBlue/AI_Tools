@@ -173,7 +173,7 @@
   function renderDuties() {
     els.dutiesWrap.innerHTML = state.duties.map(function (d) {
       return '<div class="duty-row" data-id="' + d.id + '">' +
-        '<input type="text" data-duty="' + d.id + '" value="' + escapeAttr(d.name) + '">' +
+        '<input type="text" data-duty="' + d.id + '" value="' + escapeAttr(d.name) + '" aria-label="Duty name">' +
         '<button type="button" class="danger small" data-del-duty="' + d.id + '">&times;</button>' +
         '</div>';
     }).join('');
@@ -249,7 +249,7 @@
         var options = '<option value="">&mdash;</option>' + state.staff.map(function (name) {
           return '<option value="' + escapeAttr(name) + '"' + (name === current ? ' selected' : '') + '>' + escapeHtml(name) + '</option>';
         }).join('');
-        return '<td><select data-duty="' + duty.id + '" data-day="' + day + '">' + options + '</select></td>';
+        return '<td><select data-duty="' + duty.id + '" data-day="' + day + '" aria-label="' + escapeAttr(duty.name) + ', ' + day + '">' + options + '</select></td>';
       }).join('');
       return '<tr><td class="duty-name-cell">' + escapeHtml(duty.name) + '</td>' + cells + '</tr>';
     }).join('');

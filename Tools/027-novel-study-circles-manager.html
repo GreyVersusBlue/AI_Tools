@@ -196,7 +196,7 @@
   </div>
 
   <div class="toolbar" id="toolbar" style="display:none;">
-    <label>Project:</label>
+    <label for="projectSwitch">Project:</label>
     <select id="projectSwitch"></select>
     <button class="secondary small" id="newProjectBtn">New project</button>
     <button class="danger small" id="deleteProjectBtn">Delete</button>
@@ -663,7 +663,7 @@
     els.roleList.innerHTML = state.roles.map(function (role, i) {
       return '<div class="role-row">' +
         '<div class="role-name-row">' +
-        '<input type="text" data-role-idx="' + i + '" value="' + escapeHtml(role.name).replace(/"/g, '&quot;') + '">' +
+        '<input type="text" data-role-idx="' + i + '" value="' + escapeHtml(role.name).replace(/"/g, '&quot;') + '" aria-label="Role ' + (i + 1) + ' name">' +
         '<button type="button" class="x" data-remove-role="' + i + '" title="Remove role">&#10005;</button>' +
         '</div>' +
         '<p class="role-prompts-label">Starter prompts (one per line, printed on the role card)</p>' +

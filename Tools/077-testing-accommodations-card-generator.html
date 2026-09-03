@@ -185,7 +185,7 @@
   function renderTypes() {
     els.typesWrap.innerHTML = state.types.map(function (t) {
       return '<div class="accom-row" data-id="' + t.id + '">' +
-        '<input type="text" data-type="' + t.id + '" value="' + escapeAttr(t.name) + '">' +
+        '<input type="text" data-type="' + t.id + '" value="' + escapeAttr(t.name) + '" aria-label="Accommodation name">' +
         '<button type="button" class="danger small" data-del-type="' + t.id + '">&times;</button>' +
         '</div>';
     }).join('');

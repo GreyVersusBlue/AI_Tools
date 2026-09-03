@@ -186,8 +186,8 @@
   function renderMilestones() {
     els.milestonesWrap.innerHTML = state.milestones.map(function (m, idx) {
       return '<div class="milestone-row" data-id="' + m.id + '">' +
-        '<input type="text" data-mname="' + m.id + '" value="' + escapeAttr(m.name) + '">' +
-        '<input type="date" data-mdue="' + m.id + '" value="' + escapeAttr(m.due) + '">' +
+        '<input type="text" data-mname="' + m.id + '" value="' + escapeAttr(m.name) + '" aria-label="Milestone name">' +
+        '<input type="date" data-mdue="' + m.id + '" value="' + escapeAttr(m.due) + '" aria-label="Due date for ' + escapeAttr(m.name) + '">' +
         '<button type="button" class="secondary small" data-move-up="' + m.id + '"' + (idx === 0 ? ' disabled' : '') + ' title="Move up">&uarr;</button>' +
         '<button type="button" class="secondary small" data-move-down="' + m.id + '"' + (idx === state.milestones.length - 1 ? ' disabled' : '') + ' title="Move down">&darr;</button>' +
         '<button type="button" class="danger small" data-del-m="' + m.id + '">&times;</button>' +

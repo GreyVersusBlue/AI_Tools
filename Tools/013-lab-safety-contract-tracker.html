@@ -639,7 +639,7 @@
   function renderDocsEditor() {
     els.docsEditor.innerHTML = state.documents.map(function (d) {
       return '<div class="doc-row" data-id="' + escapeAttr(d.id) + '">' +
-        '<input type="text" class="doc-label" value="' + escapeAttr(d.label) + '">' +
+        '<input type="text" class="doc-label" value="' + escapeAttr(d.label) + '" aria-label="Document name">' +
         '<input type="text" inputmode="decimal" class="doc-fee" data-fee-for="' + escapeAttr(d.id) + '" value="' + escapeAttr(d.fee || '') + '" placeholder="Fee $ (optional)" aria-label="Fee for ' + escapeAttr(d.label) + '">' +
         (state.documents.length > 1
           ? '<button type="button" class="doc-remove-btn" data-remove-doc="' + escapeAttr(d.id) + '" title="Remove document">&#10005;</button>'

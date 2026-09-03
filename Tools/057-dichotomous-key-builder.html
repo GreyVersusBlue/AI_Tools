@@ -192,7 +192,7 @@
         return '<div class="choice-row' + (traceHas(step.id, letter) ? ' on-path' : '') + '" data-step="' + step.id + '" data-choice="' + letter + '">' +
           '<div class="letter">' + (i + 1) + letter + '.</div>' +
           '<div><label>Description</label><input type="text" data-field="text" value="' + escapeAttr(choice.text) + '" placeholder="e.g. Has feathers"></div>' +
-          '<div><label>Leads to</label><select data-field="leadsTo">' + choiceOptionsHtml(choice.leadsTo, step.id) + '</select></div>' +
+          '<div><label>Leads to</label><select data-field="leadsTo" aria-label="Where step ' + (i + 1) + letter + ' leads">' + choiceOptionsHtml(choice.leadsTo, step.id) + '</select></div>' +
           (isFinal
             ? '<div><label>Result</label><input type="text" data-field="result" value="' + escapeAttr(choice.result) + '" placeholder="e.g. Bird"><label style="margin-top:.3rem;">Example specimens (comma-separated)</label><input type="text" data-field="examples" value="' + escapeAttr(choice.examples) + '" placeholder="e.g. Robin, Eagle"></div>'
             : '<div></div>') +

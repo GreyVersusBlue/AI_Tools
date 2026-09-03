@@ -201,6 +201,43 @@ here.
 Counted from the start of the improvement-prompts programme. A tool may have
 had unrelated fixes before that; those are not rounds.
 
+### Stage 2 A2 — accessibility label round — 2026-09-03 12:48 UTC — session `x2ymcz`
+
+Not a free-pick improvement round: a platform phase assigned by
+`HANDOFF_STAGE_2.md` (Stage 2, Wave A2), so it claimed one row for the sweep's
+allowlist rather than one per page, and **none of the 52 pages it visited is
+moved out of Not yet touched or counts as having had a round.** The change in
+each is a single narrow one — an accessible name on a control that had none —
+and nothing else in those files was read for improvement ideas.
+
+Every `select-name`, `label` and `label-title-only` allowance in
+`Tools/a11y-sweep/allowlist.json` is gone: **91 page-rule pairs on 59 pages →
+22 on 22 pages**, all 22 of them `color-contrast` except 034's one
+`aria-required-children`. 274 controls named across 52 pages. That clears Stage
+2's "allowlist below 30 entries and none are `select-name` or `label`" bar
+ahead of the paths that were going to have to step around it.
+
+The round is recorded in full under `UPGRADE_PATHS.md` §2 P3 (it is that
+phase's follow-up, not a new phase). Two things worth carrying forward:
+
+- **A third of it was not an `aria-label` job.** 35 controls already had a
+  visible `<label>` sitting next to them with no `for` — the copy-pasted
+  toolbar idiom on 19 tools. Wiring `for=` beats adding a second name that can
+  drift from the visible one, and it makes the label clickable. If you add a
+  toolbar `<select>` to a tool, give its label a `for`; that is now the
+  house pattern.
+- **A constant `aria-label` on a repeated row is often the wrong answer.**
+  058's duty grid is 15 selects that all read `—`; naming them all "Assignment"
+  would have passed axe and helped nobody. They read `"Cafeteria, Monday"`
+  now, built from the row. Same for 056's rubric cells and 008's points and
+  category fields. Use a constant name only where the control's own *value* is
+  the thing that tells the rows apart.
+
+What is left in the allowlist is not a labeling problem and was deliberately
+not touched: contrast needs a palette decision per tool (and Path 5 P1 has
+already logged a light-mode `--line-strong` gap that axe cannot see), and
+034's `aria-required-children` is one tool's structure.
+
 ### Path 5 P1 — theme architecture — 2026-09-03 10:40 UTC — session `n3p2vh` — PR #167
 
 Not a free-pick improvement round: this is a platform phase assigned by

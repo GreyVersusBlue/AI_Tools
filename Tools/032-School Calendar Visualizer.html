@@ -299,9 +299,9 @@
     <button id="btnExportIcs">Export Calendar (.ics)</button>
     <button id="btnImportIcs">Import Calendar (.ics)</button>
     <input type="file" id="fileImportIcs" accept=".ics,text/calendar" hidden>
-    <select id="jumpMonth" title="Jump to month"></select>
+    <select id="jumpMonth" aria-label="Jump to month" title="Jump to month"></select>
     <button id="btnJumpToday">Jump to Today</button>
-    <select id="viewCols" title="Months across">
+    <select id="viewCols" aria-label="Months across" title="Months across">
       <option value="1">1 month across</option>
       <option value="2">2 months across</option>
       <option value="compact">Compact (3+ across)</option>
@@ -483,10 +483,10 @@ function renderLegend() {
     row.className = "legend-row";
     row.innerHTML = `
       <div class="swatch pat-${t.pattern}" style="background-color:${t.color}"></div>
-      <input type="text" class="label" data-i="${idx}" data-f="label" value="${escapeAttr(t.label)}">
-      <input type="text" class="abbr" data-i="${idx}" data-f="abbr" value="${escapeAttr(t.abbr)}" maxlength="3">
-      <input type="color" data-i="${idx}" data-f="color" value="${t.color}">
-      <select data-i="${idx}" data-f="pattern">
+      <input type="text" class="label" data-i="${idx}" data-f="label" value="${escapeAttr(t.label)}" aria-label="Day type name">
+      <input type="text" class="abbr" data-i="${idx}" data-f="abbr" value="${escapeAttr(t.abbr)}" maxlength="3" aria-label="Abbreviation for ${escapeAttr(t.label)}">
+      <input type="color" data-i="${idx}" data-f="color" value="${t.color}" aria-label="Color for ${escapeAttr(t.label)}">
+      <select data-i="${idx}" data-f="pattern" aria-label="Fill pattern for ${escapeAttr(t.label)}">
         ${PATTERNS.map(p => `<option value="${p}" ${p === t.pattern ? "selected" : ""}>${p}</option>`).join("")}
       </select>
       <label class="no-school"><input type="checkbox" data-i="${idx}" data-f="noSchool" ${t.noSchool ? "checked" : ""}> No school</label>

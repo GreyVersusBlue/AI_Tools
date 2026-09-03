@@ -373,7 +373,7 @@
   <div class="card">
     <h2>Decks</h2>
     <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:flex-start;">
-      <select id="deckSelect" style="width:auto; flex:1; min-width:160px;"></select>
+      <select id="deckSelect" aria-label="Deck" style="width:auto; flex:1; min-width:160px;"></select>
       <button type="button" class="secondary" id="newDeckBtn">New deck</button>
       <button type="button" class="secondary" id="renameDeckBtn">Rename</button>
       <button type="button" class="danger" id="deleteDeckBtn">Delete</button>
@@ -382,7 +382,7 @@
     <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:flex-start; margin-top:.7rem;">
       <button type="button" class="secondary" id="shareLinkBtn">&#128279; Share deck link</button>
       <button type="button" class="secondary" id="shareQrBtn">&#9638; QR code</button>
-      <select id="sampleSelect" style="width:auto; min-width:210px; margin-bottom:0;"></select>
+      <select id="sampleSelect" aria-label="Sample deck to load" style="width:auto; min-width:210px; margin-bottom:0;"></select>
       <button type="button" class="secondary" id="sampleDeckBtn">Load sample deck</button>
     </div>
     <p class="hint" id="shareHint" style="margin:.4rem 0 0;">A share link carries card text, stats, themes, and rarity &mdash; not photos, which stay on this device. To send finished cards with photos, use Download PDF or All PNGs (zip) above.</p>

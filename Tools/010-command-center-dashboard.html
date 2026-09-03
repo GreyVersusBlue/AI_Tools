@@ -825,7 +825,7 @@
     var rosters = loadRosters();
     var names = Object.keys(rosters);
     el.innerHTML =
-      '<select id="rosterSelect"><option value="">Load a saved roster&hellip;</option>' +
+      '<select id="rosterSelect" aria-label="Saved roster to load"><option value="">Load a saved roster&hellip;</option>' +
       names.map(function (n) { return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('') +
       '</select>' +
       '<div class="picked-name" id="pickedName">&mdash;</div>' +

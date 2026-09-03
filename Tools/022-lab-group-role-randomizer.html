@@ -213,7 +213,7 @@
   </div>
 
   <div class="toolbar" id="toolbar" style="display:none;">
-    <label>Roster:</label>
+    <label for="rosterSwitch">Roster:</label>
     <select id="rosterSwitch"></select>
     <button class="secondary small" id="newRosterBtn">New roster</button>
     <button class="danger small" id="deleteRosterBtn">Delete</button>
@@ -301,9 +301,9 @@
       <div class="card">
         <div class="card-title">6 &middot; Keep Apart (optional)</div>
         <div class="pair-row">
-          <select id="pairA"><option value="">Select a name&hellip;</option></select>
+          <select id="pairA" aria-label="Keep apart: first student"><option value="">Select a name&hellip;</option></select>
           <span style="color:var(--muted);font-size:.8rem;">&amp;</span>
-          <select id="pairB"><option value="">Select a name&hellip;</option></select>
+          <select id="pairB" aria-label="Keep apart: second student"><option value="">Select a name&hellip;</option></select>
           <button type="button" class="secondary small" id="addPairBtn" style="width:auto;">Add</button>
         </div>
         <div class="hint">Pairs listed here will be split into different lab groups whenever possible &mdash; useful for keeping two students off the same bench.</div>
@@ -657,7 +657,7 @@
     els.roleList.innerHTML = state.roles.map(function (role, i) {
       return '<div class="role-row">' +
         '<div class="role-row-main">' +
-          '<input type="text" data-role-idx="' + i + '" data-role-field="name" value="' + escapeHtml(role.name).replace(/"/g, '&quot;') + '">' +
+          '<input type="text" data-role-idx="' + i + '" data-role-field="name" value="' + escapeHtml(role.name).replace(/"/g, '&quot;') + '" aria-label="Role ' + (i + 1) + ' name">' +
           '<button type="button" class="x" data-remove-role="' + i + '" title="Remove role">&#10005;</button>' +
         '</div>' +
         '<input type="text" class="role-desc" data-role-idx="' + i + '" data-role-field="description" placeholder="Optional: what this role does (prints on tents)" value="' + escapeHtml(role.description || '').replace(/"/g, '&quot;') + '">' +
