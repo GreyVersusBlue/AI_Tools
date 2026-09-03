@@ -26,7 +26,7 @@ list).
 | Vendored libs (`_shared/vendor/`) | jsPDF 2.5.2 (+AutoTable 3.6.0), SheetJS 0.18.5, JSZip 3.10.1, qrcode.js, jsQR |
 | Rosters | `np_rosters` read by 28 tools (plain name strings); `crh_students_v1` (stable ids, preferred name, pronunciation) written by 006, read by 008, 009 and Name Picker's `np-details.js` only. `_shared/roster.js` from `PLATFORM_PLAN.md` Track R **does not exist yet** |
 | Tests | 120 Playwright/Node suites chained with `&&` in one `npm test` string; 62 per-tool `test/` folders; guards `check:dedupe`, `check:social`, `check:tests`. **No CI** (`.github/` does not exist), no linter, no automated a11y check |
-| Known red | one assertion in `Tools/seating-chart/test/drive-seating.mjs` (mobile toolbar pushes the chart ~1050 px down at 375 px) |
+| Known red | one assertion in `Tools/seating-chart/test/drive-seating.mjs` (mobile toolbar pushes the chart ~1050 px down at 375 px) — fixed 2026-09-03, Path 14 P1 |
 | Storage | ~206 distinct localStorage keys across 69 writing tools, three naming eras; IndexedDB in 3 places (`bmg-maps`, `rgb-audio`, `stviz-recovery`); quota handled in ~17 files |
 | Dead / unlinked | `Tools/Old Designs/`, `Tools/New Designs/`, `index_backup.html`, `Other Landing Page ideas/`. **Correction (2026-09-02): the `v1`–`v4` landing variants are not dead.** They are a reachable chain — `index.html`'s footer links `v1-inbox.html`, which links `v2-subplans.html`, which links `v3-bellboard.html`, which links `v4-riso.html`. None of the four is precached, so all four 404 offline while being reachable. Whether to precache them or cut the chain is a decision for Path 1 P2. |
 
@@ -54,6 +54,10 @@ here so they stop being rediscovered):
 - `_ds/industry-…/styles.css` opens with an `@import` of Google Fonts. Five live
   tools (005, 011, 029, 031, 036) make an offsite request on every load and lose their
   typeface offline. `Tools/schedule/fonts/fonts.css` is the self-hosting template.
+  *Fixed 2026-09-03:* the six faces are vendored under `_shared/vendor/barlow/`
+  (latin + latin-ext, `CACHE_VERSION` v137), the `@import` points there, and the
+  harness no longer strips a Google Fonts import out of served CSS — an offsite
+  font request is now a finding like any other.
 - `assets/js/gvb-save.js` (save bar + storage probe, used by 005 and 007) is shared
   code living outside `_shared/`, contra `CLAUDE.md`.
 - `Tools/seating-chart/fonts/*.woff2` (~167 KB, three faces) appear unreferenced by
@@ -260,6 +264,21 @@ caching of same-origin GETs already works, so an on-demand tier is nearly free.
   honest shape is a separate opt-in check taking an explicit base ref. Left as a
   TODO in the guard's header. Until then this remains a code-review
   responsibility, as `CLAUDE.md` already states.
+
+  *Built 2026-09-03, in that honest shape:* `check-precache.mjs --base <ref>`
+  (BUMP, the fifth check). It diffs the working tree against the *merge-base*
+  of the ref and HEAD, so a bump anywhere on the branch counts; if any
+  precached file or `PRECACHE_URLS` itself changed since that merge-base and
+  `CACHE_VERSION` did not, it fails naming the files; an unresolvable ref (a
+  shallow clone) is exit 2, not a pass; and without `--base` it says the bump
+  was not checked. `ci.yml` runs it in the pull-request job only, against
+  `origin/<base branch>`, where `fetch-depth: 0` already exists. Exercised
+  against a bumped branch (pass, naming the 15 files it covers), the same
+  branch with the bump reverted (BUMP, exit 1), a bad ref and a missing ref
+  (exit 2). The same `ci.yml` change moved the actions to their current majors
+  (checkout v7, setup-node v7, cache v6, upload-artifact v7 — all node24, and
+  the inputs this workflow uses exist unchanged in each), ending the
+  forced-onto-Node-24 deprecation warning.
 
   *Verified:* all four checks fired by name against deliberately broken copies of
   the finished `sw.js` (a bogus entry → DEAD, a repeated entry → DUPLICATE, a
@@ -1032,11 +1051,27 @@ un-extracted.
   `_shared/undo.js` and adopt it in the tools whose undo is a single in-memory
   snapshot (002, 003, 018, 020, 021, 022, 024, 027, 043).
 
+**Status.** P1 shipped 2026-09-03. P2–P5 open.
+
+- *P1 as built.* Below 900px the toolbar is one sideways-scrolling row of the
+  controls a teacher uses standing in the room (Auto-assign, Shuffle, Clear
+  seats, Remove desks, Undo, Pick a student, Actual size, Mirror view, Seat
+  numbers) with a **More** button pinned at its right edge that unfolds the
+  desk-building and printing groups underneath it. Folded, the bar is 70px
+  tall and the chart sits 740px down a 812px screen (it was 1132px); unfolded
+  it is 328px. On a desktop the two wrappers are `display:contents`, so the
+  toolbar is the same flat flex row it always was. `drive-seating.mjs`'s
+  assertion is unchanged; its phone block now taps More before building the
+  grid, checks the folded/unfolded states and that nothing spills sideways in
+  either, and the `expectedFailures` entry is gone. `CACHE_VERSION` v136.
+  Left alone on purpose: the nav header (140px of the 812 at 375px, seven
+  links wrapping onto three lines) is a site-wide header, not this tool's.
+
 **Model.** Fable for P3; Opus otherwise.
 
-**Verification.** All four `test:seating` suites green including the currently
-red one; a solver fixture with a known-feasible constraint set and a known-infeasible
-one asserting the explanation.
+**Verification.** All four `test:seating` suites green including the formerly
+red one (done for P1); a solver fixture with a known-feasible constraint set and
+a known-infeasible one asserting the explanation.
 
 ---
 

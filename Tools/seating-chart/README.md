@@ -32,11 +32,22 @@ free. Drag-to-pan is mouse-only: a touch drag is already a native scroll (and
 a pinch a native zoom), and handling it here as well would move the floor
 twice as far as the finger.
 
+## The toolbar on a phone
+
+Below 900px the toolbar folds: the controls a teacher uses standing in the
+room (assign, shuffle, clear, undo, pick a student, the three view toggles)
+stay in one sideways-scrolling row, and a **More** button pinned at its right
+edge unfolds the desk-building and printing groups underneath. The wrappers
+that make this work (`.tb-primary`, `.tb-more`) are `display:contents` on a
+desktop, so the toolbar there is still one flat flex row. This is what turned
+the long-standing "chart is within one swipe of the top" assertion green
+(2026-09-03, Path 14 P1): folded, the bar is 70px tall instead of 460px.
+
 ## Running the tests
 
 ```
 node Tools/seating-chart/test/smoke-seating.mjs      → 123 passed, 0 failed
-node Tools/seating-chart/test/drive-seating.mjs      → 74 checks, 0 failed
+node Tools/seating-chart/test/drive-seating.mjs      → 110 checks, 0 failed
 ```
 
 Both exit non-zero on failure. The driver borrows `serve()`, `launch()` and

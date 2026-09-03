@@ -65,10 +65,15 @@ every edit. The deduplication work that established them is tracked in
 - URL-encode spaces in precache paths (`%20`), matching the existing entries.
 - **`npm run check:precache` enforces this.** It fails if a live page's
   `src`/`href`, or a local file `manifest.json` names, is missing from
-  `PRECACHE_URLS`, or if a listed URL is dead or duplicated. It runs in CI. It
-  does *not* check that you bumped `CACHE_VERSION` — no honest guard can (see the
-  header of `Tools/board-check/check-precache.mjs`), so that stays on you and on
-  review.
+  `PRECACHE_URLS`, or if a listed URL is dead or duplicated. It runs in CI.
+  The `CACHE_VERSION` bump is checked only on request, because it needs a
+  base to compare against: `npm run check:precache -- --base origin/main`
+  fails if any precached file (or the list itself) changed since the
+  merge-base of that ref and HEAD without `CACHE_VERSION` changing too. The
+  merge-base is what keeps it from crying wolf on a branch that bumped two
+  commits ago; a ref git cannot resolve is an error, not a pass. CI runs it
+  in the pull-request job only (full history, known base branch). Without
+  `--base` the bump is not checked and the guard says so.
 
 ## New tools link shared boilerplate — don't inline it
 
@@ -174,11 +179,13 @@ files must be added there too.
 - Test suites: schedule, seating-chart (a pure-logic suite and a browser
   suite), name-picker, image-to-pdf. Run them when touching those tools.
   `final-grade-checker` has no `test/` folder, despite older notes claiming
-  otherwise. **Known red as of 2026-08-11:** one assertion in
-  `Tools/seating-chart/test/drive-seating.mjs` ("the chart is within one
-  swipe of the top") fails for real — the toolbar has grown to ~15 controls
-  with no mobile cap, so at 375px it wraps to ~380px tall and pushes the
-  chart 1052px down. That's a tool bug to fix, not a test to loosen.
+  otherwise. **The one known-red assertion was fixed on 2026-09-03** (Path 14
+  P1): `drive-seating.mjs`'s "the chart is within one swipe of the top" had
+  failed since 2026-08-11 because the toolbar's ~25 controls wrapped to 460px
+  at 375px and pushed the chart 1132px down. The fix was in the tool (the
+  phone toolbar folds its desk-building and printing groups behind a More
+  button; `CACHE_VERSION` v136), the assertion was not touched, and
+  `suites.json`'s `expectedFailures` is empty again. Keep it that way.
 
 ## Other guardrails
 
