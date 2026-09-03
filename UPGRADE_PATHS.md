@@ -964,7 +964,14 @@ subtree, so live controls must live inside it).
 
   *The paper problem, which is the real reason the rollout is a separate
   phase.* All 74 ink-paper tools hardcode light colours in their own `<style>`
-  — 17 to 45 occurrences each, measured. Some are chrome that should follow the
+  — enough per tool that adopting one is real work, but **the "17 to 45
+  occurrences each" this line used to claim is wrong**: that count swept in
+  `white-space`, `@media print` blocks and inline script, and is about 3× too
+  high. The tool meant to replace it (`list-dark-candidates.mjs`,
+  `npm run path5:next`) was described in the Wave A1 handoff but never
+  committed — see `HANDOFF_STAGE_2_A2.md` §3.1. **Path 5 P3 measures this
+  properly and commits the script before it quotes a number.** Some are chrome
+  that should follow the
   theme; some are a *sheet of paper* (a print preview, a hall pass, a
   certificate) that must stay white with dark ink. So `ink-paper.css` ships a
   `.paper-sheet` class that restores the light tokens inside a subtree, applied

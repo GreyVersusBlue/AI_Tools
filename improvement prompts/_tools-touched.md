@@ -252,10 +252,12 @@ was taken from **Not yet touched**; no other tool was touched.
 `:not(.a11y-filter-dark)`, so the 73 ink-paper tools that have not adopted are
 byte-for-byte unaffected and keep the CSS-filter fallback. The rollout is
 Path 5 P3 and is a real piece of work, not a flag flip: every one of those 74
-tools hardcodes light colours in its own `<style>` (17–45 occurrences each,
-measured), and each has to separate chrome that should follow the theme from a
-*sheet of paper* that must not, before it can opt in. Read
-`_shared/ink-paper.css`'s header and copy 001.
+tools hardcodes light colours in its own `<style>` (the "17–45 occurrences
+each" first claimed here is wrong — it counted `white-space`, print blocks and
+script, and is ~3× too high; Path 5 P3 measures it properly, see
+`HANDOFF_STAGE_2_A2.md` §3.1), and each has to separate chrome that should
+follow the theme from a *sheet of paper* that must not, before it can opt in.
+Read `_shared/ink-paper.css`'s header and copy 001.
 
 | Tool | File | What shipped |
 |---|---|---|
