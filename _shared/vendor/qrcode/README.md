@@ -21,7 +21,7 @@ hash.
 two are easy to mix up by name — `_shared/qr-scan.js` (the shared
 camera/scan-loop wrapper) sits on top of jsQR, not this file.
 
-Phase 1 of `REFACTOR_PLAN.md` found and fixed the same duplication problem for
+The vendored-library consolidation (`HISTORY.md`) found and fixed the same duplication problem for
 jsPDF/SheetJS/jsQR but left this library and JSZip as a follow-up ("Phase 1b").
 This round did that follow-up: 14 identical per-tool `lib/qrcode.js` copies
 (verified byte-identical after normalizing CRLF→LF) were consolidated into this

@@ -19147,7 +19147,7 @@ const BR_CSS = `#app-browser {
   color:var(--br-forest);padding:11px 17px;border-radius:10px;cursor:pointer;transition:.18s}
 #app-browser .btn-print:hover{background:var(--br-forest);color:#fff;border-color:var(--br-forest)}
 /* ── Staleness banner (ported from 034-schedule-browser.html R62; see
-   improvement prompts/035-schedule-visualizer.md, Round 8) ── */
+   BACKLOG.md / HISTORY.md, Round 8) ── */
 #app-browser .stale-banner{display:none;margin:0 0 16px;padding:14px 20px;border-radius:0 0 10px 10px;
   background:#fbe4c8;border:2px solid #c96a1f;border-top:none;color:#7a3c0e;font-size:14.5px;font-weight:700;line-height:1.5;text-align:center}
 #app-browser .stale-banner.show{display:block}
@@ -19573,7 +19573,7 @@ function brLoadFromVisualizer() {
 }
 
 /* ── Staleness banner (ported from 034-schedule-browser.html R62; see
-   improvement prompts/035-schedule-visualizer.md, Round 8). Drives the
+   BACKLOG.md / HISTORY.md, Round 8). Drives the
    #br-stale-banner div wired into both the live preview markup above and
    brBuildPublishedMarkup() below, and shares one CSS rule (BR_CSS) so a
    published file's banner never drifts from what this app previews. If a
@@ -20155,7 +20155,7 @@ function brBuildPublishedHTML() {
        call these two unprefixed — they're the app-wide escaping helpers, not
        br-specific ones. Without them here the published file throws a
        ReferenceError the instant anyone opens a teacher or group: this was
-       missing (see improvement prompts/035-schedule-visualizer.md, Round 7). */
+       missing (see BACKLOG.md / HISTORY.md, Round 7). */
     'const escHtml = '   + escHtml.toString()   + ';',
     'const escJsAttr = ' + escJsAttr.toString() + ';',
     'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';'

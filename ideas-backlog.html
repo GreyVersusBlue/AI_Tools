@@ -366,7 +366,7 @@
 
   <h2>Platform-Wide &mdash; Big Swings</h2>
   <p class="pitch" style="margin-bottom:.8rem;color:var(--dim);">
-    The original four have a phased implementation roadmap in the repo's <code>PLATFORM_PLAN.md</code>; the ones
+    The original four have a phased implementation roadmap in the repo's <code>BACKLOG.md</code>; the ones
     below them, added in the 2026-08-11 review pass, do not have one yet. They leave this list only when they
     actually ship.
   </p>
@@ -433,11 +433,11 @@
   <div class="idea">
     <span class="name">Landing-Page Web Fonts Never Shipped</span>
     <span class="badge">Idea</span>
-    <span class="pitch"><code>index.html</code> and <code>ideas-backlog.html</code> declare <code>@font-face</code> for five woff2 files under <code>assets/fonts/</code> that were never committed to the repo, so both pages silently fall back to system-ui on the live site while every tool page under <code>Tools/</code> has its own committed fonts. Either vendor the five files (and precache them) or drop the declarations.</span>
+    <span class="pitch">This page declares <code>@font-face</code> for five woff2 files under <code>assets/fonts/</code> that were never committed to the repo, so it silently falls back to system-ui on the live site while every tool page under <code>Tools/</code> has its own committed fonts. Either vendor the five files (and precache them) or drop the declarations.</span>
   </div>
 
   <footer>
-    Source of truth for this list is <code>/IDEAS_BACKLOG.md</code> in the repo. See something missing, or want to
+    Source of truth for this list is <code>/BACKLOG.md</code> in the repo. See something missing, or want to
     call dibs on building one? Email <span style="color:var(--pen)">@dsmoore</span>.
   </footer>
 

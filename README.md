@@ -106,15 +106,13 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 
 `index.html` at the repo root is the toolkit landing page. Each tool's own entry point is a single `.html` file inside `Tools/`. Supporting scripts, fonts, and libraries for a given tool live in a matching subfolder under `Tools/` (e.g. `Tools/final-grade-checker/`, `Tools/schedule/`, `Tools/seating-chart/`). You shouldn't need to touch those unless you're editing the tool itself.
 
-## Ideas backlog
+## Backlog
 
-Planned-but-not-built tools (subject-specific ones included) are tracked in [`IDEAS_BACKLOG.md`](IDEAS_BACKLOG.md),
-and shown as "coming soon" entries on the [live toolkit page](index.html) and on
-[`ideas-backlog.html`](ideas-backlog.html).
+Everything not yet built — per-tool enhancements, platform work, and the multi-phase upgrades to
+existing tools — lives in one ranked list, [`BACKLOG.md`](BACKLOG.md). Tier 1 is the index; Tier 2
+carries each idea in full. The public-facing summary is [`ideas-backlog.html`](ideas-backlog.html).
 
-Larger, multi-phase upgrades — platform work and major overhauls of existing tools — are planned in
-[`UPGRADE_PATHS.md`](UPGRADE_PATHS.md) (top 20, each with a phase list), alongside the four original big swings in
-[`PLATFORM_PLAN.md`](PLATFORM_PLAN.md).
+What has already shipped, and what past rounds got wrong, is in [`HISTORY.md`](HISTORY.md).
 
 ## Feedback
 
