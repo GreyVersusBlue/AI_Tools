@@ -11,6 +11,47 @@ directly with `node`). The page itself is a single file.
 
 ## Status
 
+**2026-09-03 — Native dark mode; the reference adopter for Path 5 P1
+(`UPGRADE_PATHS.md`).** This tool is the first on `_shared/ink-paper.css` to
+opt out of a11y.js's CSS-filter invert and render a real dark palette. What
+that took, because every other ink-paper tool will have to do the same:
+
+- **The flag alone does nothing useful.** `window.A11Y_NATIVE_THEME = true`
+  before the `a11y.js` tag switches the page from the filter to
+  `ink-paper.css`'s `[data-theme="dark"]` tokens — but this stylesheet
+  hardcoded `#fff` in 20-odd places, so on its own the flag produced pale ink
+  on white cards. Every one of those literals is now a token: form controls,
+  buttons, chips, student cards, out-rows and the activity feed take
+  `var(--card)`; the secondary-button hover and the history summary take the
+  new `var(--card-2)`; white text on an accent or `--err` fill takes the new
+  `var(--accent-ink)`, which has to invert with the accent and so cannot stay
+  `#fff`. The board background moved from `#eeece3` to `var(--card-2)`
+  (`#f1f0ea`) — a difference of two or three luminance levels, not visible,
+  and worth it to stop carrying a private near-duplicate of a shared value.
+- **The hall pass is a sheet of paper.** `.pass-card` is a pass a student
+  carries, so it keeps a white card and dark ink in dark mode. It is marked
+  `paper-sheet`, the class `ink-paper.css` keys its light-token restoration
+  off (and which `#printArea` gets automatically). This is the distinction
+  every adopter has to make: chrome follows the theme, paper does not.
+- **The projector view opts out of one token.** It is its own dark surface in
+  both themes, so its buttons name an explicit light ink rather than inherit
+  `--accent-ink`, which goes near-black in dark.
+- **Status tints are still tool-local.** `--err-bg`/`--info-bg`/`--warn-bg`/
+  `--good-bg` and their border and ink companions are defined here in both
+  themes rather than in the shared file, because one tool is not enough
+  evidence to shape a shared contract. Path 5 P3 promotes them if most tools
+  want the same four pairs.
+- **Two side effects worth knowing.** The pairing QR renders true now: under
+  the filter it was inverted and then counter-inverted by `a11y.css`'s canvas
+  rule, and native dark leaves it alone. And printing from dark mode prints
+  on white, which it did not before — that fix is in the shared files, not
+  here, and applies to the filter tools too.
+- Covered by `npm run test:theme` (`Tools/theme/test/smoke-theme.mjs`), which
+  drives this page in both themes; `test:hall-pass` and
+  `test:a11y -- --only 001` are unchanged and still green. The 13 `label` /
+  `select-name` allowlist entries this tool carries were **not** touched —
+  they are a separate round.
+
 **2026-08-13 — Hallway Sync (two-teacher peer pairing, backlog "Multi-teacher
 awareness", P9).** Two teachers covering the same hallway were each tracking
 passes blind to the other. Shipped a new "Hallway Sync" card that pairs this

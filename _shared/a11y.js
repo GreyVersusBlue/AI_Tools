@@ -4,11 +4,23 @@
 //
 // Supersedes the older _shared/theme-toggle.js + theme.css light/dark-only
 // toggle (rather than shipping a second, parallel theme system): this file
-// is now the single place that reads/writes theme state. Pages that already
-// ship their own `[data-theme="dark"]` CSS should set
+// is now the single place that reads/writes theme state, and Path 5 P1 made
+// that ownership the site's decision rather than an accident — theme-toggle.js
+// was deleted, and the `gvb-tools-theme` key it wrote is migrated below.
+// Pages that ship their own `[data-theme="dark"]` CSS should set
 // `window.A11Y_NATIVE_THEME = true` in an inline <script> BEFORE loading
 // this file, so dark mode uses that native styling instead of the generic
-// CSS-filter fallback in a11y.css.
+// CSS-filter fallback in a11y.css. _shared/ink-paper.css now supplies that
+// native styling to the 74 tools on the ink/paper palette; its header carries
+// the decision in full, including what a tool must fix before opting in.
+//
+// Theme has three stored states, not two. 'auto' — the default for anyone who
+// has never touched the control — follows the operating system's
+// prefers-color-scheme, live, so a teacher whose laptop is already dark gets a
+// dark toolkit on first visit and nothing is written to storage. 'light' and
+// 'dark' are explicit choices and stick. The widget stays a two-state switch:
+// clicking it from 'auto' commits the opposite of whatever the OS is
+// currently saying, and Reset puts it back to 'auto'.
 //
 // Optional: mark an element `data-a11y-read` to make it the read-aloud
 // target instead of the whole page (useful for a big display prompt/word).
@@ -18,18 +30,31 @@
   var KEY = 'gvb-a11y-prefs';
   var OLD_THEME_KEY = 'gvb-tools-theme'; // old theme-toggle.js key, migrated once
   var SCALE_STEPS = [87.5, 100, 112.5, 125, 137.5, 150];
-  var DEFAULTS = { theme: 'light', textScale: 100, dyslexic: false };
+  var DEFAULTS = { theme: 'auto', textScale: 100, dyslexic: false };
+  var DARK_QUERY = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+  /** The theme actually painted: 'auto' asks the OS, everything else is literal. */
+  function resolvedTheme() {
+    if (prefs.theme !== 'auto') return prefs.theme;
+    return DARK_QUERY && DARK_QUERY.matches ? 'dark' : 'light';
+  }
+
+  function normalize(stored) {
+    return {
+      theme: stored.theme === 'dark' || stored.theme === 'light' ? stored.theme : 'auto',
+      textScale: SCALE_STEPS.indexOf(stored.textScale) > -1 ? stored.textScale : 100,
+      dyslexic: !!stored.dyslexic,
+    };
+  }
 
   function loadPrefs() {
     var stored = null;
     try { stored = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
-    if (stored && typeof stored === 'object') {
-      return {
-        theme: stored.theme === 'dark' ? 'dark' : 'light',
-        textScale: SCALE_STEPS.indexOf(stored.textScale) > -1 ? stored.textScale : 100,
-        dyslexic: !!stored.dyslexic,
-      };
-    }
+    // An existing user's stored prefs always name a literal theme, because
+    // the pre-Path-5 defaults wrote 'light' whenever anything else was saved.
+    // Those stay literal on purpose: nobody's toolkit flips to dark because
+    // this shipped. Only a browser with nothing stored starts on 'auto'.
+    if (stored && typeof stored === 'object') return normalize(stored);
     // one-time migration from the old theme-only key
     var migrated = Object.assign({}, DEFAULTS);
     try {
@@ -47,8 +72,9 @@
 
   function apply() {
     var root = document.documentElement;
-    root.setAttribute('data-theme', prefs.theme);
-    if (prefs.theme === 'dark' && !window.A11Y_NATIVE_THEME) {
+    var theme = resolvedTheme();
+    root.setAttribute('data-theme', theme);
+    if (theme === 'dark' && !window.A11Y_NATIVE_THEME) {
       root.classList.add('a11y-filter-dark');
     } else {
       root.classList.remove('a11y-filter-dark');
@@ -223,7 +249,9 @@
       if (i > -1 && i < SCALE_STEPS.length - 1) setScale(SCALE_STEPS[i + 1]);
     });
     themeBtn.addEventListener('click', function () {
-      setTheme(prefs.theme === 'dark' ? 'light' : 'dark');
+      // From 'auto' this commits a literal opposite of what is on screen, so
+      // one click always visibly flips the page.
+      setTheme(resolvedTheme() === 'dark' ? 'light' : 'dark');
     });
     dyslexicBtn.addEventListener('click', function () {
       setDyslexic(!prefs.dyslexic);
@@ -270,7 +298,7 @@
     scaleDownBtn.disabled = prefs.textScale === SCALE_STEPS[0];
     scaleUpBtn.disabled = prefs.textScale === SCALE_STEPS[SCALE_STEPS.length - 1];
 
-    var dark = prefs.theme === 'dark';
+    var dark = resolvedTheme() === 'dark';
     themeBtn.textContent = dark ? 'On' : 'Off';
     themeBtn.setAttribute('aria-pressed', dark ? 'true' : 'false');
     themeBtn.setAttribute('aria-checked', dark ? 'true' : 'false');
@@ -296,10 +324,20 @@
     init();
   }
 
+  // follow the OS live, but only while the user has not made a choice
+  if (DARK_QUERY) {
+    var onSystemTheme = function () { if (prefs.theme === 'auto') { apply(); syncControls(); } };
+    if (DARK_QUERY.addEventListener) DARK_QUERY.addEventListener('change', onSystemTheme);
+    else if (DARK_QUERY.addListener) DARK_QUERY.addListener(onSystemTheme); // Safari < 14
+  }
+
   // keep in sync across tabs/tools sharing the same key
   window.addEventListener('storage', function (e) {
     if (e.key === KEY && e.newValue) {
-      try { prefs = JSON.parse(e.newValue); } catch (err) { return; }
+      var incoming;
+      try { incoming = JSON.parse(e.newValue); } catch (err) { return; }
+      if (!incoming || typeof incoming !== 'object') return;
+      prefs = normalize(incoming);
       apply();
       syncControls();
     }

@@ -4,13 +4,16 @@
    dyslexia-friendly font, read-aloud) sharing a single localStorage key.
 
    Theme handling: pages that already ship their own `[data-theme="dark"]`
-   CSS (the old Industry-design-system tools, and Classroom Timer's bespoke
-   one) set `window.A11Y_NATIVE_THEME = true` before loading a11y.js, and
-   keep using their native dark-mode styling untouched. Everywhere else,
-   a11y.js adds `.a11y-filter-dark` to <html> instead, and the filter rules
-   below do the work — a standard "force dark mode on any page" technique
-   (invert + hue-rotate, with images/video/canvas counter-inverted so
-   photos don't come out looking like film negatives). */
+   CSS set `window.A11Y_NATIVE_THEME = true` before loading a11y.js, and keep
+   using their native dark-mode styling untouched — the Industry-design-system
+   tools and Classroom Timer's bespoke one did so first, and since Path 5 P1
+   `_shared/ink-paper.css` supplies the same thing to the 74 tools on the
+   ink/paper palette, so this is now the normal case rather than the exception.
+   Everywhere else, a11y.js adds `.a11y-filter-dark` to <html> instead, and the
+   filter rules below do the work — a standard "force dark mode on any page"
+   technique (invert + hue-rotate, with images/video/canvas counter-inverted so
+   photos don't come out looking like film negatives). Read ink-paper.css's
+   header for the decision in full; this file owns only the fallback. */
 
 html.a11y-filter-dark {
   filter: invert(0.93) hue-rotate(180deg);
@@ -26,6 +29,22 @@ html.a11y-filter-dark [style*="background-image"] {
 /* keep the widget itself readable/normal instead of double-inverted */
 html.a11y-filter-dark .a11y-widget {
   filter: invert(1) hue-rotate(180deg);
+}
+
+/* Print is always on paper. The invert filter applies to the printed page
+   too, so a teacher who leaves dark mode on and hits Print gets a black
+   sheet; drop the filter for print and let the page's real light colours
+   through. (ink-paper.css does the equivalent for native dark.) */
+@media print {
+  html.a11y-filter-dark,
+  html.a11y-filter-dark img,
+  html.a11y-filter-dark video,
+  html.a11y-filter-dark canvas,
+  html.a11y-filter-dark svg image,
+  html.a11y-filter-dark [style*="background-image"],
+  html.a11y-filter-dark .a11y-widget {
+    filter: none;
+  }
 }
 
 /* dyslexia-friendly font: a legible, simply-shaped sans-serif stack with a

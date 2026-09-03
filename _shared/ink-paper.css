@@ -1,21 +1,165 @@
-/* Shared "ink/paper" palette — the de facto standard 9-variable :root block
-   that Phase 3's variance audit (REFACTOR_PLAN.md) found duplicated
-   byte-identical across dozens of tools. Values are unchanged from the
-   original per-tool blocks: this is a straight dedup, not a restyle.
-   Dark mode for pages using this palette comes from _shared/a11y.js's
-   CSS-filter fallback (a11y.css `.a11y-filter-dark`), not from these
-   variables changing value — that keeps hardcoded-white "paper preview"
-   elements (print-sheet simulations common in these tools) readable, since
-   the filter inverts backgrounds and text together instead of remapping
-   only the text color. */
+/* Shared "ink/paper" palette — the de facto standard :root block that Phase 3's
+   variance audit (REFACTOR_PLAN.md) found duplicated byte-identical across
+   dozens of tools, and, since Path 5 P1, the native dark theme for those same
+   tools. 74 live pages link this file.
+
+   ─────────────────────────────────────────────────────────────────────────
+   THE DECISION (Path 5 P1, 2026-09-03)
+   ─────────────────────────────────────────────────────────────────────────
+   `_shared/a11y.js` owns theme, site-wide. It is the only thing that reads or
+   writes theme state (`gvb-a11y-prefs`) and the only thing that sets
+   `data-theme` on <html>. `_shared/theme-toggle.js` — a second, parallel
+   toggle on its own `gvb-tools-theme` key, loaded by zero live pages — was
+   deleted in the same change; a11y.js still migrates that old key once.
+
+   a11y.js gives a page dark one of two ways, never both:
+
+     native  the page sets `window.A11Y_NATIVE_THEME = true` before loading
+             a11y.js. a11y.js sets `data-theme` on <html> and stops; the
+             page's own CSS — for the tools here, the block below — does the
+             work. Real colours, so canvases, photos and QR codes survive.
+     filter  the page does not opt in. a11y.js also puts `.a11y-filter-dark`
+             on <html> and a11y.css inverts the whole page. Every hue shifts;
+             this is the fallback, not the goal.
+
+   So the dark block below is gated on `:not(.a11y-filter-dark)`. An
+   ink-paper tool that has not opted in keeps the filter and the unchanged
+   light values — this file changes nothing for the tools still waiting on
+   the Path 5 P3 rollout.
+
+   ─────────────────────────────────────────────────────────────────────────
+   ADOPTING (Path 5 P3) — the flag alone is not enough
+   ─────────────────────────────────────────────────────────────────────────
+   Every one of these 74 tools hardcodes light colours in its own <style>
+   (17–45 occurrences each; measured, not estimated). A remap of the tokens
+   below leaves those literals light while the text on them goes pale, so
+   adopting is three steps, in this order:
+
+     1. Chrome that should follow the theme — a card, a panel, a button face,
+        a form control, a hover fill — swaps its literal for a token:
+          #fff / #ffffff / white  →  var(--card)
+          #f1f0ea and friends     →  var(--card-2)
+          white text on a fill    →  var(--accent-ink)
+     2. Anything that is a *sheet of paper* — a print preview, a handout
+        simulation, a certificate — is left white on purpose and marked
+        `.paper-sheet` (or is `#printArea`, which is treated as one already).
+        The rule below restores the light tokens inside it, so the ink on a
+        previewed sheet stays dark in both themes.
+     3. Then, and only then, add `window.A11Y_NATIVE_THEME = true` before the
+        a11y.js tag, and look at the page in both themes.
+
+   `Tools/001-hall-pass-log.html` is the reference adopter; copy it.
+   `Tools/theme/test/smoke-theme.mjs` fails the build if a page ends up with
+   the filter and a native palette at once, or opts in without one.
+
+   ─────────────────────────────────────────────────────────────────────────
+   CONTRAST
+   ─────────────────────────────────────────────────────────────────────────
+   Every text pair below clears WCAG AA (4.5:1) in both themes: ink, muted,
+   accent, accent-2 and err on each of paper, card and card-2, plus
+   accent-ink on an accent fill. Worst case is 4.76 (light muted on card-2)
+   and 5.78 (dark muted on card-2). Do not lighten a dark value or darken a
+   light one without redoing that math.
+   `--line-strong` is the one asymmetry: dark's clears the 3:1 that WCAG
+   1.4.11 asks of a control border (3.00 on card), light's does not (1.82).
+   Raising light's is a restyle of 74 shipped pages, so it is recorded as a
+   follow-up under Path 5 rather than smuggled in here. */
+
 :root {
-  --ink: #1f2430;
-  --paper: #fafaf8;
-  --card: #fff;
-  --line: #dcdad2;
-  --line-strong: #c3c0b6;
-  --accent: #1f3550;
-  --accent-2: #2e6b8f;
-  --muted: #6b6a63;
-  --err: #a3372b;
+  /* The light values, named once. The dark block never touches these, so a
+     `.paper-sheet` subtree restores them by reference instead of keeping a
+     second copy that would drift. Nothing outside this file should use the
+     `-light` names; use the semantic token. */
+  --ink-light: #1f2430;
+  --paper-light: #fafaf8;
+  --card-light: #fff;
+  --card-2-light: #f1f0ea;
+  --line-light: #dcdad2;
+  --line-strong-light: #c3c0b6;
+  --accent-light: #1f3550;
+  --accent-2-light: #2e6b8f;
+  --accent-ink-light: #fff;
+  --muted-light: #6b6a63;
+  --err-light: #a3372b;
+
+  --ink: var(--ink-light);
+  --paper: var(--paper-light);
+  --card: var(--card-light);
+  --line: var(--line-light);
+  --line-strong: var(--line-strong-light);
+  --accent: var(--accent-light);
+  --accent-2: var(--accent-2-light);
+  --muted: var(--muted-light);
+  --err: var(--err-light);
+
+  /* Added by Path 5 P1. Adoption needs them: a hover/zebra surface a shade off
+     the card, and the colour of text drawn *on* a saturated fill — an accent
+     button, an --err chip. White in light, near-black in dark: the fills
+     invert, so a literal `#fff` cannot stay. */
+  --card-2: var(--card-2-light);
+  --accent-ink: var(--accent-ink-light);
+}
+
+/* Native dark, for pages that set window.A11Y_NATIVE_THEME = true. Chalk on
+   slate rather than a photographic negative: the same warm ink, the same
+   navy-to-blue accent ramp, reversed. */
+:root[data-theme="dark"]:not(.a11y-filter-dark) {
+  color-scheme: dark;
+  --ink: #e9e7e0;
+  --paper: #14171c;
+  --card: #1d2229;
+  --card-2: #262c34;
+  --line: #363c45;
+  --line-strong: #626c78;
+  --accent: #7fb2e5;
+  --accent-2: #a8cdf2;
+  --accent-ink: #101720;
+  --muted: #a9a69c;
+  --err: #ef8f84;
+}
+
+/* A sheet of paper is a sheet of paper in either theme. `#printArea` is the
+   site-standard printable region (59 of the 74 tools have one, and
+   _shared/print-area.css is built around it), so it counts as one without
+   being asked; `.paper-sheet` marks the same thing anywhere else. `color` is
+   re-declared because children inherit the *computed* colour from <body>,
+   which redefining the variable alone would not undo. `.paper-sheet-off`
+   opts a subtree back out, for the rare tool whose #printArea is really its
+   screen UI. */
+:root[data-theme="dark"]:not(.a11y-filter-dark) #printArea:not(.paper-sheet-off),
+:root[data-theme="dark"]:not(.a11y-filter-dark) .paper-sheet:not(.paper-sheet-off) {
+  color-scheme: light;
+  --ink: var(--ink-light);
+  --paper: var(--paper-light);
+  --card: var(--card-light);
+  --card-2: var(--card-2-light);
+  --line: var(--line-light);
+  --line-strong: var(--line-strong-light);
+  --accent: var(--accent-light);
+  --accent-2: var(--accent-2-light);
+  --accent-ink: var(--accent-ink-light);
+  --muted: var(--muted-light);
+  --err: var(--err-light);
+  color: var(--ink);
+  background: var(--card);
+}
+
+/* Printing is always on paper, whatever the screen is doing. Without this a
+   teacher who leaves dark on prints a dark page — true of the filter
+   fallback today, and it would be true of native dark too. */
+@media print {
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --ink: var(--ink-light);
+    --paper: var(--paper-light);
+    --card: var(--card-light);
+    --card-2: var(--card-2-light);
+    --line: var(--line-light);
+    --line-strong: var(--line-strong-light);
+    --accent: var(--accent-light);
+    --accent-2: var(--accent-2-light);
+    --accent-ink: var(--accent-ink-light);
+    --muted: var(--muted-light);
+    --err: var(--err-light);
+  }
 }

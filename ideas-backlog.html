@@ -393,7 +393,7 @@
   <div class="idea">
     <span class="name">Dark / Projector Mode Rollout</span>
     <span class="badge">Idea</span>
-    <span class="pitch"><code>_shared/theme.css</code> and <code>_shared/theme-toggle.js</code> are built, tested, and linked by zero of the 81 tools &mdash; the only dark mode anyone actually gets is a11y.js&rsquo;s CSS-filter invert. Ship the real toggle across the toolkit, keeping the filter fallback for the paper-preview tools it was written for.</span>
+    <span class="pitch">Half done. Path 5 P1 made <code>_shared/a11y.js</code> the one owner of theme and gave <code>_shared/ink-paper.css</code> a real <code>[data-theme=&quot;dark&quot;]</code> palette, so a tool on that palette gets native dark instead of the CSS-filter invert; <code>_shared/theme-toggle.js</code>, the dead parallel toggle, is gone. What is left is the rollout: each of the 74 ink-paper tools still hardcodes light colours in its own <code>&lt;style&gt;</code> and has to swap them for tokens before it can opt in. <code>001-hall-pass-log.html</code> is the worked example.</span>
   </div>
   <div class="idea">
     <span class="name">Shareable State Links Everywhere</span>

@@ -138,6 +138,7 @@
     "Tools/blank-map-generator/test/smoke-label-colors.mjs",
     "Tools/service-worker/test/smoke-sw-update.mjs",
     "Tools/service-worker/test/smoke-sw-tiers.mjs",
+    "Tools/theme/test/smoke-theme.mjs",
     "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs"
   ],
   "expectedFailures": []

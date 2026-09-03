@@ -116,12 +116,24 @@ every edit. The deduplication work that established them is tracked in
 Every new tool must reference the shared files instead of pasting its own
 copy of the boilerplate:
 
-- `<link rel="stylesheet" href="../_shared/theme.css">` — the site palette /
-  dark-mode tokens. Don't invent a new `:root` palette.
-- `_shared/theme-toggle.js` — the theme toggle (persists to
-  `gvb-tools-theme`, syncs across tabs). Copy the integration pattern from a
-  tool that already uses it.
-- `_shared/a11y.css` + `_shared/a11y.js` — shared accessibility baseline.
+- `<link rel="stylesheet" href="../_shared/ink-paper.css">` — the site palette
+  and, since Path 5 P1, its `[data-theme="dark"]` counterpart. Don't invent a
+  new `:root` palette, and don't hardcode `#fff` where `var(--card)` is meant:
+  a literal is what stops a tool adopting dark. (`_shared/theme.css` is the
+  older Industry-design-system palette, used by five tools only; new tools use
+  ink-paper.)
+- `_shared/a11y.css` + `_shared/a11y.js` — shared accessibility baseline, and
+  the **only** owner of theme on this site. a11y.js writes `data-theme` on
+  `<html>` from `gvb-a11y-prefs` and syncs across tabs; never write that
+  attribute yourself and never add a second theme key. A page with real dark
+  colours sets `window.A11Y_NATIVE_THEME = true` in an inline `<script>` before
+  the a11y.js tag, which switches it from a11y.css's CSS-filter invert to its
+  own palette; a page that hasn't done the token work leaves the flag off and
+  keeps the filter. `Tools/theme/test/smoke-theme.mjs` fails the build if a
+  page ends up with both, or opts in with no palette to show.
+  (`_shared/theme-toggle.js`, a second toggle on its own `gvb-tools-theme`
+  key, was deleted in Path 5 P1 — its key is still migrated once by a11y.js.
+  Read `_shared/ink-paper.css`'s header before touching any of this.)
 - `<script src="../_shared/sw-register.js" defer></script>` — service-worker
   registration. This file is created in Phase 2 of `REFACTOR_PLAN.md`; if it
   doesn't exist yet, create it (and precache it) containing exactly:
@@ -221,6 +233,15 @@ files must be added there too.
   `a11yScan(page, {impact})` for a per-tool suite that wants to scan a state
   behind a click. `--only 046` scans one page; `--all-impacts` also prints
   moderate/minor as advisory.
+- **`npm run test:theme` guards the one theme mechanism (Path 5 P1).**
+  `Tools/theme/test/smoke-theme.mjs` sweeps every live page statically for the
+  combination Path 5 calls out — a page painting a real dark palette while
+  a11y.js is also inverting it — checks that the dark blocks in
+  `_shared/ink-paper.css` and `_shared/theme.css` still carry their
+  `:not(.a11y-filter-dark)` gate, and then drives two pages: 001, which has
+  adopted native dark, and 003, which has not and must still get the filter
+  with its light values untouched. Run it after touching anything under
+  `_shared/` that has a colour in it, and after adopting a tool.
 - `Tools/board-check/harness.mjs` is the shared browser-test harness
   (static server, Playwright launch, offsite-request blocking, `a11yScan`). It was
   written from scratch in Round 1c — the original board-check folder was

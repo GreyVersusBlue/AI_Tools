@@ -825,6 +825,8 @@ simulation shows the explanatory message in every migrated tool.
 
 ## 5. Projector mode, real dark mode, shared fullscreen stage
 
+**Status.** P1 shipped (2026-09-03). P2–P4 open.
+
 **Why.** `_shared/theme-toggle.js` is loaded by zero tools; the only dark mode
 teachers get is `a11y.js`'s CSS-filter invert, which shifts every hue and looks
 wrong on canvases and photos. Projector-first tools (Timer, Name Picker, Number
@@ -842,6 +844,104 @@ subtree, so live controls must live inside it).
   fallback only for tools that opt out. Retire `theme-toggle.js` (archive it; it's
   dead) and fold `theme.css`'s Industry tokens into the same mechanism for the five
   `_ds` tools. Respect `prefers-color-scheme` on first visit.
+
+  **Shipped 2026-09-03 (Opus), CACHE_VERSION v139.** The decision is written
+  where the next person will hit it: the header of `_shared/ink-paper.css`, with
+  pointers from `a11y.css`, `theme.css`, `a11y.js` and `CLAUDE.md`.
+
+  *The decision.* `a11y.js` owns theme. It is the only thing that reads or
+  writes theme state and the only thing that sets `data-theme` on `<html>`.
+  Dark arrives one of two ways and never both: **native**, for a page that sets
+  `window.A11Y_NATIVE_THEME = true` and ships real colours, or the **filter**,
+  a11y.css's invert, for a page that has not. `ink-paper.css` gained a
+  `:root[data-theme="dark"]:not(.a11y-filter-dark)` block — the gate is the
+  point, because without it shipping a dark palette would have re-coloured all
+  74 ink-paper tools *and* left the filter inverting them on the same load.
+  With it, this phase changed nothing for the 73 tools that have not adopted,
+  which is what made it safe to ship the palette and the rollout separately.
+
+  *Two extra tokens, deliberately only two.* `--card-2` (a hover/zebra surface)
+  and `--accent-ink` (text drawn on a filled accent, white in light and
+  near-black in dark, because `#fff` cannot survive the accent inverting).
+  Adoption needs both immediately. Status tints — the error/info/warn/good
+  background pairs — were left tool-local in 001 rather than promoted to the
+  shared file: theme.css has a matching set, so promoting them is probably
+  right, but on a sample of one it would be a guess. **P3 should count how many
+  tools want the same four pairs and promote them then, with the evidence.**
+
+  *Two things the spec assumed that the tree had already done.* `theme.css`'s
+  five consumers all set `A11Y_NATIVE_THEME` already, so the "fold" was not a
+  migration — it was adding the same `:not(.a11y-filter-dark)` gate their rules
+  were missing, so the bad combination is impossible rather than merely absent.
+  And `theme-toggle.js` was loaded by zero *live* pages but by five archived
+  `Tools/New Designs/` prototypes; it was deleted outright rather than archived
+  (it is in git history), and those five lost the dangling tag.
+
+  *`prefers-color-scheme`.* Theme now has three stored states. `'auto'` — the
+  default when nothing is stored — follows the OS live and writes nothing, so a
+  teacher on a dark laptop gets a dark toolkit on first visit and keeps
+  following the OS. `'light'`/`'dark'` are explicit and stick. Existing users do
+  not move: pre-Path-5 prefs always named a literal theme (the old defaults
+  wrote `'light'` whenever anything else was saved), so nobody's toolkit flips
+  because this shipped. The widget is still a two-state switch — from `'auto'`
+  one click commits the opposite of what is on screen — and Reset returns to
+  `'auto'`.
+
+  *One bug fixed on the way through, in both mechanisms.* A teacher who left
+  dark mode on and hit Print got a dark page: the invert filter applies to
+  print, and native dark would have too. `a11y.css` now drops the filter under
+  `@media print` and `ink-paper.css` restores the light tokens there. Print is
+  on paper regardless of the screen.
+
+  *The paper problem, which is the real reason the rollout is a separate
+  phase.* All 74 ink-paper tools hardcode light colours in their own `<style>`
+  — 17 to 45 occurrences each, measured. Some are chrome that should follow the
+  theme; some are a *sheet of paper* (a print preview, a hall pass, a
+  certificate) that must stay white with dark ink. So `ink-paper.css` ships a
+  `.paper-sheet` class that restores the light tokens inside a subtree, applied
+  automatically to `#printArea` (59 of the 74 have one), with `.paper-sheet-off`
+  to opt back out. Adoption is: swap chrome literals for tokens, mark the paper,
+  *then* set the flag — the flag alone gets you pale text on white cards.
+
+  *Adopter.* `Tools/001-hall-pass-log.html`, one tool, per the handoff's
+  "at most one adopter" rule. Every `#fff` in its stylesheet is now a token
+  except the projector view's own dark surface (whose buttons needed an explicit
+  light ink, since `--accent-ink` goes near-black in dark) and the print block.
+  Its QR canvas is a small unplanned win: under the filter it was inverted and
+  counter-inverted, and now it simply renders true.
+
+  *Contrast, checked rather than eyeballed.* Every text pair clears WCAG AA in
+  both themes — ink, muted, accent, accent-2 and err on each of paper, card and
+  card-2, plus accent-ink on an accent fill, plus 001's four status tints. Worst
+  cases are 4.76 (light muted on card-2) and 5.78 (dark). One asymmetry is
+  recorded and not fixed: dark's `--line-strong` clears the 3:1 WCAG 1.4.11 asks
+  of a control border (3.00 on card), light's does not (1.82). **Raising light's
+  is a restyle of 74 shipped pages and belongs in its own phase.**
+
+  *Verified.* `Tools/theme/test/smoke-theme.mjs` (new, `npm run test:theme`,
+  port 8405, 47 assertions) does what this path's Verification note asks for:
+  a static sweep of all 89 live pages for a page carrying a native palette and
+  the invert filter at once, a check that both shared files still carry their
+  gate, then two real pages — 001 (adopted: dark tokens, no filter computed, the
+  hall pass still white with dark ink, print white, OS-follow, explicit choice
+  persisting and beating the OS) and 003 (not adopted: still the filter, its
+  declared colours untouched). Mutation-tested both ways: dropping 001's flag
+  and dropping the gate each turn it red. Also green: all nine guards, lint,
+  `check:precache --base origin/main`, `test:hall-pass`, `test:a11y --only 001`,
+  and a full `npm test`.
+
+  *Not verified.* Nothing here has been seen on a real projector or a
+  Chromebook, and no screenshot pass was run — the path's "screenshot both
+  themes for every migrated tool" belongs with the P3 rollout, when there is
+  more than one migrated tool to screenshot.
+
+  *Found, not fixed — for P4.* `035-schedule-visualizer.html` is a **third**
+  theme owner: it does not load `a11y.js` at all and runs its own four-palette
+  `data-theme` system (`dark`, `green-gold`, `green-gold-dark`). It is not
+  double-darkened, so it is not a bug today, but it means the site has two
+  answers to "who sets `data-theme`". The new suite asserts that no page which
+  *does* load a11y.js also writes the attribute itself, so the situation cannot
+  spread while 035 is decided.
 - **P2 — `_shared/stage.js`.** One fullscreen/projector helper: `Stage.mount(el,
   {controls, hud, hotkeys})` that fullscreens a container, keeps a teacher HUD
   (answer key, next/prev, timer) inside the subtree, exposes a "presentation" body
