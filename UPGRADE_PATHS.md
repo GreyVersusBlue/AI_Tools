@@ -285,13 +285,35 @@ caching of same-origin GETs already works, so an on-demand tier is nearly free.
   (it converges once the group shape is read off the live page) and dropped clicks
   (cutting the settle from 220ms to 30ms still lands all 20 generations).
 
-  **Still red on `main`, and not this phase's:** `exit-ticket-generator/test/
-  smoke-prompt-sets.mjs` failed run #8 with "exited 1 without printing a FAIL line
-  (crashed, or a setup step threw)". It passes 8/8 locally and could not be
-  reproduced here, so it is unfixed and needs its own look — most likely runner
-  side. Two different non-deterministic failures in three consecutive CI runs is
-  the real finding: now that Path 2 P1 runs all 121 suites on every push, suite
-  reliability is a live problem and belongs in a Path 2 phase.
+  **Was red on `main` (run #8), root-caused and fixed 2026-09-02:**
+  `exit-ticket-generator/test/smoke-prompt-sets.mjs` failed with "exited 1
+  without printing a FAIL line (crashed, or a setup step threw)" and passed 8/8
+  locally. The run's own log had the answer a thousand lines above the summary:
+  `route.fetch: read ECONNRESET` on `GET /_shared/ink-paper.css`, thrown inside
+  the harness's CSS-rewriting route handler — an unhandled rejection, which
+  Node exits on before the suite's reporter runs. Mechanism, measured rather
+  than guessed: `harness.serve()` answered keep-alive, Playwright's
+  `route.fetch()` pools its connections on a keep-alive agent that never closes
+  them itself, and Node's http server destroys an idle keep-alive socket about
+  6 s after its last response (`keepAliveTimeout` 5 s plus a second of grace —
+  6006 ms observed). The suite's `page.reload()` landed on that instant: first
+  stylesheet load 19:24:18.4, crash 19:24:24.41. Reproduced deterministically
+  by issuing a request in the same event-loop iteration as the server's idle
+  close (5 of 5 `ECONNRESET` against the old harness, 0 of 5 after the fix).
+  Any suite that re-requests a stylesheet ≥6 s after its last one is exposed —
+  most of the 75 that reload or navigate — but the window is one loop
+  iteration, hence rare and unreproducible by rerunning. Fixed in the harness,
+  not the suite: every response now carries `Connection: close`, so no pooled
+  socket exists to lose the race on; the CSS fetch retries once on a fresh
+  connection; and no route-handler failure can escape as an unhandled
+  rejection — it is recorded on `page.__errs`, where the suite's own "no
+  page/console errors" assertion turns it into a named FAIL. `run-suites.mjs`
+  now repeats the last lines of a crashed suite's stderr under its name in the
+  summary, so the next crash explains itself in the CI tail. Two different
+  non-deterministic failures in three consecutive CI runs remains the finding
+  for Path 2: now that P1 runs all 121 suites on every push, suite reliability
+  is a live problem, and nobody has measured the rate for anything but the
+  pairing-history suite.
 - **P3 — Split the precache into tiers.** Shell tier (index, `_shared/*`, vendor,
   icons, manifest) plus the top ~10 tools by daily use, precached at install.
   Everything else stays in `PRECACHE_URLS` but is fetched by a *second*, deferred
@@ -318,7 +340,8 @@ the readout must exist. Decide the mid-lesson suppression rule in P1.
 ## 2. CI, a real test runner, automated a11y and sweeps
 
 **Status.** P2 shipped (#159), P1 shipped (#160) — in that order; see the P1 note
-for why they swapped. P3–P5 open.
+for why they swapped. P6 (suite reliability, added after CI's first day) shipped
+2026-09-02. P3–P5 open.
 
 **Why.** 120 suites and three guard scripts exist and are designed to be
 sandbox-safe, and nothing runs them unless a session remembers. The `&&` chain
@@ -416,6 +439,77 @@ and have only ever been found by luck.
 - **P5 — Lint.** A minimal ESLint config for `_shared/*.js`, `Tools/*/*.js` and the
   `.mjs` tooling (no-undef, no-unused-vars, eqeqeq) — not for inline `<script>` in
   HTML, which would be a much larger fight.
+- **P6 — Suite reliability.** Added after P1's first day: 121 suites started
+  running on every push and two different ones failed non-deterministically
+  within three runs. Three deliverables — a crashed suite reports why it
+  crashed, a way to measure which suites are non-deterministic and at what
+  rate, and a written policy for property-style assertions over randomised tool
+  behaviour.
+
+  **Shipped 2026-09-02.** (1) `run-suites.mjs` prints the last lines of a
+  crashed suite's stderr under its name in the summary; the first crash it
+  would have explained (`route.fetch: read ECONNRESET`, run #8) was the
+  harness's own keep-alive socket race, root-caused and fixed in `harness.mjs`
+  — see Path 1 P2's note for the mechanism and the deterministic reproduction.
+  (2) `run-suites.mjs --repeat N [--only <tool>]` runs the selection N times
+  back to back and tallies, per suite, which passes it failed in and on which
+  assertion; a suite with different outcomes in different passes is listed as
+  NON-DETERMINISTIC by name, an expected failure that comes and goes is
+  reported as its own bug, and a suite red in every pass is separated out as
+  deterministic. Verified with flaky, green and always-red fixtures. (3) The
+  policy is in `CLAUDE.md` ("Test tooling"): measure the rate against the
+  parameters read off the running page, then raise the budget until the
+  property holds — never loosen the assertion, never seed `Math.random` in a
+  page-driven suite (pure-logic suites that take an rng parameter, like
+  name-picker's, already seed and are deterministic by construction).
+
+  *Inventory.* Reading every suite for assertions that are probabilistic over
+  the tool's own randomness finds one page-driven case — the pairing-history
+  coverage and spread pair (budget raised to 30 rounds in #162, measured
+  complete in 200,000 of 200,000 simulated trials) — and a handful of
+  pure-logic ones in name-picker's suite (first-pick uniformity over 28,000
+  rounds, 9:1 weighting over 20,000 draws), all driven by a seeded rng.
+  Everything else asserts on deterministic DOM state, so the remaining
+  non-determinism to expect is the harness/timing kind, which `--repeat` still
+  catches and which is a bug to root-cause rather than a rate to tolerate.
+
+  *Measured:* five back-to-back full passes of all 121 suites on this
+  container's Chromium (2026-09-02, 17.8–18.1 min each). Passes 1–4 were
+  identical: 120 green, 1 expected-fail. Pass 5 failed three suites, and none
+  of the three was random:
+
+  - `command-center/test/smoke-seating-panel.mjs` and
+    `smoke-remote-commands.mjs` build their bell-schedule fixtures as HH:MM
+    offsets around the real clock. Suite 45 of 121 landed at 23:28 UTC, where
+    a `+40 min` end time wraps past midnight, sorts before its own start, and
+    no period is current. Deterministic given the wall clock — `TZ=UTC` at
+    23:41 reproduced every failure line on demand — invisible at any other time
+    of day, and a real CI hazard: a push at 23:30 UTC is 4:30 pm Pacific. Fixed
+    by pinning the page's clock to 10:00 today (`page.clock.setFixedTime`,
+    timers keep running) and deriving every fixture time from that instant;
+    verified green under `TZ=UTC` inside the failing window, `Etc/GMT+1` and
+    `Asia/Kathmandu`.
+  - `qr-scavenger-hunt-builder/test/smoke-paper-mode.mjs`: "regenerating
+    Library's code word changed it (was MERIDIAN, now MERIDIAN)" — the same
+    assertion CI run #6 failed with HOLLOW. That one is the tool, not the
+    test: 018's regenerate handler removed the station's own word from the
+    exclusion list before drawing, so a four-station hunt got the same word
+    back 1 time in 27 and the button looked dead. Fixed in 018 (the current
+    word stays excluded; only a hunt using all 30 words falls through to
+    STATIONn), `CACHE_VERSION` v134 → v135. Measured by clicking regenerate 200
+    times on a three-station hunt: 7 unchanged on the previous tool, 0 on this
+    one; `--repeat 30 --only smoke-paper-mode` 30/30 green. (A first 20-pass
+    run showed one failure while a separate check had the tool file stashed
+    mid-run — the same "never two things on one suite at once" rule, in a new
+    shape; the clean run is the number.)
+
+  So the five-pass number is: 121 suites, 605 suite-runs, 3 failures, all
+  three root-caused and fixed, none by loosening an assertion. Two were
+  clock-of-day, which `--repeat` only finds if a pass happens to straddle the
+  window; the policy in `CLAUDE.md` now names that kind. Five passes bound the
+  random-flake rate at roughly "no worse than 1 in 5 per suite", which would
+  not catch a 1-in-362 flake like pairing-history's; a suspect suite gets a
+  high-N single-tool run (`--repeat 20 --only <tool>`, ~10 min).
 
 **Model.** Opus throughout.
 

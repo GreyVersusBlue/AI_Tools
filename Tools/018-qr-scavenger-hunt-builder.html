@@ -730,9 +730,12 @@
     var recodeStationBtn = e.target.closest('[data-recode-station]');
     if (recodeStationBtn) {
       var rsi = parseInt(recodeStationBtn.dataset.recodeStation, 10);
+      // The station's own current word stays in the exclusion list on purpose:
+      // this button promises a *new* word, and drawing from a pool that still
+      // contains the old one hands the same word back about 1 time in 28 on a
+      // three-station hunt — to a teacher, a button that did nothing. Only a
+      // hunt that has used all 30 words falls through to STATIONn here.
       var usedWords = state.stations.map(function (s) { return s.codeWord; }).filter(Boolean);
-      var wi = usedWords.indexOf(state.stations[rsi].codeWord);
-      if (wi !== -1) usedWords.splice(wi, 1);
       state.stations[rsi].codeWord = generateCodeWord(usedWords);
       renderRows();
       save();

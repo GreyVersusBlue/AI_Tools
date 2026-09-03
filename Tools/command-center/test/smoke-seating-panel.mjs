@@ -35,6 +35,17 @@ const server = await serve(PORT);
 const browser = await launch();
 const page = await prepPage(browser, BASE, { width: 1400, height: 1100 });
 
+/* The page's clock is pinned to 10:00 today. The bell-schedule fixture below is
+   built as HH:MM offsets around "now", and HH:MM cannot express a period that
+   crosses midnight: run this suite after 23:20 local and Period 2's end wraps
+   to 00:xx, sorts before its start, and no period is current. That is exactly
+   what happened in pass 5 of the first five-pass measurement (suite 45 of 121
+   landed at 23:28 UTC) and it reproduces on demand with TZ=UTC at 23:41.
+   Pinning the page's Date (timers keep running) makes "now" a real mid-morning
+   moment on every run, which is the case the panel exists for anyway. */
+const NOW = new Date(); NOW.setHours(10, 0, 0, 0);
+await page.clock.setFixedTime(NOW);
+
 console.log('Command Center — seating chart panel');
 
 /* Two sections, because picking the right one is most of the feature. The
@@ -73,9 +84,9 @@ const CHART = {
   ],
 };
 
-/* The bell schedule is built around whatever time this test actually runs at,
-   so "the period you are standing in front of" is a real answer and not a
-   fixture that goes stale at 3pm. Period 2 is now; period 1 is behind us. */
+/* The bell schedule is built around the page's (pinned) "now", so "the period
+   you are standing in front of" is a real answer and not a fixture that goes
+   stale at 3pm. Period 2 is now; period 1 is behind us. */
 const seed = async (extraSettings = {}) => {
   await page.evaluate(([chart, settingsKey, seatingKey, extra]) => {
     const now = new Date();

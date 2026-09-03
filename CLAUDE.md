@@ -128,6 +128,43 @@ files must be added there too.
   every expected failure on every run, still goes red if the same suite fails a
   *second* way, and goes red if an expected failure starts passing, so the entry
   cannot outlive the bug.
+- **A suite that fails sometimes is a measurement problem before it is a fix.**
+  `node Tools/board-check/run-suites.mjs --repeat N [--only <tool>]` runs the
+  selection N times back to back and names every suite whose outcome differed
+  between passes, with the assertion. Then decide by kind:
+  - A *property assertion over randomised tool behaviour* (every pair shares a
+    group at least once; the spread stays under a bound) fails at some real
+    rate. Measure that rate against the parameters read off the *running page*
+    (the pairing-history flake was misdiagnosed once by simulating the wrong
+    group shape), then **raise the budget** (rounds, draws, samples) until the
+    property is deterministic in practice. Never loosen the assertion — that
+    deletes the test. Don't seed `Math.random` in a page-driven suite either:
+    it turns a property test into a single-path test. Pure-logic suites that
+    take an rng as a parameter (name-picker's) may and do seed.
+  - A *crash* (exit 1, no FAIL line — the runner now prints the suite's last
+    stderr lines under its name) or a *timing race* is a harness or tool bug to
+    root-cause; a re-run is not a diagnosis. The 2026-09-02 `ECONNRESET` crash
+    was the harness's keep-alive socket race, fixed in `harness.mjs`.
+  - A *fixture built around the real clock* (a bell schedule as HH:MM offsets
+    from "now") is deterministic given the time of day and fails only in a
+    window nobody tests in — both command-center suites failed after 23:20
+    local, when a `+40 min` end time wraps past midnight. `--repeat` cannot
+    find this one; run the suite under a `TZ` that puts local time in the
+    window (`TZ=UTC` at 23:41 reproduced both). Fix it by pinning the page's
+    clock (`page.clock.setFixedTime`) and deriving every fixture time from that
+    same instant, never by widening the offsets.
+  - When the failing property is one a *teacher* would notice — "new code
+    word" handing back the same word 1 time in 28 — the fix is in the tool,
+    with a `CACHE_VERSION` bump, not in the test.
+- **Environment notes that have cost sessions time.** Suites bind fixed
+  localhost ports, so never run two copies of a suite at once — a collision
+  reports failures that are not real; if a suite exits 1 with no FAIL line,
+  check for a leftover `node`/`chrome` process before believing it. If
+  `npx playwright install chromium` can't reach its download host, run browser
+  suites with `PW_CHROMIUM_EXECUTABLE=<path to a chrome binary>`; that browser
+  may be older than the pinned Playwright's, and that difference has caught real
+  bugs both ways, so CI is the authority. A full `npm test` is ~20 minutes; run
+  it in the background.
 - `Tools/board-check/harness.mjs` is the shared browser-test harness
   (static server, Playwright launch, offsite-request blocking). It was
   written from scratch in Round 1c — the original board-check folder was
