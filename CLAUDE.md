@@ -259,6 +259,28 @@ files must be added there too.
   button; `CACHE_VERSION` v136), the assertion was not touched, and
   `suites.json`'s `expectedFailures` is empty again. Keep it that way.
 
+## Handoffs — start and end every phase here
+
+- **`HANDOFF_NEXT.md` is the entry point.** Read `CLAUDE.md` first and that
+  second, before the path section you are about to work. It carries the current
+  state, what to start, and any live blocker. The dated `HANDOFF_STAGE_2_A*.md`
+  files are history — read one only for the detail behind a claim.
+- **A phase is not done until you have rewritten `HANDOFF_NEXT.md`,** after your
+  PR is merged and the merge is confirmed — not before, so it records what
+  landed rather than what you hoped would. Replace its contents with the state
+  you are handing over: your phase marked shipped with its `CACHE_VERSION`,
+  refreshed numbers, what the next session should start, and anything you found
+  or got wrong. Commit and merge that too.
+- **Write down what did not work.** The most valuable line in any of these
+  documents has consistently been the one recording a tool that was never
+  committed, a number that was 3× too high, or a check that would have passed on
+  a broken page. State what you did not verify, too. A handoff that only lists
+  wins hands the next session your mistakes instead of your knowledge.
+- **Do not let a handoff cite something the repo does not contain.** This has
+  happened three times (`sync-social-tags.mjs`, the original `board-check`
+  folder, `list-dark-candidates.mjs` — the last one with its output quoted as
+  fact). If you name a command, run it once before you write it down.
+
 ## Other guardrails
 
 - Social/OG meta blocks in tool HTML (marked `gvb:social:start`) claim to be
