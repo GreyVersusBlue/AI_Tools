@@ -9,11 +9,44 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## Stage 2 — the platform foundation (2026-09-03, in progress)
+## Stage 2 — the platform foundation (2026-09-03 → 2026-09-04, in progress)
 
-Two of the fourteen planned phases have shipped. The plan itself — four `_shared/`
+Four of the fourteen planned phases have shipped. The plan itself — four `_shared/`
 services in dependency order, so that the tool paths become adoption rounds rather than
 invention — survives as the ordering of `BACKLOG.md`'s first ten ranks.
+
+**Path 4 P1 — `_shared/store.js`, the storage primitive. #173, `CACHE_VERSION` v142.**
+The site had ~234 distinct localStorage key literals across 86 tools, each hand-rolling
+the same three guards and getting them subtly different. `store.js` is `window.Store`:
+a `{v, data}` envelope, a `migrate(fromV, data)` hook, `onChange` that fires in the tab
+that wrote (the `storage` event never does, which is why all six hand-rolled listeners
+missed their own writes), `estimate()`, and a write that can never fail silently.
+*The migration contract is the deliverable*, and it is in the file header rather than
+inferred from the code: an object with a numeric `v` **and** an own `data` property is an
+envelope; anything else on disk is legacy at version 0, except a payload with a numeric
+`__v`, which is an `assets/js/gvb-save.js` save read at its own version so the two modules
+can share a key; a refusal returns the caller's default and **leaves the payload on disk**
+rather than destroying data it cannot read; and no key is ever renamed, so there is no flag
+day. Quota is detected with all four spellings browsers use — `035` had two *non-identical*
+predicates in two places, neither checking both. `configure({onQuota})` re-renders the
+message in a tool's own style and a handler that throws still falls back to the banner:
+there is deliberately no way to suppress it. One adopter, 019, whose silent-catch
+`loadStore`/`saveStore` is the same idiom in 017 and 001. Its student-facing `lock.html`
+was left alone on purpose — "open Backup & Restore" is teacher advice, and that page runs
+on a student's device.
+
+**Path 4 P2 — `_shared/tool-registry.js` + `check-registry.mjs`. #174, `CACHE_VERSION` v143.**
+87 rows covering 217 keys and 32 prefixes across 107 files, replacing 009's `KNOWN_GROUPS`
+(76 rows) and `STUDENT_KEYS`/`STUDENT_PREFIXES`. **Thirty-eight tools had no label at all**
+and were appearing in teachers' backups as unnamed "Other saved data" — which also meant
+they were classified as settings and survived the end-of-year clear. 009 and 010 read it;
+010's five hardcoded tool filenames became `ToolRegistry.href()`, one of which had an
+unencoded space the other four had escaped. 009's IndexedDB scan now enumerates
+registry-declared databases instead of `indexedDB.databases()`, which **Firefox has never
+implemented** and where the page used to give up entirely and leave a teacher's whole
+IndexedDB out of every backup; `rgb-audio` and `stviz-recovery` are labelled for the first
+time. The guard and the extractor are one script on purpose, given this repo's history of
+documenting commands that were never committed.
 
 **Wave A1 — Path 5 P1, the theme architecture decision. #167, `CACHE_VERSION` v139.**
 `a11y.js` is now the only thing on the site that reads or writes theme state or sets
@@ -220,6 +253,43 @@ The most valuable paragraphs in the retired documents. Every one of these cost a
   `--repeat` cannot find that one. And when the failing property is one a *teacher* would
   notice — "new code word" handing back the same word 1 time in 28 — the fix is in the
   tool.
+- **A guard can be green because it cannot see the thing it is guarding.**
+  `check-registry.mjs`'s first draft resolved localStorage call sites and looked
+  complete: 203 keys, no unresolved sites. It was wrong four ways, and every one was
+  found by *disagreeing with 009's old list*, never by reading the code. A tool that
+  wraps localStorage in its own `readJson`/`writeJson` hides every key behind a
+  parameter (006, and its three `crh_*` keys are all student data). `gvb-save.js`'s
+  `createSaveSlot({key})` hid all fourteen Name Picker keys and made `np_rosters` look
+  as though only 006 wrote it. A folder attributed to the first page that mentions it
+  gave `name-picker/` to 006, which links there once, instead of to 007, which *is* the
+  Name Picker. And `Store.get/set/remove` had to be followed, or every tool adopting
+  `store.js` would have dropped out of the guard silently as adoption spread — the exact
+  failure the guard exists to prevent, arriving through the front door. **Cross-check a
+  new measurement against the stale thing it replaces; the disagreements are the
+  findings.**
+- **The same rule then invented a key that does not exist.** Reading `key:` alone made
+  `np_bundle` a fifteenth Name Picker localStorage key; it is an export-only slot on a
+  memory stub — "given a memory stub so it can never become a real key". A claim about
+  it had already been written into 009's comment and the guard's header before the
+  source was read. Both were corrected. An extractor over-reporting is as wrong as one
+  under-reporting, and much easier to believe.
+- **A browser test can pass while the feature is broken.** The first
+  `smoke-quota-banner.mjs` filled localStorage with 512 KB chunks until one threw, then
+  asserted the banner. It passed — because the first big write to fail still leaves room
+  for a small one, and because overwriting an existing key with something no larger fits
+  on a full disk. It now steps the chunk size down to one character and adds a station
+  through the tool's own button, so the payload has to *grow*.
+- **Two tools already have a private object called `Store`** (028 and 039, each with its
+  own save/load/remove over a data prefix). They must rename before they can adopt
+  `_shared/store.js`. Worth knowing before Path 4 P4 reaches them.
+- **009's `gvb-command-center:excluded:` student-data rule could never have fired.**
+  010 keeps that in `sessionStorage`, which dies with the tab and no backup has ever
+  contained. It is the single classification difference between the old lists and the
+  registry, and the registry suite asserts it stays the only one.
+- **"Backups complete by construction" was the wrong claim.** BACKLOG said Path 4 P2
+  would make backups complete; 009's own comment says it "backs up every localStorage key
+  regardless". What was incomplete was the labelling, the student/settings split, and
+  IndexedDB. Corrected rather than repeated.
 - **Claims in these documents rot quietly.** `IDEAS_BACKLOG.md` insisted `index.html`
   carried "coming soon" rows that must be kept in sync; the convention had been retired and
   there were none. The platform themes were written when the site had 46 tools and still

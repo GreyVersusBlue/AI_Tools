@@ -11,49 +11,71 @@ summarised on the way in.
 
 ## Where things stand — start here
 
-*Current as of `main` after PR #171, 2026-09-03. Rewrite this header when your phase
-merges — that is step 7 of the definition of done, and it is not optional.*
+*Current as of `main` after PR #174, 2026-09-04. Rewrite this header when your phase
+merges — that is step 6 of the definition of done, and it is not optional.*
 
-**Last shipped.** Stage 2 Wave A2, the accessibility label round (#168,
-`CACHE_VERSION` v140). Before it, Wave A1, the theme architecture decision (#167,
-v139), and Path 14 P1, the Seating Chart phone toolbar (#164, v136), which turned the
-site's one known-red assertion green.
+**Last shipped.** Path 4 P1 and P2 — the storage primitive and the tool registry, the
+first two rows of the Stage 2 dependency spine (#173 `CACHE_VERSION` v142, #174 v143).
+Before them, Stage 2 Wave A2, the accessibility label round (#168, v140), and Wave A1,
+the theme architecture decision (#167, v139).
 
-**Numbers, all re-verified against the tree on 2026-09-03:**
+**Numbers, all re-verified against the tree on 2026-09-04:**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v141` (v140 → v141 in #171: consolidating the planning docs changed six precached pages) |
-| Precache entries | 249 in `PRECACHE_URLS`, 77 of them in the `SHELL_URLS` install tier |
-| Suites | **125** in `Tools/board-check/suites.json`, green, ~20 min; `expectedFailures` **empty** |
+| `CACHE_VERSION` | `v143` (v141 → v142 in #173 for `store.js`, → v143 in #174 for `tool-registry.js`) |
+| Precache entries | 251 in `PRECACHE_URLS`, 79 of them in the `SHELL_URLS` install tier |
+| Suites | **128** in `Tools/board-check/suites.json`, green, ~19 min; `expectedFailures` **empty** |
 | Accessibility allowlist | **22 page-rule pairs on 22 pages** — 21 `color-contrast`, 1 `aria-required-children` (034) |
-| Shared-file adoption (of 86) | `a11y.js` 77 · `ink-paper.css` 71 · `base.css` 68 · `print-area.css` 20 · `state-link.js` 17 · `qr-scan.js` 10 · `webrtc-pair.js` 7 · `theme.css` 5 · `duplex-print.js` 1 · `student-details.js` 1 |
+| Tool registry | 87 rows, **217 keys and 32 prefixes across 107 files**; `check:registry` green, `dynamic` empty everywhere |
+| Shared-file adoption (of 86) | `a11y.js` 77 · `ink-paper.css` 71 · `base.css` 68 · `print-area.css` 20 · `state-link.js` 17 · `qr-scan.js` 10 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · `duplex-print.js` 1 · `student-details.js` 1 · **`store.js` 1** |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087**. 81 of them have recorded open ideas |
 | Lint | clean |
 
-**Start here: rank 1, `_shared/store.js` (Path 4 P1).** It has been the critical path
-since the Stage 2 plan was written and neither shipped phase moved it. Nothing blocks
-it. The whole decision is the migration contract — how unversioned legacy payloads are
-read without a flag day. If you do not have a session for that, ranks 11–14 are the
-cheap, unblocked, overdue ones.
+**Start here: rank 1, `_shared/roster.js` (Path 3 P1).** Its blocker is gone — it is built
+*on* `store.js`, which now exists, so the roster service can use the envelope and the
+migrate hook rather than inventing them. Devon's two roster decisions are already made and
+recorded below (staff rosters take a `Staff —` prefix, not a forked store; skill/level
+values stay tool-local). If you do not have a session for that, ranks 9–12 are the cheap,
+unblocked, overdue ones.
+
+**What P1 and P2 leave for whoever picks up Path 4 next.**
+
+- **`store.js` has exactly one adopter (019).** Adopting it is now the cheapest real win
+  on the site, and the second and third eras — a `{v:1}` payload (063) and a hand-rolled
+  probe/migrate module (`Tools/school-calendar/scv-store.js`) — are rank 13, split out
+  when the definition of done's "at most one adopter" won over Path 4 P1's "three tools in
+  the same PR". Every adoption must pass a `migrate`, even an identity one, or the tool
+  will not see the data already on disk.
+- **028 and 039 each define a private object called `Store`.** They must rename theirs
+  before they can adopt `_shared/store.js`. `check-registry.mjs` skips them for this
+  reason and says so.
+- **`assets/js/gvb-save.js` still swallows quota errors** — `save()` returns a bare
+  `false` — and still lives outside `_shared/`, under 005, 007 and 064. That is rank 14.
+  `store.js` reads its `__v` format, so the two interoperate; nothing is forced.
+- **The registry is hand-maintained, guarded by a script**, exactly like `PRECACHE_URLS`
+  and `sw.js`. `npm run check:registry` fails on any key the tree writes that no row
+  declares; `--json` prints the extraction, which is how a new row gets seeded.
 
 **The dependency spine, which is why the top of the list is ordered the way it is:**
 
 ```
-Path 4 P1 storage ──► Path 4 P2 registry ──► Path 6 P4 "Send to…"
-   │                        │
-   ▼                        ▼
-Path 3 P1 roster ──► Path 3 P4 identity      Path 4 P3 media store ──► Path 3 P5 photos
-                                                                       Path 14 P2 photos
+Path 4 P1 storage (shipped) ──► Path 4 P2 registry (shipped) ──► Path 6 P4 "Send to…"
+   │                                  │
+   ▼                                  ▼
+Path 3 P1 roster ──► Path 3 P4 identity    Path 4 P3 media store ──► Path 3 P5 photos
+                                                                     Path 14 P2 photos
 
 Path 5 P1 theme (shipped) ──► Path 5 P2 stage ──► Path 5 P3 rollout   (independent)
 Path 6 P1 share sheet     ──► Path 6 P2 adopt  ──► Path 6 P3 extend    (independent until P4)
 ```
 
 The roster service is built **on** the storage primitive, not before it, or it is the
-first thing that has to migrate. "Send to…" needs the registry, or every handoff is
-another ad-hoc key read — the debt it exists to remove.
+first thing that has to migrate — and the primitive now exists, so rank 1 is unblocked.
+"Send to…" needs the registry, or every handoff is another ad-hoc key read — the debt it
+exists to remove; the registry now exists too, and already records which tool owns each
+key and which tools only read it.
 
 ### Decisions Devon still owes
 
@@ -61,17 +83,16 @@ Ranked work is blocked on these; the recommendation column is the previous sessi
 
 | Needed by | Decision | Recommendation |
 |---|---|---|
-| Rank 1 (Path 4 P1) | May a quota error ever be silent? | **Never.** Visible, names the tool, points at Backup & Restore. |
-| Rank 3 (Path 3 P1) | Staff rosters (058, 075): same namespace, or a `Staff —` prefix? | Prefix. Do not fork the store. |
-| Rank 3 (Path 3 P1) | Do skill/level values (002's balancing) go on the shared student record? | **No.** The platform themes call it the most sensitive thing the site would store; keep it tool-local. |
-| Rank 5 (Path 6 P1) | Link payload policy for images. | Strip by policy, say so in the sheet, offer the `.json` download. |
+| Rank 1 (Path 3 P1) | Staff rosters (058, 075): same namespace, or a `Staff —` prefix? | Prefix. Do not fork the store. |
+| Rank 1 (Path 3 P1) | Do skill/level values (002's balancing) go on the shared student record? | **No.** The platform themes call it the most sensitive thing the site would store; keep it tool-local. |
+| Rank 3 (Path 6 P1) | Link payload policy for images. | Strip by policy, say so in the sheet, offer the `.json` download. |
 | Rank 15 / 27 | 035's private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception? | Bless and document, unless Path 5 P4 is opening 035 anyway. Adopting is a re-skin of a 5,500-line tool. |
 | Rank 15 | Rebuild `list-dark-candidates.mjs`, or measure inline? | Rebuild and commit it. This backlog gets re-measured by every session that touches it. |
 | Rank 25 | Contrast round before or after Path 5 P3? | **After.** P3 re-tokenizes the same literals; doing contrast first is twice the work and a conflict in every file. |
 | Path 8 | Is a paired *student* device ever in scope? | No. Teacher-device-only. |
 | Path 17 P5 | Is an on-demand, non-precached Tesseract download acceptable under the offline promise? | Undecided. Decide before any OCR code. |
 | Any time | Should CI also run `offline:build` + `offline:verify`? | Yes, on `main` only, not on pull requests. |
-| Any time | Is `check:docs-commands` (rank 12) worth thirty lines? | Yes. Third occurrence. |
+| Any time | Is `check:docs-commands` (rank 10) worth thirty lines? | Yes. Third occurrence. |
 
 ### Live blockers and corrections carried forward
 
@@ -116,10 +137,12 @@ concurrency mechanism described above — leave it empty unless you are working 
 **Detail** links to the section in Tier 2 that carries the idea in full.
 
 **How this order was arrived at, so you can argue with it.** It is the order the sources
-already implied, not a re-ranking. Ranks **1–10** are the Stage 2 dependency chain: storage
-before roster, registry before "Send to…", exactly as the plan drew it. **11–15** are the
-cheap, unblocked, overdue items the last two handoffs kept naming. **16–27** are the Stage 2
-rollouts and the two corrections they unblock. **28–105** are the remaining platform and
+already implied, not a re-ranking. Ranks **1–8** are what is left of the Stage 2 dependency
+chain now that storage and the registry have shipped out of it: roster before identity,
+share before "Send to…", exactly as the plan drew it. **9–14** are the cheap, unblocked,
+overdue items the last two handoffs kept naming, plus the two follow-ups Path 4 P1 and P2
+left behind (13 and 14). **15–27** are the Stage 2 rollouts and the two corrections they
+unblock. **28–105** are the remaining platform and
 cross-tool paths in the path survey's own leverage ranking, phase by phase. **106–110** are
 the platform swings no path covers. **111–149** are the 39 per-tool enhancement rows from the
 retired ranked table, in their existing rank order, unchanged. **150–191** are the other 42
@@ -133,20 +156,20 @@ that is a re-rank, and it is yours to make, not a session's.
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 4 P1 — `_shared/store.js`: versioned envelope, migrate hook, visible quota errors, `onChange` | `_shared/` | 1 | `v2i47l` 2026-09-04 05:34 UTC | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 2 | Path 4 P2 — `_shared/tool-registry.js` + `check-registry.mjs`; 009 and 010 read it | `_shared/` | 1 | `v2i47l` 2026-09-04 05:34 UTC | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 3 | Path 3 P1 — `_shared/roster.js` + the identity layer (`getStudents`, `resolve`, `matchName`) | `_shared/` | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 4 | Path 3 P2 — rename, merge and roster diff in 006; bulk CSV/XLSX import | 006 | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 5 | Path 6 P1 — `_shared/share.js` + `qr-draw.js`: one share sheet, measured QR budget | `_shared/` | 1 | | [Path 6](#path-6--share-everywhere) |
-| 6 | Path 5 P2 — `_shared/stage.js`: one fullscreen/projector helper; adopt in 023, 024, 025, 021 | `_shared/` | 1 | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
-| 7 | Path 4 P3 — `_shared/media-db.js` + shared `downscaleImage`; register the database in 009 | `_shared/` | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 8 | Path 14 P2 — `_shared/seating-read.js`: one reader of `seating-chart-v1` for 010, 008, 045 | `_shared/` | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
-| 9 | Path 3 P3 — picker adoption: wire the 8 unwired tools, migrate ~20 copy-pasted pickers | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 10 | Path 3 P4 — identity adoption in the history-keeping tools (008 first, then 001, 002, 022, 027, 033, 068, 013) | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 11 | Live-site checks Stage 1 could not do: the two-deploy update test and an OS share-target run. **Devon only.** | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 12 | `check:docs-commands` — fail when a tracked `.md` cites an `npm run <x>` `package.json` does not define | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 13 | 034 `aria-required-children` — the last non-contrast accessibility allowance | 034 | ¼ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
-| 14 | Move the vendored jsPDF and SheetJS out of `SHELL_URLS` — no shell tool uses them; ~1.3 MB off the install | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 1 | Path 3 P1 — `_shared/roster.js` + the identity layer (`getStudents`, `resolve`, `matchName`) | `_shared/` | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 2 | Path 3 P2 — rename, merge and roster diff in 006; bulk CSV/XLSX import | 006 | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 3 | Path 6 P1 — `_shared/share.js` + `qr-draw.js`: one share sheet, measured QR budget | `_shared/` | 1 | | [Path 6](#path-6--share-everywhere) |
+| 4 | Path 5 P2 — `_shared/stage.js`: one fullscreen/projector helper; adopt in 023, 024, 025, 021 | `_shared/` | 1 | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
+| 5 | Path 4 P3 — `_shared/media-db.js` + shared `downscaleImage`; register the database in 009 | `_shared/` | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 6 | Path 14 P2 — `_shared/seating-read.js`: one reader of `seating-chart-v1` for 010, 008, 045 | `_shared/` | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
+| 7 | Path 3 P3 — picker adoption: wire the 8 unwired tools, migrate ~20 copy-pasted pickers | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 8 | Path 3 P4 — identity adoption in the history-keeping tools (008 first, then 001, 002, 022, 027, 033, 068, 013) | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 9 | Live-site checks Stage 1 could not do: the two-deploy update test and an OS share-target run. **Devon only.** | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 10 | `check:docs-commands` — fail when a tracked `.md` cites an `npm run <x>` `package.json` does not define | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 11 | 034 `aria-required-children` — the last non-contrast accessibility allowance | 034 | ¼ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
+| 12 | Move the vendored jsPDF and SheetJS out of `SHELL_URLS` — no shell tool uses them; ~1.3 MB off the install | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 13 | Adopt `_shared/store.js` in the other two storage eras — 063 (a `{v:1}` payload) and `Tools/school-calendar/scv-store.js` (probe + migrate) | site | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 14 | `assets/js/gvb-save.js`: its `save()` swallows quota errors, and it is shared code outside `_shared/`. Consumers 005, 007, 064 | site | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 15 | Rebuild and commit `list-dark-candidates.mjs` (`npm run path5:next`) before Path 5 P3 quotes a number | site | ½ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 16 | Path 5 P3 — native dark + `stage.js` across the projector tools, batches of ~6 | site | 2+ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 17 | Path 5 P4 — landing page and hallway tools; 034 gets a native dark palette | site | 1 | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
@@ -782,7 +805,10 @@ would store.
 
 ### Path 4 — Storage primitive, tool registry, media store
 
-**Why.** ~206 localStorage keys across 69 tools, each hand-rolling parse guards and
+**Why.** *(Measured properly while shipping P2: **217 keys and 32 prefixes across 107
+files**, not the ~206/69 estimate below — a call-site scan alone undercounts, because
+some tools wrap localStorage in their own helper.)* ~206 localStorage keys across 69
+tools, each hand-rolling parse guards and
 (in ~17 cases) quota handling; three key-naming eras; a `"v":1` convention with no
 migration mechanism. Backup & Restore's `KNOWN_GROUPS`/`STUDENT_KEYS` and Command
 Center's panel readers are hand-maintained registries that go stale silently —
@@ -791,31 +817,42 @@ four tools' keys have already been found missing from backups after the fact
 the ~5 MB ceiling (005, 015, 019, 028, 041, 042, 056, 071, 080); `bmg-map-cache.js`
 is the IndexedDB pattern everyone cites and nobody has extracted.
 
+**Status.** P1 shipped 2026-09-04 (#173, `CACHE_VERSION` v142) and P2 the same day
+(#174, v143). P3–P5 open. What actually landed, and what both phases got wrong on the
+way, is in `HISTORY.md`.
+
 **Phases.**
 
-- **P1 — `_shared/store.js` (Fable).** IIFE, `window.Store`: `get(key, {default,
+- **P1 — `_shared/store.js`. Shipped #173.** IIFE, `window.Store`: `get(key, {default,
   migrate})`, `set(key, value)` with `QuotaExceededError` surfaced as a visible,
   explanatory message (never silent), `remove`, `onChange(key, fn)` wrapping the
   `storage` event plus a same-tab `CustomEvent`, `estimate()` via
   `navigator.storage.estimate()` where available, and a versioned envelope
   (`{v, data}`) with a `migrate(fromV, data)` hook. Adopt in 3 tools of different
-  eras in the same PR to prove the shape. **No renames of existing keys.** *Fable
-  for the migration contract and for deciding how legacy unversioned payloads are
-  read without a flag day.*
-- **P2 — `_shared/tool-registry.js`.** One data file: `{slug, title, file,
+  eras in the same PR to prove the shape. **No renames of existing keys.** *The
+  migration contract, and how legacy unversioned payloads are read without a flag
+  day, is stated in the file's own header.* **What shipped differs in one way:** one
+  adopter, not three, because the definition of done's "at most one adopter" won;
+  the other two eras are rank 13.
+- **P2 — `_shared/tool-registry.js`. Shipped #174.** One data file: `{slug, title, file,
   localStorageKeys|prefixes, idbDatabases, studentData: bool, category}` for all 86
   tools. Consumers: 009 (replaces `KNOWN_GROUPS`, `STUDENT_KEYS`, `IDB_NOTES`), 010
   (panel sources), Path 10's Packet Builder, and a new `check-registry.mjs` that
   greps each tool for its declared keys and fails when a tool writes a key the
-  registry doesn't know. This is the single change that makes backups complete by
-  construction.
+  registry doesn't know. **Correction, made while shipping it:** this does *not* make
+  backups "complete by construction" — 009 always backed up every localStorage key
+  regardless, and says so in its own comment. What was incomplete was the labelling
+  (38 tools showed as unnamed "Other saved data"), the student/settings split that
+  drives the year-end clear, and IndexedDB. The record shape also had to change:
+  `studentData` is per **key**, not per tool, and ownership is decided by who *writes*.
 - **P3 — `_shared/media-db.js`.** Extract `bmg-map-cache.js` into a generic
   IndexedDB blob store (`put(id, blob, meta)`, `get`, `list`, `remove`, `usage()`),
   plus a shared `downscaleImage(file, {maxDim, quality})` lifted from the three
   near-identical copies (timeline-builder, seating-chart, 028). Register the
-  database in the registry so 009 backs it up; make 009's IndexedDB path work on
-  Firefox by enumerating registry-declared databases instead of
-  `indexedDB.databases()`.
+  database in the registry so 009 backs it up. *(The Firefox half of this — 009
+  enumerating registry-declared databases instead of `indexedDB.databases()` — was
+  taken in P2, because it fell out of the registry for free. All three existing
+  databases are declared and labelled.)*
 - **P4 — Migrate the image-bearing tools** to `media-db.js`, one or two per PR,
   keeping JSON export portable (export inlines blobs as data URLs on the way out;
   import rehydrates). Order by risk: 005 photos, 019 station images, 056/028 source
@@ -827,7 +864,7 @@ is the IndexedDB pattern everyone cites and nobody has extracted.
   `index.html`; an optional passphrase-encrypted backup (WebCrypto, local) — the
   files contain student names.
 
-**Model.** Fable for P1; Opus for the rest.
+**Model.** Opus.
 
 **Verification.** `test:backup` green; a seeded profile with every registered key
 round-trips through export → clear → import byte-identically; a full-quota
