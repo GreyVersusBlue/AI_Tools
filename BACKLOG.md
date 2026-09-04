@@ -242,8 +242,8 @@ that is a re-rank, and it is yours to make, not a session's.
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 4 P3 — `_shared/media-db.js` + shared `downscaleImage`; register the database in 009 | `_shared/` | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 2 | Path 14 P2 — `_shared/seating-read.js`: one reader of `seating-chart-v1` for 010, 008, 045 | `_shared/` | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
+| 1 | Path 4 P3 — `_shared/media-db.js` + shared `downscaleImage`; register the database in 009 | `_shared/` | 1 | `fpfz48` 2026-09-04 15:01 UTC | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 2 | Path 14 P2 — `_shared/seating-read.js`: one reader of `seating-chart-v1` for 010, 008, 045 | `_shared/` | 1 | `fpfz48` 2026-09-04 15:01 UTC | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 3 | Path 3 P3 — picker adoption: wire the 8 unwired tools, migrate ~20 copy-pasted pickers | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P4 — identity adoption in the history-keeping tools (008 first, then 001, 002, 022, 027, 033, 068, 013) | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Live-site checks Stage 1 could not do: the two-deploy update test and an OS share-target run. **Devon only.** | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
