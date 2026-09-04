@@ -26,8 +26,8 @@
      tool follow a student through a rename instead of orphaning their points.
      Read-only, and absent for any teacher who has never opened Class Roster
      Hub — everything below degrades to plain names. */
-  import { loadDetails, lookupDetail, loadIds, lookupId, normalize } from '../_shared/student-details.js';
-  window.StudentDetails = { loadDetails, lookupDetail, loadIds, lookupId, normalize };
+  import { loadDetails, lookupDetail, normalize } from '../_shared/student-details.js';
+  window.StudentDetails = { loadDetails, lookupDetail, normalize };
   window.dispatchEvent(new Event('student-details-ready'));
 
   /* Read-only bridge to Seating Chart Generator's saved room layout
@@ -560,14 +560,18 @@
      Both are best-effort. A teacher who has never opened Class Roster Hub has
      no sidecar, every lookup returns null, and this tool behaves exactly as it
      did before. ─────────────────────────────────────────────────────────── */
-  var detailsCache = null, idsCache = null;
+  /* Only the DISPLAY half is read through student-details.js now — the
+     preferred name and the pronunciation. The id half moved to
+     _shared/roster.js's trackRenames() in Path 3 P4, so this no longer keeps an
+     id cache of its own; the two modules read the same sidecar and agree about
+     which roster to check first, which is why the port was safe. */
+  var detailsCache = null;
 
   function refreshSharedRecord() {
-    if (!window.StudentDetails) { detailsCache = null; idsCache = null; return; }
+    if (!window.StudentDetails) { detailsCache = null; return; }
     try {
       detailsCache = window.StudentDetails.loadDetails(localStorage);
-      idsCache = window.StudentDetails.loadIds(localStorage);
-    } catch (e) { detailsCache = null; idsCache = null; }
+    } catch (e) { detailsCache = null; }
   }
 
   function detailFor(name) {
@@ -595,20 +599,18 @@
    * behaviour records is not something to do without being asked.
    */
   function followRenames() {
-    if (!idsCache || !state) return 0;
-    var names = parseNames();
+    if (!state) return 0;
+    /* The id bookkeeping — which stable id had which name last time, and which
+       of those changes is really a rename — is _shared/roster.js's now (Path 3
+       P4). This tool keeps the half only it can do: what a rename means to a
+       student's points, goals, log and archived days. The other seven
+       history-keeping tools adopt the same helper and each answer that half
+       their own way. */
+    var tracked = Roster.trackRenames(state.rosterName, parseNames(), state.idNames);
+    state.idNames = tracked.idNames;
     var moved = 0;
-    var seen = {};
-    names.forEach(function (name) {
-      var id = window.StudentDetails.lookupId(idsCache, name, state.rosterName);
-      if (!id) return;
-      seen[id] = true;
-      var was = state.idNames[id];
-      state.idNames[id] = name;
-      if (!was || was === name) return;
-      if (names.indexOf(was) !== -1) return;      // both names on the roster — not a rename
-      if (!renameStudentData(was, name)) return;
-      moved++;
+    tracked.renames.forEach(function (r) {
+      if (renameStudentData(r.from, r.to)) moved++;
     });
     return moved;
   }
@@ -1610,11 +1612,14 @@
     if (!state) return;
     var moved = followRenames();
     renderBoard();
+    /* Saved even when nothing moved: state.idNames IS the record of what each
+       id was called last time, so a boot that seeds it and does not write it
+       leaves the NEXT rename invisible. Path 3 P4 found this here. */
+    save();
     if (moved) {
       refreshDependentViews();
       renderHistory();
       renderCumulative();
-      save();
       showMsg(moved + ' student' + (moved === 1 ? '' : 's') +
         ' renamed in Class Roster Hub — their points and history came with them.', 'info');
     }

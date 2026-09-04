@@ -518,6 +518,124 @@
     return { id: rec.id, name: rec.name, preferred: rec.preferred, say: rec.say, roster: roster };
   }
 
+  /* ---- following a rename ---------------------------------------------- */
+
+  /**
+   * The rename-following helper Path 3 P4 exists to write once.
+   *
+   * Eight tools keep per-student history — points, hall passes, pair history,
+   * lab-role recency, novel circles, reading logs, contact logs, safety
+   * contracts — and every one of them keys it on the NAME STRING. Editing a
+   * roster name in Class Roster Hub therefore orphans that history everywhere:
+   * the student comes back with nothing, and their record belongs to a name
+   * nobody has any more. 008 Behavior Points solved it first, in about forty
+   * lines; this is that code generalised, so the other seven do not each write
+   * their own and get it subtly differently wrong.
+   *
+   * `idNames` is the CALLER's record of which name each stable id had the last
+   * time it looked — a plain `{[id]: name}` object stored beside its own data.
+   * Pass what you stored; store `result.idNames` back, always, including when
+   * `renames` is empty: that is how the first sighting of a student is
+   * remembered so the NEXT rename can be seen.
+   *
+   * Returns `{idNames, renames: [{id, from, to}]}` and MOVES NOTHING. What a
+   * rename means to a tool's storage differs in all eight, and a helper that
+   * guessed would be worse than eight copies: 008 refuses to move a record onto
+   * a name that already has one, because merging two students' behaviour
+   * histories is not a thing to do unasked. That judgement belongs to the tool.
+   *
+   * Four rules, every one learned in 008 and every one load-bearing:
+   *
+   *   1. A name the sidecar has never seen has no id and is not a rename. A
+   *      teacher who has never opened Class Roster Hub gets an empty list
+   *      forever, which is the correct nothing.
+   *   2. The FIRST sighting of an id is not a rename either — there is no
+   *      "before" to move from. It only records the name.
+   *   3. If the old name is STILL among `names`, it is not a rename: those are
+   *      two students, one of whom happens to have been re-typed.
+   *   4. Ids are looked up for the CALLER's current names, not for the roster's,
+   *      because the caller's list is what its history is keyed on. A tool that
+   *      has not re-loaded the roster since the rename sees nothing, which is
+   *      right: for that tool, nothing has changed yet.
+   *
+   * AND THE RENAME NOBODY CAN FOLLOW, because it is the boundary of what this
+   * is worth. An id survives a re-spelling whose SORTED TOKENS match — which is
+   * exactly the "Smith, Aiden" → "Aiden Smith" that a gradebook export produces
+   * for every student in the file at once, and the case that does the most
+   * damage. Retyping "Aiden Smith" as "AJ Smith" is a different name by every
+   * measure reconcile() has, so it mints AJ a new id and this returns nothing:
+   * the alternative is guessing that two different names are one student, which
+   * is the mistake a stable id exists to prevent. Following THAT needs Class
+   * Roster Hub to offer an explicit "same student, new name" action that keeps
+   * the id; assertion 27b in the suite is the marker for whoever adds it.
+   */
+  function trackRenames(rosterName, names, idNames) {
+    var next = {};
+    if (isObj(idNames)) {
+      Object.keys(idNames).forEach(function (k) {
+        if (typeof idNames[k] === 'string') next[k] = idNames[k];
+      });
+    }
+    var index = idIndex();
+    var present = {};
+    var list = Array.isArray(names) ? names : [];
+    list.forEach(function (n) { present[normKey(n)] = true; });
+
+    var renames = [];
+    var seen = {};
+    list.forEach(function (name) {
+      var id = idFor(index, name, rosterName);
+      if (!id || seen[id]) return;
+      seen[id] = true;
+      var was = next[id];
+      next[id] = name;
+      if (!was || was === name) return;
+      if (present[normKey(was)]) return;
+      renames.push({ id: id, from: was, to: name });
+    });
+    return { idNames: next, renames: renames };
+  }
+
+  /* The sidecar as `{order, byRoster: {roster: {normKey: id}}}`. Built from
+     `students` only, never `orphans`: an orphan is a record whose name has left
+     the roster, and matching a live name to one would hand a new student the id
+     of the student they replaced. student-details.js's parseIds does exactly
+     this, and the two must not disagree — 008 has read through that one since
+     before this file existed. */
+  function idIndex() {
+    var db = readRecords();
+    var out = { order: [], byRoster: {} };
+    Object.keys(db.rosters || {}).forEach(function (r) {
+      var entry = entryFor(db, r);
+      var map = {};
+      entry.students.forEach(function (rec) {
+        if (!isObj(rec) || typeof rec.name !== 'string') return;
+        if (typeof rec.id !== 'string' || !rec.id) return;
+        var k = normKey(rec.name);
+        if (k) map[k] = rec.id;
+      });
+      if (Object.keys(map).length) { out.byRoster[r] = map; out.order.push(r); }
+    });
+    return out;
+  }
+
+  /* The tool's own roster is checked first so two classes with a "Sam" do not
+     collide; without a match there it falls back to the first roster that knows
+     them. Same order as resolve(), and as student-details.js's lookupId. */
+  function idFor(index, name, rosterName) {
+    var k = normKey(name);
+    if (!k) return null;
+    if (rosterName && index.byRoster[rosterName] && index.byRoster[rosterName][k]) {
+      return index.byRoster[rosterName][k];
+    }
+    for (var i = 0; i < index.order.length; i++) {
+      var r = index.order[i];
+      if (r === rosterName) continue;
+      if (index.byRoster[r][k]) return index.byRoster[r][k];
+    }
+    return null;
+  }
+
   /* ---- fuzzy name matching --------------------------------------------- */
 
   /** Levenshtein, bounded: it stops as soon as every cell in a row exceeds
@@ -725,6 +843,7 @@
     diffNames: diffNames,
     resolve: resolve,
     matchName: matchName,
+    trackRenames: trackRenames,
     /* text */
     parseDelimited: parseDelimited,
     splitCells: splitCells,

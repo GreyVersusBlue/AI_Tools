@@ -509,7 +509,11 @@
       // school year (see recordPairHistory/prunePairHistoryToRoster below for
       // the retention-policy decision), driving both the short-term
       // recency bias and the year-long pairing grid / coverage strategy.
-      pairHistory: {}, pairGen: 0
+      pairHistory: {}, pairGen: 0,
+      // Path 3 P4: which saved roster this class follows, and which name each
+      // stable id had last time — what lets a rename in Class Roster Hub carry
+      // the pairing memory across instead of stranding it under the old name.
+      rosterName: '', idNames: {}
     };
   }
 
@@ -611,6 +615,10 @@
     if (!state.oddMode) state.oddMode = 'extra';
     if (!state.namingMode) state.namingMode = 'number';
     if (typeof state.customNames !== 'string') state.customNames = '';
+    /* Absent on every config saved before Path 3 P4, and an empty pair reads
+       exactly like "no ids known", so nothing migrates. */
+    if (typeof state.rosterName !== 'string') state.rosterName = '';
+    if (!state.idNames || typeof state.idNames !== 'object') state.idNames = {};
     localStorage.setItem(CURRENT_KEY, name);
     refreshConfigSwitcher();
     applyStateToForm();
@@ -662,9 +670,86 @@
   els.loadRosterBtn.addEventListener('click', function () {
     var list = rosterPicker ? rosterPicker.getNames() : [];
     if (!list.length) return;
+    state.rosterName = rosterPicker.getSelected() || '';
     els.namesInput.value = list.join('\n');
+    /* Before onNamesChanged, which drops an absent mark for a name no longer on
+       the roster — under the old spelling, a renamed student is exactly that. */
+    var moved = followRenames();
     onNamesChanged();
+    if (moved) {
+      renderPairList();
+      renderTogetherList();
+      showMsg(moved + ' student' + (moved === 1 ? '' : 's') +
+        ' renamed in Class Roster Hub — their pairing history came with them.');
+    }
   });
+
+  /* ── Following a rename (Path 3 P4) ──────────────────────────────────────
+     The retained pairing memory is keyed by a sorted pair of NAMES, so editing
+     a roster name in Class Roster Hub used to strand a whole year of "who has
+     already worked with whom" under a spelling nobody has — and the coverage
+     strategy would then cheerfully pair that student with the same three
+     people again. _shared/roster.js's trackRenames() does the id bookkeeping;
+     re-keying the pair table is the part only this tool can do. Best-effort:
+     no Class Roster Hub, no ids, nothing moves. */
+  function followRenames() {
+    if (!state) return 0;
+    var names = parseNames(els.namesInput.value).map(function (s) { return s.name; });
+    var tracked = Roster.trackRenames(state.rosterName, names, state.idNames);
+    state.idNames = tracked.idNames;
+    var moved = 0;
+    tracked.renames.forEach(function (r) { if (renameStudentData(r.from, r.to)) moved++; });
+    /* Saved even when nothing moved, and that is not belt-and-braces: the map
+       IS the record of what each id was called last time, so a boot that seeds
+       it and does not write it leaves the next rename invisible. */
+    saveCurrentConfig();
+    return moved;
+  }
+
+  /** Re-keys every pairHistory entry naming `from`, and moves the absent mark
+      and the keep-apart / keep-together pairs with it. A pair key is built by
+      pairKey(), so it is rebuilt rather than string-patched: the separator is
+      sorted between the two names and a rename can change which side the
+      student falls on. Where the rename collapses two keys into one — "A␟B"
+      and "A␟C" cannot collide, but "A␟B" can land on an existing "B␟C" — the
+      counts are added and the more recent generation kept, because both pairs
+      really did happen. */
+  function renameStudentData(from, to) {
+    var moved = false;
+    var next = {};
+    Object.keys(state.pairHistory).forEach(function (k) {
+      var parts = k.split('\u241F');
+      if (parts.length !== 2) { next[k] = state.pairHistory[k]; return; }
+      var a = parts[0] === from ? to : parts[0];
+      var b = parts[1] === from ? to : parts[1];
+      if (a === b) { moved = true; return; }   // renamed onto their own pair partner
+      var key = pairKey(a, b);
+      if (key !== k) moved = true;
+      var entry = state.pairHistory[k];
+      var gen = historyGen(entry);
+      var count = (entry && typeof entry === 'object' && typeof entry.count === 'number') ? entry.count : 1;
+      if (next[key]) {
+        next[key] = { gen: Math.max(historyGen(next[key]), gen), count: (next[key].count || 1) + count };
+      } else {
+        next[key] = { gen: gen, count: count };
+      }
+    });
+    state.pairHistory = next;
+
+    var ai = state.absentNames.indexOf(from);
+    if (ai !== -1) {
+      if (state.absentNames.indexOf(to) === -1) state.absentNames[ai] = to;
+      else state.absentNames.splice(ai, 1);
+      moved = true;
+    }
+    ['keepApart', 'keepTogether'].forEach(function (bag) {
+      (state[bag] || []).forEach(function (pair) {
+        if (!Array.isArray(pair)) return;
+        for (var i = 0; i < pair.length; i++) if (pair[i] === from) { pair[i] = to; moved = true; }
+      });
+    });
+    return moved;
+  }
 
   // ── Parsing the roster textarea ─────────────────────────────────────────
   // Each line is a name, optionally followed by ", <1-5>" as a skill rating.
@@ -1838,6 +1923,10 @@
   } else {
     newConfig('My Class');
   }
+  /* Seeds state.idNames on first sight of each student, which is what makes the
+     NEXT rename visible — and follows one already made if the names in the box
+     have moved on since this class last saw them. */
+  followRenames();
 
   importSharedGrouping();
 

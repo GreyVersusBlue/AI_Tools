@@ -230,13 +230,34 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
     ...OLD_STUDENT_PREFIXES.map(p => p + 'SAMPLE'),
     ...REG.tools.flatMap(t => (t.prefixes || []).map(p => p.p + 'SAMPLE')),
   ]);
-  const changed = [...probes].filter(k => oldClassify(k) !== REG.classifyKey(k));
+  /* Keys no tool wrote when 009 still held the lists. The old rule could not
+     classify a key that did not exist, so a difference here is not something a
+     teacher can see change — it is a new key, and what matters about it is that
+     a human decided whether it is student data. Naming it here IS that
+     decision, and the assertion under this one keeps the list honest: only a
+     key the registry marks `student` can diverge at all, because oldClassify
+     calls anything it has never heard of settings. Add a line only with a
+     reason.
 
-  /* The one permitted difference, and it is a fix rather than a regression:
-     gvb-command-center:excluded: lives in sessionStorage, so no backup has ever
-     contained it and the old rule could never fire. */
+       pcl_idnames_v1  Path 3 P4's id map in 068 Parent Contact Log:
+                       {roster, ids:{id: name}}. A list of student names, so
+                       the year-end rollover takes it with the rest. */
+  const SINCE_THE_MIGRATION = ['pcl_idnames_v1'];
+
+  const changed = [...probes]
+    .filter(k => !SINCE_THE_MIGRATION.includes(k))
+    .filter(k => oldClassify(k) !== REG.classifyKey(k));
+
+  /* The one permitted difference among the keys that DID exist, and it is a fix
+     rather than a regression: gvb-command-center:excluded: lives in
+     sessionStorage, so no backup has ever contained it and the old rule could
+     never fire. */
   eq(changed, ['gvb-command-center:excluded:SAMPLE'],
-    '9: the registry classifies every key exactly as 009 did, except the one dead rule');
+    '9: the registry classifies every key 009 knew about exactly as 009 did, except the one dead rule');
+
+  const misfiled = SINCE_THE_MIGRATION.filter(k => REG.classifyKey(k) !== 'student');
+  eq(misfiled, [],
+    '9: every key excused as post-migration is one the registry marks student data');
 
   const OLD_LABELLED = ['np_rosters', 'seating-chart-v1', 'scv_calendar_v1', 'ct_prefs',
     'gvb-review-board:current', 'gvb-timeline:current', 'escape-room-builder:rooms',

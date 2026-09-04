@@ -476,7 +476,14 @@
   function saveCurrentState() {
     if (!state) return;
     var all = readAllSections();
-    all[state.name] = { roster: state.roster, contracts: state.contracts, dueDate: state.dueDate, documents: state.documents };
+    all[state.name] = {
+      roster: state.roster, contracts: state.contracts, dueDate: state.dueDate, documents: state.documents,
+      /* Path 3 P4: which saved roster this section follows, and which name each
+         stable id had last time. Neither is student data a teacher entered —
+         they are what lets a rename in Class Roster Hub carry the contract
+         records across instead of orphaning them. */
+      rosterName: state.rosterName, idNames: state.idNames
+    };
     writeAllSections(all);
   }
   function deleteSectionData(name) {
@@ -597,7 +604,7 @@
   }
 
   function newSection(name) {
-    state = { name: name, dueDate: '', documents: defaultDocuments(), roster: [], contracts: {} };
+    state = { name: name, dueDate: '', documents: defaultDocuments(), roster: [], contracts: {}, rosterName: '', idNames: {} };
     setCurrentName(name);
     saveCurrentState();
     applyStateToForm();
@@ -614,7 +621,9 @@
       dueDate: data.dueDate || '',
       documents: (Array.isArray(data.documents) && data.documents.length) ? data.documents : defaultDocuments(),
       roster: data.roster || [],
-      contracts: data.contracts || {}
+      contracts: data.contracts || {},
+      rosterName: typeof data.rosterName === 'string' ? data.rosterName : '',
+      idNames: (data.idNames && typeof data.idNames === 'object') ? data.idNames : {}
     };
     state.documents.forEach(function (d) {
       if (typeof d.body !== 'string') d.body = '';
@@ -752,9 +761,55 @@
   els.rosterHubLoadBtn.addEventListener('click', function () {
     var list = rosterPicker ? rosterPicker.getNames() : [];
     if (!list.length) return;
+    state.rosterName = rosterPicker.getSelected() || '';
+    /* BEFORE the new names land, not after: Save roster creates a blank
+       contract for every name it does not recognise, and a blank record at the
+       new name is exactly what stops the old one moving into it. */
+    var moved = followRenames(list);
     els.rosterInput.value = list.join('\n');
     els.saveRosterBtn.click();
+    if (moved) {
+      els.rosterCount.textContent += ' — ' + moved + ' renamed in Class Roster Hub, records moved';
+    }
   });
+
+  /* ── Following a rename (Path 3 P4) ──────────────────────────────────────
+     Every contract record here is keyed by the student's NAME, so editing a
+     roster name in Class Roster Hub used to orphan the lot: the student comes
+     back with an empty contract and their signed record belongs to a name
+     nobody has. _shared/roster.js's trackRenames() does the id bookkeeping —
+     which stable id had which name last time, and which of those changes is
+     really a rename rather than two students; what a rename means to THIS
+     tool's records is the part below. Best-effort: a teacher who has never
+     opened Class Roster Hub has no ids, so nothing ever moves. */
+  function followRenames(names) {
+    if (!state) return 0;
+    var tracked = Roster.trackRenames(state.rosterName, names || state.roster, state.idNames);
+    state.idNames = tracked.idNames;
+    var moved = 0;
+    tracked.renames.forEach(function (r) { if (renameStudentData(r.from, r.to)) moved++; });
+    /* Saved even when nothing moved, and that is not belt-and-braces: the map
+       IS the record of what each id was called last time, so a boot that seeds
+       it and does not write it leaves the next rename invisible. */
+    saveCurrentState();
+    return moved;
+  }
+
+  /** Moves one student's roster slot and contract record from `from` to `to`.
+      Refuses when `to` already has a record of its own: that is a rename onto a
+      name already in use, and merging two students' signed documents is not
+      something to do without being asked. */
+  function renameStudentData(from, to) {
+    var moved = false;
+    var i = state.roster.indexOf(from);
+    if (i !== -1 && state.roster.indexOf(to) === -1) { state.roster[i] = to; moved = true; }
+    if (state.contracts[from] !== undefined && state.contracts[to] === undefined) {
+      state.contracts[to] = state.contracts[from];
+      delete state.contracts[from];
+      moved = true;
+    }
+    return moved;
+  }
 
   els.saveRosterBtn.addEventListener('click', function () {
     if (!state) return;
@@ -1367,6 +1422,10 @@
     else newSection('New Class');
   }
   populateRosterHubSelect();
+  /* Seeds state.idNames on first sight of each student, which is what makes the
+     NEXT rename visible. It moves nothing today: this tool's names only change
+     when a roster is re-loaded, and that path follows the rename itself. */
+  followRenames();
 
 })();
 </script>
