@@ -155,7 +155,7 @@ const STORE_READ_RE = /\bStore\s*\.\s*get\s*\(\s*([^,)]+?)\s*[,)]/g;
    the reads: the module is the writer of both, and _shared/ already declares
    that on the `shared` row. */
 const ROSTER_RE = /\bRoster\s*\.\s*(?:listRosters|getRoster|mountRosterPicker|onChange|parseNames|newId)\b/;
-const ROSTER_IDENTITY_RE = /\bRoster\s*\.\s*(?:getStudents|getStudentMeta|resolve|matchName|diffNames|syncRecords|reconcile)\b/;
+const ROSTER_IDENTITY_RE = /\bRoster\s*\.\s*(?:getStudents|getStudentMeta|resolve|matchName|diffNames|syncRecords|reconcile|trackRenames)\b/;
 
 /* assets/js/gvb-save.js writes through createSaveSlot({key}), so a scan of
    localStorage call sites cannot see those keys at all — the Name Picker's

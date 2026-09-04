@@ -611,6 +611,11 @@
     s.weeklyBudget = (Number.isFinite(budgetN) && budgetN >= 0 && budgetN <= 50) ? budgetN : 0;
     if (typeof s.teacherInitials !== 'string') s.teacherInitials = '';
     if (!Array.isArray(s.approvalNames)) s.approvalNames = [];
+    /* Path 3 P4: which saved roster this section follows, and which name each
+       stable id had last time. Absent on every section saved before this, and
+       an empty pair reads exactly like "no ids known", so nothing migrates. */
+    if (typeof s.rosterName !== 'string') s.rosterName = '';
+    if (!s.idNames || typeof s.idNames !== 'object') s.idNames = {};
     var hasArmed = s.destinations.some(function (d) { return d.id === s.armedDestId; });
     if (!hasArmed) s.armedDestId = s.destinations.length ? s.destinations[0].id : null;
     return s;
@@ -782,13 +787,60 @@
   els.loadRosterBtn.addEventListener('click', function () {
     var list = rosterPicker ? rosterPicker.getNames() : [];
     if (!list.length) return;
+    state.rosterName = rosterPicker.getSelected() || '';
     els.namesInput.value = list.join('\n');
     state.namesText = els.namesInput.value;
+    var moved = followRenames();
     updateNameCount();
     renderStudentGrid();
     renderApprovalList();
     save();
+    if (moved) {
+      showMsg(moved + ' student' + (moved === 1 ? '' : 's') +
+        ' renamed in Class Roster Hub — their passes and history came with them.', 'info');
+    }
   });
+
+  /* ── Following a rename (Path 3 P4) ──────────────────────────────────────
+     Every pass, every archived day and every pre-approval here is keyed by the
+     student's NAME, so editing a roster name in Class Roster Hub used to
+     orphan a term of hall-pass history: the student comes back with a clean
+     record and their flyer count belongs to a name nobody has. The id
+     bookkeeping — which stable id had which name last time, and which of those
+     changes is really a rename rather than two students — is
+     _shared/roster.js's trackRenames(); what a rename means to THIS tool's
+     records is below. Best-effort: a teacher who has never opened Class Roster
+     Hub has no ids, so nothing ever moves. */
+  function followRenames() {
+    if (!state) return 0;
+    var tracked = Roster.trackRenames(state.rosterName, parseNames(), state.idNames);
+    state.idNames = tracked.idNames;
+    var moved = 0;
+    tracked.renames.forEach(function (r) { if (renameStudentData(r.from, r.to)) moved++; });
+    return moved;
+  }
+
+  /** Moves one student's open pass, today's log, every archived day and any
+      pre-approval from `from` to `to`. Returns false when there was nothing to
+      move. Unlike the points board there is no "both names have records"
+      refusal to make here: a pass log is a list of events, so two students'
+      events can sit side by side under one name without either being lost —
+      but the name is still only rewritten where it matched. */
+  function renameStudentData(from, to) {
+    var moved = false;
+    state.outNow.forEach(function (o) { if (o.name === from) { o.name = to; moved = true; } });
+    state.log.forEach(function (e) { if (e.name === from) { e.name = to; moved = true; } });
+    state.history.forEach(function (h) {
+      (h.rows || []).forEach(function (r) { if (r.name === from) { r.name = to; moved = true; } });
+    });
+    var i = state.approvalNames.indexOf(from);
+    if (i !== -1) {
+      if (state.approvalNames.indexOf(to) === -1) state.approvalNames[i] = to;
+      else state.approvalNames.splice(i, 1);
+      moved = true;
+    }
+    return moved;
+  }
 
   // ── Destinations editor ──────────────────────────────────────────────────
   function renderDestsEditor() {
@@ -1980,6 +2032,19 @@
     } else {
       newSet('New Section');
     }
+  }
+  /* Seeds state.idNames on first sight of each student, which is what makes the
+     NEXT rename visible — and follows one already made if the names in the box
+     have moved on since this section last saw them. */
+  if (state) {
+    if (followRenames()) {
+      renderStudentGrid();
+      renderApprovalList();
+    }
+    /* Saved even when nothing moved, and that is not belt-and-braces: the map
+       IS the record of what each id was called last time, so a boot that seeds
+       it and does not write it leaves the next rename invisible. */
+    save();
   }
 
 })();

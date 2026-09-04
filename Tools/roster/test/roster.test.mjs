@@ -539,5 +539,149 @@ console.log('Roster — the shared roster service (Path 3 P1)');
   eq(errors.length, 1, '26: it complains once, not on every call');
 }
 
+/* ── 27. trackRenames: the migration helper Path 3 P4 exists to write once ──
+   The rename it is FOR is the one a gradebook export produces for every student
+   at once: the file switches from "Smith, Aiden" to "Aiden Smith", the teacher
+   re-imports, and eight tools' worth of per-student history is suddenly filed
+   under names nobody has. reconcile() keeps an id across that because the
+   sorted tokens match; trackRenames is what turns "the id survived" into "here
+   is the pair of names to move". */
+{
+  const { Roster } = make();
+  Roster.setRoster('Period 3', ['Smith, Aiden', 'Hopper, Grace']);
+  Roster.syncRecords('Period 3', ['Smith, Aiden', 'Hopper, Grace']);
+  const ids = {};
+  Roster.getStudents('Period 3').forEach(r => { ids[r.name] = r.id; });
+
+  // First sighting: records the names, reports no rename. This is the seeding
+  // pass every adopter runs at boot, and it must be silent.
+  const first = Roster.trackRenames('Period 3', ['Smith, Aiden', 'Hopper, Grace'], {});
+  eq(first.renames, [], '27: the first sighting of an id is never a rename');
+  eq(first.idNames[ids['Smith, Aiden']], 'Smith, Aiden', '27: ...it just records the name');
+
+  // The re-import, in Class Roster Hub.
+  Roster.setRoster('Period 3', ['Aiden Smith', 'Grace Hopper']);
+  Roster.syncRecords('Period 3', ['Aiden Smith', 'Grace Hopper']);
+  eq(Roster.getStudents('Period 3').map(r => r.id),
+    [ids['Smith, Aiden'], ids['Hopper, Grace']], '27: the ids survive the re-import');
+
+  // The tool has not re-loaded yet: for it, nothing has changed.
+  const stale = Roster.trackRenames('Period 3', ['Smith, Aiden', 'Hopper, Grace'], first.idNames);
+  eq(stale.renames, [], '27: a tool still holding the old names sees no rename yet');
+
+  // It re-loads, and now it does — both of them, in one pass.
+  const after = Roster.trackRenames('Period 3', ['Aiden Smith', 'Grace Hopper'], first.idNames);
+  eq(after.renames, [
+    { id: ids['Smith, Aiden'], from: 'Smith, Aiden', to: 'Aiden Smith' },
+    { id: ids['Hopper, Grace'], from: 'Hopper, Grace', to: 'Grace Hopper' },
+  ], '27: re-loading the roster surfaces both renames, with the ids that survived');
+  eq(after.idNames[ids['Smith, Aiden']], 'Aiden Smith', '27: ...and the map moves on');
+
+  // Twice in a row is not two renames.
+  const again = Roster.trackRenames('Period 3', ['Aiden Smith', 'Grace Hopper'], after.idNames);
+  eq(again.renames, [], '27: the same call again reports nothing');
+}
+
+/* ── 27b. THE RENAME NOBODY CAN FOLLOW, written down on purpose ──────────
+   Retyping "Aiden Smith" as "AJ Smith" is a different name by every measure
+   this file has: normKey differs and the sorted-token key differs, so
+   reconcile() cannot tell it from "Aiden left, AJ arrived" and mints AJ a new
+   id. No tool can follow that, and pretending otherwise would mean guessing
+   that two different names are one student — the mistake a stable id exists to
+   prevent. Following it needs Class Roster Hub to offer an explicit "same
+   student, new name" action that keeps the id; until it does, this is the
+   boundary of what P4 delivers, and the assertion is here so that a future
+   session that adds that action sees this test go red and knows to update it. */
+{
+  const { Roster } = make();
+  Roster.setRoster('Period 3', ['Aiden Smith']);
+  Roster.syncRecords('Period 3', ['Aiden Smith']);
+  const before = Roster.getStudents('Period 3')[0].id;
+  const seeded = Roster.trackRenames('Period 3', ['Aiden Smith'], {});
+
+  Roster.setRoster('Period 3', ['AJ Smith']);
+  Roster.syncRecords('Period 3', ['AJ Smith']);
+  const afterId = Roster.getStudents('Period 3')[0].id;
+  ok(afterId !== before, '27b: a free-text rename mints a NEW id — it is a new student to the sidecar');
+
+  const t = Roster.trackRenames('Period 3', ['AJ Smith'], seeded.idNames);
+  eq(t.renames, [], '27b: ...so no tool can follow it, and the helper says nothing rather than guessing');
+  eq(t.idNames[before], 'Aiden Smith', '27b: the old id keeps its last known name, harmlessly');
+}
+
+/* ── 28. Two students, not one rename ──────────────────────────────────── */
+{
+  /* The rule that stops a merge: if the OLD name is still on the tool's list,
+     these are two people, one of whom happens to have been re-typed. Getting
+     this wrong moves one student's history onto another's record. */
+  const { Roster } = make();
+  Roster.setRoster('Period 3', ['Sam Reyes', 'Sam Okafor']);
+  Roster.syncRecords('Period 3', ['Sam Reyes', 'Sam Okafor']);
+  const seeded = Roster.trackRenames('Period 3', ['Sam Reyes', 'Sam Okafor'], {});
+
+  /* Both names are still present; nothing may be reported even though the
+     sidecar has ids for both. */
+  const same = Roster.trackRenames('Period 3', ['Sam Okafor', 'Sam Reyes'], seeded.idNames);
+  eq(same.renames, [], '28: reordering the list is not a rename');
+}
+
+/* ── 29. No Class Roster Hub, no ids, nothing moves ────────────────────── */
+{
+  /* A roster typed straight into the Name Picker has no sidecar at all. Every
+     adopter calls this on every load, so the do-nothing path is the common one
+     and it must never invent a rename. */
+  const { Roster } = make();
+  Roster.setRoster('Period 3', ['Ada Lovelace']);
+  const none = Roster.trackRenames('Period 3', ['Ada Lovelace'], {});
+  eq(none.renames, [], '29: a roster with no sidecar reports no renames');
+  eq(none.idNames, {}, '29: ...and records no ids, because there are none');
+
+  /* And a caller's stored map survives a call that finds nothing, rather than
+     being replaced by an empty one — that map is how the NEXT rename is seen. */
+  const kept = Roster.trackRenames('Period 3', ['Ada Lovelace'], { 'id-1': 'Someone Else' });
+  eq(kept.idNames, { 'id-1': 'Someone Else' }, '29: an existing map is carried forward, not dropped');
+}
+
+/* ── 30. The sidecar's own roster is checked first ─────────────────────── */
+{
+  /* Two classes can both have a Sam. A tool following Period 3 must get Period
+     3's Sam, or one class's history follows the other class's rename. */
+  const { Roster } = make();
+  Roster.setRoster('Period 3', ['Sam Diaz']);
+  Roster.setRoster('Period 7', ['Sam Diaz']);
+  Roster.syncRecords('Period 3', ['Sam Diaz']);
+  Roster.syncRecords('Period 7', ['Sam Diaz']);
+  const p3 = Roster.getStudents('Period 3')[0].id;
+  const p7 = Roster.getStudents('Period 7')[0].id;
+  ok(p3 !== p7, '30: the two Sams have different ids');
+
+  const t3 = Roster.trackRenames('Period 3', ['Sam Diaz'], {});
+  ok(t3.idNames[p3] === 'Sam Diaz' && t3.idNames[p7] === undefined,
+    '30: a tool following Period 3 gets Period 3’s Sam');
+}
+
+/* ── 31. A record that left the roster is not matched to a new student ─── */
+{
+  /* reconcile() parks a departed student with a preferred name in `orphans`.
+     idIndex() reads `students` only, exactly as student-details.js does: a new
+     student typed in later must NOT inherit the leaver’s id, or their history
+     would be handed to them. */
+  const { Roster } = make();
+  Roster.setRoster('Period 3', ['Rosa Vega']);
+  Roster.syncRecords('Period 3', ['Rosa Vega']);
+  const db = Roster._readRecords();
+  db.rosters['Period 3'].students[0].preferred = 'Rosie';
+  Roster._writeRecords(db);
+
+  Roster.setRoster('Period 3', ['Tomas Lund']);
+  Roster.syncRecords('Period 3', ['Tomas Lund']);       // Rosa parks in orphans
+  const parked = Roster._readRecords().rosters['Period 3'];
+  ok(parked.orphans.length === 1, '31: the departed student is parked in orphans');
+
+  const t = Roster.trackRenames('Period 3', ['Rosa Vega'], {});
+  eq(t.renames, [], '31: an orphaned record is not matched to a live name');
+  eq(t.idNames, {}, '31: ...and lends nobody its id');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) { console.log('\nFailures:'); fails.forEach(f => console.log('  - ' + f)); process.exit(1); }

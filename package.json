@@ -90,6 +90,7 @@
     "test:registry": "node Tools/tool-registry/test/registry-shape.test.mjs",
     "test:roster": "node Tools/roster/test/roster.test.mjs",
     "test:picker-rollout": "node Tools/roster/test/smoke-picker-rollout.mjs",
+    "test:rename-follow": "node Tools/roster/test/smoke-rename-follow.mjs",
     "test:share": "node Tools/share/test/qr-draw.test.mjs && node Tools/share/test/share.test.mjs",
     "test:stage": "node Tools/stage/test/stage.test.mjs",
     "test:media": "node Tools/media/test/media-db.test.mjs && node Tools/media/test/smoke-media-db.mjs",

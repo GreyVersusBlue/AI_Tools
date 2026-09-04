@@ -650,9 +650,57 @@
   els.rosterHubLoadBtn.addEventListener('click', function () {
     var list = rosterPicker ? rosterPicker.getNames() : [];
     if (!list.length) return;
+    state.rosterName = rosterPicker.getSelected() || '';
     els.namesInput.value = list.join('\n');
+    var moved = followRenames();
     onNamesChanged(true);
+    if (moved) {
+      showMsg(moved + ' student' + (moved === 1 ? '' : 's') +
+        ' renamed in Class Roster Hub — their circle role history came with them.', true);
+    }
   });
+
+  /* ── Following a rename (Path 3 P4) ──────────────────────────────────────
+     The role-fairness memory and every past meeting's assignment here are keyed
+     by the student's NAME, so editing a roster name in Class Roster Hub used to
+     reset that student to "has been nothing", which is exactly the student the
+     next assignment hands Discussion Director to again. _shared/roster.js's
+     trackRenames() does the id bookkeeping; what a rename means to THIS tool's
+     records is below. Best-effort: no Class Roster Hub, no ids, nothing
+     moves. */
+  function followRenames() {
+    if (!state) return 0;
+    var tracked = Roster.trackRenames(state.rosterName, studentNames(), state.idNames);
+    state.idNames = tracked.idNames;
+    var moved = 0;
+    tracked.renames.forEach(function (r) { if (renameStudentData(r.from, r.to)) moved++; });
+    return moved;
+  }
+
+  /** Moves one student's role history, their place in the current circles and
+      their name in every recorded meeting from `from` to `to`. Refuses the
+      history when `to` already has one — a rename onto a name already in use —
+      because merging two students' role records would make both look
+      over-served. */
+  function renameStudentData(from, to) {
+    var moved = false;
+    if (state.history[from] !== undefined && state.history[to] === undefined) {
+      state.history[to] = state.history[from];
+      delete state.history[from];
+      moved = true;
+    }
+    (state.groups || []).forEach(function (g) {
+      (g.members || []).forEach(function (m, i) {
+        if (m === from) { g.members[i] = to; moved = true; }
+      });
+    });
+    (state.meetings || []).forEach(function (m) {
+      (m.groups || []).forEach(function (g) {
+        (g.assignment || []).forEach(function (a) { if (a.name === from) { a.name = to; moved = true; } });
+      });
+    });
+    return moved;
+  }
 
   // ── Role list editor ────────────────────────────────────────────────────
   function renderRoleList() {
@@ -1552,7 +1600,8 @@
       name: name, students: '', bookTitle: '',
       mode: 'count', splitValue: 4,
       groups: [], roles: defaultRoleObjects(),
-      together: true, history: {}, meetings: [], schedule: null
+      together: true, history: {}, meetings: [], schedule: null,
+      rosterName: '', idNames: {}
     };
     saveCurrent();
     applyStateToForm();
@@ -1577,7 +1626,12 @@
       together: loaded.together !== false,
       history: loaded.history || {},
       meetings: loaded.meetings || [],
-      schedule: loaded.schedule || null
+      schedule: loaded.schedule || null,
+      /* Path 3 P4: which saved roster this project follows, and which name each
+         stable id had last time. Absent on every project saved before this, and
+         an empty pair reads exactly like "no ids known", so nothing migrates. */
+      rosterName: (typeof loaded.rosterName === 'string') ? loaded.rosterName : '',
+      idNames: (loaded.idNames && typeof loaded.idNames === 'object') ? loaded.idNames : {}
     };
     try { localStorage.setItem(CURRENT_KEY, name); } catch (e) { /* ignore */ }
     applyStateToForm();
@@ -1985,6 +2039,10 @@
   }
   els.toolbar.style.display = '';
   populateRosterHubSelect();
+  /* Seeds state.idNames on first sight of each student, which is what makes the
+     NEXT rename visible — and follows one already made if the names in the box
+     have moved on since this project last saw them. */
+  if (state) { followRenames(); saveCurrent(); }
 
   var currentUnitName = getCurrentUnitName();
   var allUnits = loadUnits();

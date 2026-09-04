@@ -263,6 +263,13 @@
   'use strict';
   var ROSTER_KEY = 'pcl_roster_v1';
   var ENTRIES_KEY = 'pcl_entries_v1';
+  /* Path 3 P4. Unlike the other history-keeping tools this one has no per-class
+     state object to hang the id map on — its roster is a bare array — so the
+     map gets a key of its own: `{ roster: <np_rosters name>, ids: {id: name} }`.
+     It is student data (it is a list of student names) and is declared as such
+     in _shared/tool-registry.js, so the year-end rollover clears it with the
+     rest. */
+  var IDNAMES_KEY = 'pcl_idnames_v1';
 
   var els = {};
   ['rosterInput','saveRosterBtn','loadNamePickerBtn','namePickerHint','rosterList','rosterEmptyMsg','rosterSort',
@@ -273,6 +280,7 @@
   var roster = [];
   var entries = [];
   var editingId = null;
+  var idMap = { roster: '', ids: {} };
 
   /* ---------- contact reasons -------------------------------------------
      Method answers "how did you reach them". Reason answers "what was it
@@ -329,6 +337,51 @@
   function loadRoster() {
     try { roster = JSON.parse(localStorage.getItem(ROSTER_KEY) || '[]'); } catch (e) { roster = []; }
     if (!Array.isArray(roster)) roster = [];
+  }
+  function loadIdMap() {
+    var v = null;
+    try { v = JSON.parse(localStorage.getItem(IDNAMES_KEY) || 'null'); } catch (e) { v = null; }
+    idMap = {
+      roster: (v && typeof v.roster === 'string') ? v.roster : '',
+      ids: (v && v.ids && typeof v.ids === 'object') ? v.ids : {}
+    };
+  }
+  function saveIdMap() {
+    try { localStorage.setItem(IDNAMES_KEY, JSON.stringify(idMap)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  /* ── Following a rename (Path 3 P4) ──────────────────────────────────────
+     Every logged contact here names the student as a STRING, so editing a
+     roster name in Class Roster Hub used to leave a year of calls home filed
+     under a name that no longer exists — and the student's tally starts again
+     at nought, which is the opposite of what a contact log is for.
+     _shared/roster.js's trackRenames() does the id bookkeeping; what a rename
+     means to this tool's roster and entries is below. Best-effort: a teacher
+     who has never opened Class Roster Hub has no ids, so nothing ever moves. */
+  function followRenames(names) {
+    var tracked = Roster.trackRenames(idMap.roster, names || roster, idMap.ids);
+    idMap.ids = tracked.idNames;
+    var moved = 0;
+    tracked.renames.forEach(function (r) { if (renameStudentData(r.from, r.to)) moved++; });
+    saveIdMap();
+    if (moved) { saveRoster(); saveEntries(); }
+    return moved;
+  }
+
+  /** Moves one student's roster slot and every contact entry from `from` to
+      `to`. A contact log is a list of events, so two students' entries can sit
+      under one name without either being lost — there is nothing here to refuse
+      to merge — but the name is only rewritten where it matched. */
+  function renameStudentData(from, to) {
+    var moved = false;
+    var i = roster.indexOf(from);
+    if (i !== -1) {
+      if (roster.indexOf(to) === -1) roster[i] = to;
+      else roster.splice(i, 1);
+      moved = true;
+    }
+    entries.forEach(function (e) { if (e.student === from) { e.student = to; moved = true; } });
+    return moved;
   }
   function saveRoster() {
     try { localStorage.setItem(ROSTER_KEY, JSON.stringify(roster)); } catch (e) { /* storage full/blocked */ }
@@ -540,9 +593,14 @@
     if (!chosen || names.indexOf(chosen) === -1) return;
     var studentNames = Roster.getRoster(chosen);
     if (!studentNames.length) return;
+    idMap.roster = chosen;
+    var moved = followRenames(studentNames);
+    if (moved) renderAll();
     els.rosterInput.value = studentNames.join('\n');
     els.namePickerHint.style.display = 'block';
-    els.namePickerHint.textContent = 'Loaded "' + chosen + '" into the box below — click "Save roster" to keep it.';
+    els.namePickerHint.textContent = 'Loaded "' + chosen + '" into the box below — click "Save roster" to keep it.' +
+      (moved ? ' ' + moved + ' student' + (moved === 1 ? '' : 's') +
+        ' renamed in Class Roster Hub — their contact history came with them.' : '');
   });
 
   function resetForm() {
@@ -659,6 +717,10 @@
   /* ---------- boot ---------- */
   loadRoster();
   loadEntries();
+  loadIdMap();
+  /* Seeds the id map on first sight of each student, which is what makes the
+     NEXT rename visible. */
+  followRenames();
   els.rosterInput.value = roster.join('\n');
   fillReasonSelects(); // before resetForm, which needs the options to exist to pick one
   resetForm();

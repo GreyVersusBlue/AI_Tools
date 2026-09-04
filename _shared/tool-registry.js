@@ -181,6 +181,7 @@
         { p: 'gtg:data:', student: true },
       ],
       reads: [
+        'crh_students_v1',
         'np_rosters',
       ],
     },
@@ -193,6 +194,7 @@
         { k: 'behavior-points-tracker-sections', student: true },
       ],
       reads: [
+        'crh_students_v1',
         'np_rosters',
         'seating-chart-v1',
       ],
@@ -206,6 +208,7 @@
         { k: 'hall-pass-log-sections', student: true },
       ],
       reads: [
+        'crh_students_v1',
         'np_rosters',
       ],
     },
@@ -623,9 +626,16 @@
       category: 'docs-comm',
       keys: [
         { k: 'pcl_entries_v1', student: true },
+        /* Path 3 P4's id map: `{roster, ids:{id: name}}`. It is a list of
+           student names, so it is student data and the year-end rollover takes
+           it with the rest. This tool is the one adopter of trackRenames that
+           needed a key of its own — the other seven have a per-class state
+           object to hang the map on and did not add a key. */
+        { k: 'pcl_idnames_v1', student: true },
         { k: 'pcl_roster_v1', student: true },
       ],
       reads: [
+        'crh_students_v1',
         'np_rosters',
       ],
     },
@@ -818,6 +828,7 @@
         { k: 'sslt_sections_v1', student: true },
       ],
       reads: [
+        'crh_students_v1',
         'np_rosters',
       ],
     },
@@ -841,6 +852,7 @@
         'gvb-vocab-flashcards:list',
       ],
       reads: [
+        'crh_students_v1',
         'np_rosters',
       ],
     },
@@ -911,6 +923,7 @@
         { k: 'lgrr_rosters', student: true },
       ],
       reads: [
+        'crh_students_v1',
         'lsct_sections_v1',
         'np_rosters',
       ],
@@ -925,6 +938,7 @@
         { k: 'lsct_sections_v1', student: true },
       ],
       reads: [
+        'crh_students_v1',
         'np_rosters',
       ],
     },

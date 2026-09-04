@@ -504,7 +504,12 @@
     var all = readAllSections();
     all[state.name] = {
       roster: state.roster, logs: state.logs, finished: state.finished, genres: state.genres || {},
-      weeklyGoalPages: state.weeklyGoalPages || 0, weeklyGoalMinutes: state.weeklyGoalMinutes || 0
+      weeklyGoalPages: state.weeklyGoalPages || 0, weeklyGoalMinutes: state.weeklyGoalMinutes || 0,
+      /* Path 3 P4: which saved roster this section follows, and which name each
+         stable id had last time. Neither is a thing the teacher typed — they
+         are what lets a rename in Class Roster Hub carry a student's reading
+         log across instead of orphaning it. */
+      rosterName: state.rosterName, idNames: state.idNames
     };
     writeAllSections(all);
   }
@@ -540,7 +545,7 @@
   }
 
   function newSection(name) {
-    state = { name: name, roster: [], logs: {}, finished: {}, genres: {}, weeklyGoalPages: 0, weeklyGoalMinutes: 0 };
+    state = { name: name, roster: [], logs: {}, finished: {}, genres: {}, weeklyGoalPages: 0, weeklyGoalMinutes: 0, rosterName: '', idNames: {} };
     activeStudent = null;
     editingEntryId = null;
     setCurrentName(name);
@@ -563,7 +568,9 @@
       // Sections saved before this round have no genres map at all; an empty
       // one reads identically to "nothing tagged yet", so nothing migrates.
       genres: data.genres || {},
-      weeklyGoalPages: data.weeklyGoalPages || 0, weeklyGoalMinutes: data.weeklyGoalMinutes || 0
+      weeklyGoalPages: data.weeklyGoalPages || 0, weeklyGoalMinutes: data.weeklyGoalMinutes || 0,
+      rosterName: typeof data.rosterName === 'string' ? data.rosterName : '',
+      idNames: (data.idNames && typeof data.idNames === 'object') ? data.idNames : {}
     };
     activeStudent = (state.roster.indexOf(activeStudent) !== -1) ? activeStudent : null;
     editingEntryId = null;
@@ -665,9 +672,59 @@
   els.rosterHubLoadBtn.addEventListener('click', function () {
     var list = rosterPicker ? rosterPicker.getNames() : [];
     if (!list.length) return;
+    state.rosterName = rosterPicker.getSelected() || '';
+    /* BEFORE the new names land, not after: Save roster gives every name it
+       does not recognise an empty log, and an empty log at the new name is
+       exactly what stops the old one moving into it. */
+    var moved = followRenames(list);
     els.rosterInput.value = list.join('\n');
     els.saveRosterBtn.click();
+    if (moved) {
+      els.rosterCount.textContent += ' — ' + moved + ' renamed in Class Roster Hub, logs moved';
+    }
   });
+
+  /* ── Following a rename (Path 3 P4) ──────────────────────────────────────
+     Every log entry, finished book and roster slot here is keyed by the
+     student's NAME, so editing a roster name in Class Roster Hub used to
+     orphan a term's reading: the student comes back with nothing logged and
+     their history belongs to a name nobody has. _shared/roster.js's
+     trackRenames() does the id bookkeeping — which stable id had which name
+     last time, and which of those changes is really a rename rather than two
+     students; what a rename means to THIS tool's records is below.
+     Best-effort: no Class Roster Hub, no ids, nothing moves. */
+  function followRenames(names) {
+    if (!state) return 0;
+    var tracked = Roster.trackRenames(state.rosterName, names || state.roster, state.idNames);
+    state.idNames = tracked.idNames;
+    var moved = 0;
+    tracked.renames.forEach(function (r) { if (renameStudentData(r.from, r.to)) moved++; });
+    /* Saved even when nothing moved, and that is not belt-and-braces: the map
+       IS the record of what each id was called last time, so a boot that seeds
+       it and does not write it leaves the next rename invisible. */
+    saveCurrentState();
+    return moved;
+  }
+
+  /** Moves one student's roster slot, log entries and finished-book list from
+      `from` to `to`. Refuses when `to` already has records of its own — a
+      rename onto a name already in use — because merging two students' reading
+      logs is not something to do without being asked. `genres` is keyed by BOOK
+      title, not by student, so it is deliberately left alone. */
+  function renameStudentData(from, to) {
+    if ((state.logs[to] && state.logs[to].length) || (state.finished[to] && state.finished[to].length)) return false;
+    var moved = false;
+    var i = state.roster.indexOf(from);
+    if (i !== -1 && state.roster.indexOf(to) === -1) { state.roster[i] = to; moved = true; }
+    ['logs', 'finished'].forEach(function (bag) {
+      if (state[bag][from] === undefined) return;
+      state[bag][to] = state[bag][from];
+      delete state[bag][from];
+      moved = true;
+    });
+    if (activeStudent === from) activeStudent = to;
+    return moved;
+  }
 
   els.saveRosterBtn.addEventListener('click', function () {
     if (!state) return;
@@ -1691,6 +1748,10 @@
   }
   resetForm();
   populateRosterHubSelect();
+  /* Seeds state.idNames on first sight of each student, which is what makes the
+     NEXT rename visible. It moves nothing today: this tool's names only change
+     when a roster is re-loaded, and that path follows the rename itself. */
+  followRenames();
   renderGenreUI();
 
 })();

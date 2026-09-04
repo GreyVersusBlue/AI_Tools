@@ -498,9 +498,60 @@
   els.rosterHubLoadBtn.addEventListener('click', function () {
     var list = rosterPicker ? rosterPicker.getNames() : [];
     if (!list.length) return;
+    state.rosterName = rosterPicker.getSelected() || '';
     els.namesInput.value = list.join('\n');
+    var moved = followRenames();
     onNamesChanged(true);
+    if (moved) {
+      showMsg(moved + ' student' + (moved === 1 ? '' : 's') +
+        ' renamed in Class Roster Hub — their role history came with them.', true);
+    }
   });
+
+  /* ── Following a rename (Path 3 P4) ──────────────────────────────────────
+     The role-fairness memory — who has already been Recorder — is keyed by the
+     student's NAME, so editing a roster name in Class Roster Hub used to reset
+     that student to "has done nothing", which is exactly the student the
+     randomiser then hands the same role to again. _shared/roster.js's
+     trackRenames() does the id bookkeeping; what a rename means to THIS tool's
+     records is below. Best-effort: no Class Roster Hub, no ids, nothing
+     moves. */
+  function followRenames() {
+    if (!state) return 0;
+    var tracked = Roster.trackRenames(state.rosterName, studentNames(), state.idNames);
+    state.idNames = tracked.idNames;
+    var moved = 0;
+    tracked.renames.forEach(function (r) { if (renameStudentData(r.from, r.to)) moved++; });
+    return moved;
+  }
+
+  /** Moves one student's role history, absence mark and place in the last
+      shuffle from `from` to `to`. Refuses the history when `to` already has one
+      — a rename onto a name already in use — because merging two students'
+      role records would quietly make both look over-served. */
+  function renameStudentData(from, to) {
+    var moved = false;
+    if (state.history[from] !== undefined && state.history[to] === undefined) {
+      state.history[to] = state.history[from];
+      delete state.history[from];
+      moved = true;
+    }
+    ['absent', 'lastExcludedForSafety'].forEach(function (bag) {
+      var i = state[bag].indexOf(from);
+      if (i === -1) return;
+      if (state[bag].indexOf(to) === -1) state[bag][i] = to;
+      else state[bag].splice(i, 1);
+      moved = true;
+    });
+    (state.lastGroups || []).forEach(function (g) {
+      (g.members || []).forEach(function (m) { if (m.name === from) { m.name = to; moved = true; } });
+    });
+    (state.keepApart || []).forEach(function (pair) {
+      if (!Array.isArray(pair)) return;
+      for (var i = 0; i < pair.length; i++) if (pair[i] === from) { pair[i] = to; moved = true; }
+    });
+    return moved;
+  }
 
   // ── Safety contract gate (read-only reuse of 013-lab-safety-contract-tracker) ─
   // Reads 'lsct_sections_v1' — a completely separate storage key and roster
@@ -1545,7 +1596,12 @@
       keepApart: Array.isArray(loaded.keepApart) ? loaded.keepApart : [],
       absent: Array.isArray(loaded.absent) ? loaded.absent : [],
       safetyGate: normalizeSafetyGate(loaded.safetyGate),
-      lastExcludedForSafety: Array.isArray(loaded.lastExcludedForSafety) ? loaded.lastExcludedForSafety : []
+      lastExcludedForSafety: Array.isArray(loaded.lastExcludedForSafety) ? loaded.lastExcludedForSafety : [],
+      /* Path 3 P4: which saved roster this one follows, and which name each
+         stable id had last time. Absent on every roster saved before this, and
+         an empty pair reads exactly like "no ids known", so nothing migrates. */
+      rosterName: (typeof loaded.rosterName === 'string') ? loaded.rosterName : '',
+      idNames: (loaded.idNames && typeof loaded.idNames === 'object') ? loaded.idNames : {}
     };
   }
 
@@ -1630,6 +1686,10 @@
   }
   els.toolbar.style.display = '';
   populateRosterHubSelect();
+  /* Seeds state.idNames on first sight of each student, which is what makes the
+     NEXT rename visible — and follows one already made if the names in the box
+     have moved on since this roster last saw them. */
+  if (state) { followRenames(); saveCurrent(); }
 
 })();
 </script>
