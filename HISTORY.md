@@ -11,9 +11,18 @@ to add a to-do to this file, it belongs there instead.
 
 ## Stage 2 — the platform foundation (2026-09-03 → 2026-09-04, in progress)
 
-Six of the fourteen planned phases have shipped. The plan itself — four `_shared/`
+Seven of the fourteen planned phases have shipped. The plan itself — four `_shared/`
 services in dependency order, so that the tool paths become adoption rounds rather than
 invention — survives as the ordering of `BACKLOG.md`'s first ten ranks.
+
+**Path 6 P1 — `_shared/share.js` + `qr-draw.js`, the share sheet. #178, `CACHE_VERSION`
+v146.** Shipped by a parallel session while Path 3 P1/P2 was in flight; what it does and
+what it got wrong belongs to that session, not this entry. Recorded here because it moved
+`CACHE_VERSION` and because **it did not do step 6** — its own row was still sitting at rank
+3 of `BACKLOG.md` afterwards, so the next session would have been told to build a service
+that already existed. Removed and renumbered in #179. The claim table itself worked: the two
+sessions took different rows and no source file conflicted. Only `BACKLOG.md` did, exactly
+where both sessions had rewritten the ranked table.
 
 **Path 3 P1 — `_shared/roster.js`, the roster service and the identity layer. #176,
 `CACHE_VERSION` v144.** `np_rosters` — `{ "Period 3": ["Aiden Smith", …] }` — is read by

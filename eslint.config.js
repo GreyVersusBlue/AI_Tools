@@ -38,6 +38,8 @@ const SITE_GLOBALS = {
   Store: 'readonly',
   A11y: 'readonly',
   QrScan: 'readonly',
+  QrDraw: 'readonly',
+  Share: 'readonly',
   Roster: 'readonly',
   WebRTCPair: 'readonly',
   DuplexPrint: 'readonly',
