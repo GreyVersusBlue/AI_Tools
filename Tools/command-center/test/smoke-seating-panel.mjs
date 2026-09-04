@@ -151,6 +151,15 @@ ok(/FRONT OF ROOM/.test(await page.textContent(panel)), 'the room is oriented, t
 ok(/stroke-dasharray/.test(svg), 'the empty desk is drawn dashed rather than left out');
 ok((svg.match(/stroke-width="3\.5"/g) || []).length === 1, 'exactly one desk is marked out — the flagged student’s');
 ok(/rotate\(90 /.test(svg), 'a desk turned in the generator is turned here too');
+/* The viewBox, pinned to numbers worked out by hand from the fixture: desks
+   span x 200..586 and y 200..390, one is turned a quarter turn so the room
+   grows by (106-70)/2 on every side, plus 26 of padding and a 62-high band for
+   FRONT OF ROOM above. Since Path 14 P2 the arithmetic is
+   _shared/seating-read.js's rather than this page's, and this is what says the
+   page still draws the same room after that move. */
+eq(await page.$eval(panel + ' .seat-map', el => el.getAttribute('viewBox')), '156 94 474 340',
+   'the room is framed exactly as before, overhang for the turned desk included');
+ok(await page.evaluate(() => !!window.SeatingRead), '_shared/seating-read.js is what the panel reads through');
 ok((await page.textContent(panel)).includes('4 of 5 seats filled'), 'the seat count is stated');
 ok((await page.textContent(panel)).includes('Not seated: Solenne Adeyemi'),
    'and a student on the roster with no desk is named rather than silently missing');

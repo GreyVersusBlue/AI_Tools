@@ -466,10 +466,16 @@
   /* ---------- IndexedDB ----------
      A backup that silently omits data is worse than no backup, so this page
      always *reports* what is in IndexedDB even where it cannot enumerate it,
-     and includes it only when asked. It is left unchecked by default because
-     the one database on this site today (blank-map-generator's map cache) holds
-     image blobs that re-download on demand — the file would balloon for data
-     that costs nothing to lose. */
+     and includes it only when asked.
+
+     Which ones are ticked for the teacher is the registry's call, not this
+     page's: a database marked `backupByDefault` holds something nothing can
+     get back (the shared media store's photos and scanned documents), and one
+     that is not marked holds something that re-downloads or re-renders on
+     demand (bmg-maps' cached maps, which is why this whole section defaulted
+     to unticked when that was the only database on the site). The unticked
+     ones still cost nothing to leave out; the ticked ones cost a teacher their
+     photos. */
   var idbDatabases = [];
   var idbSupported = typeof indexedDB !== 'undefined';
   /* Only whether the browser can LIST databases for us. It is no longer whether
@@ -484,6 +490,13 @@
     var all = ToolRegistry.databases();
     for (var i = 0; i < all.length; i++) if (all[i].name === name) return all[i].note;
     return '';
+  }
+  /* A database the browser has but the registry has never heard of is left
+     unticked: this page cannot say what it is, so it cannot say it matters. */
+  function idbDefaultOn(name) {
+    var all = ToolRegistry.databases();
+    for (var i = 0; i < all.length; i++) if (all[i].name === name) return all[i].backupByDefault === true;
+    return false;
   }
 
   function openDb(name, version) {
@@ -594,12 +607,13 @@
         return;
       }
       wrap.innerHTML = '<div class="card-title" style="margin-top:1rem;">Also in IndexedDB</div>' +
-        '<p class="hint">Cached images and other large data live here rather than in ordinary storage. Tick one to include it &mdash; backups get much bigger.</p>' +
+        '<p class="hint">Images and other large data live here rather than in ordinary storage. Anything that can only be replaced by adding it again is already ticked; caches that re-download are not. Backups get much bigger with these in.</p>' +
         '<table class="scan"><thead><tr><th class="chk"></th><th>Database</th><th>Contents</th><th class="num">Records</th></tr></thead><tbody>' +
         dbs.map(function (d) {
           var recs = d.stores.reduce(function (n, s) { return n + (s.count || 0); }, 0);
           var note = idbNote(d.name);
-          return '<tr><td class="chk"><input type="checkbox" class="idb-check" data-db="' + escapeHtml(d.name) + '"></td>' +
+          return '<tr><td class="chk"><input type="checkbox" class="idb-check" data-db="' + escapeHtml(d.name) + '"' +
+            (idbDefaultOn(d.name) ? ' checked' : '') + '></td>' +
             '<td class="g-label">' + escapeHtml(d.name) + (note ? '<br><span style="font-size:.78rem;color:var(--muted);">' + escapeHtml(note) + '</span>' : '') + '</td>' +
             '<td>' + (d.unreadable ? '<i>could not be opened</i>' : escapeHtml(d.stores.map(function (s) { return s.name; }).join(', '))) + '</td>' +
             '<td class="num">' + (d.unreadable ? '—' : recs) + '</td></tr>';

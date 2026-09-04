@@ -161,9 +161,19 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
 /* ── 6. Every IndexedDB database on the site is declared ─────────────── */
 {
   const dbs = REG.databases().map(d => d.name).sort();
-  eq(dbs, ['bmg-maps', 'rgb-audio', 'stviz-recovery'],
-    '6: all three databases, not just the one 009 used to know');
+  eq(dbs, ['bmg-maps', 'gvb-media', 'rgb-audio', 'stviz-recovery'],
+    '6: every database, not just the one 009 used to know');
   ok(REG.databases().every(d => d.tool && d.tool.title), '6: each names its tool');
+
+  /* Which ones 009 ticks for the teacher is decided here, not there. A cache
+     that re-downloads (bmg-maps) is left for them to choose; the shared media
+     store holds photos nothing can replace, so it is ticked. */
+  const onByDefault = REG.databases().filter(d => d.backupByDefault).map(d => d.name).sort();
+  eq(onByDefault, ['gvb-media'], '6: only the irreplaceable one is backed up by default');
+  ok(REG.databases().every(d => typeof d.backupByDefault === 'boolean'),
+    '6: ...and every row answers the question, rather than leaving it undefined');
+  ok(REG.databases().find(d => d.name === 'gvb-media').note.length > 20,
+    '6: the shared media store says what it holds, so a backup can name it');
 }
 
 /* ── 7. href() is what 010 replaced five hardcoded filenames with ────── */

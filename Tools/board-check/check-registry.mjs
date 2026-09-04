@@ -25,6 +25,9 @@
 //   - assets/js/gvb-save.js writes through createSaveSlot({key}). Scanning call
 //     sites alone attributed none of the Name Picker's fifteen keys to it, and
 //     made np_rosters look as though only 006 wrote it.
+//   - _shared/media-db.js opens IndexedDB on its callers' behalf, so an adopter
+//     contains no indexedDB.open() at all; MediaDB.store({db}) is read instead,
+//     and a call without a `db` is the shared gvb-media database.
 //   - sessionStorage is NOT scanned, deliberately: it dies with the tab and no
 //     backup can ever contain it. That is how 009's student-data rule for
 //     gvb-command-center:excluded: turned out to have always been dead — 010
@@ -123,6 +126,14 @@ const BIND_RE = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(['"])([^'"\n]*)\2
 const READ_RE = /localStorage\s*\.\s*getItem\s*\(\s*([^,)]+?)\s*[,)]/g;
 const WRITE_RE = /localStorage\s*\.\s*(?:setItem|removeItem)\s*\(\s*([^,)]+?)\s*[,)]/g;
 const IDB_RE = /indexedDB\s*\.\s*open\s*\(\s*([^,)]+?)\s*[,)]/g;
+/* _shared/media-db.js is to IndexedDB what store.js is to localStorage: after
+   a tool adopts it, the tool's source no longer contains indexedDB.open() at
+   all, and without this the database would drop out of the scan — the same
+   silent disappearance STORE_WRITE_RE exists to stop one layer down. A call
+   with an explicit `db:` names its own database (bmg-maps, whose records
+   predate the module); a call without one is in the shared default. */
+const MEDIA_STORE_RE = /MediaDB\s*\.\s*store\s*\(\s*\{([^}]*)\}/g;
+const MEDIA_DEFAULT_DB = 'gvb-media';
 /* _shared/store.js is the site's storage primitive, so a tool that adopts it
    stops calling localStorage at all. Without these two, every adopter would
    silently drop out of the guard as adoption spreads — the exact failure this
@@ -350,6 +361,15 @@ for (const f of FILES) {
     const r = resolveArg(m[1], f);
     if (r.kind === 'key') rec.idb.add(r.value);
     else if (r.kind === 'dynamic') rec.dynamic.add('indexedDB.open(' + r.value + ')');
+  }
+  if (!f.endsWith('_shared/media-db.js')) {
+    for (const m of src.matchAll(MEDIA_STORE_RE)) {
+      const db = /\bdb\s*:\s*([^,}]+)/.exec(m[1]);
+      if (!db) { rec.idb.add(MEDIA_DEFAULT_DB); continue; }
+      const r = resolveArg(db[1], f);
+      if (r.kind === 'key') rec.idb.add(r.value);
+      else rec.dynamic.add('MediaDB.store({ db: ' + r.value + ' })');
+    }
   }
   if (rec.keys.size || rec.prefixes.size || rec.dynamic.size || rec.idb.size ||
       rec.readKeys.size || rec.readPrefixes.size) found.set(f, rec);

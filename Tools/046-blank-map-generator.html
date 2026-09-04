@@ -792,6 +792,10 @@
 <!-- Shared state-link encoder: used only by the "Send places to Timeline
      Builder" handoff below, which builds a 015-format share URL. -->
 <script src="../_shared/state-link.js"></script>
+<!-- Shared IndexedDB blob store: this tool's map cache (bmg-map-cache.js) is
+     an adapter over it. A classic script, so it has to be loaded before the
+     module below reads window.MediaDB. -->
+<script src="../_shared/media-db.js"></script>
 <script type="module">
 import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator/bmg-commons.js';

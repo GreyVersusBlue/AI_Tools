@@ -21,6 +21,7 @@
 <!-- gvb:social:end -->
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
+<script src="../_shared/seating-read.js"></script>
 <script src="../_shared/webrtc-pair.js"></script>
 <script src="../_shared/qr-scan.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
@@ -930,31 +931,16 @@
      The cost is that SVG text does not wrap, which is what fitText below is
      for.
      ===================================================================== */
-  var SEATING_KEY = 'seating-chart-v1';
-  /* ROOM.deskW / ROOM.deskH from Tools/seating-chart/seating.mjs. Desk
-     coordinates in the saved chart are the top-left corner in that space. */
-  var SEAT_DESK_W = 106, SEAT_DESK_H = 70;
-  var SEAT_PAD = 26;          // breathing room around the outermost desks
-  var SEAT_FRONT_BAND = 62;   // the FRONT OF ROOM bar the generator also draws
+  /* Reading the chart — the key, the geometry, the name matching and the room
+     maths — is _shared/seating-read.js's job since Path 14 P2. This panel was
+     the original of all of it; 008 and 045 each carry their own copy, and this
+     is the one they were copied from, so it is the one that moves first. What
+     stays here is what is genuinely this page's: which chart belongs to which
+     period, and the SVG. */
+  var SEATING_KEY = SeatingRead.KEY;
+  var SEAT_DESK_W = SeatingRead.DESK_W, SEAT_DESK_H = SeatingRead.DESK_H;
 
-  function loadSeating() {
-    try {
-      var parsed = JSON.parse(localStorage.getItem(SEATING_KEY) || 'null');
-      if (!parsed || !Array.isArray(parsed.sections) || !parsed.sections.length) return null;
-      return parsed;
-    } catch (e) { return null; }
-  }
-
-  /** Names compared the way a teacher typed them rather than character by
-      character: case, punctuation and doubled spaces all vary between the
-      roster list and the chart's section name for the same class. */
-  function loosely(s) {
-    return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-  }
-  function sameClass(a, b) {
-    a = loosely(a); b = loosely(b);
-    return !!a && !!b && (a === b || a.indexOf(b) !== -1 || b.indexOf(a) !== -1);
-  }
+  function loadSeating() { return SeatingRead.read(); }
 
   /* Which chart to show is remembered per period, not globally: a teacher who
      picks "Honors GT" while standing in 3rd period means "3rd period is
@@ -968,29 +954,16 @@
     var at = periodAt(nowMinutes());
     return at.current ? at.current.id : '-';
   }
+  /* Nothing picked yet for this period: guess from the names the teacher has
+     already entered elsewhere. The roster mapped to the period is the stronger
+     signal — it was set deliberately — so it is tried first, and the shared
+     reader takes the chain in that order. */
   function sectionForNow(state) {
-    var at = periodAt(nowMinutes());
-    var period = at.current;
-    var byId = {};
-    state.sections.forEach(function (s) { if (s && s.id) byId[s.id] = s; });
-
-    var chosen = seatingChoices()[period ? period.id : '-'];
-    if (chosen && byId[chosen]) return byId[chosen];
-
-    /* Nothing picked yet for this period: guess from the names the teacher
-       has already entered elsewhere. The roster mapped to the period is the
-       stronger signal — it was set deliberately — so it is tried first. */
-    if (period) {
-      var guess = null;
-      if (period.roster) {
-        guess = state.sections.filter(function (s) { return sameClass(s.name, period.roster); })[0];
-      }
-      if (!guess && period.label) {
-        guess = state.sections.filter(function (s) { return sameClass(s.name, period.label); })[0];
-      }
-      if (guess) return guess;
-    }
-    return byId[state.active] || state.sections[0];
+    var period = periodAt(nowMinutes()).current;
+    return SeatingRead.pickSection(state, {
+      chosenId: seatingChoices()[period ? period.id : '-'],
+      names: period ? [period.roster, period.label] : []
+    });
   }
 
   /** An SVG <text> that squeezes rather than spilling out of its desk. */
@@ -1007,41 +980,27 @@
       (extra || '') + squeeze + '>' + escapeHtml(text) + '</text>';
   }
 
+  /* The desk maths — where every desk sits once the room is mirrored, and the
+     box to draw it in, overhang for rotated desks included — is
+     _shared/seating-read.js's. What is left below is this panel's own: an SVG
+     rather than the generator's absolutely-placed divs, because one SVG in the
+     chart's own coordinate space scales to the panel, to projector mode and to
+     paper for free, and re-creating that markup here would be the copy-paste
+     drift the repo conventions exist to stop. */
   function seatingSvg(state, section) {
-    var desks = Array.isArray(section.desks) ? section.desks : [];
-    if (!desks.length) return null;
-    var assign = (section.assign && typeof section.assign === 'object') ? section.assign : {};
-    var byId = {};
-    (Array.isArray(section.students) ? section.students : []).forEach(function (s) {
-      if (s && s.id) byId[s.id] = s;
-    });
+    var placed = SeatingRead.placeDesks(section, { mirror: state.mirror === true });
+    if (!placed.length) return null;
+    var box = SeatingRead.bounds(placed, { frontBand: SeatingRead.FRONT_BAND });
+    var vx = box.vx, vy = box.vy, vw = box.vw, vh = box.vh;
+    var pad = SeatingRead.PAD;
 
-    var xs = desks.map(function (d) { return Number(d.x) || 0; });
-    var ys = desks.map(function (d) { return Number(d.y) || 0; });
-    var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs) + SEAT_DESK_W;
-    var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys) + SEAT_DESK_H;
-    /* A rotated desk overhangs its own box by (w-h)/2 top and bottom, so the
-       extents have to allow for it or a turned desk gets clipped. */
-    var overhang = desks.some(function (d) { return (Number(d.rot) || 0) % 180 !== 0; })
-      ? (SEAT_DESK_W - SEAT_DESK_H) / 2 : 0;
-    var vx = minX - SEAT_PAD - overhang;
-    var vy = minY - SEAT_PAD - SEAT_FRONT_BAND - overhang;
-    var vw = (maxX - minX) + 2 * (SEAT_PAD + overhang);
-    var vh = (maxY - minY) + 2 * (SEAT_PAD + overhang) + SEAT_FRONT_BAND;
-
-    var mirror = state.mirror === true;
     var numbered = state.numbered === true;
     var filled = 0;
 
-    var body = desks.map(function (d, i) {
-      var x = Number(d.x) || 0, y = Number(d.y) || 0;
-      var rot = Number(d.rot) || 0;
-      /* Mirroring by reflecting the coordinates, rather than by flipping the
-         whole drawing, keeps every label the right way round without a
-         counter-flip on each one. The rotation reflects with it. */
-      if (mirror) { x = (minX + maxX) - x - SEAT_DESK_W; rot = -rot; }
+    var body = placed.map(function (p) {
+      var x = p.x, y = p.y, rot = p.rot, i = p.index;
       var cx = x + SEAT_DESK_W / 2, cy = y + SEAT_DESK_H / 2;
-      var student = byId[assign[d.id]];
+      var student = p.student;
       if (student) filled++;
       var flagged = !!(student && student.flag);
 
@@ -1071,18 +1030,18 @@
       return rot ? '<g transform="rotate(' + rot + ' ' + cx + ' ' + cy + ')">' + group + '</g>' : group;
     }).join('');
 
-    var frontY = minY - SEAT_PAD - SEAT_FRONT_BAND / 2 - overhang;
+    var frontY = box.minY - pad - SeatingRead.FRONT_BAND / 2 - box.overhang;
     var front =
-      '<line x1="' + (vx + SEAT_PAD) + '" y1="' + (frontY + 16) + '" x2="' + (vx + vw - SEAT_PAD) + '" y2="' + (frontY + 16) +
+      '<line x1="' + (vx + pad) + '" y1="' + (frontY + 16) + '" x2="' + (vx + vw - pad) + '" y2="' + (frontY + 16) +
       '" stroke="var(--line-strong)" stroke-width="2"/>' +
       '<text x="' + (vx + vw / 2) + '" y="' + frontY + '" text-anchor="middle" font-size="17" letter-spacing="2" fill="var(--muted)">FRONT OF ROOM &#183; BOARD</text>';
 
     return {
       svg: '<svg class="seat-map" viewBox="' + vx + ' ' + vy + ' ' + vw + ' ' + vh + '" role="img" ' +
-        'aria-label="Seating chart for ' + escapeHtml(section.name || 'this class') + ', ' + filled + ' of ' + desks.length + ' seats filled" ' +
+        'aria-label="Seating chart for ' + escapeHtml(section.name || 'this class') + ', ' + filled + ' of ' + placed.length + ' seats filled" ' +
         'font-family="Segoe UI, Georgia, serif">' + front + body + '</svg>',
       filled: filled,
-      total: desks.length
+      total: placed.length
     };
   }
 
@@ -1095,12 +1054,7 @@
     }
     var section = sectionForNow(state);
     var drawn = seatingSvg(state, section);
-    var seated = {};
-    if (section.assign) Object.keys(section.assign).forEach(function (k) { seated[section.assign[k]] = true; });
-    var unseated = (Array.isArray(section.students) ? section.students : [])
-      .filter(function (s) { return s && !seated[s.id]; })
-      .map(function (s) { return s.name; })
-      .filter(Boolean);
+    var unseated = SeatingRead.unseatedNames(section);
 
     var picker = state.sections.length > 1
       ? '<select class="seating-pick" id="seatingPick" aria-label="Which chart to show">' +

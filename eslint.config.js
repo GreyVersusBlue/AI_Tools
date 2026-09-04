@@ -42,6 +42,8 @@ const SITE_GLOBALS = {
   Share: 'readonly',
   Stage: 'readonly',
   Roster: 'readonly',
+  MediaDB: 'readonly',
+  SeatingRead: 'readonly',
   WebRTCPair: 'readonly',
   DuplexPrint: 'readonly',
   StudentDetails: 'readonly',

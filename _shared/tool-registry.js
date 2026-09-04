@@ -47,10 +47,16 @@
    check-registry.mjs therefore does NOT count a legacy entry as coverage: a new
    key under an old prefix still has to be declared.
 
-     idb       [{name, note?}]     IndexedDB databases. Declared rather than
+     idb       [{name, note?, backupByDefault?}]
+                                   IndexedDB databases. Declared rather than
                                    discovered because indexedDB.databases() does
                                    not exist in Firefox, where enumeration
                                    silently returns nothing at all.
+                                   `backupByDefault` marks one whose contents
+                                   cannot be got back any other way, so 009
+                                   ticks it for the teacher instead of leaving
+                                   it to be noticed. Caches (bmg-maps) stay
+                                   unticked: they re-download.
      reads / readPrefixes          another tool's keys this tool only reads.
                                    TWENTY-FIVE rows read np_rosters (28 tool
                                    pages mention the key at all, counting its
@@ -94,6 +100,17 @@
         { k: 'gvb-a11y-prefs' },
         { k: 'gvb-home-cats' },
         { k: 'gvb-tools-theme', legacy: true },
+      ],
+      /* The shared media store (_shared/media-db.js). ONE database for every
+         tool's images, namespaced by a prefix on the record id rather than
+         split into a database each: nine databases would be nine rows here and
+         nine chances to leave one out of a backup, which is the failure this
+         file exists to end. It is declared before it has records in it on
+         purpose — 009 opens a declared database, finds it empty and deletes it
+         again, so an empty declaration costs nothing and a missing one costs a
+         teacher their photos. */
+      idb: [
+        { name: 'gvb-media', backupByDefault: true, note: 'Images teachers have added — student photos, source documents, logos. Nothing re-downloads these, so they are included in a backup unless you untick them.' },
       ],
       /* _shared/roster.js writes both of these on a tool's behalf, so a
          call-site scan now attributes them here rather than to 006. Neither is
@@ -1390,7 +1407,10 @@
     for (var i = 0; i < TOOLS.length; i++) {
       var dbs = TOOLS[i].idb || [];
       for (var j = 0; j < dbs.length; j++) {
-        out.push({ name: dbs[j].name, note: dbs[j].note || '', tool: TOOLS[i] });
+        out.push({
+          name: dbs[j].name, note: dbs[j].note || '',
+          backupByDefault: dbs[j].backupByDefault === true, tool: TOOLS[i]
+        });
       }
     }
     return out;
