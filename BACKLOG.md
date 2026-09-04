@@ -35,7 +35,7 @@ worked: the two sessions took different rows and no source file conflicted.
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v148` (v143 → v144 in #176 for `roster.js`, → v145 in #177 for 006, → v146 in #178 for `share.js` and `qr-draw.js`, → v147 in #180 for `stage.js`, → v148 here because `tool-registry.js` is precached and #179's header-comment change to it lands in this commit) |
+| `CACHE_VERSION` | `v147` (v143 → v144 in #176 for `roster.js`, → v145 in #177 for 006, → v146 in #178 for `share.js` and `qr-draw.js`, → v147 in #180 for `stage.js`; #179's `tool-registry.js` comment change rode on v147 because it merged after #180 and no precached byte moved between them) |
 | Precache entries | 255 in `PRECACHE_URLS`, 83 of them in the `SHELL_URLS` install tier |
 | Suites | **135** in `Tools/board-check/suites.json`, green in CI (#180: 20 min); `expectedFailures` **empty** |
 | Accessibility allowlist | **22 page-rule pairs on 22 pages** — 21 `color-contrast`, 1 `aria-required-children` (034). Untouched by these phases |
