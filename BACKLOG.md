@@ -298,6 +298,17 @@ Ranked work is blocked on these; the recommendation column is the previous sessi
 - **A full `npm test` is ~20 minutes**, and CI is ~20 minutes on top. Plan a session
   around two CI rounds, not six.
 - `npm ci` first — `node_modules` is gitignored and a fresh container has none.
+- **The 002 pairing-history flake was arithmetic, and it is fixed.** On 2026-09-04 CI went
+  red on a *documentation-only* branch at `smoke-pairing-history.mjs`'s "at least one pair
+  has been grouped together more than once". Eight names split into `4` under the default
+  `count` mode is four groups of **two**, so each shuffle records 4 of the C(8,2) = 28
+  possible pairs; six generations drew 24 of 28, which usually repeats and sometimes does
+  not. Twelve local runs produced 16–22 distinct pairs — two short of the 24 that fails. The
+  suite now runs ten generations, where 40 draws over 28 pairs make a repeat certain by
+  pigeonhole. The assertion was not touched. **Read the group shape off the running page
+  before modelling one of these** — CLAUDE.md says this flake was misdiagnosed once by
+  assuming the wrong one, and "split into 4" meaning four groups of two rather than two
+  groups of four is exactly how.
 
 ## Tier 1 — the ranked index
 
