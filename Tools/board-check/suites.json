@@ -147,6 +147,8 @@
     "Tools/roster/test/roster.test.mjs",
     "Tools/share/test/qr-draw.test.mjs",
     "Tools/share/test/share.test.mjs",
+    "Tools/stage/test/stage.test.mjs",
+    "Tools/number-talks-board/test/smoke-stage.mjs",
     "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs"
   ],
   "expectedFailures": []

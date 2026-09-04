@@ -17,6 +17,7 @@
 <meta name="twitter:description" content="Run a daily Number Talk: reveal a number string one expression at a time on a big projector display, then stamp up students' different mental-math strategies as they share out.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cline x1='5' y1='11' x2='27' y2='11' stroke='%232A6DB0' stroke-width='2'/%3E%3Cline x1='5' y1='21' x2='27' y2='21' stroke='%232A6DB0' stroke-width='2'/%3E%3Ccircle cx='11' cy='11' r='2.6' fill='%232A6DB0'/%3E%3Ccircle cx='19' cy='11' r='2.6' fill='%232A6DB0'/%3E%3Ccircle cx='15' cy='21' r='2.6' fill='%23C43A2F'/%3E%3Ccircle cx='23' cy='21' r='2.6' fill='%23C43A2F'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/stage.js"></script>
 <!-- gvb:social:end -->
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -190,27 +191,33 @@
 
   /* ── Fullscreen projector mode — the Fullscreen API shows only #stageArea
      and its descendants, so teacher-only content placed outside it (answer
-     key, teaching note, controls) is never visible while projecting. ──── */
+     key, teaching note, controls) is never visible while projecting.
+     _shared/stage.js (Path 5 P2) owns the mode: it puts `is-fullscreen` on
+     #stageArea whether the browser granted real fullscreen or the helper fell
+     back to a fixed overlay, so ONE selector styles both — until this, every
+     rule below was written three times (`:fullscreen`, `:-webkit-full-screen`,
+     `.is-fullscreen`). The Fullscreen/Exit buttons are shown and hidden by the
+     helper with `hidden`, which the [hidden] rule at the top makes stick. ── */
   #stageArea { position: relative; }
-  #stageArea.is-fullscreen, #stageArea:fullscreen, #stageArea:-webkit-full-screen {
+  #stageArea.is-fullscreen {
     position: fixed; inset: 0; z-index: 2147483000; margin: 0; padding: 2.5rem 3rem;
     background: #0c0f16; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
   }
-  #stageArea.is-fullscreen .stage, #stageArea:fullscreen .stage, #stageArea:-webkit-full-screen .stage {
+  #stageArea.is-fullscreen .stage {
     min-height: 0; flex: 1; width: 100%; max-width: 1500px; border-radius: 0; background: #0c0f16;
   }
-  #stageArea.is-fullscreen .expr-line, #stageArea:fullscreen .expr-line, #stageArea:-webkit-full-screen .expr-line { font-size: clamp(3.2rem, 9vw, 8rem); }
-  #stageArea.is-fullscreen .stage-caption, #stageArea:fullscreen .stage-caption { font-size: 1.15rem; }
-  #stageArea.is-fullscreen .dot-hidden-msg, #stageArea:fullscreen .dot-hidden-msg { font-size: 1.6rem; }
-  #stageArea.is-fullscreen .dot-stage-box, #stageArea:fullscreen .dot-stage-box { height: min(72vh, 72vw); max-width: 60rem; }
-  #stageArea.is-fullscreen .reveal-row button, #stageArea:fullscreen .reveal-row button,
-  #stageArea.is-fullscreen .dot-reveal-row button, #stageArea:fullscreen .dot-reveal-row button {
+  #stageArea.is-fullscreen .expr-line { font-size: clamp(3.2rem, 9vw, 8rem); }
+  #stageArea.is-fullscreen .stage-caption { font-size: 1.15rem; }
+  /* the category tags sit inside #stageArea, on the dark stage: the page's
+     muted-on-paper colours are 2.6:1 there (axe, on-stage scan in
+     smoke-stage.mjs) — this was true before stage.js, nothing scanned it */
+  #stageArea.is-fullscreen .meta-row .tag { color: #cfd8e2; border-color: #4a5568; }
+  #stageArea.is-fullscreen .dot-hidden-msg { font-size: 1.6rem; }
+  #stageArea.is-fullscreen .dot-stage-box { height: min(72vh, 72vw); max-width: 60rem; }
+  #stageArea.is-fullscreen .reveal-row button,
+  #stageArea.is-fullscreen .dot-reveal-row button {
     font-size: 1.25rem; padding: .9rem 1.6rem;
   }
-  #fullscreenBtn { }
-  #exitFullscreenBtn { display: none; }
-  #stageArea.is-fullscreen #fullscreenBtn, #stageArea:fullscreen #fullscreenBtn, #stageArea:-webkit-full-screen #fullscreenBtn { display: none; }
-  #stageArea.is-fullscreen #exitFullscreenBtn, #stageArea:fullscreen #exitFullscreenBtn, #stageArea:-webkit-full-screen #exitFullscreenBtn { display: inline-block; }
 
   /* ── Quick images / dot talks ────────────────────────────────────── */
   .dot-controls-row { display: flex; flex-wrap: wrap; gap: .9rem; align-items: flex-end; margin-bottom: .4rem; }
@@ -272,7 +279,7 @@
   <div id="stageArea">
     <div class="stage-toolbar">
       <button type="button" class="secondary" id="fullscreenBtn">Fullscreen projector view</button>
-      <button type="button" class="secondary" id="exitFullscreenBtn">Exit fullscreen</button>
+      <button type="button" class="secondary" id="exitFullscreenBtn" hidden>Exit fullscreen</button>
     </div>
     <div class="stage" id="stage">
       <p class="empty">Press &ldquo;New number talk&rdquo; to reveal a prompt.</p>
@@ -577,7 +584,6 @@
   var dotState = null;    // { count, layout, dots, frameRects, groupA, groupB, phase, logged }
   var dotFlashTimer = null;
   var dotCountKeyVisible = false;
-  var fallbackFullscreen = false; // true when the Fullscreen API is unavailable and we simulate it with CSS
 
   var els = {};
   ['categorySelect', 'nextPromptBtn', 'stage', 'metaRow', 'revealRow', 'revealBtn', 'revealAllBtn',
@@ -1320,43 +1326,17 @@
     renderModeUI();
   }
 
-  /* ---------- fullscreen projector mode ---------- */
-  function enterFullscreen() {
-    var el = els.stageArea;
-    if (el.requestFullscreen) {
-      el.requestFullscreen().catch(function () { activateFallbackFullscreen(); });
-    } else if (el.webkitRequestFullscreen) {
-      el.webkitRequestFullscreen();
-    } else {
-      activateFallbackFullscreen();
-    }
-  }
-  function activateFallbackFullscreen() {
-    fallbackFullscreen = true;
-    els.stageArea.classList.add('is-fullscreen');
-  }
-  function exitFullscreen() {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else if (fallbackFullscreen) {
-      fallbackFullscreen = false;
-      els.stageArea.classList.remove('is-fullscreen');
-    }
-  }
-  document.addEventListener('fullscreenchange', function () {
-    if (document.fullscreenElement === els.stageArea) {
-      els.stageArea.classList.add('is-fullscreen');
-    } else if (!fallbackFullscreen) {
-      els.stageArea.classList.remove('is-fullscreen');
-    }
-  });
-  document.addEventListener('keydown', function (e) {
-    if (!els.stageArea.classList.contains('is-fullscreen')) return;
-    if (e.key === 'Escape' && fallbackFullscreen) { exitFullscreen(); return; }
-    if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      if (mode === 'strings') revealNext(); else flashDots();
-    }
+  /* ---------- fullscreen projector mode: _shared/stage.js (Path 5 P2) ----------
+     The helper owns enter/exit, the CSS fallback when the browser refuses or
+     has no Fullscreen API, Escape in that fallback, the F key, and the
+     show/hide of the two buttons. Space / Enter / Right reveal the next
+     expression (or flash the dots) only while on stage, as before. */
+  function stageAdvance() { if (mode === 'strings') revealNext(); else flashDots(); }
+  Stage.mount(els.stageArea, {
+    enterButton: els.fullscreenBtn,
+    exitButton: els.exitFullscreenBtn,
+    hotkeys: { ' ': stageAdvance, Enter: stageAdvance, ArrowRight: stageAdvance },
+    hotkeysWhenActive: true
   });
 
   /* ---------- session history ---------- */
@@ -1718,8 +1698,6 @@
   });
   els.modeStringsBtn.addEventListener('click', function () { setMode('strings'); });
   els.modeDotsBtn.addEventListener('click', function () { setMode('dots'); });
-  els.fullscreenBtn.addEventListener('click', enterFullscreen);
-  els.exitFullscreenBtn.addEventListener('click', exitFullscreen);
   els.dotCountModeSelect.addEventListener('change', function () {
     settings.dotCountMode = els.dotCountModeSelect.value;
     els.dotExactRow.style.display = settings.dotCountMode === 'exact' ? '' : 'none';

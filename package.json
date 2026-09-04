@@ -32,7 +32,7 @@
     "test:review-board": "node Tools/review-game-board/test/smoke-clue-image.mjs && node Tools/review-game-board/test/smoke-clue-audio.mjs && node Tools/review-game-board/test/smoke-question-bank.mjs",
     "test:exit-ticket": "node Tools/exit-ticket-generator/test/smoke-response-area.mjs && node Tools/exit-ticket-generator/test/sequence-logic.test.mjs && node Tools/exit-ticket-generator/test/smoke-prompt-sets.mjs",
     "test:writing-prompt": "node Tools/writing-prompt-generator/test/smoke-half-sheet.mjs && node Tools/writing-prompt-generator/test/smoke-writing-record.mjs",
-    "test:number-talks": "node Tools/number-talks-board/test/smoke-session-record.mjs && node Tools/number-talks-board/test/smoke-strategy-library.mjs",
+    "test:number-talks": "node Tools/number-talks-board/test/smoke-session-record.mjs && node Tools/number-talks-board/test/smoke-strategy-library.mjs && node Tools/number-talks-board/test/smoke-stage.mjs",
     "test:escape-room": "node Tools/escape-room-builder/test/smoke-test-run.mjs",
     "test:lab-safety": "node Tools/lab-safety-contract-tracker/test/smoke-contact-sheet.mjs",
     "test:ssr": "node Tools/ssr-log-tracker/test/smoke-genres.mjs",
@@ -90,6 +90,7 @@
     "test:registry": "node Tools/tool-registry/test/registry-shape.test.mjs",
     "test:roster": "node Tools/roster/test/roster.test.mjs",
     "test:share": "node Tools/share/test/qr-draw.test.mjs && node Tools/share/test/share.test.mjs",
+    "test:stage": "node Tools/stage/test/stage.test.mjs",
     "lint": "eslint"
   },
   "devDependencies": {
