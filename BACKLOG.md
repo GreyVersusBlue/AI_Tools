@@ -133,8 +133,8 @@ that is a re-rank, and it is yours to make, not a session's.
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 4 P1 — `_shared/store.js`: versioned envelope, migrate hook, visible quota errors, `onChange` | `_shared/` | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 2 | Path 4 P2 — `_shared/tool-registry.js` + `check-registry.mjs`; 009 and 010 read it | `_shared/` | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 1 | Path 4 P1 — `_shared/store.js`: versioned envelope, migrate hook, visible quota errors, `onChange` | `_shared/` | 1 | `v2i47l` 2026-09-04 05:34 UTC | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 2 | Path 4 P2 — `_shared/tool-registry.js` + `check-registry.mjs`; 009 and 010 read it | `_shared/` | 1 | `v2i47l` 2026-09-04 05:34 UTC | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 3 | Path 3 P1 — `_shared/roster.js` + the identity layer (`getStudents`, `resolve`, `matchName`) | `_shared/` | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P2 — rename, merge and roster diff in 006; bulk CSV/XLSX import | 006 | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Path 6 P1 — `_shared/share.js` + `qr-draw.js`: one share sheet, measured QR budget | `_shared/` | 1 | | [Path 6](#path-6--share-everywhere) |

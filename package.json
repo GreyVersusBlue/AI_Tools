@@ -85,6 +85,7 @@
     "test:sw-tiers": "node Tools/service-worker/test/smoke-sw-tiers.mjs",
     "test:a11y": "node Tools/a11y-sweep/test/smoke-a11y-sweep.mjs",
     "test:theme": "node Tools/theme/test/smoke-theme.mjs",
+    "test:store": "node Tools/store/test/envelope.test.mjs && node Tools/store/test/smoke-quota-banner.mjs",
     "lint": "eslint"
   },
   "devDependencies": {

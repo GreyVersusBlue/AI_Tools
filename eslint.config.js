@@ -35,6 +35,7 @@ import globals from 'globals';
 const SITE_GLOBALS = {
   // _shared/
   StateLink: 'readonly',
+  Store: 'readonly',
   A11y: 'readonly',
   QrScan: 'readonly',
   WebRTCPair: 'readonly',
