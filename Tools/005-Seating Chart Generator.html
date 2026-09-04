@@ -24,6 +24,8 @@
 <!-- gvb:social:end -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="seating-chart/scg-photo.js"></script>
 <link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
@@ -1106,29 +1108,22 @@ function loadLayout(id){
 /* ============================================================
    Roster
 ============================================================ */
-// Read-only reuse of the shared roster list (Class Roster Hub / Name Picker
-// both save here under 'np_rosters') — separate storage, this file never writes it.
+// The saved-roster dropdown is _shared/roster.js's picker now: one reader of
+// np_rosters for the whole site, type-guarded against a hand-edited entry, and
+// refreshed whenever any tab saves a roster. This file still never writes it.
+let rosterPicker = null;
 function populateRosterHubSelect(){
-  const select = el('rosterHubSelect');
-  try {
-    const rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
-    const names = Object.keys(rosters);
-    select.innerHTML = '<option value="">Load a saved roster&hellip;</option>' +
-      names.map(n => `<option value="${esc(n)}">${esc(n)} (${rosters[n].length})</option>`).join('');
-  } catch (e) {
-    select.innerHTML = '<option value="">No saved rosters found</option>';
-  }
+  if (rosterPicker) { rosterPicker.refresh(); return; }
+  rosterPicker = Roster.mountRosterPicker(el('rosterHubSelect'), {
+    placeholder: 'Load a saved roster…',
+    emptyLabel: 'No saved rosters found'
+  });
 }
 function loadRosterHub(){
-  const name = el('rosterHubSelect').value;
-  if (!name) return;
-  try {
-    const rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
-    const list = rosters[name];
-    if (!list || !list.length) return;
-    el('nameInput').value = list.join('\n');
-    addNames();
-  } catch (e) { say('Could not read that roster from this browser.', 'bad'); }
+  const list = rosterPicker ? rosterPicker.getNames() : [];
+  if (!list.length) return;
+  el('nameInput').value = list.join('\n');
+  addNames();
 }
 function setLastFirst(on){ state.lastFirst = !!on; touch(); }
 function addNames(){

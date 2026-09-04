@@ -18,6 +18,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M8 24V9a2 2 0 0 1 2-2h9l5 5v12a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2z' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M19 7v5h5' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <script src="writing-prompt-generator/wpg-prompts.js"></script>
 <script src="writing-prompt-generator/wpg-store.js"></script>
 <script src="writing-prompt-generator/wpg-rubric-link.js"></script>
@@ -682,7 +684,6 @@
   var currentPrompt = null; // {band, genre, text, date, rubricName, setName, setDay, setTotal} — whichever prompt is on the stage right now, for the poster print + rubric row
   var drawPrompt = null; // last random-draw pick, kept separately so switching to Sequence mode and back doesn't lose it
   var rosterAssignments = []; // {name, band, genre, text} — built on demand, not persisted
-  var NP_ROSTERS_KEY = 'np_rosters';
 
   // Writing Record: { [studentName]: [{id, date, promptText, band, genre, rubricName, note}] } —
   // teacher-typed, persisted across sessions. See wpg-store.js for the storage contract.
@@ -1494,20 +1495,19 @@
   }
 
   /* ---------- Roster Assignment Sheet ---------- */
-  function loadNpRosters() {
-    try {
-      var v = JSON.parse(localStorage.getItem(NP_ROSTERS_KEY) || '{}');
-      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
-    } catch (e) { return {}; }
-  }
-
   // Shared by the Roster Assignment Sheet's loader and the Writing Record's —
-  // both list the same np_rosters saved rosters, just for different uses.
-  function populateRosterLoadSelect(selectEl) {
-    var rosters = loadNpRosters();
-    var names = Object.keys(rosters);
-    selectEl.innerHTML = '<option value="">Load a saved roster&hellip;</option>' +
-      names.map(function (n) { return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
+  // both list the same saved rosters, just for different uses. Both mount
+  // _shared/roster.js's picker: one reader of np_rosters for the whole site,
+  // type-guarded, and refreshed whenever any tab saves a roster.
+  var rosterPickers = {};
+  function populateRosterLoadSelect(selectEl, onPick) {
+    var id = selectEl.id;
+    if (rosterPickers[id]) { rosterPickers[id].refresh(); return; }
+    rosterPickers[id] = Roster.mountRosterPicker(selectEl, {
+      placeholder: 'Load a saved roster…',
+      emptyLabel: 'No saved rosters found',
+      onChange: onPick
+    });
   }
 
   // Tolerates a pasted spreadsheet column: a leading row number ("1. " / "12) "),
@@ -1882,15 +1882,6 @@
 
   els.addCustomPromptBtn.addEventListener('click', addCustomPrompt);
 
-  els.rosterLoadSelect.addEventListener('change', function () {
-    var name = els.rosterLoadSelect.value;
-    if (!name) return;
-    var rosters = loadNpRosters();
-    var list = rosters[name];
-    if (!Array.isArray(list)) return;
-    els.rosterNamesInput.value = list.join('\n');
-    onRosterNamesChanged();
-  });
   els.rosterNamesInput.addEventListener('input', onRosterNamesChanged);
   els.buildRosterSheetBtn.addEventListener('click', buildRosterSheet);
   els.printRosterSheetBtn.addEventListener('click', function () {
@@ -1925,14 +1916,6 @@
   });
 
   /* ---------- Writing Record ---------- */
-  els.recordRosterLoadSelect.addEventListener('change', function () {
-    var name = els.recordRosterLoadSelect.value;
-    if (!name) { recordRosterNames = []; renderRecordStudentDatalist(); return; }
-    var rosters = loadNpRosters();
-    var list = rosters[name];
-    recordRosterNames = Array.isArray(list) ? list.slice() : [];
-    renderRecordStudentDatalist();
-  });
   els.recordStudentInput.addEventListener('input', renderRecordViewer);
   els.useCurrentPromptBtn.addEventListener('click', function () {
     if (!currentPrompt) return;
@@ -2060,9 +2043,16 @@
   applyBandTabs();
   renderHistory();
   renderCustomPromptsList();
-  populateRosterLoadSelect(els.rosterLoadSelect);
+  populateRosterLoadSelect(els.rosterLoadSelect, function (name, names) {
+    if (!name || !names.length) return;
+    els.rosterNamesInput.value = names.join('\n');
+    onRosterNamesChanged();
+  });
   onRosterNamesChanged();
-  populateRosterLoadSelect(els.recordRosterLoadSelect);
+  populateRosterLoadSelect(els.recordRosterLoadSelect, function (name, names) {
+    recordRosterNames = name ? names.slice() : [];
+    renderRecordStudentDatalist();
+  });
   els.recordDateInput.value = todayStr();
   renderRecordStudentDatalist();
   renderRecordViewer();

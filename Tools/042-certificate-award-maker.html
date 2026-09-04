@@ -18,6 +18,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='13' r='7' fill='none' stroke='%238a6d1d' stroke-width='2'/%3E%3Cpath d='M12 19l-2 8 6-3 6 3-2-8' fill='none' stroke='%238a6d1d' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="certificate-award-maker/cam-store.js"></script>
 <script src="certificate-award-maker/cam-borders.js"></script>
@@ -414,7 +416,6 @@
    'previewArea','previewNote','viewToggle'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
 
   // Which batch preview the teacher is looking at right now — not persisted,
   // it's a display choice rather than a certificate setting.
@@ -579,26 +580,21 @@
     try { var v = JSON.parse(json); return v == null ? fallback : v; } catch (e) { return fallback; }
   }
 
+  /* The saved-roster dropdown is _shared/roster.js's picker now: one reader of
+     np_rosters for the whole site, type-guarded against a hand-edited entry,
+     and refreshed whenever any tab saves a roster. */
+  var rosterPicker = null;
   function populateRosterSelect() {
-    var rosters = safeParseJson(localStorage.getItem(NAME_PICKER_ROSTERS_KEY), {});
-    var names = Object.keys(rosters);
-    if (!names.length) {
-      els.camRosterSelect.innerHTML = '<option value="">No saved rosters found</option>';
-      return;
-    }
-    els.camRosterSelect.innerHTML = '<option value="">Load a saved Name Picker roster&hellip;</option>' +
-      names.map(function (n) {
-        var count = Array.isArray(rosters[n]) ? rosters[n].length : 0;
-        return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + count + ')</option>';
-      }).join('');
+    if (rosterPicker) { rosterPicker.refresh(); return; }
+    rosterPicker = Roster.mountRosterPicker(els.camRosterSelect, {
+      placeholder: 'Load a saved Name Picker roster…',
+      emptyLabel: 'No saved rosters found'
+    });
   }
 
   els.camLoadRosterBtn.addEventListener('click', function () {
-    var name = els.camRosterSelect.value;
-    if (!name) return;
-    var rosters = safeParseJson(localStorage.getItem(NAME_PICKER_ROSTERS_KEY), {});
-    var list = rosters[name];
-    if (!Array.isArray(list) || !list.length) return;
+    var list = rosterPicker ? rosterPicker.getNames() : [];
+    if (!list.length) return;
     els.batchNames.value = list.join('\n');
     settings.batchNames = els.batchNames.value;
     renderAll();

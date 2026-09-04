@@ -25,6 +25,8 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <script src="../_shared/qr-scan.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 
 <style>
   :root {
@@ -1762,15 +1764,16 @@
   // Lines are emitted tab-separated rather than comma-separated on purpose:
   // rosters are full of "Ruiz, Marisol", and splitBulkLine() prefers a tab
   // when one is present, so a comma inside a name can't split the line.
-  var ROSTER_KEY = 'np_rosters';
   var ROSTER_LINK_DEFAULT = 'https://example.com/turn-in?student={name}';
 
+  /* np_rosters is _shared/roster.js's to read now. This dropdown does more
+     than the shared picker offers — it hides a roster with no names in it,
+     disables the button and says why — so it stays hand-built on top of
+     listRosters()/getRoster() instead of mounting mountRosterPicker. */
   function readRosters() {
-    try {
-      var v = JSON.parse(localStorage.getItem(ROSTER_KEY) || '{}');
-      if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
-      return v;
-    } catch (e) { return {}; }
+    var out = {};
+    Roster.listRosters().forEach(function (n) { out[n] = Roster.getRoster(n); });
+    return out;
   }
 
   function rosterNames(roster) {

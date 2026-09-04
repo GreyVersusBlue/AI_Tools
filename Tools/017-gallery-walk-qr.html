@@ -18,6 +18,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M8 12V8h4' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M20 8h4v4' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M24 20v4h-4' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M12 24H8v-4' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='14' y='14' width='4' height='4' fill='%232A6DB0'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -1338,17 +1340,13 @@
   }
 
   els.walkRosterLoadBtn.addEventListener('click', function () {
-    var name = els.walkRosterSelect.value;
-    if (!name) return;
-    try {
-      var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
-      var list = rosters[name];
-      if (!list || !list.length) return;
-      state.walkGroups = list.slice();
-      save();
-      renderWalkGroupsSummary();
-      renderWalkOrderPreview();
-    } catch (e) { /* ignore — leaves the walking-order list unchanged */ }
+    var p = rosterPickers[els.walkRosterSelect.id];
+    var list = p ? p.getNames() : [];
+    if (!list.length) return;
+    state.walkGroups = list.slice();
+    save();
+    renderWalkGroupsSummary();
+    renderWalkOrderPreview();
   });
 
   els.walkUseStationNamesBtn.addEventListener('click', function () {
@@ -1813,35 +1811,31 @@
     }
   });
 
-  /* ---------- read-only reuse of the shared roster list (Class Roster Hub /
-     Name Picker both save here under 'np_rosters') — separate storage. ---------- */
-  function populateRosterSelect(selectEl) {
-    try {
-      var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
-      var names = Object.keys(rosters);
-      selectEl.innerHTML = '<option value="">Load names from a saved roster&hellip;</option>' +
-        names.map(function (n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
-    } catch (e) {
-      selectEl.innerHTML = '<option value="">No saved rosters found</option>';
-    }
+  /* ---------- the two saved-roster dropdowns, through _shared/roster.js ------
+     One reader of np_rosters for the whole site, type-guarded against a
+     hand-edited entry, and refreshed whenever any tab saves a roster. */
+  var rosterPickers = {};
+  function mountPicker(selectEl, placeholder) {
+    var id = selectEl.id;
+    if (rosterPickers[id]) { rosterPickers[id].refresh(); return; }
+    rosterPickers[id] = Roster.mountRosterPicker(selectEl, {
+      placeholder: placeholder,
+      emptyLabel: 'No saved rosters found'
+    });
   }
   function populateRosterHubSelect() {
-    populateRosterSelect(els.rosterHubSelect);
-    populateRosterSelect(els.walkRosterSelect);
+    mountPicker(els.rosterHubSelect, 'Load names from a saved roster…');
+    mountPicker(els.walkRosterSelect, 'Load names from a saved roster…');
   }
   els.rosterHubLoadBtn.addEventListener('click', function () {
-    var name = els.rosterHubSelect.value;
-    if (!name) return;
-    try {
-      var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
-      var list = rosters[name];
-      if (!list || !list.length) return;
-      if (state.entries.length === 1 && !state.entries[0].name && !state.entries[0].value) state.entries = [];
-      state.entries = state.entries.concat(list.map(function (n) { return { name: n, value: '' }; }));
-      renderRows();
-      save();
-      scheduleRender();
-    } catch (e) { /* ignore — leaves entries unchanged */ }
+    var p = rosterPickers[els.rosterHubSelect.id];
+    var list = p ? p.getNames() : [];
+    if (!list.length) return;
+    if (state.entries.length === 1 && !state.entries[0].name && !state.entries[0].value) state.entries = [];
+    state.entries = state.entries.concat(list.map(function (n) { return { name: n, value: '' }; }));
+    renderRows();
+    save();
+    scheduleRender();
   });
 
   /* ---------- boot ---------- */

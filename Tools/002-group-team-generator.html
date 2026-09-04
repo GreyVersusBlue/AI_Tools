@@ -222,6 +222,8 @@
 </style>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 </head>
 <body>
 
@@ -402,7 +404,6 @@
   var DATA_PREFIX = 'gtg:data:';
   var CURRENT_KEY = 'gtg:current';
   var LEGACY_STORAGE_KEY = 'gtg-settings'; // single global blob, before named configs existed
-  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
 
   var els = {
     configToolbar: document.getElementById('config-toolbar'),
@@ -646,29 +647,23 @@
     else newConfig('New Class');
   });
 
-  // ── Reading Name Picker's saved rosters (read-only reuse, separate storage) ─
+  /* The saved-roster dropdown is _shared/roster.js's picker now: one reader of
+     np_rosters for the whole site, type-guarded against a hand-edited entry,
+     and refreshed whenever any tab saves a roster. */
+  var rosterPicker = null;
   function populateRosterSelect() {
-    try {
-      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
-      var names = Object.keys(rosters);
-      els.rosterSelect.innerHTML = '<option value="">Load a saved Name Picker roster&hellip;</option>' +
-        names.map(function (n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
-      els.rosterSelect.dataset.hasRosters = names.length ? '1' : '0';
-    } catch (e) {
-      els.rosterSelect.innerHTML = '<option value="">No saved rosters found</option>';
-    }
+    if (rosterPicker) { rosterPicker.refresh(); return; }
+    rosterPicker = Roster.mountRosterPicker(els.rosterSelect, {
+      placeholder: 'Load a saved Name Picker roster…',
+      emptyLabel: 'No saved rosters found'
+    });
   }
 
   els.loadRosterBtn.addEventListener('click', function () {
-    var name = els.rosterSelect.value;
-    if (!name) return;
-    try {
-      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
-      var list = rosters[name];
-      if (!list) return;
-      els.namesInput.value = list.join('\n');
-      onNamesChanged();
-    } catch (e) { showMsg('Could not read that roster from this browser.'); }
+    var list = rosterPicker ? rosterPicker.getNames() : [];
+    if (!list.length) return;
+    els.namesInput.value = list.join('\n');
+    onNamesChanged();
   });
 
   // ── Parsing the roster textarea ─────────────────────────────────────────

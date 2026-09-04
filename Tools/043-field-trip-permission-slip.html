@@ -18,6 +18,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='5' y='10' width='22' height='12' rx='2' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cline x1='11' y1='10' x2='11' y2='22' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Cline x1='21' y1='10' x2='21' y2='22' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Ccircle cx='11' cy='24' r='2.2' fill='%23C43A2F'/%3E%3Ccircle cx='21' cy='24' r='2.2' fill='%23C43A2F'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <script src="../_shared/qr-scan.js"></script>
@@ -431,7 +433,6 @@
   var LIST_KEY = 'gvb-field-trip:list';
   var DATA_PREFIX = 'gvb-field-trip:data:';
   var CURRENT_KEY = 'gvb-field-trip:current';
-  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
 
   function safeParse(json, fallback) {
     if (json == null) return fallback;
@@ -668,37 +669,27 @@
     });
   }
 
-  /* ---------- roster loading (read-only reuse of Name Picker rosters) ---------- */
+  /* ---------- roster loading (through _shared/roster.js) ---------- */
+  /* The saved-roster dropdown is _shared/roster.js's picker now: one reader of
+     np_rosters for the whole site, type-guarded against a hand-edited entry,
+     and refreshed whenever any tab saves a roster. */
+  var rosterPicker = null;
   function populateRosterSelect() {
-    try {
-      var rosters = safeParse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY), {});
-      var names = Object.keys(rosters);
-      if (!names.length) {
-        els.rosterSelect.innerHTML = '<option value="">No saved rosters found</option>';
-        return;
-      }
-      els.rosterSelect.innerHTML = '<option value="">Load a saved Name Picker roster&hellip;</option>' +
-        names.map(function (n) {
-          return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>';
-        }).join('');
-    } catch (e) {
-      els.rosterSelect.innerHTML = '<option value="">No saved rosters found</option>';
-    }
+    if (rosterPicker) { rosterPicker.refresh(); return; }
+    rosterPicker = Roster.mountRosterPicker(els.rosterSelect, {
+      placeholder: 'Load a saved Name Picker roster…',
+      emptyLabel: 'No saved rosters found'
+    });
   }
 
   els.loadRosterBtn.addEventListener('click', function () {
-    var name = els.rosterSelect.value;
-    if (!name) return;
-    try {
-      var rosters = safeParse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY), {});
-      var list = rosters[name];
-      if (!list) return;
-      els.batchNames.value = list.join('\n');
-      state.batchNames = els.batchNames.value;
-      renderAll();
-      renderCollectionTracker();
-      renderChaperoneAssign();
-    } catch (e) { /* ignore */ }
+    var list = rosterPicker ? rosterPicker.getNames() : [];
+    if (!list.length) return;
+    els.batchNames.value = list.join('\n');
+    state.batchNames = els.batchNames.value;
+    renderAll();
+    renderCollectionTracker();
+    renderChaperoneAssign();
   });
 
   /* ---------- slip markup ---------- */

@@ -16,6 +16,8 @@
 <meta name="twitter:description" content="Track per-student fitness-test results (mile time, push-ups, sit-ups) across the year, with simple stats and a printable report.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M7 20l6-8 5 5 7-11' fill='none' stroke='%231f3550' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -95,6 +97,12 @@
 
   <div class="card">
     <h2>Students</h2>
+    <label for="rosterHubSelect">Load from a saved roster</label>
+    <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.7rem;">
+      <select id="rosterHubSelect" style="flex:1 1 auto;margin:0;"></select>
+      <button type="button" class="secondary" id="rosterHubLoadBtn" style="flex:0 0 auto;">Load</button>
+    </div>
+    <p class="hint">Fills the box below with that roster&rsquo;s names. Nothing is saved until you press Save roster.</p>
     <label for="rosterInput">Student names, one per line</label>
     <textarea id="rosterInput" placeholder="Alex Johnson&#10;Bailey Smith"></textarea>
     <button class="secondary" id="saveRosterBtn">Save roster</button>
@@ -125,7 +133,7 @@
   var STORE_KEY = 'fsat_tracker_v1';
 
   var els = {};
-  ['rosterInput', 'saveRosterBtn', 'eventsWrap', 'addEventBtn', 'resultsTable', 'printBtn', 'exportCsvBtn', 'sortNote'].forEach(function (id) {
+  ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'eventsWrap', 'addEventBtn', 'resultsTable', 'printBtn', 'exportCsvBtn', 'sortNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -210,6 +218,20 @@
   els.addEventBtn.addEventListener('click', function () {
     state.events.push({ id: uid(), name: 'New event', type: 'count' });
     save(); renderEvents(); renderResultsTable();
+  });
+
+  /* "Load from a saved roster" — _shared/roster.js's picker, the site's one
+     reader of np_rosters, listing whatever Class Roster Hub or the Name Picker
+     has saved on this device. Deliberately non-destructive: it fills the box
+     below and that box stays this tool's source of truth. */
+  var rosterPicker = Roster.mountRosterPicker(els.rosterHubSelect, {
+    placeholder: 'Load a saved roster…',
+    emptyLabel: 'No saved rosters found'
+  });
+  els.rosterHubLoadBtn.addEventListener('click', function () {
+    var list = rosterPicker ? rosterPicker.getNames() : [];
+    if (!list.length) return;
+    els.rosterInput.value = list.join('\n');
   });
 
   els.saveRosterBtn.addEventListener('click', function () {

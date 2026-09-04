@@ -261,6 +261,11 @@
       keys: [
         { k: 'drb_roster_v1' },
       ],
+      /* Path 3 P3 wired this tool's "Load from a saved roster" control to
+         _shared/roster.js; it reads np_rosters and never writes it. */
+      reads: [
+        'np_rosters',
+      ],
     },
     {
       slug: 'socratic-seminar-prep-organizer',
@@ -373,6 +378,11 @@
         { k: 'sdb_directory_v1' },
         { k: 'sdb_prefs_v1' },
       ],
+      /* Path 3 P3 wired this tool's "Load from a saved roster" control to
+         _shared/roster.js; it reads np_rosters and never writes it. */
+      reads: [
+        'np_rosters',
+      ],
     },
     {
       slug: 'grade-checker',
@@ -454,6 +464,11 @@
       category: 'assessment-grading',
       keys: [
         { k: 'tacg_cards_v1', student: true },
+      ],
+      /* Path 3 P3 wired this tool's "Load from a saved roster" control to
+         _shared/roster.js; it reads np_rosters and never writes it. */
+      reads: [
+        'np_rosters',
       ],
     },
     {
@@ -963,6 +978,11 @@
       keys: [
         { k: 'sfpt_tracker_v1', student: true },
       ],
+      /* Path 3 P3 wired this tool's "Load from a saved roster" control to
+         _shared/roster.js; it reads np_rosters and never writes it. */
+      reads: [
+        'np_rosters',
+      ],
     },
     {
       slug: 'dichotomous-key-builder',
@@ -1242,6 +1262,11 @@
       keys: [
         { k: 'pe-tournament-stations', student: true },
       ],
+      /* Path 3 P3 wired this tool's "Load from a saved roster" control to
+         _shared/roster.js; it reads np_rosters and never writes it. */
+      reads: [
+        'np_rosters',
+      ],
     },
     {
       slug: 'gallery-walk-qr',
@@ -1279,6 +1304,11 @@
       category: 'arts-pe',
       keys: [
         { k: 'fsat_tracker_v1', student: true },
+      ],
+      /* Path 3 P3 wired this tool's "Load from a saved roster" control to
+         _shared/roster.js; it reads np_rosters and never writes it. */
+      reads: [
+        'np_rosters',
       ],
     },
     {
