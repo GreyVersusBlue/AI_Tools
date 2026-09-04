@@ -16,9 +16,8 @@
 // existed is still a valid record: nothing to migrate, nothing to read twice.
 //
 // window.MediaDB rather than an import: it is a classic script (half this
-// site's tools cannot use `import`), loaded by 046 before this module.
-
-/* global MediaDB -- _shared/media-db.js, loaded by 046-blank-map-generator.html */
+// site's tools cannot use `import`), loaded by 046 before this module. It is
+// declared in eslint.config.js's SITE_GLOBALS, where the shared globals live.
 
 const DB_NAME = "bmg-maps";
 const STORE = "images";
