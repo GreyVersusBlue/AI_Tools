@@ -30,6 +30,7 @@
     "Tools/class-roster-hub/test/smoke-export.mjs",
     "Tools/class-roster-hub/test/smoke-share-target.mjs",
     "Tools/class-roster-hub/test/smoke-roster-writes.mjs",
+    "Tools/class-roster-hub/test/smoke-bulk-import.mjs",
     "Tools/backup-restore/test/smoke-restore-diff.mjs",
     "Tools/backup-restore/test/smoke-transfer.mjs",
     "Tools/behavior-points-tracker/test/smoke-shared-record.mjs",

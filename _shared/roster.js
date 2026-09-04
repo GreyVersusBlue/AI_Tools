@@ -418,6 +418,48 @@
     return { students: out, orphans: orphans };
   }
 
+  /**
+   * What changes if `incoming` replaces `existing` — the question a teacher
+   * needs answered before an import overwrites a roster they have been marking
+   * attendance on all term.
+   *
+   * Returns `{same, renamed, added, left}`. A `renamed` pair is the one that
+   * earns this function: a name whose sorted-token key matches but whose
+   * spelling does not, which is what a gradebook export that switched from
+   * "Smith, John" to "John Smith" produces for EVERY student. Without it the
+   * same import reads as "28 new, 28 left" and a teacher reasonably concludes
+   * the file is wrong. Each existing name can be claimed once, so two students
+   * cannot both be "the same kid, renamed".
+   *
+   * Pure, and order-preserving on `incoming`, so a caller can render it.
+   */
+  function diffNames(existing, incoming) {
+    var exNorm = {}, exToken = {};
+    (existing || []).forEach(function (n) {
+      exNorm[normKey(n)] = n;
+      var t = tokenKey(n);
+      if (!exToken[t]) exToken[t] = n;
+    });
+
+    var claimed = {};
+    var same = [], renamed = [], added = [];
+    (incoming || []).forEach(function (n) {
+      var k = normKey(n);
+      if (!k) return;
+      if (exNorm[k] && !claimed[k]) { claimed[k] = true; same.push(n); return; }
+      var was = exToken[tokenKey(n)];
+      if (was && !claimed[normKey(was)]) {
+        claimed[normKey(was)] = true;
+        renamed.push({ from: was, to: n });
+        return;
+      }
+      added.push(n);
+    });
+
+    var left = (existing || []).filter(function (n) { return !claimed[normKey(n)]; });
+    return { same: same, renamed: renamed, added: added, left: left };
+  }
+
   /** `reconcile` against what is on disk, then write the result back. */
   function syncRecords(rosterName, names) {
     var db = readRecords();
@@ -680,6 +722,7 @@
     getStudentMeta: getStudentMeta,
     syncRecords: syncRecords,
     reconcile: reconcile,
+    diffNames: diffNames,
     resolve: resolve,
     matchName: matchName,
     /* text */
