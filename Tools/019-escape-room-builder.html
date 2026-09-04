@@ -22,6 +22,7 @@
 <meta name="twitter:image" content="https://www.aspermylessonplan.com/assets/og/toolbook.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='9' y='15' width='14' height='11' rx='2' fill='%232A6DB0'/%3E%3Cpath d='M12 15v-4a4 4 0 0 1 8 0v4' fill='none' stroke='%23C43A2F' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='20' r='1.8' fill='%23F6F7F9'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="escape-room-builder/er-match.js"></script>
@@ -445,6 +446,8 @@
 
   var STORAGE_KEY = 'escape-room-builder:rooms';
 
+  Store.configure({ toolName: 'Escape Room Builder' });
+
   var els = {};
   ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
    'chainPreview', 'stationsList', 'addStationBtn',
@@ -466,19 +469,39 @@
 
   // ── Persisted rooms, keyed by name (same locally-saved trust level as any ─
   //    other tool state in this toolkit) ─────────────────────────────────────
+  //
+  // Through _shared/store.js, the site's storage primitive: it owns the
+  // {v, data} envelope, and it is the reason a full disk now says so instead
+  // of being swallowed the way this file used to swallow it.
+  //
+  // The key name does not change and is not versioned — rooms saved before
+  // this tool adopted Store are on disk as a bare {current, sets} object,
+  // which Store reads as legacy version 0 and hands to migrate() below. There
+  // is no flag day: the blob is rewritten as an envelope the next time a room
+  // is saved, and until then it keeps loading.
+  var STORE_VERSION = 1;
+
+  function emptyStore() { return { current: null, sets: {} }; }
+
+  /* Both the v0 upgrade and the shape guard the old loadStore() did inline.
+     It runs on the legacy payload only; a v1 envelope is trusted, because
+     this tool wrote it. */
+  function migrateStore(fromVersion, s) {
+    if (!s || typeof s !== 'object' || Array.isArray(s)) return null;
+    if (!s.sets || typeof s.sets !== 'object') s.sets = {};
+    if (typeof s.current !== 'string') s.current = null;
+    return s;
+  }
+
   function loadStore() {
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { current: null, sets: {} };
-      var s = JSON.parse(raw);
-      if (!s || typeof s !== 'object') return { current: null, sets: {} };
-      if (!s.sets || typeof s.sets !== 'object') s.sets = {};
-      return s;
-    } catch (e) { return { current: null, sets: {} }; }
+    return Store.get(STORAGE_KEY, {
+      version: STORE_VERSION,
+      migrate: migrateStore,
+      'default': emptyStore()
+    }) || emptyStore();
   }
   function saveStore(store) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
-    catch (e) { /* private browsing / storage full — silently skip */ }
+    Store.set(STORAGE_KEY, store, { version: STORE_VERSION });
   }
   function save() {
     if (!state) return;
