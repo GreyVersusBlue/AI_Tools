@@ -290,8 +290,8 @@ that is a re-rank, and it is yours to make, not a session's.
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 3 P3 — picker adoption: wire the 8 unwired tools, migrate ~20 copy-pasted pickers | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 2 | Path 3 P4 — identity adoption in the history-keeping tools (008 first, then 001, 002, 022, 027, 033, 068, 013) | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 1 | Path 3 P3 — picker adoption: wire the 8 unwired tools, migrate ~20 copy-pasted pickers | site | 2+ | `n5pyqj` 2026-09-04 18:48 UTC | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 2 | Path 3 P4 — identity adoption in the history-keeping tools (008 first, then 001, 002, 022, 027, 033, 068, 013) | site | 2+ | `n5pyqj` 2026-09-04 18:48 UTC | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 3 | Live-site checks Stage 1 could not do: the two-deploy update test and an OS share-target run. **Devon only.** | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 4 | `check:docs-commands` — fail when a tracked `.md` cites an `npm run <x>` `package.json` does not define | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 5 | `check:adoption` — measure the header's shared-file adoption table with a committed script. There is none today; a hand grep counted a *comment* as a reference on 2026-09-04, and on the same day another counted `Tools/board-check/.offline-copy-staging/` — a gitignored build output — as two more adopters | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
