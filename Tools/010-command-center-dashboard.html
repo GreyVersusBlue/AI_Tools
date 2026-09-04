@@ -17,6 +17,7 @@
 <meta name="twitter:description" content="One glanceable projector page — a timer, today's school-calendar day type and pacing note, and a quick roster call — for running the whole period from the front of the room.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M16 10.5V16l4 2.5' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='16' cy='16' r='1.3' fill='%23C43A2F'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/tool-registry.js"></script>
 <!-- gvb:social:end -->
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -757,7 +758,7 @@
 
   PANELS.today = {
     id: 'today', title: 'Today',
-    link: { href: '032-School%20Calendar%20Visualizer.html', label: 'Edit calendar' },
+    link: { href: ToolRegistry.href('school-calendar-visualizer'), label: 'Edit calendar' },
     build: function (el) {
       var now = new Date();
       var head = '<div class="today-date">' + MONTH_NAMES[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear() + '</div>' +
@@ -907,7 +908,7 @@
 
   PANELS.roster = {
     id: 'roster', title: 'Roster & Quick Call',
-    link: { href: '006-class-roster-hub.html', label: 'Manage rosters' },
+    link: { href: ToolRegistry.href('class-roster-hub'), label: 'Manage rosters' },
     build: buildRosterPanel
   };
 
@@ -1127,7 +1128,7 @@
 
   PANELS.seating = {
     id: 'seating', title: 'Seating Chart', wide: true,
-    link: { href: '005-Seating%20Chart%20Generator.html', label: 'Open Seating Chart' },
+    link: { href: ToolRegistry.href('seating-chart'), label: 'Open Seating Chart' },
     build: buildSeatingPanel
   };
 
@@ -1233,7 +1234,7 @@
 
   PANELS.hallpass = {
     id: 'hallpass', title: 'Hall Pass', wide: true,
-    link: { href: '001-hall-pass-log.html', label: 'Open Hall Pass Log' },
+    link: { href: ToolRegistry.href('hall-pass-log'), label: 'Open Hall Pass Log' },
     build: buildHallPassPanel,
     refresh: buildHallPassPanel
   };
@@ -1300,7 +1301,7 @@
   }
   PANELS.donow = {
     id: 'donow', title: 'Do Now / Agenda',
-    link: { href: '004-Classroom Timer.html', label: 'Open Classroom Timer' },
+    link: { href: ToolRegistry.href('classroom-timer'), label: 'Open Classroom Timer' },
     build: buildDoNowPanel,
     refresh: buildDoNowPanel
   };

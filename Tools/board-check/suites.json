@@ -141,6 +141,7 @@
     "Tools/theme/test/smoke-theme.mjs",
     "Tools/store/test/envelope.test.mjs",
     "Tools/store/test/smoke-quota-banner.mjs",
+    "Tools/tool-registry/test/registry-shape.test.mjs",
     "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs"
   ],
   "expectedFailures": []

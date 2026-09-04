@@ -82,6 +82,17 @@ every edit. The deduplication work that established them is summarised in
   screenshots with `node Tools/board-check/make-manifest-screenshots.mjs` after
   a visible redesign.
 - URL-encode spaces in precache paths (`%20`), matching the existing entries.
+- **`npm run check:registry` guards `_shared/tool-registry.js`** — the one record
+  of what every tool saves, which 009 Backup & Restore and 010 Command Center now
+  read instead of keeping their own lists. It resolves every localStorage call
+  site in the tree back to a literal key or prefix and fails on one the registry
+  does not declare, so a new tool's keys cannot go missing from backups the way
+  four tools' already had. A new tool needs a row: `slug`, `title`, `file` and
+  `category` (all four come from its `index.html` row), plus its `keys` and
+  `prefixes`. Mark a key `student: true` if it holds student data — that is
+  judged **per key, not per tool**, and it is what the year-end rollover deletes.
+  `--json` prints the extraction, which is how a row gets seeded; `--tool 019`
+  narrows it. It runs in CI.
 - **Three more read-only sweeps run in CI (Path 2 P4)** and should run before
   a commit that touches a page: `npm run check:entities` (an HTML entity in a
   JS string that reaches a text sink — `textContent`, a placeholder, `alert`,

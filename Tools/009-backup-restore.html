@@ -17,6 +17,7 @@
 <meta name="twitter:description" content="Export everything every tool on this site has saved in your browser to one file, or restore it on a new computer.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M16 6v14M10 14l6 6 6-6' stroke='%232A6DB0' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Cpath d='M7 24h18' stroke='%23C43A2F' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/tool-registry.js"></script>
 <!-- gvb:social:end -->
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -271,126 +272,37 @@
   'use strict';
 
   /*
-   * Add a row here whenever a new tool starts saving to localStorage, so it
-   * shows up under its own name in the table above instead of "Other saved
-   * data". The export/import itself doesn't need this list — it backs up
-   * every localStorage key regardless — this is purely for the friendly
-   * grouping shown to the teacher.
+   * The tool registry is _shared/tool-registry.js. It replaced two lists that
+   * used to live here: KNOWN_GROUPS (76 rows, keyed on a display label and
+   * nothing else) and STUDENT_KEYS/STUDENT_PREFIXES (30 keys, 5 prefixes).
+   * Nothing checked either one, and four tools' keys had already been found
+   * missing from backups after the fact. `npm run check:registry` now resolves
+   * every localStorage call site in the tree back to a literal and fails if the
+   * registry does not declare it, so this page's grouping is complete by
+   * construction rather than by somebody remembering.
+   *
+   * What that fixed on the day it landed: 87 rows against the old 76, so 38
+   * tools that had been showing up here as unnamed "Other saved data" now
+   * appear under their own names; and two IndexedDB databases — rgb-audio
+   * (Review Game Board clue recordings) and stviz-recovery (Schedule Visualizer
+   * crash recovery) — that had never been labelled at all, and on Firefox were
+   * never backed up at all.
    */
-  var KNOWN_GROUPS = [
-    { label: 'Shared — theme preference', keys: ['gvb-tools-theme'] },
-    { label: 'Name Picker', keys: ['np_rosters', 'np_current', 'np_lucky', 'np_stats', 'np_history', 'np_hof', 'np_prompts', 'np_options', 'np_theme', 'np_crazy', 'np_lucky_enabled', 'np_retro_active', 'np_retro_unlocked', 'np_absent'] },
-    { label: 'Class Roster Hub', keys: ['crh_students_v1', 'crh_archived_students', 'crh_archive_v1'] },
-    { label: 'Seating Chart Generator', keys: ['seating-chart-v1'] },
-    { label: 'School Calendar Visualizer', keys: ['scv_calendar_v1'] },
-    { label: 'Classroom Timer', keys: ['ct_prefs', 'ct_running_v1'] },
-    { label: 'Blank Map Generator', keys: ['bmg_workspace_v1', 'bmg_project_v1'] },
-    { label: 'Certificate & Award Maker', prefixes: ['gvb-certificate-maker:'] },
-    { label: 'Bracket / Tournament Generator', prefixes: ['gvb-bracket:'] },
-    { label: 'QR Code Generator', keys: ['qr-code-generator-settings', 'qr-code-generator-recent'] },
-    { label: 'QR Scavenger Hunt Builder', keys: ['qr-scavenger-hunt-settings', 'qr-scavenger-hunt-sets'] },
-    { label: 'Gallery Walk QR Codes', keys: ['gallery-walk-qr-sets'] },
-    { label: 'Rubric Builder', prefixes: ['gvb-rubric-builder:'] },
-    { label: 'Formula Reference Sheet Builder', prefixes: ['gvb-formula-sheet:'] },
-    { label: 'Graph Paper & Number Line Generator', prefixes: ['gvb-graph-paper:'] },
-    { label: 'Math Fact Drill Sheet Generator', keys: ['gvb-math-drill:settings'] },
-    { label: 'Timeline Builder', prefixes: ['gvb-timeline:'] },
-    { label: 'Quiz / Review Game Board', prefixes: ['gvb-review-board:'] },
-    { label: 'Data Table → Chart Builder', keys: ['data-chart-builder-settings', 'data-chart-builder-datasets'] },
-    { label: 'Grade Distribution Visualizer', prefixes: ['gvb-grade-distribution:'] },
-    { label: 'Vocabulary Flashcard & Word Wall Generator', prefixes: ['gvb-vocab-flashcards:'] },
-    { label: 'Vocab & Conjugation Drill Generator', prefixes: ['gvb-vocab-conj:'] },
-    { label: 'Writing Prompt Generator', prefixes: ['gvb-writing-prompts:'] },
-    { label: 'School Layout Visualizer / Schedule Browser', prefixes: ['stviz_', 'STVIZ_SNAPSHOT_'] },
-    { label: 'Prompt Builder', prefixes: ['promptBuilder'] },
-    { label: 'Group / Team Generator', keys: ['gtg-settings'], prefixes: ['gtg:'] },
-    { label: 'Behavior & Points Tracker', keys: ['behavior-points-tracker-sections'] },
-    { label: 'Digital Hall Pass / Sign-Out Log', keys: ['hall-pass-log-sections'] },
-    { label: 'Lab Group & Role Randomizer', keys: ['lgrr_rosters', 'lgrr_current'] },
-    { label: 'Lab Safety Contract Tracker', keys: ['lsct_sections_v1', 'lsct_current_v1'] },
-    { label: 'Silent Reading (SSR) Log Tracker', keys: ['sslt_sections_v1', 'sslt_current_v1'] },
-    { label: 'Novel Study / Reading Circles Manager', keys: ['novel-study-circles', 'novel-study-circles-current'] },
-    { label: 'Field Trip Permission Slip Generator', prefixes: ['gvb-field-trip:'] },
-    { label: 'Exit Ticket / Bell Ringer Generator', prefixes: ['gvb-exit-ticket:'] },
-    { label: 'Number Talks / Mental Math Board', prefixes: ['gvb-number-talks:'] },
-    { label: 'Immersion Roleplay Scenario Generator', prefixes: ['gvb-roleplay:'] },
-    { label: 'Primary Source Analysis Generator', prefixes: ['gvb-primary-source:'] },
-    { label: 'Escape Room / Puzzle Lock Builder', prefixes: ['escape-room-builder:'] },
-    { label: 'Tournament Bracket & Station Rotation', keys: ['pe-tournament-stations'] },
-    { label: 'Command Center', prefixes: ['gvb-command-center:'] },
-    { label: 'Sub Plan Builder', keys: ['subPlanBuilder.standingDetails.v1', 'subPlanBuilder.history.v1'] },
-    { label: 'Sub Binder / Day Bundle Generator', keys: ['gvb-sub-binder:today-lesson'] },
-    { label: 'Image → PDF Assembler', keys: ['image-to-pdf-settings'] },
-    { label: 'Word Doc Merger', keys: ['docx-merger-options'] },
-    { label: 'East Middle Schedule Browser', keys: ['br_home_teacher'] },
-    { label: 'Final Grade Checker', keys: ['final-grade-checker:settings-v1'] },
-    { label: 'Art Critique Worksheet Generator', keys: ['acw_worksheet_v1'] },
-    { label: 'Student Art Portfolio Label & QR Tag Maker', keys: ['apl_portfolio_v1'] },
-    { label: 'Book Tasting Menu Generator', keys: ['btmg_books_v1'] },
-    { label: 'Government/Civics Simulation Role Card Generator', keys: ['crcg_roles_v1'], prefixes: ['crcg:'] },
-    { label: 'Classroom Label Maker, Target Language', keys: ['clm_words_v1', 'clm_lang_v1'] },
-    { label: 'Cognates & False Friends Reference List Builder', keys: ['cffb_list_v1'] },
-    { label: 'Cultural Trivia Card Generator', keys: ['ctcg_custom_v1'] },
-    { label: 'Current Events Discussion Guide Generator', keys: ['cedg_guide_v1'] },
-    { label: 'Daily Editing / DOL Warm-Up Generator', keys: ['deg_custom_v1'] },
-    { label: 'DBQ / Source Packet Builder', keys: ['dbq_packet_v1'], prefixes: ['dbq:'] },
-    { label: 'Dichotomous Key Builder', keys: ['dkb_key_v1'] },
-    { label: 'Duty Roster Builder', keys: ['drb_roster_v1'] },
-    { label: 'Scientific Method / Experiment Design Planner', keys: ['edp_planner_v1'] },
-    { label: 'Fitness & Skill Assessment Tracker', keys: ['fsat_tracker_v1'] },
-    { label: 'Geography Bee / Map Skills Quiz Generator', keys: ['gbq_custom_v1', 'gbq_disabled_v1', 'gbq_settings_v1', 'gbq_tournament_v1'] },
-    { label: 'Historical Figure / Country Trading Card Maker', keys: ['htcm_cards_v1', 'htcm_cards_v2'], prefixes: ['htcm:'] },
-    { label: 'Lab Report Template Builder', keys: ['lrt_template_v1'] },
-    { label: 'Math "Find the Mistake" Warm-Up Generator', keys: ['mftm_custom_v1'] },
-    { label: 'Parent/Guardian Contact Log', keys: ['pcl_roster_v1', 'pcl_entries_v1'] },
-    { label: 'PE Warm-Up Circuit Card Generator', keys: ['pe_circuit_v1'] },
-    { label: 'Peer Feedback / Editing Checklist Generator', keys: ['pfc_checklist_v1'] },
-    { label: 'Picture-Prompt Speaking/Writing Task Generator', keys: ['ppg_images_v1', 'ppg_prompts_v1'] },
-    { label: 'Story Elements / Plot Diagram Builder', keys: ['pdb_diagram_v1'] },
-    { label: 'Science Fair Project Tracker', keys: ['sfpt_tracker_v1'] },
-    { label: 'Science Safety Symbol & Equipment Label Maker', keys: ['sslm_queue_v1'] },
-    { label: 'Staff Directory / Quick-Reference Builder', keys: ['sdb_directory_v1'] },
-    { label: 'Sub Note / Feedback Slip Generator', keys: ['snfs_slip_v1'] },
-    { label: 'Testing Accommodations Reference Card Generator', keys: ['tacg_cards_v1'] },
-    { label: 'Unit Conversion Reference Chart Builder', keys: ['ucb_chart_v1'] },
-    { label: 'Verb Conjugation Reference Poster Generator', keys: ['vcp_poster_v1'] }
-  ];
 
   /*
-   * Which keys hold student data, as opposed to the templates, settings and
-   * unlocks a teacher builds up over a year. This is the distinction the
-   * end-of-year workflow turns on — "keep my rubrics, drop last year's kids" —
-   * and it is also what makes "only student data" a meaningful export filter.
+   * Student data vs. the templates, settings and unlocks a teacher builds up
+   * over a year. This is the distinction the end-of-year workflow turns on —
+   * "keep my rubrics, drop last year's kids" — and it is also what makes "only
+   * student data" a meaningful export filter.
    *
    * It is judged per key, not per tool, because several tools store both: the
    * Name Picker's rosters and pick history are student data and its themes and
-   * task prompts are not. Anything unrecognised is treated as settings, which
-   * is the conservative direction — the year-end clear never touches a key it
-   * has not been told about.
+   * task prompts are not. Anything the registry does not recognise is treated
+   * as settings, which is the conservative direction — the year-end clear never
+   * touches a key it has not been told about.
    */
-  var STUDENT_KEYS = [
-    'np_rosters', 'np_current', 'np_lucky', 'np_stats', 'np_history', 'np_hof', 'np_absent',
-    'crh_students_v1', 'crh_archived_students', 'crh_archive_v1',
-    'seating-chart-v1', 'behavior-points-tracker-sections', 'hall-pass-log-sections',
-    'sslt_sections_v1', 'sslt_current_v1', 'lsct_sections_v1', 'lsct_current_v1',
-    'lgrr_rosters', 'lgrr_current', 'gallery-walk-qr-sets',
-    'novel-study-circles', 'novel-study-circles-current', 'pe-tournament-stations',
-    'gtg-settings',
-    'apl_portfolio_v1', 'fsat_tracker_v1', 'pcl_roster_v1', 'pcl_entries_v1',
-    'sfpt_tracker_v1', 'tacg_cards_v1'
-  ];
-  var STUDENT_PREFIXES = [
-    'gtg:', 'gvb-bracket:', 'gvb-grade-distribution:', 'gvb-command-center:excluded:',
-    'gvb-exit-ticket:tally'
-  ];
+  function classifyKey(key) { return ToolRegistry.classifyKey(key); }
 
-  function classifyKey(key) {
-    if (STUDENT_KEYS.indexOf(key) !== -1) return 'student';
-    for (var i = 0; i < STUDENT_PREFIXES.length; i++) {
-      if (key.indexOf(STUDENT_PREFIXES[i]) === 0) return 'student';
-    }
-    return 'settings';
-  }
   var KIND_LABEL = { student: 'Student data', settings: 'Settings & templates' };
 
   /* Internal bookkeeping key this page itself writes — not a teacher's data,
@@ -403,20 +315,13 @@
   var FORMAT_ID = 'aspermylessonplan-backup';
   var FORMAT_VERSION = 2;
 
-  function isInternalKey(key) { return key === LAST_BACKUP_KEY; }
+  /* This page's own bookkeeping, plus the write probes tools use to ask whether
+     storage works at all (__scv_probe__ and friends). A probe exists for a
+     microsecond and is nobody's data; before the registry marked them
+     `transient` they could land in a backup file if one was taken mid-probe. */
+  function isInternalKey(key) { return key === LAST_BACKUP_KEY || ToolRegistry.isTransient(key); }
 
-  function labelFor(key) {
-    for (var i = 0; i < KNOWN_GROUPS.length; i++) {
-      var g = KNOWN_GROUPS[i];
-      if (g.keys && g.keys.indexOf(key) !== -1) return g.label;
-      if (g.prefixes) {
-        for (var j = 0; j < g.prefixes.length; j++) {
-          if (key.indexOf(g.prefixes[j]) === 0) return g.label;
-        }
-      }
-    }
-    return null;
-  }
+  function labelFor(key) { return ToolRegistry.labelFor(key); }
 
   function formatSize(bytes) {
     if (bytes < 1024) return bytes + ' B';
@@ -567,8 +472,19 @@
      that costs nothing to lose. */
   var idbDatabases = [];
   var idbSupported = typeof indexedDB !== 'undefined';
+  /* Only whether the browser can LIST databases for us. It is no longer whether
+     this page can find them: the registry declares them, so Firefox — which has
+     never implemented indexedDB.databases() — is covered too. */
   var idbEnumerable = idbSupported && typeof indexedDB.databases === 'function';
-  var IDB_NOTES = { 'bmg-maps': 'Cached map images for the Blank Map Generator. Safe to leave out — they download again when needed.' };
+  /* Notes come from the registry now. Before it, this map knew exactly one
+     database (bmg-maps); rgb-audio (Review Game Board clue recordings) and
+     stviz-recovery (Schedule Visualizer crash recovery) went into backups
+     unlabelled, and on Firefox went in not at all. */
+  function idbNote(name) {
+    var all = ToolRegistry.databases();
+    for (var i = 0; i < all.length; i++) if (all[i].name === name) return all[i].note;
+    return '';
+  }
 
   function openDb(name, version) {
     return new Promise(function (resolve, reject) {
@@ -604,12 +520,46 @@
     });
   }
 
+  /* Which databases might exist.
+     indexedDB.databases() does not exist in Firefox, and there this page used to
+     give up entirely: `null`, and a teacher's whole IndexedDB — clue audio,
+     crash-recovery snapshots, cached maps — was silently left out of every
+     backup they took. The registry declares the databases the site can create,
+     so the list no longer has to be discovered. Where enumeration IS available
+     it is still used and unioned in, because it can also find a database this
+     site never wrote. */
+  function idbCandidates() {
+    var declared = ToolRegistry.databases().map(function (d) { return d.name; });
+    if (!idbEnumerable) return Promise.resolve(declared.map(function (n) { return { name: n }; }));
+    return indexedDB.databases().then(function (list) {
+      var seen = {}, out = [];
+      (list || []).forEach(function (d) { if (d && d.name && !seen[d.name]) { seen[d.name] = 1; out.push({ name: d.name }); } });
+      declared.forEach(function (n) { if (!seen[n]) { seen[n] = 1; out.push({ name: n }); } });
+      return out;
+    }).catch(function () { return declared.map(function (n) { return { name: n }; }); });
+  }
+
+  /* Opening a database that does not exist CREATES it, empty. That is the trap
+     in enumerating from a declared list rather than from the browser, so a
+     database that turns out to be brand new and storeless is closed and deleted
+     again rather than left behind as litter in a teacher's browser. */
+  function openExisting(name) {
+    return openDb(name).then(function (db) {
+      if (db.version === 1 && db.objectStoreNames.length === 0) {
+        db.close();
+        try { indexedDB.deleteDatabase(name); } catch (e) { /* nothing to undo */ }
+        return null;
+      }
+      return db;
+    });
+  }
+
   function scanIndexedDb() {
     if (!idbSupported) return Promise.resolve([]);
-    if (!idbEnumerable) return Promise.resolve(null); // present but not listable
-    return indexedDB.databases().then(function (list) {
-      return Promise.all((list || []).filter(function (d) { return d && d.name; }).map(function (d) {
-        return openDb(d.name).then(function (db) {
+    return idbCandidates().then(function (list) {
+      return Promise.all(list.map(function (d) {
+        return openExisting(d.name).then(function (db) {
+          if (!db) return null;
           var stores = [];
           for (var i = 0; i < db.objectStoreNames.length; i++) stores.push(db.objectStoreNames[i]);
           return Promise.all(stores.map(function (sn) {
@@ -620,7 +570,7 @@
             return { name: d.name, version: db.version, stores: info };
           });
         }).catch(function () { return { name: d.name, version: null, stores: [], unreadable: true }; });
-      }));
+      })).then(function (found) { return found.filter(Boolean); });
     }).catch(function () { return null; });
   }
 
@@ -635,7 +585,7 @@
       if (dbs === null) {
         idbDatabases = [];
         wrap.innerHTML = '<p class="hint" style="margin-top:.8rem;color:var(--warn-ink);background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:6px;padding:.5rem .7rem;">' +
-          'This browser will not list its IndexedDB databases, so this page cannot see or back them up. On this site that affects the Blank Map Generator&rsquo;s cached map images only &mdash; they re-download when needed &mdash; but be aware the backup below covers saved settings and rosters, not cached images.</p>';
+          'This browser would not open its IndexedDB at all, so this page cannot see or back up what is in it &mdash; cached map images, Review Game Board clue recordings and Schedule Visualizer crash-recovery snapshots. The backup below still covers every saved setting and roster.</p>';
         return;
       }
       idbDatabases = dbs;
@@ -648,7 +598,7 @@
         '<table class="scan"><thead><tr><th class="chk"></th><th>Database</th><th>Contents</th><th class="num">Records</th></tr></thead><tbody>' +
         dbs.map(function (d) {
           var recs = d.stores.reduce(function (n, s) { return n + (s.count || 0); }, 0);
-          var note = IDB_NOTES[d.name] || '';
+          var note = idbNote(d.name);
           return '<tr><td class="chk"><input type="checkbox" class="idb-check" data-db="' + escapeHtml(d.name) + '"></td>' +
             '<td class="g-label">' + escapeHtml(d.name) + (note ? '<br><span style="font-size:.78rem;color:var(--muted);">' + escapeHtml(note) + '</span>' : '') + '</td>' +
             '<td>' + (d.unreadable ? '<i>could not be opened</i>' : escapeHtml(d.stores.map(function (s) { return s.name; }).join(', '))) + '</td>' +

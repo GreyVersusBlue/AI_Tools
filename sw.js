@@ -60,7 +60,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v142';
+const CACHE_VERSION = 'v143';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -140,6 +140,7 @@ const SHELL_URLS = [
   "_shared/student-details.js",
   "_shared/sw-register.js",
   "_shared/theme.css",
+  "_shared/tool-registry.js",
   "_shared/webrtc-pair.js",
   "_shared/vendor/jspdf/jspdf.umd.min.js",
   "_shared/vendor/jspdf/jspdf.plugin.autotable.min.js",
@@ -386,6 +387,7 @@ const PRECACHE_URLS = [
   "_shared/student-details.js",
   "_shared/sw-register.js",
   "_shared/theme.css",
+  "_shared/tool-registry.js",
   "_shared/webrtc-pair.js",
   "_shared/vendor/jspdf/jspdf.umd.min.js",
   "_shared/vendor/jspdf/jspdf.plugin.autotable.min.js",

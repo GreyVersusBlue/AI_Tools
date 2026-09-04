@@ -70,6 +70,7 @@
     "check:entities": "node Tools/board-check/check-entities.mjs",
     "check:hidden-flex": "node Tools/board-check/check-hidden-flex.mjs",
     "check:print-clip": "node Tools/board-check/check-print-clip.mjs",
+    "check:registry": "node Tools/board-check/check-registry.mjs",
     "phase4:next": "node Tools/board-check/list-base-css-candidates.mjs",
     "offline:build": "node Tools/board-check/make-offline-copy.mjs",
     "offline:verify": "node Tools/board-check/verify-offline-copy.mjs",
@@ -86,6 +87,7 @@
     "test:a11y": "node Tools/a11y-sweep/test/smoke-a11y-sweep.mjs",
     "test:theme": "node Tools/theme/test/smoke-theme.mjs",
     "test:store": "node Tools/store/test/envelope.test.mjs && node Tools/store/test/smoke-quota-banner.mjs",
+    "test:registry": "node Tools/tool-registry/test/registry-shape.test.mjs",
     "lint": "eslint"
   },
   "devDependencies": {
