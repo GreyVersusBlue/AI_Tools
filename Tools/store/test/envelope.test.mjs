@@ -260,5 +260,43 @@ console.log('Store — the migration contract (Path 4 P1)');
   eq((await Store.estimate()).source, 'localStorage', '11: a rejecting estimate falls back');
 }
 
+/* ── 12. `raw: true` writes no envelope, for a cross-tool wire format ─── */
+{
+  // np_rosters is read by 28 tool pages with a plain JSON.parse. If _shared/
+  // roster.js enveloped it, all 28 would show a teacher an empty roster list
+  // and nothing would say why — so store.js has to be able to write a key bare
+  // while keeping the quota report, the announce and the blocked fallback.
+  const { Store, storage } = makeStore();
+  const rosters = { 'Period 3': ['Ada Lovelace'] };
+  const res = Store.set('np_rosters', rosters, { raw: true });
+  ok(res.ok, '12: a raw write reports ok');
+  eq(storage.getItem('np_rosters'), JSON.stringify(rosters), '12: on disk with no {v, data} wrapper');
+  eq(JSON.parse(storage.getItem('np_rosters')), rosters, "12: a raw reader's JSON.parse sees the real thing");
+
+  // and it round-trips back through the ordinary legacy path
+  eq(Store._unwrap(storage.getItem('np_rosters')), { data: rosters, version: 0 },
+    '12: a raw payload is legacy version 0, by rule 2');
+  eq(Store.get('np_rosters', { default: {}, migrate: (from, d) => d }), rosters,
+    '12: ...so an identity migrate reads it back unchanged');
+  eq(Store.get('np_rosters', { default: 'refused' }), 'refused',
+    '12: ...and with no migrate it is refused like any other legacy payload');
+}
+
+/* ── 13. A raw write is still never silent, and still announces ────────── */
+{
+  const { Store, storage, banners } = makeStore({ full: true });
+  const res = Store.set('np_rosters', { P: ['Ada'] }, { raw: true });
+  ok(!res.ok && res.quota, '13: a full disk fails a raw write like any other');
+  ok(banners.length === 1, '13: ...and still shows the banner — raw is not a way around it');
+  eq(storage.getItem('np_rosters'), null, '13: nothing was written');
+}
+{
+  const { Store } = makeStore();
+  const seen = [];
+  Store.onChange('np_rosters', v => seen.push(v));
+  Store.set('np_rosters', { P: ['Ada'] }, { raw: true });
+  eq(seen, [{ P: ['Ada'] }], '13: a raw write notifies subscribers in the writing tab, unwrapped');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) { fails.forEach(f => console.log('  - ' + f)); process.exit(1); }

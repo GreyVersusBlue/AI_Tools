@@ -258,8 +258,15 @@ function findWrappers(src) {
     const body = enclosingBody(src, m.index + m[0].length);
     if (!body) continue;
     const p = m[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const writes = new RegExp('localStorage\\s*\\.\\s*(?:setItem|removeItem)\\s*\\(\\s*' + p + '\\s*[,)]').test(body);
-    const reads = new RegExp('localStorage\\s*\\.\\s*getItem\\s*\\(\\s*' + p + '\\s*[,)]').test(body);
+    /* Both storage spellings, for the same reason STORE_WRITE_RE exists above:
+       a tool that wraps its keys AND adopts _shared/store.js hides them twice
+       over. 006 Class Roster Hub is the first to do both — its writeJson(key, v)
+       became Store.set(key, v, {raw:true}) when it adopted the primitive — and
+       without this its three crh_* keys, all student data, went from visible to
+       STALE ("declared by class-roster-hub, written by nothing in the tree").
+       Adoption must never be the thing that drops a tool out of this guard. */
+    const writes = new RegExp('(?:localStorage\\s*\\.\\s*(?:setItem|removeItem)|Store\\s*\\.\\s*(?:set|remove))\\s*\\(\\s*' + p + '\\s*[,)]').test(body);
+    const reads = new RegExp('(?:localStorage\\s*\\.\\s*getItem|Store\\s*\\.\\s*get)\\s*\\(\\s*' + p + '\\s*[,)]').test(body);
     if (writes) out.set(m[1], 'write');
     else if (reads && !out.has(m[1])) out.set(m[1], 'read');
   }

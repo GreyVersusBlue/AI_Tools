@@ -87,6 +87,15 @@
         { k: 'gvb-home-cats' },
         { k: 'gvb-tools-theme', legacy: true },
       ],
+      /* _shared/roster.js writes both of these on a tool's behalf, so a
+         call-site scan now attributes them here rather than to 006. Neither is
+         OWNED here — np_rosters belongs to the Name Picker's row and
+         crh_students_v1 to Class Roster Hub's, which is what decides how a
+         backup labels them and whether the year-end clear takes them. */
+      writes: [
+        'np_rosters',
+        'crh_students_v1',
+      ],
     },
     {
       slug: 'name-picker',
@@ -185,6 +194,11 @@
         { k: 'crh_archived_students', student: true },
         { k: 'crh_students_v1', student: true },
       ],
+      /* Still the tool that puts rosters on disk, but it does it through
+         _shared/roster.js now, so the scan sees the write on the shared row
+         above rather than here. Kept because ownership of the ACT is what this
+         column records, and a reader asking "which tool writes my rosters"
+         wants this answer, not "_shared/". */
       writes: [
         'np_rosters',
       ],

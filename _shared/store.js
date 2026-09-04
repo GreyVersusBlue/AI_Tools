@@ -48,7 +48,12 @@
      5. A key's name never carries the schema version; the envelope does. That
         is already scv-store.js's stated rule, and 010 reads scv_calendar_v1 raw
         on the strength of it. No key this module touches is ever renamed.
-     6. Every write stamps the current version, defaulting to 1.
+     6. Every write stamps the current version, defaulting to 1 — unless the
+        caller passes `raw: true`, which writes the bare value with no envelope
+        at all. That exists for keys whose on-disk shape is a contract with
+        other tools (np_rosters, crh_students_v1); see set()'s own comment. By
+        rule 2 such a payload reads back as version 0, so its owner passes an
+        identity `migrate` and nothing else about the contract changes.
 
    Plain global script, not an ES module, for the same reason state-link.js is:
    about half this site's tools use `<script type="module">` and half use
@@ -254,13 +259,25 @@
   /**
    * Writes `{v, data}`. Returns {ok, quota, blocked, bytes, error} and, when
    * the write does not stick, says so on screen. There is no silent path.
+   *
+   * `opts.raw` writes the bare JSON of `value` with NO envelope, for the small
+   * set of keys whose on-disk shape is a cross-tool contract other tools still
+   * read with a plain JSON.parse — `np_rosters` (28 reader pages) and
+   * `crh_students_v1` (read by _shared/student-details.js and 008). Enveloping
+   * one of those would empty every reader's roster list at once, on a
+   * teacher's machine, so it cannot happen before those readers move. Such a
+   * payload is legacy version 0 by rule 2, so get() reads it back through an
+   * identity `migrate` and the round trip is lossless. Everything else about
+   * the write — the quota probe, the never-silent report, the same-tab
+   * announce — is unchanged, which is the whole reason this is a flag here
+   * rather than a hand-rolled setItem in the calling module.
    */
   function set(key, value, opts) {
     opts = opts || {};
     var version = typeof opts.version === 'number' ? opts.version : 1;
     var raw;
     try {
-      raw = JSON.stringify({ v: version, data: value });
+      raw = JSON.stringify(opts.raw ? value : { v: version, data: value });
     } catch (e) {
       return { ok: false, quota: false, blocked: false, bytes: 0, error: e };
     }
