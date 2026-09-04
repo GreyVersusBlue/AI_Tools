@@ -158,8 +158,8 @@ that is a re-rank, and it is yours to make, not a session's.
 |---:|---|---|---|---|---|
 | 1 | Path 3 P1 — `_shared/roster.js` + the identity layer (`getStudents`, `resolve`, `matchName`) | `_shared/` | 1 | `jxoqwt` 2026-09-04 10:40 UTC | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 2 | Path 3 P2 — rename, merge and roster diff in 006; bulk CSV/XLSX import | 006 | 1 | `jxoqwt` 2026-09-04 10:40 UTC | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 3 | Path 6 P1 — `_shared/share.js` + `qr-draw.js`: one share sheet, measured QR budget | `_shared/` | 1 | | [Path 6](#path-6--share-everywhere) |
-| 4 | Path 5 P2 — `_shared/stage.js`: one fullscreen/projector helper; adopt in 023, 024, 025, 021 | `_shared/` | 1 | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
+| 3 | Path 6 P1 — `_shared/share.js` + `qr-draw.js`: one share sheet, measured QR budget | `_shared/` | 1 | `9q9afn` 2026-09-04 12:16 UTC | [Path 6](#path-6--share-everywhere) |
+| 4 | Path 5 P2 — `_shared/stage.js`: one fullscreen/projector helper; adopt in 023, 024, 025, 021 | `_shared/` | 1 | `9q9afn` 2026-09-04 12:16 UTC | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 5 | Path 4 P3 — `_shared/media-db.js` + shared `downscaleImage`; register the database in 009 | `_shared/` | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 6 | Path 14 P2 — `_shared/seating-read.js`: one reader of `seating-chart-v1` for 010, 008, 045 | `_shared/` | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 7 | Path 3 P3 — picker adoption: wire the 8 unwired tools, migrate ~20 copy-pasted pickers | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
