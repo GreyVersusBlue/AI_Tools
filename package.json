@@ -12,7 +12,7 @@
     "test:pe-stations": "node Tools/pe-tournament-stations/test/smoke-pe-stations.mjs && node Tools/pe-tournament-stations/test/smoke-pe-remote.mjs",
     "test:certificate": "node Tools/certificate-award-maker/test/smoke-stock-inset.mjs",
     "test:hall-pass": "node Tools/hall-pass-log/test/smoke-export.mjs && node Tools/hall-pass-log/test/smoke-hallway-sync.mjs",
-    "test:roster-hub": "node Tools/class-roster-hub/test/smoke-export.mjs && node Tools/class-roster-hub/test/smoke-share-target.mjs",
+    "test:roster-hub": "node Tools/class-roster-hub/test/smoke-export.mjs && node Tools/class-roster-hub/test/smoke-share-target.mjs && node Tools/class-roster-hub/test/smoke-roster-writes.mjs",
     "test:backup": "node Tools/backup-restore/test/smoke-restore-diff.mjs && node Tools/backup-restore/test/smoke-transfer.mjs",
     "test:behavior": "node Tools/behavior-points-tracker/test/smoke-shared-record.mjs && node Tools/behavior-points-tracker/test/smoke-seating-layout.mjs && node Tools/behavior-points-tracker/test/smoke-seating-board.mjs",
     "test:sub-plan": "node Tools/sub-plan-builder/test/smoke-share.mjs",
@@ -88,6 +88,7 @@
     "test:theme": "node Tools/theme/test/smoke-theme.mjs",
     "test:store": "node Tools/store/test/envelope.test.mjs && node Tools/store/test/smoke-quota-banner.mjs",
     "test:registry": "node Tools/tool-registry/test/registry-shape.test.mjs",
+    "test:roster": "node Tools/roster/test/roster.test.mjs",
     "lint": "eslint"
   },
   "devDependencies": {

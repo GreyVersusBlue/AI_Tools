@@ -18,6 +18,10 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='13' cy='11' r='4' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M6 25c0-4.4 3.1-7.5 7-7.5s7 3.1 7 7.5' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M22 14.5h5M24.5 12v5' stroke='%23C43A2F' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
+<!-- store.js must load before roster.js, which depends on it; roster.js owns
+     np_rosters and the parsing this page used to keep to itself. -->
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <!-- Device-to-device transfer ("Move Everything to Another Device"): manual-
@@ -538,12 +542,16 @@
 (function () {
   'use strict';
 
-  var STORE_KEY = 'np_rosters';                  // shared with Name Picker and every tool that reuses its saved rosters
+  var STORE_KEY = Roster.ROSTERS_KEY;            // 'np_rosters' — owned by _shared/roster.js now; this page keeps the
+                                                 // name only for OWN_KEYS, which the dependency scan below excludes
   var ARCHIVE_KEY = 'crh_archived_students';     // { [rosterName]: [name, name, ...] } — this tool only
   var RECORDS_KEY = 'crh_students_v1';           // richer per-student records, kept beside np_rosters (see note below)
   var ROSTER_ARCHIVE_KEY = 'crh_archive_v1';     // archived rosters + past school years
-  var MAX_NAME = 120, MAX_ROSTER = 400, MAX_ROSTERS = 60; // mirrors Name Picker's own ceilings
-  var MAX_ORPHANS = 120;
+  /* The ceilings come from _shared/roster.js, which is what actually enforces
+     them now. Kept as locals because two of them appear in messages a teacher
+     reads ("list capped at 400 students") — a hardcoded number here would go on
+     saying 400 after the real limit changed. */
+  var MAX_NAME = Roster.MAX_NAME, MAX_ROSTER = Roster.MAX_ROSTER, MAX_ROSTERS = Roster.MAX_ROSTERS;
 
   /* Why the richer student record lives in its own key instead of inside
      np_rosters: fifteen other tools on this site read np_rosters and every one
@@ -588,26 +596,33 @@
   }
   function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
 
-  // ── Storage (plain JSON, same shape Name Picker and other tools already read) ──
+  // ── Storage ────────────────────────────────────────────────────────────
+  /* np_rosters is _shared/roster.js's now — this page reads and writes it only
+     through window.Roster, which enforces the same ceilings and does the same
+     read-modify-write the Name Picker does. The three crh_ keys below are still
+     this tool's own and go through _shared/store.js, so a full disk is reported
+     once, in this tool's own message line, instead of by four silent catches.
+
+     Both key families stay BARE on disk (Store's `raw: true`): np_rosters is
+     read by 28 other pages with a plain JSON.parse, and crh_students_v1 by
+     _shared/student-details.js and 008. Wrapping either would empty every one
+     of those readers at once. */
+  Store.configure({
+    toolName: 'Class Roster Hub',
+    onQuota: function (info) { showMsg(info.message); }
+  });
+
   function loadAll() {
-    try {
-      var v = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
-      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
-    } catch (e) { return {}; }
-  }
-  function saveAll(all) {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(all)); return true; }
-    catch (e) { showMsg('Could not save — this browser’s storage may be full or unavailable.'); return false; }
+    var all = {};
+    Roster.listRosters().forEach(function (n) { all[n] = Roster.getRoster(n); });
+    return all;
   }
   function readJson(key, fallback) {
-    try {
-      var v = JSON.parse(localStorage.getItem(key) || 'null');
-      return (v && typeof v === 'object') ? v : fallback;
-    } catch (e) { return fallback; }
+    var v = Store.get(key, { default: null, migrate: function (fromV, data) { return data; } });
+    return (v && typeof v === 'object') ? v : fallback;
   }
   function writeJson(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
-    catch (e) { showMsg('Could not save — this browser’s storage may be full or unavailable.'); return false; }
+    return Store.set(key, value, { raw: true }).ok;
   }
 
   function loadArchive() { return readJson(ARCHIVE_KEY, {}); }
@@ -618,25 +633,25 @@
   }
 
   // ── Student records sidecar ───────────────────────────────────────────────
+  /* This used to DISCARD any payload whose `version` was not 1 — a teacher on a
+     newer build who opened an older one lost every preferred name and
+     pronunciation, silently. _shared/store.js rule 4 is the opposite: read what
+     you can, and leave what you cannot on disk rather than destroying it.
+     student-details.js has never looked at `version` either, so this also ends
+     a disagreement between two readers of the same key. */
   function loadRecords() {
-    var db = readJson(RECORDS_KEY, null);
-    if (!db || db.version !== 1 || !db.rosters || typeof db.rosters !== 'object') {
-      db = { version: 1, rosters: {} };
-    }
+    var db = Roster.getStudentMeta();
+    if (!db || !db.rosters || typeof db.rosters !== 'object') db = { version: 1, rosters: {} };
     return db;
   }
   function saveRecords(db) { return writeJson(RECORDS_KEY, db); }
 
-  function newId() {
-    return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  }
-  function normKey(s) { return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
-  /** Order- and punctuation-insensitive key, so "Smith, John" and "John Smith"
-      land in the same bucket — that swap is the single most common way one
-      student ends up as two in downstream tools. */
-  function tokenKey(s) {
-    return normKey(s).replace(/[.,;]/g, ' ').split(/\s+/).filter(Boolean).sort().join(' ');
-  }
+  /* Identity and name handling live in _shared/roster.js now, so this tool and
+     the twenty-odd that will adopt the picker agree on what "the same student"
+     means. These aliases keep the call sites below reading as they did. */
+  var newId = Roster.newId;
+  var normKey = Roster.normKey;
+  var tokenKey = Roster.tokenKey;
 
   /** Reconciles the sidecar records for one roster against the authoritative
       list of names in np_rosters. Names keep their record (and id) across
@@ -648,39 +663,13 @@
     if (!Array.isArray(entry.students)) entry.students = [];
     if (!Array.isArray(entry.orphans)) entry.orphans = [];
 
-    var byName = {}, byToken = {};
-    entry.students.concat(entry.orphans).forEach(function (r) {
-      if (!r || typeof r.name !== 'string') return;
-      byName[normKey(r.name)] = r;
-      var t = tokenKey(r.name);
-      if (!byToken[t]) byToken[t] = r;
-    });
-
-    var used = {};
-    var out = names.map(function (n) {
-      var rec = byName[normKey(n)] || byToken[tokenKey(n)];
-      if (rec && !used[rec.id]) {
-        used[rec.id] = true;
-        return { id: rec.id, name: n, preferred: rec.preferred || '', say: rec.say || '' };
-      }
-      return { id: newId(), name: n, preferred: '', say: '' };
-    });
-
-    var kept = {};
-    out.forEach(function (r) { kept[r.id] = true; });
-    var orphans = entry.students.concat(entry.orphans).filter(function (r) {
-      return r && r.id && !kept[r.id] && (r.preferred || r.say);
-    });
-    // de-dupe orphans by id, newest first, capped so this never grows without bound
-    var seenOrphan = {};
-    orphans = orphans.filter(function (r) {
-      if (seenOrphan[r.id]) return false;
-      seenOrphan[r.id] = true;
-      return true;
-    }).slice(0, MAX_ORPHANS);
-
-    entry.students = out;
-    entry.orphans = orphans;
+    /* The matcher is Roster.reconcile now. This tool OWNS the sidecar, so it
+       mints an id for a name that has never been seen (the default); a reader
+       calling Roster.getStudents() gets id:null instead, because two readers
+       minting separately would be two different ids for one student. */
+    var next = Roster.reconcile(names, entry.students, entry.orphans);
+    entry.students = next.students;
+    entry.orphans = next.orphans;
     db.rosters[rosterName] = entry;
     saveRecords(db);
     return entry;
@@ -713,23 +702,7 @@
   }
 
   // ── Tolerant name parsing (dedupe case-insensitively, cap lengths) ──────────
-  function parseNames(text) {
-    var seen = {};
-    var out = [];
-    var truncatedNames = 0;
-    String(text || '').split('\n').forEach(function (line) {
-      var name = line.replace(/\s+/g, ' ').trim();
-      if (!name) return;
-      if (name.length > MAX_NAME) { name = name.slice(0, MAX_NAME); truncatedNames++; }
-      var key = name.toLowerCase();
-      if (seen[key]) return;
-      seen[key] = true;
-      out.push(name);
-    });
-    var truncatedList = out.length > MAX_ROSTER;
-    out = out.slice(0, MAX_ROSTER);
-    return { names: out, truncatedNames: truncatedNames, truncatedList: truncatedList };
-  }
+  var parseNames = Roster.parseNames;
 
   function currentNames() {
     return students.map(function (s) { return s.name; }).filter(Boolean);
@@ -929,80 +902,27 @@
   /** Rebuilds the working student list from a flat array of names, carrying
       over preferred name / pronunciation for anyone already in the list. */
   function adoptNames(names) {
-    var byName = {}, byToken = {};
-    students.forEach(function (s) {
-      byName[normKey(s.name)] = s;
-      if (!byToken[tokenKey(s.name)]) byToken[tokenKey(s.name)] = s;
-    });
-    var used = {};
-    students = names.map(function (n) {
-      var prev = byName[normKey(n)] || byToken[tokenKey(n)];
-      if (prev && !used[prev.id]) {
-        used[prev.id] = true;
-        return { id: prev.id, name: n, preferred: prev.preferred, say: prev.say, sel: false };
-      }
-      return { id: newId(), name: n, preferred: '', say: '', sel: false };
+    /* Same reconciliation as syncRecords, against the on-screen list rather
+       than the stored one — they were two hand-written copies of one matcher
+       that had already drifted (only one guarded a non-string name). `sel` is
+       this page's own selection checkbox and is not part of the record. */
+    students = Roster.reconcile(names, students, []).students.map(function (s) {
+      s.sel = false;
+      return s;
     });
   }
 
   // ── CSV / spreadsheet import with column mapping ─────────────────────────
-  var HEADER_WORDS = ['name', 'names', 'student', 'student name', 'full name', 'last', 'first', 'last name',
-                      'first name', 'id', 'student id', 'period', 'grade', 'email'];
-
-  /** Splits one delimited line into cells. Handles quoted cells (so a
-      "Last, First" cell keeps its comma) and picks tab over comma when the
-      line has tabs — which is what pasting a spreadsheet region gives you. */
-  function splitCells(line, delim) {
-    var out = [], cur = '', inQ = false;
-    for (var i = 0; i < line.length; i++) {
-      var ch = line[i];
-      if (inQ) {
-        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-        else if (ch === '"') inQ = false;
-        else cur += ch;
-      } else if (ch === '"') inQ = true;
-      else if (ch === delim) { out.push(cur.trim()); cur = ''; }
-      else cur += ch;
-    }
-    out.push(cur.trim());
-    return out;
-  }
-
-  function parseTable(text) {
-    var lines = String(text || '').split(/\r?\n/).filter(function (l) { return l.trim() !== ''; });
-    if (!lines.length) return { rows: [], cols: 0 };
-    var delim = lines[0].indexOf('\t') !== -1 ? '\t' : (lines[0].indexOf(',') !== -1 ? ',' : '\t');
-    var rows = lines.map(function (l) { return splitCells(l, delim); });
-    var cols = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
-    rows.forEach(function (r) { while (r.length < cols) r.push(''); });
-    return { rows: rows, cols: cols };
-  }
-
-  function looksLikeHeader(row) {
-    var hits = row.filter(function (c) { return HEADER_WORDS.indexOf(normKey(c)) !== -1; }).length;
-    return hits >= Math.max(1, Math.ceil(row.length / 3));
-  }
-
-  /** "Smith, John" → "John Smith". Leaves anything without a comma alone. */
-  function flipLastFirst(name) {
-    var t = String(name || '').trim();
-    var i = t.indexOf(',');
-    if (i === -1) return t;
-    var last = t.slice(0, i).trim(), rest = t.slice(i + 1).trim();
-    if (!last || !rest) return t.replace(',', ' ').replace(/\s+/g, ' ').trim();
-    return (rest + ' ' + last).replace(/\s+/g, ' ').trim();
-  }
+  /* The delimited-text parsing moved to _shared/roster.js so the bulk importer,
+     the share-target handler and every tool that later offers "paste a
+     spreadsheet region" agree on quoting, delimiter detection and header
+     sniffing. What stays here is everything that touches the mapping dialog. */
+  var parseTable = Roster.parseDelimited;
+  var looksLikeHeader = Roster.looksLikeHeader;
+  var flipLastFirst = Roster.flipLastFirst;
+  var guessColumn = Roster.guessColumn;
 
   var importTable = null;
-
-  function guessColumn(rows, header, words) {
-    if (header) {
-      for (var c = 0; c < rows[0].length; c++) {
-        if (words.indexOf(normKey(rows[0][c])) !== -1) return c;
-      }
-    }
-    return -1;
-  }
 
   function openImportModal(text, sourceLabel) {
     var t = parseTable(text);
@@ -1038,20 +958,7 @@
     els.importOverlay.hidden = false;
   }
 
-  /** With no header to go on, the column with the most letters-and-spaces in
-      it is almost always the name column — IDs and periods are digits. */
-  function widestTextColumn(t) {
-    var best = 0, bestScore = -1;
-    for (var c = 0; c < t.cols; c++) {
-      var score = 0;
-      t.rows.slice(0, 12).forEach(function (r) {
-        var v = String(r[c] || '');
-        if (/[a-z]/i.test(v)) score += v.replace(/[^a-z ]/gi, '').length;
-      });
-      if (score > bestScore) { bestScore = score; best = c; }
-    }
-    return best;
-  }
+  var widestTextColumn = Roster.widestTextColumn;
 
   function syncMapMode() {
     var two = els.mapMode.value === 'two';
@@ -1513,9 +1420,7 @@
     var name = s.name;
     students.splice(index, 1);
 
-    var all = loadAll();
-    all[currentName] = currentNames();
-    saveAll(all);
+    Roster.setRoster(currentName, currentNames());
     writeStudents(currentName, students, meta);
 
     var archive = loadArchive();
@@ -1544,9 +1449,7 @@
     if (currentNames().map(normKey).indexOf(normKey(name)) === -1) {
       students.push({ id: newId(), name: name, preferred: '', say: '', sel: false });
     }
-    var all = loadAll();
-    all[currentName] = currentNames();
-    saveAll(all);
+    Roster.setRoster(currentName, currentNames());
     writeStudents(currentName, students, meta);
 
     renderStudents();
@@ -1579,7 +1482,7 @@
     name = name.trim().slice(0, 80);
     if (!name) return;
     if (all[name] && !confirm('"' + name + '" already exists. Open it instead?')) return;
-    if (!all[name]) { all[name] = []; saveAll(all); }
+    if (!all[name]) Roster.setRoster(name, []);
     loadRosterByName(name);
   });
 
@@ -1590,8 +1493,7 @@
     var base = currentName + ' (copy)';
     var newName = base, n = 2;
     while (all[newName]) { newName = base + ' ' + n; n++; }
-    all[newName] = currentNames();
-    saveAll(all);
+    Roster.setRoster(newName, currentNames());
     writeStudents(newName, students.map(function (s) { return { id: newId(), name: s.name, preferred: s.preferred, say: s.say }; }),
                   { period: meta.period || '', subject: meta.subject || '', term: meta.term || '', updated: Date.now() });
     loadRosterByName(newName);
@@ -1609,9 +1511,7 @@
         : 'This erases the roster here and in every tool that loads rosters from here. It can’t be undone. Archiving instead keeps the names.',
       deps,
       function () {
-        var all = loadAll();
-        delete all[name];
-        saveAll(all);
+        Roster.removeRoster(name);
         var archive = loadArchive();
         delete archive[name];
         saveArchive(archive);
@@ -1632,9 +1532,9 @@
     var all = loadAll();
     if (all[newName] && !confirm('"' + newName + '" already exists and will be overwritten. Continue?')) return;
     var from = currentName;
-    all[newName] = all[from] || [];
-    delete all[from];
-    saveAll(all);
+    /* One read-modify-write, so the roster is never on disk under both names —
+       and never under only the old one if the write fails. */
+    Roster.renameRoster(from, newName);
     var archive = loadArchive();
     if (archive[from]) { archive[newName] = archive[from]; delete archive[from]; saveArchive(archive); }
     renameRecordRoster(from, newName);
@@ -1661,8 +1561,7 @@
     if (!all[name] && atRosterLimit(all)) return false;
     var parsed = parseNames(currentNames().join('\n'));
     adoptNames(parsed.names);
-    all[name] = parsed.names;
-    if (!saveAll(all)) return false;
+    if (!Roster.setRoster(name, parsed.names).ok) return false;
     meta = readMetaFromForm();
     writeStudents(name, students, meta);
     currentName = name;
@@ -1701,7 +1600,12 @@
     }
     var existing = Array.isArray(all[target]) ? all[target] : [];
     var targetNames = parseNames(existing.concat(picked.map(function (s) { return s.name; })).join('\n')).names;
-    all[target] = targetNames;
+    /* Two rosters change here — the destination gains the students and the open
+       one loses them — so this is two writes where it used to be one saveAll of
+       a map holding both. The destination goes first: if the second write fails
+       (a full disk), the students exist in both places, which a teacher can see
+       and fix. The other order would lose them from both. */
+    if (!Roster.setRoster(target, targetNames).ok) return;
 
     // carry each student's details across to the destination roster
     var db = loadRecords();
@@ -1719,8 +1623,7 @@
     saveRecords(db);
 
     students = students.filter(function (s) { return !s.sel; });
-    all[currentName] = currentNames();
-    saveAll(all);
+    Roster.setRoster(currentName, currentNames());
     writeStudents(currentName, students, meta);
     renderStudents();
     refreshSwitcher();
@@ -1764,9 +1667,7 @@
   }
 
   function removeRoster(name) {
-    var all = loadAll();
-    delete all[name];
-    saveAll(all);
+    Roster.removeRoster(name);
     var archive = loadArchive();
     delete archive[name];
     saveArchive(archive);
@@ -1779,8 +1680,7 @@
     var base = snap.name + (suffix || '');
     var name = base, n = 2;
     while (all[name]) { name = base + ' (' + n + ')'; n++; }
-    all[name] = snap.names.slice();
-    saveAll(all);
+    Roster.setRoster(name, snap.names.slice());
     var db = loadRecords();
     db.rosters[name] = { meta: snap.meta || {}, students: (snap.students || []).slice(), orphans: [] };
     saveRecords(db);
@@ -1845,7 +1745,10 @@
             students: [], orphans: []
           };
         });
-        saveAll(fresh);
+        /* Genuinely a whole-map operation: keep this year's roster names, empty
+           every one. A loop of setRoster calls would leave storage half rolled
+           over if the disk filled in the middle. */
+        Roster.replaceAll(fresh);
         saveRecords(recs);
         saveArchive({});
 
@@ -2137,8 +2040,7 @@
     }
     var name = uniqueRosterName((decoded.name || 'Shared Roster').trim().slice(0, 80) || 'Shared Roster');
     var parsed = parseNames(decoded.names.join('\n'));
-    all[name] = parsed.names;
-    saveAll(all);
+    Roster.setRoster(name, parsed.names);
     if (decoded.meta && typeof decoded.meta === 'object') {
       var db = loadRecords();
       db.rosters[name] = {
