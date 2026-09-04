@@ -52,10 +52,18 @@
                                    not exist in Firefox, where enumeration
                                    silently returns nothing at all.
      reads / readPrefixes          another tool's keys this tool only reads.
-                                   Twelve tools read np_rosters; one tool, 010,
-                                   actually WRITES another tool's key
-                                   (hall-pass-log-sections), which is why
-                                   ownership is decided by who writes.
+                                   TWENTY-FIVE rows read np_rosters (28 tool
+                                   pages mention the key at all, counting its
+                                   owner 007, its writer 006 and 009, which
+                                   backs up every key generically). This said
+                                   "twelve" until 2026-09-04 and was never
+                                   right; it is one node -e away from checkable,
+                                   so check it rather than carrying it forward.
+                                   Two rows WRITE another tool's key: 010 writes
+                                   hall-pass-log-sections, and `shared` writes
+                                   np_rosters + crh_students_v1 on a tool's
+                                   behalf via _shared/roster.js. Ownership is
+                                   decided by who writes.
      dynamic                       a call site the extractor could not resolve
                                    to a literal, acknowledged here so that a
                                    human has looked at it once. Currently empty

@@ -11,9 +11,89 @@ to add a to-do to this file, it belongs there instead.
 
 ## Stage 2 — the platform foundation (2026-09-03 → 2026-09-04, in progress)
 
-Four of the fourteen planned phases have shipped. The plan itself — four `_shared/`
+Six of the fourteen planned phases have shipped. The plan itself — four `_shared/`
 services in dependency order, so that the tool paths become adoption rounds rather than
 invention — survives as the ordering of `BACKLOG.md`'s first ten ranks.
+
+**Path 3 P1 — `_shared/roster.js`, the roster service and the identity layer. #176,
+`CACHE_VERSION` v144.** `np_rosters` — `{ "Period 3": ["Aiden Smith", …] }` — is read by
+**28 tool pages** through roughly **six** distinct copy-pasted picker functions. Measured:
+most parse the key twice per interaction, only two (050, 064) listen for the cross-tab
+`storage` event, **none of the 28** sees a write made in its own tab, and five (017, 022,
+033, 043, 084) call `rosters[n].length` with no `Array.isArray` guard inside a `catch` that
+blanks the whole control — so one hand-edited entry hides *every* roster. `roster.js` is
+`window.Roster`: the roster CRUD, the identity layer (`getStudents`, `resolve`, `matchName`,
+`reconcile`, and `diffNames` added in P2), the parsing lifted out of 006, and
+`mountRosterPicker`, whose options are built with `createElement` — which is why the file
+has no escape helper at all. The four different escaping spellings across the six variants
+were four answers to a question that only existed because they concatenated markup.
+
+*The finding this phase turned on:* **reading `np_rosters` through `Store` is fine; writing
+it through Store's envelope is catastrophic.** It would put `{"v":1,"data":{…}}` on disk and
+all 28 readers would show a teacher an empty roster list with nothing to say why — and the
+Name Picker *silently*, because `np-store.js`'s sanitizer walks the envelope's own keys,
+drops both, and returns `{}`. So `store.js` gained `set(key, value, {raw: true})`: a bare
+write for the handful of keys whose on-disk shape is a contract with tools that still
+`JSON.parse` them directly, keeping the quota report, the same-tab announce and the blocked
+fallback. Such a payload is legacy version 0 by store.js's own rule 2, so it round-trips
+through an identity `migrate`. `crh_students_v1` is the same case. **Assertion 1 of
+`Tools/roster/test/roster.test.mjs` is that guard, and it is the reason the suite exists.**
+
+006 was the single adopter and got smaller: twelve `saveAll(all)` call sites became
+`setRoster`/`removeRoster`/`renameRoster`/`replaceAll`, and 279 lines came out. Two
+pre-existing bugs went with them — `loadRecords()` **discarded** any `crh_students_v1` whose
+`version` was not 1, so a teacher who opened a newer build and then an older one lost every
+preferred name and pronunciation silently; and `syncRecords`/`adoptNames` were two
+hand-written copies of one matcher that had already drifted (only one guarded a non-string
+name). `getStudents()` returns `id: null` for a name the sidecar has never seen: readers do
+not mint, only 006 does, because two readers minting separately would be two different ids
+for one student. `check-registry.mjs`'s wrapper detection learned `Store.set` alongside
+`localStorage.setItem` — 006 both wraps its keys and adopts store.js, and without that all
+three `crh_*` keys, every one student data, went STALE. **Adoption must never be the thing
+that drops a tool out of that guard.**
+
+**What this phase got wrong on the way.** The port introduced a real bug: "Move to another
+roster" mutates two rosters and relied on one `saveAll` to persist both, so replacing that
+one call dropped the destination silently. Nothing caught it, because **none of 006's twelve
+write paths had a suite at all** — the two existing roster-hub suites only *read*
+`np_rosters`. `smoke-roster-writes.mjs` (23 assertions, port 8407) was written for that, and
+mutation-tested against exactly that bug. A NUL byte also reached the picker's
+"type names manually" sentinel and survived every passing assertion until a test was written
+for the option model. **Not verified:** nothing was seen on a real projector, a Chromebook
+or a phone, and no screenshot pass was run.
+
+**Path 3 P2 — bulk import in Class Roster Hub. #177, `CACHE_VERSION` v145.** 006 could
+**export** a workbook and could not read one, and a six-period gradebook export had to be
+imported six times by hand. Now: `.xlsx` through the existing lazy `loadXlsx()` injector
+with each *sheet* its own table; many files at once, dropped anywhere on the page, walked
+one at a time with a "2 of 6" label and each becoming a roster named after its file or
+sheet; splitting one timetable export by its Period column into N rosters under an editable
+`Period {value}` template; and a **diff before anything is written** — "1 new, 1 no longer on
+it, 2 renamed, 0 unchanged" — from a new pure `Roster.diffNames`. The rename half is what
+earns that function: a gradebook that switches to "Last, First" produces a rename for *every*
+student, and without matching them the same import reads as "28 new, 28 left" and a teacher
+reasonably concludes the file is wrong.
+
+**`gvb-roster:meta.v1` was not built, on purpose** — Track R2 specifies it, but 006 already
+stored period/subject/term on `crh_students_v1.rosters[<name>].meta`, so `source` and
+`importedAt` joined them there rather than becoming a second answer to "what period is this
+roster", plus a registry row and a backup surface. Rename-propagation, also listed under R2,
+stayed deferred: nothing but 008 reads the id sidecar yet, so there is nothing to propagate
+*to*. `BACKLOG.md`'s R2 text is struck and corrected rather than left to mislead.
+
+**Two bugs caught by tooling rather than by eye, both in code written minutes earlier.**
+`check:hidden-flex` found that `.map-row { display: flex }` beats the `hidden` attribute on
+the new split controls — they would have been permanently visible; 006 had no `[hidden]`
+rule. And mutation-testing the rename detection printed "**3 news, 0 unchangeds**":
+`plural()` was being handed adjectives. Every passing assertion had accepted it, because
+they regex-matched fragments; the diff text is now pinned in full. **Not verified:**
+drag-and-drop is covered only through the file input, never through a real OS drag.
+
+**A process note worth more than either feature.** A background task reported "completed,
+exit 0" for a full-suite run that had been killed at suite 9 of 131 — the exit code was the
+shell wrapper's, not the suite's. Reading the log rather than the notification is what
+caught it. Two full runs were also thrown away and restarted because the tree was edited
+after they began; a run is only evidence for the tree it started on.
 
 **Path 4 P1 — `_shared/store.js`, the storage primitive. #173, `CACHE_VERSION` v142.**
 The site had ~234 distinct localStorage key literals across 86 tools, each hand-rolling
