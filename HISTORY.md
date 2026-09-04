@@ -11,10 +11,61 @@ to add a to-do to this file, it belongs there instead.
 
 ## Stage 2 — the platform foundation (2026-09-03 → 2026-09-04, in progress)
 
-Ten of the fourteen planned phases have shipped, and with `media-db.js` every `_shared/`
-service on the spine is in. The plan itself — the services in dependency order, so that the
-tool paths become adoption rounds rather than invention — survives as the ordering of
-`BACKLOG.md`'s first ranks, which are now all rollouts.
+Twelve of the fourteen planned phases have shipped: every `_shared/` service on the spine, and
+now the two biggest rollouts onto it. The plan itself — the services in dependency order, so
+that the tool paths become adoption rounds rather than invention — worked, and Path 3 P3/P4
+are the proof: two rounds that invented nothing and changed 31 tool pages.
+
+**Path 3 P3 — the saved-roster picker, across 31 tools. #184, `CACHE_VERSION` v149.**
+`np_rosters` was read by 25 tool pages through roughly six copy-pasted picker functions, and
+they disagreed about everything that matters: five (017, 022, 033, 043, 084) called
+`rosters[n].length` with no `Array.isArray` guard inside a `catch` that blanked the whole
+control, so **one hand-edited entry hid every roster**; none of the 25 saw a write made in its
+own tab and only two heard one from another; and they used four different spellings of the
+escaping question. 19 pages now mount `Roster.mountRosterPicker`; six (010, 016, 024, 050,
+064, 068) keep a dropdown of their own but read through `Roster.listRosters()`/`getRoster()`,
+because each does something the helper does not offer — hiding an empty roster, disabling a
+button with an explanation, a datalist of every name on every roster, or a `prompt()`. Six
+tools that had no picker at all (021, 058, 060, 073, 075, 077) gained one that fills the names
+box and saves nothing. **036 and 044 were on the row's list and deliberately got nothing**:
+neither has a student-names field, so a picker there would have had nothing to fill.
+`check-registry.mjs` learned to read a `Roster.*` call as a read of `np_rosters`, because
+otherwise every adopter dropped out of the storage scan the moment it adopted — the same
+silent disappearance `STORE_WRITE_RE` exists to stop one layer down. **What it changed that a
+teacher can see:** `readRosters()` trims and drops a blank entry, so a roster the old copies
+counted as 5 counts 4; and `mountRosterPicker` always renders a placeholder, so 003's two
+dropdowns no longer preselect the first roster. **Not verified:** nothing was driven in a real
+browser by hand, and 003, 023 and 025 mount their pickers only behind a mode switch that needs
+a saved document first, so those three are covered by the suite's static half rather than its
+driven half.
+
+**Path 3 P4 — `Roster.trackRenames` and the eight tools that keep history. #185,
+`CACHE_VERSION` v150.** Eight tools key per-student history on the NAME STRING, so
+re-importing a roster whose gradebook export switched from `Smith, Aiden` to `Aiden Smith`
+orphaned all of it — points, hall passes, pairing memory, lab-role recency, novel-circle
+roles, reading logs, contact logs, safety contracts — for every student in the class at once.
+008 had solved it alone in about forty lines; this is that code generalised into
+`trackRenames(rosterName, names, idNames)`, which returns `{idNames, renames:[{id,from,to}]}`
+and **moves nothing**: what a rename means to a tool's storage differs in all eight, and 008's
+refusal to move a record onto a name that already has one is a judgement about behaviour
+records that a contact log answers the opposite way. 008 was ported onto it (its existing
+24-assertion suite passes untouched) and 001, 002, 013, 022, 027, 033 and 068 adopted it.
+Seven store the `{id: name}` map in the per-class state they already had; 068's roster is a
+bare array, so it got one new key, `pcl_idnames_v1`, registered as student data.
+**The ceiling, written down rather than papered over:** an id survives a re-spelling whose
+sorted tokens match, which is exactly the whole-file flip above, but retyping `Aiden Smith` as
+`AJ Smith` mints a new id and nothing can follow it — the alternative is guessing that two
+different names are one student. Following that needs Class Roster Hub to offer an explicit
+"same student, new name" action; assertion 27b is the marker for whoever adds one.
+**The defect this found, and it was already in 008:** every adopter saved the id map only when
+something moved, so a boot that *seeded* it never wrote it — and the map is the entire record
+of what each id was called last time, so the next rename was invisible. Nothing caught it
+because the tool looks fine the whole time. All eight persist unconditionally now.
+`registry-shape`'s assertion 9 grew an explicit list of keys created since the 009 migration,
+because the old rule could not classify a key that did not exist; a second assertion keeps the
+list from excusing anything but student data. **Not verified:** no teacher's real data was
+migrated — every rename case is a fixture seeded through `Roster.syncRecords`, which is what
+006 itself uses to mint ids — and nothing was driven in a real browser by hand.
 
 **Path 4 P3 — `_shared/media-db.js`, the media store and the one downscaler. #182,
 `CACHE_VERSION` v148.** Nine tools (005, 015, 019, 028, 041, 042, 056, 071, 080) base64 an

@@ -86,11 +86,23 @@ console.log('Group / Team Generator — retained pairing history, grid, and cove
   eq(afterFirst.pairHistory[firstKey].gen, 1, 'recorded at generation 1');
   eq(afterFirst.pairHistory[firstKey].count, 1, 'with a count of 1');
 
-  await generate(page, 5); // now at generation 6 — 4 generations past the old window of 2
+  /* TEN generations, not six, and the number is arithmetic rather than taste.
+     Eight names split into `4` under the default `count` mode is four groups of
+     TWO — read off the running page, not assumed — so each shuffle records
+     exactly 4 pairs out of the C(8,2) = 28 that exist. Six generations draw 24
+     of 28, which usually repeats and sometimes does not: the count >= 2
+     assertion below went red in CI on 2026-09-04 on a documentation-only branch,
+     and twelve local runs of the same six generations produced 16–22 distinct
+     pairs — a margin of two from the 24 that would have failed. At ten
+     generations, 40 draws over 28 possible pairs, a repeat is guaranteed by
+     pigeonhole and the property stops being probabilistic at all. The
+     assertion itself is untouched; only the budget moved, which is what
+     CLAUDE.md asks for. */
+  await generate(page, 9); // now at generation 10 — 8 generations past the old window of 2
   const later = await readState(page);
   ok(firstKey in later.pairHistory,
-     'the generation-1 pairing is still present at generation 6 (old code deleted anything > 2 generations old)');
-  ok(later.pairGen >= 6, `pairGen advanced normally (got ${later.pairGen})`);
+     'the generation-1 pairing is still present at generation 10 (old code deleted anything > 2 generations old)');
+  ok(later.pairGen >= 10, `pairGen advanced normally (got ${later.pairGen})`);
   const anyCount2plus = Object.values(later.pairHistory).some(v => v.count >= 2);
   ok(anyCount2plus, 'at least one pair has been grouped together more than once, and the count field tracks it (not just the last generation)');
 
