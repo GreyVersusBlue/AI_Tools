@@ -5,11 +5,13 @@
 // Three independent features from the SS-demo revisit round, covered
 // together because all three are about getting a deck populated fast:
 //
-//   1. Share a deck by link/QR (state-link.js + vendor qrcode.js, same
-//      pattern as 028-primary-source-analysis-generator.html). The payload
-//      must carry card text, stats, meta and theme, but never a photo — and
-//      an oversized deck must fall back to the copy-link message instead of
-//      drawing a QR code nobody's phone can scan. Opening a link never
+//   1. Share a deck through the shared sheet (_shared/share.js + qr-draw.js,
+//      Path 6 P1 — 064 is the single adopter, so this suite is also where the
+//      sheet's DOM behaviour is proven). The link payload must carry card
+//      text, stats, meta and theme, but never a photo; the sheet must SAY a
+//      photo was left out; the downloaded .json must carry it; and an
+//      oversized deck must grey the QR row out with the reason instead of
+//      drawing a square nobody's phone can scan. Opening a link never
 //      overwrites a deck already on that device.
 //   2. Batch-add from roster now offers a class-list dropdown fed from the
 //      shared `np_rosters` key (written by Name Picker / Class Roster Hub),
@@ -21,7 +23,7 @@
 //
 // Exits 1 on any failure.
 
-import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
+import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
 
 const PORT = 8299;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -64,19 +66,50 @@ await settle(page, 200);
 eq(await page.textContent('#entryCount'), '1', 'one card is in the deck, with a photo');
 ok(await page.evaluate(() => !!document.querySelector('.entry-row img.thumb')), 'the photo shows in the card list');
 
-const shareLink = () => page.evaluate(() => {
-  let captured = null;
+/* the sheet: one button opens it; Copy link is the first row and gets focus */
+await page.evaluate(() => {
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
-    value: { writeText: (t) => { captured = t; return Promise.resolve(); } },
+    value: { writeText: (t) => { window.__copied = t; return Promise.resolve(); } },
   });
-  document.getElementById('shareLinkBtn').click();
-  return new Promise(r => setTimeout(() => r(captured), 80));
 });
-const url = await shareLink();
-ok(url && url.indexOf('deck=') !== -1, 'Share deck link produces a ?deck= link');
-ok(/never overwrite/.test(await page.textContent('#shareNote')) || /new deck/.test(await page.textContent('#shareNote')),
-   'and explains what opening it does');
+await page.click('#shareBtn');
+await settle(page, 150);
+ok(await page.isVisible('.share-sheet[role="dialog"]'), 'Share deck… opens the shared sheet as a dialog');
+eq(await page.getAttribute('.share-sheet', 'aria-modal'), 'true', 'it is modal');
+const rows = await page.$$eval('.share-sheet-rows button', bs => bs.map(b => b.getAttribute('data-share')));
+ok(rows.slice(0, 3).join(',') === 'copy,qr,download', 'with copy, QR and download rows in that order: ' + rows.join(','));
+eq(await page.evaluate(() => document.activeElement.getAttribute('data-share')), 'copy', 'focus lands on Copy link');
+const sheetA11y = await a11yScan(page, { include: '.share-sheet-backdrop' });
+ok(sheetA11y.length === 0, 'the open sheet has no serious/critical axe violations: ' + JSON.stringify(sheetA11y.map(v => v.id)));
+ok(/1 image is left out of the link and QR code/.test(await page.textContent('.share-sheet-note')),
+   'the sheet says the photo is left out of the link, by policy: ' + JSON.stringify(await page.textContent('.share-sheet-note')));
+ok(/downloaded file carries it/.test(await page.textContent('.share-sheet-note')), 'and that the file carries it');
+await page.click('.share-sheet button[data-share="copy"]');
+await settle(page, 120);
+const url = await page.evaluate(() => window.__copied);
+ok(url && url.indexOf('deck=') !== -1, 'Copy link puts a ?deck= link on the clipboard');
+ok(/never overwrite/.test(await page.textContent('.share-sheet-status')), 'and the sheet explains what opening it does');
+ok(/never overwrite/.test(await page.textContent('#shareNote')), 'mirrored into the page\'s own note under the button');
+
+/* the downloaded file carries the photo the link does not */
+const [dl] = await Promise.all([
+  page.waitForEvent('download'),
+  page.click('.share-sheet button[data-share="download"]'),
+]);
+eq(dl.suggestedFilename(), 'My cards.json', 'Download file is named after the deck');
+const fileText = await (await import('node:fs')).promises.readFile(await dl.path(), 'utf8');
+const file = JSON.parse(fileText);
+eq(file.aplp.tool, 'historical-trading-card-maker', 'the file names its tool');
+eq(file.aplp.param, 'deck', 'and the param the tool reads');
+ok(file.state.cards[0].image && typeof file.state.cards[0].image.src === 'string' && file.state.cards[0].image.src.startsWith('data:image/'),
+   'and the photo IS in the file');
+eq(file.state.cards[0].name, 'Harriet Tubman', 'with the rest of the card');
+
+await page.keyboard.press('Escape');
+await settle(page, 100);
+ok(!(await page.$('.share-sheet')), 'Escape closes the sheet');
+eq(await page.evaluate(() => document.activeElement.id), 'shareBtn', 'and focus returns to the button that opened it');
 
 const payload = await page.evaluate(u => window.StateLink.decodeState(new URL(u).searchParams.get('deck')), url);
 eq(payload.v, 1, 'the payload is versioned');
@@ -87,7 +120,7 @@ eq(payload.cards[0].facts.length, 2, 'and its facts');
 eq(payload.cards[0].meta.rarity, 'legendary', 'and its rarity');
 eq(payload.cards[0].meta.stars, 4, 'and its star rating');
 eq(payload.settings.theme, 'parchment', 'the deck theme travels in settings');
-eq(payload.cards[0].image, null, 'but the photo does NOT travel');
+ok(payload.cards[0].image === null || payload.cards[0].image.src === null, 'but the photo does NOT travel (image.src is stripped to null)');
 ok(JSON.stringify(payload).indexOf('base64') === -1 && url.length < 4000,
    'the link stays short because the photo was stripped, not just hidden');
 
@@ -113,17 +146,30 @@ await broken.goto(URL_PAGE + '?deck=not-base64-%%%', { waitUntil: 'networkidle' 
 await settle(broken, 300);
 ok(await broken.isVisible('#deckSelect'), 'the tool still renders a working deck after a mangled link');
 
-/* ── 4. the QR path, and the too-big-for-a-QR fallback ────────────────────── */
-await page.click('#shareQrBtn');
-await settle(page, 300);
-const qr = await page.evaluate(() => ({
-  open: !document.getElementById('shareOverlay').hidden,
-  w: document.getElementById('shareCanvas').width,
-}));
-ok(qr.open && qr.w > 100, `a small deck draws a scannable QR (${qr.w}px)`);
-await page.click('#shareCloseBtn');
+/* ── 4. the QR path, and the too-dense-to-scan refusal ───────────────────── */
+await page.click('#shareBtn');
 await settle(page, 150);
-eq(await page.evaluate(() => document.getElementById('shareOverlay').hidden), true, 'and the overlay closes again');
+ok(!(await page.evaluate(() => document.querySelector('.share-sheet button[data-share="qr"]').disabled)),
+   'a small deck\'s QR row is enabled');
+await page.click('.share-sheet button[data-share="qr"]');
+await settle(page, 300);
+const qr = await page.evaluate(() => {
+  const c = document.querySelector('.share-sheet-qr canvas');
+  return c && { w: c.width, css: c.style.width, modules: null };
+});
+ok(qr && qr.w >= 100 && qr.w % 4 === 0, `a small deck draws a QR at integer px per module (${qr && qr.w}px, ${qr && qr.css} CSS)`);
+// decode what was drawn with the vendored jsQR: the sheet's QR is a real link
+const decoded = await page.evaluate(async () => {
+  await new Promise((res, rej) => { const s = document.createElement('script'); s.src = '../_shared/vendor/jsqr/jsqr.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  const c = document.querySelector('.share-sheet-qr canvas');
+  const img = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+  const r = window.jsQR(img.data, img.width, img.height);
+  return r && r.data;
+});
+eq(decoded, url, 'and jsQR reads the exact share link back out of the canvas');
+await page.click('.share-sheet-close');
+await settle(page, 150);
+ok(!(await page.$('.share-sheet')), 'the close button closes the sheet');
 
 await page.evaluate(() => {
   const cards = [];
@@ -146,15 +192,20 @@ await page.evaluate(() => {
 await page.reload({ waitUntil: 'networkidle' });
 await settle(page, 300);
 eq(await page.textContent('#entryCount'), '80', 'a huge deck loaded (80 cards) via direct storage seeding');
-await page.click('#shareQrBtn');
+await page.click('#shareBtn');
 await settle(page, 400);
-const bigQr = await page.evaluate(() => ({
-  open: !document.getElementById('shareOverlay').hidden,
-  note: document.getElementById('shareNote').textContent,
-}));
-eq(bigQr.open, false, 'a deck too big for a QR code does not draw an unscannable square');
-ok(/too big for a QR code/.test(bigQr.note), 'and says so, pointing at the alternative: ' + JSON.stringify(bigQr.note));
-ok(/Share deck link/i.test(bigQr.note) || /link/i.test(bigQr.note), 'naming the copy-link path as the fallback');
+const bigQr = await page.evaluate(() => {
+  const b = document.querySelector('.share-sheet button[data-share="qr"]');
+  return { disabled: b.disabled, sub: b.querySelector('small').textContent, reason: document.querySelector('.share-sheet-reason').textContent,
+    copyEnabled: !document.querySelector('.share-sheet button[data-share="copy"]').disabled };
+});
+eq(bigQr.disabled, true, 'a deck too big for a QR code greys the row out instead of drawing an unscannable square');
+eq(bigQr.sub, 'too dense to scan', 'and labels it');
+ok(/more than any QR code can hold|cannot read reliably/.test(bigQr.reason), 'with the reason: ' + JSON.stringify(bigQr.reason));
+ok(/[Cc]opy the link/.test(bigQr.reason) && /download/.test(bigQr.reason), 'naming both alternatives');
+ok(bigQr.copyEnabled, 'and Copy link still works — a copied link has no such limit');
+await page.keyboard.press('Escape');
+await settle(page, 100);
 
 /* ── 5. roster batch-add reads np_rosters, with paste as the fallback ────── */
 const roster = await prepPage(browser, BASE, { width: 1280, height: 1000 });

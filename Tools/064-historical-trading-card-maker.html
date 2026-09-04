@@ -222,18 +222,11 @@
   }
   .save-warn.show { display: block; }
 
-  /* ---- share a deck by link / QR (state-link.js, same pattern as
-     028-primary-source-analysis-generator.html) ---- */
+  /* ---- share a deck: the sheet is _shared/share.js (Path 6 P1); this is
+     the note under the button that records what the sheet last did ---- */
   .share-note { font-size: .8rem; line-height: 1.5; margin: .5rem 0 0; padding: .55rem .7rem; border-radius: 6px;
     background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
   .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
-  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
-    justify-content: center; padding: 20px; z-index: 80; }
-  .share-overlay[hidden] { display: none; }
-  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
-    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
-  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
-  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
 
   .theme-swatches { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
   .theme-swatch {
@@ -380,26 +373,14 @@
     </div>
     <p class="hint" style="margin-bottom:0;">Each deck keeps its own cards, theme, and set name &mdash; e.g. one per class period or unit.</p>
     <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:flex-start; margin-top:.7rem;">
-      <button type="button" class="secondary" id="shareLinkBtn">&#128279; Share deck link</button>
-      <button type="button" class="secondary" id="shareQrBtn">&#9638; QR code</button>
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share deck&hellip;</button>
       <select id="sampleSelect" aria-label="Sample deck to load" style="width:auto; min-width:210px; margin-bottom:0;"></select>
       <button type="button" class="secondary" id="sampleDeckBtn">Load sample deck</button>
     </div>
-    <p class="hint" id="shareHint" style="margin:.4rem 0 0;">A share link carries card text, stats, themes, and rarity &mdash; not photos, which stay on this device. To send finished cards with photos, use Download PDF or All PNGs (zip) above.</p>
+    <p class="hint" id="shareHint" style="margin:.4rem 0 0;">Share by link or QR code (card text, stats, themes, and rarity &mdash; not photos, which stay on this device) or download the whole deck, photos included, as a file. To send finished cards with photos, use Download PDF or All PNGs (zip) above.</p>
     <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
   </div>
 
-  <div class="share-overlay" id="shareOverlay" hidden>
-    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Deck QR code">
-      <div class="share-head">
-        <span>Scan to open this deck</span>
-        <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
-      </div>
-      <canvas id="shareCanvas"></canvas>
-      <p class="hint" style="margin:.6rem 0 0;">Opens on that device and saves there as a new deck &mdash;
-        it never overwrites a deck already on that device. Photos stay behind.</p>
-    </div>
-  </div>
 
   <div class="card">
     <h2>Review game</h2>
@@ -557,6 +538,8 @@
 <script src="historical-trading-card-maker/htcm-export.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <script src="../_shared/vendor/jspdf/jspdf.umd.min.js" defer></script>
 <script src="../_shared/vendor/jszip/jszip.min.js" defer></script>
 <script>
@@ -569,7 +552,7 @@
    'adjustBtn', 'newStars', 'setNameInput', 'numberBtn', 'pngBtn', 'pdfBtn', 'zipBtn',
    'deckSelect', 'newDeckBtn', 'renameDeckBtn', 'deleteDeckBtn',
    'rosterBtn', 'rosterOverlay', 'rosterText', 'rosterAddBtn', 'rosterCancelBtn', 'rosterClassSelect',
-   'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn',
+   'shareBtn', 'shareNote',
    'sampleDeckBtn', 'sampleSelect',
    'gmTeamCount', 'gmTeamNames', 'gmStartBtn', 'gmResumeBtn', 'gmSetupNote', 'gameOverlay', 'gmRound',
    'gmScores', 'gmCloseBtn', 'gmEndBtn', 'gmTeamALabel', 'gmTeamBLabel', 'gmCardA', 'gmCardB',
@@ -898,12 +881,15 @@
     }
   });
 
-  /* ---------- share a deck by link / QR (state-link.js, same pattern as
-     028-primary-source-analysis-generator.html) ----------
-     The payload deliberately drops every card's `image` — a downscaled photo
-     is still a data URL that can run past what a URL bar (let alone a QR
-     code) can carry. Everything typed travels intact: stats, facts, rarity,
-     stars, per-card theme override, and the deck's own theme/size settings. */
+  /* ---------- share a deck: _shared/share.js (Path 6 P1) ----------
+     One button opens the shared sheet: copy link, QR code (greyed out with
+     the reason when the code would be too dense to scan), download .json,
+     and the system share where the browser has one. The state handed over
+     is the WHOLE deck, photos included; share.js strips every data: image
+     from the link and QR payload by policy and says so in the sheet, and
+     the downloaded file keeps them. Until this, the tool set image:null by
+     hand and hand-drew its own QR up to the encoder's limit — a 177-module
+     square at 264 px that no phone could read. */
   var SHARE_PARAM = 'deck';
 
   function setShareNote(text, isError) {
@@ -920,70 +906,25 @@
       settings: doc.settings,
       cards: entries.map(function (c) {
         return {
-          id: c.id, name: c.name, image: null, stats: c.stats, facts: c.facts,
+          id: c.id, name: c.name, image: c.image || null, stats: c.stats, facts: c.facts,
           meta: c.meta, theme: c.theme
         };
       })
     };
   }
-  function shareUrl() {
-    var payload = buildSharePayload();
-    return payload ? StateLink.buildShareUrl(SHARE_PARAM, payload) : null;
-  }
-  function shareSuccessMessage() {
-    var msg = 'Link copied. Opening it anywhere saves this deck there as a new deck — card text, stats, themes, and rarity travel; it never overwrites a deck already on that device.';
-    if (entries.some(function (e) { return e.image; })) {
-      msg += ' Photos are too large to ride in a link, so they stay on this device — use Download PDF or All PNGs (zip) to send the finished cards with photos.';
-    }
-    return msg;
-  }
-  els.shareLinkBtn.addEventListener('click', function () {
-    var url = shareUrl();
-    if (!url) { setShareNote('Add at least one card first.', true); return; }
-    var copy = (navigator.clipboard && navigator.clipboard.writeText)
-      ? navigator.clipboard.writeText(url) : Promise.reject();
-    copy.then(
-      function () { setShareNote(shareSuccessMessage()); },
-      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
-    );
-  });
 
-  function drawShareQr(canvas, text) {
-    var qr = window.qrcode(0, 'L');
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount(), quiet = 4, px = 6;
-    var size = (count + quiet * 2) * px;
-    canvas.width = size; canvas.height = size;
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#16181d';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
-      }
-    }
-  }
-  els.shareQrBtn.addEventListener('click', function () {
-    var url = shareUrl();
-    if (!url) { setShareNote('Add at least one card first.', true); return; }
-    try {
-      drawShareQr(els.shareCanvas, url);
-    } catch (e) {
-      // A QR code holds far less than a URL bar does — a big deck (many cards,
-      // long fact lists) can overrun even the largest QR version. Say so and
-      // point at the link instead of drawing a square nobody's phone can read.
-      setShareNote('This deck is too big for a QR code (' + Math.round(url.length / 1024) +
-        ' KB of link). Use "Share deck link" instead — a copied link has no such limit.', true);
-      return;
-    }
-    els.shareOverlay.hidden = false;
-    setShareNote(entries.some(function (e) { return e.image; })
-      ? 'Heads up: photos don’t fit in the QR code — the rest of the deck travels intact.' : '');
+  Share.mount(els.shareBtn, {
+    getState: buildSharePayload,
+    param: SHARE_PARAM,
+    tool: 'historical-trading-card-maker',
+    title: 'Share this deck',
+    noun: 'this deck',
+    filename: function () { return deckName; },
+    note: 'Opening the link or code anywhere saves this deck there as a new deck; it never overwrites a deck already on that device.',
+    emptyMessage: 'Add at least one card first.',
+    successMessage: 'Link copied. Opening it anywhere saves this deck there as a new deck — card text, stats, themes, and rarity travel; it never overwrites a deck already on that device.',
+    onMessage: function (text) { setShareNote(text); }
   });
-  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
-  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !els.shareOverlay.hidden) els.shareOverlay.hidden = true; });
 
   /** Consume a ?deck= link on load. Saves the arrival as a new, uniquely-named
       deck — never over an existing one, including "My cards". Returns true
