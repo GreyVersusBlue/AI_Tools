@@ -11,32 +11,36 @@ summarised on the way in.
 
 ## Where things stand — start here
 
-*Current as of `main` after PR #178, 2026-09-04. Rewrite this header when your phase
+*Current as of `main` after PR #180, 2026-09-04, with #179's rewrite folded in. Rewrite this header when your phase
 merges — that is step 6 of the definition of done, and it is not optional.*
 
-**Last shipped.** Path 6 P1 — the share sheet and the measured QR budget (#178,
-`CACHE_VERSION` v146), shipped by a parallel session. Alongside it, Path 3 P1 and P2, the
-roster service and Class Roster Hub's bulk import (#176 v144, #177 v145). Before them, Path
+**Last shipped.** Path 6 P1 and Path 5 P2 — the share sheet with its measured QR budget
+(#178, `CACHE_VERSION` v146) and the fullscreen/projector helper (#180, v147), one session.
+Alongside them, from a parallel session, Path 3 P1 and P2, the roster service and Class
+Roster Hub's bulk import (#176 v144, #177 v145). Before them, Path
 4 P1 and P2, the storage primitive and the tool registry (#173 v142, #174 v143); Stage 2
 Wave A2, the accessibility label round (#168, v140); and Wave A1, the theme architecture
 decision (#167, v139).
 
-**#178 shipped without step 6** — it did not re-rank or rewrite this header, so its own row
-was still sitting at rank 3 when this commit was written. Removed and renumbered here. That
-is the concurrency case "How to work this list" describes: the claim table did its job (the
-two sessions took different rows and no source conflicted), but a phase that skips the
-re-rank leaves the next session reading a list that says to build what already exists.
+**Two sessions rewrote this header at once, and the merge was by hand.** #178 merged
+before its session had written step 6 (it was mid-way through its second phase, #180, and
+meant to write both at the end); the roster session's #179 branch found #178's row still at
+rank 3 and removed it. This commit merges #179's branch and adds #180's own re-rank, so
+neither rewrite was lost — but the lesson holds: **write step 6 after each merge, not after
+the batch.** A row that is still in the table after its PR merged tells the next session to
+build what already exists, and it did so here for about an hour. The claim table itself
+worked: the two sessions took different rows and no source file conflicted.
 
 **Numbers, all re-measured against the tree on 2026-09-04:**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v147` (v143 → v144 in #176 for `roster.js`, → v145 in #177 for 006, → v146 in #178 for `share.js`, → v147 here because `tool-registry.js` is precached and even its header comment changed) |
-| Precache entries | 254 in `PRECACHE_URLS`, 82 of them in the `SHELL_URLS` install tier |
-| Suites | **133** in `Tools/board-check/suites.json`, green, ~21 min; `expectedFailures` **empty** |
+| `CACHE_VERSION` | `v148` (v143 → v144 in #176 for `roster.js`, → v145 in #177 for 006, → v146 in #178 for `share.js` and `qr-draw.js`, → v147 in #180 for `stage.js`, → v148 here because `tool-registry.js` is precached and #179's header-comment change to it lands in this commit) |
+| Precache entries | 255 in `PRECACHE_URLS`, 83 of them in the `SHELL_URLS` install tier |
+| Suites | **135** in `Tools/board-check/suites.json`, green in CI (#180: 20 min); `expectedFailures` **empty** |
 | Accessibility allowlist | **22 page-rule pairs on 22 pages** — 21 `color-contrast`, 1 `aria-required-children` (034). Untouched by these phases |
 | Tool registry | 87 rows, **216 keys and 32 prefixes across 107 files**; `check:registry` green, `dynamic` empty everywhere |
-| Shared-file adoption (of 86) | `a11y.js` 77 · `ink-paper.css` 71 · `base.css` 68 · `print-area.css` 20 · `state-link.js` 17 · `qr-scan.js` 10 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · **`store.js` 2** · `duplex-print.js` 1 · `student-details.js` 1 · **`roster.js` 1** · **`share.js` 1** · **`qr-draw.js` 1** |
+| Shared-file adoption (of 86) | `a11y.js` 77 · `ink-paper.css` 71 · `base.css` 68 · `print-area.css` 20 · `state-link.js` 17 · `qr-scan.js` 10 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · **`store.js` 2** · `duplex-print.js` 1 · `student-details.js` 1 · **`roster.js` 1** · **`share.js` 1** · **`qr-draw.js` 1** · **`stage.js` 1** |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087**. 81 of them have recorded open ideas |
 | Lint | clean |
@@ -45,16 +49,55 @@ re-rank leaves the next session reading a list that says to build what already e
 `_shared/roster.js`, so the call-site scan attributes it to the `shared` row instead of
 counting it a second time under 006. Nothing stopped being tracked.
 
-**Start here: rank 1, `_shared/stage.js` (Path 5 P2)** — the fullscreen/projector helper,
-adopted in 023, 024, 025 and 021, which are the four known hand-rolled copies. Every
-`_shared/` service the Stage 2 spine called for has now shipped, so ranks 4 and 5 (picker
-and identity adoption) and rank 16 (Path 6 P2, adopting the share sheet in the 17 existing
-`state-link` tools) are rollouts onto foundations that exist rather than inventions. If you
-do not have a session for a rollout, ranks 6–10 are the cheap, unblocked, overdue ones.
+**Start here: rank 1, `_shared/media-db.js` (Path 4 P3)** — the media store, the last
+`_shared/` service on the Stage 2 spine, and what Path 3 P5 and Path 14 P2 (photos) wait on.
+Everything else at the top is adoption onto a foundation that exists: pickers (rank 3),
+identity (rank 4), the three remaining hand-rolled stages (rank 13), the share sheet's
+sixteen remaining tools (rank 16). If you do not have a session for a rollout, ranks 5–9 are
+the cheap, unblocked, overdue ones.
+
+**What Path 6 P1 and Path 5 P2 leave for whoever picks up sharing or projecting next.**
+
+- **`share.js` has one adopter (064) and `stage.js` has one (024).** The other sixteen
+  `state-link` tools still carry their own share UI and **eleven** files still carry their
+  own `drawQR` (016, 017, 018, 019, 021, 048, 051, `br-pair.js`, `ct-mirror.js`,
+  `cc-remote.js`, `sv-handoff.js`); the other three stages P2 named (023, 025, 021) still
+  carry their own fullscreen code. `check:dedupe` was **not** extended to `drawQR` because it
+  would fail today; extend it in the same PR that removes the last copy. The Path 5 P2 row
+  said "adopt in 023, 024, 025, 021" and the definition of done says at most one adopter per
+  new module; the Path 4 P1 precedent decided it, and the three are rank 13.
+- **The QR budget is the decoder's floor plus a margin, not a phone measurement.**
+  `QrDraw.MIN_PX_PER_MODULE` is 4 CSS px because at 3 the vendored jsQR fails the heaviest
+  blur the suite applies and at 2 it reads nothing; the suite asserts the constant against
+  its own measurement, so the number cannot drift without the build going red. A 480 px
+  sheet therefore takes up to version 23 (~1.1 KB at level L) and a 320 px one up to version
+  13. **No code has been scanned with a real phone from a real screen.** If a teacher reports
+  a code that will not scan, measure before touching the constant.
+- **jsQR misses QR version 23.** At every size and blur, on payloads every other version
+  decodes. Recorded in `Tools/share/test/qr-draw.test.mjs` as a decoder quirk; do not chase
+  it as a renderer bug, and do not use jsQR round-trips as the only evidence for a version-23
+  payload.
+- **Images never ride in a link.** `Share.stripImages` drops every `data:image/` and `blob:`
+  string before the URL is built and the sheet says how many; the `.json` download carries
+  the untouched state. 064's card image is an object (`{src, w, h, crop, …}`), so what
+  arrives is `{src: null, …}`, which its `repairImage` already reads as "no photo" — an
+  adopter whose reader does not tolerate `null` where a string was needs a line.
+- **The downloaded `.json` has no reader yet.** It is `{ aplp: { v, tool, param, exported },
+  state }` so a file can say whose it is; opening one back into a tool is Path 6 P2's,
+  alongside routing `?state=` through the same helper.
+- **The site-wide axe sweep never scans a state behind a click.** 024's on-stage scan found
+  its category tags at 2.6:1 on the dark stage, a bug older than `stage.js`. Every projector
+  tool's on-stage contrast is unmeasured until its adoption round scans it — use
+  `a11yScan(page, { include: '#stageArea' })` after entering the stage, as
+  `smoke-stage.mjs` does.
+- **Headless Chromium grants `requestFullscreen` from a Playwright click**, so a suite can
+  drive the real API; a Playwright `Escape` does **not** leave real fullscreen (that is the
+  browser's own key), so drive the exit through the tool's button. The no-API fallback was
+  exercised only by stubbing `requestFullscreen` to reject.
 
 **What Path 3 P1 and P2 leave for whoever picks up the roster work next.**
 
-- **`_shared/roster.js` has exactly one adopter (006).** Rank 5 is the picker rollout and
+- **`_shared/roster.js` has exactly one adopter (006).** Rank 3 is the picker rollout and
   it is the largest single dedupe left on the site: **28 tool pages** read `np_rosters`
   through roughly **six** copy-pasted picker functions. Five of them (017, 022, 033, 043,
   084) call `rosters[n].length` with no `Array.isArray` guard inside a `catch` that blanks
@@ -69,8 +112,8 @@ do not have a session for a rollout, ranks 6–10 are the cheap, unblocked, over
 - **`getStudents()` returns `id: null` for a name the sidecar has never seen.** Readers do
   not mint ids — only 006, which owns `crh_students_v1`, does. Two readers minting
   separately would be two different ids for one student, which is the exact confusion a
-  stable id exists to end. Rank 6 (identity adoption) depends on this rule holding.
-- **Rename-across-tools is still open**, and is rank 5, not part of P2: nothing but 008
+  stable id exists to end. Rank 4 (identity adoption) depends on this rule holding.
+- **Rename-across-tools is still open**, and is rank 4, not part of P2: nothing but 008
   reads the id sidecar yet, so there is nothing to propagate a rename *to*. 006's
   dependency scan still warns which tools hold an old name.
 - **`gvb-roster:meta.v1` was not built, on purpose.** Track R2 below specifies it; 006
@@ -79,13 +122,13 @@ do not have a session for a rollout, ranks 6–10 are the cheap, unblocked, over
   "what period is this roster", plus a registry row and a backup surface. **The R2 text
   below has been corrected.**
 - **`store.js` has two adopters now (019, 006).** The other two eras — a `{v:1}` payload
-  (063) and `Tools/school-calendar/scv-store.js` — are rank 11. Every adoption must pass a
+  (063) and `Tools/school-calendar/scv-store.js` — are rank 10. Every adoption must pass a
   `migrate`, even an identity one, or the tool will not see the data already on disk.
 - **028 and 039 each define a private object called `Store`.** They must rename theirs
   before they can adopt `_shared/store.js`. `check-registry.mjs` skips them for this
   reason and says so.
 - **`assets/js/gvb-save.js` still swallows quota errors** — `save()` returns a bare
-  `false` — and still lives outside `_shared/`, under 005, 007 and 064. That is rank 12.
+  `false` — and still lives outside `_shared/`, under 005, 007 and 064. That is rank 11.
   `store.js` reads its `__v` format, so the two interoperate; nothing is forced.
 - **The registry is hand-maintained, guarded by a script**, exactly like `PRECACHE_URLS`
   and `sw.js`. `npm run check:registry` fails on any key the tree writes that no row
@@ -102,12 +145,12 @@ Path 3 P1 roster (shipped) ──► Path 3 P3 pickers ──► Path 3 P4 ident
    ▼                                                                           Path 14 P2 photos
 Path 3 P2 bulk import (shipped)
 
-Path 5 P1 theme (shipped) ──► Path 5 P2 stage ──► Path 5 P3 rollout   (independent)
-Path 6 P1 share sheet     ──► Path 6 P2 adopt  ──► Path 6 P3 extend    (independent until P4)
+Path 5 P1 theme (shipped) ──► Path 5 P2 stage (shipped) ──► Path 5 P3 rollout   (independent)
+Path 6 P1 share sheet (shipped) ──► Path 6 P2 adopt ──► Path 6 P3 extend   (independent until P4)
 ```
 
 Every service in the left-hand column has now shipped, which is why the top of the list
-turns from invention into adoption: pickers (rank 4), identity (rank 5) and adopting the
+turns from invention into adoption: pickers (rank 3), identity (rank 4) and adopting the
 share sheet (rank 16) are all rollouts onto foundations that exist. "Send to…" needs the
 registry, or every handoff is another ad-hoc key read — the debt it exists to remove; the
 registry records which tool owns each key and which tools only read it.
@@ -118,24 +161,24 @@ Ranked work is blocked on these; the recommendation column is the previous sessi
 
 | Needed by | Decision | Recommendation |
 |---|---|---|
-| Rank 4 (Path 3 P3) | Staff rosters (058, 075): same namespace, or a `Staff —` prefix? | Prefix, **decided**. Not yet exercised — P1 and P2 touched no staff list, so the convention is still only written down. |
-| Rank 5 (Path 3 P4) | Do skill/level values (002's balancing) go on the shared student record? | **No, decided.** The platform themes call it the most sensitive thing the site would store; keep it tool-local. `roster.js` ships no field for it. |
+| Rank 3 (Path 3 P3) | Staff rosters (058, 075): same namespace, or a `Staff —` prefix? | Prefix, **decided**. Not yet exercised — P1 and P2 touched no staff list, so the convention is still only written down. |
+| Rank 4 (Path 3 P4) | Do skill/level values (002's balancing) go on the shared student record? | **No, decided.** The platform themes call it the most sensitive thing the site would store; keep it tool-local. `roster.js` ships no field for it. |
 | ~~Path 6 P1~~ **spent** | Link payload policy for images. | Strip by policy, say so in the sheet, offer the `.json` download. Shipped in #178; kept here until a session confirms the sheet actually does all three. |
-| Rank 13 / 25 | 035's private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception? | Bless and document, unless Path 5 P4 is opening 035 anyway. Adopting is a re-skin of a 5,500-line tool. |
-| Rank 13 | Rebuild `list-dark-candidates.mjs`, or measure inline? | Rebuild and commit it. This backlog gets re-measured by every session that touches it. |
+| Rank 12 / 25 | 035's private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception? | Bless and document, unless Path 5 P4 is opening 035 anyway. Adopting is a re-skin of a 5,500-line tool. |
+| Rank 12 | Rebuild `list-dark-candidates.mjs`, or measure inline? | Rebuild and commit it. This backlog gets re-measured by every session that touches it. |
 | Rank 23 | Contrast round before or after Path 5 P3? | **After.** P3 re-tokenizes the same literals; doing contrast first is twice the work and a conflict in every file. |
 | Path 8 | Is a paired *student* device ever in scope? | No. Teacher-device-only. |
 | Path 17 P5 | Is an on-demand, non-precached Tesseract download acceptable under the offline promise? | Undecided. Decide before any OCR code. |
 | Any time | Should CI also run `offline:build` + `offline:verify`? | Yes, on `main` only, not on pull requests. |
-| Any time | Is `check:docs-commands` (rank 7) worth thirty lines? | Yes. Third occurrence. |
+| Any time | Is `check:docs-commands` (rank 6) worth thirty lines? | Yes. Third occurrence. |
 
 ### Live blockers and corrections carried forward
 
 - **`npm run path5:next` / `Tools/board-check/list-dark-candidates.mjs` does not
   exist.** A Wave A1 handoff said it shipped in #167 and quoted its output as the Path 5
-  rollout backlog; it was never committed. Rank 13 is to build it. This is the **third**
+  rollout backlog; it was never committed. Rank 12 is to build it. This is the **third**
   tool documented but never committed (`sync-social-tags.mjs` and the original
-  `board-check` folder were the first two) — which is why **rank 7**, the
+  `board-check` folder were the first two) — which is why **rank 6**, the
   `check:docs-commands` guard, exists. *(This pointer said "rank 12" from #171 until
   2026-09-04; rank 12 then was the jsPDF/`SHELL_URLS` row and had nothing to do with it. The
   guard the sentence means has always been `check:docs-commands`.)*
@@ -199,19 +242,19 @@ that is a re-rank, and it is yours to make, not a session's.
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 5 P2 — `_shared/stage.js`: one fullscreen/projector helper; adopt in 023, 024, 025, 021 | `_shared/` | 1 | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
-| 2 | Path 4 P3 — `_shared/media-db.js` + shared `downscaleImage`; register the database in 009 | `_shared/` | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 3 | Path 14 P2 — `_shared/seating-read.js`: one reader of `seating-chart-v1` for 010, 008, 045 | `_shared/` | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
-| 4 | Path 3 P3 — picker adoption: wire the 8 unwired tools, migrate ~20 copy-pasted pickers | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 5 | Path 3 P4 — identity adoption in the history-keeping tools (008 first, then 001, 002, 022, 027, 033, 068, 013) | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 6 | Live-site checks Stage 1 could not do: the two-deploy update test and an OS share-target run. **Devon only.** | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 7 | `check:docs-commands` — fail when a tracked `.md` cites an `npm run <x>` `package.json` does not define | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 8 | `check:adoption` — measure the header's shared-file adoption table with a committed script. There is none today, and a hand grep counted a *comment* as a reference on 2026-09-04 | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 9 | 034 `aria-required-children` — the last non-contrast accessibility allowance | 034 | ¼ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
-| 10 | Move the vendored jsPDF and SheetJS out of `SHELL_URLS` — no shell tool uses them; ~1.3 MB off the install | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 11 | Adopt `_shared/store.js` in the other two storage eras — 063 (a `{v:1}` payload) and `Tools/school-calendar/scv-store.js` (probe + migrate) | site | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 12 | `assets/js/gvb-save.js`: its `save()` swallows quota errors, and it is shared code outside `_shared/`. Consumers 005, 007, 064 | site | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 13 | Rebuild and commit `list-dark-candidates.mjs` (`npm run path5:next`) before Path 5 P3 quotes a number | site | ½ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
+| 1 | Path 4 P3 — `_shared/media-db.js` + shared `downscaleImage`; register the database in 009 | `_shared/` | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 2 | Path 14 P2 — `_shared/seating-read.js`: one reader of `seating-chart-v1` for 010, 008, 045 | `_shared/` | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
+| 3 | Path 3 P3 — picker adoption: wire the 8 unwired tools, migrate ~20 copy-pasted pickers | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 4 | Path 3 P4 — identity adoption in the history-keeping tools (008 first, then 001, 002, 022, 027, 033, 068, 013) | site | 2+ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 5 | Live-site checks Stage 1 could not do: the two-deploy update test and an OS share-target run. **Devon only.** | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 6 | `check:docs-commands` — fail when a tracked `.md` cites an `npm run <x>` `package.json` does not define | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 7 | `check:adoption` — measure the header's shared-file adoption table with a committed script. There is none today, and a hand grep counted a *comment* as a reference on 2026-09-04 | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 8 | 034 `aria-required-children` — the last non-contrast accessibility allowance | 034 | ¼ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
+| 9 | Move the vendored jsPDF and SheetJS out of `SHELL_URLS` — no shell tool uses them; ~1.3 MB off the install | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 10 | Adopt `_shared/store.js` in the other two storage eras — 063 (a `{v:1}` payload) and `Tools/school-calendar/scv-store.js` (probe + migrate) | site | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 11 | `assets/js/gvb-save.js`: its `save()` swallows quota errors, and it is shared code outside `_shared/`. Consumers 005, 007, 064 | site | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 12 | Rebuild and commit `list-dark-candidates.mjs` (`npm run path5:next`) before Path 5 P3 quotes a number | site | ½ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
+| 13 | Adopt `_shared/stage.js` in 023, 025 and 021 — the three remaining hand-rolled stages the P2 row named; scan each on-stage state with axe as `smoke-stage.mjs` does | site | ½ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 14 | Path 5 P3 — native dark + `stage.js` across the projector tools, batches of ~6 | site | 2+ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 15 | Path 5 P4 — landing page and hallway tools; 034 gets a native dark palette | site | 1 | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 16 | Path 6 P2 — adopt the share sheet in the 17 existing `state-link` tools | site | 2+ | | [Path 6](#path-6--share-everywhere) |
@@ -874,7 +917,7 @@ way, is in `HISTORY.md`.
   migration contract, and how legacy unversioned payloads are read without a flag
   day, is stated in the file's own header.* **What shipped differs in one way:** one
   adopter, not three, because the definition of done's "at most one adopter" won;
-  the other two eras are rank 11.
+  the other two eras are rank 10.
 - **P2 — `_shared/tool-registry.js`. Shipped #174.** One data file: `{slug, title, file,
   localStorageKeys|prefixes, idbDatabases, studentData: bool, category}` for all 86
   tools. Consumers: 009 (replaces `KNOWN_GROUPS`, `STUDENT_KEYS`, `IDB_NOTES`), 010
@@ -915,7 +958,8 @@ simulation shows the explanatory message in every migrated tool.
 
 ### Path 5 — Projector mode, real dark mode, shared fullscreen stage
 
-**Status.** P1 shipped 2026-09-03 (#167). P2–P4 open.
+**Status.** P1 shipped 2026-09-03 (#167). P2 shipped 2026-09-04 (#180, `CACHE_VERSION`
+v147) with 024 as its single adopter; 023, 025 and 021 are rank 13. P3–P4 open.
 
 **Why.** `_shared/theme-toggle.js` is loaded by zero tools; the only dark mode
 teachers get is `a11y.js`'s CSS-filter invert, which shifts every hue and looks
@@ -937,7 +981,8 @@ subtree, so live controls must live inside it).
   dead) and fold `theme.css`'s Industry tokens into the same mechanism for the five
   `_ds` tools. Respect `prefers-color-scheme` on first visit.
 
-- **P2 — `_shared/stage.js`.** One fullscreen/projector helper: `Stage.mount(el,
+- **P2 — `_shared/stage.js`. Shipped #180, `CACHE_VERSION` v147; what landed is in
+  `HISTORY.md`.** One fullscreen/projector helper: `Stage.mount(el,
   {controls, hud, hotkeys})` that fullscreens a container, keeps a teacher HUD
   (answer key, next/prev, timer) inside the subtree, exposes a "presentation" body
   class that hides chrome and enlarges type, and wires the site-standard keys
@@ -961,6 +1006,9 @@ once; keyboard-only run-through of one stage.
 
 ### Path 6 — "Share…" everywhere
 
+**Status.** P1 shipped 2026-09-04 (#178, `CACHE_VERSION` v146) with 064 as its single
+adopter. P2–P4 open; P2 is rank 16.
+
 **Why.** `state-link.js` works and is in 17 tools; [Track P](#track-p--printable-cheat-sheet-bundle-export-packet-builder) and
 the platform themes both want it universal. Every adopter independently
 re-discovered two failure modes: QR payload overflow on long states (028, 050, 056,
@@ -970,7 +1018,9 @@ download-as-file as the third option.
 
 **Phases.**
 
-- **P1 — `_shared/share.js` + `_shared/qr-draw.js`.** `Share.mount(button, {
+- **P1 — `_shared/share.js` + `_shared/qr-draw.js`. Shipped #178, `CACHE_VERSION` v146;
+  what landed, the measured budget and what was not verified are in `HISTORY.md`.**
+  `Share.mount(button, {
   getState, tool, title, filename })` opens one consistent sheet: Copy link, Show
   QR (with a *measured* payload budget — grey the QR out above the reliable
   scan size and say why), Download `.json`, and `navigator.share` where available.
@@ -1579,7 +1629,7 @@ a registry row, a 009 backup surface and a migration. The rest of R2 shipped; th
 above is struck rather than deleted so this note has something to attach to.
 
 **R1 and R2 have shipped** (#176 `CACHE_VERSION` v144, #177 v145). What landed, and what
-it got wrong, is in `HISTORY.md`. R3 is rank 4.
+it got wrong, is in `HISTORY.md`. R3 is rank 3.
 
 ##### R1 — `_shared/roster.js` — **SHIPPED #176, v144**
 
@@ -1944,7 +1994,7 @@ Cross-tool observations, extraction candidates and small defects, gathered by th
 sessions that hit them. Not a queue in themselves — but if one lands naturally inside a
 tool you are already working on, take it. The ranked rows above point here.
 
-#### `check:adoption` — the header's adoption table has no script behind it (rank 8)
+#### `check:adoption` — the header's adoption table has no script behind it (rank 7)
 
 `CLAUDE.md`'s own rule is **measure with a script, and commit the script**, and every other
 number in the "Where things stand" table has one: `check:precache` for the precache counts,
@@ -1965,7 +2015,7 @@ grep -lE "(src|href)=[\"'][^\"']*_shared/<file>[\"']|from ['\"][^'\"]*_shared/<f
 which agrees with the previous header on every unchanged row — that agreement is the only
 reason to trust it. Thirty lines wrapping that, printing the table in the header's own
 Markdown so it can be pasted, and failing on nothing (it is a measurement, not a guard).
-Worth pairing with rank 7 (`check:docs-commands`), which is the same shape of problem: a
+Worth pairing with rank 6 (`check:docs-commands`), which is the same shape of problem: a
 document making a claim nothing checks.
 
 #### Small defects found during the 2026-09-02 survey, still open on 2026-09-03
@@ -2116,7 +2166,7 @@ interactive* writing timer (Start/Pause/Reset buttons, not just a bigger
 font) that stays usable while `.stage` is fullscreened — the same
 constraint that already forced the Round 4 Anonymous Response Display
 into an overlay reparented inside the fullscreened element. A shared
-`_shared/fullscreen-stage.js` helper, whenever someone builds it, needs to
+`_shared/stage.js` helper (built in Path 5 P2, #180, as `Stage.mount` with `hud`) needs to
 account for *interactive controls living inside the fullscreened subtree*
 (timers, reveal buttons, response toggles), not just static display
 content (bigger prompt text, dark background) — the four independent
