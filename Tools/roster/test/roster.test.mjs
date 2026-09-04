@@ -427,6 +427,54 @@ console.log('Roster — the shared roster service (Path 3 P1)');
   eq(seen.length, 1, '22: unsubscribing stops it');
 }
 
+/* ── 22b. diffNames — what an import would do to a roster ──────────────── */
+{
+  const { Roster } = make();
+  const d = Roster.diffNames(
+    ['Ada Lovelace', 'Grace Hopper', 'Nellie Bly'],
+    ['Ada Lovelace', 'Grace Hopper', 'Marie Curie']);
+  eq(d.same, ['Ada Lovelace', 'Grace Hopper'], '22b: unchanged names are "same"');
+  eq(d.added, ['Marie Curie'], '22b: a name only in the import is "added"');
+  eq(d.left, ['Nellie Bly'], '22b: a name only on the roster is "left"');
+  eq(d.renamed, [], '22b: nothing is a rename here');
+}
+
+/* ── 22c. The rename case this exists for ──────────────────────────────── */
+{
+  // A gradebook that switched from "Last, First" to "First Last" produces this
+  // for EVERY student. Read as new+left it says "28 new, 28 left" and a
+  // teacher concludes the file is wrong.
+  const { Roster } = make();
+  const d = Roster.diffNames(['Smith, John', 'Bly, Nellie'], ['John Smith', 'Nellie Bly']);
+  eq(d.renamed, [{ from: 'Smith, John', to: 'John Smith' }, { from: 'Bly, Nellie', to: 'Nellie Bly' }],
+    '22c: a token-order rewrite reads as renames, not as a new roster');
+  eq(d.added, [], '22c: nothing is added');
+  eq(d.left, [], '22c: nobody left');
+}
+
+/* ── 22d. One existing name cannot be claimed twice ────────────────────── */
+{
+  const { Roster } = make();
+  const d = Roster.diffNames(['Smith, John'], ['John Smith', 'Smith John']);
+  eq(d.renamed.length, 1, '22d: the first incoming name claims the rename');
+  eq(d.added.length, 1, '22d: ...and the second is a genuinely new student');
+  eq(d.left, [], '22d: the claimed name did not also "leave"');
+}
+
+/* ── 22e. diffNames edges ──────────────────────────────────────────────── */
+{
+  const { Roster } = make();
+  eq(Roster.diffNames([], ['Ada']), { same: [], renamed: [], added: ['Ada'], left: [] },
+    '22e: importing into an empty roster is all-added');
+  eq(Roster.diffNames(['Ada'], []), { same: [], renamed: [], added: [], left: ['Ada'] },
+    '22e: importing nothing leaves everyone');
+  eq(Roster.diffNames(undefined, undefined), { same: [], renamed: [], added: [], left: [] },
+    '22e: no arguments is not a crash');
+  const caseOnly = Roster.diffNames(['ada lovelace'], ['Ada Lovelace']);
+  eq(caseOnly.same, ['Ada Lovelace'], '22e: a case-only difference is the same student');
+  eq(caseOnly.left, [], '22e: ...and nobody left');
+}
+
 /* ── 23. The picker's option model ──────────────────────────────────────
    Not the real DOM — 006's browser suites drive that — but enough of a <select>
    to assert what the six copy-pasted variants each got differently. This block

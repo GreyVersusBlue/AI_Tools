@@ -157,6 +157,11 @@
     position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.5);
     display: flex; align-items: center; justify-content: center; padding: 1rem;
   }
+  /* `hidden` is only display:none in the UA stylesheet, so any author display
+     rule beats it — .map-row and .check are both flex, and both are toggled
+     with the attribute. See npm run check:hidden-flex. */
+  [hidden] { display: none !important; }
+  body.drag-over { outline: 3px dashed var(--accent); outline-offset: -6px; }
   .overlay[hidden] { display: none; }
   .modal {
     background: #fff; border-radius: 10px; border: 1px solid var(--line);
@@ -343,8 +348,21 @@
         </div>
       </div>
       <label class="check"><input type="checkbox" id="importFlip" checked> Rewrite &ldquo;Smith, John&rdquo; as &ldquo;John Smith&rdquo;</label>
-      <label class="check"><input type="checkbox" id="importReplace"> Replace the current list instead of adding to it</label>
+      <label class="check"><input type="checkbox" id="importSplit"> Split into a roster per class, using a column</label>
+      <p class="hint" id="splitHint" hidden>This file looks like a whole timetable &mdash; it has a class or period column, so it can become one roster per class in a single import.</p>
+      <div class="map-row" id="splitWrap" hidden>
+        <div class="f">
+          <label for="splitCol">Class / period column</label>
+          <select id="splitCol"></select>
+        </div>
+        <div class="f">
+          <label for="splitPrefix">Name each roster</label>
+          <input class="input" id="splitPrefix" type="text" value="Period {value}" maxlength="60">
+        </div>
+      </div>
+      <label class="check" id="importReplaceWrap"><input type="checkbox" id="importReplace"> Replace the current list instead of adding to it</label>
       <div id="importPreviewWrap"></div>
+      <div id="importDiffWrap"></div>
       <p class="hint" id="importSummary"></p>
       <div class="btn-row">
         <button type="button" id="importConfirmBtn">Import these names</button>
@@ -427,7 +445,7 @@
 
         <div class="btn-row" style="margin-bottom:.8rem;">
           <button class="secondary small" id="importCsvBtn" type="button">Import from file&hellip;</button>
-          <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" style="display:none;">
+          <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt,.xlsx,.xls" multiple style="display:none;">
           <button class="secondary small" id="sampleBtn" type="button">Load a sample class</button>
         </div>
 
@@ -575,7 +593,8 @@
    'rolloverBtn', 'archiveList', 'archiveEmptyHint',
    'importOverlay', 'importCloseBtn', 'importCancelBtn', 'importConfirmBtn', 'importHasHeader', 'importFlip',
    'importReplace', 'mapMode', 'mapNameCol', 'mapFirstCol', 'mapLastCol', 'mapOneWrap', 'mapFirstWrap', 'mapLastWrap',
-   'importPreviewWrap', 'importSummary',
+   'importPreviewWrap', 'importSummary', 'importDiffWrap',
+   'importSplit', 'splitWrap', 'splitCol', 'splitPrefix', 'importReplaceWrap', 'splitHint',
    'confirmOverlay', 'confirmCloseBtn', 'confirmCancelBtn', 'confirmOkBtn', 'confirmTitle', 'confirmBody', 'confirmDeps',
    'handoffBtn', 'handoffOverlay', 'handoffCloseBtn', 'handoffIntro', 'handoffStartSendBtn', 'handoffStartReceiveBtn',
    'handoffStepOffer', 'handoffOfferCanvas', 'handoffOfferText', 'handoffOfferCopyBtn', 'handoffScanAnswerBtn', 'handoffAnswerInput',
@@ -923,11 +942,29 @@
   var guessColumn = Roster.guessColumn;
 
   var importTable = null;
+  /* The roster name a queued file suggests — its filename or sheet name — used
+     when the import creates a roster rather than filling the open one. */
+  var importName = '';
+  /* 'csv' | 'xlsx' | 'manual' — where the roster in the dialog came from,
+     recorded on its sidecar meta when a split import writes it. */
+  var importSource = 'manual';
+  /* Tables still waiting for the dialog, when several files (or several sheets)
+     arrived at once. Each is {label, table}. */
+  var importQueue = [];
+  /* How many tables this batch started with. Above one, each confirmed table
+     becomes a roster of its own rather than filling the editor: six files
+     cannot be reviewed one at a time in an editor that holds one roster. */
+  var importBatchTotal = 1;
 
-  function openImportModal(text, sourceLabel) {
-    var t = parseTable(text);
+
+  /* `table` and `suggestedName` are set when the caller already parsed the
+     source (a workbook sheet, or one of several queued files); `text` is the
+     paste and share-target path, which still parses here. */
+  function openImportModal(text, sourceLabel, table, suggestedName) {
+    var t = table || parseTable(text);
     if (!t.rows.length) { showMsg('Could not find anything to import in that file.'); return; }
     importTable = t;
+    importName = suggestedName || '';
     var header = looksLikeHeader(t.rows[0]);
     els.importHasHeader.checked = header;
     document.getElementById('importTitle').textContent = 'Import names' + (sourceLabel ? ' from ' + sourceLabel : '');
@@ -940,6 +977,7 @@
     els.mapNameCol.innerHTML = opts;
     els.mapFirstCol.innerHTML = opts;
     els.mapLastCol.innerHTML = opts;
+    els.splitCol.innerHTML = opts;
 
     var nameCol = guessColumn(t.rows, header, ['name', 'names', 'student', 'student name', 'full name']);
     var firstCol = guessColumn(t.rows, header, ['first', 'first name', 'firstname']);
@@ -953,9 +991,28 @@
       els.mapMode.value = 'one';
       els.mapNameCol.value = String(nameCol === -1 ? widestTextColumn(t) : nameCol);
     }
+    /* A gradebook export of a whole timetable has one row per student and a
+       Period column; that is the file a teacher actually has, and splitting it
+       is the difference between one import and six. Guessed, not forced. */
+    var splitCol = guessColumn(t.rows, header, ['period', 'class', 'section', 'block', 'hour', 'course']);
+    els.importSplit.checked = false;
+    els.splitCol.value = String(splitCol === -1 ? 0 : splitCol);
+    els.splitPrefix.value = 'Period {value}';
+    els.splitHint.hidden = splitCol === -1;
+
     syncMapMode();
+    syncSplitMode();
     renderImportPreview();
     els.importOverlay.hidden = false;
+  }
+
+  /* Whether the mapping dialog is building one roster or many. */
+  function syncSplitMode() {
+    var split = els.importSplit.checked;
+    els.splitWrap.hidden = !split;
+    /* "Replace the current list" is about the open roster, which a split
+       import does not touch — it writes whole rosters of its own. */
+    els.importReplaceWrap.hidden = split;
   }
 
   var widestTextColumn = Roster.widestTextColumn;
@@ -969,17 +1026,91 @@
 
   function importedNames() {
     if (!importTable) return [];
+    return importTable.rows.slice(els.importHasHeader.checked ? 1 : 0)
+      .map(nameFromRow).filter(Boolean);
+  }
+
+  /**
+   * The rosters a split import would create: `[{name, names}]`, in the order
+   * the class values first appear in the file. One row per student with a
+   * Period column is what a gradebook exports for a whole timetable, and this
+   * is what turns that one file into six rosters.
+   */
+  function splitRosters() {
+    if (!importTable) return [];
     var rows = importTable.rows.slice(els.importHasHeader.checked ? 1 : 0);
+    var names = importedNames();
+    var col = Number(els.splitCol.value) || 0;
+    var prefix = els.splitPrefix.value.indexOf('{value}') === -1
+      ? (els.splitPrefix.value || '') + '{value}'
+      : els.splitPrefix.value;
+    var order = [], byGroup = {};
+    /* importedNames() drops rows whose name cell is empty, so it cannot be
+       indexed against `rows` directly — walk the rows and re-derive. */
+    var i = 0;
+    rows.forEach(function (r) {
+      var nm = names[i];
+      var raw = nameFromRow(r);
+      if (!raw) return;
+      i++;
+      if (!nm) return;
+      var value = String(r[col] || '').replace(/\s+/g, ' ').trim() || 'Unassigned';
+      var title = prefix.split('{value}').join(value).replace(/\s+/g, ' ').trim().slice(0, 80) || value;
+      if (!byGroup[title]) { byGroup[title] = []; order.push(title); }
+      byGroup[title].push(nm);
+    });
+    return order.map(function (title) {
+      return { name: title, names: parseNames(byGroup[title].join('\n')).names };
+    });
+  }
+
+  /** What one row's name cell yields before parseNames' de-duplication. */
+  function nameFromRow(r) {
     var two = els.mapMode.value === 'two';
-    var nameCol = Number(els.mapNameCol.value) || 0;
-    var firstCol = Number(els.mapFirstCol.value) || 0;
-    var lastCol = Number(els.mapLastCol.value) || 0;
-    return rows.map(function (r) {
-      var v = two ? ((r[firstCol] || '') + ' ' + (r[lastCol] || '')) : (r[nameCol] || '');
-      v = v.replace(/\s+/g, ' ').trim();
-      if (!two && els.importFlip.checked) v = flipLastFirst(v);
-      return v;
-    }).filter(Boolean);
+    var v = two
+      ? ((r[Number(els.mapFirstCol.value) || 0] || '') + ' ' + (r[Number(els.mapLastCol.value) || 0] || ''))
+      : (r[Number(els.mapNameCol.value) || 0] || '');
+    v = v.replace(/\s+/g, ' ').trim();
+    if (!two && els.importFlip.checked) v = flipLastFirst(v);
+    return v;
+  }
+
+  /** "3 new, 1 left, 2 renamed" for one roster this import would overwrite. */
+  function diffLine(rosterName, incoming) {
+    var existing = Roster.getRoster(rosterName);
+    if (!existing.length) return plural(incoming.length, 'name') + ', new roster';
+    var d = Roster.diffNames(existing, incoming);
+    /* Not plural() — these are adjectives, and it would say "3 news" and
+       "0 unchangeds". The noun they modify is "students", once, at the end. */
+    var bits = [];
+    if (d.added.length) bits.push(d.added.length + ' new');
+    if (d.left.length) bits.push(d.left.length + ' no longer on it');
+    if (d.renamed.length) bits.push(d.renamed.length + ' renamed');
+    if (!bits.length) return 'no change — the same ' + plural(d.same.length, 'name');
+    return bits.join(', ') + ', ' + d.same.length + ' unchanged';
+  }
+
+  /** The diff readout under the preview: what this import does to what exists. */
+  function renderImportDiff() {
+    if (!importTable) { els.importDiffWrap.innerHTML = ''; return; }
+    var rows;
+    if (els.importSplit.checked) {
+      rows = splitRosters().map(function (g) {
+        return '<li><b>' + escapeHtml(g.name) + '</b> — ' + escapeHtml(diffLine(g.name, g.names)) + '</li>';
+      });
+    } else if (currentName && !els.importReplace.checked) {
+      /* Adding to the open roster: the merge is what the teacher gets, so diff
+         against that rather than against the file alone. */
+      var merged = parseNames(currentNames().concat(importedNames()).join('\n')).names;
+      rows = ['<li><b>' + escapeHtml(currentName) + '</b> — ' + escapeHtml(diffLine(currentName, merged)) + '</li>'];
+    } else if (currentName) {
+      rows = ['<li><b>' + escapeHtml(currentName) + '</b> — ' + escapeHtml(diffLine(currentName, importedNames())) + '</li>'];
+    } else {
+      rows = [];
+    }
+    els.importDiffWrap.innerHTML = rows.length
+      ? '<p class="hint">What this changes:</p><ul class="dep-list">' + rows.join('') + '</ul>'
+      : '';
   }
 
   function renderImportPreview() {
@@ -999,23 +1130,53 @@
     });
     html += '</tbody></table>';
     els.importPreviewWrap.innerHTML = html;
-    els.importSummary.textContent = plural(names.length, 'name') + ' will be imported.';
+    if (els.importSplit.checked) {
+      var groups = splitRosters();
+      var total = groups.reduce(function (m, g) { return m + g.names.length; }, 0);
+      els.importSummary.textContent = groups.length
+        ? plural(total, 'name') + ' across ' + plural(groups.length, 'roster') + '.'
+        : 'That column did not split the file into anything.';
+    } else {
+      els.importSummary.textContent = plural(names.length, 'name') + ' will be imported.';
+    }
+    renderImportDiff();
   }
 
   ['change', 'input'].forEach(function (ev) {
-    [els.importHasHeader, els.importFlip, els.mapNameCol, els.mapFirstCol, els.mapLastCol].forEach(function (el) {
+    [els.importHasHeader, els.importFlip, els.mapNameCol, els.mapFirstCol, els.mapLastCol,
+     els.importReplace, els.splitCol, els.splitPrefix].forEach(function (el) {
       el.addEventListener(ev, renderImportPreview);
     });
   });
   els.mapMode.addEventListener('change', function () { syncMapMode(); renderImportPreview(); });
+  els.importSplit.addEventListener('change', function () { syncSplitMode(); renderImportPreview(); });
 
-  function closeImport() { els.importOverlay.hidden = true; importTable = null; }
-  els.importCloseBtn.addEventListener('click', closeImport);
-  els.importCancelBtn.addEventListener('click', closeImport);
+  function closeImport() {
+    els.importOverlay.hidden = true;
+    importTable = null;
+    els.importDiffWrap.innerHTML = '';
+  }
+
+  /** Close this table and open the next queued one, if a batch is running. */
+  function closeImportAndAdvance(total) {
+    closeImport();
+    if (!importQueue.length) return false;
+    var next = importQueue.shift();
+    openImportTable(next, total);
+    return true;
+  }
+
+  /** Cancelling one file of a batch abandons the whole batch — a teacher who
+      backs out of file 2 of 6 is not asking to be shown files 3 to 6. */
+  function cancelImport() { importQueue = []; closeImport(); }
+  els.importCloseBtn.addEventListener('click', cancelImport);
+  els.importCancelBtn.addEventListener('click', cancelImport);
 
   els.importConfirmBtn.addEventListener('click', function () {
+    if (els.importSplit.checked) { confirmSplitImport(); return; }
     var names = importedNames();
     if (!names.length) { showMsg('No names came out of that mapping — try a different column.'); return; }
+    if (importBatchTotal > 1) { confirmBatchTable(names); return; }
     var base = els.importReplace.checked ? [] : currentNames();
     var merged = parseNames(base.concat(names).join('\n'));
     adoptNames(merged.names);
@@ -1024,22 +1185,203 @@
     showMsg('Imported ' + plural(names.length, 'name') + ' — review the list, then Save roster.', true);
   });
 
+  /** One file (or sheet) of a batch becomes one roster, named after it. */
+  function confirmBatchTable(names) {
+    /* Deliberately NOT uniqueRosterName(): re-importing period-3.csv should
+       update "Period 3", not pile up "Period 3 (2)". The diff in the dialog is
+       what told the teacher it would be replaced. */
+    var title = String(importName || '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Imported roster';
+    var res = Roster.setRoster(title, names);
+    if (!res.ok) {
+      importQueue = [];
+      closeImport();
+      showMsg('Could not save "' + title + '" — the rest of the batch was not imported.');
+      return;
+    }
+    syncRecords(title, names);
+    stampImportMeta(title);
+    var total = importBatchTotal;
+    var more = closeImportAndAdvance(total);
+    refreshSwitcher();
+    renderStats();
+    if (!more) {
+      if (currentName) loadRosterByName(currentName);
+      showMsg('Imported ' + plural(total, 'roster') + '.', true);
+    }
+  }
+
+
+
+  /**
+   * A split import writes whole rosters straight to storage — unlike the
+   * single-roster path, which only fills the editor and waits for Save. Six
+   * rosters cannot be reviewed one at a time in an editor that holds one, and
+   * the diff shown in the dialog is the review step. Existing rosters of the
+   * same name are REPLACED, which is what the diff said would happen.
+   */
+  function confirmSplitImport() {
+    var groups = splitRosters();
+    if (!groups.length) { showMsg('That column did not split the file into anything.'); return; }
+
+    var existingCount = Roster.listRosters().length;
+    var fresh = groups.filter(function (g) { return Roster.getRoster(g.name).length === 0; }).length;
+    if (existingCount + fresh > MAX_ROSTERS) {
+      showMsg('That would need ' + (existingCount + fresh) + ' rosters and the limit is ' + MAX_ROSTERS +
+              ' — delete some first, or import fewer classes.');
+      return;
+    }
+
+    var written = 0, failed = null;
+    groups.forEach(function (g) {
+      if (failed) return;
+      var res = Roster.setRoster(g.name, g.names);
+      if (!res.ok) { failed = g.name; return; }
+      written++;
+      syncRecords(g.name, g.names);
+      stampImportMeta(g.name);
+    });
+
+    var total = importBatchTotal;
+    var more = closeImportAndAdvance(total);
+    refreshSwitcher();
+    renderStats();
+    if (failed) {
+      showMsg('Imported ' + plural(written, 'roster') + ', then could not save "' + failed +
+              '" — the rest were not written.');
+      return;
+    }
+    if (more) return;
+    if (currentName && groups.some(function (g) { return g.name === currentName; })) loadRosterByName(currentName);
+    showMsg('Imported ' + plural(written, 'roster') + ' from that file.', true);
+  }
+
+  /** Records how a roster arrived, on the sidecar meta that already holds its
+      period, subject and term — not in a key of its own. */
+  function stampImportMeta(rosterName) {
+    var db = loadRecords();
+    var entry = db.rosters[rosterName];
+    if (!entry) return;
+    entry.meta = entry.meta || {};
+    entry.meta.source = importSource || 'manual';
+    entry.meta.importedAt = Date.now();
+    if (!entry.meta.created) entry.meta.created = Date.now();
+    entry.meta.updated = Date.now();
+    saveRecords(db);
+  }
+
+  /* Drop files anywhere on the page. A teacher who has just exported six
+     class lists has them in a folder, not in a file picker, and 036 already
+     established the pattern. */
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      if (!e.dataTransfer || Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') === -1) return;
+      e.preventDefault();
+      document.body.classList.add('drag-over');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      if (ev === 'dragleave' && e.relatedTarget) return;   // moving between children is not leaving
+      document.body.classList.remove('drag-over');
+    });
+  });
+  document.addEventListener('drop', function (e) {
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (!files || !files.length) return;
+    e.preventDefault();
+    handleImportFiles(Array.prototype.slice.call(files));
+  });
+
   els.importCsvBtn.addEventListener('click', function () { els.csvFileInput.click(); });
   els.csvFileInput.addEventListener('change', function () {
-    var file = els.csvFileInput.files[0];
+    var files = Array.prototype.slice.call(els.csvFileInput.files);
     els.csvFileInput.value = '';
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function () { openImportModal(reader.result, '"' + file.name + '"'); };
-    reader.onerror = function () { showMsg('Could not read that file.'); };
-    reader.readAsText(file);
+    handleImportFiles(files);
   });
+
+  function readTextFile(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(String(reader.result || '')); };
+      reader.onerror = function () { reject(new Error('could not read ' + file.name)); };
+      reader.readAsText(file);
+    });
+  }
+
+  /** One file becomes one table, or — for a workbook — one per sheet, because
+      a sheet per class is the other shape a timetable export comes in. */
+  function tablesFromFile(file) {
+    var lower = file.name.toLowerCase();
+    if (lower.slice(-5) === '.xlsx' || lower.slice(-4) === '.xls') {
+      return loadXlsx().then(function () {
+        return file.arrayBuffer();
+      }).then(function (buf) {
+        var wb = XLSX.read(buf, { type: 'array' });
+        return wb.SheetNames.map(function (sheet) {
+          var rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], { header: 1, raw: false, defval: '' });
+          return {
+            label: wb.SheetNames.length > 1 ? '"' + file.name + '" — ' + sheet : '"' + file.name + '"',
+            name: wb.SheetNames.length > 1 ? sheet : file.name.replace(/\.[^.]+$/, ''),
+            source: 'xlsx',
+            table: tableFromRows(rows)
+          };
+        }).filter(function (t) { return t.table.rows.length; });
+      });
+    }
+    return readTextFile(file).then(function (text) {
+      var t = parseTable(text);
+      return t.rows.length ? [{
+        label: '"' + file.name + '"',
+        name: file.name.replace(/\.[^.]+$/, ''),
+        source: 'csv',
+        table: t
+      }] : [];
+    });
+  }
+
+  /** SheetJS hands back ragged arrays; the dialog wants parseTable's shape. */
+  function tableFromRows(rows) {
+    var clean = (rows || []).map(function (r) {
+      return (r || []).map(function (c) { return String(c === null || c === undefined ? '' : c).trim(); });
+    }).filter(function (r) { return r.some(function (c) { return c !== ''; }); });
+    var cols = clean.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
+    clean.forEach(function (r) { while (r.length < cols) r.push(''); });
+    return { rows: clean, cols: cols };
+  }
+
+  function handleImportFiles(files) {
+    if (!files || !files.length) return;
+    showMsg('Reading ' + plural(files.length, 'file') + '…');
+    Promise.all(files.map(tablesFromFile)).then(function (lists) {
+      var all = [];
+      lists.forEach(function (l) { all = all.concat(l); });
+      if (!all.length) { showMsg('Could not find anything to import in ' + plural(files.length, 'file') + '.'); return; }
+      clearMsg();
+      importQueue = all.slice(1);
+      openImportTable(all[0], all.length);
+    }).catch(function (err) {
+      showMsg('Could not read that file: ' + (err && err.message ? err.message : 'unknown problem'));
+    });
+  }
+
+  /** Open one queued table in the mapping dialog. */
+  function openImportTable(entry, totalAtStart) {
+    importSource = entry.source || 'manual';
+    importBatchTotal = totalAtStart;
+    var label = entry.label + (totalAtStart > 1
+      ? ' (' + (totalAtStart - importQueue.length) + ' of ' + totalAtStart + ')'
+      : '');
+    openImportModal(null, label, entry.table, entry.name);
+  }
 
   // A pasted spreadsheet region lands in the same mapping dialog as a file.
   els.namesInput.addEventListener('paste', function (e) {
     var text = e.clipboardData && e.clipboardData.getData('text/plain');
     if (!text || text.indexOf('\t') === -1) return; // plain one-name-per-line paste stays plain
     e.preventDefault();
+    importQueue = [];
+    importBatchTotal = 1;
+    importSource = 'manual';
     openImportModal(text, 'the pasted table');
   });
 
@@ -2081,6 +2423,9 @@
         return res.text().then(function (text) {
           return cache.delete(key).then(function () {
             if (!text || !text.trim()) { showMsg('The shared file was empty.'); return; }
+            importQueue = [];
+            importBatchTotal = 1;
+            importSource = /\.xlsx?$/i.test(name || '') ? 'xlsx' : 'csv';
             openImportModal(text, name ? '"' + name + '"' : 'the shared file');
           });
         });
