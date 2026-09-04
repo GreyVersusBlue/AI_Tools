@@ -16,6 +16,8 @@
 <meta name="twitter:description" content="Build a rotating weekly hallway/cafeteria/bus duty assignment grid across staff and print it for the workroom board.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M7 9h18M7 16h18M7 23h18' stroke='%231f3550' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -99,6 +101,12 @@
 
   <div class="card">
     <h2>Staff</h2>
+    <label for="rosterHubSelect">Load from a saved roster</label>
+    <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.7rem;">
+      <select id="rosterHubSelect" style="flex:1 1 auto;margin:0;"></select>
+      <button type="button" class="secondary" id="rosterHubLoadBtn" style="flex:0 0 auto;">Load</button>
+    </div>
+    <p class="hint">Saved rosters are shared with the rest of the toolkit and are usually classes, not staff &mdash; save a staff list under a name starting with &ldquo;Staff &mdash; &rdquo; so it is easy to tell apart. Loading fills the box below; nothing is saved until you press Save staff list.</p>
     <label for="staffInput">Staff names, one per line</label>
     <textarea id="staffInput" placeholder="Alex Rivera&#10;Bailey Chen&#10;Carter Diaz"></textarea>
     <button class="secondary" id="saveStaffBtn">Save staff list</button>
@@ -137,7 +145,7 @@
   var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
   var els = {};
-  ['staffInput', 'saveStaffBtn', 'staffListWrap', 'dutiesWrap', 'addDutyBtn', 'gridTable', 'autoFillBtn', 'clearGridBtn',
+  ['rosterHubSelect', 'rosterHubLoadBtn', 'staffInput', 'saveStaffBtn', 'staffListWrap', 'dutiesWrap', 'addDutyBtn', 'gridTable', 'autoFillBtn', 'clearGridBtn',
    'printBtn', 'printSub', 'printGrid'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { staff: [], duties: [], assignments: {}, staffSkip: {} };
@@ -197,6 +205,20 @@
   els.addDutyBtn.addEventListener('click', function () {
     state.duties.push({ id: uid(), name: 'New duty location' });
     save(); renderDuties(); renderGrid();
+  });
+
+  /* "Load from a saved roster" — _shared/roster.js's picker, the site's one
+     reader of np_rosters, listing whatever Class Roster Hub or the Name Picker
+     has saved on this device. Deliberately non-destructive: it fills the box
+     below and that box stays this tool's source of truth. */
+  var rosterPicker = Roster.mountRosterPicker(els.rosterHubSelect, {
+    placeholder: 'Load a saved roster…',
+    emptyLabel: 'No saved rosters found'
+  });
+  els.rosterHubLoadBtn.addEventListener('click', function () {
+    var list = rosterPicker ? rosterPicker.getNames() : [];
+    if (!list.length) return;
+    els.staffInput.value = list.join('\n');
   });
 
   els.saveStaffBtn.addEventListener('click', function () {

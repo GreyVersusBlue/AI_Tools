@@ -20,6 +20,8 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -513,7 +515,6 @@
   "use strict";
 
   var STORAGE_KEY = 'hall-pass-log-sections';
-  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
   var HISTORY_LIMIT = 90;
   var LOG_LIMIT = 300;
   var OVER_TIME_MIN = 9;
@@ -767,30 +768,26 @@
     save();
   });
 
+  /* The saved-roster dropdown is _shared/roster.js's picker now: one reader of
+     np_rosters for the whole site, type-guarded against a hand-edited entry,
+     and refreshed whenever any tab saves a roster. */
+  var rosterPicker = null;
   function populateRosterSelect() {
-    try {
-      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
-      var names = Object.keys(rosters);
-      els.rosterSelect.innerHTML = '<option value="">Load a saved Name Picker roster&hellip;</option>' +
-        names.map(function (n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
-    } catch (e) {
-      els.rosterSelect.innerHTML = '<option value="">No saved rosters found</option>';
-    }
+    if (rosterPicker) { rosterPicker.refresh(); return; }
+    rosterPicker = Roster.mountRosterPicker(els.rosterSelect, {
+      placeholder: 'Load a saved Name Picker roster…',
+      emptyLabel: 'No saved rosters found'
+    });
   }
   els.loadRosterBtn.addEventListener('click', function () {
-    var name = els.rosterSelect.value;
-    if (!name) return;
-    try {
-      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
-      var list = rosters[name];
-      if (!list) return;
-      els.namesInput.value = list.join('\n');
-      state.namesText = els.namesInput.value;
-      updateNameCount();
-      renderStudentGrid();
-      renderApprovalList();
-      save();
-    } catch (e) { showMsg('Could not read that roster from this browser.', 'error'); }
+    var list = rosterPicker ? rosterPicker.getNames() : [];
+    if (!list.length) return;
+    els.namesInput.value = list.join('\n');
+    state.namesText = els.namesInput.value;
+    updateNameCount();
+    renderStudentGrid();
+    renderApprovalList();
+    save();
   });
 
   // ── Destinations editor ──────────────────────────────────────────────────

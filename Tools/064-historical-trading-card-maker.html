@@ -16,6 +16,8 @@
 <meta name="twitter:description" content="Design collectible research trading cards with era, science, math, literature and vocabulary themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, PNG/PDF/zip export, deck share links, and a teacher-run projector review game.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='7' y='5' width='18' height='22' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='16' cy='13' r='3.5' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M10 22c1-3 4-4 6-4s5 1 6 4' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -1138,15 +1140,17 @@
      picking a class list fills the paste textarea below it, which stays the
      fallback (and the thing actually read on "Add cards") when no rosters
      exist or a teacher wants to type/paste a custom list instead. */
+  /* np_rosters is _shared/roster.js's to read now. This dropdown hides a class
+     list with no names in it, so it stays hand-built on top of
+     listRosters()/getRoster() rather than mounting the shared picker. */
   function loadRosters() {
-    try {
-      var r = JSON.parse(localStorage.getItem('np_rosters') || '{}');
-      return (r && typeof r === 'object') ? r : {};
-    } catch (e) { return {}; }
+    var out = {};
+    Roster.listRosters().forEach(function (n) { out[n] = Roster.getRoster(n); });
+    return out;
   }
   function populateRosterClassSelect() {
     var rosters = loadRosters();
-    var names = Object.keys(rosters).filter(function (n) { return Array.isArray(rosters[n]) && rosters[n].length; });
+    var names = Object.keys(rosters).filter(function (n) { return rosters[n].length; });
     if (!names.length) {
       els.rosterClassSelect.innerHTML = '<option value="">No saved class lists found &mdash; paste names below</option>';
       return;
@@ -1157,12 +1161,12 @@
   els.rosterClassSelect.addEventListener('change', function () {
     var name = els.rosterClassSelect.value;
     if (!name) return;
-    var list = loadRosters()[name];
-    if (Array.isArray(list) && list.length) els.rosterText.value = list.join('\n');
+    var list = Roster.getRoster(name);
+    if (list.length) els.rosterText.value = list.join('\n');
   });
-  window.addEventListener('storage', function (ev) {
-    if (ev.key === 'np_rosters') populateRosterClassSelect();
-  });
+  /* Another tab — or this one — may have saved a class list since this page
+     loaded. Roster.onChange covers both; the storage event only covered one. */
+  Roster.onChange(populateRosterClassSelect);
 
   els.rosterBtn.addEventListener('click', function () {
     populateRosterClassSelect(); // refresh in case a roster was saved since the page loaded

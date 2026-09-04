@@ -18,6 +18,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='7' width='20' height='18' rx='1' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cline x1='6' y1='13' x2='26' y2='13' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Cline x1='6' y1='19' x2='26' y2='19' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Cline x1='14' y1='7' x2='14' y2='25' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Cline x1='20' y1='7' x2='20' y2='25' stroke='%232A6DB0' stroke-width='1.4'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <script src="rubric-builder/rb-templates.js"></script>
 <script src="rubric-builder/rb-store.js"></script>
 <script src="rubric-builder/rb-gdv-handoff.js"></script>
@@ -426,7 +428,6 @@
   var idCounter = 1;
   var currentMode = 'build'; // 'build' | 'score' | 'class'
   var currentScore = null; // { student, selections: {critId: {levelId, half, comment}}, overallComment } — the student currently being scored, or null
-  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
   var rosterNameCache = []; // names from the last "Load" in Score mode, merged into the datalist
 
   function escapeHtml(s) {
@@ -1676,25 +1677,26 @@
     window.print();
   });
 
-  /* ---------- roster loading (np_rosters, written by Name Picker / Class Roster Hub) ---------- */
+  /* ---------- roster loading (np_rosters, through _shared/roster.js) ----------
+     Two dropdowns on this page list the same saved rosters, so both mount the
+     shared picker: one reader of np_rosters for the whole site, type-guarded
+     against a hand-edited entry, and refreshed whenever any tab saves a
+     roster. Each now opens on a "Load a saved roster…" placeholder rather than
+     preselecting the first roster — the Load button needs a deliberate pick. */
+  var rosterPickers = {};
   function populateRosterSelect(selectEl) {
-    var rosters = {};
-    try { rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}'); } catch (e) { rosters = {}; }
-    var names = Object.keys(rosters);
-    selectEl.innerHTML = names.length
-      ? names.map(function (n) { return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('')
-      : '<option value="">No saved rosters found</option>';
-    return rosters;
-  }
-  function getRoster(name) {
-    try { return (JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}')[name]) || []; }
-    catch (e) { return []; }
+    var id = selectEl.id;
+    if (rosterPickers[id]) { rosterPickers[id].refresh(); return; }
+    rosterPickers[id] = Roster.mountRosterPicker(selectEl, {
+      placeholder: 'Load a saved roster…',
+      emptyLabel: 'No saved rosters found'
+    });
   }
 
   els.scoreRosterLoadBtn.addEventListener('click', function () {
     var name = els.scoreRosterSelect.value;
     if (!name) return;
-    rosterNameCache = getRoster(name);
+    rosterNameCache = Roster.getRoster(name);
     populateStudentDatalist();
   });
 
@@ -1708,7 +1710,7 @@
     if (!state) return;
     var name = els.classRosterSelect.value;
     if (!name) return;
-    var roster = getRoster(name);
+    var roster = Roster.getRoster(name);
     var existingScores = RubricStore.getAllScores(state.name);
     roster.forEach(function (studentName) {
       if (!existingScores[studentName]) {

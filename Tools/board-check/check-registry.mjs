@@ -147,6 +147,16 @@ const MEDIA_DEFAULT_DB = 'gvb-media';
 const OWN_STORE_RE = /(?:var|let|const)\s+Store\s*=/;
 const STORE_WRITE_RE = /\bStore\s*\.\s*(?:set|remove)\s*\(\s*([^,)]+?)\s*[,)]/g;
 const STORE_READ_RE = /\bStore\s*\.\s*get\s*\(\s*([^,)]+?)\s*[,)]/g;
+/* _shared/roster.js is to np_rosters what store.js is to localStorage. After a
+   tool adopts the shared picker its source no longer contains the key at all —
+   Path 3 P3 moved 25 pages at once — and the largest read set on this site would
+   silently drop out of this scan. A Roster.* call is therefore a read of
+   np_rosters, and the identity half of the module reads the sidecar too. Only
+   the reads: the module is the writer of both, and _shared/ already declares
+   that on the `shared` row. */
+const ROSTER_RE = /\bRoster\s*\.\s*(?:listRosters|getRoster|mountRosterPicker|onChange|parseNames|newId)\b/;
+const ROSTER_IDENTITY_RE = /\bRoster\s*\.\s*(?:getStudents|getStudentMeta|resolve|matchName|diffNames|syncRecords|reconcile)\b/;
+
 /* assets/js/gvb-save.js writes through createSaveSlot({key}), so a scan of
    localStorage call sites cannot see those keys at all — the Name Picker's
    fourteen came out attributed to nothing, and np_rosters looked as though only
@@ -336,6 +346,10 @@ for (const f of FILES) {
       else if (r.kind === 'prefix') rec.readPrefixes.add(r.value);
       else if (r.kind === 'dynamic') rec.dynamic.add(r.value);
     }
+  }
+  if (!f.startsWith('_shared/')) {
+    if (ROSTER_RE.test(src) || ROSTER_IDENTITY_RE.test(src)) rec.readKeys.add('np_rosters');
+    if (ROSTER_IDENTITY_RE.test(src)) rec.readKeys.add('crh_students_v1');
   }
   if (/createSaveSlot/.test(src) && !f.endsWith('assets/js/gvb-save.js')) {
     for (const m of src.matchAll(SLOT_KEY_RE)) {

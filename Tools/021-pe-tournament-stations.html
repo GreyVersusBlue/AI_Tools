@@ -18,6 +18,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='13' y='4' width='6' height='3' rx='1' fill='%23C43A2F'/%3E%3Cline x1='21.5' y1='8.5' x2='23.5' y2='6.5' stroke='%23C43A2F' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='19' r='9' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M16 19V13M16 19l4.5 2.5' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -330,6 +332,12 @@
 
   <div class="card">
     <div class="card-title"><span>Roster &amp; Groups</span></div>
+    <label for="rosterHubSelect">Load from a saved roster</label>
+    <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.7rem;">
+      <select id="rosterHubSelect" style="flex:1 1 auto;margin:0;"></select>
+      <button type="button" class="secondary" id="rosterHubLoadBtn" style="flex:0 0 auto;">Load</button>
+    </div>
+    <p class="hint">Fills the box below with that roster&rsquo;s names. Edit them here freely &mdash; nothing is written back to the saved roster.</p>
     <label for="rosterText">Roster (one student per line, or comma-separated) — used only to randomly split into groups below</label>
     <textarea id="rosterText" placeholder="Aiden Smith&#10;Brooklyn Jones&#10;Charlie Patel&#10;..." spellcheck="false"></textarea>
     <div class="field-inline">
@@ -485,7 +493,7 @@
   var els = {};
   ['toolbar', 'projectSwitch', 'newProjectBtn', 'deleteProjectBtn', 'undoBtn', 'printBtn', 'printCardsBtn',
    'projectName', 'addStationBtn', 'stationsList', 'templateSelect', 'loadTemplateBtn', 'templateHint',
-   'rosterText', 'splitCount', 'splitBtn', 'addGroupBtn', 'groupsList',
+   'rosterHubSelect', 'rosterHubLoadBtn', 'rosterText', 'splitCount', 'splitBtn', 'addGroupBtn', 'groupsList',
    'rotMinutes', 'rotSeconds', 'soundToggle', 'hiContrastToggle',
    'stage', 'stageSub', 'stageTime', 'stageStatus', 'startBtn', 'pauseBtn', 'resumeBtn', 'rotateNowBtn', 'resetRotationBtn', 'fullscreenBtn', 'openRemoteBtn', 'stationTiles',
    'scoresCard', 'scoresList', 'printScoresBtn',
@@ -811,6 +819,22 @@
     renderGroupsEditor();
     save();
     renderStage();
+  });
+
+  /* "Load from a saved roster" — _shared/roster.js's picker, the site's one
+     reader of np_rosters, listing whatever Class Roster Hub or the Name Picker
+     has saved on this device. Deliberately non-destructive: it fills the box
+     below and that box stays this tool's source of truth. */
+  var rosterPicker = Roster.mountRosterPicker(els.rosterHubSelect, {
+    placeholder: 'Load a saved roster…',
+    emptyLabel: 'No saved rosters found'
+  });
+  els.rosterHubLoadBtn.addEventListener('click', function () {
+    var list = rosterPicker ? rosterPicker.getNames() : [];
+    if (!list.length) return;
+    els.rosterText.value = list.join('\n');
+    state.roster = els.rosterText.value;
+    save();
   });
 
   els.rosterText.addEventListener('input', function () { state.roster = els.rosterText.value; save(); });

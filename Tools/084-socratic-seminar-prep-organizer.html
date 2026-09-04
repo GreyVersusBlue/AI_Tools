@@ -16,6 +16,8 @@
 <meta name="twitter:description" content="Print a claim/evidence/rebuttal prep sheet for a Socratic seminar, then run a live speaking-order and participation tracker with optional inner/outer fishbowl circles.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M7 9h12a2 2 0 012 2v6a2 2 0 01-2 2h-7l-4 4v-4H7a2 2 0 01-2-2v-6a2 2 0 012-2z' stroke='%231f3550' stroke-width='2' fill='none'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -181,7 +183,6 @@ Marcus Lee
   var LIST_KEY = 'socsem:list';
   var DATA_PREFIX = 'socsem:data:';
   var CURRENT_KEY = 'socsem:current';
-  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
 
   function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
   function escAttr(v) {
@@ -253,14 +254,23 @@ Marcus Lee
     els.projSwitch.innerHTML = html;
   }
 
+  /* The saved-roster dropdown is _shared/roster.js's picker now: one reader of
+     np_rosters for the whole site, type-guarded against a hand-edited entry,
+     and refreshed whenever any tab saves a roster. */
+  var rosterPicker = null;
   function refreshImportSelect() {
-    try {
-      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
-      var names = Object.keys(rosters);
-      if (!names.length) { els.importSelect.innerHTML = '<option value="">No saved rosters found</option>'; return; }
-      els.importSelect.innerHTML = '<option value="">Load a saved roster&hellip;</option>' +
-        names.map(function (n) { return '<option value="' + escAttr(n) + '">' + esc(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
-    } catch (e) { els.importSelect.innerHTML = '<option value="">No saved rosters found</option>'; }
+    if (rosterPicker) { rosterPicker.refresh(); return; }
+    rosterPicker = Roster.mountRosterPicker(els.importSelect, {
+      placeholder: 'Load a saved roster…',
+      emptyLabel: 'No saved rosters found',
+      onChange: function (name, names) {
+        if (!name || !names.length) return;
+        applyRoster(names.slice());
+        els.rosterText.value = names.join('\n');
+        /* setNote writes innerHTML, so the roster's own name is escaped. */
+        setNote('Loaded "' + esc(name) + '".', false);
+      }
+    });
   }
 
   function renderOrder() {
@@ -334,20 +344,6 @@ Marcus Lee
     var names = els.rosterText.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
     if (!names.length) { setNote('Type at least one name.', true); return; }
     applyRoster(names);
-  });
-
-  els.importSelect.addEventListener('change', function () {
-    var name = els.importSelect.value;
-    if (!name) return;
-    try {
-      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
-      var list = rosters[name];
-      if (list && list.length) {
-        applyRoster(list.slice());
-        els.rosterText.value = list.join('\n');
-        setNote('Loaded "' + esc(name) + '".', false);
-      }
-    } catch (e) {}
   });
 
   els.clearRosterBtn.addEventListener('click', function () {

@@ -18,6 +18,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M12 5h8' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M14 5v7l-6 11a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-6-11V5' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M11 19h10' fill='none' stroke='%232A6DB0' stroke-width='1.6'/%3E%3Ccircle cx='14.5' cy='23' r='1' fill='%232A6DB0'/%3E%3Ccircle cx='18' cy='24.5' r='1' fill='%232A6DB0'/%3E%3Ccircle cx='16.5' cy='21.5' r='0.8' fill='%232A6DB0'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -482,28 +484,22 @@
     saveCurrent();
   });
 
-  // ── Read-only reuse of the shared roster list (Class Roster Hub / Name
-  // Picker both save here under 'np_rosters') — separate storage from lgrr_rosters.
+  /* The saved-roster dropdown is _shared/roster.js's picker now: one reader of
+     np_rosters for the whole site, type-guarded against a hand-edited entry,
+     and refreshed whenever any tab saves a roster. */
+  var rosterPicker = null;
   function populateRosterHubSelect() {
-    try {
-      var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
-      var names = Object.keys(rosters);
-      els.rosterHubSelect.innerHTML = '<option value="">Load a saved roster&hellip;</option>' +
-        names.map(function (n) { return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
-    } catch (e) {
-      els.rosterHubSelect.innerHTML = '<option value="">No saved rosters found</option>';
-    }
+    if (rosterPicker) { rosterPicker.refresh(); return; }
+    rosterPicker = Roster.mountRosterPicker(els.rosterHubSelect, {
+      placeholder: 'Load a saved roster…',
+      emptyLabel: 'No saved rosters found'
+    });
   }
   els.rosterHubLoadBtn.addEventListener('click', function () {
-    var name = els.rosterHubSelect.value;
-    if (!name) return;
-    try {
-      var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
-      var list = rosters[name];
-      if (!list) return;
-      els.namesInput.value = list.join('\n');
-      onNamesChanged(true);
-    } catch (e) { showMsg('Could not read that roster from this browser.'); }
+    var list = rosterPicker ? rosterPicker.getNames() : [];
+    if (!list.length) return;
+    els.namesInput.value = list.join('\n');
+    onNamesChanged(true);
   });
 
   // ── Safety contract gate (read-only reuse of 013-lab-safety-contract-tracker) ─

@@ -18,6 +18,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='12' cy='16' r='6.5' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M9.3 16h5.4M12 13.3v5.4' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='23' cy='16' r='4.5' fill='%23C43A2F'/%3E%3Crect x='20.8' y='15.1' width='4.4' height='1.8' rx='.9' fill='%23fff'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <script type="module">
   /* The shared per-student record Class Roster Hub keeps beside np_rosters:
      preferred name and pronunciation to show, and the stable id that lets this
@@ -376,7 +378,6 @@
   "use strict";
 
   var STORAGE_KEY = 'behavior-points-tracker-sections';
-  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
   var HISTORY_LIMIT = 90;
   var LOG_LIMIT = 300;
 
@@ -743,40 +744,37 @@
     save();
   });
 
+  /* The saved-roster dropdown is _shared/roster.js's picker now: one reader of
+     np_rosters for the whole site, type-guarded against a hand-edited entry,
+     and refreshed whenever any tab saves a roster. */
+  var rosterPicker = null;
   function populateRosterSelect() {
-    try {
-      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
-      var names = Object.keys(rosters);
-      els.rosterSelect.innerHTML = '<option value="">Load a saved Name Picker roster&hellip;</option>' +
-        names.map(function (n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
-    } catch (e) {
-      els.rosterSelect.innerHTML = '<option value="">No saved rosters found</option>';
-    }
+    if (rosterPicker) { rosterPicker.refresh(); return; }
+    rosterPicker = Roster.mountRosterPicker(els.rosterSelect, {
+      placeholder: 'Load a saved Name Picker roster…',
+      emptyLabel: 'No saved rosters found'
+    });
   }
   els.loadRosterBtn.addEventListener('click', function () {
-    var name = els.rosterSelect.value;
-    if (!name) return;
-    try {
-      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
-      var list = rosters[name];
-      if (!list) return;
-      els.namesInput.value = list.join('\n');
-      state.namesText = els.namesInput.value;
-      /* Remember which saved roster this section is following, so the shared
-         record is read from the right class — two periods can both have a Sam
-         who goes by different things. */
-      state.rosterName = name;
-      refreshSharedRecord();
-      var moved = followRenames();
-      updateNameCount();
-      renderBoard();
-      refreshDependentViews();
-      save();
-      if (moved) {
-        showMsg(moved + ' student' + (moved === 1 ? '' : 's') +
-          ' renamed in Class Roster Hub — their points and history came with them.', 'info');
-      }
-    } catch (e) { showMsg('Could not read that roster from this browser.', 'error'); }
+    var name = rosterPicker ? rosterPicker.getSelected() : null;
+    var list = rosterPicker ? rosterPicker.getNames() : [];
+    if (!name || !list.length) return;
+    els.namesInput.value = list.join('\n');
+    state.namesText = els.namesInput.value;
+    /* Remember which saved roster this section is following, so the shared
+       record is read from the right class — two periods can both have a Sam
+       who goes by different things. */
+    state.rosterName = name;
+    refreshSharedRecord();
+    var moved = followRenames();
+    updateNameCount();
+    renderBoard();
+    refreshDependentViews();
+    save();
+    if (moved) {
+      showMsg(moved + ' student' + (moved === 1 ? '' : 's') +
+        ' renamed in Class Roster Hub — their points and history came with them.', 'info');
+    }
   });
 
   // ── Behavior tags editor ─────────────────────────────────────────────────

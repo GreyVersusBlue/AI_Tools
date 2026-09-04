@@ -19,6 +19,8 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/tool-registry.js"></script>
 <!-- gvb:social:end -->
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <script src="../_shared/seating-read.js"></script>
@@ -794,11 +796,14 @@
   var excludedSet = {};
   var rosterManuallyChosen = false;
 
+  /* np_rosters is _shared/roster.js's to read. This panel is not a plain
+     dropdown — it paints a call-on grid with its own exclusions — so it stays
+     hand-built on top of listRosters()/getRoster() rather than mounting the
+     shared picker. */
   function loadRosters() {
-    try {
-      var v = JSON.parse(localStorage.getItem('np_rosters') || '{}');
-      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
-    } catch (e) { return {}; }
+    var out = {};
+    Roster.listRosters().forEach(function (n) { out[n] = Roster.getRoster(n); });
+    return out;
   }
   function excludeKey(rosterName) { return EXCLUDE_KEY_PREFIX + todayKey() + ':' + rosterName; }
   function loadExcluded(rosterName) {
@@ -1604,8 +1609,12 @@
      should show up here without a refresh. */
   window.addEventListener('storage', function (e) {
     if (e.key === HALLPASS_STORAGE_KEY && mounted.hallpass) buildHallPassPanel(mounted.hallpass);
-    if (e.key === 'np_rosters' && mounted.roster) buildRosterPanel(mounted.roster);
     if (e.key === SEATING_KEY && mounted.seating) buildSeatingPanel(mounted.seating);
+  });
+  /* Roster.onChange covers the same-tab write the storage event never fires
+     for, which is why the roster line moved out of the listener above. */
+  Roster.onChange(function () {
+    if (mounted.roster) buildRosterPanel(mounted.roster);
   });
 })();
 </script>

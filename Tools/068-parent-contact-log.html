@@ -16,6 +16,8 @@
 <meta name="twitter:description" content="Log a call, email, or note home per student — date, method, and outcome — for quick reference before a conference or a difficult phone call.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M8 10h16v12H8z' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M8 10l8 7 8-7' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -261,7 +263,6 @@
   'use strict';
   var ROSTER_KEY = 'pcl_roster_v1';
   var ENTRIES_KEY = 'pcl_entries_v1';
-  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
 
   var els = {};
   ['rosterInput','saveRosterBtn','loadNamePickerBtn','namePickerHint','rosterList','rosterEmptyMsg','rosterSort',
@@ -524,19 +525,21 @@
     renderAll();
   });
 
+  /* np_rosters is _shared/roster.js's to read now — one reader for the whole
+     site, type-guarded against a hand-edited entry. This tool still asks which
+     roster through a prompt() rather than a dropdown, which is the odd one out
+     on the site; giving it a real <select> is a separate, UI-shaped change. */
   els.loadNamePickerBtn.addEventListener('click', function () {
-    var rosters;
-    try { rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}'); } catch (e) { rosters = {}; }
-    var names = Object.keys(rosters || {});
+    var names = Roster.listRosters();
     if (!names.length) {
       els.namePickerHint.style.display = 'block';
       els.namePickerHint.textContent = 'No Name Picker rosters found in this browser yet.';
       return;
     }
     var chosen = names.length === 1 ? names[0] : prompt('Which Name Picker roster?\n' + names.join('\n'), names[0]);
-    if (!chosen || !rosters[chosen]) return;
-    var list = rosters[chosen];
-    var studentNames = Array.isArray(list) ? list.map(function (s) { return typeof s === 'string' ? s : (s && s.name) || ''; }).filter(Boolean) : [];
+    if (!chosen || names.indexOf(chosen) === -1) return;
+    var studentNames = Roster.getRoster(chosen);
+    if (!studentNames.length) return;
     els.rosterInput.value = studentNames.join('\n');
     els.namePickerHint.style.display = 'block';
     els.namePickerHint.textContent = 'Loaded "' + chosen + '" into the box below — click "Save roster" to keep it.';

@@ -16,6 +16,8 @@
 <meta name="twitter:description" content="Printable role cards for a mock trial, debate, or legislative simulation, each with a position, talking points, and an optional case-file packet.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M16 6v3M9 20h14M7 26h18M9 20l-2-9h6zM23 20l-2-9h6z' fill='none' stroke='%231f3550' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -344,16 +346,19 @@
      Rosters live in `np_rosters`, written by Name Picker and Class Roster Hub
      — the toolkit's shared class list. A role with `copies: 6` is six slots;
      students fill slots in role order. */
+  /* np_rosters is _shared/roster.js's to read now. This dropdown does more
+     than the shared picker offers — it hides a class list with no names in it
+     and disables the Assign button with an explanation — so it stays
+     hand-built on top of listRosters()/getRoster(). */
   function loadRosters() {
-    try {
-      var r = JSON.parse(localStorage.getItem('np_rosters') || '{}');
-      return (r && typeof r === 'object') ? r : {};
-    } catch (e) { return {}; }
+    var out = {};
+    Roster.listRosters().forEach(function (n) { out[n] = Roster.getRoster(n); });
+    return out;
   }
 
   function populateRosterSelect() {
     var rosters = loadRosters();
-    var names = Object.keys(rosters).filter(function (n) { return Array.isArray(rosters[n]) && rosters[n].length; });
+    var names = Object.keys(rosters).filter(function (n) { return rosters[n].length; });
     if (!names.length) {
       els.rosterSelect.innerHTML = '<option value="">No saved class lists found</option>';
       els.assignBtn.disabled = true;
@@ -933,10 +938,9 @@
     els.assignSummary.textContent = 'Names cleared — every card prints a blank name line again.';
     save(); renderRoles();
   });
-  /* Another tab may have saved a roster since this page loaded. */
-  window.addEventListener('storage', function (ev) {
-    if (ev.key === 'np_rosters') populateRosterSelect();
-  });
+  /* Another tab — or this one — may have saved a roster since this page
+     loaded. Roster.onChange covers both; the storage event only covered one. */
+  Roster.onChange(populateRosterSelect);
 
   /* ---------- share by link / QR (state-link.js, same pattern as 028/040) ----------
      Now that simulations are saved by name, an incoming link no longer has to

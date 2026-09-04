@@ -19,6 +19,8 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/stage.js"></script>
 <!-- gvb:social:end -->
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -452,7 +454,6 @@
   var BANK_KEY = 'gvb-number-talks:myBank';
   var STRING_HISTORY_KEY = 'gvb-number-talks:stringHistory';
   var LIBRARY_KEY = 'gvb-number-talks:strategyLibrary'; // the class's named strategies, accumulated across the whole year — distinct from `strategies` (state.strategies), which is the per-session board and is cleared/reset per board
-  var NP_ROSTERS_KEY = 'np_rosters'; // shared, read-only — written by Class Roster Hub / Name Picker and read by many other tools
   var MINE_KEY = 'mine';
   var HISTORY_LIMIT = 20;
   var AVOID_REPEAT_WINDOW = 15;
@@ -1359,25 +1360,14 @@
     return obj === undefined ? obj : JSON.parse(JSON.stringify(obj));
   }
 
-  /* Shared roster (np_rosters), read-only — same convention as
-     023-exit-ticket-generator.html / 025-writing-prompt-generator.html /
-     003-rubric-builder.html. Feeds a <datalist> so the name field on a
+  /* Every name on every saved roster, read through _shared/roster.js — the
+     site's one reader of np_rosters. Feeds a <datalist> so the name field on a
      strategy card autocompletes from any roster saved on this device, while
      still accepting a free-typed name (or none) when no roster exists. */
-  function loadNpRosters() {
-    try {
-      var v = JSON.parse(localStorage.getItem(NP_ROSTERS_KEY) || '{}');
-      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
-    } catch (e) { return {}; }
-  }
-
   function rosterNameOptions() {
-    var rosters = loadNpRosters();
     var names = [];
-    Object.keys(rosters).forEach(function (key) {
-      var list = rosters[key];
-      if (!Array.isArray(list)) return;
-      list.forEach(function (n) {
+    Roster.listRosters().forEach(function (key) {
+      Roster.getRoster(key).forEach(function (n) {
         var name = typeof n === 'string' ? n.trim() : '';
         if (name && names.indexOf(name) === -1) names.push(name);
       });

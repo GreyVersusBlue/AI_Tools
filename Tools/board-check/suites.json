@@ -145,6 +145,7 @@
     "Tools/store/test/smoke-quota-banner.mjs",
     "Tools/tool-registry/test/registry-shape.test.mjs",
     "Tools/roster/test/roster.test.mjs",
+    "Tools/roster/test/smoke-picker-rollout.mjs",
     "Tools/share/test/qr-draw.test.mjs",
     "Tools/share/test/share.test.mjs",
     "Tools/stage/test/stage.test.mjs",
