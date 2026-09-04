@@ -149,6 +149,8 @@
     "Tools/share/test/share.test.mjs",
     "Tools/stage/test/stage.test.mjs",
     "Tools/number-talks-board/test/smoke-stage.mjs",
+    "Tools/media/test/media-db.test.mjs",
+    "Tools/media/test/smoke-media-db.mjs",
     "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs"
   ],
   "expectedFailures": []
