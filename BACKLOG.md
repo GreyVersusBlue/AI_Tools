@@ -156,8 +156,8 @@ that is a re-rank, and it is yours to make, not a session's.
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 3 P1 — `_shared/roster.js` + the identity layer (`getStudents`, `resolve`, `matchName`) | `_shared/` | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 2 | Path 3 P2 — rename, merge and roster diff in 006; bulk CSV/XLSX import | 006 | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 1 | Path 3 P1 — `_shared/roster.js` + the identity layer (`getStudents`, `resolve`, `matchName`) | `_shared/` | 1 | `jxoqwt` 2026-09-04 10:40 UTC | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 2 | Path 3 P2 — rename, merge and roster diff in 006; bulk CSV/XLSX import | 006 | 1 | `jxoqwt` 2026-09-04 10:40 UTC | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 3 | Path 6 P1 — `_shared/share.js` + `qr-draw.js`: one share sheet, measured QR budget | `_shared/` | 1 | | [Path 6](#path-6--share-everywhere) |
 | 4 | Path 5 P2 — `_shared/stage.js`: one fullscreen/projector helper; adopt in 023, 024, 025, 021 | `_shared/` | 1 | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 5 | Path 4 P3 — `_shared/media-db.js` + shared `downscaleImage`; register the database in 009 | `_shared/` | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
