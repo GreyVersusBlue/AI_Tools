@@ -11,9 +11,75 @@ to add a to-do to this file, it belongs there instead.
 
 ## Stage 2 — the platform foundation (2026-09-03 → 2026-09-04, in progress)
 
-Eight of the fourteen planned phases have shipped. The plan itself — four `_shared/`
-services in dependency order, so that the tool paths become adoption rounds rather than
-invention — survives as the ordering of `BACKLOG.md`'s first ten ranks.
+Ten of the fourteen planned phases have shipped, and with `media-db.js` every `_shared/`
+service on the spine is in. The plan itself — the services in dependency order, so that the
+tool paths become adoption rounds rather than invention — survives as the ordering of
+`BACKLOG.md`'s first ranks, which are now all rollouts.
+
+**Path 4 P3 — `_shared/media-db.js`, the media store and the one downscaler. #182,
+`CACHE_VERSION` v148.** Nine tools (005, 015, 019, 028, 041, 042, 056, 071, 080) base64 an
+image into localStorage and share a ~5 MB ceiling with every roster and setting on the site;
+a data URL is ~33% larger than the bytes it carries, so the encoding is part of the problem.
+Exactly one tool had it right — 046's `bmg-map-cache.js`, cited across the planning notes as
+"the pattern" by tools that then wrote a data URL anyway — and this is that file,
+generalised. `window.MediaDB`: `put/get/getBlob/list/remove/clear/usage` over **one**
+database, `gvb-media`, one store, `blobs`, with tools sharing it through a **namespace
+prefix on the record id** rather than a database each. One database is one registry row,
+which is one thing 009 can name, back up and clear at year end; nine would be nine chances to
+forget one. `store({db, store})` takes a database of its own and has exactly one caller,
+`bmg-maps`, whose database name, store name and keyPath are a contract with what is already
+on a teacher's disk. **Records are flat** (`{id, blob, size, type, savedAt, ...meta}`)
+precisely so the records written before this module are still valid records — the obvious
+`{id, blob, meta:{…}}` envelope would have needed a migration carried forever. A failed write
+is never silent, exactly as store.js has it: `put()` rejects with a message meant to be
+shown and `err.quota === true` when the browser is full, while reads degrade to "nothing
+stored" so a tool whose photos are gone still opens. `downscaleImage(file, {maxDim, quality,
+type, as})` replaces the three copies (tlb-photo 480 px, scg-photo 160 px, 028 inline
+1600 px) and returns a Blob, or a data URL for a tool still saving into localStorage.
+046 was the single adopter — `bmg-map-cache.js` is a ~50-line adapter now. `gvb-media` is
+declared in the registry with a new per-database `backupByDefault`, so 009 ticks the store
+nothing can re-download and leaves the map cache unticked; before this, everything in
+IndexedDB defaulted to unticked, under a comment still saying the site had one database.
+`check-registry.mjs` learned to read `MediaDB.store({db})`, because an adopter contains no
+`indexedDB.open()` at all and would otherwise have dropped out of the scan — the same
+disappearance `STORE_WRITE_RE` exists to stop one layer down. **What the suite caught on the
+way in:** `get()` rewrote `id` on the record it was handed, stripping the namespace prefix
+from the stored object so the next `list()` filtered out its own record. It is invisible in a
+browser, where IndexedDB returns a structured clone, and was only visible because the Node
+suite's fake store hands back the same object; it returns a copy now. **Also learned:**
+`prepPage()` gives every page its own browser context and IndexedDB does not cross one, so
+the "009 lists and ticks it" section failed for a reason that had nothing to do with 009 until
+it opened the backup page in the same context. **Not verified:** no teacher's real cache was
+migrated — "the old records need no migration" is proven by seeding a legacy-shaped record and
+reading it back through 046's own adapter, in both suites, not by opening a browser that has
+had 046 in use for a year. `gvb-media` has no records yet; it is declared, empty and exercised
+only by the suite, which is safe because 009 opens a declared-but-absent database, finds it
+storeless and deletes it again. `downscaleImage` has no adopter — one adopter per new module,
+and migrating the three copies is P4.
+
+**Path 14 P2 — `_shared/seating-read.js`, one reader of the seating chart. #182,
+`CACHE_VERSION` v148 (same bump).** Four files read `seating-chart-v1` and no two shared a
+line: 010's inline SVG panel, 008's `behavior-points-tracker/seating-layout.js` — whose own
+header says it is copying 010's approach so the two "don't quietly disagree about what a
+chart means" — 045's printed desk table, and 007's roster peek. `window.SeatingRead` is
+`parse`/`read`/`onChange`, `pickSection`, `placeDesks`/`bounds`/`toPercent`,
+`unseatedNames`/`fill`/`deskRows`, read-only permanently because 005 owns the key. Desk size
+(106×70) is `ROOM.deskW/deskH` over there and was hardcoded separately in 010 and 008; it is
+one constant now. `onChange` listens to `storage` alone and says why: 005 writes through
+`gvb-save.js`, not `store.js`, so `Store.onChange`'s same-tab half would never fire for this
+key and wiring it would imply a guarantee the key does not have. **The three disagreements
+were recorded, not harmonised** — which section to show (010 remembers per period, 008 per
+its own section, 045 shows `active` and nothing else), what the bounding box is drawn around
+(010 measures every desk, 008 only the desks it matched to its roster, which also moves its
+mirror axis), and whether a rotated desk's `(w-h)/2` overhang is allowed for (010 yes, 008
+no, 045 draws no room). Two of those change what a teacher sees, so they belong to 008's and
+045's own rounds; `bounds()` measures whatever it is handed so a migrating caller keeps its
+behaviour, and the header names 010's as the one to converge on. 010 was the single adopter —
+the tool all of it was copied *from* — and its 34-assertion panel suite is green unchanged,
+now also pinning the rendered `viewBox` to numbers worked out by hand from its fixture, which
+is what says the page draws the same room after the maths moved. **Not verified:** nothing was
+looked at on a projector, and 008's and 045's copies are still there — this phase removed one
+of four, not three of four.
 
 **Path 5 P2 — `_shared/stage.js`, the fullscreen/projector helper. #180, `CACHE_VERSION`
 v147.** Eight projector-first tools each hand-rolled a fullscreen stage and disagreed about
