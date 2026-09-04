@@ -122,6 +122,10 @@ jobs:
       # Path 2 P5: ESLint over the standalone scripts (no-undef, no-unused-vars,
       # eqeqeq and the recommended set). Inline <script> in tool pages is out
       # of scope — see eslint.config.js.
+      - name: 'Guard: tool registry matches what the tools store'
+        if: '!cancelled()'
+        run: npm run check:registry
+
       - name: 'Guard: lint (_shared, tool modules, tooling)'
         if: '!cancelled()'
         run: npm run lint

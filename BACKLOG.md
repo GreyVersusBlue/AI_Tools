@@ -379,7 +379,7 @@ one of them touches `_shared/`.
    `[hidden]{display:none!important}` rule on any page whose CSS sets `display` on a
    toggled element.
 3. Green locally: `check:dedupe`, `check:tests`, `check:social`, `check:entities`,
-   `check:hidden-flex`, `check:print-clip`, `lint`,
+   `check:hidden-flex`, `check:print-clip`, `check:registry`, `lint`,
    `check:precache -- --base origin/main`, every touched tool's `test:<name>`, and
    `test:a11y -- --only <nnn>` for every touched page. **Never add an allowlist line.**
    A new tool comes in clean.

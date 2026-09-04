@@ -41,6 +41,7 @@ const SITE_GLOBALS = {
   WebRTCPair: 'readonly',
   DuplexPrint: 'readonly',
   StudentDetails: 'readonly',
+  ToolRegistry: 'readonly',
   ThemeToggle: 'readonly',
   // _shared/vendor/
   jspdf: 'readonly',
