@@ -11,18 +11,68 @@ to add a to-do to this file, it belongs there instead.
 
 ## Stage 2 — the platform foundation (2026-09-03 → 2026-09-04, in progress)
 
-Seven of the fourteen planned phases have shipped. The plan itself — four `_shared/`
+Eight of the fourteen planned phases have shipped. The plan itself — four `_shared/`
 services in dependency order, so that the tool paths become adoption rounds rather than
 invention — survives as the ordering of `BACKLOG.md`'s first ten ranks.
 
-**Path 6 P1 — `_shared/share.js` + `qr-draw.js`, the share sheet. #178, `CACHE_VERSION`
-v146.** Shipped by a parallel session while Path 3 P1/P2 was in flight; what it does and
-what it got wrong belongs to that session, not this entry. Recorded here because it moved
-`CACHE_VERSION` and because **it did not do step 6** — its own row was still sitting at rank
-3 of `BACKLOG.md` afterwards, so the next session would have been told to build a service
-that already existed. Removed and renumbered in #179. The claim table itself worked: the two
-sessions took different rows and no source file conflicted. Only `BACKLOG.md` did, exactly
-where both sessions had rewritten the ranked table.
+**Path 5 P2 — `_shared/stage.js`, the fullscreen/projector helper. #180, `CACHE_VERSION`
+v147.** Eight projector-first tools each hand-rolled a fullscreen stage and disagreed about
+the fallback when the browser refuses or has no API (only 024 had one), about Escape (the
+browser's key in real fullscreen, nobody's in the fallback) and about whether hotkeys work off
+stage; the platform notes record the "only the fullscreened subtree renders" wrinkle being
+rediscovered four times. `Stage.mount(el, {…})` owns all of it: `is-fullscreen` on the element
+in both the real and the fallback case (so one selector styles both — 024 had every rule
+three times), `stage-fallback` alongside in the fallback, `hud` elements moved inside the
+stage while on and put back exactly where they were, Escape out of the fallback,
+`stage-presenting` on `<body>`, one stage active at a time, `enabled()` for a page with two
+stages on two tabs, and the site-standard key guard. 024 was the single adopter — the row
+said "adopt in 023, 024, 025, 021", the definition of done says at most one adopter, and the
+Path 4 P1 precedent decided it; the other three are a backlog row. The browser suite drives
+**real** fullscreen: headless Chromium grants `requestFullscreen` from a click, which was
+checked before the suite was written. **Bug found by the new on-stage axe scan:** 024's
+category tags kept the page's muted-on-paper colours on the dark stage (2.6:1). The
+site-wide sweep never scans a state behind a click, so every projector tool's on-stage
+contrast is unmeasured until its adoption round scans it. **What went wrong:** the first
+version of the suite pressed Space on a randomly drawn prompt, and a single-expression prompt
+leaves nothing to reveal — the hotkey had fired, the assertion was wrong; it now types a
+four-line string first. A Playwright `Escape` does not leave real fullscreen (that is the
+browser's own key), so that path is driven through the Exit button. **Not verified:** nothing
+was seen on a projector; the fallback was exercised only by stubbing `requestFullscreen` to
+reject, not on a browser that genuinely lacks the API.
+
+**Path 6 P1 — `_shared/share.js` + `_shared/qr-draw.js`, the share sheet and the QR budget.
+#178, `CACHE_VERSION` v146.** Seventeen tools share state through `state-link.js` and each
+grew its own share UI: a copy-link button, sometimes a QR modal with its own `drawQR`
+(**twelve** copies site-wide), sometimes `navigator.share`, and in four tools (028, 050, 056,
+064) a hand-written "too long for a QR" fallback that fires only when the encoder throws past
+version 40. A version-40 code at 264 CSS px is 1.4 px per module; no phone reads it, the tool
+just looks broken. `qr-draw.js` draws every module at an integer number of device pixels (the
+fractional-seam bug `ct-mirror.js` had fixed for its pairing codes and the other eleven copies
+never got) and carries a budget that is **measured, not guessed**: `Tools/share/test/
+qr-draw.test.mjs` renders codes of every version through the same loop, blurs them the way a
+camera does, and decodes them with the vendored jsQR — at 2 px per module nothing decodes, at
+3 it fails under heavier blur, at 4 it holds — so `MIN_PX_PER_MODULE` is 4, a 480 px sheet
+takes up to version 23 (~1.1 KB) and a 320 px one up to version 13, and the suite asserts the
+constant against its own measurement. `share.js` is one dialog: Copy link, Show QR code
+(greyed with the reason when over budget), Download file (a `.json` of the *full* state that
+names its tool and param), Share… where the browser has it. *Images never ride in a link, by
+policy*: `stripImages()` drops every `data:image/` and `blob:` string before the URL is built
+and the sheet says so. 064 was the single adopter; its download now carries photos.
+**What went wrong on the way:** the first measurement rendered at fractional px per module
+and produced nonsense — misses at version 9 and successes at version 30 — which is the seam
+bug itself showing up in the measuring instrument; the second pass at integer px is the one
+the suite keeps. Version 40 at 4 px is marginal under the heaviest blur (2 of 3 payloads), so
+the floor is asserted over versions the budget can actually draw (≤ 24), and the header says
+so. **Found and recorded, not fixed:** jsQR misses version 23 specifically, at every size and
+blur, on payloads every other version decodes; teachers scan with phones, not jsQR, so it is a
+documented decoder quirk in the suite, not a renderer bug. **Not verified:** no code was
+scanned with a real phone from a real screen or projector; the budget is the decoder's floor
+plus a margin, not a field measurement. `check:dedupe` was **not** extended to `drawQR`,
+because it would fail today on the eleven remaining copies — that belongs with P2. **On step 6:** #178 merged before its session had written this entry — it was
+mid-way through #180 and meant to write both at once — so for about an hour its row was still
+in `BACKLOG.md`'s table, where the parallel roster session found it and removed it (#179).
+Both rewrites were merged by hand afterwards. Write step 6 after each merge, not after the
+batch.
 
 **Path 3 P1 — `_shared/roster.js`, the roster service and the identity layer. #176,
 `CACHE_VERSION` v144.** `np_rosters` — `{ "Period 3": ["Aiden Smith", …] }` — is read by
