@@ -16,6 +16,30 @@ now the two biggest rollouts onto it. The plan itself — the services in depend
 that the tool paths become adoption rounds rather than invention — worked, and Path 3 P3/P4
 are the proof: two rounds that invented nothing and changed 31 tool pages.
 
+**Batch size became a rule, not a number — 2026-09-05, same day.** The standing instruction
+had been "work the next *two* ranked items", which was right while the top of the list was
+quarter-session rows and would have been wrong the moment it reached rank 7 (Path 5 P3, a
+rollout that describes itself as "batches of ~6"). It is now "work the next *batch*", sized by
+the **Size** column: up to 4 ¼ rows, 2–3 ½ rows, one 1-session row, or a single 2+ row alone.
+
+Three things drove the shape, and they are worth keeping when someone next argues about it:
+
+- **CI is the bottleneck, not the model.** Measured across #187, #188 and #189: 20.4, 21.1 and
+  21.2 minutes per pull request, dominated by the 140-suite pass. So rows-per-PR is nearly free
+  and PRs-per-session is not — which is why ¼ rows of the same kind may share one PR.
+- **A 2+ row is expected to survive its session.** Do one increment, ship it, and leave the row
+  in place with its text rewritten to say what is done. Deleting a 2+ row because a session
+  touched it is the failure mode on that side; stalling on it is the failure mode on the other.
+- **Step 6 after each merge is the rule that breaks first as batches grow**, and it is the one
+  with a recorded failure behind it (see the note below about #178/#180 and the hour of
+  duplicate work). It is now stated in `CLAUDE.md` as well as `BACKLOG.md`, with that failure
+  named, because a rule with its casualty attached survives a rewrite better than a rule
+  without one.
+
+**What was not done:** nothing measures whether a session actually obeys the sizing rule, and
+nothing ever will — it is a judgement written in prose, like "one phase per PR" above it. The
+honest claim is that it is easier to follow than a fixed count, not that it is enforced.
+
 **The working mode changed, 2026-09-05.** Devon's standing instruction is now: *"work the
 next two ranked items in `BACKLOG.md`, open a PR, merge to `main`"* — run without anyone
 watching, with no time to review. Three changes to `BACKLOG.md` followed, and they are worth

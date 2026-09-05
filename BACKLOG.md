@@ -11,9 +11,9 @@ summarised on the way in.
 
 ## How this repo is worked
 
-**The standing instruction is: "work the next two ranked items in `BACKLOG.md`, open a PR,
-merge to `main`."** That is the whole loop, and it is expected to run without anyone watching
-it. Two rules follow from that, and they override any older wording in this file:
+**The standing instruction is: "work the next batch of ranked items in `BACKLOG.md`, open a
+PR, merge to `main`."** That is the whole loop, and it is expected to run without anyone
+watching it. Three rules follow from that, and they override any older wording in this file:
 
 1. **Never stop to ask.** Devon is not reviewing these rounds and has said so
    (2026-09-05). If a row needs a judgement call, make it: take the standing default from
@@ -25,6 +25,36 @@ it. Two rules follow from that, and they override any older wording in this file
 2. **Do not park work on a person.** A row only a human at a real device can do does not
    belong in the ranked table; it goes in the parked list under Cross-cutting. The one such
    row has already been moved there.
+3. **Size the batch by the Size column, not by a count.** See below. It used to say "the
+   next two", which was right while the top of the list was quarter-session rows and wrong
+   the moment it reached a 2+ row.
+
+### How big a batch
+
+The rule is the **Size** column, because a fixed count means something different at rank 2
+than at rank 7:
+
+| Size | Take | Why |
+|---|---|---|
+| ¼ | up to **4**, and they may share one PR when they are the same kind of work | CI is ~21 minutes per PR and is the real bottleneck, so rows-per-PR is nearly free while PRs-per-session is not |
+| ½ | **2**, occasionally 3 | |
+| 1 | **one** | |
+| 2+ | **that row is the whole batch** | never pair it with anything |
+
+**A 2+ row will not finish in one session, and that is expected.** Do one increment of it —
+Path 5 P3 says "batches of ~6" and means it — ship that, and **leave the row in place**, with
+its Item text rewritten to say what is done and what is left. Do not delete a 2+ row until it
+is actually finished. A session that hits one and stalls, or one that tries to swallow it
+whole, are both worse than one honest increment.
+
+**Do not mix sizes to fill a quota.** Four ¼ rows is a good batch; two ¼ rows and a 2+ row is
+not, because the 2+ row will absorb whatever time the others leave and finish neither well.
+
+**Whatever the batch size, step 6 happens after each merge — never saved for the end.** This
+is the rule most likely to be dropped as batches grow, and it is the one with a recorded
+failure behind it: a session working two phases meant to write both handoffs at the end, its
+first PR merged with its row still in the ranked table, and the next session spent about an
+hour building something that already existed. See the note in "Where things stand".
 
 The two things that still are not a session's call, because they change what the product is
 rather than how it is built: **promoting anything student-facing** (see the scope rule under
