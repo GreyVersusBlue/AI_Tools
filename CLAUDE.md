@@ -302,9 +302,14 @@ files must be added there too.
 
 ## The backlog — start and end every phase here
 
-- **The standing instruction is "work the next two ranked items in `BACKLOG.md`, open a
-  PR, merge to `main`."** It runs unattended; Devon is not reviewing these rounds
-  (2026-09-05). So: **never stop to ask.** If a row needs a judgement call, take the
+- **The standing instruction is "work the next batch of ranked items in `BACKLOG.md`, open
+  a PR, merge to `main`."** It runs unattended; Devon is not reviewing these rounds
+  (2026-09-05). **Size the batch by the Size column, never by a count**: up to 4
+  quarter-session rows (they may share one PR), 2–3 half-session rows, one 1-session row,
+  or a single 2+ row on its own. A 2+ row will not finish in one session — do one
+  increment, ship it, and leave the row in place with its text rewritten to say what is
+  done. Never mix a 2+ row into a batch with others. `BACKLOG.md`'s "How big a batch" has
+  the table and the reasoning. So, also: **never stop to ask.** If a row needs a judgement call, take the
   default from `BACKLOG.md`'s "Standing decisions" if one is written, and otherwise decide
   it yourself, ship it, and record the call and its reasoning in `HISTORY.md` so it can be
   reversed cheaply. An "open question for Devon" note left in a Tier 2 section from an
@@ -325,7 +330,12 @@ files must be added there too.
   it was skipped. See "How to work this list".
 - **A phase is not done until you have rewritten `BACKLOG.md`'s header and
   re-ranked,** after your PR is merged and the merge is confirmed — not before,
-  so it records what landed rather than what you hoped would. Mark your item
+  so it records what landed rather than what you hoped would. **This happens after
+  *each* merge, never saved for the end of a batch** — it is the rule most likely to be
+  dropped as batches grow, and the one with a recorded failure behind it: a session
+  working two phases meant to write both handoffs at the end, its first PR merged with
+  its row still in the table, and the next session spent an hour building what already
+  existed. Mark your item
   shipped with its `CACHE_VERSION`, refresh the numbers, say what the next
   session should start and anything you found or got wrong, delete the rows that
   shipped and renumber so ranks stay a contiguous 1..N. Add the `HISTORY.md`
