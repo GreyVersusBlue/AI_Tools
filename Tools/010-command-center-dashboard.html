@@ -16,7 +16,13 @@
 <meta name="twitter:title" content="Command Center — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="One glanceable projector page — a timer, today's school-calendar day type and pacing note, and a quick roster call — for running the whole period from the front of the room.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M16 10.5V16l4 2.5' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='16' cy='16' r='1.3' fill='%23C43A2F'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block
+     (Path 5 P3); opting in here keeps a11y.js from putting its CSS-filter
+     invert on top. The pairing QR canvas is the visible win: under the
+     filter it was inverted. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/stage.js"></script>
 <script src="../_shared/tool-registry.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
@@ -29,7 +35,15 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <style>
-  :root { --good: #2f7d4f; }
+  /* Tool-local semantic tints, the same pairs 001 carries. ink-paper.css owns
+     the palette tokens; these are the two surfaces this page paints that the
+     shared file has no name for. Every text-on-tint pair clears WCAG AA in
+     both themes. */
+  :root { --good: #2f7d4f; --info-bg: #eef3f7; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --good: #63c08e; --info-bg: #1b2a35; }
+  /* The hidden attribute is only display:none in the UA stylesheet; any class
+     that sets display beats it. This makes `el.hidden = true` mean it. */
+  [hidden] { display: none !important; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -67,20 +81,20 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
   input[type="text"], input[type="number"], input[type="time"], select {
     font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; width: 100%; margin-bottom: .6rem;
   }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button:disabled { opacity: .45; cursor: not-allowed; }
   button.small { padding: .35rem .6rem; font-size: .78rem; }
   button.tiny { padding: .2rem .45rem; font-size: .74rem; }
@@ -94,7 +108,7 @@
   .motd-empty { color: var(--muted); font-size: .88rem; text-align: center; padding: .2rem 0; margin: 0; }
   .motd-textarea {
     width: 100%; font-family: inherit; font-size: 1rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .6rem .7rem; resize: vertical; min-height: 4rem; margin-bottom: .6rem;
   }
 
@@ -128,7 +142,7 @@
   .today-weekday { color: var(--muted); font-size: .88rem; margin-bottom: .8rem; }
   .day-badges { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
   .day-badge { display: inline-block; padding: .3rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 700; color: #fff; }
-  .today-note { background: #f4f3ee; border-radius: 8px; padding: .7rem .8rem; font-size: .88rem; white-space: pre-wrap; }
+  .today-note { background: var(--card-2); border-radius: 8px; padding: .7rem .8rem; font-size: .88rem; white-space: pre-wrap; }
   .today-note-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: .3rem; }
 
   /* ── Roster ────────────────────────────────────────────────────────── */
@@ -163,7 +177,7 @@
   .period-row { display: grid; grid-template-columns: minmax(0,1.1fr) 6.4rem 6.4rem minmax(0,1.2fr) 1.9rem; gap: .35rem; align-items: center; margin-bottom: .35rem; }
   .period-row input, .period-row select { margin-bottom: 0; padding: .35rem .4rem; font-size: .84rem; }
   .period-row.head { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
-  .period-row.current { background: #eef3f7; border-radius: 6px; }
+  .period-row.current { background: var(--info-bg); border-radius: 6px; }
   @media (max-width: 700px) { .period-row { grid-template-columns: 1fr 1fr; } .period-row.head { display: none; } }
 
   /* ── Start the day ─────────────────────────────────────────────────── */
@@ -242,6 +256,11 @@
   body.projector .presets, body.projector .custom-row, body.projector .sound-row { display: none; }
   body.projector .exit-projector { display: inline-block; }
   .exit-projector { display: none; }
+
+  /* Fullscreen is _shared/stage.js's (Path 5 P3), mounted on <body> because
+     the whole board is the stage: the helper's fixed-overlay fallback for a
+     browser that refuses fullscreen needs the page itself to scroll. */
+  body.stage-fallback.is-fullscreen { padding: 24px 20px 100px; }
 </style>
 </head>
 <body>
@@ -1564,26 +1583,28 @@
     setProjector(!document.body.classList.contains('projector'));
   });
   document.getElementById('exitProjectorBtn').addEventListener('click', function () { setProjector(false); });
-  document.getElementById('fullscreenBtn').addEventListener('click', function () {
-    if (!document.fullscreenElement) {
-      if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function () {});
-    } else if (document.exitFullscreen) {
-      document.exitFullscreen().catch(function () {});
-    }
+
+  /* Fullscreen is _shared/stage.js's (Path 5 P3): the button and its label,
+     the F key with its is-the-teacher-typing guard, the fullscreenchange
+     listener, and — new to this page — a fixed-overlay fallback when the
+     browser refuses. The whole board is the stage, so <body> is what is
+     mounted; projector mode stays a separate, persisted display state that
+     the teacher can use with or without fullscreen, exactly as before. */
+  Stage.mount(document.body, {
+    button: document.getElementById('fullscreenBtn'),
+    labels: { enter: 'Fullscreen', exit: 'Exit fullscreen' }
   });
 
   /* Two keys, both the ones a teacher already expects: space starts and pauses
-     the timer, Escape leaves projector mode. Ignored while typing. */
+     the timer, Escape leaves projector mode. Ignored while typing. (F is the
+     stage helper's.) */
   document.addEventListener('keydown', function (e) {
-    var t = e.target;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    if (Stage.isTyping(e.target)) return;
     if (e.key === ' ' && mounted.timer) {
       e.preventDefault();
       if (timerState.running) pauseTimer(); else startTimer();
     } else if (e.key === 'Escape' && document.body.classList.contains('projector')) {
       setProjector(false);
-    } else if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey) {
-      document.getElementById('fullscreenBtn').click();
     }
   });
 

@@ -143,6 +143,7 @@
     "Tools/service-worker/test/smoke-sw-update.mjs",
     "Tools/service-worker/test/smoke-sw-tiers.mjs",
     "Tools/theme/test/smoke-theme.mjs",
+    "Tools/theme/test/smoke-dark-rollout.mjs",
     "Tools/store/test/envelope.test.mjs",
     "Tools/store/test/smoke-quota-banner.mjs",
     "Tools/tool-registry/test/registry-shape.test.mjs",

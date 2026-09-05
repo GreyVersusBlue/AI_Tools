@@ -89,7 +89,7 @@
     "test:sw-update": "node Tools/service-worker/test/smoke-sw-update.mjs",
     "test:sw-tiers": "node Tools/service-worker/test/smoke-sw-tiers.mjs",
     "test:a11y": "node Tools/a11y-sweep/test/smoke-a11y-sweep.mjs",
-    "test:theme": "node Tools/theme/test/smoke-theme.mjs",
+    "test:theme": "node Tools/theme/test/smoke-theme.mjs && node Tools/theme/test/smoke-dark-rollout.mjs",
     "test:store": "node Tools/store/test/envelope.test.mjs && node Tools/store/test/smoke-quota-banner.mjs",
     "test:registry": "node Tools/tool-registry/test/registry-shape.test.mjs",
     "test:roster": "node Tools/roster/test/roster.test.mjs",

@@ -16,6 +16,11 @@
 <meta name="twitter:title" content="Exit Ticket / Bell Ringer Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="A bank of 90+ short warm-up and exit-ticket prompts with a big projector-friendly display, plus a printable half-sheet or quarter-sheet handout to hand out and collect.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='5' y='11' width='22' height='10' rx='2' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Ccircle cx='5' cy='16' r='2' fill='%23F6F7F9' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Ccircle cx='27' cy='16' r='2' fill='%23F6F7F9' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Cpath d='M11 11v10M21 11v10' stroke='%232A6DB0' stroke-width='1.2' stroke-dasharray='1.6 1.6'/%3E%3Ccircle cx='16' cy='16' r='1.6' fill='%23C43A2F'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block
+     (Path 5 P3); opting in here keeps a11y.js from putting its CSS-filter
+     invert on top. The handout preview is a sheet of paper and stays white
+     (`paper-sheet`); everything else follows the tokens. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
@@ -27,7 +32,14 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
-  :root { --good: #2f7d4f; --warn: #a3791f; }
+  /* Tool-local tints, the same pairs 001 carries. ink-paper.css owns the
+     palette tokens; these are the surfaces this page paints that the shared
+     file has no name for. --desk is the table the handout preview lies on.
+     Every text-on-tint pair clears WCAG AA in both themes. */
+  :root { --good: #2f7d4f; --warn: #a3791f; --info-bg: #eaf1f6; --info-line: #c9dce6; --desk: #d9d7cd; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --good: #63c08e; --warn: #eac077; --info-bg: #1b2a35; --info-line: #33505f; --desk: #0e1014;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -58,7 +70,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: .4rem 0 0; line-height: 1.4; }
   select, textarea, input[type="text"] {
     font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem;
   }
   textarea { width: 100%; min-height: 4rem; resize: vertical; margin-bottom: .6rem; }
@@ -66,12 +78,12 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 700; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .6rem 1.1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: 0; font-size: inherit; font-weight: 600; cursor: pointer; }
   button.link-btn:hover { background: transparent; color: var(--accent); }
 
@@ -83,9 +95,9 @@
   .mode-tabs { display: flex; gap: .5rem; margin-bottom: .8rem; }
   .mode-tabs .pill {
     font-size: .85rem; font-weight: 700; padding: .4rem .9rem; border-radius: 999px; cursor: pointer;
-    background: #fff; color: var(--muted); border: 1px solid var(--line-strong);
+    background: var(--card); color: var(--muted); border: 1px solid var(--line-strong);
   }
-  .mode-tabs .pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .mode-tabs .pill.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .mode-tabs .pill:hover:not(.active) { border-color: var(--accent-2); color: var(--accent-2); }
 
   .seq-nav { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .9rem; }
@@ -109,11 +121,11 @@
   .set-items .si-tags { display: flex; gap: .3rem; flex-wrap: wrap; }
   .set-items .si-tags .tag { font-family: Consolas, monospace; font-size: .66rem; color: var(--muted); border: 1px solid var(--line-strong); border-radius: 4px; padding: .1rem .35rem; }
   .set-items .si-btns { display: flex; gap: .3rem; flex-shrink: 0; align-items: center; }
-  .set-items .si-btns button { font-size: .78rem; padding: .25rem .5rem; background: #fff; color: var(--muted); border: 1px solid var(--line-strong); }
+  .set-items .si-btns button { font-size: .78rem; padding: .25rem .5rem; background: var(--card); color: var(--muted); border: 1px solid var(--line-strong); }
   .set-items .si-btns button:hover:not(:disabled) { color: var(--accent-2); border-color: var(--accent-2); }
   .set-items .si-btns button:disabled { opacity: .35; cursor: not-allowed; }
   .set-items .si-btns .remove-btn { color: var(--err); border-color: var(--err); }
-  .set-items .si-btns .remove-btn:hover { background: var(--err); color: #fff; }
+  .set-items .si-btns .remove-btn:hover { background: var(--err); color: var(--accent-ink); }
 
   .stage {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
@@ -153,7 +165,7 @@
   .bank-list li:last-child { border-bottom: none; }
   .bank-item-text { flex: 1; }
   .bank-remove-btn { background: transparent; color: var(--err); border: none; font-weight: 700; cursor: pointer; padding: 0 .3rem; font-size: 1.1rem; line-height: 1; }
-  .bank-remove-btn:hover { color: #7a241c; }
+  .bank-remove-btn:hover { opacity: .75; }
   .bank-empty { color: var(--muted); font-size: .85rem; margin: 0; }
 
   /* ── Quick Tally tab ─────────────────────────────────────────────── */
@@ -164,14 +176,14 @@
     background: var(--card); color: var(--ink); border: 2px solid var(--line-strong); border-radius: 12px;
     padding: 1.5rem .6rem; cursor: pointer;
   }
-  .tally-btn:hover { background: #eaf1f6; border-color: var(--accent-2); }
+  .tally-btn:hover { background: var(--info-bg); border-color: var(--accent-2); }
   .tally-btn .tally-num { font-size: clamp(2.2rem, 6vw, 3.6rem); font-weight: 800; color: var(--accent); line-height: 1; }
   .tally-btn .tally-label { font-size: .82rem; font-weight: 600; color: var(--muted); text-align: center; }
 
   .tally-results { margin-bottom: 1rem; }
   .tally-row { display: flex; align-items: center; gap: .7rem; margin-bottom: .55rem; }
   .tally-row-num { width: 1.6rem; flex-shrink: 0; font-weight: 800; font-size: 1.15rem; color: var(--accent); }
-  .tally-bar-track { flex: 1; background: #eceae1; border-radius: 7px; height: 1.7rem; overflow: hidden; }
+  .tally-bar-track { flex: 1; background: var(--card-2); border-radius: 7px; height: 1.7rem; overflow: hidden; }
   .tally-bar-fill { height: 100%; background: var(--accent-2); border-radius: 7px 0 0 7px; transition: width .2s ease; }
   .tally-row-count { width: 2.8rem; flex-shrink: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 
@@ -183,9 +195,9 @@
   .cat-tally-label-input:hover, .cat-tally-label-input:focus { border-bottom-color: var(--line-strong); outline: none; }
   .cat-tally-incr {
     font-family: inherit; width: 100%; display: flex; flex-direction: column; align-items: center; gap: .2rem;
-    background: #fff; color: var(--ink); border: 2px solid var(--line-strong); border-radius: 10px; padding: 1rem .4rem; cursor: pointer;
+    background: var(--card); color: var(--ink); border: 2px solid var(--line-strong); border-radius: 10px; padding: 1rem .4rem; cursor: pointer;
   }
-  .cat-tally-incr:hover { background: #eaf1f6; border-color: var(--accent-2); }
+  .cat-tally-incr:hover { background: var(--info-bg); border-color: var(--accent-2); }
   .cat-tally-num { font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 800; color: var(--accent); line-height: 1; }
   .cat-tally-hint { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 
@@ -198,19 +210,19 @@
   .triage-grid { display: flex; flex-direction: column; gap: .4rem; max-height: 26rem; overflow-y: auto; margin-bottom: .8rem; }
   .triage-row {
     display: flex; align-items: center; gap: .8rem; padding: .5rem .6rem;
-    border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--card); cursor: pointer;
   }
-  .triage-row.current { border-color: var(--accent-2); background: #eaf1f6; }
+  .triage-row.current { border-color: var(--accent-2); background: var(--info-bg); }
   .triage-name { flex: 1; font-weight: 600; font-size: .92rem; }
   .triage-btns { display: flex; gap: .4rem; }
   .triage-opt {
     font-family: inherit; font-size: .78rem; font-weight: 700; padding: .35rem .7rem; border-radius: 6px; cursor: pointer;
-    background: #fff; color: var(--muted); border: 1px solid var(--line-strong);
+    background: var(--card); color: var(--muted); border: 1px solid var(--line-strong);
   }
   .triage-opt:hover { border-color: var(--accent-2); color: var(--accent-2); }
-  .triage-opt.opt-got.active { background: var(--good); border-color: var(--good); color: #fff; }
-  .triage-opt.opt-almost.active { background: var(--warn); border-color: var(--warn); color: #fff; }
-  .triage-opt.opt-reteach.active { background: var(--err); border-color: var(--err); color: #fff; }
+  .triage-opt.opt-got.active { background: var(--good); border-color: var(--good); color: var(--accent-ink); }
+  .triage-opt.opt-almost.active { background: var(--warn); border-color: var(--warn); color: var(--accent-ink); }
+  .triage-opt.opt-reteach.active { background: var(--err); border-color: var(--err); color: var(--accent-ink); }
   .triage-empty { color: var(--muted); font-size: .85rem; margin: 0; }
   .triage-results h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); margin: 1rem 0 .4rem; }
   .triage-results h3:first-child { margin-top: 0; }
@@ -231,7 +243,7 @@
   .discussion-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; width: 100%; }
   .discussion-board.focused { display: block; }
   .discussion-card {
-    background: #eaf1f6; border: 1px solid #c9dce6; border-radius: 10px; padding: 1.2rem 1.4rem;
+    background: var(--info-bg); border: 1px solid var(--info-line); border-radius: 10px; padding: 1.2rem 1.4rem;
     font-size: clamp(1.1rem, 2.6vw, 1.6rem); font-weight: 600; line-height: 1.4; cursor: pointer;
   }
   .discussion-stage.is-fullscreen .discussion-card { font-size: clamp(1.6rem, 4vw, 3rem); }
@@ -243,7 +255,7 @@
 
   /* ── Printable handout tab ───────────────────────────────────────── */
   .handout-prompt-display {
-    font-size: 1.05rem; font-weight: 700; background: #eaf1f6; border: 1px solid #c9dce6;
+    font-size: 1.05rem; font-weight: 700; background: var(--info-bg); border: 1px solid var(--info-line);
     border-radius: 7px; padding: .7rem .9rem; margin: 0;
   }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: .9rem; }
@@ -252,11 +264,14 @@
   .check-inline { display: flex; align-items: center; gap: .45rem; font-weight: 500; font-size: .88rem; margin: 0; }
   .check-inline input { margin: 0; }
 
-  .handout-preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
+  .handout-preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
 
-  /* Shared slip layout — reused by the on-screen preview and the print-only area */
+  /* Shared slip layout — reused by the on-screen preview and the print-only
+     area. A slip page is a sheet of paper in either theme: the markup carries
+     `paper-sheet`, which ink-paper.css uses to restore the light tokens
+     inside it, so --card is white here even in dark. */
   .slip-page {
-    background: #fff; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
     box-shadow: 0 2px 10px rgba(0,0,0,.16); aspect-ratio: 8.5 / 11; max-width: 380px;
     margin: 0 auto; padding: .35in; overflow: hidden;
   }
@@ -2093,7 +2108,7 @@
       slips = repeatHtml(slipHtml(text), perPage);
     }
     return (
-      '<div class="slip-page">' +
+      '<div class="slip-page paper-sheet">' +
         '<div class="slip-grid pp' + perPage + '" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(2,1fr);">' +
           slips +
         '</div>' +
@@ -2130,7 +2145,7 @@
     var slips = names.map(function (name, i) { return slipHtml(texts[i], name); });
     var pages = chunkArray(slips, perPage);
     return pages.map(function (pageSlips) {
-      return '<div class="slip-page batch-page">' +
+      return '<div class="slip-page batch-page paper-sheet">' +
         '<div class="slip-grid pp' + perPage + '" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(2,1fr);">' +
           pageSlips.join('') +
         '</div></div>';
