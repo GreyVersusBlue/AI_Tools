@@ -46,9 +46,6 @@
     "Tools/029-prompt-builder.html": {
       "color-contrast": "baseline 2026-09-03: 23 × elements must meet minimum color contrast ratio thresholds (e.g. .privacy-banner); fix in the tool, then remove this line"
     },
-    "Tools/034-schedule-browser.html": {
-      "aria-required-children": "baseline 2026-09-03: 1 × certain aria roles must contain particular children (e.g. .mode); fix in the tool, then remove this line"
-    },
     "Tools/035-schedule-visualizer.html": {
       "color-contrast": "baseline 2026-09-03: 6 × elements must meet minimum color contrast ratio thresholds (e.g. #tool-classroom); fix in the tool, then remove this line"
     },

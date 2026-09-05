@@ -19042,10 +19042,10 @@ window.wiComputeDiff    = wiComputeDiff;
     <div id="br-stale-banner" class="stale-banner" role="note"></div>
     <div class="panel">
       <div class="toolbar">
-        <div class="mode" role="tablist">
-          <button id="br-mTeacher" class="on" onclick="brSetMode('teacher')">By Teacher</button>
-          <button id="br-mGroup"   onclick="brSetMode('group')">By Student Group</button>
-          <button id="br-mMap"     onclick="brSetMode('map')">Building Map</button>
+        <div class="mode" role="tablist" aria-label="Schedule view">
+          <button id="br-mTeacher" class="on" role="tab" aria-selected="true"  aria-controls="br-stage" tabindex="0"  onclick="brSetMode('teacher')">By Teacher</button>
+          <button id="br-mGroup"   role="tab" aria-selected="false" aria-controls="br-stage" tabindex="-1" onclick="brSetMode('group')">By Student Group</button>
+          <button id="br-mMap"     role="tab" aria-selected="false" aria-controls="br-stage" tabindex="-1" onclick="brSetMode('map')">Building Map</button>
         </div>
         <div class="br-field" id="br-searchField">
           <label id="br-searchLabel" for="br-search">Find a teacher</label>
@@ -19059,7 +19059,7 @@ window.wiComputeDiff    = wiComputeDiff;
         <button class="btn-print" id="br-publish-btn" onclick="brPublish()" title="Export a standalone, read-only Schedule Browser file to share with staff">Publish for Teachers</button>
         <button class="btn-print" id="br-publish-copy-btn" onclick="brCopyPublishedHTML()" title="Copy the generated Schedule Browser HTML to the clipboard, to paste directly into GitHub's web file editor">Copy Publish HTML</button>
       </div>
-      <div class="stage">
+      <div class="stage" id="br-stage" role="tabpanel" tabindex="0" aria-labelledby="br-mTeacher">
         <div id="br-empty" class="br-empty">
           <div class="big" id="br-empty-title">Pick a name to see a schedule.</div>
           <div id="br-empty-sub">Or switch to <b>By Student Group</b> to see every teacher a class shares.</div>
@@ -19652,13 +19652,54 @@ function brWireDocClick() {
   });
 }
 brWireDocClick();
+brWireTabKeys();
 
 /* === Mode & selection === */
+/* 2026-09-05: the mode switcher is a real ARIA tablist. The buttons carry role="tab"
+   and the stage is the one tabpanel they all control, so brSyncTabs keeps
+   aria-selected, the roving tabindex and the panel's label in step with the
+   .on styling. Mirrors the visualizer's own tab bar; brSetMode calls it, and
+   missing buttons are skipped so the same helper serves the published file
+   (six modes) and the in-app browser (three). */
+function brSyncTabs(mo) {
+  const ids = { teacher:'br-mTeacher', group:'br-mGroup', compare:'br-mCompare',
+                free:'br-mFree', map:'br-mMap', sub:'br-mSub' };
+  const panel = document.getElementById('br-stage');
+  for (const key in ids) {
+    const btn = document.getElementById(ids[key]);
+    if (!btn) continue;
+    const on = key === mo;
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    btn.tabIndex = on ? 0 : -1;
+    if (on && panel) panel.setAttribute('aria-labelledby', ids[key]);
+  }
+}
+
+/* Arrow/Home/End move between the mode tabs and activate on arrival, the
+   automatic-activation half of the ARIA tabs pattern. */
+function brWireTabKeys() {
+  const bar = document.querySelector('#app-browser .mode');
+  if (!bar) return;
+  bar.addEventListener('keydown', e => {
+    const tabs = Array.prototype.slice.call(bar.querySelectorAll('button[role="tab"]'));
+    const i = tabs.indexOf(document.activeElement);
+    if (i < 0) return;
+    let next = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = tabs[(i + 1) % tabs.length];
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = tabs[(i - 1 + tabs.length) % tabs.length];
+    else if (e.key === 'Home') next = tabs[0];
+    else if (e.key === 'End') next = tabs[tabs.length - 1];
+    if (!next) return;
+    e.preventDefault();
+    next.focus();
+    next.click();
+  });
+}
+
 function brSetMode(mo) {
   brMode=mo; brCurrent=null;
-  document.getElementById('br-mTeacher').classList.toggle('on', mo==='teacher');
-  document.getElementById('br-mGroup').classList.toggle('on',   mo==='group');
-  document.getElementById('br-mMap').classList.toggle('on',     mo==='map');
+  brSyncTabs(mo);
   const sf = document.getElementById('br-searchField');
   if (mo==='map') {
     sf.style.display='none';
@@ -20077,7 +20118,7 @@ function brEscHTML(s) {
 function brPublishFnList() {
   return [
     brBuildOpts, brRenderMenu, brOpenMenu, brCloseMenu, brOnType, brOnKey,
-    brWireDocClick, brSetMode, brChoose, brJumpTeacher, brJumpGroup,
+    brWireDocClick, brSyncTabs, brWireTabKeys, brSetMode, brChoose, brJumpTeacher, brJumpGroup,
     brDayRows, brRenderTeacher, brRenderGroup, brOverviewHTML,
     brGeoFindRoom, brGeoFloorSVG, brMiniMapHTML, brGroupMapHTML, brSetGrpDay,
     brOpenMapFloorIdx, brSetMapFloorIdx, brRenderMap, brRenderMapDyn,
@@ -20099,10 +20140,10 @@ function brBuildPublishedMarkup(school, dateStr) {
     <div id="br-stale-banner" class="stale-banner" role="note"></div>
     <div class="panel">
       <div class="toolbar">
-        <div class="mode" role="tablist">
-          <button id="br-mTeacher" class="on" onclick="brSetMode('teacher')">By Teacher</button>
-          <button id="br-mGroup"   onclick="brSetMode('group')">By Student Group</button>
-          <button id="br-mMap"     onclick="brSetMode('map')">Building Map</button>
+        <div class="mode" role="tablist" aria-label="Schedule view">
+          <button id="br-mTeacher" class="on" role="tab" aria-selected="true"  aria-controls="br-stage" tabindex="0"  onclick="brSetMode('teacher')">By Teacher</button>
+          <button id="br-mGroup"   role="tab" aria-selected="false" aria-controls="br-stage" tabindex="-1" onclick="brSetMode('group')">By Student Group</button>
+          <button id="br-mMap"     role="tab" aria-selected="false" aria-controls="br-stage" tabindex="-1" onclick="brSetMode('map')">Building Map</button>
         </div>
         <div class="br-field" id="br-searchField">
           <label id="br-searchLabel" for="br-search">Find a teacher</label>
@@ -20114,7 +20155,7 @@ function brBuildPublishedMarkup(school, dateStr) {
         </div>
         <button class="btn-print" onclick="window.print()">Print / Save PDF</button>
       </div>
-      <div class="stage">
+      <div class="stage" id="br-stage" role="tabpanel" tabindex="0" aria-labelledby="br-mTeacher">
         <div id="br-empty" class="br-empty">
           <div class="big" id="br-empty-title">Pick a name to see a schedule.</div>
           <div id="br-empty-sub">Or switch to <b>By Student Group</b> to see every teacher a class shares.</div>
@@ -20176,6 +20217,7 @@ function brBuildPublishedHTML() {
     "let brGrpDay = 'A', brMapFloorIdx = 0;",
     brPublishFnList().map(f => f.toString()).join('\n\n'),
     'brWireDocClick();',
+    'brWireTabKeys();',
     'brBuildOpts();',
     'brRenderMenu();',
     'brCheckStaleness();',

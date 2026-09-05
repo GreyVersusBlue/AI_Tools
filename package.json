@@ -20,7 +20,7 @@
     "test:blank-map": "node Tools/blank-map-generator/test/smoke-starters.mjs && node Tools/blank-map-generator/test/smoke-choropleth.mjs && node Tools/blank-map-generator/test/smoke-hittest.mjs && node Tools/blank-map-generator/test/smoke-timeline-handoff.mjs && node Tools/blank-map-generator/test/smoke-label-colors.mjs",
     "test:groups": "node Tools/group-team-generator/test/smoke-share.mjs && node Tools/group-team-generator/test/smoke-pairing-history.mjs",
     "test:vocab-share": "node Tools/vocab-flashcard-generator/test/smoke-share.mjs && node Tools/vocab-flashcard-generator/test/printables-logic.test.mjs && node Tools/vocab-flashcard-generator/test/smoke-printables.mjs",
-    "test:schedule-browser": "node Tools/schedule-browser/test/smoke-personal-notes.mjs && node Tools/schedule-browser/test/smoke-substitute-view.mjs",
+    "test:schedule-browser": "node Tools/schedule-browser/test/smoke-personal-notes.mjs && node Tools/schedule-browser/test/smoke-substitute-view.mjs && node Tools/schedule-browser/test/smoke-mode-tabs.mjs",
     "test:qr": "node Tools/qr-code-generator/test/smoke-roster.mjs && node Tools/qr-code-generator/test/smoke-checkout.mjs",
     "test:command-center": "node Tools/command-center/test/smoke-seating-panel.mjs && node Tools/command-center/test/smoke-remote-commands.mjs",
     "test:gallery-walk": "node Tools/gallery-walk-qr/test/smoke-projector.mjs && node Tools/gallery-walk-qr/test/smoke-scan-verify.mjs",

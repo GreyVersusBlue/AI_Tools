@@ -21,7 +21,7 @@
 //   v3-bellboard.html, v4-riso.html                      (linked pages, 404 offline)
 //   assets/icons/icon-maskable-192.png, -512.png         (the install dialog's icon)
 //
-// Five checks always, and a sixth with `--base <ref>`:
+// Six checks always, and a seventh with `--base <ref>`:
 //
 //   1. MISSING   — every same-origin src/href on a live page resolves to a file
 //                  that exists AND is listed in PRECACHE_URLS.
@@ -39,11 +39,20 @@
 //                  stays the one list of what works offline; the shell only
 //                  decides what arrives first, so a shell entry the full list
 //                  forgot would be cached at install and then never counted.
+//   6. SHELLDEP  — every subresource a shell PAGE loads eagerly (a <script src>,
+//                  a <link href>, an <img src>) is in SHELL_URLS too. A shell page
+//                  whose script arrives with the deferred pass is broken, not slow,
+//                  for a teacher who installs and goes offline inside that window.
+//                  Only eager tags count: a library injected on demand behind a
+//                  click (SheetJS in 001/006/032) is deliberately NOT shell, which
+//                  is what moved jsPDF and SheetJS out of the install in v151 —
+//                  1.23 MB of a 3.86 MB install. Anchors are ignored: linking to a
+//                  page does not make it shell.
 //
-// A sixth check is opt-in, because it needs git history and a base to compare
+// A seventh check is opt-in, because it needs git history and a base to compare
 // against, and a guess at either is how a guard learns to cry wolf:
 //
-//   6. BUMP      — `--base <ref>` only. If any precached file's content differs
+//   7. BUMP      — `--base <ref>` only. If any precached file's content differs
 //                  between the merge-base of <ref> and HEAD and the working
 //                  tree, or PRECACHE_URLS itself does, then CACHE_VERSION must
 //                  differ from what it was at that merge-base. Otherwise every
@@ -198,7 +207,38 @@ if (fs.existsSync(manifestPath)) {
   }
 }
 
-/* ── 6. BUMP (opt-in: --base <ref>) ────────────────────────────────────── */
+/* ── 6. SHELLDEP (a shell page's eager subresources are shell too) ──────── */
+{
+  const shellSet = new Set(shell.map(u => decodeURIComponent(u)));
+  // Deliberately narrower than the MISSING scan's src|href: an <a href> to
+  // another page says nothing about the install tier, and matching it would
+  // drag the whole site into the shell one link at a time.
+  const SUBRESOURCE = /<(?:script|link|img)\b[^>]*?\b(?:src|href)\s*=\s*["']([^"']+)["']/gi;
+  for (const u of shell) {
+    let page = decodeURIComponent(u);
+    if (page === './') page = 'index.html';
+    if (!page.endsWith('.html')) continue;
+    const abs = path.join(SITE, page);
+    if (!fs.existsSync(abs)) continue;
+    const html = fs.readFileSync(abs, 'utf8');
+    for (const m of html.matchAll(SUBRESOURCE)) {
+      const raw = m[1];
+      if (/^(https?:|data:|mailto:|tel:|#|javascript:|blob:)/i.test(raw)) continue;
+      const clean = decodeURIComponent(raw.split('#')[0].split('?')[0]);
+      if (!clean) continue;
+      const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(page), clean));
+      if (!resolved || resolved.startsWith('..')) continue;
+      if (!fs.existsSync(path.join(SITE, resolved))) continue;  // MISSING's problem, not this one
+      if (shellSet.has(resolved)) continue;
+      problems.push(
+        `SHELLDEP    ${resolved}\n            loaded eagerly by ${page}, which installs at first visit — ` +
+        `add it to SHELL_URLS, or the page is broken offline until the deferred pass finishes`
+      );
+    }
+  }
+}
+
+/* ── 7. BUMP (opt-in: --base <ref>) ────────────────────────────────────── */
 
 let bumpNote = '';
 if (BASE_REF) {
