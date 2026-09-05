@@ -32,7 +32,7 @@
         `data` property is a Store envelope. Its version is that `v`.
      2. ANYTHING ELSE on disk is legacy at version 0 — a bare array, a bare
         string or number, a plain {...} blob. One exception: a payload carrying
-        a numeric `__v` is an assets/js/gvb-save.js save (that module stamps its
+        a numeric `__v` is a _shared/gvb-save.js save (that module stamps its
         version INTO the state rather than around it) and is read at that
         version, so the two modules can share a key without a conversion pass.
      3. `migrate(fromV, data)` runs only when fromV < the caller's version. It
@@ -300,6 +300,22 @@
     return { ok: true, quota: false, blocked: false, bytes: bytes, error: null };
   }
 
+  /**
+   * Surfaces a write failure that happened OUTSIDE this module, through the
+   * same never-silent path set() uses, and returns the kind it reported
+   * ('quota' or 'blocked').
+   *
+   * _shared/gvb-save.js is the caller this exists for. It owns a `storage`
+   * object its callers inject — a boxing wrapper, a memory stub, a suite's Map
+   * — so its writes cannot all come through set(); what they can do is stop
+   * being silent, which is the rule this file exists to enforce.
+   */
+  function reportWriteFailure(err) {
+    var kind = isQuotaError(err) ? 'quota' : 'blocked';
+    report(kind);
+    return kind;
+  }
+
   /** Deletes `key` and notifies subscribers in this tab and the others. */
   function remove(key) {
     delete memory[key];
@@ -374,6 +390,7 @@
     set: set,
     remove: remove,
     onChange: onChange,
+    reportWriteFailure: reportWriteFailure,
     estimate: estimate,
     configure: configure,
     isBlocked: isBlocked,

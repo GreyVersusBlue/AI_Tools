@@ -83,6 +83,7 @@
     "Tools/escape-room-builder/test/smoke-test-run.mjs",
     "Tools/lab-safety-contract-tracker/test/smoke-contact-sheet.mjs",
     "Tools/ssr-log-tracker/test/smoke-genres.mjs",
+    "Tools/grammar-mad-libs/test/smoke-storage.mjs",
     "Tools/parent-contact-log/test/smoke-reasons.mjs",
     "Tools/rubric-builder/test/smoke-peer-form.mjs",
     "Tools/sub-binder-generator/test/smoke-feedback-page.mjs",

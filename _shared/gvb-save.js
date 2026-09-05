@@ -11,6 +11,19 @@
 //   Tools/seating-chart/seating.mjs  one slot, one key, the version stamp is
 //                                    written straight through.
 //
+// WHERE THIS FILE LIVES, AND WHY IT IS NOT store.js. It sat in `assets/js/` —
+// a second shared-code location, contra CLAUDE.md — until Path 4 moved it here.
+// It is still a separate module from _shared/store.js, because the two answer
+// different questions: store.js owns ONE key's envelope, migration and quota
+// message for a page that reaches localStorage directly, while this file owns a
+// SLOT — a validate/repair pair, a defaults factory, the `gvb-save` export
+// envelope and a save bar — over a `storage` object the caller injects. That
+// injection is load-bearing: np-store.js hands in a boxing wrapper so its
+// thirteen array-valued keys keep their exact on-disk shape, and the Node
+// suites hand in a Map. Merging the two would mean giving that up.
+//
+// What the two DO share, since Path 4: the never-silent write. See save().
+//
 // validate() is the coarse gate — is this a save file at all, or somebody else's
 // JSON. repair() is where every fill-in and coercion lives, and it runs on every
 // load that passes validate, including a save this build just wrote, because
@@ -37,17 +50,66 @@ function memoryFallback() {
   return store;
 }
 
-/** Guarded default storage: a real write probe, a memory stub if anything throws. */
+/** Guarded default storage: a real write probe, a memory stub if anything throws.
+ *
+ *  The probe is spelled `globalThis.localStorage.setItem('__gvb_save_probe__', …)`
+ *  rather than through the `ls` alias so that check:registry's call-site scan can
+ *  see the key. It could not see `ls.setItem(probe, …)`, which is why this probe
+ *  was the one write on the site that guard had never heard of — declared by hand
+ *  on the registry's `shared` row now, and visible to the scan as well. */
 export function defaultStorage() {
   try {
     const ls = globalThis.localStorage;
     if (!ls) return memoryFallback();
-    const probe = '__gvb_save_probe__';
-    ls.setItem(probe, '1');
-    ls.removeItem(probe);
+    globalThis.localStorage.setItem('__gvb_save_probe__', '1');
+    globalThis.localStorage.removeItem('__gvb_save_probe__');
     return ls;
   } catch (e) {
     return memoryFallback();
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The bridge to _shared/store.js
+
+   This module is older than store.js and keeps its own `storage` indirection,
+   so it cannot simply become a Store caller. What it must not do is fail a
+   write silently, and store.js is the one place on this site that owns that
+   message — so when the page has loaded it, this file borrows it.
+
+   Everything below tolerates Store being absent: the Node suites import this
+   module with no window at all, and a page is free to link it without linking
+   store.js. What that page loses is the banner, not the write.
+--------------------------------------------------------------------------- */
+
+/** window.Store, or null when the page (or Node) does not have it. */
+function siteStore() {
+  try {
+    const S = globalThis.Store;
+    return S && typeof S.set === 'function' ? S : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/** Whether `s` IS the page's own localStorage, rather than an injected stand-in.
+    Property access is guarded because reading `localStorage` throws outright in
+    a browser configured to block site data — the same reason defaultStorage()
+    exists. */
+function isPageStorage(s) {
+  try { return !!s && s === globalThis.localStorage; } catch (e) { return false; }
+}
+
+/** A write that did not stick, said out loud. Store renders it; without Store
+    the console is all that is left, and that gap is deliberate rather than
+    unnoticed — see the module note. */
+function reportWriteFailure(site, key, err) {
+  if (site && typeof site.reportWriteFailure === 'function') {
+    site.reportWriteFailure(err);
+    return;
+  }
+  if (globalThis.console && globalThis.console.error) {
+    globalThis.console.error('gvb-save: "' + key + '" did not save', err);
   }
 }
 
@@ -104,12 +166,31 @@ export function createSaveSlot({ game, key, version, storage, defaults, validate
     return finalize(parsed, storedVersionOf(parsed), { version, migrate, validate, repair });
   }
 
-  /** Writes `state` with the slot's version stamped in. Returns whether it stuck. */
+  /**
+   * Writes `state` with the slot's version stamped in. Returns whether it stuck
+   * — and, when it did not, SAYS SO. This used to be a bare `return false`
+   * inside a bare catch, which meant a teacher whose storage was full lost work
+   * and was told nothing unless the calling page happened to read the return
+   * value (neither consumer did on every path).
+   *
+   * When the slot is writing to the page's own localStorage and store.js is
+   * loaded, the write is handed to Store instead of being done here. That is
+   * not a detour: `raw: true` writes exactly the same bytes (the payload with
+   * its `__v` and no {v, data} envelope, which Store's rule 2 reads back at
+   * that same version), and it buys the quota banner and the same-tab change
+   * event for nothing. Any other storage — np-store.js's boxing wrapper, a
+   * memory stub, a suite's Map — is written here as before, and a failure is
+   * still reported through Store when the page has it.
+   */
   function save(state) {
+    const payload = { ...state, __v: version };
+    const site = siteStore();
+    if (site && isPageStorage(store)) return site.set(key, payload, { raw: true }).ok;
     try {
-      store.setItem(key, JSON.stringify({ ...state, __v: version }));
+      store.setItem(key, JSON.stringify(payload));
       return true;
     } catch (e) {
+      reportWriteFailure(site, key, e);
       return false;
     }
   }

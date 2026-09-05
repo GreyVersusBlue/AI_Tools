@@ -8,7 +8,7 @@
 // The import of gvb-save is RELATIVE so Node can resolve it. A leading slash
 // works only in the browser.
 
-import { createSaveSlot } from '../../assets/js/gvb-save.js';
+import { createSaveSlot } from '../../_shared/gvb-save.js';
 
 /* ---------------------------------------------------------------------------
    Storage identity. Both of these are permanent.

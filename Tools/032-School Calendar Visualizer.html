@@ -20,6 +20,7 @@
 <!-- gvb:social:end -->
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
+<script src="../_shared/store.js"></script>
 <style>
   :root { --ok: #2e6b3e; }
   * { box-sizing: border-box; }
@@ -433,6 +434,8 @@ import {
   parseLessonList, placeLessons, isTeachableDay, rebindAdjustments,
   parsePacingRows, emptyPacing, unitInstructionalStats,
 } from './school-calendar/scv-pacing.js';
+
+Store.configure({ toolName: 'School Calendar Visualizer' });
 
 const store = createStore(seedCalendar2026);
 let cal = store.get();

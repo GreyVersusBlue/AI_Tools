@@ -16,7 +16,7 @@ import {
   seatHistoryMap, frontRowStatus, checkHistoryConstraints,
   studentHistoryRows, classHistorySummary,
 } from '../seating.mjs';
-import { defaultStorage } from '../../../assets/js/gvb-save.js';
+import { defaultStorage } from '../../../_shared/gvb-save.js';
 
 let passed = 0, failed = 0;
 const fails = [];
