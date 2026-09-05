@@ -100,6 +100,72 @@ how it is built. The "don't promote one without Devon saying so" notes scattered
 per-tool sections stand; the "open question for Devon" notes do not, and now mean *decide it
 and write down what you decided*.
 
+**Rank 1 — Path 5 P3, increment 1: six projector pages on native dark, three more stages on
+`stage.js`. #198, `CACHE_VERSION` v154.** The first 2+ row to reach the top of the table, and
+the first taken under the batch rule: alone, one increment, row left in place. The batch was
+the one `npm run path5:next` printed — 010, 021, 015, 072, 023, 024 — and it was taken in
+that order rather than from the P3 prose list, which is what the script exists for. Native
+dark went from 9 themed pages to 15; the literal count the picker reports went from 1,749
+across 74 pages to 1,497 across 68; `_shared/stage.js` from 4 adopters to 7, and the pages
+still hand-rolling `requestFullscreen` from 5 to 2 (001 and 004).
+
+**A page converts in three decisions, and the picker's number is only about the first.**
+Chrome follows the theme (`#fff` on inputs and button faces → `--card`, hover fills →
+`--card-2`, white-on-accent → `--accent-ink`). A projector surface is dark in *both* themes:
+021's rotation stage and phone remote and 024's stage were navy with white chalk, and under a
+plain token remap they would have come out light-blue with near-black text in dark, because
+the accent inverts — so they read a tool-local `--stage-bg`/`--stage-ink`, navy in light and
+the near-black their fullscreen views already used in dark. And a sheet of paper stays white:
+015's timeline and 023's handout slips carry `paper-sheet`, which ink-paper.css uses to
+restore the light tokens *and* re-declare the dark ink inside them, on a `--desk` that goes
+dark with the theme. One literal was left on purpose and will keep being counted: 010's day
+badges are filled with the calendar's own day-type colours, so their text stays white.
+
+**Five of the six pages now define `--good` and the info/err/warn tint pairs locally, with
+001's values.** That is the evidence 001's comment asked for before promoting them to
+`ink-paper.css`. It was not done here — a P3 increment is tool pages and no shared file, which
+is what lets it run in parallel with anything else — and is a separate ¼ row if anyone wants
+it.
+
+**The three new stage adopters were three different shapes.** 010 mounts `<body>` — the whole
+board is the stage — and keeps projector mode as the separate persisted display state it was.
+015's story overlay is `hidden` and 072's presentation overlay is `display:none` until Present,
+and the helper's `enter()` fullscreens the element as it is, so both un-hide and render
+*before* asking for fullscreen, route F through their own enter function with
+`fullscreenKey: false`, and tear down from `onChange(false)`, the one path that the browser's
+Esc, the exit button, F and the fallback's Escape all reach. All three gained, for the first
+time, a fallback for a browser that refuses fullscreen and the site-standard F key. #195
+predicted that adopted stages would bring their own bugs; **these three did not** — 072's
+overlay-first design and 015's `wentFullscreen` bookkeeping both handled a refused request
+correctly, they just handled it alone. What they lose is duplicated code, not a defect.
+
+**`Tools/theme/test/smoke-dark-rollout.mjs` is the proof, and it is the first thing on the
+site that runs axe in dark.** 97 assertions: every converted page opened with the stored
+theme set to dark and again to light — `data-theme` set, no invert filter, `<body>` painted
+with ink-paper's dark paper and ink (the computed colours, not the attribute), no visible
+piece of chrome still `rgb(255, 255, 255)`, the paper sheets white with dark ink — then the
+three new stages by button, F, F-while-typing, the refused fallback and its Escape. The
+site-wide sweep only ever runs light, so before this the dark palette's contrast was checked
+nowhere. Mutation-tested by turning 072's flag off: four assertions fail. `PAGES` at the top
+is the suite's entire idea of which pages are adopted; a converted page left off it is a page
+nobody scans in dark.
+
+**Not verified.** No real projector and no Chromebook; the dark screenshots were looked at by
+eye (`DARK_SHOTS=<dir>` writes them). Nothing installed the worker — v154 is what
+`check:precache --base` agrees with. `npm test` was not run in full locally: every suite for
+the six touched tools was, and CI ran the full pass.
+
+**#197 (scoped CI) merged right after #198, and the two never saw each other.** Devon asked
+whether CI had been scoped to the touched tools; this session answered "no" from a stale
+`main`, then re-fetched and found #197 on top of #198. Reading its `select-suites.mjs`
+turned up the one thing its own "not verified" note could not: `sw.js` is `SITE_WIDE`, and
+every tool PR bumps `CACHE_VERSION` in `sw.js`, so a tool PR — the case the change was made
+for — still runs everything. #198 would have; the "first genuinely scoped run" that note
+waits for will be a docs or tooling PR, not a tool one. Recorded as a ¼ row at **rank 2**
+(inserted, not appended, because it is what makes #197 a saving), with the fix named: treat
+a `sw.js` hunk that touches only the version constant as not site-wide, and pin it in
+`select-suites.test.mjs`. Not measured — read off the diff.
+
 **Ranks 1 and 2 — the Path 5 groundwork: the picker exists, and the last three hand-rolled
 stages are gone. #195, `CACHE_VERSION` v153.** Two ½ rows in one PR, the same path's
 prerequisites.
