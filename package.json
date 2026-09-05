@@ -75,6 +75,7 @@
     "check:docs-commands": "node Tools/board-check/check-docs-commands.mjs",
     "check:adoption": "node Tools/board-check/check-adoption.mjs",
     "phase4:next": "node Tools/board-check/list-base-css-candidates.mjs",
+    "path5:next": "node Tools/board-check/list-dark-candidates.mjs",
     "offline:build": "node Tools/board-check/make-offline-copy.mjs",
     "offline:verify": "node Tools/board-check/verify-offline-copy.mjs",
     "test:current-events": "node Tools/current-events-discussion-guide-generator/test/readability.test.mjs && node Tools/current-events-discussion-guide-generator/test/smoke-comparison.mjs && node Tools/current-events-discussion-guide-generator/test/smoke-media-literacy.mjs && node Tools/current-events-discussion-guide-generator/test/smoke-citation.mjs",
@@ -95,7 +96,7 @@
     "test:picker-rollout": "node Tools/roster/test/smoke-picker-rollout.mjs",
     "test:rename-follow": "node Tools/roster/test/smoke-rename-follow.mjs",
     "test:share": "node Tools/share/test/qr-draw.test.mjs && node Tools/share/test/share.test.mjs",
-    "test:stage": "node Tools/stage/test/stage.test.mjs",
+    "test:stage": "node Tools/stage/test/stage.test.mjs && node Tools/stage/test/smoke-stage-rollout.mjs",
     "test:media": "node Tools/media/test/media-db.test.mjs && node Tools/media/test/smoke-media-db.mjs",
     "test:seating-read": "node Tools/seating-read/test/seating-read.test.mjs",
     "lint": "eslint"

@@ -110,7 +110,10 @@ every edit. The deduplication work that established them is summarised in
   tree. This exists because three tools have now been documented in this repo
   that were never committed — `sync-social-tags.mjs`, the original `board-check`
   folder, and `list-dark-candidates.mjs`, whose invented output became a
-  handoff's rollout plan. Placeholders (`npm run test:<name>`) are skipped. A
+  handoff's rollout plan. (`list-dark-candidates.mjs` was built for real on
+  2026-09-05 and is `npm run path5:next`; its `KNOWN_MISSING` entry expired
+  with it, exactly as intended, and the list is empty again. The other two are
+  still missing.) Placeholders (`npm run test:<name>`) are skipped. A
   document whose *subject* is that a command is absent has two ways to say so: a
   named entry in the script's `KNOWN_MISSING`, with its reason, for a name
   several documents cite (the guard then fails if that script ever appears, so
@@ -348,7 +351,8 @@ files must be added there too.
 - **Do not let a handoff cite something the repo does not contain.** This has
   happened three times (`sync-social-tags.mjs`, the original `board-check`
   folder, `list-dark-candidates.mjs` — the last one with its output quoted as
-  fact). If you name a command, run it once before you write it down.
+  fact; it exists now, but the numbers that handoff quoted were still
+  invented). If you name a command, run it once before you write it down.
 
 ## Other guardrails
 
@@ -372,6 +376,13 @@ files must be added there too.
   has its own `@media print` block, breaks printing. Both files' headers spell
   this out. `npm run phase4:next` (read-only) lists which tools still have
   duplicated rules and flags the ones that must not get print-area.css.
+  `npm run path5:next` (`Tools/board-check/list-dark-candidates.mjs`, also
+  read-only) is the same kind of picker for Path 5: the pages still on
+  a11y.css's invert filter, the colour literals each would have to tokenize
+  (counted outside `@media print` and outside inline script, which is what
+  made an earlier hand-derived figure about 3× too high), which pages load no
+  `a11y.js` at all, and whether each still hand-rolls fullscreen instead of
+  linking `_shared/stage.js`.
 - The site-wide platform themes **P1–P15** are a section of `BACKLOG.md`, and
   the per-tool sections cite them by ID. Do not renumber one; the IDs are
   load-bearing. Add a new theme at the end.

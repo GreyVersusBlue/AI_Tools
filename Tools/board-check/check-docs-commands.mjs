@@ -75,11 +75,10 @@ const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
    because the document's subject IS that they do not exist. Each entry has to
    say why, and check 3 above deletes it the day the script lands. */
 const KNOWN_MISSING = {
-  'path5:next':
-    'BACKLOG.md rank 8 and its live-blockers list, plus HISTORY.md, all record ' +
-    'that `list-dark-candidates.mjs` was documented in a #167 handoff and never ' +
-    'committed. Naming it is the point of those three sentences. Delete this ' +
-    'entry in the PR that builds it.',
+  // `path5:next` lived here from #187 until the PR that built
+  // list-dark-candidates.mjs; check 3 below is what made the entry expire on
+  // its own the day the script landed, which is the whole point of the
+  // arrangement. The list is empty now, and an empty list is the healthy state.
 };
 
 /** Tracked .md files, from git — an untracked scratch note is not a claim. */
