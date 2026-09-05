@@ -560,8 +560,8 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Rebuild and commit `list-dark-candidates.mjs` (`npm run path5:next`) before Path 5 P3 quotes a number | site | ½ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
-| 2 | Adopt `_shared/stage.js` in 023, 025 and 021 — the three remaining hand-rolled stages the P2 row named; scan each on-stage state with axe as `smoke-stage.mjs` does | site | ½ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
+| 1 | Rebuild and commit `list-dark-candidates.mjs` (`npm run path5:next`) before Path 5 P3 quotes a number | site | ½ | `xrhgw3` 2026-09-05 13:21 UTC | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
+| 2 | Adopt `_shared/stage.js` in 023, 025 and 021 — the three remaining hand-rolled stages the P2 row named; scan each on-stage state with axe as `smoke-stage.mjs` does | site | ½ | `xrhgw3` 2026-09-05 13:21 UTC | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 3 | Path 5 P3 — native dark + `stage.js` across the projector tools, batches of ~6 | site | 2+ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 4 | Path 5 P4 — landing page and hallway tools; 034 gets a native dark palette | site | 1 | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 5 | Path 6 P2 — adopt the share sheet in the 17 existing `state-link` tools | site | 2+ | | [Path 6](#path-6--share-everywhere) |
