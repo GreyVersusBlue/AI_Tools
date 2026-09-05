@@ -166,6 +166,75 @@ waits for will be a docs or tooling PR, not a tool one. Recorded as a ¼ row at 
 a `sw.js` hunk that touches only the version constant as not site-wide, and pin it in
 `select-suites.test.mjs`. Not measured — read off the diff.
 
+**Rank 1 — Path 5 P3, increment 2: six more pages on native dark. #200, `CACHE_VERSION`
+v155.** The same 2+ row, taken alone again, one increment, row left in place. The batch was
+the one `npm run path5:next` printed, in its order — **025, `command-center/remote.html`,
+`escape-room-builder/monitor.html`, 051, 048, `escape-room-builder/lock.html`**. Native dark
+went from 15 themed pages to 21 (25%); the picker's literal count from 1,497 across 68 pages
+to 1,396 across 62, eleven rounds of six left. `stage.js` did not move: none of the six had a
+stage of its own, and 025 had linked the helper in #195 already.
+
+**This is the first P3 increment that invented nothing** — it applied increment 1's three
+rules and no new one. That is the useful result, not a disappointment: the rules generalise
+past the projector tools they were written on. Three of the six are *sub-pages* (a phone
+remote, a student lock screen, a teacher monitor), one is a big generator, two are label
+makers, and every conversion still fell into chrome / paper / deliberately-left-alone.
+
+**What it did add is a fourth category of literal that stays on purpose, and it is two more
+kinds of "not a surface".** #198 had one: a user-coloured fill (010's day badges). #200 adds
+a **camera viewfinder** (`remote.html`, `monitor.html` — a lens, and a pale frame around a
+dark video feed is worse in a dark room) and a **mat behind a teacher-supplied image**
+(`lock.html`'s clue image — often a transparent line drawing, which on a dark mat is nothing
+at all). Each is left with a comment saying why, because the next session's instinct will be
+to "finish" them. The **QR canvases** are a fifth case that will never appear as work: they
+draw dark-on-white from inline script, which the picker does not count, and they must stay
+that way because that is what a scanner needs.
+
+**A literal can be a token's value in disguise.** 025 painted its eight remove buttons
+`#a3372b`, which is `--err-light` byte for byte. Under a naive sweep those would have stayed
+a light-mode red on a dark card; read as `var(--err)` they invert. Worth grepping a page's
+literals against ink-paper's `-light` values before deciding any of them are bespoke.
+
+**Two pages' `--good` was changed in light, deliberately.** `lock.html` and `monitor.html`
+carried `#2f6b3a`; 001's is `#2f7d4f`, and the standing note says copy 001's values rather
+than invent new ones, so they were moved. It is a small, real change to shipped light-mode
+appearance (5.87:1 → 5.03:1 on white, both AA) and it is recorded here so it can be reversed
+cheaply if anyone objects. `lock.html` also needed a `--good-line`, which 001 defines no
+counterpart for — it has `--good-bg` but never a border with it — so one was introduced
+(`#c7e2cb` light, `#2f5e42` dark) for the next page to copy rather than re-invent. Seven
+pages now carry these pairs locally; promoting them to `ink-paper.css` stays a separate ¼ row,
+because a P3 increment touching `_shared/` would stop being parallel-safe.
+
+**048's label previews needed a `prep` in the suite, and that is a shape worth knowing.**
+`smoke-dark-rollout.mjs` checks that a page's sheet of paper is still white with dark ink, but
+048 renders no preview until an entry has a title, so its `PAGES` row adds an entry and fills
+it first. A page whose sheet only exists after interaction will need the same. The suite is at
+**160 assertions** over twelve pages now, from 97 over six.
+
+**A sub-page's only accessibility coverage is this suite.** The site-wide axe sweep
+(`test:a11y`) walks `index.html` and the 86 tool pages; it never descends into a tool folder,
+so `remote.html`, `lock.html` and `monitor.html` had no axe coverage at all before #200 put
+them in `PAGES`, and what they have now is dark-only-plus-light through that one suite. Worth
+knowing before assuming a sub-page is as well covered as its parent.
+
+**#200 is the measurement rank 2 was waiting for.** That row says #197's scoped CI cannot
+help a tool PR because `sw.js` is `SITE_WIDE` and every tool PR bumps `CACHE_VERSION` in it —
+written off the diff, with "confirm on a real CI log" attached. #200 is that log: six pages
+and one test file changed, and CI ran all 145 suites in 23.4 minutes. The row stands as
+written.
+
+**Not verified, and one thing done worse than #198.** No real projector, no real phone, and
+nothing installed the worker. **The dark screenshots were not looked at** — #198 wrote them
+with `DARK_SHOTS=<dir>` and inspected them by eye; #200 relied on the suite's computed-colour
+assertions and axe-in-dark alone, which prove no white chrome and no contrast failure but not
+that a page *reads* right. Anyone wanting the stronger check can run the suite with
+`DARK_SHOTS` set and look at all twelve. **`npm test` was run in full locally** this time
+(145 green, 25.3 min) as well as in CI (23.4 min), so both numbers are measured on this
+sandbox and on the runner. One process note that cost time and is worth writing down: this
+sandbox's container clock does not advance between turns, so a background suite run makes no
+progress while the session is idle — a long local run has to be waited on inside a single
+foreground call, and a first attempt here was killed on a misreading of that.
+
 **Ranks 1 and 2 — the Path 5 groundwork: the picker exists, and the last three hand-rolled
 stages are gone. #195, `CACHE_VERSION` v153.** Two ½ rows in one PR, the same path's
 prerequisites.
