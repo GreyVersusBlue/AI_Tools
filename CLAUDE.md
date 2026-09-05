@@ -104,6 +104,38 @@ every edit. The deduplication work that established them is summarised in
   `max-height` plus `overflow:hidden` inside `@media print` — size print boxes
   with `min-height` and let overflow be visible). Each is a floor: it reports
   only what it can see statically, and everything it prints is real.
+- **`npm run check:docs-commands` guards the claims the docs make about
+  commands.** It fails when a tracked `.md` writes `npm run <name>` for a script
+  `package.json` does not define, or `node <path>` for a file that is not in the
+  tree. This exists because three tools have now been documented in this repo
+  that were never committed — `sync-social-tags.mjs`, the original `board-check`
+  folder, and `list-dark-candidates.mjs`, whose invented output became a
+  handoff's rollout plan. Placeholders (`npm run test:<name>`) are skipped. A
+  document whose *subject* is that a command is absent has two ways to say so: a
+  named entry in the script's `KNOWN_MISSING`, with its reason, for a name
+  several documents cite (the guard then fails if that script ever appears, so
+  the exemption cannot outlive the gap); or, for a whole passage — a
+  post-mortem quoting commands that are gone — a muted region, opened by an
+  HTML comment reading `docs-commands: off — reason` alone on its line and
+  closed by one reading `docs-commands: on`. A marker only counts when it is
+  alone on its line, which is why this sentence can name it. The reason is
+  required, every region is printed on every run, and a region left open to
+  end-of-file fails. Bare backticked file paths are deliberately **not**
+  checked — most are written without their
+  directory prefix, and a guard that guesses is worse than none. It runs in CI.
+- **`npm run check:adoption` measures the shared-file adoption row** of
+  `BACKLOG.md`'s header, which was the last number in that table with no script
+  behind it and had been re-derived by a different hand grep every session — on
+  2026-09-04 that counted a *comment* as a reference and a gitignored build
+  output as two adopters. It walks the 86 tool pages' real `src`/`href` and
+  `import` references (files from `git ls-files`, so nothing untracked is in
+  scope), follows per-tool modules, and prints the row as pasteable Markdown;
+  `--file roster.js` names the adopters, `--check` fails if the header
+  disagrees. It runs in CI **without** `--check`, because the header is
+  legitimately stale between a merge and the step-6 rewrite — run `--check`
+  yourself when you write that header. Direct and indirect are reported
+  separately (`1 (+1 via a module)`); the plain number is the direct count the
+  header has always carried.
 - **`npm run lint`** (ESLint, Path 2 P5) covers `_shared/*.js`, the per-tool
   modules, `sw.js`, the tooling and every suite — not inline `<script>` in the
   tool pages. Rules that matter: `no-undef`, `no-unused-vars`, `eqeqeq`. A new

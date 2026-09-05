@@ -50,7 +50,7 @@ file conflicted.
 | Suites | **140** in `Tools/board-check/suites.json`, green locally (21.6 min) and in CI; `expectedFailures` **empty** |
 | Accessibility allowlist | **22 page-rule pairs on 22 pages** — 21 `color-contrast`, 1 `aria-required-children` (034). Untouched by these phases, and the six tools that gained a new `<select>` came in clean |
 | Tool registry | 87 rows, **217 keys and 32 prefixes across 108 files** (`pcl_idnames_v1` is the one new key); four IndexedDB databases declared; `check:registry` green, `dynamic` empty everywhere |
-| Shared-file adoption (of 86) | `a11y.js` 77 · `ink-paper.css` 71 · `base.css` 68 · **`store.js` 33** · **`roster.js` 32** · `print-area.css` 20 · `state-link.js` 17 · `qr-scan.js` 10 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · `duplex-print.js` 1 · `student-details.js` 1 · `share.js` 1 · `qr-draw.js` 1 · `stage.js` 1 · `media-db.js` 1 · `seating-read.js` 1 |
+| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 77 · `a11y.js` 77 · `ink-paper.css` 71 · `base.css` 68 · `store.js` 33 · `roster.js` 32 · `print-area.css` 20 · `state-link.js` 17 · `qr-scan.js` 10 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · `duplex-print.js` 1 · `media-db.js` 1 · `qr-draw.js` 1 · `seating-read.js` 1 · `share.js` 1 · `stage.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087**. 81 of them have recorded open ideas |
 | Lint | clean |
@@ -174,8 +174,11 @@ prerequisites (8, 9) and then Path 5 P3 (10), which is the next real rollout.
   `Roster.resolve()` re-reads storage on every call and 008 renders per card; only the id
   half moved. The two modules agree about normalisation and about checking the tool's own
   roster first, and both say so in their headers — if that ever drifts, 008 is where it
-  shows. `student-details.js` now has exactly two consumers: 006 (which mentions it in prose
-  only) and 008.
+  shows. `student-details.js` has exactly two consumers, and **this sentence used to name
+  the wrong ones**: they are 008, directly, and **007**, through `np-details.js`, which
+  re-exports the module. 006 is not a consumer at all — it names the file in two comments.
+  `npm run check:adoption -- --file student-details.js` prints both, and finding this on its
+  first run is the reason rank 3 existed.
 - **036 and 044 were on R3a's list and got no picker.** Neither has a student-names field —
   036 imports grade rows, 044 is a sub-plan form — so there was nothing for one to fill. If a
   future round wants them wired, it is a feature, not a rollout.
@@ -582,15 +585,16 @@ one of them touches `_shared/`.
    `[hidden]{display:none!important}` rule on any page whose CSS sets `display` on a
    toggled element.
 3. Green locally: `check:dedupe`, `check:tests`, `check:social`, `check:entities`,
-   `check:hidden-flex`, `check:print-clip`, `check:registry`, `lint`,
-   `check:precache -- --base origin/main`, every touched tool's `test:<name>`, and
+   `check:hidden-flex`, `check:print-clip`, `check:registry`, `check:docs-commands`,
+   `lint`, `check:precache -- --base origin/main`, every touched tool's `test:<name>`, and
    `test:a11y -- --only <nnn>` for every touched page. **Never add an allowlist line.**
    A new tool comes in clean.
 4. A new `_shared/` module ships with a pure-logic Node suite and at most one adopter.
 5. Squash-merged to `main` after CI is green; merge confirmed before the session ends.
 6. **Then rewrite this file's "Where things stand" header and re-rank.** After the merge
    is confirmed — not before, so it records what actually landed rather than what you
-   hoped would. Add a `HISTORY.md` entry for what shipped and what you got wrong. Commit
+   hoped would. Take the adoption row from `npm run check:adoption` and confirm the
+   result with `npm run check:adoption -- --check`; do not re-derive it by grep. Add a `HISTORY.md` entry for what shipped and what you got wrong. Commit
    and merge that too.
 
 **On writing that honestly.** The most valuable line in any of these documents has
