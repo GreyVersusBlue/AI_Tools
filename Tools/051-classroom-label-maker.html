@@ -15,12 +15,20 @@
 <meta name="twitter:title" content="Classroom Label Maker (Target Language) — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Print vocabulary labels for real classroom objects in the target language, each with a QR code linking to a pronunciation clip, plus a plain reference sheet.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='10' width='20' height='12' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M6 12l10 6 10-6' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Tool-local semantic tints, with 001's values — ink-paper.css owns the 11
+     palette tokens and does not yet own these. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; --err-line: #6d3a33; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -38,32 +46,34 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], textarea, select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; min-height: 6rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
 
   table.word-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
   table.word-table th, table.word-table td { border: 1px solid var(--line); padding: .4rem .5rem; text-align: left; }
-  table.word-table th { background: #eef1f4; font-size: .74rem; color: var(--muted); }
+  table.word-table th { background: var(--card-2); font-size: .74rem; color: var(--muted); }
   table.word-table a.test-link { font-size: .78rem; color: var(--accent-2); }
 
-  .file-warning { display: none; background: #fbeceA; border: 1px solid #e6c6c1; color: var(--err); border-radius: 8px; padding: .8rem 1rem; margin-bottom: 1rem; font-size: .86rem; font-weight: 600; }
+  .file-warning { display: none; background: var(--err-bg); border: 1px solid var(--err-line); color: var(--err); border-radius: 8px; padding: .8rem 1rem; margin-bottom: 1rem; font-size: .86rem; font-weight: 600; }
   .file-warning.show { display: block; }
 
+  /* Everything below is the printed sheet: #printArea is display:none on screen
+     and ink-paper.css treats it as paper in dark, so its greys stay as they are. */
   #printArea { display: none; }
   .label-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .2in; margin-bottom: .3in; }
   .label-card { border: 1.5px dashed #333; border-radius: 6px; padding: .15in; display: flex; align-items: center; gap: .12in; height: 1.4in; }

@@ -7,6 +7,10 @@
 <meta name="description" content="Live view of which station each team has reached, paired device-by-device over WebRTC.">
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='9' y='15' width='14' height='11' rx='2' fill='%232A6DB0'/%3E%3Cpath d='M12 15v-4a4 4 0 0 1 8 0v4' fill='none' stroke='%23C43A2F' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='20' r='1.8' fill='%23F6F7F9'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../../_shared/a11y.js"></script>
 <script src="../../_shared/webrtc-pair.js"></script>
 <script src="../../_shared/qr-scan.js"></script>
@@ -15,7 +19,10 @@
 <link rel="stylesheet" href="../../_shared/ink-paper.css">
 <link rel="stylesheet" href="../../_shared/a11y.css">
 <style>
-  :root { --good: #2f6b3a; }
+  /* Tool-local semantic tints, with 001's values — the shared file owns the 11
+     palette tokens and does not yet own these. */
+  :root { --good: #2f7d4f; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --good: #63c08e; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -33,19 +40,19 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
 
   .roster { width: 100%; border-collapse: collapse; font-size: .9rem; }
   .roster th, .roster td { border: 1px solid var(--line); padding: .5rem .6rem; text-align: left; vertical-align: middle; }
-  .roster th { background: #f1f0ea; font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
-  .roster .bar-wrap { background: #eeece3; border-radius: 999px; height: 10px; width: 160px; overflow: hidden; }
+  .roster th { background: var(--card-2); font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+  .roster .bar-wrap { background: var(--card-2); border-radius: 999px; height: 10px; width: 160px; overflow: hidden; }
   .roster .bar-fill { background: var(--accent-2); height: 100%; }
   .roster .status-done { color: var(--good); font-weight: 700; }
   .roster .status-disconnected { color: var(--muted); }
@@ -61,6 +68,7 @@
     border: 1px solid var(--line-strong); border-radius: 6px; padding: .5rem .6rem;
   }
   .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; margin: .5rem 0; }
+  /* The camera viewfinder stays black in both themes — it is a lens, not chrome. */
   video.scan-video { width: 100%; max-width: 320px; border-radius: 8px; display: none; margin: .5rem auto; background: #000; }
   video.scan-video.active { display: block; }
   .status-line { font-size: .82rem; color: var(--muted); margin-top: .5rem; }

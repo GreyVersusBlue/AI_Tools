@@ -70,6 +70,19 @@ const PAGES = [
     prep: async page => { await page.click('.tab-btn[data-tab="handout"]'); await settle(page, 200); } },
   { label: '024', url: '/Tools/024-number-talks-board.html' },
   { label: '072', url: '/Tools/072-plot-diagram-builder.html' },
+  // increment 2
+  { label: '025', url: '/Tools/025-writing-prompt-generator.html' },
+  { label: '048', url: '/Tools/048-art-portfolio-label-maker.html', sheet: '#previewGrid .label-preview',
+    prep: async page => {
+      await page.click('#addRowBtn');
+      await settle(page, 200);
+      await page.fill('#entriesList input[data-title]', 'Self-portrait');
+      await settle(page, 600);
+    } },
+  { label: '051', url: '/Tools/051-classroom-label-maker.html' },
+  { label: 'cc-remote', url: '/Tools/command-center/remote.html' },
+  { label: 'er-lock', url: '/Tools/escape-room-builder/lock.html' },
+  { label: 'er-monitor', url: '/Tools/escape-room-builder/monitor.html' },
 ];
 
 // Chrome is what follows the theme. Anything that is a projector surface
@@ -119,7 +132,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3, increment 1: 010, 015, 021, 023, 024, 072');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor)');
 
 for (const p of PAGES) {
   /* ── dark ── */
