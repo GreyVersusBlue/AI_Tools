@@ -343,8 +343,8 @@ that is a re-rank, and it is yours to make, not a session's.
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
 | 1 | Live-site checks Stage 1 could not do: the two-deploy update test and an OS share-target run. **Devon only.** | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 2 | `check:docs-commands` — fail when a tracked `.md` cites an `npm run <x>` `package.json` does not define | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 3 | `check:adoption` — measure the header's shared-file adoption table with a committed script. There is none today; a hand grep counted a *comment* as a reference on 2026-09-04, and on the same day another counted `Tools/board-check/.offline-copy-staging/` — a gitignored build output — as two more adopters | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 2 | `check:docs-commands` — fail when a tracked `.md` cites an `npm run <x>` `package.json` does not define | site | ¼ | `n3altd` 2026-09-05 00:00 UTC | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 3 | `check:adoption` — measure the header's shared-file adoption table with a committed script. There is none today; a hand grep counted a *comment* as a reference on 2026-09-04, and on the same day another counted `Tools/board-check/.offline-copy-staging/` — a gitignored build output — as two more adopters | site | ¼ | `n3altd` 2026-09-05 00:00 UTC | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 4 | 034 `aria-required-children` — the last non-contrast accessibility allowance | 034 | ¼ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
 | 5 | Move the vendored jsPDF and SheetJS out of `SHELL_URLS` — no shell tool uses them; ~1.3 MB off the install | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 6 | Adopt `_shared/store.js` in the other two storage eras — 063 (a `{v:1}` payload) and `Tools/school-calendar/scv-store.js` (probe + migrate) | site | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
