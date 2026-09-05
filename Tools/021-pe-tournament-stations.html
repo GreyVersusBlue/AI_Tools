@@ -20,6 +20,7 @@
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/stage.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -121,7 +122,7 @@
   .stage-controls button.secondary:hover { background: rgba(255,255,255,.22); border-color: #fff; }
   .stage-controls button.danger { background: rgba(255,255,255,.12); color: #ffd8d0; border-color: #e08a7a; }
   .stage-controls button.danger:hover { background: var(--err); color: #fff; border-color: var(--err); }
-  .stage:fullscreen { width: 100vw; height: 100vh; border-radius: 0; display: flex; flex-direction: column; justify-content: center; }
+  .stage.is-fullscreen { width: 100vw; height: 100vh; border-radius: 0; display: flex; flex-direction: column; justify-content: center; }
 
   @keyframes stageFlash { 0% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); } 25% { box-shadow: inset 0 0 0 2000px rgba(255,255,255,.4); } 100% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); } }
   .stage.flash { animation: stageFlash .65s ease-out; }
@@ -150,18 +151,18 @@
   .station-tile.is-rest { border-left-color: var(--good); background: #f3f9f5; }
   .station-tile.is-rest h3 { color: var(--good); }
   .rest-badge { display: inline-block; background: var(--good); color: #fff; border-radius: 999px; padding: .1rem .55rem; font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; margin-bottom: .35rem; }
-  .stage:fullscreen .rest-badge { font-size: clamp(.85rem, 1.5vw, 1.2rem); padding: .3rem 1rem; }
+  .stage.is-fullscreen .rest-badge { font-size: clamp(.85rem, 1.5vw, 1.2rem); padding: .3rem 1rem; }
 
-  .stage:fullscreen .stage-time { font-size: clamp(6rem, 20vw, 15rem); }
-  .stage:fullscreen .stage-sub { font-size: clamp(1.4rem, 3vw, 2.4rem); }
-  .stage:fullscreen .stage-status { font-size: clamp(1rem, 2vw, 1.6rem); }
-  .stage:fullscreen .stage-controls button { font-size: clamp(1rem, 1.6vw, 1.4rem); padding: .8rem 1.6rem; }
-  .stage:fullscreen .station-tiles { gap: 1.2rem; }
-  .stage:fullscreen .station-tile { padding: 1.2rem 1.4rem; }
-  .stage:fullscreen .station-tile h3 { font-size: clamp(1.5rem, 3.4vw, 3rem); }
-  .stage:fullscreen .station-tile .activity { font-size: clamp(.9rem, 1.6vw, 1.3rem); }
-  .stage:fullscreen .station-chip { font-size: clamp(1.05rem, 2vw, 1.7rem); padding: .4rem 1.1rem; }
-  .stage:fullscreen .station-tile .next-line { font-size: clamp(.85rem, 1.4vw, 1.15rem); }
+  .stage.is-fullscreen .stage-time { font-size: clamp(6rem, 20vw, 15rem); }
+  .stage.is-fullscreen .stage-sub { font-size: clamp(1.4rem, 3vw, 2.4rem); }
+  .stage.is-fullscreen .stage-status { font-size: clamp(1rem, 2vw, 1.6rem); }
+  .stage.is-fullscreen .stage-controls button { font-size: clamp(1rem, 1.6vw, 1.4rem); padding: .8rem 1.6rem; }
+  .stage.is-fullscreen .station-tiles { gap: 1.2rem; }
+  .stage.is-fullscreen .station-tile { padding: 1.2rem 1.4rem; }
+  .stage.is-fullscreen .station-tile h3 { font-size: clamp(1.5rem, 3.4vw, 3rem); }
+  .stage.is-fullscreen .station-tile .activity { font-size: clamp(.9rem, 1.6vw, 1.3rem); }
+  .stage.is-fullscreen .station-chip { font-size: clamp(1.05rem, 2vw, 1.7rem); padding: .4rem 1.1rem; }
+  .stage.is-fullscreen .station-tile .next-line { font-size: clamp(.85rem, 1.4vw, 1.15rem); }
 
   /* ── Station template picker ──────────────────────────────────────── */
   .station-row { border-bottom: 1px dashed var(--line); padding-bottom: .6rem; margin-bottom: .6rem; }
@@ -1143,23 +1144,17 @@
 
   setInterval(tick, TICK_MS);
 
-  /* ---------- fullscreen / kiosk toggle for the stage ---------- */
-  function updateFullscreenLabel() {
-    var active = document.fullscreenElement === els.stage;
-    els.fullscreenBtn.innerHTML = active ? '&#10530; Exit Fullscreen' : '&#9970; Fullscreen';
-  }
-  function toggleFullscreen() {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else if (els.stage.requestFullscreen) els.stage.requestFullscreen();
-  }
-  els.fullscreenBtn.addEventListener('click', toggleFullscreen);
-  document.addEventListener('fullscreenchange', updateFullscreenLabel);
-  document.addEventListener('keydown', function (e) {
-    if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      var tag = (document.activeElement && document.activeElement.tagName) || '';
-      if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') return;
-      toggleFullscreen();
-    }
+  /* ---------- fullscreen / kiosk toggle for the stage: _shared/stage.js ----------
+     Path 5 P2. The helper owns the button and its label, the F key and its
+     is-the-teacher-typing guard, the fullscreenchange listener, and the
+     fixed-overlay fallback for a browser that has no Fullscreen API or
+     refuses the request — which this tool never had, so a gym display that
+     could not go fullscreen simply did nothing. Every `.stage:fullscreen`
+     rule above is now `.stage.is-fullscreen`, which the helper sets in both
+     cases, so the same CSS drives real fullscreen and the fallback. */
+  Stage.mount(els.stage, {
+    button: els.fullscreenBtn,
+    labels: { enter: '\u26F2 Fullscreen', exit: '\u2922 Exit Fullscreen' }
   });
 
   /* ---------- remote control: same-device (BroadcastChannel) + phone-to-laptop (WebRTC) ----------

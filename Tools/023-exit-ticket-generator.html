@@ -20,6 +20,7 @@
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/stage.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="exit-ticket-generator/etg-sequence.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -128,9 +129,9 @@
   .stage .think-timer:empty { display: none; }
   .stage .think-timer.think-timer-done { color: var(--err); animation: think-timer-flash 1s steps(2, start) infinite; }
   @keyframes think-timer-flash { 50% { opacity: .2; } }
-  .stage:fullscreen { width: 100vw; height: 100vh; border-radius: 0; }
-  .stage:fullscreen .prompt-text { font-size: clamp(2.2rem, 6vw, 5rem); }
-  .stage:fullscreen .think-timer { font-size: clamp(2.6rem, 8vw, 6rem); }
+  .stage.is-fullscreen { width: 100vw; height: 100vh; border-radius: 0; }
+  .stage.is-fullscreen .prompt-text { font-size: clamp(2.2rem, 6vw, 5rem); }
+  .stage.is-fullscreen .think-timer { font-size: clamp(2.6rem, 8vw, 6rem); }
 
   .meta-row { display: flex; justify-content: center; gap: .5rem; margin-bottom: 1.3rem; flex-wrap: wrap; min-height: 1.4rem; }
   .meta-row .tag {
@@ -226,14 +227,14 @@
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
     padding: 2rem; min-height: 12rem; margin-bottom: .6rem; display: flex; align-items: center; justify-content: center;
   }
-  .discussion-stage:fullscreen { width: 100vw; height: 100vh; border-radius: 0; background: var(--paper); }
+  .discussion-stage.is-fullscreen { width: 100vw; height: 100vh; border-radius: 0; background: var(--paper); }
   .discussion-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; width: 100%; }
   .discussion-board.focused { display: block; }
   .discussion-card {
     background: #eaf1f6; border: 1px solid #c9dce6; border-radius: 10px; padding: 1.2rem 1.4rem;
     font-size: clamp(1.1rem, 2.6vw, 1.6rem); font-weight: 600; line-height: 1.4; cursor: pointer;
   }
-  .discussion-stage:fullscreen .discussion-card { font-size: clamp(1.6rem, 4vw, 3rem); }
+  .discussion-stage.is-fullscreen .discussion-card { font-size: clamp(1.6rem, 4vw, 3rem); }
   .discussion-card .discussion-letter {
     display: block; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
     color: var(--accent-2); margin-bottom: .4rem;
@@ -1461,39 +1462,33 @@
   els.seqNextBtn.addEventListener('click', function () { sequenceStep(1); });
   els.seqJumpBtn.addEventListener('click', sequenceJumpToToday);
 
-  // ── Fullscreen / projector mode ──────────────────────────────────────────
-  function updateFullscreenLabel() {
-    var active = document.fullscreenElement === els.stage;
-    els.fullscreenBtn.innerHTML = active ? '&#9974; Exit Fullscreen' : '&#9974; Fullscreen';
-  }
-  function toggleFullscreen() {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else if (els.stage.requestFullscreen) els.stage.requestFullscreen();
-  }
-  function updateDiscussionFullscreenLabel() {
-    var active = document.fullscreenElement === els.discussionStage;
-    els.discussionFullscreenBtn.innerHTML = active ? '&#9974; Exit Fullscreen' : '&#9974; Fullscreen';
-  }
-  function toggleDiscussionFullscreen() {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else if (els.discussionStage.requestFullscreen) els.discussionStage.requestFullscreen();
-  }
-  els.fullscreenBtn.addEventListener('click', toggleFullscreen);
-  els.discussionFullscreenBtn.addEventListener('click', toggleDiscussionFullscreen);
-  document.addEventListener('fullscreenchange', function () {
-    updateFullscreenLabel();
-    updateDiscussionFullscreenLabel();
+  // ── Fullscreen / projector mode: _shared/stage.js (Path 5 P2) ────────────
+  //    Two stages on two tabs, so each mount is gated by `enabled` — F on the
+  //    Prompt Bank tab drives the prompt stage, F on the Discussion tab drives
+  //    the board, and on any other tab F is just a letter. That is what the
+  //    hand-rolled version did with its own currentTab check; what it did not
+  //    do is survive a browser that refuses fullscreen (the helper falls back
+  //    to a fixed overlay, so the same `.is-fullscreen` CSS applies either
+  //    way), and it left the toggle button OUTSIDE the fullscreened subtree,
+  //    where the Fullscreen API does not render it — a teacher on stage had no
+  //    visible way out but the F key. `hud` moves each button into its own
+  //    stage while on it and puts it back after.
+  Stage.mount(els.stage, {
+    button: els.fullscreenBtn,
+    hud: els.fullscreenBtn,
+    labels: { enter: '\u26F6 Fullscreen', exit: '\u26F6 Exit Fullscreen' },
+    enabled: function () { return currentTab === 'bank'; }
+  });
+  Stage.mount(els.discussionStage, {
+    button: els.discussionFullscreenBtn,
+    hud: els.discussionFullscreenBtn,
+    labels: { enter: '\u26F6 Fullscreen', exit: '\u26F6 Exit Fullscreen' },
+    enabled: function () { return currentTab === 'discussion'; }
   });
   document.addEventListener('keydown', function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    var tag = (document.activeElement && document.activeElement.tagName) || '';
-    var typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
-    if ((e.key === 'f' || e.key === 'F') && !typing) {
-      if (currentTab === 'bank') { e.preventDefault(); toggleFullscreen(); }
-      else if (currentTab === 'discussion') { e.preventDefault(); toggleDiscussionFullscreen(); }
-      return;
-    }
-    if (currentTab === 'triage' && !typing && triageCurrentId && (e.key === '1' || e.key === '2' || e.key === '3')) {
+    if (Stage.isTyping(document.activeElement)) return;
+    if (currentTab === 'triage' && triageCurrentId && (e.key === '1' || e.key === '2' || e.key === '3')) {
       e.preventDefault();
       setTriageStatus(triageCurrentId, { '1': 'got', '2': 'almost', '3': 'reteach' }[e.key]);
     }

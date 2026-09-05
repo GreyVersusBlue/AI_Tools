@@ -183,7 +183,9 @@ same file's tree diagram still listed `Tools/schedule/libs/jspdf/`, deleted in R
 Phase 1 — fixed in passing, since `_shared/vendor/jspdf/` is where 035 actually loads it
 from. `npm run path5:next` is the one name in `KNOWN_MISSING`, because three sentences across
 `BACKLOG.md` and `HISTORY.md` exist precisely to say it does not exist; the guard fails if
-that script ever appears, so the exemption cannot outlive the gap. **Deliberately not
+that script ever appears, so the exemption cannot outlive the gap. *(And it did not: the
+script landed on 2026-09-05 and the entry was deleted in the same PR. `KNOWN_MISSING` is
+empty now.)* **Deliberately not
 checked:** bare backticked file paths. There are 318 of them across the tracked `.md` files
 and most are written without a directory prefix (`005-seating-chart.html`), so resolving them
 means guessing — measured, then not implemented.

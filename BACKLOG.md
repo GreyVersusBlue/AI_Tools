@@ -473,22 +473,23 @@ session hitting one of these ships rather than stalls.
 
 ### Live blockers and corrections carried forward
 
-- **`npm run path5:next` / `Tools/board-check/list-dark-candidates.mjs` does not
-  exist.** A Wave A1 handoff said it shipped in #167 and quoted its output as the Path 5
-  rollout backlog; it was never committed. Rank 3 is to build it. This is the **third**
-  tool documented but never committed (`sync-social-tags.mjs` and the original
-  `board-check` folder were the first two) — which is why `check:docs-commands` exists.
-  **That guard shipped in #187**, and `path5:next` is the one name in its `KNOWN_MISSING`
-  list, with this bullet as the reason. The guard fails the day that script appears while
-  the exemption is still there, so **the PR that builds `list-dark-candidates.mjs` must
-  delete the entry and correct this bullet** — that is the point of the arrangement, not an
-  obstacle to work around. *(This pointer said "rank 12" from #171 until 2026-09-04, when
-  rank 12 was the jsPDF/`SHELL_URLS` row and had nothing to do with it; the guard the
-  sentence means has always been `check:docs-commands`.)*
-- **The "17–45 hardcoded literals per tool" figure for Path 5 P3 is wrong** and was
-  removed in #169 rather than replaced: it swept in `white-space`, `@media print` blocks
-  and inline script, and is about 3× too high. Do not reintroduce a figure without the
-  script.
+- **`npm run path5:next` exists now — this blocker is spent.**
+  `Tools/board-check/list-dark-candidates.mjs` was built on 2026-09-05, and
+  `check:docs-commands`'s `KNOWN_MISSING` entry for `path5:next` was deleted in the same
+  PR, which is exactly the expiry the arrangement was designed for: check 3 of that guard
+  would have gone red on the next run if the entry had outlived the gap. `KNOWN_MISSING`
+  is empty again, and empty is its healthy state. The history — a Wave A1 handoff claiming
+  the script shipped in #167 and quoting its output as the Path 5 rollout backlog, the
+  third of three tools documented and never committed — is in `HISTORY.md`. Two of those
+  three are still missing: `sync-social-tags.mjs` and the original `board-check` folder.
+- **The "17–45 hardcoded literals per tool" figure for Path 5 P3 was wrong**, was removed
+  in #169 rather than replaced (it swept in `white-space`, `@media print` blocks and
+  inline script), and now has a replacement that comes from a script:
+  **1,749 colour literals across the 74 pages still on the filter — median 17 per page,
+  range 3–74, none at zero.** Read it off `npm run path5:next`, do not carry it forward:
+  it moves every time a page is converted. The script counts a literal only in a
+  colour-bearing property, only inside `<style>`, never inside `@media print` and never
+  inside a rule that is already dark work; its header says so in full.
 - **`index.html`'s `color-contrast` count is not stable between runs** — ×8 at the
   2026-09-03 baseline, then ×24 and ×35 with the file untouched. The landing page paints
   its category counts and the "Offline: N of 86 tools ready" readout as the worker
