@@ -16,6 +16,41 @@ now the two biggest rollouts onto it. The plan itself — the services in depend
 that the tool paths become adoption rounds rather than invention — worked, and Path 3 P3/P4
 are the proof: two rounds that invented nothing and changed 31 tool pages.
 
+**The working mode changed, 2026-09-05.** Devon's standing instruction is now: *"work the
+next two ranked items in `BACKLOG.md`, open a PR, merge to `main`"* — run without anyone
+watching, with no time to review. Three changes to `BACKLOG.md` followed, and they are worth
+knowing about because they invert an assumption most of this file was written under.
+
+- **`BACKLOG.md` opens with a "How this repo is worked" section** stating the loop and its two
+  rules: never stop to ask, and never park work on a person. A judgement call gets made,
+  shipped, and recorded in this file so it can be reversed cheaply — not deferred.
+- **Rank 1 was removed from the ranked table**, and the table renumbered to a contiguous
+  1..181. It was the two live-site checks Stage 1 could never do — the two-deploy update test
+  and an OS share into the installed PWA — marked **Devon only**, and Devon has said he is not
+  going to run them. A row every session must skip does not belong at the top of a ranked
+  list. They are parked under Cross-cutting with the full context, and the Stage 1 entry below
+  already says the same thing: **still never verified on the live site.** Parking them does not
+  make them done, and if either is ever run the bullet should be deleted rather than left to
+  quietly become a wrong "never verified".
+- **"Decisions Devon still owes" is now "Standing decisions"**, and every open question has a
+  **default applied** — taken from the recommendation a previous session had already written
+  into the same row. Nothing in the queue blocks on a person any more. The one that is a real
+  product question rather than an implementation one is **OCR: an on-demand, non-precached
+  Tesseract download against the offline promise. Defaulted to no**, because "every tool keeps
+  working offline once the site has been visited" is the first sentence of `CLAUDE.md` and the
+  reason this site has no CDN; the alternative, vendoring a ~10 MB build into the precache, is
+  worse. That row (rank 68) should read "out of scope" rather than "pending a decision", and it
+  is the first thing to bring to Devon if he ever does want to spend one.
+- **Two rank citations in that table were wrong** and were corrected while it was rewritten:
+  the 035-theme row had cited "Rank 6 / 21" since it was written, and rank 6 as it then stood
+  was the `store.js` adoption row, unrelated to 035.
+
+**What this does not change.** Two things are still not a session's call: promoting anything
+student-facing, and re-ranking the list wholesale. Both change what the product is rather than
+how it is built. The "don't promote one without Devon saying so" notes scattered through the
+per-tool sections stand; the "open question for Devon" notes do not, and now mean *decide it
+and write down what you decided*.
+
 **Ranks 2 and 3 — two guards over the claims the documents make. #187, no `CACHE_VERSION`
 bump: nothing precached changed, and `check:precache --base` confirmed it.** Both come from the same recurring failure — a document asserting
 something nobody checked — and both found real drift on their first run.

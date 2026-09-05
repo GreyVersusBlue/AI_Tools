@@ -302,6 +302,15 @@ files must be added there too.
 
 ## The backlog — start and end every phase here
 
+- **The standing instruction is "work the next two ranked items in `BACKLOG.md`, open a
+  PR, merge to `main`."** It runs unattended; Devon is not reviewing these rounds
+  (2026-09-05). So: **never stop to ask.** If a row needs a judgement call, take the
+  default from `BACKLOG.md`'s "Standing decisions" if one is written, and otherwise decide
+  it yourself, ship it, and record the call and its reasoning in `HISTORY.md` so it can be
+  reversed cheaply. An "open question for Devon" note left in a Tier 2 section from an
+  earlier era means *decide it and write down what you decided*. The two things that are
+  still not a session's call: promoting anything **student-facing**, and **re-ranking the
+  list** wholesale. Read `BACKLOG.md`'s "How this repo is worked" for the rest.
 - **`BACKLOG.md` is the entry point.** Read `CLAUDE.md` first and that second,
   before the section you are about to work. Its header carries the current
   state, what to start and any live blocker; Tier 1 is the ranked index of every
