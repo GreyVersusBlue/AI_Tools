@@ -32,13 +32,24 @@ const browser = await launch();
 const page = await prepPage(browser, BASE, { width: 1280, height: 950 });
 
 const ROSTER = ['Ada Lovelace', 'Marco Polo', 'Nellie Bly', 'Zheng He', 'Grace Hopper', 'Ida B Wells'];
-const BEHIND = ROSTER[0];   // never called; everybody else is on 60
+const BEHIND = ROSTER[0];   // never called; everybody else is on 600
 
 /* The deficit is deliberately enormous. Each pick also *increments* that
    student's count, so the lean self-corrects as it works — which is the right
-   behaviour and a confound for a short measurement. A gap of 60 keeps the
-   effect obvious across the handful of picks this suite can afford to make
-   through the real animation. The exact odds are smoke.mjs's job. */
+   behaviour and a confound for a short measurement. The exact odds are
+   smoke.mjs's job.
+
+   It was 60 until 2026-09-05, and 60 was too small: `weight = max - count + 1`
+   made the behind student 61/65 of each eligible draw at the start and only
+   52/56 by the twentieth pick, because her own count had climbed to ~9 while
+   everyone else stayed put. Feeding that chain into the no-repeat rule gives a
+   long-run rate of ~47.9% rather than the ~50% ceiling, and **the `> 0.4`
+   assertion below then failed 4.4% of runs** — measured over 200,000 simulated
+   runs of the exact chain (uniformPick + fairnessWeights + the no-repeat rule),
+   and observed for real in CI on 2026-09-05 at exactly 8/20. At 600 the
+   self-correction is negligible over twenty picks (49.96% mean) and the same
+   assertion fails 1 run in ~77,000. The assertion was not touched: the fixture
+   was made big enough for the property it asserts to be true in practice. */
 
 console.log('Name Picker — lean toward who has been called least');
 
@@ -50,7 +61,7 @@ await settle(page, 400);
    picked up on reload. */
 await page.evaluate(r => {
   const stats = {};
-  r.forEach((n, i) => { stats[n] = i === 0 ? 0 : 60; });
+  r.forEach((n, i) => { stats[n] = i === 0 ? 0 : 600; });
   localStorage.setItem('np_current', JSON.stringify(r));
   localStorage.setItem('np_stats', JSON.stringify(stats));
 }, ROSTER);
@@ -117,8 +128,17 @@ async function draw() {
   return name;
 }
 
-const TRIES = 20;
-const measure = async () => {
+/* Two budgets, because the two measurements are not equally noisy. Leaning is
+   a ~50% event and twenty draws settle it; flat is a ~1-in-6 event, and twenty
+   draws of that land on 7+ hits about 1 run in 92 — which is what made the
+   `leanRate > flatRate + 0.15` line below fail 1.08% of runs on its own, a
+   second flake behind the first. Forty flat draws take it to 1 run in ~4,500
+   for the suite as a whole (300,000 simulated runs), at the cost of about 36
+   seconds: each draw is a real UI roll of roughly two seconds, which is the
+   only reason these numbers are not larger still. */
+const TRIES_LEAN = 20;
+const TRIES_FLAT = 40;
+const measure = async (TRIES) => {
   const hits = { behind: 0, seen: new Set() };
   for (let i = 0; i < TRIES; i++) {
     const name = await draw();
@@ -128,35 +148,35 @@ const measure = async () => {
   return hits;
 };
 
-const lean = await measure();
-const leanRate = lean.behind / TRIES;
+const lean = await measure(TRIES_LEAN);
+const leanRate = lean.behind / TRIES_LEAN;
 /* The ceiling here is 50%, not the ~92% the raw weights suggest: both pickers
    exclude whoever was called last, so no student can be drawn twice in a row
    however far behind they are. That rule outranks the lean by design — being
    called twice running is exactly what a teacher does not want — so a heavily
    favoured student alternates with the rest of the room. */
-ok(leanRate > 0.4, `the student who is behind is drawn far more than 1 in 6 (got ${(leanRate * 100).toFixed(0)}% of ${TRIES}, ceiling 50%)`);
-ok(lean.seen.size >= 2, `and the rest of the class is still reachable (${lean.seen.size} different students in ${TRIES} picks)`);
+ok(leanRate > 0.4, `the student who is behind is drawn far more than 1 in 6 (got ${(leanRate * 100).toFixed(0)}% of ${TRIES_LEAN}, ceiling 50%)`);
+ok(lean.seen.size >= 2, `and the rest of the class is still reachable (${lean.seen.size} different students in ${TRIES_LEAN} picks)`);
 
 /* ── 3. with the option off, the same roster is drawn flat ─────────────── */
 await openOptions();
 await page.uncheck('#weightedFairness');
 await settle(page, 200);
-const flat = await measure();
-const flatRate = flat.behind / TRIES;
+const flat = await measure(TRIES_FLAT);
+const flatRate = flat.behind / TRIES_FLAT;
 ok(flatRate < 0.45, `off, the student behind is back toward 1 in 6 (got ${(flatRate * 100).toFixed(0)}%)`);
 /* The margin has to fit between the two bounds above, and those bounds are
    generous on purpose: leanRate is capped at 0.5 by the no-repeat rule, and
-   flatRate is only asserted to be under 0.45 because 20 draws of a 1-in-6
-   chance is a noisy sample — five hits out of twenty (25%) happens about a
-   quarter of the time. Demanding a 0.25 gap was therefore self-contradictory
-   with the line above it and failed roughly one run in four for no reason but
-   luck. 0.15 is still a difference nobody would miss (a student drawn 40%+ of
-   the time versus 25%), and it cannot be defeated by a sample the preceding
-   assertion accepts. More draws would tighten this properly, but each draw is
-   a real UI roll costing about two seconds. */
+   flatRate is only asserted to be under 0.45 because a 1-in-6 chance is a noisy
+   sample — five hits out of twenty (25%) happens about a quarter of the time.
+   Demanding a 0.25 gap was therefore self-contradictory with the line above it
+   and failed roughly one run in four for no reason but luck. 0.15 is still a
+   difference nobody would miss (a student drawn 40%+ of the time versus 25%),
+   and it cannot be defeated by a sample the preceding assertion accepts. The
+   remaining noise was answered by TRIES_FLAT rather than by a wider margin —
+   see the note on the budgets above. */
 ok(leanRate > flatRate + 0.15, `the option makes a difference a teacher would see (${(flatRate * 100).toFixed(0)}% -> ${(leanRate * 100).toFixed(0)}%)`);
-console.log(`  the student sixty calls behind was picked ${(flatRate * 100).toFixed(0)}% of the time plain, ${(leanRate * 100).toFixed(0)}% leaning`);
+console.log(`  the student six hundred calls behind was picked ${(flatRate * 100).toFixed(0)}% of the time plain, ${(leanRate * 100).toFixed(0)}% leaning`);
 
 /* ── 5. no console noise ───────────────────────────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 4)));
