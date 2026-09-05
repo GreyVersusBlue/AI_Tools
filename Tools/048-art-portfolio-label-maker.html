@@ -15,12 +15,20 @@
 <meta name="twitter:title" content="Student Art Portfolio Label &amp; QR Tag Maker — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Printable labels and QR tags for physical student art portfolios, each code carrying a photo thumbnail or artist statement.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='7' width='20' height='15' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='11' cy='13' r='2' fill='%231f3550'/%3E%3Cpath d='M8 20l5-5 4 4 3-3 4 4' fill='none' stroke='%231f3550' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Tool-local semantic tints, with 001's values — ink-paper.css owns the 11
+     palette tokens and does not yet own these. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; --err-line: #6d3a33; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -42,7 +50,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
   input[type="text"], select, textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; min-height: 3.2rem; }
@@ -50,14 +58,14 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .25rem .55rem; font-size: .78rem; }
   button.link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: .2rem 0; font-size: .78rem; }
   button.link-btn:hover { background: transparent; color: var(--accent); }
@@ -65,14 +73,14 @@
   .btnrow, .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
   .ws-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
   .ws-row label { margin: 0; white-space: nowrap; }
-  .ws-row select { font-family: inherit; font-size: .88rem; padding: .4rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; background: #fff; color: var(--ink); flex: 1 1 12rem; min-width: 10rem; margin-bottom: 0; width: auto; }
+  .ws-row select { font-family: inherit; font-size: .88rem; padding: .4rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--card); color: var(--ink); flex: 1 1 12rem; min-width: 10rem; margin-bottom: 0; width: auto; }
 
   .entries-list { display: flex; flex-direction: column; gap: .7rem; }
   .entry-row { border: 1px solid var(--line); border-radius: 8px; padding: .7rem .8rem; display: grid; grid-template-columns: auto 70px 1fr; gap: .7rem; }
   .entry-thumb-wrap { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
   .entry-thumb {
     width: 64px; height: 64px; border-radius: 6px; border: 1px dashed var(--line-strong);
-    background: #f1f0ea center/cover no-repeat; display: flex; align-items: center; justify-content: center;
+    background: var(--card-2) center/cover no-repeat; display: flex; align-items: center; justify-content: center;
     color: var(--muted); font-size: .65rem; text-align: center; overflow: hidden;
   }
   .entry-fields input[type="text"], .entry-fields textarea { margin-bottom: .4rem; }
@@ -84,22 +92,24 @@
   .char-count { font-size: .68rem; color: var(--muted); margin: -.35rem 0 .5rem; text-align: right; }
   .char-count.warn { color: var(--err); font-weight: 600; }
 
-  .import-box { background: #f4f3ee; border: 1px solid var(--line); border-radius: 8px; padding: .9rem; margin-top: .6rem; display: none; }
+  .import-box { background: var(--card-2); border: 1px solid var(--line); border-radius: 8px; padding: .9rem; margin-top: .6rem; display: none; }
   .import-box.open { display: block; }
   .import-box textarea { min-height: 6rem; font-family: Consolas, monospace; font-size: .82rem; }
 
   #msg { font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-top: .7rem; white-space: pre-line; }
-  #msg.show { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
+  #msg.show { display: block; background: var(--err-bg); color: var(--err); border: 1px solid var(--err-line); }
 
-  .preview-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
+  /* The desk the label sheets are laid out on — it goes dark with the theme,
+     while each .label-preview below is a printed label and stays white paper. */
+  .preview-wrap { background: var(--card-2); border-radius: 10px; padding: 1.2rem; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
   .empty-hint { font-size: .85rem; color: var(--muted); text-align: center; padding: 2.4rem 1rem; }
 
   .label-preview-grid { display: flex; flex-wrap: wrap; gap: .6rem; }
-  .label-preview { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: .7rem; width: 190px;
+  .label-preview { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .7rem; width: 190px;
     display: flex; flex-direction: column; align-items: center; text-align: center; gap: .3rem; }
   .label-preview img.thumb, .label-preview .no-thumb {
-    width: 70px; height: 70px; border-radius: 6px; object-fit: cover; background: #f1f0ea;
+    width: 70px; height: 70px; border-radius: 6px; object-fit: cover; background: var(--card-2);
     display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: .62rem;
   }
   .label-preview canvas { width: 84px; height: 84px; image-rendering: pixelated; }
@@ -615,7 +625,9 @@
     els.previewGrid.innerHTML = '';
     valid.forEach(function (e) {
       var card = document.createElement('div');
-      card.className = 'label-preview';
+      // paper-sheet: this is what the printed label looks like, so ink-paper.css
+      // keeps it white with dark ink in dark mode too.
+      card.className = 'label-preview paper-sheet';
       var thumbHtml = e.image
         ? '<img class="thumb" src="' + e.image + '" alt="">'
         : '<div class="no-thumb">No photo</div>';
