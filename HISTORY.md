@@ -484,6 +484,77 @@ shell wrapper's, not the suite's. Reading the log rather than the notification i
 caught it. Two full runs were also thrown away and restarted because the tree was edited
 after they began; a run is only evidence for the tree it started on.
 
+**Ranks 1 and 2 — the last two storage eras, and gvb-save's silent writes. #193, `CACHE_VERSION` v152.**
+Two ½ rows in one PR, both follow-ups Path 4 P1 left behind, and between them they close the
+storage era: `_shared/store.js` has reached **all three key-naming eras** it was written for
+and has 36 adopters.
+
+**063 and `scv-store.js` adopted the primitive, from opposite directions.** 063's custom story
+was `{v: 1, text: "..."}` — the hand-rolled version stamp that nothing dispatches on, and the
+payload the row named. It is **not** a Store envelope: rule 1 wants a numeric `v` *and* an own
+`data` property, and this shape has only the first, so it reads as legacy version 0 and a
+`migrate` turns it into the bare string the envelope now carries. `envelope.test.mjs` had
+already recorded that spelling as "the one case a reader will expect to go the other way";
+there is now a browser assertion for it too. `scv-store.js` went the other way and writes with
+`raw: true`, because 010 Command Center reads `scv_calendar_v1` with a plain `JSON.parse` —
+the bytes on disk are what they were. Its own `isValid`/`migrate` still run in the tool on
+**every** load rather than only on a load Store judged to be behind, which is what Store's
+version machinery would have skipped for a current-version blob.
+
+**`assets/js/gvb-save.js` moved to `_shared/gvb-save.js`** — it was a second shared-code
+location, contra `CLAUDE.md`; `assets/` now holds only icons and screenshots. That also closed
+a duplicate row further down the ranked table saying the same thing, which is why #193 removed
+three rows for two shipped.
+
+**Its `save()` stopped swallowing failed writes.** It was a bare `return false` inside a bare
+catch, and neither consumer read the return value on every path. Two routes now, because
+gvb-save owns a `storage` object its callers inject and so cannot simply become a Store
+caller: when the slot's storage **is** the page's own localStorage (005), the write is handed
+to `Store.set(…, {raw: true})` — identical bytes, plus the quota banner and the same-tab
+change event; when it is an injected storage (007's boxing wrapper, a suite's Map), the write
+stays in gvb-save and the failure is reported through a new `Store.reportWriteFailure(err)`,
+the same never-silent surface `set()` uses. Keeping the injection is what keeps 007's four
+array-valued keys their exact shape on disk, which is why the two modules did not merge.
+
+**What we got wrong, found, or did not verify.**
+
+- **The row said gvb-save's consumers were 005, 007 and 064. 064 is not one.** Its
+  `htcm-store.js` says "discipline modeled on gvb-save.js" and imports nothing from it. The
+  real two are 005 (directly, plus `seating.mjs`) and 007 (through `np-store.js`). The Tier 2
+  bullet in `BACKLOG.md` carried the same error and is corrected.
+- **`__gvb_save_probe__` was the one write on this site `check:registry` had never heard of.**
+  `defaultStorage()` wrote it as `ls.setItem(probe, '1')` on a local alias, and the guard's
+  call-site scan matches `localStorage.setItem` — so the key was invisible in both directions:
+  never demanded, and free to vanish without a word. The probe is spelled out in full now and
+  declared on the registry's `shared` row. **The general lesson is that the guard's floor is
+  lower than it reads: a storage write through any alias is invisible to it, and nobody has
+  swept for others.**
+- **`np-store.js` carried a note asking for a fix that had already happened** — that gvb-save's
+  `load()` calls `store.getItem(key)` bare. `readRaw()` wraps it in a try/catch; all three
+  storage touches in that module are guarded. Corrected rather than left to send the next
+  session after a bug that is not there.
+- **`_shared/seating-read.js`'s reason for not using `Store.onChange` changed** and is restated
+  in the file. It used to be that 005 wrote through gvb-save rather than Store, so the same-tab
+  half could never fire; that write goes through Store now, so it *would* fire — for 005 and
+  nothing else. The `storage` listener stays, because the key is read raw by four tools.
+- **`Tools/Old Designs/` and `Tools/New Designs/` import `../assets/js/gvb-save.js`, and that
+  was already dead before the move**: from those folders it resolves to `Tools/assets/js/`, a
+  directory that has never existed. Verified before writing it down. Do not read it as
+  breakage from this round.
+- **The new suite was negative-probed.** `Tools/grammar-mad-libs/test/smoke-storage.mjs` (17
+  assertions) was run once with `migrateStory` deliberately broken, and section 1 went red —
+  which is the only evidence that a sweep-driven round has not gone green by breaking the page.
+  Worth doing every time; it cost two minutes.
+- **Not verified: no real full disk, and no real install.** The banner assertions fill
+  localStorage for real in headless Chromium and read the rendered element back, which is the
+  strongest thing available here, but the four browser spellings of a quota error are still
+  only covered by `isQuotaError`'s unit test. `CACHE_VERSION` v152 covers a rename in both
+  precache tiers that `check:precache --base origin/main` agrees with; nothing installed the
+  worker.
+- **One silent-ish path is left, on purpose.** With no store.js on the page, a failed gvb-save
+  write falls back to `console.error`. Both consumers link store.js, and the module says so;
+  nothing guards it.
+
 **Path 4 P1 — `_shared/store.js`, the storage primitive. #173, `CACHE_VERSION` v142.**
 The site had ~234 distinct localStorage key literals across 86 tools, each hand-rolling
 the same three guards and getting them subtly different. `store.js` is `window.Store`:
