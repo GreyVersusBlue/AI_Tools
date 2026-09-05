@@ -219,7 +219,28 @@ files must be added there too.
   every run. Adding a suite means adding it to `suites.json` **and** giving it a
   `test:<name>` shortcut — `npm run check:tests` fails if either is missing, or
   if a suite exists on disk that the list forgets. `--only <tool>` runs one
-  tool's suites; `--changed` runs the suites covering your working-tree diff.
+  tool's suites; `--changed` runs the suites covering your working-tree diff
+  and commits since `origin/main` (`--base <ref>` picks another base).
+- **CI runs `--changed` on pull requests and the full list on a push to
+  `main`** (`.github/workflows/ci.yml`, since 2026-09-05). The full pass is
+  ~21 minutes and was the measured bottleneck of every PR while most PRs touch
+  one or two tools; the push-to-main run is the safety net that catches
+  anything the selector under-selected before the site deploys. Which suites
+  cover which files is decided by `Tools/board-check/select-suites.mjs`, four
+  rules its header spells out: `_shared/`, `sw.js`, `index.html`,
+  `manifest.json`, `package*.json`, `Tools/board-check/` and `.github/` run
+  everything; a `Tools/<folder>/` edit runs that folder's suites **and** the
+  suites that open any page importing from that folder; a page edit runs the
+  suites that name it; and any page edit also runs the sweeps that list the
+  pages themselves (a11y, theme, picker rollout, registry shape). The step
+  prints every touched file and the reason for every selected suite.
+  `Tools/board-check/test/select-suites.test.mjs` (`npm run test:select-suites`,
+  pure Node) pins each rule against the real tree, including what must *not*
+  be selected. **Anyone touching the diffing in `run-suites.mjs` or the rules
+  in `select-suites.mjs` keeps both callers working** — a session's bare
+  `--changed` against `origin/main`, and CI's `--base origin/<base branch>` —
+  and adds the case to that test. The guards are not scoped: all eleven
+  together take about twelve seconds, so there is nothing to save.
 - A known-red assertion goes in `suites.json`'s `expectedFailures` with its exact
   text and a reason — **never** by loosening the assertion. The runner prints
   every expected failure on every run, still goes red if the same suite fails a

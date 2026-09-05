@@ -1,10 +1,26 @@
-# CI — the guards and the full suite, on every pull request and every push to main.
+# CI — the guards on every run; the suites a pull request touches on a pull
+# request, and every suite on a push to main.
 #
 # Until this file existed, 120 test suites and three read-only guards ran only
 # when a session remembered to run them. They are all designed to be
 # sandbox-safe (no network, no credentials, a static server on 127.0.0.1), so
 # there was never a reason they could not run here except that nobody had
 # written it down.
+#
+# TWO TEST STEPS, ONE OF WHICH RUNS. Measured across #187–#189 the job took
+# 20–21 minutes per pull request, almost all of it the 140-odd browser suites,
+# on PRs that typically touch one or two tools. So the pull-request job runs
+# `npm test -- --changed --base origin/<base branch>`: run-suites.mjs diffs the
+# merge-base of the base branch and HEAD (the same comparison the CACHE_VERSION
+# guard below makes) and runs only the suites that cover those files, by the
+# four rules in Tools/board-check/select-suites.mjs — a _shared/, sw.js,
+# harness or workflow edit still runs everything. The push-to-main job runs the
+# full list with no --changed, on purpose: it is the last run before the site
+# deploys, and a selector that under-selected on the PR is caught there rather
+# than by a teacher. The selector itself is a suite (select-suites.test.mjs)
+# that runs on every PR that touches it, since Tools/board-check/ is site-wide.
+# The guards are not scoped: all eleven together take about twelve seconds.
+# See CLAUDE.md, "Test tooling".
 #
 # A known-red assertion does NOT fail this workflow if it is recorded in
 # Tools/board-check/suites.json expectedFailures: run-suites.mjs prints it with
@@ -155,8 +171,18 @@ jobs:
         if: "!cancelled() && github.event_name == 'pull_request'"
         run: npm run check:precache -- --base "origin/${{ github.base_ref }}"
 
-      - name: Test suites
-        if: '!cancelled()'
+      # Pull request: only the suites covering the PR's diff against its base
+      # branch (see the header). The selection and the reason for every suite
+      # in it are printed at the top of the step, so "why did that not run" is
+      # answered from the log. A PR that touches nothing a suite covers (a
+      # Markdown-only change) runs no suite here and passes on the guards.
+      - name: Test suites (changed)
+        if: "!cancelled() && github.event_name == 'pull_request'"
+        run: npm test -- --changed --base "origin/${{ github.base_ref }}"
+
+      # Push to main: everything, as the safety net behind the selector.
+      - name: Test suites (full)
+        if: "!cancelled() && github.event_name != 'pull_request'"
         run: npm test
 
       # Screenshots and printed PDFs the browser suites write as they go. On a
