@@ -16,6 +16,12 @@
 <meta name="twitter:title" content="PE Tournament & Station Rotation — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Run timed PE station rotations for groups, plus a click-to-advance tournament bracket for the competitive activities inside a unit — all on one projector-friendly screen.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='13' y='4' width='6' height='3' rx='1' fill='%23C43A2F'/%3E%3Cline x1='21.5' y1='8.5' x2='23.5' y2='6.5' stroke='%23C43A2F' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='19' r='9' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M16 19V13M16 19l4.5 2.5' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block
+     (Path 5 P3); opting in here keeps a11y.js from putting its CSS-filter
+     invert on top. The rotation stage and the phone remote keep their own
+     surface colours in both themes — see --stage-bg below. The pairing QR
+     canvas is the visible win: under the filter it was inverted. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
@@ -33,7 +39,27 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <style>
-  :root { --good: #2f7d4f; }
+  /* Tool-local tints, the same pairs 001 carries. ink-paper.css owns the
+     palette tokens; these are the surfaces this page paints that the shared
+     file has no name for. The stage pair is the projector surface — navy
+     with white chalk in the light theme, near-black in dark, so the gym
+     display reads the same whichever theme the laptop is in; the hicontrast
+     mode below overrides both on purpose. Every text-on-tint pair clears
+     WCAG AA in both themes. */
+  :root {
+    --good: #2f7d4f; --good-bg: #f3f9f5;
+    --err-bg: #fbecea;  --err-line: #e6c6c1;
+    --info-bg: #eef4f9; --info-line: #c9dbe3;
+    --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
+    --stage-bg: var(--accent); --stage-ink: #fff;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --good: #63c08e; --good-bg: #173021;
+    --err-bg: #3a201c;  --err-line: #6d3a33;
+    --info-bg: #1b2a35; --info-line: #33505f;
+    --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
+    --stage-bg: #0c0f16; --stage-ink: #f4f6fa;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -46,7 +72,7 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
   .toolbar label { margin: 0; font-weight: 600; font-size: .85rem; }
   .toolbar .spacer { flex: 1 1 auto; }
 
@@ -55,7 +81,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
   input[type="text"], input[type="number"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .6rem;
   }
   textarea { min-height: 6rem; resize: vertical; font-family: Consolas, monospace; font-size: .85rem; }
@@ -63,14 +89,14 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: .2rem 0; font-size: .78rem; }
   button.link-btn:hover { background: transparent; color: var(--accent); }
   button:disabled { opacity: .45; cursor: not-allowed; }
@@ -82,10 +108,10 @@
   .row-line > * { margin-bottom: 0 !important; }
   .row-line .grow { flex: 1 1 auto; }
   .remove-row-btn {
-    background: #fff; border: 1px solid var(--line-strong); color: var(--muted);
+    background: var(--card); border: 1px solid var(--line-strong); color: var(--muted);
     width: 2.3rem; height: 2.3rem; flex-shrink: 0; border-radius: 6px; font-size: .9rem; padding: 0; cursor: pointer;
   }
-  .remove-row-btn:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .remove-row-btn:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
 
   .field-inline { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: .6rem; }
   .field-inline > div { flex: 1 1 140px; }
@@ -95,17 +121,17 @@
   .checkline input { width: auto; margin: 0; }
 
   #msg { font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-top: .5rem; white-space: pre-line; }
-  #msg.error { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
-  #msg.info { display: block; background: #eaf1f5; color: var(--accent-2); border: 1px solid #c9dbe3; }
+  #msg.error { display: block; background: var(--err-bg); color: var(--err); border: 1px solid var(--err-line); }
+  #msg.info { display: block; background: var(--info-bg); color: var(--accent-2); border: 1px solid var(--info-line); }
   /* Not an error — the tool did the safe thing on its own and is saying so
      (a name collision that was suffixed rather than allowed to overwrite). */
-  #msg.warn { display: block; background: #fdf6e3; color: #7a5a12; border: 1px solid #e6d5a8; }
+  #msg.warn { display: block; background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); }
 
   .empty-hint { font-size: .85rem; color: var(--muted); padding: .4rem 0; }
 
   /* ── Live rotation stage ─────────────────────────────────────────── */
   .stage {
-    background: var(--accent); color: #fff; border-radius: 12px;
+    background: var(--stage-bg); color: var(--stage-ink); border-radius: 12px;
     padding: 1.4rem 1.4rem 1.6rem; margin-bottom: 1.2rem; text-align: center;
   }
   .stage-sub { font-size: .95rem; opacity: .85; margin-bottom: .3rem; letter-spacing: .02em; }
@@ -121,7 +147,7 @@
   .stage-controls button.secondary { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.4); }
   .stage-controls button.secondary:hover { background: rgba(255,255,255,.22); border-color: #fff; }
   .stage-controls button.danger { background: rgba(255,255,255,.12); color: #ffd8d0; border-color: #e08a7a; }
-  .stage-controls button.danger:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .stage-controls button.danger:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
   .stage.is-fullscreen { width: 100vw; height: 100vh; border-radius: 0; display: flex; flex-direction: column; justify-content: center; }
 
   @keyframes stageFlash { 0% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); } 25% { box-shadow: inset 0 0 0 2000px rgba(255,255,255,.4); } 100% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); } }
@@ -144,13 +170,13 @@
   .station-tile h3 { margin: 0 0 .2rem; font-size: .95rem; color: var(--accent); }
   .station-tile .activity { font-size: .78rem; color: var(--muted); margin-bottom: .5rem; min-height: 1em; }
   .station-tile .groups-here { display: flex; flex-wrap: wrap; gap: .35rem; }
-  .station-chip { background: #eef4f9; border: 1px solid var(--accent-2); color: var(--accent-2); border-radius: 999px; padding: .2rem .6rem; font-size: .8rem; font-weight: 700; }
+  .station-chip { background: var(--info-bg); border: 1px solid var(--accent-2); color: var(--accent-2); border-radius: 999px; padding: .2rem .6rem; font-size: .8rem; font-weight: 700; }
   .station-tile .none-here { font-size: .78rem; color: var(--muted); font-style: italic; }
   .station-tile .next-line { font-size: .74rem; color: var(--muted); margin-top: .4rem; padding-top: .35rem; border-top: 1px dashed var(--line); }
   .station-tile .next-line strong { color: var(--accent-2); }
-  .station-tile.is-rest { border-left-color: var(--good); background: #f3f9f5; }
+  .station-tile.is-rest { border-left-color: var(--good); background: var(--good-bg); }
   .station-tile.is-rest h3 { color: var(--good); }
-  .rest-badge { display: inline-block; background: var(--good); color: #fff; border-radius: 999px; padding: .1rem .55rem; font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; margin-bottom: .35rem; }
+  .rest-badge { display: inline-block; background: var(--good); color: var(--accent-ink); border-radius: 999px; padding: .1rem .55rem; font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; margin-bottom: .35rem; }
   .stage.is-fullscreen .rest-badge { font-size: clamp(.85rem, 1.5vw, 1.2rem); padding: .3rem 1rem; }
 
   .stage.is-fullscreen .stage-time { font-size: clamp(6rem, 20vw, 15rem); }
@@ -178,10 +204,10 @@
   .score-station:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
   .score-station h3 { margin: 0 0 .5rem; font-size: .95rem; color: var(--accent); }
   .score-unit { color: var(--muted); font-weight: 400; font-size: .8rem; }
-  .score-group { background: #f7f6f2; border: 1px solid var(--line); border-radius: 7px; padding: .55rem .7rem; margin-bottom: .5rem; }
-  .score-group-here { border-color: var(--accent-2); background: #eef4f9; }
+  .score-group { background: var(--card-2); border: 1px solid var(--line); border-radius: 7px; padding: .55rem .7rem; margin-bottom: .5rem; }
+  .score-group-here { border-color: var(--accent-2); background: var(--info-bg); }
   .score-group-title { font-weight: 700; font-size: .82rem; margin-bottom: .4rem; }
-  .here-badge { background: var(--accent-2); color: #fff; border-radius: 999px; padding: .1rem .5rem; font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; margin-left: .3rem; }
+  .here-badge { background: var(--accent-2); color: var(--accent-ink); border-radius: 999px; padding: .1rem .5rem; font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; margin-left: .3rem; }
   .score-row { display: flex; align-items: center; gap: .6rem; margin-bottom: .35rem; }
   .score-row:last-child { margin-bottom: 0; }
   .score-name { flex: 1 1 auto; font-size: .85rem; }
@@ -192,7 +218,7 @@
   body.remote-mode .wrap, body.remote-mode footer.note { display: none; }
   body.remote-mode .remote-view { display: flex; }
   .remote-view {
-    position: fixed; inset: 0; background: var(--accent); color: #fff;
+    position: fixed; inset: 0; background: var(--stage-bg); color: var(--stage-ink);
     flex-direction: column; align-items: center; justify-content: center;
     padding: 1.4rem; text-align: center; overflow-y: auto;
   }
@@ -237,18 +263,18 @@
   .pair-status.good { color: var(--good); }
 
   /* ── Bracket (matches Bracket / Tournament Generator styling) ─────── */
-  .champion-banner { display: none; background: #fff9e8; border: 1px solid #e5c56a; color: #6b5410; border-radius: 8px; padding: .8rem 1rem; font-weight: 700; margin-bottom: 1rem; }
+  .champion-banner { display: none; background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-ink); border-radius: 8px; padding: .8rem 1rem; font-weight: 700; margin-bottom: 1rem; }
   .champion-banner.show { display: block; }
   .bracket-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 .9rem; }
   .bracket { display: flex; gap: 2.2rem; overflow-x: auto; padding-bottom: .5rem; }
   .round { display: flex; flex-direction: column; justify-content: space-around; min-width: 180px; }
   .round-label { font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-align: center; margin-bottom: .6rem; }
   .match { display: flex; flex-direction: column; gap: .35rem; margin: .5rem 0; flex: 1; justify-content: center; }
-  .slot { border: 1px solid var(--line-strong); border-radius: 6px; background: #fff; padding: .5rem .65rem; font-size: .9rem; text-align: left; cursor: pointer; transition: background .12s ease, border-color .12s ease; }
-  .slot:hover:not(.slot-bye):not(.slot-winner):not(.slot-empty) { border-color: var(--accent-2); background: #eef4f9; }
+  .slot { border: 1px solid var(--line-strong); border-radius: 6px; background: var(--card); padding: .5rem .65rem; font-size: .9rem; text-align: left; cursor: pointer; transition: background .12s ease, border-color .12s ease; }
+  .slot:hover:not(.slot-bye):not(.slot-winner):not(.slot-empty) { border-color: var(--accent-2); background: var(--info-bg); }
   .slot-empty { color: var(--muted); font-style: italic; cursor: default; }
-  .slot-bye { color: var(--muted); font-style: italic; cursor: default; background: #f5f4f0; }
-  .slot-winner { background: #eaf5ee; border-color: var(--good); color: var(--good); font-weight: 700; cursor: default; }
+  .slot-bye { color: var(--muted); font-style: italic; cursor: default; background: var(--card-2); }
+  .slot-winner { background: var(--good-bg); border-color: var(--good); color: var(--good); font-weight: 700; cursor: default; }
   .slot-decided { cursor: default; }
   .slot-decided:not(.slot-winner) { opacity: .5; text-decoration: line-through; }
 

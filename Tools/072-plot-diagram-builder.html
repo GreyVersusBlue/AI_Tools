@@ -15,12 +15,26 @@
 <meta name="twitter:title" content="Story Elements / Plot Diagram Builder — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Build a plot-mountain diagram (exposition through resolution) for a novel or story with your own class, then print or project it as a shared reference.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M4 24l8-14 4 6 4-10 8 18z' fill='none' stroke='%231f3550' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block
+     (Path 5 P3); opting in here keeps a11y.js from putting its CSS-filter
+     invert on top. The presentation overlay below is dark in BOTH themes on
+     purpose — it is a projector surface, not chrome. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/stage.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* Tool-local tint for a plot-stage box that has text in it. ink-paper.css
+     owns the palette tokens; this pair is the one colour this page paints
+     that the shared file has no name for. Both pairs clear WCAG AA. */
+  :root { --filled-bg: #f4f8f3; --filled-line: #8fae82; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --filled-bg: #1a2a1e; --filled-line: #4f7a52; }
+  /* The hidden attribute is only display:none in the UA stylesheet; any class
+     that sets display beats it. stage.js hides the exit button with `hidden`. */
+  [hidden] { display: none !important; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -37,7 +51,7 @@
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   input[type="text"], textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; min-height: 3.5rem; }
@@ -46,16 +60,16 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   select {
     font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; width: 100%;
   }
   .saves-row { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; }
@@ -64,13 +78,16 @@
 
   .mountain-wrap { position: relative; height: 380px; margin: 1rem 0 2rem; }
   .mountain-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  /* CSS beats the polyline's stroke attribute, so the mountain follows the
+     theme's accent instead of staying navy on a dark card. */
+  .mountain-svg polyline { stroke: var(--accent); }
   .stage-box { position: absolute; width: 180px; }
   .stage-box .stage-label { font-weight: 700; font-size: .82rem; color: var(--accent); margin-bottom: .2rem; text-align: center; }
   .stage-box textarea { min-height: 4.5rem; font-size: .8rem; }
-  .stage-box textarea.filled { background: #f4f8f3; border-color: #8fae82; }
+  .stage-box textarea.filled { background: var(--filled-bg); border-color: var(--filled-line); }
 
   .print-title { font-size: 1.5rem; margin: 0 0 .1rem; text-align: center; }
-  .print-author { text-align: center; color: #555; margin: 0 0 1rem; }
+  .print-author { text-align: center; color: var(--muted); margin: 0 0 1rem; }
   .print-elements { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem 1.5rem; font-size: .88rem; margin-bottom: 1.2rem; }
   .print-elements b { color: var(--accent); }
   .print-mountain-wrap { position: relative; height: 340px; margin-top: .5rem; }
@@ -81,13 +98,13 @@
      the current diagram for projecting live during class discussion.
      Independent CSS overlay (not gated on the Fullscreen API succeeding)
      so it works the same in every browser, including ones that refuse
-     fullscreen; requestFullscreen() is layered on top only as a bonus
-     that also hides the browser chrome when the browser allows it. This
-     mirrors the projector-mode pattern already used by Number Talks
-     Board (Tools/024), which hardcodes its own dark stage background
-     independent of the page's ink/paper theme for the same reason:
-     legibility from the back of a room matters more than theme
-     consistency for a projected view. ── */
+     fullscreen; _shared/stage.js (Path 5 P2) layers real fullscreen on top
+     where the browser allows it and owns the F key, the Escape of its own
+     fallback and the exit button. The stage hardcodes its own dark
+     background independent of the page's ink/paper theme, like Number
+     Talks Board (Tools/024): legibility from the back of a room matters
+     more than theme consistency for a projected view, so it is dark in the
+     light theme and dark in the dark theme. ── */
   #presentStage { display: none; }
   #presentStage.active {
     display: flex; flex-direction: column; align-items: center;
@@ -96,7 +113,7 @@
     padding: clamp(1.2rem, 3vw, 3rem) clamp(1.2rem, 4vw, 3.5rem);
     overflow: auto;
   }
-  body.presenting { overflow: hidden; }
+  body.stage-presenting { overflow: hidden; }
   .present-exit-btn {
     position: absolute; top: 1rem; right: 1rem;
     background: rgba(255,255,255,.08); color: #f4f6fa; border: 1px solid rgba(255,255,255,.25);
@@ -404,9 +421,15 @@
      projecting live during a class discussion. Built from the same state
      the print view uses, so it can never drift out of sync with what's
      actually in the form. The overlay is shown via a CSS class regardless
-     of whether the Fullscreen API is available; requestFullscreen() is
-     layered on top as a bonus (hides the browser chrome too) where the
-     browser allows it, but the read-only view works either way. */
+     of whether the Fullscreen API is available; _shared/stage.js (Path 5
+     P2) layers real fullscreen on top where the browser allows it, and
+     owns what this page used to hand-roll: the fullscreenchange listener
+     that drops the overlay when the browser's own Esc leaves fullscreen,
+     the exit button, Escape in the no-fullscreen fallback, and the
+     site-standard F key — which this tool never had. The overlay is
+     display:none until `.active`, so Present renders and shows it BEFORE
+     asking the helper for fullscreen; the helper's onChange(false) is the
+     one place it is torn down, whichever way it was left. */
   function renderPresentContent() {
     var title = state.title.trim() || 'Plot Diagram';
     var author = state.author.trim() ? 'by ' + escapeHtml(state.author.trim()) : '';
@@ -433,50 +456,30 @@
       stagesHtml + '</div>';
   }
 
+  var presentStage = Stage.mount(els.presentStage, {
+    exitButton: els.presentExitBtn,
+    // F is routed through enterPresent so the content is rendered and the
+    // overlay shown before the helper fullscreens it; the helper's own key
+    // would fullscreen an element that is still display:none.
+    fullscreenKey: false,
+    hotkeys: { f: function () { if (presentStage.isActive()) presentStage.exit(); else enterPresent(); } },
+    onChange: function (active) {
+      if (active) { els.presentExitBtn.focus(); return; }
+      els.presentStage.classList.remove('active');
+      els.presentStage.setAttribute('aria-hidden', 'true');
+      els.presentBtn.focus();
+    }
+  });
+
   function enterPresent() {
+    if (presentStage.isActive()) return;
     renderPresentContent();
     els.presentStage.classList.add('active');
     els.presentStage.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('presenting');
-    var el = els.presentStage;
-    if (el.requestFullscreen) {
-      el.requestFullscreen().catch(function () { /* overlay is already showing regardless */ });
-    } else if (el.webkitRequestFullscreen) {
-      el.webkitRequestFullscreen();
-    }
-    els.presentExitBtn.focus();
-  }
-
-  function exitPresent() {
-    if (document.fullscreenElement === els.presentStage && document.exitFullscreen) {
-      document.exitFullscreen().catch(function () { /* ignore */ });
-    } else if (document.webkitFullscreenElement === els.presentStage && document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    }
-    els.presentStage.classList.remove('active');
-    els.presentStage.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('presenting');
-    els.presentBtn.focus();
+    presentStage.enter();
   }
 
   els.presentBtn.addEventListener('click', enterPresent);
-  els.presentExitBtn.addEventListener('click', exitPresent);
-
-  document.addEventListener('fullscreenchange', function () {
-    // Covers the browser's own Esc/F11 exit of a real fullscreen session:
-    // drop the overlay too so it doesn't get stranded on-screen.
-    if (!document.fullscreenElement && els.presentStage.classList.contains('active')) {
-      els.presentStage.classList.remove('active');
-      els.presentStage.setAttribute('aria-hidden', 'true');
-      document.body.classList.remove('presenting');
-    }
-  });
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && els.presentStage.classList.contains('active')) {
-      exitPresent();
-    }
-  });
 
   /* ---------- boot ---------- */
   migrateLegacyIfNeeded();

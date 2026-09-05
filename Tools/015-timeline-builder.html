@@ -17,7 +17,13 @@
 <meta name="twitter:description" content="Build a visual timeline of events with photos, then display it on screen or print it.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cline x1='5' y1='16' x2='27' y2='16' stroke='%232A6DB0' stroke-width='2'/%3E%3Ccircle cx='10' cy='16' r='2.6' fill='%232A6DB0'/%3E%3Ccircle cx='19' cy='16' r='2.6' fill='%232A6DB0'/%3E%3Ccircle cx='25' cy='16' r='2.6' fill='%232A6DB0'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block
+     (Path 5 P3); opting in here keeps a11y.js from putting its CSS-filter
+     invert on top. The timeline itself is a sheet of paper and stays white
+     (`paper-sheet`); story mode is dark in both themes on purpose. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/stage.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="timeline-builder/tlb-layout.js"></script>
@@ -35,6 +41,12 @@
      that sets display beats it. This makes `el.hidden = true` mean it
      (check-hidden-flex). */
   [hidden] { display: none !important; }
+  /* Tool-local tints, the same pairs 001 carries. ink-paper.css owns the
+     palette tokens; these are the surfaces this page paints that the shared
+     file has no name for. --desk is the table the timeline sheet lies on.
+     Every text-on-tint pair clears WCAG AA in both themes. */
+  :root { --err-bg: #fbeceb; --err-line: #eecac7; --desk: #d9d7cd; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; --err-line: #6d3a33; --desk: #0e1014; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -46,7 +58,7 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
 
   .layout { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
@@ -55,7 +67,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], input[type="number"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { min-height: 3.5rem; resize: vertical; }
@@ -65,17 +77,17 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem; width: 100%; margin-bottom: .5rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .25rem .5rem; font-size: .78rem; width: auto; margin: 0; }
 
-  .warn-banner { font-size: .82rem; color: var(--err); background: #fbeceb; border: 1px solid #eecac7; border-radius: 6px; padding: .5rem .7rem; margin-bottom: .8rem; display: none; }
+  .warn-banner { font-size: .82rem; color: var(--err); background: var(--err-bg); border: 1px solid var(--err-line); border-radius: 6px; padding: .5rem .7rem; margin-bottom: .8rem; display: none; }
   .warn-banner.show { display: block; }
 
   .event-list .row-item {
@@ -103,10 +115,14 @@
 
   .view-toggle { display: flex; gap: .4rem; margin-bottom: 1rem; }
   .view-toggle button { width: auto; margin: 0; }
-  .view-toggle button.secondary.active { background: var(--accent); color: #fff; }
+  .view-toggle button.secondary.active { background: var(--accent); color: var(--accent-ink); }
 
-  .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; }
-  .timeline-scroll { background: #fff; border-radius: 8px; overflow-x: auto; padding: 3rem 1rem; box-shadow: 0 2px 10px rgba(0,0,0,.14); }
+  /* The timeline is a sheet of paper on a desk: the sheet carries
+     `paper-sheet` in the markup, which ink-paper.css uses to restore the
+     light tokens inside it, so --card is white here even in dark and the
+     ink on it stays dark. The desk goes dark with the theme. */
+  .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; }
+  .timeline-scroll { background: var(--card); border-radius: 8px; overflow-x: auto; padding: 3rem 1rem; box-shadow: 0 2px 10px rgba(0,0,0,.14); }
   .timeline-canvas { position: relative; height: 9rem; }
   .timeline-line { position: absolute; top: 50%; left: 0; height: 0; border-top: 3px solid var(--accent); transform: translateY(-50%); }
   .timeline-line.dashed { border-top-style: dashed; }
@@ -118,9 +134,9 @@
   .track-lane { position: absolute; left: 0; width: 100%; }
   .track-lane-label {
     position: sticky; left: .4rem; top: .3rem; display: inline-block; font-size: .68rem; font-weight: 700;
-    color: #fff; background: var(--accent); border-radius: 4px; padding: .15rem .5rem; z-index: 2;
+    color: var(--accent-ink); background: var(--accent); border-radius: 4px; padding: .15rem .5rem; z-index: 2;
   }
-  .marker { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--accent); transform: translate(-50%, -50%); }
+  .marker { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--card); box-shadow: 0 0 0 1px var(--accent); transform: translate(-50%, -50%); }
   .marker-bar { position: absolute; top: 50%; height: 6px; background: var(--accent-2); opacity: .55; transform: translateY(-50%); border-radius: 3px; }
   .event-label { position: absolute; width: 9rem; text-align: center; font-size: .78rem; transform: translateX(-50%); }
   .event-label.above { bottom: calc(50% + 1.2rem); }
@@ -129,11 +145,11 @@
   .event-label .lbl-title { color: var(--ink); }
   .event-label img { width: 2.4rem; height: 2.4rem; object-fit: cover; border-radius: 4px; margin: .2rem auto; display: block; }
 
-  .print-view { background: #fff; border-radius: 8px; padding: 1.2rem 1.4rem; box-shadow: 0 2px 10px rgba(0,0,0,.14); max-width: 46rem; margin: 0 auto; }
+  .print-view { background: var(--card); border-radius: 8px; padding: 1.2rem 1.4rem; box-shadow: 0 2px 10px rgba(0,0,0,.14); max-width: 46rem; margin: 0 auto; }
   .print-event { display: flex; gap: 1rem; padding: 1rem 0; border-left: 3px solid var(--accent); padding-left: 1.2rem; margin-left: .6rem; position: relative; }
   .print-event.dashed { border-left-style: dashed; }
   .print-event.dotted { border-left-style: dotted; }
-  .print-event::before { content: ''; position: absolute; left: -8px; top: 1.3rem; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--accent); }
+  .print-event::before { content: ''; position: absolute; left: -8px; top: 1.3rem; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--card); box-shadow: 0 0 0 1px var(--accent); }
   .print-event img { width: 4.5rem; height: 4.5rem; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
   .print-event .pe-date { font-weight: 700; color: var(--accent); font-size: .82rem; }
   .print-event .pe-track {
@@ -183,7 +199,7 @@
   .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
     justify-content: center; padding: 20px; z-index: 80; }
   .share-overlay[hidden] { display: none; }
-  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
+  .share-modal { background: var(--card); color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
     text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
   .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
   #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
@@ -225,7 +241,7 @@
   .pin-num {
     position: absolute; top: 50%; transform: translate(-50%, -50%);
     min-width: 1.15rem; height: 1.15rem; padding: 0 .2rem; border-radius: .6rem;
-    background: var(--accent); color: #fff; border: 2px solid #fff;
+    background: var(--accent); color: var(--accent-ink); border: 2px solid var(--card);
     font-size: .68rem; font-weight: 700; line-height: 1rem; text-align: center; white-space: nowrap;
   }
   .print-event .pe-place { font-size: .82rem; color: var(--accent-2); margin-top: .1rem; }
@@ -649,20 +665,20 @@
         <button type="button" class="secondary" id="viewCompareBtn">Compare two timelines</button>
       </div>
       <div id="screenView">
-        <div class="timeline-scroll">
+        <div class="timeline-scroll paper-sheet">
           <div class="timeline-canvas" id="timelineCanvas"></div>
         </div>
         <div class="legend-row" id="screenLegend"></div>
       </div>
       <div id="printPreview" style="display:none;">
-        <div class="print-view" id="printViewInner"></div>
+        <div class="print-view paper-sheet" id="printViewInner"></div>
       </div>
       <div id="compareView" style="display:none;">
         <div class="toolbar" style="margin-bottom:.8rem;">
           <label style="margin:0;font-weight:600;font-size:.85rem;" for="compareSelect">Compare with:</label>
           <select id="compareSelect"><option value="">Choose a saved timeline&hellip;</option></select>
         </div>
-        <div class="timeline-scroll">
+        <div class="timeline-scroll paper-sheet">
           <div class="timeline-canvas" id="compareCanvas"></div>
         </div>
         <div class="legend-row" id="compareLegend"></div>
@@ -2182,12 +2198,19 @@
     if (e.key === 'End') { e.preventDefault(); goStory(story.steps.length - 1); return; }
   }
 
-  function storyFullscreenChange() {
-    // Some browsers swallow the Esc keypress that leaves fullscreen, so treat
-    // leaving fullscreen as leaving the presentation too. exitStoryMode is
-    // idempotent, so the keydown path firing as well is harmless.
-    if (story && story.wentFullscreen && !document.fullscreenElement) exitStoryMode();
-  }
+  /* Fullscreen is _shared/stage.js's (Path 5 P3). It owns what this page
+     used to hand-roll: the request, the fullscreenchange listener that
+     treated leaving fullscreen as leaving the presentation (some browsers
+     swallow the Esc that does it), and — new — a fixed-overlay fallback plus
+     its Escape for a browser that refuses, and the site-standard F key. The
+     overlay is `hidden` until story mode starts, so Present un-hides and
+     builds it BEFORE asking for fullscreen; onChange(false) is the one place
+     a story is torn down from the helper's side, whichever way it ended. */
+  var storyStage = Stage.mount(els.storyOverlay, {
+    fullscreenKey: false,
+    hotkeys: { f: function () { if (story) exitStoryMode(); else enterStoryMode(); } },
+    onChange: function (active) { if (!active && story) exitStoryMode(); }
+  });
 
   function storyResize() {
     if (!story || !story.map) return;
@@ -2261,8 +2284,7 @@
     }
     story = {
       steps: TimelineStory.buildSteps(state.events),
-      index: 0, map: null, views: null, pins: {}, ticks: {}, currentView: null, raf: null,
-      wentFullscreen: false
+      index: 0, map: null, views: null, pins: {}, ticks: {}, currentView: null, raf: null
     };
     els.storyTitle.textContent = state.title || state.name;
     els.storyBody.classList.add('no-map'); // until a map is actually drawn
@@ -2270,17 +2292,13 @@
     els.storyOverlay.hidden = false;
     document.addEventListener('keydown', storyKeydown);
     window.addEventListener('resize', storyResize);
-    document.addEventListener('fullscreenchange', storyFullscreenChange);
     els.storyNextBtn.focus();
 
     // Fullscreen first, then measure: entering fullscreen changes the panel's
-    // size, and the map's extent is fitted to that panel's aspect ratio.
-    if (els.storyOverlay.requestFullscreen) {
-      try {
-        await els.storyOverlay.requestFullscreen();
-        if (story) story.wentFullscreen = true;
-      } catch (e) { /* not permitted here; the overlay already covers the window */ }
-    }
+    // size, and the map's extent is fitted to that panel's aspect ratio. The
+    // helper resolves once it is on stage either way — real fullscreen, or
+    // its fallback when the browser says no.
+    await storyStage.enter();
     if (!story) return;
     buildStoryStrip();
     renderStoryStep(0);
@@ -2296,18 +2314,14 @@
   function exitStoryMode() {
     if (!story) return;
     if (story.raf) cancelAnimationFrame(story.raf);
-    var wasFullscreen = story.wentFullscreen;
     story = null;
     document.removeEventListener('keydown', storyKeydown);
     window.removeEventListener('resize', storyResize);
-    document.removeEventListener('fullscreenchange', storyFullscreenChange);
     els.storyOverlay.hidden = true;
     els.storyMapLayer.innerHTML = ''; // release the base map bitmap
     els.storyMapLayer.style.transform = '';
     els.storyMap.classList.remove('dimmed');
-    if (wasFullscreen && document.fullscreenElement && document.exitFullscreen) {
-      document.exitFullscreen().catch(function () {});
-    }
+    storyStage.exit(); // a no-op when the helper is already off stage
     els.presentBtn.focus();
   }
 

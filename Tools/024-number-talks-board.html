@@ -16,6 +16,11 @@
 <meta name="twitter:title" content="Number Talks / Mental Math Routine Board — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Run a daily Number Talk: reveal a number string one expression at a time on a big projector display, then stamp up students' different mental-math strategies as they share out.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cline x1='5' y1='11' x2='27' y2='11' stroke='%232A6DB0' stroke-width='2'/%3E%3Cline x1='5' y1='21' x2='27' y2='21' stroke='%232A6DB0' stroke-width='2'/%3E%3Ccircle cx='11' cy='11' r='2.6' fill='%232A6DB0'/%3E%3Ccircle cx='19' cy='11' r='2.6' fill='%232A6DB0'/%3E%3Ccircle cx='15' cy='21' r='2.6' fill='%23C43A2F'/%3E%3Ccircle cx='23' cy='21' r='2.6' fill='%23C43A2F'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block
+     (Path 5 P3); opting in here keeps a11y.js from putting its CSS-filter
+     invert on top. The projector stage keeps its own surface colours in
+     both themes — see --stage-bg below. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/stage.js"></script>
 <!-- gvb:social:end -->
@@ -29,7 +34,21 @@
      that sets display beats it. This makes `el.hidden = true` mean it
      (check-hidden-flex). */
   [hidden] { display: none !important; }
-  :root { --good: #2f7d4f; }
+  /* Tool-local tints. ink-paper.css owns the palette tokens; these are the
+     surfaces this page paints that the shared file has no name for. The
+     stage trio is the projector surface: navy with white chalk in the light
+     theme, and in dark the same near-black the fullscreen stage already
+     used, so the board reads the same from the back of the room whichever
+     theme the teacher's laptop is in. Every text-on-tint pair clears WCAG AA
+     in both themes. */
+  :root {
+    --good: #2f7d4f; --info-bg: #eef3f6;
+    --stage-bg: var(--accent); --stage-ink: #fff; --stage-muted: #cfd8e2;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --good: #63c08e; --info-bg: #1b2a35;
+    --stage-bg: #0c0f16; --stage-ink: #f4f6fa; --stage-muted: #cfd8e2;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -49,7 +68,7 @@
 
   select, input[type="text"], textarea {
     font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem;
   }
   select:focus, input:focus, textarea:focus { outline: none; border-color: var(--accent-2); }
@@ -63,25 +82,25 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 700; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .6rem 1.1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: .2rem 0; font-size: .78rem; font-weight: 600; }
   button.link-btn:hover { background: transparent; color: var(--accent); }
   button:disabled { opacity: .4; cursor: not-allowed; }
 
   /* ── Big projector stage ─────────────────────────────────────────── */
   .stage {
-    background: var(--accent); color: #fff; border-radius: 14px;
+    background: var(--stage-bg); color: var(--stage-ink); border-radius: 14px;
     padding: 2.6rem 1.5rem 2rem; text-align: center; margin-bottom: .7rem; min-height: 12rem;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6rem;
   }
-  .stage .empty { color: #cfd8e2; font-size: 1.1rem; }
+  .stage .empty { color: var(--stage-muted); font-size: 1.1rem; }
   .expr-list { display: flex; flex-direction: column; gap: .5rem; align-items: center; }
   .expr-line {
     font-family: Consolas, "Courier New", monospace; font-weight: 800;
@@ -89,7 +108,7 @@
     animation: reveal-in .25s ease;
   }
   @keyframes reveal-in { from { opacity: 0; transform: translateY(-.4rem); } to { opacity: 1; transform: none; } }
-  .stage-caption { color: #cfd8e2; font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; margin-top: .3rem; }
+  .stage-caption { color: var(--stage-muted); font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; margin-top: .3rem; }
 
   .reveal-row { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; margin-bottom: 1.4rem; }
 
@@ -105,14 +124,14 @@
 
   /* ── Strategy board ───────────────────────────────────────────────── */
   .strategy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .8rem; margin-bottom: .8rem; }
-  .strategy-card { background: #f4f3ee; border: 2px solid var(--line-strong); border-radius: 10px; padding: .7rem .8rem; }
+  .strategy-card { background: var(--card-2); border: 2px solid var(--line-strong); border-radius: 10px; padding: .7rem .8rem; }
   .s-card-head { display: flex; gap: .4rem; margin-bottom: .5rem; }
   .s-card-head input[type="text"] { flex: 1; font-weight: 700; font-size: .88rem; }
   .remove-row-btn {
-    background: #fff; border: 1px solid var(--line-strong); color: var(--muted);
+    background: var(--card); border: 1px solid var(--line-strong); color: var(--muted);
     width: 2rem; height: 2rem; flex-shrink: 0; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer;
   }
-  .remove-row-btn:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .remove-row-btn:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
   .s-text {
     width: 100%; min-height: 4.2rem; resize: vertical; font-family: Consolas, monospace;
     font-size: 1rem; font-weight: 600; border: 1px solid var(--line-strong); border-radius: 6px; padding: .45rem .55rem;
@@ -129,10 +148,10 @@
   .bank-item-note { display: block; color: var(--muted); font-size: .75rem; font-style: italic; margin-top: .2rem; }
   .bank-item-actions { display: flex; gap: .4rem; flex-shrink: 0; }
   .bank-use-btn {
-    background: #fff; color: var(--accent-2); border: 1px solid var(--line-strong);
+    background: var(--card); color: var(--accent-2); border: 1px solid var(--line-strong);
     border-radius: 6px; font-size: .78rem; font-weight: 700; padding: .35rem .7rem; cursor: pointer;
   }
-  .bank-use-btn:hover { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+  .bank-use-btn:hover { background: var(--accent-2); color: var(--accent-ink); border-color: var(--accent-2); }
   .bank-empty { font-size: .85rem; color: var(--muted); margin: 0; }
 
   /* ── Session history ─────────────────────────────────────────────── */
@@ -182,11 +201,11 @@
   .poster-date { font-size: .9rem; color: #777; }
 
   .mode-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
-  .mode-tab { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); border-radius: 7px; padding: .55rem 1rem; font-weight: 700; font-size: .88rem; cursor: pointer; }
+  .mode-tab { background: var(--card); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 7px; padding: .55rem 1rem; font-weight: 700; font-size: .88rem; cursor: pointer; }
   .mode-tab:hover { border-color: var(--accent-2); color: var(--accent-2); }
-  .mode-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .mode-tab.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
-  .teaching-note { background: #eef3f6; border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem; font-size: .85rem; color: var(--ink); margin: 0 0 1rem; }
+  .teaching-note { background: var(--info-bg); border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem; font-size: .85rem; color: var(--ink); margin: 0 0 1rem; }
   .teaching-note strong { color: var(--accent); }
 
   .stage-toolbar { display: flex; justify-content: center; margin-bottom: .6rem; }
