@@ -16,8 +16,8 @@ now the two biggest rollouts onto it. The plan itself — the services in depend
 that the tool paths become adoption rounds rather than invention — worked, and Path 3 P3/P4
 are the proof: two rounds that invented nothing and changed 31 tool pages.
 
-**Ranks 2 and 3 — two guards over the claims the documents make. No `CACHE_VERSION` bump:
-nothing precached changed.** Both come from the same recurring failure — a document asserting
+**Ranks 2 and 3 — two guards over the claims the documents make. #187, no `CACHE_VERSION`
+bump: nothing precached changed, and `check:precache --base` confirmed it.** Both come from the same recurring failure — a document asserting
 something nobody checked — and both found real drift on their first run.
 
 <!-- docs-commands: off — this entry's subject is commands that no longer exist; naming them is the point -->
@@ -58,6 +58,14 @@ identical mistake the row was written to end, one section further down the same 
 files the header had simply omitted are now in the row: `sw-register.js` 85 and `a11y.css` 77.
 Indirect adopters are reported as `+n via a module` rather than folded into the count, so the
 long-running number keeps meaning what it meant.
+
+**A third wrong number, found while re-ranking.** This file's ranked table has always been
+described as "a contiguous 1..189". It has never held more than 185 rows; after #187 removed
+three (the two guards and the `Tools/schedule/libs/jspdf/` README row they fixed in passing)
+it holds 182. The block boundaries quoted in the "how this order was arrived at" paragraph
+were re-measured from the table rather than shifted down by three, because the old text
+contained the same class of error it was itself warning about — it said "39 enhancement rows"
+then "42 other tools" for a block of 82.
 
 **Why `check:adoption` runs in CI without `--check`.** The header is legitimately stale
 between a merge and the step-6 rewrite that follows it, so failing on that by default would
