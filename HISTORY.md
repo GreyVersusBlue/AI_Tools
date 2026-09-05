@@ -16,6 +16,31 @@ now the two biggest rollouts onto it. The plan itself — the services in depend
 that the tool paths become adoption rounds rather than invention — worked, and Path 3 P3/P4
 are the proof: two rounds that invented nothing and changed 31 tool pages.
 
+**CI scoped to the pull request's diff — 2026-09-05.** Every PR had been paying the full
+~21-minute suite pass (measured on #187–#189) while most touched one or two tools.
+`run-suites.mjs --changed` already existed for sessions; the pull-request job now runs it
+with `--base origin/<base branch>` and the push-to-main job still runs the full list, as
+the safety net before deploy. Reading `--changed` before trusting it with CI found three
+under-selections in the first draft, all fixed in `Tools/board-check/select-suites.mjs`
+(the selection logic, moved out of the runner so it can be tested): a `Tools/<folder>/`
+edit did not reach the suites that open a *page* importing from that folder (an edit to
+`Tools/schedule/` skipped schedule-visualizer's suites, though 035 imports from it; an
+edit to `Tools/seating-chart/` skipped the store suite that opens 005); the four suites
+that enumerate the tool pages with `readdirSync` (a11y sweep, theme sweep, picker rollout,
+registry shape) name no page and so could never be selected by a page edit; and a
+workflow-only PR ran nothing, which is the one PR that most needs to prove the pipeline.
+`.github/`, `manifest.json` are now site-wide with `_shared/`, `sw.js`, `index.html`,
+`package*.json` and `Tools/board-check/`. `Tools/board-check/test/select-suites.test.mjs`
+(`npm run test:select-suites`) pins every rule, half of its assertions being about what is
+*not* selected. The eleven guards were timed at about twelve seconds in total and left
+unscoped. **What was not verified:** a real scoped run on GitHub's runner — the PR that
+shipped this touches `Tools/board-check/` and `.github/`, both site-wide, so its own CI
+run is a full pass by design; the first genuinely scoped run is the next one-tool PR, and
+its log prints the selection and the reason for each suite. **Tradeoff:** a Markdown-only
+PR now runs no browser suite at all (the guards still run); and the selector reads a
+page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
+path at runtime from a string would not link its folder to its suites.
+
 **Batch size became a rule, not a number — 2026-09-05, same day.** The standing instruction
 had been "work the next *two* ranked items", which was right while the top of the list was
 quarter-session rows and would have been wrong the moment it reached rank 7 (Path 5 P3, a

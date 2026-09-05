@@ -99,6 +99,7 @@
     "test:stage": "node Tools/stage/test/stage.test.mjs && node Tools/stage/test/smoke-stage-rollout.mjs",
     "test:media": "node Tools/media/test/media-db.test.mjs && node Tools/media/test/smoke-media-db.mjs",
     "test:seating-read": "node Tools/seating-read/test/seating-read.test.mjs",
+    "test:select-suites": "node Tools/board-check/test/select-suites.test.mjs",
     "lint": "eslint"
   },
   "devDependencies": {

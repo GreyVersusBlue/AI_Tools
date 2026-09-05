@@ -65,6 +65,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { suitesForChanges, toolOf, readFileOnDisk, listPagesOnDisk } from './select-suites.mjs';
 
 const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const CONFIG = path.join(SITE, 'Tools', 'board-check', 'suites.json');
@@ -86,9 +87,6 @@ if (!SUITES.length) {
   process.exit(1);
 }
 
-/** The tool folder a suite belongs to: Tools/<tool>/test/x.mjs -> <tool>. */
-const toolOf = suite => (suite.split('/')[1] || '');
-
 const expectedFor = suite => EXPECTED.filter(e => e.suite === suite);
 
 /* ── argv ───────────────────────────────────────────────────────────────── */
@@ -102,16 +100,13 @@ const valueOf = name => {
 
 /* ── --changed ──────────────────────────────────────────────────────────── */
 
-// Maps touched paths to the suites that cover them. Three rules, in order:
-//
-//   _shared/, sw.js, index.html, Tools/board-check/  -> everything. These are
-//       site-wide; any of them can break a tool that does not name them.
-//   Tools/<folder>/...  -> every suite under that folder.
-//   Tools/<nnn>-<Name>.html  -> the suites whose source opens that page. The
-//       page and its folder have different names (005-Seating Chart
-//       Generator.html lives beside Tools/seating-chart/), and no file records
-//       the pairing, so this is resolved by reading each suite and looking for
-//       the filename — percent-encoded or not, which is how the suites write it.
+// Which suites cover the touched files is decided by select-suites.mjs (four
+// rules: site-wide, folder, page, sweep — its header explains each, and
+// Tools/board-check/test/select-suites.test.mjs proves them against the real
+// tree). This function only produces the file list. Two consumers depend on
+// it: a session's `--changed` against origin/main, and CI's pull-request job,
+// which passes `--base origin/<base branch>`; the push-to-main job runs the
+// full list on purpose. Keep both working when touching either half.
 function changedFiles(base) {
   const ref = base || 'origin/main';
   // -z throughout: half this repo's tool pages have spaces in their filenames
@@ -121,6 +116,10 @@ function changedFiles(base) {
   const run = args => execFileSync('git', args, { cwd: SITE, encoding: 'utf8' });
   const nul = out => out.split('\0').map(s => s.trim()).filter(Boolean);
 
+  // `ref...HEAD` is the merge-base diff — the commits on this side only, which
+  // is the same thing a pull request shows. The two-dot fallback compares
+  // trees directly and over-selects when the base has moved on, which is the
+  // safe direction.
   let merged = [];
   try {
     merged = nul(run(['diff', '--name-only', '-z', `${ref}...HEAD`]));
@@ -135,7 +134,8 @@ function changedFiles(base) {
   }
 
   // `status --porcelain -z` emits "XY path\0" per entry (a rename adds a second
-  // \0-terminated field, which we simply also treat as a touched path).
+  // \0-terminated field, which we simply also treat as a touched path). In CI
+  // the tree is clean and this adds nothing; locally it is the uncommitted edit.
   let working = [];
   try {
     working = run(['status', '--porcelain', '-z'])
@@ -145,34 +145,6 @@ function changedFiles(base) {
   } catch {}
 
   return [...new Set([...merged, ...working])];
-}
-
-const SITE_WIDE = [/^_shared\//, /^sw\.js$/, /^index\.html$/, /^Tools\/board-check\//, /^package(-lock)?\.json$/];
-
-function suitesForChanges(files) {
-  if (files.some(f => SITE_WIDE.some(re => re.test(f)))) return SUITES.slice();
-
-  const wanted = new Set();
-  const folders = new Set();
-  const pages = [];
-  for (const f of files) {
-    const m = /^Tools\/([^/]+)\/(.*)$/.exec(f);
-    if (m && !/\.html$/.test(m[1])) { folders.add(m[1]); continue; }
-    const p = /^Tools\/([^/]+\.html)$/.exec(f);
-    if (p) pages.push(p[1]);
-  }
-  for (const suite of SUITES) if (folders.has(toolOf(suite))) wanted.add(suite);
-
-  if (pages.length) {
-    const needles = pages.flatMap(p => [p, encodeURIComponent(p), p.replace(/ /g, '%20')]);
-    for (const suite of SUITES) {
-      if (wanted.has(suite)) continue;
-      let src = '';
-      try { src = fs.readFileSync(path.join(SITE, suite), 'utf8'); } catch { continue; }
-      if (needles.some(n => src.includes(n))) wanted.add(suite);
-    }
-  }
-  return SUITES.filter(s => wanted.has(s));
 }
 
 /* ── suite selection ────────────────────────────────────────────────────── */
@@ -191,9 +163,17 @@ if (flag('--only')) {
     process.exit(1);
   }
 } else if (flag('--changed')) {
-  const files = changedFiles(valueOf('--base'));
-  selected = suitesForChanges(files);
-  selectionLabel = `--changed (${files.length} file${files.length === 1 ? '' : 's'} touched)`;
+  const base = valueOf('--base') || 'origin/main';
+  const files = changedFiles(base);
+  const { selected: picked, why } = suitesForChanges(files, {
+    suites: SUITES, readFile: readFileOnDisk(SITE), listPages: () => listPagesOnDisk(SITE),
+  });
+  selected = picked;
+  selectionLabel = `--changed against ${base} (${files.length} file${files.length === 1 ? '' : 's'} touched, ${selected.length} of ${SUITES.length} suites)`;
+  // The selection is printed in full so a CI log answers "why did this suite
+  // run" and, more to the point, "why did that one not" without a checkout.
+  for (const f of files) console.log(`  touched  ${f}`);
+  for (const w of why) console.log(`  because  ${w}`);
   if (!selected.length) {
     console.log(`run-suites: ${selectionLabel} — no suite covers the touched files. Nothing to run.`);
     process.exit(0);
