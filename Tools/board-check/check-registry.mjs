@@ -22,7 +22,7 @@
 //
 // HOW A KEY IS RESOLVED (see below) is only half of it. Two patterns are not
 // localStorage call sites at all and were found the hard way:
-//   - assets/js/gvb-save.js writes through createSaveSlot({key}). Scanning call
+//   - _shared/gvb-save.js writes through createSaveSlot({key}). Scanning call
 //     sites alone attributed none of the Name Picker's fifteen keys to it, and
 //     made np_rosters look as though only 006 wrote it.
 //   - _shared/media-db.js opens IndexedDB on its callers' behalf, so an adopter
@@ -157,7 +157,7 @@ const STORE_READ_RE = /\bStore\s*\.\s*get\s*\(\s*([^,)]+?)\s*[,)]/g;
 const ROSTER_RE = /\bRoster\s*\.\s*(?:listRosters|getRoster|mountRosterPicker|onChange|parseNames|newId)\b/;
 const ROSTER_IDENTITY_RE = /\bRoster\s*\.\s*(?:getStudents|getStudentMeta|resolve|matchName|diffNames|syncRecords|reconcile|trackRenames)\b/;
 
-/* assets/js/gvb-save.js writes through createSaveSlot({key}), so a scan of
+/* _shared/gvb-save.js writes through createSaveSlot({key}), so a scan of
    localStorage call sites cannot see those keys at all — the Name Picker's
    fourteen came out attributed to nothing, and np_rosters looked as though only
    006 wrote it. In a file that imports createSaveSlot, a `key:` property is a
@@ -351,7 +351,7 @@ for (const f of FILES) {
     if (ROSTER_RE.test(src) || ROSTER_IDENTITY_RE.test(src)) rec.readKeys.add('np_rosters');
     if (ROSTER_IDENTITY_RE.test(src)) rec.readKeys.add('crh_students_v1');
   }
-  if (/createSaveSlot/.test(src) && !f.endsWith('assets/js/gvb-save.js')) {
+  if (/createSaveSlot/.test(src) && !f.endsWith('_shared/gvb-save.js')) {
     for (const m of src.matchAll(SLOT_KEY_RE)) {
       /* The slot's OWN object decides. np-store.js's fourteen real slots are
          rows of a KEYS table with no storage of their own (the caller passes

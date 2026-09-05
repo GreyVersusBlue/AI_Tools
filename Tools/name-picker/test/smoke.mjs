@@ -276,6 +276,14 @@ console.log("name-picker smoke\n");
   try { store = createStore({ storage: hostile }); } catch (e) { built = false; }
   assert(built, "the store is constructible when storage throws");
 
+  /* A write that does not stick is REPORTED now, never swallowed. On a page it
+     is Store's banner; here, with no window and no store.js, gvb-save falls
+     back to console.error — which is captured rather than printed, both so the
+     suite's output stays readable and so the report itself can be asserted. */
+  const reported = [];
+  const realError = console.error;
+  console.error = (...a) => reported.push(a.map(String).join(" "));
+
   let ran = true;
   try {
     store.get("rosters");
@@ -283,7 +291,11 @@ console.log("name-picker smoke\n");
     store.set("theme", "space");
     store.snapshot();
   } catch (e) { ran = false; }
+  console.error = realError;
+
   assert(ran, "reads and writes against throwing storage do not take the page down");
+  assert(reported.length === 1, "the blocked write was reported exactly once, not swallowed: " + JSON.stringify(reported));
+  assert(/np_theme/.test(reported[0]), "and the report names the key that did not save: " + reported[0]);
   assert(Object.keys(store.get("rosters")).length === 0, "a blocked read reads as empty");
 
   // gvb-save's own probe path: no localStorage at all in Node.

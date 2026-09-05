@@ -10,6 +10,12 @@
 // It also covers the migration contract's one irreversible claim — that a room
 // saved before 019 adopted Store still loads afterwards — because getting that
 // wrong silently deletes a teacher's escape rooms.
+//
+// Sections 4 and 5 were added when _shared/gvb-save.js stopped swallowing its
+// write failures: 4 drives 007, whose slots write through an injected boxing
+// wrapper and so report through Store rather than writing through it, and 5
+// checks that 005 — whose slot DOES write through Store now — still leaves the
+// bare, `__v`-stamped payload the four raw readers of `seating-chart-v1` expect.
 
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
 
@@ -164,6 +170,85 @@ const browser = await launch();
   eq(seen, [{ hello: 'world' }, null], '3: same-tab set and remove both notified, unsubscribe stopped it');
 
   eq(page.__errs.length, 0, '3: no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 3)));
+  await page.context().close();
+}
+
+/* ── 4. The other never-silent entrance: gvb-save's own writes ────────── */
+{
+  /* 007 Name Picker does not write through Store — np-store.js hands each of
+     its thirteen slots a boxing wrapper so the on-disk shape of the four
+     array-valued keys is preserved, and _shared/gvb-save.js writes through that
+     wrapper. Before Path 4 the write returned a bare `false` and nothing else
+     happened. It now reports through Store.reportWriteFailure, and this is the
+     assertion that the message actually reaches the screen — read out of the
+     browser, not off a return value. */
+  const page = await prepPage(browser, BASE, { width: 1200, height: 900 });
+  await page.goto(BASE + '/Tools/007-Name%20Picker.html', { waitUntil: 'networkidle' });
+  await settle(page, 250);
+
+  const filled = await page.evaluate(() => {
+    let n = 0, last = null;
+    for (let size = 512 * 1024; size >= 1; size = Math.floor(size / 4)) {
+      for (;;) {
+        try { localStorage.setItem('__fill__' + n, 'x'.repeat(size)); n++; }
+        catch (e) { last = { name: e && e.name, code: e && e.code }; break; }
+      }
+    }
+    return { writes: n, last };
+  });
+  ok(filled.writes > 0 && filled.last, '4: the fill hit the ceiling: ' + JSON.stringify(filled));
+
+  /* Crazy mode is the cheapest control on the page that persists: one click,
+     one `store.set('crazy', …)`, straight down through the slot. */
+  await page.click('#crazyBtn');
+  await settle(page, 250);
+
+  const banner = await page.evaluate(() => {
+    const el = [...document.querySelectorAll('[role="alert"]')]
+      .find(n => /could not save/i.test(n.textContent || ''));
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    return {
+      text: el.textContent,
+      visible: r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none',
+    };
+  });
+  ok(banner !== null, '4: a gvb-save write that did not stick produced a role=alert message');
+  ok(banner && banner.visible, '4: and it is rendered, not just in the DOM');
+  ok(banner && /Name Picker/.test(banner.text), '4: it names the tool: ' + (banner && banner.text));
+
+  eq(page.__blocked.length, 0, '4: nothing left the site: ' + JSON.stringify(page.__blocked.slice(0, 3)));
+  await page.context().close();
+}
+
+/* ── 5. Routing 005's writes through Store did not change the bytes ───── */
+{
+  /* `seating-chart-v1` is read with a plain JSON.parse by _shared/seating-read.js
+     and by three other tools. gvb-save now hands this write to Store, so the one
+     thing that must be true is that `raw: true` really did keep the payload
+     bare: `__v` inside it, and no {v, data} envelope around it. If this ever
+     fails, four tools stop seeing a teacher's chart. */
+  const page = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  await page.goto(BASE + '/Tools/005-Seating%20Chart%20Generator.html', { waitUntil: 'networkidle' });
+  await settle(page, 300);
+
+  const seen = await page.evaluate(async () => {
+    const got = [];
+    window.Store.onChange('seating-chart-v1', v => got.push(v && v.__v));
+    window.addRow();                       // a change; the autosaver picks it up
+    await new Promise(r => setTimeout(r, 2000));
+    const raw = localStorage.getItem('seating-chart-v1');
+    return { got, parsed: raw ? JSON.parse(raw) : null };
+  });
+
+  ok(seen.parsed !== null, '5: the chart was written');
+  eq(seen.parsed && seen.parsed.v, undefined, '5: with NO {v, data} envelope around it');
+  ok(seen.parsed && typeof seen.parsed.__v === 'number', '5: the version is inside the payload, as before');
+  ok(seen.parsed && Array.isArray(seen.parsed.sections), '5: and a raw reader still finds sections');
+  ok(seen.got.length > 0, '5: Store.onChange now fires in the writing tab for this key too: ' + JSON.stringify(seen.got));
+
+  eq(page.__errs.length, 0, '5: no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 3)));
   await page.context().close();
 }
 

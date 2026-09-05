@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<script src="../_shared/store.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -175,6 +176,8 @@
     'subject-area': ['math', 'science', 'gym', 'art', 'music', 'social studies']
   };
 
+  Store.configure({ toolName: 'Grammar Mad Libs Generator' });
+
   var els = {};
   ['templateSelect', 'customText', 'useCustomBtn', 'storyPreview', 'bankBox', 'fillRandomBtn', 'clearFillBtn',
    'printBtn', 'printStory', 'printBank', 'tagRef',
@@ -187,20 +190,40 @@
   /* Only overridden tags are stored; every reader goes through
      effectiveBank() so the printed bank, the on-screen bank, and the
      random fill all pick up a teacher's unit vocabulary together. */
+  /* Both keys go through _shared/store.js, the site's storage primitive: it owns
+     the {v, data} envelope and it is why a full disk now says so on screen
+     instead of being swallowed by the two bare catches this file used to have.
+
+     Neither key is renamed, and neither payload on disk is touched until the
+     next save. A bank map written before this adoption is a bare {tag: [...]}
+     object, which Store reads as legacy version 0 and hands to migrateBanks();
+     a story written before it is {v: 1, text: "..."} — a `v` with no `data`
+     beside it, so it is NOT a Store envelope and is also version 0, which is
+     the one thing worth knowing about this key. Both migrations are the shape
+     guard the old loaders did inline. */
+  var STORE_VERSION = 1;
+
   var CUSTOM_BANKS_KEY = 'gmlg_custom_banks_v1';
   var customBanks = {};
 
+  /* A tag map, from either era: only the shape check the old loader ran. */
+  function migrateBanks(fromVersion, data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+    return data;
+  }
+
   function loadCustomBanks() {
-    try {
-      var data = JSON.parse(localStorage.getItem(CUSTOM_BANKS_KEY) || 'null');
-      if (data && typeof data === 'object' && !Array.isArray(data)) customBanks = data;
-    } catch (e) { /* ignore */ }
+    customBanks = Store.get(CUSTOM_BANKS_KEY, {
+      version: STORE_VERSION,
+      migrate: migrateBanks,
+      'default': {}
+    }) || {};
     Object.keys(customBanks).forEach(function (tag) {
       if (!Array.isArray(customBanks[tag]) || !customBanks[tag].length) delete customBanks[tag];
     });
   }
   function saveCustomBanks() {
-    try { localStorage.setItem(CUSTOM_BANKS_KEY, JSON.stringify(customBanks)); } catch (e) { /* storage full/blocked */ }
+    Store.set(CUSTOM_BANKS_KEY, customBanks, { version: STORE_VERSION });
   }
   function effectiveBank(tag) {
     return (customBanks[tag] && customBanks[tag].length) ? customBanks[tag] : (WORD_BANK[tag] || []);
@@ -215,21 +238,26 @@
   var CUSTOM_STORY_KEY = 'gmlg_custom_story_v1';
   var customSaveTimer = null;
 
+  /* The stored value is now the story text itself, inside Store's envelope.
+     The pre-adoption payload was {v: 1, text: "..."} — a hand-rolled version
+     stamp that nothing ever dispatched on — and arrives here as version 0. */
+  function migrateStory(fromVersion, data) {
+    if (typeof data === 'string') return data;
+    if (data && typeof data.text === 'string') return data.text;
+    return null;
+  }
+
   function loadCustomStory() {
-    try {
-      var raw = localStorage.getItem(CUSTOM_STORY_KEY);
-      if (!raw) return;
-      var data = JSON.parse(raw);
-      if (data && typeof data.text === 'string') {
-        els.customText.value = data.text;
-      }
-    } catch (e) { /* corrupt or unavailable storage — ignore */ }
+    var text = Store.get(CUSTOM_STORY_KEY, {
+      version: STORE_VERSION,
+      migrate: migrateStory,
+      'default': null
+    });
+    if (typeof text === 'string') els.customText.value = text;
   }
 
   function saveCustomStory() {
-    try {
-      localStorage.setItem(CUSTOM_STORY_KEY, JSON.stringify({ v: 1, text: els.customText.value }));
-    } catch (e) { /* storage unavailable (e.g. private mode) — ignore */ }
+    Store.set(CUSTOM_STORY_KEY, els.customText.value, { version: STORE_VERSION });
   }
 
   function escapeHtml(s) {

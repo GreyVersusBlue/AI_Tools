@@ -96,6 +96,15 @@
       category: 'platform',
       backupLabel: 'Shared — theme preference',
       keys: [
+        /* Two write probes, both shared code's, both removed the instant they
+           are written, both declared so a backup can recognise one rather than
+           capture it. `__gvb_save_probe__` is _shared/gvb-save.js's and had
+           never been declared: its write was `ls.setItem(probe, '1')` on a
+           local alias, which check:registry's call-site scan could not see, so
+           the guard had never asked for it. The probe is spelled out in full
+           there now, so the scan sees it and this row can go stale if it ever
+           stops being written. */
+        { k: '__gvb_save_probe__', transient: true },
         { k: '__gvb_store_probe__', transient: true },
         { k: 'gvb-a11y-prefs' },
         { k: 'gvb-home-cats' },
@@ -327,7 +336,9 @@
       file: 'Tools/032-School%20Calendar%20Visualizer.html',
       category: 'scheduling-subs',
       keys: [
-        { k: '__scv_probe__', transient: true },
+        /* `__scv_probe__` was here until scv-store.js adopted _shared/store.js;
+           the blocked-storage probe is Store's `__gvb_store_probe__` now, and
+           that one is declared on the `shared` row. */
         { k: 'scv_calendar_v1' },
         { k: 'scv_view_cols' },
       ],

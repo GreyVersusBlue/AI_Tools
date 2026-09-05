@@ -23,7 +23,7 @@
        }],
        settings: { size: 'standard'|'fill'|'reference', theme: themeKey } }
 
-   Discipline modeled on assets/js/gvb-save.js: repair() runs on every load and
+   Discipline modeled on _shared/gvb-save.js: repair() runs on every load and
    fills defaults for every field, so later feature rounds can add fields
    without a v3 bump; an unparseable document is refused (fresh start) rather
    than half-loaded. Migration from v1 (htcm_cards_v1 array + htcm_card_size_v1

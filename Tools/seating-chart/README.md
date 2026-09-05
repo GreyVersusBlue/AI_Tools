@@ -62,7 +62,7 @@ is exactly what a Node test can drive without a browser and what a browser test
 would be a slow way to check. The page keeps the DOM and nothing else.
 
 The page is therefore an ES-module page. That is not a new dependency: adopting
-`assets/js/gvb-save.js` already made it one. The consequence worth knowing is
+`_shared/gvb-save.js` already made it one. The consequence worth knowing is
 that opening the saved `.html` file from disk no longer works — a browser refuses
 module imports over `file://`. The page detects that and says so instead of
 rendering a blank floor.

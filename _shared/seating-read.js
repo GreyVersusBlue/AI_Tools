@@ -87,12 +87,16 @@
     return parse(raw);
   }
 
-  /* A plain `storage` listener rather than Store.onChange: 005 writes this key
-     through assets/js/gvb-save.js, not through _shared/store.js, so the
-     same-tab CustomEvent half of that API would never fire for it and the
-     wiring would imply a guarantee this key does not have. Cross-tab is the
-     case that matters anyway — the teacher edits the chart in 005 and looks at
-     it in another tab. Returns an unsubscribe. */
+  /* A plain `storage` listener rather than Store.onChange. The reason has
+     changed and is worth restating: 005 writes this key through
+     _shared/gvb-save.js, which since Path 4 hands the write to Store when the
+     slot's storage is the page's own localStorage — so the same-tab CustomEvent
+     half WOULD now fire for 005's own writes. It would not fire for anyone
+     else's: this key is read raw by four tools and written by gvb-save through
+     an injected storage in the suites, so a Store.onChange here would still
+     imply a guarantee the key does not have. Cross-tab is the case that matters
+     anyway — the teacher edits the chart in 005 and looks at it in another tab.
+     Returns an unsubscribe. */
   function onChange(fn) {
     if (!global.addEventListener) return function () {};
     var handler = function (e) {

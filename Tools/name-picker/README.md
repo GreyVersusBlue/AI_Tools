@@ -9,7 +9,7 @@ name, would have meant a board change and a broken URL; see the session notes.
 
 | File | What it is |
 | --- | --- |
-| `np-store.js` | All thirteen storage keys, on `assets/js/gvb-save.js`. DOM-free. |
+| `np-store.js` | All thirteen storage keys, on `_shared/gvb-save.js`. DOM-free. |
 | `np-pick.js` | Who gets called and how fairly. Pure, injectable `rng`. DOM-free. |
 | `fonts/` | Bungee, Outfit, Press Start 2P, vendored. See its README. |
 | `test/smoke.mjs` | 207 assertions under plain Node. |

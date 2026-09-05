@@ -35,7 +35,7 @@
 // DOM-free on purpose — test/smoke.mjs imports it under plain Node, which is why
 // the gvb-save import is relative rather than site-absolute.
 
-import { createSaveSlot, defaultStorage } from "../../assets/js/gvb-save.js";
+import { createSaveSlot, defaultStorage } from "../../_shared/gvb-save.js";
 
 const GAME = "name-picker";
 const SLOT_VERSION = 1;   // per-key slots. Unversioned data on disk reads as 0.
@@ -303,15 +303,13 @@ const encodeOf = d => d.encode || identity;
  * already wraps `JSON.parse` in a try/catch and returns null, and letting it do
  * that instead of doing it here again is the point of adopting the module.
  *
- * The try/catch around `base.getItem` is not belt-and-braces. gvb-save's
- * `load()` guards `JSON.parse` but calls `store.getItem(key)` bare, so a storage
- * object that throws on read propagates out through `load()` — the one storage
- * touch in the module that is not guarded (`save` guards setItem, `reset` guards
- * removeItem). Its own `defaultStorage()` probe hides this, because a browser
- * that blocks storage fails the setItem probe and gets swapped for a memory
- * stub before any read happens. An injected storage does not get that treatment.
- * Guarded here rather than there; there is a Shared-file request in the session
- * notes for the one-line fix in `load()`.
+ * The try/catch around `base.getItem` is belt-and-braces today, and the note
+ * that used to be here — that gvb-save's `load()` called `store.getItem(key)`
+ * bare — is out of date: its `readRaw()` guards the read, and `save` and
+ * `reset` guard setItem and removeItem. All three storage touches in that
+ * module are guarded. This one stays because it is the layer that knows an
+ * injected storage may be anything at all, and because removing it would
+ * change nothing but the line count.
  */
 export function boxed(base, wire) {
   const read = k => { try { return base.getItem(k); } catch (e) { return null; } };

@@ -298,5 +298,36 @@ console.log('Store — the migration contract (Path 4 P1)');
   eq(seen, [{ P: ['Ada'] }], '13: a raw write notifies subscribers in the writing tab, unwrapped');
 }
 
+/* ── 14. reportWriteFailure: the never-silent path, lent out ──────────── */
+{
+  /* _shared/gvb-save.js writes through a `storage` object its callers inject
+     (np-store.js's boxing wrapper, a suite's Map), so its failures cannot come
+     through set(). They come through here instead, and must land on the same
+     surface. */
+  const { Store, banners } = makeStore();
+  const quota = Object.assign(new Error('QuotaExceededError'), { name: 'QuotaExceededError', code: 22 });
+  eq(Store.reportWriteFailure(quota), 'quota', '14: a quota error is classified as one');
+  ok(banners.length === 1, '14: ...and shows the banner');
+  ok(/storage for this site is\s+full/.test(banners[0].textContent),
+    '14: with the full-disk wording: ' + JSON.stringify(banners[0].textContent));
+}
+{
+  const { Store, banners } = makeStore();
+  const other = Object.assign(new Error('SecurityError'), { name: 'SecurityError', code: 18 });
+  eq(Store.reportWriteFailure(other), 'blocked', '14: anything else reads as blocked storage');
+  ok(banners.length === 1, '14: ...and is still said out loud');
+}
+{
+  /* configure({onQuota}) re-renders it; it cannot suppress it. Same rule as
+     set()'s, and worth asserting on this entrance too. */
+  const { Store, banners } = makeStore();
+  const seen = [];
+  Store.configure({ toolName: 'Name Picker', onQuota: e => seen.push(e) });
+  Store.reportWriteFailure(Object.assign(new Error('q'), { name: 'QuotaExceededError' }));
+  eq(seen.length, 1, '14: a tool handler receives the report');
+  eq(seen[0].tool, 'Name Picker', '14: ...and it names the tool');
+  ok(banners.length === 0, '14: the default banner steps aside for it');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) { fails.forEach(f => console.log('  - ' + f)); process.exit(1); }

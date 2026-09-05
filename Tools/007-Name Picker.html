@@ -22,6 +22,7 @@
 <meta name="twitter:image" content="https://greyversusblue.com/assets/og/guild-board.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%233B2A1A'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%237E2A20'/%3E%3Ccircle cx='13' cy='13' r='3.5' fill='%23A8443A'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
+<script src="../_shared/store.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <style>
@@ -709,6 +710,13 @@ import { freshRotation, pickOne, pickMany, shuffle, makeGroups as splitGroups, l
 import { report as equityReport, summaryLine as equitySummaryLine, dayKey } from './name-picker/np-equity.js';
 import { loadDetails, lookupDetail, displayName } from './name-picker/np-details.js';
 import { loadSeatingState, seatEquityReport, seatSummaryLine } from './name-picker/np-seat-equity.js';
+
+/* _shared/store.js is linked in the head but nothing on this page calls it
+   directly: np-store's thirteen slots keep their boxing wrapper. It is here so
+   that a write which does not stick says so on screen — gvb-save reports a
+   failed setItem through Store.reportWriteFailure, and configure() is what puts
+   this tool's name in that message. */
+Store.configure({ toolName: 'Name Picker' });
 
 const store = createStore();
 let opts = { ...OPTION_DEFAULTS };

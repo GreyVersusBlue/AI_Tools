@@ -102,9 +102,11 @@ export default [
     },
   },
   {
-    // Browser files: _shared/*.js, the per-tool modules (and the odd nested
-    // folder such as Tools/schedule/fonts/), assets/js/.
-    files: ['_shared/*.js', 'Tools/*/*.js', 'Tools/*/*.mjs', 'Tools/*/*/*.js', 'assets/js/*.js'],
+    // Browser files: _shared/*.js and the per-tool modules (and the odd nested
+    // folder such as Tools/schedule/fonts/). There was an `assets/js/*.js`
+    // pattern here too, for the one file that lived there; gvb-save.js moved
+    // into _shared/ and assets/ now holds only icons and screenshots.
+    files: ['_shared/*.js', 'Tools/*/*.js', 'Tools/*/*.mjs', 'Tools/*/*/*.js'],
     ignores: ['Tools/*/test/**', 'Tools/board-check/**', 'Tools/*/*.test.mjs'],
     languageOptions: {
       ecmaVersion: 2022,

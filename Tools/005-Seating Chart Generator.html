@@ -753,7 +753,7 @@ import {
   todayISO, suggestQuarter, newHistoryEntry, checkHistoryConstraints,
   studentHistoryRows, classHistorySummary,
 } from './seating-chart/seating.mjs';
-import { mountSaveBar, defaultStorage } from '../assets/js/gvb-save.js';
+import { mountSaveBar, defaultStorage } from '../_shared/gvb-save.js';
 const { getParam, decodeState, clearParam, mountShareControl } = window.StateLink;
 
 /* ============================================================
@@ -767,6 +767,13 @@ const DESK_W = ROOM.deskW, DESK_H = ROOM.deskH;
    before the module's memory fallback can catch anything, and the page dies on
    boot. `defaultStorage()` does the same job inside a try/catch and hands back a
    memory-backed stub. Shared-file request is in the session notes. */
+/* This page's chart is written through gvb-save, which since Path 4 hands the
+   write to _shared/store.js whenever the slot's storage IS this page's
+   localStorage — as it is here. configure() is what puts this tool's name in
+   the message a teacher sees when the write does not stick. (store.js is
+   already linked in the head for _shared/roster.js.) */
+Store.configure({ toolName: 'Seating Chart Generator' });
+
 const slot = createSeatingSlot({ storage: defaultStorage() });
 
 let state = freshState();
