@@ -217,6 +217,13 @@ so `remote.html`, `lock.html` and `monitor.html` had no axe coverage at all befo
 them in `PAGES`, and what they have now is dark-only-plus-light through that one suite. Worth
 knowing before assuming a sub-page is as well covered as its parent.
 
+**Scoped CI's first genuinely scoped run is #201, the step-6 PR for this entry: 43 seconds
+green.** #197 shipped `--changed` for pull requests and could not measure it, because its own
+PR touched `Tools/board-check/` and `.github/`, both site-wide. #201 touches two Markdown
+files, so the selector picked no browser suite and only the eleven guards ran. That is the
+tradeoff #197 named — a Markdown-only PR now runs no browser suite at all — observed rather
+than predicted, and it is the other half of the #200 measurement below.
+
 **#200 is the measurement rank 2 was waiting for.** That row says #197's scoped CI cannot
 help a tool PR because `sw.js` is `SITE_WIDE` and every tool PR bumps `CACHE_VERSION` in it —
 written off the diff, with "confirm on a real CI log" attached. #200 is that log: six pages
