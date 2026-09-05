@@ -50,6 +50,7 @@
     "Tools/vocab-flashcard-generator/test/smoke-share.mjs",
     "Tools/schedule-browser/test/smoke-personal-notes.mjs",
     "Tools/schedule-browser/test/smoke-substitute-view.mjs",
+    "Tools/schedule-browser/test/smoke-mode-tabs.mjs",
     "Tools/bracket-tournament-generator/test/smoke-standings.mjs",
     "Tools/bracket-tournament-generator/test/smoke-pools-swiss.mjs",
     "Tools/schedule-visualizer/test/smoke-evacuation.mjs",

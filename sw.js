@@ -7,11 +7,19 @@
 //     asset the site currently ships (index.html, every Tools/*.html file,
 //     and their vendored scripts/styles/fonts). It is cached in TWO TIERS:
 //       * SHELL_URLS — a subset of PRECACHE_URLS — is cached at install: the
-//         landing page, everything under _shared/ (the vendored libraries and
-//         fonts included), the icons and manifest, and the ten tools a teacher
-//         reaches for standing in the room, with their support files. This is
-//         what "installed" means: 77 of 249 entries, ~3.6 of ~10.8 MB,
-//         of which the vendored libraries are half.
+//         landing page, everything under _shared/, the icons and manifest, and
+//         the ten tools a teacher reaches for standing in the room, with their
+//         support files. This is what "installed" means: 82 of 257 entries,
+//         ~2.6 of ~10.9 MB (measured 2026-09-05).
+//         A vendored library belongs here only when a shell tool loads it with
+//         a plain <script src> — jsqr, qrcode.js and jszip do. jsPDF (+
+//         AutoTable) and SheetJS do not: no shell tool references jsPDF at
+//         all, and the three that touch SheetJS (001, 006, 032) inject it on
+//         demand behind an explicit "import a spreadsheet" click, already
+//         handling the load failing. They were 1.23 MB — a third of the whole
+//         install — bought for a keystroke nobody makes in the first seconds
+//         after install, so as of v151 they arrive with the deferred pass
+//         instead. Anything eagerly loaded by a shell page must stay here.
 //       * Everything else in PRECACHE_URLS is fetched by a second, deferred
 //         pass that never blocks install. _shared/sw-register.js posts
 //         PRECACHE_REST once the page has been idle for a few seconds; the
@@ -60,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v150';
+const CACHE_VERSION = 'v151';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -148,9 +156,6 @@ const SHELL_URLS = [
   "_shared/theme.css",
   "_shared/tool-registry.js",
   "_shared/webrtc-pair.js",
-  "_shared/vendor/jspdf/jspdf.umd.min.js",
-  "_shared/vendor/jspdf/jspdf.plugin.autotable.min.js",
-  "_shared/vendor/xlsx/xlsx.full.min.js",
   "_shared/vendor/jsqr/jsqr.js",
   "_shared/vendor/qrcode/qrcode.js",
   "_shared/vendor/jszip/jszip.min.js",
