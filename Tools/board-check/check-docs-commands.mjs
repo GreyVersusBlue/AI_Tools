@@ -62,7 +62,7 @@
 //   - Arguments. `npm run check:precache -- --base origin/main` is a claim
 //     about `check:precache` and nothing else.
 //
-// Exit code: 0 all clean, 1 any NO SCRIPT, NO FILE or STALE.
+// Exit code: 0 all clean, 1 any NO SCRIPT, NO FILE, STALE or UNCLOSED.
 
 import fs from 'node:fs';
 import path from 'node:path';
