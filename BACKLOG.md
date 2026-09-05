@@ -443,8 +443,8 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | 034 `aria-required-children` — the last non-contrast accessibility allowance | 034 | ¼ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
-| 2 | Move the vendored jsPDF and SheetJS out of `SHELL_URLS` — no shell tool uses them; ~1.3 MB off the install | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 1 | 034 `aria-required-children` — the last non-contrast accessibility allowance | 034 | ¼ | `edpwzb` 2026-09-05 04:01 UTC | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
+| 2 | Move the vendored jsPDF and SheetJS out of `SHELL_URLS` — no shell tool uses them; ~1.3 MB off the install | site | ¼ | `edpwzb` 2026-09-05 04:01 UTC | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 3 | Adopt `_shared/store.js` in the other two storage eras — 063 (a `{v:1}` payload) and `Tools/school-calendar/scv-store.js` (probe + migrate) | site | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 4 | `assets/js/gvb-save.js`: its `save()` swallows quota errors, and it is shared code outside `_shared/`. Consumers 005, 007, 064 | site | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 5 | Rebuild and commit `list-dark-candidates.mjs` (`npm run path5:next`) before Path 5 P3 quotes a number | site | ½ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
