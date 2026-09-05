@@ -504,8 +504,8 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Adopt `_shared/store.js` in the other two storage eras — 063 (a `{v:1}` payload) and `Tools/school-calendar/scv-store.js` (probe + migrate) | site | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 2 | `assets/js/gvb-save.js`: its `save()` swallows quota errors, and it is shared code outside `_shared/`. Consumers 005, 007, 064 | site | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 1 | Adopt `_shared/store.js` in the other two storage eras — 063 (a `{v:1}` payload) and `Tools/school-calendar/scv-store.js` (probe + migrate) | site | ½ | `jduvkq` 2026-09-05 11:48 UTC | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 2 | `assets/js/gvb-save.js`: its `save()` swallows quota errors, and it is shared code outside `_shared/`. Consumers 005, 007, 064 | site | ½ | `jduvkq` 2026-09-05 11:48 UTC | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 3 | Rebuild and commit `list-dark-candidates.mjs` (`npm run path5:next`) before Path 5 P3 quotes a number | site | ½ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 4 | Adopt `_shared/stage.js` in 023, 025 and 021 — the three remaining hand-rolled stages the P2 row named; scan each on-stage state with axe as `smoke-stage.mjs` does | site | ½ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 5 | Path 5 P3 — native dark + `stage.js` across the projector tools, batches of ~6 | site | 2+ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
