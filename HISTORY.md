@@ -75,6 +75,88 @@ how it is built. The "don't promote one without Devon saying so" notes scattered
 per-tool sections stand; the "open question for Devon" notes do not, and now mean *decide it
 and write down what you decided*.
 
+**Ranks 1 and 2 — the Path 5 groundwork: the picker exists, and the last three hand-rolled
+stages are gone. #195, `CACHE_VERSION` v153.** Two ½ rows in one PR, the same path's
+prerequisites.
+
+**`npm run path5:next` (`Tools/board-check/list-dark-candidates.mjs`) exists.** It was the
+third tool this repo documented and never committed, and the one whose invented output a #167
+handoff quoted as fact — the reason `check:docs-commands` was built at all. The guard's
+`KNOWN_MISSING` entry for it was deleted in the same commit, which is the arrangement working
+rather than being worked around: check 3 of that guard fails the day a `KNOWN_MISSING` script
+appears, so the exemption could not have outlived the gap. **`KNOWN_MISSING` is empty now, and
+empty is its healthy state.** Read-only, shaped like `phase4:next`, exit code always 0.
+
+**It replaces a number this file had already had to delete once.** The #167-era "17–45
+hardcoded literals per tool" was removed in #169 rather than corrected, because it swept in
+`white-space`, `@media print` blocks and inline script and was about 3× too high. The measured
+version: **1,749 colour literals across the 74 pages still on the invert filter — median 17,
+range 3–74, none at zero.** A literal counts only in a colour-bearing property, only inside
+`<style>`, never inside `@media print`, and never inside a rule that is already dark work
+(`[data-theme="dark"]`, `prefers-color-scheme: dark`).
+
+**Both exclusions were checked, not assumed.** 010's 13 were enumerated by hand and matched
+the script exactly (1 custom property + 9 `background` + 3 `color`); turning the print
+exclusion off took 021 from 67 to 80, so it demonstrably fires. That is the whole reason to
+believe the new figure and not the old one.
+
+**Two findings the script produced on its first run that no prose list had.** **004 already
+has a native dark palette** — it has since #167 — and the Path 5 P3 rollout list still names
+it. And **fourteen live pages load no `a11y.js` at all** (002, 007, 016, 018, 034, 035, 038,
+044, 086, `classroom-label-maker/speak.html`, and the four root landing-page variants), so
+they get no theme in either direction; **007 is on the P3 list and cannot be converted until
+that changes.** That is a different kind of work from a palette conversion and P3 should not
+absorb it silently.
+
+**`tokens` vs `scattered` was meant to find a cheap tier and did not.** The split counts
+literals in custom-property declarations separately, on the theory that a page with its own
+`:root` palette converts in one dark block. **46 of the 74 pages have zero token literals,
+only three have five or more, and the median is zero** — these pages inherit ink-paper's
+palette and then paint over it in place. So there is no cheap tier: a low total means a small
+page, not an easy one. Recording it because the opposite was the expectation.
+
+**`_shared/stage.js` went from one adopter to four.** 021, 023 and 025 lost their own
+`requestFullscreen` toggle, `fullscreenchange` listener, label updater and F-key handler —
+the three copies the P2 row named and #180 left behind. Every `:fullscreen` CSS rule became
+`.is-fullscreen`, which the helper sets for real fullscreen and for its fallback alike, so
+one selector now drives both cases where each tool had written the rule for one.
+
+**Two bugs came out of an "adoption" round, and neither was in the row's text.** 023's and
+025's toggle buttons live outside the element being fullscreened, where the Fullscreen API
+does not render them — a teacher on stage had no visible way out but the F key. They are `hud`
+now, moved onto the stage on entry and put back on exit. And **025's F always drove the prompt
+stage, even with the Anonymous Responses overlay open on top of it**, so it fullscreened
+something the teacher could not see; `enabled` gives F to the overlay while the overlay is up.
+The lesson for P3: **a tool that hand-rolled a stage also hand-rolled its bugs**, and the
+adoption is where they surface.
+
+**None of the three had any fallback before.** A browser with no Fullscreen API, or one that
+refuses the request, left the button doing nothing at all. All three have one now, for free,
+because it is the helper's.
+
+`Tools/stage/test/smoke-stage-rollout.mjs` — new, 116 assertions, in `suites.json` and
+`test:stage`. It drives all five stages (021, 023 ×2, 025 ×2) in a real browser: real
+fullscreen from the button, the rewritten `.is-fullscreen` CSS filling the viewport, the
+button staying reachable on stage and returning to its home node, F entering and exiting, F
+while typing doing nothing and the letter reaching the box, the refused-fullscreen fallback
+and its Escape, 023's two-tab gate, and 025's overlay taking F. **Each on-stage state is
+scanned with axe** — a state the site-wide sweep never reaches, which is what rank 2 asked
+for. Clean everywhere. 143 suites green locally in 23.3 min and in CI in 22.7.
+
+**Not verified:** no real projector, and no browser that genuinely refuses fullscreen — the
+fallback is driven by rejecting `requestFullscreen` from inside the page, which is the
+strongest thing available headless. Nothing installed the service worker; v153 is what
+`check:precache --base` agrees with, not a measured install. The five pages that still
+hand-roll fullscreen (001, 004, 010, 015, 072) were counted and not opened. And
+`check:dedupe` was **not** extended to `drawQR` — that is Path 6's verification note, still
+open, and #195 did not touch it.
+
+**One deliberate difference between the picker and `smoke-theme.mjs`:** the picker excludes
+fixtures under a `test/` folder and `Other Landing Page ideas/`, an unlinked and unprecached
+second copy of the four root landing-page variants (rank 87 is to delete it). That is why it
+reports 97 live pages where the theme suite reports 102. The root `v1-inbox.html` and its
+three siblings ARE linked from `index.html` and ARE precached, and are counted.
+
 **Ranks 1 and 2 — the last non-contrast a11y allowance, and a third of the install. #191,
 `CACHE_VERSION` v151.** Two quarter-session rows, shipped as one PR because they are the same
 kind of work: a claim in a list that nobody had opened the code to check.
