@@ -676,7 +676,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 5 P3 — native dark + `stage.js` across the projector tools, batches of ~6. **Increment 1 shipped (#198): 010, 015, 021, 023, 024, 072; 68 pages left.** Next batch from `npm run path5:next` | site | 2+ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
+| 1 | Path 5 P3 — native dark + `stage.js` across the projector tools, batches of ~6. **Increment 1 shipped (#198): 010, 015, 021, 023, 024, 072; 68 pages left.** Next batch from `npm run path5:next` | site | 2+ | `g1ss0e` 2026-09-05 22:08 UTC | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 2 | Make #197's scoped CI actually fire on a tool PR: `select-suites.mjs` treats any `sw.js` edit as site-wide, and every tool PR bumps `CACHE_VERSION` there. Teach it that a `sw.js` diff touching only the `CACHE_VERSION` line is not site-wide (read the hunk, not the filename), pin it in `select-suites.test.mjs`, and confirm on the next tool PR's CI log | `Tools/board-check/` | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 3 | Path 5 P4 — landing page and hallway tools; 034 gets a native dark palette | site | 1 | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 4 | Path 6 P2 — adopt the share sheet in the 17 existing `state-link` tools | site | 2+ | | [Path 6](#path-6--share-everywhere) |
