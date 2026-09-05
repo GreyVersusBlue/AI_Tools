@@ -16,6 +16,10 @@
 <meta name="twitter:title" content="Bracket / Tournament Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Build a single-elimination bracket for review games or tournaments and run it live on a projector.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M6 9h6v4h-6zM6 19h6v4h-6zM20 9h6v14h-6z' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M12 11h5M12 21h5M17 11v10' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
@@ -27,7 +31,19 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
-  :root { --ok: #2e6b3e; }
+  /* Path 5 P3: --ok was this page's name for --good; renamed and moved onto
+     001's values, with the info/warn/good tint pairs it also needed, so the
+     tools defining these stay identical until they move to ink-paper.css. */
+  :root {
+    --good: #2f7d4f;  --good-bg: #e4f5ea;
+    --info-bg: #eaf1f5; --info-line: #c9dbe3;
+    --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --good: #63c08e;  --good-bg: #173021;
+    --info-bg: #1b2a35; --info-line: #33505f;
+    --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -55,13 +71,13 @@
   .hint { color: var(--muted); font-size: .82rem; margin: -.15rem 0 .7rem; }
   textarea, input[type="text"] {
     width: 100%; font-family: inherit; font-size: .95rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .55rem .7rem;
   }
   textarea { min-height: 140px; resize: vertical; }
   #setupCard select {
     font-family: inherit; font-size: .95rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .55rem .7rem;
   }
   .row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; margin-top: .8rem; }
@@ -71,18 +87,18 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .6rem 1.1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
 
   .toolbar select {
     font-family: inherit; font-size: .9rem; padding: .5rem .6rem;
-    border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink);
+    border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink);
   }
   .toolbar .spacer { flex: 1 1 auto; }
 
@@ -92,7 +108,7 @@
   }
   .bracket-subtitle:first-child { margin-top: 0; }
   .champion-banner {
-    display: none; background: #fff9e8; border: 1px solid #e5c56a; color: #6b5410;
+    display: none; background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-ink);
     border-radius: 8px; padding: .8rem 1rem; font-weight: 700; margin-bottom: 1rem;
   }
   .champion-banner.show { display: block; }
@@ -110,21 +126,21 @@
     justify-content: center;
   }
   .slot {
-    border: 1px solid var(--line-strong); border-radius: 6px; background: #fff;
+    border: 1px solid var(--line-strong); border-radius: 6px; background: var(--card);
     padding: .5rem .65rem; font-size: .92rem; text-align: left; cursor: pointer;
     transition: background .12s ease, border-color .12s ease;
   }
-  .slot:hover:not(.slot-bye):not(.slot-winner):not(.slot-empty) { border-color: var(--accent-2); background: #eef4f9; }
+  .slot:hover:not(.slot-bye):not(.slot-winner):not(.slot-empty) { border-color: var(--accent-2); background: var(--info-bg); }
   .slot-empty { color: var(--muted); font-style: italic; cursor: default; }
-  .slot-bye { color: var(--muted); font-style: italic; cursor: default; background: #f5f4f0; }
-  .slot-winner { background: #eaf5ee; border-color: var(--ok); color: var(--ok); font-weight: 700; cursor: default; }
+  .slot-bye { color: var(--muted); font-style: italic; cursor: default; background: var(--card-2); }
+  .slot-winner { background: var(--good-bg); border-color: var(--good); color: var(--good); font-weight: 700; cursor: default; }
   .slot-decided { cursor: default; }
   .slot-decided:not(.slot-winner) { opacity: .5; text-decoration: line-through; }
 
   .match-score-pair { display: flex; align-items: center; gap: .3rem; width: 100%; margin-top: -.05rem; }
   .match-score {
     flex: 1 1 0; min-width: 0; font-family: inherit; font-size: .78rem; color: var(--muted);
-    border: 1px solid var(--line); border-radius: 5px; background: #fbfaf7;
+    border: 1px solid var(--line); border-radius: 5px; background: var(--card-2);
     padding: .2rem .35rem; -moz-appearance: textfield;
   }
   .match-score::-webkit-outer-spin-button, .match-score::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -137,7 +153,7 @@
   .roster-load-row { display: flex; gap: .5rem; margin-bottom: .6rem; }
   .roster-load-row select {
     flex: 1 1 auto; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem;
   }
 
@@ -148,10 +164,10 @@
     border: 1px solid var(--line); padding: .4rem .6rem; text-align: left;
   }
   .standings-table th, .schedule-table th {
-    background: #f1f0ea; font-size: .76rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+    background: var(--card-2); font-size: .76rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
   }
   .standings-table td.num, .standings-table th.num { text-align: center; }
-  .standings-table tr.leader td { font-weight: 700; color: var(--ok); }
+  .standings-table tr.leader td { font-weight: 700; color: var(--good); }
 
   .match-schedule { font-size: .74rem; color: var(--muted); margin-top: -.1rem; }
 
@@ -163,7 +179,7 @@
   }
   .modal-overlay[hidden] { display: none; }
   .modal-box {
-    background: #fff; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--card); border-radius: 10px; border: 1px solid var(--line);
     padding: 1.2rem; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.3);
     max-width: 340px;
   }
@@ -177,7 +193,7 @@
   .schedule-modal-body label { margin-bottom: .2rem; }
   .schedule-modal-body input {
     width: 100%; font-family: inherit; font-size: .95rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .65rem;
   }
   .schedule-modal-actions { display: flex; gap: .6rem; justify-content: flex-end; flex-wrap: wrap; margin-top: .9rem; }
@@ -187,7 +203,7 @@
   body.presenting .toolbar, body.presenting footer.note { display: none; }
   #presentBar {
     display: none; align-items: baseline; gap: .6rem; flex-wrap: wrap;
-    background: #eef4f9; border: 1px solid var(--accent-2); border-radius: 8px;
+    background: var(--info-bg); border: 1px solid var(--accent-2); border-radius: 8px;
     padding: .9rem 1.1rem; margin-bottom: 1.1rem; font-weight: 700; font-size: 1.3rem; color: var(--accent);
   }
   body.presenting #presentBar.show { display: flex; }

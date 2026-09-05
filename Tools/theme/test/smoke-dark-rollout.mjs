@@ -83,6 +83,21 @@ const PAGES = [
   { label: 'cc-remote', url: '/Tools/command-center/remote.html' },
   { label: 'er-lock', url: '/Tools/escape-room-builder/lock.html' },
   { label: 'er-monitor', url: '/Tools/escape-room-builder/monitor.html' },
+  // increment 3
+  { label: '006', url: '/Tools/006-class-roster-hub.html' },
+  { label: '009', url: '/Tools/009-backup-restore.html' },
+  { label: '019', url: '/Tools/019-escape-room-builder.html' },
+  { label: '020', url: '/Tools/020-bracket-tournament-generator.html' },
+  // 039's sheet is the worksheet itself, and it only renders once there is a
+  // verb to conjugate — the conjugation tab starts empty.
+  { label: '039', url: '/Tools/039-vocab-conjugation-drill.html', sheet: '#previewArea .page',
+    prep: async page => {
+      await page.click('.mode-tab[data-mode="conjugation"]');
+      await settle(page, 200);
+      await page.click('#addConjBtn');
+      await settle(page, 400);
+    } },
+  { label: '056', url: '/Tools/056-dbq-source-packet-builder.html' },
 ];
 
 // Chrome is what follows the theme. Anything that is a projector surface
@@ -132,7 +147,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor)');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056)');
 
 for (const p of PAGES) {
   /* ── dark ── */

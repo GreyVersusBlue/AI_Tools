@@ -16,6 +16,10 @@
 <meta name="twitter:title" content="Class Roster Hub — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Build and save a class roster once — Name Picker, Seating Chart, Group/Team Generator, and other tools on this site can all load it from here instead of being re-typed.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='13' cy='11' r='4' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M6 25c0-4.4 3.1-7.5 7-7.5s7 3.1 7 7.5' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M22 14.5h5M24.5 12v5' stroke='%23C43A2F' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <!-- store.js must load before roster.js, which depends on it; roster.js owns
@@ -35,9 +39,20 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Path 5 P3: the tint pairs this page needs, in 001's values (the reference
+     adopter) rather than the near-misses this page carried, so every tool
+     defining them stays identical until they move to ink-paper.css. */
   :root {
     --good: #2f7d4f;
-    --warn-bg: #fdf5e6; --warn-line: #e6d3a8; --warn-ink: #7a5a12;
+    --err-bg: #fbecea;  --err-line: #e6c6c1;
+    --info-bg: #eaf1f5; --info-line: #c9dbe3;
+    --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --good: #63c08e;
+    --err-bg: #3a201c;  --err-line: #6d3a33;
+    --info-bg: #1b2a35; --info-line: #33505f;
+    --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
   }
   * { box-sizing: border-box; }
   body {
@@ -52,7 +67,7 @@
   .back-link:hover { color: var(--accent-2); }
 
   .toolbar label { font-weight: 600; font-size: .85rem; margin: 0; }
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); width: auto; margin: 0; }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); width: auto; margin: 0; }
 
   .layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr); gap: 1.4rem; align-items: start; }
   @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
@@ -62,7 +77,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.45; }
   input[type="text"], input[type="number"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { min-height: 14rem; resize: vertical; font-family: Consolas, monospace; font-size: .85rem; }
@@ -76,25 +91,25 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .4rem .7rem; font-size: .8rem; }
   button.tiny { padding: .18rem .4rem; font-size: .74rem; line-height: 1.1; }
   .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
 
   .tabs { display: flex; gap: .3rem; margin-bottom: .7rem; }
-  .tabs button { background: #fff; color: var(--muted); border: 1px solid var(--line); border-radius: 7px 7px 0 0; border-bottom-color: transparent; padding: .38rem .8rem; font-size: .82rem; }
-  .tabs button[aria-selected="true"] { color: var(--accent); background: #eef3f7; border-color: var(--line-strong); }
+  .tabs button { background: var(--card); color: var(--muted); border: 1px solid var(--line); border-radius: 7px 7px 0 0; border-bottom-color: transparent; padding: .38rem .8rem; font-size: .82rem; }
+  .tabs button[aria-selected="true"] { color: var(--accent); background: var(--card-2); border-color: var(--line-strong); }
 
   #msg { font-size: .82rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-bottom: .8rem; white-space: pre-line; }
-  #msg.show { display: block; background: #f9e9e6; color: var(--err); border: 1px solid #e3bdb5; }
-  #msg.ok { display: block; background: #eaf1f6; color: var(--accent-2); border: 1px solid #c9dce6; }
+  #msg.show { display: block; background: var(--err-bg); color: var(--err); border: 1px solid var(--err-line); }
+  #msg.ok { display: block; background: var(--info-bg); color: var(--accent-2); border: 1px solid var(--info-line); }
 
   .roster-list { list-style: none; margin: 0; padding: 0; }
   .roster-list li {
@@ -115,7 +130,7 @@
   .used-by .n { color: var(--muted); }
 
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: .6rem; margin-bottom: .8rem; }
-  .stat { background: #f6f5f0; border: 1px solid var(--line); border-radius: 8px; padding: .5rem .6rem; }
+  .stat { background: var(--card-2); border: 1px solid var(--line); border-radius: 8px; padding: .5rem .6rem; }
   .stat .v { font-size: 1.25rem; font-weight: 700; color: var(--accent); line-height: 1.1; }
   .stat .k { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 
@@ -164,7 +179,7 @@
   body.drag-over { outline: 3px dashed var(--accent); outline-offset: -6px; }
   .overlay[hidden] { display: none; }
   .modal {
-    background: #fff; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--card); border-radius: 10px; border: 1px solid var(--line);
     padding: 1.2rem; box-shadow: 0 20px 60px rgba(0,0,0,.3);
     max-width: 760px; width: 100%; max-height: 88vh; overflow-y: auto;
   }
@@ -177,6 +192,7 @@
 
   /* Device-to-device transfer modal */
   .handoff-qr { display: block; width: 220px; height: 220px; margin: 0 auto .6rem; image-rendering: pixelated; }
+  /* A camera viewfinder is a lens, not a surface: it stays black in both themes. */
   .handoff-video { display: block; width: 100%; max-width: 280px; margin: 0 auto .6rem; border-radius: 6px; background: #000; }
   .handoff-status { font-size: .8rem; color: var(--muted); margin: .6rem 0 0; }
   .handoff-status.bad { color: var(--err); }
@@ -184,7 +200,7 @@
 
   .preview-table { width: 100%; border-collapse: collapse; font-size: .8rem; margin-bottom: .8rem; }
   .preview-table th, .preview-table td { border: 1px solid var(--line); padding: .3rem .45rem; text-align: left; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .preview-table th { background: #f1f0ea; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .preview-table th { background: var(--card-2); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
   .preview-table select { margin: 0; font-size: .78rem; padding: .25rem; }
   .map-row { display: flex; gap: .8rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: .6rem; }
   .map-row .f { min-width: 150px; }
