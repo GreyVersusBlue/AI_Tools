@@ -71,6 +71,8 @@
     "check:hidden-flex": "node Tools/board-check/check-hidden-flex.mjs",
     "check:print-clip": "node Tools/board-check/check-print-clip.mjs",
     "check:registry": "node Tools/board-check/check-registry.mjs",
+    "check:docs-commands": "node Tools/board-check/check-docs-commands.mjs",
+    "check:adoption": "node Tools/board-check/check-adoption.mjs",
     "phase4:next": "node Tools/board-check/list-base-css-candidates.mjs",
     "offline:build": "node Tools/board-check/make-offline-copy.mjs",
     "offline:verify": "node Tools/board-check/verify-offline-copy.mjs",

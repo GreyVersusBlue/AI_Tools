@@ -52,7 +52,7 @@ node Tools/seating-chart/test/drive-seating.mjs      → 110 checks, 0 failed
 
 Both exit non-zero on failure. The driver borrows `serve()`, `launch()` and
 `prepPage()` from `Tools/board-check/harness.mjs` rather than starting its own
-browser, and runs headless, so it does not fight `npm run games` for the screen.
+browser, and runs headless, so it does not take over the screen.
 
 ## Why the logic lives in a module
 

@@ -130,6 +130,21 @@ jobs:
         if: '!cancelled()'
         run: npm run lint
 
+      # Two claims nothing used to check: a document naming a command that does
+      # not exist (three tools have now been documented in this repo that were
+      # never committed), and the adoption figures in BACKLOG.md's header, which
+      # every session re-derived by a different hand grep. check:adoption runs
+      # WITHOUT --check here: the header is legitimately stale between a merge
+      # and the step-6 rewrite that follows it, so the CI step is there to prove
+      # the script still runs and to print the row, not to fail on the prose.
+      - name: 'Guard: documented commands exist'
+        if: '!cancelled()'
+        run: npm run check:docs-commands
+
+      - name: 'Report: shared-file adoption'
+        if: '!cancelled()'
+        run: npm run check:adoption
+
       # The CACHE_VERSION bump is an opt-in fifth check, pull requests only: it
       # compares against the merge-base of the PR's base branch, which needs the
       # full history fetched above and a base to name. A push to main has no

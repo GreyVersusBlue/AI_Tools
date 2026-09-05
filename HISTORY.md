@@ -16,6 +16,66 @@ now the two biggest rollouts onto it. The plan itself — the services in depend
 that the tool paths become adoption rounds rather than invention — worked, and Path 3 P3/P4
 are the proof: two rounds that invented nothing and changed 31 tool pages.
 
+**Ranks 2 and 3 — two guards over the claims the documents make. No `CACHE_VERSION` bump:
+nothing precached changed.** Both come from the same recurring failure — a document asserting
+something nobody checked — and both found real drift on their first run.
+
+<!-- docs-commands: off — this entry's subject is commands that no longer exist; naming them is the point -->
+
+`npm run check:docs-commands` (`Tools/board-check/check-docs-commands.mjs`) fails when a
+tracked `.md` writes `npm run <name>` for a script `package.json` does not define, or
+`node <path>` for a file that is not in the tree. It exists because **three tools have now
+been documented in this repo that were never committed**: `sync-social-tags.mjs`, the original
+`board-check` folder, and `list-dark-candidates.mjs`, whose invented output a #167 handoff
+quoted as fact and a later session tried to work from. **It caught three on its first run,
+all of them survivors of the never-committed `board-check` package:**
+`Tools/schedule/README.md` told you to run `npm run social` to put a social block back after
+republishing 034 and `npm run social:check` to verify it — neither exists, and no command
+does that job, so that section now says the restore is a hand edit out of git history and
+points at the read-only `check-social.mjs`; and `Tools/seating-chart/README.md` said the
+driver "does not fight `npm run games` for the screen", a dev server that is also gone. The
+same file's tree diagram still listed `Tools/schedule/libs/jspdf/`, deleted in Refactor
+Phase 1 — fixed in passing, since `_shared/vendor/jspdf/` is where 035 actually loads it
+from. `npm run path5:next` is the one name in `KNOWN_MISSING`, because three sentences across
+`BACKLOG.md` and `HISTORY.md` exist precisely to say it does not exist; the guard fails if
+that script ever appears, so the exemption cannot outlive the gap. **Deliberately not
+checked:** bare backticked file paths. There are 318 of them across the tracked `.md` files
+and most are written without a directory prefix (`005-seating-chart.html`), so resolving them
+means guessing — measured, then not implemented.
+
+<!-- docs-commands: on -->
+
+`npm run check:adoption` (`Tools/board-check/check-adoption.mjs`) measures the shared-file
+adoption row of `BACKLOG.md`'s header — the last number in that table with no script behind
+it. It walks the 86 tool pages' real `src`/`href` and `import` references, follows per-tool
+modules, and prints the row as pasteable Markdown; `-- --file roster.js` names the adopters,
+`-- --check` fails if the header disagrees. **It reproduces the 2026-09-04 header exactly on
+all eighteen rows it carried**, which is the only reason to trust it, and that check was run
+before the file was committed. It also **disproved a sentence in that same header**:
+`student-details.js`'s two consumers are 008 and **007** (via `np-details.js`, which
+re-exports it), not "006 and 008" — 006 only names the file in two comments. That is the
+identical mistake the row was written to end, one section further down the same document. Two
+files the header had simply omitted are now in the row: `sw-register.js` 85 and `a11y.css` 77.
+Indirect adopters are reported as `+n via a module` rather than folded into the count, so the
+long-running number keeps meaning what it meant.
+
+**Why `check:adoption` runs in CI without `--check`.** The header is legitimately stale
+between a merge and the step-6 rewrite that follows it, so failing on that by default would
+go red during normal work. The CI step proves the script still runs and prints the row; the
+verification is opt-in, and step 6 of the definition of done now names it.
+
+**What was not verified.** Neither guard has a test suite — no guard in `Tools/board-check/`
+does, and `check-tests.mjs` exempts that folder from ORPHAN. Both were instead proved
+positively by hand, per `CLAUDE.md`'s "a guard going quiet is not evidence": a bogus
+<!-- docs-commands: off — the same, for the two deliberately-bogus probes below -->
+`npm run bogus:script` and `node …/nope.mjs` were pasted into a tracked `.md` and both fired;
+<!-- docs-commands: on -->
+a `path5:next` script was temporarily added to `package.json` and STALE fired; the
+placeholder forms (`npm run test:<name>`, a bare `npm run`) produced no noise; an unclosed
+muted region fired UNCLOSED, and a citation placed after a closing marker was still caught
+while one inside the region stayed muted. That is reproducible from the header comments but
+is not automated, and a future edit to either regex has nothing catching it.
+
 **Path 3 P3 — the saved-roster picker, across 31 tools. #184, `CACHE_VERSION` v149.**
 `np_rosters` was read by 25 tool pages through roughly six copy-pasted picker functions, and
 they disagreed about everything that matters: five (017, 022, 033, 043, 084) called
