@@ -166,6 +166,91 @@ waits for will be a docs or tooling PR, not a tool one. Recorded as a ¼ row at 
 a `sw.js` hunk that touches only the version constant as not site-wide, and pin it in
 `select-suites.test.mjs`. Not measured — read off the diff.
 
+**Rank 1 — Path 5 P3, increment 5: six more pages on native dark. #206, `CACHE_VERSION`
+v158.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
+one `npm run path5:next` printed, in its order — **047, 067, 075, 081, 061, 063**. Native dark
+went from 33 themed pages to **39 (47%)**; the picker's literal count from 975 across 50 pages
+to **931 across 44**, eight rounds of six left. `stage.js` is unchanged at 7 adopters with 001
+and 004 still the last two hand-rolling fullscreen: none of these six has a stage.
+
+**The picker's 7-and-8-literal tail is as cheap as it promised, and it is cheap because it is
+uniform.** Five of the six carried the identical seven-literal boilerplate — `#fff` on the
+control background, `#fff` on the button face, the `.secondary` `#fff`/`#f1f0ea` pair, the
+`.danger` `#fff`/`#fff` pair — and converting it is mechanical. **What the count does not
+measure is where the work actually was**, and in this batch that was true of every one of the
+six. Budget the page by what its main surface is made of, not by the literal count; the count
+predicts the *chrome* and nothing else.
+
+**067 is the first page in the rollout whose main surface is a drawn SVG, and it took two
+fixes, the second only visible after the first.** The sight-reading staff is built as SVG
+markup in `renderPitches()` with `stroke="#333"` on the five staff lines, the barlines and the
+ledger lines, and `fill`/`stroke="#1f2430"` on noteheads and stems — a near-black staff about
+to be drawn on ink-paper's near-black card. The tool's own rhythm glyphs already used
+`currentColor`, so the fix was to make the staff use the idiom the file already had; it now
+inherits the display card's ink in either theme. The dark screenshot then showed the second
+one: **SVG `<text>` defaults to `fill: black`, and `currentColor` on sibling shapes does not
+carry to it.** The clef — and the `TREBLE`/`BASS` word fallback the tool draws when the machine
+lacks the Unicode musical block, which is the case in headless Chromium — stayed black on the
+slate card while everything around it went pale. Both `<text>` elements now say
+`fill="currentColor"` explicitly. **Neither bug is visible to the suite's white-chrome
+assertion, which reads `backgroundColor` on DOM chrome; the screenshot found both.**
+
+**The dark-rollout suite found a critical axe `label` violation on 075 that is present in light
+too — the third increment running in which it has found a light-mode bug, and the second by
+exactly the mechanism #202 named.** 075's directory table renders one editable input per field
+per person and nothing else names them, so a screen reader reads four unlabeled edit boxes per
+row. `test:a11y` cannot see it: the site-wide sweep opens 075 with empty storage, no rows
+render, and there is nothing to fail on. This suite's entry has a prep that adds a staff member
+first. Fixed in the tool — each input carries an `aria-label` naming its field and its person
+(the person's name, or "staff member N" while the row is still blank), and the row's Delete
+button names the person too. **#202 warned that any page whose UI only appears once storage is
+non-empty is under-covered this way and that nothing measures how wide that is; this is the
+second confirmed instance, and it is still not measured.** The practical rule the two share:
+when adding a page to `PAGES`, give it a prep that puts *content* on the page, not just the
+page.
+
+**075 also contained two literal NUL bytes.** `departmentLabels()` builds a composite key as
+`key + <U+0000> + raw`, and that separator had been written as an actual NUL character in the
+source, so git and grep classified the whole 26 KB file as binary: `grep -n` on it printed
+"binary file matches" and no lines, which is how this session started on that page. Replaced
+with the `\u0000` escape — the same character at runtime, and the file is text again. Nothing
+else in the tree has one (checked with `git ls-files -z | xargs -0 grep -lP` for it; no hits).
+
+**Three more unstyled controls, which is #204's 054 lesson generalising.** 047 styled
+`input[type="text"]`, `input[type="number"]` and `textarea` but not its two `<select>`s; 081
+and 061 style `select` and `input[type="number"]` but not the readonly `#seedDisplay`
+`input[type="text"]` that shows the sheet seed. All three had always carried the browser's own
+control styling, invisible in light and obvious in dark beside the tokenized controls next to
+them. One grep per page (`<input type=` and `<select` against the page's own
+`input[type=…]`/`select` selectors) found all three and nothing else; it is worth doing on
+every page in this rollout.
+
+**Only one of the six has a sheet of paper on screen.** 081's printable worksheet and answer
+key are two static `.sheet-page` divs behind its second tab, so they took `paper-sheet`; 047,
+061, 063 and 075 keep theirs inside `#printArea`, which is `display:none` on screen (#204's
+finding, four more times), and 067 prints from `.print-only` blocks hidden the same way. **But
+two of those four have a surface that is on screen *and* on the printed sheet**, which #204 did
+not hit: 061's `.drill-table` is the on-screen preview and the printed table, and 063's
+`.bank-box` is the on-screen word bank and the printed one. A literal cannot serve both, so
+both moved to `var(--card-2)`, which is the dark tint on screen and, inside `#printArea`, the
+light `#f1f0ea` again. **A class shared between the screen view and the print view is the case
+where the token is not optional.**
+
+**Light-mode changes, all deliberate and all small.** 061's drill-table header (`#eef1f4`),
+063's word bank (`#f6f5f0`) and 075's department sub-header (`#eef1f4`) are now
+`var(--card-2)` (`#f1f0ea`) — three private tints onto the site's one, the same convergence
+#202 and #204 did, and on paper it is a tint either way. The three newly-styled controls above
+pick up the shared control padding, radius and border. 067's staff lines go from `#333` to the
+card's ink (`#1f2430` in light) and its noteheads from `#1f2430` to the same: imperceptible on
+screen, and in print `ink-paper.css`'s `@media print` block restores the light tokens, so a
+printed warm-up is unchanged.
+
+**Not verified.** No real projector, no real phone, nothing with the worker installed — the
+fifth increment in a row. The `DARK_SHOTS` screenshots of the six new pages were written and
+looked at in both themes, and that is what found both 067 bugs; the thirty already-adopted
+pages were not re-checked by eye, only by the suite. `test:theme` is 47 + **352** assertions
+(up from 289), green.
+
 **Rank 1 — Path 5 P3, increment 4: six more pages on native dark. #204, `CACHE_VERSION`
 v157.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
 one `npm run path5:next` printed, in its order — **050, 040, 054, 017, 028, 078**. Native dark
