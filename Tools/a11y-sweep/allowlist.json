@@ -66,9 +66,6 @@
     },
     "Tools/043-field-trip-permission-slip.html": {
       "color-contrast": "baseline 2026-09-03: 5 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
-    },
-    "Tools/074-science-safety-label-maker.html": {
-      "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. .selected > span); fix in the tool, then remove this line"
     }
   }
 }
