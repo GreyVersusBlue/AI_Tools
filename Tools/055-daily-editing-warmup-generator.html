@@ -15,12 +15,21 @@
 <meta name="twitter:title" content="Daily Editing / DOL Warm-Up Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="A bank of broken sentences reveals one at a time on the projector with a click-to-show corrected version, plus a printable worksheet mode and a teacher-added custom sentence bank.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M9 22l3-9 8-8 3 3-8 8-9 3z' fill='none' stroke='%231f3550' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The printed worksheet and key are built into #printArea, which is paper.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Path 5 P3. --ok is the "corrected sentence" green — on screen in the
+     projector display and the sentence bank, never on the printed sheet.
+     The dark value is the site's --good dark (001, 006, 010). */
   :root { --ok: #2c6e3f; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --ok: #63c08e; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -38,27 +47,27 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], input[type="number"], textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .6rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; min-height: 2.6rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .25rem .6rem; font-size: .8rem; }
   .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
 
   .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
-  .tabs button { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tabs button { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  .tabs button.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .stage { display: none; }
   .stage.active { display: block; }
 
@@ -214,28 +223,28 @@
   };
 
   var BUILTIN = [
-    ['their going to the movies tonight', 'They&rsquo;re going to the movies tonight.', 'homophones'],
+    ['their going to the movies tonight', 'They’re going to the movies tonight.', 'homophones'],
     ['the dog chased its tail for an hour', 'The dog chased its tail for an hour.', 'capitalization'],
-    ['your the best friend ive ever had', 'You&rsquo;re the best friend I&rsquo;ve ever had.', 'homophones'],
-    ['i cant believe theyre already here', 'I can&rsquo;t believe they&rsquo;re already here.', 'punctuation'],
+    ['your the best friend ive ever had', 'You’re the best friend I’ve ever had.', 'homophones'],
+    ['i cant believe theyre already here', 'I can’t believe they’re already here.', 'punctuation'],
     ['me and him went to the game yesterday', 'He and I went to the game yesterday.', 'other'],
     ['the students was working quietly on there project', 'The students were working quietly on their project.', 'subject-verb'],
-    ['she dont know where the book is', 'She doesn&rsquo;t know where the book is.', 'subject-verb'],
+    ['she dont know where the book is', 'She doesn’t know where the book is.', 'subject-verb'],
     ['we seen that movie last weekend', 'We saw that movie last weekend.', 'other'],
     ['the teacher gave us are homework early', 'The teacher gave us our homework early.', 'homophones'],
     ['everyone brought there own lunch today', 'Everyone brought their own lunch today.', 'homophones'],
-    ['its going to rain later so bring a umbrella', 'It&rsquo;s going to rain later, so bring an umbrella.', 'punctuation'],
+    ['its going to rain later so bring a umbrella', 'It’s going to rain later, so bring an umbrella.', 'punctuation'],
     ['can you pass me them books over their', 'Can you pass me those books over there?', 'homophones'],
     ['my favorite subjects is math and science', 'My favorite subjects are math and science.', 'subject-verb'],
     ['he should of finished his homework last night', 'He should have finished his homework last night.', 'other'],
-    ['the girls soccer team won they&rsquo;re first game', 'The girls&rsquo; soccer team won their first game.', 'punctuation'],
+    ['the girls soccer team won they’re first game', 'The girls’ soccer team won their first game.', 'punctuation'],
     ['there is alot of homework this week', 'There is a lot of homework this week.', 'other'],
-    ['who&rsquo;s backpack is this laying on the floor', 'Whose backpack is this lying on the floor?', 'homophones'],
+    ['who’s backpack is this laying on the floor', 'Whose backpack is this lying on the floor?', 'homophones'],
     ['i walked to the store then i walked home', 'I walked to the store, and then I walked home.', 'run-ons'],
     ['the weather were nice so we played outside', 'The weather was nice, so we played outside.', 'subject-verb'],
     ['neither of the boys have finished their test', 'Neither of the boys has finished his test.', 'subject-verb'],
     ['she is one of the best players on the team her coach says', 'She is one of the best players on the team, her coach says.', 'run-ons'],
-    ['im going to bring my lunch box and my jacket', 'I&rsquo;m going to bring my lunch box and my jacket.', 'punctuation'],
+    ['im going to bring my lunch box and my jacket', 'I’m going to bring my lunch box and my jacket.', 'punctuation'],
     ['the books on the top shelf is mine', 'The books on the top shelf are mine.', 'subject-verb'],
     ['every one of the students need a pencil', 'Every one of the students needs a pencil.', 'subject-verb']
   ].map(function (row, i) { return { broken: row[0], fixed: row[1], category: row[2], custom: false, id: 'b' + i }; });
@@ -324,7 +333,7 @@
     var item = all[order[idx]];
     els.displayNum.textContent = 'Sentence ' + (idx + 1) + ' of ' + order.length;
     els.displayBroken.textContent = item.broken;
-    els.displayFixed.innerHTML = item.fixed;
+    els.displayFixed.textContent = item.fixed;
     els.displayFixed.classList.remove('shown');
     els.displayCat.textContent = CAT_LABELS[item.category] || item.category;
     els.displayCat.classList.remove('shown');
@@ -357,7 +366,7 @@
         '<span class="worksheet-line"></span></div>';
     }).join('');
     els.sheetKey.innerHTML = chosen.map(function (item, i) {
-      return '<li>' + (i + 1) + '. ' + item.fixed + '</li>';
+      return '<li>' + (i + 1) + '. ' + escapeHtml(item.fixed) + '</li>';
     }).join('');
   });
 
@@ -400,7 +409,7 @@
       }
       var hidden = hiddenIds.indexOf(item.id) !== -1;
       return '<div class="bank-row"' + (hidden ? ' style="opacity:.5;"' : '') + '><span class="btext"><b>[' + (CAT_LABELS[item.category] || item.category) + ']</b> <span class="broken-txt">' + escapeHtml(item.broken) +
-        '</span><span class="arrow">&rarr;</span><span class="fixed-txt">' + item.fixed + '</span>' +
+        '</span><span class="arrow">&rarr;</span><span class="fixed-txt">' + escapeHtml(item.fixed) + '</span>' +
         (hidden ? ' <span class="hint" style="display:inline;margin:0;">(hidden)</span>' : '') + '</span>' +
         '<button type="button" class="secondary small" data-hide="' + item.id + '">' + (hidden ? 'Unhide' : 'Hide') + '</button></div>';
     }).join('');

@@ -144,6 +144,56 @@ const PAGES = [
   // sheet of paper: white with dark ink in dark mode too.
   { label: '081', url: '/Tools/081-word-problem-warmup-generator.html', sheet: '.sheet-page',
     prep: async page => { await page.click('.tab-btn[data-stage="sheet"]'); await settle(page, 400); } },
+  // increment 6. All six build their printable into #printArea, which
+  // print-area.css (or the page's own copy of that rule) keeps display:none on
+  // screen, so none of them has a sheet to check here — every literal these
+  // conversions left alone is print-only. Each prep puts real content on the
+  // page first: an empty tool renders no rows, and a row is where the tints
+  // and the tokenised chrome actually are.
+  { label: '055', url: '/Tools/055-daily-editing-warmup-generator.html',
+    // The sentence bank is where --ok (the corrected sentence) and --err (the
+    // broken one) are drawn on a card; the projector tab shows neither until
+    // someone presses Reveal.
+    prep: async page => { await page.click('.tab-btn[data-stage="bank"]'); await settle(page, 400); } },
+  { label: '058', url: '/Tools/058-duty-roster-builder.html',
+    // The weekly grid's header row is the only --card-2 surface on the page,
+    // and there is no grid until there is a duty and someone on staff.
+    prep: async page => {
+      await page.fill('#staffInput', 'Alex Rivera\nBailey Chen\nCarter Diaz');
+      await page.click('#saveStaffBtn');
+      await settle(page, 200);
+      await page.click('#addDutyBtn');
+      await settle(page, 200);
+      await page.click('#autoFillBtn');
+      await settle(page, 400);
+    } },
+  { label: '059', url: '/Tools/059-experiment-design-planner.html',
+    prep: async page => {
+      await page.click('#addControlledBtn');
+      await page.click('#addMaterialBtn');
+      await page.click('#addStepBtn');
+      await settle(page, 400);
+    } },
+  { label: '070', url: '/Tools/070-peer-feedback-checklist-generator.html',
+    prep: async page => {
+      await page.click('#addCategoryBtn');
+      await settle(page, 400);
+    } },
+  // 074's ten safety symbols are SVG drawn in currentColor, coloured by a
+  // token per symbol; the picker shows all ten and the queue shows the chosen
+  // one, so add a label to get both on screen before the axe scan.
+  { label: '074', url: '/Tools/074-science-safety-label-maker.html',
+    prep: async page => {
+      await page.click('.symbol-btn');
+      await page.fill('#labelText', 'Ethanol — flammable');
+      await page.click('#addLabelBtn');
+      await settle(page, 400);
+    } },
+  { label: '076', url: '/Tools/076-sub-note-feedback-slip-generator.html',
+    prep: async page => {
+      await page.click('#addPromptBtn');
+      await settle(page, 400);
+    } },
 ];
 
 // Chrome is what follows the theme. Anything that is a projector surface
@@ -193,7 +243,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081)');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076)');
 
 for (const p of PAGES) {
   /* ── dark ── */

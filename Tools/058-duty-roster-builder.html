@@ -15,6 +15,11 @@
 <meta name="twitter:title" content="Duty Roster Builder — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Build a rotating weekly hallway/cafeteria/bus duty assignment grid across staff and print it for the workroom board.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M7 9h18M7 16h18M7 23h18' stroke='%231f3550' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The printed weekly grid is built into #printArea, which is paper.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -40,21 +45,21 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], textarea, select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; min-height: 4.5rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .8rem; }
 
@@ -72,7 +77,7 @@
 
   table.roster-grid { width: 100%; border-collapse: collapse; font-size: .88rem; }
   table.roster-grid th, table.roster-grid td { border: 1px solid var(--line-strong); padding: .5rem .5rem; text-align: left; vertical-align: middle; }
-  table.roster-grid th { background: #eef1f4; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+  table.roster-grid th { background: var(--card-2); font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
   table.roster-grid td select { margin-bottom: 0; }
   table.roster-grid .duty-name-cell { font-weight: 700; white-space: nowrap; }
   table.roster-grid .duty-name-cell input { margin-bottom: 0; font-weight: 700; }

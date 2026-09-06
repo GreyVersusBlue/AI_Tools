@@ -15,12 +15,44 @@
 <meta name="twitter:title" content="Science Safety Symbol &amp; Equipment Label Maker — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Printable hazard and equipment labels for lab storage, bins, and stations — pairs with the Lab Safety Contract Tracker.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M16 6l10 18H6z' fill='none' stroke='%23a3372b' stroke-width='2' stroke-linejoin='round'/%3E%3Ctext x='14' y='24' font-family='Georgia,serif' font-weight='700' font-size='11' fill='%23a3372b'%3E!%3C/text%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The printed labels are built into #printArea, which is paper.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* Path 5 P3. The ten safety symbols are drawn in currentColor and coloured
+     by SYMBOLS[].color below, which is on screen in the picker and the queue
+     and on the printed label. Seven of the ten hues ARE ink-paper's light
+     values exactly (--err #a3372b, --ink #1f2430, --muted #6b6a63,
+     --accent-2 #2e6b8f), so those symbols just use the token and flip with
+     the theme for free. These three have no token; the dark values keep the
+     hue and raise the lightness so a near-black card does not swallow them.
+     #printArea is a sheet of paper, so it restores the light three the same
+     way ink-paper.css restores its own. */
+  :root {
+    --sym-corrosive-light: #c07a1a;
+    --sym-biohazard-light: #2c6e3f;
+    --sym-electrical-light: #c9a400;
+    --sym-corrosive: var(--sym-corrosive-light);
+    --sym-biohazard: var(--sym-biohazard-light);
+    --sym-electrical: var(--sym-electrical-light);
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --sym-corrosive: #e0a94e;
+    --sym-biohazard: #63c08e;
+    --sym-electrical: #e3c344;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) #printArea:not(.paper-sheet-off) {
+    --sym-corrosive: var(--sym-corrosive-light);
+    --sym-biohazard: var(--sym-biohazard-light);
+    --sym-electrical: var(--sym-electrical-light);
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -37,30 +69,33 @@
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   input[type="text"], input[type="number"] {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   .add-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: .6rem; align-items: end; }
   .add-grid.editing { outline: 2px solid var(--accent-2); outline-offset: 6px; border-radius: 8px; }
   .editing-note { font-size: .78rem; color: var(--accent-2); font-weight: 600; margin: -.3rem 0 .6rem; }
-  select#sizeSelect { width: auto; font-family: inherit; font-size: .85rem; padding: .35rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; }
+  select#sizeSelect { width: auto; font-family: inherit; font-size: .85rem; padding: .35rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--card); color: var(--ink); }
 
   .symbol-picker { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .8rem; }
-  .symbol-btn { display: flex; flex-direction: column; align-items: center; gap: .2rem; padding: .5rem .4rem; border: 2px solid var(--line-strong); border-radius: 8px; background: #fff; cursor: pointer; width: 5.2rem; }
-  .symbol-btn.selected { border-color: var(--accent); background: #eef1f4; }
+  /* `color` is set here on purpose: .symbol-btn is a <button>, so without it
+     the label under each icon inherited the accent button's white ink and
+     was white on a white card — invisible in light since the tool shipped. */
+  .symbol-btn { display: flex; flex-direction: column; align-items: center; gap: .2rem; padding: .5rem .4rem; border: 2px solid var(--line-strong); border-radius: 8px; background: var(--card); color: var(--ink); cursor: pointer; width: 5.2rem; }
+  .symbol-btn.selected { border-color: var(--accent); background: var(--card-2); }
   .symbol-btn svg { width: 28px; height: 28px; }
   .symbol-btn span { font-size: .68rem; text-align: center; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
 
@@ -128,16 +163,16 @@
   var STORE_KEY = 'sslm_queue_v1';
 
   var SYMBOLS = [
-    { key: 'flammable', name: 'Flammable', color: '#a3372b', path: '<path d="M16 4c-3 6-9 8-9 15a9 9 0 0018 0c0-5-3-6-3-10-2 3-3 4-3 6a3 3 0 01-6 0c0-4 2-6 3-11z" fill="currentColor"/>' },
-    { key: 'corrosive', name: 'Corrosive', color: '#c07a1a', path: '<path d="M8 6h6l-1 8h-4z" fill="currentColor"/><path d="M6 22c0-3 2-5 2-5h4c0 0 2 2 2 5a4 4 0 01-8 0z" fill="currentColor"/><path d="M18 10h8v3l-2 12h-4l-2-12z" fill="currentColor" opacity=".7"/>' },
-    { key: 'toxic', name: 'Toxic / Poison', color: '#1f2430', path: '<circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 12a5 5 0 0010 0M11 20a5 5 0 0010 0" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="2" fill="currentColor"/>' },
-    { key: 'biohazard', name: 'Biohazard', color: '#2c6e3f', path: '<circle cx="16" cy="9" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="20" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="22" cy="20" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="2" fill="currentColor"/>' },
-    { key: 'electrical', name: 'Electrical Hazard', color: '#c9a400', path: '<path d="M18 4L8 18h6l-2 10 12-16h-7z" fill="currentColor"/>' },
-    { key: 'sharp', name: 'Sharp Objects', color: '#6b6a63', path: '<path d="M8 24l14-14 3 3-14 14z" fill="currentColor"/><path d="M8 24l-2 4 4-2z" fill="currentColor"/>' },
-    { key: 'eyeprotect', name: 'Eye Protection', color: '#2e6b8f', path: '<ellipse cx="11" cy="16" rx="5" ry="4" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="21" cy="16" rx="5" ry="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16h0" stroke="currentColor" stroke-width="2"/>' },
-    { key: 'hot', name: 'Hot Surface', color: '#a3372b', path: '<path d="M12 6c-1 3 1 4 1 6a3 3 0 006 0c0-1-1-2-1-3 1 1 3 3 3 6a5 5 0 01-10 0c0-3 1-6 1-9z" fill="none" stroke="currentColor" stroke-width="2"/>' },
-    { key: 'fragile', name: 'Fragile', color: '#2e6b8f', path: '<path d="M11 5h10l-1 10a4 4 0 01-8 0z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 15v6M12 26h8" stroke="currentColor" stroke-width="2"/>' },
-    { key: 'none', name: 'Equipment (no symbol)', color: '#6b6a63', path: '<rect x="7" y="9" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>' }
+    { key: 'flammable', name: 'Flammable', color: 'var(--err)', path: '<path d="M16 4c-3 6-9 8-9 15a9 9 0 0018 0c0-5-3-6-3-10-2 3-3 4-3 6a3 3 0 01-6 0c0-4 2-6 3-11z" fill="currentColor"/>' },
+    { key: 'corrosive', name: 'Corrosive', color: 'var(--sym-corrosive)', path: '<path d="M8 6h6l-1 8h-4z" fill="currentColor"/><path d="M6 22c0-3 2-5 2-5h4c0 0 2 2 2 5a4 4 0 01-8 0z" fill="currentColor"/><path d="M18 10h8v3l-2 12h-4l-2-12z" fill="currentColor" opacity=".7"/>' },
+    { key: 'toxic', name: 'Toxic / Poison', color: 'var(--ink)', path: '<circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 12a5 5 0 0010 0M11 20a5 5 0 0010 0" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="2" fill="currentColor"/>' },
+    { key: 'biohazard', name: 'Biohazard', color: 'var(--sym-biohazard)', path: '<circle cx="16" cy="9" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="20" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="22" cy="20" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="2" fill="currentColor"/>' },
+    { key: 'electrical', name: 'Electrical Hazard', color: 'var(--sym-electrical)', path: '<path d="M18 4L8 18h6l-2 10 12-16h-7z" fill="currentColor"/>' },
+    { key: 'sharp', name: 'Sharp Objects', color: 'var(--muted)', path: '<path d="M8 24l14-14 3 3-14 14z" fill="currentColor"/><path d="M8 24l-2 4 4-2z" fill="currentColor"/>' },
+    { key: 'eyeprotect', name: 'Eye Protection', color: 'var(--accent-2)', path: '<ellipse cx="11" cy="16" rx="5" ry="4" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="21" cy="16" rx="5" ry="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16h0" stroke="currentColor" stroke-width="2"/>' },
+    { key: 'hot', name: 'Hot Surface', color: 'var(--err)', path: '<path d="M12 6c-1 3 1 4 1 6a3 3 0 006 0c0-1-1-2-1-3 1 1 3 3 3 6a5 5 0 01-10 0c0-3 1-6 1-9z" fill="none" stroke="currentColor" stroke-width="2"/>' },
+    { key: 'fragile', name: 'Fragile', color: 'var(--accent-2)', path: '<path d="M11 5h10l-1 10a4 4 0 01-8 0z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 15v6M12 26h8" stroke="currentColor" stroke-width="2"/>' },
+    { key: 'none', name: 'Equipment (no symbol)', color: 'var(--muted)', path: '<rect x="7" y="9" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>' }
   ];
 
   var els = {};
