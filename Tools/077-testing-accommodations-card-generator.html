@@ -15,6 +15,12 @@
 <meta name="twitter:title" content="Testing Accommodations Reference Card Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Print small per-student reference cards (extended time, separate setting, read-aloud) to keep testing day accommodations straight — stays entirely local.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='7' y='10' width='18' height='13' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M10 15h6M10 19h4' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The printed cards are built into #printArea, which is paper: its #333
+     card borders, #999 rules and #555 notes are never on a dark screen.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -40,21 +46,21 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; min-height: 4.5rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
 
@@ -63,7 +69,7 @@
 
   table.grid-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
   table.grid-table th, table.grid-table td { border: 1px solid var(--line); padding: .4rem .4rem; text-align: center; }
-  table.grid-table th { background: #eef1f4; font-size: .72rem; color: var(--muted); }
+  table.grid-table th { background: var(--card-2); font-size: .72rem; color: var(--muted); }
   table.grid-table td:first-child, table.grid-table th:first-child { text-align: left; font-weight: 700; }
   table.grid-table input[type="text"].note-input { width: 6rem; margin: 0; font-size: .78rem; padding: .2rem .3rem; }
 
@@ -323,16 +329,25 @@
         escapeHtml(filterLabel()) + '&rdquo; yet &mdash; switch Show back to every student to tick some.</td></tr>';
       return;
     }
-    var head = '<tr><th>Student</th>' + state.types.map(function (t) { return '<th>' + escapeHtml(t.name) + '</th>'; }).join('') + '<th>Note</th></tr>';
+    var head = '<tr><th scope="col">Student</th>' +
+      state.types.map(function (t) { return '<th scope="col">' + escapeHtml(t.name) + '</th>'; }).join('') +
+      '<th scope="col">Note</th></tr>';
+    /* Every control in this grid needs its own name. A column header is not
+       one: a screen reader announces "checkbox" and nothing else, and axe
+       reports it as a `label` violation — 21 of them on a three-student
+       roster. The sweep never saw it because it runs on empty storage, where
+       the grid renders a single "Save a roster above first" cell. */
     var rows = shown.map(function (name) {
       var cells = state.types.map(function (t) {
         var key = assignKey(name, t.id);
         var checked = state.assignments[key] ? ' checked' : '';
-        return '<td><input type="checkbox" data-student="' + escapeAttr(name) + '" data-type-check="' + t.id + '"' + checked + '></td>';
+        return '<td><input type="checkbox" aria-label="' + escapeAttr(t.name + ' — ' + name) +
+          '" data-student="' + escapeAttr(name) + '" data-type-check="' + t.id + '"' + checked + '></td>';
       }).join('');
       var note = state.notes[name] || '';
       return '<tr data-student-row="' + escapeAttr(name) + '"><td>' + escapeHtml(name) + '</td>' + cells +
-        '<td><input type="text" class="note-input" data-note="' + escapeAttr(name) + '" value="' + escapeAttr(note) + '"></td></tr>';
+        '<td><input type="text" class="note-input" aria-label="' + escapeAttr('Note for ' + name) +
+        '" data-note="' + escapeAttr(name) + '" value="' + escapeAttr(note) + '"></td></tr>';
     }).join('');
     els.assignTable.innerHTML = head + rows;
   }

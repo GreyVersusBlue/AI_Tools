@@ -15,6 +15,12 @@
 <meta name="twitter:title" content="Fitness &amp; Skill Assessment Tracker — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Track per-student fitness-test results (mile time, push-ups, sit-ups) across the year, with simple stats and a printable report.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M7 20l6-8 5 5 7-11' fill='none' stroke='%231f3550' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The report is built into #printArea, which is paper: .print-sub's #555,
+     .print-table's #999 rules and #eee header fill are never on a dark screen.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -23,6 +29,11 @@
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* Path 5 P3. The sorted column's header fill is the one tint on this page
+     with no token behind it: a shade bluer than --card-2 so the sorted column
+     reads as chosen rather than merely as a header. */
+  :root { --sorted-bg: #e2e9ef; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --sorted-bg: #2f3b4a; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -40,7 +51,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], select, textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; min-height: 4.5rem; }
@@ -49,27 +60,27 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
 
   table.grid-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
   table.grid-table th, table.grid-table td { border: 1px solid var(--line); padding: .35rem .45rem; text-align: center; }
-  table.grid-table th { background: #eef1f4; font-size: .72rem; color: var(--muted); }
+  table.grid-table th { background: var(--card-2); font-size: .72rem; color: var(--muted); }
   table.grid-table td:first-child, table.grid-table th:first-child { text-align: left; font-weight: 700; }
   table.grid-table input[type="text"] { width: 4.5rem; margin: 0; text-align: center; padding: .25rem; font-size: .82rem; }
-  table.grid-table tfoot td { font-weight: 700; background: #fbfbf9; font-size: .76rem; }
+  table.grid-table tfoot td { font-weight: 700; background: var(--paper); font-size: .76rem; }
   table.grid-table th[data-sort-by] { cursor: pointer; user-select: none; }
   table.grid-table th[data-sort-by]:hover { color: var(--accent-2); }
   table.grid-table th .arrow { font-size: .68rem; opacity: .7; margin-left: .15rem; }
-  table.grid-table th.sorted-on { color: var(--accent); background: #e2e9ef; }
+  table.grid-table th.sorted-on { color: var(--accent); background: var(--sorted-bg); }
   .sort-note { font-size: .78rem; color: var(--muted); margin: -.2rem 0 .6rem; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 
   .print-title { font-size: 1.4rem; margin: 0 0 .1rem; }
