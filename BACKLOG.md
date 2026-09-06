@@ -63,10 +63,38 @@ yours.
 
 ## Where things stand — start here
 
-*Current as of `main` after PR #202, 2026-09-05. Rewrite this header when your phase
+*Current as of `main` after PR #204, 2026-09-06. Rewrite this header when your phase
 merges — that is step 6 of the definition of done, and it is not optional.*
 
-**Last shipped.** Rank 1 — **the third increment of Path 5 P3** (#202, `CACHE_VERSION`
+**Last shipped.** Rank 1 — **the fourth increment of Path 5 P3** (#204, `CACHE_VERSION`
+**v157**), a 2+ row taken alone again. Six more pages left a11y.css's invert filter for a
+native dark palette — **050, 040, 054, 017, 028 and 078**, the batch `npm run path5:next`
+printed, in its order. Native dark is **33 of 83** themed pages, from 27 (40%); `stage.js` is
+unchanged at **7** adopters with **2** pages still hand-rolling (001, 004), because none of
+these six has a stage of its own. **The row stays in the table at rank 1**, rewritten again;
+**nine** rounds of six are left by the picker's count. **This was the first batch whose real
+work was the printable preview rather than the chrome**, and four things it found are worth
+carrying. (1) **A sheet of paper built by script now has a second and third shape.** 039 (#202)
+put `paper-sheet` into two template strings; 040 and 028 each have exactly *one* chokepoint
+instead — 040's `pageClass()`, which every `.page` on that tool comes through, and 028's single
+`'<div class="sheet">'`. **Look for the chokepoint before editing templates one by one.** The
+other three pages needed nothing at all here: 050, 054 and 078 hide `#printArea` on screen, so
+their print greys are never on screen in either theme. (2) The dark-rollout suite found a
+**serious axe `color-contrast` violation on 028 that is present in light too** — three
+placeholders inside the worksheet at `#888`, 3.54:1 on white. They are on the sheet, so
+`var(--muted)` resolves to the light `#6b6a63` (4.76:1) inside it. Fixed in the tool. **That is
+the second increment running in which this suite found a light-mode bug the site-wide sweep
+had not**, for a different reason each time (#202's was empty storage; this one the sweep did
+see, and its allowlist line had been absorbing it since the 2026-09-03 baseline — 028 was
+allowed 2 and is now allowed 1). **An allowlist line hides a count, not just a rule.** (3)
+**054 never styled `input[type="url"]`**, so its two article-link boxes have always carried the
+browser's own control styling — invisible in light, obvious in dark beside the tokenized boxes
+around them. A sweep of all six found no other unstyled text-ish input type; it is worth the
+one grep per page (`<input type=` against the page's `input[type=…]` selectors). (4) 017's
+projector view is the **first projector surface since increment 1** — already hardcoded dark,
+left that way in both themes, and now with the reason written next to it. Full `npm test` was
+run locally (145 green, 24.5 min) and the dark and light screenshots of the six were looked at.
+Before it, rank 1 — **the third increment of Path 5 P3** (#202, `CACHE_VERSION`
 **v156**), a 2+ row taken alone again. Six more pages left a11y.css's invert filter for a
 native dark palette — **006, 020, 056, 019, 039 and 009**, the batch `npm run path5:next`
 printed, in its order. Native dark is **27 of 83** themed pages, from 21; `stage.js` is
@@ -155,16 +183,17 @@ v144, #177 v145); Path 4 P1 and P2, the storage primitive and the tool registry 
 #174 v143); Stage 2 Wave A2, the accessibility label round (#168, v140); and Wave A1, the
 theme architecture decision (#167, v139).
 
-**The rollout is under way and rank 1 is still Path 5 P3, a 2+ row.** Two increments of six
-have shipped (#198, #200); **eleven** rounds of six are left by the picker's count. Take it
-alone, do the next increment, ship it, and **leave the row in place** with its text rewritten
-to say what is done. Do not pair it with anything; see "How big a batch". On 2026-09-05 the
-batch the picker printed next was **006, 020, 056, 019, 039 and 009** — read it off the script
-when you start, not off this sentence. Note what that list is: the first two increments were
-sub-pages and single-purpose makers, and this one is six of the biggest tools on the site
-(23–33 literals each, and 019's own builder page sits above the two sub-pages #200 just
-converted). Budget for six pages that each need a decision per literal, not for a
-find-and-replace.
+**The rollout is under way and rank 1 is still Path 5 P3, a 2+ row.** Four increments of six
+have shipped (#198, #200, #202, #204); **nine** rounds of six are left by the picker's count.
+Take it alone, do the next increment, ship it, and **leave the row in place** with its text
+rewritten to say what is done. Do not pair it with anything; see "How big a batch". On
+2026-09-06 the batch the picker printed next was **047, 067, 075, 081, 061 and 063** — read it
+off the script when you start, not off this sentence. Note what that list is, because it is a
+change of kind: the picker has run out of the big tools and is into the **7-and-8 literal
+tail** — six worksheet and drill generators that are each one button block and one preview.
+The expensive four increments are behind you; budget for a batch that is mostly the standard
+input/button swap, and spend the time you save reading the *preview* on each, which is where
+the last four increments' real work and both of their bugs were.
 
 **Write step 6 after each merge, not after the batch.** On 2026-09-04 two sessions rewrote
 this header at once and it had to be merged by hand: #178 merged before its session had
@@ -175,23 +204,23 @@ tells the next session to build what already exists, and it did so for about an 
 claim table itself worked, both then and for #182: sessions took different rows and no source
 file conflicted.
 
-**Numbers, all re-measured against the tree on 2026-09-05:**
+**Numbers, all re-measured against the tree on 2026-09-06:**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v156` (→ v156 in #202; seven precached pages changed — 006, 009, 019, 020, 039, 056 and `escape-room-builder/lock.html`, whose tint values were converged onto 001's. Nothing was added to or removed from either tier) |
-| Precache entries | 257 in `PRECACHE_URLS`, **82** of them in the `SHELL_URLS` install tier — unchanged by #202, which changed seven already-listed pages, none of them in the shell tier |
-| Suites | **145** in `Tools/board-check/suites.json`; `expectedFailures` **empty**. #202 added no suite — it added six pages to `PAGES` in `smoke-dark-rollout.mjs`, taking it from 160 assertions to **223**. **#202 ran the full `npm test` locally as well as in CI: 145 green in 23.2 min locally**, so the ~21-minute figure quoted elsewhere in this file is the right order of magnitude on both machines |
-| CI per pull request | **Scoped to the diff since #197** — the pull-request job runs `npm test -- --changed --base origin/<base>`; a push to `main` still runs everything. **But `sw.js` is site-wide in `select-suites.mjs`, and every tool PR bumps `CACHE_VERSION` there, so a tool PR still runs the full pass.** #200 is the confirmation the rank-2 row asked for on a real CI log: it touched six pages and one test file, and CI still ran all 145 suites in 23.4 minutes. Rank 2 is the fix; until it ships, the saving is real only for a PR with no precached change (docs, tooling, tests) — and there the saving is large: **#201, this file plus `HISTORY.md`, ran green in 43 seconds**, which is the first genuinely scoped run on a real log and the confirmation #197's own "not verified" note was waiting for |
+| `CACHE_VERSION` | `v157` (→ v157 in #204; six precached pages changed — 017, 028, 040, 050, 054 and 078. Nothing was added to or removed from either tier) |
+| Precache entries | 257 in `PRECACHE_URLS`, **82** of them in the `SHELL_URLS` install tier — unchanged by #204, which changed six already-listed pages, none of them in the shell tier |
+| Suites | **145** in `Tools/board-check/suites.json`; `expectedFailures` **empty**. #204 added no suite either — it added six more pages to `PAGES` in `smoke-dark-rollout.mjs`, taking it from 223 assertions to **289**; two of them (017, 040) need a `prep`, because their preview does not exist until an entry has been typed. **#204 ran the full `npm test` locally as well as in CI: 145 green in 24.5 min locally, 23.7 in CI** — the two machines agree to within a minute across two increments now |
+| CI per pull request | **Scoped to the diff since #197** — the pull-request job runs `npm test -- --changed --base origin/<base>`; a push to `main` still runs everything. **But `sw.js` is site-wide in `select-suites.mjs`, and every tool PR bumps `CACHE_VERSION` there, so a tool PR still runs the full pass.** #200 is the confirmation the rank-2 row asked for on a real CI log: it touched six pages and one test file, and CI still ran all 145 suites in 23.4 minutes. **#204 is the third tool PR in a row to do the same — six pages, one test file, all 145 suites, 23.7 minutes.** Rank 2 is the fix; until it ships, the saving is real only for a PR with no precached change (docs, tooling, tests) — and there the saving is large: **#201, this file plus `HISTORY.md`, ran green in 43 seconds**, which is the first genuinely scoped run on a real log and the confirmation #197's own "not verified" note was waiting for |
 | Read-only guards | **11**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands` and `adoption`. All run in CI. `check:precache` is one guard running **six** always-on checks since #191 (SHELLDEP is the sixth) plus the opt-in BUMP. `check:docs-commands`'s `KNOWN_MISSING` is **empty** since #195 |
-| Accessibility allowlist | **21 page-rule pairs on 21 pages, every one `color-contrast`** — 034's `aria-required-children` was fixed and its line deleted in #191, and it was the last non-contrast allowance on the site. Unchanged by #202: the `label` violation it found on 009 was fixed in the tool. **The sweep behind that list walks index and the 86 tool pages only**, so a tool's sub-pages are outside it — and, #202's finding, **it opens every page with empty storage**, so any UI that only renders once something is saved is not scanned at all. That is how a critical `label` violation sat on 009 in *light* without the sweep ever reporting it |
+| Accessibility allowlist | **21 page-rule pairs on 21 pages, every one `color-contrast`** — 034's `aria-required-children` was fixed and its line deleted in #191, and it was the last non-contrast allowance on the site. Still 21 lines after #204, but 028's is now absorbing **1** violation where it absorbed 2: three `#888` placeholders inside its worksheet were fixed in the tool. **A line hides a count, not just a rule** — its text quotes the baseline count and nothing checks that number, so a page can be allowed one and quietly grow to five. **The sweep behind the list walks index and the 86 tool pages only**, so a tool's sub-pages are outside it — and, #202's finding, **it opens every page with empty storage**, so any UI that only renders once something is saved is not scanned at all |
 | Tool registry | 87 rows, **217 keys and 32 prefixes across 109 files** — `__scv_probe__` retired and `__gvb_save_probe__` declared for the first time, so the total is unchanged for two unrelated reasons; four IndexedDB databases declared; `check:registry` green, `dynamic` empty everywhere |
 | Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 77 · `a11y.js` 77 · `ink-paper.css` 71 · `base.css` 68 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `state-link.js` 17 · `qr-scan.js` 10 · `stage.js` 7 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `qr-draw.js` 1 · `seating-read.js` 1 · `share.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087**. 81 of them have recorded open ideas |
-| Tier 1 rows | **176**, a contiguous 1..176 — #202 shipped an increment of rank 1 and left it in place, and added one new ¼ row (the duplicate `a11y.js`/`a11y.css` loads on 014 and 033) at rank 14, so everything below shifted by one. Every one is a row a session can finish alone; the one that was not is parked under Cross-cutting. *(Counted, not carried forward, and NOT with `grep -oE '^\| [0-9]+ \|' BACKLOG.md` — that over-counts, because #190 added a batch-size table whose `| 1 | **one** | |` row matches it. Count the ranked table alone: `awk '/^\| Rank \| Item/,/^$/' BACKLOG.md | grep -cE '^\| [0-9]+ \|'`.)* |
-| Dark mode (`npm run path5:next`) | **27 of 83** themed pages paint a native dark palette (33%); **56** are still getting a11y.css's CSS-filter invert. A further **14 live pages load no `a11y.js` at all** and get no theme either way — 002, 007, 016, 018, 034, 035, 038, 044, 086, `classroom-label-maker/speak.html` and the four root landing-page variants. **1,225 colour literals** stand between here and the rest: median **16** per page, range **6–69**, none at zero |
-| Fullscreen | `_shared/stage.js` in **7** pages (010, 015, 021, 023, 024, 025, 072); **2** still hand-roll `requestFullscreen` — 001 and 004, neither of which was ever on the P2 list. Unchanged by #202: none of its six pages had a stage |
+| Tier 1 rows | **176**, a contiguous 1..176 — #204 shipped an increment of rank 1, left it in place and added no row, so the table and the tool-number boundary (**95**) are exactly what #202 left. Every one is a row a session can finish alone; the one that was not is parked under Cross-cutting. *(Counted, not carried forward, and NOT with `grep -oE '^\| [0-9]+ \|' BACKLOG.md` — that over-counts, because #190 added a batch-size table whose `| 1 | **one** | |` row matches it. Count the ranked table alone: `awk '/^\| Rank \| Item/,/^$/' BACKLOG.md | grep -cE '^\| [0-9]+ \|'`.)* |
+| Dark mode (`npm run path5:next`) | **33 of 83** themed pages paint a native dark palette (40%); **50** are still getting a11y.css's CSS-filter invert. A further **14 live pages load no `a11y.js` at all** and get no theme either way — 002, 007, 016, 018, 034, 035, 038, 044, 086, `classroom-label-maker/speak.html` and the four root landing-page variants. **975 colour literals** stand between here and the rest: median **15** per page, range **7–54**, none at zero. **The range is the number that moved**: the top was 69 before #204 and the picker's next six are all 7s and 8s, so the remaining fifty are a flatter, cheaper tail than the four increments behind them |
+| Fullscreen | `_shared/stage.js` in **7** pages (010, 015, 021, 023, 024, 025, 072); **2** still hand-roll `requestFullscreen` — 001 and 004, neither of which was ever on the P2 list. Unchanged by #204: none of its six pages had a stage either. 017 has a *projector view*, which is not the same thing — it is a fixed overlay the page shows and hides itself, with no `requestFullscreen` anywhere |
 | Lint | clean |
 
 **217 keys is not a gain.** Two keys changed hands in #193 and cancelled out: `__scv_probe__`
@@ -202,9 +231,8 @@ changed no keys at all.
 **Start here: rank 1 alone — Path 5 P3, and it is still a 2+ row.** Run `npm run path5:next`,
 take the batch it prints (six by default, ranked projector-evidence-first then cheapest-first),
 convert those pages, ship, and **leave the row in place**, rewritten to say which pages are
-done. Do not pair it with rank 2 or anything else. On 2026-09-05 the next batch it printed was
-025, `command-center/remote.html`, `escape-room-builder/monitor.html`, 051, 048 and
-`escape-room-builder/lock.html` — read it off the script when you start, not off this
+done. Do not pair it with rank 2 or anything else. On 2026-09-06 the next batch it printed was
+047, 067, 075, 081, 061 and 063 — read it off the script when you start, not off this
 sentence. Two things the script will tell you that the P3 prose list does not: 004 already
 has a native palette, and 007 loads no `a11y.js`, so it needs that before it can have a theme
 at all. **Add each converted page to `PAGES` in `smoke-dark-rollout.mjs`** — that list is the
@@ -259,17 +287,40 @@ they were written on. #202's own additions are the last three bullets.
   / `#eaf1f5` / `#c9dbe3`. #202 moved lock.html, 019, 006 and 009 onto 001's, so there is one
   family again; keep it that way. 009 needed one genuinely new trio — `--student-*`, the
   purple "holds student data" chip — which nothing else on the site has.
-- **A sheet of paper can be built by script.** 039's worksheet preview is generated in two
-  template strings, so `paper-sheet` goes into the JavaScript, not the markup — and the sheet
-  does not exist until a teacher picks a tab and adds a verb, so its `PAGES` row needs a
-  two-click `prep`. Grep the inline script for the sheet's class before assuming it is static.
+- **A sheet of paper can be built by script, and it usually has a chokepoint.** 039's worksheet
+  preview is generated in two template strings, so `paper-sheet` goes into the JavaScript, not
+  the markup — and the sheet does not exist until a teacher picks a tab and adds a verb, so its
+  `PAGES` row needs a two-click `prep`. Grep the inline script for the sheet's class before
+  assuming it is static. **#204 found that two template strings is the hard case, not the
+  normal one**: 040 builds twelve different printable pages and every one of them goes through
+  a single `pageClass()` helper, and 028 has exactly one `'<div class="sheet">'` in the whole
+  file. Look for the one place the class is written before editing templates one at a time.
+  And the inverse is also common and costs nothing: 050, 054 and 078 hide `#printArea` on
+  screen (`_shared/print-area.css` or their own rule), so their print greys are never on screen
+  in either theme and the whole print half of the page needs no decision at all. Check that
+  first — it can turn a 39-literal page into a six-literal one.
 - **The site-wide axe sweep opens every page with empty storage, and that hides real
   violations.** #202's dark-rollout run found a critical `label` violation on 009 that is
   present in **light** as well: 009's per-tool checkboxes only exist once something is saved,
   and `test:a11y` saves nothing, while `smoke-dark-rollout.mjs` writes `gvb-a11y-prefs` to set
   the theme and so always has a row. Fixed in the tool. **Any page whose UI appears only once
   storage is non-empty is under-covered the same way**; nothing measures how many there are,
-  and a converted page is a good moment to look.
+  and a converted page is a good moment to look. **#204 found the second way the sweep hides a
+  real light-mode bug, and it is not the storage one**: 028's three `#888` placeholders were
+  fully visible to `test:a11y`, and its allowlist line had been absorbing them since the
+  2026-09-03 baseline. A line allows a *rule* on a page; the count in its text is prose that
+  nothing checks, so a page allowed one violation can grow to five in silence. The dark-rollout
+  suite allows nothing, which is why it caught them. **A `color-contrast` allowance on a page
+  you are converting is worth reading before you trust it** — 028's is now absorbing 1 instead
+  of 2, and the line stays only because `.preview-note` still fires.
+- **Check which `input` types the page actually styles.** 054 styled `input[type="text"]` and
+  `textarea` and nothing else, so its two `type="url"` boxes have always had the browser's own
+  control styling. In light that is invisible; in dark it is a paler, differently-bordered
+  control sitting beside six tokenized ones, and the suite's white-chrome check will not catch
+  it because `color-scheme: dark` makes the UA control dark rather than white. One grep per
+  page settles it: the `<input type=` values used against the `input[type=…]` selectors in the
+  `<style>`. Across #204's six only 054 had a gap; `file` and `checkbox` are UA controls and
+  are meant to be left alone.
 - **Add every converted page to `PAGES` in `smoke-dark-rollout.mjs`.** That list is the
   suite's whole idea of which pages are adopted, and a page left off it is a page nobody scans
   in dark. For a **sub-page** it is worse than that: the site-wide a11y sweep walks index and
@@ -288,11 +339,13 @@ they were written on. #202's own additions are the last three bullets.
   persisted display state it was, usable with or without fullscreen. The fallback style the
   helper injects strips body padding, so 010 restores it under `body.stage-fallback`.
 - **Nothing has been verified on a real projector, a real phone, or with the worker
-  installed**, across either increment. #198's dark screenshots were looked at by eye
-  (`DARK_SHOTS=<dir>` writes them); **#200's were not** — it relied on the suite's computed
-  colour assertions and axe-in-dark alone, which is a weaker check on whether a converted page
-  actually *looks* right. If you want the stronger one, run the suite with `DARK_SHOTS` set
-  and look at the twelve pages.
+  installed**, across any of the four increments. #198's, #202's and #204's dark screenshots
+  were looked at by eye (`DARK_SHOTS=<dir>` writes them); **#200's were not** — it relied on
+  the suite's computed colour assertions and axe-in-dark alone, which is a weaker check on
+  whether a converted page actually *looks* right. If you want the stronger one, run the suite
+  with `DARK_SHOTS` set and look at the twenty-four pages. It is worth the five minutes: the
+  screenshots are what showed #204 that 054's URL boxes were a different control from their
+  neighbours, which no assertion in the suite was ever going to say.
 - **One thing #200 did not do that the next increment might want to.** The picker still counts
   the deliberate literals (three of them, now with comments), so its number will never reach
   zero and cannot be used as a completion signal. Nobody has proposed teaching it to skip a
@@ -754,7 +807,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 5 P3 — native dark + `stage.js` across the projector tools, batches of ~6. **Increments 1–3 shipped (#198, #200, #202): 010, 015, 021, 023, 024, 072; then 025, 048, 051 and the three sub-pages `command-center/remote.html`, `escape-room-builder/lock.html` + `monitor.html`; then 006, 009, 019, 020, 039, 056. 56 pages left, ~10 rounds.** Next batch from `npm run path5:next` | site | 2+ | increment 4 in progress | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
+| 1 | Path 5 P3 — native dark + `stage.js` across the projector tools, batches of ~6. **Increments 1–4 shipped (#198, #200, #202, #204): 010, 015, 021, 023, 024, 072; then 025, 048, 051 and the three sub-pages `command-center/remote.html`, `escape-room-builder/lock.html` + `monitor.html`; then 006, 009, 019, 020, 039, 056; then 017, 028, 040, 050, 054, 078. 50 pages left, 9 rounds — and the picker is into the 7-and-8-literal tail, so they are cheaper than the four behind them.** Next batch from `npm run path5:next` | site | 2+ | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 2 | Make #197's scoped CI actually fire on a tool PR: `select-suites.mjs` treats any `sw.js` edit as site-wide, and every tool PR bumps `CACHE_VERSION` there. Teach it that a `sw.js` diff touching only the `CACHE_VERSION` line is not site-wide (read the hunk, not the filename), pin it in `select-suites.test.mjs`, and confirm on the next tool PR's CI log | `Tools/board-check/` | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 3 | Path 5 P4 — landing page and hallway tools; 034 gets a native dark palette | site | 1 | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 4 | Path 6 P2 — adopt the share sheet in the 17 existing `state-link` tools | site | 2+ | | [Path 6](#path-6--share-everywhere) |
@@ -1522,8 +1575,9 @@ subtree, so live controls must live inside it).
   (#200, v155): 025, `command-center/remote.html`, `escape-room-builder/monitor.html`, 051,
   048 and `escape-room-builder/lock.html`, all palette-only — none of the six had a stage of
   its own. Increment 3 the same day (#202, v156): 006, 020, 056, 019, 039 and 009, also all
-  palette-only. 56 pages left, ~10 rounds; 001 and 004 are still the last two hand-rolled
-  stages.** Each converted page goes into `PAGES` in
+  palette-only. Increment 4 on 2026-09-06 (#204, v157): 050, 040, 054, 017, 028 and 078,
+  palette-only again — 017's projector view is a self-managed overlay, not a stage. 50 pages
+  left, 9 rounds; 001 and 004 are still the last two hand-rolled stages.** Each converted page goes into `PAGES` in
   `Tools/theme/test/smoke-dark-rollout.mjs`.
   **Take the batch from `npm run path5:next`, not from this list** — the script ranks by
   projector evidence and then by cost, and it already contradicts the list in two places:

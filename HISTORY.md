@@ -166,6 +166,77 @@ waits for will be a docs or tooling PR, not a tool one. Recorded as a ¼ row at 
 a `sw.js` hunk that touches only the version constant as not site-wide, and pin it in
 `select-suites.test.mjs`. Not measured — read off the diff.
 
+**Rank 1 — Path 5 P3, increment 4: six more pages on native dark. #204, `CACHE_VERSION`
+v157.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
+one `npm run path5:next` printed, in its order — **050, 040, 054, 017, 028, 078**. Native dark
+went from 27 themed pages to 33 (40%); the picker's literal count from 1,225 across 56 pages to
+**975 across 50**, nine rounds of six left. `stage.js` did not move again: none of these six has
+a stage. 017 has a *projector view*, which is a fixed overlay the page shows and hides itself,
+with no `requestFullscreen` anywhere — worth naming, because it looks like a stage in the
+markup and is not one.
+
+**This was the first batch whose real work was the printed sheet rather than the chrome, and
+the useful finding is that a script-built sheet usually has a chokepoint.** #202 had put
+`paper-sheet` into 039's two template strings and recorded that as the shape to expect. Two
+template strings turns out to be the hard case: 040 builds twelve different printable pages —
+flashcards, word wall, foldables, word search, crossword, bingo, matching quiz — and every one
+of them goes through a single `pageClass()` helper, and 028 has exactly one
+`'<div class="sheet">'` in the whole 2,700-line file. Both took a one-line change. **Look for
+the one place the class is written before editing templates one at a time.** The inverse was
+worth as much: 050, 054 and 078 hide `#printArea` on screen, so their print greys — and there
+are dozens, `#333`, `#555`, `#999`, `#ccc`, `#eee` — are never on screen in either theme and
+needed no decision at all. That is what turned 050's 39 literals and 054's 46 into about six
+each. **Check whether the print half is on screen before budgeting a page by the picker's
+count.**
+
+**The second increment running in which this suite found a light-mode accessibility bug that
+`test:a11y` was not reporting — and for a completely different reason.** #202's was structural:
+the sweep opens every page with empty storage. #204's was not. 028's three `#888` placeholders
+(`.source-desc.empty`, `.step-answer.key.empty`, `.source-text-lines .stl-num` — 3.54:1 on
+white, serious) were fully visible to the sweep, and its **allowlist line had been absorbing
+them since the 2026-09-03 baseline**. The line allows the `color-contrast` *rule* on that page;
+the count in its prose ("2 ×") is documentation that nothing checks. So a page allowed one
+violation can grow to five with the sweep still green. `smoke-dark-rollout.mjs` allows nothing,
+which is why it caught them. Fixed in the tool: the three are inside the worksheet, so
+`var(--muted)` resolves to the light `#6b6a63` (4.76:1) within the `paper-sheet` subtree and to
+the dark muted anywhere else. 028's line stays — `.preview-note` still fires — but it now
+absorbs 1 where it absorbed 2. **A `color-contrast` allowance on a page you are converting is
+worth reading before you trust it.** Nothing has been done about the general problem, which is
+that the allowlist's counts are unverified prose; that would be a new guard, and it is not
+recorded as a row because a session should decide whether it is worth one after seeing whether
+this recurs.
+
+**054 never styled `input[type="url"]`.** Its rule named `input[type="text"]` and `textarea`,
+so its two article-link boxes have always carried the browser's own control styling. Invisible
+in light; in dark, a paler, differently-bordered control sitting next to six tokenized ones.
+**The suite's white-chrome assertion cannot catch this**, because `color-scheme: dark` makes
+the UA control dark rather than white — the dark screenshot is what showed it. One grep per
+page settles it (the `<input type=` values used against the `input[type=…]` selectors in the
+`<style>`); across the six only 054 had a gap, and `file` and `checkbox` are UA controls that
+are meant to be left alone.
+
+**017's projector view is the first projector surface since increment 1**, and it needed
+nothing: already hardcoded `#12151b` on `#f4f3ee`, and correct as-is in both themes, because
+remapping it would have made it light-blue-on-near-black — the accent ramp inverts. The comment
+saying so is new. Driving `#projectorBtn` in both themes confirmed it paints identically in
+each. `--desk` (015/023/039's name for the table a preview sheet lies on) reached three more
+pages: 040's and 028's preview wells, and 017's, where the thing behind the QR card previews is
+the same object under a different name.
+
+**Light-mode changes, all deliberate, all onto 001's tint family** — the same convergence #202
+did, so there is still one family to promote into `ink-paper.css` eventually rather than two:
+017's warn trio (`#fbe7c6`/`#8a5a00`/`#e0b876`) and err pair (`#fbeceA`/`#d8a89f`), 054's
+`#fce8b8`/`#6b4c00` word chips, and three near-miss info tints (`#e9eef3`, `#eaf1f6`) onto
+001's `#eaf1f5`. Imperceptible individually; recorded so they can be reversed cheaply.
+
+**Not verified.** No real projector, no real phone, nothing with the worker installed — the
+fourth increment in a row. The `DARK_SHOTS` screenshots of the six new pages were written and
+looked at in both themes, and that is what found the 054 control; the eighteen already-adopted
+pages were not re-checked by eye this time, only by the suite. Full local pass: 145 suites,
+24.5 min, green, `expectedFailures` still empty; CI 23.7 min, also a full pass, because the
+`CACHE_VERSION` bump makes `sw.js` site-wide in `select-suites.mjs` — the third tool PR running
+to confirm what rank 2 exists to fix.
+
 **Rank 1 — Path 5 P3, increment 3: six more pages on native dark. #202, `CACHE_VERSION`
 v156.** The same 2+ row, taken alone again, one increment, row left in place. The batch was
 the one `npm run path5:next` printed, in its order — **006, 020, 056, 019, 039, 009**. Native
