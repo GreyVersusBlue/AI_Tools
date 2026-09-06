@@ -18,13 +18,15 @@
 <link rel="stylesheet" href="../../_shared/ink-paper.css">
 <link rel="stylesheet" href="../../_shared/a11y.css">
 <style>
-  /* Tool-local semantic tints, with 001's values where 001 has them. --good-line
-     is new here: 001 defines --good-bg but never needed a border to go with it. */
+  /* Tool-local semantic tints, in 001's values. --good-line is the one 001 has
+     no value for: it defines --good-bg but never needed a border to go with it.
+     --good-bg and the info pair were this page's own near-misses until the
+     019 conversion put both halves of the escape room on 001's numbers. */
   :root {
     --good: #2f7d4f;
-    --good-bg: #eaf5ec;  --good-line: #c7e2cb;
+    --good-bg: #e4f5ea;  --good-line: #c7e2cb;
     --err-bg: #fbecea;   --err-line: #e6c6c1;
-    --info-bg: #eef4f8;  --info-line: #cfe0ea;
+    --info-bg: #eaf1f5;  --info-line: #c9dbe3;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --good: #63c08e;

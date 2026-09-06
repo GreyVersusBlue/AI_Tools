@@ -16,6 +16,10 @@
 <meta name="twitter:title" content="Backup &amp; Restore — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Export everything every tool on this site has saved in your browser to one file, or restore it on a new computer.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M16 6v14M10 14l6 6 6-6' stroke='%232A6DB0' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Cpath d='M7 24h18' stroke='%23C43A2F' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/tool-registry.js"></script>
 <!-- gvb:social:end -->
@@ -29,9 +33,25 @@
 <script src="backup-restore/br-transfer.js"></script>
 <script src="backup-restore/br-pair.js"></script>
 <style>
+  /* Path 5 P3: the semantic tints, in 001's values (the reference adopter),
+     replacing the near-misses this page carried. --warn is 023's fill colour and
+     --good-line is lock.html's, the two 001 has no value for; --student-* is the
+     purple "holds student data" tag, which nothing else on the site has. */
   :root {
-    --good: #2f7d4f;
-    --warn-bg: #fdf5e6; --warn-line: #e6d3a8; --warn-ink: #7a5a12;
+    --good: #2f7d4f;    --good-bg: #e4f5ea;  --good-line: #c7e2cb;
+    --err-bg: #fbecea;  --err-line: #e6c6c1;
+    --info-bg: #eaf1f5; --info-line: #c9dbe3;
+    --warn: #a3791f;
+    --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
+    --student-bg: #f3ecf6; --student-ink: #6a3d84; --student-line: #dbc9e4;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --good: #63c08e;    --good-bg: #173021;  --good-line: #2f5e42;
+    --err-bg: #3a201c;  --err-line: #6d3a33;
+    --info-bg: #1b2a35; --info-line: #33505f;
+    --warn: #eac077;
+    --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
+    --student-bg: #2b2133; --student-ink: #d9bced; --student-line: #4c3a5c;
   }
   * { box-sizing: border-box; }
   body {
@@ -58,19 +78,19 @@
   table.scan th.chk, table.scan td.chk { width: 1.6rem; text-align: center; }
   table.scan tr.total td.chk { border-top: 2px solid var(--line-strong); }
   .kind { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; padding: .05rem .35rem; border-radius: 4px; white-space: nowrap; }
-  .kind.student { background: #f3ecf6; color: #6a3d84; border: 1px solid #dbc9e4; }
-  .kind.settings { background: #eef2f5; color: var(--accent-2); border: 1px solid #cfdde5; }
+  .kind.student { background: var(--student-bg); color: var(--student-ink); border: 1px solid var(--student-line); }
+  .kind.settings { background: var(--info-bg); color: var(--accent-2); border: 1px solid var(--info-line); }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button:disabled { opacity: .45; cursor: not-allowed; }
   button.small { padding: .3rem .6rem; font-size: .78rem; }
 
@@ -78,15 +98,15 @@
 
   input[type="file"] { font-family: inherit; font-size: .88rem; }
   input[type="text"] {
-    font-family: inherit; font-size: .9rem; color: var(--ink); background: #fff;
+    font-family: inherit; font-size: .9rem; color: var(--ink); background: var(--card);
     border: 1px solid var(--line-strong); border-radius: 6px; padding: .45rem .6rem;
   }
   label.field { display: block; font-weight: 600; font-size: .8rem; margin-bottom: .25rem; }
   code.filename { font-size: .82rem; color: var(--muted); word-break: break-all; }
 
-  .meter { height: 12px; border-radius: 6px; background: #eceae3; border: 1px solid var(--line); overflow: hidden; margin: .35rem 0 .4rem; }
+  .meter { height: 12px; border-radius: 6px; background: var(--card-2); border: 1px solid var(--line); overflow: hidden; margin: .35rem 0 .4rem; }
   .meter > span { display: block; height: 100%; background: var(--good); }
-  .meter.warn > span { background: #c9922a; }
+  .meter.warn > span { background: var(--warn); }
   .meter.full > span { background: var(--err); }
   .quota-line { font-size: .85rem; }
   .offenders { font-size: .82rem; color: var(--muted); margin: .3rem 0 0; }
@@ -98,14 +118,14 @@
   .modes label span.d { color: var(--muted); }
 
   #msg { font-size: .85rem; padding: .6rem .8rem; border-radius: 6px; display: none; margin-top: .8rem; white-space: pre-line; }
-  #msg.error { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
-  #msg.info { display: block; background: #eaf1f5; color: var(--accent-2); border: 1px solid #c9dbe3; }
-  #msg.good { display: block; background: #e4f5ea; color: var(--good); border: 1px solid #bfe3cd; }
+  #msg.error { display: block; background: var(--err-bg); color: var(--err); border: 1px solid var(--err-line); }
+  #msg.info { display: block; background: var(--info-bg); color: var(--accent-2); border: 1px solid var(--info-line); }
+  #msg.good { display: block; background: var(--good-bg); color: var(--good); border: 1px solid var(--good-line); }
 
   #backupBanner { font-size: .85rem; padding: .6rem .9rem; border-radius: 6px; display: none; margin-bottom: 1.1rem; }
-  #backupBanner.warn { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
-  #backupBanner.loud { display: block; background: #fbeceA; color: var(--err); border: 2px solid var(--err); font-weight: 700; }
-  #backupBanner.ok { display: block; background: #eaf1f5; color: var(--accent-2); border: 1px solid #c9dbe3; }
+  #backupBanner.warn { display: block; background: var(--err-bg); color: var(--err); border: 1px solid var(--err-line); }
+  #backupBanner.loud { display: block; background: var(--err-bg); color: var(--err); border: 2px solid var(--err); font-weight: 700; }
+  #backupBanner.ok { display: block; background: var(--info-bg); color: var(--accent-2); border: 1px solid var(--info-line); }
 
   .preview { display: none; margin-top: .9rem; border-top: 1px dashed var(--line); padding-top: .9rem; }
   .preview.active { display: block; }
@@ -116,13 +136,13 @@
   .preview .warn-count { color: var(--err); font-weight: 700; }
   .preview .new-count { color: var(--good); font-weight: 700; }
 
-  .verify { background: #f6f5f0; border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem; font-size: .85rem; margin-bottom: .7rem; }
+  .verify { background: var(--card-2); border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem; font-size: .85rem; margin-bottom: .7rem; }
   .verify dl { display: grid; grid-template-columns: max-content 1fr; gap: .1rem .7rem; margin: 0; }
   .verify dt { color: var(--muted); font-size: .8rem; }
   .verify dd { margin: 0; }
   .verify .flags { margin: .5rem 0 0; padding: 0; list-style: none; }
   .verify .flags li { color: var(--warn-ink); background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 5px; padding: .3rem .5rem; margin-top: .3rem; }
-  .verify .flags li.bad { color: var(--err); background: #fbeceA; border-color: #e6c6c1; }
+  .verify .flags li.bad { color: var(--err); background: var(--err-bg); border-color: var(--err-line); }
   .untouched { color: var(--good); font-weight: 700; }
 
   /* ---------- device-to-device transfer ---------- */
@@ -149,6 +169,7 @@
   .xfer-body { padding: 1.1rem; font-size: .9rem; line-height: 1.5; }
   .xfer-body p { margin: 0 0 .8rem; color: var(--muted); }
   .xfer-body canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto .8rem; border-radius: 6px; }
+  /* A camera viewfinder is a lens, not a surface: it stays black in both themes. */
   .xfer-body video { display: block; width: 100%; max-width: 280px; margin: 0 auto .8rem; border-radius: 6px; background: #000; }
   .xfer-status { font-size: .85rem; color: var(--muted); margin: .5rem 0 0; }
   .xfer-status.bad { color: var(--err); }
@@ -380,7 +401,12 @@
       var tr = document.createElement('tr');
       if (g.label === 'Other saved data') tr.className = 'other';
       tr.innerHTML =
-        '<td class="chk"><input type="checkbox" class="scan-grp-check" data-id="' + escapeHtml(g.id) + '" data-kind="' + g.kind + '" checked></td>' +
+        // The row's own name is in the next cell, but a checkbox with no label
+        // of its own is an axe `label` violation — and one the site-wide sweep
+        // never sees, because it opens this page with empty storage and there
+        // is no row to render. Found by the dark-rollout suite, which sets a
+        // theme preference first and so always has one group to list.
+        '<td class="chk"><input type="checkbox" class="scan-grp-check" data-id="' + escapeHtml(g.id) + '" data-kind="' + g.kind + '" checked aria-label="Include ' + escapeHtml(g.label) + ' in the backup"></td>' +
         '<td class="g-label">' + escapeHtml(g.label) + '</td>' +
         '<td><span class="kind ' + g.kind + '">' + KIND_LABEL[g.kind] + '</span></td>' +
         '<td class="num">' + g.count + '</td>' +

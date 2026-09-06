@@ -17,13 +17,21 @@
 <meta name="twitter:description" content="Flashcard-style vocabulary quiz drills and blank verb-conjugation tables for any world language, with matching answer keys.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M6 10a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H14l-5 4v-4a3 3 0 0 1-3-3z' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
-<link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <style>
+  /* Path 5 P3. --good and --warn-ink are 001's values (the reference adopter);
+     --desk is the table the printable sheet lies on, named the same way 015 and
+     023 name theirs because ink-paper.css has no token for it. */
+  :root { --good: #2f7d4f; --warn-ink: #8a5a13; --desk: #d9d7cd; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --good: #63c08e; --warn-ink: #eac077; --desk: #0e1014; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -35,7 +43,7 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
 
   /* Share a drill set by link / QR (same pattern as 040-vocab-flashcard-generator) */
   .share-note { font-size: .8rem; line-height: 1.5; margin: 0 0 .9rem; padding: .55rem .7rem; border-radius: 6px;
@@ -44,14 +52,14 @@
   .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
     justify-content: center; padding: 20px; z-index: 80; }
   .share-overlay[hidden] { display: none; }
-  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
+  .share-modal { background: var(--card); color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
     text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
   .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
   #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
 
   .mode-tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
-  .mode-tab { flex: 1; text-align: center; padding: .55rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .88rem; color: var(--muted); }
-  .mode-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .mode-tab { flex: 1; text-align: center; padding: .55rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); cursor: pointer; font-weight: 700; font-size: .88rem; color: var(--muted); }
+  .mode-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 
   .layout { display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
@@ -60,7 +68,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { min-height: 8rem; resize: vertical; font-family: Consolas, monospace; font-size: .85rem; }
@@ -68,14 +76,14 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .25rem .55rem; font-size: .78rem; }
   button.full { width: 100%; margin-bottom: .5rem; }
 
@@ -92,7 +100,7 @@
     background: none; border: 1px solid var(--line-strong); color: var(--accent-2);
     border-radius: 5px; padding: .1rem .4rem; font-size: .85rem; line-height: 1.4; cursor: pointer; flex-shrink: 0;
   }
-  .listen-btn:hover { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+  .listen-btn:hover { background: var(--accent-2); color: var(--accent-ink); border-color: var(--accent-2); }
   .listen-btn:disabled { opacity: .35; cursor: not-allowed; }
   .listen-btn:disabled:hover { background: none; color: var(--accent-2); }
   .forms-grid .form-field { position: relative; }
@@ -121,7 +129,7 @@
   .verb-head.irregular { color: var(--err); }
   .irregular-tag {
     display: inline-block; font-size: .6rem; font-weight: 800; letter-spacing: .03em;
-    background: var(--err); color: #fff; border-radius: 4px; padding: .05rem .35rem; margin-left: .35rem; vertical-align: middle;
+    background: var(--err); color: var(--accent-ink); border-radius: 4px; padding: .05rem .35rem; margin-left: .35rem; vertical-align: middle;
   }
   .quiz-head.irregular .quiz-title { color: var(--err); }
 
@@ -146,10 +154,14 @@
   .forms-grid .form-field .plabel { font-size: .72rem; color: var(--muted); margin-bottom: .15rem; }
   .forms-grid .form-field input { margin-bottom: 0; }
 
-  .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
+  .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
 
-  .page { background: #fff; width: 8.5in; margin: 0 auto 1rem; padding: .6in; box-shadow: 0 2px 10px rgba(0,0,0,.18); max-width: 100%; }
+  /* The worksheet itself is a sheet of paper, so it carries `paper-sheet` in
+     the markup and ink-paper.css restores the light tokens (and the dark ink)
+     inside it — the dotted rules and #444 blanks below are on white in both
+     themes. */
+  .page { background: var(--card); width: 8.5in; margin: 0 auto 1rem; padding: .6in; box-shadow: 0 2px 10px rgba(0,0,0,.18); max-width: 100%; }
   .page-title { font-size: 1.3rem; font-weight: 700; text-align: center; margin-bottom: .3rem; }
   .page-sub { text-align: center; color: var(--muted); font-size: .82rem; margin-bottom: 1.1rem; border-bottom: 1px solid var(--line); padding-bottom: .5rem; }
 
@@ -173,7 +185,7 @@
   /* ---- conjugation quiz mode (interactive fill-in-the-blank) ---- */
   .btn-row { display: flex; gap: .6rem; }
   .btn-row button { flex: 1; }
-  .quiz-wrap { background: #fff; border-radius: 10px; padding: 1.2rem 1.4rem; max-width: 34rem; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,.14); }
+  .quiz-wrap { background: var(--card); border-radius: 10px; padding: 1.2rem 1.4rem; max-width: 34rem; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,.14); }
   .quiz-head { display: flex; align-items: center; gap: .5rem; font-size: 1.3rem; font-weight: 700; margin-bottom: .2rem; }
   .quiz-progress { color: var(--muted); font-size: .82rem; margin-bottom: 1rem; }
   .quiz-row { display: flex; align-items: center; gap: .6rem; padding: .4rem 0; border-bottom: 1px dashed var(--line); }
@@ -181,11 +193,11 @@
   .quiz-row .quiz-person { width: 40%; flex-shrink: 0; color: var(--muted); font-size: .88rem; }
   .quiz-row .quiz-input { margin-bottom: 0; flex: 1; }
   .quiz-row .quiz-mark { flex-shrink: 0; font-size: .85rem; font-weight: 700; white-space: nowrap; }
-  .quiz-row.correct .quiz-mark { color: #2f7d4f; }
-  .quiz-row.close .quiz-mark { color: #9a6b00; }
+  .quiz-row.correct .quiz-mark { color: var(--good); }
+  .quiz-row.close .quiz-mark { color: var(--warn-ink); }
   .quiz-row.incorrect .quiz-mark { color: var(--err); }
-  .quiz-row.correct .quiz-input { border-color: #2f7d4f; }
-  .quiz-row.close .quiz-input { border-color: #9a6b00; }
+  .quiz-row.correct .quiz-input { border-color: var(--good); }
+  .quiz-row.close .quiz-input { border-color: var(--warn-ink); }
   .quiz-row.incorrect .quiz-input { border-color: var(--err); }
   .sheet-nav { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: 1rem; }
   .sheet-nav button.secondary { width: auto; margin: 0; }
@@ -202,7 +214,6 @@
   }
 </style>
 <link rel="stylesheet" href="../_shared/a11y.css">
-<script src="../_shared/a11y.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -768,7 +779,7 @@
       return '<div class="item"><span class="num">' + (i + 1) + '.</span>' +
         '<span class="word">' + escapeHtml(pair.front) + '</span>' + right + '</div>';
     }).join('');
-    return '<div class="page">' +
+    return '<div class="page paper-sheet">' +
       (kicker ? '<div class="page-kicker">' + escapeHtml(kicker) + '</div>' : '') +
       '<div class="page-title">' + escapeHtml(state.name) + '</div>' +
       '<div class="page-sub">' + (filled ? 'Answer key' : 'Name: _______________________&emsp;&emsp;Date: _____') + '</div>' +
@@ -829,7 +840,7 @@
       pages.push(conjList.slice(i, i + perPage));
     }
     return pages.map(function (group) {
-      return '<div class="page">' +
+      return '<div class="page paper-sheet">' +
         (kicker ? '<div class="page-kicker">' + escapeHtml(kicker) + '</div>' : '') +
         '<div class="page-title">' + escapeHtml(state.name) + '</div>' +
         '<div class="page-sub">' + (filled ? 'Answer key' : 'Name: _______________________&emsp;&emsp;Date: _____') + '</div>' +
