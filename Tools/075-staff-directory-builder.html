@@ -15,6 +15,10 @@
 <meta name="twitter:title" content="Staff Directory / Quick-Reference Builder — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Build a printable staff directory (name, room, extension, subject) for the workroom wall or a new teacher's binder.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='7' y='6' width='18' height='20' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M11 12h10M11 16h10M11 20h6' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -39,21 +43,21 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], select, textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem;
   }
   textarea { resize: vertical; min-height: 4.5rem; margin-bottom: .6rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .25rem .55rem; font-size: .78rem; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
 
@@ -72,7 +76,7 @@
   /* Department sub-headers. A row of the table rather than a separate list,
      so the columns stay aligned down the whole page. */
   table.dir tr.dept-head td {
-    background: #eef1f4; font-weight: 700; font-size: .78rem;
+    background: var(--card-2); font-weight: 700; font-size: .78rem;
     text-transform: uppercase; letter-spacing: .05em; color: var(--accent);
     padding: .45rem .5rem; border-bottom: 1px solid var(--line-strong);
   }
@@ -264,7 +268,7 @@
       var key = raw.toLowerCase();
       if (!counts[key]) counts[key] = {};
       counts[key][raw] = (counts[key][raw] || 0) + 1;
-      var mark = key + ' ' + raw;
+      var mark = key + '\u0000' + raw;
       if (firstSeen[mark] === undefined) firstSeen[mark] = i;
     });
     var out = {};
@@ -274,7 +278,7 @@
         if (best === null) { best = raw; return; }
         var mine = counts[key][raw], theirs = counts[key][best];
         if (mine > theirs ||
-            (mine === theirs && firstSeen[key + ' ' + raw] < firstSeen[key + ' ' + best])) best = raw;
+            (mine === theirs && firstSeen[key + '\u0000' + raw] < firstSeen[key + '\u0000' + best])) best = raw;
       });
       out[key] = best;
     });
@@ -318,6 +322,7 @@
     var sequence = blocks
       ? blocks.reduce(function (acc, b) { return acc.concat([b], b.rows); }, [])
       : list;
+    var personNumber = 0;
     sequence.forEach(function (p) {
       var tr = document.createElement('tr');
       if (p.rows) {   // a department block, not a person
@@ -327,12 +332,24 @@
         els.dirRows.appendChild(tr);
         return;
       }
+      /* Every cell is an editable input, and a column header is not an
+         accessible name, so each one says which field of which person it is.
+         Without this a screen reader reads four unlabeled edit boxes per row —
+         axe's `label` rule, which the site-wide sweep never sees because it
+         opens this page with an empty directory and no rows at all. */
+      personNumber += 1;
+      var who = (p.name || '').trim() || ('staff member ' + personNumber);
+      var cell = function (field, label, value) {
+        return '<td><input type="text" data-field="' + field + '" data-id="' + p.id +
+          '" aria-label="' + escapeHtml(label + ' \u2014 ' + who) + '" value="' + escapeHtml(value) + '"></td>';
+      };
       tr.innerHTML =
-        '<td><input type="text" data-field="name" data-id="' + p.id + '" value="' + escapeHtml(p.name) + '"></td>' +
-        '<td><input type="text" data-field="room" data-id="' + p.id + '" value="' + escapeHtml(p.room) + '"></td>' +
-        '<td><input type="text" data-field="ext" data-id="' + p.id + '" value="' + escapeHtml(p.ext) + '"></td>' +
-        '<td><input type="text" data-field="subject" data-id="' + p.id + '" value="' + escapeHtml(p.subject) + '"></td>' +
-        '<td><div class="row-actions"><button type="button" class="danger small" data-delete="' + p.id + '">Delete</button></div></td>';
+        cell('name', 'Name', p.name) +
+        cell('room', 'Room', p.room) +
+        cell('ext', 'Extension', p.ext) +
+        cell('subject', 'Subject or department', p.subject) +
+        '<td><div class="row-actions"><button type="button" class="danger small" data-delete="' + p.id +
+        '" aria-label="' + escapeHtml('Delete ' + who) + '">Delete</button></div></td>';
       els.dirRows.appendChild(tr);
     });
     document.querySelectorAll('table.dir th[data-sort]').forEach(function (th) {

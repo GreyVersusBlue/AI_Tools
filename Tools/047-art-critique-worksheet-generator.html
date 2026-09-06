@@ -15,6 +15,10 @@
 <meta name="twitter:title" content="Art Critique Worksheet Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="A structured describe/analyze/interpret/judge critique worksheet for student artwork or a gallery walk, with editable prompts per step and a printable half-sheet per student.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.4' fill='%231f3550'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -35,23 +39,23 @@
   .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
-  input[type="text"], input[type="number"], textarea {
+  input[type="text"], input[type="number"], textarea, select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; min-height: 2.4rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
 
@@ -59,7 +63,7 @@
 
   .step-block { border: 1px solid var(--line); border-radius: 8px; padding: .9rem 1rem; margin-bottom: .9rem; }
   .step-block h3 { font-size: 1.05rem; margin: 0 0 .1rem; color: var(--accent); }
-  .step-block .step-num { display: inline-block; width: 1.4rem; height: 1.4rem; border-radius: 50%; background: var(--accent); color: #fff; text-align: center; line-height: 1.4rem; font-size: .8rem; margin-right: .4rem; }
+  .step-block .step-num { display: inline-block; width: 1.4rem; height: 1.4rem; border-radius: 50%; background: var(--accent); color: var(--accent-ink); text-align: center; line-height: 1.4rem; font-size: .8rem; margin-right: .4rem; }
   .sub-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
   .sub-row input { margin-bottom: 0; }
 
