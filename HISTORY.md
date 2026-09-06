@@ -166,6 +166,70 @@ waits for will be a docs or tooling PR, not a tool one. Recorded as a ¼ row at 
 a `sw.js` hunk that touches only the version constant as not site-wide, and pin it in
 `select-suites.test.mjs`. Not measured — read off the diff.
 
+**Rank 1 — Path 5 P3, increment 3: six more pages on native dark. #202, `CACHE_VERSION`
+v156.** The same 2+ row, taken alone again, one increment, row left in place. The batch was
+the one `npm run path5:next` printed, in its order — **006, 020, 056, 019, 039, 009**. Native
+dark went from 21 themed pages to 27 (33%); the picker's literal count from 1,396 across 62
+pages to 1,225 across 56, ten rounds of six left. `stage.js` did not move again: none of these
+six has a stage of its own, and 001 and 004 are still the last two pages hand-rolling
+fullscreen. Every conversion again fell into increment 1's three categories, and the two
+"not a surface" kinds #200 discovered were both *applied* to a fresh page for the first time
+rather than found: a camera viewfinder (006's and 009's device-transfer `<video>`) and a mat
+behind a teacher-supplied image (019's station thumbnail, 056's crop frame). They generalise.
+
+**The suite found a real accessibility bug that `test:a11y` structurally cannot see, and that
+is the most useful thing this increment produced.** 009's per-tool checkbox in the "what's
+saved right now" table carried no label of its own — an axe `label` violation, critical, and
+present in **light** as well as dark. The site-wide sweep has never reported it because it
+opens 009 with empty storage: no saved data, no rows, no checkboxes to fail on.
+`smoke-dark-rollout.mjs` writes `gvb-a11y-prefs` before navigating (that is how it sets the
+theme), so the page it scans always has at least one group to list. **Any page whose UI only
+appears once storage is non-empty is under-covered by the site-wide sweep in exactly this
+way** — that is a general hole, not a 009 quirk, and nothing measures how wide it is. The fix
+is in the tool (`aria-label="Include <group> in the backup"`), not in an allowlist.
+
+**Two shipped families of the tint-pair values existed, and they are now one.** #200's note
+says to copy 001's values; `lock.html`, shipped in that same PR, actually took 019's
+(`--good-bg: #eaf5ec`, `--info-bg: #eef4f8`, `--info-line: #cfe0ea`) where 001 has `#e4f5ea`,
+`#eaf1f5`, `#c9dbe3`. Both halves of the escape room are on 001's numbers now, which meant
+editing an already-converted page. The differences are imperceptible; the point is that the
+eventual promotion of these pairs into `ink-paper.css` has one family to promote rather than
+two. `--good-line` (`#c7e2cb` / `#2f5e42`), which 001 has no counterpart for, stays lock.html's
+and was copied into 019 and 009. 006's and 009's `--warn-*` triples were also near-misses
+(`#fdf5e6`/`#e6d3a8`/`#7a5a12`) and moved to 001's — a small, real change to shipped light-mode
+appearance, recorded here so it can be reversed cheaply.
+
+**A token can be hiding under a tool-private name.** 020 called its success colour `--ok`, not
+`--good`, so a grep for the standard names finds nothing and the page looks like it has no
+semantic tints at all. It had one, with a third value again (`#2e6b3e`). Renamed, and worth
+checking for on the next page that appears to define none.
+
+**009 needed one genuinely new pair.** Its `.kind.student` tag — the purple "this row holds
+student data" chip — has no precedent anywhere on the site, so `--student-bg/-ink/-line` were
+invented (`#f3ecf6`/`#6a3d84`/`#dbc9e4` light, `#2b2133`/`#d9bced`/`#4c3a5c` dark). If a second
+tool ever needs it, copy these rather than mixing a third purple.
+
+**039 is the first page whose sheet of paper is built by script.** Its worksheet preview is
+`.page`, generated in two template strings, so `paper-sheet` went into the JS rather than the
+markup, and the sheet does not exist until a teacher picks the conjugation tab and adds a
+verb — a two-click `prep` in `PAGES`, the shape #200 first needed for 048. Its desk
+(`--desk: #d9d7cd` / `#0e1014`) is copied from 015 and 023 rather than renamed.
+
+**039 was loading `_shared/a11y.js` and `_shared/a11y.css` twice** — once at the top of
+`<head>` and again after `</style>`. Removed: the early `a11y.css` link (so the cascade is
+byte-identical to what shipped, the late copy having always won ties) and the late `a11y.js`
+tag (so the theme is still applied before first paint). **Two more pages still do it:
+`Tools/014-roleplay-scenario-generator.html` and `Tools/033-ssr-log-tracker.html`** — found
+with a `git ls-files` sweep, left alone because neither is in this batch and the cascade
+question has to be answered per page. That is a new ¼ row in `BACKLOG.md`.
+
+**Not verified.** No real projector, no real phone, nothing with the worker installed — the
+third increment in a row. **The `DARK_SHOTS` screenshots of all eighteen adopted pages were written and looked at**,
+which #200 skipped and #198 did — the six new ones read correctly in dark and light, and the
+light shots confirm the tint moves changed nothing anyone would notice. The
+`aria-label` fix was proved positively: axe reported the violation before and reported none
+after, in both themes, out of a real browser.
+
 **Rank 1 — Path 5 P3, increment 2: six more pages on native dark. #200, `CACHE_VERSION`
 v155.** The same 2+ row, taken alone again, one increment, row left in place. The batch was
 the one `npm run path5:next` printed, in its order — **025, `command-center/remote.html`,
