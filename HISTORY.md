@@ -166,6 +166,91 @@ waits for will be a docs or tooling PR, not a tool one. Recorded as a ¼ row at 
 a `sw.js` hunk that touches only the version constant as not site-wide, and pin it in
 `select-suites.test.mjs`. Not measured — read off the diff.
 
+**Rank 1 — Path 5 P3, increment 6: six more pages on native dark. #208, `CACHE_VERSION`
+v159.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
+one `npm run path5:next` printed, in its order — **059, 070, 074, 076, 055, 058**. Native dark
+went from 39 themed pages to **45 (54%)** — the rollout is past half — and the picker's literal
+count from 931 across 44 pages to **875 across 38**, seven rounds of six left. `stage.js` is
+unchanged at 7 adopters with 001 and 004 still the last two hand-rolling fullscreen; none of
+these six has a stage.
+
+**All six are print-first generator tools, and that made the chrome half of the job the whole
+of the mechanical work.** Every one of them builds its printable into `#printArea`, which
+`_shared/print-area.css` (or the page's own copy of the same two rules) keeps `display: none`
+on screen — so the `#333` rules, the `#555` print subtitles and the `#eee` header fills these
+pages carry are *never on a dark screen* and were deliberately left alone. That is why the
+picker's count for a page like 076 (9) overstates the work: three of its nine are inside
+`#printArea`. **The rule that fell out of this batch: before converting a literal, find out
+whether the element it styles is ever painted on screen.** `#printArea` under print-area.css
+never is.
+
+**074 is the batch's real work, and none of it is in the picker's count.** Its ten hazard
+symbols are inline SVG drawn in `currentColor`, coloured by `style="color: <hex>"` written
+from a `SYMBOLS[]` table in script — invisible to a scan of the page's `<style>`. Two of the
+ten (`#1f2430` toxic, `#6b6a63` sharp/equipment) would have been drawn near-black on
+ink-paper's near-black card. The fix turned out to be almost free: **seven of the ten hues
+*are* ink-paper's light values exactly** — `#a3372b` is `--err-light`, `#1f2430` is
+`--ink-light`, `#6b6a63` is `--muted-light`, `#2e6b8f` is `--accent-2-light` — so those
+symbols now say `color: 'var(--err)'` and flip with the theme, and restore to the light hue
+inside `#printArea` because ink-paper.css already restores those tokens there. Only three
+hues (corrosive, biohazard, electrical) have no token; they got a light/dark pair plus a
+`#printArea` restore in the page's own `<style>`, written in ink-paper's own `-light` idiom.
+Verified positively: with the theme dark and the sheet built, the four `label-card` SVGs
+compute to `#c07a1a`, `#2c6e3f`, `#c9a400` and `#1f2430` — the original light hues — on screen
+and under `emulateMedia({media:'print'})`.
+
+**The dark-rollout suite found a serious axe `color-contrast` violation on 074 that had been
+shipped, in light, since the tool existed — and the site-wide sweep had been reporting one
+tenth of it.** `.symbol-btn` is a `<button>` and never set `color`, so the symbol name under
+each icon inherited the accent button's `#fff` and was **white text on a white card**: ten
+invisible labels. The a11y allowlist carried exactly one baseline violation for that page
+(`.selected > span`) — the *only* one of the ten whose background differs (the selected
+button's `#eef1f4`); axe reported the other nine nowhere. **So an allowlist line saying "1 ×"
+is not a count of the bug it names.** Fixed with `color: var(--ink)` on `.symbol-btn`, which
+reads in both themes, and **074's allowlist line is deleted** — the page comes out clean in
+light and dark. The mechanism by which axe skipped the nine exact-equal pairs was not
+established; only the observation is.
+
+**055 was carrying an entity bug in its data that no guard can see.** Its 24 built-in
+sentences stored `&rsquo;` inside the JS array, and the three sinks disagreed about it:
+`displayFixed.innerHTML` rendered it (fine), `displayBroken.textContent` did not — so the two
+rows whose *broken* sentence contains one have been projecting a literal `&rsquo;` since the
+tool shipped — and the sentence bank escaped `broken` but not `fixed`, so the two were
+inconsistent there too. `npm run check:entities` cannot reach this: the entity is in an array
+literal and the sink is a variable, which is exactly the "sink is not visible statically" case
+its own summary counts (325 of them). Fixed the way `CLAUDE.md` prescribes — **the character
+itself** (`’`) in the data, 11 replacements — plus `textContent` for `displayFixed` and
+`escapeHtml` on `item.fixed` in the worksheet key and the bank row, so the tool now escapes
+teacher-typed text everywhere instead of in three places out of five. **Not pinned by an
+assertion:** 055 has no suite, the dark-rollout suite only checks colour, and a `&rsquo;`
+typed back into that array would go unnoticed. Verified by driving the page — the projector,
+the printed key and the bank all render `’`.
+
+**Two smaller calls, recorded so they can be reversed.** 070's "this checklist is on the
+larger side" chip was a warm tint triple (`#fdf3ec`/`#e0b98f`/`#7a4a1c`) with no dark
+counterpart; it now uses `--warn-bg`/`--warn-line`/`--warn-ink` with 001's values, the same
+pair 017 took. 055's `--ok` (the corrected sentence, green) kept its light value and gained
+the site's dark `--good`, `#63c08e`.
+
+**A seam this rollout leaves behind, named because it will come up again.** A `<select>` with
+no `background` in the page's CSS renders in the UA's dark control colour under
+`color-scheme: dark` — `rgb(107, 107, 107)` — not `--card`. That is the mechanism working
+(the control is legible, and axe passes), but next to a tokenised input it reads as a
+different surface. 058 and 070 already list `select` in their input rule and so are
+consistent; 055's two selects are entirely unstyled and were left alone rather than restyled
+on this row; 074's was half-styled already (border, radius, padding, no face) and was
+finished. Deciding this site-wide is a `_shared/` question, not a per-page one.
+
+**Not verified.** No real projector and no Chromebook; the dark and light screenshots of all
+six were looked at by eye. Nothing installed the worker — v159 is what `check:precache --base
+origin/main` agrees with. The printed sheets were checked by computed style under print
+emulation, not on paper.
+
+**Environment note that cost time.** `CLAUDE.md` says the sandbox's browser is
+`/opt/pw-browsers/chromium`; on this machine that path is a directory and the binary the
+pinned Playwright will launch is `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`
+(141.0.7390.37). `PW_CHROMIUM_EXECUTABLE` pointed there runs every suite.
+
 **Rank 1 — Path 5 P3, increment 5: six more pages on native dark. #206, `CACHE_VERSION`
 v158.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
 one `npm run path5:next` printed, in its order — **047, 067, 075, 081, 061, 063**. Native dark
