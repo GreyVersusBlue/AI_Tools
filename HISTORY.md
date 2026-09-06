@@ -166,6 +166,97 @@ waits for will be a docs or tooling PR, not a tool one. Recorded as a ¼ row at 
 a `sw.js` hunk that touches only the version constant as not site-wide, and pin it in
 `select-suites.test.mjs`. Not measured — read off the diff.
 
+**Rank 1 — Path 5 P3, increment 8: six more pages on native dark. #212, `CACHE_VERSION`
+v161.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
+one `npm run path5:next` printed, in its order — **066, 069, 079, 026, 073, 083**. Native dark
+went from 51 themed pages to **57 (70%)**, and the picker's literal count from 799 across 31
+pages to **721 across 25**, five rounds left. `stage.js` is unchanged at 7 adopters; none of
+these six has a stage, and 001 and 004 are still the last two hand-rolling fullscreen.
+`smoke-dark-rollout.mjs` went from 472 assertions to **538**, every one of the six needing a
+`prep` again.
+
+**The shape of the batch.** Four of the six (066, 079, 073, 083) keep their printable inside a
+container that is `display:none` on screen — `#printArea` under `print-area.css` for 079, 073
+and 083, an unconditional `#printArea { display: none }` for 066 — so their `#333` borders,
+`#555` subtitles, `#999` rules and `#eee` header fills were left exactly as they were, as in
+increments 6 and 7. The two with an **on-screen facsimile** are the work: 069's station-card
+preview and 026's 8.5×11in worksheet and answer key, both sitting on a `--desk` (069 copied
+017's `#eeece3`/`#0e1014`, 026 the `#d9d7cd`/`#0e1014` that 015, 023, 028 and 039 share). Both
+needed `.paper-sheet` written into the JavaScript that builds them. 069 has one chokepoint;
+**026 has four `class="sheet"` template strings and no chokepoint at all**, which is the case
+#204's "look for the chokepoint first" rule warned could exist. The payoff is that everything
+inside the sheet stops being a decision: 026's colour-by-answer fills come from a table of
+eight hex literals in `math-drill-generator/mdg-selfcheck.js` — exactly #208's "a colour can be
+written from a data table in script" — and needed **no change**, because the sheet restores
+ink-paper's light tokens around them.
+
+**Two mistakes this increment made, both caught before merge, and both worth more than the
+conversion itself.**
+
+*A `*/` inside a CSS comment closes the comment.* The new comment on 073 read
+``.print-*/.missing-list``. The parser ended the comment at that `*/`, then read the remaining
+prose as the start of a selector and swallowed the following `:root { --err-bg: #fbecea; }` as
+that bad selector's block. **Light mode therefore had no `--err-bg` at all, and the overdue
+cell in the progress grid lost its tint** — a bug the conversion *introduced*, in the theme
+that was supposed to be untouched. Nothing in the eleven guards sees this; `check:entities`,
+`check:hidden-flex` and `check:print-clip` all read the file as text. And **`test:theme` stayed
+green**, for a reason worth stating: the dark `:root[data-theme="dark"]` rule was declared
+second and survived, so the body-paint assertions passed, and the white-chrome assertion only
+looks for `rgb(255, 255, 255)` — a control that lost its background entirely is not white, it
+is transparent. It was found by *looking at the light screenshot*, and confirmed by reading
+`getComputedStyle` on an overdue cell in both themes (light `rgb(251, 236, 234)`, dark
+`rgb(58, 32, 28)`). The general lesson: **a guard that reads a page's CSS as text cannot tell
+you the browser parsed it the way you meant**, and the screenshots earn their five minutes
+again.
+
+*`test:theme` and `test:a11y` are not the tools' own suites.* 079's `NO_COLOR.line` — the
+neutral a panel borders in when colour-coding is off — is used on the on-screen swatch **and**
+on the printed panel, so it became `var(--ink)`: near-black inside `#printArea`, pale on a dark
+card. That broke `Tools/verb-conjugation-poster-generator/test/smoke-panel-colors.mjs`, whose
+"borders go back to plain black" assertion read `el.style.borderColor` — **an inline `var()`
+reference comes back from CSSOM unresolved**, as the literal string `"var(--ink)"`. `test:theme`
+passed, `test:a11y --only 079` passed, and only the full local `npm test` caught it (144 green,
+079 red). The assertion was re-expressed rather than loosened: `printedPanels()` now reports
+`getComputedStyle().borderTopColor`, which is what actually reaches the paper, and the expected
+value is ink-paper's `--ink` resolved through a probe inside `#printArea` rather than a
+hardcoded `#333`, so it cannot drift from the palette. Both directions still hold — an accented
+panel's border is not the ink, and colour-coding off returns every panel to it. **Five
+increments got away without running the converted tools' own suites only because no converted
+page had one that read a colour.** The rule is now in the P3 bullets: `run-suites.mjs --only
+<tool>` for every page in the batch, before pushing.
+
+**073 was shipping 18 unnamed checkboxes — the fourth confirmed instance of the empty-storage
+blind spot** (009 in #202, 075 in #206, 077 in #210). Its progress grid gives every checkbox no
+accessible name at all: a **critical** axe `label` violation, present in **light** since the
+tool shipped, and one the site-wide sweep structurally cannot reach because it opens the page
+with an empty roster and the grid renders an empty state instead. The page had **no allowlist
+line**, so nothing in the repo claimed to know. Confirmed both ways with a probe: with the names
+stripped the page scans `label`, critical, **18** nodes; as shipped it is clean. Fixed with a
+per-checkbox `aria-label` ("Board Complete done for Alex Rivera") and `scope="col"` on the
+header row. **One correction to how that evidence gets read**, which cost this session a wrong
+number for ten minutes: `a11yScan`'s returned `nodes` array is **capped at four by
+`harness.mjs`** and `count` carries the real total — `nodes.length` would have reported 4
+unnamed controls where there were 18. That is a different mechanism from #208's finding (where
+axe itself reported one of ten), and confusing the two would have written the same wrong
+sentence twice.
+
+**Two more unstyled controls, five batches in a row.** 066's `#newBand` sat next to a
+`select#newCategory` that *was* styled, and 073's selector list had no `select` in it at all, so
+`#rosterHubSelect` carried the UA's own control styling. Both are invisible in light and obvious
+in dark. 073 also carried a **dead `--ok: #2c6e3f`** that nothing in the page referenced; it was
+removed rather than given a dark value, because a half-converted private token tells the next
+reader the page has a semantic green when it does not. 066's `--ok` **is** used (the
+corrected-solution line on the projector) and took 001's `#63c08e` in dark, as 055 did.
+
+**What was not verified.** Nothing on a real projector, a real Chromebook, or with the worker
+installed — eight increments now. 026's and 069's print output was reasoned from the
+`#printArea`/`.paper-sheet` restore, not observed under print emulation. And 073's overdue tint
+moved from `#fbe2df` to 001's `#fbecea` in light, which is very slightly paler; it was kept
+because the standing rule is to copy 001's values rather than invent a fifth family, and nothing
+on that cell is encoded in colour alone (there is a `⚠` glyph and a 3px `--err` left border).
+Full `npm test` ran locally twice — 25.6 min each, the first finding the 079 failure — and CI
+ran the full pass in 25 min.
+
 **Rank 1 — Path 5 P3, increment 7: six more pages on native dark. #210, `CACHE_VERSION`
 v160.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
 one `npm run path5:next` printed, in its order — **077, 082, 014, 045, 085, 060** — *after the
