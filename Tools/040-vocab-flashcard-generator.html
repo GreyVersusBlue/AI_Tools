@@ -17,6 +17,11 @@
 <meta name="twitter:description" content="Turn a word list into printable flashcards or word-wall cards.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='9' width='20' height='14' rx='2' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cline x1='6' y1='16' x2='26' y2='16' stroke='%232A6DB0' stroke-width='1.4' stroke-dasharray='2 2'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The printable sheets stay white paper (`paper-sheet`); everything else
+     follows the tokens. Read ink-paper.css's header before copying this. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="vocab-flashcard-generator/vfg-layout.js"></script>
 <script src="vocab-flashcard-generator/vfg-printables.js"></script>
@@ -28,6 +33,13 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Path 5 P3. The info tint pair is 001's (the reference adopter); --desk is
+     the table the printable sheet lies on, named the same way 015, 023 and 039
+     name theirs because ink-paper.css has no token for it. */
+  :root { --info-bg: #eaf1f5; --info-line: #c9dbe3; --desk: #d9d7cd; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --info-bg: #1b2a35; --info-line: #33505f; --desk: #0e1014;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -39,7 +51,7 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
 
   .layout { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
@@ -48,7 +60,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { min-height: 9rem; resize: vertical; font-family: Consolas, monospace; font-size: .85rem; }
@@ -64,35 +76,40 @@
   .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
     justify-content: center; padding: 20px; z-index: 80; }
   .share-overlay[hidden] { display: none; }
-  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
+  .share-modal { background: var(--card); color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
     text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
   .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
   #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
 
   .mode-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .9rem; }
-  .mode-tab { flex: 1 1 30%; min-width: 6.2rem; text-align: center; padding: .5rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--muted); }
-  .mode-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .mode-tab { flex: 1 1 30%; min-width: 6.2rem; text-align: center; padding: .5rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--muted); }
+  .mode-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .6rem 1.1rem; width: 100%; margin-bottom: .5rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
 
-  .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
+  .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
-  .print-note { font-size: .82rem; color: var(--accent-2); background: #eaf1f6; border: 1px solid #c9dce6; border-radius: 6px; padding: .6rem .8rem; margin-bottom: 1rem; }
+  .print-note { font-size: .82rem; color: var(--accent-2); background: var(--info-bg); border: 1px solid var(--info-line); border-radius: 6px; padding: .6rem .8rem; margin-bottom: 1rem; }
 
   .sheet-view { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: 1rem; }
   .sheet-view button.secondary { width: auto; margin: 0; }
 
+  /* Every printable page is a sheet of paper, so it carries `paper-sheet` (added
+     in pageClass(), because these pages are built by script) and ink-paper.css
+     restores the light tokens and the dark ink inside it — the dashed cut lines,
+     the grey grid gutters and the #2a2a2a crossword blocks below are all on
+     white in both themes. */
   .page {
-    background: #fff; width: 8.5in; margin: 0 auto 1rem; padding: 0.4in;
+    background: var(--card); width: 8.5in; margin: 0 auto 1rem; padding: 0.4in;
     box-shadow: 0 2px 10px rgba(0,0,0,.18); max-width: 100%;
   }
   /* ---- cut lines & margin guide ---- */
@@ -135,7 +152,7 @@
   .quiz-wrap { max-width: 560px; margin: 0 auto; text-align: center; }
   .quiz-counter { color: var(--muted); font-size: .85rem; margin-bottom: .7rem; }
   .quiz-card {
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 14px; cursor: pointer;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 14px; cursor: pointer;
     min-height: 220px; display: flex; align-items: center; justify-content: center; padding: 1.5rem;
     box-shadow: 0 2px 10px rgba(0,0,0,.1); user-select: none;
   }
@@ -457,7 +474,10 @@
   }
 
   function guideClass(base) { return base + (state.showGuides ? ' guides' : ''); }
-  function pageClass() { return guideClass('page'); }
+  // `paper-sheet` is what keeps a printable page white with dark ink in dark
+  // mode (ink-paper.css restores the light tokens inside it). Every .page on
+  // this tool comes through here, so this is the one place it has to be added.
+  function pageClass() { return guideClass('page paper-sheet'); }
 
   function flashCardHtml(item) {
     if (!item) return '<div class="' + guideClass('flash-card blank') + '"></div>';
@@ -1246,6 +1266,8 @@
     var size = (count + quiet * 2) * px;
     canvas.width = size; canvas.height = size;
     var ctx = canvas.getContext('2d');
+    // A QR canvas draws dark-on-white in both themes on purpose: that is what a
+    // scanner needs, and inverting it would stop phones reading the code.
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
     ctx.fillStyle = '#16181d';
     for (var r = 0; r < count; r++) {

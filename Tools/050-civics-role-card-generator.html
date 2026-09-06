@@ -15,6 +15,10 @@
 <meta name="twitter:title" content="Government/Civics Simulation Role Card Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Printable role cards for a mock trial, debate, or legislative simulation, each with a position, talking points, and an optional case-file packet.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M16 6v3M9 20h14M7 26h18M9 20l-2-9h6zM23 20l-2-9h6z' fill='none' stroke='%231f3550' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -43,26 +47,26 @@
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   input[type="text"], input[type="number"], select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   textarea {
     width: 100%; font-family: inherit; font-size: .85rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .3rem; resize: vertical; min-height: 3.6rem; line-height: 1.4;
   }
   .field-hint { font-weight: 400; color: var(--muted); font-size: .76rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
 
@@ -105,7 +109,7 @@
   .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
     justify-content: center; padding: 20px; z-index: 80; }
   .share-overlay[hidden] { display: none; }
-  .share-modal { background: #fff; color: #16181d; border-radius: 10px; padding: 16px 18px; max-width: 340px;
+  .share-modal { background: var(--card); color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
     text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
   .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
   #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
@@ -1067,6 +1071,8 @@
     var size = (count + quiet * 2) * px;
     canvas.width = size; canvas.height = size;
     var ctx = canvas.getContext('2d');
+    // A QR canvas draws dark-on-white in both themes on purpose: that is what a
+    // scanner needs, and inverting it would stop phones reading the code.
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
     ctx.fillStyle = '#16181d';
     for (var r = 0; r < count; r++) {

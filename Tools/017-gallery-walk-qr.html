@@ -17,6 +17,11 @@
 <meta name="twitter:description" content="Turn a list of student work links into a printable set of QR codes for a gallery walk, plus a reference sheet for you.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M8 12V8h4' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M20 8h4v4' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M24 20v4h-4' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M12 24H8v-4' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='14' y='14' width='4' height='4' fill='%232A6DB0'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The projector view stays dark in both themes on purpose, and the printed
+     QR grid is paper. Read ink-paper.css's header before copying this. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -26,6 +31,20 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Path 5 P3. The warn and err tint pairs are 001's values (the reference
+     adopter); --desk is the well the card previews sit in, named the same way
+     015, 023, 039 and 040 name theirs because ink-paper.css has no token for
+     it. */
+  :root {
+    --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
+    --err-bg: #fbecea;  --err-line: #e6c6c1;
+    --desk: #eeece3;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
+    --err-bg: #3a201c;  --err-line: #6d3a33;
+    --desk: #0e1014;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -38,7 +57,7 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
   .toolbar label { margin: 0; font-weight: 600; font-size: .85rem; }
 
   .layout { display: grid; grid-template-columns: minmax(320px, 460px) 1fr; gap: 1.4rem; align-items: start; }
@@ -49,7 +68,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
   input[type="text"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { min-height: 8rem; resize: vertical; font-family: Consolas, monospace; font-size: .85rem; }
@@ -64,51 +83,51 @@
   .entries-table td.actions-cell { width: auto; text-align: center; white-space: nowrap; padding-top: .35rem; }
   .entries-table input { margin-bottom: 0; font-size: .85rem; padding: .45rem .55rem; }
   .remove-row-btn, .move-row-btn {
-    background: #fff; border: 1px solid var(--line-strong); color: var(--muted);
+    background: var(--card); border: 1px solid var(--line-strong); color: var(--muted);
     width: 1.7rem; height: 1.7rem; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer; margin-left: .25rem;
   }
   .move-row-btn:first-child { margin-left: 0; }
-  .move-row-btn:hover:not(:disabled) { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  .move-row-btn:hover:not(:disabled) { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   .move-row-btn:disabled { opacity: .35; cursor: not-allowed; }
-  .remove-row-btn:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .remove-row-btn:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
 
-  tr.dup-row { background: #fbf2e6; }
+  tr.dup-row { background: var(--warn-bg); }
   .dup-badge {
     display: inline-block; margin-top: .25rem; font-size: .68rem; font-weight: 700;
-    color: #8a5a00; background: #fbe7c6; border: 1px solid #e0b876; border-radius: 4px;
+    color: var(--warn-ink); background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 4px;
     padding: .1rem .35rem; letter-spacing: .01em; white-space: nowrap;
   }
   #dupWarning {
     font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; margin-bottom: .7rem;
-    background: #fbe7c6; color: #8a5a00; border: 1px solid #e0b876; display: none;
+    background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); display: none;
   }
   #dupWarning.show { display: block; }
 
   /* ── Scan-verify: decode every code right after drawing it (same in-canvas
      jsQR check the QR Code Generator's bulk mode uses) and flag any that
      didn't come back reading the same content, before a teacher prints. ── */
-  .preview-card.scan-unverified { background: #fbeceA; border-color: #d8a89f; }
+  .preview-card.scan-unverified { background: var(--err-bg); border-color: var(--err-line); }
   .scan-warn-badge {
     display: inline-block; margin-top: .25rem; font-size: .68rem; font-weight: 700;
-    color: var(--err); background: #f6d9d4; border: 1px solid #d8a89f; border-radius: 4px;
+    color: var(--err); background: var(--err-bg); border: 1px solid var(--err-line); border-radius: 4px;
     padding: .1rem .35rem; letter-spacing: .01em; white-space: nowrap;
   }
   #scanWarning {
     font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; margin-bottom: .7rem;
-    background: #fbeceA; color: var(--err); border: 1px solid #d8a89f; display: none;
+    background: var(--err-bg); color: var(--err); border: 1px solid var(--err-line); display: none;
   }
   #scanWarning.show { display: block; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: .2rem 0; font-size: .78rem; }
   button.link-btn:hover { background: transparent; color: var(--accent); }
   button:disabled { opacity: .4; cursor: not-allowed; }
@@ -116,7 +135,7 @@
   .btn-row { display: flex; gap: .6rem; margin-top: .7rem; flex-wrap: wrap; }
   .btn-row button:not(.link-btn) { width: auto; }
 
-  .import-box { background: #f4f3ee; border: 1px solid var(--line); border-radius: 8px; padding: .9rem; margin-top: .6rem; display: none; }
+  .import-box { background: var(--card-2); border: 1px solid var(--line); border-radius: 8px; padding: .9rem; margin-top: .6rem; display: none; }
   .import-box.open { display: block; }
 
   .option-row { display: flex; align-items: center; gap: .55rem; padding: .3rem 0; }
@@ -124,24 +143,24 @@
   .option-row .option-label { flex: 1; font-size: .84rem; font-weight: normal; margin: 0; cursor: pointer; }
 
   #msg { font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-top: .7rem; white-space: pre-line; }
-  #msg.error { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
+  #msg.error { display: block; background: var(--err-bg); color: var(--err); border: 1px solid var(--err-line); }
 
-  .preview-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
+  .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.2rem; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
   .empty-hint { font-size: .85rem; color: var(--muted); text-align: center; padding: 2.4rem 1rem; }
 
   #cards-preview { display: flex; flex-direction: column; gap: .6rem; max-height: 640px; overflow-y: auto; }
-  .preview-card { background: #fff; border-radius: 8px; padding: .8rem; display: flex; align-items: center; gap: .8rem; border: 1px solid var(--line); }
+  .preview-card { background: var(--card); border-radius: 8px; padding: .8rem; display: flex; align-items: center; gap: .8rem; border: 1px solid var(--line); }
   .preview-card canvas { width: 76px; height: 76px; flex-shrink: 0; image-rendering: pixelated; }
   .preview-card .meta { flex: 1; min-width: 0; }
   .preview-card .badge { font-family: Consolas, monospace; font-size: .68rem; color: var(--muted); letter-spacing: .04em; }
   .preview-card .p-name { font-size: .92rem; font-weight: 700; color: var(--ink); margin: .1rem 0 .15rem; overflow-wrap: anywhere; }
   .preview-card .p-content { font-size: .74rem; color: var(--muted); overflow-wrap: anywhere; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .reaction-btn {
-    flex-shrink: 0; display: flex; align-items: center; gap: .3rem; background: #fff; color: var(--ink);
+    flex-shrink: 0; display: flex; align-items: center; gap: .3rem; background: var(--card); color: var(--ink);
     border: 1px solid var(--line-strong); border-radius: 20px; padding: .35rem .7rem; font-size: .9rem; font-weight: 700;
   }
-  .reaction-btn:hover { background: #fdf3e3; border-color: #e0b876; color: var(--ink); }
+  .reaction-btn:hover { background: var(--warn-bg); border-color: var(--warn-line); color: var(--ink); }
   .reaction-btn .reaction-count { font-size: .82rem; color: var(--muted); font-weight: 700; min-width: 1ch; text-align: left; }
 
   .entries-table textarea.f-value { min-height: 4rem; font-family: inherit; font-size: .85rem; padding: .45rem .55rem; margin-bottom: 0; }
@@ -155,10 +174,10 @@
   .notes-row:last-child { border-bottom: none; }
   .notes-row-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
   .notes-row-head .n-name { font-size: .85rem; font-weight: 600; overflow-wrap: anywhere; }
-  .notes-count { font-size: .7rem; color: var(--muted); background: #f1f0ea; border: 1px solid var(--line); border-radius: 10px; padding: .05rem .5rem; white-space: nowrap; }
+  .notes-count { font-size: .7rem; color: var(--muted); background: var(--card-2); border: 1px solid var(--line); border-radius: 10px; padding: .05rem .5rem; white-space: nowrap; }
   .notes-row textarea { margin: .5rem 0 0; min-height: 4.5rem; font-family: inherit; font-size: .85rem; }
 
-  .timer-display { text-align: center; background: #f4f3ee; border: 1px solid var(--line); border-radius: 8px; padding: 1rem .8rem; margin-bottom: .8rem; }
+  .timer-display { text-align: center; background: var(--card-2); border: 1px solid var(--line); border-radius: 8px; padding: 1rem .8rem; margin-bottom: .8rem; }
   .timer-round { font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); margin-bottom: .3rem; }
   .timer-clock { font-family: Consolas, monospace; font-size: 2.6rem; font-weight: 700; line-height: 1; color: var(--ink); }
   .timer-clock.paused { color: var(--muted); }
@@ -167,7 +186,7 @@
 
   .ref-list { width: 100%; border-collapse: collapse; font-size: .85rem; }
   .ref-list th, .ref-list td { border: 1px solid var(--line); padding: .4rem .55rem; text-align: left; vertical-align: top; }
-  .ref-list th { background: #f1f0ea; font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+  .ref-list th { background: var(--card-2); font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
   .ref-list td.ref-url { overflow-wrap: anywhere; font-family: Consolas, monospace; font-size: .8rem; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
@@ -182,7 +201,11 @@
      Everything here is a view of state.timer; nothing in this block owns
      any. The controls forward to the real buttons in the editor rather than
      reimplementing start/pause/rotate, so there is exactly one copy of the
-     rotation rules. */
+     rotation rules.
+
+     Path 5 P3: this is a *projector surface*, so it stays dark in both themes
+     and its literals are deliberate. Remapping them onto the tokens would make
+     it light-navy-on-near-black in dark, because the accent ramp inverts. */
   .projector {
     position: fixed; inset: 0; z-index: 60; background: #12151b; color: #f4f3ee;
     display: flex; flex-direction: column; align-items: center;
@@ -996,6 +1019,8 @@
     var px = size / totalModules;
     canvas.width = size; canvas.height = size;
     var c = canvas.getContext('2d');
+    // A QR canvas draws dark-on-white in both themes on purpose: that is what a
+    // scanner needs, and inverting it would stop phones reading the code.
     c.fillStyle = '#fff'; c.fillRect(0, 0, size, size);
     c.fillStyle = '#000';
     for (var r = 0; r < count; r++) {

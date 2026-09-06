@@ -98,6 +98,28 @@ const PAGES = [
       await settle(page, 400);
     } },
   { label: '056', url: '/Tools/056-dbq-source-packet-builder.html' },
+  // increment 4
+  { label: '017', url: '/Tools/017-gallery-walk-qr.html',
+    // The card previews, the duplicate-name warning and the scan-verify tints
+    // only exist once there is an entry, so add one before the axe scan.
+    prep: async page => {
+      await page.click('#addRowBtn');
+      await settle(page, 200);
+      await page.fill('#entriesBody input[type="text"]', 'Station 1');
+      await settle(page, 600);
+    } },
+  { label: '028', url: '/Tools/028-primary-source-analysis-generator.html', sheet: '.sheet' },
+  // 040's printable page is built by script and there is nothing to print
+  // until the teacher has typed a word, so its sheet needs a prep.
+  { label: '040', url: '/Tools/040-vocab-flashcard-generator.html', sheet: '#previewArea .page',
+    prep: async page => {
+      await page.fill('#wordInput', 'Photosynthesis: how plants make food');
+      await page.dispatchEvent('#wordInput', 'input');
+      await settle(page, 600);
+    } },
+  { label: '050', url: '/Tools/050-civics-role-card-generator.html' },
+  { label: '054', url: '/Tools/054-current-events-discussion-guide-generator.html' },
+  { label: '078', url: '/Tools/078-unit-conversion-chart-builder.html' },
 ];
 
 // Chrome is what follows the theme. Anything that is a projector surface
@@ -147,7 +169,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056)');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078)');
 
 for (const p of PAGES) {
   /* ── dark ── */

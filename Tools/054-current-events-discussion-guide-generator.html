@@ -15,6 +15,11 @@
 <meta name="twitter:title" content="Current Events Discussion Guide Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Turn one or two pasted news articles into a printable discussion guide (summary, vocabulary, guiding questions, and an optional side-by-side bias/framing comparison).">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M7 6h18v20H7z' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M10 11h12M10 15h12M10 19h8' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     #printArea is hidden on screen (print-area.css), so the printed guide's
+     greys below are paper and stay as they are. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
@@ -24,6 +29,13 @@
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* Path 5 P3. Both tint pairs are 001's values (the reference adopter): the
+     word chip is the info tint, and a word that appears in both articles is
+     the warn tint. */
+  :root { --info-bg: #eaf1f5; --warn-bg: #fdf0dc; --warn-ink: #8a5a13; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --info-bg: #1b2a35; --warn-bg: #332711; --warn-ink: #eac077;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -42,9 +54,12 @@
   .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
-  input[type="text"], textarea {
+  /* input[type="url"] was never in this list, so the two article-link boxes had
+     the browser's own control styling in light and kept it in dark, where they
+     read as a different, paler control than everything around them. */
+  input[type="text"], input[type="url"], textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; }
@@ -52,14 +67,14 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   button.full { width: 100%; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
@@ -73,14 +88,14 @@
      shoved every question's text against the right edge. */
   .q-row label input[type="checkbox"] { flex: 0 0 auto; }
   .q-row label { display: flex; align-items: center; gap: .4rem; font-weight: 400; flex: 1; margin-bottom: 0; }
-  .word-chip { display: inline-block; background: #e9eef3; color: var(--accent-2); border-radius: 999px; padding: .15rem .6rem; margin: .15rem .3rem .15rem 0; font-size: .82rem; cursor: pointer; }
-  .word-chip:hover { background: var(--accent-2); color: #fff; }
-  .word-chip.both { background: #fce8b8; color: #6b4c00; font-weight: 700; }
-  .word-chip.both:hover { background: #6b4c00; color: #fff; }
+  .word-chip { display: inline-block; background: var(--info-bg); color: var(--accent-2); border-radius: 999px; padding: .15rem .6rem; margin: .15rem .3rem .15rem 0; font-size: .82rem; cursor: pointer; }
+  .word-chip:hover { background: var(--accent-2); color: var(--accent-ink); }
+  .word-chip.both { background: var(--warn-bg); color: var(--warn-ink); font-weight: 700; }
+  .word-chip.both:hover { background: var(--warn-ink); color: var(--warn-bg); }
 
   #articleBCard h2 { display: flex; align-items: baseline; gap: .4rem; }
-  .both-badge { display: inline-block; background: #fce8b8; color: #6b4c00; border-radius: 999px; padding: .1rem .5rem; font-size: .72rem; font-weight: 700; white-space: nowrap; }
-  .vocab-row.both input.term { color: #6b4c00; }
+  .both-badge { display: inline-block; background: var(--warn-bg); color: var(--warn-ink); border-radius: 999px; padding: .1rem .5rem; font-size: .72rem; font-weight: 700; white-space: nowrap; }
+  .vocab-row.both input.term { color: var(--warn-ink); }
 
   /* Share a guide by link / QR (same pattern as 028-primary-source-analysis-generator) */
   .share-note { font-size: .8rem; line-height: 1.5; margin: .5rem 0 0; padding: .55rem .7rem; border-radius: 6px;
@@ -89,7 +104,7 @@
   .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
     justify-content: center; padding: 20px; z-index: 80; }
   .share-overlay[hidden] { display: none; }
-  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
+  .share-modal { background: var(--card); color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
     text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
   .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
   #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
@@ -107,7 +122,7 @@
   tr.core-vocab td:first-child { font-weight: 700; }
 
   /* Media literacy kit — on-screen controls */
-  select { width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink); background: #fff;
+  select { width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink); background: var(--card);
     border: 1px solid var(--line-strong); border-radius: 6px; padding: .45rem .55rem; margin-bottom: .6rem; }
   .kit-toggle { display: flex; align-items: flex-start; gap: .5rem; padding: .4rem 0; font-weight: 400; margin-bottom: 0; }
   .kit-toggle input { margin-top: .3rem; flex: 0 0 auto; }
@@ -1077,6 +1092,8 @@
       var canvas = document.createElement('canvas');
       canvas.width = size; canvas.height = size;
       var ctx = canvas.getContext('2d');
+      // A QR canvas draws dark-on-white in both themes on purpose: that is what
+      // a scanner needs, and inverting it would stop phones reading the code.
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
       ctx.fillStyle = '#000';
       for (var r = 0; r < count; r++) {
@@ -1417,6 +1434,7 @@
     var size = (count + quiet * 2) * px;
     canvas.width = size; canvas.height = size;
     var ctx = canvas.getContext('2d');
+    // Same as the source QR above: dark-on-white in both themes, for scanners.
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
     ctx.fillStyle = '#16181d';
     for (var r = 0; r < count; r++) {
