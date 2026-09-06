@@ -16,6 +16,12 @@
 <meta name="twitter:title" content="Primary Source Analysis Worksheet Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Describe or paste in a primary source and build a printable OPTIC or SOAPSTone analysis worksheet with real guiding questions, plus a matching answer-key version filled in with your own teacher notes.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='5' y='4' width='16' height='21' rx='1' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cline x1='8' y1='9' x2='18' y2='9' stroke='%232A6DB0' stroke-width='1.3'/%3E%3Cline x1='8' y1='13' x2='18' y2='13' stroke='%232A6DB0' stroke-width='1.3'/%3E%3Cline x1='8' y1='17' x2='15' y2='17' stroke='%232A6DB0' stroke-width='1.3'/%3E%3Ccircle cx='21' cy='21' r='5' fill='%23F6F7F9' stroke='%23C43A2F' stroke-width='2'/%3E%3Cline x1='24.7' y1='24.7' x2='28' y2='28' stroke='%23C43A2F' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The worksheet itself stays white paper (`paper-sheet`, added where the
+     sheet is built); everything else follows the tokens. Read ink-paper.css's
+     header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -24,7 +30,15 @@
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <style>
-  :root { --good: #2f7d4f; }
+  /* Path 5 P3. --good and the info tint are 001's values (the reference
+     adopter); --desk is the table the worksheet lies on, named the same way
+     015, 023, 039 and 040 name theirs because ink-paper.css has no token for
+     it. --good is read from script for the library note, which is screen
+     chrome and so needs the dark value too. */
+  :root { --good: #2f7d4f; --info-bg: #eaf1f5; --desk: #d9d7cd; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --good: #63c08e; --info-bg: #1b2a35; --desk: #0e1014;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -38,7 +52,7 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
 
   /* Share a worksheet by link / QR (same pattern as 040-vocab-flashcard-generator) */
   .share-note { font-size: .8rem; line-height: 1.5; margin: 0 0 .9rem; padding: .55rem .7rem; border-radius: 6px;
@@ -47,7 +61,7 @@
   .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
     justify-content: center; padding: 20px; z-index: 80; }
   .share-overlay[hidden] { display: none; }
-  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
+  .share-modal { background: var(--card); color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
     text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
   .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
   #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
@@ -60,7 +74,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
   input[type="text"], input[type="url"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { resize: vertical; min-height: 3.6rem; }
@@ -69,14 +83,14 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.full { width: 100%; margin-bottom: .5rem; }
   button.small { padding: .3rem .6rem; font-size: .78rem; }
 
@@ -87,7 +101,7 @@
     border-radius: 8px; padding: .6rem .7rem; cursor: pointer;
   }
   .fw-option:hover { border-color: var(--accent-2); }
-  .fw-option.active { border-color: var(--accent); background: #eaf1f6; }
+  .fw-option.active { border-color: var(--accent); background: var(--info-bg); }
   .fw-option input { margin: .2rem 0 0; flex-shrink: 0; }
   .fw-option .fw-name { font-weight: 700; font-size: .92rem; }
   .fw-option .fw-desc { font-size: .8rem; color: var(--muted); margin-top: .1rem; line-height: 1.35; }
@@ -98,7 +112,7 @@
   .note-step-head { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .35rem; }
   .note-step-letter {
     display: inline-flex; align-items: center; justify-content: center; min-width: 1.6rem; height: 1.6rem;
-    border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: .78rem; padding: 0 .3rem;
+    border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: .78rem; padding: 0 .3rem;
   }
   .note-step-label { font-weight: 700; font-size: .92rem; }
   .note-step-qs { color: var(--muted); font-size: .78rem; margin: 0 0 .5rem 2.1rem; line-height: 1.4; }
@@ -106,22 +120,27 @@
   .note-step textarea { margin: 0 0 0 2.1rem; width: calc(100% - 2.1rem); min-height: 3.2rem; font-size: .85rem; }
   @media (max-width: 520px) { .note-step-qs, .note-step textarea { margin-left: 0; width: 100%; } }
 
-  .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
+  .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
   .preview-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .7rem; margin-bottom: .9rem; }
   .preview-note { font-size: .8rem; color: var(--muted); margin: 0; }
   .view-tabs { display: flex; gap: .4rem; }
   .view-tab {
     font-family: inherit; font-size: .8rem; font-weight: 700; cursor: pointer;
-    background: #fff; color: var(--muted); border: 1px solid var(--line-strong);
+    background: var(--card); color: var(--muted); border: 1px solid var(--line-strong);
     border-radius: 7px; padding: .4rem .8rem;
   }
-  .view-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .view-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
   .print-btns { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 1rem; }
   .print-btns button { flex: 1; min-width: 11rem; }
 
-  /* ---- the worksheet itself ---- */
+  /* ---- the worksheet itself ----
+     A sheet of paper is a sheet of paper in either theme, so the .sheet div is
+     built with `paper-sheet` on it (see outputHtml) and ink-paper.css restores
+     the light tokens inside it. Every literal from here down to the print
+     block — the rules, the #000 borders, the tint boxes — is printed ink on
+     white and stays as it is. */
   .sheet {
-    background: #fff; width: 8.5in; max-width: 100%; margin: 0 auto; padding: 0.6in 0.65in;
+    background: var(--card); width: 8.5in; max-width: 100%; margin: 0 auto; padding: 0.6in 0.65in;
     box-shadow: 0 2px 10px rgba(0,0,0,.18); color: #000; font-family: Georgia, "Times New Roman", serif;
   }
   .key-banner {
@@ -159,6 +178,10 @@
   .crop-tool img { display: block; width: 100%; height: auto; pointer-events: none; -webkit-user-drag: none; }
   .crop-box { position: absolute; border: 2px solid var(--accent); background: rgba(42,109,176,.15); box-sizing: border-box; pointer-events: none; }
   .crop-hint { color: var(--muted); font-size: .76rem; margin: 0 0 .4rem; }
+  /* A mat behind a teacher-supplied image stays light in both themes: a scanned
+     source is often a transparent line drawing, and dark ink on a dark mat is
+     nothing at all. Same reason 056 and escape-room-builder/lock.html keep
+     theirs. (This one is inside the sheet as well, so it is paper twice over.) */
   .crop-frame { position: relative; overflow: hidden; border: 1px solid #999; background: #f1f0ea; }
   .crop-frame img { display: block; max-width: none; }
 
@@ -172,14 +195,18 @@
   .detail-marker { position: absolute; border: 2px solid #C43A2F; box-sizing: border-box; pointer-events: none; }
   .detail-caption { font-size: .72rem; color: #555; margin: .1rem 0 0; text-align: center; }
   .source-desc { font-size: .9rem; margin-top: .3rem; }
-  .source-desc.empty { color: #888; font-style: italic; }
+  /* #888 is 3.54:1 on white and axe called it: these three placeholders are on
+     the sheet, so var(--muted) resolves to the light #6b6a63 (4.76:1) inside it
+     and to the dark muted anywhere else. Found by the dark-rollout scan, but
+     the violation was in light too. */
+  .source-desc.empty { color: var(--muted); font-style: italic; }
   .source-text-block {
     font-size: .86rem; margin-top: .5rem; padding: .5rem .6rem; background: #f7f7f4;
     border-left: 3px solid #999; white-space: pre-wrap;
   }
   .source-text-lines { font-size: .86rem; margin-top: .5rem; padding: .5rem .6rem; background: #f7f7f4; border-left: 3px solid #999; }
   .source-text-lines .stl-line { display: flex; gap: .5rem; }
-  .source-text-lines .stl-num { flex-shrink: 0; width: 1.6rem; text-align: right; color: #888; font-family: Consolas, monospace; font-size: .78rem; }
+  .source-text-lines .stl-num { flex-shrink: 0; width: 1.6rem; text-align: right; color: var(--muted); font-family: Consolas, monospace; font-size: .78rem; }
   .source-text-lines .stl-text { white-space: pre-wrap; }
   .citation-line { font-size: .82rem; color: #333; margin-top: .3rem; font-style: italic; }
   .reading-support-box, .reading-paraphrase-box {
@@ -279,7 +306,7 @@
   .lib-entry-title { font-weight: 700; font-size: .88rem; }
   .lib-entry-meta { color: var(--muted); font-size: .76rem; margin: .1rem 0 .35rem; }
   .lib-tags { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .35rem; }
-  .lib-tag { font-size: .72rem; background: #eaf1f6; border: 1px solid var(--line-strong); border-radius: 10px; padding: .05rem .45rem; }
+  .lib-tag { font-size: .72rem; background: var(--info-bg); border: 1px solid var(--line-strong); border-radius: 10px; padding: .05rem .45rem; }
   .lib-entry-actions { display: flex; flex-wrap: wrap; gap: .35rem; }
   .lib-empty { color: var(--muted); font-size: .82rem; margin: 0; }
 
@@ -301,7 +328,7 @@
     margin: .4rem 0 0 2.4rem; padding: .5rem .6rem; background: #eef6ef; border: 1px solid var(--good);
     border-radius: 5px; font-size: .88rem; white-space: pre-wrap; font-family: "Segoe UI", sans-serif;
   }
-  .step-answer.key.empty { color: #888; font-style: italic; background: #f4f4f0; border-color: #ccc; }
+  .step-answer.key.empty { color: var(--muted); font-style: italic; background: #f4f4f0; border-color: #ccc; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -1126,6 +1153,9 @@
           var canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
           var ctx = canvas.getContext('2d');
+          // A white matte under a transparent PNG, because the re-encode below is
+          // JPEG and has no alpha. Nothing to do with the theme: without it a
+          // transparent source comes out black on paper.
           ctx.fillStyle = '#fff';
           ctx.fillRect(0, 0, w, h);
           ctx.drawImage(img, 0, 0, w, h);
@@ -2136,7 +2166,9 @@
       ? '<div class="student-line">Name: _____________________________ &nbsp;&nbsp; Date: ______________ &nbsp;&nbsp; Class: ______________</div>'
       : '';
     return (
-      '<div class="sheet">' +
+      // `paper-sheet` is what keeps the worksheet white with dark ink in dark
+      // mode; the sheet is built here, so this is the one place it goes.
+      '<div class="sheet paper-sheet">' +
         keyBanner +
         (tagLevel ? '<div class="level-tag">' + escapeHtml(LEVELS[level].name) + '</div>' : '') +
         '<div class="sheet-header">' +
@@ -2672,6 +2704,8 @@
     var size = (count + quiet * 2) * px;
     canvas.width = size; canvas.height = size;
     var ctx = canvas.getContext('2d');
+    // A QR canvas draws dark-on-white in both themes on purpose: that is what a
+    // scanner needs, and inverting it would stop phones reading the code.
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
     ctx.fillStyle = '#16181d';
     for (var r = 0; r < count; r++) {
