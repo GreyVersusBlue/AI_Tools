@@ -11,8 +11,9 @@
 //   Auto assignment really varies by panel, and a per-panel override really
 //   wins over it, in the printed DOM and not just in the builder.
 //
-//   Turning color-coding off returns every panel to plain black, so the
-//   ink-conscious case is one checkbox and not a per-panel sweep.
+//   Turning color-coding off returns every panel to plain ink (ink-paper's
+//   --ink, as it resolves inside #printArea), so the ink-conscious case is one
+//   checkbox and not a per-panel sweep.
 //
 //   Posters saved before this feature existed pick the accents up on load
 //   instead of printing plain forever — the old `vcp_poster_v1` blob has
@@ -41,18 +42,39 @@ const browser = await launch();
 const page = await prepPage(browser, BASE, { width: 1400, height: 950 });
 
 /** Print into #printArea (with window.print stubbed) and report each panel's
- *  accent id, border color and heading band. */
+ *  accent id, border color and heading band.
+ *
+ *  The border is read COMPUTED, not off the inline style. Path 5 P3 made the
+ *  no-colour neutral `var(--ink)` rather than a literal #333, because that one
+ *  value borders the on-screen swatch as well as the printed panel and has to
+ *  work on a dark card too; an inline style string would come back as the
+ *  unresolved "var(--ink)". Computed is also the stronger claim — it is what
+ *  reaches the paper. */
 async function printedPanels(p = page) {
   await p.evaluate(() => { window.print = function () {}; });
   await p.click('#printBtn');
   await settle(p);
   return p.evaluate(() => Array.from(document.querySelectorAll('#printArea .poster-panel')).map(el => ({
     accent: el.getAttribute('data-accent'),
-    border: el.style.borderColor,
+    border: getComputedStyle(el).borderTopColor,
     band: el.querySelector('h3').style.backgroundColor,
     text: el.querySelector('h3').textContent,
   })));
 }
+
+/** ink-paper.css's ink as it resolves inside #printArea — the colour a panel
+ *  with colour-coding off must print in. Read off the page so the assertion
+ *  cannot drift from the palette. */
+const printedInk = () => page.evaluate(() => {
+  // Resolved through a probe so it comes back as the same rgb() string
+  // getComputedStyle reports for a border, not the raw "#1f2430" token value.
+  const probe = document.createElement('span');
+  probe.style.color = 'var(--ink)';
+  document.getElementById('printArea').appendChild(probe);
+  const rgb = getComputedStyle(probe).color;
+  probe.remove();
+  return rgb;
+});
 
 const builderSwatches = () => page.evaluate(() =>
   Array.from(document.querySelectorAll('.panel-block .swatch')).map(s => s.style.borderColor));
@@ -66,7 +88,8 @@ ok(await page.isChecked('#colorPanels'), 'color-coding is on for a new poster');
 const first = await printedPanels();
 eq(first.length, 3, 'the default Spanish present-tense poster prints its three panels');
 eq(new Set(first.map(p => p.accent)).size, 3, 'each verb-ending group gets its own accent: ' + JSON.stringify(first.map(p => p.accent)));
-ok(first.every(p => p.border && p.border !== 'rgb(51, 51, 51)'), 'every panel border takes its accent');
+const INK = await printedInk();
+ok(first.every(p => p.border && p.border !== INK), 'every panel border takes its accent');
 ok(first.every(p => p.band && p.band !== 'transparent'), 'every heading band is tinted');
 
 /* the builder shows the same accents, so the choice is visible before printing */
@@ -90,7 +113,7 @@ await page.uncheck('#colorPanels');
 await settle(page);
 const plain = await printedPanels();
 ok(plain.every(p => p.accent === 'none'), 'no panel claims an accent with color-coding off');
-ok(plain.every(p => p.border === 'rgb(51, 51, 51)'), 'borders go back to plain black: ' + JSON.stringify(plain.map(p => p.border)));
+ok(plain.every(p => p.border === INK), 'borders go back to plain ink: ' + JSON.stringify(plain.map(p => p.border)) + ' (want ' + INK + ')');
 ok(plain.every(p => p.band === 'transparent'), 'heading bands go back to no fill');
 ok(plain.every(p => p.text), 'the panel names — which is what actually says -AR from -ER — are untouched');
 

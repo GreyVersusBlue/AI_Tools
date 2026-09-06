@@ -15,11 +15,24 @@
 <meta name="twitter:title" content="PE Warm-Up Circuit Card Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Printable warm-up/calisthenics circuit cards to post at stations before a rotation or tournament begins.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='8' r='3' fill='%231f3550'/%3E%3Cpath d='M16 12v8m0-6l-6 3m6-3l6 3m-6 5l-4 6m4-6l4 6' fill='none' stroke='%231f3550' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The station cards print, so their preview is .paper-sheet — white in both
+     themes — and the @media print block below is never on a dark screen.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Path 5 P3. --desk is the well the card previews sit in, named and valued
+     the same way 017 names its (ink-paper.css has no token for it). The
+     previews themselves are .paper-sheet: they are a facsimile of the printed
+     station card, so they stay white with dark ink in both themes. The
+     rgba(0,0,0,.15) drop shadow stays as it is, as in 001 and 040. */
+  :root { --desk: #eeece3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --desk: #0e1014; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -40,21 +53,21 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
   input[type="text"], select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .25rem .55rem; font-size: .78rem; }
   .btnrow, .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
 
@@ -66,7 +79,7 @@
   .station-row input, .station-row textarea { margin-bottom: .4rem; }
   .station-row textarea {
     width: 100%; font-family: inherit; font-size: .85rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .4rem .5rem; resize: vertical; min-height: 2.6rem;
   }
   .station-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .4rem; }
@@ -76,17 +89,19 @@
   .emoji-pick-btn { align-self: center; font-size: .74rem; padding: .35rem .5rem; white-space: nowrap; }
   .emoji-palette {
     position: absolute; top: 100%; left: 0; z-index: 10; margin-top: .2rem;
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.15);
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.15);
     padding: .5rem; display: grid; grid-template-columns: repeat(7, 1fr); gap: .15rem; width: 240px;
   }
   .emoji-palette button { background: none; border: none; color: inherit; font-size: 1.2rem; padding: .3rem; border-radius: 5px; }
-  .emoji-palette button:hover { background: #eeece3; }
+  .emoji-palette button:hover { background: var(--card-2); }
 
-  .preview-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
+  .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.2rem; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
   .empty-hint { font-size: .85rem; color: var(--muted); text-align: center; padding: 2.4rem 1rem; }
 
   .card-preview-grid { display: flex; flex-wrap: wrap; gap: .7rem; }
+  /* Paper: a facsimile of the printed card. .paper-sheet (added where the
+     markup is built) restores ink-paper's light tokens inside it in dark. */
   .card-preview { background: #fff; border: 2px solid var(--accent); border-radius: 10px; padding: .9rem; width: 220px; }
   .card-preview .cp-num { font-family: Consolas, monospace; font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
   .card-preview .cp-emoji { font-size: 2.2rem; text-align: center; margin: .2rem 0; }
@@ -542,7 +557,7 @@
       return;
     }
     els.previewGrid.innerHTML = valid.map(function (s) {
-      return '<div class="card-preview">' +
+      return '<div class="card-preview paper-sheet">' +
         '<div class="cp-num">Station ' + (s.idx + 1) + '</div>' +
         (s.emoji ? '<div class="cp-emoji">' + s.emoji + '</div>' : '') +
         '<div class="cp-name">' + escapeHtml(s.name) + '</div>' +

@@ -15,12 +15,21 @@
 <meta name="twitter:title" content="Math &quot;Find the Mistake&quot; Warm-Up Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Worked-out problems with one intentional error each, for students to spot and correct — reveal the fix on the projector or print as a worksheet.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23a3372b' stroke-width='2'/%3E%3Cpath d='M12 12l8 8M20 12l-8 8' stroke='%23a3372b' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
   :root { --ok: #2c6e3f; }
+  /* Native dark: the tokens come from _shared/ink-paper.css; this page only
+     needs its one private semantic colour (the corrected-solution green,
+     001's --good value under a local name). Everything inside #printArea is
+     paper — it is display:none on screen — so its greys are left alone. */
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --ok: #63c08e; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -38,27 +47,27 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], input[type="number"], textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .6rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; min-height: 3.6rem; font-family: Consolas, monospace; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .25rem .6rem; font-size: .8rem; }
   .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
 
   .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
-  .tabs button { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tabs button { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  .tabs button.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .stage { display: none; }
   .stage.active { display: block; }
 
@@ -82,14 +91,18 @@
   .bank-list { max-height: 40vh; overflow-y: auto; }
   .bank-row .del-btn { float: right; }
   .bank-row.disabled { opacity: .55; }
-  .cat-pill { display: inline-block; font-size: .7rem; padding: .05rem .45rem; border-radius: 999px; background: #eee; color: var(--muted); margin-left: .4rem; border: 1px solid var(--line-strong); }
+  .cat-pill { display: inline-block; font-size: .7rem; padding: .05rem .45rem; border-radius: 999px; background: var(--card-2); color: var(--muted); margin-left: .4rem; border: 1px solid var(--line-strong); }
   .toggle-btn { float: right; margin-left: .5rem; }
   .filter-list { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; }
   .filter-list label { display: flex; align-items: center; gap: .35rem; font-weight: 500; font-size: .82rem; margin: 0; }
   .filter-list input[type="checkbox"] { margin: 0; width: auto; }
   .display-empty { color: var(--muted); font-size: .95rem; }
-  select#newCategory { width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink); background: #fff; border: 1px solid var(--line-strong); border-radius: 6px; padding: .45rem .6rem; margin-bottom: .6rem; }
+  /* #newBand was never in this selector, so it had the browser's own control
+     styling next to a styled one — invisible in light, obvious in dark. */
+  select#newCategory, select#newBand { width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink); background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px; padding: .45rem .6rem; margin-bottom: .6rem; }
 
+  /* Paper: #printArea is display:none on screen, so this white and the print
+     block below are never on a dark surface. */
   .sheet-page { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 1.5rem 1.8rem; margin-bottom: 1rem; }
   .sheet-title { font-size: 1.2rem; margin: 0 0 .2rem; }
   .sheet-sub { color: var(--muted); font-size: .82rem; margin: 0 0 1rem; }

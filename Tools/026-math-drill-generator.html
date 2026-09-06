@@ -16,8 +16,14 @@
 <meta name="twitter:title" content="Math Fact Drill Sheet Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Randomized, printable math fact drill sheets with a matching answer key.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ctext x='7' y='21' font-family='Consolas,monospace' font-size='13' font-weight='700' fill='%232A6DB0'%3E7%2B8%3C/text%3E%3C/svg%3E">
-<script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The previewed worksheet is .paper-sheet, so it and its answer key stay
+     white with dark ink on a dark --desk.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
+<script src="../_shared/a11y.js"></script>
 <script src="math-drill-generator/mdg-templates.js"></script>
 <script src="math-drill-generator/mdg-generate.js"></script>
 <script src="math-drill-generator/mdg-selfcheck.js"></script>
@@ -26,6 +32,14 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Path 5 P3. --desk is the table the worksheet preview lies on, named and
+     valued the way 015, 023, 028 and 039 name theirs (ink-paper.css has no
+     token for it). Everything from .sheet down is paper: the previewed sheet
+     carries .paper-sheet (written where the markup is built), so its #999
+     fill lines, #fbfbf8 answer box, the colour-by-answer fills from
+     mdg-selfcheck.js and the white text on them stay light in both themes. */
+  :root { --desk: #d9d7cd; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --desk: #0e1014; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -43,7 +57,7 @@
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   input[type="text"], input[type="number"], select {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
@@ -51,19 +65,19 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .6rem 1.1rem; width: 100%; margin-bottom: .6rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
 
   .toggle-row { display: flex; gap: .5rem; margin-bottom: .6rem; }
   .toggle-row button { margin-bottom: 0; }
-  .toggle-row button.active { background: var(--accent); color: #fff; }
-  .toggle-row button:not(.active) { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  .toggle-row button.active { background: var(--accent); color: var(--accent-ink); }
+  .toggle-row button:not(.active) { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
 
-  .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
+  .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
 
   .sheet {
@@ -635,9 +649,9 @@
 
   function mazeSheetHtml(set, answerMode) {
     var maze = MathDrillSelfCheck.buildMaze(set.problems, { seed: settings.seed });
-    if (!maze) return '<div class="sheet"><div class="sheet-title">' + sheetTitleFor(set.label) + '</div></div>';
+    if (!maze) return '<div class="sheet paper-sheet"><div class="sheet-title">' + sheetTitleFor(set.label) + '</div></div>';
     return (
-      '<div class="sheet">' +
+      '<div class="sheet paper-sheet">' +
         '<div class="sheet-title">' + sheetTitleFor(set.label) + (answerMode ? ' &mdash; Maze Answer Key' : '') + '</div>' +
         sheetMetaHtml(answerMode) +
         (answerMode ? '' : fluencyHeaderHtml()) +
@@ -666,7 +680,7 @@
       var pageLabel = pages.length > 1 ? ' <span class="page-label">(page ' + (pageIndex + 1) + ' of ' + pages.length + ')</span>' : '';
       var extra = pageIndex === pages.length - 1 ? selfCheckWorksheetExtraHtml(set) : '';
       return (
-        '<div class="sheet">' +
+        '<div class="sheet paper-sheet">' +
           '<div class="sheet-title">' + sheetTitleFor(set.label) + pageLabel + '</div>' +
           sheetMetaHtml(false) +
           (pageIndex === 0 ? fluencyHeaderHtml() : '') +
@@ -688,7 +702,7 @@
     var extra = settings.selfCheck === 'riddle' ? riddleAnswerHtml(set)
       : settings.selfCheck === 'colorByAnswer' ? colorGridHtml(set, true) : '';
     return (
-      '<div class="sheet">' +
+      '<div class="sheet paper-sheet">' +
         '<div class="sheet-title">' + sheetTitleFor(set.label) + ' &mdash; Answer Key</div>' +
         sheetMetaHtml(true) +
         '<div class="answers' + fsClass + '" style="column-count:' + cols + ';">' + items + '</div>' +

@@ -15,6 +15,12 @@
 <meta name="twitter:title" content="Verb Conjugation Reference Poster Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="A printable large-format wall poster of conjugation patterns — a visual reference to hang up, distinct from the drill worksheets.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ctext x='6' y='23' font-family='Georgia,serif' font-style='italic' font-weight='700' font-size='16' fill='%231f3550'%3EAr%3C/text%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The poster is built into #printArea, which is paper: its #333 borders,
+     #999 rules and #555 person column are never on a dark screen.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -41,20 +47,20 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   button.full { width: 100%; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
@@ -69,6 +75,10 @@
   .form-row .plabel { font-size: .82rem; color: var(--muted); }
   .form-row input { margin-bottom: 0; }
 
+  /* Paper, all of it: .poster-* exists only inside #printArea, which
+     _shared/print-area.css hides on screen, so these greys and the navy
+     .pform are never on a dark surface. The one exception is the accent
+     colour, which is shared with the on-screen swatch — see NO_COLOR. */
   .poster-title { text-align: center; font-size: 2.2rem; margin: 0 0 1.2rem; }
   .poster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; }
   .poster-panel { border: 2px solid #333; border-radius: 10px; padding: 0 0 1rem; overflow: hidden; }
@@ -90,7 +100,7 @@
   }
   .panel-block-head .swatch {
     width: 1.1rem; height: 1.1rem; border-radius: 4px; flex: none;
-    border: 2px solid #333; background: #fff;
+    border: 2px solid var(--ink); background: var(--card);
   }
   .panel-block-head select {
     width: auto; margin-bottom: 0; font-size: .78rem; padding: .25rem .3rem;
@@ -192,7 +202,11 @@
     { id: 'purple', name: 'Purple', line: '#6a3382', tint: '#f2e8f7' },
     { id: 'green', name: 'Green', line: '#2f6a2f', tint: '#e6f2e6' }
   ];
-  var NO_COLOR = { line: '#333', tint: 'transparent' };
+  // The only neutral in the palette, and the one value here that is on the
+  // screen as well as on the paper: it borders the on-screen swatch and the
+  // printed panel. var(--ink) is near-black inside #printArea (which restores
+  // ink-paper's light tokens) and pale on a dark card, so it serves both.
+  var NO_COLOR = { line: 'var(--ink)', tint: 'transparent' };
 
   var TEMPLATES = {
     es_present: {
