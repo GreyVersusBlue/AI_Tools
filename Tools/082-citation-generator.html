@@ -15,12 +15,23 @@
 <meta name="twitter:title" content="Citation Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Build a Works Cited, References, or Bibliography page in MLA, APA, or Chicago style — books, articles, websites, Wikipedia, videos, and more. Stays entirely in your browser.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='9' y='11' width='3' height='6' rx='1.5' fill='%231f3550' transform='rotate(-15 10.5 14)'/%3E%3Crect x='19' y='11' width='3' height='6' rx='1.5' fill='%231f3550' transform='rotate(-15 20.5 14)'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The Works Cited page is built into #printArea, which is paper: its #111
+     serif ink is never on a dark screen.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* Path 5 P3. The scope note is the site's warning chip, so it takes 001's
+     trio (the reference adopter) instead of keeping a fourth cream of its
+     own; its light values shift very slightly as a result. */
+  :root { --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -38,7 +49,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .8rem; }
   select, input[type="text"] {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem;
   }
 
@@ -46,12 +57,12 @@
     font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
     border-radius: 6px; padding: .5rem .9rem; border: 1px solid var(--accent);
   }
-  button.primary { background: var(--accent); color: #fff; }
+  button.primary { background: var(--accent); color: var(--accent-ink); }
   button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--accent); }
-  button.secondary:hover { background: #eef2f6; }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: #fbecea; }
+  button.secondary { background: var(--card); color: var(--accent); }
+  button.secondary:hover { background: var(--card-2); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button:disabled { opacity: .5; cursor: not-allowed; }
 
   .toprow { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; margin-bottom: .9rem; }
@@ -77,7 +88,7 @@
   .share-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
   .share-note.error { color: var(--err); }
 
-  .scope-note { background: #fff8e6; border: 1px solid #e9d9a0; border-radius: 8px; padding: .6rem .8rem; font-size: .82rem; color: #6b5a1f; margin-bottom: 1rem; }
+  .scope-note { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px; padding: .6rem .8rem; font-size: .82rem; color: var(--warn-ink); margin-bottom: 1rem; }
 
   #printArea .print-sheet { font-family: "Times New Roman", Georgia, serif; color: #111; padding: 0.5in; }
   #printArea h1 { font-size: 14pt; text-align: center; font-weight: normal; margin: 0 0 1em; }

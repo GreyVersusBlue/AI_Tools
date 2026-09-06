@@ -15,9 +15,12 @@
 //
 // Definitions, all read off the tree rather than off any prose list:
 //
-//   THEMED     the page loads _shared/a11y.js. Only those pages get a theme
-//              at all, so only those can be candidates. (035 runs its own
-//              four-palette system and is reported separately, not ranked.)
+//   THEMED     the page loads _shared/a11y.js — from a real <script src>, not
+//              from a mention of the path in prose or in a comment; see
+//              `loadedFiles` below for why that distinction cost six
+//              increments. Only those pages get a theme at all, so only those
+//              can be candidates. (035 runs its own four-palette system and is
+//              reported separately, not ranked.)
 //   NATIVE     the page sets `window.A11Y_NATIVE_THEME = true` — it has opted
 //              out of a11y.css's invert filter and paints its own dark. Done.
 //   CANDIDATE  a themed page that is not native yet. It is still getting the
@@ -197,6 +200,30 @@ function measure(html) {
   return out;
 }
 
+/* ── what a page actually loads ───────────────────────────────────────── */
+// A substring search of the whole file is not a reference. `ideas-backlog.html`
+// is a page *about* this backlog: its prose says `<code>_shared/a11y.js</code>`
+// and `<code>_shared/ink-paper.css</code>`, and a `/_shared\/a11y\.js/` test
+// over the raw HTML counted that as loading them. It was therefore ranked as a
+// themed candidate for six increments and reached the top of a batch — a page
+// with no a11y.js, no shared palette and its own private :root, where a dark
+// block would never be switched on. Adopted pages also carry a `<!-- Native
+// dark comes from _shared/ink-paper.css ... -->` comment, so the same test
+// would call a page ink-paper on the strength of its own explanation.
+//
+// So: strip comments, read the `src`/`href` of real <script> and <link> tags,
+// and match on the resolved filename. Nothing else counts as loading a file.
+const stripHtmlComments = html => html.replace(/<!--[\s\S]*?-->/g, '');
+function loadedFiles(html) {
+  const out = new Set();
+  for (const tag of stripHtmlComments(html).match(/<(?:script|link)\b[^>]*>/gi) || []) {
+    const m = /\b(?:src|href)\s*=\s*["']([^"']+)["']/i.exec(tag);
+    if (m) out.add(m[1].split('?')[0].split('#')[0].replace(/\\/g, '/'));
+  }
+  return out;
+}
+const loads = (files, name) => [...files].some(u => u === name || u.endsWith('/' + name));
+
 /* ── the survey ───────────────────────────────────────────────────────── */
 
 const pages = livePages();
@@ -206,14 +233,15 @@ const unthemed = [];
 
 for (const rel of pages) {
   const html = fs.readFileSync(path.join(SITE, rel), 'utf8');
-  const themed = /_shared\/a11y\.js/.test(html);
-  const flag = /A11Y_NATIVE_THEME\s*=\s*true/.test(html);
+  const files = loadedFiles(html);
+  const themed = loads(files, 'a11y.js');
+  const flag = /A11Y_NATIVE_THEME\s*=\s*true/.test(stripHtmlComments(html));
   const m = measure(html);
   const entry = {
     file: rel,
-    inkPaper: /_shared\/ink-paper\.css/.test(html),
-    themeCss: /_shared\/theme\.css/.test(html),
-    stage: /_shared\/stage\.js/.test(html) ? 'linked'
+    inkPaper: loads(files, 'ink-paper.css'),
+    themeCss: loads(files, 'theme.css'),
+    stage: loads(files, 'stage.js') ? 'linked'
       : /requestFullscreen/.test(html) ? 'hand-rolled' : '',
     canvas: /<canvas\b/i.test(html),
     tokens: m.tokens,

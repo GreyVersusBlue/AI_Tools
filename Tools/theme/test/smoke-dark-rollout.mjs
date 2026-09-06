@@ -194,6 +194,58 @@ const PAGES = [
       await page.click('#addPromptBtn');
       await settle(page, 400);
     } },
+  // increment 7. Five of the six keep their printable in a hidden container
+  // (#printArea for 077, 082, 085 and 060, .print-only for 014 and 045), so
+  // their #333/#555/#999/#eee print values were left alone. 045 is the
+  // exception worth naming: its feedback form's classes are shared between
+  // the on-screen card and the printed page, so those ARE tokenised.
+  { label: '014', url: '/Tools/014-roleplay-scenario-generator.html',
+    // Nothing is on the stage until a scenario is drawn; the role badges are
+    // the page's only accent-ink surface and the scaffolding cards its only
+    // --card-2 one.
+    prep: async page => {
+      await page.click('#shuffleBtn');
+      await settle(page, 400);
+    } },
+  { label: '045', url: '/Tools/045-sub-binder-generator.html',
+    // Every card renders on load, including the substitute feedback form and
+    // the "nothing saved yet" warn card, which is what puts --warn-bg on
+    // screen in a fresh profile.
+    prep: async page => { await settle(page, 300); } },
+  { label: '060', url: '/Tools/060-fitness-skill-assessment-tracker.html',
+    // No roster, no results table — and the table header is where --card-2,
+    // --paper (the totals row) and --sorted-bg all are.
+    prep: async page => {
+      await page.fill('#rosterInput', 'Alex Rivera\nBailey Chen\nCarter Diaz');
+      await page.click('#saveRosterBtn');
+      await settle(page, 300);
+      await page.click('th[data-sort-by]');
+      await settle(page, 300);
+    } },
+  { label: '077', url: '/Tools/077-testing-accommodations-card-generator.html',
+    // The six accommodation types are seeded on first load; the roster is not,
+    // and without one the assignment grid does not render at all.
+    prep: async page => {
+      await page.fill('#rosterInput', 'Alex Rivera\nBailey Chen\nCarter Diaz');
+      await page.click('#saveRosterBtn');
+      await settle(page, 400);
+    } },
+  { label: '082', url: '/Tools/082-citation-generator.html',
+    // The scope note (the warn chip) is on screen from the start; adding a
+    // source is what puts an .entry row and its danger button there too.
+    prep: async page => {
+      const first = page.locator('#fieldsWrap input[type="text"]').first();
+      await first.fill('Angelou, Maya');
+      await page.click('#addBtn');
+      await settle(page, 400);
+    } },
+  { label: '085', url: '/Tools/085-parent-communication-templates.html',
+    // The built-in templates render on load; clicking one fills the editor and
+    // the preview box, which is the page's largest --card surface.
+    prep: async page => {
+      await page.click('#templateList .tpl-row');
+      await settle(page, 400);
+    } },
 ];
 
 // Chrome is what follows the theme. Anything that is a projector surface
@@ -243,7 +295,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076)');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085)');
 
 for (const p of PAGES) {
   /* ── dark ── */

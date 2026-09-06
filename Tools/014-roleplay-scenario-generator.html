@@ -15,6 +15,12 @@
 <meta name="twitter:title" content="Immersion Roleplay Scenario Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Random real-life dialogue roleplay scenarios for partner speaking practice in any world language, with fill-in vocabulary scaffolding cards, a projector display, and printable pair handouts.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M5 7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-8l-4 3v-3H7a2 2 0 0 1-2-2z' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M14 16a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2v3l-3-3h-4a2 2 0 0 1-2-2z' fill='%23C43A2F'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The pair handout lives in .print-only, which is paper: its #333 rules,
+     #555 labels and #999 hairlines are only ever on a printed page.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -36,22 +42,22 @@
 
   .toolbar select {
     font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong);
-    border-radius: 7px; background: #fff; color: var(--ink);
+    border-radius: 7px; background: var(--card); color: var(--ink);
   }
   .toolbar .spacer { flex: 1 1 auto; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.small { padding: .3rem .6rem; font-size: .78rem; }
   button.big { font-size: 1.02rem; padding: .8rem 1.6rem; }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
 
   .stage {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
@@ -69,7 +75,7 @@
   .role-assign-row .hint { color: var(--muted); font-size: .82rem; margin: 0; }
   .roles-row { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 1.4rem; }
   .role-badge {
-    background: var(--accent); color: #fff; border-radius: 8px; padding: .6rem 1.1rem;
+    background: var(--accent); color: var(--accent-ink); border-radius: 8px; padding: .6rem 1.1rem;
     font-weight: 700; font-size: 1rem; flex: 1 1 12rem; text-align: center;
   }
   .role-badge .who { display: block; font-size: .68rem; font-weight: 600; letter-spacing: .06em;
@@ -83,7 +89,7 @@
   .scaff-card .prompt { font-weight: 700; font-size: .92rem; margin-bottom: .5rem; }
   .scaff-card textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; min-height: 3.4rem; resize: vertical;
   }
   .scaff-card .fill-hint { color: var(--muted); font-size: .74rem; margin: .3rem 0 0; }
@@ -98,7 +104,7 @@
     display: block; color: var(--muted); font-size: .72rem; font-style: italic;
     margin: .5rem 0 .25rem;
   }
-  .scaff-card textarea.frame-input { border-style: dashed; background: #fdfcf8; }
+  .scaff-card textarea.frame-input { border-style: dashed; background: var(--card-2); }
 
   .pairs-box { border: 1px solid var(--line); border-radius: 9px; padding: .8rem .9rem; margin-bottom: 1.4rem; background: var(--paper); }
   .pairs-box h3 { margin: 0 0 .5rem; font-size: .9rem; }
@@ -123,7 +129,7 @@
   .add-panel .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   .add-panel input[type="text"], .add-panel select, .add-panel textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .3rem;
   }
   .add-panel textarea { min-height: 4.5rem; resize: vertical; }
@@ -136,7 +142,7 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; text-align: center; }
 
-  .stage-success { border: 2px solid var(--accent, #1f3550); border-radius: 8px; padding: .5rem .8rem; margin: .8rem 0; text-align: left; }
+  .stage-success { border: 2px solid var(--accent); border-radius: 8px; padding: .5rem .8rem; margin: .8rem 0; text-align: left; }
   .stage-success strong { display: block; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
   .stage-success ul { margin: .3rem 0 0; padding-left: 1.2rem; }
   .stage-success li { margin-bottom: .15rem; }

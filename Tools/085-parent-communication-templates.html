@@ -15,6 +15,12 @@
 <meta name="twitter:title" content="Parent Communication Template Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Fill in the blanks on ready-made parent letters — positive notes, missing-work notices, conference requests, and more — then copy, print, or email. Batch-fill a whole roster at once.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='10' width='20' height='14' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M6 11l10 8 10-8' stroke='%231f3550' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The letters are built into #printArea, which is paper: its #111 serif ink
+     is never on a dark screen.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -40,7 +46,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .8rem; }
   select, input[type="text"], textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem;
   }
   textarea { resize: vertical; }
@@ -49,23 +55,23 @@
     font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
     border-radius: 6px; padding: .5rem .9rem; border: 1px solid var(--accent);
   }
-  button.primary { background: var(--accent); color: #fff; }
+  button.primary { background: var(--accent); color: var(--accent-ink); }
   button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--accent); }
-  button.secondary:hover { background: #eef2f6; }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: #fbecea; }
+  button.secondary { background: var(--card); color: var(--accent); }
+  button.secondary:hover { background: var(--card-2); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
 
   .layout { display: grid; grid-template-columns: 17rem 1fr; gap: 1rem; align-items: start; }
   @media (max-width: 62rem) { .layout { grid-template-columns: 1fr; } }
 
   .catbar { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .7rem; }
-  .catbar button { padding: .25rem .6rem; font-size: .75rem; border-radius: 12px; background: #fff; color: var(--accent); }
-  .catbar button.active { background: var(--accent); color: #fff; }
+  .catbar button { padding: .25rem .6rem; font-size: .75rem; border-radius: 12px; background: var(--card); color: var(--accent); }
+  .catbar button.active { background: var(--accent); color: var(--accent-ink); }
 
   .tpl-row { border: 1px solid var(--line); border-radius: 7px; padding: .5rem .6rem; margin-bottom: .4rem; cursor: pointer; font-size: .84rem; display: flex; justify-content: space-between; align-items: center; gap: .4rem; }
   .tpl-row:hover { border-color: var(--accent-2); }
-  .tpl-row.active { border-color: var(--accent); background: #eef4f8; }
+  .tpl-row.active { border-color: var(--accent); background: var(--card-2); }
   .tpl-row .tname { flex: 1; }
   .tpl-row .cattag { font-size: .68rem; color: var(--muted); display: block; }
   .tpl-row .delx { border: none; background: none; color: var(--err); font-weight: 700; padding: 0 .3rem; }
@@ -76,7 +82,7 @@
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
   .fields-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: .6rem .9rem; margin-bottom: .8rem; }
 
-  .preview { border: 1px dashed var(--line-strong); border-radius: 8px; padding: .8rem 1rem; background: #fff; white-space: pre-wrap; font-size: .9rem; }
+  .preview { border: 1px dashed var(--line-strong); border-radius: 8px; padding: .8rem 1rem; background: var(--card); white-space: pre-wrap; font-size: .9rem; }
   .preview .psubj { font-weight: 700; margin-bottom: .5rem; }
 
   .batchbar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .6rem; font-weight: 600; font-size: .85rem; }

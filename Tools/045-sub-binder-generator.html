@@ -16,15 +16,28 @@
 <meta name="twitter:title" content="Sub Binder / Day Bundle Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Pulls your saved Sub Plan Builder standing details and current Seating Chart into one printable packet, so a substitute gets everything in one stack.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='8' y='6' width='16' height='20' rx='1.5' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M8 11h16M8 16h16M8 21h10' stroke='%232A6DB0' stroke-width='1.6'/%3E%3Ccircle cx='24' cy='24' r='4.4' fill='%23C43A2F'/%3E%3Cpath d='M22.3 24l1.2 1.2 2.2-2.2' stroke='%23F6F7F9' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The packet is built into .print-only, which is paper; the feedback form's
+     classes are shared with the on-screen card, so those are tokenised.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Path 5 P3. The warn pair is 001's (the reference adopter); --good is the
+     site's dark green, the one 055 uses. The light values keep this page's
+     own, so nothing moves in light except the warn tint, very slightly. */
   :root {
     --good: #2f7d4f;
-    --warn-bg: #fff3d6; --warn-line: #e0c27a;
+    --warn-bg: #fdf0dc; --warn-line: #eecda0;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --good: #63c08e;
+    --warn-bg: #332711; --warn-line: #5e4a20;
   }
   * { box-sizing: border-box; }
   body {
@@ -46,7 +59,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
   select, textarea, input[type=date] {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .6rem;
   }
   input[type=date] { width: auto; }
@@ -54,12 +67,12 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.small { font-size: .78rem; padding: .3rem .6rem; }
   .btn-row { display: flex; gap: .6rem; flex-wrap: wrap; }
 
@@ -81,8 +94,11 @@
   table.seating .note { color: var(--muted); font-size: .82rem; }
 
   .day-badges { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .6rem; }
+  /* The badge fill is a day type's own colour, written inline from the school
+     calendar, and is saturated in either theme — so this white stays a literal
+     rather than becoming --accent-ink, which is near-black in dark. */
   .day-badge { display: inline-block; padding: .3rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 700; color: #fff; }
-  .today-note { background: #f4f3ee; border-radius: 8px; padding: .7rem .8rem; font-size: .88rem; white-space: pre-wrap; }
+  .today-note { background: var(--card-2); border-radius: 8px; padding: .7rem .8rem; font-size: .88rem; white-space: pre-wrap; }
   .today-note-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: .3rem; }
 
   .checkbox-row { display: flex; align-items: flex-start; gap: .5rem; font-size: .85rem; margin: .4rem 0; padding-bottom: .4rem; border-bottom: 1px solid var(--line); }
@@ -97,7 +113,7 @@
     display: inline-block; padding: .5rem .9rem; border: 1px solid var(--line-strong); border-radius: 7px;
     color: var(--accent-2); text-decoration: none; font-size: .85rem; font-weight: 600;
   }
-  .links-row a:hover { background: #f1f0ea; }
+  .links-row a:hover { background: var(--card-2); }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 1.6rem; }
 
@@ -105,7 +121,7 @@
      so everything on it is sized for handwriting rather than for reading. */
   .fb-table { width: 100%; border-collapse: collapse; font-size: .9rem; margin-bottom: .8rem; }
   .fb-table th, .fb-table td { border: 1px solid var(--line-strong); padding: .35rem .5rem; text-align: left; vertical-align: top; }
-  .fb-table th { background: #f1f0ea; font-size: .82rem; }
+  .fb-table th { background: var(--card-2); font-size: .82rem; }
   .fb-table th.fb-period, .fb-table td.fb-period { width: 6.5rem; font-weight: 600; }
   .fb-table td.fb-write { height: 2.2rem; }
   .fb-block { margin-bottom: .7rem; }

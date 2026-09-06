@@ -63,18 +63,40 @@ ok(pages.length > 80, `the sweep sees the whole site (${pages.length} live pages
 const DARK_RULE = /\[data-theme\s*=\s*["']dark["']\][^{}\n]*\{/g;
 const GATED = /\[data-theme\s*=\s*["']dark["']\][^{}\n]*:not\(\.a11y-filter-dark\)/;
 
+// Which shared files a page LOADS, read off real <script>/<link> tags rather
+// than by searching the file for the path. A page can name a shared file in
+// prose or in its own header comment without loading it — `ideas-backlog.html`
+// names both a11y.js and ink-paper.css in a `<code>` block and loads neither,
+// and every page adopted by Path 5 P3 carries a comment naming ink-paper.css.
+// A substring test called that loading them; `npm run path5:next` ranked
+// ideas-backlog as a themed candidate for six increments on the strength of it
+// (fixed in list-dark-candidates.mjs in the same change). Nothing here goes red
+// on that today — ideas-backlog has no dark rules to be double-darkened — but
+// `orphanFlag` below is exactly the assertion a prose mention could satisfy.
+const stripHtmlComments = html => html.replace(/<!--[\s\S]*?-->/g, '');
+function loadedFiles(html) {
+  const out = new Set();
+  for (const tag of stripHtmlComments(html).match(/<(?:script|link)\b[^>]*>/gi) || []) {
+    const m = /\b(?:src|href)\s*=\s*["']([^"']+)["']/i.exec(tag);
+    if (m) out.add(m[1].split('?')[0].split('#')[0].replace(/\\/g, '/'));
+  }
+  return out;
+}
+const loads = (files, name) => [...files].some(u => u === name || u.endsWith('/' + name));
+
 const report = [];
 for (const rel of pages) {
   const src = fs.readFileSync(path.join(SITE, rel), 'utf8');
   const rules = src.match(DARK_RULE) || [];
+  const files = loadedFiles(src);
   report.push({
     rel,
-    flag: /A11Y_NATIVE_THEME\s*=\s*true/.test(src),
+    flag: /A11Y_NATIVE_THEME\s*=\s*true/.test(stripHtmlComments(src)),
     ownRules: rules,
     ungated: rules.filter(r => !GATED.test(r)),
-    inkPaper: /_shared\/ink-paper\.css/.test(src),
-    themeCss: /_shared\/theme\.css/.test(src),
-    a11y: /_shared\/a11y\.js/.test(src),
+    inkPaper: loads(files, 'ink-paper.css'),
+    themeCss: loads(files, 'theme.css'),
+    a11y: loads(files, 'a11y.js'),
   });
 }
 
