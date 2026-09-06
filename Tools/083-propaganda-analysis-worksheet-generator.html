@@ -15,12 +15,23 @@
 <meta name="twitter:title" content="Propaganda &amp; Persuasion Analysis Worksheet Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Build a printable propaganda-poster or political-cartoon analysis worksheet — symbols, technique checklist, ethos/pathos/logos, message and audience — leveled Academic, Honors, or Honors GT, with a matching teacher answer key.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M9 6v20M9 8h12l-3.5 4L21 16H9' fill='none' stroke='%231f3550' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The worksheet and key are built into #printArea, which is paper.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* Path 5 P3. The err and info tint pairs are 001's values (the reference
+     adopter). Everything under #printArea is paper — _shared/print-area.css
+     hides it on screen — so its #111 body, #999 rules and #333 checkbox
+     outlines are never on a dark surface and stay as they are. */
+  :root { --err-bg: #fbecea; --info-bg: #eaf1f5; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; --info-bg: #1b2a35; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -39,7 +50,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .8rem; }
   select, input[type="text"], textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem;
   }
   textarea { resize: vertical; min-height: 3.5rem; }
@@ -48,12 +59,12 @@
     font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
     border-radius: 6px; padding: .5rem .9rem; border: 1px solid var(--accent);
   }
-  button.primary { background: var(--accent); color: #fff; }
+  button.primary { background: var(--accent); color: var(--accent-ink); }
   button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--accent); }
-  button.secondary:hover { background: #eef2f6; }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: #fbecea; }
+  button.secondary { background: var(--card); color: var(--accent); }
+  button.secondary:hover { background: var(--card-2); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err-bg); }
 
   .toprow { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; margin-bottom: .9rem; }
   .toprow .field { min-width: 10rem; }
@@ -62,15 +73,17 @@
   .fields-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .7rem .9rem; }
 
   .imgbox { display: flex; align-items: center; gap: .8rem; margin-top: .6rem; }
+  /* The mat behind a teacher-supplied image stays white in both themes: a
+     transparent line drawing in dark ink on a dark mat is nothing at all. */
   .imgbox img { max-width: 8rem; max-height: 8rem; border: 1px solid var(--line); border-radius: 6px; object-fit: contain; background: #fff; }
 
   .share-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
   .share-note.error { color: var(--err); }
 
   .step { border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; margin-bottom: .7rem; }
-  .step .letter { display: inline-flex; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--accent); color: #fff; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; margin-right: .5rem; }
+  .step .letter { display: inline-flex; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--accent); color: var(--accent-ink); align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; margin-right: .5rem; }
   .step .q { margin: .4rem 0 0; }
-  .step .note { margin: .5rem 0 0; padding: .5rem .7rem; background: #eef4f8; border-radius: 6px; font-size: .82rem; color: var(--accent-2); }
+  .step .note { margin: .5rem 0 0; padding: .5rem .7rem; background: var(--info-bg); border-radius: 6px; font-size: .82rem; color: var(--accent-2); }
   .techlist { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .4rem; }
   .techlist li { display: flex; gap: .5rem; font-size: .86rem; }
   .techlist b { min-width: 11rem; flex-shrink: 0; }

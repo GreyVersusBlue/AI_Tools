@@ -15,6 +15,12 @@
 <meta name="twitter:title" content="Science Fair Project Tracker — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Track milestones and checkpoints for a science-fair project (question, background research, experiment, board, presentation) with due dates and a printable progress report.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M6 26V10M14 26V6M22 26V16' stroke='%231f3550' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The report is built into #printArea, which is paper: its #555 subtitle,
+     #999 rules, #eee header fill and #333 heading rule never reach a dark
+     screen. Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -23,7 +29,14 @@
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
-  :root { --ok: #2c6e3f; }
+  /* Path 5 P3. --err-bg is 001's value (the reference adopter); its --err-line
+     partner is not copied because nothing here draws that border. A dead
+     `--ok: #2c6e3f` used to sit here — nothing in the page referenced it — so
+     it was removed rather than given a dark value. The print classes and the
+     missing-list are paper: they exist only inside #printArea, which
+     _shared/print-area.css hides on screen, so their greys are left alone. */
+  :root { --err-bg: #fbecea; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -39,23 +52,26 @@
   .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
-  input[type="text"], input[type="date"], textarea {
+  /* #rosterHubSelect was in none of these selectors, so it carried the
+     browser's own control styling next to styled ones — invisible in light,
+     obvious in dark. */
+  input[type="text"], input[type="date"], select, textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; min-height: 4.5rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
 
@@ -65,11 +81,11 @@
 
   table.grid-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
   table.grid-table th, table.grid-table td { border: 1px solid var(--line); padding: .4rem .5rem; text-align: center; }
-  table.grid-table th { background: #eef1f4; font-size: .72rem; color: var(--muted); }
+  table.grid-table th { background: var(--card-2); font-size: .72rem; color: var(--muted); }
   table.grid-table td:first-child, table.grid-table th:first-child { text-align: left; font-weight: 700; }
   table.grid-table .due { font-size: .68rem; color: var(--muted); display: block; }
   table.grid-table td.progress { font-size: .8rem; }
-  table.grid-table td.overdue { background: #fbe2df; border-left: 3px solid var(--err); }
+  table.grid-table td.overdue { background: var(--err-bg); border-left: 3px solid var(--err); }
   table.grid-table td.overdue::after { content: " \26A0"; color: var(--err); font-size: .8rem; }
   table.grid-table td .note-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .85rem; padding: 0 .15rem; vertical-align: middle; }
   table.grid-table td .note-btn:hover { color: var(--accent-2); background: none; }
@@ -275,9 +291,9 @@
       return;
     }
     var today = todayIso();
-    var head = '<tr><th>Student</th>' + state.milestones.map(function (m) {
-      return '<th>' + escapeHtml(m.name) + (m.due ? '<span class="due">due ' + fmtDate(m.due) + '</span>' : '') + '</th>';
-    }).join('') + '<th>Progress</th></tr>';
+    var head = '<tr><th scope="col">Student</th>' + state.milestones.map(function (m) {
+      return '<th scope="col">' + escapeHtml(m.name) + (m.due ? '<span class="due">due ' + fmtDate(m.due) + '</span>' : '') + '</th>';
+    }).join('') + '<th scope="col">Progress</th></tr>';
     var studentStats = state.roster.map(function (name) {
       var completeCount = 0;
       var cells = state.milestones.map(function (m) {
@@ -287,7 +303,8 @@
         var overdue = !checked && m.due && m.due < today;
         var note = (state.notes[key] || '').trim();
         return '<td' + (overdue ? ' class="overdue" title="Overdue"' : '') + '>' +
-          '<input type="checkbox" data-student="' + escapeAttr(name) + '" data-milestone="' + m.id + '"' + (checked ? ' checked' : '') + '>' +
+          '<input type="checkbox" data-student="' + escapeAttr(name) + '" data-milestone="' + m.id + '"' + (checked ? ' checked' : '') +
+            ' aria-label="' + escapeAttr(m.name) + ' done for ' + escapeAttr(name) + '">' +
           '<button type="button" class="note-btn' + (note ? ' has-note' : '') + '" data-note-student="' + escapeAttr(name) + '" data-note-milestone="' + m.id + '" ' +
             'title="' + (note ? escapeAttr(note) : 'Add a status note') + '" aria-label="Status note for ' + escapeAttr(name) + ', ' + escapeAttr(m.name) + '">&#9998;</button>' +
           (note ? '<span class="cell-note">' + escapeHtml(note) + '</span>' : '') +

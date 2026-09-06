@@ -246,6 +246,56 @@ const PAGES = [
       await page.click('#templateList .tpl-row');
       await settle(page, 400);
     } },
+  // increment 8. All six are print-first generators again: 066's worksheet,
+  // 079's poster, 073's report and 083's worksheet+key live only inside a
+  // hidden #printArea, so their print greys were left alone. The two with an
+  // on-screen facsimile are the ones with a `sheet` below — 069's station-card
+  // preview and 026's 8.5x11in worksheet — and both had to be marked
+  // .paper-sheet where the markup is built.
+  { label: '066', url: '/Tools/066-math-find-the-mistake-generator.html',
+    // The projector stage renders on load; the bank tab is where the two
+    // selects, the text inputs and the .cat-pill rows are, and #newBand was
+    // the control that had no styling at all before this increment.
+    prep: async page => {
+      await page.click('.tab-btn[data-stage="bank"]');
+      await settle(page, 300);
+    } },
+  { label: '069', url: '/Tools/069-pe-warmup-circuit-generator.html', sheet: '#previewGrid .card-preview',
+    // Empty storage seeds the default 8-station circuit, so the station rows
+    // and the card previews are both on screen without any clicking.
+    prep: async page => { await settle(page, 400); } },
+  { label: '073', url: '/Tools/073-science-fair-project-tracker.html',
+    // No roster, no progress grid — and the grid is where --card-2, the
+    // overdue --err-bg tint and (until this increment) 30 unnamed checkboxes
+    // are. An overdue cell needs a milestone with a due date in the past.
+    prep: async page => {
+      await page.fill('#rosterInput', 'Alex Rivera\nBailey Chen\nCarter Diaz');
+      await page.click('#saveRosterBtn');
+      await settle(page, 300);
+      await page.click('#addMilestoneBtn');
+      await settle(page, 200);
+      const rows = page.locator('.milestone-row');
+      const last = rows.nth(await rows.count() - 1);
+      await last.locator('input[type="text"]').fill('Proposal');
+      await last.locator('input[type="date"]').fill('2020-01-01');
+      await settle(page, 400);
+    } },
+  { label: '079', url: '/Tools/079-verb-conjugation-poster-generator.html',
+    // Empty storage loads the es_present template, so the panel blocks and
+    // their colour swatches — the only place NO_COLOR's border reaches the
+    // screen — render on load.
+    prep: async page => { await settle(page, 400); } },
+  { label: '026', url: '/Tools/026-math-drill-generator.html', sheet: '.preview-wrap .sheet',
+    // generate() runs at boot, so the previewed sheet is there; switching to
+    // the answer key exercises the second .sheet template as well.
+    prep: async page => {
+      await page.click('#viewAnswersBtn');
+      await settle(page, 400);
+    } },
+  { label: '083', url: '/Tools/083-propaganda-analysis-worksheet-generator.html',
+    // init() seeds a blank worksheet, so the step cards and their .note
+    // (--info-bg) render on load.
+    prep: async page => { await settle(page, 400); } },
 ];
 
 // Chrome is what follows the theme. Anything that is a projector surface
@@ -295,7 +345,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085)');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083)');
 
 for (const p of PAGES) {
   /* ── dark ── */
