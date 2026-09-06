@@ -166,6 +166,99 @@ waits for will be a docs or tooling PR, not a tool one. Recorded as a ¼ row at 
 a `sw.js` hunk that touches only the version constant as not site-wide, and pin it in
 `select-suites.test.mjs`. Not measured — read off the diff.
 
+**Rank 1 — Path 5 P3, increment 7: six more pages on native dark. #210, `CACHE_VERSION`
+v160.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
+one `npm run path5:next` printed, in its order — **077, 082, 014, 045, 085, 060** — *after the
+picker was fixed*, which is the first thing worth recording. Native dark went from 45 themed
+pages to **51 (62%)**, and the picker's literal count from 875 across 38 pages to **799 across
+31**, six rounds of six left. `stage.js` is unchanged at 7 adopters with 001 and 004 still the
+last two hand-rolling fullscreen; none of these six has a stage, which makes it five increments
+running.
+
+**The picker had been ranking a page that cannot be themed at all, and had been doing it since
+#198.** `Tools/board-check/list-dark-candidates.mjs` decided THEMED with
+`/_shared\/a11y\.js/.test(html)` — a substring search over the whole file. `ideas-backlog.html`
+is a page *about* this backlog: its prose contains `<code>_shared/a11y.js</code>` and
+`<code>_shared/ink-paper.css</code>` inside a pitch describing Path 5 itself, and it loads
+neither; it has its own private `:root` palette, no `a11y.js`, and therefore no switch that
+could ever turn a dark block on. It had been counted as a candidate for six increments and had
+climbed to **third place in this batch**, where the previous session's handoff had already
+written it into the "start here" paragraph as a nice cheap page whose eleven literals are all
+in custom properties. The same test would also call a page ink-paper on the strength of the
+`<!-- Native dark comes from _shared/ink-paper.css … -->` comment that every page adopted since
+#198 now carries — so the bug was getting easier to hit, not harder. Fixed: strip HTML comments,
+read the `src`/`href` of real `<script>`/`<link>` tags, match on the resolved filename. The
+correction is **exactly one page** across the whole tree (a probe over all 97 live pages found
+no other disagreement between the loose and strict tests): 83 themed → **82**, 38 candidates →
+**37**, 875 literals → **864**, and the sixth candidate, 060, moved up into the batch.
+`Tools/theme/test/smoke-theme.mjs` carried the identical loose test in its sweep and was fixed
+the same way. **Nothing was red on it**, and that is the honest version: 035's four-palette
+system is the case that assertion was written for, and no page today both mentions a11y.js in
+prose *and* sets `A11Y_NATIVE_THEME`. But `orphanFlag` ("nothing sets `A11Y_NATIVE_THEME`
+without loading a11y.js") is precisely the assertion a prose mention could satisfy, so it was
+tightened rather than left as a latent hole. **The general lesson: a guard that decides what a
+page loads by searching the file for a path is measuring the wrong thing** — the same mistake
+in a checker rather than a picker would have passed a page that ships nothing.
+
+**077 was shipping twenty-one unnamed form controls, and no allowlist line said so.** Its
+assignment grid renders a checkbox per accommodation per student plus a note input per student,
+and none of them had an accessible name — a serious axe `label` violation, present in **light**
+since the tool shipped. `npm run test:a11y` has never seen it, because the sweep opens every
+page with empty storage and 077's grid then renders a single "Save a roster above first" cell.
+`smoke-dark-rollout.mjs` caught it only because this increment's `PAGES` row saves a
+three-student roster first. **That is the third confirmed instance of the empty-storage blind
+spot** (009 in #202, 075 in #206) and the fourth increment running in which the dark-rollout
+suite has found a light-mode bug the site-wide sweep did not. Unlike 028's in #204, this page
+had **no allowlist line at all**, so there was nothing in the repo even claiming to know about
+it. Three instances with nothing measuring how many pages are like this was enough: it is now a
+ranked row (**16**, `Tools/a11y-sweep/`, ½), with the shape of the fix written down — seed the
+sweep per page from `_shared/tool-registry.js`, which already records every key each tool saves,
+then re-baseline and say how much the seed exposed. Fixed here with a per-control `aria-label`
+("Extended time — Alex Rivera", "Note for Alex Rivera") and `scope="col"` on the header row.
+**One thing tried and reverted:** making the student-name cell a `<th scope="row">`, which is
+the better markup — `.grid-table th` paints the `--card-2` header fill, so every row would have
+gained a header-coloured first cell, and the `tr.filtered-out td:first-child::after` rule that
+writes "— not in this list any more" would have stopped matching. It stays a `<td>`; the row
+header is a separate, larger change.
+
+**045 is the counter-example to increment 6's rule, and the rule needed it.** #208 concluded
+that a print-first generator is half a page, because its printable lives in a container that is
+`display: none` on screen. Five of these six behave that way — `#printArea` under
+`print-area.css` for 077, 082, 085 and 060, `.print-only` for 014 and 045 — so their `#333`
+rules, `#555` subtitles, `#999` hairlines and `#eee` fills were left alone again. But 045's
+substitute feedback form is built by **one function called twice**: `feedbackFormHtml()` fills
+the on-screen `#feedbackBody` card *and* is pushed into the printed packet. So `.fb-table`'s
+`#f1f0ea` header fill is real screen chrome, tokenised to `var(--card-2)`, and ink-paper's
+`@media print` block restores it to the light value on paper. **`.print-only` is a claim about
+a container, not about a class** — grep for the render function and count its callers before
+deciding.
+
+**Calls taken, recorded so they can be reversed.** (1) 060's sorted-column header fill
+(`#e2e9ef`) is the one tint in the batch with no token behind it and got a page-local
+`--sorted-bg` pair, dark `#2f3b4a`; `--accent` on it is 5.10:1 and `--ink` 9.20:1. (2) 045's
+`--good` keeps its light `#2f7d4f` and gains the site's dark `#63c08e` (7.21:1 on `--card`),
+the same value 055 took in #208. (3) 082's scope note and 045's warn card both took 001's
+`--warn-bg`/`--warn-line`/`--warn-ink` trio instead of keeping a fourth and fifth cream of
+their own — their light tint moves very slightly, which is a visible change to two shipped
+pages and is the precedent #208 set with 070. (4) 082's and 085's `button.danger:hover` cream
+tints (`#fbecea`) became the site-standard `background: var(--err); color: var(--accent-ink)`
+that about thirty other tools already use; in light that turns a pale-red hover into a solid
+red fill on a delete button. (5) 045's `.day-badge` **keeps** a literal `#fff`: its background
+is a day type's own saturated colour, written inline from the school calendar, so
+`--accent-ink` (near-black in dark) would be exactly wrong. It is already in the dark-rollout
+suite's `NOT_CHROME` list. (6) 060's totals row took `var(--paper)` rather than `--card-2`, so
+the footer sits a shade *below* the card in dark instead of matching the header.
+
+**What was not verified.** Nothing has been looked at on a real projector or a real Chromebook
+in seven increments, and nothing has installed the worker; the screenshots and
+`smoke-dark-rollout.mjs` remain the whole of the evidence. The `@media print` restore on 045's
+`.fb-table` was reasoned from ink-paper.css's own print block, not observed under print
+emulation. **014 still loads `a11y.js` and `a11y.css` twice** — it is one of the two pages rank
+14 names — and the duplicate did not interfere with the native theme in either direction, which
+is a useful data point for that row but is not the same as having fixed it. Full `npm test` ran
+locally (145 green, 26.9 min) and CI ran the full pass in 24.6 min, because a PR touching
+`Tools/board-check/` is site-wide by design.
+
 **Rank 1 — Path 5 P3, increment 6: six more pages on native dark. #208, `CACHE_VERSION`
 v159.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
 one `npm run path5:next` printed, in its order — **059, 070, 074, 076, 055, 058**. Native dark
