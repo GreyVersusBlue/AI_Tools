@@ -120,6 +120,30 @@ const PAGES = [
   { label: '050', url: '/Tools/050-civics-role-card-generator.html' },
   { label: '054', url: '/Tools/054-current-events-discussion-guide-generator.html' },
   { label: '078', url: '/Tools/078-unit-conversion-chart-builder.html' },
+  // increment 5
+  { label: '047', url: '/Tools/047-art-critique-worksheet-generator.html' },
+  // 061's and 063's worksheets live inside #printArea, which is display:none
+  // on screen, so neither has a sheet to check here; the drill table and the
+  // word bank on screen are chrome and are covered by the white-chrome sweep.
+  { label: '061', url: '/Tools/061-fraction-decimal-percent-drill-generator.html' },
+  { label: '063', url: '/Tools/063-grammar-mad-libs-generator.html' },
+  // 067's staff is drawn as SVG in currentColor; the sight-reading tab has to
+  // be opened before the axe scan or only the rhythm display exists.
+  { label: '067', url: '/Tools/067-music-sightreading-generator.html',
+    prep: async page => { await page.click('#pitchTabBtn'); await settle(page, 400); } },
+  // 075's department sub-headers only render once someone is in the directory.
+  { label: '075', url: '/Tools/075-staff-directory-builder.html',
+    prep: async page => {
+      await page.fill('#newName', 'A. Teacher');
+      await page.fill('#newSubject', 'Math');
+      await page.click('#addRowBtn');
+      await page.check('#groupByDeptBox');
+      await settle(page, 400);
+    } },
+  // 081's worksheet preview is on screen behind the second tab, and it is a
+  // sheet of paper: white with dark ink in dark mode too.
+  { label: '081', url: '/Tools/081-word-problem-warmup-generator.html', sheet: '.sheet-page',
+    prep: async page => { await page.click('.tab-btn[data-stage="sheet"]'); await settle(page, 400); } },
 ];
 
 // Chrome is what follows the theme. Anything that is a projector surface
@@ -169,7 +193,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078)');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081)');
 
 for (const p of PAGES) {
   /* ── dark ── */

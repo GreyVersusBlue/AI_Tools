@@ -15,6 +15,10 @@
 <meta name="twitter:title" content="Word Problem Warm-Up Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Templated word problems with randomized numbers per operation and grade band, for a projector display or a printable warm-up sheet.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ctext x='5' y='22' font-family='Georgia,serif' font-weight='700' font-size='16' fill='%231f3550'%3E?%3C/text%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -34,9 +38,9 @@
 
   .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
-  select, input[type="number"] {
+  select, input[type="number"], input[type="text"] {
     font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .6rem;
   }
   .controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; margin-bottom: .8rem; }
@@ -46,18 +50,18 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.small { padding: .35rem .7rem; font-size: .84rem; }
   .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
 
   .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
-  .tabs button { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tabs button { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  .tabs button.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
   /* projector display */
   .stage { display: none; }
@@ -77,7 +81,7 @@
   /* worksheet */
   .sheet { display: none; }
   .sheet.active { display: block; }
-  .sheet-page { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 1.5rem 1.8rem; margin-bottom: 1rem; }
+  .sheet-page { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.5rem 1.8rem; margin-bottom: 1rem; }
   .sheet-title { font-size: 1.2rem; margin: 0 0 .2rem; }
   .sheet-sub { color: var(--muted); font-size: .82rem; margin: 0 0 1rem; }
   .problem { margin-bottom: 1.1rem; }
@@ -166,12 +170,12 @@
       <button class="secondary" id="printBtn">Print worksheet + key</button>
     </div>
     <div class="print-target" id="printTarget">
-      <div class="sheet-page">
+      <div class="sheet-page paper-sheet">
         <h2 class="sheet-title">Word Problem Warm-Up</h2>
         <p class="sheet-sub">Name: __________________________ &nbsp; Date: __________</p>
         <div id="sheetProblems"></div>
       </div>
-      <div class="sheet-page">
+      <div class="sheet-page paper-sheet">
         <h2 class="sheet-title">Answer Key</h2>
         <ul class="key-list" id="sheetKey"></ul>
       </div>
