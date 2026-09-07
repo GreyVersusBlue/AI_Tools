@@ -15,6 +15,16 @@
 <meta name="twitter:title" content="Virtual Manipulatives Board — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="A projector-friendly board of draggable base-ten blocks, fraction tiles, algebra tiles, and a number line for demonstrating a concept live, with a one-click snapshot of whatever's on the board.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='7' y='7' width='7' height='7' fill='%232e6b8f'/%3E%3Crect x='17' y='7' width='7' height='7' fill='%231f3550'/%3E%3Crect x='7' y='17' width='7' height='7' fill='%231f3550'/%3E%3Crect x='17' y='17' width='7' height='7' fill='%232e6b8f'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The board and the number line are marked .paper-sheet: they are the white
+     working surface the manipulatives sit on, and a base-ten flat, a fraction
+     tile and an algebra tile are objects with fixed colours, not chrome. That
+     also keeps the PNG snapshot honest — it paints #ffffff and then copies the
+     computed colour of every piece and of the number-line marker (var(--accent)),
+     so a dark palette inside the board would put pale blue on a white export.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -33,29 +43,29 @@
   .back-link:hover { color: var(--accent-2); }
 
   .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
-  .tabs button { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); border-radius: 7px; padding: .5rem 1rem; font-weight: 600; cursor: pointer; }
-  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tabs button { background: var(--card); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 7px; padding: .5rem 1rem; font-weight: 600; cursor: pointer; }
+  .tabs button.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .pane { display: none; }
   .pane.active { display: block; }
 
-  .palette { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .8rem; padding: .8rem; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+  .palette { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .8rem; padding: .8rem; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
   .palette .group-label { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-right: -.2rem; }
   .palette button {
     font-family: inherit; font-size: .84rem; font-weight: 600; cursor: pointer;
-    background: #fff; color: var(--ink); border: 1px solid var(--line-strong);
+    background: var(--card); color: var(--ink); border: 1px solid var(--line-strong);
     border-radius: 6px; padding: .35rem .7rem;
   }
-  .palette button:hover { background: #eef1f4; border-color: var(--accent-2); }
+  .palette button:hover { background: var(--card-2); border-color: var(--accent-2); }
   .divider { width: 1px; height: 1.6rem; background: var(--line-strong); margin: 0 .3rem; }
 
-  button.action { font-family: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; background: var(--accent); color: #fff; border: 1px solid var(--accent); border-radius: 7px; padding: .5rem 1rem; }
+  button.action { font-family: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent); border-radius: 7px; padding: .5rem 1rem; }
   button.action:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.action.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.action.secondary:hover { background: #f1f0ea; }
+  button.action.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.action.secondary:hover { background: var(--card-2); }
   .btnrow { display: flex; gap: .6rem; margin-bottom: .8rem; }
 
   #board {
-    position: relative; background: #fff; border: 2px dashed var(--line-strong); border-radius: 10px;
+    position: relative; background: var(--card); border: 2px dashed var(--line-strong); border-radius: 10px;
     height: 60vh; min-height: 420px; overflow: hidden;
   }
   /* The grid is drawn only while snapping is on, so a teacher can see what the
@@ -70,8 +80,8 @@
   .snap-row input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
   .piece { position: absolute; cursor: grab; touch-action: none; }
   .piece:active { cursor: grabbing; }
-  .piece .del { position: absolute; top: -8px; right: -8px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1px solid var(--line-strong); color: var(--err); font-size: 11px; line-height: 16px; text-align: center; cursor: pointer; display: none; z-index: 2; }
-  .piece .dup { position: absolute; top: -8px; right: 12px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1px solid var(--line-strong); color: var(--accent-2); font-size: 11px; line-height: 16px; text-align: center; cursor: pointer; display: none; z-index: 2; }
+  .piece .del { position: absolute; top: -8px; right: -8px; width: 18px; height: 18px; border-radius: 50%; background: var(--card); border: 1px solid var(--line-strong); color: var(--err); font-size: 11px; line-height: 16px; text-align: center; cursor: pointer; display: none; z-index: 2; }
+  .piece .dup { position: absolute; top: -8px; right: 12px; width: 18px; height: 18px; border-radius: 50%; background: var(--card); border: 1px solid var(--line-strong); color: var(--accent-2); font-size: 11px; line-height: 16px; text-align: center; cursor: pointer; display: none; z-index: 2; }
   .piece:hover .del, .piece:hover .dup { display: block; }
 
   /* Every base-ten piece is built from the same 26px square as a single unit,
@@ -99,8 +109,8 @@
 
   .nl-controls { display: flex; gap: .8rem; align-items: end; margin-bottom: 1rem; }
   .nl-controls label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
-  .nl-controls input { width: 6rem; font-family: inherit; font-size: .9rem; padding: .4rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; }
-  #numberLineWrap { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 3rem 2rem 2rem; height: 30vh; min-height: 220px; position: relative; }
+  .nl-controls input { width: 6rem; font-family: inherit; font-size: .9rem; padding: .4rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--card); color: var(--ink); }
+  #numberLineWrap { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 3rem 2rem 2rem; height: 30vh; min-height: 220px; position: relative; }
   #nlLine { position: absolute; left: 2rem; right: 2rem; top: 50%; height: 2px; background: var(--ink); }
   .nl-tick { position: absolute; top: -6px; width: 1px; height: 14px; background: var(--ink); }
   .nl-tick-label { position: absolute; top: 14px; font-size: .78rem; transform: translateX(-50%); color: var(--muted); }
@@ -111,9 +121,9 @@
   .snapshot-preview { margin-top: 1rem; }
   .snapshot-preview canvas { border: 1px solid var(--line); max-width: 100%; }
 
-  .saved-bar { padding: .7rem .8rem; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+  .saved-bar { padding: .7rem .8rem; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
   .saved-bar .bar-label { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-  .saved-bar select { font-family: inherit; font-size: .88rem; padding: .35rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; background: #fff; color: var(--ink); min-width: 12rem; }
+  .saved-bar select { font-family: inherit; font-size: .88rem; padding: .35rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--card); color: var(--ink); min-width: 12rem; }
   .saved-bar button.action { font-size: .84rem; padding: .35rem .7rem; }
   .saved-bar .save-status { font-size: .82rem; color: var(--muted); margin-left: auto; }
 </style>
@@ -177,7 +187,7 @@
       <label class="snap-row" for="snapToggle"><input type="checkbox" id="snapToggle"> Snap to grid</label>
       <button class="action secondary" id="alignPiecesBtn" style="display:none;" title="Move every piece already on the board onto the grid">Align pieces</button>
     </div>
-    <div id="board"></div>
+    <div id="board" class="paper-sheet"></div>
   </div>
 
   <div class="pane" id="pane-numberline">
@@ -189,7 +199,7 @@
       <button class="action secondary" id="clearMarkersBtn">Clear markers</button>
       <button class="action" id="snapshotLineBtn">Snapshot number line</button>
     </div>
-    <div id="numberLineWrap">
+    <div id="numberLineWrap" class="paper-sheet">
       <div id="nlLine"></div>
       <div id="nlTicks"></div>
       <div id="nlMarkers"></div>

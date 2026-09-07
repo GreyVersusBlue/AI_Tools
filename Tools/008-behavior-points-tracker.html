@@ -16,6 +16,13 @@
 <meta name="twitter:title" content="Behavior & Points Tracker — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Tap a behavior, then tap a student — a quick per-student point tally you can run live during class and print an end-of-day report from.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='12' cy='16' r='6.5' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M9.3 16h5.4M12 13.3v5.4' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='23' cy='16' r='4.5' fill='%23C43A2F'/%3E%3Crect x='20.8' y='15.1' width='4.4' height='1.8' rx='.9' fill='%23fff'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The end-of-day report is .print-only — display:none on screen, styled
+     entirely inside @media print — so its #555, #999 and #eee are print values
+     and stay as they are.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
@@ -45,7 +52,27 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
-  :root { --good: #2f7d4f; }
+  /* Path 5 P3. The tint pairs are 001's, the reference adopter's. --desk is the
+     recessed mat the live board and the seating room sit on, behind the white
+     student cards; the three --cat-* stripes identify a tag's category on a
+     card's left edge and are lifted in dark so a 4px stripe still reads
+     against #1d2229. */
+  :root {
+    --good: #2f7d4f;
+    --desk: #eeece3;
+    --err-bg: #fbecea;  --err-line: #e6c6c1;
+    --info-bg: #eaf1f5; --info-line: #c9dbe3;
+    --good-bg: #e4f5ea;
+    --cat-academic: #2e6b8f; --cat-social: #7a5aa8; --cat-effort: #b8860b;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --good: #63c08e;
+    --desk: #0e1014;
+    --err-bg: #3a201c;  --err-line: #6d3a33;
+    --info-bg: #1b2a35; --info-line: #33505f;
+    --good-bg: #173021;
+    --cat-academic: #6fa8cd; --cat-social: #b394d8; --cat-effort: #d9a83a;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -58,7 +85,7 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
   .toolbar label { margin: 0; font-weight: 600; font-size: .85rem; }
 
   .layout { display: grid; grid-template-columns: minmax(300px, 400px) 1fr; gap: 1.4rem; align-items: start; }
@@ -69,7 +96,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
   input[type="text"], input[type="number"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { min-height: 8rem; resize: vertical; font-family: Consolas, monospace; font-size: .85rem; }
@@ -80,14 +107,14 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: .2rem 0; font-size: .78rem; }
   button.link-btn:hover { background: transparent; color: var(--accent); }
   button:disabled { opacity: .4; cursor: not-allowed; }
@@ -96,14 +123,14 @@
   .btn-row button { width: auto; }
 
   .remove-row-btn {
-    background: #fff; border: 1px solid var(--line-strong); color: var(--muted);
+    background: var(--card); border: 1px solid var(--line-strong); color: var(--muted);
     width: 1.9rem; height: 1.9rem; flex-shrink: 0; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer;
   }
-  .remove-row-btn:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .remove-row-btn:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
 
   #msg { font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-top: .7rem; white-space: pre-line; }
-  #msg.error { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
-  #msg.info { display: block; background: #eaf1f5; color: var(--accent-2); border: 1px solid #c9dbe3; }
+  #msg.error { display: block; background: var(--err-bg); color: var(--err); border: 1px solid var(--err-line); }
+  #msg.info { display: block; background: var(--info-bg); color: var(--accent-2); border: 1px solid var(--info-line); }
 
   .empty-hint { font-size: .85rem; color: var(--muted); text-align: center; padding: 2.4rem 1rem; }
 
@@ -117,16 +144,16 @@
   .tag-row input[type="text"] { min-width: 6rem; }
 
   /* ── Live board ───────────────────────────────────────────────────── */
-  .board-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
+  .board-wrap { background: var(--desk); border-radius: 10px; padding: 1.2rem; }
   .tag-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
   .tag-chip {
     cursor: pointer; border-radius: 999px; padding: .45rem .95rem; font-size: .85rem; font-weight: 700;
-    border: 1.5px solid var(--line-strong); background: #fff; color: var(--ink); user-select: none;
+    border: 1.5px solid var(--line-strong); background: var(--card); color: var(--ink); user-select: none;
   }
   .tag-chip.pos { border-color: var(--good); color: var(--good); }
   .tag-chip.neg { border-color: var(--err); color: var(--err); }
-  .tag-chip.armed.pos { background: var(--good); color: #fff; }
-  .tag-chip.armed.neg { background: var(--err); color: #fff; }
+  .tag-chip.armed.pos { background: var(--good); color: var(--accent-ink); }
+  .tag-chip.armed.neg { background: var(--err); color: var(--accent-ink); }
   .tag-chip.armed { box-shadow: 0 0 0 2px rgba(0,0,0,.12); }
 
   .board-controls { display: flex; align-items: center; gap: .6rem; margin-bottom: .9rem; flex-wrap: wrap; }
@@ -136,7 +163,7 @@
 
   .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: .6rem; margin-bottom: 1.3rem; }
   .student-card {
-    background: #fff; border: 2px solid var(--line); border-radius: 10px; padding: .7rem .5rem; text-align: center;
+    background: var(--card); border: 2px solid var(--line); border-radius: 10px; padding: .7rem .5rem; text-align: center;
     cursor: pointer; user-select: none; transition: transform .08s ease, background .25s, border-color .25s;
   }
   .student-card:hover { border-color: var(--accent-2); }
@@ -148,9 +175,14 @@
   .student-card .s-goal.met { color: var(--good); }
   .student-card .s-goal.missed { color: var(--err); }
   .student-card.picked { outline: 3px solid var(--accent-2); outline-offset: -3px; }
-  .cat-academic { border-left: 4px solid #2e6b8f; }
-  .cat-social { border-left: 4px solid #7a5aa8; }
-  .cat-effort { border-left: 4px solid #b8860b; }
+  /* Scoped to .tag-chip, not bare, because `.tag-chip.pos/.neg { border-color }`
+     above is (0,2,0) and outranked a lone class: every chip is pos or neg, so
+     the three category colours have never once been drawn — the stripe took the
+     green or red of the sign instead. Only the left EDGE was theirs, and only
+     because 4px beat .tag-chip's 1.5px on source order. */
+  .tag-chip.cat-academic { border-left: 4px solid var(--cat-academic); }
+  .tag-chip.cat-social { border-left: 4px solid var(--cat-social); }
+  .tag-chip.cat-effort { border-left: 4px solid var(--cat-effort); }
   .chip-key { opacity: .55; font-size: .78em; margin-right: .25rem; font-family: Consolas, monospace; }
   .spark { display: inline-flex; align-items: flex-end; gap: 1px; height: 20px; vertical-align: bottom; }
   .spark i { width: 4px; background: var(--good); display: block; min-height: 1px; }
@@ -160,12 +192,12 @@
   .trend-row .t-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .trend-row .t-total { font-family: Consolas, monospace; font-weight: 700; min-width: 3.2rem; text-align: right; }
   .trend-row .t-goal { min-width: 4.4rem; text-align: right; font-size: .78rem; color: var(--muted); }
-  .note-pill { display: inline-block; background: #f1f0ea; border: 1px solid var(--line); border-radius: 999px; padding: 0 .4rem; font-size: .72rem; margin-left: .3rem; }
+  .note-pill { display: inline-block; background: var(--card-2); border: 1px solid var(--line); border-radius: 999px; padding: 0 .4rem; font-size: .72rem; margin-left: .3rem; }
   .display-note { font-size: .78rem; color: var(--muted); margin: -.3rem 0 .6rem; }
   .student-card.pos-total .s-points { color: var(--good); }
   .student-card.neg-total .s-points { color: var(--err); }
-  .student-card.flash-pos { background: #e4f5ea; border-color: var(--good); }
-  .student-card.flash-neg { background: #fbeceA; border-color: var(--err); }
+  .student-card.flash-pos { background: var(--good-bg); border-color: var(--good); }
+  .student-card.flash-neg { background: var(--err-bg); border-color: var(--err); }
 
   /* ── Seating-chart board layout ──────────────────────────────────────────
      A room-shaped box holding one absolutely-positioned .student-card per
@@ -174,7 +206,7 @@
      attribute the grid layout uses, so the existing click / long-press /
      flash / keyboard-arm handling (all delegated from #studentGrid) needs no
      changes at all — only how the cards are positioned differs. */
-  .seat-room { position: relative; width: 100%; background: #eeece3; border: 1px dashed var(--line-strong); border-radius: 10px; margin-bottom: .9rem; overflow: hidden; }
+  .seat-room { position: relative; width: 100%; background: var(--desk); border: 1px dashed var(--line-strong); border-radius: 10px; margin-bottom: .9rem; overflow: hidden; }
   .seat-room .front-label { position: absolute; top: .4rem; left: 50%; transform: translateX(-50%); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); pointer-events: none; }
   .seat-room .student-card.seat-card {
     position: absolute; margin: 0; display: flex; flex-direction: column; align-items: center;
@@ -187,7 +219,7 @@
   .seating-note { font-size: .78rem; color: var(--muted); margin: -.2rem 0 .7rem; }
   .unseated-title { font-size: .78rem; font-weight: 700; color: var(--muted); margin: 0 0 .5rem; }
 
-  .activity-feed { max-height: 230px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: .3rem .8rem; }
+  .activity-feed { max-height: 230px; overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .3rem .8rem; }
   .activity-item { display: flex; justify-content: space-between; gap: .6rem; font-size: .82rem; padding: .35rem 0; border-bottom: 1px dashed var(--line); }
   .activity-item:last-child { border-bottom: none; }
   .a-who { font-weight: 600; }
@@ -199,7 +231,7 @@
 
   /* ── History ──────────────────────────────────────────────────────── */
   .history-entry { border: 1px solid var(--line); border-radius: 7px; margin-bottom: .5rem; overflow: hidden; }
-  .history-entry summary { cursor: pointer; padding: .5rem .7rem; font-size: .83rem; background: #f4f3ee; list-style: none; }
+  .history-entry summary { cursor: pointer; padding: .5rem .7rem; font-size: .83rem; background: var(--card-2); list-style: none; }
   .history-entry summary::-webkit-details-marker { display: none; }
   .history-entry summary b { color: var(--accent); }
   .history-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
