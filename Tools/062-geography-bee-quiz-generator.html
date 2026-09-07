@@ -15,12 +15,32 @@
 <meta name="twitter:title" content="Geography Bee / Map Skills Quiz Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="A question bank generator for geography practice (capitals, landmarks, map reading) — the quiz-format companion to the Blank Map Generator.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M6 16h20M16 6c3 4 3 16 0 20M16 6c-3 4-3 16 0 20' stroke='%231f3550' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The quiz and its key are built into #printArea, which is display:none on
+     screen, so .sheet-page's white paper is paper and stays as it is.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
-  :root { --ok: #2c6e3f; }
+  /* Path 5 P3. --ok is the correct answer, on the projector card and in the
+     standings; --ok-bg is the tint behind the revealed correct option, which
+     was an rgba() of that same green. The tint pairs are 001's, the reference
+     adopter's (--good-bg there), as are the info and err pairs that replaced
+     the bulk-note's four rgba() literals. */
+  :root {
+    --ok: #2c6e3f;      --ok-bg: #e4f5ea;
+    --err-bg: #fbecea;  --err-line: #e6c6c1;
+    --info-bg: #eaf1f5; --info-line: #c9dbe3;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --ok: #63c08e;      --ok-bg: #173021;
+    --err-bg: #3a201c;  --err-line: #6d3a33;
+    --info-bg: #1b2a35; --info-line: #33505f;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -38,28 +58,28 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem; resize: vertical; min-height: 5.5rem;
   }
   .bulk-note { font-size: .8rem; line-height: 1.5; margin: 0 0 .2rem; padding: .55rem .7rem; border-radius: 6px;
-    background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); }
-  .bulk-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
+    background: var(--info-bg); border: 1px solid var(--info-line); }
+  .bulk-note.error { background: var(--err-bg); border-color: var(--err-line); }
   input[type="text"], input[type="number"], select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .6rem; margin-bottom: .6rem;
   }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .25rem .6rem; font-size: .8rem; }
   .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
   .controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
@@ -67,8 +87,8 @@
   .controls select, .controls input { width: 100%; }
 
   .tabs { display: flex; gap: .4rem; margin: 1rem 0; }
-  .tabs button { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tabs button { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  .tabs button.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .stage { display: none; }
   .stage.active { display: block; }
 
@@ -78,7 +98,7 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
   }
   .display-num { color: var(--muted); font-size: .9rem; letter-spacing: .05em; text-transform: uppercase; }
-  .display-cat { display: inline-block; font-size: .72rem; font-weight: 700; padding: .15rem .6rem; border-radius: 999px; background: #e9eef3; color: var(--accent-2); text-transform: uppercase; }
+  .display-cat { display: inline-block; font-size: .72rem; font-weight: 700; padding: .15rem .6rem; border-radius: 999px; background: var(--info-bg); color: var(--accent-2); text-transform: uppercase; }
   .display-q { font-size: 1.5rem; }
   .display-a { font-size: 1.3rem; color: var(--ok); font-weight: 700; display: none; }
   .display-a.shown { display: block; }
@@ -88,7 +108,7 @@
   .display-options.hidden { display: none; }
   .mc-opt { display: flex; align-items: center; gap: .7rem; padding: .6rem .9rem; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--card); font-size: 1.08rem; }
   .mc-opt .mc-letter { font-weight: 700; color: var(--accent-2); min-width: 1.5rem; }
-  .display-options.revealed .mc-opt.correct { background: rgba(44, 110, 63, .12); border-color: var(--ok); }
+  .display-options.revealed .mc-opt.correct { background: var(--ok-bg); border-color: var(--ok); }
   .display-options.revealed .mc-opt.correct .mc-letter,
   .display-options.revealed .mc-opt.correct span:last-child { color: var(--ok); font-weight: 700; }
 
@@ -107,9 +127,9 @@
   .tour-board { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 .7rem; }
   .tour-team {
     display: flex; align-items: baseline; gap: .5rem; padding: .4rem .8rem;
-    border: 1px solid var(--line-strong); border-radius: 999px; background: #fff; font-size: .9rem;
+    border: 1px solid var(--line-strong); border-radius: 999px; background: var(--card); font-size: .9rem;
   }
-  .tour-team.up { border-color: var(--accent); background: rgba(42, 109, 176, .1); font-weight: 700; }
+  .tour-team.up { border-color: var(--accent); background: var(--info-bg); font-weight: 700; }
   .tour-team .tour-score { font-weight: 700; font-size: 1.05rem; }
   .tour-turn { font-size: .95rem; margin: 0 0 .6rem; }
   .tour-turn b { color: var(--accent-2); }

@@ -416,7 +416,7 @@
 
   function leadsToLabel(choice) {
     if (choice.leadsTo) return 'Go to step ' + stepNumber(choice.leadsTo);
-    return escapeHtml(choice.result || '&mdash;');
+    return escapeHtml(choice.result || '—');
   }
 
   function shuffle(arr) {
@@ -432,8 +432,8 @@
     var title = state.title.trim() || 'Dichotomous Key';
     var coupletsHtml = state.steps.map(function (step, i) {
       var n = i + 1;
-      return '<div class="key-couplet"><span class="cnum">' + n + 'a.</span> ' + escapeHtml(step.a.text || '&hellip;') + ' &mdash; <em>' + leadsToLabel(step.a) + '</em></div>' +
-        '<div class="key-couplet"><span class="cnum">' + n + 'b.</span> ' + escapeHtml(step.b.text || '&hellip;') + ' &mdash; <em>' + leadsToLabel(step.b) + '</em></div>';
+      return '<div class="key-couplet"><span class="cnum">' + n + 'a.</span> ' + escapeHtml(step.a.text || '…') + ' &mdash; <em>' + leadsToLabel(step.a) + '</em></div>' +
+        '<div class="key-couplet"><span class="cnum">' + n + 'b.</span> ' + escapeHtml(step.b.text || '…') + ' &mdash; <em>' + leadsToLabel(step.b) + '</em></div>';
     }).join('');
 
     var includeSpecimens = els.includeSpecimens.checked;

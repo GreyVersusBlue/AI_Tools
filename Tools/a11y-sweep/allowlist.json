@@ -58,9 +58,6 @@
     "Tools/040-vocab-flashcard-generator.html": {
       "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
     },
-    "Tools/041-formula-sheet-builder.html": {
-      "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. .preview-note); fix in the tool, then remove this line"
-    },
     "Tools/042-certificate-award-maker.html": {
       "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
     },

@@ -367,6 +367,93 @@ const PAGES = [
       await page.click('#pinPromptBtn');
       await settle(page, 300);
     } },
+  // increment 10. Two of the six have an on-screen facsimile of the paper —
+  // 041's live sheet preview and 065's print-preview modal — and both are
+  // marked .paper-sheet where the markup is made. 053, 062 and 049 build their
+  // printable into a hidden #printArea, so their print greys were left alone.
+  // 037 is the exception this increment found: its #printArea IS the on-screen
+  // output panel, so it takes ink-paper's .paper-sheet-off opt-out and its
+  // `sheet` here is deliberately absent — the panel follows the theme.
+  { label: '041', url: '/Tools/041-formula-sheet-builder.html', sheet: '#previewArea .sheet',
+    // A new sheet boots empty, so the preview is an .empty-sheet placeholder
+    // and there is not one .item-row on the page. Loading a template fills
+    // both; the pencil opens the per-item editor (--card-2), and the library
+    // modal is the page's other large --card surface.
+    prep: async page => {
+      await page.click('#loadTemplateBtn');
+      await settle(page, 400);
+      await page.click('button[title="Edit worked example / variable key"]');
+      await settle(page, 300);
+      await page.click('#browsePickerBtn');
+      await settle(page, 400);
+    } },
+  { label: '065', url: '/Tools/065-lab-report-template-builder.html', sheet: '#previewBody',
+    // The generic template is seeded at boot, so the builder's lists are all
+    // on screen; Preview is what renders the packet into the modal, and the
+    // packet is the sheet of paper.
+    prep: async page => {
+      await page.click('#previewBtn');
+      await settle(page, 400);
+    } },
+  { label: '053', url: '/Tools/053-cultural-trivia-card-generator.html',
+    // Only one stage is displayed at a time, so this page is driven twice.
+    // Here: the projector card with its answer revealed, which is the only
+    // place --ok and the category chip are on screen.
+    prep: async page => {
+      await page.click('#revealBtn');
+      await settle(page, 400);
+    } },
+  { label: '053-bank', url: '/Tools/053-cultural-trivia-card-generator.html',
+    // And here: the bank tab, where the tokenised inputs are and where a bulk
+    // import of an empty box paints .bulk-note.error — the err tint that
+    // replaced two rgba() literals.
+    prep: async page => {
+      await page.click('.tab-btn[data-stage="bank"]');
+      await settle(page, 200);
+      await page.click('#bulkImportBtn');
+      await settle(page, 400);
+    } },
+  { label: '062', url: '/Tools/062-geography-bee-quiz-generator.html',
+    // The projector stage with a tournament running: .tour-team, the .up
+    // highlight and the revealed answer are all conversions of this batch.
+    prep: async page => {
+      await page.click('#tourToggleBtn');
+      await settle(page, 200);
+      await page.click('#tourStartBtn');
+      await settle(page, 300);
+      await page.click('#revealBtn');
+      await settle(page, 400);
+    } },
+  { label: '062-bank', url: '/Tools/062-geography-bee-quiz-generator.html',
+    // Same reason as 053-bank: the bank tab's inputs and its error note are
+    // in a stage the display tab hides.
+    prep: async page => {
+      await page.click('.tab-btn[data-stage="bank"]');
+      await settle(page, 200);
+      await page.click('#bulkImportBtn');
+      await settle(page, 400);
+    } },
+  { label: '049', url: '/Tools/049-book-tasting-menu-generator.html',
+    // Nothing renders without a book, and the response-slip options card is
+    // behind the third tab.
+    prep: async page => {
+      await page.fill('#newTitle', 'The Westing Game');
+      await page.fill('#newAuthor', 'Ellen Raskin');
+      await page.fill('#newGenre', 'Mystery');
+      await page.fill('#newBlurb', 'Sixteen heirs, one puzzle, and a will nobody can read straight.');
+      await page.click('#addBookBtn');
+      await settle(page, 300);
+      await page.click('.tab-btn[data-mode="slips"]');
+      await settle(page, 400);
+    } },
+  { label: '037', url: '/Tools/037-grade-distribution-visualizer.html',
+    // No scores, no output at all. The paste includes a 0 (the hatched
+    // zero-bar) and a 12 (an outlier, which is what paints .outlier-note).
+    prep: async page => {
+      await page.fill('#scoreInput', 'Alvarez, 96\nBaker, 88\nChen, 84\nDiaz, 79\nEllis, 74\nFord, 71\nGarcia, 66\nHall, 91\nIto, 83\nJones, 0\nKim, 12');
+      await page.dispatchEvent('#scoreInput', 'input');
+      await settle(page, 500);
+    } },
   { label: '084', url: '/Tools/084-socratic-seminar-prep-organizer.html',
     // The speaking-order rows are the page's only --card surface outside the
     // cards themselves, and the inner/outer chips only exist in fishbowl mode.
@@ -426,7 +513,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083) + increment 9 (012, 052, 057, 068, 071, 084)');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083) + increment 9 (012, 052, 057, 068, 071, 084) + increment 10 (041, 065, 053, 062, 049, 037)');
 
 for (const p of PAGES) {
   /* ── dark ── */
