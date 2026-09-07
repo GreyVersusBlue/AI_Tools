@@ -202,7 +202,7 @@ console.log('share.js — images never ride in a link, and the file carries ever
 
 /* ── 7. receive: the link half, identical in every adopter ────────────── */
 {
-  const { Share, StateLink, win } = make({ search: '?deck=' + encodeURIComponent(btoaish({ v: 1, cards: [{ name: 'A' }] })) });
+  const { Share, win } = make({ search: '?deck=' + encodeURIComponent(btoaish({ v: 1, cards: [{ name: 'A' }] })) });
   const seen = [], errs = [];
   const out = Share.receive({
     param: 'deck',

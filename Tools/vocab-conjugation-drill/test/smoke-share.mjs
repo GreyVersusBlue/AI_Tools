@@ -105,7 +105,7 @@ await other.addInitScript(() => {
   if (localStorage.getItem('gvb-vocab-conj:list')) return;
   localStorage.setItem('gvb-vocab-conj:list', JSON.stringify(['Unit 3 Spanish']));
   localStorage.setItem('gvb-vocab-conj:data:Unit 3 Spanish', JSON.stringify({
-    name: 'Unit 3 Spanish', mode: 'vocab', vocab: 'mine: not the sender\'s',
+    name: 'Unit 3 Spanish', mode: 'vocab', vocabText: 'mine: not the sender\'s',
     persons: [], conjugations: [],
   }));
   localStorage.setItem('gvb-vocab-conj:current', 'Unit 3 Spanish');
@@ -118,7 +118,7 @@ ok((await other.inputValue('#vocabInput')).includes('la niñez'),
    'with the sender\'s words, non-ASCII intact');
 const kept = await other.evaluate(() =>
   JSON.parse(localStorage.getItem('gvb-vocab-conj:data:Unit 3 Spanish') || 'null'));
-ok(kept && /not the sender/.test(kept.vocab), 'and the set already saved under that name is untouched');
+ok(kept && /not the sender/.test(kept.vocabText), 'and the set already saved under that name is untouched');
 eq(new URL(other.url()).searchParams.get('set'), null,
    'the ?set= parameter is consumed on open, so a refresh cannot import it twice');
 
@@ -139,7 +139,7 @@ eq(new URL(broken.url()).searchParams.get('set'), null,
 const envelope = await page.evaluate(() => JSON.stringify({
   aplp: { v: 1, tool: 'vocab-conjugation-drill', param: 'set', exported: new Date().toISOString() },
   state: {
-    v: 1, name: 'Downloaded Set', mode: 'vocab', vocab: 'el puente: the bridge',
+    v: 1, name: 'Downloaded Set', mode: 'vocab', vocabText: 'el puente: the bridge',
     persons: ['yo'], conjugations: [],
   },
 }));
