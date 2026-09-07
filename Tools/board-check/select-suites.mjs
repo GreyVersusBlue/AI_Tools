@@ -15,6 +15,21 @@
 //      .github/ select EVERY suite. Each can break a tool that never names it,
 //      and a workflow edit has to prove the whole pipeline still runs.
 //
+//      ONE EXEMPTION, AND IT IS READ OFF THE HUNK, NOT THE FILENAME: every
+//      tool PR bumps CACHE_VERSION in sw.js, so for the nine tool PRs after
+//      #197 the scoped job this file exists for never once fired — a
+//      one-character version string ran the whole ~21-minute list. A sw.js
+//      diff whose only changed lines are that assignment is therefore not
+//      site-wide; it selects the service-worker folder's own suites instead,
+//      which are the suites that actually exercise a version bump. Anything
+//      else in the file — PRECACHE_URLS, SHELL_URLS, the fetch handler, a
+//      comment — is site-wide exactly as before, and so is a diff this
+//      function cannot see, because "I do not know what changed" has to
+//      select more, never less. #214's rule-4 bug is the shape to avoid here:
+//      a rule that reads a name where it should read the content goes quiet
+//      rather than red, so isCacheVersionBumpOnly() checks EVERY changed line
+//      and never merely looks for the word CACHE_VERSION in the diff.
+//
 //   2. FOLDER     — Tools/<folder>/... selects every suite under that folder,
 //      and ALSO treats every page whose src/href/import names that folder as
 //      touched (rule 3 then applies to those pages) — unless the only files
@@ -70,6 +85,33 @@ export const SITE_WIDE = [
   /^\.github\//,
 ];
 
+/** The worker, and the folder whose suites are about it. */
+export const SW_FILE = /^sw\.js$/;
+export const SW_SUITE_FOLDER = 'service-worker';
+
+/**
+ * A changed line that is nothing but the CACHE_VERSION assignment.
+ * `const CACHE_VERSION = 'v165';` — quotes either way, semicolon optional.
+ */
+const CACHE_VERSION_LINE = /^[+-]\s*const\s+CACHE_VERSION\s*=\s*(['"])v\d+\1\s*;?\s*$/;
+
+/**
+ * True when a unified diff of sw.js changes the CACHE_VERSION line and nothing
+ * else. Deliberately strict in both directions: an empty or unavailable diff is
+ * false (the caller then treats the file as site-wide, the safe answer), and a
+ * diff that changes one other line — a precache URL, a comment, whitespace — is
+ * false however many CACHE_VERSION lines it also contains.
+ *
+ * @param {string|null} diff  unified diff text for sw.js, any context width
+ */
+export function isCacheVersionBumpOnly(diff) {
+  if (typeof diff !== 'string' || !diff.trim()) return false;
+  const changed = diff.split('\n')
+    .map(l => l.replace(/\r$/, ''))
+    .filter(l => /^[+-]/.test(l) && !/^(\+\+\+|---)/.test(l));
+  return changed.length > 0 && changed.every(l => CACHE_VERSION_LINE.test(l));
+}
+
 /** Design archives, not live pages: nothing tests them and the sweeps skip them. */
 const NOT_LIVE = [/^Tools\/(New|Old) Designs\//];
 
@@ -104,17 +146,27 @@ export function foldersReferencedBy(pageSrc) {
  * @param {string[]} env.suites          ordered list from suites.json
  * @param {(rel: string) => string|null} env.readFile   returns a file's text or null
  * @param {() => string[]} env.listPages  repo-relative paths of every live page
+ * @param {(rel: string) => string|null} [env.diffOf]   unified diff of a touched
+ *   file, or null when it cannot be produced. Only sw.js is read this way
+ *   (rule 1's one exemption); omitting it keeps the pre-#197 behaviour, where
+ *   any sw.js edit is site-wide.
  * @returns {{ selected: string[], why: string[] }}
  */
-export function suitesForChanges(files, { suites, readFile, listPages }) {
+export function suitesForChanges(files, { suites, readFile, listPages, diffOf = () => null }) {
   const why = [];
-  const siteWide = files.filter(f => SITE_WIDE.some(re => re.test(f)));
+  // Rule 1's exemption, resolved first because it decides what "site-wide" means.
+  const bumpOnly = files.filter(f => SW_FILE.test(f) && isCacheVersionBumpOnly(diffOf(f)));
+  const siteWide = files.filter(f => SITE_WIDE.some(re => re.test(f)) && !bumpOnly.includes(f));
   if (siteWide.length) {
     why.push(`site-wide: ${siteWide.join(', ')} — every suite runs`);
     return { selected: suites.slice(), why };
   }
+  if (bumpOnly.length) {
+    why.push('sw.js: CACHE_VERSION is the only changed line — not site-wide; the service-worker suites run');
+  }
 
   const folders = new Set();   // every touched Tools/<folder>/
+  if (bumpOnly.length) folders.add(SW_SUITE_FOLDER);
   const shipped = new Set();   // those touched outside their test/ — what a page can load
   const pages = new Set();
   for (const f of files) {

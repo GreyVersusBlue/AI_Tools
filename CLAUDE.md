@@ -232,8 +232,17 @@ files must be added there too.
   everything; a `Tools/<folder>/` edit runs that folder's suites **and** the
   suites that open any page importing from that folder; a page edit runs the
   suites that name it; and any page edit also runs the sweeps that list the
-  pages themselves (a11y, theme, picker rollout, registry shape). The step
-  prints every touched file and the reason for every selected suite.
+  pages themselves (a11y, theme, picker rollout, registry shape). **Rule 1 has
+  one exemption, and it is read off the hunk rather than the filename: a
+  `sw.js` diff whose only changed lines are the `CACHE_VERSION` assignment is
+  not site-wide** — it runs the `service-worker` suites, which are the ones a
+  version bump exercises, and lets the rest of the PR decide the selection.
+  Every tool PR bumps that line, so before this landed the scoped job never
+  fired on one. Anything else in `sw.js` (a precache URL, a comment, the fetch
+  handler) is site-wide as before, and so is a `sw.js` change whose diff the
+  runner cannot produce — not knowing what changed has to select more, never
+  less. The step prints every touched file and the reason for every selected
+  suite.
   `Tools/board-check/test/select-suites.test.mjs` (`npm run test:select-suites`,
   pure Node) pins each rule against the real tree, including what must *not*
   be selected. **Anyone touching the diffing in `run-suites.mjs` or the rules

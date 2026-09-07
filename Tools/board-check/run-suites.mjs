@@ -103,10 +103,13 @@ const valueOf = name => {
 // Which suites cover the touched files is decided by select-suites.mjs (four
 // rules: site-wide, folder, page, sweep — its header explains each, and
 // Tools/board-check/test/select-suites.test.mjs proves them against the real
-// tree). This function only produces the file list. Two consumers depend on
-// it: a session's `--changed` against origin/main, and CI's pull-request job,
-// which passes `--base origin/<base branch>`; the push-to-main job runs the
-// full list on purpose. Keep both working when touching either half.
+// tree). This function produces the file list, and — for rule 1's one
+// exemption — a way to read a touched file's own diff, so that a sw.js change
+// can be judged by what it changed rather than by its name. Two consumers
+// depend on it: a session's `--changed` against origin/main, and CI's
+// pull-request job, which passes `--base origin/<base branch>`; the
+// push-to-main job runs the full list on purpose. Keep both working when
+// touching either half.
 function changedFiles(base) {
   const ref = base || 'origin/main';
   // -z throughout: half this repo's tool pages have spaces in their filenames
@@ -121,11 +124,13 @@ function changedFiles(base) {
   // trees directly and over-selects when the base has moved on, which is the
   // safe direction.
   let merged = [];
+  let range = `${ref}...HEAD`;
   try {
-    merged = nul(run(['diff', '--name-only', '-z', `${ref}...HEAD`]));
+    merged = nul(run(['diff', '--name-only', '-z', range]));
   } catch {
+    range = ref;
     try {
-      merged = nul(run(['diff', '--name-only', '-z', ref]));
+      merged = nul(run(['diff', '--name-only', '-z', range]));
     } catch (e) {
       console.error(`run-suites: --changed could not diff against ${ref} — ${e.message}`);
       console.error('Pass an available ref with --base, or run without --changed.');
@@ -144,7 +149,18 @@ function changedFiles(base) {
       .filter(Boolean);
   } catch {}
 
-  return [...new Set([...merged, ...working])];
+  // One file's unified diff, in the same two halves the file list came from:
+  // the commits on this side of `range`, then any uncommitted edit. -U0 keeps
+  // context lines out, so a caller reading the hunk sees only what changed.
+  // Null on any git failure — the caller must then treat the file as fully
+  // changed, which is the over-selecting direction.
+  const diffOf = rel => {
+    try {
+      return run(['diff', '-U0', range, '--', rel]) + run(['diff', '-U0', 'HEAD', '--', rel]);
+    } catch { return null; }
+  };
+
+  return { files: [...new Set([...merged, ...working])], diffOf };
 }
 
 /* ── suite selection ────────────────────────────────────────────────────── */
@@ -164,9 +180,9 @@ if (flag('--only')) {
   }
 } else if (flag('--changed')) {
   const base = valueOf('--base') || 'origin/main';
-  const files = changedFiles(base);
+  const { files, diffOf } = changedFiles(base);
   const { selected: picked, why } = suitesForChanges(files, {
-    suites: SUITES, readFile: readFileOnDisk(SITE), listPages: () => listPagesOnDisk(SITE),
+    suites: SUITES, readFile: readFileOnDisk(SITE), listPages: () => listPagesOnDisk(SITE), diffOf,
   });
   selected = picked;
   selectionLabel = `--changed against ${base} (${files.length} file${files.length === 1 ? '' : 's'} touched, ${selected.length} of ${SUITES.length} suites)`;
