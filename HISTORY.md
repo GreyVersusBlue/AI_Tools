@@ -166,6 +166,99 @@ waits for will be a docs or tooling PR, not a tool one. Recorded as a ¼ row at 
 a `sw.js` hunk that touches only the version constant as not site-wide, and pin it in
 `select-suites.test.mjs`. Not measured — read off the diff.
 
+**Rank 1 — Path 5 P3, increment 11: six more pages on native dark. #218, `CACHE_VERSION`
+v164.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
+one `npm run path5:next` printed, in its order — **033, 080, 008, 022, 013, 027**. Native dark
+went from 69 themed pages to **75 (91%)**, and the literal count from 513 across 13 pages to
+**333 across 7** — median 50, range 38–54. That is **one batch of six (003, 032, 043, 030, 064,
+042) and then a single page**, so the phase can finish in two more increments. `stage.js` is
+unchanged at 7 adopters; none of these six has a stage, which makes it nine increments running,
+and 001 and 004 are still the last two hand-rolled fullscreens. 080 is the closest miss on that
+front — a projector-first board with no fullscreen of any kind.
+
+**080's board is a sheet of paper, and the argument that settled it was in the export, not the
+design.** Its `#board` and `#numberLineWrap` are marked `.paper-sheet`: the base-ten flats,
+fraction tiles and algebra tiles standing on them are *objects with fixed colours*, so a dark
+board would have meant redesigning the manipulatives rather than theming the page. But the
+decisive evidence is that `snapshotEl()` paints `#ffffff` and then copies each piece's
+**computed** colour — and the number-line marker's `var(--accent)` — onto the canvas. Without
+the sheet restoring the light tokens inside the board, a teacher working in dark mode would
+have downloaded pale-blue arrows on white paper. Verified in dark *after* the change: canvas
+corner `255,255,255`, hundred-flat still `#1f3550`, marker `--accent` resolving to `#1f3550`
+inside the wrap. **The rule this adds to the two already written down** (a hidden `#printArea`
+is paper; #216's on-screen `#printArea` is not): *ask what the tool **exports**, not only what
+it prints.* Both earlier rules are about printing and neither would have caught this one.
+
+The other five keep their printable out of sight — 033's class summary, slips and wall cards in
+a `display:none` `#printArea`; 008's, 013's and 027's in `.print-only` blocks styled entirely
+inside `@media print`; and 022's table tents, which exist in the DOM only for the duration of
+`window.print()` and are restyled by that block — so their `#999`/`#555`/`#eee` were left alone.
+013's per-student QR is the same call for a different reason: script paints it black on `#fff`
+onto a canvas, and a QR that follows a theme does not scan.
+
+**Four bugs, three of them shipped in *light*, and not one of them found by looking at a
+colour.**
+
+1. **027's four group-name inputs have had no accessible name at all since the tool shipped** —
+   critical axe `label` violations, in both themes. The visible name **is** the input's value,
+   so it cannot label itself; each carries `aria-label="Group N name"` now. The site-wide sweep
+   never saw them because it opens the page with no project, where there are no groups and so
+   no rows — **the seventh consecutive increment to find an instance of that blind spot** (009,
+   075, 077, 073, 068, 037, 027), which is what rank 16 exists to fix, and the *second in a row*
+   found by the dark-rollout suite's axe scan rather than by eye. Confirmed in light as well as
+   dark before treating it as pre-existing. **Path 5 P3 has one round left, so that row stops
+   getting free evidence after it.**
+2. **Two shipped CSS bugs with one root cause: a bare class losing to a higher-specificity
+   selector, so the literal a conversion rewrites was never the winning declaration.** 033's
+   per-book genre box has been rendering **859px** wide and overflowing its card, because
+   `input[type="text"] { width: 100% }` is (0,1,1) and outranks a lone `.book-genre-input`
+   (0,1,0) — its `width: 11rem` *and* the `margin-left: auto` beside it were both inert.
+   And 008's three behaviour-category colours have **never once been drawn**: every chip is
+   `.pos` or `.neg`, and `.tag-chip.pos { border-color }` (0,2,0) beat `.cat-academic` (0,1,0),
+   so the 4px stripe always took the green or red of the sign; only the *width* was the
+   category's, and only because 4px beat `.tag-chip`'s 1.5px on source order. Scoping each rule
+   to its parent fixes both, and 008's Academic/Social/Effort read blue/purple/goldenrod in both
+   themes for the first time. **Neither is visible in a diff**; both were found by measuring the
+   running page (176px vs 859px; `borderLeftColor` coming back as `--good` on all three
+   categories). *A conversion rewrites the value of a declaration and never asks whether that
+   declaration was winning.*
+3. **022 and 027 are 041's `--desk-ink` fix, twice more.** Both put `.empty-hint` in
+   `var(--muted)` on a `#d9d7cd` mat — 3.76:1 — and that element was the single allowlisted axe
+   line each of them had, exactly the shape #216 fixed on 041. Same values (`#595850`, 4.96:1 in
+   light; plain `var(--muted)` in dark, where the mat is near-black). Three tools, one mat
+   colour, one bug: check `--desk` against its ink wherever a remaining page has a recessed
+   surface. `Tools/a11y-sweep/allowlist.json` is two lines shorter.
+4. **The one regression this branch caused, and the suite caught it before the screenshots
+   did.** 033's `.student-item .count` is `color: inherit` at `opacity: .7`, which on the
+   *active* item is `var(--accent-ink)` on `var(--accent)`: 6.8:1 on light's `#1f3550` and
+   **4.35:1** on dark's `#7fb2e5`. `.85` gives 6.2:1 there and 9.7:1 on a resting card. **An
+   `opacity` on inherited text is a contrast ratio that changes when the surface under it
+   inverts**, and no literal-counting sweep can see one.
+
+**A stale number this session had to correct, recorded because carrying it is the failure
+mode.** The header's accessibility row said "**20** page-rule pairs on 20 pages". #216 deleted
+041's line and took it to **19**; #217's step-6 rewrite carried the old figure forward instead
+of re-measuring. It is 17 now, and the row carries the one-liner that measures it
+(`python3 -c "import json;d=json.load(open('Tools/a11y-sweep/allowlist.json'));p=d['pages'];print(len(p),sum(len(v) for v in p.values()))"`).
+
+**A prep can reach the right page in the wrong state through the wrong event.** 033's weekly-goal
+listener is on `change`, not `input`; an `input` there left the goal column hidden and its
+`--rail` track unscanned — on a **green** suite, for the same reason #214's two failed preps
+were green. The screenshot is what said so, again. Also recorded: **033 still loads `a11y.js`
+and `a11y.css` twice** (rank 14, deliberately untouched — the flag is read by both loads, so
+opting in is correct either way), and 008's `.flash-pos`/`.flash-neg` tints are tokenised but
+transient (a .25s transition), so they were checked by computed value and **not** seen in a
+screenshot.
+
+**Verification.** Full `npm test` once, **145 of 145 green in 27.0 min**; `npm run test:theme`
+763/763 on the rollout suite (up from 687 — seven new `PAGES` entries, 080 driven twice because
+each pane is its own sheet) and 47/47 on the mechanism suite; the per-tool suites for all six
+pages; `test:a11y --only` for each of the six; the eleven read-only guards including
+`check:precache -- --base origin/main`; and the light and dark screenshots of all six were
+looked at. CI ran the full pass green in 25.4 min. **Not verified:** nothing has been opened on
+a real projector or a real Chromebook, and nothing has installed the worker — eleven increments
+running.
+
 **Rank 1 — Path 5 P3, increment 10: six more pages on native dark. #216, `CACHE_VERSION`
 v163.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
 one `npm run path5:next` printed, in its order — **041, 065, 053, 062, 049, 037**. Native dark
