@@ -464,6 +464,102 @@ const PAGES = [
       await page.check('#fishbowlToggle');
       await settle(page, 400);
     } },
+  // increment 11. All six keep their printable out of the way — 033's class
+  // summary, slips and wall cards in a display:none #printArea; 008's, 013's
+  // and 027's in .print-only blocks styled entirely inside @media print; and
+  // 022's table tents rendered into #resultsArea only for the duration of
+  // window.print() — so every #999/#555/#eee those carry is a print value and
+  // was left alone. 080 is the exception and the interesting one: its board and
+  // number line are marked .paper-sheet, because a base-ten flat and an algebra
+  // tile are objects with fixed colours, not chrome, and the PNG snapshot paints
+  // #ffffff and then copies each piece's computed colour onto it.
+  { label: '033', url: '/Tools/033-ssr-log-tracker.html',
+    // No roster, no student list — and the log table, the book-progress list,
+    // the genre chips, the reading-diet bars and the per-student goal bars are
+    // all downstream of one logged entry. A goal is what makes the goal column
+    // (and its --rail track) render at all.
+    prep: async page => {
+      await page.fill('#rosterInput', 'Alex Rivera\nBailey Chen\nCarter Diaz');
+      await page.click('#saveRosterBtn');
+      await settle(page, 300);
+      await page.click('.student-item');
+      await settle(page, 200);
+      await page.fill('#entryBook', 'Hatchet');
+      await page.fill('#entryPages', '24');
+      await page.fill('#entryMinutes', '20');
+      await page.fill('#entryGenre', 'Adventure');
+      await page.click('#addEntryBtn');
+      await settle(page, 300);
+      // The goal listener is on `change`, not `input` — an `input` here left the
+      // goal column hidden and its --rail track unscanned, on a green suite.
+      await page.fill('#goalPages', '20');
+      await page.dispatchEvent('#goalPages', 'change');
+      await settle(page, 400);
+    } },
+  { label: '080', url: '/Tools/080-virtual-manipulatives-board.html', sheet: '#board',
+    // The board starts empty, so add one piece of each shape to get the
+    // manipulative colours and the per-piece delete/duplicate buttons (both
+    // background: var(--card), which inside the sheet is white) onto it.
+    prep: async page => {
+      await page.click('button[data-add="hundred"]');
+      await page.click('button[data-add-fraction="4"]');
+      await page.click('button[data-add="alg-negx"]');
+      await settle(page, 400);
+    } },
+  { label: '080-line', url: '/Tools/080-virtual-manipulatives-board.html', sheet: '#numberLineWrap',
+    // The number line is the page's second stage and its second paper sheet;
+    // the tab has to be opened or its wrap has no box at all.
+    prep: async page => {
+      await page.click('.tabs button:nth-of-type(2)');
+      await settle(page, 400);
+    } },
+  { label: '008', url: '/Tools/008-behavior-points-tracker.html',
+    // No roster, no student cards — and the cards are where --card, the
+    // --cat-* stripes and the flash tints live. Arming a tag chip and tapping
+    // a card also puts an activity-feed row and a --good-bg flash on screen.
+    prep: async page => {
+      await page.fill('#namesInput', 'Alex Rivera\nBailey Chen\nCarter Diaz');
+      await page.dispatchEvent('#namesInput', 'input');
+      await settle(page, 300);
+      await page.click('.tag-chip');
+      await settle(page, 200);
+      await page.click('.student-card');
+      await settle(page, 400);
+    } },
+  { label: '022', url: '/Tools/022-lab-group-role-randomizer.html',
+    // The desk mat starts holding only .empty-hint — which is the point, since
+    // that element was this page's one allowlisted axe line — so scan it with
+    // groups shuffled onto it as well.
+    prep: async page => {
+      await page.fill('#namesInput', 'Alex Rivera\nBailey Chen\nCarter Diaz\nDana Ellis\nErin Fox\nGil Haro');
+      await page.dispatchEvent('#namesInput', 'input');
+      await settle(page, 200);
+      await page.click('#shuffleBtn');
+      await settle(page, 400);
+    } },
+  { label: '013', url: '/Tools/013-lab-safety-contract-tracker.html',
+    // No roster, no student rows — and the rows carry the .signed/.unsigned
+    // tints and the two status toggles. Signing one is what puts a --good-bg
+    // row and an --accent-ink-on-good toggle on screen next to an unsigned one.
+    prep: async page => {
+      await page.fill('#rosterInput', 'Alex Rivera\nBailey Chen\nCarter Diaz');
+      await page.click('#saveRosterBtn');
+      await settle(page, 300);
+      await page.click('.student-row .status-toggle');
+      await settle(page, 400);
+    } },
+  { label: '027', url: '/Tools/027-novel-study-circles-manager.html',
+    // Same shape as 022 — the mat and its .empty-hint — plus the meeting log,
+    // whose <summary> is the page's only --card-2 surface.
+    prep: async page => {
+      await page.fill('#namesInput', 'Alex Rivera\nBailey Chen\nCarter Diaz\nDana Ellis\nErin Fox\nGil Haro');
+      await page.dispatchEvent('#namesInput', 'input');
+      await settle(page, 200);
+      await page.click('#splitBtn');
+      await settle(page, 300);
+      await page.click('#logMeetingBtn');
+      await settle(page, 400);
+    } },
 ];
 
 // Chrome is what follows the theme. Anything that is a projector surface
@@ -513,7 +609,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083) + increment 9 (012, 052, 057, 068, 071, 084) + increment 10 (041, 065, 053, 062, 049, 037)');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083) + increment 9 (012, 052, 057, 068, 071, 084) + increment 10 (041, 065, 053, 062, 049, 037) + increment 11 (033, 080, 008, 022, 013, 027)');
 
 for (const p of PAGES) {
   /* ── dark ── */

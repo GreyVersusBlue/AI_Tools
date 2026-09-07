@@ -31,14 +31,8 @@
     "Tools/018-qr-scavenger-hunt-builder.html": {
       "color-contrast": "baseline 2026-09-03: 14 × elements must meet minimum color contrast ratio thresholds (e.g. label[for=\"hunt-name\"]); fix in the tool, then remove this line"
     },
-    "Tools/022-lab-group-role-randomizer.html": {
-      "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. .empty-hint); fix in the tool, then remove this line"
-    },
     "Tools/026-math-drill-generator.html": {
       "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
-    },
-    "Tools/027-novel-study-circles-manager.html": {
-      "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. #resultsArea > .empty-hint); fix in the tool, then remove this line"
     },
     "Tools/028-primary-source-analysis-generator.html": {
       "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. .preview-note); fix in the tool, then remove this line"
