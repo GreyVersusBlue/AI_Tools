@@ -63,10 +63,70 @@ yours.
 
 ## Where things stand — start here
 
-*Current as of `main` after PR #225, 2026-09-07. Rewrite this header when your phase
+*Current as of `main` after PR #227, 2026-09-07. Rewrite this header when your phase
 merges — that is step 6 of the definition of done, and it is not optional.*
 
-**Last shipped.** Rank 1 — **the thirteenth and last palette increment of Path 5 P3** (#225,
+**Last shipped.** Rank 1 — **the stage rollout, which finishes Path 5 P3 outright** (#227,
+`CACHE_VERSION` **v167**). 001's Projector View and 004's whole page were the last two on the
+site hand-rolling `requestFullscreen`; both are on `_shared/stage.js` now, which goes from 7
+adopters to **9**, and `npm run path5:next` reports **0** hand-rolled stages among the themed
+pages. Eleven palette increments in a row had walked past them. **The row is deleted, not
+rewritten: P3 has no half left.** Six things are worth carrying.
+
+(1) **A stage element that is `display:none` cannot be fullscreened, so the helper's own F key is
+the wrong one for it.** `fullscreenKey` calls `enter()` straight out; 001 passes
+`fullscreenKey: false` and puts `f` in the hotkey map instead, pointing at a toggle that un-hides
+first and asks second — the order 015's story overlay already used, now written down. Everything
+else about the key is unchanged, because it is the same code path: the typing guard, the modifier
+guard, one-stage-at-a-time.
+
+(2) **`<body>` is a legitimate stage and `<html>` is not.** 004 fullscreened
+`document.documentElement`, which no mount can express — the helper puts its classes on the
+element it is given, and the fallback rule needs something to pin. Everything 004 must keep on
+screen is already a body child (header controls, the zero-flash overlay, a11y.js's own widget), so
+nothing needed `hud`. 010 has done this since #198.
+
+(3) **The helper's fallback rule is injected into `<head>` after the page's `<style>`, so a
+same-specificity override ties and then loses on order.** `.stage-fallback.is-fullscreen` paints
+`var(--paper, #fff)`. A bare `.projector-view` (0,1,0) loses outright and a two-class rule of our
+own would only tie, so both pages use id- or element-level: `#projectorView.is-fullscreen` and
+`body.stage-fallback.is-fullscreen`. Without them a browser that refuses fullscreen hands the room
+a **white** projector board with light-grey numbers, and 004 — which defines no `--paper` at all —
+a white page in dark mode. Neither is visible in a diff; the suite's new fallback assertions are
+what found them.
+
+(4) **The tenth instance of the a11y sweep's blind spot, and the first found by a *suite* rather
+than by a conversion.** 001's `.proj-note` was `#6c7484` on the `#10151c` board — **3.98:1, a
+serious `color-contrast` failure shipped in *light*, on every projector since the tool existed**.
+The whole view is `display:none` until a button is pressed, so the site-wide sweep has never seen
+it. `#7f8794` is 5.16:1 and **no allowlist line was added**. Rank 14 said "the free evidence is
+spent"; this is where the next evidence comes from — **scan the state, not the page**, with
+`a11yScan(page, {include})` after a prep.
+
+(5) **A harness that identifies its subject by an id cannot describe a mount it already had.**
+`smoke-stage-rollout.mjs` keyed everything on `document.getElementById(stageId)`, so 010 has
+mounted `<body>` since #198 with no suite able to say so, and 004 could not be added at all. It
+takes a **CSS selector** now, plus the two-button shape 001 needs (enter and exit are different
+elements, so there is no relabelling to assert) and, for that shape, an assertion that **F
+re-enters after the Exit button leaves** — the only check proving F reaches a stage whose element
+was `display:none` when the key was pressed. 116 → **164** assertions.
+
+(6) **Path 5 P4 was surveyed and deliberately not started, and the survey is now its row.** It was
+claimed alongside P3 and released rather than half-done: "034 gets a native dark palette" is one
+page in this table and six problems in the code, the decisive one measured — **the five department
+hues all fail as text on a dark card** (2.39–3.56:1) and `brDColor()` writes them from *script*
+into `style="color:${col}"`, where no CSS token override reaches them. Rank 1 carries all six.
+
+Full `npm test` ran locally once — **145 of 145 green, 28.6 min** — and **CI was scoped for the
+second consecutive tool PR: 15 of 145 suites, green in 4.7 minutes** (19:38:10 → 19:42:54 UTC),
+against #225's 14 in 9.1. **Not verified:** nothing has been opened on a real projector or a real
+Chromebook and nothing has installed the worker, twelve increments running; headless Chromium
+grants `requestFullscreen` from a click and a Playwright `Escape` cannot exit *real* fullscreen, so
+the real exits are driven by the button and by F and only the fallback's by Escape. **007 still
+hand-rolls `requestFullscreen`** and was left alone on purpose — it loads no `a11y.js`, so
+`path5:next` does not count it, and it needs a theme before it needs a stage.
+
+Before it, rank 1 — **the thirteenth and last palette increment of Path 5 P3** (#225,
 `CACHE_VERSION` **v166**). 046 left a11y.css's invert filter for a native dark palette, and
 **every themed page on the site is native now: 82 of 82, 100%, zero on the filter.** P3's
 palette work is finished; **the row stays at rank 1 rewritten as what is actually left — the
@@ -153,74 +213,23 @@ verified at the time of writing:** a real scoped run on GitHub's runner — #223
 full pass by design, because it edits `Tools/board-check/`. The next tool PR is the first
 genuinely scoped one, and its log prints the selection and the reason for every suite.
 
-Before it, rank 1 — **the twelfth increment of Path 5 P3** (#221, `CACHE_VERSION`
-**v165**), and it is the last full batch that row will ever take. Six more pages left a11y.css's
-invert filter for a native dark palette — **003, 032, 043, 030, 064 and 042**, the batch
-`npm run path5:next` printed, in its order. Native dark is **81 of 82** themed pages, from 75
-(**99%**), and **046 is the only page left on the filter** — 54 literals, one round. `stage.js`
-is unchanged at **7** adopters with **2** pages still hand-rolling (001, 004); ten increments
-running have added none. **The row stays at rank 1 but is no longer a 2+ row: it is a single
-page now, sized ½.** Six things are worth carrying.
-
-(1) **"Is this a sheet of paper?" has a NO answer, and the argument for it is specificity, not
-taste.** Four of the six render a printable on screen and they split two-two. 003's
-`.rubric-sheet` and 043's `.slip` / `.missing-list-page` / `.reminder-slip` / `.chaperone-print`
-got `.paper-sheet`, because they inherit `var(--muted)`, `var(--line-strong)` and `var(--ink)`
-from the page and would otherwise have previewed and printed dark-theme tokens on white. 064's
-`.trading-card` and 042's `.cert` must **not**, and not merely because they do not need it:
-ink-paper.css's paper rule is **(0,5,0)** — `:root[data-theme]:not(.a11y-filter-dark)
-.paper-sheet:not(.paper-sheet-off)` — which outranks `.trading-card.theme-classic` (0,2,0) and
-`.theme-elegant` (0,1,0), so it would have repainted every themed card and every certificate
-skin white in dark mode. **The rule that reads as protection is the one that would have
-destroyed them.** This is #218's specificity lesson from the other side: there, a bare class was
-losing and a conversion rewrote a dead declaration; here, a shared class would have won and
-killed a live one. Both times the answer came from counting selectors, not from looking.
-
-(2) **A white control drawn ON a projector surface cannot ink itself with `var(--accent)`.**
-030's reveal overlay is navy in both themes on purpose, and its award buttons are white on it —
-but their text was `var(--accent)`, which in dark is `#7fb2e5` and reads **2.5:1 on white**. The
-new `--board-btn-ink` (`#1f3550`, no dark override, sitting with `--board-bg` and `--gold`) is
-the fix. **The general form: a token that flips with the theme is wrong wherever the surface
-under it does not.** Worth checking on any page that puts a light control on a fixed dark stage.
-
-(3) **Five unlabeled controls, all shipped in *light*, on four different pages — the eighth
-increment in a row to hit rank 15's blind spot (rank 16 until #223 removed the row above it), and the first to hit it four times at once.**
-003's class grid draws three `<select>`s per row, one per criterion, with **no accessible name
-at all** (critical `select-name`); 030's team-name inputs are 027's bug from #218 exactly (the
-name *is* the value, so it cannot label itself) and `#boardSwitch`'s "Board:" label had no
-`for`; 043's `#rosterSelect` and its per-student chaperone selects; 042's `#camRosterSelect`.
-**Scanned unprepped, all six pages come back clean in light** — that measurement, not an
-argument, is what says the site-wide sweep could never have found any of it. **Rank 15's free
-evidence is now down to one page**, and 046 is unlikely to supply an eighth-plus instance on its
-own; the row has to be built, not waited for.
-
-(4) **`--desk-ink` for the fifth time.** 003, 042 and 043 all put `#previewNote` in
-`var(--muted)` on the same `#d9d7cd` preview mat — 3.76:1, and the single allowlisted axe line
-on each. Same values as 041 (#216) and 022/027 (#218): `#595850` at 4.96:1 in light, plain
-`var(--muted)` in dark. **`Tools/a11y-sweep/allowlist.json` is three entries shorter, 17 → 14.**
-Five tools, one mat colour, one bug — the pattern is now reliable enough to look for first.
-
-(5) **`smoke-theme.mjs`'s "has NOT adopted" control page moved from 003 to 046, and that is the
-last time it can move.** The mechanism suite proves both halves of the theme decision on two
-pages, and the filtered half needs a page still on the filter. 046 is the only one left, so its
-comment now says the assertions **retire with it** when it adopts rather than being repointed a
-third time. A session converting 046 that repoints instead of deleting will be pointing at a
-page that no longer proves anything.
-
-(6) **This session's wrong `prep` failed loudly, and the difference from #214's and #218's is
-worth naming.** 003 opens a new rubric with performance levels but **no criteria**, so the
-preview sheet, the comment bank and the student-text cell do not exist until a template is
-loaded — the first prep drove a page with no sheet on it at all. It crashed, because it targeted
-an element that was absent; #214's and #218's silent preps targeted elements that were *present
-and did nothing*. **A prep that names something is safe; a prep that clicks something is not** —
-the second kind is the one that leaves a green suite reporting a page it never checked.
-
-Full `npm test` ran locally once — **145 of 145 green, 28.3 min** — CI ran the full pass green
-in 27 min, and the light and dark screenshots of all eleven driven states were looked at. **Not
-verified:** 043's `.scan-status` tints need the camera scanner to render and were read off the
-CSS rather than seen; nothing has been opened on a real projector or a real Chromebook, and
-nothing has installed the worker, twelve increments running.
-
+Before it, rank 1 — **the twelfth increment of Path 5 P3** (#221, `CACHE_VERSION` **v165**), the
+six pages 003, 032, 043, 030, 064 and 042 — the last full palette batch. Its findings are folded
+into the P3 rules below and the detail is in `HISTORY.md`. Four of the six render a printable on
+screen and they **split two-two on the sheet question**: 003's `.rubric-sheet` and 043's four
+printables got `.paper-sheet`, while 064's `.trading-card` and 042's `.cert` had to be **denied**
+it — ink-paper's paper rule is (0,5,0) and outranks `.trading-card.theme-<key>` (0,2,0) and
+`.theme-elegant` (0,1,0), so marking a self-coloured object as paper repaints it white. *The rule
+that reads as protection is the one that would have destroyed them.* 030 needed a new fixed token,
+`--board-btn-ink`: its white award buttons sit **on** a navy overlay and were inking themselves
+with `var(--accent)`, 2.5:1 on white in dark — **a token that flips with the theme is wrong
+wherever the surface under it does not.** It also fixed **five unlabeled controls across four
+pages** (the eighth instance of the sweep's blind spot and the first to find it four times at
+once), deleted **three** `#previewNote` allowlist lines with the `--desk-ink` fix, and proved the
+invisibility of those five the right way: **all six pages were scanned unprepped and came back
+clean in light.** Two process notes: a prep that *names* something is safe, a prep that *clicks*
+is not; and a fixture built on the real clock (a bell schedule as offsets from "now") fails only
+in a window nobody tests in.
 Before it, rank 1 — **the eleventh increment of Path 5 P3** (#218, `CACHE_VERSION` **v164**),
 the six pages 033, 080, 008, 022, 013 and 027. Its findings are folded into the P3 rules below
 and the detail is in `HISTORY.md`. **080 was the new category and it is not about printing at
@@ -445,23 +454,23 @@ tells the next session to build what already exists, and it did so for about an 
 claim table itself worked, both then and for #182: sessions took different rows and no source
 file conflicted.
 
-**Numbers, all re-measured against the tree on 2026-09-07, after #225 merged:**
+**Numbers, all re-measured against the tree on 2026-09-07, after #227 merged:**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v166` (→ v166 in #225; **one** precached page changed — 046, for the theme. Nothing was added to or removed from either tier, and 046 is **not** in the `SHELL_URLS` install tier) |
-| Precache entries | 257 in `PRECACHE_URLS`, **82** of them in the `SHELL_URLS` install tier — unchanged by #225, which changed one already-listed page and added no file |
-| Suites | **145** in `Tools/board-check/suites.json`; `expectedFailures` **empty**. #225 added no suite: it added **two** `PAGES` entries to `smoke-dark-rollout.mjs` (046 twice — the ordinary viewer and the projector quiz mode), taking that suite from 872 assertions to **901**, gave its sheet check an optional `sheetBg`/`sheetChild` pair, and **deleted** `smoke-theme.mjs`'s filtered-page half, which took that suite from 47 assertions to **42** — the one place in this repo where a shrinking assertion count is the correct outcome, because the page it described no longer exists. Before it, #223 took `select-suites.test.mjs` from 61 to **92**. **#225 ran the full `npm test` locally once: 145 of 145 green, 27.7 min** |
-| CI per pull request | **Scoped to the diff since #197, and since #223 that scoping actually reaches a tool PR.** The pull-request job runs `npm test -- --changed --base origin/<base>`; the push-to-`main` job runs everything. `sw.js` was site-wide by rule 1 and every tool PR bumps `CACHE_VERSION` there, so **nine tool PRs in a row (#200 … #221) ran the full ~21-minute list anyway** — #200 touched six pages and one test file and still ran all 145 suites in 23.4 minutes. #223 makes rule 1 read the **hunk**: a `sw.js` diff whose only changed lines are the `CACHE_VERSION` assignment selects the two `service-worker` suites instead of everything, and anything else in the file — a precache URL, a comment, a diff the runner cannot produce — is site-wide exactly as before. **#225 is that first genuinely scoped tool PR, and it is measured, not assumed: 14 of 145 suites, green in 9.1 minutes** (18:37:31 → 18:46:34 UTC) against 23–27 for the full pass. Its log's first `because` line reads `sw.js: CACHE_VERSION is the only changed line — not site-wide; the service-worker suites run`. Before #223 the saving was real only for a PR with no precached change: **#201, this file plus `HISTORY.md`, ran green in 43 seconds.** **#214 found the first real bug in rule 4:** the selector finds the page-sweeping suites by grepping their source for `readdirSync`, so moving `smoke-theme.mjs` to `git ls-files` silently took it out of every page edit's selection; `isSweep` matches both spellings now and `select-suites.test.mjs` pins both. That is the same shape of mistake #223 had to avoid — a rule reading a *name* where it should read the *content* goes quiet, not red — which is why nothing in the new check looks for the word `CACHE_VERSION` anywhere in a diff and why the test reads the constant out of the real `sw.js`. **The push-to-`main` full pass is not the safety net it reads as, and this was measured, not assumed.** `ci.yml` sets `concurrency: group: ci-${{ github.ref }}` with `cancel-in-progress: true`, and step 6 merges onto the same ref minutes after the increment does — so the increment commit's own main run is **cancelled** every time. Run 135 (#216's commit) and run 139 (#218's) are both `cancelled`; runs 137 and 141, the step-6 commits that followed them, are the `success`es. Nothing is actually unprotected — the step-6 commit carries the same tool tree plus documentation, so its full pass covers the increment's code — but **the run that says "green on main" for an increment is the one for the handoff commit after it**. If a session ever needs the increment commit itself covered (a revert, a bisect), re-run it by hand; the concurrency group will not do it |
+| `CACHE_VERSION` | `v167` (→ v167 in #227; **two** precached pages changed — 001 and 004, for the stage adoption. Nothing was added to or removed from either tier; `_shared/stage.js` was already in both, which is why the adoption needed no `PRECACHE_URLS` edit at all) |
+| Precache entries | 257 in `PRECACHE_URLS`, **82** of them in the `SHELL_URLS` install tier — unchanged by #227, which changed two already-listed pages and added no file |
+| Suites | **145** in `Tools/board-check/suites.json`; `expectedFailures` **empty**. #227 added no suite: it rewrote `smoke-stage-rollout.mjs` to name its stage with a **CSS selector** instead of an id (which is what let 004's `<body>` stage be driven at all) and added two adopters, taking that suite from 116 assertions to **164**. Before it, #225 added two `PAGES` entries to `smoke-dark-rollout.mjs` (872 → **901**) and **deleted** `smoke-theme.mjs`'s filtered-page half (47 → **42**, the one place in this repo where a shrinking assertion count is correct, because the page it described no longer exists); #223 took `select-suites.test.mjs` from 61 to **92**. **#227 ran the full `npm test` locally once: 145 of 145 green, 28.6 min** |
+| CI per pull request | **Scoped to the diff since #197, and since #223 that scoping actually reaches a tool PR.** The pull-request job runs `npm test -- --changed --base origin/<base>`; the push-to-`main` job runs everything. `sw.js` was site-wide by rule 1 and every tool PR bumps `CACHE_VERSION` there, so **nine tool PRs in a row (#200 … #221) ran the full ~21-minute list anyway** — #200 touched six pages and one test file and still ran all 145 suites in 23.4 minutes. #223 makes rule 1 read the **hunk**: a `sw.js` diff whose only changed lines are the `CACHE_VERSION` assignment selects the two `service-worker` suites instead of everything, and anything else in the file — a precache URL, a comment, a diff the runner cannot produce — is site-wide exactly as before. **#225 was that first genuinely scoped tool PR and #227 is the second, both measured rather than assumed: 14 of 145 suites in 9.1 minutes (18:37:31 → 18:46:34 UTC) and 15 of 145 in 4.7 minutes (19:38:10 → 19:42:54 UTC), against 23–29 for the full pass.** #227 is the cheaper of the two despite selecting one suite more, because its selection was two tool pages and a suite file rather than six pages. Its log's first `because` line reads `sw.js: CACHE_VERSION is the only changed line — not site-wide; the service-worker suites run`. Before #223 the saving was real only for a PR with no precached change: **#201, this file plus `HISTORY.md`, ran green in 43 seconds.** **#214 found the first real bug in rule 4:** the selector finds the page-sweeping suites by grepping their source for `readdirSync`, so moving `smoke-theme.mjs` to `git ls-files` silently took it out of every page edit's selection; `isSweep` matches both spellings now and `select-suites.test.mjs` pins both. That is the same shape of mistake #223 had to avoid — a rule reading a *name* where it should read the *content* goes quiet, not red — which is why nothing in the new check looks for the word `CACHE_VERSION` anywhere in a diff and why the test reads the constant out of the real `sw.js`. **The push-to-`main` full pass is not the safety net it reads as, and this was measured, not assumed.** `ci.yml` sets `concurrency: group: ci-${{ github.ref }}` with `cancel-in-progress: true`, and step 6 merges onto the same ref minutes after the increment does — so the increment commit's own main run is **cancelled** every time. Run 135 (#216's commit) and run 139 (#218's) are both `cancelled`; runs 137 and 141, the step-6 commits that followed them, are the `success`es. Nothing is actually unprotected — the step-6 commit carries the same tool tree plus documentation, so its full pass covers the increment's code — but **the run that says "green on main" for an increment is the one for the handoff commit after it**. If a session ever needs the increment commit itself covered (a revert, a bisect), re-run it by hand; the concurrency group will not do it |
 | Read-only guards | **11**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands` and `adoption`. All run in CI. `check:precache` is one guard running **six** always-on checks since #191 (SHELLDEP is the sixth) plus the opt-in BUMP. `check:docs-commands`'s `KNOWN_MISSING` is **empty** since #195 |
-| Accessibility allowlist | **14 page-rule pairs on 14 pages, every one `color-contrast`** — unchanged by #225, which added none and deleted none: 046 had no line, comes in clean in both themes, and its one critical violation had no line to delete because the sweep had never seen it. Before it, #221 deleted three, 003's, 042's and 043's, all `#previewNote` in `var(--muted)` on a `#d9d7cd` mat at 3.76:1, the fifth, sixth and seventh instances of the `--desk-ink` fix #216 first made on 041. Before it, #218 deleted two, 022's and 027's, both `.empty-hint` in `var(--muted)` on a `#d9d7cd` mat at 3.76:1, the same bug and the same `--desk-ink` fix #216 made on 041. **The figure this row carried, "20 on 20", was stale by one**: #216 deleted 041's line and took it to 19, and #217's step-6 rewrite did not re-measure — count it, do not carry it (`python3 -c "import json;d=json.load(open('Tools/a11y-sweep/allowlist.json'));p=d['pages'];print(len(p),sum(len(v) for v in p.values()))"`). #218 also fixed **four critical `label` violations on 027** that had **no line at all** (the sweep never saw them: empty storage), as #216 did on 037, #214 on 068, #212 on 073 and #210 on 077. **A line hides a count, not just a rule** — its text quotes the baseline count and nothing checks that number, so a page can be allowed one and quietly grow to five, or (#208) **be one tenth of the truth**: 074's line said "1 ×" and named `.selected > span`, and the same bug was on all ten of that page's symbol buttons — axe reported only the one whose background differed. **The sweep behind the list walks index and the 86 tool pages only**, so a tool's sub-pages are outside it — and, #202's finding, **it opens every page with empty storage**, so any UI that only renders once something is saved is not scanned at all; #225 is the **ninth** increment caught that way — 046's `#scaleBarUnitSelect`, a critical `select-name` with no allowlist line, hidden until the scale bar is switched on **over a calibrated map**, which widens the row's claim from *empty storage* to **any state a control has to be opened into**; before it #221 was the eighth and the first to find it on four pages at once — 003's per-criterion class-grid selects, 030's team-name inputs and `#boardSwitch`, 043's roster and chaperone selects, 042's roster select, all critical or serious, all shipped in *light*, and **all six of its pages scan clean unprepped**, which is the measurement that proves the sweep could not have seen them. One more caveat on reading the evidence, from #212: `a11yScan`'s returned `nodes` array is **capped at four by `harness.mjs`** and `count` is the real number — 073's 18 unnamed checkboxes come back as `nodes.length` 4 |
+| Accessibility allowlist | **14 page-rule pairs on 14 pages, every one `color-contrast`** — unchanged by #227 and by #225 before it, neither of which added or deleted a line. #227's `color-contrast` fix on 001 (`.proj-note`, 3.98:1 on the projector board) had no line to delete for the same reason 046's `select-name` did not: the sweep had never seen it. Before it, #221 deleted three, 003's, 042's and 043's, all `#previewNote` in `var(--muted)` on a `#d9d7cd` mat at 3.76:1, the fifth, sixth and seventh instances of the `--desk-ink` fix #216 first made on 041. Before it, #218 deleted two, 022's and 027's, both `.empty-hint` in `var(--muted)` on a `#d9d7cd` mat at 3.76:1, the same bug and the same `--desk-ink` fix #216 made on 041. **The figure this row carried, "20 on 20", was stale by one**: #216 deleted 041's line and took it to 19, and #217's step-6 rewrite did not re-measure — count it, do not carry it (`python3 -c "import json;d=json.load(open('Tools/a11y-sweep/allowlist.json'));p=d['pages'];print(len(p),sum(len(v) for v in p.values()))"`). #218 also fixed **four critical `label` violations on 027** that had **no line at all** (the sweep never saw them: empty storage), as #216 did on 037, #214 on 068, #212 on 073 and #210 on 077. **A line hides a count, not just a rule** — its text quotes the baseline count and nothing checks that number, so a page can be allowed one and quietly grow to five, or (#208) **be one tenth of the truth**: 074's line said "1 ×" and named `.selected > span`, and the same bug was on all ten of that page's symbol buttons — axe reported only the one whose background differed. **The sweep behind the list walks index and the 86 tool pages only**, so a tool's sub-pages are outside it — and, #202's finding, **it opens every page with empty storage**, so any UI that only renders once something is saved is not scanned at all; **#227 is the tenth increment caught that way and the first caught by a *suite* rather than by a page conversion** — the on-stage `a11yScan` in `smoke-stage-rollout.mjs` reported 001's `.proj-note`, which no palette round would have touched; #225 is the **ninth** — 046's `#scaleBarUnitSelect`, a critical `select-name` with no allowlist line, hidden until the scale bar is switched on **over a calibrated map**, which widens the row's claim from *empty storage* to **any state a control has to be opened into**; before it #221 was the eighth and the first to find it on four pages at once — 003's per-criterion class-grid selects, 030's team-name inputs and `#boardSwitch`, 043's roster and chaperone selects, 042's roster select, all critical or serious, all shipped in *light*, and **all six of its pages scan clean unprepped**, which is the measurement that proves the sweep could not have seen them. One more caveat on reading the evidence, from #212: `a11yScan`'s returned `nodes` array is **capped at four by `harness.mjs`** and `count` is the real number — 073's 18 unnamed checkboxes come back as `nodes.length` 4 |
 | Tool registry | 87 rows, **217 keys and 32 prefixes across 109 files** — `__scv_probe__` retired and `__gvb_save_probe__` declared for the first time, so the total is unchanged for two unrelated reasons; four IndexedDB databases declared; `check:registry` green, `dynamic` empty everywhere |
-| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 77 · `a11y.js` 77 · `ink-paper.css` 71 · `base.css` 68 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `state-link.js` 17 · `qr-scan.js` 10 · `stage.js` 7 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `qr-draw.js` 1 · `seating-read.js` 1 · `share.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 77 · `a11y.js` 77 · `ink-paper.css` 71 · `base.css` 68 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `state-link.js` 17 · `qr-scan.js` 10 · `stage.js` 9 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `qr-draw.js` 1 · `seating-read.js` 1 · `share.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087**. 81 of them have recorded open ideas |
-| Tier 1 rows | **177**, a contiguous 1..177 — unchanged by #225, which shipped an increment of rank 1 and **left the row in place, rewritten as what is actually left of it**: the `stage.js` rollout in 001 and 004, sized ½. Rank 15 (the sweep's blind spot) has its **ninth** confirmed instance and a widened claim. The tool-number boundary is **96**. Every one is a row a session can finish alone; the one that was not is parked under Cross-cutting. *(Counted, not carried forward, and NOT with `grep -oE '^\| [0-9]+ \|' BACKLOG.md` — that over-counts, because #190 added a batch-size table whose `| 1 | **one** | |` row matches it. Count the ranked table alone: `awk '/^\| Rank \| Item/,/^$/' BACKLOG.md | grep -cE '^\| [0-9]+ \|'`.)* |
-| Dark mode (`npm run path5:next`) | **82 of 82** themed pages paint a native dark palette (**100%**) and **0** are left on a11y.css's CSS-filter invert — the phase's palette work is finished. A further **15 live pages load no `a11y.js` at all** and get no theme either way: 002, 007, 016, 018, 034, 035, 038, 044, 086, `classroom-label-maker/speak.html`, `ideas-backlog.html` and the four root landing-page variants. What the script still measures is the other half of the row: **`stage.js` at 7 adopters, 2 pages still hand-rolling fullscreen** (001, 004). **Read these off the script, and be aware it was wrong until #214**: it walked the filesystem rather than `git ls-files`, so it counted `Tools/board-check/.offline-copy-staging/` and reported double everything on any tree where that folder exists; **97 live pages on its first line is right, 188 is the bug**. **The literal count predicted the chrome and missed the work in six increments running** — #208's cheapest page was its most expensive (colours from a table in *script*); #212's cheapest needed `.paper-sheet` in its renderer; #214's real work was in two literals no count could see; #216's hardest decision (`.paper-sheet-off`) is invisible to any count; #218's two hardest calls were not colour changes at all; #221's was a `.paper-sheet` it had to **withhold**; and #225's was a `.paper-sheet` it had to **stretch over an entire interactive viewer**, decided by what `buildExportCanvas()` paints rather than by what the page prints |
-| Fullscreen | `_shared/stage.js` in **7** pages (010, 015, 021, 023, 024, 025, 072); **2** still hand-roll `requestFullscreen` — 001 and 004, neither of which was ever on the P2 list. Unchanged by #221: none of its six pages had a stage either, and **ten increments running have added none** — 030 is the closest miss now, a projector-first review game whose reveal is a fixed `inset: 0` overlay rather than real fullscreen, and 064's review game is the same shape. 017 has a *projector view*, which is not the same thing — it is a fixed overlay the page shows and hides itself, with no `requestFullscreen` anywhere |
+| Tier 1 rows | **176**, a contiguous 1..176 — **one fewer than #225 left, because Path 5 P3 is finished and its row was deleted rather than rewritten a fourteenth time.** Rank 1 is Path 5 P4, rewritten from a one-line row into the survey #227 made of it without starting it. Rank 14 (the sweep's blind spot) has its **tenth** confirmed instance. The tool-number boundary is **95**. Every one is a row a session can finish alone; the one that was not is parked under Cross-cutting. *(Counted, not carried forward, and NOT with `grep -oE '^\| [0-9]+ \|' BACKLOG.md` — that over-counts, because #190 added a batch-size table whose `| 1 | **one** | |` row matches it. Count the ranked table alone: `awk '/^\| Rank \| Item/,/^$/' BACKLOG.md | grep -cE '^\| [0-9]+ \|'`.)* |
+| Dark mode (`npm run path5:next`) | **82 of 82** themed pages paint a native dark palette (**100%**) and **0** are left on a11y.css's CSS-filter invert. A further **15 live pages load no `a11y.js` at all** and get no theme either way: 002, 007, 016, 018, 034, 035, 038, 044, 086, `classroom-label-maker/speak.html`, `ideas-backlog.html` and the four root landing-page variants — **034 is rank 1 and the other fourteen are nobody's row yet.** The script's other half now reads **`stage.js` at 9 adopters, 0 pages hand-rolling fullscreen**, so Path 5 P3 is finished on both counts and this script has nothing left to pick. **Read these off the script, and be aware it was wrong until #214**: it walked the filesystem rather than `git ls-files`, so it counted `Tools/board-check/.offline-copy-staging/` and reported double everything on any tree where that folder exists; **97 live pages on its first line is right, 188 is the bug**. **The literal count predicted the chrome and missed the work in seven increments running** — #208's cheapest page was its most expensive (colours from a table in *script*); #212's cheapest needed `.paper-sheet` in its renderer; #214's real work was in two literals no count could see; #216's hardest decision (`.paper-sheet-off`) is invisible to any count; #218's two hardest calls were not colour changes at all; #221's was a `.paper-sheet` it had to **withhold**; #225's was a `.paper-sheet` it had to **stretch over an entire interactive viewer**; and #227 was not a palette round at all and still found a contrast bug the picker's count could never have named |
+| Fullscreen | `_shared/stage.js` in **9** pages (001, 004, 010, 015, 021, 023, 024, 025, 072); **0** themed pages still hand-roll `requestFullscreen`. #227 took the last two — 001's Projector View and 004's whole page (mounted on `<body>`, as 010 is) — neither of which was ever on the P2 list. **One page outside the themed set still hand-rolls: 007**, which loads no `a11y.js`, so `path5:next` does not count it; it needs a theme before it needs a stage. 030 and 064 run a projector review game off a fixed `inset: 0` overlay rather than the Fullscreen API, and 017 has a *projector view* of the same shape — a fixed overlay the page shows and hides itself, with no `requestFullscreen` anywhere. Whether any of those three should become a stage is open and unclaimed |
 | Lint | clean |
 
 **217 keys is not a gain.** Two keys changed hands in #193 and cancelled out: `__scv_probe__`
@@ -469,14 +478,26 @@ retired when `scv-store.js` stopped doing its own blocked-storage probe, and
 `__gvb_save_probe__` was declared for the first time. Nothing stopped being tracked. #195
 changed no keys at all.
 
-**Start here: rank 1 — Path 5 P3's remainder, which is `stage.js` in 001 and 004.** The palette
-half is finished and the row says so; what is left is the fullscreen helper the P2 adopters
-(021, 023, 024, 025) and #198's three (010, 015, 072) already use, in the last two pages that
-hand-roll `requestFullscreen`. `Tools/stage/test/smoke-stage-rollout.mjs` is the suite that
-covers it, and `smoke-dark-rollout.mjs`'s stage section is the pattern for driving one: real
-fullscreen by button, the exit path, `F`, and the refused-fullscreen fallback with `Escape`.
-Size it **½**. The row is a fair candidate to pair with rank 2 (Path 5 P4, the landing page and
-034) since both are Path 5, but read each row first.
+**Start here: rank 1 — Path 5 P4, which is now only 034, and the row carries the survey.**
+#227 claimed this row alongside P3's, ran out of session, and released it rather than half-doing
+it; what it did instead was measure the job, and the row is that measurement. Read it before
+opening either file. The short version: **034 is not a clean publish of 035's `BR_CSS`** (they
+have drifted by ~109 diff lines), a **published** standalone file has no `_shared/` next to it so
+the dark tokens must key on `prefers-color-scheme` **and** `data-theme`, `--br-forest` is one name
+for ten fills and twenty-four ink uses, and — the finding that sets the size — **the five
+department hues all fail as text on a dark card (2.39–3.56:1) and `brDColor()` writes them from
+script into `style="color:${col}"`, where no CSS token override reaches them.** The P3 conversion
+rules below apply almost unchanged; the ones that matter most here are the fourth (literals that
+stay on purpose, each with a comment) and #225's sheet rule, which is why the floor plan should
+keep a light mat in both themes. Sized **1**, and it is a fair 1 *given the survey* — it was not
+one without it.
+
+**Two things #227 leaves behind that are nobody's row.** `007` still hand-rolls
+`requestFullscreen` and loads no `a11y.js`, so `path5:next` cannot see it and it needs a theme
+before it needs a stage. And 030, 064 and 017 each run a projector surface off a fixed
+`inset: 0` overlay rather than the Fullscreen API; whether any of them should become a
+`Stage.mount` is genuinely open — the P3 row used to carry the question and the row is gone, so
+it is written here instead.
 
 Two things the script tells you that the P3 prose list does not: 004 already has a native
 palette, and 007 loads no `a11y.js`, so it needs that before it can have a theme at all. **The
@@ -1156,183 +1177,182 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 5 P3 — the **stage rollout**, which is all that is left of this row. **The palette work is finished: increments 1–13 shipped (#198 … #225) and 82 of 82 themed pages are native dark, none on a11y.css's invert filter.** What remains is `_shared/stage.js`, still at **7** adopters, and the **two** pages that hand-roll `requestFullscreen` — **001**'s projector view and **004**'s timer. Eleven palette increments in a row added no stage, so this will not happen as a side effect of anything else. Adopt the helper as 010, 015 and 072 did in #198: delete the local fullscreen code, mount the stage with its controls inside the fullscreened subtree (the Fullscreen API renders only that subtree — the wrinkle four tools rediscovered), and drive it in `Tools/stage/test/smoke-stage-rollout.mjs` four ways: the button, the exit path, `F`, and the **refused-fullscreen fallback with `Escape`**, which is the case a hand-rolled stage never had. 030 and 064 run their projector game off a fixed `inset: 0` overlay rather than the API; whether that becomes a stage is a judgement call this row leaves open — decide it and write down what you decided. Rules bought with a red suite or a shipped bug and still worth having: run the full `npm test` before pushing (#214); `run-suites.mjs --only <tool folder name, not the number>` (#212); and **a prep that clicks can silently do nothing** — count what it created rather than waiting for one of them (#225) | site | ½ | `acwog9` 2026-09-07 19:25 UTC | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
-| 2 | Path 5 P4 — landing page and hallway tools; 034 gets a native dark palette | site | 1 | `acwog9` 2026-09-07 19:25 UTC | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
-| 3 | Path 6 P2 — adopt the share sheet in the 17 existing `state-link` tools | site | 2+ | | [Path 6](#path-6--share-everywhere) |
-| 4 | Path 6 P3 — extend sharing to the ~11 builders that do not share yet | site | 2+ | | [Path 6](#path-6--share-everywhere) |
-| 5 | Path 6 P4 — cross-tool "Send to…" driven by the tool registry | site | 1 | | [Path 6](#path-6--share-everywhere) |
-| 6 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js` (005 photos first) | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 7 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 8 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 9 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 10 | The contrast round — the 21 remaining `color-contrast` allowances. **After Path 5 P3, not before.** | site | 1–2 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 11 | Light `--line-strong` misses the 3:1 WCAG 1.4.11 control-border ask. The axe sweep will never surface it | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 12 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 13 | Two pages load `_shared/a11y.js` **and** `_shared/a11y.css` twice — 014 and 033, found by a `git ls-files` sweep during #202, which fixed the third (039). Removing a duplicate is a cascade decision per page: the late `a11y.css` copy is the one winning ties today, and the early `a11y.js` is what keeps the theme off the first paint. **Both pages have now been converted to native dark without touching this** (014 in #210, 033 in #218) — the `A11Y_NATIVE_THEME` flag is read by both loads, so opting in is correct either way, which is why nine increments have walked past it | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 14 | `check:entities` cannot see an HTML entity that lives in a **data array** and reaches a text sink through a variable. #208 found 055 projecting a literal `&rsquo;` on the board since the tool shipped — the entity is in a `BUILTIN[]` row and the sink is `item.broken`, so the guard counted it among the 325 "strings whose sink is not visible statically" and passed. Follow a literal from an array/object initialiser to the sink its element is written to, at least single-hop, and re-baseline the 325 (**312 as of #216**). **Start with the free half of this row:** #216 found four more in that same bucket — 065 printing `&mdash;` on every lab packet and 057 doing it three times — all of the form `escapeHtml('&mdash;')`, which escapes the `&` and renders the entity as text. **An entity in a string argument of `escapeHtml`/`escapeAttr` is wrong wherever the sink is**, so that rule needs no dataflow at all and would have caught every one of the four | `Tools/board-check/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 15 | The site-wide axe sweep opens every page with **empty storage**, so any UI that only renders once something is saved is scanned nowhere — and, since #225, that is the narrow statement of the problem: 046's `#scaleBarUnitSelect` is `hidden` until a *toolbar toggle* is pressed **over a calibrated map**, and no seeded key would have revealed it. **Nine increments, nine instances, every one a serious-or-critical violation shipped in *light*:** 009 (#202), 075 (#206), 077 (#210, 21 unnamed controls with no allowlist line at all), 073 (#212, 18 unnamed checkboxes, also with no line), 068 (#214, a `link-in-text-block` on every roster row), 037 (#216, white label text on the C segment of the stacked bar at 3.41:1), 027 (#218, four group-name inputs with no accessible name at all), #221 on four pages at once (003's class-grid selects, 030's team-name inputs and `#boardSwitch`, 043's roster and chaperone selects, 042's roster select), and #225's `select-name` above. Give `smoke-a11y-sweep.mjs` a per-page seed — a small fixture of localStorage keys, taken from `_shared/tool-registry.js`, written before the page loads — and re-baseline; then decide what to do about the states a seed cannot reach, because that is now a named half of the row rather than a guess. **The free evidence is spent: Path 5 P3's palette rounds are over and nobody is going to find the tenth for you.** Two measurements worth reusing: **#221 scanned all six of its pages unprepped and they came back clean**, which is how you prove a finding is invisible to the sweep rather than merely new; and the recurring shape is a control whose **visible name is its own value** (027's groups, 030's teams, 046's km/mi select), which cannot label itself and needs an `aria-label` naming its position or its row and column | `Tools/a11y-sweep/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 16 | Path 7 P1 — `_shared/print-kit.css` + `print-kit.js`; the ink-safe utility set | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
-| 17 | Path 7 P2 — print reliability audit across the 63 hand-written `@media print` blocks | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
-| 18 | Path 7 P3 — adoption: the class-set/blank tools, then the card-grid tools | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
-| 19 | Path 7 P4 — `_shared/export.js`: `toPdf`, `toCsv/xlsx`, `toZip`, booklet/N-up imposition | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
-| 20 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
-| 21 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 22 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 23 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 24 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 25 | Path 9 P1 — bell schedules per day type in 032 + `_shared/school-day.js` | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
-| 26 | Path 9 P2 — pacing that recomputes around lost days | 032 | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
-| 27 | Path 9 P3 — consumers: 004, 010, 001, 036/037, 044/045, 032 itself | site | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
-| 28 | Path 9 P4 — `.ics` import/export and a one-page year wall calendar print | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
-| 29 | Path 10 P1 — Packet Builder `087` with the section-provider registry | 087 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 30 | Path 10 P2 — 045 re-based on the providers; its six raw key reads go away | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 31 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 32 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 33 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 34 | Path 11 P1 — publisher drift guard before any extraction | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 35 | Path 11 P2 — extract the pure engines; target the HTML under ~300 KB | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 36 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 37 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 38 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 39 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 40 | Path 12 P1 — `_shared/question-bank.js` with 030 as the front door | `_shared/` | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 41 | Path 12 P2 — read-side adopters: 053, 062, 040, 018, 019, 020 | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 42 | Path 12 P3 — play modes in 030: every-team-answers, quiz-bowl, wheel, final wager, printed quiz | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 43 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 44 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 45 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 46 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 47 | Path 13 P4 — bracket completeness: double elimination, pools, Swiss, ties, consolation | 020 | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 48 | Path 14 P3 — seating constraint solver that explains which soft constraints it broke | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
-| 49 | Path 14 P4 — the room, not the grid: a room layer shared across period assignments | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
-| 50 | Path 14 P5 — live mode; extract the undo stack into `_shared/undo.js` | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
-| 51 | Path 15 P1 — split Name Picker: themes as data, sound, one module per pick mode | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
-| 52 | Path 15 P2 — per-day history rollup keyed on student ids | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
-| 53 | Path 15 P3 — equity dashboard across weeks and periods, printed as one page | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
-| 54 | Path 15 P4 — question-attached picks | 007 | ½ | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
-| 55 | Path 15 P5 — artifacts and remotes: hand off to grouping and the bracket; theme packs as JSON | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
-| 56 | Path 16 P1 — `_shared/chart-svg.js` with 037’s accessibility patterns; 038 gets the a11y baseline | `_shared/` | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
-| 57 | Path 16 P2 — `_shared/paste-table.js`, one parser for pasted spreadsheet regions | `_shared/` | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
-| 58 | Path 16 P3 — per-question item analysis in 037 and a printed reteach priority list | 037 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
-| 59 | Path 16 P4 — 036 modelling: term count, scenario modelling, grading window, roster join | 036 | 2+ | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
-| 60 | Path 16 P5 — 038 for science: regression, log axes, annotation layer, handoffs to 065 and 073 | 038 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
-| 61 | Path 17 P1 — thumbnail-grid reordering, crop/straighten, real-photo validation of the retry presets | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 62 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 63 | Path 17 P3 — PDF in: vendor `pdf.js`, merge/insert/extract/rotate existing PDFs | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 64 | Path 17 P4 — imposition: booklet order, N-up with cut marks, two-sided presets | `_shared/` | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 65 | Path 17 P5 — OCR, decision first: a vendored Tesseract build against the offline promise | 011 | ½ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 66 | Path 18 P1 — one station/room/hunt schema both 018 and 019 can read, with stable station ids | `_shared/` | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
-| 67 | Path 18 P2 — both tools on the schema, plus the payload budget and a printed short-code fallback | 018 | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
-| 68 | Path 18 P3 — feature parity between 018 and 019; questions from the bank | 019 | 2+ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
-| 69 | Path 18 P4 — the debrief print: per-team path, time per station, misses, reflection page | 019 | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
-| 70 | Path 18 P5 — decide the product: two entry points on one engine, or one tool with a mode switch | 018 | ¼ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
-| 71 | Path 19 P1 — `_shared/word-list.js`, owned by a Word Lists hub inside 040 | `_shared/` | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
-| 72 | Path 19 P2 — adopters: 040, 039, 014, 027, 051, 052; delete `vfg-conjdrill-link.js` | site | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
-| 73 | Path 19 P3 — conjugation pattern engine for Spanish and French, with irregular overrides | 039 | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
-| 74 | Path 19 P4 — printables: Frayer page, spaced repetition, fill-in-the-blank, word wall as a system | 040 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
-| 75 | Path 19 P5 — audio: TTS on study mode, teacher-recorded pronunciations into the media store | 051 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
-| 76 | Path 20 P1 — `_shared/geo-project.js` + `traceFeature`, hit-test and the curriculum gazetteer | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
-| 77 | Path 20 P2 — dropped GeoJSON/TopoJSON as a base map | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
-| 78 | Path 20 P3 — live vector viewer, keeping the raster path for poster export | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
-| 79 | Path 20 P4 — time slices for annotations; two-way selective handoff with 015 | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
-| 80 | Path 20 P5 — quiz memory across sessions; decide the Wikimedia network question | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
-| 81 | Track B1 — brand engine in `a11y.js`: school accent and logo, pre-paint, with an opt-out flag | `_shared/` | 1 | | [Track B](#track-b--custom-theme--branding-pass) |
-| 82 | Track B2 — school-branding settings UI in the a11y widget, with a contrast warning | `_shared/` | 1 | | [Track B](#track-b--custom-theme--branding-pass) |
-| 83 | Track V1 — `_shared/voice.js` (opt-in, push-to-talk, disclosed) + Name Picker commands | `_shared/` | 1 | | [Track V](#track-v--voice-command-input) |
-| 84 | Track V2 — voice commands in 008 Behavior & Points Tracker | 008 | ½ | | [Track V](#track-v--voice-command-input) |
-| 85 | Shared-baseline adoption sweep: 9 tools skip `a11y.*`, 15 skip `ink-paper.css`, 18 skip `base.css` | site | 1–2 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 86 | First-run "Load sample data" across the tools that open to an empty form (P15) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 87 | Phone-sized layout pass beyond 005 — cap or collapse oversized toolbars site-wide | site | 1–2 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 88 | `assets/fonts/` — five `@font-face` files `ideas-backlog.html` declares were never committed | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 89 | `Tools/seating-chart/fonts/*.woff2` (~167 KB, three faces) are unreferenced and unprecached | 005 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 90 | Delete the four dead, unlinked trees: `index_backup.html`, `Tools/Old Designs/`, `Tools/New Designs/`, `Other Landing Page ideas/` (~590 KB) | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 91 | Next `base.css` dedupe candidates: `.app-header h1`, `.app-header .sub`, `.back-link`, `.card h2` | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 92 | `_shared/levels.js` — one home for Academic / Honors / Honors GT and the level footer tag | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 93 | A shared plain-language social-studies glossary (056 ships ~60 entries; 028 and 040 want the same) | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 94 | `regionGroupCaption()` — one list-to-sentence formatter the whole site agrees on | `_shared/` | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 95 | Data-driven `index.html` — 86 hand-written rows and three hand-maintained counts | site | 1 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 96 | Wiki Race (086): teacher scoreboard from finish codes, an offline corpus mode, a Node suite for the seed logic | 086 | 1 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 97 | Speaking assessment layer — a short rubric per pair while circulating, stored per class, printed as a per-student speaking record | 014 | ½ | | [014 Immersion Roleplay Scenario Generator](#014--immersion-roleplay-scenario-generator) |
-| 98 | Task-organized prompt library — grouped by teaching task, each entry loading a full form state | 029 | ½ | | [029 Prompt Builder](#029--prompt-builder) |
-| 99 | Cover page, headers, and page numbers across the merged document | 031 | ½ | | [031 Word Doc Merger](#031--word-doc-merger) |
-| 100 | Printable parent reading report — one page per student, batch-printed for conferences | 033 | ½ | | [033 Silent Reading (SSR) Log Tracker](#033--silent-reading-ssr-log-tracker) |
-| 101 | Per-question item analysis — chart which questions the class missed, print a reteach priority list | 037 | ½ | | [037 Grade Distribution Visualizer](#037--grade-distribution-visualizer) |
-| 102 | Chart annotation layer — arrows, text callouts and shaded regions so a printed figure makes an argument | 038 | ½ | | [038 Data Table → Chart Builder](#038--data-table--chart-builder) |
-| 103 | Conjugation pattern engine — generate the full regular table from an infinitive and verb class | 039 | ½ | | [039 Vocab & Conjugation Drill Generator](#039--vocab--conjugation-drill-generator) |
-| 104 | Local math notation renderer — fractions, radicals, exponents, subscripts, Greek letters | 041 | ½ | | [041 Formula Reference Sheet Builder](#041--formula-reference-sheet-builder) |
-| 105 | Templates as data — layout, fonts, borders and colors as template objects, so new designs need no code | 042 | ½ | | [042 Certificate & Award Maker](#042--certificate--award-maker) |
-| 106 | Evergreen emergency binder — date-independent sections only, with a staleness reminder | 045 | ½ | | [045 Sub Binder / Day Bundle Generator](#045--sub-binder--day-bundle-generator) |
-| 107 | Rubric-scored critique variant — an optional per-step point scale and teacher score column | 047 | ½ | | [047 Art Critique Worksheet Generator](#047--art-critique-worksheet-generator) |
-| 108 | Bulk photo import — a whole folder at once, downscaled and auto-matched by filename | 048 | ½ | | [048 Student Art Portfolio Label & QR Tag Maker](#048--student-art-portfolio-label--qr-tag-maker) |
-| 109 | Spreadsheet book-list import via the shared SheetJS build, with a genre-balance warning | 049 | ½ | | [049 Book Tasting Menu Generator](#049--book-tasting-menu-generator) |
-| 110 | Teacher-recorded audio fallback via MediaRecorder, so labels work with no target-language voice | 051 | ½ | | [051 Classroom Label Maker (Target Language)](#051--classroom-label-maker-target-language) |
-| 111 | Practice worksheet variants — matching, fill-in-the-blank and "trap or true cognate" with answer keys | 052 | ½ | | [052 Cognates & False Friends Reference List Builder](#052--cognates--false-friends-reference-list-builder) |
-| 112 | Export into Review Game Board — emit the question set in the board’s category/points format | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
-| 113 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
-| 114 | Visual branching tree view, printable as a one-page overview alongside the numbered key | 057 | ½ | | [057 Dichotomous Key Builder](#057--dichotomous-key-builder) |
-| 115 | Multi-week rotating schedule — derive week N+1 by shifting each person one duty; print a month | 058 | ½ | | [058 Duty Roster Builder](#058--duty-roster-builder) |
-| 116 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
-| 117 | Per-student report cards — one page per student across all events and dates, with the class average | 060 | ½ | | [060 Fitness & Skill Assessment Tracker](#060--fitness--skill-assessment-tracker) |
-| 118 | Improper, mixed and negative values — extend operand generation past 0–1 | 061 | ½ | | [061 Fraction–Decimal–Percent Conversion Drill Generator](#061--fractiondecimalpercent-conversion-drill-generator) |
-| 119 | Multiple saved custom stories — named multi-save for templates plus their word banks | 063 | ½ | | [063 Grammar Mad Libs Generator](#063--grammar-mad-libs-generator) |
-| 120 | Pre-lab and post-lab packet split from one saved template | 065 | ½ | | [065 Lab Report Template Builder](#065--lab-report-template-builder) |
-| 121 | Bulk import a custom bank — paste problem/work/fix/explain rows for a whole unit | 066 | ½ | | [066 Math "Find the Mistake" Warm-Up Generator](#066--math-find-the-mistake-warm-up-generator) |
-| 122 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
-| 123 | Conference print packet — one student’s full contact history plus a blank note area | 068 | ½ | | [068 Parent/Guardian Contact Log](#068--parentguardian-contact-log) |
-| 124 | Live circuit rotation timer — a projector mode that counts down each station and signals the rotation | 069 | ½ | | [069 PE Warm-Up Circuit Card Generator](#069--pe-warm-up-circuit-card-generator) |
-| 125 | Roster-driven pre-named half-sheets — read `np_rosters` and print one per student | 070 | ½ | | [070 Peer Feedback / Editing Checklist Generator](#070--peer-feedback--editing-checklist-generator) |
-| 126 | Multiple named saved image sets, so two vocabulary libraries coexist without re-uploading | 071 | ½ | | [071 Picture-Prompt Speaking/Writing Task Generator](#071--picture-prompt-speakingwriting-task-generator) |
-| 127 | Share a diagram by link, so the same novel’s diagram moves between class periods | 072 | ½ | | [072 Story Elements / Plot Diagram Builder](#072--story-elements--plot-diagram-builder) |
-| 128 | Multiple named saved trackers — one per class period’s science-fair cohort | 073 | ½ | | [073 Science Fair Project Tracker](#073--science-fair-project-tracker) |
-| 129 | Two symbols per label — across the edit form, duplicate logic and the printed card | 074 | ½ | | [074 Science Safety Symbol & Equipment Label Maker](#074--science-safety-symbol--equipment-label-maker) |
-| 130 | Wallet-card layout with QR — a lanyard insert with a phone or email link per entry | 075 | ½ | | [075 Staff Directory / Quick-Reference Builder](#075--staff-directory--quick-reference-builder) |
-| 131 | Room-assignment view — define rooms and proctors, auto-route by accommodation, print proctor lists | 077 | ½ | | [077 Testing Accommodations Reference Card Generator](#077--testing-accommodations-reference-card-generator) |
-| 132 | Multiple named saved prompt sets — a general slip, a lab-day slip and a testing-day slip at once | 076 | ½ | | [076 Sub Note / Feedback Slip Generator](#076--sub-note--feedback-slip-generator) |
-| 133 | Named saves plus reorder and share — group and line reordering and a state-link share URL | 078 | ½ | | [078 Unit Conversion Reference Chart Builder](#078--unit-conversion-reference-chart-builder) |
-| 134 | Irregular verb call-out boxes — three to five common irregulars per tense | 079 | ½ | | [079 Verb Conjugation Reference Poster Generator](#079--verb-conjugation-reference-poster-generator) |
-| 135 | Two-step word problems — chained-operation templates for the upper grade band | 081 | ½ | | [081 Word Problem Warm-Up Generator](#081--word-problem-warm-up-generator) |
-| 136 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
-| 137 | Roles built into a group; project-team mode; a pair-history that spans the year | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
-| 138 | Peer review mode; rubric handoff to the grades tools | 003 | ½ | | [003 Rubric Builder](#003--rubric-builder) |
-| 139 | Bell-schedule awareness; a multi-timer board; a reconnecting mirror | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
-| 140 | A constraint solver worth the name; the room, not the grid | 005 | ½ | | [005 Seating Chart Generator](#005--seating-chart-generator) |
-| 141 | Bulk operations across rosters | 006 | ½ | | [006 Class Roster Hub](#006--class-roster-hub) |
-| 142 | `prefers-reduced-motion` respect; equity across weeks and periods | 007 | ½ | | [007 Name Picker](#007--name-picker) |
-| 143 | Team / house points; longitudinal reports | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
-| 144 | Restore preview / diff; per-record conflict resolution | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
-| 145 | Reuse the real timer; period-aware auto-advance | 010 | ½ | | [010 Command Center](#010--command-center) |
-| 146 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
-| 147 | More grid types; number-line variants | 012 | ½ | | [012 Graph Paper & Number Line Generator](#012--graph-paper--number-line-generator) |
-| 148 | Date-received per student; contract-gate reporting | 013 | ½ | | [013 Lab Safety Contract Tracker](#013--lab-safety-contract-tracker) |
-| 149 | Printed ordering activity; blanking dates, not just titles | 015 | ½ | | [015 Timeline Builder](#015--timeline-builder) |
-| 150 | A label under each code; batch codes from a spreadsheet | 016 | ½ | | [016 QR Code Generator](#016--qr-code-generator) |
-| 151 | Peer feedback slips; gallery-walk reactions | 017 | ½ | | [017 Gallery Walk QR Codes](#017--gallery-walk-qr-codes) |
-| 152 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
-| 153 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
-| 154 | Team names with members; a loser’s-side consolation bracket | 020 | ½ | | [020 Bracket / Tournament Generator](#020--bracket--tournament-generator) |
-| 155 | Uneven groups and stations; a shared rotation engine | 021 | ½ | | [021 Tournament Bracket & Station Rotation (PE)](#021--tournament-bracket--station-rotation-pe) |
-| 156 | Lock a group or a role and reshuffle the rest | 022 | ½ | | [022 Lab Group & Role Randomizer](#022--lab-group--role-randomizer) |
-| 157 | Name and date lines on the slips; response collection questions | 023 | ½ | | [023 Exit Ticket / Bell Ringer Generator](#023--exit-ticket--bell-ringer-generator) |
-| 158 | Draw on a strategy card; a shared stage | 024 | ½ | | [024 Number Talks / Mental Math Routine Board](#024--number-talks--mental-math-routine-board) |
-| 159 | Sentence starters and an "if you’re stuck" line | 025 | ½ | | [025 Writing Prompt Generator](#025--writing-prompt-generator) |
-| 160 | Fraction multiply/divide, exponents and one-step equations | 026 | ½ | | [026 Math Fact Drill Sheet Generator](#026--math-fact-drill-sheet-generator) |
-| 161 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
-| 162 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
-| 163 | Projector styling; the site-wide question bank | 030 | ½ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
-| 164 | Week-at-a-glance print; year-grid A/B badges | 032 | ½ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
-| 165 | "Where is this student right now?"; the published pathfinder | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
-| 166 | Split the file; accessibility routing | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
-| 167 | Scenario modelling — drop lowest, curve, re-weight | 036 | ½ | | [036 Final Grade Checker](#036--final-grade-checker) |
-| 168 | Image on a card; the Frayer model page | 040 | ½ | | [040 Vocabulary Flashcard & Word Wall Generator](#040--vocabulary-flashcard--word-wall-generator) |
-| 169 | A second language version; trip-day rosters | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
-| 170 | Seating chart and roster references by name | 044 | ½ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
-| 171 | Time-slice maps; live vectors | 046 | ½ | | [046 Blank Map Generator](#046--blank-map-generator) |
-| 172 | A per-simulation roster memory | 050 | ½ | | [050 Government/Civics Simulation Role Card Generator](#050--governmentcivics-simulation-role-card-generator) |
-| 173 | A bank of saved generic question sets beyond the six built-ins | 054 | ½ | | [054 Current Events Discussion Guide Generator](#054--current-events-discussion-guide-generator) |
-| 174 | The reverse direction of the 028 pairing — pull a source out of 028’s library | 056 | ½ | | [056 DBQ / Source Packet Builder](#056--dbq--source-packet-builder) |
-| 175 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
-| 176 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
-| 177 | Snap-to-grid for base-ten blocks; export and data-driven piece families | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
+| 1 | Path 5 P4 — **034 gets a native dark palette.** Two of the row's three parts are already done and this row now says so: `index.html` has had a native dark palette since P1, and the offline-copy generator's "stale theme-link pattern" **is not stale** — `sanitizeEntryPoint()`'s two hardcoded strings still match `index.html` exactly (1 theme-switch link, 3 ideas-backlog links, measured 2026-09-07) and `assertExactlyOne()` fails loudly the day either drifts, so there is nothing to re-check. What is left is 034, and #227 surveyed it without starting it, because it is much more than "one more palette page". Six things a session should not rediscover: **(a)** 034 is **not** a clean publish of 035's `BR_CSS` — the two have drifted by ~109 diff lines (personal notes, the copy/share buttons, `.gchip.active`, substitute coverage), so the dark block goes into **both**, independently, and `Tools/schedule/README.md` should record that beside its social-block note; **(b)** a *published* standalone file has no `_shared/` folder next to it, so `BR_CSS` must key its dark tokens on **both** `[data-theme="dark"]` (the committed site copy, once it links `a11y.js` with `A11Y_NATIVE_THEME = true`) and `@media (prefers-color-scheme: dark)` (the file a teacher emails), plus a `@media print` reset like ink-paper's; **(c)** `--br-forest` is used as a **fill and as ink** — 10 `background:` uses against 24 `color:`/border uses — so it must split into `--br-forest` and `--br-forest-ink` before any dark value can exist; **(d)** the **five department hues all fail as text on a dark card** — measured `--br-ss` 2.39:1, `--br-scsi` 2.80:1, `--br-ela` 3.21:1, `--br-sci` 3.24:1, `--br-math` 3.56:1 on `#1a201c`, against 4.66–6.94:1 on white — and they are written from *script* into `style="color:${col}"` by `brDColor()`, so no CSS token override reaches them; they need an ink sibling; **(e)** 034's script hardcodes `style="color:#62756a"` — `--br-muted`'s **light** value — in **four** places, which is #214's inline-style finding again and a bug worth fixing on its own; **(f)** the floor plan, the mini-map and the `.rcell.ctx` SVG rules should keep a **light mat in both themes** (#225's rule — the room fills are department hues at a `fill-opacity` tuned for a light ground, and the map is the thing that gets printed), which takes ~10 literals out of the job. A dark palette that measures clean is in `HISTORY.md`; worst pair 4.85:1 | 034 | 1 | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
+| 2 | Path 6 P2 — adopt the share sheet in the 17 existing `state-link` tools | site | 2+ | | [Path 6](#path-6--share-everywhere) |
+| 3 | Path 6 P3 — extend sharing to the ~11 builders that do not share yet | site | 2+ | | [Path 6](#path-6--share-everywhere) |
+| 4 | Path 6 P4 — cross-tool "Send to…" driven by the tool registry | site | 1 | | [Path 6](#path-6--share-everywhere) |
+| 5 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js` (005 photos first) | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 6 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 7 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 8 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 9 | The contrast round — the 21 remaining `color-contrast` allowances. **After Path 5 P3, not before.** | site | 1–2 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 10 | Light `--line-strong` misses the 3:1 WCAG 1.4.11 control-border ask. The axe sweep will never surface it | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 11 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 12 | Two pages load `_shared/a11y.js` **and** `_shared/a11y.css` twice — 014 and 033, found by a `git ls-files` sweep during #202, which fixed the third (039). Removing a duplicate is a cascade decision per page: the late `a11y.css` copy is the one winning ties today, and the early `a11y.js` is what keeps the theme off the first paint. **Both pages have now been converted to native dark without touching this** (014 in #210, 033 in #218) — the `A11Y_NATIVE_THEME` flag is read by both loads, so opting in is correct either way, which is why nine increments have walked past it | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 13 | `check:entities` cannot see an HTML entity that lives in a **data array** and reaches a text sink through a variable. #208 found 055 projecting a literal `&rsquo;` on the board since the tool shipped — the entity is in a `BUILTIN[]` row and the sink is `item.broken`, so the guard counted it among the 325 "strings whose sink is not visible statically" and passed. Follow a literal from an array/object initialiser to the sink its element is written to, at least single-hop, and re-baseline the 325 (**312 as of #216**). **Start with the free half of this row:** #216 found four more in that same bucket — 065 printing `&mdash;` on every lab packet and 057 doing it three times — all of the form `escapeHtml('&mdash;')`, which escapes the `&` and renders the entity as text. **An entity in a string argument of `escapeHtml`/`escapeAttr` is wrong wherever the sink is**, so that rule needs no dataflow at all and would have caught every one of the four | `Tools/board-check/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 14 | The site-wide axe sweep opens every page with **empty storage**, so any UI that only renders once something is saved is scanned nowhere — and, since #225, that is the narrow statement of the problem: 046's `#scaleBarUnitSelect` is `hidden` until a *toolbar toggle* is pressed **over a calibrated map**, and no seeded key would have revealed it. **Ten increments, ten instances, every one a serious-or-critical violation shipped in *light*:** 009 (#202), 075 (#206), 077 (#210, 21 unnamed controls with no allowlist line at all), 073 (#212, 18 unnamed checkboxes, also with no line), 068 (#214, a `link-in-text-block` on every roster row), 037 (#216, white label text on the C segment of the stacked bar at 3.41:1), 027 (#218, four group-name inputs with no accessible name at all), #221 on four pages at once (003's class-grid selects, 030's team-name inputs and `#boardSwitch`, 043's roster and chaperone selects, 042's roster select), #225's `select-name` above, and #227's 001 — `.proj-note` at 3.98:1 on the projector board, which the whole `display:none` Projector View hides. **#227 is also the first instance found by a *suite* rather than by a page conversion**, and that is the answer to this row's own "the free evidence is spent": `harness.mjs` already exports `a11yScan(page, {include})`, so any suite that preps a page into a state can scan that state for nothing extra — 001's came out of the stage suite's on-stage scan, which exists to check a *different* claim. Give `smoke-a11y-sweep.mjs` a per-page seed — a small fixture of localStorage keys, taken from `_shared/tool-registry.js`, written before the page loads — and re-baseline; then decide what to do about the states a seed cannot reach, because that is now a named half of the row rather than a guess. **Path 5 P3 is over, so no more will arrive from palette rounds — but #227 shows they arrive from any suite that drives a page into a state, at no extra cost.** Two measurements worth reusing: **#221 scanned all six of its pages unprepped and they came back clean**, which is how you prove a finding is invisible to the sweep rather than merely new; and the recurring shape is a control whose **visible name is its own value** (027's groups, 030's teams, 046's km/mi select), which cannot label itself and needs an `aria-label` naming its position or its row and column | `Tools/a11y-sweep/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 15 | Path 7 P1 — `_shared/print-kit.css` + `print-kit.js`; the ink-safe utility set | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
+| 16 | Path 7 P2 — print reliability audit across the 63 hand-written `@media print` blocks | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 17 | Path 7 P3 — adoption: the class-set/blank tools, then the card-grid tools | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 18 | Path 7 P4 — `_shared/export.js`: `toPdf`, `toCsv/xlsx`, `toZip`, booklet/N-up imposition | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 19 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
+| 20 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
+| 21 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
+| 22 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
+| 23 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
+| 24 | Path 9 P1 — bell schedules per day type in 032 + `_shared/school-day.js` | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
+| 25 | Path 9 P2 — pacing that recomputes around lost days | 032 | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
+| 26 | Path 9 P3 — consumers: 004, 010, 001, 036/037, 044/045, 032 itself | site | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
+| 27 | Path 9 P4 — `.ics` import/export and a one-page year wall calendar print | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
+| 28 | Path 10 P1 — Packet Builder `087` with the section-provider registry | 087 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
+| 29 | Path 10 P2 — 045 re-based on the providers; its six raw key reads go away | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
+| 30 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
+| 31 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
+| 32 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
+| 33 | Path 11 P1 — publisher drift guard before any extraction | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 34 | Path 11 P2 — extract the pure engines; target the HTML under ~300 KB | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 35 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 36 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 37 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 38 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 39 | Path 12 P1 — `_shared/question-bank.js` with 030 as the front door | `_shared/` | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 40 | Path 12 P2 — read-side adopters: 053, 062, 040, 018, 019, 020 | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 41 | Path 12 P3 — play modes in 030: every-team-answers, quiz-bowl, wheel, final wager, printed quiz | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 42 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 43 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
+| 44 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
+| 45 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
+| 46 | Path 13 P4 — bracket completeness: double elimination, pools, Swiss, ties, consolation | 020 | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
+| 47 | Path 14 P3 — seating constraint solver that explains which soft constraints it broke | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
+| 48 | Path 14 P4 — the room, not the grid: a room layer shared across period assignments | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
+| 49 | Path 14 P5 — live mode; extract the undo stack into `_shared/undo.js` | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
+| 50 | Path 15 P1 — split Name Picker: themes as data, sound, one module per pick mode | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
+| 51 | Path 15 P2 — per-day history rollup keyed on student ids | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
+| 52 | Path 15 P3 — equity dashboard across weeks and periods, printed as one page | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
+| 53 | Path 15 P4 — question-attached picks | 007 | ½ | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
+| 54 | Path 15 P5 — artifacts and remotes: hand off to grouping and the bracket; theme packs as JSON | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
+| 55 | Path 16 P1 — `_shared/chart-svg.js` with 037’s accessibility patterns; 038 gets the a11y baseline | `_shared/` | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
+| 56 | Path 16 P2 — `_shared/paste-table.js`, one parser for pasted spreadsheet regions | `_shared/` | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
+| 57 | Path 16 P3 — per-question item analysis in 037 and a printed reteach priority list | 037 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
+| 58 | Path 16 P4 — 036 modelling: term count, scenario modelling, grading window, roster join | 036 | 2+ | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
+| 59 | Path 16 P5 — 038 for science: regression, log axes, annotation layer, handoffs to 065 and 073 | 038 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
+| 60 | Path 17 P1 — thumbnail-grid reordering, crop/straighten, real-photo validation of the retry presets | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
+| 61 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
+| 62 | Path 17 P3 — PDF in: vendor `pdf.js`, merge/insert/extract/rotate existing PDFs | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
+| 63 | Path 17 P4 — imposition: booklet order, N-up with cut marks, two-sided presets | `_shared/` | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
+| 64 | Path 17 P5 — OCR, decision first: a vendored Tesseract build against the offline promise | 011 | ½ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
+| 65 | Path 18 P1 — one station/room/hunt schema both 018 and 019 can read, with stable station ids | `_shared/` | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
+| 66 | Path 18 P2 — both tools on the schema, plus the payload budget and a printed short-code fallback | 018 | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
+| 67 | Path 18 P3 — feature parity between 018 and 019; questions from the bank | 019 | 2+ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
+| 68 | Path 18 P4 — the debrief print: per-team path, time per station, misses, reflection page | 019 | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
+| 69 | Path 18 P5 — decide the product: two entry points on one engine, or one tool with a mode switch | 018 | ¼ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
+| 70 | Path 19 P1 — `_shared/word-list.js`, owned by a Word Lists hub inside 040 | `_shared/` | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
+| 71 | Path 19 P2 — adopters: 040, 039, 014, 027, 051, 052; delete `vfg-conjdrill-link.js` | site | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
+| 72 | Path 19 P3 — conjugation pattern engine for Spanish and French, with irregular overrides | 039 | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
+| 73 | Path 19 P4 — printables: Frayer page, spaced repetition, fill-in-the-blank, word wall as a system | 040 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
+| 74 | Path 19 P5 — audio: TTS on study mode, teacher-recorded pronunciations into the media store | 051 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
+| 75 | Path 20 P1 — `_shared/geo-project.js` + `traceFeature`, hit-test and the curriculum gazetteer | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
+| 76 | Path 20 P2 — dropped GeoJSON/TopoJSON as a base map | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
+| 77 | Path 20 P3 — live vector viewer, keeping the raster path for poster export | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
+| 78 | Path 20 P4 — time slices for annotations; two-way selective handoff with 015 | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
+| 79 | Path 20 P5 — quiz memory across sessions; decide the Wikimedia network question | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
+| 80 | Track B1 — brand engine in `a11y.js`: school accent and logo, pre-paint, with an opt-out flag | `_shared/` | 1 | | [Track B](#track-b--custom-theme--branding-pass) |
+| 81 | Track B2 — school-branding settings UI in the a11y widget, with a contrast warning | `_shared/` | 1 | | [Track B](#track-b--custom-theme--branding-pass) |
+| 82 | Track V1 — `_shared/voice.js` (opt-in, push-to-talk, disclosed) + Name Picker commands | `_shared/` | 1 | | [Track V](#track-v--voice-command-input) |
+| 83 | Track V2 — voice commands in 008 Behavior & Points Tracker | 008 | ½ | | [Track V](#track-v--voice-command-input) |
+| 84 | Shared-baseline adoption sweep: 9 tools skip `a11y.*`, 15 skip `ink-paper.css`, 18 skip `base.css` | site | 1–2 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 85 | First-run "Load sample data" across the tools that open to an empty form (P15) | site | 2+ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 86 | Phone-sized layout pass beyond 005 — cap or collapse oversized toolbars site-wide | site | 1–2 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 87 | `assets/fonts/` — five `@font-face` files `ideas-backlog.html` declares were never committed | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 88 | `Tools/seating-chart/fonts/*.woff2` (~167 KB, three faces) are unreferenced and unprecached | 005 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 89 | Delete the four dead, unlinked trees: `index_backup.html`, `Tools/Old Designs/`, `Tools/New Designs/`, `Other Landing Page ideas/` (~590 KB) | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 90 | Next `base.css` dedupe candidates: `.app-header h1`, `.app-header .sub`, `.back-link`, `.card h2` | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 91 | `_shared/levels.js` — one home for Academic / Honors / Honors GT and the level footer tag | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 92 | A shared plain-language social-studies glossary (056 ships ~60 entries; 028 and 040 want the same) | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 93 | `regionGroupCaption()` — one list-to-sentence formatter the whole site agrees on | `_shared/` | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 94 | Data-driven `index.html` — 86 hand-written rows and three hand-maintained counts | site | 1 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 95 | Wiki Race (086): teacher scoreboard from finish codes, an offline corpus mode, a Node suite for the seed logic | 086 | 1 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 96 | Speaking assessment layer — a short rubric per pair while circulating, stored per class, printed as a per-student speaking record | 014 | ½ | | [014 Immersion Roleplay Scenario Generator](#014--immersion-roleplay-scenario-generator) |
+| 97 | Task-organized prompt library — grouped by teaching task, each entry loading a full form state | 029 | ½ | | [029 Prompt Builder](#029--prompt-builder) |
+| 98 | Cover page, headers, and page numbers across the merged document | 031 | ½ | | [031 Word Doc Merger](#031--word-doc-merger) |
+| 99 | Printable parent reading report — one page per student, batch-printed for conferences | 033 | ½ | | [033 Silent Reading (SSR) Log Tracker](#033--silent-reading-ssr-log-tracker) |
+| 100 | Per-question item analysis — chart which questions the class missed, print a reteach priority list | 037 | ½ | | [037 Grade Distribution Visualizer](#037--grade-distribution-visualizer) |
+| 101 | Chart annotation layer — arrows, text callouts and shaded regions so a printed figure makes an argument | 038 | ½ | | [038 Data Table → Chart Builder](#038--data-table--chart-builder) |
+| 102 | Conjugation pattern engine — generate the full regular table from an infinitive and verb class | 039 | ½ | | [039 Vocab & Conjugation Drill Generator](#039--vocab--conjugation-drill-generator) |
+| 103 | Local math notation renderer — fractions, radicals, exponents, subscripts, Greek letters | 041 | ½ | | [041 Formula Reference Sheet Builder](#041--formula-reference-sheet-builder) |
+| 104 | Templates as data — layout, fonts, borders and colors as template objects, so new designs need no code | 042 | ½ | | [042 Certificate & Award Maker](#042--certificate--award-maker) |
+| 105 | Evergreen emergency binder — date-independent sections only, with a staleness reminder | 045 | ½ | | [045 Sub Binder / Day Bundle Generator](#045--sub-binder--day-bundle-generator) |
+| 106 | Rubric-scored critique variant — an optional per-step point scale and teacher score column | 047 | ½ | | [047 Art Critique Worksheet Generator](#047--art-critique-worksheet-generator) |
+| 107 | Bulk photo import — a whole folder at once, downscaled and auto-matched by filename | 048 | ½ | | [048 Student Art Portfolio Label & QR Tag Maker](#048--student-art-portfolio-label--qr-tag-maker) |
+| 108 | Spreadsheet book-list import via the shared SheetJS build, with a genre-balance warning | 049 | ½ | | [049 Book Tasting Menu Generator](#049--book-tasting-menu-generator) |
+| 109 | Teacher-recorded audio fallback via MediaRecorder, so labels work with no target-language voice | 051 | ½ | | [051 Classroom Label Maker (Target Language)](#051--classroom-label-maker-target-language) |
+| 110 | Practice worksheet variants — matching, fill-in-the-blank and "trap or true cognate" with answer keys | 052 | ½ | | [052 Cognates & False Friends Reference List Builder](#052--cognates--false-friends-reference-list-builder) |
+| 111 | Export into Review Game Board — emit the question set in the board’s category/points format | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
+| 112 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
+| 113 | Visual branching tree view, printable as a one-page overview alongside the numbered key | 057 | ½ | | [057 Dichotomous Key Builder](#057--dichotomous-key-builder) |
+| 114 | Multi-week rotating schedule — derive week N+1 by shifting each person one duty; print a month | 058 | ½ | | [058 Duty Roster Builder](#058--duty-roster-builder) |
+| 115 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
+| 116 | Per-student report cards — one page per student across all events and dates, with the class average | 060 | ½ | | [060 Fitness & Skill Assessment Tracker](#060--fitness--skill-assessment-tracker) |
+| 117 | Improper, mixed and negative values — extend operand generation past 0–1 | 061 | ½ | | [061 Fraction–Decimal–Percent Conversion Drill Generator](#061--fractiondecimalpercent-conversion-drill-generator) |
+| 118 | Multiple saved custom stories — named multi-save for templates plus their word banks | 063 | ½ | | [063 Grammar Mad Libs Generator](#063--grammar-mad-libs-generator) |
+| 119 | Pre-lab and post-lab packet split from one saved template | 065 | ½ | | [065 Lab Report Template Builder](#065--lab-report-template-builder) |
+| 120 | Bulk import a custom bank — paste problem/work/fix/explain rows for a whole unit | 066 | ½ | | [066 Math "Find the Mistake" Warm-Up Generator](#066--math-find-the-mistake-warm-up-generator) |
+| 121 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
+| 122 | Conference print packet — one student’s full contact history plus a blank note area | 068 | ½ | | [068 Parent/Guardian Contact Log](#068--parentguardian-contact-log) |
+| 123 | Live circuit rotation timer — a projector mode that counts down each station and signals the rotation | 069 | ½ | | [069 PE Warm-Up Circuit Card Generator](#069--pe-warm-up-circuit-card-generator) |
+| 124 | Roster-driven pre-named half-sheets — read `np_rosters` and print one per student | 070 | ½ | | [070 Peer Feedback / Editing Checklist Generator](#070--peer-feedback--editing-checklist-generator) |
+| 125 | Multiple named saved image sets, so two vocabulary libraries coexist without re-uploading | 071 | ½ | | [071 Picture-Prompt Speaking/Writing Task Generator](#071--picture-prompt-speakingwriting-task-generator) |
+| 126 | Share a diagram by link, so the same novel’s diagram moves between class periods | 072 | ½ | | [072 Story Elements / Plot Diagram Builder](#072--story-elements--plot-diagram-builder) |
+| 127 | Multiple named saved trackers — one per class period’s science-fair cohort | 073 | ½ | | [073 Science Fair Project Tracker](#073--science-fair-project-tracker) |
+| 128 | Two symbols per label — across the edit form, duplicate logic and the printed card | 074 | ½ | | [074 Science Safety Symbol & Equipment Label Maker](#074--science-safety-symbol--equipment-label-maker) |
+| 129 | Wallet-card layout with QR — a lanyard insert with a phone or email link per entry | 075 | ½ | | [075 Staff Directory / Quick-Reference Builder](#075--staff-directory--quick-reference-builder) |
+| 130 | Room-assignment view — define rooms and proctors, auto-route by accommodation, print proctor lists | 077 | ½ | | [077 Testing Accommodations Reference Card Generator](#077--testing-accommodations-reference-card-generator) |
+| 131 | Multiple named saved prompt sets — a general slip, a lab-day slip and a testing-day slip at once | 076 | ½ | | [076 Sub Note / Feedback Slip Generator](#076--sub-note--feedback-slip-generator) |
+| 132 | Named saves plus reorder and share — group and line reordering and a state-link share URL | 078 | ½ | | [078 Unit Conversion Reference Chart Builder](#078--unit-conversion-reference-chart-builder) |
+| 133 | Irregular verb call-out boxes — three to five common irregulars per tense | 079 | ½ | | [079 Verb Conjugation Reference Poster Generator](#079--verb-conjugation-reference-poster-generator) |
+| 134 | Two-step word problems — chained-operation templates for the upper grade band | 081 | ½ | | [081 Word Problem Warm-Up Generator](#081--word-problem-warm-up-generator) |
+| 135 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
+| 136 | Roles built into a group; project-team mode; a pair-history that spans the year | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
+| 137 | Peer review mode; rubric handoff to the grades tools | 003 | ½ | | [003 Rubric Builder](#003--rubric-builder) |
+| 138 | Bell-schedule awareness; a multi-timer board; a reconnecting mirror | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
+| 139 | A constraint solver worth the name; the room, not the grid | 005 | ½ | | [005 Seating Chart Generator](#005--seating-chart-generator) |
+| 140 | Bulk operations across rosters | 006 | ½ | | [006 Class Roster Hub](#006--class-roster-hub) |
+| 141 | `prefers-reduced-motion` respect; equity across weeks and periods | 007 | ½ | | [007 Name Picker](#007--name-picker) |
+| 142 | Team / house points; longitudinal reports | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
+| 143 | Restore preview / diff; per-record conflict resolution | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
+| 144 | Reuse the real timer; period-aware auto-advance | 010 | ½ | | [010 Command Center](#010--command-center) |
+| 145 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
+| 146 | More grid types; number-line variants | 012 | ½ | | [012 Graph Paper & Number Line Generator](#012--graph-paper--number-line-generator) |
+| 147 | Date-received per student; contract-gate reporting | 013 | ½ | | [013 Lab Safety Contract Tracker](#013--lab-safety-contract-tracker) |
+| 148 | Printed ordering activity; blanking dates, not just titles | 015 | ½ | | [015 Timeline Builder](#015--timeline-builder) |
+| 149 | A label under each code; batch codes from a spreadsheet | 016 | ½ | | [016 QR Code Generator](#016--qr-code-generator) |
+| 150 | Peer feedback slips; gallery-walk reactions | 017 | ½ | | [017 Gallery Walk QR Codes](#017--gallery-walk-qr-codes) |
+| 151 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
+| 152 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
+| 153 | Team names with members; a loser’s-side consolation bracket | 020 | ½ | | [020 Bracket / Tournament Generator](#020--bracket--tournament-generator) |
+| 154 | Uneven groups and stations; a shared rotation engine | 021 | ½ | | [021 Tournament Bracket & Station Rotation (PE)](#021--tournament-bracket--station-rotation-pe) |
+| 155 | Lock a group or a role and reshuffle the rest | 022 | ½ | | [022 Lab Group & Role Randomizer](#022--lab-group--role-randomizer) |
+| 156 | Name and date lines on the slips; response collection questions | 023 | ½ | | [023 Exit Ticket / Bell Ringer Generator](#023--exit-ticket--bell-ringer-generator) |
+| 157 | Draw on a strategy card; a shared stage | 024 | ½ | | [024 Number Talks / Mental Math Routine Board](#024--number-talks--mental-math-routine-board) |
+| 158 | Sentence starters and an "if you’re stuck" line | 025 | ½ | | [025 Writing Prompt Generator](#025--writing-prompt-generator) |
+| 159 | Fraction multiply/divide, exponents and one-step equations | 026 | ½ | | [026 Math Fact Drill Sheet Generator](#026--math-fact-drill-sheet-generator) |
+| 160 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
+| 161 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
+| 162 | Projector styling; the site-wide question bank | 030 | ½ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
+| 163 | Week-at-a-glance print; year-grid A/B badges | 032 | ½ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
+| 164 | "Where is this student right now?"; the published pathfinder | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
+| 165 | Split the file; accessibility routing | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
+| 166 | Scenario modelling — drop lowest, curve, re-weight | 036 | ½ | | [036 Final Grade Checker](#036--final-grade-checker) |
+| 167 | Image on a card; the Frayer model page | 040 | ½ | | [040 Vocabulary Flashcard & Word Wall Generator](#040--vocabulary-flashcard--word-wall-generator) |
+| 168 | A second language version; trip-day rosters | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
+| 169 | Seating chart and roster references by name | 044 | ½ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
+| 170 | Time-slice maps; live vectors | 046 | ½ | | [046 Blank Map Generator](#046--blank-map-generator) |
+| 171 | A per-simulation roster memory | 050 | ½ | | [050 Government/Civics Simulation Role Card Generator](#050--governmentcivics-simulation-role-card-generator) |
+| 172 | A bank of saved generic question sets beyond the six built-ins | 054 | ½ | | [054 Current Events Discussion Guide Generator](#054--current-events-discussion-guide-generator) |
+| 173 | The reverse direction of the 028 pairing — pull a source out of 028’s library | 056 | ½ | | [056 DBQ / Source Packet Builder](#056--dbq--source-packet-builder) |
+| 174 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
+| 175 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
+| 176 | Snap-to-grid for base-ten blocks; export and data-driven piece families | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
 
 ## How to work this list
 
@@ -1886,7 +1906,7 @@ simulation shows the explanatory message in every migrated tool.
 v147) with 024 as its single adopter, and **its rollout finished 2026-09-05 (#195, v153):
 021, 023 and 025 adopted too, so all four copies the P2 row named are gone and `stage.js`
 has four adopters.** The picker P3 needs, `npm run path5:next`, shipped in the same PR.
-P3 is **rank 1**; P4 is rank 2.
+**P3 is finished (#227).** P4 is rank 1.
 
 **Why.** `_shared/theme-toggle.js` is loaded by zero tools; the only dark mode
 teachers get is `a11y.js`'s CSS-filter invert, which shifts every hue and looks
@@ -1997,23 +2017,51 @@ subtree, so live controls must live inside it).
   shipped in light, the ninth instance of the sweep's blind spot and the first found **behind a
   toolbar toggle** rather than behind saved data, and it **deleted** `smoke-theme.mjs`'s
   filtered-page half rather than repointing it a third time.
-  **82 of 82 (100%). The palette work is finished and nothing is on the filter. 001 and 004 are
-  still the last two hand-rolled stages, and eleven increments running have added no stage at all** — 030 and 064 both
-  run a projector review game off a fixed `inset: 0` overlay rather than the Fullscreen API, which
-  is the closest either batch has come. Each converted page goes into `PAGES` in
-  `Tools/theme/test/smoke-dark-rollout.mjs` — more than once when the page shows one stage at a
-  time, as 053, 062, 080, 003 and 030 do.
-  **The palette half of this phase is closed; what the script still measures is the stage
-  rollout.** For the record, the batching rule while it ran: **take the batch from
+  **The stage rollout — and with it the whole phase — finished the same day (#227,
+  `CACHE_VERSION` v167).** 001's Projector View and 004's whole page were the last two hand-rolled
+  `requestFullscreen` calls on the site; `stage.js` is at **9** adopters and `path5:next` reports
+  **0**. Three things it settled that the row had left open. 001 is the shape where **the tool
+  keeps its own display state and the helper owns only the fullscreen half**: `show` stays the
+  tool's (the render loop and three callers test it), and because the stage element is
+  `display:none` until the tool shows it, `fullscreenKey: false` plus `f` in the hotkey map is
+  required — the helper's own key calls `enter()` straight out, and you cannot fullscreen a hidden
+  element. 004 is the shape where **`<body>` is the stage**: it fullscreened `<html>`, which no
+  mount can express. And both needed an id- or element-level `.is-fullscreen` rule, because the
+  helper's fallback rule is injected into `<head>` *after* the page's own `<style>` and paints
+  `var(--paper, #fff)` — a same-specificity override ties and loses on order, which would have put
+  a white board in front of the room.
+  **The one question this phase leaves open, written here because the ranked row is gone:** 030,
+  064 and 017 each run a projector surface off a fixed `inset: 0` overlay rather than the
+  Fullscreen API. Whether any of them should become a `Stage.mount` is a judgement call nobody has
+  made. And **007 hand-rolls `requestFullscreen` and loads no `a11y.js`**, so the picker cannot
+  see it at all; it needs a theme before it needs a stage.
+  **82 of 82 (100%) native, nothing on the filter, no hand-rolled stage among them.** Each
+  converted page went into `PAGES` in `Tools/theme/test/smoke-dark-rollout.mjs` — more than once
+  when the page shows one stage at a time, as 053, 062, 080, 003 and 030 do; the adopted stages
+  are driven in `Tools/stage/test/smoke-stage-rollout.mjs`, which since #227 names its stage by
+  **CSS selector** rather than by id, so a `<body>` mount can be driven at all.
+  For the record, the batching rule while the palette rounds ran: **take the batch from
   `npm run path5:next`, not from this list** — the script ranks by projector evidence and then by
   cost, and it contradicted the list in two places:
   004 has had a native palette since #167 (it is one of the nine), and 007 loads no
   `a11y.js` at all, so it cannot be given a theme until it does. The prose list, kept for
   its intent: 004, 007, 010, 030 (a projector-first tool with neither today), 001's
   projector view, 062, 064, 046's quiz mode, 055, 066, 081, 086. Batches of ~6.
-- **P4 — Landing page and hallway tools.** `index.html` already has a native dark
-  palette; 034 (a phone tool "that's always white") gets one too; the offline copy
-  generator's stale theme-link pattern is re-checked.
+- **P4 — Landing page and hallway tools. Rank 1, and two of its three parts are already
+  done — verified 2026-09-07 by #227, which surveyed the row without starting it.**
+  `index.html` has had a native `[data-theme="dark"]` palette and `A11Y_NATIVE_THEME = true`
+  since P1. The offline-copy generator's "stale theme-link pattern" **is not stale**:
+  `sanitizeEntryPoint()` in `Tools/board-check/make-offline-copy.mjs` hardcodes two strings
+  from `index.html` — the "Prefer a different look?" Inbox-edition link and the
+  `ideas-backlog.html` link — and both still match exactly (1 and 3 occurrences), with
+  `assertExactlyOne()` failing loudly the day the first one drifts. There is nothing to
+  re-check; the ranked row says so now so nobody re-derives it.
+  What is left is **034**, and the survey is in the ranked row in full. The headline: 034 is
+  **not** a clean publish of 035's `BR_CSS` (~109 diff lines apart), a published standalone
+  file has no `_shared/` beside it so the dark tokens must key on `prefers-color-scheme` as
+  well as `data-theme`, `--br-forest` is one name for ten fills and twenty-four ink uses, and
+  **the five department hues all fail as text on a dark card (2.39–3.56:1) while being written
+  from script into `style="color:${col}"`**, where no CSS token reaches them.
 
 **Model.** Opus. Sonnet for the rollout batches.
 
