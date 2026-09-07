@@ -15,6 +15,12 @@
 <meta name="twitter:title" content="Lab Report Template Builder — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Build a reusable lab report template — hypothesis, materials, procedure, data table, and conclusion prompts — from a topic starter or from scratch, and print a fillable packet for each lab.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M13 5v8l-6 11a2 2 0 002 3h10a2 2 0 002-3l-6-11V5' fill='none' stroke='%231f3550' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M11 5h6' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The print-preview modal shows the packet itself, so #previewBody carries
+     .paper-sheet and every #333/#555/#999/#eee on that packet stays paper.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -41,21 +47,21 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], input[type="number"], select, textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; min-height: 2.4rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   button.full { width: 100%; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
@@ -69,14 +75,19 @@
   .add-btn { margin-top: .2rem; }
 
   /* ---- saved templates toolbar ---- */
-  select#templateSwitch { width: 100%; font-family: inherit; font-size: .9rem; padding: .45rem .55rem; border: 1px solid var(--line-strong); border-radius: 6px; background: #fff; color: var(--ink); margin-bottom: .6rem; }
+  select#templateSwitch { width: 100%; font-family: inherit; font-size: .9rem; padding: .45rem .55rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--card); color: var(--ink); margin-bottom: .6rem; }
 
   /* ---- print preview modal ---- */
   .modal-overlay { position: fixed; inset: 0; background: rgba(20,20,15,.45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 1rem; }
-  .modal-box { background: #fff; width: 100%; max-width: 760px; max-height: 88vh; overflow: auto; border-radius: 10px; padding: 1.1rem 1.3rem; }
+  .modal-box { background: var(--card); width: 100%; max-width: 760px; max-height: 88vh; overflow: auto; border-radius: 10px; padding: 1.1rem 1.3rem; }
   .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .8rem; gap: .6rem; }
   .modal-header h2 { font-size: 1.15rem; margin: 0; }
-  .preview-sheet { background: #fff; border: 1px solid var(--line); padding: .9in .75in; }
+  /* The preview is a facsimile of the printed packet, so it is a sheet of
+     paper in both themes (.paper-sheet in the markup): white, with the light
+     tokens restored inside it. That is why the packet's own #333 rules, #555
+     name line, #999 fill lines and #eee table header are left as they are —
+     they are ink on paper, not chrome. */
+  .preview-sheet { background: var(--card); border: 1px solid var(--line); padding: .9in .75in; }
 
   .lab-title { font-size: 1.4rem; margin: 0 0 .1rem; }
   .lab-sub { color: #555; font-size: .82rem; margin: 0 0 1rem; }
@@ -210,7 +221,7 @@
         <button type="button" class="secondary" id="closePreviewBtn">Close</button>
       </div>
     </div>
-    <div id="previewBody" class="preview-sheet"></div>
+    <div id="previewBody" class="preview-sheet paper-sheet"></div>
   </div>
 </div>
 
@@ -587,7 +598,7 @@
     }).join('');
     return '<h1 class="lab-title">' + title + '</h1>' +
       '<p class="lab-sub">Name: __________________________ &nbsp; Date: __________ &nbsp; Period: ______</p>' +
-      '<div class="lab-section"><h3>Objective</h3><p style="font-size:.9rem;">' + escapeHtml(state.objective || '&mdash;') + '</p></div>' +
+      '<div class="lab-section"><h3>Objective</h3><p style="font-size:.9rem;">' + escapeHtml(state.objective || '—') + '</p></div>' +
       '<div class="lab-section"><h3>Hypothesis</h3><p style="font-size:.9rem;">' + escapeHtml(state.hypothesisPrompt) + '</p><span class="fill-line"></span><span class="fill-line"></span></div>' +
       '<div class="lab-section"><h3>Materials</h3>' + materials + '</div>' +
       '<div class="lab-section"><h3>Procedure</h3>' + procedure + '</div>' +
