@@ -227,9 +227,33 @@ const clickThemeSwitch = page => page.evaluate(() => {
   ok(luminance(pass.fg) < 0.3, `001: with dark ink on it (${pass.fg})`);
 
   // Printing is on paper too, whatever the screen is doing.
+  //
+  // Read the TOKENS, not just the body's painted colours. Until 2026-09-07
+  // this checked `body`'s background alone, and it passed for two months on a
+  // print reset that never fired: ink-paper.css's `:root[data-theme="dark"]`
+  // is (0,2,0) and its own screen dark block is (0,3,0), so the reset lost the
+  // cascade and every token stayed dark — while Chromium's print default
+  // painted the body white over the top and satisfied the assertion. Anything
+  // with `background: var(--card)` on it printed dark grey. This is the
+  // repo's recurring shape: a guard that measures the symptom the platform
+  // fixes for you, rather than the thing under test.
   await page.emulateMedia({ media: 'print' });
-  const printBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  ok(luminance(printBg) > 0.9, `001: printing from dark mode prints on white (${printBg})`);
+  const printed = await page.evaluate(() => {
+    const cs = getComputedStyle(document.documentElement);
+    return {
+      bodyBg: getComputedStyle(document.body).backgroundColor,
+      ink: cs.getPropertyValue('--ink').trim(),
+      card: cs.getPropertyValue('--card').trim(),
+      paper: cs.getPropertyValue('--paper').trim(),
+      lightInk: cs.getPropertyValue('--ink-light').trim(),
+      lightCard: cs.getPropertyValue('--card-light').trim(),
+      lightPaper: cs.getPropertyValue('--paper-light').trim(),
+    };
+  });
+  ok(luminance(printed.bodyBg) > 0.9, `001: printing from dark mode prints on white (${printed.bodyBg})`);
+  eq(printed.ink, printed.lightInk, '001: and --ink is back to its light value in print');
+  eq(printed.card, printed.lightCard, '001: and so is --card, which is what a card actually paints with');
+  eq(printed.paper, printed.lightPaper, '001: and --paper');
   await page.emulateMedia({ media: 'screen' });
 
   // Same page, light OS.

@@ -145,10 +145,20 @@
 }
 
 /* Printing is always on paper, whatever the screen is doing. Without this a
-   teacher who leaves dark on prints a dark page — true of the filter
-   fallback today, and it would be true of native dark too. */
+   teacher who leaves dark on prints a dark page.
+
+   The :not() is load-bearing and was missing until 2026-09-07 (Path 5 P4):
+   this rule has to MATCH the screen dark block's selector, not merely name
+   the same attribute. A bare `:root[data-theme="dark"]` is (0,2,0) and the
+   screen block is (0,3,0), so for every native adopter the reset lost the
+   cascade outright and printed the dark tokens — measured on 001, where
+   --ink stayed #e9e7e0 and --card #1d2229 under `emulateMedia({media:
+   'print'})`. It looked fine at a glance only because Chromium's own print
+   default paints body text black over the top, which hides the token values
+   but not a `background: var(--card)` on any element that has one. With the
+   gate the two selectors tie, and this block wins on source order. */
 @media print {
-  :root[data-theme="dark"] {
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
     color-scheme: light;
     --ink: var(--ink-light);
     --paper: var(--paper-light);
