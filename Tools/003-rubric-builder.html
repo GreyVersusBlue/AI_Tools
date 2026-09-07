@@ -17,6 +17,13 @@
 <meta name="twitter:description" content="Build a printable rubric with fully editable performance levels and criteria, from a template or from scratch.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='7' width='20' height='18' rx='1' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cline x1='6' y1='13' x2='26' y2='13' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Cline x1='6' y1='19' x2='26' y2='19' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Cline x1='14' y1='7' x2='14' y2='25' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Cline x1='20' y1='7' x2='20' y2='25' stroke='%232A6DB0' stroke-width='1.4'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The previewed rubric is a sheet of paper in either theme, so every
+     .rubric-sheet carries .paper-sheet and the ink on it stays dark; #printArea
+     is display:none and its @media print values are untouched.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -28,6 +35,26 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Path 5 P3. --desk is the mat the previewed sheet sits on — the same #d9d7cd
+     041 and 022 have — and --desk-ink is the muted text drawn ON it, because
+     var(--muted) on that mat is 3.76:1 and #previewNote was this page's one
+     allowlisted axe line. The info/err/warn/note pairs are the chrome tints
+     that used to be literals; --note-bg is the cream fill that marks a
+     per-student cell as student-specific. */
+  :root {
+    --desk: #d9d7cd; --desk-ink: #595850;
+    --info-bg: #eaf1f6; --info-line: #c9dce6;
+    --err-bg: #fbeeee;
+    --warn-bg: #fff3c4; --warn-line: #e6c200;
+    --note-bg: #fdf9ee;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --desk: #0e1014; --desk-ink: var(--muted);
+    --info-bg: #1b2a35; --info-line: #33505f;
+    --err-bg: #3a201c;
+    --warn-bg: #332711; --warn-line: #5e4a20;
+    --note-bg: #2b2718;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -39,7 +66,7 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
 
   .layout { display: grid; grid-template-columns: minmax(320px, 460px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
@@ -48,28 +75,28 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], input[type="number"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { resize: vertical; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .25rem .55rem; font-size: .78rem; }
   button.full { width: 100%; margin-bottom: .5rem; }
 
   /* ---- performance levels editor ---- */
   .levels-row { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: .8rem; }
   .level-chip {
-    display: flex; flex-direction: column; gap: .3rem; background: #fff;
+    display: flex; flex-direction: column; gap: .3rem; background: var(--card);
     border: 1px solid var(--line-strong); border-radius: 8px; padding: .55rem .6rem; min-width: 9.5rem;
   }
   .level-chip input.lvl-label { margin-bottom: 0; font-weight: 700; }
@@ -91,16 +118,16 @@
   .criterion-cells textarea { min-height: 3.4rem; font-size: .8rem; margin-bottom: 0; }
 
   .stat-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: .8rem; }
-  .stat-points { font-weight: 700; font-size: .95rem; color: var(--accent); background: #eaf1f6; border: 1px solid #c9dce6; border-radius: 6px; padding: .4rem .7rem; }
+  .stat-points { font-weight: 700; font-size: .95rem; color: var(--accent); background: var(--info-bg); border: 1px solid var(--info-line); border-radius: 6px; padding: .4rem .7rem; }
 
   /* ---- build / score mode tabs ---- */
   .mode-tabs { display: flex; gap: .4rem; margin-bottom: 1.2rem; }
   .mode-tab {
-    background: #fff; color: var(--ink); border: 1px solid var(--line-strong);
+    background: var(--card); color: var(--ink); border: 1px solid var(--line-strong);
     border-radius: 7px 7px 0 0; padding: .55rem 1.1rem;
   }
-  .mode-tab:hover { background: #f1f0ea; }
-  .mode-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .mode-tab:hover { background: var(--card-2); }
+  .mode-tab.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .mode-tab.active:hover { background: var(--accent); }
 
   /* ---- score-a-student editor ---- */
@@ -109,18 +136,18 @@
   .score-crit-name { font-weight: 700; font-size: .9rem; margin-bottom: .45rem; }
   .level-btn-row { display: flex; flex-wrap: wrap; gap: .4rem; }
   .level-btn {
-    background: #fff; color: var(--ink); border: 1px solid var(--line-strong);
+    background: var(--card); color: var(--ink); border: 1px solid var(--line-strong);
     border-radius: 7px; padding: .45rem .75rem; font-size: .85rem; font-weight: 600;
   }
-  .level-btn:hover { background: #f1f0ea; }
-  .level-btn.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .level-btn:hover { background: var(--card-2); }
+  .level-btn.selected { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .level-btn.selected:hover { background: var(--accent-2); border-color: var(--accent-2); }
   .score-student-line { font-size: 1rem; font-weight: 700; text-align: center; margin-bottom: .6rem; }
   .score-summary { font-size: 1rem; font-weight: 700; text-align: right; color: var(--accent); margin-top: .8rem; }
   .rubric-table td.selected-cell { background: #eaf1f6; border: 2px solid var(--accent); }
 
-  .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
-  .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
+  .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
+  .preview-note { font-size: .8rem; color: var(--desk-ink); margin-bottom: .8rem; }
 
   .rubric-sheet { background: #fff; padding: 1.2rem; box-shadow: 0 2px 10px rgba(0,0,0,.18); min-width: 34rem; max-width: 100%; overflow-x: auto; }
   .sheet-title { font-size: 1.4rem; font-weight: 700; margin-bottom: .8rem; text-align: center; }
@@ -149,7 +176,7 @@
   .comment-bank { margin-top: .4rem; }
   .comment-bank-chips { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .4rem; }
   .comment-chip {
-    display: inline-flex; align-items: center; gap: .3rem; background: #eef1f5; border: 1px solid var(--line-strong);
+    display: inline-flex; align-items: center; gap: .3rem; background: var(--card-2); border: 1px solid var(--line-strong);
     border-radius: 12px; padding: .2rem .3rem .2rem .6rem; font-size: .75rem;
   }
   .comment-chip button { background: none; border: none; color: var(--muted); font-weight: 700; padding: 0 .3rem; font-size: .8rem; }
@@ -157,7 +184,7 @@
   .comment-bank-add { display: flex; gap: .3rem; }
   .comment-bank-add input { margin-bottom: 0; flex: 1; }
   .student-cell-wrap { margin-top: .3rem; }
-  .student-cell-wrap textarea { min-height: 2.4rem; font-size: .75rem; margin-bottom: 0; background: #fdf9ee; }
+  .student-cell-wrap textarea { min-height: 2.4rem; font-size: .75rem; margin-bottom: 0; background: var(--note-bg); }
 
   /* ---- score mode: comments & half-credit ---- */
   .half-credit-row { display: flex; align-items: center; gap: .4rem; margin: .4rem 0; }
@@ -166,10 +193,10 @@
   .crit-comment-wrap textarea { min-height: 2.6rem; font-size: .85rem; margin-bottom: .3rem; }
   .comment-bank-picks { display: flex; flex-wrap: wrap; gap: .3rem; }
   .comment-pick-btn {
-    background: #eef1f5; color: var(--ink); border: 1px solid var(--line-strong);
+    background: var(--card-2); color: var(--ink); border: 1px solid var(--line-strong);
     border-radius: 12px; padding: .25rem .6rem; font-size: .75rem; font-weight: 500;
   }
-  .comment-pick-btn:hover { background: #dfe6ec; }
+  .comment-pick-btn:hover { background: var(--line); }
 
   /* ---- class scoring grid ---- */
   .class-controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: .8rem; }
@@ -178,15 +205,15 @@
   .grid-cell-controls { display: flex; align-items: center; gap: .25rem; }
   .grid-cell-controls select { margin-bottom: 0; min-width: 8rem; }
   .grid-comment-btn {
-    flex-shrink: 0; background: #eef1f5; color: var(--ink); border: 1px solid var(--line-strong);
+    flex-shrink: 0; background: var(--card-2); color: var(--ink); border: 1px solid var(--line-strong);
     border-radius: 4px; padding: .15rem .35rem; font-size: .8rem; line-height: 1; opacity: .55;
   }
-  .grid-comment-btn:hover { opacity: 1; background: #dfe6ec; }
-  .grid-comment-btn.active { opacity: 1; background: #fff3c4; border-color: #e6c200; }
+  .grid-comment-btn:hover { opacity: 1; background: var(--line); }
+  .grid-comment-btn.active { opacity: 1; background: var(--warn-bg); border-color: var(--warn-line); }
   table.class-grid { width: 100%; border-collapse: collapse; font-size: .82rem; }
   table.class-grid th, table.class-grid td { border: 1px solid var(--line-strong); padding: .4rem .5rem; text-align: left; }
-  table.class-grid thead th { background: #eef1f5; position: sticky; top: 0; }
-  table.class-grid td.student-cell { font-weight: 600; white-space: nowrap; background: #f7f7f4; }
+  table.class-grid thead th { background: var(--card-2); position: sticky; top: 0; }
+  table.class-grid td.student-cell { font-weight: 600; white-space: nowrap; background: var(--card-2); }
   table.class-grid select { width: 100%; font-size: .78rem; padding: .3rem; margin-bottom: 0; }
   table.class-grid td.total-cell { font-weight: 700; color: var(--accent); white-space: nowrap; }
   table.class-grid td.remove-cell { text-align: center; }
@@ -196,8 +223,8 @@
     font-size: .85rem;
   }
   .analytics-list li:last-child { border-bottom: none; }
-  .analytics-list li.lowest { background: #fbeeee; font-weight: 700; }
-  .analytics-bar-wrap { flex: 1; background: #eee; border-radius: 4px; overflow: hidden; height: .6rem; align-self: center; }
+  .analytics-list li.lowest { background: var(--err-bg); font-weight: 700; }
+  .analytics-bar-wrap { flex: 1; background: var(--line); border-radius: 4px; overflow: hidden; height: .6rem; align-self: center; }
   .analytics-bar { height: 100%; background: var(--accent-2); }
   .analytics-list li.lowest .analytics-bar { background: var(--err); }
 
@@ -745,7 +772,7 @@
     }
 
     return (
-      '<div class="rubric-sheet">' +
+      '<div class="rubric-sheet paper-sheet">' +
         '<div class="sheet-title">' + escapeHtml(state.title || state.name) + '</div>' +
         '<table class="rubric-table"><thead><tr><th class="corner">Criteria</th>' + headerCells + '</tr></thead>' +
         '<tbody>' + bodyRows + '</tbody></table>' +
@@ -786,7 +813,7 @@
       bodyRows = '<tr><td class="empty-row" colspan="' + (state.levels.length + 2) + '">No criteria yet.</td></tr>';
     }
     return (
-      '<div class="rubric-sheet">' +
+      '<div class="rubric-sheet paper-sheet">' +
         '<div class="sheet-title">' + escapeHtml(state.title || state.name) + '</div>' +
         '<div class="sheet-nameline"><span>Name</span><span>Date</span></div>' +
         '<p class="sheet-subhead">Before you turn this in: read each row, decide which level best describes your work, and say why in the last column.</p>' +
@@ -811,7 +838,7 @@
       bodyRows = '<tr><td class="empty-row" colspan="3">No criteria yet.</td></tr>';
     }
     return (
-      '<div class="rubric-sheet">' +
+      '<div class="rubric-sheet paper-sheet">' +
         '<div class="sheet-title">' + escapeHtml(state.title || state.name) + '</div>' +
         '<div class="sheet-nameline"><span>Name</span><span>Date</span></div>' +
         '<table class="rubric-table"><thead><tr><th>Concerns</th><th>Criteria &mdash; ' +
@@ -835,7 +862,7 @@
       bodyRows = '<tr><td class="empty-row" colspan="2">No criteria yet.</td></tr>';
     }
     return (
-      '<div class="rubric-sheet">' +
+      '<div class="rubric-sheet paper-sheet">' +
         '<div class="sheet-title">' + escapeHtml(state.title || state.name) + '</div>' +
         '<table class="rubric-table checklist-table"><tbody>' + bodyRows + '</tbody></table>' +
       '</div>'
@@ -871,7 +898,7 @@
       bodyRows = '<tr><td class="empty-row" colspan="2">No criteria yet.</td></tr>';
     }
     return (
-      '<div class="rubric-sheet">' +
+      '<div class="rubric-sheet paper-sheet">' +
         '<div class="sheet-title">' + escapeHtml(state.title || state.name) + ' &mdash; Peer Feedback</div>' +
         '<div class="sheet-nameline"><span>Writer</span><span>Reviewer</span><span>Date</span></div>' +
         '<p class="sheet-subhead">Read your partner&rsquo;s work all the way through first. For each row, write one specific thing that works and one thing to try. No scores &mdash; that part is the teacher&rsquo;s job.</p>' +
@@ -1032,7 +1059,7 @@
       : '';
 
     return (
-      '<div class="rubric-sheet">' +
+      '<div class="rubric-sheet paper-sheet">' +
         '<div class="sheet-title">' + escapeHtml(state.title || state.name) + '</div>' +
         '<div class="score-student-line">Student: ' + escapeHtml(scoreRec.student || '') + '</div>' +
         '<table class="rubric-table"><thead><tr><th class="corner">Criteria</th>' + headerCells + '</tr></thead>' +
@@ -1247,7 +1274,11 @@
         var selectedVal = sel && sel.levelId ? (sel.levelId + (sel.half ? '|half' : '')) : '';
         var hasComment = !!(sel && sel.comment);
         return '<td><div class="grid-cell-controls">' +
-          '<select data-student="' + escapeHtml(name) + '" data-crit="' + c.id + '">' +
+          // The visible context is the row's student and the column's
+          // criterion, neither of which is programmatically tied to this
+          // control — so it carries both itself (axe select-name, critical).
+          '<select data-student="' + escapeHtml(name) + '" data-crit="' + c.id + '"' +
+          ' aria-label="' + escapeHtml((c.name || 'Criterion') + ' level for ' + name) + '">' +
           levelSelectOptions(selectedVal) + '</select>' +
           '<button type="button" class="grid-comment-btn' + (hasComment ? ' active' : '') + '"' +
           ' data-comment-student="' + escapeHtml(name) + '" data-comment-crit="' + c.id + '"' +

@@ -16,13 +16,35 @@
 <meta name="twitter:title" content="School Calendar Visualizer — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Build a full-year school calendar once — holidays, half days, workdays, grading periods — and reuse the template every year.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='6' width='20' height='20' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cline x1='6' y1='13' x2='26' y2='13' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='11' cy='19' r='2' fill='%23a3372b'/%3E%3Ccircle cx='16' cy='19' r='2' fill='%23c98a1f'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The day-type chips, unit bars and swatches carry colours the TEACHER
+     picked, so they are left exactly as they are — including the white
+     pattern overlays drawn on them and the white scrim behind a unit tag,
+     which is what keeps a light-chosen colour legible on a dark cell. Every
+     @media print value is untouched; ink-paper.css already forces the light
+     tokens when the page prints.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <script src="../_shared/store.js"></script>
 <style>
-  :root { --ok: #2e6b3e; }
+  /* Path 5 P3. --ok is the "on pace" green, --accent-deep the darker navy a
+     primary button goes to on hover (in dark the accent is already light, so
+     it brightens instead), --warn-ink the amber a bump note is written in. */
+  :root {
+    --ok: #2e6b3e; --accent-deep: #16283f; --warn-ink: #8a5a00;
+    --info-bg: #eef4f8;
+    --warn-bg: #fff3d6; --warn-line: #e0c27a;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --ok: #63c08e; --accent-deep: var(--accent-2); --warn-ink: #eac077;
+    --info-bg: #1b2a35;
+    --warn-bg: #332711; --warn-line: #5e4a20;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -41,16 +63,16 @@
   .print-mode label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
   button {
     font-family: inherit; font-size: 0.85rem; padding: 8px 13px; border-radius: 6px;
-    border: 1px solid var(--line); background: #fff; cursor: pointer; color: var(--ink);
+    border: 1px solid var(--line); background: var(--card); cursor: pointer; color: var(--ink);
   }
-  button:hover { background: #f2f0ea; }
-  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
-  button.primary:hover { background: #16283f; }
+  button:hover { background: var(--card-2); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button.primary:hover { background: var(--accent-deep); }
   button.danger { color: var(--err); }
   button.small { padding: 4px 9px; font-size: 0.76rem; }
   input[type=text], input[type=date], input[type=color], select, textarea {
     font-family: inherit; font-size: 0.88rem; padding: 6px 9px; border: 1px solid var(--line);
-    border-radius: 5px; background: #fff; color: var(--ink);
+    border-radius: 5px; background: var(--card); color: var(--ink);
   }
   textarea { width: 100%; resize: vertical; min-height: 54px; }
 
@@ -83,7 +105,7 @@
   .ab-badge {
     position: absolute; top: 2px; right: 3px; font-size: 0.58rem; font-weight: 700;
     color: var(--accent-2); border: 1px solid var(--accent-2); border-radius: 3px;
-    padding: 0 3px; line-height: 1.3; background: #fff;
+    padding: 0 3px; line-height: 1.3; background: var(--card);
   }
   @media print { .ab-badge { color: #000 !important; border-color: #000 !important; } }
 
@@ -120,7 +142,7 @@
   .units-print h2 { font-size: 1.05rem; margin: 0 0 10px; }
   .units-print table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
   .units-print th, .units-print td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; }
-  .units-print th { background: var(--accent); color: #fff; }
+  .units-print th { background: var(--accent); color: var(--accent-ink); }
   .units-print .swatch-cell { display: flex; align-items: center; gap: 6px; }
   .units-print .u-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,.3); flex-shrink: 0; }
   .units-print tfoot td { font-weight: 700; }
@@ -134,7 +156,7 @@
   /* --- lesson pacing --- */
   .pace-help summary { cursor: pointer; font-size: 0.85rem; color: var(--accent-2); }
   .pace-help p, .pace-help ul { font-size: 0.82rem; color: var(--muted); margin: 8px 0; }
-  .pace-help code { background: #f2f0ea; border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; font-size: 0.95em; }
+  .pace-help code { background: var(--card-2); border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; font-size: 0.95em; }
   .pacing-card textarea { font-family: ui-monospace, Consolas, monospace; font-size: 0.8rem; margin-top: 10px; }
   .pace-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-top: 8px; }
   .pace-row .field { display: flex; flex-direction: column; gap: 3px; }
@@ -154,7 +176,7 @@
   /* compact overview: one line per lesson, full text in the tooltip */
   .months.cols-compact .day .paced { font-size: 0.62rem; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
   .day .paced.mismatch { color: var(--err); }
-  .day .bump-note { display: block; font-size: 0.64rem; color: #8a5a00; font-style: italic; line-height: 1.2; }
+  .day .bump-note { display: block; font-size: 0.64rem; color: var(--warn-ink); font-style: italic; line-height: 1.2; }
   .months.cols-compact .day .bump-note { font-size: 0.6rem; line-height: 1.15; }
   .drawer-paced { font-size: 0.84rem; color: var(--ok); font-weight: 600; word-break: break-word; }
   @media print { .day .paced, .day .paced.mismatch, .day .bump-note { color: #000 !important; } }
@@ -171,22 +193,22 @@
     .months.cols-2 { grid-template-columns: 1fr; }
   }
   .month { background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
-  .month h3 { margin: 0; padding: 10px 12px; background: var(--accent); color: #fff; font-size: 0.95rem; }
+  .month h3 { margin: 0; padding: 10px 12px; background: var(--accent); color: var(--accent-ink); font-size: 0.95rem; }
   .weekdays, .weeks { display: grid; grid-template-columns: repeat(7, 1fr); }
   .weekdays div { font-size: 0.68rem; font-weight: 700; text-align: center; color: var(--muted); padding: 4px 0; border-bottom: 1px solid var(--line); }
   .day {
     min-height: 58px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
-    padding: 3px 4px; font-size: 0.72rem; cursor: pointer; position: relative; background: #fff;
+    padding: 3px 4px; font-size: 0.72rem; cursor: pointer; position: relative; background: var(--card);
     /* overflow:hidden also zeroes the grid item's automatic minimum size, so a
        long nowrap lesson code ellipsizes instead of blowing the column out */
     overflow: hidden;
   }
-  .day:hover { background: #f6f4ee; }
-  .day.empty { background: #fbfaf7; cursor: default; }
-  .day.empty:hover { background: #fbfaf7; }
+  .day:hover { background: var(--card-2); }
+  .day.empty { background: var(--paper); cursor: default; }
+  .day.empty:hover { background: var(--paper); }
   .day .num { font-weight: 600; color: var(--muted); }
   .day.selected { outline: 2px solid var(--accent-2); outline-offset: -2px; }
-  .day.today .num { display: inline-block; background: var(--accent-2); color: #fff; border-radius: 50%; width: 1.3em; height: 1.3em; line-height: 1.3em; text-align: center; }
+  .day.today .num { display: inline-block; background: var(--accent-2); color: var(--accent-ink); border-radius: 50%; width: 1.3em; height: 1.3em; line-height: 1.3em; text-align: center; }
   .yday.today { outline: 1.5px solid var(--accent-2); outline-offset: -1.5px; }
   .chips { display: flex; gap: 2px; flex-wrap: wrap; margin: 2px 0; }
   .chip { width: 13px; height: 13px; border-radius: 3px; border: 1px solid rgba(0,0,0,.35); }
@@ -202,7 +224,7 @@
   /* --- whole-year print grid --- */
   .year-grid { display: none; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .ymonth { border: 1px solid var(--line); border-radius: 4px; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
-  .ymonth h4 { margin: 0; padding: 3px 0; background: var(--accent); color: #fff; font-size: 0.66rem; text-align: center; }
+  .ymonth h4 { margin: 0; padding: 3px 0; background: var(--accent); color: var(--accent-ink); font-size: 0.66rem; text-align: center; }
   .ymonth .yweekdays, .ymonth .yweeks { display: grid; grid-template-columns: repeat(7, 1fr); }
   .ymonth .yweekdays div { font-size: 0.5rem; font-weight: 700; text-align: center; color: var(--muted); }
   .yday {
@@ -225,10 +247,10 @@
   #drawer .types { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
   #drawer .types label { display: flex; align-items: center; gap: 7px; font-size: 0.85rem; cursor: pointer; }
   #drawer label.f { font-size: 0.78rem; font-weight: 600; color: var(--muted); display: block; margin: 10px 0 3px; }
-  #drawer .range-hint { display: none; font-size: 0.78rem; background: #eef4f8; border: 1px solid var(--accent-2); border-radius: 5px; padding: 8px 10px; margin: 8px 0; color: var(--accent-2); }
+  #drawer .range-hint { display: none; font-size: 0.78rem; background: var(--info-bg); border: 1px solid var(--accent-2); border-radius: 5px; padding: 8px 10px; margin: 8px 0; color: var(--accent-2); }
   #drawer.range-mode .range-hint { display: block; }
 
-  .storage-warn { background: #fff3d6; border: 1px solid #e0c27a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; margin-bottom: 16px; }
+  .storage-warn { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; margin-bottom: 16px; }
 
   /* ── Week-at-a-glance ──────────────────────────────────────────────────────
      The month grid answers "where does this fall in the year"; a planner page
@@ -239,23 +261,23 @@
   body.view-week .week-strip { display: block; }
   body.view-week .months, body.view-week .year-grid { display: none; }
   .week-strip h2 { font-size: 1.05rem; margin: 0 0 2px; }
-  .week-strip .week-sub { font-size: .8rem; color: var(--muted, #6b6a63); margin: 0 0 10px; }
+  .week-strip .week-sub { font-size: .8rem; color: var(--muted); margin: 0 0 10px; }
   .week-days { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-  .week-day { border: 1px solid var(--line, #d9d7cd); border-radius: 8px; padding: 8px 9px; min-height: 150px; display: flex; flex-direction: column; gap: 5px; }
-  .week-day.is-off { background: #f4f3ef; }
-  .week-day .wd-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; border-bottom: 1px solid var(--line, #d9d7cd); padding-bottom: 4px; }
+  .week-day { border: 1px solid var(--line); border-radius: 8px; padding: 8px 9px; min-height: 150px; display: flex; flex-direction: column; gap: 5px; }
+  .week-day.is-off { background: var(--card-2); }
+  .week-day .wd-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
   .week-day .wd-name { font-weight: 700; font-size: .82rem; }
-  .week-day .wd-date { font-size: .72rem; color: var(--muted, #6b6a63); font-variant-numeric: tabular-nums; }
+  .week-day .wd-date { font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
   .week-day .wd-types { display: flex; flex-wrap: wrap; gap: 4px; }
   .week-day .wd-type { font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; border: 1px solid currentColor; border-radius: 4px; padding: 1px 4px; }
   .week-day .wd-label { font-size: .76rem; font-weight: 700; }
-  .week-day .wd-paced { font-size: .74rem; font-weight: 700; color: #2e6b3e; }
+  .week-day .wd-paced { font-size: .74rem; font-weight: 700; color: var(--ok); }
   .week-day .wd-lesson { font-size: .74rem; font-style: italic; }
-  .week-day .wd-note { font-size: .72rem; color: var(--muted, #6b6a63); white-space: pre-line; margin-top: auto; }
+  .week-day .wd-note { font-size: .72rem; color: var(--muted); white-space: pre-line; margin-top: auto; }
   .week-day .wd-ab { font-size: .68rem; font-weight: 700; border: 1px solid currentColor; border-radius: 3px; padding: 0 3px; }
-  .week-strip .week-lines { margin-top: 10px; border: 1px solid var(--line, #d9d7cd); border-radius: 8px; padding: 8px 10px; }
+  .week-strip .week-lines { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
   .week-strip .week-lines strong { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }
-  .week-strip .week-lines .rule { border-bottom: 1px solid #ccc; height: 18px; }
+  .week-strip .week-lines .rule { border-bottom: 1px solid var(--line-strong); height: 18px; }
 
   @media print {
     body { padding: 8px; background: #fff; }

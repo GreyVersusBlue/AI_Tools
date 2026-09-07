@@ -15,6 +15,16 @@
 <meta name="twitter:title" content="Historical Figure / Country Trading Card Maker — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Design collectible research trading cards with era, science, math, literature and vocabulary themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, PNG/PDF/zip export, deck share links, and a teacher-run projector review game.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='7' y='5' width='18' height='22' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='16' cy='13' r='3.5' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M10 22c1-3 4-4 6-4s5 1 6 4' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     A .trading-card is an OBJECT, not chrome: htcm-themes.js writes its own
+     color and background-color for every theme, so it already shows true print
+     colours on a dark page and needs no conversion — and it must NOT be given
+     .paper-sheet, whose (0,5,0) rule in ink-paper.css would outrank
+     .trading-card.theme-<key> (0,2,0) and repaint every themed card white.
+     The review-game overlay is a projector surface, dark in both themes.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -39,7 +49,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], textarea, input[type="file"], select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   textarea { resize: vertical; min-height: 4rem; }
@@ -59,15 +69,11 @@
   .htcm-flipper.flipped { transform: rotateY(180deg); }
   .htcm-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
   .htcm-face.face-back { transform: rotateY(180deg); }
+  /* White is the unthemed fallback under a card face; every theme paints its
+     own paper over it. This page took native dark in Path 5 P3, so the pair of
+     `html.a11y-filter-dark .htcm-face` counter-invert rules that used to sit
+     here are gone with the filter that made them necessary. */
   .htcm-face .trading-card { width: 100%; height: 100%; background: #fff; }
-  /* a11y dark mode is a whole-page invert filter (see _shared/a11y.css); the
-     preview must show true print colors, so each face counter-inverts —
-     exactly the treatment a11y.css gives photos — and the photo inside then
-     needs the page-wide img counter-invert switched off to avoid a double
-     negative. Faces, not the stage: a filter on the stage or flipper would
-     flatten the 3D flip (CSS filters force transform-style: flat). */
-  html.a11y-filter-dark .htcm-face { filter: invert(1) hue-rotate(180deg); }
-  html.a11y-filter-dark .htcm-face img { filter: none; }
 
   /* offscreen host for measuring real card layout (stat-overflow warning) */
   .htcm-measure { position: absolute; left: -10000px; top: 0; width: 2.5in; }
@@ -77,14 +83,14 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
 
   .entry-row { display: flex; gap: .7rem; padding: .5rem 0; border-bottom: 1px dashed var(--line); align-items: center; }
@@ -219,7 +225,7 @@
   .entry-row .kb-badge { color: var(--muted); font-size: .72rem; margin-left: .5rem; }
 
   .save-warn {
-    display: none; background: #fff; border: 1.5px solid var(--err); border-radius: 8px;
+    display: none; background: var(--card); border: 1.5px solid var(--err); border-radius: 8px;
     color: var(--err); font-size: .85rem; font-weight: 600; padding: .6rem .8rem; margin: 0 0 1rem;
   }
   .save-warn.show { display: block; }
@@ -301,11 +307,6 @@
     display: flex; align-items: center; justify-content: center;
     color: #d4b354; font-size: calc(0.6in * var(--gs, 1.4)); font-weight: 700;
   }
-  /* same counter-invert the live preview uses: a11y dark mode inverts the
-     whole page, and a projected card has to show its true print colors */
-  html.a11y-filter-dark .gcard-inner { filter: invert(1) hue-rotate(180deg); }
-  html.a11y-filter-dark .gcard-inner img { filter: none; }
-
   .gm-setup-teams { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .6rem; }
   .gm-setup-teams input[type="text"] { width: 9rem; margin-bottom: 0; }
 
@@ -315,13 +316,13 @@
     display: flex; align-items: center; justify-content: center;
   }
   .photo-editor {
-    background: #fff; border-radius: 10px; padding: 1rem 1.2rem;
+    background: var(--card); border-radius: 10px; padding: 1rem 1.2rem;
     width: min(380px, 92vw); max-height: 92vh; overflow: auto;
     box-shadow: 0 10px 40px rgba(0,0,0,.35);
   }
   .photo-editor h3 { margin: 0 0 .6rem; font-size: 1rem; }
   .pe-stage { display: flex; justify-content: center; margin-bottom: .4rem; }
-  .pe-viewport { position: relative; overflow: hidden; background: #eee; touch-action: none; }
+  .pe-viewport { position: relative; overflow: hidden; background: var(--card-2); touch-action: none; }
   .pe-hint { margin: 0 0 .6rem; }
   .pe-zoom { width: 100%; margin-bottom: .6rem; }
   .pe-row { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .6rem; }

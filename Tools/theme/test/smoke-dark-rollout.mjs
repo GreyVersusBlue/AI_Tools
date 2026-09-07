@@ -560,14 +560,171 @@ const PAGES = [
       await page.click('#logMeetingBtn');
       await settle(page, 400);
     } },
+  // increment 12 — the last full batch of Path 5 P3. Four of the six render a
+  // printable on screen and each answers the "is this a sheet of paper?"
+  // question differently: 003's .rubric-sheet and 043's .slip/.missing-list-page/
+  // .reminder-slip/.chaperone-print carry .paper-sheet, because they inherit
+  // var(--muted)/var(--line-strong)/var(--ink) and would otherwise print dark
+  // tokens on white; 064's .trading-card and 042's .cert must NOT, because
+  // htcm-themes.js and the .theme-* skins paint each one's own colour and
+  // background, and ink-paper's (0,5,0) .paper-sheet rule would outrank them
+  // and repaint every skin white. 030's board and 064's review game are
+  // projector surfaces, navy/near-black in both themes on purpose.
+  { label: '003', url: '/Tools/003-rubric-builder.html', sheet: '#previewArea .rubric-sheet',
+    // A new rubric has performance levels but NO criteria — so no preview
+    // sheet, no comment bank, no student-text cell, which is most of what the
+    // conversion touched. Loading the default template is what creates them.
+    prep: async page => {
+      await page.click('#loadTemplateBtn');
+      await settle(page, 600);
+      await page.fill('.comment-bank-add input', 'Cite one more source');
+      await page.click('.comment-bank-add button');
+      await settle(page, 400);
+    } },
+  { label: '003-score', url: '/Tools/003-rubric-builder.html', sheet: '#scorePreviewArea .rubric-sheet',
+    // Score mode is where .level-btn, .level-btn.selected and the scored
+    // sheet's .selected-cell live — none of them exist in build mode.
+    prep: async page => {
+      await page.click('#loadTemplateBtn');
+      await settle(page, 600);
+      await page.click('#modeScoreBtn');
+      await settle(page, 200);
+      await page.fill('#studentNameInput', 'Alex Rivera');
+      await page.click('#loadStudentScoreBtn');
+      await settle(page, 300);
+      const btn = page.locator('.level-btn').first();
+      if (await btn.count()) { await btn.click(); await settle(page, 300); }
+    } },
+  { label: '003-class', url: '/Tools/003-rubric-builder.html',
+    // The class grid and the analytics list below it: a sticky header row, a
+    // student cell, the per-cell comment button and the lowest-average row.
+    prep: async page => {
+      await page.click('#loadTemplateBtn');
+      await settle(page, 600);
+      await page.click('#modeClassBtn');
+      await settle(page, 200);
+      await page.fill('#classAddStudentInput', 'Alex Rivera');
+      await page.click('#classAddStudentBtn');
+      await settle(page, 400);
+    } },
+  { label: '032', url: '/Tools/032-School Calendar Visualizer.html',
+    // An empty calendar has no .day cells at all, so seed the real year: that
+    // is what puts the month grid, the legend rows with their swatches, the
+    // day-type chips and the stats line on screen. Then open the drawer,
+    // which is the page's one panel and carries the range hint.
+    prep: async page => {
+      page.on('dialog', d => d.accept());
+      await page.click('#btnSeed');
+      await settle(page, 900);
+      const day = page.locator('.day:not(.empty)').first();
+      if (await day.count()) { await day.click(); await settle(page, 400); }
+    } },
+  { label: '032-week', url: '/Tools/032-School Calendar Visualizer.html',
+    // The week planner is a second view of the same data — five wide columns
+    // with their own is-off fill and "on pace" green, none of which the month
+    // grid renders.
+    prep: async page => {
+      page.on('dialog', d => d.accept());
+      await page.click('#btnSeed');
+      await settle(page, 900);
+      await page.check('input[name="printMode"][value="week"]');
+      await settle(page, 500);
+    } },
+  { label: '043', url: '/Tools/043-field-trip-permission-slip.html', sheet: '#previewArea .slip',
+    // The slip previews from the starter trip on load. The deadline line and
+    // the collection rows need a roster, and the scan status needs a state:
+    // both are the tinted chrome this conversion tokenised.
+    prep: async page => {
+      // A trip with no due date renders no .deadline-line at all, which is one
+      // of the two tinted panels this conversion tokenised.
+      await page.fill('#dueDate', '2026-10-15');
+      await page.dispatchEvent('#dueDate', 'change');
+      await settle(page, 300);
+      await page.click('.mode-tab[data-mode="batch"]');
+      await settle(page, 200);
+      await page.fill('#batchNames', 'Alex Rivera\nBailey Chen\nCarter Diaz');
+      await page.dispatchEvent('#batchNames', 'input');
+      await settle(page, 600);
+    } },
+  { label: '030', url: '/Tools/030-review-game-board.html',
+    // No board, no grid and no scoreboard — the whole point of the page is
+    // downstream of a saved category. Saving one also reveals the toolbar, the
+    // team chips, the score toolbar and the storage line. The editor starts
+    // with one empty category block, so a second is added to get a real grid.
+    prep: async page => {
+      page.on('dialog', d => d.accept());
+      await page.click('#addCategoryBtn');
+      await settle(page, 250);
+      await fillBoardEditor(page);
+      await page.click('#buildFromManualBtn');
+      await settle(page, 800);
+    } },
+  { label: '030-clue', url: '/Tools/030-review-game-board.html',
+    // The reveal overlay is the projector half of this tool and exists in the
+    // DOM only while a clue is open: the wager panel's inputs, the white award
+    // buttons and the ghost button are all scanned here and nowhere else.
+    prep: async page => {
+      page.on('dialog', d => d.accept());
+      await page.click('#addCategoryBtn');
+      await settle(page, 250);
+      await fillBoardEditor(page);
+      await page.click('#buildFromManualBtn');
+      await settle(page, 800);
+      await page.click('.cell:not(.blank)');
+      await settle(page, 300);
+      await page.click('#showAnswerBtn');
+      await settle(page, 400);
+    } },
+  { label: '064', url: '/Tools/064-historical-trading-card-maker.html',
+    // The live preview needs a card: the flipper is empty until one entry
+    // exists, and the entry row's thumb/badges are chrome the sweep never
+    // sees. A sample deck is the cheapest way to get both.
+    prep: async page => {
+      page.on('dialog', d => d.accept());
+      await page.click('#sampleDeckBtn');
+      await settle(page, 900);
+    } },
+  { label: '042', url: '/Tools/042-certificate-award-maker.html',
+    // The single-certificate preview renders on load; grid view (and its
+    // .thumb-label on the desk mat) needs a batch, which is why the batch tab
+    // is opened rather than trusting the default.
+    prep: async page => {
+      await page.click('.mode-tab[data-mode="batch"]');
+      await settle(page, 200);
+      await page.fill('#batchNames', 'Alex Rivera\nBailey Chen\nCarter Diaz');
+      await page.dispatchEvent('#batchNames', 'input');
+      await settle(page, 500);
+      const grid = page.locator('.view-tab[data-view="grid"]');
+      if (await grid.count()) { await grid.click(); await settle(page, 500); }
+    } },
 ];
+
+/** 030's manual editor: name every category block and fill every clue row it
+    holds, so "Save board" has something to build a grid from. Shared by the
+    two 030 entries because a board is the precondition for both. */
+async function fillBoardEditor(page) {
+  const blocks = page.locator('.category-block');
+  const count = await blocks.count();
+  for (let i = 0; i < count; i++) {
+    const block = blocks.nth(i);
+    await block.locator('.cat-name-input').fill(i === 0 ? 'Rivers' : 'Mountains');
+    const questions = block.locator('.clue-question');
+    const rows = await questions.count();
+    for (let j = 0; j < rows; j++) {
+      await questions.nth(j).fill('Question ' + (j + 1) + '?');
+      await block.locator('.clue-answer').nth(j).fill('Answer ' + (j + 1));
+    }
+  }
+}
 
 // Chrome is what follows the theme. Anything that is a projector surface
 // (dark in both themes on purpose), a sheet of paper, a print-only container
 // or a user-coloured badge is excluded, and the exclusions are named so a
-// future page cannot hide a white button by accident.
+// future page cannot hide a white button by accident. `#overlay` is 030's
+// reveal overlay — the one element on the site with that id — where the award
+// buttons are white on navy in both themes by design.
 const CHROME = 'button, input, select, textarea, .card, .now-strip, .panel-config, .stage, .discussion-stage, .strategy-card, .station-tile, .slot, .triage-row, .tally-btn, .cat-tally-incr, .mode-tab, .pill';
-const NOT_CHROME = '.paper-sheet, #printArea, .print-only, #presentStage, .story-overlay, #stageArea.is-fullscreen, .remote-view, .day-badge, .hicontrast';
+const NOT_CHROME = '.paper-sheet, #printArea, .print-only, #presentStage, .story-overlay, #stageArea.is-fullscreen, .remote-view, .day-badge, .hicontrast, #overlay';
 
 const whiteChrome = page => page.evaluate(({ CHROME, NOT_CHROME }) => {
   const out = [];
@@ -609,7 +766,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083) + increment 9 (012, 052, 057, 068, 071, 084) + increment 10 (041, 065, 053, 062, 049, 037) + increment 11 (033, 080, 008, 022, 013, 027)');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083) + increment 9 (012, 052, 057, 068, 071, 084) + increment 10 (041, 065, 053, 062, 049, 037) + increment 11 (033, 080, 008, 022, 013, 027) + increment 12 (003, 032, 043, 030, 064, 042)');
 
 for (const p of PAGES) {
   /* ── dark ── */
