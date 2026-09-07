@@ -17,6 +17,16 @@
 <meta name="twitter:description" content="Printable student certificates and awards — pick a template and border, type in the details, print or batch-generate a whole class set.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='13' r='7' fill='none' stroke='%238a6d1d' stroke-width='2'/%3E%3Cpath d='M12 19l-2 8 6-3 6 3-2-8' fill='none' stroke='%238a6d1d' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     A .cert is an OBJECT, not chrome: each .theme-* skin sets the
+     certificate's own color and background, so it already shows true print
+     colours on a dark page. It must NOT be given .paper-sheet, whose (0,5,0)
+     rule in ink-paper.css would outrank .theme-elegant (0,1,0) and repaint
+     every skin white. #printArea is display:none and its @media print values
+     are untouched.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -28,6 +38,19 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Path 5 P3. --desk is the mat the previewed certificate sits on — 041's
+     #d9d7cd — and --desk-ink the muted text drawn ON it, because var(--muted)
+     there is 3.76:1 and #previewNote was this page's one allowlisted axe line.
+     --accent-soft is the selected-swatch halo, which used to be an undefined
+     variable's rgba fallback and so never changed with the theme. */
+  :root {
+    --desk: #d9d7cd; --desk-ink: #595850;
+    --accent-soft: rgba(31, 53, 80, .15);
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --desk: #0e1014; --desk-ink: var(--muted);
+    --accent-soft: rgba(127, 178, 229, .28);
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -43,7 +66,7 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
 
   .layout { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
@@ -52,7 +75,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], input[type="date"], textarea, select {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { min-height: 5rem; resize: vertical; }
@@ -60,27 +83,27 @@
   .swatches { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .9rem; }
   .swatch {
     border: 2px solid var(--line-strong); border-radius: 8px; padding: .4rem .3rem;
-    width: 5.4rem; text-align: center; cursor: pointer; background: #fff;
+    width: 5.4rem; text-align: center; cursor: pointer; background: var(--card);
   }
-  .swatch.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft, rgba(31,53,80,.15)); }
+  .swatch.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
   .swatch .chip { height: 1.6rem; border-radius: 5px; margin-bottom: .3rem; }
   .swatch .label { font-size: .66rem; color: var(--muted); }
 
   .mode-tabs { display: flex; gap: .4rem; margin-bottom: .9rem; }
   .mode-tab {
     flex: 1; text-align: center; padding: .5rem; border: 1px solid var(--line-strong);
-    border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--muted);
+    border-radius: 7px; background: var(--card); cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--muted);
   }
-  .mode-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .mode-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 
   /* Layout choice pills (orientation, per-page) — same look as .mode-tab but
      not full-width/flex:1, since there are only ever two short options. */
   .seg-tabs { display: flex; gap: .4rem; margin-bottom: .9rem; flex-wrap: wrap; }
   .seg-tab {
     padding: .4rem .8rem; border: 1px solid var(--line-strong);
-    border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .8rem; color: var(--muted);
+    border-radius: 7px; background: var(--card); cursor: pointer; font-weight: 700; font-size: .8rem; color: var(--muted);
   }
-  .seg-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .seg-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 
   .roster-row { display: flex; gap: .5rem; margin-bottom: .6rem; }
   .roster-row select { margin-bottom: 0; flex: 1; }
@@ -92,27 +115,27 @@
   .view-toggle { display: flex; gap: .4rem; margin-bottom: .8rem; }
   .view-tab {
     padding: .35rem .8rem; border: 1px solid var(--line-strong);
-    border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .78rem; color: var(--muted);
+    border-radius: 7px; background: var(--card); cursor: pointer; font-weight: 700; font-size: .78rem; color: var(--muted);
   }
-  .view-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .view-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .6rem 1.1rem; width: 100%;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   button.small { padding: .25rem .5rem; font-size: .78rem; width: auto; margin: 0; }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
 
   .logo-preview { display: flex; align-items: center; gap: .6rem; margin: .5rem 0 .8rem; }
-  .logo-preview img { width: 2.6rem; height: 2.6rem; object-fit: contain; border-radius: 6px; border: 1px solid var(--line-strong); background: #fff; }
+  .logo-preview img { width: 2.6rem; height: 2.6rem; object-fit: contain; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--card); }
 
-  .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
-  .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
+  .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
+  .preview-note { font-size: .8rem; color: var(--desk-ink); margin-bottom: .8rem; }
 
   /* ---- the certificate itself ---- */
   .cert {
@@ -173,7 +196,7 @@
     margin: 0; box-shadow: none; transform-origin: top left;
   }
   .thumb-label {
-    font-size: .72rem; color: var(--muted); text-align: center; margin: .35rem 0 0;
+    font-size: .72rem; color: var(--desk-ink); text-align: center; margin: .35rem 0 0;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
@@ -286,7 +309,7 @@
         </div>
         <div id="batchFields" style="display:none;">
           <div class="roster-row">
-            <select id="camRosterSelect"><option value="">Load a saved Name Picker roster&hellip;</option></select>
+            <select id="camRosterSelect" aria-label="Load a saved roster"><option value="">Load a saved Name Picker roster&hellip;</option></select>
             <button type="button" class="secondary" id="camLoadRosterBtn">Load</button>
           </div>
           <label for="batchNames">Student names (one per line)</label>

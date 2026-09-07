@@ -13,9 +13,6 @@
     "Tools/002-group-team-generator.html": {
       "color-contrast": "baseline 2026-09-03: 18 × elements must meet minimum color contrast ratio thresholds (e.g. .col-left > .card:nth-child(1) > .card-title); fix in the tool, then remove this line"
     },
-    "Tools/003-rubric-builder.html": {
-      "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
-    },
     "Tools/005-Seating Chart Generator.html": {
       "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. #status > b); fix in the tool, then remove this line"
     },
@@ -51,12 +48,6 @@
     },
     "Tools/040-vocab-flashcard-generator.html": {
       "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
-    },
-    "Tools/042-certificate-award-maker.html": {
-      "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
-    },
-    "Tools/043-field-trip-permission-slip.html": {
-      "color-contrast": "baseline 2026-09-03: 5 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
     }
   }
 }

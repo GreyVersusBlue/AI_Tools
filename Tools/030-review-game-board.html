@@ -16,6 +16,16 @@
 <meta name="twitter:title" content="Quiz / Review Game Board — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="A Jeopardy-style review game board for the projector — type in questions or import them from a spreadsheet.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231a1a3a'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='18' font-weight='700' text-anchor='middle' fill='%23f0c419'%3E%24%3C/text%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The board, the reveal overlay and the wager panel are a PROJECTOR surface:
+     navy and gold in both themes on purpose, so their --board-* / --gold values
+     are fixed rather than tokens that flip, and that includes the ink on the
+     white award buttons drawn on them. The answer key and the student quiz are
+     rendered into a .print-only #printArea, so their #999/#eee/#444 are print
+     values and stay as they are.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
@@ -37,13 +47,29 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* The board and its reveal overlay are the same navy and gold in both
+     themes — a projector surface, not chrome — so nothing here is overridden
+     below except --ok and --warn-ink, which are read on the page's own cards.
+     --board-btn-ink is the ink on the white award buttons that sit ON the
+     overlay: it cannot be var(--accent), because dark's accent is a pale blue
+     that reads 2.5:1 on white. */
   :root {
     --board-bg: #0d1b4c;
     --board-cell: #1a2d6e;
     --board-cell-hover: #24398a;
     --board-used: #0a1436;
+    --board-btn-ink: #1f3550;
     --gold: #f0c419;
     --ok: #2e6b3e;
+    --warn-ink: #8a5a12;
+    --good-bg: #cdeed3;
+    --err-bg: #f6d6d1;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --ok: #63c08e;
+    --warn-ink: #eac077;
+    --good-bg: #173021;
+    --err-bg: #3a201c;
   }
   * { box-sizing: border-box; }
   body {
@@ -67,29 +93,29 @@
      itself is not interesting until it is close to the edge — and the edge is
      where a teacher needs a sentence telling them what to do, not a colour. */
   .storage-line { color: var(--muted); font-size: .8rem; margin: .7rem 0 0; }
-  .storage-line.warn { color: #8a5a12; font-weight: 600; }
+  .storage-line.warn { color: var(--warn-ink); font-weight: 600; }
   .storage-line.danger { color: var(--err); font-weight: 700; }
   input[type="text"], input[type="number"], textarea {
     width: 100%; font-family: inherit; font-size: .95rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .65rem;
   }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .3rem .6rem; font-size: .82rem; border-radius: 5px; }
 
   .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
   .tab-btn {
-    background: #fff; color: var(--muted); border: 1px solid var(--line-strong);
+    background: var(--card); color: var(--muted); border: 1px solid var(--line-strong);
     border-radius: 7px 7px 0 0; padding: .5rem 1rem; font-weight: 700;
   }
   .tab-btn.active { color: var(--ink); background: var(--paper); border-bottom-color: var(--paper); }
@@ -102,10 +128,10 @@
      rather than one more tab of a single board's edit form. */
   .top-tabs { display: flex; gap: .5rem; margin-bottom: 1.1rem; }
   .top-tab-btn {
-    background: #fff; color: var(--muted); border: 1px solid var(--line-strong);
+    background: var(--card); color: var(--muted); border: 1px solid var(--line-strong);
     border-radius: 8px; padding: .6rem 1.2rem; font-weight: 700; font-size: 1rem;
   }
-  .top-tab-btn.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .top-tab-btn.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
   .top-section { display: none; }
   .top-section.active { display: block; }
 
@@ -132,7 +158,7 @@
   .bank-pull-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .9rem; }
   .bank-pull-row input[type="text"] { width: 14rem; }
 
-  .category-block { border: 1px solid var(--line-strong); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .9rem; background: #fdfdfb; }
+  .category-block { border: 1px solid var(--line-strong); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .9rem; background: var(--card-2); }
   .category-block .cat-name { font-weight: 700; margin-bottom: .5rem; }
   .clue-row { display: grid; grid-template-columns: 5.5rem 1fr 1fr auto auto auto; gap: .5rem; margin-bottom: .5rem; align-items: start; }
   .clue-row input, .clue-row textarea { font-size: .88rem; }
@@ -144,7 +170,7 @@
   .clue-image-cell button { padding: .3rem .4rem; font-size: .72rem; width: 100%; }
   .clue-image-thumb {
     width: 4.6rem; height: 3.2rem; object-fit: cover; border-radius: 5px;
-    border: 1px solid var(--line-strong); background: #fff; cursor: pointer; display: block;
+    border: 1px solid var(--line-strong); background: var(--card); cursor: pointer; display: block;
   }
   .clue-image-size { font-size: .65rem; color: var(--muted); }
 
@@ -173,7 +199,7 @@
   .overlay .clue-audio.show { display: block; }
   .cat-actions, .board-actions { display: flex; gap: .6rem; margin-top: .5rem; flex-wrap: wrap; }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
   .toolbar .spacer { flex: 1 1 auto; }
 
   .import-row { display: flex; gap: .8rem; align-items: center; flex-wrap: wrap; margin-bottom: .6rem; }
@@ -189,7 +215,7 @@
     padding: .7rem .2rem .9rem; border-bottom: 2px solid var(--line-strong);
   }
   .team-chip {
-    display: flex; align-items: center; gap: .6rem; background: #fff;
+    display: flex; align-items: center; gap: .6rem; background: var(--card);
     border: 2px solid var(--line-strong); border-radius: 10px; padding: .6rem .9rem;
     transition: background-color .2s ease, box-shadow .2s ease;
   }
@@ -200,12 +226,12 @@
   }
   .team-chip button { padding: .25rem .65rem; font-size: 1.05rem; }
   @keyframes scoreFlashUp {
-    0% { background: #cdeed3; box-shadow: 0 0 0 5px rgba(46,107,62,.4); }
-    100% { background: #fff; box-shadow: 0 0 0 0 rgba(46,107,62,0); }
+    0% { background: var(--good-bg); box-shadow: 0 0 0 5px rgba(46,107,62,.4); }
+    100% { background: var(--card); box-shadow: 0 0 0 0 rgba(46,107,62,0); }
   }
   @keyframes scoreFlashDown {
-    0% { background: #f6d6d1; box-shadow: 0 0 0 5px rgba(163,55,43,.4); }
-    100% { background: #fff; box-shadow: 0 0 0 0 rgba(163,55,43,0); }
+    0% { background: var(--err-bg); box-shadow: 0 0 0 5px rgba(163,55,43,.4); }
+    100% { background: var(--card); box-shadow: 0 0 0 0 rgba(163,55,43,0); }
   }
   .team-chip.flash-up { animation: scoreFlashUp 900ms ease-out; }
   .team-chip.flash-down { animation: scoreFlashDown 900ms ease-out; }
@@ -245,7 +271,7 @@
   .overlay-actions { display: flex; gap: .8rem; flex-wrap: wrap; justify-content: center; margin-bottom: 1rem; }
   .award-row { display: none; flex-wrap: wrap; gap: .6rem; justify-content: center; }
   .award-row.show { display: flex; }
-  .award-row button { background: #fff; color: var(--accent); }
+  .award-row button { background: #fff; color: var(--board-btn-ink); }
   .overlay button.ghost { background: transparent; color: #cfd6ea; border-color: #445; }
 
   .board-options { display: flex; align-items: center; gap: 1rem; margin-bottom: .9rem; flex-wrap: wrap; }
@@ -256,7 +282,7 @@
   .score-toolbar { display: flex; align-items: center; gap: .7rem; margin: -.4rem 0 .9rem; }
   .score-toolbar button:disabled { opacity: .4; cursor: not-allowed; }
   .kbd-hint { color: var(--muted); font-size: .78rem; }
-  .kbd-hint kbd { font-family: Consolas, monospace; background: #fff; border: 1px solid var(--line-strong); border-radius: 4px; padding: 0 .3rem; }
+  .kbd-hint kbd { font-family: Consolas, monospace; background: var(--card); border: 1px solid var(--line-strong); border-radius: 4px; padding: 0 .3rem; }
 
   .wager-panel { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.2); border-radius: 8px; padding: 1.2rem 1.4rem; max-width: 26rem; margin-bottom: 1.4rem; }
   .wager-panel label { display: block; color: #cfd6ea; font-size: .85rem; font-weight: 600; margin-bottom: .3rem; text-align: left; }
@@ -300,7 +326,7 @@
   <div class="top-section active" id="boardsSection">
 
   <div class="toolbar" id="toolbar" style="display:none;">
-    <label style="margin:0;font-weight:600;font-size:.85rem;">Board:</label>
+    <label for="boardSwitch" style="margin:0;font-weight:600;font-size:.85rem;">Board:</label>
     <select id="boardSwitch"></select>
     <button class="secondary" id="newBoardBtn">New board</button>
     <button class="secondary" id="editBoardBtn">Edit questions</button>
@@ -1590,6 +1616,9 @@
       chip.className = 'team-chip';
       var nameInput = document.createElement('input');
       nameInput.type = 'text'; nameInput.value = team.name;
+      // The team's name IS this input's value, so it cannot label itself
+      // (axe label, critical) — the position is what stays true when it changes.
+      nameInput.setAttribute('aria-label', 'Team ' + (i + 1) + ' name');
       nameInput.addEventListener('change', function () { team.name = nameInput.value.trim() || team.name; save(); });
       var minus = document.createElement('button');
       minus.className = 'small secondary'; minus.textContent = '−';

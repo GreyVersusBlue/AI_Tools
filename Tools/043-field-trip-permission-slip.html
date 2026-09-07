@@ -16,6 +16,15 @@
 <meta name="twitter:title" content="Field Trip Permission Slip Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Fill in a field trip's details once and print a clean, signable permission slip — one per student, or a stack of blank copies.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='5' y='10' width='22' height='12' rx='2' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cline x1='11' y1='10' x2='11' y2='22' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Cline x1='21' y1='10' x2='21' y2='22' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Ccircle cx='11' cy='24' r='2.2' fill='%23C43A2F'/%3E%3Ccircle cx='21' cy='24' r='2.2' fill='%23C43A2F'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     Everything the parent signs is a sheet of paper — the slip, the pocket
+     list, the reminder slip and the chaperone sheet all carry .paper-sheet, so
+     their #000 ink, their dashed rules and the var(--muted)/var(--line-strong)
+     they inherit stay light in both themes. #printArea is display:none and its
+     @media print values are untouched.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
@@ -27,7 +36,20 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
-  :root { --good: #2e7d4f; }
+  /* Path 5 P3. --desk is the mat the previewed slip sits on — 041's #d9d7cd —
+     and --desk-ink the muted text drawn ON it, because var(--muted) there is
+     3.76:1 and #previewNote was one of this page's five allowlisted axe lines.
+     --good is the scan-succeeded green; the tint pairs are 001's. */
+  :root {
+    --good: #2e7d4f; --good-bg: #e9f6ee;
+    --err-bg: #fbeceb;
+    --desk: #d9d7cd; --desk-ink: #595850;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --good: #63c08e; --good-bg: #173021;
+    --err-bg: #3a201c;
+    --desk: #0e1014; --desk-ink: var(--muted);
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -39,7 +61,7 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
 
   .layout { display: grid; grid-template-columns: minmax(320px, 460px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
@@ -49,7 +71,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], input[type="date"], input[type="time"], input[type="number"], textarea, select {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { min-height: 3.6rem; resize: vertical; }
@@ -59,23 +81,23 @@
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.full { width: 100%; margin-bottom: .5rem; }
   button.small { padding: .25rem .5rem; font-size: .78rem; }
 
   .mode-tabs { display: flex; gap: .4rem; margin-bottom: .9rem; }
   .mode-tab {
     flex: 1; text-align: center; padding: .5rem .3rem; border: 1px solid var(--line-strong);
-    border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .82rem; color: var(--muted);
+    border-radius: 7px; background: var(--card); cursor: pointer; font-weight: 700; font-size: .82rem; color: var(--muted);
   }
-  .mode-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .mode-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 
   .roster-row { display: flex; gap: .5rem; margin-bottom: .6rem; }
   .roster-row select { margin-bottom: 0; flex: 1; }
@@ -83,8 +105,8 @@
 
   .name-count { font-size: .78rem; color: var(--muted); margin: -.5rem 0 .7rem; }
 
-  .deadline-line { font-size: .88rem; font-weight: 700; color: var(--ink); margin-bottom: .5rem; padding: .5rem .7rem; background: #f2f2ef; border-radius: 6px; }
-  .deadline-line.overdue { color: var(--err); background: #fbeceb; }
+  .deadline-line { font-size: .88rem; font-weight: 700; color: var(--ink); margin-bottom: .5rem; padding: .5rem .7rem; background: var(--card-2); border-radius: 6px; }
+  .deadline-line.overdue { color: var(--err); background: var(--err-bg); }
   .deadline-line .sub { font-weight: 400; color: var(--muted); font-size: .82rem; }
 
   .collection-summary { font-size: .85rem; font-weight: 700; color: var(--accent); margin-bottom: .6rem; }
@@ -103,13 +125,13 @@
   .scan-actions { margin-top: .7rem; }
   .scan-status { font-size: .85rem; font-weight: 600; margin: .5rem 0 0; padding: .5rem .7rem; border-radius: 6px; display: none; }
   .scan-status.show { display: block; }
-  .scan-status.ok { background: #e9f6ee; color: var(--good); border: 1px solid var(--good); }
-  .scan-status.bad { background: #fbeceb; color: var(--err); border: 1px solid var(--err); }
-  .scan-status.muted { background: #f2f2ef; color: var(--muted); border: 1px solid var(--line-strong); }
+  .scan-status.ok { background: var(--good-bg); color: var(--good); border: 1px solid var(--good); }
+  .scan-status.bad { background: var(--err-bg); color: var(--err); border: 1px solid var(--err); }
+  .scan-status.muted { background: var(--card-2); color: var(--muted); border: 1px solid var(--line-strong); }
 
   .cam-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 1rem; }
   .cam-overlay[hidden] { display: none; }
-  .cam-modal { background: #fff; border: 1px solid var(--line-strong); border-radius: 10px; max-width: 360px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+  .cam-modal { background: var(--card); border: 1px solid var(--line-strong); border-radius: 10px; max-width: 360px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
   .cam-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.1rem; border-bottom: 1px solid var(--line-strong); font-weight: 700; color: var(--ink); font-family: "Segoe UI", Georgia, serif; }
   .cam-close { border: none; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--muted); padding: 0; }
   .cam-close:hover { color: var(--err); }
@@ -128,8 +150,8 @@
   .undo-bar { font-size: .82rem; color: var(--muted); display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-top: .4rem; }
   .undo-bar button { width: auto; }
 
-  .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
-  .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
+  .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
+  .preview-note { font-size: .8rem; color: var(--desk-ink); margin-bottom: .8rem; }
 
   /* ---- the permission slip itself ---- */
   .slip {
@@ -156,7 +178,7 @@
   .slip-section { margin-bottom: .75rem; }
   .slip-label { font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; margin-bottom: .15rem; }
   .slip-text { font-size: .92rem; white-space: pre-wrap; }
-  .slip-text.empty { color: #888; font-style: italic; }
+  .slip-text.empty { color: var(--muted); font-style: italic; }
 
   .slip-divider { border-top: 1px dashed #000; margin: 1rem 0; position: relative; }
   .slip-divider span { position: absolute; top: -.65rem; left: 0; background: #fff; padding-right: .5rem; font-size: .75rem; color: #555; letter-spacing: .05em; text-transform: uppercase; }
@@ -346,7 +368,7 @@
 
         <div id="batchFields" style="display:none;">
           <div class="roster-row">
-            <select id="rosterSelect"><option value="">Load a saved Name Picker roster&hellip;</option></select>
+            <select id="rosterSelect" aria-label="Load a saved roster"><option value="">Load a saved Name Picker roster&hellip;</option></select>
             <button type="button" class="secondary" id="loadRosterBtn">Load</button>
           </div>
           <label for="batchNames">Student names (one per line)</label>
@@ -719,7 +741,8 @@
           '<span class="collection-name">' + escapeHtml(n) + '</span>' +
           '<label class="collection-check"><input type="checkbox" data-collected-returned="' + escapeHtml(n) + '"' + (rec.returned ? ' checked' : '') + '> Returned</label>' +
           (showPaid ?
-            '<select class="payment-select" data-payment-select="' + escapeHtml(n) + '">' +
+            '<select class="payment-select" data-payment-select="' + escapeHtml(n) + '"' +
+              ' aria-label="' + escapeHtml('Payment status for ' + n) + '">' +
               '<option value="unpaid"' + (rec.payment === 'unpaid' ? ' selected' : '') + '>Not paid</option>' +
               '<option value="paid"' + (rec.payment === 'paid' ? ' selected' : '') + '>Paid</option>' +
               '<option value="waived"' + (rec.payment === 'waived' ? ' selected' : '') + '>Waived</option>' +
@@ -1092,7 +1115,7 @@
     if (state.returnTime) timesLine.push(L.ret + ' ' + formatTime(state.returnTime));
 
     return (
-      '<div class="slip"' + (lang ? ' lang="' + state.secondLang + '" data-slip-lang="' + state.secondLang + '"' : ' data-slip-lang="en"') + '>' +
+      '<div class="slip paper-sheet"' + (lang ? ' lang="' + state.secondLang + '" data-slip-lang="' + state.secondLang + '"' : ' data-slip-lang="en"') + '>' +
         '<div class="slip-header">' +
           (state.schoolTeacher ? '<div class="slip-school">' + escapeHtml(state.schoolTeacher) + '</div>' : '') +
           '<div class="slip-title">' + escapeHtml(L.title) + '</div>' +
@@ -1198,7 +1221,7 @@
         (showPaid ? '<td>' + payLabel + '</td>' : '') + '</tr>';
     }).join('');
     return (
-      '<div class="missing-list-page">' +
+      '<div class="missing-list-page paper-sheet">' +
         '<h2>' + (escapeHtml(state.name) || 'Field Trip') + ' &mdash; Still Missing</h2>' +
         '<div class="sub">Return by ' + (formatDate(state.dueDate) || 'no date set') + ' &middot; ' + missing.length + ' student' + (missing.length === 1 ? '' : 's') + ' outstanding</div>' +
         '<table>' +
@@ -1222,7 +1245,7 @@
     if (!rec.returned) needs.push('the signed permission slip');
     if (showPaid && rec.payment === 'unpaid') needs.push('the trip fee (' + (state.cost || 'see teacher') + ')');
     return (
-      '<div class="reminder-slip">' +
+      '<div class="reminder-slip paper-sheet">' +
         '<h2>Field Trip Reminder</h2>' +
         '<div class="rline"><b>Student:</b> ' + escapeHtml(studentName) + '</div>' +
         '<div class="rline"><b>Trip:</b> ' + (escapeHtml(state.name) || '&mdash;') + '</div>' +
@@ -1265,7 +1288,8 @@
       var assigned = (state.chaperoneAssignments && state.chaperoneAssignments[n]) || '';
       return '<div class="collection-row">' +
         '<span class="collection-name">' + escapeHtml(n) + '</span>' +
-        '<select class="chaperone-select" data-chaperone-for="' + escapeHtml(n) + '">' +
+        '<select class="chaperone-select" data-chaperone-for="' + escapeHtml(n) + '"' +
+          ' aria-label="' + escapeHtml('Chaperone group for ' + n) + '">' +
           '<option value="">Unassigned</option>' +
           groupNames.map(function (g) { return '<option value="' + escapeHtml(g) + '"' + (assigned === g ? ' selected' : '') + '>' + escapeHtml(g) + '</option>'; }).join('') +
         '</select>' +
@@ -1340,7 +1364,7 @@
     var unassignedHtml = unassigned.length ?
       '<div class="chaperone-group"><h3>Unassigned</h3><ul>' + unassigned.map(function (s) { return '<li>' + escapeHtml(s) + '</li>'; }).join('') + '</ul></div>' : '';
     return (
-      '<div class="chaperone-print">' +
+      '<div class="chaperone-print paper-sheet">' +
         '<h2>' + (escapeHtml(state.name) || 'Field Trip') + ' &mdash; Chaperone Groups</h2>' +
         (groupsHtml || '<p>No chaperones added yet.</p>') +
         unassignedHtml +
