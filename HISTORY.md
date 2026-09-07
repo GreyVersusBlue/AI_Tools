@@ -41,6 +41,80 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 5 P3's stage rollout — the row's last half — 2026-09-07 (#227, `CACHE_VERSION` v167).**
+001 and 004 were the last two pages on the site hand-rolling `requestFullscreen`; eleven
+palette increments in a row had walked past them, which is why the row said this would not
+happen as a side effect of anything else. `_shared/stage.js` goes from 7 adopters to **9**, and
+`npm run path5:next` reports **0** hand-rolled stages among the themed pages. Five things are
+the reusable part.
+
+- **A stage element that is `display:none` cannot be fullscreened, so the helper's own F key is
+  wrong for it.** 001's Projector View is hidden until the tool shows it, and `fullscreenKey`
+  calls `enter()` straight out. The adoption is `fullscreenKey: false` plus `f` in the hotkey
+  map, pointing at a toggle that un-hides first and asks second — the order 015's story overlay
+  already used, now written down as the rule. Everything else about the key (the typing guard,
+  the modifier guard, one-stage-at-a-time) is unchanged, because it is the same code path.
+- **`<body>` is a legitimate stage and `<html>` is not.** 004 fullscreened
+  `document.documentElement`, which no mount can express: the helper puts its classes on the
+  element it is given, and the fallback rule needs something to pin. `document.body` is what 010
+  has mounted since #198, and everything 004 must keep on screen — the header controls, the
+  zero-flash overlay, a11y.js's own widget — is already a child of it, so nothing needed `hud`.
+- **The helper's fallback rule is injected into `<head>` after the page's `<style>`, so a
+  same-specificity override ties and loses.** `.stage-fallback.is-fullscreen` paints
+  `var(--paper, #fff)`. A plain `.projector-view` (0,1,0) loses outright, and a two-class rule of
+  our own would only tie and then lose on document order. `#projectorView.is-fullscreen` and
+  `body.stage-fallback.is-fullscreen` win. Without them a browser that refuses fullscreen would
+  have handed the room a **white** projector board with light-grey numbers on it, and 004 — which
+  defines no `--paper` at all — a white page in dark mode. Neither is visible in a diff; both came
+  from the suite's new fallback assertions.
+- **The tenth instance of the a11y sweep's blind spot, found by a suite rather than by a
+  conversion.** 001's `.proj-note` was `#6c7484` on the `#10151c` board: **3.98:1, a serious
+  `color-contrast` failure shipped in *light*, on every projector since the tool existed.** The
+  site-wide sweep cannot see it because the whole view is `display:none` until a button is
+  pressed — the same widened statement #225 gave the row. `#7f8794` is 5.16:1. **No allowlist
+  line was added**; the on-stage `a11yScan` in `smoke-stage-rollout.mjs` is what reported it, and
+  the previous nine instances all came out of a page conversion. The row said "the free evidence
+  is spent"; this says where the *next* evidence comes from — scan the state, not the page.
+- **A test harness that identifies its subject by an id cannot describe the mount it already
+  had.** `smoke-stage-rollout.mjs` keyed everything on `document.getElementById(stageId)`, so 010
+  has mounted `<body>` since #198 with no suite able to say so, and 004 could not be added at all.
+  It takes a **CSS selector** now, plus the two-button shape 001 needs (enter and exit are
+  different elements, so there is no relabelling to assert) and, for that shape, an assertion that
+  **F re-enters after the Exit button leaves** — the only check that proves F reaches a stage whose
+  element was `display:none` when the key was pressed. 116 → **164** assertions.
+
+**What was not verified.** Nothing has been opened on a real projector or a real Chromebook, and
+nothing has installed the worker — twelve increments running. Headless Chromium grants
+`requestFullscreen` from a click, and a Playwright `Escape` cannot exit *real* fullscreen (that key
+is the browser's own), so the real-fullscreen exits are driven by the button and by F and only the
+fallback's exit by Escape. **007 still hand-rolls `requestFullscreen`** and was left alone on
+purpose: it loads no `a11y.js`, so `path5:next` does not count it, and it needs a theme before it
+needs a stage.
+
+**CI scoping, measured a second time.** #227 ran **15 of 145 suites in 4.7 minutes** on GitHub's
+runner (#225 was 14 in 9.1). The `sw.js` `CACHE_VERSION`-only exemption from #223 is doing what it
+was built for on a second consecutive tool PR.
+
+**Path 5 P4 was surveyed and deliberately not started (#227).** Its row was claimed with P3's, and
+releasing it rather than half-doing it is the call worth recording, with the reason: "034 gets a
+native dark palette" is one page in the ranked table and six problems in the code. 034 is **not** a
+clean publish of 035's `BR_CSS` — the two have drifted by ~109 diff lines — so the dark block has to
+go into both. A published standalone file has no `_shared/` next to it, so `BR_CSS` must key its
+dark tokens on `prefers-color-scheme` **and** `data-theme`. `--br-forest` is 10 fills and 24 ink
+uses under one name. And the measurement that settles the size: **the five department hues all fail
+as text on a dark card** — `--br-ss` 2.39:1, `--br-scsi` 2.80:1, `--br-ela` 3.21:1, `--br-sci`
+3.24:1, `--br-math` 3.56:1 on `#1a201c`, against 4.66–6.94:1 on white — and `brDColor()` writes
+them from **script** into `style="color:${col}"`, where no token override reaches them. In the same
+sweep, 034's script hardcodes `style="color:#62756a"` — `--br-muted`'s *light* value — in four
+places, invisible on dark; that is #214's inline-style finding for the third time. The floor plan,
+the mini-map and the `.rcell.ctx` rules should keep a light mat in both themes for #225's reason
+(department hues at a `fill-opacity` tuned for a light ground, and the map is what prints), which
+takes ~10 literals out of the job. A dark palette that measures clean, for whoever takes the row:
+card `#1a201c`, cream `#222923`, paper `#272f28`, ink `#e7ece7`, muted `#a3b4a7`, line `#2e372f`,
+forest-ink `#79cfa2`, forest fill `#12563a`, plan `#d9bb63` on `#2a2718`, placeholder `#7e8f83` —
+every text pair 4.85:1 or better, worst being the placeholder. **None of that was written to a
+file**; it is a survey, and the row is unclaimed.
+
 **Path 5 P3's palette rollout finished — 2026-09-07 (#225, `CACHE_VERSION` v166).** Thirteen
 increments over three days took every themed page on the site from a11y.css's CSS-filter invert
 to `_shared/ink-paper.css`'s real dark palette: **82 of 82, 100%, nothing left on the filter.**
