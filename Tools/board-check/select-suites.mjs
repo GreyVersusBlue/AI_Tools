@@ -32,12 +32,17 @@
 //      how the pairing is resolved). Pages under Tools/<folder>/ (001's hallway
 //      remote, say) count too.
 //
-//   4. SWEEP      — a suite that enumerates the tool pages itself with
-//      readdirSync (the a11y sweep, the theme sweep, the picker rollout, the
-//      registry-shape test) never names any page, so rule 3 can never select
-//      it. Any changed page selects all of them. They are found by reading the
-//      suites for `readdirSync`, not from a list, so a new sweep is covered the
-//      day it lands.
+//   4. SWEEP      — a suite that enumerates the tool pages itself (the a11y
+//      sweep, the theme sweep, the picker rollout, the registry-shape test)
+//      never names any page, so rule 3 can never select it. Any changed page
+//      selects all of them. They are found by reading the suites, not from a
+//      list, so a new sweep is covered the day it lands. There are two ways to
+//      enumerate and both count: `readdirSync`, and `git ls-files` — which
+//      smoke-theme.mjs moved to on 2026-09-07 so its sweep would stop
+//      including the gitignored offline-copy staging tree. That move made it
+//      invisible to a `readdirSync`-only test for as long as it took the full
+//      suite to run: a page edit would have quietly stopped running the theme
+//      sweep in CI. `select-suites.test.mjs` pins both spellings.
 //
 // Everything else — the Markdown, eslint.config.js, .gitignore — selects
 // nothing, and run-suites.mjs then exits 0 having run no suite. The guards in
@@ -75,7 +80,8 @@ export const toolOf = suite => (suite.split('/')[1] || '');
 export const needlesFor = file => [...new Set([file, encodeURIComponent(file), file.replace(/ /g, '%20')])];
 
 /** A suite that lists the tool pages for itself instead of naming them. */
-export const isSweep = src => /readdirSync\s*\(/.test(src);
+export const isSweep = src =>
+  /readdirSync\s*\(/.test(src) || /['"]ls-files['"]/.test(src);
 
 /** The per-tool folders a live page references through src/href/import/fetch. */
 export function foldersReferencedBy(pageSrc) {

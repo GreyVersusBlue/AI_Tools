@@ -15,6 +15,12 @@
 <meta name="twitter:title" content="Socratic Seminar Prep &amp; Tracker — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Print a claim/evidence/rebuttal prep sheet for a Socratic seminar, then run a live speaking-order and participation tracker with optional inner/outer fishbowl circles.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M7 9h12a2 2 0 012 2v6a2 2 0 01-2 2h-7l-4 4v-4H7a2 2 0 01-2-2v-6a2 2 0 012-2z' stroke='%231f3550' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The seminar sheets are built into #printArea, which is paper, so the #111
+     body and #999 answer rules in the #printArea rules stay as they are.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -23,6 +29,21 @@
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* Path 5 P3. The inner/outer circle chips were a blue and an amber trio of
+     literals. The amber is 001's warn trio unchanged (the page's own values
+     were within a shade of it); the blue is the matching chip strength, one
+     step stronger than 001's --info-line, which is a note border rather than a
+     chip's. --err-bg is 001's, for the danger hover. */
+  :root {
+    --info-bg: #eaf1f5; --info-line: #9dc4f0; --info-ink: #1f5ea3;
+    --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
+    --err-bg: #fbecea;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --info-bg: #1b2a35; --info-line: #3f6b96; --info-ink: #a8cdf2;
+    --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
+    --err-bg: #3a201c;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -40,7 +61,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .8rem; }
   select, input[type="text"], input[type="number"], textarea {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem;
   }
   textarea { resize: vertical; min-height: 3.5rem; }
@@ -49,12 +70,12 @@
     font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
     border-radius: 6px; padding: .5rem .9rem; border: 1px solid var(--accent);
   }
-  button.primary { background: var(--accent); color: #fff; }
+  button.primary { background: var(--accent); color: var(--accent-ink); }
   button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--accent); }
-  button.secondary:hover { background: #eef2f6; }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: #fbecea; }
+  button.secondary { background: var(--card); color: var(--accent); }
+  button.secondary:hover { background: var(--card-2); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err-bg); }
   button.tiny { padding: .15rem .4rem; font-size: .75rem; border-radius: 4px; }
 
   .toprow { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; margin-bottom: .9rem; }
@@ -72,12 +93,12 @@
   .fishbowl-toggle { display: flex; align-items: center; gap: .5rem; margin: .6rem 0 1rem; font-weight: 600; font-size: .85rem; }
   .fishbowl-toggle input { width: auto; }
 
-  .orow { display: flex; align-items: center; gap: .7rem; border: 1px solid var(--line); border-radius: 8px; padding: .5rem .7rem; margin-bottom: .4rem; background: #fff; cursor: grab; }
+  .orow { display: flex; align-items: center; gap: .7rem; border: 1px solid var(--line); border-radius: 8px; padding: .5rem .7rem; margin-bottom: .4rem; background: var(--card); cursor: grab; }
   .orow .handle { color: var(--muted); font-size: 1rem; user-select: none; }
   .orow .oname { flex: 1 1 10rem; font-weight: 600; font-size: .9rem; }
-  .orow .grouptag { font-size: .72rem; padding: .15rem .5rem; border-radius: 10px; border: 1px solid var(--line-strong); background: #f3f5f7; cursor: pointer; }
-  .orow .grouptag.inner { background: #eaf3ff; border-color: #9dc4f0; color: #1f5ea3; }
-  .orow .grouptag.outer { background: #fff2e6; border-color: #f0c69d; color: #a3611f; }
+  .orow .grouptag { font-size: .72rem; padding: .15rem .5rem; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--card-2); cursor: pointer; }
+  .orow .grouptag.inner { background: var(--info-bg); border-color: var(--info-line); color: var(--info-ink); }
+  .orow .grouptag.outer { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-ink); }
   .tally { display: flex; gap: .6rem; align-items: center; }
   .tally .t { display: flex; align-items: center; gap: .3rem; font-size: .78rem; color: var(--muted); }
   .tally .t b { color: var(--ink); min-width: 1.1em; text-align: center; }

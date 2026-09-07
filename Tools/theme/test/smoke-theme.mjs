@@ -23,6 +23,7 @@ import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
 import { SITE } from '../../board-check/harness.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const PORT = 8405;
 
@@ -42,16 +43,20 @@ console.log('Theme — one owner, one mechanism (Path 5 P1)');
 // pages, minus the two archived design folders and the index backup. Tool
 // support pages (Tools/<tool>/*.html) are live too — 001's hallway remote and
 // the escape-room lock screen both link ink-paper.css.
+// Tracked files only, via `git ls-files`, for the reason recorded in
+// list-dark-candidates.mjs and check-adoption.mjs: a plain walk of the tree
+// also sweeps `Tools/board-check/.offline-copy-staging/`, the gitignored
+// whole-site copy `npm run offline:build` leaves behind, so every page gets
+// checked twice and a staging copy built before a conversion fails as though
+// the real page had regressed.
 const EXEMPT = ['Tools/New Designs/', 'Tools/Old Designs/', 'index_backup.html', 'node_modules/'];
-function livePages(dir = SITE, out = []) {
-  for (const name of fs.readdirSync(dir)) {
-    const full = path.join(dir, name);
-    const rel = path.relative(SITE, full).split(path.sep).join('/');
-    if (EXEMPT.some(e => rel.startsWith(e)) || name === '.git') continue;
-    if (fs.statSync(full).isDirectory()) livePages(full, out);
-    else if (name.endsWith('.html')) out.push(rel);
-  }
-  return out;
+function livePages() {
+  const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: SITE, encoding: 'utf8' })
+    .split('\0').filter(Boolean);
+  return tracked.filter(rel =>
+    rel.endsWith('.html') &&
+    !EXEMPT.some(e => rel.startsWith(e)) &&
+    fs.existsSync(path.join(SITE, rel)));
 }
 
 const pages = livePages().sort();

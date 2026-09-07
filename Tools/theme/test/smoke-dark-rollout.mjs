@@ -296,6 +296,87 @@ const PAGES = [
     // init() seeds a blank worksheet, so the step cards and their .note
     // (--info-bg) render on load.
     prep: async page => { await settle(page, 400); } },
+  // increment 9. Four of the six keep their printable inside #printArea, which
+  // print-area.css (or, for 068, the page's own display:none) hides on screen,
+  // so their print greys were left alone. 012 is the one with an on-screen
+  // facsimile: the live graph-paper preview is the sheet that gets printed, it
+  // is marked .paper-sheet, and it matters more here than usual because
+  // gpg-render.js draws the whole grid in `currentColor` — without the sheet
+  // restoring the light ink, dark mode would draw a pale grid on white paper.
+  { label: '012', url: '/Tools/012-graph-paper-generator.html', sheet: '#previewArea',
+    // Boot loads (or creates) a preset and renders, so the preview is there;
+    // the number-line tab is where the second half of the form controls live.
+    prep: async page => { await settle(page, 500); } },
+  { label: '052', url: '/Tools/052-cognates-false-friends-builder.html',
+    // A bulk import with nothing in the box is the cheapest way to put the
+    // .bulk-note.error tint on screen; the two add buttons put a row of the
+    // tokenised inputs under it.
+    prep: async page => {
+      await page.click('#bulkImportBtn');
+      await page.click('#addCognateBtn');
+      await page.click('#addFalseFriendBtn');
+      await settle(page, 400);
+    } },
+  { label: '057', url: '/Tools/057-dichotomous-key-builder.html',
+    // Empty storage seeds a two-step vertebrate key, so the step blocks, the
+    // .on-path highlight and the .trace-choice buttons are all on load;
+    // walking to a final answer is what renders a .trace-outcome tint.
+    prep: async page => {
+      await settle(page, 200);
+      const choices = page.locator('.trace-choice');
+      if (await choices.count() > 1) await choices.nth(1).click();
+      await settle(page, 400);
+    } },
+  { label: '068', url: '/Tools/068-parent-contact-log.html',
+    // No roster, no table — and the table is where the method and reason
+    // badges, the row hover and the tally bars are. Two contacts, one of them
+    // "Positive news", is what puts a --ok figure and a green tally bar there.
+    // The outcome field is not optional: the log button alert()s and returns
+    // without it, and an earlier version of this prep silently logged nothing.
+    prep: async page => {
+      await page.fill('#rosterInput', 'Alex Rivera\nBailey Chen\nCarter Diaz');
+      await page.click('#saveRosterBtn');
+      await settle(page, 300);
+      await page.fill('#entryOutcome', 'Called about missing homework; mum will check in tonight.');
+      await page.click('#logEntryBtn');
+      await settle(page, 200);
+      await page.selectOption('#entryReason', 'Positive news');
+      await page.fill('#entryOutcome', 'Emailed home about a strong essay.');
+      await page.click('#logEntryBtn');
+      await settle(page, 300);
+    } },
+  { label: '071', url: '/Tools/071-picture-prompt-generator.html',
+    // The stage, the thumbnail and the pin button only exist once there is an
+    // image, so this is the first prep in the suite to upload one: a 1x1 PNG
+    // through the real file input, which is what the tool reads with
+    // FileReader. Pinning is what puts the amber warn trio on screen.
+    prep: async page => {
+      await page.setInputFiles('#imageInput', {
+        name: 'prompt.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+          'base64'),
+      });
+      await settle(page, 600);
+      // Uploading fills the thumbnail strip but does not put anything on the
+      // stage — the stage stays on "Upload at least one image to get started"
+      // until a random image is drawn, and the pin button lives inside it.
+      await page.click('#newImageBtn');
+      await settle(page, 400);
+      await page.click('#pinPromptBtn');
+      await settle(page, 300);
+    } },
+  { label: '084', url: '/Tools/084-socratic-seminar-prep-organizer.html',
+    // The speaking-order rows are the page's only --card surface outside the
+    // cards themselves, and the inner/outer chips only exist in fishbowl mode.
+    prep: async page => {
+      await page.fill('#rosterText', 'Alex Rivera\nBailey Chen\nCarter Diaz\nDana Ellis');
+      await page.click('#applyNamesBtn');
+      await settle(page, 300);
+      await page.check('#fishbowlToggle');
+      await settle(page, 400);
+    } },
 ];
 
 // Chrome is what follows the theme. Anything that is a projector surface
@@ -345,7 +426,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083)');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083) + increment 9 (012, 052, 057, 068, 071, 084)');
 
 for (const p of PAGES) {
   /* ── dark ── */

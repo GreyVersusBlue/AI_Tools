@@ -15,12 +15,27 @@
 <meta name="twitter:title" content="Picture-Prompt Speaking/Writing Task Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="A random image prompt for describing-in-the-target-language speaking or writing tasks, projector-friendly or printable.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='7' width='20' height='16' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='12' cy='13' r='2' fill='%231f3550'/%3E%3Cpath d='M8 21l6-6 4 4 3-3 5 5' fill='none' stroke='%231f3550' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The printable cards are built into #printArea, which is paper, so their
+     #333 rule stays as it is. The pinned-prompt state uses the site's amber
+     warn trio (001's values).
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* Path 5 P3. The amber pair is 001's warn trio, the site's standard tint for
+     "held on purpose"; --warn-bg-2 is the hover a literal #fbe8d8 used to do. */
+  :root {
+    --warn-bg: #fdf0dc; --warn-bg-2: #f9e6cc; --warn-line: #eecda0; --warn-ink: #8a5a13;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --warn-bg: #332711; --warn-bg-2: #3f2f14; --warn-line: #5e4a20; --warn-ink: #eac077;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -36,29 +51,29 @@
   .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
-  input[type="text"], input[type="file"] {
+  input[type="text"], input[type="file"], input[type="number"] {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
 
   .thumb-grid { display: flex; flex-wrap: wrap; gap: .5rem; }
   .thumb-wrap { position: relative; }
   .thumb-wrap img { width: 5rem; height: 5rem; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); }
-  .thumb-wrap .del { position: absolute; top: -6px; right: -6px; width: 1.2rem; height: 1.2rem; border-radius: 50%; background: #fff; border: 1px solid var(--line-strong); color: var(--err); font-size: .75rem; line-height: 1; cursor: pointer; }
+  .thumb-wrap .del { position: absolute; top: -6px; right: -6px; width: 1.2rem; height: 1.2rem; border-radius: 50%; background: var(--card); border: 1px solid var(--line-strong); color: var(--err); font-size: .75rem; line-height: 1; cursor: pointer; }
 
   .prompt-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
   .prompt-row input { margin-bottom: 0; }
@@ -67,7 +82,7 @@
   .setbar .field { display: flex; flex-direction: column; }
   .setbar select {
     font-family: inherit; font-size: .9rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; min-width: 16rem; max-width: 100%;
   }
 
@@ -79,10 +94,10 @@
   .stage-card .task-text { font-size: 1.3rem; }
   .stage-nav { display: flex; gap: .8rem; justify-content: center; margin-top: .5rem; }
   .empty-hint { color: var(--muted); }
-  .pin-btn { background: #fff; color: var(--ink); border-color: var(--line-strong); font-size: .82rem; padding: .4rem .8rem; }
-  .pin-btn:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  .pin-btn.pinned { background: #fdf3ec; border-color: #e0b98f; color: #7a4a1c; }
-  .pin-btn.pinned:hover { background: #fbe8d8; }
+  .pin-btn { background: var(--card); color: var(--ink); border-color: var(--line-strong); font-size: .82rem; padding: .4rem .8rem; }
+  .pin-btn:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  .pin-btn.pinned { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-ink); }
+  .pin-btn.pinned:hover { background: var(--warn-bg-2); }
   .print-count-field { display: inline-flex; align-items: center; gap: .4rem; }
   .print-count-field input { width: 5rem; margin-bottom: 0; }
 

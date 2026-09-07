@@ -15,6 +15,13 @@
 <meta name="twitter:title" content="Parent/Guardian Contact Log — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Log a call, email, or note home per student — date, method, and outcome — for quick reference before a conference or a difficult phone call.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M8 10h16v12H8z' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M8 10l8 7 8-7' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The printed log lives in #printArea, which this page hides with
+     display:none and styles entirely inside @media print, so its #555, #999
+     and #eee are paper values and stay as they are.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
@@ -22,7 +29,13 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
-  :root { --ok: #2c6e3f; }
+  /* Path 5 P3. --ok was the toast fill only; the tally's "good news" count and
+     bar were a second, slightly lighter green (#2f7d4f) written twice. They are
+     one token now, and it is the darker of the two, which also lifts the tally
+     figure's contrast on the card from 4.47 to 5.36. Dark is 001's --good, and
+     --info-bg (001's too) is the method badge's pale blue chip. */
+  :root { --ok: #2c6e3f; --info-bg: #eaf1f5; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --ok: #63c08e; --info-bg: #1b2a35; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -43,21 +56,21 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], input[type="date"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { resize: vertical; min-height: 4.5rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .25rem .55rem; font-size: .78rem; }
   button.full { width: 100%; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
@@ -70,6 +83,12 @@
   .roster-list li:last-child { border-bottom: none; }
   .roster-list .count { color: var(--muted); font-size: .78rem; }
   .roster-list .count.zero { color: var(--err); }
+  /* Underlined on purpose. This link sits inside muted text and was drawn in
+     --accent-2 with text-decoration:none, which is a 1.1:1 difference from the
+     text around it — axe's link-in-text-block, serious, and true in light
+     since the tool shipped. The site-wide sweep never saw it because it opens
+     the page with an empty roster and this list does not render at all. */
+  .roster-list .print-link { color: var(--accent-2); text-decoration: underline; }
   .roster-empty { color: var(--muted); font-size: .85rem; }
 
   .toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1rem; }
@@ -80,7 +99,7 @@
 
   .toast {
     position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
-    background: var(--ok); color: #fff; font-weight: 600; font-size: .88rem;
+    background: var(--ok); color: var(--accent-ink); font-weight: 600; font-size: .88rem;
     padding: .6rem 1.1rem; border-radius: 999px; box-shadow: 0 6px 18px rgba(0,0,0,.18);
     opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; z-index: 50;
   }
@@ -93,14 +112,14 @@
   table { width: 100%; border-collapse: collapse; font-size: .88rem; }
   th, td { text-align: left; padding: .5rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-  tr:hover td { background: #f6f5f0; }
+  tr:hover td { background: var(--card-2); }
   .method-badge {
     display: inline-block; font-size: .72rem; font-weight: 600; padding: .1rem .5rem;
-    border-radius: 999px; background: #e9eef3; color: var(--accent-2); white-space: nowrap;
+    border-radius: 999px; background: var(--info-bg); color: var(--accent-2); white-space: nowrap;
   }
   .reason-badge {
     display: inline-block; font-size: .72rem; font-weight: 600; padding: .1rem .5rem;
-    border-radius: 4px; background: #f2efe6; color: var(--ink); border: 1px solid var(--line-strong);
+    border-radius: 4px; background: var(--card-2); color: var(--ink); border: 1px solid var(--line-strong);
     white-space: nowrap;
   }
   .reason-badge.none { background: transparent; border-color: transparent; color: var(--muted); font-weight: 400; }
@@ -109,18 +128,18 @@
      under it, and it changes with every filter — which is the point: it
      answers "what have this term's contacts about this student actually
      been about", not just "how many are there". */
-  .tally { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .75rem; margin-bottom: .8rem; background: #fbfbf9; }
+  .tally { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .75rem; margin-bottom: .8rem; background: var(--card); }
   .tally-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1rem; margin-bottom: .5rem; }
   .tally-total { font-weight: 700; font-size: .95rem; }
-  .tally-good { font-size: .86rem; color: #2f7d4f; font-weight: 700; }
+  .tally-good { font-size: .86rem; color: var(--ok); font-weight: 700; }
   .tally-good.none { color: var(--muted); font-weight: 600; }
   .tally-bars { display: grid; grid-template-columns: auto 1fr auto; gap: .25rem .6rem; align-items: center; }
   .tally-label { font-size: .82rem; white-space: nowrap; }
-  .tally-track { background: #eceae2; border-radius: 3px; height: .55rem; overflow: hidden; }
+  .tally-track { background: var(--card-2); border-radius: 3px; height: .55rem; overflow: hidden; }
   /* display:block, because a bare span is inline and would ignore width — the
      bars would render as empty tracks and look like a rendering bug. */
   .tally-fill { display: block; background: var(--accent-2); height: 100%; }
-  .tally-row.good .tally-fill { background: #2f7d4f; }
+  .tally-row.good .tally-fill { background: var(--ok); }
   .tally-n { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
   .tally-empty { font-size: .84rem; color: var(--muted); margin: 0; }
   .row-actions { display: flex; gap: .3rem; white-space: nowrap; }
@@ -414,7 +433,7 @@
       var c = countFor(name);
       li.innerHTML = '<span>' + escapeHtml(name) + '</span>' +
         '<span class="count' + (c === 0 ? ' zero' : '') + '">' + c + ' contact' + (c === 1 ? '' : 's') +
-        ' &middot; <a href="#" data-print-student="' + escapeHtml(name) + '" style="color:var(--accent-2);text-decoration:none;">print</a></span>';
+        ' &middot; <a href="#" data-print-student="' + escapeHtml(name) + '" class="print-link">print</a></span>';
       els.rosterList.appendChild(li);
     });
   }
