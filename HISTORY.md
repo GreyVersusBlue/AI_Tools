@@ -41,6 +41,58 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 5 P3's palette rollout finished — 2026-09-07 (#225, `CACHE_VERSION` v166).** Thirteen
+increments over three days took every themed page on the site from a11y.css's CSS-filter invert
+to `_shared/ink-paper.css`'s real dark palette: **82 of 82, 100%, nothing left on the filter.**
+The last page was 046, the Blank Map Generator, and it made a category the twelve before it had
+not: **the sheet of paper was the whole interactive viewer.** `#viewport` carries
+`.paper-sheet`, so the label boxes, the legend, the markers, the compass, the scale bar, the
+lat/lon readout and the locator inset keep their light literals — and the argument was not that
+the map prints (it does) but that `buildExportCanvas()` rasterises that furniture with hardcoded
+values: `#eef0ec` behind the map, `#fff` boxes, `#1f3550` ink. A themed viewer would have shown
+a teacher something the PNG, the PDF and the paper do not. The mat became `var(--map-mat)`, a
+token declared with **no dark override on purpose**, because a colour that has to keep equalling
+a literal in script is not a theme colour and naming it is how the constraint stays visible.
+
+Three smaller judgements, recorded because they are the reusable part:
+
+- **Two thumbnail mats stayed light** — `.result .thumb` with its transparency checker, and the
+  24px `.recentItem img`. A Wikimedia Commons map is usually a transparent PNG of dark line art,
+  so a mat that followed the theme would hide the thumbnail it exists to show.
+- **A sheet that is not white needs a second assertion, not a looser one.**
+  `smoke-dark-rollout.mjs` checked every sheet for `rgb(255,255,255)`; 046's sheet is the mat.
+  The entry declares `sheetBg` (an exact equality against the page's own declared colour) **and**
+  a `sheetChild` — a label box inside the sheet, which must still be white with dark ink. What
+  `.paper-sheet` actually claims is that the light tokens are restored *inside* it, and on a
+  coloured sheet only something in the subtree can prove that.
+- **`smoke-theme.mjs`'s filtered-page half was deleted, not repointed.** It drove a page that had
+  *not* adopted, to prove the dark block changed nothing for the tools still on the filter; that
+  page moved 003 → 046 in #221 and there is no third. Its assertion count went 47 → 42, which is
+  the one place in this repo where a shrinking count is the right outcome. The static sweep still
+  fails any page shipping the filter and a native palette at once.
+
+**The ninth instance of the a11y sweep's blind spot, and the one that widened its statement.**
+046's `#scaleBarUnitSelect` (km/mi) has had **no accessible name at all** since the tool shipped
+— a critical axe `select-name`, in light as well — and it is `hidden` until the scale bar is
+switched on **over a calibrated map**. Every previous instance was hidden behind *saved data*, so
+the row's fix (seed each page's localStorage from the tool registry) would have found them; this
+one is behind a **toolbar toggle**, and no seed reveals it. The row now says so.
+
+**What the preps got wrong, again.** The first draft of the quiz-mode prep placed its second
+label on the mat below the map, the tool ignored the click, and a `waitForSelector` for
+`.bmg-label` was satisfied by the *first* label — a prep silently doing half of what it says,
+which is how #214 and #218 ended up with green assertions about states no browser reached. Both
+preps now wait for the label **count** to rise. A second trap in the same tool: "Color each new
+label" is on by default and writes a palette colour inline, which answered the `sheetChild`
+question with the teacher's red instead of the sheet's ink until the prep turned it off.
+
+**What was not verified:** the export canvas was *read*, not rendered — `buildExportCanvas()`
+paints literals, so the theme cannot reach it, but no PNG was downloaded and compared against a
+light-mode one. And nothing has been opened on a real projector or a real Chromebook, and nothing
+has installed the worker, in thirteen increments. **What is left of Path 5 P3** is the honest
+remainder the row now carries: `stage.js` is still at 7 adopters and 001 and 004 still hand-roll
+`requestFullscreen`, which eleven palette increments walked past.
+
 **…and the scoping finally reached a tool PR — 2026-09-07 (#223).** For two days the scoped
 job existed and never fired on the PRs it was built for. `select-suites.mjs`'s rule 1 made any
 `sw.js` edit site-wide, `CLAUDE.md` requires a `CACHE_VERSION` bump in the same commit as any
