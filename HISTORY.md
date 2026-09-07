@@ -133,6 +133,13 @@ scanned, because a view whose script threw scans clean.
 `test:a11y -- --only 034` is clean and **no allowlist line was added**; 034 was already clean and
 stayed clean, in dark as well as light.
 
+**And nothing else on the site checks this.** Ten suites emulate print at all
+(`grep -rln "media: *'print'" Tools --include=*.mjs`) and **only two of them do it in dark** —
+`smoke-theme.mjs` on 001 and this round's new suite on 034. The other eight never set a theme, so
+they print from light and could never have seen the bug. A sweep that drives each printing tool
+through `emulateMedia({media:'print'})` in dark and reads the **tokens** is the cheap follow-up;
+it is written into `BACKLOG.md`'s header rather than made a row.
+
 **Not verified.** Nothing has been opened on a real projector, a real Chromebook or a real
 printer, fourteen increments running — the print reset is verified by `emulateMedia`, which is
 what the token values say and not what a printer puts on paper. The **PNG export**
