@@ -28,6 +28,7 @@
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/webrtc-pair.js"></script>
 <script src="../_shared/qr-scan.js"></script>
+<script src="../_shared/stage.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <style>
@@ -70,6 +71,18 @@
     transition: background 0.15s ease, color 0.15s ease;
   }
   .container { max-width: 780px; margin: 0 auto; }
+
+  /* _shared/stage.js's refused-fullscreen fallback pins <body> to the viewport
+     with a `.stage-fallback.is-fullscreen` rule it injects into <head>, i.e.
+     after this block — and that rule paints `var(--paper, #fff)`, a token this
+     page does not define, so a fallback would have gone white in dark mode and
+     eaten the body padding. Three classes beat the helper's two; the values are
+     the body's own. */
+  body.stage-fallback.is-fullscreen {
+    background: var(--color-bg);
+    color: var(--color-text);
+    padding: 1.5rem 1rem 3rem;
+  }
 
   .app-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
   .app-header h1 { font-size: 1.6rem; margin: 0; }
@@ -750,15 +763,22 @@ function renderConnected() {
 </script>
 <script>
 (function () {
-  var btn = document.getElementById('fullscreenBtn');
-  function updateLabel() {
-    btn.textContent = document.fullscreenElement ? '⤢ Exit Fullscreen' : '⛶ Fullscreen';
-  }
-  btn.addEventListener('click', function () {
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-    else document.exitFullscreen();
+  /* Fullscreen is _shared/stage.js's (Path 5 P3). This page hand-rolled the
+     button, its label, the fullscreenchange listener and an F key with its own
+     copy of the typing guard; all four are the helper's now, and with them
+     comes the thing the hand-rolled version did not have — a fixed-overlay
+     fallback, and an Escape that leaves it, for a browser that refuses the
+     request. Before, a refusal left the button silently doing nothing.
+
+     <body> is the stage, not <html>: the timer IS the page, so there is no
+     smaller subtree to project, and mounting the body is what 010 does for the
+     same reason. Everything that must stay on screen is already a child of it
+     — the header controls, the zero-flash overlay, a11y.js's own widget — so
+     nothing needs `hud`. */
+  Stage.mount(document.body, {
+    button: document.getElementById('fullscreenBtn'),
+    labels: { enter: '⛶ Fullscreen', exit: '⤢ Exit Fullscreen' }
   });
-  document.addEventListener('fullscreenchange', updateLabel);
 
   /* Ambient strip: open this same page in its own small window with ?strip=1.
      A browser tab cannot be drawn on top of a slide deck, so the working
@@ -778,13 +798,6 @@ function renderConnected() {
       try { win.focus(); } catch (e) { /* focus refused — the window is still open */ }
     });
   }
-  document.addEventListener('keydown', function (e) {
-    if (e.key.toLowerCase() !== 'f' || e.ctrlKey || e.metaKey || e.altKey) return;
-    var tag = (e.target && e.target.tagName) || '';
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-    else document.exitFullscreen();
-  });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

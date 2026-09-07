@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="../_shared/base.css">
 <script src="../_shared/webrtc-pair.js"></script>
 <script src="../_shared/qr-scan.js"></script>
+<script src="../_shared/stage.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <style>
@@ -186,7 +187,12 @@
   .proj-dest-row span:last-child { font-size: 1.9rem; font-weight: 700; }
   .proj-dest-row.empty { color: #9aa3b0; font-size: 1rem; padding: .9rem 1.3rem; }
   .proj-alert { font-size: 1.1rem; font-weight: 700; color: #ff8c7a; min-height: 1.6rem; margin-bottom: 1.4rem; }
-  .proj-note { font-size: .82rem; color: #6c7484; margin-bottom: 1.2rem; }
+  /* #6c7484 on this board was 3.98:1 — a serious color-contrast failure that
+     shipped in LIGHT and has been on every projector since the tool did. The
+     site-wide axe sweep cannot see it: the whole view is display:none until the
+     teacher presses Projector View, so it is scanned nowhere (BACKLOG rank 15).
+     #7f8794 is 5.16:1 on #10151c and still reads as the quiet aside it is. */
+  .proj-note { font-size: .82rem; color: #7f8794; margin-bottom: 1.2rem; }
   .proj-sync-note { font-size: .85rem; color: #9aa3b0; margin: -0.8rem 0 1rem; }
   .proj-sync-note.paired { color: #7fd6a3; font-weight: 600; }
   .proj-sync-note.stale { color: #e0a85c; font-weight: 600; }
@@ -194,6 +200,13 @@
      opt out of --accent-ink (near-black in dark) and name their own light ink. */
   .projector-view button { background: #2e3948; border-color: #2e3948; color: #f4f4f0; }
   .projector-view button:hover { background: #3d4b5e; border-color: #3d4b5e; }
+  /* _shared/stage.js's refused-fullscreen fallback paints `var(--paper)` from a
+     `.stage-fallback.is-fullscreen` rule it injects into <head> — i.e. AFTER
+     this block, so a plain `.projector-view` (0,1,0) loses and a two-class rule
+     of our own would only tie and still lose on order. Id-level wins outright.
+     Without it a browser that refuses fullscreen would hand the room a white
+     board with light-grey numbers on it. */
+  #projectorView.is-fullscreen { background: #10151c; color: #f4f4f0; }
 
   /* ── Hallway Sync (two-teacher peer pairing) ─────────────────────────── */
   .sync-status-line { font-size: .82rem; font-weight: 600; margin: -.3rem 0 .7rem; }
@@ -1469,29 +1482,58 @@
     }
   }
 
+  /* Projector View's fullscreen is _shared/stage.js's (Path 5 P3). What this
+     page hand-rolled — the requestFullscreen call, the fullscreenchange
+     listener that treated leaving fullscreen as closing the view, and the
+     Escape branch that did the same — is the helper's now, and it brings two
+     things this tool never had: the site-standard F key with its
+     is-the-teacher-typing guard, and a fixed-overlay fallback for a browser
+     that refuses the request. Before, a refusal left the view showing with no
+     way for F or Escape to leave it, only the Exit button.
+
+     `show` and `is-fullscreen` stay two separate things on purpose. `show` is
+     the tool's own display state — it is what the render loop and three
+     callers already test — and the helper owns only the fullscreen half. The
+     ordering matters in one direction: an element that is `display: none`
+     cannot be fullscreened, so entering un-hides FIRST and asks second, the
+     same shape 015's story overlay uses. Leaving is the mirror: whichever way
+     it ends (the Exit button, F, Escape on the fallback, the browser's own
+     Escape in real fullscreen), the helper's onChange is the one place the
+     view is torn down. */
   function openProjector() {
-    els.projectorView.className = 'projector-view show';
+    els.projectorView.classList.add('show');
     renderProjector();
-    projectorTimer = setInterval(renderProjector, 1000);
-    if (els.projectorView.requestFullscreen) els.projectorView.requestFullscreen().catch(function () {});
+    if (!projectorTimer) projectorTimer = setInterval(renderProjector, 1000);
   }
 
   function closeProjector() {
-    els.projectorView.className = 'projector-view';
+    els.projectorView.classList.remove('show');
     if (projectorTimer) { clearInterval(projectorTimer); projectorTimer = null; }
-    if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
   }
 
-  els.projectorBtn.addEventListener('click', openProjector);
-  els.projectorCloseBtn.addEventListener('click', closeProjector);
+  /* `fullscreenKey: false` with `f` in the hotkey map instead of the helper's
+     own key, because the helper's key calls enter() straight out — which on
+     this page would ask to fullscreen an element that is still display:none.
+     Everything else about the key is unchanged: the same typing guard, the
+     same modifier guard, the same one-stage-at-a-time arbitration. */
+  var projectorStage = Stage.mount(els.projectorView, {
+    exitButton: els.projectorCloseBtn,
+    fullscreenKey: false,
+    hotkeys: { f: function () { toggleProjector(); } },
+    onChange: function (on) { if (!on) closeProjector(); }
+  });
+
+  function toggleProjector() {
+    if (projectorStage.isActive()) return projectorStage.exit();
+    openProjector();
+    return projectorStage.enter();
+  }
+
+  els.projectorBtn.addEventListener('click', toggleProjector);
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
-    if (els.projectorView.classList.contains('show')) closeProjector();
     if (els.passOverlay.classList.contains('show')) closePass();
     if (!els.syncOverlay.hidden) closeSyncModal();
-  });
-  document.addEventListener('fullscreenchange', function () {
-    if (!document.fullscreenElement && els.projectorView.classList.contains('show')) closeProjector();
   });
 
   // ── Hallway Sync — pairs this board with exactly one other Hall Pass Log
