@@ -166,6 +166,83 @@ waits for will be a docs or tooling PR, not a tool one. Recorded as a ¼ row at 
 a `sw.js` hunk that touches only the version constant as not site-wide, and pin it in
 `select-suites.test.mjs`. Not measured — read off the diff.
 
+**Rank 1 — Path 5 P3, increment 10: six more pages on native dark. #216, `CACHE_VERSION`
+v163.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
+one `npm run path5:next` printed, in its order — **041, 065, 053, 062, 049, 037**. Native dark
+went from 63 themed pages to **69 (84%)**, and the literal count from 627 across 19 pages to
+**513 across 13** — median 38, range 25–54 — which the picker calls **two** more rounds. They
+will be slower than the last eight: the cheapest page left costs 25 literals where this batch's
+cheapest cost 17. `stage.js` is unchanged at 7 adopters; none of these six has a stage, which
+makes it eight increments running, and 001 and 004 are still the last two hand-rolled
+fullscreens.
+
+Two of the six have an on-screen facsimile of the paper and are marked `.paper-sheet` where the
+markup is made — 041's live sheet preview (one template chokepoint, as 040's and 028's were)
+and 065's print-preview modal (a static element in the markup, the easiest case so far). 053,
+062 and 049 build their printable into a hidden `#printArea`, so their print greys were left
+alone.
+
+**037 is a category no previous increment had met, and the rule generalises.** Its `#printArea`
+is not a hidden print sheet: it is the tool's on-screen output panel, visible whenever there
+are scores, carrying the chart's own download and copy buttons, and *restyled* rather than
+revealed at print time. ink-paper.css's paper rule treats `#printArea` as a sheet without being
+asked, so left alone it would have painted the entire right-hand column white in dark mode. It
+takes `.paper-sheet-off` — the opt-out P1 documented and that nothing had needed in ten
+increments. **The reason this matters more than one page:** `smoke-dark-rollout.mjs` lists
+`#printArea` in `NOT_CHROME`, so its white-chrome sweep would not have said a word, and the
+mistake would have shipped looking green. *Before converting a page, check whether its
+`#printArea` is on the screen* — `display: none`, from the page's own CSS or from
+`print-area.css`, is the usual case and 037 is the counter-example.
+
+**Three bugs that had already shipped in light, all found here.**
+
+1. **037's stacked bar has labelled its C segment white on `#4292c6` since the tool shipped** —
+   3.41:1, a serious axe `color-contrast` violation. `textColorFor()` was a *perceived
+   brightness* formula (`0.299R + 0.587G + 0.114B`, threshold 0.55), which is not WCAG relative
+   luminance and goes wrong precisely in the middle of a sequential ramp, where the choice is
+   closest. It computes real luminance and contrast against both candidate inks now and takes
+   the better; only C changes (to the dark ink, 4.55:1), and A, B, D and F are where they were.
+   The site-wide sweep never saw it because it opens the page with no scores and the bar does
+   not render — **the sixth consecutive increment to find an instance of that blind spot**
+   (009, 075, 077, 073, 068, 037), which is what rank 16 exists to fix. Confirmed the old way:
+   scanned the *shipped* page in *light* before touching it, and got the same single violation.
+2. **An HTML entity inside `escapeHtml()` always renders as text**, because the `&` is escaped
+   first. 065's printed lab packet has been showing the literal `&mdash;` for a blank objective
+   on every copy a teacher hands a class, and **057 — converted one increment earlier — has
+   three of the same** (`&hellip;` twice, `&mdash;` once), which that increment's screenshots
+   did not catch. All four are the character now. `check:entities` cannot see them: its "sink
+   not visible statically" count moved **316 → 312**, which is the proof they were in that
+   bucket. Written into **rank 15** as the free half of that row — *an entity in a string
+   argument of `escapeHtml`/`escapeAttr` is wrong wherever the sink is*, so the rule needs none
+   of the dataflow the rest of that row is about.
+3. **041's `.preview-note` was the one line 041 had in the axe allowlist**, `var(--muted)` on
+   the `#d9d7cd` preview mat at 3.76:1. The mat became `var(--desk)` in this conversion anyway,
+   so it got a `--desk-ink` at the same time: `#595850`, 4.96:1 in light; in dark the mat is
+   near-black and the ordinary muted is already 7.8:1, so the dark value is just `var(--muted)`.
+   `Tools/a11y-sweep/allowlist.json` is one line shorter, which is the direction that file is
+   only ever allowed to move.
+
+**Two smaller things that cost time and would cost the next session the same.** A
+`page.fill()` in a prep leaves the text *selected*, so the screenshot shows that control under
+the selection highlight — 037's textarea looked white in the dark shot and is `--card`; read
+the computed value before believing a screenshot of a filled field. And **`run-suites.mjs
+--only` takes a tool folder name, not a tool number**: `--only 041` matches nothing (it exits 1
+and prints the folder list), which matters because rank 1's own text tells sessions to run it
+for every page in the batch.
+
+053 and 062 show one stage at a time, so each is in `PAGES` **twice** — `053`/`053-bank` and
+`062`/`062-bank` — rather than leaving the bank tab's tokenised inputs and its `--err-bg` note
+unscanned in dark. That took `smoke-dark-rollout.mjs` from 601 assertions to **687**.
+
+Verified: full `npm test` locally once, **145 of 145 green in 26.3 min**; `test:theme`
+687/687, after a first run that went red on 037 and is what found bug 1; the four converted
+pages that have a suite of their own driven with `--only <folder>`; `test:a11y --only` for each
+of the six; the eleven read-only guards; and the light and dark screenshots of all six looked
+at, which is what found bug 2. CI ran the full pass green in 25.8 min. **Not verified, as in
+the nine increments before it:** nothing has been looked at on a real projector or a real
+Chromebook, and the service worker was never installed — the screenshots and the suite remain
+the whole of the evidence.
+
 **Rank 1 — Path 5 P3, increment 9: six more pages on native dark. #214, `CACHE_VERSION`
 v162.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
 one `npm run path5:next` printed, in its order — **012, 052, 057, 068, 071, 084** — but only
