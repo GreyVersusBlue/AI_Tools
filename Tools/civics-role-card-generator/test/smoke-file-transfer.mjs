@@ -92,7 +92,11 @@ ok(kit.caseFiles || kit.agenda || kit.rubric || kit.reflections || kit.ballots,
 const fromLink = await page.evaluate(async () => {
   let captured = null;
   navigator.clipboard.writeText = (t) => { captured = t; return Promise.resolve(); };
-  document.getElementById('shareLinkBtn').click();
+  document.getElementById('shareBtn').click();
+  document.querySelector('.share-sheet button[data-share="copy"]').click();
+  // The sheet is modal — its backdrop swallows every later click on this
+  // page — so close it before handing the link back.
+  document.querySelector('.share-sheet-close').click();
   await new Promise(r => setTimeout(r, 60));
   if (!captured) return { error: 'clipboard never received a link' };
   const raw = new URL(captured).searchParams.get('roles');

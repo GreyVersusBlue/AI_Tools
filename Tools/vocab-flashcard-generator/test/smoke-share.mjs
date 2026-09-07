@@ -63,50 +63,60 @@ eq(await page.isVisible('#toolbar'), true, 'the toolbar is there on a first run'
 await page.reload({ waitUntil: 'networkidle' });
 await settle(page, 500);
 eq(await page.isVisible('#toolbar'), true, 'and still there after a reload onto a saved list');
-eq(await page.isVisible('#shareLinkBtn'), true, 'so the share buttons are reachable on a return visit');
+eq(await page.isVisible('#shareBtn'), true, 'so the share button is reachable on a return visit');
 eq(await page.inputValue('#listName'), 'Unit 4 Vocabulary', 'with the saved list actually loaded');
 
-/** The URL the Copy link button would put on the clipboard. */
-const shareLink = () => page.evaluate(() => {
+/* ── the shared sheet (_shared/share.js, Path 6 P2) ─────────────────────
+   One button now, opening the same four-row sheet every adopter opens: copy
+   link, QR (greyed out with the reason when the code would be too dense to
+   scan at this size, rather than drawn unscannably as the tool's own copy
+   used to), download .json, and the system share where there is one. */
+await page.click('#shareBtn');
+await settle(page, 200);
+ok(await page.isVisible('.share-sheet[role="dialog"]'), 'Share list… opens the shared sheet as a dialog');
+const rows = await page.$$eval('.share-sheet-rows button', bs => bs.map(b => b.getAttribute('data-share')));
+ok(rows.includes('copy') && rows.includes('qr') && rows.includes('download'), 'with copy, QR and download rows: ' + JSON.stringify(rows));
+
+const link = await page.evaluate(() => {
   let captured = null;
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
     value: { writeText: (t) => { captured = t; return Promise.resolve(); } },
   });
-  document.getElementById('shareLinkBtn').click();
+  document.querySelector('.share-sheet button[data-share="copy"]').click();
   return new Promise(r => setTimeout(() => r(captured), 60));
 });
-
-const link = await shareLink();
 ok(typeof link === 'string' && link.includes('deck='), 'Copy link produces a ?deck= URL');
-ok(/Link copied/.test(await page.textContent('#shareNote')), 'and says so');
+ok(/Link copied/.test(await page.textContent('#shareNote')), 'and the note under the button says so');
 
-/* ── the QR code ───────────────────────────────────────────────────────── */
-await page.click('#shareQrBtn');
-await settle(page, 200);
-const qr = await page.evaluate(() => ({
-  open: !document.getElementById('shareOverlay').hidden,
-  w: document.getElementById('shareCanvas').width,
-  note: document.getElementById('shareNote').textContent,
-}));
-if (qr.open) {
-  ok(qr.w > 100, `a QR was drawn (${qr.w}px)`);
-  await page.keyboard.press('Escape');
-  await settle(page, 150);
-  eq(await page.evaluate(() => document.getElementById('shareOverlay').hidden), true, 'Escape closes the QR overlay');
+/* ── the QR row ────────────────────────────────────────────────────────── */
+const qr = await page.evaluate(() => {
+  const b = document.querySelector('.share-sheet button[data-share="qr"]');
+  return { disabled: b.disabled, reason: (document.querySelector('.share-sheet-reason') || {}).textContent || '' };
+});
+if (!qr.disabled) {
+  await page.click('.share-sheet button[data-share="qr"]');
+  await settle(page, 200);
+  const w = await page.evaluate(() => document.querySelector('.share-sheet-qr canvas').width);
+  ok(w > 100, `a QR was drawn (${w}px)`);
 } else {
-  // A long list with example sentences can outrun what a QR can hold. Saying so
-  // is the correct behavior; an unscannable square is not.
-  ok(/too long to fit in a QR/.test(qr.note), 'an over-long list is refused by name');
+  // A long list with example sentences outruns what a QR can be READ at.
+  // Saying so is the correct behavior; an unscannable square is not — and
+  // the budget is qr-draw.js's measured one, not the encoder's own limit.
+  ok(/scan|dense|long/i.test(qr.reason), 'an over-long list greys the QR row out with a reason: ' + JSON.stringify(qr.reason));
 }
+await page.keyboard.press('Escape');
+await settle(page, 150);
+ok(!(await page.$('.share-sheet')), 'Escape closes the sheet');
 
 /* ── an empty list has nothing to share ────────────────────────────────── */
 await page.fill('#wordInput', '');
 await page.dispatchEvent('#wordInput', 'input');
 await settle(page, 200);
-await page.click('#shareLinkBtn');
-await settle(page, 150);
-ok(/Add some words first/.test(await page.textContent('#shareNote')), 'an empty list refuses to share');
+await page.click('#shareBtn');
+await settle(page, 200);
+ok(!(await page.$('.share-sheet')), 'an empty list opens no sheet at all');
+ok(/Add some words first/.test(await page.textContent('#shareNote')), 'and says why');
 
 /* ── receiver: a separate context, so nothing is shared but the URL ────── */
 const other = await prepPage(browser, BASE, { width: 1280, height: 950 });

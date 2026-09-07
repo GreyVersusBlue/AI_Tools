@@ -12,7 +12,7 @@
 //      packet, and the legacy key is kept as a backup
 //   2. a share link/QR carries the packet's text sources, citations, and
 //      questions, but never an image source's pixel data
-//   3. the share note names exactly which sources kept their images on this
+//   3. the share sheet names exactly which sources kept their images on this
 //      device, so the "identical packet" promise stays honest
 //   4. opening a shared link always saves as a NEW packet under a uniqued
 //      name, even when the name collides with one already on the receiving
@@ -103,18 +103,35 @@ await settle(page, 500); // FileReader + natural-size probe are both async
 const beforeSourceCount = await page.evaluate(() => document.querySelectorAll('#sourcesWrap .source-block').length);
 eq(beforeSourceCount, 4, 'the packet now has 4 sources, the 4th with an uploaded image');
 
-/* ── the share link itself ──────────────────────────────────────────────── */
-const shareLink = () => page.evaluate(() => {
+/* ── the share link itself, out of the shared sheet (_shared/share.js) ──── */
+await page.click('#shareBtn');
+await settle(page, 200);
+ok(await page.isVisible('.share-sheet[role="dialog"]'), 'Share packet… opens the shared sheet as a dialog');
+
+/* ── the sheet names exactly which sources kept their images ────────────
+   The generic half of this — "1 image is left out of the link and QR code;
+   the downloaded file carries it" — is share.js's own sentence and holds for
+   every adopter. The naming half is this tool's `note` callback, and it is
+   what keeps the "identical packet" promise honest. */
+const sheetNote = await page.textContent('.share-sheet-note');
+ok(/Photograph of a Mill/.test(sheetNote), `the sheet names the image source by title (got: ${JSON.stringify(sheetNote)})`);
+ok(/Source D/.test(sheetNote), 'and by its letter');
+ok(/re-upload/i.test(sheetNote), 'and says what to do about it');
+ok(/left out of the link and QR code/.test(sheetNote), 'and share.js says the images do not ride the link at all');
+ok(/downloaded file carries/.test(sheetNote), 'while the downloaded file does carry them — the route that did not exist before');
+
+const url = await page.evaluate(() => {
   let captured = null;
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
     value: { writeText: (t) => { captured = t; return Promise.resolve(); } },
   });
-  document.getElementById('shareLinkBtn').click();
+  document.querySelector('.share-sheet button[data-share="copy"]').click();
   return new Promise(r => setTimeout(() => r(captured), 60));
 });
-const url = await shareLink();
-ok(url && url.indexOf('packet=') !== -1, 'Copy Link produces a ?packet= link');
+ok(url && url.indexOf('packet=') !== -1, 'Copy link produces a ?packet= link');
+await page.keyboard.press('Escape');
+await settle(page, 150);
 
 const payload = await page.evaluate(u => window.StateLink.decodeState(new URL(u).searchParams.get('packet')), url);
 eq(payload.v, 1, 'the payload is versioned');
@@ -124,14 +141,11 @@ eq(payload.sources[0].citation, 'Edited citation for testing, 1833.', 'an edited
 ok(payload.sources[0].text.indexOf('cotton mills') !== -1, 'source text travels intact');
 eq(payload.sharedQuestions.length, 2, 'the shared guiding questions travel');
 ok(payload.sources[0].questions[0].text.length > 0, 'a source-specific question travels');
-eq(payload.sources[3].image, undefined, 'the 4th (image) source travels WITHOUT its image pixel data');
+eq(payload.sources[3].image, null, 'the 4th (image) source travels WITHOUT its pixel data — share.js strips every data: image out of the link by policy, leaving null');
 ok(typeof payload.sources[3].widthPct === 'number', 'but its width-percent metadata still travels');
 
-/* ── the share note names exactly which sources kept their images ──────── */
-const shareNote = await page.textContent('#shareNote');
-ok(/Photograph of a Mill/.test(shareNote), `the share note names the image source by title (got: ${JSON.stringify(shareNote)})`);
-ok(/Source D/.test(shareNote), 'and by its letter');
-ok(/re-upload/i.test(shareNote), 'and says what to do about it');
+/* ── the note under the button records what the sheet last did ─────────── */
+ok(/Link copied/.test(await page.textContent('#shareNote')), 'the note under the button says the link was copied');
 
 /* ── 3. an incoming link never overwrites — it saves under a uniqued name,
    even when the receiving device already has a packet under that name.

@@ -24,6 +24,8 @@
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -106,13 +108,6 @@
   .share-note { font-size: .8rem; line-height: 1.5; margin: .5rem 0 0; padding: .55rem .7rem; border-radius: 6px;
     background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
   .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
-  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
-    justify-content: center; padding: 20px; z-index: 80; }
-  .share-overlay[hidden] { display: none; }
-  .share-modal { background: var(--card); color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
-    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
-  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
-  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
 
   .role-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .25in; }
   .role-print-card .assigned { text-align: center; font-weight: 700; font-size: 1rem; margin-bottom: .12in; }
@@ -191,8 +186,7 @@
       <p class="sub">Build and print the whole simulation: cards, case files, agenda, ballots, rubric, reflections.</p>
     </div>
     <div class="btnrow">
-      <button class="secondary" id="shareLinkBtn">&#128279; Copy link</button>
-      <button class="secondary" id="shareQrBtn">&#9638; QR code</button>
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share simulation&hellip;</button>
       <button class="secondary" id="exportFileBtn">&#11015; Save as file</button>
       <button class="secondary" id="importFileBtn">&#11014; Open a file&hellip;</button>
       <input type="file" id="importFileInput" accept=".json,application/json" hidden>
@@ -200,18 +194,6 @@
     </div>
   </div>
   <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
-
-  <div class="share-overlay" id="shareOverlay" hidden>
-    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Simulation QR code">
-      <div class="share-head">
-        <span>Scan to open this simulation</span>
-        <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
-      </div>
-      <canvas id="shareCanvas"></canvas>
-      <p class="hint" style="margin:.6rem 0 0;">Opens the same roles, case files, and kit pages on that device &mdash;
-        edits on either side stay put.</p>
-    </div>
-  </div>
 
   <div class="card">
     <h2>Saved simulations</h2>
@@ -289,7 +271,7 @@
    'simSelect', 'newSimBtn', 'renameSimBtn', 'deleteSimBtn',
    'kitTitle', 'kitWrap', 'printSummary',
    'ptAgenda', 'ptCards', 'ptCaseFiles', 'ptBallots', 'ptRubric', 'ptReflections',
-   'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn',
+   'shareBtn', 'shareNote',
    'exportFileBtn', 'importFileBtn', 'importFileInput'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var PRINT_KEYS = [['agenda', 'ptAgenda'], ['cards', 'ptCards'], ['caseFiles', 'ptCaseFiles'],
@@ -946,11 +928,15 @@
      loaded. Roster.onChange covers both; the storage event only covered one. */
   Roster.onChange(populateRosterSelect);
 
-  /* ---------- share by link / QR (state-link.js, same pattern as 028/040) ----------
+  /* ---------- share a simulation: _shared/share.js (Path 6 P2) ----------
      Now that simulations are saved by name, an incoming link no longer has to
      ask permission to overwrite what is on screen: it files itself away under
      its own (uniqued) name and opens it, and everything already saved is left
-     exactly where it was. */
+     exactly where it was. One button opens the shared sheet — copy link, QR
+     code (greyed out with the reason when the code would be too dense to
+     scan), download .civics.json, and the system share where the browser has
+     one. Until this the tool hand-drew its own QR at 6 px per module up to
+     the encoder's own limit, and only said "too long" when it threw. */
   var SHARE_PARAM = 'roles';
 
   function setShareNote(text, isError) {
@@ -975,17 +961,12 @@
     return { v: 2, name: simName, doc: doc };
   }
 
-  function shareUrl() {
-    return StateLink.buildShareUrl(SHARE_PARAM, sharePayload());
-  }
-
-  /** Files and links both land here: validate, regenerate ids, file it under
-      a name that can't collide, open it. Returns the name, or null. */
-  function adoptPayload(decoded, badPayloadMessage) {
-    if (!isPlausiblePayload(decoded)) {
-      setShareNote(badPayloadMessage, true);
-      return null;
-    }
+  /** Files and links both land here: regenerate ids, file it under a name
+      that can't collide, open it. Returns the name it was filed under.
+      Validation is isPlausiblePayload(), which _shared/share.js's receiver
+      runs before this is called — so the "that link is unreadable" sentence
+      is written in one place for both routes now. */
+  function adoptPayload(decoded) {
     var incoming = CrcgStore.repairDoc(decoded.doc || { roles: decoded.roles });
     /* Ids are regenerated: two teachers who both loaded the Mock Trial
        template have the same role ids, and an imported copy landing beside
@@ -1031,92 +1012,57 @@
 
   els.importFileBtn.addEventListener('click', function () { els.importFileInput.click(); });
 
+  /* Through _shared/share.js's receiver (Path 6 P2): it unwraps the
+     { aplp, state } envelope the share sheet's Download row writes as
+     readily as the bare payload "Save as file" writes, so both open here. */
   els.importFileInput.addEventListener('change', function () {
     var file = els.importFileInput.files && els.importFileInput.files[0];
     // Cleared straight away so choosing the same file twice in a row still
     // fires a change event the second time.
     els.importFileInput.value = '';
     if (!file) return;
-    var reader = new FileReader();
-    reader.onerror = function () { setShareNote('That file could not be read.', true); };
-    reader.onload = function () {
-      var decoded = null;
-      try { decoded = JSON.parse(String(reader.result)); } catch (e) { decoded = null; }
-      var name = adoptPayload(decoded,
-        'That file isn’t a simulation this tool can open. It should be a .civics.json file saved by this tool’s “Save as file” button.');
-      if (name) {
+    Share.receiveFile(file, {
+      validate: isPlausiblePayload,
+      fileErrorMessage: 'That file isn’t a simulation this tool can open. It should be a .civics.json file saved by this tool’s “Save as file” button, or a .json downloaded from the share sheet.',
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var name = adoptPayload(decoded);
         setShareNote('Opened &ldquo;' + escapeHtml(file.name) + '&rdquo; and saved it as &ldquo;' +
           escapeHtml(name) + '&rdquo;. Nothing you already had was replaced.');
       }
-    };
-    reader.readAsText(file);
+    });
   });
 
-  els.shareLinkBtn.addEventListener('click', function () {
-    if (!doc.roles.length) { setShareNote('Add at least one role first.', true); return; }
-    var url = shareUrl();
-    var copy = (navigator.clipboard && navigator.clipboard.writeText)
-      ? navigator.clipboard.writeText(url) : Promise.reject();
-    copy.then(
-      function () { setShareNote('Link copied. Opening it anywhere saves this whole simulation there under its own name, without touching anything already saved.'); },
-      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
-    );
+  Share.mount(els.shareBtn, {
+    getState: function () { return doc.roles.length ? sharePayload() : null; },
+    param: SHARE_PARAM,
+    tool: 'civics-role-card-generator',
+    title: 'Share this simulation',
+    noun: 'this simulation',
+    filename: function () { return sanitizeFilename(simName); },
+    ext: '.civics.json',
+    note: 'Opening the link or code anywhere saves the whole simulation there under its own name; nothing already saved on that device is touched.',
+    emptyMessage: 'Add at least one role first.',
+    successMessage: 'Link copied. Opening it anywhere saves this whole simulation there under its own name, without touching anything already saved.',
+    onMessage: function (text) { setShareNote(text); }
   });
-
-  function drawShareQr(canvas, text) {
-    var qr = window.qrcode(0, 'L');
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount(), quiet = 4, px = 6;
-    var size = (count + quiet * 2) * px;
-    canvas.width = size; canvas.height = size;
-    var ctx = canvas.getContext('2d');
-    // A QR canvas draws dark-on-white in both themes on purpose: that is what a
-    // scanner needs, and inverting it would stop phones reading the code.
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#16181d';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
-      }
-    }
-  }
-
-  els.shareQrBtn.addEventListener('click', function () {
-    if (!doc.roles.length) { setShareNote('Add at least one role first.', true); return; }
-    var url = shareUrl();
-    try {
-      drawShareQr(els.shareCanvas, url);
-    } catch (e) {
-      // A QR code holds far less than a URL bar does. A simulation with a few
-      // long case files can run past it — say so rather than drawing a
-      // square nobody's phone can read.
-      setShareNote('This simulation is too long to fit in a QR code (' + Math.round(url.length / 1024) +
-        ' KB of link). Use “Copy link” instead — a pasted link has no such limit.', true);
-      return;
-    }
-    els.shareOverlay.hidden = false;
-    setShareNote('');
-  });
-
-  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
-  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
 
   /** Consume a ?roles= link on load. Returns the name it was filed under, or
       null. v1 links carried a bare `roles` array with no kit; v2 links carry
       the whole document. Both are accepted — repairDoc fills in the rest. */
   function importSharedSim() {
-    var raw = StateLink.getParam(SHARE_PARAM);
-    if (!raw) return null;
-    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't re-import
-    var decoded = StateLink.decodeState(raw);
-    var name = adoptPayload(decoded,
-      'That shared link could not be read — it may have been cut short when it was pasted or emailed. ' +
-      'If it keeps happening, ask for the simulation as a saved file instead: the “Save as file” button has no length limit.');
-    if (!name) return null;
-    setShareNote('Opened from a shared link and saved as &ldquo;' + escapeHtml(name) + '&rdquo;. Nothing you already had was replaced.');
-    return name;
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausiblePayload,
+      errorMessage: 'That shared link could not be read — it may have been cut short when it was pasted or emailed. ' +
+        'If it keeps happening, ask for the simulation as a saved file instead: the “Save as file” button has no length limit.',
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var name = adoptPayload(decoded);
+        setShareNote('Opened from a shared link and saved as &ldquo;' + escapeHtml(name) + '&rdquo;. Nothing you already had was replaced.');
+        return name;
+      }
+    }) || null;
   }
 
   /* ---------- boot ---------- */

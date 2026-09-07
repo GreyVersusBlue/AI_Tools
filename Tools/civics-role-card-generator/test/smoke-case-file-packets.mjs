@@ -166,7 +166,9 @@ await page.evaluate(() => {
   window.__copied = null;
   navigator.clipboard.writeText = t => { window.__copied = t; return Promise.resolve(); };
 });
-await page.click('#shareLinkBtn');
+await page.click('#shareBtn');
+await page.click('.share-sheet button[data-share="copy"]');
+await page.click('.share-sheet-close'); // modal: its backdrop swallows later clicks
 await settle(page);
 const link = await page.evaluate(() => window.__copied);
 ok(!!link && link.indexOf('roles=') !== -1, 'Copy link produces a URL carrying the roles= payload');
