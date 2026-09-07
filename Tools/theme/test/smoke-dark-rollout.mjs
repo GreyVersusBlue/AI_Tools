@@ -2,8 +2,9 @@
 //
 //   node Tools/theme/test/smoke-dark-rollout.mjs      (or: npm run test:theme)
 //
-// smoke-theme.mjs proves the MECHANISM on two pages: 001 (native) and 003
-// (still on the filter). This suite proves each ADOPTED page, which is a
+// smoke-theme.mjs proves the MECHANISM on 001 (native); the page it used to
+// pair that with — one still on the invert filter — was retired with increment
+// 13, which converted the last of them. This suite proves each ADOPTED page, which is a
 // different claim with its own ways to go wrong — a page can carry the flag
 // and still paint white chrome, because ink-paper.css only remaps the tokens
 // and every one of these pages used to hardcode `#fff` on its inputs and
@@ -697,6 +698,44 @@ const PAGES = [
       const grid = page.locator('.view-tab[data-view="grid"]');
       if (await grid.count()) { await grid.click(); await settle(page, 500); }
     } },
+  // increment 13 — 046, the last page on a11y.css's invert filter, and the end
+  // of P3's palette work. The whole viewer is the sheet of paper here, and it is
+  // the widest .paper-sheet on the site: #viewport carries the class, so the
+  // label boxes, the legend, the markers, the scale bar, the compass and the
+  // lat/lon readout keep their light literals. The argument is not that the map
+  // prints (it does) but that buildExportCanvas() rasterises that furniture with
+  // hardcoded values — #eef0ec behind the map, #fff boxes, #1f3550 ink — so a
+  // themed viewer would show a teacher something the PNG, the PDF and the paper
+  // do not. Driven twice: once ordinary, once in the projector quiz mode, whose
+  // .quiz-hidden labels and quiz toolbar exist in no other state.
+  { label: '046', url: '/Tools/046-blank-map-generator.html', sheet: '#viewport',
+    sheetBg: 'rgb(238, 240, 236)', sheetChild: '.bmg-label .lbl-text',
+    prep: async page => {
+      await bmgBaseMap(page);
+      // "Color each new label" is on by default and paints the label's text
+      // with a palette colour inline, which would answer the sheetChild
+      // question with the teacher's red instead of the sheet's ink. The
+      // default-ink label is the one that proves inheritance.
+      await page.uncheck('#labelAutoColorCheck');
+      await bmgPlaceLabel(page, 'Great Plains', 0.45, 0.5);
+      await page.click('#btnCompass');
+      await page.click('#btnScaleBar');
+      await settle(page, 400);
+      await page.waitForSelector('#compassRose:not([hidden])', { timeout: 5000 });
+      await page.waitForSelector('#scaleBar:not([hidden])', { timeout: 5000 });
+    } },
+  // No sheetChild here: quiz mode paints every .lbl-text `transparent` until it
+  // is clicked, which is the state's whole point.
+  { label: '046-quiz', url: '/Tools/046-blank-map-generator.html', sheet: '#viewport',
+    sheetBg: 'rgb(238, 240, 236)',
+    prep: async page => {
+      await bmgBaseMap(page);
+      await bmgPlaceLabel(page, 'Great Plains', 0.42, 0.48);
+      await bmgPlaceLabel(page, 'Great Lakes', 0.6, 0.44);
+      await page.click('#btnQuizMode');
+      await settle(page, 400);
+      await page.waitForSelector('.bmg-label.quiz-hidden', { timeout: 5000 });
+    } },
 ];
 
 /** 030's manual editor: name every category block and fill every clue row it
@@ -715,6 +754,51 @@ async function fillBoardEditor(page) {
       await block.locator('.clue-answer').nth(j).fill('Answer ' + (j + 1));
     }
   }
+}
+
+/** 046's built-in vector base map: a real map on screen with no network, which
+    is the only way an offline suite can put anything under the viewer's
+    furniture. Same route smoke-label-colors.mjs takes, and it waits on the
+    workspace record rather than on a pixel, because the vector map is drawn
+    into #mapImg as a data URL. */
+async function bmgBaseMap(page) {
+  await page.selectOption('#baseMapSelect', 'usa-48');
+  await page.click('#btnBaseMap');
+  await page.waitForFunction(() => {
+    const raw = Object.keys(localStorage).map(k => [k, localStorage.getItem(k)]).find(([k]) => /bmg_workspace/.test(k));
+    if (!raw) return false;
+    const w = JSON.parse(raw[1]);
+    const p = w.projects.find(x => x.id === w.activeId);
+    return !!(p && /^vector:usa-48:/.test(p.data.mapId || ''));
+  }, null, { timeout: 90000 });
+  await settle(page, 900);
+}
+
+/** Place one label the way a teacher does — arm the mode, click the map, type.
+    "+ Add Label" is a mode toggle that stays armed, so pressing it twice turns
+    it off and the map click does nothing. The waitForSelector at the end is
+    deliberate: a prep that CLICKS can silently accomplish nothing and leave a
+    green suite reporting a page it never checked (#214, #218), so this one
+    names what it was supposed to create and crashes if it is not there. */
+async function bmgPlaceLabel(page, text, fx, fy) {
+  const before = await page.evaluate(() => document.querySelectorAll('.bmg-label').length);
+  const armed = await page.evaluate(() => document.getElementById('btnAddLabel').classList.contains('active'));
+  if (!armed) await page.click('#btnAddLabel');
+  const pt = await page.evaluate(([x, y]) => {
+    const r = document.getElementById('viewport').getBoundingClientRect();
+    return { x: r.left + r.width * x, y: r.top + r.height * y };
+  }, [fx, fy]);
+  await page.mouse.click(pt.x, pt.y);
+  await settle(page, 250);
+  await page.keyboard.type(text);
+  await page.keyboard.press('Enter');
+  await settle(page, 350);
+  // Count, don't just look: the first draft of this prep placed its second
+  // label on the mat below the map and the tool ignored it, and a
+  // waitForSelector for ".bmg-label" was satisfied by the FIRST one — a prep
+  // silently doing half of what it says, which is exactly how #214 and #218
+  // ended up with green assertions about states no browser had reached.
+  await page.waitForFunction(n => document.querySelectorAll('.bmg-label').length === n, before + 1, { timeout: 5000 });
 }
 
 // Chrome is what follows the theme. Anything that is a projector surface
@@ -766,7 +850,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083) + increment 9 (012, 052, 057, 068, 071, 084) + increment 10 (041, 065, 053, 062, 049, 037) + increment 11 (033, 080, 008, 022, 013, 027) + increment 12 (003, 032, 043, 030, 064, 042)');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083) + increment 9 (012, 052, 057, 068, 071, 084) + increment 10 (041, 065, 053, 062, 049, 037) + increment 11 (033, 080, 008, 022, 013, 027) + increment 12 (003, 032, 043, 030, 064, 042) + increment 13 (046, twice — the last page on the filter)');
 
 for (const p of PAGES) {
   /* ── dark ── */
@@ -787,8 +871,28 @@ for (const p of PAGES) {
         return { bg: cs.backgroundColor, ink: cs.color, marked: el.classList.contains('paper-sheet') };
       }, p.sheet);
       ok(sheet && sheet.marked, `${p.label} dark: the preview sheet carries paper-sheet`);
-      eq(sheet && sheet.bg, WHITE, `${p.label} dark: the sheet is still white paper`);
+      // A sheet is white unless the page declares its own surface colour on the
+      // element itself, which 046 does: its sheet is the map mat, and that grey
+      // has to keep matching the value buildExportCanvas() fills the canvas
+      // with. `sheetBg` names that colour exactly — it is still an equality, not
+      // a relaxation, and a page that leaves it out is held to white as before.
+      eq(sheet && sheet.bg, p.sheetBg || WHITE, `${p.label} dark: the sheet is still ${p.sheetBg ? 'its declared paper colour' : 'white paper'}`);
       eq(sheet && sheet.ink, LIGHT_INK, `${p.label} dark: with dark ink on it`);
+      // What the sheet is FOR is that the light tokens are restored inside it.
+      // On a page whose sheet is not itself white, that claim needs something
+      // in the subtree to make it: 046's label boxes are white with dark ink in
+      // dark mode, or the map furniture has gone dark on a light map.
+      if (p.sheetChild) {
+        const child = await page.evaluate(sel => {
+          const el = document.querySelector(sel);
+          if (!el) return null;
+          const cs = getComputedStyle(el);
+          return { bg: cs.backgroundColor, ink: cs.color };
+        }, p.sheetChild);
+        ok(child, `${p.label} dark: ${p.sheetChild} exists on the sheet`);
+        eq(child && child.bg, WHITE, `${p.label} dark: and is white paper inside it`);
+        eq(child && child.ink, LIGHT_INK, `${p.label} dark: with the sheet's dark ink`);
+      }
     }
     const violations = await a11yScan(page);
     ok(violations.length === 0,

@@ -7,6 +7,17 @@
 <title>Blank Map Generator</title>
 <meta name="description" content="Pull a map from Wikimedia Commons, pan and zoom into a region, and use it as the base for a labeling activity.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M6 10l7-3 6 3 7-3v18l-7 3-6-3-7 3z' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M13 7v18M19 10v18' stroke='%231f3550' stroke-width='1.4'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%23a3372b'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     #viewport is marked .paper-sheet and everything drawn inside it keeps its
+     light literals: the base map is a Wikimedia image with fixed colours, and
+     buildExportCanvas() paints the same furniture onto the export canvas with
+     hardcoded values (#eef0ec behind the map, #fff label boxes, #1f3550 ink),
+     so a themed viewer would show a teacher something the printed map and the
+     PNG/PDF export do not. Every @media print value is untouched; ink-paper.css
+     already forces the light tokens when the page prints.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -15,8 +26,21 @@
      that sets display beats it (#mapImg, #scaleBar and .loadMoreRow all did).
      This makes `el.hidden = true` mean it (check-hidden-flex). */
   [hidden] { display: none !important; }
+  /* Path 5 P3. --ok is the "valid data" green on the choropleth report,
+     --accent-deep the darker navy a primary button goes to on hover (in dark
+     the accent is already light, so it brightens instead), and --warn-* the
+     amber of the storage banner. --map-mat is the grey behind the map itself:
+     it is NOT a theme colour, it is the exact value buildExportCanvas() fills
+     the canvas with (#eef0ec), and it is named here so the next person can see
+     that the two have to agree. */
   :root {
-    --ok: #2e6b3e;
+    --ok: #2e6b3e; --accent-deep: #16283f;
+    --warn-bg: #fff3d6; --warn-line: #e0c27a;
+    --map-mat: #eef0ec;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --ok: #63c08e; --accent-deep: var(--accent-2);
+    --warn-bg: #332711; --warn-line: #5e4a20;
   }
   * { box-sizing: border-box; }
   body {
@@ -36,17 +60,17 @@
 
   button {
     font-family: inherit; font-size: 0.85rem; padding: 8px 13px; border-radius: 6px;
-    border: 1px solid var(--line); background: #fff; cursor: pointer; color: var(--ink);
+    border: 1px solid var(--line); background: var(--card); cursor: pointer; color: var(--ink);
   }
-  button:hover { background: #f2f0ea; }
+  button:hover { background: var(--card-2); }
   button:disabled { opacity: 0.5; cursor: default; }
-  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
-  button.primary:hover { background: #16283f; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button.primary:hover { background: var(--accent-deep); }
   button.small { padding: 4px 9px; font-size: 0.76rem; }
   button.icon { width: 34px; padding: 6px 0; font-size: 1rem; line-height: 1; }
   input[type=text] {
     font-family: inherit; font-size: 0.88rem; padding: 7px 10px; border: 1px solid var(--line);
-    border-radius: 5px; background: #fff; color: var(--ink); width: 100%;
+    border-radius: 5px; background: var(--card); color: var(--ink); width: 100%;
   }
 
   .searchRow { display: flex; gap: 8px; }
@@ -87,9 +111,13 @@
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 12px; }
   .result {
-    border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #fff;
+    border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--card);
     display: flex; flex-direction: column;
   }
+  /* The thumbnail mat and its transparency checker stay light in both themes.
+     A Commons map is usually a transparent PNG of dark line art, so a mat that
+     followed the theme would hide the thumbnail it exists to show. Same reason
+     the 24px .recentItem img mat below is left alone. */
   .result .thumb {
     height: 110px; background: #f2f0ea repeating-conic-gradient(#eceae2 0% 25%, transparent 0% 50%) 0 0 / 16px 16px;
     display: flex; align-items: center; justify-content: center; overflow: hidden;
@@ -103,14 +131,25 @@
   .recentRow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   .recentItem {
     display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 20px;
-    padding: 4px 10px 4px 4px; background: #fff; cursor: pointer; font-size: 0.78rem;
+    padding: 4px 10px 4px 4px; background: var(--card); cursor: pointer; font-size: 0.78rem;
   }
-  .recentItem:hover { background: #f2f0ea; }
+  .recentItem:hover { background: var(--card-2); }
   .recentItem img { width: 24px; height: 24px; object-fit: cover; border-radius: 50%; background: #f2f0ea; }
 
+  /* The viewer is a sheet of paper (ink-paper.css's .paper-sheet, set on the
+     element itself): the map inside it is a fixed-colour image and every piece
+     of furniture drawn over it — label boxes, the legend, markers, the scale
+     bar, the compass, the lat/lon readout, the locator inset — is white-on-map
+     by design and is rasterised with those same literals by
+     buildExportCanvas(). So none of the values from here down to #attribution
+     are converted; they are the printed artifact, not chrome. .paper-sheet
+     restores the light tokens inside the subtree, which is what keeps
+     var(--ink)/var(--line)/var(--err) on a label reading as dark ink on white.
+     The mat colour stays an id-level literal so it keeps beating the
+     .paper-sheet rule's own background — it must equal the canvas fill. */
   #viewport {
     position: relative; height: 62vh; min-height: 340px; max-width: 100%; border: 1px solid var(--line); border-radius: 8px;
-    overflow: hidden; background: #eef0ec; touch-action: none; cursor: grab; margin: 0 auto;
+    overflow: hidden; background: var(--map-mat); touch-action: none; cursor: grab; margin: 0 auto;
   }
   #viewport.dragging { cursor: grabbing; }
   #viewport.adding { cursor: crosshair; }
@@ -240,11 +279,11 @@
   .customRatioControls input[type=range] { width: 100px; }
   .zoomReadout { font-size: 0.78rem; color: var(--muted); min-width: 46px; text-align: center; }
   .spacer { flex: 1; }
-  button.toggle.active { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+  button.toggle.active { background: var(--accent-2); color: var(--accent-ink); border-color: var(--accent-2); }
   .toolHint { font-size: 0.78rem; color: var(--accent-2); font-weight: 600; }
   select.styleSelect {
     font-family: inherit; font-size: 0.8rem; padding: 6px 8px; border: 1px solid var(--line);
-    border-radius: 6px; background: #fff; color: var(--ink);
+    border-radius: 6px; background: var(--card); color: var(--ink);
   }
 
   #calibratePanel { margin-bottom: 10px; }
@@ -256,7 +295,7 @@
   }
   #calibratePanel select {
     font-family: inherit; font-size: 0.85rem; padding: 6px 8px; border: 1px solid var(--line);
-    border-radius: 5px; background: #fff; color: var(--ink);
+    border-radius: 5px; background: var(--card); color: var(--ink);
   }
 
   #compassRose { position: absolute; top: 12px; right: 12px; cursor: grab; z-index: 7; }
@@ -309,10 +348,10 @@
 
   #batchPanel textarea, #labelSetEditor textarea {
     width: 100%; font-family: inherit; font-size: 0.85rem; padding: 8px; border: 1px solid var(--line);
-    border-radius: 6px; resize: vertical; color: var(--ink); background: #fff;
+    border-radius: 6px; resize: vertical; color: var(--ink); background: var(--card);
   }
   #labelSetEditor { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
-  #batchPanel code { background: #f2f0ea; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
+  #batchPanel code { background: var(--card-2); padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
 
   #latLonReadout {
     position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,.92); border: 1px solid var(--line);
@@ -321,7 +360,7 @@
 
   #locatorInset {
     position: absolute; bottom: 10px; right: 10px; border: 2px solid #fff; border-radius: 4px;
-    box-shadow: 0 1px 6px rgba(0,0,0,.35); overflow: hidden; z-index: 7; background: #eef0ec;
+    box-shadow: 0 1px 6px rgba(0,0,0,.35); overflow: hidden; z-index: 7; background: var(--map-mat);
     cursor: grab;
   }
   #locatorInset.dragging { cursor: grabbing; }
@@ -331,7 +370,7 @@
   #attribution { font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
   #attribution a { color: var(--accent-2); }
 
-  .storage-warn { background: #fff3d6; border: 1px solid #e0c27a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; margin-bottom: 16px; }
+  .storage-warn { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; margin-bottom: 16px; }
 
   .projectBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .projectBar label { font-weight: 600; font-size: 0.85rem; color: var(--accent); }
@@ -379,7 +418,7 @@
 
   #tiledPrintPanel .tileRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
   #tiledPrintPanel label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--muted); font-weight: 600; }
-  #tiledPrintPanel select { font-family: inherit; font-size: 0.85rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: #fff; color: var(--ink); }
+  #tiledPrintPanel select { font-family: inherit; font-size: 0.85rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--card); color: var(--ink); }
 
   #tiledPrintPages { display: none; }
   .tiledPage { position: relative; }
@@ -576,7 +615,12 @@
       <button id="btnLocator" class="small toggle">Locator Map</button>
       <button id="btnCalibrate" class="small">Set Map Coordinates&hellip;</button>
       <button id="btnScaleBar" class="small toggle">Scale Bar</button>
-      <select id="scaleBarUnitSelect" class="styleSelect" hidden>
+      <!-- The visible name of this control is the option showing in it ("km"),
+           which cannot label the control, and the "Scale Bar" button beside it
+           is a different control. It ships hidden until the scale bar is
+           switched on over a calibrated map, which is why the site-wide axe
+           sweep — every page opened with empty storage — has never seen it. -->
+      <select id="scaleBarUnitSelect" class="styleSelect" aria-label="Scale bar units" hidden>
         <option value="km">km</option>
         <option value="mi">mi</option>
       </select>
@@ -743,7 +787,7 @@
       </div>
     </div>
     <div id="tiledPrintPages" aria-hidden="true"></div>
-    <div id="viewport">
+    <div id="viewport" class="paper-sheet">
       <div id="stage">
         <img id="mapImg" alt="" hidden>
         <div id="gridLayer"></div>

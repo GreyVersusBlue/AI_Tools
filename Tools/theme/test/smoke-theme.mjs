@@ -12,10 +12,12 @@
 // sweep of every live page looking for the combination, plus the gates in
 // _shared/ink-paper.css and _shared/theme.css that make it impossible.
 //
-// The second half drives two real pages: 001, the reference ink-paper adopter,
-// and 046, an ink-paper tool that has NOT adopted — which is the half that
-// matters, because the gate's whole job is that shipping the dark block
-// changed nothing for the 73 tools still on the filter.
+// The second half drives 001, the reference ink-paper adopter. It used to
+// drive a second page — one that had NOT adopted — to prove the gate had
+// changed nothing for the tools still on the filter; Path 5 P3's thirteenth
+// increment converted the last of them (046), so that half was retired with
+// its subject rather than repointed. The static sweep is what now carries the
+// "never both" claim for every page.
 //
 // Exits 1 on any failure.
 
@@ -263,27 +265,17 @@ const clickThemeSwitch = page => page.evaluate(() => {
   await page.context().close();
 }
 
-/* — 046, an ink-paper tool that has NOT adopted. This was 003 until Path 5
-     P3's twelfth increment converted it; 046 is the LAST page still on the
-     filter, so when it adopts, this half of the suite has no subject left and
-     the assertions below have to be retired with it rather than repointed. — */
-{
-  const page = await prepPage(browser, base, { width: 1280, height: 900 });
-  await page.emulateMedia({ colorScheme: 'dark' });
-  await page.goto(`${base}/Tools/046-blank-map-generator.html`, { waitUntil: 'networkidle' });
-  await settle(page, 250);
-  const s = await themeState(page);
-  eq(s.attr, 'dark', '046: still gets dark');
-  eq(s.filterClass, true, '046: but through the invert filter, as before');
-  ok(/invert/.test(s.rootFilter), `046: the filter is really applied (${s.rootFilter})`);
-  // The point of the gate: shipping the dark block changed nothing here. The
-  // declared background is still the light paper; the filter does the rest.
-  ok(luminance(s.bodyBg) > 0.9,
-     `046: its declared colours are untouched by ink-paper.css's dark block (${s.bodyBg})`);
-
-  eq(page.__errs.length, 0, '046: no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 3)));
-  await page.context().close();
-}
+/* — There is no third page here any more, and that is the point. This half of
+     the suite used to drive an ink-paper tool that had NOT adopted — 003 until
+     Path 5 P3's twelfth increment, then 046, the last one — to prove that
+     shipping the dark block changed nothing for a page still on the invert
+     filter. The thirteenth increment converted 046, so every themed page on the
+     site is native and the claim has no subject left. The assertions were
+     retired with their page rather than repointed at one that would contradict
+     them; the static sweep above still fails any page that ships the filter and
+     a native palette at once, which is the mechanism's real guard. If a NEW
+     tool ever ships on the filter, it is that sweep's business, not a rewrite
+     of this block. — */
 
 await browser.close();
 server.close();
