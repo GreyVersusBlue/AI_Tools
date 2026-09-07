@@ -15,12 +15,31 @@
 <meta name="twitter:title" content="Dichotomous Key Builder — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Build a custom dichotomous key for a classification lab, then print it as a student worksheet with an answer key.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M16 6v6M16 12l-7 6M16 12l7 6' stroke='%231f3550' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='6' r='2' fill='%231f3550'/%3E%3Ccircle cx='9' cy='20' r='2' fill='%231f3550'/%3E%3Ccircle cx='23' cy='20' r='2' fill='%231f3550'/%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     The printed key and specimen table are built into #printArea, which is
+     paper, so their #999 and #eee stay as they are; the specimen *walk* is
+     on-screen UI and its three tints are tokenised.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* Path 5 P3. Tint pairs in 001's values (the reference adopter), so every
+     tool defining them stays identical until they move to ink-paper.css. */
+  :root {
+    --good-bg: #e4f5ea;  --good-line: #c7e2cb;
+    --err-bg: #fbecea;   --err-line: #e6c6c1;
+    --warn-bg: #fdf0dc;  --warn-line: #eecda0;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --good-bg: #173021;  --good-line: #2f5e42;
+    --err-bg: #3a201c;   --err-line: #6d3a33;
+    --warn-bg: #332711;  --warn-line: #5e4a20;
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -37,20 +56,20 @@
   label { display: block; font-weight: 600; font-size: .78rem; margin-bottom: .2rem; }
   input[type="text"], select {
     width: 100%; font-family: inherit; font-size: .88rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .4rem .5rem; margin-bottom: .4rem;
   }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .55rem 1rem;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
-  button.danger:hover { background: var(--err); color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
 
@@ -61,19 +80,24 @@
   .choice-row input, .choice-row select { margin-bottom: 0; }
 
   /* ---- walk a hypothetical specimen through the key ---- */
-  .choice-row.on-path { background: #fdf6e6; border-radius: 6px; box-shadow: 0 0 0 2px #e0b98f; }
+  .choice-row.on-path { background: var(--warn-bg); border-radius: 6px; box-shadow: 0 0 0 2px var(--warn-line); }
   .trace-choice {
     display: block; width: 100%; text-align: left; margin-bottom: .5rem;
-    background: #fff; color: var(--ink); border-color: var(--line-strong);
+    background: var(--card); color: var(--ink); border-color: var(--line-strong);
     font-weight: 400; line-height: 1.35;
   }
-  .trace-choice:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  .trace-choice:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
   .trace-choice b { display: inline-block; min-width: 2rem; }
   .trace-path { font-size: .86rem; color: var(--muted); margin: 0 0 .6rem; }
   .trace-path .crumb { font-weight: 700; color: var(--ink); }
   .trace-outcome { font-size: .92rem; border-radius: 8px; padding: .6rem .7rem; margin: 0 0 .6rem; }
-  .trace-outcome.good { background: #edf5ec; border: 1px solid #9cc39a; }
-  .trace-outcome.bad { background: #fbeceb; border: 1px solid #d9a19d; }
+  .trace-outcome.good { background: var(--good-bg); border: 1px solid var(--good-line); }
+  /* The parenthetical after a result. It was written as an inline
+     style="color:#555" from script, which is a colour literal no sweep of the
+     <style> block can see and which axe read as serious contrast failure the
+     moment the tint behind it went dark. */
+  .trace-outcome .aside { color: var(--muted); }
+  .trace-outcome.bad { background: var(--err-bg); border: 1px solid var(--err-line); }
 
   .print-title { font-size: 1.3rem; margin: 0 0 .8rem; }
   .key-couplet { margin-bottom: .5rem; font-size: .92rem; }
@@ -287,8 +311,8 @@
       var examples = st.choice.examples.trim();
       body = '<p class="trace-outcome good"><strong>Ends at:</strong> ' + escapeHtml(st.choice.result.trim()) +
         (examples
-          ? ' &nbsp;<span style="color:#555;">(example specimens: ' + escapeHtml(examples) + ')</span>'
-          : ' &nbsp;<span style="color:#555;">&mdash; no example specimens tagged, so this result won&rsquo;t appear in the classification worksheet.</span>') +
+          ? ' &nbsp;<span class="aside">(example specimens: ' + escapeHtml(examples) + ')</span>'
+          : ' &nbsp;<span class="aside">&mdash; no example specimens tagged, so this result won&rsquo;t appear in the classification worksheet.</span>') +
         '</p>';
     } else if (st.kind === 'dead-end') {
       body = '<p class="trace-outcome bad">Couplet <strong>' + st.label + '</strong> is a dead end &mdash; it leads to no step and names no result. ' +

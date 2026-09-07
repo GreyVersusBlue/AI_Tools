@@ -16,6 +16,13 @@
 <meta name="twitter:title" content="Graph Paper & Number Line Generator — AsPerMyLessonPlan.com">
 <meta name="twitter:description" content="Printable graph paper, number lines, and coordinate planes, sized true-to-scale for printing.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cg stroke='%232A6DB0' stroke-width='1.3'%3E%3Cline x1='6' y1='10' x2='26' y2='10'/%3E%3Cline x1='6' y1='16' x2='26' y2='16'/%3E%3Cline x1='6' y1='22' x2='26' y2='22'/%3E%3Cline x1='11' y1='6' x2='11' y2='26'/%3E%3Cline x1='16' y1='6' x2='16' y2='26'/%3E%3Cline x1='21' y1='6' x2='21' y2='26'/%3E%3C/g%3E%3C/svg%3E">
+<!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
+     opting in here keeps a11y.js from putting its CSS-filter invert on top.
+     #previewArea is a true-to-scale sheet of graph paper and carries
+     .paper-sheet, so the grid gpg-render.js draws in currentColor, and its
+     red plot line, stay dark ink on white in both themes.
+     Read ink-paper.css's header before copying this into another tool. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="graph-paper-generator/gpg-store.js"></script>
@@ -24,6 +31,12 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Path 5 P3. --desk is the mat the previewed sheet sits on, and it is the
+     one surface that has to go *darker* than the card in dark rather than
+     lighter, so a white sheet still reads as a sheet lying on something.
+     Values are 015's and 026's. */
+  :root { --desk: #d9d7cd; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --desk: #0e1014; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -35,7 +48,7 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); color: var(--ink); }
 
   .layout { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
@@ -44,7 +57,7 @@
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], input[type="number"], select {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
@@ -57,28 +70,28 @@
   .mode-tabs { display: flex; gap: .4rem; margin-bottom: .9rem; flex-wrap: wrap; }
   .mode-tab {
     flex: 1 1 auto; text-align: center; padding: .5rem .4rem; border: 1px solid var(--line-strong);
-    border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .82rem; color: var(--muted);
+    border-radius: 7px; background: var(--card); cursor: pointer; font-weight: 700; font-size: .82rem; color: var(--muted);
   }
-  .mode-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .mode-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
   .mode-panel { display: none; }
   .mode-panel.active { display: block; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
-    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
     border-radius: 7px; padding: .6rem 1.1rem; width: 100%;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
-  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
-  button.danger { background: #fff; color: #a3372b; border-color: #a3372b; }
-  button.danger:hover { background: #a3372b; color: #fff; }
+  button.secondary { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: var(--card-2); border-color: var(--muted); color: var(--ink); }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); }
   .btnRow { display: flex; gap: .6rem; }
   .btnRow button { width: auto; flex: 1 1 0; }
 
-  .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
+  .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
-  #previewArea { background: #fff; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,.18); max-width: 100%; }
+  #previewArea { background: var(--card); margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,.18); max-width: 100%; }
   #previewArea svg { display: block; width: 100%; height: auto; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
@@ -367,7 +380,7 @@
 
     <div class="preview-wrap">
       <p class="preview-note">Live preview &mdash; sized true-to-scale for printing at 100%.</p>
-      <div id="previewArea"></div>
+      <div id="previewArea" class="paper-sheet"></div>
     </div>
   </div>
 

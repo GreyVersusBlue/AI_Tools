@@ -58,6 +58,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -69,27 +70,38 @@ const only = args.includes('--tool') ? args[args.indexOf('--tool') + 1] : null;
 const batchSize = Number(args.find(a => /^\d+$/.test(a)) || 6);
 
 /* ── which files are live pages ────────────────────────────────────────── */
-// smoke-theme.mjs's sweep plus two exclusions it does not make. Tool support
-// pages (Tools/<tool>/*.html) are live — 001's hallway remote is one — but a
-// fixture under a test/ folder is not a page a teacher opens, and
-// `Other Landing Page ideas/` is a second, unlinked and unprecached copy of the
-// four alternative landing pages (the ones at the repo root ARE linked from
-// index.html and ARE in PRECACHE_URLS; these four differ from them and are
-// reachable from nothing). Both would otherwise inflate the denominator.
+// The list comes from `git ls-files`, the same way check-adoption.mjs builds
+// its list and for the same recorded reason: a plain filesystem walk picks up
+// `Tools/board-check/.offline-copy-staging/`, the gitignored full-site copy
+// that `npm run offline:build` leaves behind, and counts every page of the
+// site twice. That is not hypothetical — on 2026-09-07 this script reported
+// "188 live pages, 99 still on the filter, 2519 literals, 17 rounds left" on a
+// tree whose real figures were half of that, and the next batch it printed was
+// six staging duplicates of pages that had already been converted. A gitignored
+// build output had produced a wrong number here once before (see
+// check-adoption.mjs's header, 2026-09-04); nothing untracked belongs in a
+// measurement. check-dedupe.mjs skips the same folder by name.
+//
+// On top of tracked-ness: smoke-theme.mjs's sweep plus two exclusions it does
+// not make. Tool support pages (Tools/<tool>/*.html) are live — 001's hallway
+// remote is one — but a fixture under a test/ folder is not a page a teacher
+// opens, and `Other Landing Page ideas/` is a second, unlinked and unprecached
+// copy of the four alternative landing pages (the ones at the repo root ARE
+// linked from index.html and ARE in PRECACHE_URLS; these four differ from them
+// and are reachable from nothing). Both would otherwise inflate the denominator.
 const EXEMPT = [
   'Tools/New Designs/', 'Tools/Old Designs/', 'Other Landing Page ideas/',
   'index_backup.html', 'node_modules/',
 ];
 const isFixture = rel => /(^|\/)test\//.test(rel);
-function livePages(dir = SITE, out = []) {
-  for (const name of fs.readdirSync(dir).sort()) {
-    const full = path.join(dir, name);
-    const rel = path.relative(SITE, full).split(path.sep).join('/');
-    if (name === '.git' || EXEMPT.some(e => rel.startsWith(e)) || isFixture(rel)) continue;
-    if (fs.statSync(full).isDirectory()) livePages(full, out);
-    else if (name.endsWith('.html')) out.push(rel);
-  }
-  return out;
+function livePages() {
+  const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: SITE, encoding: 'utf8' })
+    .split('\0').filter(Boolean);
+  return tracked.filter(rel =>
+    rel.endsWith('.html') &&
+    !EXEMPT.some(e => rel.startsWith(e)) &&
+    !isFixture(rel) &&
+    fs.existsSync(path.join(SITE, rel)));    // tracked, but deleted in the tree
 }
 
 /* ── CSS ──────────────────────────────────────────────────────────────── */
