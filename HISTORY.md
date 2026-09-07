@@ -166,6 +166,133 @@ waits for will be a docs or tooling PR, not a tool one. Recorded as a ¼ row at 
 a `sw.js` hunk that touches only the version constant as not site-wide, and pin it in
 `select-suites.test.mjs`. Not measured — read off the diff.
 
+**Rank 1 — Path 5 P3, increment 9: six more pages on native dark. #214, `CACHE_VERSION`
+v162.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
+one `npm run path5:next` printed, in its order — **012, 052, 057, 068, 071, 084** — but only
+after the picker was fixed for the second time in three increments. Native dark went from 57
+themed pages to **63 (77%)**, and the literal count from 721 across 25 pages to **627 across
+19** — median 31, range 17–54 — which the picker calls **four** more rounds, not three. `stage.js` is unchanged at 7 adopters; none of these six has a
+stage, which makes it seven increments running, and 001 and 004 are still the last two
+hand-rolling fullscreen. `smoke-dark-rollout.mjs` went from 538 assertions to **601**, every
+one of the six needing a `prep`.
+
+**The picker had been reporting numbers that were twice the truth, and its printed batch was
+six pages that were already done.** `list-dark-candidates.mjs` built its page list by walking
+the filesystem from the repo root, exempting a hardcoded list plus `node_modules/`. It
+therefore swept `Tools/board-check/.offline-copy-staging/` — the gitignored, whole-site copy
+`npm run offline:build` leaves behind — and counted every page of the site twice. On this
+session's tree it opened with **"188 live pages, 164 themed, 99 still on the filter, 2519
+literals, 17 rounds left"**, and the six-page batch it printed was six *staging duplicates* of
+001, 021, 015, 010, 072 and 023 — pages converted in increments 1 and 2. It now filters
+`git ls-files`, the way `check-adoption.mjs` has since a gitignored build output produced a
+wrong number there on 2026-09-04; its header records the episode. `smoke-theme.mjs`'s
+site-wide sweep had the identical walk and got the identical fix — it was double-checking every
+page, and a staging copy built *before* a conversion would have failed it as though the real
+page had regressed. **The confirmation that only the local run was wrong**: with the fix the
+picker reproduces #212's handoff figures exactly — 82 themed, 57 native, 721 literals, 25
+pages, five rounds. This is the third time a number in this repo has come from something
+untracked or unbuilt; the pattern is now explicit enough to state as a rule. **A measurement
+that walks the tree must start from `git ls-files`.** The rest of the tree-walking scripts were
+audited while this was fixed, and the two fixed here were the only two exposed: eighteen scripts
+walk or list the tree, five use `git ls-files` (these two, `check-adoption`,
+`check-docs-commands` and `make-offline-copy`), `check-dedupe` recurses but skips the staging
+folder by name, and **every other one reads `Tools/` or `Tools/<tool>/test/` one level down**,
+so it never descends into `Tools/board-check/.offline-copy-staging/` at all. Recursing from the
+repo root was the whole exposure.
+
+**Two serious axe violations, both found by `smoke-dark-rollout.mjs`, neither introduced by
+the conversion.**
+
+*A colour literal can live in an inline `style` attribute written from script.* 057's trace
+outcome appends `' &nbsp;<span style="color:#555;">(example specimens: …)</span>'`. The picker
+counts colour literals **inside `<style>` only** — 16 on this page, and this was not one of
+them — so no sweep in the repo could see it, and it went unreadable the moment the tint behind
+it became `--good-bg`'s dark green. It is a `.trace-outcome .aside` class on `var(--muted)`
+now. This is the same family as #208's "a colour can come from a data table in script" and
+#212's `.paper-sheet`-in-the-renderer, and the three together are the argument that **the
+`<style>` block is not the boundary of a page's colours**.
+
+*068's per-student "print" link fails `link-in-text-block`, and has since the tool shipped.*
+It is drawn `--accent-2` with `text-decoration: none` inside a `--muted` span — a **1.1:1**
+difference against the text around it, where axe wants 3:1 for a link with no underline.
+Serious, ×3 (one per roster row), and **true in light**: confirmed by scanning the shipped page
+in light mode before touching it, not inferred from the dark failure. That makes it the
+**fifth** confirmed instance of the empty-storage blind spot (009 in #202, 075 in #206, 077 in
+#210, 073 in #212), and like 077's and 073's the page had **no allowlist line**, because the
+site-wide sweep opens 068 with no roster and the list that holds the link never renders. Fixed
+with an underline, which satisfies the rule regardless of colour. **Rank 16 has now been argued
+for by five consecutive increments; at some point finding these one page at a time stops being
+a bonus and starts being the plan, which it should not be.**
+
+**Two `prep`s in the new suite silently did nothing, and only the screenshots said so.** 068's
+`#logEntryBtn` `alert()`s and returns unless the outcome textarea is filled; Playwright
+auto-dismisses the dialog, so the click looked like it worked and the page was scanned with an
+empty contact table — that is, with the badges, the tally bars and the row hover this
+conversion is mostly *about* absent. 071's `setInputFiles` fills the thumbnail strip but leaves
+the stage on "Upload at least one image to get started" until `#newImageBtn` draws one, so the
+pin button and the whole amber warn trio did not exist. Both are fixed and both preps now put
+real content on the page; 071's is the first in this suite to upload a file (a 1×1 PNG through
+the real `<input type="file">`). **The general form is worse than these two cases**: a `prep`
+that fails leaves the page in exactly the state the site-wide sweep already covers, so every
+assertion still passes and the suite reports a page as checked that it did not check. Nothing
+detects this but looking at the screenshot, which is now two increments running where the
+screenshots caught something no assertion did.
+
+**A sixth unstyled control, six batches in a row.** 071's selector read `input[type="text"],
+input[type="file"]` and the page has one `input[type="number"]` (cards-to-print), which
+therefore carried the UA's own control styling beside its styled neighbours — invisible in
+light, obvious in dark. **Tint values were standardised on 001's rather than kept.** Four of
+the six needed a tint pair, and the page values were all within a shade of the reference
+adopter's: 071's pin amber (`#fdf3ec`/`#e0b98f`/`#7a4a1c`) and 084's outer-circle chip
+(`#fff2e6`/`#f0c69d`/`#a3611f`) both became 001's `--warn-*`; 057's and 052's greens, reds and
+blues became 001's `--good-*`, `--err-*` and `--info-*`. Two deliberate departures, both
+recorded here so they are not read as drift: 084's `--info-line`/`--info-ink` are a *chip*
+strength, one step stronger than 001's `--info-line`, which is a note border; and 071 adds a
+`--warn-bg-2` for the hover a literal `#fbe8d8` used to do. **068's `--ok` absorbed a second
+green.** The page defined `--ok: #2c6e3f` for its toast and separately wrote `#2f7d4f` twice
+for the tally's good-news figure and bar. They are one token now, and it is the darker of the
+two, which incidentally lifts that figure's contrast on the card from **4.47 to 5.36** — the
+one place in this increment where a light value moved on purpose.
+
+**The `git ls-files` move broke rule 4 of the CI selector, and only the full local pass said
+so.** `select-suites.mjs` decides which suites a page edit runs, and its rule 4 — "a suite that
+enumerates the pages itself never names one, so select all of them" — found those suites by
+grepping their source for `readdirSync`. Rewriting `smoke-theme.mjs`'s enumeration therefore
+took it out of that set, and **a tool-page edit would have quietly stopped running the theme
+sweep in CI**: the exact silence rule 4 exists to prevent, on the one suite that proves the
+theme mechanism. Nothing targeted saw it — not `test:theme` (which passes; the suite still
+works), not the eleven guards, not `--changed`. `Tools/board-check/test/select-suites.test.mjs`
+did, on the real tree, in a 25-minute run. `isSweep` now recognises both spellings and the test
+pins the new one (61 assertions, from 59), per `CLAUDE.md`'s standing rule that anyone touching
+these rules adds the case; the git-listing call is spelled in two halves inside the test for the
+same reason the directory listing already was, so the test file does not itself read as a
+sweep. Checked across all 145 suites: `ls-files` matches `smoke-theme.mjs` and nothing else.
+**The general lesson is not about this detector.** A guard that identifies its subjects by
+grepping for an implementation detail goes silent, not red, when the implementation changes —
+and a change that is *good* for the subject (this one made the sweep correct) is exactly the
+kind that gets waved through.
+
+**One local failure that is not this branch's.**
+`Tools/music-sightreading-generator/test/smoke-glyph-fallback.mjs` fails on this machine with
+its own diagnostic — *"this machine lacks the musical symbol font"* — because it measures `A`
+against the U+FFFF tofu box and both come back the same width. It reproduces without this
+branch's working-tree changes and touches nothing here. Both full local passes ended
+**144 of 145 green** with only this suite red — 25.2 min and 24.7 min. **No `expectedFailures` entry was
+added**: `suites.json`'s list is for a repo-level known-red, and a font missing from one
+developer's Chromium is not that. This is the case `CLAUDE.md`'s environment notes already
+cover, and CI is the authority. Recorded so the next session on a machine without that font
+does not spend the twenty minutes twice.
+
+**What was not verified.** Nothing on a real projector, a real Chromebook, or with the worker
+installed — nine increments now. 012's *printed* output was reasoned from the `.paper-sheet`
+restore rather than observed under print emulation, and it is the page where that reasoning
+carries the most weight: `gpg-render.js` draws the entire grid, the axis labels and the
+number-line ticks in `currentColor`, so without the sheet restoring `--ink` the printed sheet
+in dark mode would be a pale grid on white paper. The one thing checked directly is that the
+preview is white with a dark grid in both themes, in the screenshots and in the suite's `sheet`
+assertion. The remaining 19 pages' costs are read off the picker and move every round; do not
+carry the figure forward.
+
 **Rank 1 — Path 5 P3, increment 8: six more pages on native dark. #212, `CACHE_VERSION`
 v161.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
 one `npm run path5:next` printed, in its order — **066, 069, 079, 026, 073, 083**. Native dark
