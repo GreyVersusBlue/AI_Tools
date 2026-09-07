@@ -41,6 +41,38 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**…and the scoping finally reached a tool PR — 2026-09-07 (#223).** For two days the scoped
+job existed and never fired on the PRs it was built for. `select-suites.mjs`'s rule 1 made any
+`sw.js` edit site-wide, `CLAUDE.md` requires a `CACHE_VERSION` bump in the same commit as any
+precached file change, and so **nine tool PRs in a row (#200 … #221) paid the full ~21-minute
+pass for a one-character version string**. Rule 1 now reads the *hunk*: `isCacheVersionBumpOnly()`
+checks every changed line of `sw.js`'s unified diff against the `const CACHE_VERSION = 'vNN';`
+assignment, and a bump-only diff selects the two `service-worker` suites — the ones a version
+bump actually exercises, since `smoke-sw-tiers.mjs` stages the repo's own worker — instead of
+all 145. `run-suites.mjs`'s `changedFiles()` gained a `diffOf()` built from the same range the
+file list came from, so a session's bare `--changed` and CI's `--base origin/<base>` read the
+same hunks.
+
+**The interesting part is the failure mode, because it is silent.** An exemption that fires
+when it should not skips suites, and nothing downstream says so; an exemption that stops
+firing merely wastes twenty minutes, which nothing says either. So the check is strict in both
+directions — a diff touching one other line, and a diff git could not produce, are both
+site-wide, because *not knowing what changed has to select more, never less* — and
+`select-suites.test.mjs` (61 → 92 assertions) pins the case a naive version gets wrong (a diff
+containing the `CACHE_VERSION` line **and** another change), the unavailable-diff fallback, the
+exemption never applying to a file that is not `sw.js`, and — reading the real `sw.js` — that
+the constant is still spelled the way the exemption keys on. That last assertion exists because
+respelling it would quietly turn the scoping back off. This is #214's rule-4 bug from the other
+side: **a rule that reads a name where it should read the content goes quiet rather than red**,
+and both bugs in this selector have now had that shape.
+
+**Verified end to end on the real tree**, not only in the unit test: a bump-only `sw.js` printed
+`because sw.js: CACHE_VERSION is the only changed line` and two suites, and the same file with
+one more edited line printed `because site-wide: sw.js` and all 145. **What was not verified:**
+a real scoped run on GitHub's runner. #223's own CI is a full pass by design — it edits
+`Tools/board-check/`, which is site-wide by rule 1 — so the first genuinely scoped tool PR is
+the next one, and its log prints the selection and the reason for every suite.
+
 **Batch size became a rule, not a number — 2026-09-05, same day.** The standing instruction
 had been "work the next *two* ranked items", which was right while the top of the list was
 quarter-session rows and would have been wrong the moment it reached rank 7 (Path 5 P3, a
