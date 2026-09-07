@@ -58,6 +58,45 @@ it after editing the module, or the suite fails:
 node Tools/schedule/test/fixture-northwind.mjs
 ```
 
+## 034 is a snapshot, not a copy — the two files have drifted
+
+`Tools/034-schedule-browser.html` was published from 035 and then **edited in
+this repo**, round after round, while 035's `BR_CSS` and browser script stayed
+where they were. Measured 2026-09-07, on the stylesheets as they stood before
+Path 5 P4: **87 lines of CSS in 034 that no version of 035 has** (the PNG
+download button, the copy-link button and staleness banner, the personal-notes
+column, the common-planning and substitute views, the door sign,
+`.gchip.active`) and 11 the other way, which are comments. On top of that 034
+has three tab modes and their render functions that 035 has never had.
+(`BACKLOG.md` said "~109 diff lines"; the figure is the same measurement read
+off a slightly wider slice.) **A change to the browser therefore lands in both
+files, independently.** Re-publishing 034 from 035 today would delete every
+one of those features, so do not "resync" them; treat 034 as a second
+implementation that happens to share a stylesheet's worth of rules.
+
+Two mechanisms hold the pieces that MUST agree:
+
+- `Tools/schedule-browser/test/smoke-mode-tabs.mjs` compares the tab markup
+  the publisher emits against the tab markup 034 ships (Round 8's fix had to
+  land in three places — 035's live copy, its publisher template, and 034).
+- `Tools/schedule-browser/test/smoke-dark-theme.mjs` compares the **theme**
+  region byte for byte: the palette block and everything from the dark block
+  to the end of the stylesheet. That region is the one part of the CSS that is
+  supposed to be identical in both files, and the suite fails the moment it is
+  not.
+
+Two things about the palette that are easy to break (Path 5 P4, 2026-09-07):
+
+- **`BR_CSS` is a JavaScript template literal.** A backtick anywhere inside it
+  ends the string and the rest of the stylesheet is parsed as JavaScript; the
+  symptom is a `SyntaxError` naming a CSS property, several hundred lines from
+  the backtick. Do not use backticks in its comments.
+- **Three different things own `data-theme` on a page showing this browser** —
+  `_shared/a11y.js` on 034, 035's own palette switcher inside the visualizer,
+  and nothing at all in a file a teacher was emailed. The last case is the one
+  `body.br-published` gates, and it is why `prefers-color-scheme` must not
+  apply to the embedded copy. The dark block's own comment spells this out.
+
 ## After regenerating the committed browser file
 
 `brPublish()` writes a plain `<head>`; it does not emit the `gvb:social`

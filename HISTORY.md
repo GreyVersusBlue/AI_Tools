@@ -41,6 +41,108 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 5 P4 — the Schedule Browser's native dark palette, and the end of Path 5's rollout
+work — 2026-09-07 (#229, `CACHE_VERSION` v168).** 034 was the last page in the ranked table with
+no theme of its own. It is now on a native dark palette and links `_shared/a11y.js` with
+`A11Y_NATIVE_THEME`, so `npm run path5:next` reports **83 of 83 themed pages native, 0 on the
+filter**, and the fourteen pages still without any theme are nobody's row. The row's other two
+parts were already true and the row said so: `index.html` has had a native palette since P1, and
+the offline generator's "stale theme-link pattern" is not stale.
+
+**This was not "one more palette page", and the reason is worth keeping: 034 is a published
+snapshot, so its palette has three homes and three different owners of `data-theme`.** On the
+committed site copy `_shared/a11y.js` owns the attribute. Inside 035, the visualizer's own
+four-palette switcher owns it — and two of those four are dark, so the embedded browser now
+follows the visualizer into dark, which it never did before. A file a teacher was **emailed** has
+no owner at all: no `_shared/` folder, no switcher, so there and only there
+`prefers-color-scheme` decides. That last case is gated on a new `body.br-published` class,
+because without the gate the embedded copy would go dark on a dark laptop while the visualizer
+around it stayed light. Seven things are worth carrying.
+
+(1) **`--br-forest` was ten fills and 24 inks under one name, and no single dark value could
+have existed** — a green dark enough to carry white text is far too dark to be text on a dark
+card. It split into `--br-forest` (the fill) and `--br-forest-ink`, and that split is the whole
+reason the round is a session rather than an hour. The palette is now declared the way
+`_shared/ink-paper.css` declares its own: every colour named once as a `-light` and a `-dark`
+value, with the theme blocks only re-pointing the semantic token, so the two themes cannot drift.
+
+(2) **The five department hues are DATA, not theme, and CSS could not reach them.** `brDColor()`
+reads them out of `PUBLISHED_DATA`, where they were chosen against a white card; all five fail as
+text on a dark one (measured 2.39:1 Social Studies to 3.56:1 Math), and they are written into a
+`style` attribute, which beats every stylesheet rule. The fix is that each inked element now
+carries **both** values inline — `--dc` and `--dc-ink` — and a two-line CSS rule picks. The
+sibling is computed by a new `brDeptInk()`: same hue and saturation, lightness raised in 1% steps
+until it clears 4.5:1 on the darkest surface one of them ever sits on. It works on hues nobody has
+published yet, which a hand-written table would not. The generalisable rule: **a value that comes
+out of the user's data cannot be themed by a token — move it out of the property and into a
+variable the theme can choose between.**
+
+(3) **A guard that measures the symptom the platform fixes for you passes on a broken fix.**
+`_shared/ink-paper.css`'s `@media print` reset **has never fired on a native-dark page**. Its
+selector `:root[data-theme="dark"]` is (0,2,0) and its own screen dark block is
+`:root[data-theme="dark"]:not(.a11y-filter-dark)`, (0,3,0) — so for every one of the 83 adopters
+the reset lost the cascade outright and printing kept the dark tokens. Measured on 001 under
+`emulateMedia({media:'print'})`: `--ink` stayed `#e9e7e0` and `--card` `#1d2229`. It looked fine
+because Chromium's own print default paints body text black over the top — and `smoke-theme.mjs`
+was asserting exactly that, `body`'s background, which is why the bug survived two months and 83
+conversions. The `:not()` is added, the reset now ties and wins on source order, and the suite
+reads the **tokens** as well. Anything printing `background: var(--card)` from dark mode has been
+printing dark grey since Path 5 P1.
+
+(4) **BR_CSS is a JavaScript template literal, and a backtick in a CSS comment ends it.** The
+first draft's comments used backticks the way every other comment in this repo does; the whole
+stylesheet after the first one was parsed as JavaScript and 035 died with
+`SyntaxError: Unexpected identifier 'background'` — several hundred lines from the cause, and
+naming a CSS property, which is a confusing thing to read in a JS stack. The suite asserts the
+absence now, and `Tools/schedule/README.md` records it.
+
+(5) **The publisher/published drift is real, was measured, and is now guarded rather than
+described.** 87 lines of CSS exist in 034 and in no version of 035 (the PNG download, the copy
+button and staleness banner, personal notes, the comparison and substitute views, the door sign),
+plus three whole tab modes; 11 lines go the other way and are comments. So the palette went into
+**both** files independently, and `smoke-dark-theme.mjs` compares the two **theme regions** byte
+for byte — not the stylesheets, which are not comparable and never will be. Re-publishing 034
+from 035 to "resync" them would delete a year of features; the README now says so in as many
+words.
+
+(6) **The floor plan and the mini-maps are a light mat in both themes**, #225's rule again: the
+room fills are department hues at a `fill-opacity` tuned for a light ground, `brGeoFloorSVG()`
+paints the corridor labels and context rooms with literals, and the map is the half of this tool
+that gets printed and pinned up. Marking the mat took ~10 literals out of the job. It is
+unconditional — a mat that is light in **every** theme needs no theme selector, and gets the
+print reset for free.
+
+(7) **Two assertions in `smoke-theme.mjs` had to be satisfied by the source, not worked
+around**, and both were right to exist. Its dark-rule regex wants `[data-theme="dark"]…{` on one
+line, so the gated selector has to be the one carrying the brace — the `green-gold-dark` selector
+goes first. And its `A11Y_NATIVE_THEME = true` grep reads HTML comments *and* the inside of
+BR_CSS, so a CSS comment explaining that 034 raises the flag read as 035 raising it; the comment
+is reworded and says why.
+
+Measured, not assumed: every text pair in the dark palette clears **4.85:1** (worst is the
+placeholder on a card), ink/muted/forest-ink clear 6.3:1 on all four dark surfaces, and
+`--br-gold-soft` — the control border — clears WCAG 1.4.11's 3:1 in dark at 3.48:1, which light's
+`#d9ca98` (1.63:1) does not. That asymmetry is the same one ink-paper.css records for
+`--line-strong` and the same open backlog row; it is not new here.
+`Tools/schedule-browser/test/smoke-dark-theme.mjs` is new — **59 assertions**, in `suites.json`
+and under `npm run test:schedule-browser` — and it drives all three cases, including building a
+published file with `brBuildPublishedHTML()` and opening it under both OS colour schemes, and all
+six of 034's modes in dark (three of which 035 has never had, so nothing in the publisher
+exercises them and only this suite can). Each mode is asserted to have **rendered** before it is
+scanned, because a view whose script threw scans clean.
+`test:a11y -- --only 034` is clean and **no allowlist line was added**; 034 was already clean and
+stayed clean, in dark as well as light.
+
+**Not verified.** Nothing has been opened on a real projector, a real Chromebook or a real
+printer, fourteen increments running — the print reset is verified by `emulateMedia`, which is
+what the token values say and not what a printer puts on paper. The **PNG export**
+(`brDownloadTeacherSchedule()`) was read and deliberately left painting light literals, on #225's
+rule that an export is paper, but no PNG was downloaded and compared. The **door sign** was left
+alone for the same reason: it is `display:none` except while printing, so the dark theme never
+reaches it. All six modes are driven and scanned in dark by the new suite, but only
+**three** of them (teacher, group, map) have a **screenshot** a person actually looked at; the
+other three are green assertions and nothing more.
+
 **Path 5 P3's stage rollout — the row's last half — 2026-09-07 (#227, `CACHE_VERSION` v167).**
 001 and 004 were the last two pages on the site hand-rolling `requestFullscreen`; eleven
 palette increments in a row had walked past them, which is why the row said this would not

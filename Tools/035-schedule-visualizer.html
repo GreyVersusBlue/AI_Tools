@@ -19085,13 +19085,88 @@ window.wiComputeDiff    = wiComputeDiff;
 const BR_CSS = `#app-browser {
   display:none; /* shown by toggleApp() */
   font-family:'Public Sans',system-ui,sans-serif;
-  color:#283831; margin:0; padding:30px 18px 90px; font-size:16px; line-height:1.5;
-  background:linear-gradient(180deg,#eef3ee 0%,#f4f7f4 240px,#f4f7f4 100%);
+  color:var(--br-ink); margin:0; padding:30px 18px 90px; font-size:16px; line-height:1.5;
+  background:var(--br-page);
   min-height:100vh; box-sizing:border-box;
-  --br-forest:#0c4b31; --br-forest-2:#155f3e; --br-forest-deep:#08381f;
-  --br-gold:#f3c63f; --br-gold-soft:#d9ca98; --br-gold-line:#ece2c5;
-  --br-cream:#fcfaf2; --br-paper:#f6f8f5; --br-ink:#283831; --br-muted:#62756a;
-  --br-line:#e8eee9; --br-shadow:0 12px 34px -16px rgba(8,56,31,.30);
+}
+
+/* ── The palette, named twice (Path 5 P4) ─────────────────────────────────
+   Every colour this browser paints is declared here as a a -light and a
+   -dark value, and the blocks below only re-point the semantic token at
+   one of them. No value is written down twice, so the two themes cannot
+   drift; _shared/ink-paper.css uses the same -light idiom for the same
+   reason. Declared on :root rather than on #app-browser because the
+   published page's own <body> reads --br-page.
+
+   --br-forest is the FILL and --br-forest-ink the INK. They were one token
+   until this round — ten background uses against 24 colour and border ones
+   — which is why no single dark value could exist: a green dark enough to
+   carry white text is far too dark to BE text on a dark card.
+
+   Contrast, measured on the dark values: every text pair is 4.85:1 or better
+   (worst is the placeholder on a card), and ink / muted / forest-ink clear
+   6.3:1 on all four dark surfaces. --br-gold-soft is the control border and
+   clears WCAG 1.4.11's 3:1 in dark (3.48:1 on a card); light's #d9ca98 is
+   1.63:1 and does not — the same asymmetry ink-paper.css records for
+   --line-strong, and the same open backlog row, not something this round
+   introduced. */
+:root {
+  --br-forest-light:#0c4b31;     --br-forest-dark:#12563a;
+  --br-forest-ink-light:#0c4b31; --br-forest-ink-dark:#79cfa2;
+  --br-forest-2-light:#155f3e;   --br-forest-2-dark:#1a7049;
+  --br-gold-soft-light:#d9ca98;  --br-gold-soft-dark:#7a7355;
+  --br-gold-line-light:#ece2c5;  --br-gold-line-dark:#3a3729;
+  --br-cream-light:#fcfaf2;      --br-cream-dark:#222923;
+  --br-paper-light:#f6f8f5;      --br-paper-dark:#272f28;
+  --br-card-light:#fff;          --br-card-dark:#1a201c;
+  --br-ink-light:#283831;        --br-ink-dark:#e7ece7;
+  --br-muted-light:#62756a;      --br-muted-dark:#a3b4a7;
+  --br-line-light:#e8eee9;       --br-line-dark:#2e372f;
+  --br-placeholder-light:#9aa89f;--br-placeholder-dark:#7e8f83;
+  --br-plan-ink-light:#9a8430;   --br-plan-ink-dark:#d9bb63;
+  --br-plan-bg-light:#fdfaef;    --br-plan-bg-dark:#2a2718;
+  --br-note-bg-light:#fffdf4;    --br-note-bg-dark:#2a2718;
+  --br-common-bg-light:#fdf3d9;  --br-common-bg-dark:#2f2a16;
+  --br-common-ink-light:#9a7415; --br-common-ink-dark:#e0b95e;
+  --br-warn-bg-light:#fbe4c8;    --br-warn-bg-dark:#3a2412;
+  --br-warn-ink-light:#7a3c0e;   --br-warn-ink-dark:#f0c08a;
+  --br-alert-ink-light:#9a5b2a;  --br-alert-ink-dark:#e8a06b;
+  --br-page-light:linear-gradient(180deg,#eef3ee 0%,#f4f7f4 240px,#f4f7f4 100%);
+  --br-page-dark:#121713;
+  --br-focus-ring-light:0 0 0 3px rgba(12,75,49,.13);
+  --br-focus-ring-dark:0 0 0 3px rgba(121,207,162,.28);
+
+  --br-forest:var(--br-forest-light);
+  --br-forest-ink:var(--br-forest-ink-light);
+  --br-forest-2:var(--br-forest-2-light);
+  --br-gold-soft:var(--br-gold-soft-light);
+  --br-gold-line:var(--br-gold-line-light);
+  --br-cream:var(--br-cream-light);
+  --br-paper:var(--br-paper-light);
+  --br-card:var(--br-card-light);
+  --br-ink:var(--br-ink-light);
+  --br-muted:var(--br-muted-light);
+  --br-line:var(--br-line-light);
+  --br-placeholder:var(--br-placeholder-light);
+  --br-plan-ink:var(--br-plan-ink-light);
+  --br-plan-bg:var(--br-plan-bg-light);
+  --br-note-bg:var(--br-note-bg-light);
+  --br-common-bg:var(--br-common-bg-light);
+  --br-common-ink:var(--br-common-ink-light);
+  --br-warn-bg:var(--br-warn-bg-light);
+  --br-warn-ink:var(--br-warn-ink-light);
+  --br-alert-ink:var(--br-alert-ink-light);
+  --br-page:var(--br-page-light);
+  --br-focus-ring:var(--br-focus-ring-light);
+
+  /* Fixed in both themes. The mast and the seal are a dark green card with
+     white type either way; the five department hues are DATA, read out of
+     the published file by brDColor(), and are handled by brDeptInk() and
+     .dcink below rather than here. */
+  --br-forest-deep:#08381f;
+  --br-gold:#f3c63f;
+  --br-warn-line:#c96a1f;
+  --br-shadow:0 12px 34px -16px rgba(8,56,31,.30);
   --br-ela:#2563eb; --br-math:#c2520f; --br-sci:#0d7c69; --br-ss:#7c3aa8; --br-scsi:#71641f;
 }
 #app-browser *{box-sizing:border-box}
@@ -19119,37 +19194,37 @@ const BR_CSS = `#app-browser {
 }
 #app-browser .br-back-btn:hover{background:#f7d050;box-shadow:0 4px 14px rgba(0,0,0,.22);transform:translateY(-1px)}
 #app-browser .br-back-btn:active{transform:translateY(0);box-shadow:0 1px 4px rgba(0,0,0,.18)}
-#app-browser .panel{background:#fff;border:1px solid var(--br-gold-soft);border-top:none;border-radius:0 0 16px 16px;box-shadow:var(--br-shadow)}
+#app-browser .panel{background:var(--br-card);border:1px solid var(--br-gold-soft);border-top:none;border-radius:0 0 16px 16px;box-shadow:var(--br-shadow)}
 #app-browser .toolbar{padding:20px 30px;background:var(--br-cream);border-bottom:1px solid var(--br-gold-line);
   display:flex;flex-wrap:wrap;gap:14px 20px;align-items:flex-end}
-#app-browser .mode{display:inline-flex;background:#fff;border:1px solid var(--br-gold-soft);border-radius:11px;padding:3px}
+#app-browser .mode{display:inline-flex;background:var(--br-card);border:1px solid var(--br-gold-soft);border-radius:11px;padding:3px}
 #app-browser .mode button{font:inherit;font-weight:600;font-size:14px;border:none;background:none;color:var(--br-muted);
   padding:9px 18px;border-radius:8px;cursor:pointer;transition:.18s}
 #app-browser .mode button.on{background:var(--br-forest);color:#fff}
 #app-browser .br-field{display:flex;flex-direction:column;gap:6px;min-width:250px;flex:1}
-#app-browser .br-field label{font-size:13px;font-weight:700;color:var(--br-forest)}
+#app-browser .br-field label{font-size:13px;font-weight:700;color:var(--br-forest-ink)}
 #app-browser .searchbox{position:relative}
 #app-browser .searchbox input{width:100%;font:inherit;font-size:16px;font-weight:500;padding:12px 15px;border-radius:10px;
-  border:1px solid var(--br-gold-soft);background:#fff;color:var(--br-forest);outline:none;transition:.18s}
-#app-browser .searchbox input::placeholder{color:#9aa89f;font-weight:400}
-#app-browser .searchbox input:focus{border-color:var(--br-forest);box-shadow:0 0 0 3px rgba(12,75,49,.13)}
-#app-browser .br-menu{position:absolute;z-index:9000;top:calc(100% + 6px);left:0;right:0;background:#fff;
+  border:1px solid var(--br-gold-soft);background:var(--br-card);color:var(--br-forest-ink);outline:none;transition:.18s}
+#app-browser .searchbox input::placeholder{color:var(--br-placeholder);font-weight:400}
+#app-browser .searchbox input:focus{border-color:var(--br-forest-ink);box-shadow:var(--br-focus-ring)}
+#app-browser .br-menu{position:absolute;z-index:9000;top:calc(100% + 6px);left:0;right:0;background:var(--br-card);
   border:1px solid var(--br-gold-soft);border-radius:12px;
   box-shadow:0 20px 46px -18px rgba(8,56,31,.45);max-height:min(60vh,360px);overflow:auto;display:none}
 #app-browser .br-menu.show{display:block}
 #app-browser .br-menu .grp{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
-  color:var(--br-muted);padding:12px 16px 5px;position:sticky;top:0;background:#fff}
+  color:var(--br-muted);padding:12px 16px 5px;position:sticky;top:0;background:var(--br-card)}
 #app-browser .br-menu .opt{padding:11px 16px;cursor:pointer;display:flex;align-items:center;gap:11px;font-size:15.5px;font-weight:500}
 #app-browser .br-menu .opt:hover,#app-browser .br-menu .opt.active{background:var(--br-paper)}
 #app-browser .br-menu .opt .tag{font-size:12.5px;color:var(--br-muted);margin-left:auto}
 #app-browser .br-dot{width:10px;height:10px;border-radius:50%;flex:none}
-#app-browser .btn-print{font:inherit;font-weight:600;font-size:13.5px;border:1px solid var(--br-gold-soft);background:#fff;
-  color:var(--br-forest);padding:11px 17px;border-radius:10px;cursor:pointer;transition:.18s}
+#app-browser .btn-print{font:inherit;font-weight:600;font-size:13.5px;border:1px solid var(--br-gold-soft);background:var(--br-card);
+  color:var(--br-forest-ink);padding:11px 17px;border-radius:10px;cursor:pointer;transition:.18s}
 #app-browser .btn-print:hover{background:var(--br-forest);color:#fff;border-color:var(--br-forest)}
 /* ── Staleness banner (ported from 034-schedule-browser.html R62; see
    BACKLOG.md / HISTORY.md, Round 8) ── */
 #app-browser .stale-banner{display:none;margin:0 0 16px;padding:14px 20px;border-radius:0 0 10px 10px;
-  background:#fbe4c8;border:2px solid #c96a1f;border-top:none;color:#7a3c0e;font-size:14.5px;font-weight:700;line-height:1.5;text-align:center}
+  background:var(--br-warn-bg);border:2px solid var(--br-warn-line);border-top:none;color:var(--br-warn-ink);font-size:14.5px;font-weight:700;line-height:1.5;text-align:center}
 #app-browser .stale-banner.show{display:block}
 #app-browser .stale-banner::before{content:"⚠ "}
 #app-browser .stage{padding:34px 34px 30px}
@@ -19158,42 +19233,42 @@ const BR_CSS = `#app-browser {
    It used to inherit 400, which no loaded face provided, so it silently
    resolved to a lighter weight than every other heading. One weight shipped
    instead of two. */
-#app-browser .br-empty .big{font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:var(--br-forest);margin-bottom:8px}
+#app-browser .br-empty .big{font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:var(--br-forest-ink);margin-bottom:8px}
 #app-browser .br-view{display:none;animation:br-rise .4s ease-out}
 #app-browser .br-view.show{display:block}
 @keyframes br-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 #app-browser .idhead{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:8px}
 #app-browser .idhead .ibadge{width:56px;height:56px;border-radius:13px;flex:none;display:grid;place-items:center;
   font-family:'Fraunces',serif;font-weight:600;font-size:23px;color:#fff}
-#app-browser .idhead h2{font-family:'Fraunces',serif;font-weight:600;font-size:28px;margin:0;color:var(--br-forest);line-height:1.05}
+#app-browser .idhead h2{font-family:'Fraunces',serif;font-weight:600;font-size:28px;margin:0;color:var(--br-forest-ink);line-height:1.05}
 #app-browser .idhead .role{font-size:15px;font-weight:600;margin-top:3px}
 #app-browser .factline{color:var(--br-muted);font-size:15px;margin:4px 0 28px}
-#app-browser .factline b{color:var(--br-forest);font-weight:600}
+#app-browser .factline b{color:var(--br-forest-ink);font-weight:600}
 #app-browser .days{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:0 0 8px}
 @media(max-width:720px){#app-browser .days{grid-template-columns:1fr}}
-#app-browser .daycard{border:1px solid var(--br-line);border-radius:13px;overflow:hidden;background:#fff}
+#app-browser .daycard{border:1px solid var(--br-line);border-radius:13px;overflow:hidden;background:var(--br-card)}
 #app-browser .daycard h3{margin:0;font-family:'Public Sans';font-size:15px;font-weight:700;letter-spacing:.5px;
   padding:13px 18px;color:#fff;background:var(--br-forest)}
 #app-browser .daycard.B h3{background:#4d5f3f}
 #app-browser .blockrow{display:flex;align-items:center;border-top:1px solid var(--br-line);min-height:56px}
 #app-browser .blockrow .bk{width:62px;flex:none;text-align:center;padding:10px 0;border-right:1px solid var(--br-line);color:var(--br-muted)}
-#app-browser .blockrow .bk .n{font-family:'Fraunces',serif;font-weight:600;font-size:20px;color:var(--br-forest);display:block;line-height:1}
+#app-browser .blockrow .bk .n{font-family:'Fraunces',serif;font-weight:600;font-size:20px;color:var(--br-forest-ink);display:block;line-height:1}
 #app-browser .blockrow .bk .t{font-size:10.5px;letter-spacing:.4px}
 #app-browser .blockrow .cell{flex:1;padding:10px 18px}
 #app-browser .blockrow .cell .sec{font-weight:700;font-size:18px;color:var(--br-ink)}
 #app-browser .blockrow .cell .who{font-size:13px;color:var(--br-muted);margin-top:1px}
-#app-browser .blockrow.plan .cell{color:#9a8430;font-style:italic;font-weight:600;background:#fdfaef}
-#app-browser .block-title{font-family:'Fraunces',serif;font-size:19px;color:var(--br-forest);margin:30px 0 4px;font-weight:600}
+#app-browser .blockrow.plan .cell{color:var(--br-plan-ink);font-style:italic;font-weight:600;background:var(--br-plan-bg)}
+#app-browser .block-title{font-family:'Fraunces',serif;font-size:19px;color:var(--br-forest-ink);margin:30px 0 4px;font-weight:600}
 #app-browser .hint{color:var(--br-muted);font-size:14.5px;margin:0 0 14px}
 #app-browser .classrow{display:flex;flex-wrap:wrap;gap:9px}
-#app-browser .gchip{border:1px solid var(--br-gold-soft);background:#fff;border-radius:10px;padding:9px 15px;cursor:pointer;
-  font-weight:600;font-size:15.5px;color:var(--br-forest);transition:.15s;font-family:inherit}
+#app-browser .gchip{border:1px solid var(--br-gold-soft);background:var(--br-card);border-radius:10px;padding:9px 15px;cursor:pointer;
+  font-weight:600;font-size:15.5px;color:var(--br-forest-ink);transition:.15s;font-family:inherit}
 #app-browser .gchip:hover{background:var(--br-forest);color:#fff;border-color:var(--br-forest)}
 #app-browser .team{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:13px;margin-top:4px}
-#app-browser .tcard{border:1px solid var(--br-line);border-left:5px solid var(--br-forest);border-radius:11px;padding:14px 16px;
-  background:#fff;cursor:pointer;transition:.15s;text-align:left;width:100%;font:inherit}
+#app-browser .tcard{border:1px solid var(--br-line);border-left:5px solid var(--br-forest-ink);border-radius:11px;padding:14px 16px;
+  background:var(--br-card);cursor:pointer;transition:.15s;text-align:left;width:100%;font:inherit}
 #app-browser .tcard:hover{background:var(--br-paper);box-shadow:0 8px 18px -12px rgba(8,56,31,.4)}
-#app-browser .tcard .nm{font-family:'Fraunces',serif;font-weight:600;font-size:18px;color:var(--br-forest)}
+#app-browser .tcard .nm{font-family:'Fraunces',serif;font-weight:600;font-size:18px;color:var(--br-forest-ink)}
 #app-browser .tcard .sj{font-size:14px;font-weight:600;margin-top:2px}
 #app-browser .tcard .rm{font-size:13px;color:var(--br-muted);margin-top:7px}
 #app-browser .gtable{width:100%;border-collapse:collapse;margin-top:4px;font-size:15.5px;border:1px solid var(--br-line);border-radius:12px;overflow:hidden}
@@ -19202,9 +19277,9 @@ const BR_CSS = `#app-browser {
 #app-browser .gtable td{padding:13px 16px;border-bottom:1px solid var(--br-line)}
 #app-browser .gtable tr:last-child td{border-bottom:none}
 #app-browser .gtable .subj{font-weight:700}
-#app-browser .gtable .lnk{font:inherit;font-weight:700;font-size:15.5px;background:none;border:none;color:var(--br-forest);
+#app-browser .gtable .lnk{font:inherit;font-weight:700;font-size:15.5px;background:none;border:none;color:var(--br-forest-ink);
   cursor:pointer;padding:0;text-decoration:underline;text-decoration-color:var(--br-gold-soft);text-underline-offset:3px}
-#app-browser .gtable .lnk:hover{text-decoration-color:var(--br-forest)}
+#app-browser .gtable .lnk:hover{text-decoration-color:var(--br-forest-ink)}
 #app-browser .overview{margin-top:34px;border-top:1px solid var(--br-line);padding-top:8px}
 #app-browser .overview summary{cursor:pointer;font-weight:600;font-size:14.5px;color:var(--br-muted);padding:10px 2px;list-style:none}
 #app-browser .overview summary::-webkit-details-marker{display:none}
@@ -19220,7 +19295,7 @@ const BR_CSS = `#app-browser {
 #app-browser .footnote{color:var(--br-muted);font-size:12.5px;margin:22px 6px 0;line-height:1.6;text-align:center}
 /* Building map */
 #app-browser .maptop{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:center;justify-content:space-between;margin-bottom:6px}
-#app-browser .maptop h2{font-family:'Fraunces',serif;font-weight:600;font-size:26px;margin:0;color:var(--br-forest)}
+#app-browser .maptop h2{font-family:'Fraunces',serif;font-weight:600;font-size:26px;margin:0;color:var(--br-forest-ink)}
 #app-browser .maptop .role{font-size:14.5px;color:var(--br-muted);margin-top:3px}
 #app-browser .floortabs{display:inline-flex;background:var(--br-cream);border:1px solid var(--br-gold-soft);border-radius:11px;padding:3px}
 #app-browser .floortabs button{font:inherit;font-weight:600;font-size:13.5px;border:none;background:none;color:var(--br-muted);
@@ -19255,16 +19330,16 @@ const BR_CSS = `#app-browser {
   padding:11px 16px;border-bottom:1px solid var(--br-line);background:var(--br-cream)}
 #app-browser .mini-card .msvg{padding:12px}
 #app-browser .mini-side{flex:0 0 220px;min-width:200px;display:flex;flex-direction:column;justify-content:center;gap:12px;
-  border:1px solid var(--br-line);border-radius:14px;padding:18px;background:#fff}
+  border:1px solid var(--br-line);border-radius:14px;padding:18px;background:var(--br-card)}
 #app-browser .mini-side .where{font-size:14px;color:var(--br-muted);line-height:1.5}
-#app-browser .mini-side .where b{color:var(--br-forest)}
+#app-browser .mini-side .where b{color:var(--br-forest-ink)}
 #app-browser .mini-side .roomtag{font-family:'Fraunces',serif;font-size:30px;font-weight:600;line-height:1}
 #app-browser .mini-side .floortag{font-size:13.5px;font-weight:600;color:var(--br-muted)}
 #app-browser .btn-map{font:inherit;font-weight:600;font-size:14px;border:1px solid var(--br-forest);background:var(--br-forest);
   color:#fff;padding:11px 16px;border-radius:10px;cursor:pointer;transition:.18s;text-align:center}
 #app-browser .btn-map:hover{background:var(--br-forest-2)}
 #app-browser .offmap{padding:22px;color:var(--br-muted);font-size:14.5px;line-height:1.6}
-#app-browser .offmap b{color:var(--br-forest)}
+#app-browser .offmap b{color:var(--br-forest-ink)}
 @media(max-width:620px){#app-browser .mini-side{flex:1 1 100%}}
 @media print{
   #app-browser .toolbar,#app-browser .btn-print,#app-browser .br-menu,
@@ -19276,7 +19351,7 @@ const BR_CSS = `#app-browser {
 /* ── R60 additions ── */
 #app-browser .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 #app-browser .blockrow .bk .bt{display:block;font-size:10px;font-weight:600;color:var(--br-muted);margin-top:2px;line-height:1.2}
-#app-browser .daychips{display:inline-flex;background:#fff;border:1px solid var(--br-gold-soft);border-radius:11px;padding:3px;margin:0 0 14px}
+#app-browser .daychips{display:inline-flex;background:var(--br-card);border:1px solid var(--br-gold-soft);border-radius:11px;padding:3px;margin:0 0 14px}
 #app-browser .daychips button{font:inherit;font-weight:600;font-size:13.5px;border:none;background:none;color:var(--br-muted);padding:8px 16px;border-radius:8px;cursor:pointer}
 #app-browser .daychips button.on{background:var(--br-forest);color:#fff}
 #app-browser .groupmaps{display:grid;gap:16px}
@@ -19300,6 +19375,155 @@ const BR_CSS = `#app-browser {
   #app-browser .gtable{min-width:520px}
   #app-browser .idhead h2{font-size:23px}
 }
+
+/* ── Dark ─────────────────────────────────────────────────────────────────
+   Nobody who owns data-theme on this page is this file, and there are
+   three cases rather than one:
+
+     034, the committed site copy   _shared/a11y.js owns the attribute. That
+       page raises the window.A11Y_NATIVE_THEME flag, without which a11y.js
+       would ALSO drop its CSS-filter invert on top and the two would cancel
+       out. (Spelling the assignment out here would be read as 035 raising it
+       too: this comment travels inside BR_CSS, and smoke-theme.mjs greps.)
+     035, the visualizer            its own four-palette switcher owns it;
+       two of the four are dark, so the embedded browser follows whichever
+       palette the visualizer is wearing.
+     a file a teacher was emailed   has no theme owner at all — no
+       _shared/ folder next to it, no switcher — so the OS preference
+       decides, and ONLY there. That is what body.br-published gates: an
+       embedded browser must not go dark on a dark laptop while the
+       visualizer around it stays light.
+
+   The two assignment lists below are deliberately identical; smoke-dark-
+   theme.mjs fails if they ever stop being. */
+:root[data-theme="green-gold-dark"],
+:root[data-theme="dark"]:not(.a11y-filter-dark) {
+  color-scheme:dark;
+  --br-forest:var(--br-forest-dark);
+  --br-forest-ink:var(--br-forest-ink-dark);
+  --br-forest-2:var(--br-forest-2-dark);
+  --br-gold-soft:var(--br-gold-soft-dark);
+  --br-gold-line:var(--br-gold-line-dark);
+  --br-cream:var(--br-cream-dark);
+  --br-paper:var(--br-paper-dark);
+  --br-card:var(--br-card-dark);
+  --br-ink:var(--br-ink-dark);
+  --br-muted:var(--br-muted-dark);
+  --br-line:var(--br-line-dark);
+  --br-placeholder:var(--br-placeholder-dark);
+  --br-plan-ink:var(--br-plan-ink-dark);
+  --br-plan-bg:var(--br-plan-bg-dark);
+  --br-note-bg:var(--br-note-bg-dark);
+  --br-common-bg:var(--br-common-bg-dark);
+  --br-common-ink:var(--br-common-ink-dark);
+  --br-warn-bg:var(--br-warn-bg-dark);
+  --br-warn-ink:var(--br-warn-ink-dark);
+  --br-alert-ink:var(--br-alert-ink-dark);
+  --br-page:var(--br-page-dark);
+  --br-focus-ring:var(--br-focus-ring-dark);
+}
+@media (prefers-color-scheme:dark) {
+  html:not([data-theme]) body.br-published {
+    color-scheme:dark;
+    --br-forest:var(--br-forest-dark);
+    --br-forest-ink:var(--br-forest-ink-dark);
+    --br-forest-2:var(--br-forest-2-dark);
+    --br-gold-soft:var(--br-gold-soft-dark);
+    --br-gold-line:var(--br-gold-line-dark);
+    --br-cream:var(--br-cream-dark);
+    --br-paper:var(--br-paper-dark);
+    --br-card:var(--br-card-dark);
+    --br-ink:var(--br-ink-dark);
+    --br-muted:var(--br-muted-dark);
+    --br-line:var(--br-line-dark);
+    --br-placeholder:var(--br-placeholder-dark);
+    --br-plan-ink:var(--br-plan-ink-dark);
+    --br-plan-bg:var(--br-plan-bg-dark);
+    --br-note-bg:var(--br-note-bg-dark);
+    --br-common-bg:var(--br-common-bg-dark);
+    --br-common-ink:var(--br-common-ink-dark);
+    --br-warn-bg:var(--br-warn-bg-dark);
+    --br-warn-ink:var(--br-warn-ink-dark);
+    --br-alert-ink:var(--br-alert-ink-dark);
+    --br-page:var(--br-page-dark);
+    --br-focus-ring:var(--br-focus-ring-dark);
+  }
+}
+body.br-published { background:var(--br-page); color:var(--br-ink); }
+
+/* ── Department hues, which are data and not theme ────────────────────────
+   brDColor() reads its five (or however many) hues out of PUBLISHED_DATA,
+   where they were chosen against a white card. All five of East Middle's
+   fail as text on a dark one — measured 2.39:1 (Social Studies) to 3.56:1
+   (Math) — and they are written into a style attribute from script, where
+   no token override can reach them. So each element that inks itself with a
+   hue carries BOTH values inline (--dc and --dc-ink, the second from
+   brDeptInk()) and the theme picks. A style attribute beats any stylesheet
+   rule, which is why the value moved out of the color property and into a variable. */
+#app-browser .dcink { color:var(--dc,var(--br-forest-ink)); }
+#app-browser .br-muted-ink { color:var(--br-muted); }
+:root[data-theme="green-gold-dark"] #app-browser .dcink,
+:root[data-theme="dark"]:not(.a11y-filter-dark) #app-browser .dcink { color:var(--dc-ink,var(--dc)); }
+@media (prefers-color-scheme:dark) {
+  html:not([data-theme]) body.br-published #app-browser .dcink { color:var(--dc-ink,var(--dc)); }
+}
+
+/* ── The floor plan is a light mat in both themes ─────────────────────────
+   Same call as 046's map mat (#225): the room fills are department hues at a
+   fill-opacity tuned for a light ground, the SVG's own furniture — corridor
+   labels, context rooms, the stair blocks — is painted with literals in
+   brGeoFloorSVG(), and the map is the half of this tool that gets printed
+   and pinned up. Restoring the light tokens here is what keeps the mini-map
+   card's header legible on it. These are unconditional on purpose: a mat
+   that is light in every theme needs no theme selector, and gets the print
+   reset for free. */
+#app-browser .mapscroll,
+#app-browser .mini-card {
+  --br-forest-ink:var(--br-forest-ink-light);
+  --br-cream:var(--br-cream-light);
+  --br-paper:var(--br-paper-light);
+  --br-card:var(--br-card-light);
+  --br-ink:var(--br-ink-light);
+  --br-muted:var(--br-muted-light);
+  --br-line:var(--br-line-light);
+  color:var(--br-ink);
+}
+
+/* ── Print is always on paper ─────────────────────────────────────────────
+   Last block in this stylesheet on purpose: it ties on specificity with the
+   two dark blocks above (deliberately — matching their selectors is what
+   makes the tie), so source order is what decides it. Do not move it. */
+@media print {
+  :root[data-theme]:not(.a11y-filter-dark),
+  html:not([data-theme]) body.br-published {
+    color-scheme:light;
+    --br-forest:var(--br-forest-light);
+    --br-forest-ink:var(--br-forest-ink-light);
+    --br-forest-2:var(--br-forest-2-light);
+    --br-gold-soft:var(--br-gold-soft-light);
+    --br-gold-line:var(--br-gold-line-light);
+    --br-cream:var(--br-cream-light);
+    --br-paper:var(--br-paper-light);
+    --br-card:var(--br-card-light);
+    --br-ink:var(--br-ink-light);
+    --br-muted:var(--br-muted-light);
+    --br-line:var(--br-line-light);
+    --br-placeholder:var(--br-placeholder-light);
+    --br-plan-ink:var(--br-plan-ink-light);
+    --br-plan-bg:var(--br-plan-bg-light);
+    --br-note-bg:var(--br-note-bg-light);
+    --br-common-bg:var(--br-common-bg-light);
+    --br-common-ink:var(--br-common-ink-light);
+    --br-warn-bg:var(--br-warn-bg-light);
+    --br-warn-ink:var(--br-warn-ink-light);
+    --br-alert-ink:var(--br-alert-ink-light);
+    --br-page:var(--br-page-light);
+    --br-focus-ring:var(--br-focus-ring-light);
+  }
+  :root[data-theme]:not(.a11y-filter-dark) #app-browser .dcink,
+  html:not([data-theme]) body.br-published #app-browser .dcink { color:var(--dc); }
+}
+
 `;
 (function(){
   const st = document.createElement('style');
@@ -19371,6 +19595,44 @@ function brSyncDeptFromSettings() {
   } catch(e) { console.warn('[Browser] subject sync failed:', e); }
 }
 const brDColor = d => (BR_DEPT[d]||BR_DEPT_FALLBACK).c || '#64748b';
+/* The department hues are DATA: brDColor() reads them out of the published
+   file, where they were picked against a white card. On a dark card all five
+   of East Middle's fail as text — 2.39:1 (Social Studies) to 3.56:1 (Math) —
+   and they are written into a `style` attribute, which beats every stylesheet
+   rule, so no CSS token can correct them. This returns the ink sibling of a
+   hue: the same hue and saturation, lightened in 1% steps until it clears
+   4.5:1 on --br-paper-dark (#272f28, the darkest surface one of these ever
+   sits on), and giving up at 95% lightness. Every element that inks itself
+   with a hue carries both values (`--dc`, `--dc-ink`) and .dcink picks. */
+function brDeptInk(hex) {
+  const raw = String(hex).trim().replace('#', '');
+  const full = raw.length === 3 ? raw.split('').map(c => c + c).join('') : raw;
+  if (!/^[0-9a-fA-F]{6}$/.test(full)) return '#e7ece7';
+  const lum = c => { const s = c.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * s[0] + 0.7152 * s[1] + 0.0722 * s[2]; };
+  const BG = lum([39, 47, 40]);
+  const ratio = c => { const a = lum(c); return (Math.max(a, BG) + 0.05) / (Math.min(a, BG) + 0.05); };
+  const rgb = [0, 2, 4].map(i => parseInt(full.slice(i, i + 2), 16));
+  if (ratio(rgb) >= 4.5) return '#' + full.toLowerCase();
+  const [r, g, b] = rgb.map(v => v / 255);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, l0 = (mx + mn) / 2;
+  let h = 0, sat = 0;
+  if (d) {
+    sat = l0 > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    h = (mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) / 6;
+  }
+  const chan = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p; };
+  for (let l = l0 + 0.01; l <= 0.95; l += 0.01) {
+    const q = l < 0.5 ? l * (1 + sat) : l + sat - l * sat, p = 2 * l - q;
+    const out = (sat ? [chan(p, q, h + 1 / 3), chan(p, q, h), chan(p, q, h - 1 / 3)] : [l, l, l])
+      .map(v => Math.max(0, Math.min(255, Math.round(v * 255))));
+    if (ratio(out) >= 4.5) return '#' + out.map(v => v.toString(16).padStart(2, '0')).join('');
+  }
+  return '#e7ece7';
+}
 const brTDept  = n => BR_TEACHERS[n] ? BR_TEACHERS[n].dept : (Object.keys(BR_DEPT)[0] || 'ELA');
 const brDShort = d => {
   if (BR_LEGACY_SHORT[d] && BR_DEPT[d]) return BR_LEGACY_SHORT[d];
@@ -19629,7 +19891,7 @@ function brRenderMenu(filter='') {
     const dot = `<span class="br-dot" style="background:${o.dept?brDColor(o.dept):'#0c4b31'}"></span>`;
     html += `<div class="opt${i===brActiveIdx?' active':''}" onmousedown="brChoose('${o.key}')">${dot}<span>${o.label}</span><span class="tag">${o.tag}</span></div>`;
   });
-  m.innerHTML = html || '<div class="opt" style="color:#62756a">No matches</div>';
+  m.innerHTML = html || '<div class="opt br-muted-ink">No matches</div>';
   m._shown = shown;
 }
 
@@ -19754,7 +20016,7 @@ function brRenderTeacher(n) {
   document.getElementById('br-view').innerHTML=`
    <div class="idhead">
      <div class="ibadge" style="background:${col}">${escHtml(n[0])}</div>
-     <div><h2>${escHtml(n)}</h2><div class="role" style="color:${col}">${escHtml(deptLabel)} · Room ${escHtml(t.room)}</div></div>
+     <div><h2>${escHtml(n)}</h2><div class="role dcink" style="--dc:${col};--dc-ink:${brDeptInk(col)}">${escHtml(deptLabel)} · Room ${escHtml(t.room)}</div></div>
    </div>
    <p class="factline">Teaches <b>${t.sec.length} class${t.sec.length!==1?'es':''}</b>. Planning is <b>${BR_MOD_LABEL} ${t.plan}</b>.
      ${split?'A&nbsp;days and B&nbsp;days are different — both are shown below.':'A&nbsp;days and B&nbsp;days are the same.'}</p>
@@ -19775,7 +20037,7 @@ function brRenderTeacher(n) {
      const shared=t.sec.filter(s=>(BR_SECTIONS[s]||[]).includes(m.n));
      const mdLabel=(BR_DEPT[m.dept]||{}).name||m.dept;
      return `<button class="tcard" style="border-left-color:${mc}" onclick="brJumpTeacher('${escJsAttr(m.n)}')">
-       <div class="nm">${escHtml(m.n)}</div><div class="sj" style="color:${mc}">${escHtml(mdLabel)}</div>
+       <div class="nm">${escHtml(m.n)}</div><div class="sj dcink" style="--dc:${mc};--dc-ink:${brDeptInk(mc)}">${escHtml(mdLabel)}</div>
        <div class="rm">Room ${escHtml(mt.room)} · shares ${escHtml(shared.join(', '))}</div></button>`;}).join('')}</div>`:''}
    ${brOverviewHTML()}`;
 }
@@ -19793,7 +20055,7 @@ function brRenderGroup(sec) {
   document.getElementById('br-view').innerHTML=`
    <div class="idhead">
      <div class="ibadge" style="background:#0c4b31">${escHtml(grade)}</div>
-     <div><h2>Class ${escHtml(sec)}</h2><div class="role" style="color:#62756a">Grade ${escHtml(grade)} · ${list.length} teacher${list.length!==1?'s':''}</div></div>
+     <div><h2>Class ${escHtml(sec)}</h2><div class="role br-muted-ink">Grade ${escHtml(grade)} · ${list.length} teacher${list.length!==1?'s':''}</div></div>
    </div>
    <h3 class="block-title">Who teaches class ${escHtml(sec)}</h3>
    <p class="hint">Tap a name to open that teacher's full schedule.</p>
@@ -19801,7 +20063,7 @@ function brRenderGroup(sec) {
      <thead><tr><th>Subject</th><th>Teacher</th><th>Room</th><th>A day</th><th>B day</th></tr></thead>
      <tbody>${list.map(name=>{const t=BR_TEACHERS[name];if(!t)return '';const c=brDColor(t.dept);const s=slot(name);
        const dLabel=(BR_DEPT[t.dept]||{}).name||t.dept;
-       return `<tr><td class="subj" style="color:${c}">${escHtml(dLabel)}</td>
+       return `<tr><td class="subj dcink" style="--dc:${c};--dc-ink:${brDeptInk(c)}">${escHtml(dLabel)}</td>
          <td><button class="lnk" onclick="brJumpTeacher('${escJsAttr(name)}')">${escHtml(name)}</button></td>
          <td>${escHtml(t.room)}</td><td>${escHtml(s.a)}</td><td>${escHtml(s.b)}</td></tr>`;}).join('')}</tbody>
    </table></div>
@@ -19818,7 +20080,7 @@ function brOverviewHTML() {
   const ord=['ELA','MATH','SCI','SS','SCI/SS'];
   const max=Math.max(1,...Object.values(agg).map(a=>a.inst));
   const rows=ord.filter(d=>agg[d]).map(d=>{const a=agg[d];const c=brDColor(d);const w=Math.round(a.inst/max*100);
-    return `<div class="row"><div class="lbl" style="color:${c}">${(BR_DEPT[d]||{}).name||d}</div>
+    return `<div class="row"><div class="lbl dcink" style="--dc:${c};--dc-ink:${brDeptInk(c)}">${(BR_DEPT[d]||{}).name||d}</div>
       <div class="track"><div class="fill" style="width:${w}%;background:${c}">${a.inst}</div></div>
       <div class="cnt">${a.teachers} teacher${a.teachers>1?'s':''}</div></div>`;}).join('');
   return `<details class="overview"><summary>Whole-school staffing overview (optional)</summary>
@@ -19996,7 +20258,7 @@ function brMiniMapHTML(name) {
   if (!loc) {
     const hasGeo = BR_GEOM && BR_GEOM.floors && BR_GEOM.floors.length;
     return `<div class="mini-wrap"><div class="mini-side" style="flex:1 1 100%">
-      <div><div class="roomtag" style="color:${col}">${escHtml(t.room)}</div><div class="floortag">Location not mapped</div></div>
+      <div><div class="roomtag dcink" style="--dc:${col};--dc-ink:${brDeptInk(col)}">${escHtml(t.room)}</div><div class="floortag">Location not mapped</div></div>
       <div class="offmap">Room <b>${escHtml(t.room)}</b> isn't on the blueprint floor plan${hasGeo?'':' — no blueprint data is available'}.</div>
       ${hasGeo?`<button class="btn-map" onclick="brSetMode('map')">Open building map</button>`:''}</div></div>`;
   }
@@ -20004,7 +20266,7 @@ function brMiniMapHTML(name) {
   return `<div class="mini-wrap">
     <div class="mini-card"><div class="mhd">${escHtml(loc.floor.label)}</div><div class="msvg">${brGeoFloorSVG(loc.floor,{highlights:hiOne})}</div></div>
     <div class="mini-side">
-      <div><div class="roomtag" style="color:${col}">${escHtml(t.room)}</div><div class="floortag">${escHtml(loc.floor.label)}</div></div>
+      <div><div class="roomtag dcink" style="--dc:${col};--dc-ink:${brDeptInk(col)}">${escHtml(t.room)}</div><div class="floortag">${escHtml(loc.floor.label)}</div></div>
       <div class="where">You're <b>highlighted</b> here. Colored rooms with teachers are clickable.</div>
       <button class="btn-map" onclick="brOpenMapFloorIdx(${loc.floorIdx})">See the whole floor</button>
     </div></div>`;
@@ -20188,6 +20450,7 @@ function brBuildPublishedHTML() {
     'const BR_LEGACY_SHORT = ' + JSON.stringify(BR_LEGACY_SHORT) + ';',
     'const BR_DEPT_FALLBACK = ' + JSON.stringify(BR_DEPT_FALLBACK) + ';',
     'const brDColor = '  + brDColor.toString()  + ';',
+    'const brDeptInk = ' + brDeptInk.toString() + ';',
     'const brTDept = '   + brTDept.toString()   + ';',
     'const brDShort = '  + brDShort.toString()  + ';',
     'const brOrderOf = ' + brOrderOf.toString() + ';',
@@ -20251,13 +20514,17 @@ function brBuildPublishedHTML() {
     + BR_CSS
     + '\n/* published overrides */\n'
     + '#app-browser{display:block}\n'
-    + 'html,body{margin:0;padding:0;background:#f4f7f4}\n';
+    /* <body> carries the page colour on its own so it propagates to the
+       canvas, which leaves the theme one element to repaint instead of two;
+       the colour itself is var(--br-page), set on body.br-published in
+       BR_CSS. */
+    + 'html,body{margin:0;padding:0}\n';
 
   return '<!DOCTYPE html>\n<html lang="en">\n<head>\n'
     + '<meta charset="UTF-8">\n'
     + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
     + '<title>' + brEscHTML(school) + ' — Schedule Browser</title>\n'
-    + '<style>\n' + css + '\n</style>\n</head>\n<body>\n'
+    + '<style>\n' + css + '\n</style>\n</head>\n<body class="br-published">\n'
     + brBuildPublishedMarkup(school, dateStr)
     + '\n<script>\n' + js + '\n<\/script>\n</body>\n</html>\n';
 }
