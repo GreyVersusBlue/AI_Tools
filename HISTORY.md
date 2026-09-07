@@ -166,6 +166,94 @@ waits for will be a docs or tooling PR, not a tool one. Recorded as a ¼ row at 
 a `sw.js` hunk that touches only the version constant as not site-wide, and pin it in
 `select-suites.test.mjs`. Not measured — read off the diff.
 
+**Rank 1 — Path 5 P3, increment 12: the last six pages on native dark. #221, `CACHE_VERSION`
+v165.** The same row, taken alone, one increment — and the last *batch* it will ever take. The
+six were the ones `npm run path5:next` printed, in its order: **003, 032, 043, 030, 064, 042**.
+Native dark went from 75 themed pages to **81 (99%)**, and the literal count from 333 across 7
+pages to **54 on one** — `046-blank-map-generator.html`, the only page left on a11y.css's invert
+filter. The row stays at rank 1 but is **resized from 2+ to ½**: one page is not a multi-session
+row, and pretending otherwise would mislead the next session as surely as deleting it would.
+`stage.js` is unchanged at 7 adopters; none of these six has a stage, which makes it ten
+increments running, and 030 and 064 are the closest misses — both run a projector review game
+off a fixed `inset: 0` overlay rather than the Fullscreen API.
+
+**The `.paper-sheet` decision has a NO answer, and the argument for it is specificity.** Four of
+the six render a printable on screen, and they split two-two. 003's `.rubric-sheet` and 043's
+`.slip` / `.missing-list-page` / `.reminder-slip` / `.chaperone-print` were marked
+`.paper-sheet`, because they inherit `var(--muted)`, `var(--line-strong)` and `var(--ink)` from
+the page and would otherwise have previewed — and printed — dark-theme tokens on white paper.
+064's `.trading-card` and 042's `.cert` were deliberately **not**, and the reason is stronger
+than "they do not need it": ink-paper.css's rule is
+`:root[data-theme="dark"]:not(.a11y-filter-dark) .paper-sheet:not(.paper-sheet-off)`, which is
+**(0,5,0)**, and it sets `background: var(--card)`. That outranks `.trading-card.theme-<key>`
+(0,2,0), written by `htcm-themes.js` for every one of its ten card themes, and `.theme-elegant`
+(0,1,0) and its four siblings on 042 — so the "protective" class would have repainted every
+themed card and every certificate skin white in dark mode. **This is #218's specificity lesson
+from the other side.** There, a bare class was *losing* to a compound selector and a conversion
+rewrote a declaration that had never been drawn. Here, a shared class would have *won* and
+killed live declarations. Both times the answer came from counting selectors rather than from
+looking at the page — and in this direction the mistake would have been invisible in review,
+because adding `.paper-sheet` is what every previous increment did.
+
+**A white control drawn ON a projector surface cannot ink itself with `var(--accent)`.** 030's
+reveal overlay is navy in both themes on purpose. Its award buttons ("+100 Team 1") are white on
+that navy, and their text was `var(--accent)` — `#1f3550` in light, fine, but `#7fb2e5` in dark,
+which is **2.5:1 on white**. The fix is a new `--board-btn-ink` (`#1f3550`, with no dark
+override, declared beside `--board-bg` and `--gold`). The general rule: **a token that flips
+with the theme is wrong wherever the surface under it does not.** Anywhere a page puts a light
+control on a fixed dark stage, its ink has to be as fixed as the stage.
+
+**Five unlabeled controls, on four pages, all shipped in *light* — the eighth increment in a row
+to hit the empty-storage blind spot and the first to hit it four times at once.** 003's class
+grid draws three `<select>`s per row, one per criterion, with no accessible name at all
+(critical `select-name`); the row's student and the column's criterion are the visible context
+and neither is programmatically tied to the control, so each now carries both in an
+`aria-label`. 030's team-name inputs are 027's bug from #218 exactly — the team's name *is* the
+input's value, so it cannot label itself — and `#boardSwitch`'s "Board:" label had no `for`.
+043's `#rosterSelect` and its per-student chaperone selects, plus the payment select beside them
+(same shape, fixed with them, though it only renders once a trip has a cost). 042's
+`#camRosterSelect`. **The measurement that matters: all six pages were scanned *unprepped* and
+came back clean in light**, which is what proves the site-wide sweep could not have found any of
+it — an argument alone would not have. Rank 16's free evidence is now spent: one page of P3
+remains and it will not supply a ninth instance.
+
+**`--desk-ink`, the fifth through seventh use.** 003, 042 and 043 all put `#previewNote` in
+`var(--muted)` on the same `#d9d7cd` preview mat — 3.76:1, and the single allowlisted axe line
+on each. Same values as 041 (#216) and 022/027 (#218). `Tools/a11y-sweep/allowlist.json` is
+three entries shorter, **17 → 14**. Five tools, one mat colour, one bug: this is now the first
+thing to check on any remaining page with a recessed surface.
+
+**A test that has to be retired rather than repointed.** `smoke-theme.mjs` proves both halves of
+the theme decision on two pages: 001, which has adopted native dark, and a page that has *not*
+and must still get the filter with its light values untouched. That second page was 003 and is
+now **046** — the last page on the filter. Its comment says so: when 046 adopts, those
+assertions have no subject left and must be **deleted**, not pointed at a third page, because
+there will be no third page. A suite that outlives the thing it describes is worse than no
+suite.
+
+**The prep bug that failed loudly, and why that is a distinction worth keeping.** 003 opens a
+new rubric with performance levels but **no criteria** — so no preview sheet, no comment bank,
+no student-text cell, none of what the conversion touched — until a template is loaded. The
+first `prep` written for it drove a page with no sheet on it at all. It **crashed**
+(`page.fill` timed out on a selector that did not exist), where #214's and #218's wrong preps
+were silent and left a green suite reporting a page it never checked. The difference is what the
+prep names: **a prep that fills or names a specific element fails loudly when the state is
+wrong; a prep that clicks something fails quietly**, because the click lands on nothing, throws
+nothing, and every assertion then passes on the same empty page the site-wide sweep already
+covers. Prefer the first kind, and when a click is unavoidable, assert on what it produced.
+
+**Verification.** Full `npm test` once, **145 of 145 green in 28.3 min**;
+`smoke-dark-rollout.mjs` went from 763 assertions to **872** (eleven new `PAGES` entries for six
+pages — 003 driven three times for build/score/class, 030 twice for the board and an open clue);
+the mechanism suite 47/47; the per-tool suites for all six tools; `test:a11y --only` for each of
+the six plus 046; the eleven read-only guards including `check:precache -- --base origin/main`;
+and the light and dark screenshots of all eleven driven states were looked at. CI ran the full
+pass green in 27 min. **Not verified:** 043's `.scan-status` tints need the camera scanner to
+render and were read off the CSS rather than seen; 030's board was driven with clues whose point
+values were left blank, so the cells read "0" in both screenshots — the colours are right, the
+numbers are an artefact of the prep; and nothing has been opened on a real projector or a real
+Chromebook, and nothing has installed the worker, twelve increments running.
+
 **Rank 1 — Path 5 P3, increment 11: six more pages on native dark. #218, `CACHE_VERSION`
 v164.** The same 2+ row, taken alone again, one increment, row left in place. The batch was the
 one `npm run path5:next` printed, in its order — **033, 080, 008, 022, 013, 027**. Native dark

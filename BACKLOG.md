@@ -63,10 +63,78 @@ yours.
 
 ## Where things stand — start here
 
-*Current as of `main` after PR #218, 2026-09-07. Rewrite this header when your phase
+*Current as of `main` after PR #221, 2026-09-07. Rewrite this header when your phase
 merges — that is step 6 of the definition of done, and it is not optional.*
 
-**Last shipped.** Rank 1 — **the eleventh increment of Path 5 P3** (#218, `CACHE_VERSION`
+**Last shipped.** Rank 1 — **the twelfth increment of Path 5 P3** (#221, `CACHE_VERSION`
+**v165**), and it is the last full batch that row will ever take. Six more pages left a11y.css's
+invert filter for a native dark palette — **003, 032, 043, 030, 064 and 042**, the batch
+`npm run path5:next` printed, in its order. Native dark is **81 of 82** themed pages, from 75
+(**99%**), and **046 is the only page left on the filter** — 54 literals, one round. `stage.js`
+is unchanged at **7** adopters with **2** pages still hand-rolling (001, 004); ten increments
+running have added none. **The row stays at rank 1 but is no longer a 2+ row: it is a single
+page now, sized ½.** Six things are worth carrying.
+
+(1) **"Is this a sheet of paper?" has a NO answer, and the argument for it is specificity, not
+taste.** Four of the six render a printable on screen and they split two-two. 003's
+`.rubric-sheet` and 043's `.slip` / `.missing-list-page` / `.reminder-slip` / `.chaperone-print`
+got `.paper-sheet`, because they inherit `var(--muted)`, `var(--line-strong)` and `var(--ink)`
+from the page and would otherwise have previewed and printed dark-theme tokens on white. 064's
+`.trading-card` and 042's `.cert` must **not**, and not merely because they do not need it:
+ink-paper.css's paper rule is **(0,5,0)** — `:root[data-theme]:not(.a11y-filter-dark)
+.paper-sheet:not(.paper-sheet-off)` — which outranks `.trading-card.theme-classic` (0,2,0) and
+`.theme-elegant` (0,1,0), so it would have repainted every themed card and every certificate
+skin white in dark mode. **The rule that reads as protection is the one that would have
+destroyed them.** This is #218's specificity lesson from the other side: there, a bare class was
+losing and a conversion rewrote a dead declaration; here, a shared class would have won and
+killed a live one. Both times the answer came from counting selectors, not from looking.
+
+(2) **A white control drawn ON a projector surface cannot ink itself with `var(--accent)`.**
+030's reveal overlay is navy in both themes on purpose, and its award buttons are white on it —
+but their text was `var(--accent)`, which in dark is `#7fb2e5` and reads **2.5:1 on white**. The
+new `--board-btn-ink` (`#1f3550`, no dark override, sitting with `--board-bg` and `--gold`) is
+the fix. **The general form: a token that flips with the theme is wrong wherever the surface
+under it does not.** Worth checking on any page that puts a light control on a fixed dark stage.
+
+(3) **Five unlabeled controls, all shipped in *light*, on four different pages — the eighth
+increment in a row to hit rank 16's blind spot, and the first to hit it four times at once.**
+003's class grid draws three `<select>`s per row, one per criterion, with **no accessible name
+at all** (critical `select-name`); 030's team-name inputs are 027's bug from #218 exactly (the
+name *is* the value, so it cannot label itself) and `#boardSwitch`'s "Board:" label had no
+`for`; 043's `#rosterSelect` and its per-student chaperone selects; 042's `#camRosterSelect`.
+**Scanned unprepped, all six pages come back clean in light** — that measurement, not an
+argument, is what says the site-wide sweep could never have found any of it. **Rank 16's free
+evidence is now down to one page**, and 046 is unlikely to supply an eighth-plus instance on its
+own; the row has to be built, not waited for.
+
+(4) **`--desk-ink` for the fifth time.** 003, 042 and 043 all put `#previewNote` in
+`var(--muted)` on the same `#d9d7cd` preview mat — 3.76:1, and the single allowlisted axe line
+on each. Same values as 041 (#216) and 022/027 (#218): `#595850` at 4.96:1 in light, plain
+`var(--muted)` in dark. **`Tools/a11y-sweep/allowlist.json` is three entries shorter, 17 → 14.**
+Five tools, one mat colour, one bug — the pattern is now reliable enough to look for first.
+
+(5) **`smoke-theme.mjs`'s "has NOT adopted" control page moved from 003 to 046, and that is the
+last time it can move.** The mechanism suite proves both halves of the theme decision on two
+pages, and the filtered half needs a page still on the filter. 046 is the only one left, so its
+comment now says the assertions **retire with it** when it adopts rather than being repointed a
+third time. A session converting 046 that repoints instead of deleting will be pointing at a
+page that no longer proves anything.
+
+(6) **This session's wrong `prep` failed loudly, and the difference from #214's and #218's is
+worth naming.** 003 opens a new rubric with performance levels but **no criteria**, so the
+preview sheet, the comment bank and the student-text cell do not exist until a template is
+loaded — the first prep drove a page with no sheet on it at all. It crashed, because it targeted
+an element that was absent; #214's and #218's silent preps targeted elements that were *present
+and did nothing*. **A prep that names something is safe; a prep that clicks something is not** —
+the second kind is the one that leaves a green suite reporting a page it never checked.
+
+Full `npm test` ran locally once — **145 of 145 green, 28.3 min** — CI ran the full pass green
+in 27 min, and the light and dark screenshots of all eleven driven states were looked at. **Not
+verified:** 043's `.scan-status` tints need the camera scanner to render and were read off the
+CSS rather than seen; nothing has been opened on a real projector or a real Chromebook, and
+nothing has installed the worker, twelve increments running.
+
+Before it, rank 1 — **the eleventh increment of Path 5 P3** (#218, `CACHE_VERSION`
 **v164**), a 2+ row taken alone again. Six more pages left a11y.css's invert filter for a
 native dark palette — **033, 080, 008, 022, 013 and 027**, the batch `npm run path5:next`
 printed, in its order. Native dark is **75 of 82** themed pages, from 69 (**91%**), and 333
@@ -196,77 +264,20 @@ inputs and error tint unscanned in dark. Full `npm test` ran locally once — **
 26.3 min** — CI ran 25.8 min green, and the dark and light screenshots of all six were looked
 at, which is what found (3).
 
-Before it, rank 1 — **the ninth increment of Path 5 P3** (#214, `CACHE_VERSION`
-**v162**), a 2+ row taken alone again. Six more pages left a11y.css's invert filter for a
-native dark palette — **012, 052, 057, 068, 071 and 084**, the batch `npm run path5:next`
-printed, in its order, *after the picker was fixed for the second time in three increments*.
-Native dark is **63 of 82** themed pages, from 57 (**77%**), and 627 literals across 19 pages
-remain, **four** rounds by the picker's count. `stage.js` is unchanged at **7** adopters with
-**2** pages still hand-rolling (001, 004); seven increments running have added none. **The row
-stays in the table at rank 1**, rewritten again. Five findings are worth carrying, and the fifth is a regression this session caused.
-
-(1) **`npm run path5:next` was reporting numbers that were twice the truth, and the batch it
-printed was six pages already converted.** It built its page list by walking the filesystem
-from the repo root, so it swept `Tools/board-check/.offline-copy-staging/` — the gitignored
-whole-site copy `npm run offline:build` leaves behind — and counted the site twice: **"188 live
-pages, 99 still on the filter, 2519 literals, 17 rounds left"**, with staging duplicates of
-001, 021, 015, 010, 072 and 023 as the "next batch". It filters `git ls-files` now, as
-`check-adoption.mjs` has since the same folder produced a wrong number there on 2026-09-04.
-`smoke-theme.mjs`'s site-wide sweep had the identical walk and got the identical fix. With the
-fix the picker reproduces #212's handoff figures exactly (82 themed, 57 native, 721 literals,
-25 pages), which is what says the header was right and the local run was not. **The rest of the
-tree-walkers were audited**: eighteen scripts walk or list the tree, five now use `git
-ls-files`, `check-dedupe` skips the folder by name, and every other one reads `Tools/` or
-`Tools/<tool>/test/` one level down and never descends into it. Recursing from the repo root
-was the whole exposure.
-
-(2) **A colour literal can live in an inline `style` attribute written from script**, where no
-sweep of the page's `<style>` can see it. 057 appended
-`<span style="color:#555;">(example specimens: …)</span>` to its trace outcome; the picker
-counts 16 literals on that page and this was not among them, and it went unreadable the moment
-the tint behind it turned dark. It is a class on `var(--muted)` now. With #208's "colours from
-a data table" and #212's `.paper-sheet`-in-the-renderer, that is three increments saying the
-same thing: **the `<style>` block is not the boundary of a page's colours.**
-
-(3) **068's per-student "print" link is a serious `link-in-text-block` violation, in light,
-since the tool shipped** — `--accent-2` with `text-decoration: none` inside `--muted` text is a
-1.1:1 difference where axe wants 3:1. Confirmed by scanning the *shipped* page in light before
-touching it. That is the **fifth** confirmed instance of the empty-storage blind spot (009
-#202, 075 #206, 077 #210, 073 #212), and like the last two the page had no allowlist line at
-all, because the sweep opens 068 with no roster and the list never renders. **Rank 16 is the
-row for this**, and five consecutive increments finding one each is not a plan.
-
-(4) **Two `prep`s in `smoke-dark-rollout.mjs` silently did nothing, and only the screenshots
-said so.** 068's log button `alert()`s and returns without an outcome note, so the page was
-scanned with an empty table — no badges, no tally, no row hover, which is most of what the
-conversion touched. 071's file upload fills the thumbnail strip but leaves the stage empty
-until `#newImageBtn` draws an image, so the pin button and its amber trio did not exist. **The
-general form matters more than either case**: a failed prep leaves the page in the same state
-the site-wide sweep already covers, so every assertion passes and the suite reports a page as
-checked that it did not check. Both are fixed; 071's prep is the first in the suite to upload a
-file.
-
-(5) **The `git ls-files` move in (1) broke rule 4 of the CI selector, and only the full local
-`npm test` said so.** `select-suites.mjs` finds the page-sweeping suites by grepping their
-source for `readdirSync`, so rewriting `smoke-theme.mjs`'s enumeration took it out of that set:
-**a tool-page edit would have quietly stopped running the theme sweep in CI.** `isSweep` now
-recognises both spellings and `select-suites.test.mjs` pins the new one. The lesson generalises:
-**a guard that identifies its subjects by grepping for an implementation detail goes silent, not
-red, when that implementation changes** — and a change that improves the subject is the kind
-most likely to be waved through.
-
-**One local failure that is not this branch's**, recorded so it is not re-diagnosed:
-`Tools/music-sightreading-generator/test/smoke-glyph-fallback.mjs` fails on a machine without
-the musical-symbol font (its own diagnostic says so), reproduces without this branch's changes,
-and got **no `expectedFailures` entry** — that list is for a repo-level known-red, not one
-developer's missing font. CI is the authority.
-
-Also: a **sixth** unstyled control in six batches (071's `input[type="number"]` was in none of
-its selectors); every tint pair in the batch was standardised on 001's values, with two
-deliberate departures recorded in `HISTORY.md`; and 068's two greens became one token, which
-lifts the tally figure's contrast on the card from 4.47 to 5.36. Full `npm test` ran locally twice — 25.2 and
-24.7 min, **144 of 145** both times, the only red being that font — and the first pass is what
-found finding 5. CI ran the full pass. The dark and light screenshots of all six were looked at.
+Before it, rank 1 — **the ninth increment of Path 5 P3** (#214, `CACHE_VERSION` **v162**),
+the six pages 012, 052, 057, 068, 071 and 084. Five findings from it are folded into the P3
+rules below and the detail is in `HISTORY.md`: **`npm run path5:next` was reporting double
+every figure** because it walked the filesystem rather than `git ls-files` and swept the
+gitignored `.offline-copy-staging/` tree — 188 live pages is the bug, 97 is right — and the
+eighteen other tree-walkers were audited in the same pass; **a colour literal can live in an
+inline `style` attribute written from script**, where no sweep of the page's `<style>` can see
+it (057's `#555` example-specimen note); **068's per-student print link was a serious
+`link-in-text-block` violation shipped in light**, the fifth instance of the empty-storage blind
+spot; **two `prep`s did nothing and only the screenshots said so**, which is the failure this
+file has now recorded three times; and **the `git ls-files` fix broke rule 4 of the CI
+selector**, which finds page-sweeping suites by grepping for `readdirSync` and went *silent*
+rather than red — a guard that identifies its subjects by an implementation detail fails quietly
+the day that detail improves.
 
 Before it, rank 1 — **the eighth increment of Path 5 P3** (#212, `CACHE_VERSION` **v161**),
 the six pages 066, 069, 079, 026, 073 and 083. Four findings from it are folded into the P3
@@ -441,23 +452,23 @@ tells the next session to build what already exists, and it did so for about an 
 claim table itself worked, both then and for #182: sessions took different rows and no source
 file conflicted.
 
-**Numbers, all re-measured against the tree on 2026-09-07, after #214 merged:**
+**Numbers, all re-measured against the tree on 2026-09-07, after #221 merged:**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v164` (→ v164 in #218; six precached pages changed — 033, 080, 008, 022, 013 and 027, all six for the theme. Nothing was added to or removed from either tier, and one of the six — 008 — is in the `SHELL_URLS` install tier) |
-| Precache entries | 257 in `PRECACHE_URLS`, **82** of them in the `SHELL_URLS` install tier — unchanged by #218, which changed six already-listed pages, one of them (008) in the shell tier |
-| Suites | **145** in `Tools/board-check/suites.json`; `expectedFailures` **empty**. #218 added no suite either — it added the six converted pages to `PAGES` in `smoke-dark-rollout.mjs` as **seven** entries, because 080 shows one pane at a time and each pane is its own paper sheet (`080`/`080-line`), taking that suite from 687 assertions to **763**. Every entry needed a `prep` again, and one of them was wrong in a way the assertions could not see (033's goal listener is on `change`, not `input`). No other suite was touched. **#218 ran the full `npm test` locally once: 145 of 145 green, 27.0 min.** CI ran the full pass green in 25.4 min |
+| `CACHE_VERSION` | `v165` (→ v165 in #221; six precached pages changed — 003, 032, 043, 030, 064 and 042, all six for the theme. Nothing was added to or removed from either tier, and one of the six — **032** — is in the `SHELL_URLS` install tier) |
+| Precache entries | 257 in `PRECACHE_URLS`, **82** of them in the `SHELL_URLS` install tier — unchanged by #221, which changed six already-listed pages, one of them (032) in the shell tier |
+| Suites | **145** in `Tools/board-check/suites.json`; `expectedFailures` **empty**. #221 added no suite either — it added the six converted pages to `PAGES` in `smoke-dark-rollout.mjs` as **eleven** entries (003 three times, for build / score / class mode; 030 twice, for the board and an open clue), taking that suite from 763 assertions to **872**, and it added `#overlay` to `NOT_CHROME`. It also repointed `smoke-theme.mjs`'s filtered-page half from 003 to **046**, the last page on the filter. **#221 ran the full `npm test` locally once: 145 of 145 green, 28.3 min.** CI ran the full pass green in 27 min |
 | CI per pull request | **Scoped to the diff since #197** — the pull-request job runs `npm test -- --changed --base origin/<base>`; a push to `main` still runs everything. **But `sw.js` is site-wide in `select-suites.mjs`, and every tool PR bumps `CACHE_VERSION` there, so a tool PR still runs the full pass.** #200 is the confirmation the rank-2 row asked for on a real CI log: it touched six pages and one test file, and CI still ran all 145 suites in 23.4 minutes. **#214 is the eighth tool PR in a row to run everything**, though unlike #212 it is not a clean example of rank 2's problem — it also edits `Tools/board-check/`, which is site-wide by rule 1 and correctly runs everything. **#214 also found the first real bug in rule 4:** the selector finds the page-sweeping suites by grepping their source for `readdirSync`, so moving `smoke-theme.mjs` to `git ls-files` silently took it out of every page edit's selection. `isSweep` now matches both spellings and `select-suites.test.mjs` pins it. Rank 2 is still the fix for the `sw.js` half; until it ships, the saving is real only for a PR with no precached change (docs, tooling, tests) — and there it is large: **#201, this file plus `HISTORY.md`, ran green in 43 seconds** **#218 is the ninth tool PR in a row to run everything**, and unlike #214 it is a clean example of rank 2's problem: it touches six tool pages, one suite and `sw.js`, and the only site-wide file among them is `sw.js`, changed on its `CACHE_VERSION` line alone **The push-to-`main` full pass is not the safety net it reads as, and this was measured, not assumed.** `ci.yml` sets `concurrency: group: ci-${{ github.ref }}` with `cancel-in-progress: true`, and step 6 merges onto the same ref minutes after the increment does — so the increment commit's own main run is **cancelled** every time. Run 135 (#216's commit) and run 139 (#218's) are both `cancelled`; runs 137 and 141, the step-6 commits that followed them, are the `success`es. Nothing is actually unprotected — the step-6 commit carries the same tool tree plus documentation, so its full pass covers the increment's code — but **the run that says "green on main" for an increment is the one for the handoff commit after it**, and looking up the increment's own run will show a cancellation that is not a failure. If a session ever needs the increment commit itself covered (a revert, a bisect), re-run 139-equivalent by hand; the concurrency group will not do it |
 | Read-only guards | **11**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands` and `adoption`. All run in CI. `check:precache` is one guard running **six** always-on checks since #191 (SHELLDEP is the sixth) plus the opt-in BUMP. `check:docs-commands`'s `KNOWN_MISSING` is **empty** since #195 |
-| Accessibility allowlist | **17 page-rule pairs on 17 pages, every one `color-contrast`** — #218 deleted two, 022's and 027's, both `.empty-hint` in `var(--muted)` on a `#d9d7cd` mat at 3.76:1, the same bug and the same `--desk-ink` fix #216 made on 041. **The figure this row carried, "20 on 20", was stale by one**: #216 deleted 041's line and took it to 19, and #217's step-6 rewrite did not re-measure — count it, do not carry it (`python3 -c "import json;d=json.load(open('Tools/a11y-sweep/allowlist.json'));p=d['pages'];print(len(p),sum(len(v) for v in p.values()))"`). #218 also fixed **four critical `label` violations on 027** that had **no line at all** (the sweep never saw them: empty storage), as #216 did on 037, #214 on 068, #212 on 073 and #210 on 077. **A line hides a count, not just a rule** — its text quotes the baseline count and nothing checks that number, so a page can be allowed one and quietly grow to five, or (#208) **be one tenth of the truth**: 074's line said "1 ×" and named `.selected > span`, and the same bug was on all ten of that page's symbol buttons — axe reported only the one whose background differed. **The sweep behind the list walks index and the 86 tool pages only**, so a tool's sub-pages are outside it — and, #202's finding, **it opens every page with empty storage**, so any UI that only renders once something is saved is not scanned at all; #218 is the **seventh** page caught that way. One more caveat on reading the evidence, from #212: `a11yScan`'s returned `nodes` array is **capped at four by `harness.mjs`** and `count` is the real number — 073's 18 unnamed checkboxes come back as `nodes.length` 4 |
+| Accessibility allowlist | **14 page-rule pairs on 14 pages, every one `color-contrast`** — #221 deleted three, 003's, 042's and 043's, all `#previewNote` in `var(--muted)` on a `#d9d7cd` mat at 3.76:1, the fifth, sixth and seventh instances of the `--desk-ink` fix #216 first made on 041. Before it, #218 deleted two, 022's and 027's, both `.empty-hint` in `var(--muted)` on a `#d9d7cd` mat at 3.76:1, the same bug and the same `--desk-ink` fix #216 made on 041. **The figure this row carried, "20 on 20", was stale by one**: #216 deleted 041's line and took it to 19, and #217's step-6 rewrite did not re-measure — count it, do not carry it (`python3 -c "import json;d=json.load(open('Tools/a11y-sweep/allowlist.json'));p=d['pages'];print(len(p),sum(len(v) for v in p.values()))"`). #218 also fixed **four critical `label` violations on 027** that had **no line at all** (the sweep never saw them: empty storage), as #216 did on 037, #214 on 068, #212 on 073 and #210 on 077. **A line hides a count, not just a rule** — its text quotes the baseline count and nothing checks that number, so a page can be allowed one and quietly grow to five, or (#208) **be one tenth of the truth**: 074's line said "1 ×" and named `.selected > span`, and the same bug was on all ten of that page's symbol buttons — axe reported only the one whose background differed. **The sweep behind the list walks index and the 86 tool pages only**, so a tool's sub-pages are outside it — and, #202's finding, **it opens every page with empty storage**, so any UI that only renders once something is saved is not scanned at all; #221 is the **eighth** increment caught that way, and the first to find it on four pages at once — 003's per-criterion class-grid selects, 030's team-name inputs and `#boardSwitch`, 043's roster and chaperone selects, 042's roster select, all critical or serious, all shipped in *light*, and **all six of its pages scan clean unprepped**, which is the measurement that proves the sweep could not have seen them. One more caveat on reading the evidence, from #212: `a11yScan`'s returned `nodes` array is **capped at four by `harness.mjs`** and `count` is the real number — 073's 18 unnamed checkboxes come back as `nodes.length` 4 |
 | Tool registry | 87 rows, **217 keys and 32 prefixes across 109 files** — `__scv_probe__` retired and `__gvb_save_probe__` declared for the first time, so the total is unchanged for two unrelated reasons; four IndexedDB databases declared; `check:registry` green, `dynamic` empty everywhere |
 | Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 77 · `a11y.js` 77 · `ink-paper.css` 71 · `base.css` 68 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `state-link.js` 17 · `qr-scan.js` 10 · `stage.js` 7 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `qr-draw.js` 1 · `seating-read.js` 1 · `share.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087**. 81 of them have recorded open ideas |
-| Tier 1 rows | **178**, a contiguous 1..178 — unchanged by #218, which shipped an increment of rank 1 and left it in place. Rank 16 (the site-wide sweep's empty-storage blind spot) has its **seventh** confirmed instance now, 027's four unnamed group-name inputs, one per increment for seven increments; **Path 5 P3 has one more round after this, so that row's free evidence runs out with it**. The tool-number boundary is **97**. Every one is a row a session can finish alone; the one that was not is parked under Cross-cutting. *(Counted, not carried forward, and NOT with `grep -oE '^\| [0-9]+ \|' BACKLOG.md` — that over-counts, because #190 added a batch-size table whose `| 1 | **one** | |` row matches it. Count the ranked table alone: `awk '/^\| Rank \| Item/,/^$/' BACKLOG.md | grep -cE '^\| [0-9]+ \|'`.)* |
-| Dark mode (`npm run path5:next`) | **75 of 82** themed pages paint a native dark palette (**91%**); **7** are still getting a11y.css's CSS-filter invert. A further **15 live pages load no `a11y.js` at all** and get no theme either way — 002, 007, 016, 018, 034, 035, 038, 044, 086, `classroom-label-maker/speak.html`, `ideas-backlog.html` and the four root landing-page variants. **333 colour literals** stand between here and the rest: median **50** per page, range **38–54**, none at zero — two rounds by the picker's own count, and the second is a single page. **Read these off the script, and be aware it was wrong until #214**: it walked the filesystem rather than `git ls-files`, so it counted `Tools/board-check/.offline-copy-staging/` — the gitignored whole-site copy `npm run offline:build` leaves — and reported double everything on any tree where that folder exists; **97 live pages on its first line is right, 188 is the bug**. **The count also keeps predicting the chrome and missing the work**: #208's cheapest page (074, nine literals) was its most expensive because its hazard symbols are coloured from a table in *script*; #212's cheapest, 069, needed `.paper-sheet` written into its renderer; #214's real work was in two literals no count could see at all; #216's hardest page was 037, whose *literal* count is the batch's highest but whose actual decision — `.paper-sheet-off` — is invisible to any count; and #218's two hardest calls were **not colour changes at all** (080's board as a sheet, decided by what the PNG export copies; and two CSS-specificity bugs where the literal was never the winning declaration) |
-| Fullscreen | `_shared/stage.js` in **7** pages (010, 015, 021, 023, 024, 025, 072); **2** still hand-roll `requestFullscreen` — 001 and 004, neither of which was ever on the P2 list. Unchanged by #218: none of its six pages had a stage either, and **nine increments running have added none** — 080 is the closest miss, a projector-first board with no fullscreen of any kind. 017 has a *projector view*, which is not the same thing — it is a fixed overlay the page shows and hides itself, with no `requestFullscreen` anywhere |
+| Tier 1 rows | **178**, a contiguous 1..178 — unchanged by #221, which shipped an increment of rank 1 and left it in place (resized from 2+ to ½: it is one page now). Rank 16 (the site-wide sweep's empty-storage blind spot) has its **eighth** confirmed instance, and #221 found it on four pages at once — five unlabeled controls across 003, 030, 043 and 042. **Path 5 P3 has exactly one page left, so that row's free evidence is spent: it has to be built now, not waited for.** The tool-number boundary is **97**. Every one is a row a session can finish alone; the one that was not is parked under Cross-cutting. *(Counted, not carried forward, and NOT with `grep -oE '^\| [0-9]+ \|' BACKLOG.md` — that over-counts, because #190 added a batch-size table whose `| 1 | **one** | |` row matches it. Count the ranked table alone: `awk '/^\| Rank \| Item/,/^$/' BACKLOG.md | grep -cE '^\| [0-9]+ \|'`.)* |
+| Dark mode (`npm run path5:next`) | **81 of 82** themed pages paint a native dark palette (**99%**); **1** is still getting a11y.css's CSS-filter invert — **046**, and that is the whole of what is left. A further **15 live pages load no `a11y.js` at all** and get no theme either way — 002, 007, 016, 018, 034, 035, 038, 044, 086, `classroom-label-maker/speak.html`, `ideas-backlog.html` and the four root landing-page variants. **54 colour literals** stand between here and the end of the phase, all of them on 046 — one round, and the picker says so on its own first line. **Read these off the script, and be aware it was wrong until #214**: it walked the filesystem rather than `git ls-files`, so it counted `Tools/board-check/.offline-copy-staging/` — the gitignored whole-site copy `npm run offline:build` leaves — and reported double everything on any tree where that folder exists; **97 live pages on its first line is right, 188 is the bug**. **The count also keeps predicting the chrome and missing the work**: #208's cheapest page (074, nine literals) was its most expensive because its hazard symbols are coloured from a table in *script*; #212's cheapest, 069, needed `.paper-sheet` written into its renderer; #214's real work was in two literals no count could see at all; #216's hardest page was 037, whose *literal* count is the batch's highest but whose actual decision — `.paper-sheet-off` — is invisible to any count; #218's two hardest calls were **not colour changes at all** (080's board as a sheet, decided by what the PNG export copies; and two CSS-specificity bugs where the literal was never the winning declaration); and #221's hardest call was a `.paper-sheet` it had to **withhold**, because ink-paper's (0,5,0) paper rule outranks 064's and 042's own `.theme-*` skins and would have repainted every card and certificate white |
+| Fullscreen | `_shared/stage.js` in **7** pages (010, 015, 021, 023, 024, 025, 072); **2** still hand-roll `requestFullscreen` — 001 and 004, neither of which was ever on the P2 list. Unchanged by #221: none of its six pages had a stage either, and **ten increments running have added none** — 030 is the closest miss now, a projector-first review game whose reveal is a fixed `inset: 0` overlay rather than real fullscreen, and 064's review game is the same shape. 017 has a *projector view*, which is not the same thing — it is a fixed overlay the page shows and hides itself, with no `requestFullscreen` anywhere |
 | Lint | clean |
 
 **217 keys is not a gain.** Two keys changed hands in #193 and cancelled out: `__scv_probe__`
@@ -465,24 +476,26 @@ retired when `scv-store.js` stopped doing its own blocked-storage probe, and
 `__gvb_save_probe__` was declared for the first time. Nothing stopped being tracked. #195
 changed no keys at all.
 
-**Start here: rank 1 alone — Path 5 P3, and it is still a 2+ row.** Run `npm run path5:next`,
-take the batch it prints (six by default, ranked projector-evidence-first then cheapest-first),
-convert those pages, ship, and **leave the row in place**, rewritten to say which pages are
-done. Do not pair it with rank 2 or anything else. On 2026-09-06, after #212, the next batch it
-printed was 012, 071, 052, 057, 068 and 084 — read it off the script when you start, not off
-this sentence. The tail keeps stepping up: the cheapest page left costs **15** literals where
-#212's batch started at 12 and #210's at 9. Two things the script will tell you that the P3
-prose list does not: 004 already has a native palette, and 007 loads no `a11y.js`, so it needs
-that before it can have a theme at all. **The picker's own `THEMED` test was wrong until
-#210** — it searched the raw HTML for `_shared/a11y.js`, so `ideas-backlog.html`, which only
-*names* the file in prose, was ranked as a candidate for six increments and reached third place
-in #210's batch. It now reads real `<script>`/`<link>` attributes with comments stripped. If you
-add a signal to that script, read a tag, not the file. **Add each converted page to `PAGES` in
-`smoke-dark-rollout.mjs`** — that list is the suite's whole idea of which pages are adopted, and
-a page left off it is a page nobody scans in dark. **And run
-`node Tools/board-check/run-suites.mjs --only <tool>` for every page in the batch before you
-push**: #212 broke 079's own suite with a change `test:theme` and `test:a11y` both passed, and
-only the full local pass found it.
+**Start here: rank 1 — Path 5 P3, and it is one page now, not a 2+ row.** Run
+`npm run path5:next`; after #221 it prints a batch of exactly one, **046-blank-map-generator**
+(54 literals), and finishing it finishes P3's palette work. Read the batch off the script when
+you start, not off this sentence. The row is sized **½** for that reason, so it can share a
+session with another ½ row or with rank 2 (¼) if you want — but read the row itself first: it
+carries two jobs beyond the palette, and one of them is a **deletion**. `smoke-theme.mjs` proves
+the *filtered* half of the theme decision on 046, the last page on the filter, and when 046
+adopts those assertions have no subject left: **delete them, do not repoint them a third time.**
+Two things the script tells you that the P3 prose list does not: 004 already has a native
+palette, and 007 loads no `a11y.js`, so it needs that before it can have a theme at all. **The
+picker's own `THEMED` test was wrong until #210** — it searched the raw HTML for
+`_shared/a11y.js`, so `ideas-backlog.html`, which only *names* the file in prose, was ranked as
+a candidate for six increments. It now reads real `<script>`/`<link>` attributes with comments
+stripped. If you add a signal to that script, read a tag, not the file. **Add the converted page
+to `PAGES` in `smoke-dark-rollout.mjs`** — that list is the suite's whole idea of which pages are
+adopted, and a page left off it is a page nobody scans in dark; add it more than once if it shows
+one stage at a time, as #221 did for 003 (build / score / class) and 030 (board / open clue).
+**And run `node Tools/board-check/run-suites.mjs --only <tool>` before you push**: #212 broke
+079's own suite with a change `test:theme` and `test:a11y` both passed, and only the full local
+pass found it.
 
 **A P3 increment touches `_shared/` only by reading it** — tool pages and no shared file — so a
 second session on a tool row can run in parallel with one. Anything that edits `_shared/`
@@ -1149,7 +1162,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 5 P3 — native dark + `stage.js` across the projector tools, batches of ~6. **Increments 1–11 shipped (#198, #200, #202, #204, #206, #208, #210, #212, #214, #216, #218): 010, 015, 021, 023, 024, 072; then 025, 048, 051 and the three sub-pages `command-center/remote.html`, `escape-room-builder/lock.html` + `monitor.html`; then 006, 009, 019, 020, 039, 056; then 017, 028, 040, 050, 054, 078; then 047, 061, 063, 067, 075, 081; then 055, 058, 059, 070, 074, 076; then 014, 045, 060, 077, 082, 085; then 066, 069, 079, 026, 073, 083; then 012, 052, 057, 068, 071, 084; then 041, 065, 053, 062, 049, 037; then 033, 080, 008, 022, 013, 027. **75 of 82 (91%)**. **7 pages left — one batch of 6 (003, 032, 043, 030, 064, 042) and then a single page, so this row can finish in two more increments.** Four rules bought with a red suite or a shipped bug, in the order they cost time: run the full `npm test` before pushing (#214) and `run-suites.mjs --only <tool folder name, not the number>` for every page in the batch (#212); **check whether the page's `#printArea` is on the screen** before converting (#216 — 037's is its output panel and needed `.paper-sheet-off`, and nothing in the suite would have caught the white column, because `#printArea` is in `NOT_CHROME`); **and ask what the tool *exports*, not only what it prints** (#218 — 080's board is a `.paper-sheet` because its PNG snapshot copies each piece's computed colour onto white). Two things no literal count can see: a colour in an inline `style` attribute written from script, and **a declaration that was never winning** — #218 found two shipped CSS bugs where a bare class lost to `input[type="text"]` and to `.tag-chip.pos`, so rewriting the literal would have changed nothing. **Look at the screenshots** — that is what found #216's `&mdash;` bug and #218's dead prep. | site | 2+ | `ijuz3z` 2026-09-07 15:30 UTC | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
+| 1 | Path 5 P3 — native dark + `stage.js` across the projector tools. **Increments 1–12 shipped (#198 … #221). 81 of 82 themed pages are native (99%), and ONE page is left: `046-blank-map-generator.html`, 54 literals — a single round, which is why this row is now sized ½ rather than 2+.** Two things to do with it beyond the palette. First, `Tools/theme/test/smoke-theme.mjs` proves the *filtered* half of the theme decision on 046 (it moved there from 003 in #221, the second and last time it can move): when 046 adopts, **delete those assertions, do not repoint them** — there will be no page left that they describe. Second, `stage.js` is still at **7** adopters with 001 and 004 hand-rolling `requestFullscreen`, and ten increments running have added none; 030 and 064 both run a projector review game off a fixed `inset: 0` overlay rather than the Fullscreen API. Finishing 046 finishes P3's palette work and leaves the stage rollout as the honest remainder — say so in the row you leave behind. Six rules bought with a red suite or a shipped bug: run the full `npm test` before pushing (#214); `run-suites.mjs --only <tool folder name, not the number>` (#212); check whether the page's `#printArea` is **on screen** before converting (#216); ask what the tool **exports**, not only what it prints (#218); **a declaration that was never winning** — rewriting its literal changes nothing (#218); and **a `.paper-sheet` you must withhold** — ink-paper's paper rule is (0,5,0) and outranks a page's own `.theme-*` skin, so marking a self-coloured object as paper repaints it white (#221). **Look at the screenshots**, and remember a prep that *clicks* something can silently do nothing while a prep that *names* something crashes | site | ½ |  | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 2 | Make #197's scoped CI actually fire on a tool PR: `select-suites.mjs` treats any `sw.js` edit as site-wide, and every tool PR bumps `CACHE_VERSION` there. Teach it that a `sw.js` diff touching only the `CACHE_VERSION` line is not site-wide (read the hunk, not the filename), pin it in `select-suites.test.mjs`, and confirm on the next tool PR's CI log. **Read #214's rule-4 bug first** — the selector identifies its page-sweeping suites by grepping their source for `readdirSync`, which went silent (not red) the day one of them changed how it enumerates. The same shape of mistake is available here: a rule that reads a *filename* where it should read the *hunk* | `Tools/board-check/` | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 3 | Path 5 P4 — landing page and hallway tools; 034 gets a native dark palette | site | 1 | | [Path 5](#path-5--projector-mode-real-dark-mode-shared-fullscreen-stage) |
 | 4 | Path 6 P2 — adopt the share sheet in the 17 existing `state-link` tools | site | 2+ | | [Path 6](#path-6--share-everywhere) |
@@ -1164,7 +1177,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 13 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 14 | Two pages load `_shared/a11y.js` **and** `_shared/a11y.css` twice — 014 and 033, found by a `git ls-files` sweep during #202, which fixed the third (039). Removing a duplicate is a cascade decision per page: the late `a11y.css` copy is the one winning ties today, and the early `a11y.js` is what keeps the theme off the first paint. **Both pages have now been converted to native dark without touching this** (014 in #210, 033 in #218) — the `A11Y_NATIVE_THEME` flag is read by both loads, so opting in is correct either way, which is why nine increments have walked past it | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 15 | `check:entities` cannot see an HTML entity that lives in a **data array** and reaches a text sink through a variable. #208 found 055 projecting a literal `&rsquo;` on the board since the tool shipped — the entity is in a `BUILTIN[]` row and the sink is `item.broken`, so the guard counted it among the 325 "strings whose sink is not visible statically" and passed. Follow a literal from an array/object initialiser to the sink its element is written to, at least single-hop, and re-baseline the 325 (**312 as of #216**). **Start with the free half of this row:** #216 found four more in that same bucket — 065 printing `&mdash;` on every lab packet and 057 doing it three times — all of the form `escapeHtml('&mdash;')`, which escapes the `&` and renders the entity as text. **An entity in a string argument of `escapeHtml`/`escapeAttr` is wrong wherever the sink is**, so that rule needs no dataflow at all and would have caught every one of the four | `Tools/board-check/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 16 | The site-wide axe sweep opens every page with **empty storage**, so any UI that only renders once something is saved is scanned nowhere. **Seven** confirmed instances now, one per increment for seven increments, each a serious-or-critical violation shipped in *light*: 009 (#202), 075 (#206), 077 (#210, 21 unnamed controls with no allowlist line at all), 073 (#212, 18 unnamed checkboxes, also with no line), 068 (#214, a `link-in-text-block` on every roster row), 037 (#216, white label text on the C segment of the stacked bar, 3.41:1 — the page renders no bar without scores) and 027 (#218, four group-name inputs with no accessible name at all, critical, and no line either — the page renders no groups until a roster is split). Give `smoke-a11y-sweep.mjs` a per-page seed — a small fixture of localStorage keys, taken from `_shared/tool-registry.js`, written before the page loads — and re-baseline; the dark-rollout suite finding these one page at a time is not a plan, and seven in a row is the argument. **Path 5 P3 has ONE round left, so this row's free evidence stops after it** — and note that both of the last two were found by that suite's *axe scan* rather than by looking at the page, which is the part a seeded sweep would reproduce directly | `Tools/a11y-sweep/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 16 | The site-wide axe sweep opens every page with **empty storage**, so any UI that only renders once something is saved is scanned nowhere. **Eight increments, eight instances, every one a serious-or-critical violation shipped in *light*:** 009 (#202), 075 (#206), 077 (#210, 21 unnamed controls with no allowlist line at all), 073 (#212, 18 unnamed checkboxes, also with no line), 068 (#214, a `link-in-text-block` on every roster row), 037 (#216, white label text on the C segment of the stacked bar at 3.41:1), 027 (#218, four group-name inputs with no accessible name at all) and **#221, which found it on four pages at once** — 003's per-criterion class-grid selects, 030's team-name inputs and an unlabelled `#boardSwitch`, 043's roster and chaperone selects, 042's roster select. Give `smoke-a11y-sweep.mjs` a per-page seed — a small fixture of localStorage keys, taken from `_shared/tool-registry.js`, written before the page loads — and re-baseline. **The free evidence is spent.** Path 5 P3 has one page left and eight increments have already handed this row its case; nobody is going to find the ninth for you. Two measurements worth reusing when you build it: **#221 scanned all six of its pages unprepped and they came back clean**, which is how you prove a finding is invisible to the sweep rather than merely new; and the recurring shape is an input or select whose **visible name is its own value** (027's groups, 030's teams), which cannot label itself and needs an `aria-label` naming its position or its row and column | `Tools/a11y-sweep/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 17 | Path 7 P1 — `_shared/print-kit.css` + `print-kit.js`; the ink-safe utility set | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 18 | Path 7 P2 — print reliability audit across the 63 hand-written `@media print` blocks | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 19 | Path 7 P3 — adoption: the class-set/blank tools, then the card-grid tools | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
@@ -1969,11 +1982,23 @@ subtree, so live controls must live inside it).
   008's three category stripe colours never once being drawn — the last two both cases of **a
   bare class losing to a higher-specificity selector, so the literal a conversion rewrites was
   never the winning declaration.**
-  **75 of 82 (91%). 7 pages left: one batch of six (003, 032, 043, 030, 064, 042) and then a
-  single page, so this phase can finish in two more increments. 001 and 004 are still the last
-  two hand-rolled stages, and nine increments running have added no stage at all.** Each
-  converted page goes into `PAGES` in `Tools/theme/test/smoke-dark-rollout.mjs` — as **two**
-  entries when the page shows one stage at a time, as 053, 062 and 080 do.
+  Increment 12 the same day (#221, v165): 003, 032, 043, 030, 064 and 042 — the last full batch.
+  Four of the six render a printable on screen and they split two-two on the sheet question: 003's
+  `.rubric-sheet` and 043's four printables got `.paper-sheet`, while **064's `.trading-card` and
+  042's `.cert` had to be denied it**, because ink-paper's paper rule is (0,5,0) and outranks
+  `.trading-card.theme-<key>` (0,2,0) and `.theme-elegant` (0,1,0) — marking a self-coloured
+  object as paper repaints it white. 030 is the batch's projector page and needed a new fixed
+  token, `--board-btn-ink`: its white award buttons sit **on** the navy overlay and were inking
+  themselves with `var(--accent)`, 2.5:1 on white in dark. The increment also fixed **five
+  unlabeled controls across four pages** — the eighth instance of the empty-storage blind spot and
+  the first to find it four times at once — and deleted **three** `#previewNote` allowlist lines
+  with the `--desk-ink` fix, its fifth through seventh use.
+  **81 of 82 (99%). ONE page left: 046, 54 literals. 001 and 004 are still the last two
+  hand-rolled stages, and ten increments running have added no stage at all** — 030 and 064 both
+  run a projector review game off a fixed `inset: 0` overlay rather than the Fullscreen API, which
+  is the closest either batch has come. Each converted page goes into `PAGES` in
+  `Tools/theme/test/smoke-dark-rollout.mjs` — more than once when the page shows one stage at a
+  time, as 053, 062, 080, 003 and 030 do.
   **Take the batch from `npm run path5:next`, not from this list** — the script ranks by
   projector evidence and then by cost, and it already contradicts the list in two places:
   004 has had a native palette since #167 (it is one of the nine), and 007 loads no
@@ -1989,7 +2014,7 @@ subtree, so live controls must live inside it).
 **Verification.** Screenshot both themes for every migrated tool via the harness;
 a Playwright check that no tool ships the invert filter *and* a native palette at
 once; keyboard-only run-through of one stage. **Nothing has been checked on a real projector or
-a real Chromebook in eleven increments**, and nothing has installed the worker; the screenshots
+a real Chromebook in twelve increments**, and nothing has installed the worker; the screenshots
 and `smoke-dark-rollout.mjs` are the whole of the evidence — and #214 is the second increment
 running where **the screenshots caught something no assertion did**. Two of its six pages were
 being scanned in a state the `prep` had failed to reach (an `alert()` swallowed a click on 068;
