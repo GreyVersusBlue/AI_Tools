@@ -33,9 +33,10 @@ const lacks = (list, item, label) => ok(!list.includes(item), `${label}: expecte
 
 /* ── 1. a synthetic tree: every rule in isolation ─────────────────────────── */
 
-// The directory-listing call is spelled in two halves throughout this file so
-// that the file does not itself read as a page sweep (rule 4 greps for it).
+// Both enumeration calls rule 4 greps for are spelled in two halves throughout
+// this file, so that the file does not itself read as a page sweep.
 const LISTDIR = 'readdir' + 'Sync(';
+const LSFILES = "'ls-" + "files'";
 
 const FAKE_SUITES = [
   'Tools/alpha/test/smoke-alpha.mjs',        // opens 001
@@ -135,6 +136,11 @@ console.log('select-suites: helpers');
   ok(needlesFor('005-Seating Chart Generator.html').includes('005-Seating%20Chart%20Generator.html'), 'needles include the %20 spelling');
   ok(needlesFor('001-hall-pass-log.html').length === 1, 'a name with no spaces has one spelling');
   ok(isSweep(`fs.${LISTDIR}path.join(SITE, 'Tools'))`) && !isSweep("goto('/Tools/001.html')"), 'isSweep keys on the directory listing');
+  // The second spelling. smoke-theme.mjs enumerates with `git ls-files` rather
+  // than a directory listing, and a readdirSync-only isSweep silently dropped
+  // it out of every page edit's selection — the regression this line pins.
+  ok(isSweep(`execFileSync('git', [${LSFILES}, '-z'])`) && !isSweep("// lists the files"),
+    'isSweep keys on the git file listing too');
   ok(toolOf('Tools/final-grade-checker/grade-math.test.mjs') === 'final-grade-checker', 'toolOf handles a suite beside its module');
 }
 
