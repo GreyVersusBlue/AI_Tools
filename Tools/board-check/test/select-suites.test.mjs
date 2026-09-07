@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   SITE, suitesForChanges, foldersReferencedBy, isSweep, needlesFor,
-  listPagesOnDisk, readFileOnDisk, toolOf,
+  isCacheVersionBumpOnly, listPagesOnDisk, readFileOnDisk, toolOf,
 } from '../select-suites.mjs';
 
 let passed = 0, failed = 0;
@@ -44,6 +44,7 @@ const FAKE_SUITES = [
   'Tools/beta/test/smoke-beta.mjs',          // opens 002 (space in the name)
   'Tools/gamma/test/smoke-cross.mjs',        // gamma's suite, but opens 001
   'Tools/sweep/test/smoke-sweep.mjs',        // lists every page itself
+  'Tools/service-worker/test/smoke-sw.mjs',  // the worker's own suite
 ];
 const FAKE_FILES = {
   'Tools/alpha/test/smoke-alpha.mjs': "goto(BASE + '/Tools/001-alpha.html')",
@@ -51,6 +52,7 @@ const FAKE_FILES = {
   'Tools/beta/test/smoke-beta.mjs': "goto(BASE + '/Tools/002-Beta%20Tool.html')",
   'Tools/gamma/test/smoke-cross.mjs': "goto(BASE + '/Tools/001-alpha.html')",
   'Tools/sweep/test/smoke-sweep.mjs': `const pages = fs.${LISTDIR}path.join(SITE, 'Tools'))`,
+  'Tools/service-worker/test/smoke-sw.mjs': "stages a copy of sw.js and installs it",
   'Tools/001-alpha.html': '<script type="module" src="alpha/alpha.js"></script>',
   'Tools/002-Beta Tool.html': '<script>inline only</script>',
   'Tools/003-delta.html': '<script src="../_shared/a11y.js"></script><script src="beta/beta.js"></script>',
@@ -119,6 +121,80 @@ ok(pick(['Tools/001-alpha.html']).join() === pick(['Tools/001-alpha.html']).join
 ok(pick(['Tools/001-alpha.html', 'Tools/alpha/alpha.js']).indexOf('Tools/alpha/test/smoke-alpha.mjs') <
    pick(['Tools/001-alpha.html', 'Tools/alpha/alpha.js']).indexOf('Tools/gamma/test/smoke-cross.mjs'),
   'the selection keeps suites.json order');
+
+/* ── 1b. rule 1's one exemption: a CACHE_VERSION-only sw.js diff ─────────── */
+
+// Every tool PR bumps CACHE_VERSION, and for the nine tool PRs after #197 that
+// one line ran the whole list. The exemption is read off the hunk, so the
+// assertions that matter are the ones where the diff contains the word
+// CACHE_VERSION and is site-wide anyway.
+const BUMP_ONLY = [
+  'diff --git a/sw.js b/sw.js',
+  '--- a/sw.js',
+  '+++ b/sw.js',
+  '@@ -71 +71 @@',
+  "-const CACHE_VERSION = 'v165';",
+  "+const CACHE_VERSION = 'v166';",
+].join('\n');
+const BUMP_PLUS_PRECACHE = BUMP_ONLY + [
+  '',
+  '@@ -212 +212,2 @@',
+  "   '/Tools/046-blank-map-generator.html',",
+  "+  '/Tools/046-new-thing.js',",
+].join('\n');
+const BUMP_PLUS_COMMENT = BUMP_ONLY + [
+  '',
+  '@@ -50 +50 @@',
+  '-// Bump CACHE_VERSION any time PRECACHE_URLS changes',
+  '+// Bump CACHE_VERSION whenever PRECACHE_URLS changes',
+].join('\n');
+
+console.log('select-suites: the CACHE_VERSION exemption');
+{
+  ok(isCacheVersionBumpOnly(BUMP_ONLY), 'a bump-only diff is recognised');
+  ok(isCacheVersionBumpOnly(BUMP_ONLY.replace(/'/g, '"')), 'double quotes count too');
+  ok(isCacheVersionBumpOnly(BUMP_ONLY.replace(/;$/gm, '')), 'the semicolon is optional');
+  ok(isCacheVersionBumpOnly(BUMP_ONLY.split('\n').join('\r\n')), 'CRLF output is recognised');
+  ok(!isCacheVersionBumpOnly(BUMP_PLUS_PRECACHE), 'a bump plus a precache line is NOT bump-only');
+  ok(!isCacheVersionBumpOnly(BUMP_PLUS_COMMENT), 'a bump plus a comment edit is NOT bump-only');
+  ok(!isCacheVersionBumpOnly(''), 'an empty diff is not bump-only');
+  ok(!isCacheVersionBumpOnly(null), 'a diff git could not produce is not bump-only');
+  ok(!isCacheVersionBumpOnly('diff --git a/sw.js b/sw.js\n@@ -71 +71 @@\n-const CACHE = 1;\n+const CACHE = 2;'),
+    'a different constant is not bump-only');
+}
+{
+  const withDiff = (files, diff) =>
+    suitesForChanges(files, { ...fakeEnv, diffOf: rel => (rel === 'sw.js' ? diff : null) });
+
+  const bump = withDiff(['sw.js'], BUMP_ONLY);
+  ok(bump.selected.length === 1 && bump.selected[0] === 'Tools/service-worker/test/smoke-sw.mjs',
+    'a bump-only sw.js edit runs the service-worker suites and nothing else');
+  ok(bump.why.some(w => w.includes('CACHE_VERSION is the only changed line')),
+    'the reason says why sw.js was not site-wide');
+
+  ok(withDiff(['sw.js'], BUMP_PLUS_PRECACHE).selected.length === FAKE_SUITES.length,
+    'a sw.js diff that also touches PRECACHE_URLS is site-wide');
+  ok(withDiff(['sw.js'], BUMP_PLUS_COMMENT).selected.length === FAKE_SUITES.length,
+    'a sw.js diff that also touches a comment is site-wide');
+  ok(pick(['sw.js']).length === FAKE_SUITES.length,
+    'with no diff available at all, sw.js is site-wide as it always was');
+  ok(withDiff(['sw.js'], null).selected.length === FAKE_SUITES.length,
+    'a diff git could not produce leaves sw.js site-wide');
+
+  // The shape a tool PR actually has: pages, a suite, and the version bump.
+  const toolPr = withDiff(['Tools/001-alpha.html', 'Tools/alpha/alpha.js', 'sw.js'], BUMP_ONLY);
+  has(toolPr.selected, 'Tools/alpha/test/smoke-alpha.mjs', 'tool PR with a bump');
+  has(toolPr.selected, 'Tools/sweep/test/smoke-sweep.mjs', 'tool PR with a bump still runs the sweeps');
+  has(toolPr.selected, 'Tools/service-worker/test/smoke-sw.mjs', 'tool PR with a bump runs the worker suites');
+  lacks(toolPr.selected, 'Tools/beta/test/smoke-beta.mjs', 'tool PR with a bump');
+  ok(toolPr.selected.length < FAKE_SUITES.length, 'a tool PR with a bump is no longer the full list');
+
+  // And the exemption is only ever about sw.js.
+  ok(withDiff(['_shared/a11y.js', 'sw.js'], BUMP_ONLY).selected.length === FAKE_SUITES.length,
+    'a bump next to a _shared edit is still site-wide');
+  const shared = suitesForChanges(['_shared/ink-paper.css'], { ...fakeEnv, diffOf: () => BUMP_ONLY });
+  ok(shared.selected.length === FAKE_SUITES.length, 'the exemption never applies to a file that is not sw.js');
+}
 
 /* ── 2. helpers ────────────────────────────────────────────────────────── */
 
@@ -195,6 +271,30 @@ console.log('select-suites: real tree (' + SUITES.length + ' suites)');
   lacks(s, 'Tools/class-roster-hub/test/smoke-export.mjs', 'name-picker folder edit');
 }
 {
+  // Rule 1's exemption against the real suite list, in the shape a Path 5
+  // increment actually has: a converted page plus the version bump. The line
+  // the exemption keys on is taken from the real sw.js, so that renaming or
+  // respelling the constant fails here instead of quietly turning the scoping
+  // back off — the exemption failing open over-selects, which no assertion
+  // downstream would ever notice.
+  const swSrc = fs.readFileSync(path.join(SITE, 'sw.js'), 'utf8');
+  const versionLine = swSrc.split('\n').find(l => /const\s+CACHE_VERSION\s*=/.test(l));
+  ok(!!versionLine, "sw.js still declares CACHE_VERSION on one line");
+  const realBump = ['diff --git a/sw.js b/sw.js', '--- a/sw.js', '+++ b/sw.js', '@@ -71 +71 @@',
+    '-' + versionLine, '+' + versionLine.replace(/v(\d+)/, (_, n) => 'v' + (Number(n) + 1))].join('\n');
+  ok(isCacheVersionBumpOnly(realBump), "the real sw.js's CACHE_VERSION line is recognised as a bump");
+
+  const bumped = suitesForChanges(['Tools/046-blank-map-generator.html', 'sw.js'],
+    { ...realEnv, diffOf: rel => (rel === 'sw.js' ? realBump : null) }).selected;
+  has(bumped, 'Tools/blank-map-generator/test/smoke-starters.mjs', 'a page edit plus a bump');
+  has(bumped, 'Tools/a11y-sweep/test/smoke-a11y-sweep.mjs', 'a page edit plus a bump runs the sweeps');
+  has(bumped, 'Tools/service-worker/test/smoke-sw-tiers.mjs', 'a bump runs the worker suites');
+  has(bumped, 'Tools/service-worker/test/smoke-sw-update.mjs', 'a bump runs both worker suites');
+  lacks(bumped, 'Tools/name-picker/test/smoke.mjs', 'a page edit plus a bump');
+  ok(bumped.length < SUITES.length / 2,
+    `a tool PR with a version bump selects a minority of suites (${bumped.length} of ${SUITES.length})`);
+  ok(real(['sw.js']).length === SUITES.length, 'sw.js with no diff to read is site-wide on the real tree');
+
   ok(real(['BACKLOG.md', 'HISTORY.md']).length === 0, 'a backlog/history edit runs no suite');
   ok(real(['_shared/roster.js']).length === SUITES.length, 'a _shared edit runs every suite');
   ok(real(['Tools/board-check/select-suites.mjs']).length === SUITES.length, 'an edit to the selector itself runs every suite');
