@@ -20,10 +20,28 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* The two tint pairs are 001's values (the reference adopter), with dark
+     counterparts, rather than a fourth generation of the rgba() literal the
+     first share adopters wrote. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share a worksheet: the sheet itself is _shared/share.js (Path 6 P3). This
+     is only the note under the saved-worksheet controls that records what the
+     sheet last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
+
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -113,7 +131,9 @@
       <button type="button" class="secondary small" id="newWorksheetBtn">+ New worksheet</button>
       <button type="button" class="secondary small" id="duplicateWorksheetBtn">Duplicate</button>
       <button type="button" class="danger small" id="deleteWorksheetBtn">Delete</button>
+      <button type="button" class="secondary small" id="shareBtn">&#128279; Share worksheet&hellip;</button>
     </div>
+    <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
     <div>
       <label for="modeSwitch">Worksheet mode</label>
       <select id="modeSwitch">
@@ -175,7 +195,7 @@
   var els = {};
   ['activityName', 'copyCount', 'stepsWrap', 'printBtn', 'printArea',
    'worksheetSwitch', 'worksheetName', 'newWorksheetBtn', 'duplicateWorksheetBtn', 'deleteWorksheetBtn',
-   'modeSwitch'
+   'modeSwitch', 'shareBtn', 'shareNote'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { name: 'New Worksheet', activityName: '', copyCount: 10, mode: DEFAULT_MODE, steps: [] };
@@ -431,8 +451,90 @@
     window.print();
   });
 
-  /* ---------- boot ---------- */
-  load();
+  /* ---------- share a worksheet: _shared/share.js (Path 6 P3) ----------
+     This tool keeps a NAMED LIBRARY (a list of names plus a blob per name),
+     not one document, so an arrival is saved BESIDE what is already here
+     under a free name and none of #237's confirm-before-replacing machinery
+     applies — the same shape 054 and 003 already use. uniqueName() is what
+     guarantees that: a link whose worksheet is called the same thing as one
+     on this device lands as "… (2)" and the teacher's own copy is untouched.
+
+     Sub-question ids are handed out fresh on import. Nothing in this state
+     refers to an id across records — data-sub only ever addresses a row of
+     the worksheet being edited — so the receiving device owning its own ids
+     is right here; see 057 for the tool where it is not. */
+  var SHARE_PARAM = 'worksheet';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { save(); return state; },
+    param: SHARE_PARAM,
+    tool: 'art-critique-worksheet-generator',
+    title: 'Share this worksheet',
+    noun: 'this worksheet',
+    filename: function () { return state.name || 'art critique worksheet'; },
+    note: 'The four steps, every prompt and follow-up question, the activity name and the copy count travel. Opening the link saves this worksheet on the receiving device as a new saved worksheet; nothing already saved there is changed.',
+    successMessage: 'Link copied. Opening it anywhere saves this worksheet there alongside whatever is already saved.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleWorksheet(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.steps) && obj.steps.length > 0;
+  }
+
+  /** An arrival as this device would have written it: known fields only,
+      strings coerced, and every follow-up question given a local id. */
+  function normalizeWorksheet(obj, name) {
+    var count = parseInt(obj.copyCount, 10);
+    return {
+      name: name,
+      activityName: typeof obj.activityName === 'string' ? obj.activityName : '',
+      copyCount: (count >= 1 && count <= 60) ? count : 10,
+      mode: obj.mode === 'self' ? 'self' : DEFAULT_MODE,
+      steps: obj.steps.map(function (step) {
+        return {
+          key: String(step && step.key || uid()),
+          label: String(step && step.label || ''),
+          prompt: String(step && step.prompt || ''),
+          subs: (Array.isArray(step && step.subs) ? step.subs : []).map(function (sub) {
+            return { id: uid(), text: String(sub && sub.text || '') };
+          })
+        };
+      })
+    };
+  }
+
+  /** Consumes a ?worksheet= link on load, saving the arrival as a NEW named
+      worksheet. Returns true when a link was found and opened. */
+  function importSharedWorksheet() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleWorksheet,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var wanted = String(decoded.name || decoded.activityName || '').trim() || 'Shared Worksheet';
+        var name = uniqueName(wanted);
+        var incoming = normalizeWorksheet(decoded, name);
+        saveNamed(name, incoming);
+        state = incoming;
+        setShareNote('Loaded a shared worksheet as “' + name + '”. Nothing already saved here was changed.');
+        return true;
+      }
+    });
+  }
+
+  /* ---------- boot ----------
+     The legacy migration runs BEFORE the import: an arrival saved first would
+     make listNames() non-empty, and migrateLegacyIfNeeded() bails on that —
+     which would quietly drop the worksheet a teacher saved before this tool
+     had named worksheets at all. */
+  migrateLegacyIfNeeded();
+  if (!importSharedWorksheet()) load();
   renderAll();
 })();
 </script>
