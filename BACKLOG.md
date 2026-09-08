@@ -2345,7 +2345,7 @@ passing on the same empty page the site-wide sweep already covers. Look at them.
 ### Path 6 — "Share…" everywhere
 
 **Status.** P1 shipped 2026-09-04 (#178, `CACHE_VERSION` v146) with 064 as its single
-adopter. **P3's first increment shipped 2026-09-08 (#TBD, v172): 052, 057, 070, 073, 079
+adopter. **P3's first increment shipped 2026-09-08 (#237, v172): 052, 057, 070, 073, 079
 and 081, taking `share.js` and `qr-draw.js` to 21 of 86 and `state-link.js` to 22.** **P2 is finished**, in three increments all on 2026-09-08: #231 (v169) took 028,
 039, 040, 050, 054 and 056 and grew the receiving half (`unwrap`, `parseFile`, `receive`,
 `receiveFile`); #233 (v170) took 002, 007, 015 and 044 — every tool with a hand-written
@@ -2396,7 +2396,7 @@ download-as-file as the third option.
   keep their own renderer (`drawPairingQr`), and produced the finding that is now rank 12.
 
 - **P3 — Extend to the builders that don't share yet. First increment shipped
-  2026-09-08 (#TBD, `CACHE_VERSION` v172); the row stays.** The phase's original
+  2026-09-08 (#237, `CACHE_VERSION` v172); the row stays.** The phase's original
   list — 044, 045, 047, 052, 057, 065, 070, 072, 073, 079, 081, plus every
   "generator" tool with a saved configuration — was already one out of date:
   **044 adopted in P2 (#233).** **052, 057, 070, 073, 079 and 081 are done**, which

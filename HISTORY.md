@@ -42,7 +42,7 @@ page's static `src`/`href`/`import`/`fetch` references only — a page that buil
 path at runtime from a string would not link its folder to its suites.
 
 **Path 6 P3, first increment — six builders that could not share at all, and one rollout
-suite instead of six — 2026-09-08 (#TBD, `CACHE_VERSION` v172).** P3 is a 2+ row and **stays in
+suite instead of six — 2026-09-08 (#237, `CACHE_VERSION` v172).** P3 is a 2+ row and **stays in
 the table, rewritten to say what is left.** **052, 057, 070, 073, 079 and 081** now open
 `_shared/share.js`'s sheet; `npm run check:adoption` puts **`share.js` and `qr-draw.js` at 21 of 86
 each**, up from 15, and **`state-link.js` at 22**. These six are a different kind of work from all
