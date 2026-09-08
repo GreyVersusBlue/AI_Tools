@@ -1,5 +1,7 @@
-// smoke-share-rollout.mjs — Path 6 P3's first increment: the six single-document
-// builders that could not hand their work to another teacher at all.
+// smoke-share-rollout.mjs — Path 6 P3: the builders that could not hand their
+// work to another teacher at all. Increment 1 was six SINGLE-DOCUMENT tools;
+// increment 2 adds the three that keep a NAMED LIBRARY, which is a different
+// claim and has its own section below.
 //
 //   node Tools/share/test/smoke-share-rollout.mjs      (or: npm run test:share-rollout)
 //
@@ -26,11 +28,21 @@
 //      must carry the milestone schedule and NO student name, tick or note.
 //   4. the link opens elsewhere: the receiving browser shows the shared work
 //      and the parameter is consumed, so a refresh cannot import it twice.
-//   5. THE CONFIRM. Five of the six keep one document, so an arrival lands on
-//      top of it. Declining must keep the local copy — a real outcome with a
-//      sentence of its own — and, because share.js clears the parameter before
-//      the payload is judged, a refresh must not ask again. 081 is exempt and
-//      is asserted NOT to ask: nothing it stores is authored.
+//   5. THE CONFIRM, on the single-document tools. Five of the six in increment
+//      1 keep one document, so an arrival lands on top of it. Declining must
+//      keep the local copy — a real outcome with a sentence of its own — and,
+//      because share.js clears the parameter before the payload is judged, a
+//      refresh must not ask again. 081 is exempt and is asserted NOT to ask:
+//      nothing it stores is authored.
+//   5b. SAVED BESIDE, on the library tools (047, 065, 072). These keep a list
+//      of names plus a blob per name, so there is nowhere for an arrival to
+//      land destructively and there must be NO dialog at all. The claim worth
+//      testing is the collision: a link whose document has the SAME NAME as
+//      one already on the device must land under a free name, leave the
+//      teacher's blob byte-for-byte as it was, and leave the list two long.
+//      That is the failure mode "save it under its own name" invites, and it
+//      is invisible on an empty install — which is how every one of these
+//      would be opened in a demo.
 //   6. the sheet's rows, the QR budget, and the { aplp, state } envelope the
 //      Download row writes, read back through Share.unwrap.
 //   7. axe on the OPEN SHEET. The site-wide sweep opens every page with empty
@@ -62,11 +74,17 @@ const ok = (cond, label) => {
 };
 const eq = (a, b, label) => ok(a === b, `${label} (got ${JSON.stringify(a)}, want ${JSON.stringify(b)})`);
 
-/* One row per adopter. `seed` writes the tool's own storage key before the
-   page loads, so "there is work here" is real stored state rather than typing
-   driven through the UI — the fixtures are small and the point of the suite is
-   the share wiring, not each tool's editor. `expect` is read off the payload;
-   `absent` is what must not be in it, as a string search over the whole JSON. */
+/* One row per adopter. The fixture is written straight into the tool's own
+   storage before the page loads, so "there is work here" is real stored state
+   rather than typing driven through the UI — the fixtures are small and the
+   point of the suite is the share wiring, not each tool's editor. `expect` is
+   read off the payload; `absent` is what must not be in it, as a string search
+   over the whole JSON.
+
+   Two storage shapes, and `library` is what tells them apart. A single-document
+   tool has one `key`; a library tool has a list key, a per-name data prefix and
+   a pointer to the current name, so seeding it means writing three entries and
+   the fixture document needs a `docName` to be filed under. */
 const TOOLS = [
   {
     n: '052', file: '052-cognates-false-friends-builder.html', param: 'cognates',
@@ -164,10 +182,95 @@ const TOOLS = [
     arrived: page => page.inputValue('#posterTitle'),
     arrivedWant: 'Italian — Passato Prossimo',
   },
+
+  /* ── increment 2: the three named-library tools ───────────────────────── */
+  {
+    n: '047', file: '047-art-critique-worksheet-generator.html', param: 'worksheet',
+    slug: 'art-critique-worksheet-generator',
+    library: { list: 'acw_worksheets_list_v1', data: 'acw_worksheet_data_v1:', current: 'acw_worksheet_current_v1' },
+    docName: 'Sculpture Unit Critique',
+    state: {
+      name: 'Sculpture Unit Critique', activityName: 'Clay Vessels Gallery Walk', copyCount: 24, mode: 'self',
+      steps: [
+        { key: 'describe', label: 'Describe', prompt: 'What did I make?',
+          subs: [{ id: 'q1', text: 'What clay body did I use?' }] },
+        { key: 'judge', label: 'Judge', prompt: 'Is this piece finished?',
+          subs: [{ id: 'q2', text: 'What would I glaze differently?' }] },
+      ],
+    },
+    expect: p => [
+      [p.activityName === 'Clay Vessels Gallery Walk', 'the payload carries the activity name'],
+      [p.copyCount === 24, 'and the copy count, which is the class it was built for'],
+      [p.mode === 'self', 'and the worksheet mode, which rewords every default prompt'],
+      [p.steps.length === 2 && p.steps[1].prompt === 'Is this piece finished?', 'and every step’s edited prompt'],
+      [p.steps[0].subs[0].text.indexOf('clay body') !== -1, 'and every follow-up question'],
+    ],
+    arrived: page => page.inputValue('#activityName'),
+    arrivedWant: 'Clay Vessels Gallery Walk',
+    localField: 'activityName',
+  },
+  {
+    n: '065', file: '065-lab-report-template-builder.html', param: 'template',
+    slug: 'lab-report-template-builder',
+    library: { list: 'lrt_list_v1', data: 'lrt_data_v1:', current: 'lrt_current_v1' },
+    docName: 'Acid-Base Lab',
+    state: {
+      name: 'Acid-Base Lab', title: 'Acid-Base Reactions', objective: 'Find the neutral point.',
+      hypothesisPrompt: 'If more base is added, then ____.',
+      materials: [{ id: 'm1', text: 'Goggles' }, { id: 'm2', text: 'Burette' }],
+      procedure: [{ id: 'p1', text: 'Fill the burette to zero.' }],
+      columns: [{ id: 'c1', text: 'Drops', type: 'number', units: 'drops' },
+                { id: 'c2', text: 'Colour', type: 'text', units: '' }],
+      dataRows: 8,
+      observationsPrompt: 'When did the colour hold?',
+      conclusion: [{ id: 'k1', text: 'Was the hypothesis supported?' }],
+    },
+    expect: p => [
+      [p.title === 'Acid-Base Reactions', 'the payload carries the lab title'],
+      [p.objective === 'Find the neutral point.', 'and the objective'],
+      [p.materials.length === 2 && p.procedure[0].text.indexOf('burette') !== -1, 'and the materials and procedure'],
+      /* The kind and units are what make a column print a format hint, and
+         they were added after the columns themselves were. */
+      [p.columns[0].type === 'number' && p.columns[0].units === 'drops',
+        'and each column’s kind and units, not just its name'],
+      [p.dataRows === 8, 'and how many blank data rows to print'],
+      [p.conclusion[0].text.indexOf('hypothesis') !== -1, 'and the conclusion questions'],
+    ],
+    arrived: page => page.inputValue('#labTitle'),
+    arrivedWant: 'Acid-Base Reactions',
+    localField: 'title',
+  },
+  {
+    n: '072', file: '072-plot-diagram-builder.html', param: 'diagram',
+    slug: 'plot-diagram-builder',
+    library: { list: 'pdb_list_v1', data: 'pdb_data_v1:', current: 'pdb_current_v1' },
+    docName: 'Hatchet ch. 1-8',
+    state: {
+      title: 'Hatchet', author: 'Gary Paulsen',
+      characters: 'Brian Robeson', setting: 'The Canadian wilderness',
+      conflict: 'Surviving alone after the crash', theme: 'What a person finds out about themselves',
+      stages: { exposition: 'Brian boards the bush plane', rising: 'The pilot has a heart attack',
+                climax: 'The plane goes into the lake', falling: 'Brian builds a shelter',
+                resolution: 'The search plane finds him' },
+    },
+    expect: p => [
+      [p.title === 'Hatchet' && p.author === 'Gary Paulsen', 'the payload carries the story title and author'],
+      [p.characters === 'Brian Robeson' && p.theme.indexOf('themselves') !== -1, 'and all four story elements'],
+      [Object.keys(p.stages).length === 5 && p.stages.climax.indexOf('lake') !== -1,
+        'and all five plot stages'],
+      /* The library key is the diagram's identity and is NOT in `state`, so a
+         teacher who renamed it away from the story title would lose that name
+         if getState() shared the stored blob as-is. */
+      [p.name === 'Hatchet ch. 1-8', 'and the name the teacher filed it under, which is not part of the document'],
+    ],
+    arrived: page => page.inputValue('#storyTitle'),
+    arrivedWant: 'Hatchet',
+    localField: 'title',
+  },
 ];
 
 /* ── 0. static: the four tags, in dependency order ──────────────────────── */
-console.log('Share rollout — Path 6 P3, the six builders that could not share');
+console.log('Share rollout — Path 6 P3, the builders that could not share');
 
 const ORDER = ['_shared/state-link.js', '_shared/vendor/qrcode/qrcode.js', '_shared/qr-draw.js', '_shared/share.js'];
 for (const t of [...TOOLS, { n: '081', file: '081-word-problem-warmup-generator.html' }]) {
@@ -202,17 +305,43 @@ const shareLink = async (p) => {
   });
 };
 
-/** A page with `state` already in the tool's own key, as a teacher who has
-    used the tool would have. */
-const openWith = async (t, url) => {
+/** The localStorage entries that put `doc` in front of the teacher: one for a
+    single-document tool, three for a library tool (the list, the blob under
+    `name`, and the pointer at it). */
+const seedFor = (t, doc, name) => t.library
+  ? [[t.library.list, JSON.stringify([name])],
+     [t.library.data + name, JSON.stringify(doc)],
+     [t.library.current, name]]
+  : [[t.key, JSON.stringify(doc)]];
+
+/** Writes `pairs` into localStorage before the page's own script runs — ONCE,
+    however many times the page is navigated.
+
+    addInitScript fires on every navigation, so the obvious version silently
+    re-seeds on reload and hands back the fixture instead of what the tool
+    wrote. That made "a refresh does not file the same arrival twice" pass on a
+    tool that had genuinely filed it twice, and fail on one that had not. The
+    first entry's key is the sentinel: it exists on this origin from the first
+    load onwards, whoever wrote it. */
+const seed = (page, pairs) => page.addInitScript((entries) => {
+  if (localStorage.getItem(entries[0][0]) !== null) return;
+  for (const [k, v] of entries) localStorage.setItem(k, v);
+}, pairs);
+
+/** A page seeded with `pairs`, opened at `url`. */
+const openSeeded = async (label, url, pairs) => {
   const page = await prepPage(browser, BASE, { width: 1400, height: 1000 });
-  pages.push([t.n, page]);
-  await page.addInitScript(([k, v]) => { localStorage.setItem(k, v); },
-    [t.key, JSON.stringify(t.state)]);
-  await page.goto(url || (BASE + '/Tools/' + t.file), { waitUntil: 'load' });
-  await settle(page, 600);
+  pages.push([label, page]);
+  await seed(page, pairs);
+  await page.goto(url, { waitUntil: 'load' });
+  await settle(page, 800);
   return page;
 };
+
+/** A page with the fixture already saved, as a teacher who has used the tool
+    would have. */
+const openWith = async (t, url) =>
+  openSeeded(t.n, url || (BASE + '/Tools/' + t.file), seedFor(t, t.state, t.docName));
 
 for (const t of TOOLS) {
   console.log(`\n${t.n} — ${t.file}`);
@@ -258,7 +387,7 @@ for (const t of TOOLS) {
     pages.push([t.n + '-declines', mine]);
     const asked = [];
     mine.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
-    await mine.addInitScript(([k, v]) => { localStorage.setItem(k, v); }, [t.key, local]);
+    await seed(mine, [[t.key, local]]);
     await mine.goto(url, { waitUntil: 'load' });
     await settle(mine, 800);
     eq(asked.length, 1, `${t.n}: an arriving link asks before replacing saved work`);
@@ -278,11 +407,57 @@ for (const t of TOOLS) {
     const yes = await prepPage(browser, BASE, { width: 1400, height: 1000 });
     pages.push([t.n + '-accepts', yes]);
     yes.on('dialog', async d => { await d.accept(); });
-    await yes.addInitScript(([k, v]) => { localStorage.setItem(k, v); }, [t.key, local]);
+    await seed(yes, [[t.key, local]]);
     await yes.goto(url, { waitUntil: 'load' });
     await settle(yes, 800);
     ok(/Loaded a shared/.test(await yes.textContent('#shareNote')),
       `${t.n}: accepting loads the shared copy: ` + JSON.stringify(await yes.textContent('#shareNote')));
+  }
+
+  /* ── 5b. saved beside, on a device that already has a library ──────────── */
+  if (t.library) {
+    /* The collision case, which is the only one that can lose work here: the
+       teacher already has a document filed under the SAME NAME the link wants,
+       with different content in it. */
+    const local = JSON.parse(JSON.stringify(t.state));
+    local[t.localField] = KEPT;
+    if (Object.prototype.hasOwnProperty.call(local, 'name')) local.name = t.docName;
+    ok(JSON.stringify(local) !== JSON.stringify(t.state),
+      `${t.n}: the local variant really differs from the shared one`);
+
+    const mine = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+    pages.push([t.n + '-beside', mine]);
+    const asked = [];
+    mine.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
+    await seed(mine, seedFor(t, local, t.docName));
+    await mine.goto(url, { waitUntil: 'load' });
+    await settle(mine, 900);
+
+    eq(asked.length, 0,
+      `${t.n}: an arriving link does not ask, because it takes nothing away: ` + JSON.stringify(asked));
+    eq(await t.arrived(mine), t.arrivedWant, `${t.n}: the shared work is what is on screen`);
+    ok(/Loaded a shared/.test(await mine.textContent('#shareNote')),
+      `${t.n}: and the note says so: ` + JSON.stringify(await mine.textContent('#shareNote')));
+
+    const after = await mine.evaluate(([listKey, dataPrefix, name]) => ({
+      names: JSON.parse(localStorage.getItem(listKey) || '[]'),
+      kept: JSON.parse(localStorage.getItem(dataPrefix + name) || 'null'),
+    }), [t.library.list, t.library.data, t.docName]);
+    eq(after.names.length, 2,
+      `${t.n}: the saved list holds both, not one: ` + JSON.stringify(after.names));
+    ok(after.names.indexOf(t.docName) !== -1,
+      `${t.n}: the teacher’s own entry is still listed under its own name`);
+    ok(after.names.some(n => n !== t.docName && n.indexOf(t.docName) === 0),
+      `${t.n}: and the arrival took a suffixed name beside it: ` + JSON.stringify(after.names));
+    eq(after.kept && after.kept[t.localField], KEPT,
+      `${t.n}: and the document already saved under that name is untouched`);
+
+    /* Same as the single-document tools: the parameter is gone, so a refresh
+       cannot file a second copy of the same arrival. */
+    await mine.reload({ waitUntil: 'load' });
+    await settle(mine, 800);
+    const names2 = await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || '[]'), t.library.list);
+    eq(names2.length, 2, `${t.n}: a refresh does not file the same arrival a second time: ` + JSON.stringify(names2));
   }
 
   /* ── 6. the rows, the QR budget and the download envelope ─────────────── */

@@ -22,11 +22,29 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* The two tint pairs are 001's values (the reference adopter), with dark
+     counterparts, rather than a fourth generation of the rgba() literal the
+     first share adopters wrote. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share a template: the sheet itself is _shared/share.js (Path 6 P3). This
+     is only the note under the saved-templates controls that records what the
+     sheet last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
+
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -146,7 +164,9 @@
         <div class="btnrow">
           <button class="secondary" id="newTemplateBtn">New</button>
           <button class="danger" id="deleteTemplateBtn">Delete</button>
+          <button type="button" class="secondary" id="shareBtn">&#128279; Share template&hellip;</button>
         </div>
+        <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
       </div>
       <div class="card">
         <h2>Start from a template</h2>
@@ -282,7 +302,8 @@
    'hypothesisPrompt', 'materialsWrap', 'addMaterialBtn', 'procedureWrap', 'addStepBtn',
    'observationsPrompt', 'conclusionWrap', 'addQuestionBtn', 'printBtn', 'printArea',
    'templateName', 'templateSwitch', 'newTemplateBtn', 'deleteTemplateBtn',
-   'previewBtn', 'previewModal', 'previewBody', 'closePreviewBtn', 'previewPrintBtn'].forEach(function (id) {
+   'previewBtn', 'previewModal', 'previewBody', 'closePreviewBtn', 'previewPrintBtn',
+   'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -348,6 +369,17 @@
   }
   function getCurrentTemplateName() {
     try { return localStorage.getItem(CURRENT_KEY); } catch (e) { return null; }
+  }
+  /* A name free in the saved list. Only the share importer needs this — every
+     other way of creating a template asks the teacher for the name — and it
+     is what lets an arrival land beside a template of the same name rather
+     than on top of it. */
+  function uniqueName(base) {
+    var names = listTemplates();
+    if (names.indexOf(base) === -1) return base;
+    var i = 2;
+    while (names.indexOf(base + ' (' + i + ')') !== -1) i++;
+    return base + ' (' + i + ')';
   }
 
   // One-time migration: if a teacher already has the old single-template
@@ -627,16 +659,110 @@
     window.print();
   });
 
-  /* ---------- boot ---------- */
+  /* ---------- share a template: _shared/share.js (Path 6 P3) ----------
+     This tool keeps a NAMED LIBRARY (a list of names plus a blob per name),
+     not one document, so an arrival is saved BESIDE what is already here
+     under a free name and none of #237's confirm-before-replacing machinery
+     applies — the same shape 054 and 003 already use. A departmental lab
+     template is the thing science teachers actually pass around, and until
+     now the only way to move one was to retype it.
+
+     Item ids are handed out fresh on import: they address a row of the
+     template being edited (data-id) and nothing refers to one across
+     records, so the receiving device owning its own is right here. */
+  var SHARE_PARAM = 'template';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { save(); return state; },
+    param: SHARE_PARAM,
+    tool: 'lab-report-template-builder',
+    title: 'Share this template',
+    noun: 'this template',
+    filename: function () { return (state && state.name) || 'lab report template'; },
+    note: 'The objective, hypothesis and observation prompts, every material and procedure step, the data table’s columns and the conclusion questions all travel. Opening the link saves this template on the receiving device as a new saved template; nothing already saved there is changed.',
+    successMessage: 'Link copied. Opening it anywhere saves this template there alongside whatever is already saved.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  /* The same test loadTemplateByName() uses to decide a stored blob is a
+     template, so a link and a saved template are judged by one rule. */
+  function isPlausibleTemplate(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.materials);
+  }
+
+  function textList(list) {
+    return (Array.isArray(list) ? list : []).map(function (item) {
+      return { id: uid(), text: String(item && item.text || '') };
+    });
+  }
+
+  /** An arrival as this device would have written it: known fields only,
+      local ids, and columns defaulted the way loadTemplateByName() defaults
+      a template saved before columns carried a kind and units. */
+  function normalizeTemplate(obj, name) {
+    var rows = parseInt(obj.dataRows, 10);
+    return {
+      name: name,
+      title: String(obj.title || ''),
+      objective: String(obj.objective || ''),
+      hypothesisPrompt: String(obj.hypothesisPrompt || ''),
+      materials: textList(obj.materials),
+      procedure: textList(obj.procedure),
+      columns: (Array.isArray(obj.columns) ? obj.columns : []).map(function (c) {
+        return {
+          id: uid(),
+          text: String(c && c.text || ''),
+          type: (c && c.type === 'number') ? 'number' : 'text',
+          units: String(c && c.units || '')
+        };
+      }),
+      dataRows: (rows >= 1 && rows <= 20) ? rows : 5,
+      observationsPrompt: String(obj.observationsPrompt || ''),
+      conclusion: textList(obj.conclusion)
+    };
+  }
+
+  /** Consumes a ?template= link on load, saving the arrival as a NEW named
+      template. Returns true when a link was found and opened. */
+  function importSharedTemplate() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleTemplate,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var wanted = String(decoded.name || decoded.title || '').trim() || 'Shared Template';
+        var name = uniqueName(wanted);
+        state = normalizeTemplate(decoded, name);
+        saveTemplateAs(name, state);
+        renderAll();
+        setShareNote('Loaded a shared template as “' + name + '”. Nothing already saved here was changed.');
+        return true;
+      }
+    });
+  }
+
+  /* ---------- boot ----------
+     The legacy migration runs BEFORE the import: an arrival saved first would
+     make listTemplates() non-empty, and migrateOldTemplateIfNeeded() bails on
+     that — which would quietly drop the template a teacher saved before this
+     tool had named templates at all. */
   migrateOldTemplateIfNeeded();
-  var bootName = getCurrentTemplateName();
-  if (!bootName || !loadTemplateByName(bootName)) {
-    var savedNames = listTemplates();
-    var loadedExisting = false;
-    for (var bi = 0; bi < savedNames.length && !loadedExisting; bi++) {
-      loadedExisting = loadTemplateByName(savedNames[bi]);
+  if (!importSharedTemplate()) {
+    var bootName = getCurrentTemplateName();
+    if (!bootName || !loadTemplateByName(bootName)) {
+      var savedNames = listTemplates();
+      var loadedExisting = false;
+      for (var bi = 0; bi < savedNames.length && !loadedExisting; bi++) {
+        loadedExisting = loadTemplateByName(savedNames[bi]);
+      }
+      if (!loadedExisting) newTemplate('My Template');
     }
-    if (!loadedExisting) newTemplate('My Template');
   }
 })();
 </script>
