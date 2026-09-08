@@ -14,6 +14,11 @@
 // reaches a link. Four tools each hand-strip images before building theirs;
 // the day one forgets, a teacher gets a 200 KB URL that nothing accepts.
 //
+// Sections 6-8 are Path 6 P2's receiving half — unwrap/parseFile/receive/
+// receiveFile — including the loop P1 left open: a .json the sheet's own
+// Download row writes is wrapped in { aplp, state } and did not open in any
+// adopter's file importer until unwrap() existed.
+//
 // Exits 1 on any failure.
 
 import fs from 'node:fs';
@@ -36,10 +41,19 @@ const STATE_LINK = read('_shared/state-link.js');
 const QRDRAW = read('_shared/qr-draw.js');
 const SHARE = read('_shared/share.js');
 
-function make({ noStateLink = false } = {}) {
+function make({ noStateLink = false, search = '' } = {}) {
   const els = [];
+  const replaced = [];
+  const base = 'https://aspermylessonplan.com/Tools/064-historical-trading-card-maker.html';
   const win = {
-    location: { href: 'https://aspermylessonplan.com/Tools/064-historical-trading-card-maker.html#x', search: '' },
+    location: { href: base + search + '#x', search },
+    // replaceState is what clearParam() calls; recording it is how the
+    // "consumed up front" assertion below is checked.
+    history: { replaceState(_s, _t, url) { replaced.push(url); win.location.href = url; win.location.search = new URL(url).search; } },
+    __replaced: replaced,
+    // A stand-in FileReader: readAsText resolves on the next tick, the way
+    // the real one does, so receiveFile()'s callbacks are genuinely async.
+    FileReader: class { readAsText(file) { setTimeout(() => { if (file.__bad) { this.onerror(); } else { this.result = file.__text; this.onload(); } }, 0); } },
     navigator: {},
     devicePixelRatio: 1,
     innerWidth: 1280, innerHeight: 900,
@@ -63,6 +77,9 @@ function make({ noStateLink = false } = {}) {
   vm.runInContext(SHARE, ctx, { filename: '_shared/share.js' });
   return { Share: win.Share, StateLink: win.StateLink, win, els };
 }
+
+/** The same encoding state-link.js uses, so a fixture link is a real link. */
+const btoaish = value => Buffer.from(unescape(encodeURIComponent(JSON.stringify(value))), 'latin1').toString('base64');
 
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
@@ -162,6 +179,119 @@ console.log('share.js — images never ride in a link, and the file carries ever
   const h2 = Share.open({ getState: () => null, emptyMessage: 'Add a card first.', onMessage: m => messages.push(m) });
   eq(h2.root, null, '5: emptyMessage overrides the wording');
   eq(messages[1], 'Add a card first.', '5: verbatim');
+}
+
+/* ── 6. unwrap: one payload out of a link or the sheet's own file ─────── */
+{
+  const { Share } = make();
+  const state = { v: 1, name: 'Deck', cards: [] };
+  const file = JSON.parse(Share.fileContents({ tool: 't', param: 'deck' }, state));
+  eq(Share.unwrap(file), state, '6: the { aplp, state } envelope the Download row writes unwraps to the payload');
+  eq(Share.unwrap(state), state, '6: a bare payload — every link, and every export from before P1 — passes through');
+  eq(Share.unwrap(null), null, '6: null stays null');
+  eq(Share.unwrap([1, 2]), [1, 2], '6: an array is not an envelope');
+  // The discriminator is BOTH keys, so a tool whose own state happens to have
+  // an `aplp` field, or a `state` field, is not mistaken for an envelope.
+  eq(Share.unwrap({ state: { a: 1 } }), { state: { a: 1 } }, '6: `state` alone is not an envelope');
+  eq(Share.unwrap({ aplp: { v: 1 } }), { aplp: { v: 1 } }, '6: nor is `aplp` alone');
+
+  eq(Share.parseFile(JSON.stringify(file)), state, '6: parseFile does both steps');
+  eq(Share.parseFile('{not json'), null, '6: and never throws on rubbish');
+  eq(Share.parseFile(''), null, '6: or on nothing');
+}
+
+/* ── 7. receive: the link half, identical in every adopter ────────────── */
+{
+  const { Share, win } = make({ search: '?deck=' + encodeURIComponent(btoaish({ v: 1, cards: [{ name: 'A' }] })) });
+  const seen = [], errs = [];
+  const out = Share.receive({
+    param: 'deck',
+    validate: st => Array.isArray(st.cards),
+    onState: st => { seen.push(st); return 'My Deck'; },
+    onError: m => errs.push(m),
+  });
+  eq(seen.length, 1, '7: the payload is handed over once');
+  eq(seen[0], { v: 1, cards: [{ name: 'A' }] }, '7: decoded');
+  eq(errs, [], '7: with nothing reported');
+  eq(out, 'My Deck', '7: receive returns whatever onState returned, so a boot path can branch on it');
+  eq(win.__replaced.length, 1, '7: and the param was cleared');
+  ok(!String(win.__replaced[0]).includes('deck='), '7: out of the URL: ' + win.__replaced[0]);
+}
+{
+  // No param at all is the ordinary case and is NOT an error.
+  const { Share, win } = make();
+  const errs = [];
+  eq(Share.receive({ param: 'deck', onState: () => true, onError: m => errs.push(m) }), false,
+     '7: no parameter returns false');
+  eq(errs, [], '7: and reports nothing — an ordinary page load is not a failure');
+  eq(win.__replaced.length, 0, '7: nothing was cleared');
+}
+{
+  // Unreadable: cleared FIRST, so a refresh does not show the same failure again.
+  const { Share, win } = make({ search: '?deck=not-base64-at-all%%%' });
+  const errs = [];
+  eq(Share.receive({ param: 'deck', onState: () => true, onError: m => errs.push(m) }), false, '7: an unreadable link returns false');
+  ok(/cut short/.test(errs[0]), '7: with the one standard sentence: ' + JSON.stringify(errs[0]));
+  eq(win.__replaced.length, 1, '7: and it is cleared anyway, so a refresh does not repeat the failure');
+}
+{
+  // A payload that decodes but is not this tool's.
+  const { Share } = make({ search: '?deck=' + encodeURIComponent(btoaish({ notADeck: true })) });
+  const errs = [];
+  eq(Share.receive({ param: 'deck', validate: st => Array.isArray(st.cards), onError: m => errs.push(m),
+                     errorMessage: 'Ask for it as a file instead.' }), false, '7: validate rejects a foreign payload');
+  eq(errs, ['Ask for it as a file instead.'], '7: errorMessage replaces the standard sentence verbatim');
+}
+
+/* ── 8. receiveFile: the sheet's own download opens again ─────────────── */
+{
+  const { Share } = make();
+  const state = { v: 1, cards: [{ name: 'A' }] };
+  const envelope = Share.fileContents({ tool: 'historical-trading-card-maker', param: 'deck' }, state);
+  const seen = [], errs = [];
+  await new Promise(resolve => {
+    Share.receiveFile({ __text: envelope }, {
+      validate: st => Array.isArray(st.cards),
+      onState: st => { seen.push(st); resolve(); },
+      onError: m => { errs.push(m); resolve(); },
+    });
+  });
+  eq(seen[0], state, '8: a file the sheet wrote opens as the payload — the loop P1 left open');
+  eq(errs, [], '8: with no error');
+}
+{
+  const { Share } = make();
+  const errs = [];
+  await new Promise(resolve => {
+    Share.receiveFile({ __text: '{"words":"a"}' }, {
+      validate: st => Array.isArray(st.cards),
+      onState: () => resolve(),
+      onError: m => { errs.push(m); resolve(); },
+    });
+  });
+  ok(/not one this tool can open/.test(errs[0]), '8: another tool\'s export is refused: ' + JSON.stringify(errs[0]));
+}
+{
+  const { Share } = make();
+  const errs = [];
+  await new Promise(resolve => {
+    Share.receiveFile({ __bad: true }, { onState: () => resolve(), onError: m => { errs.push(m); resolve(); } });
+  });
+  ok(/could not be read/.test(errs[0]), '8: a disk-level failure is a different sentence: ' + JSON.stringify(errs[0]));
+}
+
+/* ── 9. note may be a function, read when the sheet opens ─────────────── */
+{
+  const { Share } = make();
+  let sawStripped = null;
+  const h = Share.open({
+    getState: () => ({ cards: [{ image: PNG }] }),
+    param: 'deck',
+    note: link => { sawStripped = link.stripped; return 'Source D keeps its picture here.'; },
+  });
+  eq(sawStripped, 1, '9: the note callback is given the link it is about');
+  ok(h.root, '9: and the sheet opened');
+  h.close();
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

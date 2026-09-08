@@ -26,6 +26,8 @@
 <link rel="stylesheet" href="../_shared/print-area.css">
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -139,13 +141,6 @@
   .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .55rem .7rem; border-radius: 6px;
     background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
   .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
-  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
-    justify-content: center; padding: 20px; z-index: 80; }
-  .share-overlay[hidden] { display: none; }
-  .share-modal { background: var(--card); color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
-    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
-  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
-  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
 
 </style>
 </head>
@@ -177,24 +172,12 @@
     </div>
     <p class="hint" style="margin:.5rem 0 0;">Each packet saves separately, so a unit with several DBQ activities stays ready without one overwriting another.</p>
     <div class="btnrow" style="margin-top:.7rem;">
-      <button type="button" class="secondary small" id="shareLinkBtn">&#128279; Copy link</button>
-      <button type="button" class="secondary small" id="shareQrBtn">&#9638; QR code</button>
+      <button type="button" class="secondary small" id="shareBtn">&#128279; Share packet&hellip;</button>
       <button type="button" class="secondary small" id="exportJsonBtn">Export JSON</button>
       <button type="button" class="secondary small" id="importJsonBtn">Import JSON</button>
       <input type="file" id="importJsonFile" accept="application/json,.json" style="display:none;">
     </div>
     <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
-  </div>
-
-  <div class="share-overlay" id="shareOverlay" hidden>
-    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Packet QR code">
-      <div class="share-head">
-        <span>Scan to open this packet</span>
-        <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
-      </div>
-      <canvas id="shareCanvas"></canvas>
-      <p class="hint" style="margin:.6rem 0 0;">Opens the same packet on that device and saves it there as a new packet. Editing it on either side does not change the other.</p>
-    </div>
   </div>
 
   <div class="card">
@@ -298,7 +281,7 @@
    'toggleBankBtn', 'bankPanel', 'bankWrap', 'bankFilter', 'bankNote',
    'packetSwitch', 'packetName', 'newPacketBtn', 'duplicatePacketBtn', 'deletePacketBtn', 'loadExampleBtn',
    'levelSelect', 'organizerToggle', 'rubricToggle', 'rubricStyle', 'rubricGrid', 'addCriterionBtn', 'resetRubricBtn',
-   'shareLinkBtn', 'shareQrBtn', 'exportJsonBtn', 'importJsonBtn', 'importJsonFile', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn'
+   'shareBtn', 'exportJsonBtn', 'importJsonBtn', 'importJsonFile', 'shareNote'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { name: 'New Packet', title: '', context: '', essayPrompt: '', sharedQuestions: [], sources: [] };
@@ -1083,7 +1066,20 @@
     save(); renderAll();
   });
 
-  /* ---------- share by link / QR (state-link.js, same pattern as 028) ---------- */
+  /* ---------- share a packet: _shared/share.js (Path 6 P2) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the code would be too dense to scan), download .json,
+     and the system share where the browser has one. Until this the tool
+     hand-drew its own QR at 6 px per module up to the encoder's own limit,
+     and only said "too long" when the encoder threw.
+
+     The state handed over is the WHOLE packet, uploaded images included.
+     An image is base64 in src.image and can run to a megabyte, far past what
+     a URL (let alone a QR code) can carry — share.js strips every data:
+     image out of the link and QR payload by policy and says so, and the
+     DOWNLOADED file keeps them. That is the change here: the tool used to
+     build a stripped payload by hand and had no route at all that carried
+     the images except the separate Export JSON button. */
   var SHARE_PARAM = 'packet';
 
   function setShareNote(text, isError) {
@@ -1094,7 +1090,8 @@
   }
 
   /* Which of the CURRENT sources have image data that will NOT ride the
-     link/QR — shown by name so the "identical packet" promise stays honest. */
+     link/QR — shown by name so the "identical packet" promise stays honest.
+     share.js's own note already says how many; this says which. */
   function imagesKeptOnDevice() {
     var labels = [];
     state.sources.forEach(function (s, i) {
@@ -1103,91 +1100,33 @@
     return labels;
   }
 
-  /* An uploaded image is base64'd into src.image and can run to a megabyte
-     or more, far past what a URL (let alone a QR code) can carry. The
-     payload deliberately travels without image pixel data; crop and
-     width-percent metadata still ride along for when the image is
-     re-uploaded on the other end. */
-  function buildSharePayload() {
-    save();
-    return {
-      v: 1,
-      name: state.name,
-      title: state.title,
-      context: state.context,
-      essayPrompt: state.essayPrompt,
-      level: state.level,
-      organizerEnabled: state.organizerEnabled,
-      rubricEnabled: state.rubricEnabled,
-      rubric: state.rubric,
-      sharedQuestions: state.sharedQuestions,
-      sources: state.sources.map(function (s) {
-        var copy = {};
-        Object.keys(s).forEach(function (k) { if (k !== 'image') copy[k] = s[k]; });
-        return copy;
-      })
-    };
-  }
-
-  function shareUrl() {
-    return StateLink.buildShareUrl(SHARE_PARAM, buildSharePayload());
-  }
-
-  function shareSuccessMessage() {
-    var msg = 'Link copied. Opening it anywhere loads this packet: title, context, sources, citations, and questions, and saves it there as a new packet.';
-    var imgs = imagesKeptOnDevice();
-    if (imgs.length) {
-      msg += ' These sources keep their images on this device only: ' + imgs.join(', ') + '. Whoever opens the link will need to re-upload them there (crop and width settings are still there once they do).';
-    }
-    return msg;
-  }
-
-  els.shareLinkBtn.addEventListener('click', function () {
-    var url = shareUrl();
-    var copy = (navigator.clipboard && navigator.clipboard.writeText) ? navigator.clipboard.writeText(url) : Promise.reject();
-    copy.then(
-      function () { setShareNote(shareSuccessMessage()); },
-      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here. The link is in the box above.'); }
-    );
-  });
-
-  function drawShareQr(canvas, text) {
-    var qr = window.qrcode(0, 'L');
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount(), quiet = 4, px = 6;
-    var size = (count + quiet * 2) * px;
-    canvas.width = size; canvas.height = size;
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#16181d';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      save();
+      // v rides along as it always has: nothing reads it today, but a link
+      // already in a teacher's email carries it and dropping it silently
+      // would make the two generations of payload indistinguishable.
+      var payload = { v: 1 };
+      Object.keys(state).forEach(function (k) { payload[k] = state[k]; });
+      return payload;
+    },
+    param: SHARE_PARAM,
+    tool: 'dbq-source-packet-builder',
+    title: 'Share this packet',
+    noun: 'this packet',
+    filename: function () { return state.name || 'dbq-packet'; },
+    note: function () {
+      var imgs = imagesKeptOnDevice();
+      var text = 'Opening the link or code anywhere saves this packet there as a new packet; it never overwrites one already on that device.';
+      if (imgs.length) {
+        text += ' The sources whose images stay behind are: ' + imgs.join(', ') +
+          ' — crop and width settings still travel, so re-uploading the picture on the other end is all it takes.';
       }
-    }
-  }
-
-  els.shareQrBtn.addEventListener('click', function () {
-    var url = shareUrl();
-    try {
-      drawShareQr(els.shareCanvas, url);
-    } catch (e) {
-      // A QR code holds far less than a URL bar does. A long, text-heavy
-      // packet can run past it — say so rather than drawing a square
-      // nobody's phone can read.
-      setShareNote('This packet is too long to fit in a QR code (' + Math.round(url.length / 1024) +
-        ' KB of link). Use “Copy link” instead. A pasted link has no such limit.', true);
-      return;
-    }
-    els.shareOverlay.hidden = false;
-    var imgs = imagesKeptOnDevice();
-    setShareNote(imgs.length ? 'These sources keep their images on this device only: ' + imgs.join(', ') + '.' : '');
+      return text;
+    },
+    successMessage: 'Link copied. Opening it anywhere loads this packet: title, context, sources, citations, and questions, and saves it there as a new packet.',
+    onMessage: function (text) { setShareNote(text); }
   });
-
-  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
-  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
 
   /* Round 2 added level / organizer / rubric fields to the payload. They are
      validated as OPTIONAL-but-shaped, exactly the way 028's worksheet
@@ -1205,23 +1144,30 @@
 
   /** Consume a ?packet= link on load. Saves the arrival as a new packet
       under a uniqued name — never over an existing one. Returns true if imported. */
-  function importSharedPacket() {
-    var raw = StateLink.getParam(SHARE_PARAM);
-    if (!raw) return false;
-    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't import it twice
-    var decoded = StateLink.decodeState(raw);
-    if (!isPlausiblePacket(decoded)) {
-      setShareNote('That shared link could not be read. It may have been cut short when it was pasted or emailed.', true);
-      return false;
-    }
-    var name = uniqueName((decoded.name && String(decoded.name).trim()) || 'Shared packet');
+  /** Files and links both land here: unique the name so nothing already
+      saved is touched, repair, save, open. Returns the name. */
+  function adoptPacket(decoded, fallbackName) {
+    var name = uniqueName((decoded.name && String(decoded.name).trim()) || fallbackName);
     var packet = repairPacket(decoded, name);
     packet.name = name;
     saveNamed(name, packet);
     state = packet;
     renderAll();
-    setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your own copy now. Editing it does not change the sender’s.');
-    return true;
+    return name;
+  }
+
+  function importSharedPacket() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausiblePacket,
+      errorMessage: 'That shared link could not be read. It may have been cut short when it was pasted or emailed.',
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var name = adoptPacket(decoded, 'Shared packet');
+        setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your own copy now. Editing it does not change the sender’s.');
+        return true;
+      }
+    });
   }
 
   /* ---------- JSON export / import (carries images; the honest "send everything" path) ---------- */
@@ -1238,34 +1184,29 @@
     URL.revokeObjectURL(url);
   }
 
+  /* Through _shared/share.js's receiver (Path 6 P2), which unwraps the
+     { aplp, state } envelope the share sheet's Download row writes as
+     readily as the bare packet Export JSON writes — so the file the sheet
+     hands over opens here, which it did not before. */
   function importPacketFromFile(file) {
-    var reader = new FileReader();
-    reader.onload = function () {
-      var parsed = null;
-      try { parsed = JSON.parse(reader.result); } catch (e) { parsed = null; }
-      if (!isPlausiblePacket(parsed)) {
-        alert('That file doesn’t look like a packet exported from this tool.');
-      } else {
-        var name = uniqueName((parsed.name && String(parsed.name).trim()) || 'Imported packet');
-        var packet = repairPacket(parsed, name);
-        packet.name = name;
-        saveNamed(name, packet);
-        state = packet;
-        renderAll();
+    Share.receiveFile(file, {
+      validate: isPlausiblePacket,
+      fileErrorMessage: 'That file is not a packet this tool can open. It should be a .json saved by “Export JSON”, or downloaded from the share sheet.',
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (parsed) {
+        var name = adoptPacket(parsed, 'Imported packet');
+        setShareNote('Opened that file and saved it here as “' + name + '”. Nothing you already had was replaced.');
       }
-      els.importJsonFile.value = '';
-    };
-    reader.onerror = function () {
-      alert('Could not read that file.');
-      els.importJsonFile.value = '';
-    };
-    reader.readAsText(file);
+    });
   }
 
   els.exportJsonBtn.addEventListener('click', exportPacket);
   els.importJsonBtn.addEventListener('click', function () { els.importJsonFile.click(); });
   els.importJsonFile.addEventListener('change', function () {
     var file = els.importJsonFile.files && els.importJsonFile.files[0];
+    // Cleared straight away so choosing the same file twice in a row still
+    // fires a change event the second time.
+    els.importJsonFile.value = '';
     if (file) importPacketFromFile(file);
   });
 

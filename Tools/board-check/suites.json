@@ -48,6 +48,7 @@
     "Tools/group-team-generator/test/smoke-share.mjs",
     "Tools/group-team-generator/test/smoke-pairing-history.mjs",
     "Tools/vocab-flashcard-generator/test/smoke-share.mjs",
+    "Tools/vocab-conjugation-drill/test/smoke-share.mjs",
     "Tools/schedule-browser/test/smoke-personal-notes.mjs",
     "Tools/schedule-browser/test/smoke-substitute-view.mjs",
     "Tools/schedule-browser/test/smoke-mode-tabs.mjs",

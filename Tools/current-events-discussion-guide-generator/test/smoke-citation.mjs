@@ -134,7 +134,11 @@ eq(await page.inputValue('#articleUrl'), 'https://example.com/news/bike-lanes', 
 const shareUrl = await page.evaluate(async () => {
   let captured = null;
   navigator.clipboard.writeText = (t) => { captured = t; return Promise.resolve(); };
-  document.getElementById('shareLinkBtn').click();
+  document.getElementById('shareBtn').click();
+  document.querySelector('.share-sheet button[data-share="copy"]').click();
+  // The sheet is modal — its backdrop swallows every later click on this
+  // page — so close it before handing the link back.
+  document.querySelector('.share-sheet-close').click();
   await new Promise(r => setTimeout(r, 80));
   return captured;
 });

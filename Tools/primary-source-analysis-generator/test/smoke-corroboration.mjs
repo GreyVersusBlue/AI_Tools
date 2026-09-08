@@ -183,7 +183,11 @@ const shareLink = () => page.evaluate(() => {
     configurable: true,
     value: { writeText: (t) => { captured = t; return Promise.resolve(); } },
   });
-  document.getElementById('shareLinkBtn').click();
+  document.getElementById('shareBtn').click();
+  document.querySelector('.share-sheet button[data-share="copy"]').click();
+  // The sheet is modal — its backdrop swallows every later click on this
+  // page — so close it before handing the link back.
+  document.querySelector('.share-sheet-close').click();
   return new Promise(r => setTimeout(() => r(captured), 60));
 });
 const link = await shareLink();

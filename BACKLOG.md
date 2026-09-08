@@ -1261,7 +1261,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 6 P2 — adopt the share sheet in the 17 existing `state-link` tools | site | 2+ | | [Path 6](#path-6--share-everywhere) |
+| 1 | Path 6 P2 — adopt the share sheet in the 17 existing `state-link` tools | site | 2+ | `tjrh2a` 2026-09-07 22:23 UTC | [Path 6](#path-6--share-everywhere) |
 | 2 | Path 6 P3 — extend sharing to the ~11 builders that do not share yet | site | 2+ | | [Path 6](#path-6--share-everywhere) |
 | 3 | Path 6 P4 — cross-tool "Send to…" driven by the tool registry | site | 1 | | [Path 6](#path-6--share-everywhere) |
 | 4 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js` (005 photos first) | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |

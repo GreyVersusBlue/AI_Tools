@@ -23,6 +23,8 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <script src="current-events-discussion-guide-generator/cedg-readability.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -97,17 +99,11 @@
   .both-badge { display: inline-block; background: var(--warn-bg); color: var(--warn-ink); border-radius: 999px; padding: .1rem .5rem; font-size: .72rem; font-weight: 700; white-space: nowrap; }
   .vocab-row.both input.term { color: var(--warn-ink); }
 
-  /* Share a guide by link / QR (same pattern as 028-primary-source-analysis-generator) */
+  /* Share a guide: the sheet is _shared/share.js (Path 6 P2); this is the
+     note under the button that records what the sheet last did. */
   .share-note { font-size: .8rem; line-height: 1.5; margin: .5rem 0 0; padding: .55rem .7rem; border-radius: 6px;
     background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
   .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
-  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
-    justify-content: center; padding: 20px; z-index: 80; }
-  .share-overlay[hidden] { display: none; }
-  .share-modal { background: var(--card); color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
-    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
-  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
-  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
 
   /* Comparison-guide print layout */
   .compare-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 1rem; }
@@ -208,8 +204,7 @@
         </div>
         <p class="hint" style="margin-top:.5rem;">Each guide saves separately, so a semester of article guides stays retrievable instead of each new article overwriting the last.</p>
         <div class="btnrow" style="margin-top:.5rem;">
-          <button type="button" class="secondary small" id="shareLinkBtn">&#128279; Copy link</button>
-          <button type="button" class="secondary small" id="shareQrBtn">&#9638; QR code</button>
+          <button type="button" class="secondary small" id="shareBtn">&#128279; Share guide&hellip;</button>
         </div>
         <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
       </div>
@@ -315,17 +310,6 @@
         </div>
       </div>
     </div>
-  </div>
-</div>
-
-<div class="share-overlay" id="shareOverlay" hidden>
-  <div class="share-modal" role="dialog" aria-modal="true" aria-label="Discussion guide QR code">
-    <div class="share-head">
-      <span>Scan to open this guide</span>
-      <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
-    </div>
-    <canvas id="shareCanvas"></canvas>
-    <p class="hint" style="margin:.6rem 0 0;">Opens the same guide on that device and saves it there as a new guide &mdash; edits on either side stay put.</p>
   </div>
 </div>
 
@@ -455,7 +439,7 @@
    'guideSwitch', 'guideName', 'newGuideBtn', 'duplicateGuideBtn', 'deleteGuideBtn',
    'articleBCard', 'articleTitleB', 'articleSourceB', 'articleUrlB', 'articleUrlHintB', 'articleTextB', 'wordCountHintB', 'addArticleBBtn', 'removeArticleBBtn',
    'summaryBWrap', 'summaryTextB', 'comparisonQuestionsWrap', 'comparisonQuestions', 'loadExampleBtn',
-   'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn',
+   'shareBtn', 'shareNote',
    'levelSelect', 'printAllLevelsBtn', 'kitSift', 'kitHeadline', 'kitClaims', 'claimEditor', 'claimRows', 'addClaimRowBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -1402,7 +1386,14 @@
     analyzeArticle();
   });
 
-  /* ---------- share by link / QR (state-link.js, same pattern as 028) ---------- */
+  /* ---------- share a guide: _shared/share.js (Path 6 P2) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the code would be too dense to scan), download .json,
+     and the system share where the browser has one. Until this the tool
+     hand-drew its own QR at 6 px per module up to the encoder's own limit,
+     and only said "too long" when the encoder threw. (The article-source QR
+     printed on the handout is a different thing and still has its own
+     renderer — sourceQrDataUrl(); it is not share code.) */
   var SHARE_PARAM = 'guide';
 
   function setShareNote(text, isError) {
@@ -1411,55 +1402,17 @@
     els.shareNote.classList.toggle('error', !!isError);
   }
 
-  function shareUrl() {
-    save();
-    return StateLink.buildShareUrl(SHARE_PARAM, state);
-  }
-
-  els.shareLinkBtn.addEventListener('click', function () {
-    var url = shareUrl();
-    var copy = (navigator.clipboard && navigator.clipboard.writeText)
-      ? navigator.clipboard.writeText(url) : Promise.reject();
-    copy.then(
-      function () { setShareNote('Link copied. Opening it anywhere loads this guide — both articles, vocabulary, and your questions — and saves it there as a new guide.'); },
-      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
-    );
+  Share.mount(els.shareBtn, {
+    getState: function () { save(); return state; },
+    param: SHARE_PARAM,
+    tool: 'current-events-discussion-guide-generator',
+    title: 'Share this guide',
+    noun: 'this guide',
+    filename: function () { return (state && state.name) || 'discussion guide'; },
+    note: 'Opening the link or code anywhere saves this guide there as a new guide; it never overwrites a guide already on that device.',
+    successMessage: 'Link copied. Opening it anywhere loads this guide — both articles, vocabulary, and your questions — and saves it there as a new guide.',
+    onMessage: function (text) { setShareNote(text); }
   });
-
-  function drawShareQr(canvas, text) {
-    var qr = window.qrcode(0, 'L');
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount(), quiet = 4, px = 6;
-    var size = (count + quiet * 2) * px;
-    canvas.width = size; canvas.height = size;
-    var ctx = canvas.getContext('2d');
-    // Same as the source QR above: dark-on-white in both themes, for scanners.
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#16181d';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
-      }
-    }
-  }
-
-  els.shareQrBtn.addEventListener('click', function () {
-    var url = shareUrl();
-    try {
-      drawShareQr(els.shareCanvas, url);
-    } catch (e) {
-      setShareNote('This guide is too long to fit in a QR code (' + Math.round(url.length / 1024) +
-        ' KB of link). Use “Copy link” instead — a pasted link has no such limit.', true);
-      return;
-    }
-    els.shareOverlay.hidden = false;
-    setShareNote('');
-  });
-
-  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
-  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
 
   function isPlausibleGuide(obj) {
     return !!obj && typeof obj === 'object' &&
@@ -1469,21 +1422,20 @@
   /** Consumes a ?guide= link on load. Saves the arrival as a NEW named guide
       (never over an existing one). Returns true if a link was found. */
   function importSharedGuide() {
-    var raw = StateLink.getParam(SHARE_PARAM);
-    if (!raw) return false;
-    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't re-import it
-    var decoded = StateLink.decodeState(raw);
-    if (!isPlausibleGuide(decoded)) {
-      setShareNote('That shared link could not be read — it may have been cut short when it was pasted or emailed.', true);
-      return false;
-    }
-    var name = uniqueName((decoded.name && String(decoded.name).trim()) || (decoded.title && String(decoded.title).trim()) || 'Shared Guide');
-    var guide = normalizeGuide(decoded, name);
-    guide.name = name;
-    saveNamed(name, guide);
-    state = guide;
-    setShareNote('Loaded a shared guide as “' + name + '”.');
-    return true;
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleGuide,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var name = uniqueName((decoded.name && String(decoded.name).trim()) || (decoded.title && String(decoded.title).trim()) || 'Shared Guide');
+        var guide = normalizeGuide(decoded, name);
+        guide.name = name;
+        saveNamed(name, guide);
+        state = guide;
+        setShareNote('Loaded a shared guide as “' + name + '”.');
+        return true;
+      }
+    });
   }
 
   /* ---------- boot ---------- */

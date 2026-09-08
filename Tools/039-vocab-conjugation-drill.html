@@ -26,6 +26,8 @@
 <link rel="stylesheet" href="../_shared/base.css">
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <style>
   /* Path 5 P3. --good and --warn-ink are 001's values (the reference adopter);
      --desk is the table the printable sheet lies on, named the same way 015 and
@@ -49,13 +51,6 @@
   .share-note { font-size: .8rem; line-height: 1.5; margin: 0 0 .9rem; padding: .55rem .7rem; border-radius: 6px;
     background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
   .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
-  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
-    justify-content: center; padding: 20px; z-index: 80; }
-  .share-overlay[hidden] { display: none; }
-  .share-modal { background: var(--card); color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
-    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
-  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
-  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
 
   .mode-tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
   .mode-tab { flex: 1; text-align: center; padding: .55rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); cursor: pointer; font-weight: 700; font-size: .88rem; color: var(--muted); }
@@ -233,26 +228,13 @@
     <button class="secondary" id="exportSetBtn">Export set</button>
     <button class="secondary" id="importSetBtn">Import set</button>
     <input type="file" id="importSetFile" accept="application/json,.json" style="display:none;">
-    <button class="secondary" id="shareLinkBtn">🔗 Copy link</button>
-    <button class="secondary" id="shareQrBtn">▦ QR code</button>
+    <button type="button" class="secondary" id="shareBtn">🔗 Share set…</button>
     <span class="tts-lang-row">
       <label for="ttsLangSelect">Pronunciation:</label>
       <select id="ttsLangSelect"></select>
     </span>
   </div>
   <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
-
-  <div class="share-overlay" id="shareOverlay" hidden>
-    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Drill set QR code">
-      <div class="share-head">
-        <span>Scan to open this drill set</span>
-        <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
-      </div>
-      <canvas id="shareCanvas"></canvas>
-      <p class="hint" style="margin:.6rem 0 0;">Opens the same set on that device and saves it there as a copy &mdash;
-        edits on either side stay put.</p>
-    </div>
-  </div>
 
   <div class="card">
     <label for="setName">Set name</label>
@@ -442,7 +424,7 @@
    'vocabEditor','conjugationEditor','vocabInput','vocabDirection','vocabLimit',
    'personsList','personPresets','addPersonBtn','conjList','emptyConjHint','addConjBtn','vocabShuffle','conjShuffle',
    'printBtn','printCombined','printVersions','previewArea','previewNote','sheetNav','ttsLangSelect',
-   'shareLinkBtn','shareQrBtn','shareNote','shareOverlay','shareCanvas','shareCloseBtn'
+   'shareBtn','shareNote'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var DEFAULT_PERSONS = ['yo', 'tú', 'él / ella / usted', 'nosotros', 'vosotros', 'ellos / ellas / ustedes'];
@@ -1257,38 +1239,38 @@
     URL.revokeObjectURL(url);
   }
 
+  /* Both ways in go through _shared/share.js's receiver (Path 6 P2), which
+     unwraps the { aplp, state } envelope the share sheet's Download row
+     writes as readily as the bare set "Export set" writes — so a file
+     downloaded from the sheet opens here, which it did not before. */
   function importSetFromFile(file) {
-    var reader = new FileReader();
-    reader.onload = function () {
-      var parsed = null;
-      try { parsed = JSON.parse(reader.result); } catch (e) { parsed = null; }
-      if (!isPlausibleDrillSet(parsed)) {
-        alert('That file doesn\'t look like a drill set exported from this tool.');
-      } else {
-        var name = parsed.name;
-        var existing = Store.list();
-        while (existing.indexOf(name) !== -1) name = name + ' (imported)';
-        parsed.name = name;
-        Store.save(name, parsed);
-        loadSetByName(name);
+    Share.receiveFile(file, {
+      validate: isPlausibleDrillSet,
+      fileErrorMessage: 'That file is not a drill set this tool can open. It should be a .json saved by “Export set”, or downloaded from the share sheet.',
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (parsed) {
+        var name = adoptSet(parsed);
+        setShareNote('Opened that file and saved it here as “' + name + '”. Nothing you already had was replaced.');
       }
-      els.importSetFile.value = '';
-    };
-    reader.onerror = function () {
-      alert('Could not read that file.');
-      els.importSetFile.value = '';
-    };
-    reader.readAsText(file);
+    });
   }
 
   els.exportSetBtn.addEventListener('click', exportSet);
   els.importSetBtn.addEventListener('click', function () { els.importSetFile.click(); });
   els.importSetFile.addEventListener('change', function () {
     var file = els.importSetFile.files && els.importSetFile.files[0];
+    // Cleared straight away so choosing the same file twice in a row still
+    // fires a change event the second time.
+    els.importSetFile.value = '';
     if (file) importSetFromFile(file);
   });
 
-  /* ---------- share by link / QR (state-link.js, same pattern as 040) ---------- */
+  /* ---------- share a set: _shared/share.js (Path 6 P2) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the code would be too dense to scan), download .json,
+     and the system share where the browser has one. Until this the tool
+     hand-drew its own QR at 6 px per module up to the encoder's own limit,
+     and only said "too long" when the encoder threw. */
   var SHARE_PARAM = 'set';
 
   function setShareNote(text, isError) {
@@ -1297,85 +1279,57 @@
     els.shareNote.classList.toggle('error', !!isError);
   }
 
-  function shareUrl() {
+  function buildSharePayload() {
     if (!state) return null;
     save();
     var payload = { v: 1 };
     Object.keys(state).forEach(function (k) { payload[k] = state[k]; });
-    return StateLink.buildShareUrl(SHARE_PARAM, payload);
+    return payload;
   }
 
-  els.shareLinkBtn.addEventListener('click', function () {
-    var url = shareUrl();
-    if (!url) { setShareNote('Nothing to share yet.', true); return; }
-    var copy = (navigator.clipboard && navigator.clipboard.writeText)
-      ? navigator.clipboard.writeText(url) : Promise.reject();
-    copy.then(
-      function () { setShareNote('Link copied. Opening it anywhere loads this set — words, verbs, person labels, and settings — and saves it there as a copy.'); },
-      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
-    );
+  Share.mount(els.shareBtn, {
+    getState: buildSharePayload,
+    param: SHARE_PARAM,
+    tool: 'vocab-conjugation-drill',
+    title: 'Share this drill set',
+    noun: 'this set',
+    filename: function () { return (state && state.name) || 'drill set'; },
+    note: 'Opening the link or code anywhere saves this set there as a copy; it never overwrites a set already on that device.',
+    emptyMessage: 'Nothing to share yet.',
+    successMessage: 'Link copied. Opening it anywhere loads this set — words, verbs, person labels, and settings — and saves it there as a copy.',
+    onMessage: function (text) { setShareNote(text); }
   });
 
-  function drawShareQr(canvas, text) {
-    var qr = window.qrcode(0, 'L');
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount(), quiet = 4, px = 6;
-    var size = (count + quiet * 2) * px;
-    canvas.width = size; canvas.height = size;
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#16181d';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
-      }
-    }
-  }
-
-  els.shareQrBtn.addEventListener('click', function () {
-    var url = shareUrl();
-    if (!url) { setShareNote('Nothing to share yet.', true); return; }
-    try {
-      drawShareQr(els.shareCanvas, url);
-    } catch (e) {
-      // A QR code holds far less than a URL bar does. A big set runs past
-      // it — say so rather than drawing a square nobody's phone can read.
-      setShareNote('This set is too long to fit in a QR code (' + Math.round(url.length / 1024) +
-        ' KB of link). Use “Copy link” instead — a pasted link has no such limit.', true);
-      return;
-    }
-    els.shareOverlay.hidden = false;
-    setShareNote('');
-  });
-
-  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
-  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
-
-  /** Consume a ?set= link on load. Saves the arrival under a uniqued name —
-      never over an existing set. Returns true if a set was imported. */
-  function importSharedSet() {
-    var raw = StateLink.getParam(SHARE_PARAM);
-    if (!raw) return false;
-    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't import it twice
-    var decoded = StateLink.decodeState(raw);
-    if (!isPlausibleDrillSet(decoded)) {
-      setShareNote('That shared link could not be read — it may have been cut short when it was pasted or emailed.', true);
-      return false;
-    }
-    var name = (decoded.name && decoded.name.trim()) || 'Shared drill set';
+  /** Files and links both land here: unique the name so nothing already
+      saved is touched, save, open. Returns the name it was filed under. */
+  function adoptSet(decoded) {
+    var name = (decoded.name && String(decoded.name).trim()) || 'Shared drill set';
     var existing = Store.list();
     if (existing.indexOf(name) !== -1) {
       name = name + ' (shared)';
       while (existing.indexOf(name) !== -1) name = name + ' 2';
     }
-    delete decoded.v;
-    decoded.name = name;
-    Store.save(name, decoded); // loadSetByName defaults any missing newer fields
+    var copy = {};
+    Object.keys(decoded).forEach(function (k) { copy[k] = decoded[k]; });
+    delete copy.v;
+    copy.name = name;
+    Store.save(name, copy); // loadSetByName defaults any missing newer fields
     loadSetByName(name);
-    setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your copy now — editing it does not change the sender’s.');
-    return true;
+    return name;
+  }
+
+  /** Consume a ?set= link on load. Returns true if a set was imported. */
+  function importSharedSet() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleDrillSet,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var name = adoptSet(decoded);
+        setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your copy now — editing it does not change the sender’s.');
+        return true;
+      }
+    });
   }
 
   els.printBtn.addEventListener('click', function () {

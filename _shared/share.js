@@ -27,8 +27,10 @@
    downloaded file carries them." The download gets the untouched state.
 
    The download is `{ aplp: { v, tool, param, exported }, state }`, so a file
-   can say which tool it belongs to; the receiving side of that (open a .json
-   the way ?state= is opened) is Path 6 P2's, alongside the link receiver.
+   can say which tool it belongs to. Path 6 P2 added the receiving side —
+   `Share.receive()` consumes `?state=` on load and `Share.receiveFile()` a
+   picked .json, both through the same `unwrap()`, so a file the sheet wrote
+   and a link opened land in the same place and fail with the same sentence.
 
    Depends on state-link.js (the URL) and, for the QR row, qr-draw.js plus
    the vendored encoder. A page that loads share.js without state-link.js is
@@ -122,6 +124,107 @@
     return Promise.reject(new Error('clipboard unavailable'));
   }
 
+  /* ── the receiving side ───────────────────────────────────────────── */
+
+  /* Every adopter also wrote its own "consume ?state= on load": read the
+     param, clear it up front so a refresh cannot import the same thing
+     twice, decode it, decide whether the payload is one this tool can open,
+     and say something when it is not. In the six adopted in P2's first
+     increment the four steps were identical line for line and only the
+     sentence differed — six wordings of "that link could not be read", and
+     a shape test that was a named isPlausibleX() in five of them and an
+     inline typeof in the sixth.
+
+     Worse, the .json the sheet's Download row writes is NOT shaped like a
+     link payload — it is wrapped in the { aplp, state } envelope
+     fileContents() builds — so a file downloaded from the sheet did not
+     open in any adopter's own file importer. unwrap() is what closes that
+     loop, and it is the reason both receivers exist here rather than only
+     the link one the phase called for. */
+
+  var CUT_SHORT = 'That shared link could not be read — it may have been cut short when it was copied or emailed.';
+  var BAD_FILE = 'That file is not one this tool can open.';
+  var UNREADABLE = 'That file could not be read.';
+
+  /**
+   * The payload out of whatever was handed over: the { aplp, state }
+   * envelope the Download row writes, or a bare payload — which is what
+   * every link carries, and what every file exported before P1 carries.
+   * Anything else is returned untouched, so a tool's own validate() is
+   * still the thing that decides.
+   */
+  function unwrap(value) {
+    if (value && typeof value === 'object' && !Array.isArray(value) &&
+        value.aplp && typeof value.aplp === 'object' &&
+        Object.prototype.hasOwnProperty.call(value, 'state')) {
+      return value.state;
+    }
+    return value;
+  }
+
+  /** JSON text -> unwrapped payload. Never throws; null on anything unparsable. */
+  function parseFile(text) {
+    var parsed;
+    try { parsed = JSON.parse(String(text)); } catch (e) { return null; }
+    return unwrap(parsed);
+  }
+
+  /** Validates and hands over, or reports `message`. Shared by both receivers. */
+  function deliver(state, opts, message) {
+    var good = state !== null && state !== undefined &&
+      (typeof opts.validate !== 'function' || !!opts.validate(state));
+    if (!good) {
+      if (opts.onError) opts.onError(message);
+      return false;
+    }
+    var out = opts.onState ? opts.onState(state) : true;
+    return out === undefined ? true : out;
+  }
+
+  /**
+   * Consumes `?<param>=` on load. Options:
+   *
+   *   param            the query-string parameter (required)
+   *   validate(state)  true when the payload is one this tool can open
+   *   onState(state)   called once, with a validated payload
+   *   onError(message) called instead when there WAS a param and it was unusable
+   *   errorMessage     replaces the standard sentence
+   *
+   * Returns whatever onState returned (true when it returned nothing), and
+   * false otherwise — including the ordinary case of no parameter at all,
+   * which is not an error and reports nothing.
+   *
+   * The param is cleared BEFORE the payload is judged, on purpose: a link
+   * that cannot be read must not survive a refresh either, or the teacher
+   * sees the same failure every time the page opens.
+   */
+  function receive(opts) {
+    opts = opts || {};
+    if (!global.StateLink) throw new Error('share.js needs _shared/state-link.js loaded first');
+    var raw = global.StateLink.getParam(opts.param);
+    if (!raw) return false;
+    global.StateLink.clearParam(opts.param);
+    return deliver(unwrap(global.StateLink.decodeState(raw)), opts, opts.errorMessage || CUT_SHORT);
+  }
+
+  /**
+   * The same for a file the teacher picked — the sheet's own download, or an
+   * export from before there was a sheet. Asynchronous, so it reports only
+   * through the callbacks. `fileErrorMessage` replaces the standard "not one
+   * this tool can open"; `unreadableMessage` the disk-level failure.
+   */
+  function receiveFile(file, opts) {
+    opts = opts || {};
+    var onError = opts.onError || function () {};
+    if (!file) return;
+    var reader = new global.FileReader();
+    reader.onerror = function () { onError(opts.unreadableMessage || UNREADABLE); };
+    reader.onload = function () {
+      deliver(parseFile(reader.result), opts, opts.fileErrorMessage || BAD_FILE);
+    };
+    reader.readAsText(file);
+  }
+
   /* ── the sheet ────────────────────────────────────────────────────── */
 
   function ensureStyle() {
@@ -207,7 +310,7 @@
     head.appendChild(closeBtn);
     sheet.appendChild(head);
 
-    var noteText = opts.note || '';
+    var noteText = (typeof opts.note === 'function' ? opts.note(link) : opts.note) || '';
     if (link.stripped) {
       noteText += (noteText ? ' ' : '') + link.stripped + (link.stripped === 1 ? ' image is' : ' images are') +
         ' left out of the link and QR code; the downloaded file carries ' + (link.stripped === 1 ? 'it' : 'them') + '.';
@@ -348,7 +451,8 @@
    *   base             the page the link opens (defaults to this page)
    *   title            the sheet heading ("Share this deck")
    *   noun             "this deck" — used in the default copy message
-   *   note             one sentence on what travels
+   *   note             one sentence on what travels; may be a function, read
+   *                    when the sheet opens and given the link it is about
    *   filename, ext    the download name (sanitised; ".json" by default); filename
    *                    may be a function, read when the sheet opens
    *   tool             the tool slug, written into the file header
@@ -375,6 +479,10 @@
   global.Share = {
     mount: mount,
     open: open,
+    receive: receive,
+    receiveFile: receiveFile,
+    unwrap: unwrap,
+    parseFile: parseFile,
     close: function () { if (openSheet) openSheet.close(); },
     buildLink: buildLink,
     stripImages: stripImages,
