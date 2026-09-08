@@ -26,6 +26,10 @@
 <script src="../_shared/a11y.js"></script>
 <script src="formula-sheet-builder/fsb-templates.js"></script>
 <script src="formula-sheet-builder/fsb-store.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -41,8 +45,18 @@
      it at 4.96:1 and still reads as a note rather than body copy. In dark the
      mat is near-black, where the ordinary muted is already 7.8:1, so the dark
      value is just var(--muted). The allowlist line for 041 is gone. */
-  :root { --desk: #d9d7cd; --desk-ink: #595850; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) { --desk: #0e1014; --desk-ink: var(--muted); }
+  :root { --desk: #d9d7cd; --desk-ink: #595850;
+    --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --desk: #0e1014; --desk-ink: var(--muted);
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share a sheet: the sheet itself is _shared/share.js (Path 6 P3). This is
+     only the note under the toolbar that records what it last did. The two
+     tint pairs above are 001's values, with dark counterparts, rather than a
+     fourth generation of the rgba() literal the first share adopters wrote. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -204,7 +218,9 @@
     <button class="secondary" id="exportSheetBtn">Export JSON</button>
     <button class="secondary" id="importSheetBtn">Import JSON</button>
     <input type="file" id="importSheetFile" accept="application/json,.json" style="display:none;">
+    <button class="secondary" id="shareBtn">&#128279; Share sheet&hellip;</button>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="layout">
     <div class="editor">
@@ -301,6 +317,7 @@
 
   var els = {};
   ['toolbar','sheetSwitch','newSheetBtn','deleteSheetBtn','exportSheetBtn','importSheetBtn','importSheetFile',
+   'shareBtn','shareNote',
    'sheetName','sheetTitle','columnCount','pageSize','templatePicker','loadTemplateBtn','browsePickerBtn',
    'itemsList','emptyHint','newName','newExpr','newNote','addItemBtn',
    'printBtn','previewArea','autofitNote','pageSizeNote',
@@ -934,13 +951,95 @@
     reader.readAsText(file);
   });
 
-  /* ---------- boot ---------- */
+  /* ---------- share a sheet: _shared/share.js (Path 6 P3) ----------
+     This tool keeps a NAMED LIBRARY (a list of names plus a blob per name),
+     not one document, so an arrival is saved BESIDE what is already here
+     under a free name and none of #237's confirm-before-replacing machinery
+     applies — the same shape 047, 065 and 072 took in #239. uniqueSheetName()
+     is what guarantees that, and it was already here for the Import JSON
+     button: a link whose sheet is called the same thing as one on this device
+     lands as "… (2)" and the teacher's own copy is untouched.
+
+     The diagrams pasted onto formulas are data: URLs and share.js strips them
+     from the link by policy, saying how many it dropped. The Download row
+     still carries them, which is the difference between the two rows and is
+     why the note below does not promise the pictures travel. */
+  var SHARE_PARAM = 'sheet';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { save(); return state; },
+    param: SHARE_PARAM,
+    tool: 'formula-sheet-builder',
+    title: 'Share this formula sheet',
+    noun: 'this sheet',
+    filename: function () { return (state && state.name) || 'formula sheet'; },
+    note: 'Every formula with its variables and worked example, the printed title, the column count and print size, and which formulas are ticked as allowed on the assessment. Opening the link saves this sheet on the receiving device as a new saved sheet; nothing already saved there is changed.',
+    successMessage: 'Link copied. Opening it anywhere saves this sheet there alongside whatever is already saved.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  /** The same test the Import JSON button already applies to a picked file, so
+      a link and a file are judged by one rule. */
+  function isPlausibleSheet(obj) {
+    return looksLikeSheet(obj);
+  }
+
+  /** An arrival as this device would have written it: known fields only, and
+      every formula through the same normalizeItem() a stored sheet goes
+      through, so a sheet saved before `allowed` existed still opens. */
+  function normalizeSheet(obj, name) {
+    return {
+      name: name,
+      title: typeof obj.title === 'string' ? obj.title : '',
+      columns: obj.columns || 2,
+      pageSize: PAGE_SIZES[obj.pageSize] ? obj.pageSize : 'full',
+      allowedOnly: obj.allowedOnly === true,
+      assessment: typeof obj.assessment === 'string' ? obj.assessment : '',
+      items: obj.items.map(normalizeItem)
+    };
+  }
+
+  /** Consumes a ?sheet= link on load, saving the arrival as a NEW named sheet.
+      Returns true when a link was found and opened. */
+  function importSharedSheet() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleSheet,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var wanted = String(decoded.name || decoded.title || '').trim() || 'Shared Sheet';
+        var name = uniqueSheetName(wanted);
+        state = normalizeSheet(decoded, name);
+        FormulaSheetStore.setCurrentName(name);
+        openEditIndex = -1;
+        setShareNote('Loaded a shared formula sheet as “' + name + '”. Nothing already saved here was changed.');
+        return true;
+      }
+    });
+  }
+
+  /* ---------- boot ----------
+     renderAll() is what persists `state` (its first line is save()), so the
+     arrival is filed by the same path a teacher's own edit is. There is no
+     legacy migration here to order the import against — 041 has never had a
+     single-sheet key to migrate; see 047 and 069 for the tools where that
+     ordering matters. */
   buildTemplatePicker();
-  var current = FormulaSheetStore.getCurrentName();
-  if (current && FormulaSheetStore.loadSheet(current)) {
-    loadSheetByName(current);
+  if (!importSharedSheet()) {
+    var current = FormulaSheetStore.getCurrentName();
+    if (current && FormulaSheetStore.loadSheet(current)) {
+      loadSheetByName(current);
+    } else {
+      newSheet('New Sheet');
+    }
   } else {
-    newSheet('New Sheet');
+    renderAll();
   }
 })();
 </script>
