@@ -63,10 +63,100 @@ yours.
 
 ## Where things stand — start here
 
-*Current as of `main` after PR #235, 2026-09-08. Rewrite this header when your phase
+*Current as of `main` after PR #237, 2026-09-08. Rewrite this header when your phase
 merges — that is step 6 of the definition of done, and it is not optional.*
 
-**Last shipped.** Rank 1 — **Path 6 P2's third increment, which finishes P2: the last four
+**Last shipped.** Rank 1 — **Path 6 P3's first increment: six builders that could not share at
+all** (#237, `CACHE_VERSION` **v172**). **052, 057, 070, 073, 079 and 081** open
+`_shared/share.js`'s sheet now; `npm run check:adoption` puts **`share.js` and `qr-draw.js` at 21 of
+86 each**, up from 15, and **`state-link.js` at 22**. **P3 is a 2+ row, so it stays**, rewritten to
+say what is left: **045, 047, 065 and 072**, plus the generators nobody has enumerated. Seven things
+are worth carrying.
+
+(1) **These six are a different kind of work from all of P2, and the next increment is different
+again.** Every P2 adopter had share code to delete — a hand-written bar, a `drawShareQr`, a
+`mountShareControl` call. These six had **none**: no share code, no `state-link.js`, no importer.
+Nothing was deleted; the whole increment is new wiring, which is why it is six tools rather than
+four. **The four left are a third shape:** 047, 065 and 072 all keep a **named library**
+(`LIST_KEY` + `DATA_PREFIX` + `CURRENT_KEY`) rather than one document, so an arrival can be saved
+*beside* what is there under a suffixed name exactly as P1/P2's adopters do, and **none of the
+confirm machinery in (2) applies to them.** 045 is the odd one out and should go last or not at all
+yet: it compiles other tools' storage rather than owning much of its own, and Path 10 P2/P3 are
+about to re-base it on section providers, so sharing it now means sharing a payload whose shape is
+scheduled to change.
+
+(2) **The decision these six forced, taken once and applied six times: what an arriving link does to
+work already on the device.** P1 and P2's adopters keep *named* documents, so an arrival was never
+at anyone's expense. Five of these six keep exactly **one**, so a link has nowhere to land except on
+top of it. The rule that shipped: **ask with the page's own `confirm()`, and only when `load()` found
+something in storage.** The second half is the part worth defending — every one of these tools seeds
+a starter template into an empty install (a Spanish cognate list, an animal key, a narrative
+checklist), and asking about a template nobody typed teaches the teacher to click through the dialog
+that matters. So `load()` now returns whether it read a stored value, which is the one line per tool
+that changed for a reason other than sharing. Declining is a real outcome with a sentence of its own,
+and because `share.js` clears the parameter before the payload is judged, a refresh does not ask
+again. **Reverse it by deleting the `hadSaved` argument in each importer.**
+
+(3) **Two tools would have silently destroyed data with the obvious implementation, and neither would
+have thrown or shown anything wrong in the sending browser.** 057's couplets refer to each other by
+id through `leadsTo`, so handing out fresh ids on import — which is right for every other tool here,
+because a receiving device should own its ids — would have kept every word of a key and **cut every
+branch of it**. 073's `done` map is keyed on milestone **id**, so fresh ids would have left every tick
+pointing at nothing: the roster looks untouched and the progress is gone. 057 preserves ids outright;
+073 reuses the **local** id of any milestone whose name already exists. **Both were found by writing
+the payload down, not by a test failing** — which is the argument for spending ten minutes on what
+each field means before wiring the next four.
+
+(4) **073 is the privacy row, and the split is per field rather than per key.** `sfpt_tracker_v1` is
+the one key in this batch that `_shared/tool-registry.js` marks `student: true`. `getState` returns
+the **milestone schedule and nothing else** — no roster, tick or note. This follows 003, where the
+rubric travels and the marks do not; the difference is that 003's split is between two storage keys
+and this one is between fields of a single object, which is why the suite searches the **whole encoded
+payload** for the fixture's student names rather than checking the fields it happens to know about.
+
+(5) **081 shares a seed, not problems — the first payload on this site that is a recipe.** Nothing it
+stores is authored: the problems come out of `makeRng(seed)`, so the link is four settings plus the
+seed, about 100 bytes, and the receiving device regenerates the same sheet — same names, numbers and
+order. `generate()` grew a `forcedSeed` parameter so an arrival need not flip the teacher's own
+"lock the seed" checkbox, and its click handler had to stop being
+`addEventListener('click', generate)`, which was quietly passing a MouseEvent into that new first
+argument. It is also the one tool here that does **not** ask before loading, and the suite asserts
+that it does not.
+
+(6) **One rollout suite, not six.** `Tools/share/test/smoke-share-rollout.mjs`
+(`npm run test:share-rollout`, **226 assertions**) drives all six pages from one table — the shape
+`smoke-picker-rollout.mjs` and `smoke-stage-rollout.mjs` already use. P2's per-tool suites were right
+for P2, where each tool had its own bar to delete and its own bug in it; P3 is the same wiring six
+times, and **the next increment adds a row rather than a file**. It scans the open sheet with
+`a11yScan(page, {include})` on every page — rank 13's mechanism, free to a suite that has prepped a
+state — and **all six came back clean; no allowlist line was added.**
+
+(7) **The suite's one real failure was a fixture asserting the absence of a merge.** 073's "did the
+shared work arrive" check read `[data-mname="m1"]`, the fixture's own milestone id — which is gone on
+a fresh install *precisely because* (3)'s name match reuses the local id. It reads the first milestone
+by position now. Worth knowing before the seventh row: **a fixture that names an id is asserting that
+nothing remaps ids.**
+
+CI ran the **full** list, because `package.json` and `suites.json` are site-wide under rule 1: green
+in **29.2 minutes** (10:47:01 → 11:16:15 UTC). **A full `npm test` was NOT run locally** for this
+increment — the selected suites were, plus all eleven guards — which is a real gap against #231/#233/#235,
+all of which ran the full list once before pushing. **Not verified:** no QR produced by any of the six
+was scanned by a real camera; the **system-share row is exercised nowhere**, because headless Chromium
+has no `navigator.share`; no file was downloaded by a real browser and re-opened by hand; the sheet was
+scanned by axe in **light only** on these six (P2's suites cover dark on 003 and 015); and the
+`confirm()` flow was driven by Playwright's dialog handler, never by a human clicking Cancel.
+
+**One thing found and deliberately not fixed.** `.share-note` is now on 21 pages in **three
+generations**: this increment's `var(--info-bg)`/`var(--err-bg)` one from #235, the only one with dark
+values; nine pages still on the `rgba(42, 109, 176, .09)` literal from #231/#233; and **082–085 using
+the class name for something else entirely** — a plain status line with no share code behind it, which
+will fool anyone who greps for adopters by that class. It belongs in `_shared/base.css`, which exists
+for exactly this, and is a tidy of its own rather than P3's; the three tools whose palette lacked the
+tint tokens (070, 079, 081) got 001's values with dark counterparts rather than a fourth generation of
+the literal.
+
+
+Before it, rank 1 — **Path 6 P2's third increment, which finishes P2: the last four
 `state-link` tools, and `mountShareControl` retired** (#235, `CACHE_VERSION` **v171**). **003, 005,
 006 and 020** open `_shared/share.js`'s sheet now; `npm run check:adoption` puts **`share.js` and
 `qr-draw.js` at 15 of 86 each**, up from 11, and **`state-link.js` at 16**. **The row is deleted,
@@ -696,21 +786,21 @@ tells the next session to build what already exists, and it did so for about an 
 claim table itself worked, both then and for #182: sessions took different rows and no source
 file conflicted.
 
-**Numbers, all re-measured against the tree on 2026-09-08, after #235 merged:**
+**Numbers, all re-measured against the tree on 2026-09-08, after #237 merged:**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v171` (→ v171 in #235; **seven** precached files changed — the four adopted pages, `_shared/state-link.js`, `Tools/classroom-timer/mirror.html` and `sw.js` itself, plus 004, which is eight if you count the two dead-tag deletions separately from the four conversions; `check:precache -- --base origin/main` prints the figure and is the thing to trust. Nothing was added to or removed from either tier: `share.js` and `qr-draw.js` were already listed, and a test file is never precached) |
-| Precache entries | 257 in `PRECACHE_URLS`, **82** of them in the `SHELL_URLS` install tier — unchanged by #235, which changed seven already-listed files and added none. **Three increments in a row have added four to six adopters of a shared file and touched neither list**, which is the point of `_shared/` being precached once |
-| Suites | **153** in `Tools/board-check/suites.json`; `expectedFailures` **empty**. #235 added **four**, one per converted page, because **none of 003, 005, 006 or 020 had any share coverage at all**: `Tools/seating-chart/test/smoke-share.mjs` (**36 assertions**), `Tools/bracket-tournament-generator/test/smoke-share.mjs` (**36**), `Tools/class-roster-hub/test/smoke-share.mjs` (**34**) and `Tools/rubric-builder/test/smoke-share.mjs` (**32**) — reached through the existing `test:seating`, `test:bracket`, `test:roster-hub` and `test:rubric` shortcuts rather than four new ones. The 005 one is the one to copy: it asserts the image policy against **the writer's own downloaded bytes**, captured off `URL.createObjectURL`, the same technique #233's timeline suite introduced. Before it, #233 added two (name-picker **25**, timeline-builder **34**) and #231 one (vocab-conjugation-drill **28**) and took `Tools/share/test/share.test.mjs` from 47 to **68**. **#235 ran the full `npm test` locally once: 153 of 153 green, 29.6 min, and its CI ran the full list, green in 29.7 minutes**; #233's were 149 of 149 in 29.4 and 27.4 |
+| `CACHE_VERSION` | `v172` (→ v172 in #237; **six** precached files changed — the six adopted pages; `sw.js` itself makes seven, and `check:precache -- --base origin/main` prints the figure and is the thing to trust. Nothing was added to or removed from either tier: `state-link.js`, `qr-draw.js`, `share.js` and the vendored encoder were all already listed, and a test file is never precached. **Four increments running have added four to six adopters of a shared file and touched neither tier list** — that is what `_shared/` being precached once buys.) *(Before it: `v171` in #235; **seven** precached files changed — the four adopted pages, `_shared/state-link.js`, `Tools/classroom-timer/mirror.html` and `sw.js` itself, plus 004, which is eight if you count the two dead-tag deletions separately from the four conversions; `check:precache -- --base origin/main` prints the figure and is the thing to trust. Nothing was added to or removed from either tier: `share.js` and `qr-draw.js` were already listed, and a test file is never precached.)* |
+| Precache entries | 257 in `PRECACHE_URLS`, **82** of them in the `SHELL_URLS` install tier — unchanged by #237, which changed six already-listed files and added none. **Four increments in a row have added four to six adopters of a shared file and touched neither list**, which is the point of `_shared/` being precached once |
+| Suites | **154** in `Tools/board-check/suites.json`; `expectedFailures` **empty**. #237 added **one**, and that is the change worth noticing: `Tools/share/test/smoke-share-rollout.mjs` (`npm run test:share-rollout`, **226 assertions**) is a *rollout* suite covering all six of its adopters from one table, the shape `smoke-picker-rollout.mjs` and `smoke-stage-rollout.mjs` already use, rather than six near-identical per-tool files. **P3's next increment adds a row to that table, not a file.** The per-tool shape was right for P2, where each tool had its own hand-written share bar to delete and its own bug in it; P3 is the same wiring repeated. Before it, #235 added **four**, one per converted page, because **none of 003, 005, 006 or 020 had any share coverage at all**: `Tools/seating-chart/test/smoke-share.mjs` (**36 assertions**), `Tools/bracket-tournament-generator/test/smoke-share.mjs` (**36**), `Tools/class-roster-hub/test/smoke-share.mjs` (**34**) and `Tools/rubric-builder/test/smoke-share.mjs` (**32**) — reached through the existing `test:seating`, `test:bracket`, `test:roster-hub` and `test:rubric` shortcuts rather than four new ones. The 005 one is the one to copy: it asserts the image policy against **the writer's own downloaded bytes**, captured off `URL.createObjectURL`, the same technique #233's timeline suite introduced. Before it, #233 added two (name-picker **25**, timeline-builder **34**) and #231 one (vocab-conjugation-drill **28**) and took `Tools/share/test/share.test.mjs` from 47 to **68**. **#235 ran the full `npm test` locally once: 153 of 153 green, 29.6 min, and its CI ran the full list, green in 29.7 minutes**; #233's were 149 of 149 in 29.4 and 27.4 |
 | CI per pull request | **Scoped to the diff since #197, and since #223 that scoping actually reaches a tool PR.** The pull-request job runs `npm test -- --changed --base origin/<base>`; the push-to-`main` job runs everything. `sw.js` was site-wide by rule 1 and every tool PR bumps `CACHE_VERSION` there, so **nine tool PRs in a row (#200 … #221) ran the full ~21-minute list anyway** — #200 touched six pages and one test file and still ran all 145 suites in 23.4 minutes. #223 makes rule 1 read the **hunk**: a `sw.js` diff whose only changed lines are the `CACHE_VERSION` assignment selects the two `service-worker` suites instead of everything, and anything else in the file — a precache URL, a comment, a diff the runner cannot produce — is site-wide exactly as before. **#225 was that first genuinely scoped tool PR and #227 is the second, both measured rather than assumed: 14 of 145 suites in 9.1 minutes (18:37:31 → 18:46:34 UTC) and 15 of 145 in 4.7 minutes (19:38:10 → 19:42:54 UTC), against 23–29 for the full pass.** #227 is the cheaper of the two despite selecting one suite more, because its selection was two tool pages and a suite file rather than six pages. Its log's first `because` line reads `sw.js: CACHE_VERSION is the only changed line — not site-wide; the service-worker suites run`. Before #223 the saving was real only for a PR with no precached change: **#201, this file plus `HISTORY.md`, ran green in 43 seconds.** **#214 found the first real bug in rule 4:** the selector finds the page-sweeping suites by grepping their source for `readdirSync`, so moving `smoke-theme.mjs` to `git ls-files` silently took it out of every page edit's selection; `isSweep` matches both spellings now and `select-suites.test.mjs` pins both. That is the same shape of mistake #223 had to avoid — a rule reading a *name* where it should read the *content* goes quiet, not red — which is why nothing in the new check looks for the word `CACHE_VERSION` anywhere in a diff and why the test reads the constant out of the real `sw.js`. **The push-to-`main` full pass is not the safety net it reads as, and this was measured, not assumed.** `ci.yml` sets `concurrency: group: ci-${{ github.ref }}` with `cancel-in-progress: true`, and step 6 merges onto the same ref minutes after the increment does — so the increment commit's own main run is **cancelled** every time. Run 135 (#216's commit) and run 139 (#218's) are both `cancelled`; runs 137 and 141, the step-6 commits that followed them, are the `success`es. Nothing is actually unprotected — the step-6 commit carries the same tool tree plus documentation, so its full pass covers the increment's code — but **the run that says "green on main" for an increment is the one for the handoff commit after it**. If a session ever needs the increment commit itself covered (a revert, a bisect), re-run it by hand; the concurrency group will not do it |
 | Read-only guards | **11**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands` and `adoption`. All run in CI. `check:precache` is one guard running **six** always-on checks since #191 (SHELLDEP is the sixth) plus the opt-in BUMP. `check:docs-commands`'s `KNOWN_MISSING` is **empty** since #195 |
-| Accessibility allowlist | **14 page-rule pairs on 14 pages, every one `color-contrast`** — unchanged by #235, #233, #231, #229, #227 and #225, none of which added or deleted a line. #235 touched four pages, added a button and a note paragraph to each, and **all four came back clean from the site-wide sweep**; its four new suites also scan the open share sheet with `a11yScan`, in light and dark on 003, and found nothing. That is six increments in a row that changed pages and did not need a line, which is the standard a new tool is held to |
+| Accessibility allowlist | **14 page-rule pairs on 14 pages, every one `color-contrast`** — unchanged by #237, #235, #233, #231, #229, #227 and #225, none of which added or deleted a line. #237 touched six pages, added a button and a note paragraph to each, and **all six came back clean from the site-wide sweep**; its rollout suite also scans the open share sheet with `a11yScan` on all six and found nothing. That is **seven** increments in a row that changed pages and did not need a line, which is the standard a new tool is held to |
 | Tool registry | 87 rows, **217 keys and 32 prefixes across 109 files** — `__scv_probe__` retired and `__gvb_save_probe__` declared for the first time, so the total is unchanged for two unrelated reasons; four IndexedDB databases declared; `check:registry` green, `dynamic` empty everywhere |
-| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `state-link.js` 16 · `qr-draw.js` 15 · `share.js` 15 · `qr-scan.js` 10 · `stage.js` 9 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `store.js` 36 · `roster.js` 32 · `state-link.js` 22 · `qr-draw.js` 21 · `share.js` 21 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 9 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087**. 81 of them have recorded open ideas |
-| Tier 1 rows | **175**, a contiguous 1..175 — **unchanged in total, but not unchanged**: rank 1 (Path 6 P2) was **deleted**, because P2 finished rather than shipping another half, and one row was **added** at rank 12, the pairing-QR sizing bug #235 measured on its way past. The tool-number boundary is still **94** for the same reason — one out above it, one in above it. **Rank 1 is now Path 6 P3, a 2+ row, so it is the next session's whole batch on its own** (see "How big a batch"), and rank 2 (P4) is a 1. Rank 13 (the sweep's blind spot) still has **eleven** confirmed instances: #235 added none, and that is itself worth noting — it is the first page-changing increment in twelve whose conversions turned up no shipped violation, and its four suites scanned the open sheet on four pages to establish that rather than inferring it from a quiet sweep |
+| Tier 1 rows | **175**, a contiguous 1..175 — **genuinely unchanged this time**: #237 shipped one increment of rank 1, a 2+ row, so nothing was deleted, nothing added and nothing renumbered. The tool-number boundary is still **94** (measured by walking the table from the bottom, not by subtraction). **Rank 1 is still Path 6 P3 and is still a 2+ row, so it is the next session's whole batch on its own** (see "How big a batch"); rank 2 (P4) is a 1. Rank 13 (the sweep's blind spot) still has **eleven** confirmed instances: #237 added none, which is the second page-changing increment running to turn up no shipped violation, and its rollout suite scanned the open sheet on six pages to establish that rather than inferring it from a quiet sweep |
 | Dark mode (`npm run path5:next`) | **83 of 83** themed pages paint a native dark palette (**100%**) and **0** are left on a11y.css's CSS-filter invert. A further **14 live pages load no `a11y.js` at all** and get no theme either way: 002, 007, 016, 018, 035, 038, 044, 086, `classroom-label-maker/speak.html`, `ideas-backlog.html` and the four root landing-page variants — **none of them is a ranked row**, and 035 is a standing decision rather than an omission. The script's other half reads **`stage.js` at 9 adopters, 0 pages hand-rolling fullscreen**, so **Path 5 is finished on both counts and this script has nothing left to pick.** **Read these off the script, and be aware it was wrong until #214**: it walked the filesystem rather than `git ls-files`, so it counted `Tools/board-check/.offline-copy-staging/` and reported double everything on any tree where that folder exists; **97 live pages on its first line is right, 188 is the bug**. **The literal count predicted the chrome and missed the work in seven increments running** — #208's cheapest page was its most expensive (colours from a table in *script*); #212's cheapest needed `.paper-sheet` in its renderer; #214's real work was in two literals no count could see; #216's hardest decision (`.paper-sheet-off`) is invisible to any count; #218's two hardest calls were not colour changes at all; #221's was a `.paper-sheet` it had to **withhold**; #225's was a `.paper-sheet` it had to **stretch over an entire interactive viewer**; and #227 was not a palette round at all and still found a contrast bug the picker's count could never have named. **#229 is the end of that argument rather than another instance:** 034's literal count was never printed by the picker at all, because the page loaded no `a11y.js`, and the work turned out to be a token split, a data-driven ink and a print reset in `_shared/` |
 | Fullscreen | `_shared/stage.js` in **9** pages (001, 004, 010, 015, 021, 023, 024, 025, 072); **0** themed pages still hand-roll `requestFullscreen` — unchanged by #229, which added no stage. #227 took the last two — 001's Projector View and 004's whole page (mounted on `<body>`, as 010 is) — neither of which was ever on the P2 list. **One page outside the themed set still hand-rolls: 007**, which loads no `a11y.js`, so `path5:next` does not count it; it needs a theme before it needs a stage. 030 and 064 run a projector review game off a fixed `inset: 0` overlay rather than the Fullscreen API, and 017 has a *projector view* of the same shape — a fixed overlay the page shows and hides itself, with no `requestFullscreen` anywhere. Whether any of those three should become a stage is open and unclaimed |
 | Lint | clean |
@@ -720,11 +810,31 @@ retired when `scv-store.js` stopped doing its own blocked-storage probe, and
 `__gvb_save_probe__` was declared for the first time. Nothing stopped being tracked. #195
 changed no keys at all.
 
-**Start here: rank 1 — Path 6 P3, extending sharing to the ~11 builders that do not share yet.
+**Start here: rank 1 — Path 6 P3, and it is the same row #237 just took an increment out of.
 It is a 2+ row, so it is the whole batch on its own** — do not pair it with anything, do one honest
-increment (P3 says "batches of ~8" and means it), ship it, and leave the row in place with its Item
-text rewritten to say what is done and what is left. Rank 2 is P4, a 1, so it is a batch of one when
-the list reaches it.
+increment, ship it, and leave the row in place with its Item text rewritten again. Rank 2 is P4, a 1,
+so it is a batch of one when the list reaches it.
+
+**What is left of P3, and it is not what the phase text originally listed.** Six of the eleven named
+tools are done (052, 057, 070, 073, 079, 081) and **044 was never P3's — it adopted in P2 (#233)**,
+which is worth knowing because the phase's list has now been one out for two increments. **Left:
+047, 065, 072 and 045**, plus every "generator" with a saved configuration, which **nobody has
+enumerated** — doing that enumeration once and writing the list into the Path 6 section is itself
+worth half an hour, because "plus every generator" is how a phase list goes stale.
+
+**047, 065 and 072 are one coherent batch and are easier than the six just shipped, not harder.**
+All three keep a **named library** — `LIST_KEY` + `DATA_PREFIX` + `CURRENT_KEY` — so an arrival is
+saved *beside* what is there under a suffixed name, exactly as every P1/P2 adopter does, and **none
+of #237's confirm machinery applies**: no `load()` return value, no `confirm()`, no "kept the local
+copy" sentence. Copy 054 or 003, not 052. **Take 045 last or not at all yet**: it compiles other
+tools' storage rather than owning much of its own, and Path 10 P2/P3 (ranks 28 and 29) are about to
+re-base it on section providers, so sharing it now means shipping a payload whose shape is already
+scheduled to change.
+
+**And add a row to `Tools/share/test/smoke-share-rollout.mjs`'s table rather than writing a fourth
+per-tool share suite** — that is what the rollout shape is for. One caution from writing it: a
+fixture that names a record **id** is asserting that nothing remaps ids, which is false on any tool
+that merges an arrival into local records.
 
 **What P3 inherits from three increments of P2, so it does not rediscover any of it.** The sheet is
 `Share.mount(button, {...})` on a button the page already has, and `Share.receive({...})` on the way
@@ -1443,7 +1553,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 6 P3 — extend sharing to the ~11 builders that do not share yet | site | 2+ | `h1y8q5` 2026-09-08 10:22 UTC | [Path 6](#path-6--share-everywhere) |
+| 1 | Path 6 P3 — extend sharing to the builders that do not share yet. **Increment 1 shipped (#237, v172): 052, 057, 070, 073, 079, 081.** Left: **047, 065 and 072**, which are one batch and *easier* than the six done — all three keep a named library (`LIST_KEY` + `DATA_PREFIX` + `CURRENT_KEY`), so an arrival is saved beside what is there under a suffixed name and none of #237's confirm-before-replacing machinery applies; copy 054 or 003, not 052. Then **045**, which should go last or wait: it compiles other tools' storage and ranks 28–29 (Path 10 P2/P3) are about to re-base it on section providers. The phase's original list also named 044, which **adopted in P2 (#233)** and is not P3's; "plus every generator with a saved configuration" has never been enumerated and should be, once, into the Path 6 section. Add a row to `Tools/share/test/smoke-share-rollout.mjs`'s table rather than a per-tool suite | site | 2+ | | [Path 6](#path-6--share-everywhere) |
 | 2 | Path 6 P4 — cross-tool "Send to…" driven by the tool registry | site | 1 | | [Path 6](#path-6--share-everywhere) |
 | 3 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js` (005 photos first) | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 4 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
@@ -2401,8 +2511,10 @@ download-as-file as the third option.
   "generator" tool with a saved configuration — was already one out of date:
   **044 adopted in P2 (#233).** **052, 057, 070, 073, 079 and 081 are done**, which
   takes `share.js` and `qr-draw.js` to **21 of 86** and `state-link.js` to 22.
-  **Left: 045, 047, 065, 072**, plus the generators nobody has enumerated yet — and
-  those four are one coherent set of their own, because 047, 065 and 072 all keep a
+  **Left: 047, 065, 072 and then 045**, plus the generators nobody has
+  enumerated yet — **do that enumeration once and write the list in here**, because
+  "plus every generator with a saved configuration" is how this list went one out in
+  the first place. 047, 065 and 072 are one coherent set of their own, because they keep a
   **named library** (`LIST_KEY` + `DATA_PREFIX` + `CURRENT_KEY`) rather than the
   single document the first six kept, which means an arrival can be saved *beside*
   what is there under a suffixed name, exactly as P1/P2's adopters do, and none of
