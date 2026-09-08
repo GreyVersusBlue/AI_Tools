@@ -59,52 +59,36 @@
     global.history.replaceState(null, '', url.toString());
   }
 
-  /**
-   * A minimal "copy shareable link" control: one button, rendered into
-   * `container`, that builds a link from `opts.getState()` and copies it to
-   * the clipboard (falling back to handing the raw URL to `onMessage` if the
-   * clipboard API is unavailable or denied — e.g. `file://`, or no HTTPS).
-   * `opts.onMessage(text)` reports back so the page can show it however it
-   * likes, same convention as gvb-save.js's mountSaveBar.
-   */
-  function mountShareControl(container, opts) {
-    opts = opts || {};
-    var paramName = opts.param || 'state';
-    var getState = opts.getState || function () { return null; };
-    var onMessage = opts.onMessage || function () {};
-    var label = opts.label || 'Copy shareable link';
+  /* mountShareControl() lived here and is gone (Path 6 P2's third increment).
+     It was a "copy shareable link" button this module built itself, and 003,
+     005, 006 and 020 were its four call sites; all four open the share sheet
+     now — copy link, QR code with a measured payload budget, download .json,
+     and the system share where there is one.
 
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = label;
-    btn.addEventListener('click', function () {
-      var state = getState();
-      if (state === null || state === undefined) {
-        onMessage("There's nothing to share yet.");
-        return;
-      }
-      var url = buildShareUrl(paramName, state, { base: opts.base });
-      if (global.navigator && global.navigator.clipboard && global.navigator.clipboard.writeText) {
-        global.navigator.clipboard.writeText(url).then(function () {
-          onMessage(opts.successMessage || 'Link copied — paste it anywhere to open this exact board.');
-        }, function () {
-          onMessage(url);
-        });
-      } else {
-        onMessage(url);
-      }
-    });
-    container.appendChild(btn);
+     It was retired rather than kept as a thin wrapper over Share.mount(),
+     which was the other option on the table, for three reasons worth
+     recording because the wrapper looks cheaper than it is:
 
-    return { node: btn, destroy: function () { btn.remove(); } };
-  }
+     - A wrapper would give state-link.js a runtime dependency on share.js,
+       qr-draw.js and the vendored encoder, none of which it can require. The
+       dependency already runs the other way — share.js throws at mount when
+       state-link.js is absent — and inverting it would mean the lower module
+       degrading silently when the upper one is not on the page. There is no
+       good behaviour for that case: falling back to copy-link means the same
+       call quietly does two different things on two pages.
+     - The sheet wants a button that is already in the page: with a label, a
+       class, a title, a position in the toolbar and an id a suite can find.
+       Every one of the fourteen adopters has one. A control that appends its
+       own bare <button> to a container cannot express any of that.
+     - `npm run check:adoption` counts a page's own src/href references, so a
+       page reaching the sheet only through state-link.js would not count as
+       a share.js adopter and the header's number would be wrong. */
 
   global.StateLink = {
     encodeState: encodeState,
     decodeState: decodeState,
     getParam: getParam,
     buildShareUrl: buildShareUrl,
-    clearParam: clearParam,
-    mountShareControl: mountShareControl
+    clearParam: clearParam
   };
 })(window);

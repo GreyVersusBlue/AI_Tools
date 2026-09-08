@@ -28,10 +28,14 @@
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <!-- Device-to-device transfer ("Move Everything to Another Device"): manual-
      signaling WebRTC pairing, no server — see _shared/webrtc-pair.js's header
      for why. The QR decoder is shared site-wide; the qrcode.js encoder above
-     is already loaded for the existing per-roster QR share. -->
+     is loaded for qr-draw.js (the share sheet's QR row) and for the pairing
+     offer/answer codes below, which are not share payloads and keep their
+     own fixed-size renderer. -->
 <script src="../_shared/webrtc-pair.js"></script>
 <script src="../_shared/qr-scan.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
@@ -183,12 +187,9 @@
     padding: 1.2rem; box-shadow: 0 20px 60px rgba(0,0,0,.3);
     max-width: 760px; width: 100%; max-height: 88vh; overflow-y: auto;
   }
-  .modal.narrow { max-width: 340px; text-align: center; }
   .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-bottom: .8rem; font-weight: 700; }
   .modal-close { border: none; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--muted); padding: 0; }
   .modal-close:hover { color: var(--err); }
-  #qrCanvas { display: block; width: 260px; height: 260px; margin: 0 auto; image-rendering: pixelated; }
-  .qr-hint { font-size: .78rem; color: var(--muted); margin: .6rem 0 0; max-width: 260px; }
 
   /* Device-to-device transfer modal */
   .handoff-qr { display: block; width: 220px; height: 220px; margin: 0 auto .6rem; image-rendering: pixelated; }
@@ -256,19 +257,7 @@
     <button class="secondary small" id="duplicateRosterBtn" type="button">Duplicate</button>
     <button class="secondary small" id="archiveRosterBtn" type="button">Archive</button>
     <button class="danger small" id="deleteRosterBtn" type="button">Delete</button>
-    <span id="shareBar"></span>
-    <button class="secondary small" id="qrBtn" type="button">QR code</button>
-  </div>
-
-  <div class="overlay" id="qrOverlay" hidden>
-    <div class="modal narrow" role="dialog" aria-modal="true" aria-label="Roster QR code">
-      <div class="modal-head">
-        <span>Scan to import this roster</span>
-        <button type="button" class="modal-close" id="qrCloseBtn" aria-label="Close">&times;</button>
-      </div>
-      <canvas id="qrCanvas"></canvas>
-      <p class="qr-hint">Scanning imports a new copy of this roster on the other device &mdash; it won&rsquo;t stay in sync after that.</p>
-    </div>
+    <button class="secondary small" id="shareBtn" type="button">&#128279; Share roster&hellip;</button>
   </div>
 
   <div class="overlay" id="handoffOverlay" hidden>
@@ -603,7 +592,7 @@
    'rosterName', 'renameBtn', 'metaPeriod', 'metaSubject', 'metaTerm',
    'tabList', 'tabText', 'listPane', 'textPane', 'stuList', 'addStudentBtn', 'sortAzBtn', 'sortLastBtn', 'showDetails',
    'namesInput', 'nameCount', 'issuesBox', 'saveBtn', 'printBtn', 'printFormat', 'exportScope', 'exportCsvBtn', 'exportXlsxBtn', 'allRosters', 'emptyHint', 'msg',
-   'shareBar', 'qrBtn', 'qrOverlay', 'qrCloseBtn', 'qrCanvas', 'importCsvBtn', 'csvFileInput', 'sampleBtn',
+   'shareBtn', 'importCsvBtn', 'csvFileInput', 'sampleBtn',
    'archivedStudentList', 'archivedEmptyHint', 'statGrid', 'depList', 'depHint',
    'moveTarget', 'moveBtn', 'selCount', 'mergeSource', 'mergeBtn',
    'rolloverBtn', 'archiveList', 'archiveEmptyHint',
@@ -2313,17 +2302,48 @@
     if (name) loadRosterByName(name.textContent);
   });
 
-  // ── Share link + QR code for one roster ──────────────────────────────────
-  StateLink.mountShareControl(els.shareBar, {
-    param: 'roster',
-    label: 'Share this roster',
-    getState: function () {
-      return currentName ? { name: currentName, names: currentNames(), meta: meta } : null;
-    },
-    onMessage: function (text) { alert(text); }
+  /* ── Share one roster: _shared/share.js (Path 6 P2) ──────────────────────
+     One button opens the shared sheet — copy link, QR code, download .json,
+     and the system share where the browser has one. It replaces two controls
+     that stood side by side in the toolbar: state-link.js's own
+     mountShareControl (a copy-link button it built itself, every message
+     through alert()) and a hand-rolled "QR code" modal.
+
+     The QR is the part that changed behaviour. The old drawShareQr drew
+     whatever the encoder accepted at a fixed 6 px per module into a canvas
+     the CSS then squashed to 260 px, and only refused when the encoder
+     itself threw — so a full class list produced a code the tool called a
+     success and no phone could read. qr-draw.js measures the module size
+     against the space on screen and greys the row out with the reason.
+
+     The offer/answer codes in "Move everything to another device" are NOT
+     share payloads and keep their own renderer, drawPairingQr() below. */
+  var SHARE_PARAM = 'roster';
+
+  function shareableRoster() {
+    return currentName ? { name: currentName, names: currentNames(), meta: meta } : null;
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: shareableRoster,
+    param: SHARE_PARAM,
+    tool: 'class-roster-hub',
+    title: 'Share this roster',
+    noun: 'this roster',
+    filename: function () { return currentName || 'roster'; },
+    note: 'One roster travels — its names and their per-student details. The other rosters saved here, the archive and the department lists stay on this device.',
+    successMessage: 'Link copied. Opening it anywhere saves this roster there as a new roster — it never overwrites one already on that device.',
+    emptyMessage: 'Save a roster first, then there is something to share.',
+    onMessage: function (text, isError) { showMsg(text, !isError); }
   });
 
-  function drawShareQr(canvas, text) {
+  /* The pairing codes' own renderer. Not the share sheet's: these are SDP
+     payloads that webrtc-pair.js deliberately keeps compact for exactly this
+     reason, they are drawn at a fixed size into a fixed 220 px box, and they
+     are never a link. Kept here rather than merged into the share code it
+     used to be spelled identically to, so a change to one cannot silently
+     move the other. */
+  function drawPairingQr(canvas, text) {
     var qr = window.qrcode(0, 'L'); // typeNumber 0 = smallest version that fits; L = lowest EC, most capacity
     qr.addData(text);
     qr.make();
@@ -2345,22 +2365,8 @@
     }
   }
 
-  els.qrBtn.addEventListener('click', function () {
-    if (!currentName) { showMsg('Save a roster first, then share it.'); return; }
-    var url = StateLink.buildShareUrl('roster', { name: currentName, names: currentNames(), meta: meta });
-    try {
-      drawShareQr(els.qrCanvas, url);
-    } catch (e) {
-      alert('This roster is too large to encode as a QR code — use the "Share this roster" copy-link button instead.');
-      return;
-    }
-    els.qrOverlay.hidden = false;
-  });
-  els.qrCloseBtn.addEventListener('click', function () { els.qrOverlay.hidden = true; });
-  els.qrOverlay.addEventListener('mousedown', function (e) { if (e.target === els.qrOverlay) els.qrOverlay.hidden = true; });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
-    if (!els.qrOverlay.hidden) els.qrOverlay.hidden = true;
     if (!els.importOverlay.hidden) closeImport();
     if (!els.confirmOverlay.hidden) closeConfirm();
     if (!els.handoffOverlay.hidden) closeHandoff();
@@ -2381,16 +2387,21 @@
   }
 
   /** A ?roster=... link imports as a brand-new, uniquely-named roster rather
-      than overwriting anything already saved here. */
+      than overwriting anything already saved here. Share.receive() does the
+      read/clear/decode/unwrap this function used to do by hand — including
+      unwrapping the { aplp, state } envelope the sheet's own Download row
+      writes, so a file saved from the sheet on one device opens as a link
+      payload here. */
   function importSharedRosterFromUrl() {
-    var raw = StateLink.getParam('roster');
-    if (!raw) return false;
-    StateLink.clearParam('roster'); // consume it up front so a bad payload can't loop on refresh
-    var decoded = StateLink.decodeState(raw);
-    if (!looksLikeRosterPayload(decoded)) {
-      showMsg("That shared link's roster data looks corrupted.");
-      return false;
-    }
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: looksLikeRosterPayload,
+      onError: function (message) { showMsg(message); },
+      onState: applySharedRoster
+    });
+  }
+
+  function applySharedRoster(decoded) {
     var all = loadAll();
     if (Object.keys(all).length >= MAX_ROSTERS) {
       showMsg('You’ve hit the limit of ' + MAX_ROSTERS + ' saved rosters — delete one before importing another.');
@@ -2611,7 +2622,7 @@
       handoffChannel.addEventListener('close', function () {
         handoffSetStatus('handoffSendStatus', 'Connection closed.');
       });
-      drawShareQr(els.handoffOfferCanvas, result.offerPayload);
+      drawPairingQr(els.handoffOfferCanvas, result.offerPayload);
       els.handoffOfferText.value = result.offerPayload;
       handoffSetStatus('handoffSendStatus', 'Show this to the other device, or paste its reply below once you have it.');
       els.handoffOfferCopyBtn.onclick = function () {
@@ -2697,7 +2708,7 @@
       });
     }).then(function (result) {
       handoffPc = result.pc;
-      drawShareQr(els.handoffAnswerCanvas, result.answerPayload);
+      drawPairingQr(els.handoffAnswerCanvas, result.answerPayload);
       els.handoffAnswerText.value = result.answerPayload;
       els.handoffAnswerWrap.style.display = '';
       els.handoffAnswerCopyBtn.onclick = function () {

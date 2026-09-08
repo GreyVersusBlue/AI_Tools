@@ -31,6 +31,9 @@
 <script src="rubric-builder/rb-store.js"></script>
 <script src="rubric-builder/rb-gdv-handoff.js"></script>
 <script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -73,6 +76,12 @@
 
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  /* The note under the Share button, which records what the shared sheet
+     (_shared/share.js, Path 6 P2) last did. Tokenised, not literal, so it
+     follows this page into dark with everything else. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   input[type="text"], input[type="number"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
     background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
@@ -282,8 +291,9 @@
     <button class="secondary" id="exportRubricBtn">Export JSON</button>
     <button class="secondary" id="importRubricBtn">Import JSON</button>
     <input type="file" id="importRubricFile" accept="application/json,.json" style="display:none;">
-    <span id="shareBar"></span>
+    <button type="button" class="secondary" id="shareBtn">&#128279; Share rubric&hellip;</button>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="mode-tabs" id="modeTabs" style="display:none;">
     <button type="button" class="mode-tab active" id="modeBuildBtn">Build rubric</button>
@@ -440,7 +450,7 @@
    'levelsRow','addLevelBtn','criteriaList','emptyHint','addCriterionBtn',
    'toggleStudentTextBtn','studentTextHint',
    'printFormat','singlePointWrap','singlePointLevel','singlePointLevelLabel',
-   'printBtn','previewArea','previewNote','totalPoints','shareBar',
+   'printBtn','previewArea','previewNote','totalPoints','shareBtn','shareNote',
    'modeTabs','modeBuildBtn','modeScoreBtn','modeClassBtn','buildMode','scoreMode','classMode','analyticsCard',
    'scoreRosterSelect','scoreRosterLoadBtn',
    'studentNameInput','studentNamesList','loadStudentScoreBtn','deleteScoreBtn',
@@ -1764,11 +1774,32 @@
     if (e.key === 'Enter') { e.preventDefault(); els.classAddStudentBtn.click(); }
   });
 
-  StateLink.mountShareControl(els.shareBar, {
-    param: 'rubric',
-    label: 'Share this rubric',
+  /* ---------- share a rubric: _shared/share.js (Path 6 P2) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the code would be too dense to scan at this size),
+     download .json, and the system share where the browser has one. Until
+     this the tool had state-link.js's own mountShareControl, which built its
+     own button and did copy-link only: no QR, no file, and every message
+     through alert(). mountShareControl is retired with this increment. */
+  var SHARE_PARAM = 'rubric';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
     getState: function () { return state; },
-    onMessage: function (text) { alert(text); }
+    param: SHARE_PARAM,
+    tool: 'rubric-builder',
+    title: 'Share this rubric',
+    noun: 'this rubric',
+    filename: function () { return (state && state.name) || 'rubric'; },
+    note: 'The rubric travels — its levels, criteria and point values. Student scores stay in this browser; they are saved per rubric and are not part of the link.',
+    successMessage: 'Link copied. Opening it anywhere saves this rubric there as a new rubric — it never overwrites one already on that device.',
+    emptyMessage: 'Make a rubric first, then there is something to share.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
   });
 
   function looksLikeRubric(obj) {
@@ -1787,24 +1818,28 @@
   }
 
   /** A ?rubric=... link imports as a brand-new, uniquely-named rubric rather
-      than overwriting anything already saved here. */
+      than overwriting anything already saved here. Share.receive() does the
+      four steps this function used to do by hand — read the param, clear it
+      before judging the payload so a bad link cannot meet the teacher again
+      on every refresh, decode, and unwrap the { aplp, state } envelope the
+      sheet's own Download row writes. */
   function importSharedRubricFromUrl() {
-    var raw = StateLink.getParam('rubric');
-    if (!raw) return false;
-    StateLink.clearParam('rubric'); // consume it up front so a bad payload can't loop on refresh
-    var decoded = StateLink.decodeState(raw);
-    if (!looksLikeRubric(decoded)) {
-      alert("That shared link's rubric data looks corrupted.");
-      return false;
-    }
-    var name = uniqueRubricName(decoded.name || decoded.title || 'Shared Rubric');
-    state = ensureStateDefaults({ name: name, title: decoded.title || '', levels: decoded.levels, criteria: decoded.criteria,
-      showStudentText: decoded.showStudentText, singlePointLevelId: decoded.singlePointLevelId });
-    bumpIdCounterFromState();
-    RubricStore.saveRubric(name, state);
-    RubricStore.setCurrentName(name);
-    renderAll();
-    return true;
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: looksLikeRubric,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var name = uniqueRubricName(decoded.name || decoded.title || 'Shared Rubric');
+        state = ensureStateDefaults({ name: name, title: decoded.title || '', levels: decoded.levels, criteria: decoded.criteria,
+          showStudentText: decoded.showStudentText, singlePointLevelId: decoded.singlePointLevelId });
+        bumpIdCounterFromState();
+        RubricStore.saveRubric(name, state);
+        RubricStore.setCurrentName(name);
+        renderAll();
+        setShareNote('Loaded a shared rubric as \u201c' + name + '\u201d.');
+        return true;
+      }
+    });
   }
 
   /* ---------- boot ---------- */
