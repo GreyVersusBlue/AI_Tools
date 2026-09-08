@@ -23,11 +23,26 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* The two tint pairs the share note sits on, in 001's values with dark
+     counterparts — ink-paper.css has no token for either. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share a roster: the sheet itself is _shared/share.js (Path 6 P3). This is
+     only the note under the toolbar that records what the sheet last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -100,9 +115,11 @@
       <p class="sub">Assign staff to duty locations across the week, auto-fill a rotation, and print it for the workroom board.</p>
     </div>
     <div class="btnrow" style="margin-bottom:0;">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share roster&hellip;</button>
       <button class="secondary" id="printBtn">Print roster</button>
     </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <h2>Staff</h2>
@@ -151,7 +168,8 @@
 
   var els = {};
   ['rosterHubSelect', 'rosterHubLoadBtn', 'staffInput', 'saveStaffBtn', 'staffListWrap', 'dutiesWrap', 'addDutyBtn', 'gridTable', 'autoFillBtn', 'clearGridBtn',
-   'printBtn', 'printSub', 'printGrid'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'printBtn', 'printSub', 'printGrid',
+   'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { staff: [], duties: [], assignments: {}, staffSkip: {} };
 
@@ -163,10 +181,14 @@
   }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
+  /** True when there was a saved roster here — which is what tells an arriving
+      share link whether it is about to replace somebody's week or the three
+      duty locations every empty install starts with. */
   function load() {
+    var had = false;
     try {
       var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.duties)) state = saved;
+      if (saved && Array.isArray(saved.duties)) { state = saved; had = true; }
     } catch (e) { /* ignore */ }
     if (!state.staff) state.staff = [];
     if (!state.duties.length) state.duties = [
@@ -176,6 +198,7 @@
     ];
     if (!state.assignments) state.assignments = {};
     if (!state.staffSkip) state.staffSkip = {};
+    return had;
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -324,8 +347,104 @@
     window.print();
   });
 
+  /* ---------- share a roster: _shared/share.js (Path 6 P3) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the payload is too dense to scan), download .json, and
+     the system share where the browser has one. A duty roster is built by one
+     person and read by a corridor's worth of colleagues; before this the only
+     way to hand over the editable version was to rebuild it.
+
+     DUTY IDS ARE PRESERVED ON ARRIVAL, which is the one thing this payload
+     cannot treat like the others': every assignment is filed under
+     `<dutyId>|<day>`, so handing out fresh ids on import would keep the duty
+     names and empty the whole grid — 057's `leadsTo` problem in another
+     shape.
+
+     The staff named here are colleagues, not students: this is the building's
+     own duty list, printed for the workroom board, and the names ARE the
+     roster. Nothing in _shared/tool-registry.js marks this tool's key as
+     student data, and the "skip this week" flags travel with the names
+     because without them the grid a colleague opens cannot be re-filled the
+     way it was.
+
+     This tool keeps ONE roster, so an arriving link has nowhere to land
+     except on top of what is here; it asks first, and only when `load()`
+     found something saved. */
+  var SHARE_PARAM = 'duties';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { return state; },
+    param: SHARE_PARAM,
+    tool: 'duty-roster-builder',
+    title: 'Share this roster',
+    noun: 'this roster',
+    filename: 'duty roster',
+    note: 'The duty locations, the staff list, who is skipped this week and every assignment in the grid travel together. Opening it replaces the roster on the receiving device, which is asked first.',
+    successMessage: 'Link copied. Opening it on another device offers this whole roster — duties, staff and the filled-in week — in place of whatever is there.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleRoster(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.duties);
+  }
+
+  /** Normalises an arrival. Duty ids are kept exactly as they came: see above.
+      An assignment naming a duty or a person that did not travel is dropped,
+      so the grid never holds a cell no select can show. */
+  function normalizeRoster(obj) {
+    var staff = (Array.isArray(obj.staff) ? obj.staff : [])
+      .map(function (n) { return String(n || '').trim(); }).filter(Boolean);
+    var seen = {}, uniqueStaff = [];
+    staff.forEach(function (n) { if (!seen[n]) { seen[n] = true; uniqueStaff.push(n); } });
+
+    var duties = obj.duties.map(function (d) {
+      return { id: String(d && d.id || uid()), name: String(d && d.name || '') };
+    });
+    var known = {};
+    duties.forEach(function (d) { known[d.id] = true; });
+
+    var assignments = {};
+    Object.keys(obj.assignments || {}).forEach(function (key) {
+      var dutyId = key.split('|')[0];
+      var name = obj.assignments[key];
+      if (known[dutyId] && seen[name]) assignments[key] = name;
+    });
+    var staffSkip = {};
+    Object.keys(obj.staffSkip || {}).forEach(function (n) { if (seen[n] && obj.staffSkip[n]) staffSkip[n] = true; });
+
+    return { staff: uniqueStaff, duties: duties, assignments: assignments, staffSkip: staffSkip };
+  }
+
+  function importSharedRoster(hadSaved) {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleRoster,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var incoming = normalizeRoster(decoded);
+        if (hadSaved && !confirm('Replace the duty roster saved here with the shared one (' +
+            incoming.duties.length + ' duties, ' + incoming.staff.length + ' staff)?')) {
+          setShareNote('Kept the roster already on this device. The shared one was not loaded.');
+          return false;
+        }
+        state = incoming;
+        save();
+        setShareNote('Loaded a shared roster — ' + state.duties.length + ' duties across ' +
+          state.staff.length + ' staff.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
-  load();
+  var hadSaved = load();
+  importSharedRoster(hadSaved);
   els.staffInput.value = state.staff.join('\n');
   renderDuties();
   renderGrid();

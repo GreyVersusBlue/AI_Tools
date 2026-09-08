@@ -21,6 +21,10 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -36,6 +40,9 @@
      #printArea is a sheet of paper, so it restores the light three the same
      way ink-paper.css restores its own. */
   :root {
+    /* The two tint pairs the share note sits on, in 001's values with dark
+       counterparts — ink-paper.css has no token for either. */
+    --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3;
     --sym-corrosive-light: #c07a1a;
     --sym-biohazard-light: #2c6e3f;
     --sym-electrical-light: #c9a400;
@@ -44,6 +51,7 @@
     --sym-electrical: var(--sym-electrical-light);
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f;
     --sym-corrosive: #e0a94e;
     --sym-biohazard: #63c08e;
     --sym-electrical: #e3c344;
@@ -53,6 +61,11 @@
     --sym-biohazard: var(--sym-biohazard-light);
     --sym-electrical: var(--sym-electrical-light);
   }
+  /* Share a label sheet: the sheet itself is _shared/share.js (Path 6 P3).
+     This is only the note under the toolbar that records what it last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -134,9 +147,11 @@
         <option value="medium" selected>Medium (3/row)</option>
         <option value="large">Large (2/row)</option>
       </select>
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share labels&hellip;</button>
       <button class="secondary" id="printBtn">Print labels</button>
     </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <h2>Choose a symbol</h2>
@@ -176,7 +191,8 @@
   ];
 
   var els = {};
-  ['symbolPicker', 'labelText', 'labelQty', 'addLabelBtn', 'queueWrap', 'queueCount', 'printBtn', 'printArea', 'sizeSelect', 'editingNote', 'addGrid', 'cancelEditLink'].forEach(function (id) {
+  ['symbolPicker', 'labelText', 'labelQty', 'addLabelBtn', 'queueWrap', 'queueCount', 'printBtn', 'printArea', 'sizeSelect', 'editingNote', 'addGrid', 'cancelEditLink',
+   'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -194,12 +210,16 @@
   function symbolByKey(key) { return SYMBOLS.find(function (s) { return s.key === key; }); }
   function svgFor(sym) { return '<svg viewBox="0 0 32 32" style="color:' + sym.color + '">' + sym.path + '</svg>'; }
 
+  /** True when there was a sheet of labels here already — which is what tells
+      an arriving share link whether it is about to replace somebody's work.
+      An empty install seeds nothing, so an empty queue is the whole test. */
   function load() {
     var saved = null;
     try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { saved = []; }
     if (Array.isArray(saved)) { queue = saved; labelSize = 'medium'; }
     else if (saved && Array.isArray(saved.queue)) { queue = saved.queue; labelSize = saved.labelSize || 'medium'; }
     else { queue = []; labelSize = 'medium'; }
+    return queue.length > 0;
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify({ queue: queue, labelSize: labelSize })); } catch (e) { /* storage full/blocked */ }
@@ -320,8 +340,91 @@
     window.print();
   });
 
+  /* ---------- share a label sheet: _shared/share.js (Path 6 P3) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the payload is too dense to scan), download .json, and
+     the system share where the browser has one. A science department labels
+     its storage cupboards the same way in every room, and until now the only
+     way to pass that sheet on was to print it and photocopy it.
+
+     The symbols themselves do not travel: each label carries its symbol KEY
+     and the receiving page draws its own SVG for it, so a sheet shared from a
+     build with a symbol this one does not have still prints, with those
+     labels falling back to the plain equipment box rather than vanishing.
+
+     This tool keeps ONE sheet, so an arriving link has nowhere to land except
+     on top of what is here; it asks first, and only when `load()` found
+     labels — an empty install has nothing to lose. */
+  var SHARE_PARAM = 'labels';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { return { queue: queue, labelSize: labelSize }; },
+    param: SHARE_PARAM,
+    tool: 'science-safety-label-maker',
+    title: 'Share these labels',
+    noun: 'this label sheet',
+    filename: 'safety labels',
+    note: 'Every queued label travels — its text, its hazard symbol, how many copies of it to print and the printed label size — in the order they are stacked in. Opening it replaces the sheet on the receiving device, which is asked first.',
+    successMessage: 'Link copied. Opening it on another device offers this whole label sheet in place of whatever is there.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleLabels(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.queue);
+  }
+
+  var SIZES = { small: true, medium: true, large: true };
+
+  /** Normalises an arrival. Ids are handed out locally — the queue's own
+      order is what the printed grid follows and nothing refers to a label
+      from outside it — and a symbol key this build does not know becomes the
+      plain equipment box rather than an empty card. */
+  function normalizeLabels(obj) {
+    return {
+      labelSize: SIZES[obj.labelSize] ? obj.labelSize : 'medium',
+      queue: obj.queue.map(function (item) {
+        item = item || {};
+        var qty = parseInt(item.qty, 10);
+        return {
+          id: uid(),
+          symbol: symbolByKey(item.symbol) ? item.symbol : 'none',
+          text: String(item.text || ''),
+          qty: (isFinite(qty) && qty >= 1) ? Math.min(qty, 30) : 1
+        };
+      }).filter(function (item) { return item.text.trim(); })
+    };
+  }
+
+  function importSharedLabels(hadSaved) {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleLabels,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var incoming = normalizeLabels(decoded);
+        if (hadSaved && !confirm('Replace the ' + queue.length + ' label' + (queue.length === 1 ? '' : 's') +
+            ' on this device with the shared sheet (' + incoming.queue.length + ')?')) {
+          setShareNote('Kept the labels already on this device. The shared sheet was not loaded.');
+          return false;
+        }
+        queue = incoming.queue;
+        labelSize = incoming.labelSize;
+        save();
+        setShareNote('Loaded a shared sheet of ' + queue.length + ' label' + (queue.length === 1 ? '' : 's') + '.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
-  load();
+  var hadSaved = load();
+  importSharedLabels(hadSaved);
   els.sizeSelect.value = labelSize;
   renderPicker();
   renderQueue();

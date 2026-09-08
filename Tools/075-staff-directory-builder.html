@@ -22,10 +22,25 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* The two tint pairs the share note sits on, in 001's values with dark
+     counterparts — ink-paper.css has no token for either. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share a directory: the sheet itself is _shared/share.js (Path 6 P3). This
+     is only the note under the toolbar that records what it last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -125,9 +140,11 @@
       <button class="secondary" id="exportJsonBtn">Export JSON</button>
       <button class="secondary" id="importBtn">Import file&hellip;</button>
       <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json" style="display:none;">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share directory&hellip;</button>
       <button class="secondary" id="printBtn">Print directory</button>
     </div>
     <p class="import-msg" id="importMsg" style="display:none;"></p>
+    <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
   </div>
 
   <div class="card">
@@ -191,7 +208,8 @@
   var els = {};
   ['newName','newRoom','newExt','newSubject','addRowBtn','rosterHubSelect','rosterHubLoadBtn','bulkInput','bulkAddBtn','bulkMsg',
    'searchInput','clearAllBtn','dirRows','emptyMsg','printBtn','printSub','printTable','groupByDeptBox',
-   'exportCsvBtn','exportJsonBtn','importBtn','importFile','importMsg'].forEach(function (id) {
+   'exportCsvBtn','exportJsonBtn','importBtn','importFile','importMsg',
+   'shareBtn','shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -502,7 +520,12 @@
       var added = 0, skipped = 0;
       try {
         if (/\.json$/i.test(file.name) || /^\s*[\[{]/.test(text)) {
-          var data = JSON.parse(text);
+          /* Share.unwrap() so the .json the share sheet's Download row
+             writes — a { aplp, state } envelope around this same array —
+             opens through the button that has always opened this tool's
+             own exports. A bare array (every export written before the
+             sheet existed) comes back untouched. */
+          var data = Share.unwrap(JSON.parse(text));
           if (!Array.isArray(data)) throw new Error('not an array');
           data.forEach(function (p) {
             var result = addPerson(p.name, p.room, p.ext, p.subject, { skipDuplicates: true });
@@ -559,8 +582,78 @@
     window.print();
   });
 
+  /* ---------- share a directory: _shared/share.js (Path 6 P3) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the payload is too dense to scan), download .json, and
+     the system share where the browser has one. The directory is the thing
+     this tool exists to hand around: a new teacher, a long-term sub and the
+     front office all want the same page.
+
+     AN ARRIVING LINK MERGES, IT DOES NOT REPLACE, and so it does not ask.
+     That is a deliberate departure from the other single-document tools in
+     Path 6 P3, and the reason is that this tool already had an importer: its
+     "Import file…" button adds rows and skips the ones it already has, and a
+     link is the same document arriving by another route (#244's rule, that a
+     link and a picked file are judged and filed by one rule). Merging takes
+     nothing away, so there is nothing to ask about — the guard against loss
+     is the duplicate check, not a dialog. Two half-directories from two
+     departments are the case this is for.
+
+     What travels is the array of people, exactly what Export JSON writes.
+     "Group by department" does not: it is one checkbox in its own key, a
+     preference of the device rather than part of the directory.
+
+     The names here are staff, not students — this is the page that gets
+     printed for the workroom wall — which is why nothing is stripped. */
+  var SHARE_PARAM = 'directory';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    /* Null when empty, so the sheet refuses rather than handing over a link
+       to nothing — the same answer both Export buttons already give. */
+    getState: function () { return people.length ? people : null; },
+    param: SHARE_PARAM,
+    tool: 'staff-directory-builder',
+    title: 'Share this directory',
+    noun: 'this directory',
+    filename: 'staff directory',
+    note: 'Every row travels — name, room, extension and subject. Opening it ADDS these people to the directory on the receiving device and skips anyone already listed; nothing there is replaced.',
+    successMessage: 'Link copied. Opening it on another device adds these people to whatever directory is already there, skipping duplicates.',
+    emptyMessage: 'Add at least one person before sharing this directory.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleDirectory(list) {
+    return Array.isArray(list) && list.every(function (p) { return p && typeof p === 'object'; });
+  }
+
+  function importSharedDirectory() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleDirectory,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (list) {
+        var added = 0, skipped = 0;
+        list.forEach(function (p) {
+          var result = addPerson(p.name, p.room, p.ext, p.subject, { skipDuplicates: true });
+          if (result === 'added') added++; else if (result === 'duplicate') skipped++;
+        });
+        save();
+        setShareNote('Added ' + added + ' from a shared directory' +
+          (skipped ? ', skipped ' + skipped + ' already listed' : '') + '.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
   load();
+  importSharedDirectory();
   loadPrefs();
   els.groupByDeptBox.checked = groupByDept;
   render();

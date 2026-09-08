@@ -280,6 +280,7 @@
       title: 'Duty Roster Builder',
       file: 'Tools/058-duty-roster-builder.html',
       category: 'classroom-mgmt',
+      share: { param: 'duties' },
       keys: [
         { k: 'drb_roster_v1' },
       ],
@@ -390,6 +391,7 @@
       title: 'Sub Note / Feedback Slip Generator',
       file: 'Tools/076-sub-note-feedback-slip-generator.html',
       category: 'scheduling-subs',
+      share: { param: 'slip' },
       keys: [
         { k: 'snfs_slip_v1' },
       ],
@@ -399,6 +401,7 @@
       title: 'Staff Directory / Quick-Reference Builder',
       file: 'Tools/075-staff-directory-builder.html',
       category: 'scheduling-subs',
+      share: { param: 'directory' },
       keys: [
         { k: 'sdb_directory_v1' },
         { k: 'sdb_prefs_v1' },
@@ -775,6 +778,7 @@
       title: 'Unit Conversion Reference Chart Builder',
       file: 'Tools/078-unit-conversion-chart-builder.html',
       category: 'math',
+      share: { param: 'chart' },
       keys: [
         { k: 'ucb_chart_v1' },
       ],
@@ -910,6 +914,7 @@
       title: 'Book Tasting Menu Generator',
       file: 'Tools/049-book-tasting-menu-generator.html',
       category: 'ela',
+      share: { param: 'menu' },
       keys: [
         { k: 'btmg_books_v1' },
         { k: 'btmg_slips_v1' },
@@ -1002,6 +1007,7 @@
       title: 'Science Safety Symbol & Equipment Label Maker',
       file: 'Tools/074-science-safety-label-maker.html',
       category: 'science',
+      share: { param: 'labels' },
       keys: [
         { k: 'sslm_queue_v1' },
       ],

@@ -1,9 +1,11 @@
 // smoke-share-rollout.mjs — Path 6 P3: the builders that could not hand their
 // work to another teacher at all. Increment 1 was six SINGLE-DOCUMENT tools;
 // increment 2 added the three that keep a NAMED LIBRARY, which is a different
-// claim and has its own section below; increment 3 adds five more of those
+// claim and has its own section below; increment 3 added five more of those
 // (041, 051, 069, 082, 083) and no new machinery — which is the point of a
-// table-driven suite.
+// table-driven suite. Increment 4 adds six more single-document tools (049,
+// 058, 074, 076, 078) plus 075, which is the first adopter that MERGES an
+// arrival instead of replacing what is there, and section 5c is its.
 //
 //   node Tools/share/test/smoke-share-rollout.mjs      (or: npm run test:share-rollout)
 //
@@ -36,6 +38,12 @@
 //      because share.js clears the parameter before the payload is judged, a
 //      refresh must not ask again. 081 is exempt and is asserted NOT to ask:
 //      nothing it stores is authored.
+//   5c. MERGED BESIDE, on 075 alone. Its one key holds a LIST and it already
+//      had an importer that adds rows and skips duplicates, so a link merges
+//      and must not ask. What is asserted is what SURVIVES: the rows already
+//      on the device, the rows that arrived, and — because the duplicate
+//      check is the only guard against loss here — that opening the same
+//      link twice adds nobody twice.
 //   5b. SAVED BESIDE, on the library tools (047, 065, 072, 041, 051, 069, 082,
 //      083). These keep a list
 //      of names plus a blob per name, so there is nowhere for an arrival to
@@ -428,6 +436,162 @@ const TOOLS = [
     arrivedWant: 'We Can Do It!',
     localField: 'source.title',
   },
+  /* ── increment 4: six more single-document tools ──────────────────────── */
+  {
+    n: '049', file: '049-book-tasting-menu-generator.html', param: 'menu',
+    key: 'btmg_books_v1', slug: 'book-tasting-menu-generator', confirms: true,
+    /* This tool's key holds a BARE ARRAY of books and the payload is an
+       object around it, so the two image paths differ: `imageField` reads the
+       downloaded envelope, `imageStateField` the fixture as stored. */
+    state: [
+      { id: 'b1', title: 'The Girl Who Drank the Moon', author: 'Kelly Barnhill', genre: 'Fantasy',
+        blurb: 'A witch feeds a baby moonlight by mistake.',
+        /* A scanned cover. It must be in the DOWNLOAD and out of the LINK. */
+        cover: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==' },
+      { id: 'b2', title: 'Ghost', author: 'Jason Reynolds', genre: 'Realistic Fiction',
+        blurb: 'A sprinter running from more than the starting gun.', cover: null },
+    ],
+    expect: p => [
+      [p.books.length === 2, 'the payload carries every book'],
+      [p.books[0].title === 'The Girl Who Drank the Moon', 'with its title'],
+      [p.books[0].author === 'Kelly Barnhill' && p.books[0].blurb.indexOf('moonlight') !== -1,
+        'its author and the blurb that took an hour to type'],
+      /* The genre is the menu's course heading, so a stack shared without it
+         prints as one undifferentiated list. */
+      [p.books[1].genre === 'Realistic Fiction', 'and the genre, which is the course it prints under'],
+      [p.books[0].cover === null, 'and the cover image is dropped from the link, not carried in it'],
+    ],
+    absent: ['iVBORw0KGgo'],
+    imageField: 'books.0.cover',
+    imageStateField: '0.cover',
+    arrived: page => page.$eval('#booksWrap', el => (el.querySelector('.title-line') || {}).textContent || ''),
+    arrivedWant: 'The Girl Who Drank the Moon',
+  },
+  {
+    n: '058', file: '058-duty-roster-builder.html', param: 'duties',
+    key: 'drb_roster_v1', slug: 'duty-roster-builder', confirms: true,
+    state: {
+      staff: ['Rosalind Franklin', 'Chien-Shiung Wu', 'Katherine Johnson'],
+      duties: [{ id: 'dA', name: 'Cafeteria (west doors)' }, { id: 'dB', name: 'Bus loop' }],
+      assignments: { 'dA|Monday': 'Rosalind Franklin', 'dB|Monday': 'Chien-Shiung Wu',
+                     'dA|Tuesday': 'Katherine Johnson' },
+      staffSkip: { 'Chien-Shiung Wu': true },
+    },
+    expect: p => [
+      [p.duties.length === 2 && p.duties[0].name === 'Cafeteria (west doors)', 'the payload carries the duty locations'],
+      [p.staff.length === 3, 'and the staff list'],
+      /* The grid, not just its headings: every assignment is filed under
+         `<dutyId>|<day>`, so fresh ids on import would empty the whole week. */
+      [p.assignments['dA|Monday'] === 'Rosalind Franklin' && p.assignments['dB|Monday'] === 'Chien-Shiung Wu',
+        'and every filled-in cell, keyed on the duty ids that travelled with it'],
+      [p.staffSkip['Chien-Shiung Wu'] === true, 'and who is skipped this week'],
+    ],
+    arrived: page => page.$$eval('#dutiesWrap input[data-duty]', els => els.length ? els[0].value : null),
+    arrivedWant: 'Cafeteria (west doors)',
+  },
+  {
+    n: '074', file: '074-science-safety-label-maker.html', param: 'labels',
+    key: 'sslm_queue_v1', slug: 'science-safety-label-maker', confirms: true,
+    state: {
+      labelSize: 'large',
+      queue: [
+        { id: 'l1', symbol: 'corrosive', text: 'Dilute HCl — Cupboard 3', qty: 4 },
+        { id: 'l2', symbol: 'eyeprotect', text: 'Goggles — wash before returning', qty: 2 },
+      ],
+    },
+    expect: p => [
+      [p.queue.length === 2 && p.queue[0].text.indexOf('Dilute HCl') === 0, 'the payload carries every queued label'],
+      /* The symbol KEY travels, not the drawing: the receiving page draws its
+         own SVG for it. */
+      [p.queue[0].symbol === 'corrosive' && p.queue[1].symbol === 'eyeprotect',
+        'and each label’s hazard symbol, by key'],
+      [p.queue[0].qty === 4, 'and how many copies of it to print'],
+      [p.labelSize === 'large', 'and the printed label size, which is what the sheet is cut for'],
+    ],
+    /* The label's own text, without the " — <symbol name>" the row appends:
+       what section 5 swaps for KEPT is the string in the fixture, and the
+       symbol name is the page's, not the fixture's. */
+    arrived: page => page.$eval('#queueWrap', el => {
+      const q = el.querySelector('.qtext');
+      return q ? q.firstChild.textContent.replace(/\s+—\s+$/, '') : null;
+    }),
+    arrivedWant: 'Dilute HCl — Cupboard 3',
+  },
+  {
+    n: '076', file: '076-sub-note-feedback-slip-generator.html', param: 'slip',
+    key: 'snfs_slip_v1', slug: 'sub-note-feedback-slip', confirms: true,
+    state: {
+      copyCount: 6, classPeriod: 'Team 6 — Blue Hall', urgencyBox: false,
+      prompts: [{ id: 'p1', text: 'Which group needed the most redirection?' },
+                { id: 'p2', text: 'Did the lab clean-up get done?' }],
+    },
+    expect: p => [
+      [p.prompts.length === 2 && p.prompts[0].text.indexOf('redirection') !== -1,
+        'the payload carries every prompt the department agreed on'],
+      [p.copyCount === 6, 'and how many copies to print'],
+      [p.classPeriod === 'Team 6 — Blue Hall', 'and the class or period pre-filled on every slip'],
+      /* The box is the triage mechanism: a slip shared without the setting
+         arrives as a different slip. */
+      [p.urgencyBox === false, 'and whether the “call me about this” box is on'],
+    ],
+    arrived: page => page.inputValue('#classPeriod'),
+    arrivedWant: 'Team 6 — Blue Hall',
+  },
+  {
+    n: '078', file: '078-unit-conversion-chart-builder.html', param: 'chart',
+    key: 'ucb_chart_v1', slug: 'unit-conversion-chart-builder', confirms: true,
+    state: {
+      selected: { time: true },
+      hidden: { time: { 5: true } },
+      custom: { 'Sports Day Conversions': [{ id: 'x1', text: '1 lap = 400 meters' }] },
+      columns: 3,
+    },
+    expect: p => [
+      [p.selected.time === true, 'the payload carries which built-in unit sets are ticked'],
+      /* The recipe, not the rendered lines: the built-in tables are in the
+         page, so what has to travel is which of their lines were removed. */
+      [p.hidden.time && p.hidden.time['5'] === true, 'and which of their lines were removed'],
+      [p.custom['Sports Day Conversions'][0].text === '1 lap = 400 meters', 'and every custom line, under its group'],
+      [p.columns === 3, 'and the column count the chart is laid out in'],
+      [JSON.stringify(p).indexOf('1 minute = 60 seconds') === -1,
+        'and no built-in conversion text at all, which the receiving page prints from its own copy'],
+    ],
+    /* The custom group's heading, which is the only one not printed from the
+       page's own TEMPLATES table. */
+    arrived: page => page.$$eval('#chartGroups h3', els => els.map(e => e.textContent).filter(t => t !== 'Time')[0] || null),
+    arrivedWant: 'Sports Day Conversions',
+  },
+
+  /* ── increment 4: the one that merges ─────────────────────────────────── */
+  {
+    n: '075', file: '075-staff-directory-builder.html', param: 'directory',
+    key: 'sdb_directory_v1', slug: 'staff-directory-builder', merges: true,
+    /* The payload IS the array this tool's Export JSON has always written,
+       so the sheet and the file agree without a wrapper. */
+    state: [
+      { id: 's1', name: 'Amara Okonkwo', room: '214', ext: '4214', subject: 'Math' },
+      { id: 's2', name: 'Devi Raman', room: '118', ext: '4118', subject: 'Science' },
+    ],
+    expect: p => [
+      [Array.isArray(p) && p.length === 2, 'the payload is the array Export JSON writes, with every row'],
+      [p[0].name === 'Amara Okonkwo' && p[0].room === '214' && p[0].ext === '4214',
+        'with each person’s name, room and extension'],
+      [p[1].subject === 'Science', 'and their department, which is what the printed page groups by'],
+    ],
+    /* Every cell of this table is an editable input, so the name is a value
+       rather than text — reading textContent here returned "". */
+    arrived: page => page.$eval('#dirRows', el => {
+      const first = el.querySelector('input[data-field="name"]');
+      return first ? first.value : null;
+    }),
+    arrivedWant: 'Amara Okonkwo',
+    arrivedNote: /Added \d+ from a shared/,
+    /* Section 5c: the row the local device already has, and the one it does
+       not. `mergeLocal` is a whole fixture, because a merge is asserted on
+       what SURVIVES rather than on what replaced what. */
+    mergeLocal: [{ id: 'x9', name: 'Priya Anand', room: '301', ext: '4301', subject: 'ELA' }],
+    mergeKeeps: 'Priya Anand',
+  },
 ];
 
 /* ── 0. static: the four tags, in dependency order ──────────────────────── */
@@ -531,7 +695,8 @@ for (const t of TOOLS) {
   await fresh.goto(url, { waitUntil: 'load' });
   await settle(fresh, 700);
   eq(await t.arrived(fresh), t.arrivedWant, `${t.n}: an untouched device opens the shared work`);
-  ok(/Loaded a shared/.test(await fresh.textContent('#shareNote')), `${t.n}: and says so`);
+  ok((t.arrivedNote || /Loaded a shared/).test(await fresh.textContent('#shareNote')),
+    `${t.n}: and says so: ` + JSON.stringify(await fresh.textContent('#shareNote')));
   eq(new URL(fresh.url()).searchParams.get(t.param), null,
     `${t.n}: the parameter is consumed on open, so a refresh cannot import it twice`);
 
@@ -621,6 +786,45 @@ for (const t of TOOLS) {
     eq(names2.length, 2, `${t.n}: a refresh does not file the same arrival a second time: ` + JSON.stringify(names2));
   }
 
+  /* ── 5c. merged beside, on the one tool whose arrival adds rows ───────── */
+  if (t.merges) {
+    /* 075 is the departure this section exists for: a single-document tool
+       whose document is a LIST and which already had an importer that adds
+       rows and skips duplicates. A link is the same document by another
+       route, so it merges, it does not ask, and what must be asserted is that
+       the rows already on the device are all still there afterwards. */
+    const mine = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+    pages.push([t.n + '-merges', mine]);
+    const asked = [];
+    mine.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
+    await seed(mine, [[t.key, JSON.stringify(t.mergeLocal)]]);
+    await mine.goto(url, { waitUntil: 'load' });
+    await settle(mine, 900);
+
+    eq(asked.length, 0,
+      `${t.n}: an arriving link does not ask, because it takes nothing away: ` + JSON.stringify(asked));
+    ok(/Added \d+ from a shared/.test(await mine.textContent('#shareNote')),
+      `${t.n}: and the note says how many it added: ` + JSON.stringify(await mine.textContent('#shareNote')));
+
+    const after = await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || '[]'), t.key);
+    eq(after.length, t.mergeLocal.length + t.state.length,
+      `${t.n}: the saved list holds both sides of the merge: ` + JSON.stringify(after.map(r => r.name)));
+    ok(after.some(r => r.name === t.mergeKeeps),
+      `${t.n}: the row already on the device is still there`);
+    ok(after.some(r => r.name === t.arrivedWant),
+      `${t.n}: and the shared rows are there beside it`);
+
+    /* The duplicate check is the guard against loss here, so it is what a
+       second arrival of the same link must hit. */
+    await mine.goto(url, { waitUntil: 'load' });
+    await settle(mine, 900);
+    const twice = await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || '[]'), t.key);
+    eq(twice.length, after.length,
+      `${t.n}: opening the same link twice adds nobody a second time: ` + JSON.stringify(twice.map(r => r.name)));
+    ok(/skipped \d+ already listed/.test(await mine.textContent('#shareNote')),
+      `${t.n}: and says it skipped them: ` + JSON.stringify(await mine.textContent('#shareNote')));
+  }
+
   /* ── 6. the rows, the QR budget and the download envelope ─────────────── */
   await page.click('#shareBtn');
   await settle(page, 250);
@@ -664,7 +868,7 @@ for (const t of TOOLS) {
        the downloaded file, which is the only way it travels at all. */
     eq(await page.evaluate(([txt, path]) =>
       String(path).split('.').reduce((o, k) => (o == null ? o : o[k]), window.Share.unwrap(JSON.parse(txt))),
-      [file, t.imageField]), atPath(t.state, t.imageField),
+      [file, t.imageField]), atPath(t.state, t.imageStateField || t.imageField),
       `${t.n}: and the picture the link dropped is in the downloaded file, whole`);
   }
 
