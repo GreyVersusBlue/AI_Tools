@@ -41,6 +41,87 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 6 P2, second increment — the last four hand-written share bars, and a contrast bug in
+the sheet itself — 2026-09-08 (#233, `CACHE_VERSION` v170).** P2 is a 2+ row, so this is one
+increment and **the row stays, rewritten**. **002, 007, 015 and 044** deleted their own
+copy-link handler, their own `drawShareQr` / `drawRosterShareQr`, their own 264 px canvas and
+their overlay markup and CSS, and open `_shared/share.js`'s sheet instead; `npm run
+check:adoption` puts **`share.js` and `qr-draw.js` at 11 of 86 each**, up from 7. That is
+every tool with a hand-written share bar. **Four are left and they are all the same job**:
+003, 005, 006 and 020 go through `state-link.js`'s own `mountShareControl`, which is a
+different conversion and the whole of the next increment. Six things are worth carrying.
+
+(1) **The sheet has been unreadable on 007 since P1 shipped, and no guard on this site could
+have seen it.** `share.js` painted its muted text with `var(--muted, #6b6a63)` and its card
+with `var(--card, #fff)`. 007 defines `--muted` — `rgba(234,234,234,0.65)`, a *dark-theme*
+muted for its own `#1a1a2e` page — and does not define `--card` at all, so the sheet mixed the
+page's half-palette with its own fallback and drew near-white text on white: **five serious
+`color-contrast` violations, measured, on the note and all three row captions**. The general
+rule this breaks is that *a shared component must not mix a host's tokens with its own
+fallbacks*: a page that defines one and not the other is a partial palette, and there is no
+value of `--muted` that is right on somebody else's `--card`. Every muted colour in the sheet
+fades its own resolved `inherit` now (`color:inherit;opacity:.75`), which cannot be
+inconsistent with whatever surface the sheet actually landed on.
+
+(2) **That bug is the eleventh instance of the axe sweep's blind spot, and the second found by
+a suite rather than a conversion** (#227's 001 was the first). The site-wide sweep opens every
+page with empty storage; this sheet is a dialog behind a saved roster *and* a click, so it has
+never been scanned. The fix is rank 13's own answer, and it is free: `harness.mjs` already
+exports `a11yScan(page, { include })`, so a suite that has already prepped the state scans it
+for nothing. Both new suites do — the timeline one in **light and dark**, because the sheet
+paints its own surface and a fade that reads on paper can stop reading on a dark card.
+
+(3) **`onMessage` knew the sentence but not whether it was a failure.** 044's note has a
+`.saved` and an `.err` class, and the first draft matched on the wording (`/could not|too/`) to
+pick between them — which is a guard that breaks the moment a sentence in `share.js` is
+reworded, in a file the adopter does not own. `say()` already knows; it passes the flag now
+(`onMessage(text, isError)`), and the six adopters from #231 that take one argument are
+unaffected.
+
+(4) **The shared sheet is stricter about QR codes than the code it replaced, and 044 is where
+that shows.** A two-day sub plan is 2.1 KB of link; 044's own `drawShareQr` drew it at 153
+modules and 6 px each and called it a success, and its suite asserted the canvas was square.
+`qr-draw.js`'s measured budget greys the row out instead: *under 4 px per module at this size,
+which phones cannot read reliably — it would need 644 px*. **The old assertion passed on a code
+nobody could scan.** The suite reads the reason now rather than the canvas.
+
+(5) **A tool that strips its own images loses the only route that carries them** — the same
+finding as #231's (3), now on 015. It hand-built a payload with every event `photo` removed,
+because a downscaled photo is still tens of kilobytes of base64. It hands over the whole
+timeline now: share.js strips images out of the link and the QR by policy and says how many,
+and the **downloaded file keeps them**, which is a route the shared timeline never had — photos
+reached another machine only through Export JSON, and only if the teacher knew to use it.
+`compareWith` is still dropped by hand and it is *not* an image problem: it names a timeline
+saved only in the sending browser.
+
+(6) **Two pages had share code and nothing watching it.** 007's roster share was the
+least-tested share code on the site — its two existing suites are pure Node, so no browser had
+ever opened the page — and 015's file importer was about to start reading an envelope it had
+never seen. `Tools/name-picker/test/smoke-share.mjs` (**25 assertions**) and
+`Tools/timeline-builder/test/smoke-share.mjs` (**34**) are new. The timeline one drives the
+`{ aplp, state }` round trip with the **writer's own bytes** — the blob handed to
+`URL.createObjectURL` is captured and fed straight back into the file input — rather than a
+hand-written envelope, because a hand-written one cannot catch the writer drifting from the
+reader, which is exactly the bug #231 found. **Its first draft returned a dummy `blob:` URL
+from the stub and the anchor click logged "Not allowed to load local resource", which the
+suite's own no-console-noise assertion then reported as a failure.**
+
+**007 is the shape no other adopter has.** Its 🔗 buttons are per-roster rows that
+`updateRosterUI()` rebuilds from scratch on every change, so there is no stable button to
+mount on, and each one shares a *different* roster — which one `Share.mount`'s single
+`getState` could not express. It calls `Share.open()` out of the click handler instead. The
+row buttons carry `data-share="<roster name>"` and the sheet's rows carry
+`data-share="copy"`; the suite's selectors are scoped to `.share-sheet` for that reason.
+
+**Not verified.** No QR produced by any of the four was scanned by a real camera; the
+system-share row is exercised nowhere, because headless Chromium has no `navigator.share`; no
+file was downloaded by a real browser and re-opened by hand (the round trip is driven with a
+captured blob and `setInputFiles`); and the contrast fix in (1) was measured with axe and
+`getComputedStyle`, not on a projector or a Chromebook. **The six adopters from #231 were not
+re-checked page by page after the `--muted` change** — the sheet is scanned in both themes on
+015 and in light on 007, which is the ink-paper case and the partial-palette case, but the
+other nine adopters' palettes were not individually measured.
+
 **Path 6 P2, first increment — six tools open the shared share sheet, and `share.js` grows
 the receiving half — 2026-09-08 (#231, `CACHE_VERSION` v169).** P2 is a 2+ row, so this is one
 increment of it and the row stays, rewritten. **028, 039, 040, 050, 054 and 056** deleted their
