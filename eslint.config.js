@@ -40,6 +40,7 @@ const SITE_GLOBALS = {
   QrScan: 'readonly',
   QrDraw: 'readonly',
   Share: 'readonly',
+  Handoffs: 'readonly',
   Stage: 'readonly',
   Roster: 'readonly',
   MediaDB: 'readonly',

@@ -25,6 +25,12 @@
                                    keeps the wording teachers already know.
      keys      [{k, student?, transient?}]
      prefixes  [{p, student?}]     a family of keys built as PREFIX + something.
+     share     {param}                the query parameter this tool's own
+                                   Share.receive() reads (Path 6 P4). Present
+                                   only on a tool that can open a shared link;
+                                   _shared/handoffs.js resolves a "Send to…"
+                                   through it, and handoffs.test.mjs fails if
+                                   it disagrees with the page's source.
 
    `student` is per key, NOT per tool, and that is deliberate: the Name Picker's
    np_rosters is student data and its np_theme is not; 010's :excluded: is and
@@ -136,6 +142,7 @@
       title: 'Name Picker',
       file: 'Tools/007-Name%20Picker.html',
       category: 'classroom-mgmt',
+      share: { param: 'roster' },
       keys: [
         { k: 'np_absent', student: true },
         { k: 'np_crazy' },
@@ -158,6 +165,7 @@
       title: 'Seating Chart Generator',
       file: 'Tools/005-Seating%20Chart%20Generator.html',
       category: 'classroom-mgmt',
+      share: { param: 'section' },
       keys: [
         { k: 'seating-chart-v1', student: true },
       ],
@@ -180,6 +188,7 @@
       title: 'Group / Team Generator',
       file: 'Tools/002-group-team-generator.html',
       category: 'classroom-mgmt',
+      share: { param: 'groups' },
       keys: [
         { k: 'gtg-settings', student: true },
         { k: 'gtg:current', student: true },
@@ -226,6 +235,7 @@
       title: 'Class Roster Hub',
       file: 'Tools/006-class-roster-hub.html',
       category: 'classroom-mgmt',
+      share: { param: 'roster' },
       keys: [
         { k: 'crh_archive_v1', student: true },
         { k: 'crh_archived_students', student: true },
@@ -348,6 +358,7 @@
       title: 'Sub Plan Builder',
       file: 'Tools/044-Sub%20Plan%20Builder.html',
       category: 'scheduling-subs',
+      share: { param: 'plan' },
       keys: [
         { k: 'subPlanBuilder.history.v1' },
         { k: 'subPlanBuilder.lastAbsence.v1' },
@@ -412,6 +423,7 @@
       title: 'Rubric Builder',
       file: 'Tools/003-rubric-builder.html',
       category: 'assessment-grading',
+      share: { param: 'rubric' },
       keys: [
         { k: 'gvb-rubric-builder:current' },
         { k: 'gvb-rubric-builder:list' },
@@ -490,6 +502,7 @@
       title: 'Bracket / Tournament Generator',
       file: 'Tools/020-bracket-tournament-generator.html',
       category: 'games-rewards',
+      share: { param: 'bracket' },
       keys: [
         { k: 'gvb-bracket:current', student: true },
         { k: 'gvb-bracket:list', student: true },
@@ -750,6 +763,7 @@
       title: 'Word Problem Warm-Up Generator',
       file: 'Tools/081-word-problem-warmup-generator.html',
       category: 'math',
+      share: { param: 'warmup' },
       keys: [
         { k: 'wpwg_settings_v1' },
       ],
@@ -787,6 +801,7 @@
       title: 'Vocabulary Flashcard & Word Wall Generator',
       file: 'Tools/040-vocab-flashcard-generator.html',
       category: 'ela',
+      share: { param: 'deck' },
       keys: [
         { k: 'gvb-vocab-flashcards:current' },
         { k: 'gvb-vocab-flashcards:list' },
@@ -883,6 +898,7 @@
       title: 'Peer Feedback / Editing Checklist Generator',
       file: 'Tools/070-peer-feedback-checklist-generator.html',
       category: 'ela',
+      share: { param: 'checklist' },
       keys: [
         { k: 'pfc_checklist_v1' },
       ],
@@ -912,6 +928,7 @@
       title: 'Story Elements / Plot Diagram Builder',
       file: 'Tools/072-plot-diagram-builder.html',
       category: 'ela',
+      share: { param: 'diagram' },
       keys: [
         { k: 'pdb_current_v1' },
         { k: 'pdb_diagram_v1', legacy: true },
@@ -968,6 +985,7 @@
       title: 'Lab Report Template Builder',
       file: 'Tools/065-lab-report-template-builder.html',
       category: 'science',
+      share: { param: 'template' },
       keys: [
         { k: 'lrt_current_v1' },
         { k: 'lrt_list_v1' },
@@ -1000,6 +1018,7 @@
       title: 'Science Fair Project Tracker',
       file: 'Tools/073-science-fair-project-tracker.html',
       category: 'science',
+      share: { param: 'milestones' },
       keys: [
         { k: 'sfpt_tracker_v1', student: true },
       ],
@@ -1014,6 +1033,7 @@
       title: 'Dichotomous Key Builder',
       file: 'Tools/057-dichotomous-key-builder.html',
       category: 'science',
+      share: { param: 'key' },
       keys: [
         { k: 'dkb_key_v1' },
       ],
@@ -1040,6 +1060,7 @@
       title: 'Timeline Builder',
       file: 'Tools/015-timeline-builder.html',
       category: 'social-studies',
+      share: { param: 'timeline' },
       keys: [
         { k: 'gvb-timeline:current' },
         { k: 'gvb-timeline:list' },
@@ -1054,6 +1075,7 @@
       title: 'Primary Source Analysis Worksheet Generator',
       file: 'Tools/028-primary-source-analysis-generator.html',
       category: 'social-studies',
+      share: { param: 'worksheet' },
       keys: [
         { k: 'gvb-primary-source:current' },
         { k: 'gvb-primary-source:library' },
@@ -1069,6 +1091,7 @@
       title: 'DBQ / Source Packet Builder',
       file: 'Tools/056-dbq-source-packet-builder.html',
       category: 'social-studies',
+      share: { param: 'packet' },
       keys: [
         { k: 'dbq_packet_v1', legacy: true },
         { k: 'dbq:bank' },
@@ -1088,6 +1111,7 @@
       title: 'Historical Figure / Country Trading Card Maker',
       file: 'Tools/064-historical-trading-card-maker.html',
       category: 'social-studies',
+      share: { param: 'deck' },
       keys: [
         { k: 'htcm_cards_v1', legacy: true },
         { k: 'htcm_cards_v2', legacy: true },
@@ -1111,6 +1135,7 @@
       title: 'Current Events Discussion Guide Generator',
       file: 'Tools/054-current-events-discussion-guide-generator.html',
       category: 'social-studies',
+      share: { param: 'guide' },
       keys: [
         { k: 'cedg_current_v1' },
         { k: 'cedg_guide_v1', legacy: true },
@@ -1128,6 +1153,7 @@
       title: 'Government/Civics Simulation Role Card Generator',
       file: 'Tools/050-civics-role-card-generator.html',
       category: 'social-studies',
+      share: { param: 'roles' },
       keys: [
         { k: 'crcg_roles_v1', legacy: true },
         { k: 'crcg:current' },
@@ -1178,6 +1204,7 @@
       title: 'Vocab & Conjugation Drill Generator',
       file: 'Tools/039-vocab-conjugation-drill.html',
       category: 'world-language',
+      share: { param: 'set' },
       keys: [
         { k: 'gvb-vocab-conj:current' },
         { k: 'gvb-vocab-conj:list' },
@@ -1242,6 +1269,7 @@
       title: 'Verb Conjugation Reference Poster Generator',
       file: 'Tools/079-verb-conjugation-poster-generator.html',
       category: 'world-language',
+      share: { param: 'poster' },
       keys: [
         { k: 'vcp_columns_v1' },
         { k: 'vcp_poster_v1' },
@@ -1275,6 +1303,7 @@
       title: 'Cognates & False Friends Reference List Builder',
       file: 'Tools/052-cognates-false-friends-builder.html',
       category: 'world-language',
+      share: { param: 'cognates' },
       keys: [
         { k: 'cffb_list_v1' },
       ],
@@ -1310,6 +1339,7 @@
       title: 'Art Critique Worksheet Generator',
       file: 'Tools/047-art-critique-worksheet-generator.html',
       category: 'arts-pe',
+      share: { param: 'worksheet' },
       keys: [
         { k: 'acw_worksheet_current_v1' },
         { k: 'acw_worksheet_v1', legacy: true },

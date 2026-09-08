@@ -35,6 +35,11 @@
    Depends on state-link.js (the URL) and, for the QR row, qr-draw.js plus
    the vendored encoder. A page that loads share.js without state-link.js is
    a deployment mistake and is told so at mount, not at the first click.
+   Path 6 P4 added an optional fifth kind of row: "Send to <tool>", one per
+   handoff _shared/handoffs.js declares for the sheet's `tool`, present only
+   on a page that has loaded that file (and tool-registry.js, which it
+   reads). See handoffs.js for why the receiver's file and parameter live
+   in the registry rather than in the sender.
 
    Plain global script; see state-link.js for why not an ES module. */
 (function (global) {
@@ -342,6 +347,20 @@
       nativeBtn = row('native', 'Share…', 'system share sheet');
       rows.appendChild(nativeBtn);
     }
+    /* Path 6 P4: one "Send to <tool>" row per handoff declared for this
+       tool in _shared/handoffs.js, when the page has loaded it. The payload
+       handed to the transform is the IMAGE-STRIPPED state, because what
+       comes out is a link and the policy above holds for every link this
+       sheet builds. Rows carry data-share="send:<receiver slug>". */
+    var sendRows = [];
+    if (global.Handoffs && opts.tool) {
+      global.Handoffs.from(opts.tool).forEach(function (entry) {
+        var target = global.ToolRegistry && global.ToolRegistry.bySlug(entry.to);
+        var b = row('send:' + entry.to, entry.label || ('Send to ' + (target ? target.title : entry.to)), entry.note || '');
+        rows.appendChild(b);
+        sendRows.push({ button: b, entry: entry });
+      });
+    }
     sheet.appendChild(rows);
 
     var reason = el('p', 'share-sheet-reason');
@@ -411,6 +430,13 @@
     dlBtn.addEventListener('click', function () {
       download(dlName, fileContents(opts, link.state));
       say('Saved as ' + dlName + '.');
+    });
+
+    sendRows.forEach(function (sr) {
+      sr.button.addEventListener('click', function () {
+        var r = global.Handoffs.open(sr.entry, link.payload);
+        say(r.message, !r.ok);
+      });
     });
 
     if (nativeBtn) {
