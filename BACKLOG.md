@@ -63,10 +63,84 @@ yours.
 
 ## Where things stand — start here
 
-*Current as of `main` after PR #233, 2026-09-08. Rewrite this header when your phase
+*Current as of `main` after PR #235, 2026-09-08. Rewrite this header when your phase
 merges — that is step 6 of the definition of done, and it is not optional.*
 
-**Last shipped.** Rank 1 — **Path 6 P2's second increment: the last four hand-written share
+**Last shipped.** Rank 1 — **Path 6 P2's third increment, which finishes P2: the last four
+`state-link` tools, and `mountShareControl` retired** (#235, `CACHE_VERSION` **v171**). **003, 005,
+006 and 020** open `_shared/share.js`'s sheet now; `npm run check:adoption` puts **`share.js` and
+`qr-draw.js` at 15 of 86 each**, up from 11, and **`state-link.js` at 16**. **The row is deleted,
+not rewritten** — a 2+ row is rewritten while it has a half left, and this one does not: the single
+page with `state-link.js` and no sheet is **046**, whose one `buildShareUrl` builds 015's
+`?timeline=` link, a cross-tool send that is **P4's**. Seven things are worth carrying.
+
+(1) **The call the row had carried since #231 is decided: `mountShareControl` is retired, not
+wrapped.** Three reasons, now written into `state-link.js` where the function was, because a
+wrapper looks cheaper than it is. A wrapper would give `state-link.js` a runtime dependency on
+`share.js`, `qr-draw.js` and the vendored encoder that it **cannot require** — the dependency
+already runs the other way, since `share.js` throws at mount when `state-link.js` is absent — and
+there is no good behaviour for the missing case: falling back to copy-link means the same call
+quietly does two different things on two pages. The sheet also wants a button that is *already in
+the page*, with a label, a class, a title, a toolbar position and an id a suite can find; a control
+that appends its own bare `<button>` to a container can express none of that. And `check:adoption`
+counts a page's own `src`/`href`, so a page reaching the sheet only through `state-link.js` would
+not count as an adopter and this header's number would be wrong.
+
+(2) **005 is the one where the swap fixes a bug rather than tidying one, and it is measured.** Its
+students carry `photo`, a `data:image/` URL that `scg-photo.js` writes at 160 px and JPEG q0.75, and
+`mountShareControl` encoded the section **whole**. A class of 28 with photos produced a link of
+**105 KB** (photo-like fixture) or **742 KB** (noise fixture) against **3.0 KB** for the same section
+with images stripped — and `QrDraw.plan` on the old link returns *"more than any QR code can hold"*.
+The clipboard accepted all of it and the tool reported success. Both fixtures are **generated, not a
+teacher's real class photos**, so read the shape rather than the digits.
+
+(3) **Two hand-rolled QR modals went with them, and both had the same lie in them.** 006's
+`drawShareQr` and 020's `drawBracketQr` drew whatever the encoder accepted at a fixed 6 px per
+module and refused only when the encoder itself threw past version 40 — 006's was then squashed to
+260 px by its own CSS. `qr-draw.js`'s measured budget greys the row out with the reason instead.
+020's suite pins this on **both** sides: a 4-team bracket draws, a 32-entrant one is disabled with a
+reason naming the size.
+
+(4) **006's WebRTC pairing codes are not share payloads and were deliberately left alone — and that
+is where the new rank 12 came from.** Measuring them to justify leaving them found that they are
+below the readable floor and have been since they shipped: **569 bytes → 81 modules**, drawn at 6 px
+per module into a 534 px canvas that `.handoff-qr` forces to 220 px, so **2.47 px per module**
+against `qr-draw.js`'s measured **4**. The paste-the-code-as-text box beside it is why nobody has
+reported it. Fixing it would have widened a Path 6 PR into Path 8's territory, so it is a row with
+the number attached rather than a quiet edit. The helper is renamed `drawPairingQr` so the two
+cannot be confused again.
+
+(5) **Two `state-link.js` script tags were dead and one of them was not on anybody's list.** The row
+had named 004's since #231; **`Tools/classroom-timer/mirror.html`'s had never been noticed**. Both
+deleted, verified rather than assumed — the identifier `StateLink` appears in neither file nor in
+any of the four `classroom-timer/` modules. This is what took P2 from "mostly done" to done, and it
+is the argument for spending five minutes on the accounting rather than trusting the last count.
+
+(6) **Four new suites, 138 assertions, and none of these four pages had any share coverage at all.**
+`Tools/seating-chart/test/smoke-share.mjs` (**36**) checks the photo policy against the *writer's own
+downloaded bytes*, captured off `URL.createObjectURL`;
+`Tools/bracket-tournament-generator/test/smoke-share.mjs` (**36**) pins the QR budget on both sides;
+`Tools/class-roster-hub/test/smoke-share.mjs` (**34**) proves the pairing half did not move;
+`Tools/rubric-builder/test/smoke-share.mjs` (**32**) proves the marks do not travel with the rubric
+and scans the sheet in **light and dark**. Each scans the open sheet with `a11yScan(page, {include})`
+— rank 13's mechanism, free to any suite that has already prepped a page into a state. **All four
+came back clean and no allowlist line was added.**
+
+(7) **Two of the four suites' first drafts failed on the fixture, not the tool**, which is worth
+knowing before writing the fifth: 003's "a student score is on file before sharing" fired `change` on
+`#studentNameInput` and got nothing, because the tool saves on the **Load / start scoring** button,
+not on the field. Nothing was wrong with the page.
+
+Full `npm test` ran locally once — **153 of 153 green, 29.6 min** — and CI ran the **full** list
+because `_shared/` is in the diff: green in **29.7 minutes** (02:59:57 → 03:29:42 UTC).
+**Not verified:** no QR produced by any of the four was scanned by a real camera; the **system-share
+row is exercised nowhere**, because headless Chromium has no `navigator.share`; no file was
+downloaded by a real browser and re-opened by hand; the 105 KB / 742 KB figures come from generated
+fixtures; and **the other three pairing-QR candidates in rank 12 were read off the source, not
+measured** — only 006's number is real.
+
+
+Before it, rank 1 — **Path 6 P2's second increment: the last four hand-written share
 bars, and a contrast bug in the sheet itself** (#233, `CACHE_VERSION` **v170**). P2 is a 2+ row,
 so this is one increment and **the row stays, rewritten to say what is left**. **002, 007, 015
 and 044** deleted their own copy-link handler, their own `drawShareQr`/`drawRosterShareQr`, their
@@ -622,21 +696,21 @@ tells the next session to build what already exists, and it did so for about an 
 claim table itself worked, both then and for #182: sessions took different rows and no source
 file conflicted.
 
-**Numbers, all re-measured against the tree on 2026-09-08, after #233 merged:**
+**Numbers, all re-measured against the tree on 2026-09-08, after #235 merged:**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v170` (→ v170 in #233; **six** precached files changed — the four adopted pages, `_shared/share.js` and `sw.js` itself. Nothing was added to or removed from either tier: `share.js` and `qr-draw.js` were already listed, because 064 has linked them since #178, and a test file is never precached) |
-| Precache entries | 257 in `PRECACHE_URLS`, **82** of them in the `SHELL_URLS` install tier — unchanged by #233, which changed five already-listed files and added none. **Two increments in a row have added four to six adopters of a shared file and touched neither list**, which is the point of `_shared/` being precached once |
-| Suites | **149** in `Tools/board-check/suites.json`; `expectedFailures` **empty**. #233 added two, for two pages whose share code nothing was watching: `Tools/name-picker/test/smoke-share.mjs` (**25 assertions**, `npm run test:name-picker-share`) is **the first suite to open 007 in a browser at all** — its two existing suites are pure Node — and `Tools/timeline-builder/test/smoke-share.mjs` (**34**, `npm run test:timeline-share`) drives the `{ aplp, state }` round trip with the **writer's own bytes**, captured off `URL.createObjectURL` and fed back into the file input, because a hand-written envelope cannot catch the writer drifting from the reader. Both scan the open sheet with `a11yScan(page, {include})`, the timeline one in light **and** dark; that scan is what found the sheet's five `color-contrast` failures on 007. #233 also rewrote three existing suites against the sheet (002's, 044's, and the share half of 015's `smoke-map-print.mjs`) — **044's old QR assertion checked that the canvas was square and so passed on a 153-module code nobody could scan**; it reads `qr-draw.js`'s stated reason now. Before it, #231 added one — `Tools/vocab-conjugation-drill/test/smoke-share.mjs`, **28 assertions**; **039 had no `test/` folder at all**, and it was the only page in that batch with nothing watching it. #231 also took `Tools/share/test/share.test.mjs` from 47 to **68** (the receiving half: `unwrap`, `parseFile`, `receive`, `receiveFile`) and closed the modal in eight more suites. **#233 ran the full `npm test` locally once: 149 of 149 green, 29.4 min, and its CI ran the full list, green in 27.4 minutes**; #231's were 146 of 146 in 29.1 and 28.2 |
+| `CACHE_VERSION` | `v171` (→ v171 in #235; **seven** precached files changed — the four adopted pages, `_shared/state-link.js`, `Tools/classroom-timer/mirror.html` and `sw.js` itself, plus 004, which is eight if you count the two dead-tag deletions separately from the four conversions; `check:precache -- --base origin/main` prints the figure and is the thing to trust. Nothing was added to or removed from either tier: `share.js` and `qr-draw.js` were already listed, and a test file is never precached) |
+| Precache entries | 257 in `PRECACHE_URLS`, **82** of them in the `SHELL_URLS` install tier — unchanged by #235, which changed seven already-listed files and added none. **Three increments in a row have added four to six adopters of a shared file and touched neither list**, which is the point of `_shared/` being precached once |
+| Suites | **153** in `Tools/board-check/suites.json`; `expectedFailures` **empty**. #235 added **four**, one per converted page, because **none of 003, 005, 006 or 020 had any share coverage at all**: `Tools/seating-chart/test/smoke-share.mjs` (**36 assertions**), `Tools/bracket-tournament-generator/test/smoke-share.mjs` (**36**), `Tools/class-roster-hub/test/smoke-share.mjs` (**34**) and `Tools/rubric-builder/test/smoke-share.mjs` (**32**) — reached through the existing `test:seating`, `test:bracket`, `test:roster-hub` and `test:rubric` shortcuts rather than four new ones. The 005 one is the one to copy: it asserts the image policy against **the writer's own downloaded bytes**, captured off `URL.createObjectURL`, the same technique #233's timeline suite introduced. Before it, #233 added two (name-picker **25**, timeline-builder **34**) and #231 one (vocab-conjugation-drill **28**) and took `Tools/share/test/share.test.mjs` from 47 to **68**. **#235 ran the full `npm test` locally once: 153 of 153 green, 29.6 min, and its CI ran the full list, green in 29.7 minutes**; #233's were 149 of 149 in 29.4 and 27.4 |
 | CI per pull request | **Scoped to the diff since #197, and since #223 that scoping actually reaches a tool PR.** The pull-request job runs `npm test -- --changed --base origin/<base>`; the push-to-`main` job runs everything. `sw.js` was site-wide by rule 1 and every tool PR bumps `CACHE_VERSION` there, so **nine tool PRs in a row (#200 … #221) ran the full ~21-minute list anyway** — #200 touched six pages and one test file and still ran all 145 suites in 23.4 minutes. #223 makes rule 1 read the **hunk**: a `sw.js` diff whose only changed lines are the `CACHE_VERSION` assignment selects the two `service-worker` suites instead of everything, and anything else in the file — a precache URL, a comment, a diff the runner cannot produce — is site-wide exactly as before. **#225 was that first genuinely scoped tool PR and #227 is the second, both measured rather than assumed: 14 of 145 suites in 9.1 minutes (18:37:31 → 18:46:34 UTC) and 15 of 145 in 4.7 minutes (19:38:10 → 19:42:54 UTC), against 23–29 for the full pass.** #227 is the cheaper of the two despite selecting one suite more, because its selection was two tool pages and a suite file rather than six pages. Its log's first `because` line reads `sw.js: CACHE_VERSION is the only changed line — not site-wide; the service-worker suites run`. Before #223 the saving was real only for a PR with no precached change: **#201, this file plus `HISTORY.md`, ran green in 43 seconds.** **#214 found the first real bug in rule 4:** the selector finds the page-sweeping suites by grepping their source for `readdirSync`, so moving `smoke-theme.mjs` to `git ls-files` silently took it out of every page edit's selection; `isSweep` matches both spellings now and `select-suites.test.mjs` pins both. That is the same shape of mistake #223 had to avoid — a rule reading a *name* where it should read the *content* goes quiet, not red — which is why nothing in the new check looks for the word `CACHE_VERSION` anywhere in a diff and why the test reads the constant out of the real `sw.js`. **The push-to-`main` full pass is not the safety net it reads as, and this was measured, not assumed.** `ci.yml` sets `concurrency: group: ci-${{ github.ref }}` with `cancel-in-progress: true`, and step 6 merges onto the same ref minutes after the increment does — so the increment commit's own main run is **cancelled** every time. Run 135 (#216's commit) and run 139 (#218's) are both `cancelled`; runs 137 and 141, the step-6 commits that followed them, are the `success`es. Nothing is actually unprotected — the step-6 commit carries the same tool tree plus documentation, so its full pass covers the increment's code — but **the run that says "green on main" for an increment is the one for the handoff commit after it**. If a session ever needs the increment commit itself covered (a revert, a bisect), re-run it by hand; the concurrency group will not do it |
 | Read-only guards | **11**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands` and `adoption`. All run in CI. `check:precache` is one guard running **six** always-on checks since #191 (SHELLDEP is the sixth) plus the opt-in BUMP. `check:docs-commands`'s `KNOWN_MISSING` is **empty** since #195 |
-| Accessibility allowlist | **14 page-rule pairs on 14 pages, every one `color-contrast`** — unchanged by #233, #231, #229, #227 and #225, none of which added or deleted a line. #233 touched four pages and two of them (002, 007) carry one of those 14 lines; neither changed. **The five violations #233 fixed were never in this file and could not have been**: they are in the share sheet, a dialog the sweep cannot reach, and they were found by a suite scanning the state instead. That is rank 13's mechanism working, and it is the second time it has (see #227) |
+| Accessibility allowlist | **14 page-rule pairs on 14 pages, every one `color-contrast`** — unchanged by #235, #233, #231, #229, #227 and #225, none of which added or deleted a line. #235 touched four pages, added a button and a note paragraph to each, and **all four came back clean from the site-wide sweep**; its four new suites also scan the open share sheet with `a11yScan`, in light and dark on 003, and found nothing. That is six increments in a row that changed pages and did not need a line, which is the standard a new tool is held to |
 | Tool registry | 87 rows, **217 keys and 32 prefixes across 109 files** — `__scv_probe__` retired and `__gvb_save_probe__` declared for the first time, so the total is unchanged for two unrelated reasons; four IndexedDB databases declared; `check:registry` green, `dynamic` empty everywhere |
-| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `state-link.js` 17 · `qr-draw.js` 11 · `share.js` 11 · `qr-scan.js` 10 · `stage.js` 9 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `state-link.js` 16 · `qr-draw.js` 15 · `share.js` 15 · `qr-scan.js` 10 · `stage.js` 9 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087**. 81 of them have recorded open ideas |
-| Tier 1 rows | **175**, a contiguous 1..175 — **unchanged**, because rank 1 is a 2+ row that shipped an increment and was rewritten rather than deleted, which is what a 2+ row is supposed to do. **Rank 1 is still Path 6 P2, a 2+ row, so it is the next session's whole batch on its own** (see "How big a batch"); it now says which 4 tools are left, why they are one job rather than four, and the decision the next session has to make on `mountShareControl`. The tool-number boundary is **94**. Rank 13 (the sweep's blind spot) has **eleven** confirmed instances: #233 added one, and it is the first found in a `_shared/` file rather than a tool page — the share sheet reading a host's `--muted` onto its own `--card` fallback, five serious `color-contrast` failures on 007 that no page-level sweep could see. **It is also the second instance found by a suite rather than a page conversion**, which is what that row's "the free evidence is spent" worry was answered with in #227 |
+| Tier 1 rows | **175**, a contiguous 1..175 — **unchanged in total, but not unchanged**: rank 1 (Path 6 P2) was **deleted**, because P2 finished rather than shipping another half, and one row was **added** at rank 12, the pairing-QR sizing bug #235 measured on its way past. The tool-number boundary is still **94** for the same reason — one out above it, one in above it. **Rank 1 is now Path 6 P3, a 2+ row, so it is the next session's whole batch on its own** (see "How big a batch"), and rank 2 (P4) is a 1. Rank 13 (the sweep's blind spot) still has **eleven** confirmed instances: #235 added none, and that is itself worth noting — it is the first page-changing increment in twelve whose conversions turned up no shipped violation, and its four suites scanned the open sheet on four pages to establish that rather than inferring it from a quiet sweep |
 | Dark mode (`npm run path5:next`) | **83 of 83** themed pages paint a native dark palette (**100%**) and **0** are left on a11y.css's CSS-filter invert. A further **14 live pages load no `a11y.js` at all** and get no theme either way: 002, 007, 016, 018, 035, 038, 044, 086, `classroom-label-maker/speak.html`, `ideas-backlog.html` and the four root landing-page variants — **none of them is a ranked row**, and 035 is a standing decision rather than an omission. The script's other half reads **`stage.js` at 9 adopters, 0 pages hand-rolling fullscreen**, so **Path 5 is finished on both counts and this script has nothing left to pick.** **Read these off the script, and be aware it was wrong until #214**: it walked the filesystem rather than `git ls-files`, so it counted `Tools/board-check/.offline-copy-staging/` and reported double everything on any tree where that folder exists; **97 live pages on its first line is right, 188 is the bug**. **The literal count predicted the chrome and missed the work in seven increments running** — #208's cheapest page was its most expensive (colours from a table in *script*); #212's cheapest needed `.paper-sheet` in its renderer; #214's real work was in two literals no count could see; #216's hardest decision (`.paper-sheet-off`) is invisible to any count; #218's two hardest calls were not colour changes at all; #221's was a `.paper-sheet` it had to **withhold**; #225's was a `.paper-sheet` it had to **stretch over an entire interactive viewer**; and #227 was not a palette round at all and still found a contrast bug the picker's count could never have named. **#229 is the end of that argument rather than another instance:** 034's literal count was never printed by the picker at all, because the page loaded no `a11y.js`, and the work turned out to be a token split, a data-driven ink and a print reset in `_shared/` |
 | Fullscreen | `_shared/stage.js` in **9** pages (001, 004, 010, 015, 021, 023, 024, 025, 072); **0** themed pages still hand-roll `requestFullscreen` — unchanged by #229, which added no stage. #227 took the last two — 001's Projector View and 004's whole page (mounted on `<body>`, as 010 is) — neither of which was ever on the P2 list. **One page outside the themed set still hand-rolls: 007**, which loads no `a11y.js`, so `path5:next` does not count it; it needs a theme before it needs a stage. 030 and 064 run a projector review game off a fixed `inset: 0` overlay rather than the Fullscreen API, and 017 has a *projector view* of the same shape — a fixed overlay the page shows and hides itself, with no `requestFullscreen` anywhere. Whether any of those three should become a stage is open and unclaimed |
 | Lint | clean |
@@ -646,17 +720,28 @@ retired when `scv-store.js` stopped doing its own blocked-storage probe, and
 `__gvb_save_probe__` was declared for the first time. Nothing stopped being tracked. #195
 changed no keys at all.
 
-**Start here: rank 1 — Path 6 P2, the share-sheet adoption in the 17 existing `state-link`
-tools. It is a 2+ row, so it is the whole batch on its own** — do not pair it with anything, do
-one honest increment, ship it, and leave the row in place with its Item text rewritten to say what
-is done and what is left. That is the rule in "How big a batch" and the top of the list has just
-walked off the end of a run of 1s into it. Ranks 2 and 3 are the rest of Path 6 and rank 2 is
-another 2+, so the same applies next time.
+**Start here: rank 1 — Path 6 P3, extending sharing to the ~11 builders that do not share yet.
+It is a 2+ row, so it is the whole batch on its own** — do not pair it with anything, do one honest
+increment (P3 says "batches of ~8" and means it), ship it, and leave the row in place with its Item
+text rewritten to say what is done and what is left. Rank 2 is P4, a 1, so it is a batch of one when
+the list reaches it.
 
-**Two things worth knowing before opening Path 6.** The share sheet (`_shared/share.js`) shipped
-in #178 with a measured QR budget and has **one adopter**; `state-link.js` has **17**, and those
-17 are the row. The Path 6 section in Tier 2 carries the phase list; read the P1 notes in
-`HISTORY.md` for what the QR budget actually measured before assuming any payload fits.
+**What P3 inherits from three increments of P2, so it does not rediscover any of it.** The sheet is
+`Share.mount(button, {...})` on a button the page already has, and `Share.receive({...})` on the way
+back in; **fifteen pages** are worked examples. Four things cost earlier increments real time.
+`Share.open()` exists beside `mount()` for a per-row share that no single `getState` can express
+(007). `onMessage(text, isError)` passes the failure flag, so an adopter with a two-colour note never
+matches on the wording. The sheet is a **real modal with a backdrop**, so a suite that opens it and
+walks away wedges the next click — close it in the same `page.evaluate`. And a `.json` the Download
+row writes is wrapped in `{ aplp, state }`, which is what `Share.unwrap()` is for; P1 shipped that
+envelope with no reader and no single-file suite could have said so. Read `HISTORY.md`'s P1 notes for
+what the QR budget actually measured before assuming any payload fits.
+
+**A P3 candidate that carries images needs the 005 lesson.** `share.js` strips `data:image/` and
+`blob:` strings out of the link and QR by policy and says how many; without it a tool that puts
+photos in a URL produces a link of **~105 KB for a class of 28** that the clipboard accepts and
+nothing else will (measured on 005 in #235). If a P3 tool has images, check the link size before
+believing the sheet is a no-op for it.
 
 **What Path 5 leaves behind, now that the path is over.** Fourteen live pages load no `a11y.js`
 at all and are nobody's row (listed in the table above); 007 hand-rolls `requestFullscreen` and
@@ -1358,18 +1443,18 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 6 P2 — adopt the share sheet in the `state-link` tools. **10 of 14 done** (#231 `CACHE_VERSION` v169; #233 v170): 028, 039, 040, 050, 054, 056 and now **002, 007, 015 and 044** open the shared sheet from one button and have lost their own copy-link handler, `drawShareQr`, 264 px canvas and overlay; `check:adoption` puts `share.js` and `qr-draw.js` at **11 of 86** each. **That is every tool with a hand-written share bar, so the four left are all the same job and are the next increment on its own**: **003, 005, 006 and 020** go through `state-link.js`'s own `mountShareControl`, which builds its own button and does copy-link only — so this conversion is *replace the mount*, not *delete handlers*, and it needs the call this row has carried since #231: **make `mountShareControl` a thin wrapper over `Share.mount` and keep its four call sites, or retire it and edit four pages.** Two things are measured and change the shape of that work: **006 and 020 hand-roll a QR *beside* the mount** (`drawShareQr`, `drawBracketQr`), and **006's cannot simply be deleted — the same helper draws the WebRTC pairing offer and answer codes** (`handoffOfferCanvas`, `handoffAnswerCanvas`), which are not share payloads and are not P6's. **Two tools counted in the original "17" are not P2's at all and this is measured, not assumed: 004 loads `state-link.js` and calls nothing in it** (a dead script tag to delete; its own `drawQR` is ct-mirror's pairing code), and **046's single `buildShareUrl` builds 015's `?timeline=` link**, a cross-tool send that belongs to P4 | site | 2+ | `2kpzdz` 2026-09-08 02:29 UTC | [Path 6](#path-6--share-everywhere) |
-| 2 | Path 6 P3 — extend sharing to the ~11 builders that do not share yet | site | 2+ | | [Path 6](#path-6--share-everywhere) |
-| 3 | Path 6 P4 — cross-tool "Send to…" driven by the tool registry | site | 1 | | [Path 6](#path-6--share-everywhere) |
-| 4 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js` (005 photos first) | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 5 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
-| 6 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 7 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 8 | The contrast round — the 21 remaining `color-contrast` allowances. **After Path 5 P3, not before.** | site | 1–2 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 9 | Light `--line-strong` misses the 3:1 WCAG 1.4.11 control-border ask. The axe sweep will never surface it | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 10 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 11 | Two pages load `_shared/a11y.js` **and** `_shared/a11y.css` twice — 014 and 033, found by a `git ls-files` sweep during #202, which fixed the third (039). Removing a duplicate is a cascade decision per page: the late `a11y.css` copy is the one winning ties today, and the early `a11y.js` is what keeps the theme off the first paint. **Both pages have now been converted to native dark without touching this** (014 in #210, 033 in #218) — the `A11Y_NATIVE_THEME` flag is read by both loads, so opting in is correct either way, which is why nine increments have walked past it | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 12 | `check:entities` cannot see an HTML entity that lives in a **data array** and reaches a text sink through a variable. #208 found 055 projecting a literal `&rsquo;` on the board since the tool shipped — the entity is in a `BUILTIN[]` row and the sink is `item.broken`, so the guard counted it among the 325 "strings whose sink is not visible statically" and passed. Follow a literal from an array/object initialiser to the sink its element is written to, at least single-hop, and re-baseline the 325 (**312 as of #216**). **Start with the free half of this row:** #216 found four more in that same bucket — 065 printing `&mdash;` on every lab packet and 057 doing it three times — all of the form `escapeHtml('&mdash;')`, which escapes the `&` and renders the entity as text. **An entity in a string argument of `escapeHtml`/`escapeAttr` is wrong wherever the sink is**, so that rule needs no dataflow at all and would have caught every one of the four | `Tools/board-check/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 1 | Path 6 P3 — extend sharing to the ~11 builders that do not share yet | site | 2+ | | [Path 6](#path-6--share-everywhere) |
+| 2 | Path 6 P4 — cross-tool "Send to…" driven by the tool registry | site | 1 | | [Path 6](#path-6--share-everywhere) |
+| 3 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js` (005 photos first) | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 4 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 5 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 6 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 7 | The contrast round — the 21 remaining `color-contrast` allowances. **After Path 5 P3, not before.** | site | 1–2 | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 8 | Light `--line-strong` misses the 3:1 WCAG 1.4.11 control-border ask. The axe sweep will never surface it | `_shared/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 9 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 10 | Two pages load `_shared/a11y.js` **and** `_shared/a11y.css` twice — 014 and 033, found by a `git ls-files` sweep during #202, which fixed the third (039). Removing a duplicate is a cascade decision per page: the late `a11y.css` copy is the one winning ties today, and the early `a11y.js` is what keeps the theme off the first paint. **Both pages have now been converted to native dark without touching this** (014 in #210, 033 in #218) — the `A11Y_NATIVE_THEME` flag is read by both loads, so opting in is correct either way, which is why nine increments have walked past it | site | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 11 | `check:entities` cannot see an HTML entity that lives in a **data array** and reaches a text sink through a variable. #208 found 055 projecting a literal `&rsquo;` on the board since the tool shipped — the entity is in a `BUILTIN[]` row and the sink is `item.broken`, so the guard counted it among the 325 "strings whose sink is not visible statically" and passed. Follow a literal from an array/object initialiser to the sink its element is written to, at least single-hop, and re-baseline the 325 (**312 as of #216**). **Start with the free half of this row:** #216 found four more in that same bucket — 065 printing `&mdash;` on every lab packet and 057 doing it three times — all of the form `escapeHtml('&mdash;')`, which escapes the `&` and renders the entity as text. **An entity in a string argument of `escapeHtml`/`escapeAttr` is wrong wherever the sink is**, so that rule needs no dataflow at all and would have caught every one of the four | `Tools/board-check/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 12 | The WebRTC pairing QR codes are drawn below the size a phone can read, and this is measured on 006: its offer payload is **569 bytes → 81 modules** (version 16), `drawPairingQr` renders it at 6 px per module into a **534 px** canvas, and `.handoff-qr` then forces `width/height: 220px` — **2.47 px per module**, against the **4 px** floor `qr-draw.js` measured by blurring codes and decoding them with the vendored jsQR. `QrDraw.plan(payload, {maxPx: 220})` refuses it outright and says it would need **356 px**. So "Move everything to another device" has shown an unscannable code since it shipped; the paste-the-code-as-text box beside it is why nobody has reported it. **Two more have the same shape, read off the source and NOT measured:** `Tools/escape-room-builder/monitor.html` draws at 8 px/module into `canvas.qr { max-width: 220px; width: 100% }`, and 035's two handoff canvases are `max-width: 100%` inside a panel, so theirs depends on the panel width. **021 draws at 8 px/module with no CSS rule constraining `#pairOfferCanvas`** and is probably fine. The fix is not "make the box bigger" on its own — a 356 px code in a 460 px modal is fine, but the general answer is to route the pairing codes through `qr-draw.js` with a fitted size and let it say when the payload will not fit, which is exactly what it exists for. Found while converting 006 for Path 6 P2 (#235); pairing codes are not share payloads and were deliberately left alone there rather than widening that PR | site | ½ |  | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 13 | The site-wide axe sweep opens every page with **empty storage**, so any UI that only renders once something is saved is scanned nowhere — and, since #225, that is the narrow statement of the problem: 046's `#scaleBarUnitSelect` is `hidden` until a *toolbar toggle* is pressed **over a calibrated map**, and no seeded key would have revealed it. **Ten increments, ten instances, every one a serious-or-critical violation shipped in *light*:** 009 (#202), 075 (#206), 077 (#210, 21 unnamed controls with no allowlist line at all), 073 (#212, 18 unnamed checkboxes, also with no line), 068 (#214, a `link-in-text-block` on every roster row), 037 (#216, white label text on the C segment of the stacked bar at 3.41:1), 027 (#218, four group-name inputs with no accessible name at all), #221 on four pages at once (003's class-grid selects, 030's team-name inputs and `#boardSwitch`, 043's roster and chaperone selects, 042's roster select), #225's `select-name` above, and #227's 001 — `.proj-note` at 3.98:1 on the projector board, which the whole `display:none` Projector View hides. **#227 is also the first instance found by a *suite* rather than by a page conversion**, and that is the answer to this row's own "the free evidence is spent": `harness.mjs` already exports `a11yScan(page, {include})`, so any suite that preps a page into a state can scan that state for nothing extra — 001's came out of the stage suite's on-stage scan, which exists to check a *different* claim. Give `smoke-a11y-sweep.mjs` a per-page seed — a small fixture of localStorage keys, taken from `_shared/tool-registry.js`, written before the page loads — and re-baseline; then decide what to do about the states a seed cannot reach, because that is now a named half of the row rather than a guess. **Path 5 P3 is over, so no more will arrive from palette rounds — but #227 shows they arrive from any suite that drives a page into a state, at no extra cost.** Two measurements worth reusing: **#221 scanned all six of its pages unprepped and they came back clean**, which is how you prove a finding is invisible to the sweep rather than merely new; and the recurring shape is a control whose **visible name is its own value** (027's groups, 030's teams, 046's km/mi select), which cannot label itself and needs an `aria-label` naming its position or its row and column | `Tools/a11y-sweep/` | ½ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 14 | Path 7 P1 — `_shared/print-kit.css` + `print-kit.js`; the ink-safe utility set | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 15 | Path 7 P2 — print reliability audit across the 63 hand-written `@media print` blocks | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
@@ -2260,14 +2345,15 @@ passing on the same empty page the site-wide sweep already covers. Look at them.
 ### Path 6 — "Share…" everywhere
 
 **Status.** P1 shipped 2026-09-04 (#178, `CACHE_VERSION` v146) with 064 as its single
-adopter. **P2 is under way and is rank 1**: its first increment shipped 2026-09-08 (#231,
-`CACHE_VERSION` v169) — 028, 039, 040, 050, 054 and 056 adopted the sheet, and `share.js`
-grew the receiving half (`unwrap`, `parseFile`, `receive`, `receiveFile`); its second the
-same day (#233, v170) — 002, 007, 015 and 044, which is every tool with a hand-written
-share bar, plus `Share.open()` beside `Share.mount()` for 007's per-row shape and a
-contrast fix in the sheet's own CSS. **10 of 14 done; `share.js` and `qr-draw.js` are at 11
-adopters each.** The four left all go through `mountShareControl` and are one job; the rank
-1 row says what has to be decided about it. P3–P4 open.
+adopter. **P2 is finished**, in three increments all on 2026-09-08: #231 (v169) took 028,
+039, 040, 050, 054 and 056 and grew the receiving half (`unwrap`, `parseFile`, `receive`,
+`receiveFile`); #233 (v170) took 002, 007, 015 and 044 — every tool with a hand-written
+share bar — and added `Share.open()` beside `Share.mount()` for 007's per-row shape plus a
+contrast fix in the sheet's own CSS; #235 (v171) took 003, 005, 006 and 020, the four that
+went through `state-link.js`'s own `mountShareControl`, and **retired `mountShareControl`**.
+**`share.js` and `qr-draw.js` are at 15 adopters each and `state-link.js` at 16** — the one
+page with the latter and not the former is 046, whose single `buildShareUrl` builds 015's
+`?timeline=` link, which is **P4's**. **P3 is now rank 1; P4 is rank 2.**
 
 **Why.** `state-link.js` works and is in 17 tools; [Track P](#track-p--printable-cheat-sheet-bundle-export-packet-builder) and
 the platform themes both want it universal. Every adopter independently
@@ -2288,8 +2374,8 @@ download-as-file as the third option.
   Strip images from link payloads by policy and say so in the sheet.
 - **P2 — Adopt in the existing `state-link` tools**, deleting their local QR and
   share code; then wire the receiving side (`?state=`) through the same helper so
-  "open from link" behaves identically everywhere. **In progress — 10 of 14 done.**
-  **#231 (v169)** did the first six and also built the receiving side, finding that the
+  "open from link" behaves identically everywhere. **Shipped, in three increments.**
+  **#231 (v169)** did the first six and built the receiving side, finding that the
   count of tools was wrong (004 loads `state-link.js` and calls nothing; 046's one call
   is a P4-shaped cross-tool send). That receiving side turned out to be two halves, not
   one: a `.json` written by P1's own Download row is wrapped in `{ aplp, state }` and did
@@ -2297,8 +2383,17 @@ download-as-file as the third option.
   `Share.receive()`. **#233 (v170)** did 002, 007, 015 and 044, finishing the
   hand-written share bars; it added `Share.open()` for a per-row share that no single
   `getState` could express, gave `onMessage` the error flag, and fixed the sheet painting
-  a host's `--muted` onto its own `--card` fallback. See the rank 1 row for the four
-  `mountShareControl` tools that are left and the call to make.
+  a host's `--muted` onto its own `--card` fallback. **#235 (v171)** did the last four —
+  003, 005, 006, 020 — and **retired `mountShareControl`** rather than keeping it as a
+  wrapper over `Share.mount`, because a wrapper would invert the module dependency,
+  cannot express a real in-page button, and would make `check:adoption`'s number wrong;
+  `state-link.js` carries all three reasons where the function was. It also deleted two
+  genuinely dead `state-link.js` script tags (004 and `classroom-timer/mirror.html`),
+  which is what finished the list. **005 is the increment's headline**: its students carry
+  `data:image/` photos and the old control encoded the section whole, for a link of
+  ~105 KB against 3.0 KB stripped. 006's WebRTC pairing codes are **not** share payloads,
+  keep their own renderer (`drawPairingQr`), and produced the finding that is now rank 12.
+
 - **P3 — Extend to the builders that don't share yet.** From the improvement
   notes: 044, 045, 047, 052, 057, 065, 070, 072, 073, 079, 081, plus every
   "generator" tool with a saved configuration. Batches of ~8.
@@ -2395,6 +2490,25 @@ in one browser; extend that pattern into a shared `pairTwo(page)` harness helper
 
 **Decisions.** Whether a paired student device is ever in scope — the platform
 themes say no, and this path deliberately stays teacher-device-only.
+
+**A bug this path inherits, measured on 2026-09-08 (#235) and now rank 12.** Every
+pairing adopter draws its offer/answer code with its own copy of the same loop, and at
+least one of them draws it below the size a phone can read. On **006**, measured off the
+live page: the offer payload is **569 bytes → 81 modules** (version 16), `drawPairingQr`
+renders it at 6 px per module into a **534 px** canvas, and `.handoff-qr` then forces
+`width/height: 220px` — **2.47 px per module**, against the **4 px** floor `qr-draw.js`
+established by blurring codes and decoding them with the vendored jsQR.
+`QrDraw.plan(payload, {maxPx: 220})` refuses it and says it would need **356 px**. The
+paste-the-code-as-text box beside it is why this has never been reported. **Read off the
+source and not measured:** `Tools/escape-room-builder/monitor.html` draws at 8 px/module
+into `canvas.qr { max-width: 220px; width: 100% }` — identical shape; 035's two handoff
+canvases are `max-width: 100%` inside a panel, so theirs depends on the panel width; 021
+draws at 8 px/module with no CSS rule constraining `#pairOfferCanvas` and is probably
+fine. **P1 is the right place to fix it** — `_shared/remote.js` owns "the one-QR-per-side
+flow captured once", and routing those codes through `qr-draw.js` with a fitted size is
+what that helper exists for. Whoever takes P1 should measure the other three first;
+`qr-draw.js`'s `{px}` option was written for exactly these payloads and applies no budget,
+so a fitted `maxPx` is the change, not a bigger constant.
 
 ---
 
