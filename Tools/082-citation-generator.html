@@ -22,6 +22,10 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -132,10 +136,11 @@
       </div>
       <div class="btnrow">
         <button type="button" class="secondary" id="newListBtn">New list</button>
+        <button type="button" class="secondary" id="shareBtn">&#128279; Share list&hellip;</button>
         <button type="button" class="danger" id="delListBtn">Delete list</button>
       </div>
     </div>
-    <p class="share-note" id="shareNote"></p>
+    <p class="share-note" id="shareNote" aria-live="polite"></p>
   </div>
 
   <div class="scope-note">Citations use reasonable, classroom-standard defaults for each style. Unusual sources (rare formats, multiple authors, missing information) may need a small manual tweak — have students spot-check against their style guide.</div>
@@ -609,7 +614,8 @@
     copyBtn: document.getElementById('copyBtn'),
     printBtn: document.getElementById('printBtn'),
     printArea: document.getElementById('printArea'),
-    shareNote: document.getElementById('shareNote')
+    shareNote: document.getElementById('shareNote'),
+    shareBtn: document.getElementById('shareBtn')
   };
 
   var doc = null;
@@ -860,17 +866,109 @@
     window.print();
   });
 
+  /* ---------- share a citation list: _shared/share.js (Path 6 P3) ----------
+     This tool keeps a NAMED LIBRARY (a list of names plus a blob per name),
+     not one document, so an arrival is saved BESIDE what is already here
+     under a free name and none of #237's confirm-before-replacing machinery
+     applies — the same shape 047, 065 and 072 took in #239. uniqueName() is
+     new here: the rename box refuses a name that is taken, which is right for
+     a teacher typing but wrong for an arrival, which has no one to tell.
+
+     Source ids are handed out fresh on import. Nothing in this state refers
+     to a source by id across records — data-id only addresses a row of the
+     list being edited — so the receiving device owning its own ids is right
+     here; see 057 for the tool where it is not.
+
+     setShareNote() is NOT setNote(): setNote writes innerHTML and clears
+     itself after four seconds, which is right for "Saved." and wrong for the
+     sentence saying what a link just did to this device's storage. It also
+     means a document name typed by whoever built the list would reach an HTML
+     sink; this one sets textContent. */
+  var SHARE_PARAM = 'citations';
+
+  function setShareNote(text, isError) {
+    window.clearTimeout(setNote._t);
+    els.shareNote.textContent = text || '';
+    els.shareNote.className = 'share-note' + (isError ? ' error' : '');
+  }
+
+  /** Suffixes a name until it does not collide with a list already saved
+      here, so an arrival never lands on top of one. */
+  function uniqueName(base) {
+    var names = listNames();
+    if (names.indexOf(base) === -1) return base;
+    var i = 2;
+    while (names.indexOf(base + ' (' + i + ')') !== -1) i++;
+    return base + ' (' + i + ')';
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { saveDoc(doc); return doc; },
+    param: SHARE_PARAM,
+    tool: 'citation-generator',
+    title: 'Share this citation list',
+    noun: 'this citation list',
+    filename: function () { return (doc && doc.name) || 'citation list'; },
+    note: 'Every source with its type and all the fields typed for it, and the style the list is formatted in. Opening the link saves this list on the receiving device as a new saved list; nothing already saved there is changed.',
+    successMessage: 'Link copied. Opening it anywhere saves this list there alongside whatever is already saved.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleCitationList(obj) {
+    return !!obj && typeof obj === 'object' && !Array.isArray(obj) && Array.isArray(obj.sources);
+  }
+
+  /** An arrival as this device would have written it: a known style, and only
+      sources of a type this build knows, with their fields coerced to strings
+      and a local id. A source of an unknown type is dropped rather than kept
+      as a row that formatCitation() cannot render. */
+  function normalizeCitationList(obj, name) {
+    var STYLES = { mla: true, apa: true, chicago: true };
+    var out = { name: name, style: STYLES[obj.style] ? obj.style : 'mla', sources: [] };
+    obj.sources.forEach(function (src) {
+      if (!src || typeof src !== 'object' || !TYPES[src.type]) return;
+      var fields = {}, raw = (src.fields && typeof src.fields === 'object') ? src.fields : {};
+      for (var k in raw) {
+        if (Object.prototype.hasOwnProperty.call(raw, k)) fields[k] = String(raw[k] == null ? '' : raw[k]);
+      }
+      out.sources.push({ id: uid(), type: src.type, fields: fields });
+    });
+    return out;
+  }
+
+  /** Consumes a ?citations= link on load, saving the arrival as a NEW named
+      list. Returns true when a link was found and opened. */
+  function importSharedList() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleCitationList,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var name = uniqueName(String(decoded.name || '').trim() || 'Shared Citation List');
+        doc = normalizeCitationList(decoded, name);
+        saveDoc(doc);
+        setShareNote('Loaded a shared citation list as “' + name + '”. Nothing already saved here was changed.');
+        return true;
+      }
+    });
+  }
+
   function init() {
-    var lastName = null;
-    try { lastName = localStorage.getItem(CURRENT_KEY); } catch (e) {}
-    doc = (lastName && loadDoc(lastName)) || null;
-    if (!doc) {
-      var names = listNames();
-      doc = (names.length && loadDoc(names[0])) || { name: 'My Citations', style: 'mla', sources: [] };
+    /* There is no legacy migration here to order the import against — 082 has
+       always kept named lists; see 051 and 069 for the tools where that
+       ordering matters. */
+    if (!importSharedList()) {
+      var lastName = null;
+      try { lastName = localStorage.getItem(CURRENT_KEY); } catch (e) {}
+      doc = (lastName && loadDoc(lastName)) || null;
+      if (!doc) {
+        var names = listNames();
+        doc = (names.length && loadDoc(names[0])) || { name: 'My Citations', style: 'mla', sources: [] };
+      }
+      if (!doc.style) doc.style = 'mla';
+      if (!doc.sources) doc.sources = [];
+      saveDoc(doc);
     }
-    if (!doc.style) doc.style = 'mla';
-    if (!doc.sources) doc.sources = [];
-    saveDoc(doc);
     els.typeSelect.value = 'book';
     refreshAll();
   }

@@ -20,15 +20,26 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
   /* Tool-local semantic tints, with 001's values — ink-paper.css owns the 11
      palette tokens and does not yet own these. */
-  :root { --err-bg: #fbecea; --err-line: #e6c6c1; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; --err-line: #6d3a33; }
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; --err-line: #6d3a33;
+    --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share a label list: the sheet itself is _shared/share.js (Path 6 P3).
+     This is only the note under the saved-list controls that records what the
+     sheet last did. The info pair is 001's, matching the --err pair above. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -119,7 +130,9 @@
       <button type="button" class="secondary small" id="newListBtn">+ New list</button>
       <button type="button" class="secondary small" id="duplicateListBtn">Duplicate</button>
       <button type="button" class="danger small" id="deleteListBtn">Delete</button>
+      <button type="button" class="secondary small" id="shareBtn">&#128279; Share list&hellip;</button>
     </div>
+    <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
     <p class="hint" style="margin-top:.5rem;">Each list keeps its own words and language, so a room set, a kitchen set, and a unit set can coexist &mdash; switching lists never overwrites another.</p>
   </div>
 
@@ -168,7 +181,8 @@
 
   var els = {};
   ['langSelect', 'wordInput', 'saveWordsBtn', 'wordCount', 'wordTable', 'printBtn', 'printArea', 'fileWarning',
-   'listSwitch', 'listName', 'newListBtn', 'duplicateListBtn', 'deleteListBtn'].forEach(function (id) {
+   'listSwitch', 'listName', 'newListBtn', 'duplicateListBtn', 'deleteListBtn',
+   'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -392,8 +406,79 @@
     window.print();
   });
 
-  /* ---------- boot ---------- */
-  load();
+  /* ---------- share a label list: _shared/share.js (Path 6 P3) ----------
+     This tool keeps a NAMED LIBRARY (a list of names plus a blob per name),
+     not one document, so an arrival is saved BESIDE what is already here
+     under a free name and none of #237's confirm-before-replacing machinery
+     applies — the same shape 047, 065 and 072 took in #239. uniqueName() is
+     what guarantees that: a link whose list is called the same thing as one
+     on this device lands as "… (2)" and the teacher's own copy is untouched.
+
+     The pronunciation QR codes printed on the labels are NOT share payloads
+     and keep this page's own drawQR — they encode a link to speak.html, one
+     per word, at print time. qr-draw.js is loaded for the share sheet's QR
+     row only; see 006, where the same distinction is written down for its
+     pairing codes. */
+  var SHARE_PARAM = 'labels';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { save(); return state; },
+    param: SHARE_PARAM,
+    tool: 'classroom-label-maker',
+    title: 'Share this label list',
+    noun: 'this label list',
+    filename: function () { return (state && state.name) || 'classroom labels'; },
+    note: 'Every target word with its English, and the language the pronunciation links are spoken in. Opening the link saves this list on the receiving device as a new saved list; nothing already saved there is changed.',
+    successMessage: 'Link copied. Opening it anywhere saves this list there alongside whatever is already saved.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleLabelList(obj) {
+    return !!obj && typeof obj === 'object' && !Array.isArray(obj) && Array.isArray(obj.words);
+  }
+
+  /** An arrival as this device would have written it: normalizeList() for the
+      shape, then the word rows coerced to the { target, english } pairs the
+      table and the labels read, dropping any row with no target — the same
+      test the "Save word list" button applies to a typed line. */
+  function normalizeSharedList(obj, name) {
+    var out = normalizeList({ name: name, lang: obj.lang }, name);
+    out.words = obj.words.map(function (w) {
+      return { target: String(w && w.target || '').trim(), english: String(w && w.english || '').trim() };
+    }).filter(function (w) { return !!w.target; });
+    return out;
+  }
+
+  /** Consumes a ?labels= link on load, saving the arrival as a NEW named list.
+      Returns true when a link was found and opened. */
+  function importSharedList() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleLabelList,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var name = uniqueName(String(decoded.name || '').trim() || 'Shared Label List');
+        state = normalizeSharedList(decoded, name);
+        save();
+        setShareNote('Loaded a shared label list as “' + name + '”. Nothing already saved here was changed.');
+        return true;
+      }
+    });
+  }
+
+  /* ---------- boot ----------
+     The legacy migration runs BEFORE the import: an arrival saved first would
+     make listNames() non-empty, and migrateLegacyIfNeeded() bails on exactly
+     that — which would quietly drop the word list a teacher saved before this
+     tool had named lists at all. load() calls it too, and it is idempotent. */
+  migrateLegacyIfNeeded();
+  if (!importSharedList()) load();
   renderAll();
   if (location.protocol === 'file:') els.fileWarning.classList.add('show');
 })();

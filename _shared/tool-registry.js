@@ -681,6 +681,7 @@
       title: 'Citation Generator',
       file: 'Tools/082-citation-generator.html',
       category: 'docs-comm',
+      share: { param: 'citations' },
       keys: [
         { k: 'citegen:current' },
         { k: 'citegen:list' },
@@ -720,6 +721,7 @@
       title: 'Formula Reference Sheet Builder',
       file: 'Tools/041-formula-sheet-builder.html',
       category: 'math',
+      share: { param: 'sheet' },
       keys: [
         { k: 'gvb-formula-sheet:current' },
         { k: 'gvb-formula-sheet:list' },
@@ -1185,6 +1187,7 @@
       title: 'Propaganda & Persuasion Analysis Worksheet Generator',
       file: 'Tools/083-propaganda-analysis-worksheet-generator.html',
       category: 'social-studies',
+      share: { param: 'analysis' },
       keys: [
         { k: 'propa:current' },
         { k: 'propa:list' },
@@ -1250,6 +1253,7 @@
       title: 'Classroom Label Maker (Target Language)',
       file: 'Tools/051-classroom-label-maker.html',
       category: 'world-language',
+      share: { param: 'labels' },
       keys: [
         { k: 'clm_current_v1' },
         { k: 'clm_lang_v1', legacy: true },
@@ -1393,6 +1397,7 @@
       title: 'PE Warm-Up Circuit Card Generator',
       file: 'Tools/069-pe-warmup-circuit-generator.html',
       category: 'arts-pe',
+      share: { param: 'circuit' },
       keys: [
         { k: 'pe_circuit_current_v1' },
         { k: 'pe_circuit_v1', legacy: true },

@@ -21,6 +21,10 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -130,10 +134,11 @@
       </div>
       <div class="btnrow">
         <button type="button" class="secondary" id="newListBtn">New worksheet</button>
+        <button type="button" class="secondary" id="shareBtn">&#128279; Share worksheet&hellip;</button>
         <button type="button" class="danger" id="delListBtn">Delete</button>
       </div>
     </div>
-    <p class="share-note" id="shareNote"></p>
+    <p class="share-note" id="shareNote" aria-live="polite"></p>
   </div>
 
   <div class="card">
@@ -245,7 +250,7 @@
   var els = {};
   ['projName','projSwitch','newListBtn','delListBtn','srcTitle','srcCreator','srcDate','srcOrigin',
    'levelSelect','levelBadge','imgBtn','imgRemoveBtn','imgInput','imgPreview','stepsWrap','shareNote',
-   'printKeyBtn','printWorksheetBtn','printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'shareBtn','printKeyBtn','printWorksheetBtn','printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var doc = null;
 
@@ -433,17 +438,115 @@
     window.print();
   });
 
+  /* ---------- share a worksheet: _shared/share.js (Path 6 P3) ----------
+     This tool keeps a NAMED LIBRARY (a list of names plus a blob per name),
+     not one document, so an arrival is saved BESIDE what is already here
+     under a free name and none of #237's confirm-before-replacing machinery
+     applies — the same shape 047, 065 and 072 took in #239. uniqueName() is
+     new here: the rename box refuses a name that is taken, which is right for
+     a teacher typing but wrong for an arrival, which has no one to tell.
+
+     THE SOURCE IMAGE DOES NOT TRAVEL IN THE LINK. It is a data: URL of a
+     scanned poster, often hundreds of KB, and share.js strips every data:
+     image out of a link by policy and says how many it dropped; the Download
+     row still carries it. So a colleague opening the link gets the source's
+     title, creator, date and origin and the level, and re-attaches the
+     picture — which is also the honest answer for an image the sender may not
+     have the right to redistribute.
+
+     setShareNote() is NOT setNote(): setNote writes innerHTML and clears
+     itself after four seconds, which is right for "Saved." and wrong for the
+     sentence saying what a link just did to this device's storage. It also
+     means a worksheet name typed by whoever built it would reach an HTML
+     sink; this one sets textContent. */
+  var SHARE_PARAM = 'analysis';
+
+  function setShareNote(text, isError) {
+    window.clearTimeout(setNote._t);
+    els.shareNote.textContent = text || '';
+    els.shareNote.className = 'share-note' + (isError ? ' error' : '');
+  }
+
+  /** Suffixes a name until it does not collide with a worksheet already saved
+      here, so an arrival never lands on top of one. */
+  function uniqueName(base) {
+    var names = listNames();
+    if (names.indexOf(base) === -1) return base;
+    var i = 2;
+    while (names.indexOf(base + ' (' + i + ')') !== -1) i++;
+    return base + ' (' + i + ')';
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { saveDoc(doc); return doc; },
+    param: SHARE_PARAM,
+    tool: 'propaganda-analysis-worksheet-generator',
+    title: 'Share this worksheet',
+    noun: 'this worksheet',
+    filename: function () { return (doc && doc.name) || 'propaganda analysis worksheet'; },
+    note: 'The source’s title, creator, date and origin, and the level the questions are written at. The scanned poster or cartoon is too large for a link and is left out of it — the downloaded file carries it. Opening the link saves this worksheet on the receiving device as a new saved worksheet; nothing already saved there is changed.',
+    successMessage: 'Link copied. Opening it anywhere saves this worksheet there alongside whatever is already saved.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleWorksheet(obj) {
+    return !!obj && typeof obj === 'object' && !Array.isArray(obj) &&
+      !!obj.source && typeof obj.source === 'object';
+  }
+
+  /** An arrival as this device would have written it: a known level, the four
+      source fields as strings, and the image only when one actually came
+      through — a link's is null, having been stripped on the way out. */
+  function normalizeWorksheet(obj, name) {
+    var src = obj.source || {};
+    var img = typeof src.imageDataUrl === 'string' ? src.imageDataUrl : '';
+    return {
+      name: name,
+      level: LEVEL_LABEL[obj.level] ? obj.level : 'academic',
+      source: {
+        title: String(src.title == null ? '' : src.title),
+        creator: String(src.creator == null ? '' : src.creator),
+        date: String(src.date == null ? '' : src.date),
+        origin: String(src.origin == null ? '' : src.origin),
+        imageDataUrl: /^data:image\//i.test(img) ? img : ''
+      }
+    };
+  }
+
+  /** Consumes an ?analysis= link on load, saving the arrival as a NEW named
+      worksheet. Returns true when a link was found and opened. */
+  function importSharedWorksheet() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleWorksheet,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var wanted = String(decoded.name || (decoded.source && decoded.source.title) || '').trim() || 'Shared Worksheet';
+        var name = uniqueName(wanted);
+        doc = normalizeWorksheet(decoded, name);
+        saveDoc(doc);
+        setShareNote('Loaded a shared worksheet as “' + name + '”. Nothing already saved here was changed.');
+        return true;
+      }
+    });
+  }
+
   function init() {
-    var lastName = null;
-    try { lastName = localStorage.getItem(CURRENT_KEY); } catch (e) {}
-    doc = (lastName && loadDoc(lastName)) || null;
-    if (!doc) {
-      var names = listNames();
-      doc = (names.length && loadDoc(names[0])) || { name: 'New Worksheet', level: 'academic', source: { title: '', creator: '', date: '', origin: '', imageDataUrl: '' } };
+    /* There is no legacy migration here to order the import against — 083 has
+       always kept named worksheets; see 051 and 069 for the tools where that
+       ordering matters. */
+    if (!importSharedWorksheet()) {
+      var lastName = null;
+      try { lastName = localStorage.getItem(CURRENT_KEY); } catch (e) {}
+      doc = (lastName && loadDoc(lastName)) || null;
+      if (!doc) {
+        var names = listNames();
+        doc = (names.length && loadDoc(names[0])) || { name: 'New Worksheet', level: 'academic', source: { title: '', creator: '', date: '', origin: '', imageDataUrl: '' } };
+      }
+      if (!doc.level) doc.level = 'academic';
+      if (!doc.source) doc.source = {};
+      saveDoc(doc);
     }
-    if (!doc.level) doc.level = 'academic';
-    if (!doc.source) doc.source = {};
-    saveDoc(doc);
     refreshAll();
   }
   init();
