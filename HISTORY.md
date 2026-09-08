@@ -41,6 +41,90 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 6 P3, second increment — the three named-library builders, and a fixture bug that had
+made an assertion vacuous — 2026-09-08 (#239, `CACHE_VERSION` v173).** P3 is a 2+ row and
+**stays in the table**. **047, 065 and 072** now open `_shared/share.js`'s sheet;
+`npm run check:adoption` puts **`share.js` and `qr-draw.js` at 24 of 86 each**, up from 21, and
+**`state-link.js` at 25**. Six things are worth carrying.
+
+(1) **The storage shape is what decides how much of the previous increment applies, and these
+three are the third shape.** #237's six kept **one document**, so an arrival had nowhere to land
+except on top of it and the whole increment turned on a `confirm()` before replacing. These three
+keep a **named library** — a list key, a blob per name, and a pointer at the current one — so an
+arrival is saved *beside* what is there under a free name (`uniqueName()`), nothing can be taken
+away, and **nothing asks**. Not one line of #237's `hadSaved` machinery was carried over. That is
+the right answer for this shape and it means the two increments are not interchangeable templates:
+read the storage before copying either.
+
+(2) **The assertion that matters for a library tool is the NAME COLLISION, and it passes for free
+on an empty install.** "Save it under its own name" is correct right up until the teacher already
+has a document under that name — which is exactly what a shared departmental lab template hits,
+because the sender and the receiver both call it "Acid-Base Lab". Section 5b of the rollout suite
+seeds a device with a *differing* document under the *same* name and asserts three things after
+the link opens: the arrival took a suffixed name, the list is two entries long, and the teacher's
+own blob is unchanged. Every demo of these tools would be run on an empty install, where all three
+pass whether or not the importer is correct.
+
+(3) **072's library name is not part of its state, which is a trap worth naming.** 047 and 065
+store `name` inside the document; 072 stores it *only* as the key the blob is filed under
+(`currentName`). Sharing the stored blob as-is therefore loses the name of a diagram the teacher
+renamed away from its story title ("Hatchet ch. 1-8" for a diagram whose `title` is "Hatchet"), and
+the obvious fix — writing the name onto `state` — would persist a second copy of it into storage
+on the very next `save()`. `getState()` attaches it to a **copy**, and the suite asserts
+`payload.name` for that reason and no other.
+
+(4) **All three had to run the legacy migration BEFORE the import, and getting it wrong would have
+been silent.** Each tool's migration bails when the name list is non-empty. An arrival saved first
+makes it non-empty — so a teacher opening a shared link on a device still holding the
+pre-named-documents blob would have lost it, with nothing thrown and nothing shown. One line of
+ordering per tool; the only way to find it is to read the migration rather than the importer.
+
+(5) **A real fixture bug, found here and affecting the five tools already in the suite.**
+Playwright's `addInitScript` fires on **every navigation**, so the suite's seeding re-wrote the
+fixture on `reload()` and handed the page the fixture instead of whatever the tool had written.
+**"A refresh does not import the same thing twice" was therefore asserting nothing** on 052, 057,
+070, 073 and 079: it passed because the reseed restored the expected value, not because the tools
+behave. It only became visible here because a library tool's *list length* differs between the two
+explanations. Seeding is now once per origin, sentinelled on the first key. **The general lesson:
+a fixture written by `addInitScript` is re-applied by every navigation in the suite, so any
+assertion made after a reload is about the fixture unless something stops it.**
+
+(6) **The enumeration P3's row had asked for twice is now done.** "Plus every generator with a
+saved configuration" is how the phase's list went one out in the first place. Measured: of the 86
+pages, 24 load `share.js`; of the 62 that do not, **30 are named generator/builder/maker/creator
+and write to localStorage**. They are grouped in `BACKLOG.md`'s Path 6 section by storage shape —
+**seven named-library** (041, 051, 069, 082, 083, 048, 019: a straight copy of this increment),
+**ten single-document** (#237's shape), and **twelve bank-plus-settings**, where what should travel
+is a design question per tool rather than wiring. Three carry a `student: true` key and need 073's
+per-field split first (023, 048, 077); four are already promised to Path 12 P2 (053, 062, 018,
+019).
+
+**Verification.** No new suite: three rows in `Tools/share/test/smoke-share-rollout.mjs`, taking it
+from 226 assertions to **343**. All three pages came back clean from the site-wide axe sweep and
+from the suite's `a11yScan` on the **open sheet**; **no allowlist line was added**, the eighth
+page-changing increment running. **The full `npm test` was run locally: 154 of 154 green in 32.9
+minutes**, closing the gap #237 recorded against itself. CI's scoped pull-request run was green in
+**8.8 minutes** selecting 11 suites — the cheapest tool PR measured so far, and the difference from
+#237's 29.2 is not the page count but that #237 also touched `package.json` and `suites.json`, both
+site-wide under rule 1.
+
+**What was not verified.** No QR produced by any of the three was scanned by a real camera. The
+system-share row is exercised **nowhere**, because headless Chromium has no `navigator.share`. No
+file was downloaded by a real browser and re-opened by hand. The open sheet was scanned by axe in
+**light only** on these three. Nothing was driven by a human clicking anything.
+
+**Deferred again, deliberately, and now a row — with the numbers actually counted.**
+`.share-note` is on **23** pages in three generations: 11 on the tokenised block these three used,
+**8** on the `rgba()` literal, and 082–085 using the class name for a status line with no share
+code behind it. #237's handoff said "21 pages … nine on the literal" and #239's own first draft
+said 24 and nine; **both were read off the `share.js` adopter count instead of counted, and the
+two sets are not the same** — five real adopters (002, 005, 006, 007, 044) carry no `.share-note`
+at all. So the grep over-counts by four and under-counts by five simultaneously, which is a small
+instance of this repo's recurring failure: a number re-derived by hand from a related number rather
+than measured. It belongs in `_shared/base.css`. #237 called it "a tidy of its own"; #239 agreed
+and, rather than deferring it a third time silently, made it **rank 11** with the page list and the
+rename it needs.
+
 **Path 6 P3, first increment — six builders that could not share at all, and one rollout
 suite instead of six — 2026-09-08 (#237, `CACHE_VERSION` v172).** P3 is a 2+ row and **stays in
 the table, rewritten to say what is left.** **052, 057, 070, 073, 079 and 081** now open
