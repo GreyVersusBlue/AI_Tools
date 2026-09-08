@@ -27,6 +27,8 @@
 <script src="bracket-tournament-generator/bt-store.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -37,11 +39,13 @@
   :root {
     --good: #2f7d4f;  --good-bg: #e4f5ea;
     --info-bg: #eaf1f5; --info-line: #c9dbe3;
+    --err-bg: #fbeeee;
     --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --good: #63c08e;  --good-bg: #173021;
     --info-bg: #1b2a35; --info-line: #33505f;
+    --err-bg: #3a201c;
     --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
   }
   * { box-sizing: border-box; }
@@ -186,8 +190,14 @@
   .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-bottom: .8rem; font-weight: 700; }
   .modal-close { border: none; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--muted); padding: 0; }
   .modal-close:hover { color: var(--err); }
-  #qrCanvas { display: block; width: 260px; height: 260px; margin: 0 auto; image-rendering: pixelated; }
   .modal-hint { font-size: .78rem; color: var(--muted); margin: .6rem 0 0; max-width: 280px; }
+
+  /* The note under the toolbar, which records what the shared sheet
+     (_shared/share.js, Path 6 P2) last did. Tokenised so it follows this page
+     into dark; it replaces this tool's alert()s. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
 
   .schedule-modal-body { display: flex; flex-direction: column; gap: .7rem; text-align: left; margin-bottom: .2rem; }
   .schedule-modal-body label { margin-bottom: .2rem; }
@@ -253,8 +263,7 @@
     <button class="secondary" id="resetPicksBtn">Reset picks</button>
     <button class="secondary" id="undoBtn" style="display:none;" title="Reverts the single most recent winner pick, including any bye auto-advance it triggered.">Undo last pick</button>
     <button class="danger" id="deleteBracketBtn">Delete</button>
-    <span id="shareBar"></span>
-    <button type="button" class="secondary" id="qrBtn">QR code</button>
+    <button type="button" class="secondary" id="shareBtn">&#128279; Share bracket&hellip;</button>
     <button type="button" class="secondary" id="scheduleBtn">Schedule</button>
     <button type="button" class="secondary" id="presentBtn">Present</button>
     <span class="spacer"></span>
@@ -263,6 +272,7 @@
     </label>
     <button id="printBtn">Print</button>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card" id="setupCard">
     <label for="bracketName">Bracket name</label>
@@ -329,17 +339,6 @@
       <div style="flex:0 0 auto;">
         <button id="generateBtn">Generate bracket</button>
       </div>
-    </div>
-  </div>
-
-  <div class="modal-overlay" id="qrOverlay" hidden>
-    <div class="modal-box" role="dialog" aria-modal="true" aria-label="Bracket QR code">
-      <div class="modal-head">
-        <span>Scan to open this bracket</span>
-        <button type="button" class="modal-close" id="qrCloseBtn" aria-label="Close">&times;</button>
-      </div>
-      <canvas id="qrCanvas"></canvas>
-      <p class="modal-hint" id="qrHint">Scanning opens a copy of this bracket on the other device — it won't stay in sync after that.</p>
     </div>
   </div>
 
@@ -415,12 +414,8 @@
     bracketTitle: document.getElementById('bracketTitle'),
     bracketView: document.getElementById('bracketView'),
     championBanner: document.getElementById('championBanner'),
-    shareBar: document.getElementById('shareBar'),
-    qrBtn: document.getElementById('qrBtn'),
-    qrOverlay: document.getElementById('qrOverlay'),
-    qrCloseBtn: document.getElementById('qrCloseBtn'),
-    qrCanvas: document.getElementById('qrCanvas'),
-    qrHint: document.getElementById('qrHint'),
+    shareBtn: document.getElementById('shareBtn'),
+    shareNote: document.getElementById('shareNote'),
     scheduleBtn: document.getElementById('scheduleBtn'),
     scheduleOverlay: document.getElementById('scheduleOverlay'),
     scheduleCloseBtn: document.getElementById('scheduleCloseBtn'),
@@ -3140,52 +3135,41 @@
     }
   });
 
-  StateLink.mountShareControl(els.shareBar, {
-    param: 'bracket',
-    label: 'Share this bracket',
-    getState: function () { return state; },
-    onMessage: function (text) { alert(text); }
-  });
+  /* ---------- share a bracket: _shared/share.js (Path 6 P2) ----------
+     One button opens the shared sheet — copy link, QR code, download .json,
+     and the system share where the browser has one. It replaces two controls:
+     state-link.js's own mountShareControl (a copy-link button it built
+     itself, every message through alert()) and a hand-rolled "QR code"
+     modal beside it.
 
-  // ── QR code for the share link (same vendored library/approach as the
-  //    site's other QR-generating tools) — scannable straight off a projector.
-  function drawBracketQr(canvas, text) {
-    var qr = window.qrcode(0, 'L'); // typeNumber 0 = smallest version that fits; L = lowest EC, most capacity
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount();
-    var quiet = 4;
-    var total = count + quiet * 2;
-    var px = 6;
-    var size = total * px;
-    canvas.width = size;
-    canvas.height = size;
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#1f2430';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
-      }
-    }
+     The QR is the part that changed behaviour. The old drawBracketQr drew
+     whatever the encoder accepted at a fixed 6 px per module and only
+     refused when the encoder itself threw — so a 32-player bracket with
+     scores produced a dense code at the encoder's own ceiling that a phone
+     could not read, and the tool called that a success. qr-draw.js measures
+     the module size against the space on screen and greys the row out with
+     the reason instead. The vendored encoder is still loaded, because
+     qr-draw.js needs it — what went away is this page's own loop over it. */
+  var SHARE_PARAM = 'bracket';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
   }
 
-  els.qrBtn.addEventListener('click', function () {
-    if (!state) { alert("There's nothing to share yet."); return; }
-    var url = StateLink.buildShareUrl('bracket', state);
-    try {
-      drawBracketQr(els.qrCanvas, url);
-      els.qrHint.textContent = "Scanning opens a copy of this bracket on the other device — it won't stay in sync after that.";
-    } catch (e) {
-      alert('This bracket is too large to encode as a QR code — use the "Share this bracket" copy-link button instead.');
-      return;
-    }
-    els.qrOverlay.hidden = false;
+  Share.mount(els.shareBtn, {
+    getState: function () { return state; },
+    param: SHARE_PARAM,
+    tool: 'bracket-tournament-generator',
+    title: 'Share this bracket',
+    noun: 'this bracket',
+    filename: function () { return (state && state.name) || 'bracket'; },
+    note: 'The whole bracket travels — players, seeds, every pick made so far and any station schedule. It is a copy: picks made on the other device never come back here.',
+    successMessage: 'Link copied. Opening it anywhere saves this bracket there as a new bracket — it never overwrites one already on that device.',
+    emptyMessage: 'Generate a bracket first, then there is something to share.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
   });
-  els.qrCloseBtn.addEventListener('click', function () { els.qrOverlay.hidden = true; });
-  els.qrOverlay.addEventListener('mousedown', function (e) { if (e.target === els.qrOverlay) els.qrOverlay.hidden = true; });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !els.qrOverlay.hidden) els.qrOverlay.hidden = true; });
 
   function looksLikeBracket(obj) {
     if (!obj || typeof obj !== 'object' || typeof obj.name !== 'string') return false;
@@ -3204,16 +3188,19 @@
   }
 
   /** A ?bracket=... link imports as a brand-new, uniquely-named bracket rather
-      than overwriting anything already saved here. */
+      than overwriting anything already saved here. Share.receive() does the
+      read/clear/decode/unwrap this function used to do by hand, so a .json
+      the sheet's own Download row wrote opens here too. */
   function importSharedBracketFromUrl() {
-    var raw = StateLink.getParam('bracket');
-    if (!raw) return false;
-    StateLink.clearParam('bracket'); // consume it up front so a bad payload can't loop on refresh
-    var decoded = StateLink.decodeState(raw);
-    if (!looksLikeBracket(decoded)) {
-      alert("That shared link's bracket data looks corrupted.");
-      return false;
-    }
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: looksLikeBracket,
+      onError: function (message) { setShareNote(message, true); },
+      onState: applySharedBracket
+    });
+  }
+
+  function applySharedBracket(decoded) {
     var name = uniqueBracketName(decoded.name);
     undoSnapshot = null; // a freshly-imported bracket starts its own undo history
     if (decoded.type === 'roundrobin') {
@@ -3251,6 +3238,7 @@
     migrateScores(state); // normalizes any pre-structured-score free-text scores from an old share link
     BracketStore.saveBracket(name, state);
     render();
+    setShareNote('Loaded a shared bracket as \u201c' + name + '\u201d.');
     return true;
   }
 

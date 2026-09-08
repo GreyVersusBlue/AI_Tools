@@ -27,6 +27,9 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <script src="seating-chart/scg-photo.js"></script>
 <link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
 <link rel="stylesheet" href="../_shared/theme.css">
@@ -685,6 +688,10 @@
       </div>
       <div class="sep"></div>
       <span class="grp" id="saveBar"></span>
+      <div class="grp">
+        <button class="btn sm ghost" type="button" id="shareBtn"
+                title="Copy a link, show a QR code or download a file for this section">&#128279; Share section&hellip;</button>
+      </div>
       </div>
       <span class="spacer"></span>
       <div class="status" id="status" role="status" aria-live="polite"></div>
@@ -754,7 +761,7 @@ import {
   studentHistoryRows, classHistorySummary,
 } from './seating-chart/seating.mjs';
 import { mountSaveBar, defaultStorage } from '../_shared/gvb-save.js';
-const { getParam, decodeState, clearParam, mountShareControl } = window.StateLink;
+const { getParam, decodeState, clearParam } = window.StateLink;
 
 /* ============================================================
    State
@@ -2162,11 +2169,30 @@ function mountBar(){
     setTimeout(() => { erasing = false; }, 0);
   }, true);
 
-  mountShareControl(el('saveBar'), {
-    param: 'section',
-    label: 'Share this section',
+  /* The sheet is _shared/share.js (Path 6 P2): copy link, QR code (greyed
+     out with the reason when the code would be too dense to scan at this
+     size), download .json, and the system share where the browser has one.
+     It replaces state-link.js's own mountShareControl, which built its own
+     button and did copy-link only.
+
+     The link is the part that changed behaviour, and it is why this tool
+     mattered. A section's students carry `photo`, a data:image/ URL of tens
+     of KB each, and mountShareControl encoded the section whole — so a
+     class with photos produced a link that no address bar, mail client or
+     QR code could carry, and nothing said so. share.js strips images out of
+     the link and the QR by policy, says how many it left out, and the
+     downloaded file keeps them. */
+  Share.mount(el('shareBtn'), {
     getState: () => sec(),
-    onMessage: text => say(text, /nothing to share/i.test(text) ? 'bad' : 'good'),
+    param: 'section',
+    tool: 'seating-chart',
+    title: 'Share this section',
+    noun: 'this section',
+    filename: () => (sec() && sec().name) || 'seating section',
+    note: 'One section travels — its desks, seats, names, notes and keep-apart rules. The other sections, the saved layouts and the seating history stay on this device.',
+    successMessage: 'Link copied. Opening it anywhere adds this section there as a new section — it never overwrites one already on that device.',
+    emptyMessage: 'There is no section to share yet.',
+    onMessage: (text, isError) => say(text, isError ? 'bad' : 'good'),
   });
 
   return bar;
@@ -2177,19 +2203,26 @@ function mountBar(){
     Returns the status message to show, or null if there was nothing to
     import. Doesn't call say() itself: boot() calls renderAll() (which resets
     the status bar via refreshStatus()) after this runs, so the message has
-    to be applied after that, not before it. */
+    to be applied after that, not before it — which is why this collects the
+    outcome out of Share.receive()'s callbacks rather than returning from
+    them. Share.receive() does the read/clear/decode/unwrap the body used to
+    do by hand, so a .json the sheet's Download row wrote opens here too. */
 function importSharedSectionFromUrl(){
-  const raw = getParam('section');
-  if (!raw) return null;
-  clearParam('section'); // consume it up front so a bad payload can't loop on refresh
-  const decoded = decodeState(raw);
-  if (!decoded) return { text: "That shared link's data looks corrupted.", kind: 'bad' };
-  const repaired = repairState({ sections: [decoded] });
-  const shared = repaired.sections[0];
-  state.sections.push(shared);
-  state.active = shared.id;
-  slot.save(state);
-  return { text: `Imported "${shared.name}" from a shared link as a new section.`, kind: 'good' };
+  let outcome = null;
+  Share.receive({
+    param: 'section',
+    validate: d => !!d && typeof d === 'object' && !Array.isArray(d),
+    onError: message => { outcome = { text: message, kind: 'bad' }; },
+    onState: decoded => {
+      const repaired = repairState({ sections: [decoded] });
+      const shared = repaired.sections[0];
+      state.sections.push(shared);
+      state.active = shared.id;
+      slot.save(state);
+      outcome = { text: `Imported "${shared.name}" from a shared link as a new section.`, kind: 'good' };
+    },
+  });
+  return outcome;
 }
 
 function boot(){
