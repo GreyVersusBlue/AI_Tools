@@ -41,6 +41,88 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 6 P2, first increment — six tools open the shared share sheet, and `share.js` grows
+the receiving half — 2026-09-08 (#231, `CACHE_VERSION` v169).** P2 is a 2+ row, so this is one
+increment of it and the row stays, rewritten. **028, 039, 040, 050, 054 and 056** deleted their
+own copy-link handler, their own `drawShareQr`, their own 264 px canvas and their overlay markup
+and CSS, and mount `_shared/share.js` on one button instead; `npm run check:adoption` puts
+**`share.js` and `qr-draw.js` at 7 of 86 each**, up from 1. Six things are worth carrying.
+
+(1) **P1 shipped a download nothing could open, and the bug was invisible from either side
+alone.** The sheet's Download row writes `{ aplp: { v, tool, param, exported }, state }` — that
+envelope is the point, it is how a file says which tool it belongs to — but every adopter's own
+file importer `JSON.parse`d the file and then looked for **its own fields at the top level**,
+found `aplp` and `state` instead, and refused the file the sheet had just written. That is the
+file a teacher is most likely to try. The writer is correct, every reader is correct, and only
+the round trip is broken, so nothing static and no single-file suite could have said so.
+`Share.unwrap()` is four lines; it is why the receiving half is `receive()` **and**
+`receiveFile()` rather than only the `?state=` receiver the phase asked for. **The general
+shape: a shared writer and N private readers is a contract nothing in this repo tests until
+something drives the loop.**
+
+(2) **The steps of "consume `?state=` on load" were identical in all six and only the sentence
+differed.** Read the param, clear it, decode, shape-test, complain: six wordings of "that link
+could not be read", and a shape test that was a named `isPlausibleX()` in five of them and an
+inline `typeof` in the sixth. `Share.receive({ param, validate, onState, onError, errorMessage })`
+is that shape with one sentence, and it **clears the param before it judges the payload** — a
+link that cannot be read must not survive a refresh either, or the teacher meets the same failure
+every time the page opens. The two tools with a genuinely tool-specific sentence (050 points at
+"Save as file"; 056 has its own wording) keep it through `errorMessage`.
+
+(3) **A tool that strips its own images loses the only route that carries them.** 028 dropped
+`imageDataUrl` and 056 dropped `sources[].image` before building a link, because an uploaded
+image is base64 and runs to a megabyte. Both hand share.js the **whole** state now: it strips
+every `data:` image out of the link and QR by policy and says how many in the sheet, and the
+**downloaded file keeps them** — before this the only image-carrying route in either tool was a
+separate Export button. The receiving side had to learn the difference: 028's adopt blanks an
+image only when it is **not a usable string**, so a link's `null` is blanked and a file's pixels
+are not.
+
+(4) **`v: 1` had to be put back by hand.** Handing over the whole state instead of a built
+payload silently dropped the version field both tools had always sent. Nothing reads it today —
+`isPlausiblePacket` and `repairPacket` both ignore it — which is exactly why nothing would have
+failed, and why links already in a teacher's email would have become indistinguishable from new
+ones. `smoke-share.mjs`'s `eq(payload.v, 1)` is what caught it.
+
+(5) **The sheet is a real modal, and a suite that opens it and walks away wedges.**
+`smoke-essay-levels.mjs` timed out with `<div class="share-sheet-backdrop">…</div> intercepts
+pointer events` — 58 retries on the next click. Eight suites capture a share link mid-test and
+then keep driving the page; each closes the sheet in the same `page.evaluate` that clicks the
+copy row now. This is the price of replacing an overlay a page hid with `hidden` by a real
+dialog, and it shows up only in the tests, never in the tool.
+
+(6) **039 had no test folder at all** — the only page in the batch with nothing watching it,
+while its share code, its link receiver and its file importer were all being rewritten.
+`Tools/vocab-conjugation-drill/test/smoke-share.mjs` is new (`npm run test:conjdrill-share`,
+28 assertions) and it is the suite that drives (1)'s round trip end to end: a `{ aplp, state }`
+file handed to the tool's own Import set button, which has to open it. **Its first draft seeded
+the receiving device's colliding set with a `vocab` field 039 does not have** — the field is
+`vocabText` — **and the collision assertion passed anyway**, because the tool defaults every
+missing field on load. Only the assertion that read the words back out of the textarea caught
+it. *A fixture with the wrong field name is still a valid record, so a suite that only asserts
+"the collision was avoided" cannot tell you it seeded nonsense.*
+
+**Also found, and deliberately not fixed, because neither is P2's.** **004 loads
+`_shared/state-link.js` and calls nothing in it** — a dead script tag, not an adopter; its own
+`drawQR` is ct-mirror's pairing code. And **046's single `buildShareUrl` builds 015's
+`?timeline=` link**, a cross-tool send that is Path 6 **P4**'s. So P2's remaining scope is **8**
+tools that share their own state, not the 10 that "17 minus 064 minus six" implies, and **015 is
+the cheapest next one** — the last tool still on the uniform `shareLinkBtn`/`shareQrBtn`/
+`shareOverlay` shape these six had. 003, 005, 006 and 020 use `state-link.js`'s own
+`mountShareControl` instead and are a different conversion.
+
+**Verification.** Full `npm test` locally once: **146 of 146 green, 29.1 min** (146 rather than
+147 because the 039 suite was written after that run started; it was run separately, 28 of 28).
+CI ran the **full** list because `_shared/` is in the diff — green in **28.2 minutes**
+(23:08:14 → 23:36:25 UTC). Every guard green, and **no allowlist line was added**.
+**What was not verified:** **no QR code produced by any of the six was scanned by a real
+camera** — the budget is `qr-draw.js`'s measured one and its own suite decodes with jsQR, but
+this branch added no new decode; the **system-share row is exercised nowhere**, because headless
+Chromium has no `navigator.share` and the row is therefore never even built in a suite; and no
+file was downloaded from a real browser and re-opened by hand — the envelope round trip is
+driven with `setInputFiles` and a buffer, so it proves the parsing and not the browser's
+download.
+
 **Path 5 P4 — the Schedule Browser's native dark palette, and the end of Path 5's rollout
 work — 2026-09-07 (#229, `CACHE_VERSION` v168).** 034 was the last page in the ranked table with
 no theme of its own. It is now on a native dark palette and links `_shared/a11y.js` with
