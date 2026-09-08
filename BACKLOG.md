@@ -63,10 +63,79 @@ yours.
 
 ## Where things stand — start here
 
-*Current as of `main` after PR #239, 2026-09-08. Rewrite this header when your phase
+*Current as of `main` after PR #242, 2026-09-08. Rewrite this header when your phase
 merges — that is step 6 of the definition of done, and it is not optional.*
 
-**Last shipped.** Rank 1 — **Path 6 P3's second increment: the three named-library builders**
+**Last shipped.** Rank 2 — **Path 6 P4: cross-tool "Send to…" as declared handoffs, driven by the
+tool registry** (#242, `CACHE_VERSION` **v174**). `_shared/handoffs.js` is new and is the one list of
+cross-tool sends; `_shared/tool-registry.js` rows carry **`share: { param }`** for the 24 tools that
+can open a shared link; `_shared/share.js`'s sheet grows a "Send to <tool>" row from that table on a
+page that has loaded it; and **052 → 040** (cognates and false friends → a flashcard word list) is the
+one adopter, per the one-adopter rule for a new `_shared/` module. **The row is rewritten, not deleted:**
+the phase text names five more handoffs and three hand-rolled ones to move onto the table, and that
+rollout is now rank 2's text. Seven things are worth carrying.
+
+(1) **The receiver's file and parameter are in the registry, not in the entry, and a test holds the
+registry to the pages.** 046 → 015 and 056 → 028 each hard-code the other tool's file name and
+`?param=`; a receiver renaming either strands the sender silently. A handoff entry is
+`{ from, to, label, note, sent, transform }` and nothing else; `Handoffs.url()` resolves `to`
+through `ToolRegistry.bySlug()` for the file and its new `share.param` for the parameter.
+`Tools/share/test/handoffs.test.mjs` reads every tool page's own `SHARE_PARAM` (or the literal in its
+`Share.receive({ param })`, 007's shape, or `StateLink.getParam(SHARE_PARAM)`, 064's) and fails when
+the registry disagrees — **and fails the other way too**, when a page with no receiver declares a
+parameter, because a handoff to it would be a dead link. That second half is the one to keep.
+
+(2) **A handoff is the receiver's ordinary share link, so there is no third format.** The transform
+produces exactly what the receiver's `Share.receive()` validates and files; 040 saves the arrival as
+"Portuguese cognates & false friends (shared)" without touching what it had, the same as any
+colleague's link. This is the rule 046 and 056 already followed by hand, and it is why the sender
+needs no knowledge of the receiver's storage — the contrast is `rb-gdv-handoff.js`, which writes
+037's storage keys directly and had to copy its saved-set shape to do it.
+
+(3) **The Send row is opt-in per page, not a site-wide surprise.** `share.js` builds the rows only
+when `window.Handoffs` exists and the sheet has a `tool`; 052 loads `tool-registry.js` (46 KB, already
+precached) and `handoffs.js` after `share.js`, and the suite asserts 054, which loads neither, has no
+such row. The transform is handed the **image-stripped** state, because what comes out is a link and
+the policy from P1 holds for every link the sheet builds.
+
+(4) **What a cognate becomes on a card is a decision, written into the transform.** 040's format is
+one `term: definition` line, with `|` for an example; a cognate is `animal: animal`, a false friend
+is `puxar: to pull (not "push")` — the trap travels on the definition side, which is the point of a
+false-friend card. A colon inside a term is softened to a full-width colon so 040 does not split the
+card there, and a blank target is skipped rather than sent as an empty card. Editor ids do not travel.
+
+(5) **`Handoffs.open()` never throws; it returns `{ ok, url, message }`.** A receiver without
+`share.param`, an unknown slug, a missing registry and a blocked pop-up each come back as a sentence
+the sheet shows in its status line as an error. The pop-up case is the one a teacher will hit: 046's
+own send already had the sentence, and it is reused.
+
+(6) **The four existing cross-tool reads and writes are named in the module header and left as they
+are.** 046 → 015 and 056 → 028 (hand-built links), 003 → 037 (`rb-gdv-handoff.js` writes storage) and
+040 ← 039 (`vfg-conjdrill-link.js` reads storage). Moving the two link-builders onto the table is
+mechanical; the two storage-shaped ones are not the same thing and need a decision — a handoff that
+*writes* the receiver's storage from another page bypasses the receiver's own importer, which is
+exactly what P4 exists to stop. That is the rollout row.
+
+(7) **The same-minute claim race happened again today, and the claim table did not close it.** This
+session claimed rank 1 at 12:22 UTC and built P3's second increment; a parallel session had claimed
+the same row at 11:56 **inside its PR branch** and merged it as #239 eight minutes before this
+session's #240 went green. Neither claim was on `main` when the other read the table. #240 was closed
+as a duplicate, nothing from it was kept, and this session took rank 2 instead. **A claim pushed only
+inside a feature branch is not a claim** — "push that claim-only commit by itself" means to `main`'s
+view of the table, and the rule now says so below.
+
+CI ran the **full** list, because `_shared/` and `package.json` are in the diff: green in **30.4 minutes (13:01:55 → 13:32:17 UTC)**.
+Full `npm test` ran locally once: **156 of 156 green, 31.5 min**. Locally: all eleven guards, `lint`,
+`check:precache -- --base origin/main`, `test:share` (the pure suite is **252 assertions**),
+`test:send-to` (**30**), `test:share-rollout`, `test:theme`, `test:vocab-share`, the registry-shape and
+select-suites tests, `test:a11y -- --only 052` and `040`; the open sheet with the new row is axe-clean
+in light and dark. **Not verified:** no real browser opened the new tab by hand — Playwright stubs
+`window.open` — so the `noopener` tab, the pop-up blocker and 040 receiving focus were never watched
+by a person; the system-share row is still exercised nowhere; and no handoff other than 052 → 040
+exists yet, so the table's shape has been tested against one entry.
+
+
+Before it, rank 1 — **Path 6 P3's second increment: the three named-library builders**
 (#239, `CACHE_VERSION` **v173**). **047, 065 and 072** open `_shared/share.js`'s sheet now;
 `npm run check:adoption` puts **`share.js` and `qr-draw.js` at 24 of 86 each**, up from 21, and
 **`state-link.js` at 25**. **P3 is a 2+ row, so it stays**, and what is left of it has now been
@@ -858,18 +927,18 @@ tells the next session to build what already exists, and it did so for about an 
 claim table itself worked, both then and for #182: sessions took different rows and no source
 file conflicted.
 
-**Numbers, all re-measured against the tree on 2026-09-08, after #239 merged:**
+**Numbers, all re-measured against the tree on 2026-09-08, after #242 merged:**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v173` (→ v173 in #239; **four** precached files changed — the three adopted pages and `sw.js` itself; the fourth changed file, the rollout suite, is a test and is never precached. `check:precache -- --base origin/main` prints the figure and is the thing to trust. Nothing was added to or removed from either tier: `state-link.js`, `qr-draw.js`, `share.js` and the vendored encoder were all already listed. **Five increments running have added three to six adopters of a shared file and touched neither tier list** — that is what `_shared/` being precached once buys.) *(Before it: `v172` in #237; **six** precached files changed — the six adopted pages, seven with `sw.js` itself.)* |
-| Precache entries | 257 in `PRECACHE_URLS`, **82** of them in the `SHELL_URLS` install tier — unchanged by #239, which changed three already-listed files and added none. **Five increments in a row have added three to six adopters of a shared file and touched neither list**, which is the point of `_shared/` being precached once |
-| Suites | **154** in `Tools/board-check/suites.json`; `expectedFailures` **empty**. **#239 added none** — it added three *rows* to `Tools/share/test/smoke-share-rollout.mjs`, taking it from 226 assertions to **343**, which is what the rollout shape is for and what P3's next increment should do again. It also fixed a fixture bug in that suite that had made one assertion vacuous on all five tools already in it: `addInitScript` fires on every navigation, so the seeding re-wrote the fixture on `reload()` and "a refresh does not import twice" was testing the reseed rather than the tool. Seeding is now once per origin. Before it, #237 added **one**, and that was the change worth noticing: `Tools/share/test/smoke-share-rollout.mjs` (`npm run test:share-rollout`, **226 assertions**) is a *rollout* suite covering all six of its adopters from one table, the shape `smoke-picker-rollout.mjs` and `smoke-stage-rollout.mjs` already use, rather than six near-identical per-tool files. **P3's next increment adds a row to that table, not a file.** The per-tool shape was right for P2, where each tool had its own hand-written share bar to delete and its own bug in it; P3 is the same wiring repeated. Before it, #235 added **four**, one per converted page, because **none of 003, 005, 006 or 020 had any share coverage at all**: `Tools/seating-chart/test/smoke-share.mjs` (**36 assertions**), `Tools/bracket-tournament-generator/test/smoke-share.mjs` (**36**), `Tools/class-roster-hub/test/smoke-share.mjs` (**34**) and `Tools/rubric-builder/test/smoke-share.mjs` (**32**) — reached through the existing `test:seating`, `test:bracket`, `test:roster-hub` and `test:rubric` shortcuts rather than four new ones. The 005 one is the one to copy: it asserts the image policy against **the writer's own downloaded bytes**, captured off `URL.createObjectURL`, the same technique #233's timeline suite introduced. Before it, #233 added two (name-picker **25**, timeline-builder **34**) and #231 one (vocab-conjugation-drill **28**) and took `Tools/share/test/share.test.mjs` from 47 to **68**. **#235 ran the full `npm test` locally once: 153 of 153 green, 29.6 min, and its CI ran the full list, green in 29.7 minutes**; #233's were 149 of 149 in 29.4 and 27.4 |
+| `CACHE_VERSION` | `v174` (→ v174 in #242; **three** precached files changed — `_shared/share.js`, `_shared/tool-registry.js` and 052 — plus `_shared/handoffs.js` **added to both tiers** and `sw.js` itself; `check:precache -- --base origin/main` prints the figure and is the thing to trust. First list change in six increments.) *(Before it: `v173` in #239; **four** precached files changed — the three adopted pages and `sw.js` itself; the fourth changed file, the rollout suite, is a test and is never precached. `check:precache -- --base origin/main` prints the figure and is the thing to trust. Nothing was added to or removed from either tier: `state-link.js`, `qr-draw.js`, `share.js` and the vendored encoder were all already listed. **Five increments running have added three to six adopters of a shared file and touched neither tier list** — that is what `_shared/` being precached once buys.) *(Before it: `v172` in #237; **six** precached files changed — the six adopted pages, seven with `sw.js` itself.)* |
+| Precache entries | **258** in `PRECACHE_URLS`, **83** of them in the `SHELL_URLS` install tier — #242 added `_shared/handoffs.js` to both, the first list change since #225. Before it, 257 and 82, unchanged by #239, which changed three already-listed files and added none. **Five increments in a row have added three to six adopters of a shared file and touched neither list**, which is the point of `_shared/` being precached once |
+| Suites | **156** in `Tools/board-check/suites.json`; `expectedFailures` **empty**. #242 added **two**: `Tools/share/test/handoffs.test.mjs` (pure Node, **252 assertions**, in `test:share`) and `Tools/share/test/smoke-send-to.mjs` (`test:send-to`, **30**). Before it, **#239 added none** — it added three *rows* to `Tools/share/test/smoke-share-rollout.mjs`, taking it from 226 assertions to **343**, which is what the rollout shape is for and what P3's next increment should do again. It also fixed a fixture bug in that suite that had made one assertion vacuous on all five tools already in it: `addInitScript` fires on every navigation, so the seeding re-wrote the fixture on `reload()` and "a refresh does not import twice" was testing the reseed rather than the tool. Seeding is now once per origin. Before it, #237 added **one**, and that was the change worth noticing: `Tools/share/test/smoke-share-rollout.mjs` (`npm run test:share-rollout`, **226 assertions**) is a *rollout* suite covering all six of its adopters from one table, the shape `smoke-picker-rollout.mjs` and `smoke-stage-rollout.mjs` already use, rather than six near-identical per-tool files. **P3's next increment adds a row to that table, not a file.** The per-tool shape was right for P2, where each tool had its own hand-written share bar to delete and its own bug in it; P3 is the same wiring repeated. Before it, #235 added **four**, one per converted page, because **none of 003, 005, 006 or 020 had any share coverage at all**: `Tools/seating-chart/test/smoke-share.mjs` (**36 assertions**), `Tools/bracket-tournament-generator/test/smoke-share.mjs` (**36**), `Tools/class-roster-hub/test/smoke-share.mjs` (**34**) and `Tools/rubric-builder/test/smoke-share.mjs` (**32**) — reached through the existing `test:seating`, `test:bracket`, `test:roster-hub` and `test:rubric` shortcuts rather than four new ones. The 005 one is the one to copy: it asserts the image policy against **the writer's own downloaded bytes**, captured off `URL.createObjectURL`, the same technique #233's timeline suite introduced. Before it, #233 added two (name-picker **25**, timeline-builder **34**) and #231 one (vocab-conjugation-drill **28**) and took `Tools/share/test/share.test.mjs` from 47 to **68**. **#235 ran the full `npm test` locally once: 153 of 153 green, 29.6 min, and its CI ran the full list, green in 29.7 minutes**; #233's were 149 of 149 in 29.4 and 27.4 |
 | CI per pull request | **Scoped to the diff since #197, and since #223 that scoping actually reaches a tool PR.** The pull-request job runs `npm test -- --changed --base origin/<base>`; the push-to-`main` job runs everything. `sw.js` was site-wide by rule 1 and every tool PR bumps `CACHE_VERSION` there, so **nine tool PRs in a row (#200 … #221) ran the full ~21-minute list anyway** — #200 touched six pages and one test file and still ran all 145 suites in 23.4 minutes. #223 makes rule 1 read the **hunk**: a `sw.js` diff whose only changed lines are the `CACHE_VERSION` assignment selects the two `service-worker` suites instead of everything, and anything else in the file — a precache URL, a comment, a diff the runner cannot produce — is site-wide exactly as before. **#225 was that first genuinely scoped tool PR and #227 is the second, both measured rather than assumed: 14 of 145 suites in 9.1 minutes (18:37:31 → 18:46:34 UTC) and 15 of 145 in 4.7 minutes (19:38:10 → 19:42:54 UTC), against 23–29 for the full pass.** **#239 is the clearest instance yet: 11 of 154 suites, green in 8.8 minutes (12:19:06 → 12:27:52 UTC), against the 29.2 minutes #237 paid two days' work earlier for a site-wide selection.** The difference between them is not the number of tool pages — it is that #237 also touched `package.json` and `suites.json`, both site-wide under rule 1, while #239 added no suite and so touched neither. #227 is the cheaper of the two despite selecting one suite more, because its selection was two tool pages and a suite file rather than six pages. Its log's first `because` line reads `sw.js: CACHE_VERSION is the only changed line — not site-wide; the service-worker suites run`. Before #223 the saving was real only for a PR with no precached change: **#201, this file plus `HISTORY.md`, ran green in 43 seconds.** **#214 found the first real bug in rule 4:** the selector finds the page-sweeping suites by grepping their source for `readdirSync`, so moving `smoke-theme.mjs` to `git ls-files` silently took it out of every page edit's selection; `isSweep` matches both spellings now and `select-suites.test.mjs` pins both. That is the same shape of mistake #223 had to avoid — a rule reading a *name* where it should read the *content* goes quiet, not red — which is why nothing in the new check looks for the word `CACHE_VERSION` anywhere in a diff and why the test reads the constant out of the real `sw.js`. **The push-to-`main` full pass is not the safety net it reads as, and this was measured, not assumed.** `ci.yml` sets `concurrency: group: ci-${{ github.ref }}` with `cancel-in-progress: true`, and step 6 merges onto the same ref minutes after the increment does — so the increment commit's own main run is **cancelled** every time. Run 135 (#216's commit) and run 139 (#218's) are both `cancelled`; runs 137 and 141, the step-6 commits that followed them, are the `success`es. Nothing is actually unprotected — the step-6 commit carries the same tool tree plus documentation, so its full pass covers the increment's code — but **the run that says "green on main" for an increment is the one for the handoff commit after it**. If a session ever needs the increment commit itself covered (a revert, a bisect), re-run it by hand; the concurrency group will not do it |
 | Read-only guards | **11**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands` and `adoption`. All run in CI. `check:precache` is one guard running **six** always-on checks since #191 (SHELLDEP is the sixth) plus the opt-in BUMP. `check:docs-commands`'s `KNOWN_MISSING` is **empty** since #195 |
 | Accessibility allowlist | **14 page-rule pairs on 14 pages, every one `color-contrast`** — unchanged by #239, which touched three pages, added a button and a note paragraph to each, and had **all three come back clean** from the site-wide sweep and from its rollout suite's `a11yScan` on the open share sheet. That is **eight** page-changing increments in a row with no line added, which is the standard a new tool is held to. Also unchanged by #237, #235, #233, #231, #229, #227 and #225, none of which added or deleted a line. #237 touched six pages, added a button and a note paragraph to each, and **all six came back clean from the site-wide sweep**; its rollout suite also scans the open share sheet with `a11yScan` on all six and found nothing. That is **seven** increments in a row that changed pages and did not need a line, which is the standard a new tool is held to |
-| Tool registry | 87 rows, **217 keys and 32 prefixes across 109 files** — `__scv_probe__` retired and `__gvb_save_probe__` declared for the first time, so the total is unchanged for two unrelated reasons; four IndexedDB databases declared; `check:registry` green, `dynamic` empty everywhere |
-| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `store.js` 36 · `roster.js` 32 · `state-link.js` 25 · `qr-draw.js` 24 · `share.js` 24 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 9 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 2 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Tool registry | 87 rows, **217 keys and 32 prefixes across 109 files**; since #242 **24 rows carry `share: { param }`**, the parameter their own `Share.receive()` reads, checked against each page's source by `handoffs.test.mjs` — `__scv_probe__` retired and `__gvb_save_probe__` declared for the first time, so the total is unchanged for two unrelated reasons; four IndexedDB databases declared; `check:registry` green, `dynamic` empty everywhere |
+| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `store.js` 36 · `roster.js` 32 · `state-link.js` 25 · `qr-draw.js` 24 · `share.js` 24 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 9 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `handoffs.js` 1 · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087**. 81 of them have recorded open ideas |
 | Tier 1 rows | **176**, a contiguous 1..176. #239 shipped one increment of rank 1, a 2+ row, so that row was neither deleted nor renumbered — but it **added one row**, the `.share-note` consolidation into `_shared/base.css`, inserted at **rank 11** (a ¼, and every row from the old 11 down moved by one). The tool-number boundary moved with it, to **95** (measured by walking the table from the bottom, not by subtraction). **Rank 1 is still Path 6 P3 and is still a 2+ row, so it is the next session's whole batch on its own** (see "How big a batch"); rank 2 (P4) is a 1. Rank 14 (the sweep's blind spot, one lower than it was) still has **eleven** confirmed instances: #239 added none, which is the third page-changing increment running to turn up no shipped violation, and its rollout suite scanned the open sheet on three more pages to establish that rather than inferring it from a quiet sweep |
@@ -1591,7 +1660,7 @@ session hitting one of these ships rather than stalls.
 
 ## Tier 1 — the ranked index
 
-Ranks are a single contiguous 1..177 order with no ties. **Area** is a tool number,
+Ranks are a single contiguous 1..176 order with no ties. **Area** is a tool number,
 `_shared/`, or `site`. **Size** is quarter / half / one / two-plus sessions. **Claimed** is the
 concurrency mechanism described above — leave it empty unless you are working the row.
 **Detail** links to the section in Tier 2 that carries the idea in full.
@@ -1610,7 +1679,7 @@ priority is implied among them.
 
 *(Boundaries shift down by two every time a batch of two ships. Only one of them is exact,
 and it is the one worth checking: the rank from which the Area
-column is a tool number and stays one, **96** as of 2026-09-07, after #223. Measured by walking the table
+column is a tool number and stays one, **95** as of 2026-09-08, after #242. Measured by walking the table
 from the bottom until an Area is not three digits — do not derive it by subtraction, which is
 how the figure it replaced ("104") went wrong in the first place. Everything else here
 describes the order rather than measuring it, and the old text's "39 enhancement rows then 42
@@ -1626,7 +1695,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
 | 1 | Path 6 P3 — extend sharing to the builders that do not share yet. **Increment 1 shipped (#237, v172): 052, 057, 070, 073, 079, 081, all single-document. Increment 2 shipped (#239, v173): 047, 065, 072, all named-library.** Left, and now **enumerated rather than gestured at** — the [Path 6](#path-6--share-everywhere) section lists all 30 remaining generator/builder tools grouped by storage shape, which is what decides how much of #237 applies. **Take the seven named-library ones next — 041, 051, 069, 082, 083, 048, 019 — because #239 is a straight copy for them and no confirm machinery applies.** Then the ten single-document ones (018, 038, 046, 049, 058, 074, 075, 076, 077, 078), which are #237's shape. The twelve bank-plus-settings ones are a design question per tool, not wiring, and should not be batched with either. **Three carry a `student: true` key and need 073's per-field split first** (023, 048, 077); **four are already promised to Path 12 P2** (053, 062, 018, 019). **045 still goes last or waits:** it compiles other tools' storage and ranks 29–30 (Path 10 P2/P3) are about to re-base it on section providers. Add a row to `Tools/share/test/smoke-share-rollout.mjs`'s table rather than a per-tool suite | site | 2+ | | [Path 6](#path-6--share-everywhere) |
-| 2 | Path 6 P4 — cross-tool "Send to…" driven by the tool registry | site | 1 | `4pn3fw` 2026-09-08 12:52 UTC | [Path 6](#path-6--share-everywhere) |
+| 2 | Path 6 P4 rollout — the mechanism shipped (#242, v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Left, all named by the phase text:** move the two hand-built links onto the table (**046 → 015** `?timeline=`, **056 → 028** `?worksheet=`) so their receivers' file and parameter stop being hard-coded; **decide** the two storage-shaped ones (**003 → 037** writes 037's keys through `rb-gdv-handoff.js`; **040 ← 039** reads 039's through `vfg-conjdrill-link.js`) — a table entry through the receiver's own importer, or a documented exception; then the new ones: **roster → groups → lab roles → seating** (006/007 → 002 → 022 → 005), **trivia → review board** (053 → 030, after rank 38), **rubric → grade distribution** by link rather than by storage. Each is one entry plus a row in `smoke-send-to.mjs`; a sender that does not yet load `share.js` (046) adopts the sheet first | site | 1 | | [Path 6](#path-6--share-everywhere) |
 | 3 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js` (005 photos first) | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 4 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 5 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
@@ -1832,7 +1901,12 @@ Every session is on a branch named `claude/<something>-<code>`; `<code>` is your
 code — read it off your own branch name, do not invent one. To claim a row, put
 `` `<code>` <YYYY-MM-DD HH:MM UTC> `` in its **Claimed** cell and **push that
 claim-only commit by itself, before writing any implementation code**, so a concurrent
-session sees the claim before picking its own batch. Clear the cell if you abandon the
+session sees the claim before picking its own batch. **A claim is only visible if it
+reaches `main`'s view of the table** — a claim commit pushed to a feature branch that
+nobody fetches is invisible until the PR merges, which is how #239 and #240 (2026-09-08)
+built the same increment twice with both sessions having "claimed" it. So, also: fetch
+`main` and check the row's cell **again** just before the first implementation commit
+and again before opening the PR. Clear the cell if you abandon the
 row. A claim more than about six hours old with no matching PR is stale — safe to
 reclaim, and say so in the commit message; sessions stall, this is not an accusation.
 
@@ -2539,7 +2613,8 @@ contrast fix in the sheet's own CSS; #235 (v171) took 003, 005, 006 and 020, the
 went through `state-link.js`'s own `mountShareControl`, and **retired `mountShareControl`**.
 **`share.js` and `qr-draw.js` are at 15 adopters each and `state-link.js` at 16** — the one
 page with the latter and not the former is 046, whose single `buildShareUrl` builds 015's
-`?timeline=` link, which is **P4's**. **P3 is now rank 1; P4 is rank 2.**
+`?timeline=` link, which is **P4's**. **P4's mechanism shipped 2026-09-08 (#242, v174) with
+052 → 040 as its one adopter; its rollout is rank 2. P3 is rank 1.**
 
 **Why.** `state-link.js` works and is in 17 tools; [Track P](#track-p--printable-cheat-sheet-bundle-export-packet-builder) and
 the platform themes both want it universal. Every adopter independently
@@ -2642,11 +2717,19 @@ download-as-file as the third option.
   (`tacg_cards_v1`). **Four are already promised to Path 12 P2** (rank 40: 053, 062, 018,
   019) — share them there or accept that their payload shape changes when the question bank
   lands.
-- **P4 — Cross-tool "Send to…".** The same sheet grows a "Send to <tool>" row
-  driven by the tool registry (Path 4): map places → timeline (exists), rubric →
-  grade distribution (exists), roster → groups → lab roles → seating, trivia →
-  review board, vocab → flashcards. Each handoff is a declared
-  `{from, to, param, transform}` entry, not an ad-hoc key read.
+- **P4 — Cross-tool "Send to…". Mechanism shipped 2026-09-08 (#242, `CACHE_VERSION`
+  v174); the rollout is rank 2.** The same sheet grows a "Send to <tool>" row driven by
+  the tool registry (Path 4). Each handoff is a declared `{ from, to, label, note, sent,
+  transform }` entry in `_shared/handoffs.js`, not an ad-hoc key read; the receiver's
+  **file and parameter are not in the entry** — they come from the registry row, whose
+  new `share: { param }` is checked against every page's own source by
+  `Tools/share/test/handoffs.test.mjs`. The link is the receiver's ordinary share link,
+  so the receiver files it through its own importer and no third format exists. One
+  handoff is declared: **052 → 040**, cognates and false friends as a flashcard word list.
+  **Left** (rank 2): map places → timeline (exists in 046 by hand), source → worksheet
+  (exists in 056 by hand), rubric → grade distribution (exists in 003 by writing 037's
+  storage — decide whether that becomes a link), roster → groups → lab roles → seating,
+  trivia → review board, vocab → flashcards from 039 (exists as a storage read in 040).
 
 **Model.** Opus.
 

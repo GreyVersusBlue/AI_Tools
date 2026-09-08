@@ -41,6 +41,34 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 6 P4 — cross-tool "Send to…" as declared handoffs, driven by the tool registry —
+2026-09-08 (#242, `CACHE_VERSION` v174).** `_shared/handoffs.js` is new: the one list of cross-tool
+sends, each `{ from, to, label, note, sent, transform }`, with the receiver's page and parameter
+resolved through `_shared/tool-registry.js`, whose rows now carry `share: { param }` for the 24 tools
+that can open a shared link. `_shared/share.js`'s sheet adds one "Send to <tool>" row per entry for its
+`tool`, only on a page that has loaded the table; **052 → 040** is the one adopter (a cognate list
+becomes a flashcard word list in 040's own `term: definition` format, a false friend's trap on the
+definition side). **What was decided:** the entry never names the receiver's file or parameter, and
+`Tools/share/test/handoffs.test.mjs` holds the registry to every page's own `SHARE_PARAM` in both
+directions — a receiver renaming its parameter, or a non-receiver declaring one, fails there; the link
+is the receiver's ordinary share link so it lands through the receiver's own importer; the transform is
+handed the image-stripped state; `Handoffs.open()` returns `{ ok, url, message }` and never throws.
+The four existing cross-tool reads and writes (046 → 015, 056 → 028 as hand-built links; 003 → 037 and
+040 ← 039 as direct storage access) are named in the header and left alone — the two storage-shaped
+ones bypass the receiver's importer, which is what P4 exists to stop, and need a decision rather than a
+port; that is the rank-2 rollout row. **What went wrong:** this session first built P3's second
+increment (047, 065, 072) in full and had it green as #240 when #239 — the same increment from a
+parallel session — merged eight minutes earlier; both sessions had claimed rank 1, but the other
+session's claim was pushed only inside its PR branch and this session's only after its fetch, so neither
+saw the other. #240 was closed as a duplicate and nothing from it kept; the claim rule in `BACKLOG.md`
+now says a claim is visible only when it reaches `main`, and says to re-check the cell before the first
+implementation commit and before the PR. Its one other cost: the 10-minute tool timeout on background
+commands killed the first attempt at a full local `npm test`; the second was launched detached.
+Full `npm test` ran locally once: 156 of 156 green, 31.5 min. CI ran the **full** list (`_shared/` in the diff), green in
+**30.4 minutes (13:01:55 → 13:32:17 UTC)**. **Not verified:** no real browser opened the new tab by hand (Playwright stubs
+`window.open`); the system-share row is still exercised nowhere; the table has one entry, so its shape
+has been tested against one handoff.
+
 **Path 6 P3, second increment — the three named-library builders, and a fixture bug that had
 made an assertion vacuous — 2026-09-08 (#239, `CACHE_VERSION` v173).** P3 is a 2+ row and
 **stays in the table**. **047, 065 and 072** now open `_shared/share.js`'s sheet;
