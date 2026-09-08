@@ -41,6 +41,43 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 6 P3, increment 3 — five more named-library builders share — 2026-09-08 (#244,
+`CACHE_VERSION` v175).** **041** Formula Reference Sheet Builder, **051** Classroom Label Maker,
+**069** PE Warm-Up Circuit Generator, **082** Citation Generator and **083** Propaganda Analysis
+Worksheet Generator open `_shared/share.js`'s sheet and consume a link on load; none had share
+code, `state-link.js` or an importer before. `share.js` and `qr-draw.js` go to **29 of 86** each,
+`state-link.js` to **30**. **What was decided: nothing new, and that is the result.** All three of
+#239's calls were applied verbatim — an arrival on a named-library tool is saved beside what is
+there under a free name and **nothing asks**, the legacy migration runs before the import (051 and
+069 have one; 041, 082 and 083 do not and say so), and the only per-tool thinking is *what
+travels*: 041 shares which formulas are ticked as allowed and the assessment they are approved for,
+051 the language its printed pronunciation codes speak in, 069 the cards-per-page and every
+station's icon, 082 the list's style rather than the device's, 083 the level that rewrites all nine
+questions. **What went wrong, and it is the entry worth keeping:** 041 and 083 are the first
+adopters whose fixture carries an image, and that exposed a **vacuous assertion the rollout suite
+had carried for nine rows** — section 6 asserted `Share.unwrap(downloaded file) === link payload`,
+which is *false by design* for any tool with a picture (the file is the full state, the link the
+stripped one) and had only ever passed because no earlier fixture had a `data:` URL in it. It now
+asserts the general statement — the file put through the same image policy **is** the link's
+payload — plus, on those two rows, that the dropped picture is in the file whole. Two smaller
+things: 069's `load()` seeds an eight-station default template into an empty circuit and the import
+has to skip it, a silent branch findable only by reading `load()` rather than the storage shape;
+and 082/083 already had a `#shareNote` toast (two of the four pages rank 11 records as using
+`.share-note` for something else), kept but driven through a `setShareNote()` that is deliberately
+not their `setNote()`, which writes `innerHTML` and self-clears after four seconds. **Two of the
+seven named-library tools were deliberately not taken:** 048 holds a `student: true` key and needs
+073's per-field split decided first, and 019 is promised to Path 12 P2 — both named in rank 1's
+rewritten text rather than left to be rediscovered. Verification is five rows added to
+`Tools/share/test/smoke-share-rollout.mjs` (**543 assertions**, up from 343) and no new file, plus
+`share: { param }` on five registry rows, checked against each page's own `SHARE_PARAM` by
+`handoffs.test.mjs` (`test:share` **262**, up from 252). A full `npm test` ran locally: **156 of
+156 green in 32.5 minutes**; CI ran the full list (`_shared/tool-registry.js` is site-wide) green
+in **30.6 minutes**. All five pages came back clean from the site-wide axe sweep and from the
+suite's `a11yScan` on the open sheet — **no allowlist line added, nine page-changing increments
+running**. **Not verified:** no QR was scanned by a real camera; the system-share row is exercised
+nowhere; no file was downloaded by a real browser and re-opened by hand; the open sheet was scanned
+in **light only** on these five; nothing was driven by a human clicking anything.
+
 **Path 6 P4 — cross-tool "Send to…" as declared handoffs, driven by the tool registry —
 2026-09-08 (#242, `CACHE_VERSION` v174).** `_shared/handoffs.js` is new: the one list of cross-tool
 sends, each `{ from, to, label, note, sent, transform }`, with the receiver's page and parameter
