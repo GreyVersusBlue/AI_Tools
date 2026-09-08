@@ -2345,7 +2345,8 @@ passing on the same empty page the site-wide sweep already covers. Look at them.
 ### Path 6 — "Share…" everywhere
 
 **Status.** P1 shipped 2026-09-04 (#178, `CACHE_VERSION` v146) with 064 as its single
-adopter. **P2 is finished**, in three increments all on 2026-09-08: #231 (v169) took 028,
+adopter. **P3's first increment shipped 2026-09-08 (#TBD, v172): 052, 057, 070, 073, 079
+and 081, taking `share.js` and `qr-draw.js` to 21 of 86 and `state-link.js` to 22.** **P2 is finished**, in three increments all on 2026-09-08: #231 (v169) took 028,
 039, 040, 050, 054 and 056 and grew the receiving half (`unwrap`, `parseFile`, `receive`,
 `receiveFile`); #233 (v170) took 002, 007, 015 and 044 — every tool with a hand-written
 share bar — and added `Share.open()` beside `Share.mount()` for 007's per-row shape plus a
@@ -2394,9 +2395,32 @@ download-as-file as the third option.
   ~105 KB against 3.0 KB stripped. 006's WebRTC pairing codes are **not** share payloads,
   keep their own renderer (`drawPairingQr`), and produced the finding that is now rank 12.
 
-- **P3 — Extend to the builders that don't share yet.** From the improvement
-  notes: 044, 045, 047, 052, 057, 065, 070, 072, 073, 079, 081, plus every
-  "generator" tool with a saved configuration. Batches of ~8.
+- **P3 — Extend to the builders that don't share yet. First increment shipped
+  2026-09-08 (#TBD, `CACHE_VERSION` v172); the row stays.** The phase's original
+  list — 044, 045, 047, 052, 057, 065, 070, 072, 073, 079, 081, plus every
+  "generator" tool with a saved configuration — was already one out of date:
+  **044 adopted in P2 (#233).** **052, 057, 070, 073, 079 and 081 are done**, which
+  takes `share.js` and `qr-draw.js` to **21 of 86** and `state-link.js` to 22.
+  **Left: 045, 047, 065, 072**, plus the generators nobody has enumerated yet — and
+  those four are one coherent set of their own, because 047, 065 and 072 all keep a
+  **named library** (`LIST_KEY` + `DATA_PREFIX` + `CURRENT_KEY`) rather than the
+  single document the first six kept, which means an arrival can be saved *beside*
+  what is there under a suffixed name, exactly as P1/P2's adopters do, and none of
+  the confirm machinery below applies to them. 045 is the odd one: it compiles other
+  tools' storage rather than owning much of its own, and Path 10 P2/P3 are about to
+  re-base it on section providers, so **share it after those or accept that its
+  payload will change shape.**
+
+  The first increment's own decisions, which the next one should follow or
+  deliberately reverse: an arriving link on a **single-document** tool asks with the
+  page's own `confirm()` before replacing, and **only when `load()` found something
+  in storage** — the starter template an empty install seeds is not somebody's work;
+  a tool whose state is a **recipe rather than authored content** (081's seed) does
+  not ask at all; and what travels is decided per field, not per key — **073 shares
+  its milestone schedule and no student name, tick or note**, following 003's
+  rubric-without-marks split. Verification is one **rollout suite**,
+  `Tools/share/test/smoke-share-rollout.mjs` (`npm run test:share-rollout`), a table
+  with a row per adopter rather than a per-tool suite each; add a row to it.
 - **P4 — Cross-tool "Send to…".** The same sheet grows a "Send to <tool>" row
   driven by the tool registry (Path 4): map places → timeline (exists), rubric →
   grade distribution (exists), roster → groups → lab roles → seating, trivia →

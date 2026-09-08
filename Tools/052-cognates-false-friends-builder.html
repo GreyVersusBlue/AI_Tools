@@ -23,6 +23,10 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -99,6 +103,13 @@
   .cognate-text { color: var(--ok); }
   .false-friend-text { color: var(--err); }
 
+  /* Share a list: the sheet itself is _shared/share.js (Path 6 P3). This is
+     only the note under the toolbar that records what the sheet last did —
+     on the page's own tint tokens, which already have dark values above. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
+
 </style>
 </head>
 <body>
@@ -110,9 +121,11 @@
       <p class="sub">Build a reference list of look-alike words that mean the same thing, and ones that don't.</p>
     </div>
     <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share list&hellip;</button>
       <button class="secondary" id="printBtn">Print reference sheet</button>
     </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <label for="langName">Language</label>
@@ -223,7 +236,8 @@
   var els = {};
   ['langName', 'templateSelect', 'loadTemplateBtn', 'cognatesWrap', 'addCognateBtn',
    'falseFriendsWrap', 'addFalseFriendBtn', 'printBtn', 'printArea',
-   'bulkInput', 'bulkImportBtn', 'bulkNote'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'bulkInput', 'bulkImportBtn', 'bulkNote',
+   'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { lang: '', cognates: [], falseFriends: [] };
 
@@ -242,12 +256,17 @@
     state.falseFriends = t.falseFriends.map(function (f) { return { id: uid(), target: f[0], looksLike: f[1], actual: f[2] }; });
   }
 
+  /** True when there was a saved list here — which is what tells an arriving
+      share link whether it is about to replace somebody's work or an untouched
+      starter template. */
   function load() {
+    var had = false;
     try {
       var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.cognates)) state = saved;
+      if (saved && Array.isArray(saved.cognates)) { state = saved; had = true; }
     } catch (e) { /* ignore */ }
     if (!state.cognates.length && !state.falseFriends.length) fromTemplate('spanish');
+    return had;
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -425,8 +444,83 @@
     window.print();
   });
 
+  /* ---------- share a list: _shared/share.js (Path 6 P3) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the code would be too dense to scan), download .json, and
+     the system share where the browser has one. This tool had no way to hand
+     a list to another teacher at all before; the only route off the device
+     was the printed sheet.
+
+     This tool keeps ONE list, not a named library, so an arriving link has
+     nowhere to land except on top of what is here. It therefore asks first —
+     but only when `load()` found something saved, because the Spanish starter
+     template every empty install shows is not somebody's work. Declining is a
+     real outcome and says so; the parameter is consumed either way (share.js
+     clears it before the payload is even judged), so a refresh cannot ask
+     twice. */
+  var SHARE_PARAM = 'cognates';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { return state; },
+    param: SHARE_PARAM,
+    tool: 'cognates-false-friends-builder',
+    title: 'Share this reference list',
+    noun: 'this list',
+    filename: function () { return (state.lang || 'cognates') + ' reference list'; },
+    note: 'The whole list travels — the language, every cognate pair and every false friend. Opening it replaces the list on the receiving device, which is asked first.',
+    successMessage: 'Link copied. Opening it on another device offers this whole list — cognates and false friends — in place of whatever is there.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleList(obj) {
+    return !!obj && typeof obj === 'object' &&
+      (Array.isArray(obj.cognates) || Array.isArray(obj.falseFriends));
+  }
+
+  /** Normalises an arrival: ids are this device's to hand out, and a payload
+      that came from an older or hand-edited file may be missing them. */
+  function normalizeList(obj) {
+    return {
+      lang: typeof obj.lang === 'string' ? obj.lang : '',
+      cognates: (Array.isArray(obj.cognates) ? obj.cognates : []).map(function (c) {
+        return { id: uid(), target: String(c && c.target || ''), english: String(c && c.english || '') };
+      }),
+      falseFriends: (Array.isArray(obj.falseFriends) ? obj.falseFriends : []).map(function (f) {
+        return { id: uid(), target: String(f && f.target || ''), looksLike: String(f && f.looksLike || ''),
+                 actual: String(f && f.actual || '') };
+      })
+    };
+  }
+
+  function importSharedList(hadSaved) {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleList,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var incoming = normalizeList(decoded);
+        var count = incoming.cognates.length + incoming.falseFriends.length;
+        if (hadSaved && !confirm('Replace the list saved here with the shared one (' + count + ' entries)?')) {
+          setShareNote('Kept the list already on this device. The shared one was not loaded.');
+          return false;
+        }
+        state = incoming;
+        save();
+        setShareNote('Loaded a shared list' + (state.lang ? ' for ' + state.lang : '') + ' — ' + count + ' entries.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
-  load();
+  var hadSaved = load();
+  importSharedList(hadSaved);
   renderAll();
 })();
 </script>

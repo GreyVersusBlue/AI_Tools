@@ -21,14 +21,26 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
   /* Path 5 P3. The warn tint pair is 001's (the reference adopter); it is the
      "this will not fit on half a sheet" chip, which is screen-only. */
-  :root { --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) { --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077; }
+  :root { --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
+    --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share a checklist: the sheet itself is _shared/share.js (Path 6 P3). This
+     is only the note under the toolbar that records what the sheet last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -122,9 +134,11 @@
       <p class="sub">Build a checklist for a specific assignment, then print a half-sheet per student.</p>
     </div>
     <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share checklist&hellip;</button>
       <button class="secondary" id="printBtn">Print checklists</button>
     </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="layout">
     <div>
@@ -209,7 +223,8 @@
 
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'assignmentName', 'copyCount', 'categoriesWrap',
-   'addCategoryBtn', 'printBtn', 'printArea', 'sizeWarning', 'ratingStyle'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'addCategoryBtn', 'printBtn', 'printArea', 'sizeWarning', 'ratingStyle',
+   'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { assignmentName: '', copyCount: 6, categories: [], ratingStyle: 'check' };
 
@@ -221,12 +236,16 @@
   }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
+  /** True when there was a saved checklist here — which is what tells an
+      arriving share link whether it is about to replace somebody's work. */
   function load() {
+    var had = false;
     try {
       var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.categories)) state = saved;
+      if (saved && Array.isArray(saved.categories)) { state = saved; had = true; }
     } catch (e) { /* ignore */ }
     if (state.ratingStyle !== 'three') state.ratingStyle = 'check'; // added 2026-08; single checkbox for pre-existing saves
+    return had;
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -392,8 +411,87 @@
     window.print();
   });
 
+  /* ---------- share a checklist: _shared/share.js (Path 6 P3) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the code would be too dense to scan), download .json, and
+     the system share where the browser has one. A department that agrees on
+     one editing checklist had no way to hand it round before except retyping
+     it from a printed half-sheet.
+
+     `copyCount` deliberately travels with it. It is not a preference so much
+     as the class size the checklist was built for, and a receiving teacher who
+     wants a different number changes one field.
+
+     This tool keeps ONE checklist, so an arriving link has nowhere to land
+     except on top of what is here; it asks first, and only when `load()` found
+     something saved. */
+  var SHARE_PARAM = 'checklist';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { return state; },
+    param: SHARE_PARAM,
+    tool: 'peer-feedback-checklist-generator',
+    title: 'Share this checklist',
+    noun: 'this checklist',
+    filename: function () { return state.assignmentName || 'peer feedback checklist'; },
+    note: 'Every category and line travels, with the rating style and the number of copies. Opening it replaces the checklist on the receiving device, which is asked first.',
+    successMessage: 'Link copied. Opening it on another device offers this whole checklist in place of whatever is there.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleChecklist(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.categories);
+  }
+
+  /** Normalises an arrival. Nothing here refers to an id across records, so
+      this device hands out its own — see 057 for the tool where it may not. */
+  function normalizeChecklist(obj) {
+    var count = parseInt(obj.copyCount, 10);
+    return {
+      assignmentName: typeof obj.assignmentName === 'string' ? obj.assignmentName : '',
+      copyCount: (count >= 1 && count <= 60) ? count : 6,
+      ratingStyle: obj.ratingStyle === 'three' ? 'three' : 'check',
+      categories: obj.categories.map(function (c) {
+        return {
+          id: uid(),
+          name: String(c && c.name || ''),
+          items: (Array.isArray(c && c.items) ? c.items : []).map(function (it) {
+            return { id: uid(), text: String(it && it.text || '') };
+          })
+        };
+      })
+    };
+  }
+
+  function importSharedChecklist(hadSaved) {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleChecklist,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var incoming = normalizeChecklist(decoded);
+        if (hadSaved && !confirm('Replace the checklist saved here with the shared one (' + incoming.categories.length + ' categories)?')) {
+          setShareNote('Kept the checklist already on this device. The shared one was not loaded.');
+          return false;
+        }
+        state = incoming;
+        save();
+        setShareNote('Loaded a shared checklist' + (state.assignmentName ? ' — “' + state.assignmentName + '”' : '') +
+          ', ' + state.categories.length + ' categories.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
-  load();
+  var hadSaved = load();
+  importSharedChecklist(hadSaved);
   els.assignmentName.value = state.assignmentName || '';
   els.copyCount.value = state.copyCount || 6;
   els.ratingStyle.value = state.ratingStyle;
