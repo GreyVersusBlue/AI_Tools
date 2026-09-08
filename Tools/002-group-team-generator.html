@@ -151,13 +151,10 @@
   .sheet-names li { font-size: 0.95rem; padding: 0.25rem 0; border-bottom: 1px dashed var(--border); }
   .sheet-task-box { border: 1px solid var(--border); border-radius: 6px; min-height: 2.4in; padding: 0.6rem 0.75rem; font-size: 0.8rem; color: var(--text-dim); }
 
-  /* Share a grouping by link / QR */
-  .share-overlay { position: fixed; inset: 0; background: rgba(10,10,14,.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 80; }
-  .share-overlay[hidden] { display: none; }
-  .share-modal { background: var(--card, #fff); color: inherit; border-radius: 10px; padding: 16px 18px; max-width: 340px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
-  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
-  #share-canvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
-  /* A shared arrangement is somebody else's; the banner has to say so, because
+  /* Share a grouping: the sheet is _shared/share.js (Path 6 P2), so only the
+     note under the export row and the arrival banner are this page's now.
+
+     A shared arrangement is somebody else's; the banner has to say so, because
      the page otherwise looks exactly like one you generated yourself. */
   .shared-banner { font-size: 0.8rem; padding: 0.6rem 0.75rem; border-radius: 6px; margin-bottom: 0.85rem; background: rgba(108,142,245,.12); border: 1px solid rgba(108,142,245,.35); line-height: 1.5; }
   #share-note { margin-top: 0.5rem; }
@@ -222,6 +219,8 @@
 </style>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 </head>
@@ -349,17 +348,6 @@
     <div id="msg"></div>
   </div>
 
-  <div class="share-overlay" id="share-overlay" hidden>
-    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Grouping QR code">
-      <div class="share-head">
-        <span>Scan to open this grouping</span>
-        <button type="button" class="btn-secondary" id="share-close-btn" aria-label="Close">&times;</button>
-      </div>
-      <canvas id="share-canvas"></canvas>
-      <p class="hint">Opens a read-only copy of this exact arrangement. It is a copy &mdash; a reshuffle there does not come back here.</p>
-    </div>
-  </div>
-
   <div class="grid-overlay" id="grid-overlay" hidden>
     <div class="grid-modal" role="dialog" aria-modal="true" aria-label="Pairing grid">
       <div class="grid-head">
@@ -388,8 +376,7 @@
         <button class="btn-secondary" id="print-tents-btn">🪧 Print Table Tents</button>
         <button class="btn-secondary" id="print-sheets-btn">📄 Print Group Sheets</button>
         <button class="btn-secondary" id="copy-btn">📋 Copy as Text</button>
-        <button class="btn-secondary" id="share-link-btn">🔗 Copy Link</button>
-        <button class="btn-secondary" id="share-qr-btn">▦ QR Code</button>
+        <button class="btn-secondary" id="share-btn">🔗 Share grouping&hellip;</button>
       </div>
       <p class="hint" id="share-note" style="display:none;"></p>
     </div>
@@ -1785,12 +1772,8 @@
   ------------------------------------------------------------------------- */
   var SHARE_PARAM = 'groups';
   var shareEls = {
-    linkBtn: document.getElementById('share-link-btn'),
-    qrBtn: document.getElementById('share-qr-btn'),
-    note: document.getElementById('share-note'),
-    overlay: document.getElementById('share-overlay'),
-    canvas: document.getElementById('share-canvas'),
-    closeBtn: document.getElementById('share-close-btn')
+    btn: document.getElementById('share-btn'),
+    note: document.getElementById('share-note')
   };
 
   function setShareNote(text, isError) {
@@ -1815,57 +1798,27 @@
       o.groups.every(function (g) { return g && Array.isArray(g.members); });
   }
 
-  function shareUrl() {
-    var payload = buildSharePayload();
-    return payload ? StateLink.buildShareUrl(SHARE_PARAM, payload) : null;
-  }
+  /* The sheet is _shared/share.js (Path 6 P2): copy link, QR (greyed out
+     with the reason when the code would be too dense to scan at this size —
+     the tool's own copy drew it anyway and only refused when the encoder
+     threw), download .json, and the system share where there is one.
 
-  shareEls.linkBtn.addEventListener('click', function () {
-    var url = shareUrl();
-    if (!url) { setShareNote('Make some groups first, then there is something to share.', true); return; }
-    var copy = (navigator.clipboard && navigator.clipboard.writeText)
-      ? navigator.clipboard.writeText(url) : Promise.reject();
-    copy.then(
-      function () { setShareNote('Link copied — it opens this exact arrangement, with nothing else from this page.'); },
-      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
-    );
+     `getState` still hands over the derived payload rather than `state`,
+     because that is this tool's whole point about sharing: what travels is
+     the RESULT, not the recipe. The roster, the constraints, the skill
+     numbers and the pairing memory stay here. */
+  Share.mount(shareEls.btn, {
+    getState: buildSharePayload,
+    param: SHARE_PARAM,
+    tool: 'group-team-generator',
+    title: 'Share this grouping',
+    noun: 'this grouping',
+    filename: function () { return (state && state.name) || 'grouping'; },
+    note: 'Only the group labels and who is in each one travel — not the roster, the constraints, the skill numbers or the pairing memory.',
+    successMessage: 'Link copied — it opens this exact arrangement, with nothing else from this page.',
+    emptyMessage: 'Make some groups first, then there is something to share.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
   });
-
-  function drawShareQr(canvas, text) {
-    var qr = window.qrcode(0, 'L');
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount(), quiet = 4, px = 6;
-    var size = (count + quiet * 2) * px;
-    canvas.width = size; canvas.height = size;
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#16181d';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
-      }
-    }
-  }
-
-  shareEls.qrBtn.addEventListener('click', function () {
-    var url = shareUrl();
-    if (!url) { setShareNote('Make some groups first, then there is something to share.', true); return; }
-    try {
-      drawShareQr(shareEls.canvas, url);
-    } catch (e) {
-      // A QR holds far less than a URL bar. A big class in many small groups
-      // runs past it — say so instead of showing an unscannable square.
-      setShareNote('This grouping is too big to fit in a QR code (' + Math.round(url.length / 1024) + ' KB). Use “Copy Link” instead — a link has no such limit.', true);
-      return;
-    }
-    shareEls.overlay.hidden = false;
-    setShareNote('');
-  });
-
-  shareEls.closeBtn.addEventListener('click', function () { shareEls.overlay.hidden = true; });
-  shareEls.overlay.addEventListener('mousedown', function (e) { if (e.target === shareEls.overlay) shareEls.overlay.hidden = true; });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') shareEls.overlay.hidden = true; });
 
   /** Renders a shared arrangement read-only, over whatever config happened to
       load. Nothing is saved: closing the tab leaves this browser as it was. */
@@ -1900,15 +1853,12 @@
   }
 
   function importSharedGrouping() {
-    var raw = StateLink.getParam(SHARE_PARAM);
-    if (!raw) return;
-    StateLink.clearParam(SHARE_PARAM);   // consumed up front so a refresh cannot re-import
-    var decoded = StateLink.decodeState(raw);
-    if (!looksLikeSharePayload(decoded)) {
-      setShareNote('That shared link could not be read — it may have been cut short when it was pasted.', true);
-      return;
-    }
-    applySharedGrouping(decoded);
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: looksLikeSharePayload,
+      onError: function (message) { setShareNote(message, true); },
+      onState: applySharedGrouping
+    });
   }
 
   // ── Init ─────────────────────────────────────────────────────────────────
