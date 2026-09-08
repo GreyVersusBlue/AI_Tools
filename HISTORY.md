@@ -41,6 +41,55 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 6 P3, increment 4 — six more builders, and the first arrival that merges — 2026-09-08
+(#246, `CACHE_VERSION` v176).** **049** Book Tasting Menu Generator, **058** Duty Roster Builder,
+**074** Science Safety Label Maker, **075** Staff Directory Builder, **076** Sub Note / Feedback
+Slip Generator and **078** Unit Conversion Chart Builder open `_shared/share.js`'s sheet and consume
+a link on load; none had share code, `state-link.js` or a link importer before. `share.js` and
+`qr-draw.js` go to **35 of 86** each, `state-link.js` to **36**. Five of the six are #237's shape and
+were a straight copy of it. **What was decided, and it is the entry worth keeping: #237's
+confirm-before-replacing rule is about *replacing*, not about single-document storage, and 075 is
+where the two come apart.** 075 keeps one key, but that key holds a **list of rows**, and the tool
+already had an "Import file…" button that adds rows and skips duplicates. An arriving link is the
+same document by another route, so it **merges and does not ask** — the duplicate check is the guard
+against loss rather than a dialog, and two half-directories from two departments are the case it is
+for. Its payload is the bare array `Export JSON` has always written (no wrapper to disagree with),
+and its file importer now calls `Share.unwrap()` so the `.json` the sheet writes opens through the
+button that has always opened its own exports. **078 forced the second decision:** its four starter
+unit sets are *written* to storage the first time the page is opened, so "did `load()` find
+something?" — #237's own test — reports work on every device that has ever looked at the tool;
+`isStarterChart()` compares what was read against the seed instead. It also needed 069's branch
+exactly: skip the seeding when an import filed something, or a shared chart of nothing but custom
+lines arrives with four unit sets stapled to it. Both are invisible in the storage shape and were
+found by reading the boot block. **The rest was per-tool *what travels*:** 058 preserves duty ids
+because every assignment is filed under `<dutyId>|<day>` (057's `leadsTo` problem in another shape —
+twice now in eleven single-document adopters, and the assertion that catches it is that a
+*relationship* survived); 074 travels the symbol **key**, not the drawing, so an unknown symbol falls
+back to the plain equipment box; 049's scanned covers are stripped from the link by policy and kept
+in the download, with a note that tells the receiving teacher to re-add them, because a missing cover
+is the first thing they will notice on the printed menu; 076 carries the "call me about this" setting
+because a slip without it is a different slip; and the staff names on 058 and 075 travel because the
+registry marks neither key `student: true` and both tools print those names on paper — the rule is
+whose data it is, not whether a name is in it. **What went wrong:** two, both small. The rollout
+suite's first 075 row read the arrived name with `textContent` and got `""` — every cell of that
+table is an editable input — which the suite caught rather than a person. And **038 turned out to be
+mis-filed** in the phase's own enumeration as a single-document tool: it keeps device settings plus a
+name→pasted-text map of saved datasets whose own source comment says the pasted data can contain
+student data, so it has been moved to the bank-plus-settings group, where what travels is a decision
+rather than wiring. **046 was left deliberately** — 4,765 lines, and it is rank 2's first job because
+its hand-built `?timeline=` link cannot move onto the handoff table until the page loads the sheet.
+Verification is six rows added to `Tools/share/test/smoke-share-rollout.mjs` plus one new **section
+5c** for the merge — what survives on both sides, and that the same link opened twice adds nobody
+twice — taking it to **777 assertions**, up from 543, with no new file; plus `share: { param }` on six
+registry rows, checked against each page's own `SHARE_PARAM` by `handoffs.test.mjs` (**274**). A full
+`npm test` ran locally: **156 of 156 green in 34.8 minutes**; CI ran the full list
+(`_shared/tool-registry.js` is site-wide) green in **31.0 minutes (19:26:02 → 19:56:59 UTC)**. All six
+pages came back clean from the site-wide axe sweep and from the suite's `a11yScan` on the open sheet —
+**no allowlist line added, ten page-changing increments running**. **Not verified:** no QR was
+scanned by a real camera; the system-share row is exercised nowhere; no file was downloaded by a real
+browser and re-opened by hand; the open sheet was scanned in **light only** on these six; nothing was
+driven by a human clicking anything.
+
 **Path 6 P3, increment 3 — five more named-library builders share — 2026-09-08 (#244,
 `CACHE_VERSION` v175).** **041** Formula Reference Sheet Builder, **051** Classroom Label Maker,
 **069** PE Warm-Up Circuit Generator, **082** Citation Generator and **083** Propaganda Analysis
