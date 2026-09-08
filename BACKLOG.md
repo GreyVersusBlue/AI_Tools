@@ -1443,7 +1443,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 6 P3 — extend sharing to the ~11 builders that do not share yet | site | 2+ | | [Path 6](#path-6--share-everywhere) |
+| 1 | Path 6 P3 — extend sharing to the ~11 builders that do not share yet | site | 2+ | `h1y8q5` 2026-09-08 10:22 UTC | [Path 6](#path-6--share-everywhere) |
 | 2 | Path 6 P4 — cross-tool "Send to…" driven by the tool registry | site | 1 | | [Path 6](#path-6--share-everywhere) |
 | 3 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js` (005 photos first) | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 4 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
