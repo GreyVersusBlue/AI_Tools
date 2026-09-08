@@ -23,6 +23,10 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -34,12 +38,19 @@
     --good-bg: #e4f5ea;  --good-line: #c7e2cb;
     --err-bg: #fbecea;   --err-line: #e6c6c1;
     --warn-bg: #fdf0dc;  --warn-line: #eecda0;
+    --info-bg: #eaf1f5;  --info-line: #c9dbe3;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --good-bg: #173021;  --good-line: #2f5e42;
     --err-bg: #3a201c;   --err-line: #6d3a33;
     --warn-bg: #332711;  --warn-line: #5e4a20;
+    --info-bg: #1b2a35;  --info-line: #33505f;
   }
+  /* Share a key: the sheet itself is _shared/share.js (Path 6 P3). This is
+     only the note under the toolbar that records what the sheet last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -118,9 +129,11 @@
       <p class="sub">Build numbered couplets, tag examples under each result, print a worksheet and answer key.</p>
     </div>
     <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share key&hellip;</button>
       <button class="secondary" id="printBtn">Print worksheet + key</button>
     </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <label for="keyTitle">Key title</label>
@@ -164,7 +177,8 @@
   var STORE_KEY = 'dkb_key_v1';
 
   var els = {};
-  ['keyTitle', 'stepsWrap', 'addStepBtn', 'printBtn', 'printArea', 'warningsCard', 'warningsList', 'includeSpecimens', 'traceWrap'].forEach(function (id) { els[id] = document.getElementById(id); });
+  ['keyTitle', 'stepsWrap', 'addStepBtn', 'printBtn', 'printArea', 'warningsCard', 'warningsList', 'includeSpecimens', 'traceWrap',
+   'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { title: '', steps: [] };
 
@@ -177,10 +191,14 @@
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
   function blankChoice() { return { text: '', leadsTo: '', result: '', examples: '' }; }
 
+  /** True when there was a saved key here — which is what tells an arriving
+      share link whether it is about to replace somebody's work or the starter
+      key every empty install shows. */
   function load() {
+    var had = false;
     try {
       var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.steps) && saved.steps.length) state = saved;
+      if (saved && Array.isArray(saved.steps) && saved.steps.length) { state = saved; had = true; }
     } catch (e) { /* ignore */ }
     if (!state.steps.length) {
       var step1Id = uid(), step2Id = uid();
@@ -189,6 +207,7 @@
         { id: step2Id, a: { text: 'Has fur', leadsTo: '', result: 'Mammal', examples: 'Dog, Whale' }, b: { text: 'No fur', leadsTo: '', result: 'Reptile, bird, fish, or amphibian', examples: 'Snake, Robin' } }
       ];
     }
+    return had;
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -466,8 +485,83 @@
     window.print();
   });
 
+  /* ---------- share a key: _shared/share.js (Path 6 P3) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the code would be too dense to scan), download .json, and
+     the system share where the browser has one. There was no route off this
+     device before except the printed worksheet, and a printed key cannot be
+     edited by the teacher who receives it.
+
+     STEP IDS ARE PRESERVED ON ARRIVAL, which is the one thing this tool's
+     payload cannot treat like the others': every couplet's `leadsTo` names
+     another step by its id, so handing out fresh ids on import would keep the
+     text and silently cut every branch of the key.
+
+     This tool keeps ONE key, so an arriving link has nowhere to land except on
+     top of what is here; it asks first, and only when `load()` found something
+     saved — the animal starter key an empty install shows is not somebody's
+     work. */
+  var SHARE_PARAM = 'key';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { return state; },
+    param: SHARE_PARAM,
+    tool: 'dichotomous-key-builder',
+    title: 'Share this key',
+    noun: 'this key',
+    filename: function () { return state.title || 'dichotomous key'; },
+    note: 'Every couplet travels, with the branches between them intact. Opening it replaces the key on the receiving device, which is asked first.',
+    successMessage: 'Link copied. Opening it on another device offers this whole key — every couplet, result and example — in place of whatever is there.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleKey(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.steps);
+  }
+
+  /** Normalises an arrival. Ids are kept exactly as they came: see above. */
+  function normalizeKey(obj) {
+    function choice(c) {
+      c = c || {};
+      return { text: String(c.text || ''), leadsTo: String(c.leadsTo || ''),
+               result: String(c.result || ''), examples: String(c.examples || '') };
+    }
+    return {
+      title: typeof obj.title === 'string' ? obj.title : '',
+      steps: obj.steps.map(function (st) {
+        return { id: String(st && st.id || uid()), a: choice(st && st.a), b: choice(st && st.b) };
+      })
+    };
+  }
+
+  function importSharedKey(hadSaved) {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleKey,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var incoming = normalizeKey(decoded);
+        if (hadSaved && !confirm('Replace the key saved here with the shared one (' + incoming.steps.length + ' couplets)?')) {
+          setShareNote('Kept the key already on this device. The shared one was not loaded.');
+          return false;
+        }
+        state = incoming;
+        save();
+        setShareNote('Loaded a shared key' + (state.title ? ' — “' + state.title + '”' : '') + ', ' + state.steps.length + ' couplets.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
-  load();
+  var hadSaved = load();
+  importSharedKey(hadSaved);
   els.keyTitle.value = state.title;
   renderSteps();
 })();

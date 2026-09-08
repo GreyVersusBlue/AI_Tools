@@ -22,6 +22,10 @@
      screen. Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -35,8 +39,16 @@
      it was removed rather than given a dark value. The print classes and the
      missing-list are paper: they exist only inside #printArea, which
      _shared/print-area.css hides on screen, so their greys are left alone. */
-  :root { --err-bg: #fbecea; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; }
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; --err-line: #6d3a33;
+    --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share the milestone schedule: the sheet itself is _shared/share.js
+     (Path 6 P3). This is only the note under the toolbar that records what the
+     sheet last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -117,9 +129,11 @@
       <p class="sub">Track each student's milestones toward the science fair, with due dates and a printable report.</p>
     </div>
     <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share milestones&hellip;</button>
       <button class="secondary" id="printBtn">Print progress report</button>
     </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <h2>Students</h2>
@@ -162,7 +176,8 @@
   var DEFAULT_MILESTONES = ['Question & Hypothesis', 'Background Research', 'Materials & Procedure', 'Data Collection', 'Board Complete', 'Presentation Ready'];
 
   var els = {};
-  ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'milestonesWrap', 'addMilestoneBtn', 'progressTable', 'printBtn', 'printArea', 'summaryBar', 'sortLeastComplete'].forEach(function (id) {
+  ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'milestonesWrap', 'addMilestoneBtn', 'progressTable', 'printBtn', 'printArea', 'summaryBar', 'sortLeastComplete',
+   'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -190,16 +205,20 @@
     return parts[1] + '/' + parts[2] + '/' + parts[0];
   }
 
+  /** True when there was a saved tracker here — which is what tells an
+      arriving share link whether it is about to replace somebody's work. */
   function load() {
+    var had = false;
     try {
       var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.roster)) state = saved;
+      if (saved && Array.isArray(saved.roster)) { state = saved; had = true; }
     } catch (e) { /* ignore */ }
     if (!state.milestones || !state.milestones.length) {
       state.milestones = DEFAULT_MILESTONES.map(function (name) { return { id: uid(), name: name, due: '' }; });
     }
     if (!state.done) state.done = {};
     if (!state.notes) state.notes = {}; // added 2026-08: per student-milestone status notes
+    return had;
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -374,8 +393,93 @@
     window.print();
   });
 
+  /* ---------- share the milestone schedule: _shared/share.js (Path 6 P3) ----
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the code would be too dense to scan), download .json, and
+     the system share where the browser has one.
+
+     WHAT TRAVELS IS THE SCHEDULE, NOT THE CLASS. This tool's storage key is
+     the one this batch has that `_shared/tool-registry.js` marks
+     `student: true`: `roster` is real students' names and `done`/`notes` are
+     keyed on those names. What a science department actually wants to hand
+     round is the milestone list and its due dates — the thing every teacher
+     retypes off somebody's printed report — so that is all the payload holds.
+     This follows 003, where the rubric travels and the marks do not; the
+     difference is that there the split was between two storage keys and here
+     it is between fields of one object, which is exactly why it is asserted in
+     a suite rather than left to a reader of this file.
+
+     ARRIVING MILESTONES KEEP THE TICKS THEY CAN. `done` and `notes` are keyed
+     `studentName|milestoneId`, so importing milestones with fresh ids would
+     leave every existing tick pointing at nothing — the roster would look
+     untouched and the progress would be silently gone. An incoming milestone
+     whose name matches one already here therefore reuses the LOCAL id, and
+     only genuinely new milestones start empty. */
+  var SHARE_PARAM = 'milestones';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      return { milestones: state.milestones.map(function (m) { return { id: m.id, name: m.name, due: m.due }; }) };
+    },
+    param: SHARE_PARAM,
+    tool: 'science-fair-project-tracker',
+    title: 'Share these milestones',
+    noun: 'these milestones',
+    filename: 'science fair milestones',
+    note: 'Only the milestone list and its due dates travel. No student name, tick or note is in the link, the code or the file.',
+    successMessage: 'Link copied. It carries the milestone list and due dates only — no student names, ticks or notes.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleSchedule(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.milestones);
+  }
+
+  /** Incoming milestones, reusing the local id of any milestone of the same
+      name so that this device's ticks keep pointing at it. See above. */
+  function mergeMilestoneIds(incoming) {
+    var byName = {};
+    state.milestones.forEach(function (m) { byName[String(m.name).trim().toLowerCase()] = m.id; });
+    var kept = 0;
+    var merged = incoming.map(function (m) {
+      var name = String(m && m.name || '');
+      var existing = byName[name.trim().toLowerCase()];
+      if (existing) kept++;
+      return { id: existing || uid(), name: name, due: String(m && m.due || '') };
+    });
+    return { milestones: merged, kept: kept };
+  }
+
+  function importSharedMilestones(hadSaved) {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleSchedule,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var merged = mergeMilestoneIds(decoded.milestones);
+        if (hadSaved && !confirm('Replace the milestone list here with the shared one (' + merged.milestones.length +
+              ' milestones)? Your students and their ticks stay; ticks on milestones the shared list does not have will no longer show.')) {
+          setShareNote('Kept the milestone list already on this device. The shared one was not loaded.');
+          return false;
+        }
+        state.milestones = merged.milestones;
+        save();
+        setShareNote('Loaded a shared milestone list — ' + merged.milestones.length + ' milestones' +
+          (merged.kept ? ', ' + merged.kept + ' of them already here, with their ticks kept' : '') + '.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
-  load();
+  var hadSaved = load();
+  importSharedMilestones(hadSaved);
   els.rosterInput.value = state.roster.join('\n');
   renderMilestones();
   renderTable();

@@ -41,6 +41,89 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 6 P3, first increment — six builders that could not share at all, and one rollout
+suite instead of six — 2026-09-08 (#237, `CACHE_VERSION` v172).** P3 is a 2+ row and **stays in
+the table, rewritten to say what is left.** **052, 057, 070, 073, 079 and 081** now open
+`_shared/share.js`'s sheet; `npm run check:adoption` puts **`share.js` and `qr-draw.js` at 21 of 86
+each**, up from 15, and **`state-link.js` at 22**. These six are a different kind of work from all
+of P2: none of them had share code, `state-link.js` or an importer, so nothing was deleted — the
+whole increment is new wiring. Seven things are worth carrying.
+
+(1) **The decision every one of these tools forced, taken once and applied six times: what an
+arriving link does to work that is already on the device.** P1 and P2's adopters all keep *named*
+documents, so an arrival could be saved beside what was there under a suffixed name and nothing was
+ever at risk. Five of these six keep exactly **one** document, so there is nowhere for an arrival to
+land except on top of it. The rule shipped: **ask first, with the page's own `confirm()`, and only
+when `load()` found something in storage** — every one of these tools seeds a starter template into
+an empty install (a Spanish cognate list, an animal key, a narrative checklist), and asking about a
+template nobody typed would train the teacher to click through the dialog that matters. So `load()`
+returns whether it read a stored value, which is the one line of each tool that changed for a reason
+other than sharing. Declining is a real outcome with a sentence of its own, and because `share.js`
+clears the parameter before the payload is judged, a refresh of the page it was declined on does not
+ask again. Reverse it by deleting the `hadSaved` argument in each importer.
+
+(2) **073 is the row that is about privacy, and it is why the split is per-field rather than
+per-key.** `sfpt_tracker_v1` is the only key in this batch that `_shared/tool-registry.js` marks
+`student: true`: `roster` is real names, and `done`/`notes` are keyed `studentName|milestoneId`.
+What a science department wants to hand round is the milestone list and its due dates, so **that is
+all `getState` returns** — no roster, no tick, no note. This follows 003, where the rubric travels
+and the marks do not; the difference is that 003's split is between two storage keys and this one is
+between fields of a single object, which is exactly why the suite searches the whole encoded payload
+for the fixture's student names rather than checking the fields it happens to know about.
+
+(3) **Two tools would have silently destroyed data with the obvious implementation, and both were
+found by writing the payload down rather than by a failing test.** 057's couplets refer to each
+other by id (`leadsTo`), so handing out fresh ids on import — which is right for every other tool
+here, because a receiving device should own its own ids — would have kept every word of the key and
+cut every branch of it. Its importer preserves ids, and the suite asserts `steps[0].a.leadsTo ===
+steps[1].id` after a round trip. 073's `done` map is keyed on milestone **id**, so importing
+milestones with fresh ids would have left every tick pointing at nothing: the roster would look
+untouched and the progress would be gone. An incoming milestone whose name matches one already on
+the device therefore reuses the **local** id. Neither failure would have shown up in the sending
+browser, and neither would have thrown.
+
+(4) **081 shares a seed, not problems, and it is the first tool on this site where the payload is a
+*recipe*.** Nothing it stores is authored — the problems come out of `makeRng(seed)` — so the link
+carries four settings and the seed, about 100 bytes, and the receiving device regenerates the same
+sheet: same names, same numbers, same order. `generate()` grew a `forcedSeed` parameter so an
+arrival can do that without flipping the teacher's own "lock the seed" checkbox, and its click
+handler had to stop being `addEventListener('click', generate)`, which was passing a MouseEvent into
+the new first argument. It is also the one tool here that does **not** ask before loading, because
+there is no authored work to protect, and the suite asserts that it does not ask. The claim is
+checked by comparing the **rendered problem text** on both machines, not by checking that the seed
+arrived.
+
+(5) **One rollout suite, not six.** `Tools/share/test/smoke-share-rollout.mjs` (`npm run
+test:share-rollout`, **226 assertions**) drives all six pages from one table — the shape
+`smoke-picker-rollout.mjs` and `smoke-stage-rollout.mjs` already use. P2's per-tool share suites were
+right for P2, where each tool had its own hand-written bar to delete and its own bug in it; P3 is the
+same wiring six times, and a table with a row per tool is both shorter and the thing the next
+increment adds to. It scans the **open sheet** with `a11yScan(page, {include})` on every page — rank
+13's mechanism, free to a suite that has already prepped a state — and **all six came back clean; no
+allowlist line was added.**
+
+(6) **The suite's one real failure was a fixture that assumed the merge did not work.** 073's "did
+the shared work arrive" check read `[data-mname="m1"]`, the fixture's own milestone id — which is
+gone on a fresh install precisely because point (3)'s name match reuses the *local* id. It reads the
+first milestone by position now. Worth knowing before writing the seventh row: a fixture that names
+an id is asserting the absence of the id merge.
+
+(7) **`.share-note` is now on 21 pages in three different generations**, and this increment added
+the third: the `var(--info-bg)`/`var(--err-bg)` one 003 and 020 got in #235, which is the only one
+with dark values. Nine pages still carry the `rgba(42, 109, 176, .09)` literal from #231/#233, and
+**082–085 use the class name for something else entirely** — a plain status line with no share code
+behind it, which is a trap for anyone who greps for adopters by that class. It was left alone here
+rather than consolidated into `_shared/base.css`, which is where it belongs and which is a tidy of
+its own; the three tools whose palette lacked the tint tokens (070, 079, 081) got 001's values with
+their dark counterparts rather than a fourth generation of the literal.
+
+Full `npm test` was **not** run for this increment; the suites selected by the diff were, plus the
+whole guard set. **Not verified:** no QR produced by any of the six was scanned by a real camera; the
+**system-share row is exercised nowhere**, because headless Chromium has no `navigator.share`; no
+file was downloaded by a real browser and re-opened by hand; the sheet was scanned by axe in **light
+only** on these six (P2's suites cover the dark case on 003 and 015); and the `confirm()` flow was
+driven by Playwright's dialog handler, not by a human clicking Cancel on a real browser.
+
 **Path 6 P2, third increment — the last four `state-link` tools, and `mountShareControl`
 retired — 2026-09-08 (#235, `CACHE_VERSION` v171). This finishes P2.** **003, 005, 006 and 020**
 open `_shared/share.js`'s sheet now; `npm run check:adoption` puts **`share.js` and `qr-draw.js` at

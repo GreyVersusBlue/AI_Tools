@@ -22,11 +22,23 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* Share a poster: the sheet itself is _shared/share.js (Path 6 P3). This is
+     only the note under the toolbar that records what the sheet last did; the
+     tint pair is 001's, the reference adopter's. */
+  :root { --err-bg: #fbecea; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; --info-bg: #1b2a35; --info-line: #33505f; }
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -120,9 +132,11 @@
       <p class="sub">A large-format wall poster of conjugation patterns, for any language you teach.</p>
     </div>
     <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share poster&hellip;</button>
       <button class="secondary" id="printBtn">Print poster</button>
     </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="layout">
     <div>
@@ -288,7 +302,8 @@
 
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'posterTitle', 'personsWrap', 'panelsWrap', 'addPanelBtn',
-   'printBtn', 'printArea', 'colCount', 'colorPanels'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'printBtn', 'printArea', 'colCount', 'colorPanels',
+   'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var COLS_KEY = 'vcp_columns_v1';
   var columns = parseInt(localStorage.getItem(COLS_KEY), 10) || 2;
@@ -313,10 +328,13 @@
     };
   }
 
+  /** True when there was a saved poster here — which is what tells an
+      arriving share link whether it is about to replace somebody's work. */
   function load() {
+    var had = false;
     try {
       var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.panels)) state = saved;
+      if (saved && Array.isArray(saved.panels)) { state = saved; had = true; }
     } catch (e) { /* ignore */ }
     /* Posters saved before panel colors existed carry neither field. They get
        the same defaults a new poster does — accents on, assigned in panel
@@ -327,6 +345,7 @@
       state.panels.forEach(function (p) { if (!p.color) { p.color = 'auto'; upgraded = true; } });
       if (upgraded) save();
     }
+    return had;
   }
 
   /** The accent a panel actually prints in: its own pick, or the next one
@@ -454,8 +473,84 @@
     try { localStorage.setItem(COLS_KEY, String(columns)); } catch (e) { /* storage full/blocked */ }
   });
 
+  /* ---------- share a poster: _shared/share.js (Path 6 P3) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the code would be too dense to scan), download .json, and
+     the system share where the browser has one. A world-language department
+     builds one poster per tense and every teacher rebuilt it by hand; the only
+     route off the device before this was the printed poster itself.
+
+     `vcp_columns_v1` — the print column count — does NOT travel. It is a
+     property of the receiving teacher's paper and printer, not of the poster,
+     and it is the one field here that would be wrong more often than right if
+     it arrived from somebody else's device. The poster's own colour setting
+     does travel, because that is a design choice made in the poster.
+
+     This tool keeps ONE poster, so an arriving link has nowhere to land except
+     on top of what is here; it asks first, and only when `load()` found
+     something saved. */
+  var SHARE_PARAM = 'poster';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { return state; },
+    param: SHARE_PARAM,
+    tool: 'verb-conjugation-poster-generator',
+    title: 'Share this poster',
+    noun: 'this poster',
+    filename: function () { return (state && state.title) || 'conjugation poster'; },
+    note: 'The whole poster travels — its title, its persons, every panel and its colour. How many columns it prints in stays a setting of each device.',
+    successMessage: 'Link copied. Opening it on another device offers this whole poster in place of whatever is there.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausiblePoster(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.panels) && Array.isArray(obj.persons);
+  }
+
+  function normalizePoster(obj) {
+    return {
+      title: typeof obj.title === 'string' ? obj.title : '',
+      colorPanels: typeof obj.colorPanels === 'boolean' ? obj.colorPanels : true,
+      persons: obj.persons.map(function (x) { return String(x == null ? '' : x); }),
+      panels: obj.panels.map(function (pn) {
+        return {
+          id: uid(),
+          name: String(pn && pn.name || ''),
+          forms: (Array.isArray(pn && pn.forms) ? pn.forms : []).map(function (f) { return String(f == null ? '' : f); }),
+          color: String(pn && pn.color || 'auto')
+        };
+      })
+    };
+  }
+
+  function importSharedPoster(hadSaved) {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausiblePoster,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var incoming = normalizePoster(decoded);
+        if (hadSaved && !confirm('Replace the poster saved here with the shared one (' + incoming.panels.length + ' panels)?')) {
+          setShareNote('Kept the poster already on this device. The shared one was not loaded.');
+          return false;
+        }
+        state = incoming;
+        save();
+        setShareNote('Loaded a shared poster' + (state.title ? ' — “' + state.title + '”' : '') + ', ' + state.panels.length + ' panels.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
-  load();
+  var hadSaved = load();
+  importSharedPoster(hadSaved);
   if (!state) fromTemplate('es_present');
   els.colCount.value = String(columns);
   renderAll();

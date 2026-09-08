@@ -20,10 +20,23 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* Share a warm-up: the sheet itself is _shared/share.js (Path 6 P3). This is
+     only the note under the toolbar that records what the sheet last did; the
+     tint pair is 001's, the reference adopter's. */
+  :root { --err-bg: #fbecea; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; --info-bg: #1b2a35; --info-line: #33505f; }
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -106,7 +119,11 @@
       <h1>Word Problem Warm-Up Generator</h1>
       <p class="sub">Randomized word problems, by operation and grade band — project one at a time or print a full sheet.</p>
     </div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share warm-up&hellip;</button>
+    </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <div class="controls">
@@ -272,7 +289,8 @@
   var els = {};
   ['gradeBand', 'problemCount', 'generateBtn', 'displayNum', 'displayText', 'displayAnswer',
    'prevBtn', 'revealBtn', 'nextBtn', 'printBtn', 'sheetProblems', 'sheetKey',
-   'seedDisplay', 'lockSeed', 'copyBtn', 'copyNote'].forEach(function (id) {
+   'seedDisplay', 'lockSeed', 'copyBtn', 'copyNote',
+   'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -316,12 +334,15 @@
     return Math.floor(Math.random() * 0xFFFFFFFF);
   }
 
-  function generate() {
+  /** `forcedSeed` is what an arriving share link passes: this exact sheet,
+      whatever the teacher's own "lock the seed" checkbox says. Every other
+      caller omits it and gets nextSeed()'s usual answer. */
+  function generate(forcedSeed) {
     var ops = selectedOps();
     if (!ops.length) { alert('Pick at least one operation.'); return; }
     var count = Math.max(1, Math.min(20, parseInt(els.problemCount.value, 10) || 6));
     var band = els.gradeBand.value;
-    settings.seed = nextSeed();
+    settings.seed = (typeof forcedSeed === 'number') ? forcedSeed : nextSeed();
     saveSettings(ops, band, count);
     var rng = makeRng(settings.seed);
     problems = [];
@@ -352,7 +373,7 @@
     }).join('');
   }
 
-  els.generateBtn.addEventListener('click', generate);
+  els.generateBtn.addEventListener('click', function () { generate(); });
   els.lockSeed.addEventListener('change', function () { settings.lockSeed = els.lockSeed.checked; });
 
   els.prevBtn.addEventListener('click', function () {
@@ -403,9 +424,89 @@
 
   els.printBtn.addEventListener('click', function () { window.print(); });
 
+  /* ---------- share a warm-up: _shared/share.js (Path 6 P3) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the code would be too dense to scan), download .json, and
+     the system share where the browser has one.
+
+     THE SEED IS THE POINT HERE, and it is what makes this tool different from
+     the other five in this batch. Nothing this tool saves is authored: the
+     problems come out of `makeRng(seed)`, so the payload is the four settings
+     plus the seed, and the receiving device regenerates the SAME sheet — the
+     same names, numbers and answers, in the same order. That is a warm-up a
+     department can actually agree on, and it is about 100 bytes of link rather
+     than the twenty problems themselves.
+
+     It follows that arrival is not destructive the way it is on the builders:
+     nothing here is somebody's typing, so there is no confirm. What it does
+     replace is the current sheet on screen, and the note says so.
+
+     `lockSeed` is a device preference and does not travel — the arriving link
+     already forces its own seed through generate(forcedSeed), which is exactly
+     what the checkbox would otherwise have to be flipped to achieve. */
+  var SHARE_PARAM = 'warmup';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      if (settings.seed == null) return null;
+      return {
+        seed: settings.seed,
+        gradeBand: els.gradeBand.value,
+        ops: selectedOps(),
+        problemCount: Math.max(1, Math.min(20, parseInt(els.problemCount.value, 10) || 6))
+      };
+    },
+    param: SHARE_PARAM,
+    tool: 'word-problem-warmup-generator',
+    title: 'Share this warm-up',
+    noun: 'this warm-up',
+    filename: 'word problem warm-up',
+    note: 'The link carries the seed, not the problems: the receiving device regenerates this exact set — same names, same numbers, same order.',
+    emptyMessage: 'Generate a set of problems first, then it can be shared.',
+    successMessage: 'Link copied. Opening it regenerates this exact warm-up — the same problems in the same order.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  /** A payload this build can actually reproduce. The op names are checked
+      against the checkboxes in the page rather than a second list here, so a
+      payload naming only operations this build does not have is rejected
+      BEFORE any checkbox is touched — otherwise the boot fall-through would
+      re-generate against an empty op set and alert at the teacher. */
+  function isPlausibleWarmup(obj) {
+    if (!obj || typeof obj !== 'object' || typeof obj.seed !== 'number' || !Array.isArray(obj.ops)) return false;
+    var known = Array.prototype.slice.call(document.querySelectorAll('[data-op]'))
+      .map(function (cb) { return cb.getAttribute('data-op'); });
+    return obj.ops.some(function (op) { return known.indexOf(op) >= 0; });
+  }
+
+  function importSharedWarmup() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleWarmup,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        if (decoded.gradeBand === 'elementary' || decoded.gradeBand === 'middle') els.gradeBand.value = decoded.gradeBand;
+        document.querySelectorAll('[data-op]').forEach(function (cb) {
+          cb.checked = decoded.ops.indexOf(cb.getAttribute('data-op')) >= 0;
+        });
+        var count = parseInt(decoded.problemCount, 10);
+        els.problemCount.value = String(count >= 1 && count <= 20 ? count : 6);
+        generate(decoded.seed);
+        setShareNote('Loaded a shared warm-up — the same ' + problems.length + ' problems the sender saw.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
   loadSettings();
-  generate();
+  if (!importSharedWarmup()) generate();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
