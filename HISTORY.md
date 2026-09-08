@@ -41,6 +41,99 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 6 P2, third increment — the last four `state-link` tools, and `mountShareControl`
+retired — 2026-09-08 (#235, `CACHE_VERSION` v171). This finishes P2.** **003, 005, 006 and 020**
+open `_shared/share.js`'s sheet now; `npm run check:adoption` puts **`share.js` and `qr-draw.js` at
+15 of 86 each**, up from 11, and **`state-link.js` at 16**. **The row was deleted, not rewritten** —
+a 2+ row is rewritten while it has a half left, and this one did not: the single page with
+`state-link.js` and no sheet is 046, whose one `buildShareUrl` builds 015's `?timeline=` link, which
+belongs to P4. Seven things are worth carrying.
+
+(1) **The call the row had carried since #231 is decided: `mountShareControl` was retired, not
+wrapped.** Three reasons, written into `state-link.js` where the function was, because the wrapper
+looks cheaper than it is. A wrapper would give `state-link.js` a runtime dependency on `share.js`,
+`qr-draw.js` and the vendored encoder that it **cannot require** — the dependency already runs the
+other way, since `share.js` throws at mount when `state-link.js` is absent — and there is no good
+behaviour for the missing case: falling back to copy-link means the same call quietly does two
+different things on two pages. The sheet also wants a button that is *already in the page*, with a
+label, a class, a title, a toolbar position and an id a suite can find; a control that appends its
+own bare `<button>` to a container can express none of that. And `check:adoption` counts a page's own
+`src`/`href`, so a page reaching the sheet only through `state-link.js` would not count as an adopter
+and `BACKLOG.md`'s header number would be wrong. **The general rule: a shared module may depend
+downward, never upward, and a convenience that inverts that has to degrade — which is worse than
+deleting it.**
+
+(2) **005 is the one where the swap fixed a bug rather than tidying one, and it is measured.** Its
+students carry `photo`, a `data:image/` URL that `scg-photo.js` writes at 160 px long edge and JPEG
+q0.75, and `mountShareControl` encoded the section **whole**. A class of 28 with photos produced a
+link of **105 KB** (photo-like fixture: gradients and blobs, ~2.76 KB per image) or **742 KB** (noise
+fixture, ~20.3 KB per image) against **3.0 KB** for the same section with images stripped;
+`QrDraw.plan` on the old link returns *"more than any QR code can hold (about 2.9 KB)"*. The
+clipboard accepted all of it and the tool reported success. **Both fixtures are generated, not a
+teacher's real class photos** — the shape is the finding, not the digits. This is the third time
+Path 6 has found a tool putting images somewhere they cannot go (028/050/056/064 stripped by hand,
+015 stripped so hard the photos had no route at all, now 005 not stripping at all), which is why the
+policy lives in `share.js` rather than in adopters.
+
+(3) **Two hand-rolled QR modals went with them, and both had the same lie in them.** 006's
+`drawShareQr` and 020's `drawBracketQr` drew whatever the vendored encoder accepted at a fixed 6 px
+per module and refused only when the encoder itself threw past version 40 — and 006's was then
+squashed to 260 px by its own CSS. `qr-draw.js`'s measured budget greys the row out with the reason
+instead. 020's new suite pins this on **both** sides deliberately: a 4-team bracket draws and the row
+states its module count, a 32-entrant one is disabled with a reason naming the size and the way
+round it. A budget asserted only on the failing side can be satisfied by a helper that refuses
+everything.
+
+(4) **006's WebRTC pairing codes are not share payloads, were deliberately left alone — and
+measuring them to justify that is where a new rank 12 came from.** They are below the readable floor
+and have been since they shipped: the offer payload is **569 bytes → 81 modules** (version 16),
+drawn at 6 px per module into a 534 px canvas that `.handoff-qr` forces to 220 px, so **2.47 px per
+module** against `qr-draw.js`'s measured **4**; `QrDraw.plan(payload, {maxPx: 220})` says it would
+need **356 px**. The paste-the-code-as-text box beside it is why nobody has reported it. Fixing it
+would have widened a Path 6 PR into Path 8's territory, so it became a ranked row with the number
+attached instead, and the helper was renamed `drawPairingQr` so the two cannot be confused again.
+**Only 006's number is measured**; `escape-room-builder/monitor.html` (8 px/module into
+`max-width: 220px`) and 035 (`max-width: 100%` in a panel) were read off the source, and 021 draws at
+8 px/module with nothing constraining it and is probably fine.
+
+(5) **Two `state-link.js` script tags were dead and one of them was on nobody's list.** The row had
+named 004's since #231; **`Tools/classroom-timer/mirror.html`'s had never been noticed.** Both
+deleted, verified rather than assumed — the identifier `StateLink` appears in neither file nor in any
+of `ct-app.js`, `ct-mirror.js`, `ct-sounds.js` or `ct-store.js`. This is what took P2 from "mostly
+done" to done, and it is the argument for re-deriving the accounting from the tree rather than
+trusting the previous session's count: the previous count was right about 004 and did not know about
+mirror.html.
+
+(6) **Four new suites, 138 assertions, and none of these four pages had any share coverage at all.**
+`Tools/seating-chart/test/smoke-share.mjs` (**36**) checks the image policy against the *writer's own
+downloaded bytes*, captured off `URL.createObjectURL` — the technique #233's timeline suite
+introduced, and the only kind that catches a writer drifting from a reader.
+`Tools/bracket-tournament-generator/test/smoke-share.mjs` (**36**) pins the QR budget on both sides.
+`Tools/class-roster-hub/test/smoke-share.mjs` (**34**) asserts the pairing half did **not** move.
+`Tools/rubric-builder/test/smoke-share.mjs` (**32**) proves the marks do not travel with the rubric —
+a rubric and its scores live under different key prefixes, and a link carrying a class's marks to
+whoever the teacher sent it to would be a privacy failure, not a feature — and scans the sheet in
+**light and dark**. All four reach `npm test` through the existing `test:seating`, `test:bracket`,
+`test:roster-hub` and `test:rubric` shortcuts rather than four new ones. Each scans the open sheet
+with `a11yScan(page, {include})`; **all four came back clean and no allowlist line was added.**
+
+(7) **Two suite drafts failed on the fixture rather than the tool, and that is worth knowing before
+writing the fifth.** 003's "a student score is on file before sharing" fired `change` on
+`#studentNameInput` and got an empty list back, because the tool saves on the **Load / start scoring
+this student** button and not on the field; nothing was wrong with the page. Separately, the first
+`--changed` run of this increment was started before the edits were finished and had to be killed —
+`_shared/state-link.js` in the diff makes `--changed` select everything, so it is a 30-minute run
+either way, and starting one against a half-edited tree wastes it.
+
+Full `npm test` ran locally once — **153 of 153 green, 29.6 min** — and CI ran the **full** list
+because `_shared/` is in the diff: green in **29.7 minutes** (02:59:57 → 03:29:42 UTC).
+**Not verified:** no QR produced by any of the four was scanned by a real camera; the **system-share
+row is exercised nowhere**, because headless Chromium has no `navigator.share` and the row is
+therefore never built in a suite; no file was downloaded by a real browser and re-opened by hand; the
+105 KB / 742 KB figures come from generated fixtures rather than a teacher's photos; the three other
+pairing-QR candidates were read rather than measured; and **nothing was opened on a real projector,
+Chromebook or printer**, which is now sixteen increments running.
+
 **Path 6 P2, second increment — the last four hand-written share bars, and a contrast bug in
 the sheet itself — 2026-09-08 (#233, `CACHE_VERSION` v170).** P2 is a 2+ row, so this is one
 increment and **the row stays, rewritten**. **002, 007, 015 and 044** deleted their own
