@@ -25,6 +25,8 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <style>
 /* === VENDORED FONTS =========================================================
    Bungee, Outfit and Press Start 2P used to be hotlinked from Google's font CDN,
@@ -1469,58 +1471,30 @@ function deleteRoster(name){
   updateRosterUI();updateDataTab();
 }
 
-/* Share a saved roster as a link/QR code (state-link.js), the same pattern
-   Class Roster Hub and Bracket Generator already use — a co-teacher opens the
-   link and gets their own copy added to their saved rosters, nothing here
-   is overwritten by their end and nothing of theirs overwrites this browser. */
-function drawRosterShareQr(canvas,text){
-  const qr=window.qrcode(0,'L');
-  qr.addData(text);
-  qr.make();
-  const count=qr.getModuleCount();
-  const quiet=4,px=5;
-  const total=count+quiet*2;
-  const size=total*px;
-  canvas.width=size;canvas.height=size;
-  const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#fff';ctx.fillRect(0,0,size,size);
-  ctx.fillStyle='#1a1a1a';
-  for(let r=0;r<count;r++)for(let c=0;c<count;c++)if(qr.isDark(r,c))ctx.fillRect((quiet+c)*px,(quiet+r)*px,px,px);
-}
+/* Share a saved roster: the sheet is _shared/share.js (Path 6 P2). A
+   co-teacher opens the link and gets their own copy added to their saved
+   rosters; nothing here is overwritten by their end and nothing of theirs
+   overwrites this browser.
+
+   This one uses Share.open() rather than Share.mount(): the 🔗 buttons are
+   per-roster rows that updateRosterUI() rebuilds from scratch on every
+   change, so there is no stable button to mount on — and each one shares a
+   DIFFERENT roster, which a mount's single getState could not express. The
+   sheet is otherwise identical to every other adopter's, including the
+   download row this modal never had. */
 function openRosterShareModal(name){
   const rosters=store.get('rosters');
   const names=rosters[name];
   if(!names){alert('That roster could not be found.');return;}
-  const url=StateLink.buildShareUrl('roster',{name,names});
-  const overlay=document.createElement('div');
-  overlay.className='modal-overlay';
-  overlay.innerHTML=`<div class="modal">
-    <div class="modal-label">🔗 Share "${escapeHtml(name)}"</div>
-    <p style="font-size:0.85em;color:var(--muted);margin:0 0 14px;max-width:280px;">Anyone who opens this link gets their own copy of this roster added to their saved rosters — it won't touch what's saved on this computer.</p>
-    <canvas id="rosterShareQr" style="display:block;margin:0 auto 14px;border-radius:8px;max-width:100%;height:auto;"></canvas>
-    <div class="modal-buttons">
-      <button class="btn-primary" id="rosterShareCopy">Copy link</button>
-      <button id="rosterShareClose">Close</button>
-    </div>
-  </div>`;
-  document.body.appendChild(overlay);
-  const qrCanvas=document.getElementById('rosterShareQr');
-  try{drawRosterShareQr(qrCanvas,url);}
-  catch(e){
-    const warn=document.createElement('p');
-    warn.style.cssText='font-size:0.85em;color:var(--muted);';
-    warn.textContent='This roster is too large to encode as a QR code — use "Copy link" below instead.';
-    qrCanvas.replaceWith(warn);
-  }
-  const cleanup=()=>{overlay.remove();document.removeEventListener('keydown',escHandler);};
-  const escHandler=(e)=>{if(e.key==='Escape')cleanup();};
-  document.addEventListener('keydown',escHandler);
-  overlay.addEventListener('mousedown',(e)=>{if(e.target===overlay)cleanup();});
-  document.getElementById('rosterShareClose').addEventListener('click',cleanup);
-  document.getElementById('rosterShareCopy').addEventListener('click',async()=>{
-    const btn=document.getElementById('rosterShareCopy');
-    try{await navigator.clipboard.writeText(url);btn.textContent='Copied!';}
-    catch(e){window.prompt('Copy this link:',url);}
+  Share.open({
+    getState:()=>({name,names}),
+    param:'roster',
+    tool:'name-picker',
+    title:`Share “${name}”`,
+    noun:'this roster',
+    filename:()=>name,
+    note:'Anyone who opens this link gets their own copy of this roster added to their saved rosters — it will not touch what is saved on this computer.',
+    successMessage:'Link copied.'
   });
 }
 function looksLikeSharedRosterPayload(obj){
@@ -1537,21 +1511,25 @@ function uniqueSharedRosterName(base){
    rather than overwriting anything already saved here — mirrors Class Roster
    Hub's importSharedRosterFromUrl. */
 function importSharedRosterFromUrl(){
-  if(typeof StateLink==='undefined')return;
-  const raw=StateLink.getParam('roster');
-  if(!raw)return;
-  StateLink.clearParam('roster');
-  const decoded=StateLink.decodeState(raw);
-  if(!looksLikeSharedRosterPayload(decoded)){alert("That shared link's roster data looks corrupted.");return;}
-  const cleanNames=decoded.names.filter(n=>typeof n==='string'&&n.trim()).map(n=>n.trim());
-  if(!cleanNames.length){alert("That shared link's roster has no names in it.");return;}
-  const name=uniqueSharedRosterName((decoded.name||'Shared Roster').toString().trim().slice(0,60)||'Shared Roster');
-  const rosters=store.get('rosters');
-  rosters[name]=cleanNames;
-  if(!store.set('rosters',rosters)){alert('This browser will not let the page save a new roster — the shared link could not be imported.');return;}
-  document.getElementById('namesInput').value=cleanNames.join('\n');
-  loadNamesFromInput();
-  showAchievement('🔗','ROSTER IMPORTED',`"${name}" — ${cleanNames.length} names loaded.`,null);
+  if(typeof Share==='undefined')return;
+  return Share.receive({
+    param:'roster',
+    validate:looksLikeSharedRosterPayload,
+    errorMessage:"That shared link's roster data looks corrupted.",
+    onError:(message)=>{alert(message);},
+    onState:(decoded)=>{
+      const cleanNames=decoded.names.filter(n=>typeof n==='string'&&n.trim()).map(n=>n.trim());
+      if(!cleanNames.length){alert("That shared link's roster has no names in it.");return false;}
+      const name=uniqueSharedRosterName((decoded.name||'Shared Roster').toString().trim().slice(0,60)||'Shared Roster');
+      const rosters=store.get('rosters');
+      rosters[name]=cleanNames;
+      if(!store.set('rosters',rosters)){alert('This browser will not let the page save a new roster — the shared link could not be imported.');return false;}
+      document.getElementById('namesInput').value=cleanNames.join('\n');
+      loadNamesFromInput();
+      showAchievement('🔗','ROSTER IMPORTED',`"${name}" — ${cleanNames.length} names loaded.`,null);
+      return true;
+    }
+  });
 }
 
 /* Tolerant roster paste parsing, mirroring Seating Chart Generator's

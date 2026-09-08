@@ -36,18 +36,24 @@ const page = await prepPage(browser, BASE, { width: 1200, height: 1000 });
 
 const SECRET = 'Period 3 — Jane D. has extended time on all written work per her 504.';
 
-/** The URL the copy button would put on the clipboard. Read through the page's
- *  own StateLink rather than the clipboard, which headless Chromium will not
- *  hand back without a permission grant. */
-const shareLink = () => page.evaluate(() => {
-  let captured = null;
-  Object.defineProperty(navigator, 'clipboard', {
-    configurable: true,
-    value: { writeText: (t) => { captured = t; return Promise.resolve(); } },
+/** The URL the sheet's Copy link row would put on the clipboard. Captured
+ *  from a stubbed clipboard, which headless Chromium will not hand back
+ *  without a permission grant. Opens the sheet and CLOSES it again in the
+ *  same call: since Path 6 P2 the sheet is a real modal with a backdrop, and
+ *  leaving it open makes the next click on the page miss. */
+const shareLink = async () => {
+  await page.click('#btnSharePlan');
+  await settle(page, 200);
+  return page.evaluate(() => {
+    let captured = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: (t) => { captured = t; return Promise.resolve(); } },
+    });
+    document.querySelector('.share-sheet button[data-share="copy"]').click();
+    return new Promise(r => setTimeout(() => { window.Share.close(); r(captured); }, 50));
   });
-  document.getElementById('btnCopyPlanLink').click();
-  return new Promise(r => setTimeout(() => r(captured), 50));
-});
+};
 
 console.log('Sub Plan Builder — share a plan by link or QR');
 
@@ -138,37 +144,54 @@ await broken.goto(URL_PAGE + '?plan=this-is-not-base64-%%%', { waitUntil: 'netwo
 await settle(broken, 400);
 ok(/could not be read/.test(await broken.textContent('#shareNote')), 'a truncated or mangled link says so');
 
-/* ── 6. the QR path ────────────────────────────────────────────────────── */
-await page.click('#btnPlanQr');
-await settle(page, 400);
+/* ── 6. the shared sheet: its rows, its QR, and the way it closes ──────── */
+await page.click('#btnSharePlan');
+await settle(page, 250);
+ok(await page.isVisible('.share-sheet[role="dialog"]'), 'Share this plan… opens the shared sheet as a dialog');
+const rows = await page.$$eval('.share-sheet-rows button', bs => bs.map(b => b.getAttribute('data-share')));
+ok(rows.includes('copy') && rows.includes('qr') && rows.includes('download'),
+   'with copy, QR and download rows: ' + JSON.stringify(rows));
+
 const qr = await page.evaluate(() => {
-  const c = document.getElementById('qrCanvas');
-  const overlayOpen = !document.getElementById('qrOverlay').hidden;
-  return { overlayOpen, w: c.width, h: c.height, note: document.getElementById('shareNote').textContent };
+  const b = document.querySelector('.share-sheet button[data-share="qr"]');
+  return { disabled: b.disabled, reason: (document.querySelector('.share-sheet-reason') || {}).textContent || '' };
 });
-console.log(`  link is ${(url.length / 1024).toFixed(1)} KB; QR ${qr.overlayOpen ? 'drawn' : 'refused as too long'}`);
-if (qr.overlayOpen) {
-  ok(qr.w > 100 && qr.w === qr.h, `a square QR was drawn (${qr.w}x${qr.h})`);
-  await page.click('#qrCloseBtn');
-  await settle(page, 200);
-  eq(await page.evaluate(() => document.getElementById('qrOverlay').hidden), true, 'and closes again');
+console.log(`  link is ${(url.length / 1024).toFixed(1)} KB; QR ${qr.disabled ? 'greyed out' : 'available'}`);
+if (!qr.disabled) {
+  await page.click('.share-sheet button[data-share="qr"]');
+  await settle(page, 250);
+  const box = await page.evaluate(() => {
+    const c = document.querySelector('.share-sheet-qr canvas');
+    return { w: c.width, h: c.height };
+  });
+  ok(box.w > 100 && box.w === box.h, `a square QR was drawn (${box.w}x${box.h})`);
 } else {
-  // A long plan is legitimately past what a QR can hold; the tool has to say
-  // so rather than draw an unscannable square.
-  ok(/too long to fit in a QR/.test(qr.note), 'an over-long plan is refused by name, pointing at the link instead');
+  // A long plan is legitimately past what a QR can be READ at. The row is
+  // greyed out with the reason; an unscannable square is worse than a refusal.
+  ok(/(KB|modules)/.test(qr.reason) && /Copy the link/.test(qr.reason), 'an over-long plan greys the QR row out with a reason naming the size and the way round it: ' + JSON.stringify(qr.reason));
 }
+await page.keyboard.press('Escape');
+await settle(page, 200);
+ok(!(await page.$('.share-sheet')), 'Escape closes the sheet');
 
 /* A QR holds far less than a URL bar does, and a plan with several days of
-   detailed notes runs past what any scanner will read. The failure has to be
-   named — an unscannable grey square is worse than a refusal. */
+   detailed notes runs past what any scanner will read. The budget is
+   qr-draw.js's measured one — greyed out with a reason, not drawn and then
+   refused only when the encoder itself throws, which is what this tool's own
+   copy did. */
 await page.fill('#overviewText', 'Detailed instructions. '.repeat(220));
 await settle(page, 300);
-await page.click('#btnPlanQr');
-await settle(page, 400);
-ok(/too long to fit in a QR/.test(await page.textContent('#shareNote')),
-   'an over-long plan is refused by name, pointing at the copy-link button instead');
-eq(await page.evaluate(() => document.getElementById('qrOverlay').hidden), true,
-   'and no unscannable square is shown');
+await page.click('#btnSharePlan');
+await settle(page, 300);
+const bigQr = await page.evaluate(() => {
+  const b = document.querySelector('.share-sheet button[data-share="qr"]');
+  return { disabled: b.disabled, reason: (document.querySelector('.share-sheet-reason') || {}).textContent || '' };
+});
+eq(bigQr.disabled, true, 'an over-long plan greys the QR row out');
+ok(/(KB|modules)/.test(bigQr.reason) && /Copy the link/.test(bigQr.reason), 'by name: ' + JSON.stringify(bigQr.reason));
+ok(!(await page.$('.share-sheet-qr canvas')), 'and no unscannable square is shown');
+await page.keyboard.press('Escape');
+await settle(page, 200);
 ok((await shareLink()).length > 4000, 'while the link itself still works at that size');
 
 /* ── 7. richer .docx output: per-period tables, header/footer with page

@@ -26,6 +26,8 @@
 <script src="../_shared/stage.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <script src="timeline-builder/tlb-layout.js"></script>
 <script src="timeline-builder/tlb-photo.js"></script>
 <script src="timeline-builder/tlb-store.js"></script>
@@ -190,19 +192,12 @@
   .tiledLegendPage .legend-row { justify-content: center; font-size: 1.1rem; gap: .6rem 1.6rem; }
   .tiledLegendPage .legend-swatch { width: 1.1rem; height: 1.1rem; }
 
-  /* Share a timeline by link / QR — same pattern (and wording) as
-     028-primary-source-analysis-generator.html, which shares the same
-     "the pictures are too big to ride in a URL" problem. */
+  /* Share a timeline: the sheet is _shared/share.js (Path 6 P2). What is
+     left here is the note under the toolbar recording what the sheet last
+     did, and what a ?timeline= link or a picked file turned into. */
   .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .55rem .7rem; border-radius: 6px;
     background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
   .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
-  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
-    justify-content: center; padding: 20px; z-index: 80; }
-  .share-overlay[hidden] { display: none; }
-  .share-modal { background: var(--card); color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
-    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
-  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
-  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
 
   /* Map + timeline print — see printMapTimeline() below. One landscape page:
      the base map on top with a numbered pin per placed event, the same
@@ -433,22 +428,9 @@
     <input type="file" id="importTimelineFile" accept="application/json,.json" style="display:none;">
     <button class="secondary" style="width:auto;" id="loadExampleBtn">Load example</button>
     <button class="secondary" style="width:auto;" id="presentBtn">▶ Present</button>
-    <button class="secondary" style="width:auto;" id="shareLinkBtn">🔗 Copy link</button>
-    <button class="secondary" style="width:auto;" id="shareQrBtn">▦ QR code</button>
+    <button class="secondary" style="width:auto;" id="shareBtn">🔗 Share timeline&hellip;</button>
   </div>
   <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
-
-  <div class="share-overlay" id="shareOverlay" hidden>
-    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Timeline QR code">
-      <div class="share-head">
-        <span>Scan to open this timeline</span>
-        <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
-      </div>
-      <canvas id="shareCanvas"></canvas>
-      <p class="hint" style="margin:.6rem 0 0;">Opens the same timeline on that device and saves it there as a copy &mdash;
-        edits on either side stay put. Event photos stay on this device.</p>
-    </div>
-  </div>
 
   <div class="layout">
     <div class="editor">
@@ -753,7 +735,7 @@
    'presentBtn','storyOverlay','storyTitle','storyCounter','storyExitBtn','storyBody',
    'storyCat','storyDate','storyEventTitle','storyPlace','storyDesc','storyPhoto',
    'storyMap','storyMapLayer','storyNoMapNote','storyStrip','storyPrevBtn','storyNextBtn',
-   'loadExampleBtn','shareLinkBtn','shareQrBtn','shareNote','shareOverlay','shareCanvas','shareCloseBtn',
+   'loadExampleBtn','shareBtn','shareNote',
    'viewScreenBtn','viewPrintBtn','viewCompareBtn','screenView','printPreview','compareView',
    'timelineCanvas','screenLegend','printViewInner','compareSelect','compareCanvas','compareLegend'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -2453,47 +2435,46 @@
 
   els.importTimelineBtn.addEventListener('click', function () { els.importTimelineFile.click(); });
 
+  /* Import JSON goes through Share.receiveFile, which unwraps the sheet's
+     own download envelope — `{ aplp: {...}, state }` — before this code sees
+     it. Without that step the file the Share sheet writes would be refused
+     by the very tool that wrote it: the fields below all live one level
+     down inside `state`. Plain exports from Export JSON are untouched. */
   els.importTimelineFile.addEventListener('change', function () {
     var file = els.importTimelineFile.files && els.importTimelineFile.files[0];
     els.importTimelineFile.value = '';
     if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function () {
-      var decoded;
-      try { decoded = JSON.parse(reader.result); } catch (e) {
-        alert('That file isn’t valid JSON.');
-        return;
+    Share.receiveFile(file, {
+      validate: looksLikeTimeline,
+      onError: function (message) { alert(message); },
+      fileErrorMessage: 'That doesn’t look like a timeline file exported from this page.',
+      unreadableMessage: 'Couldn’t read that file.',
+      onState: function (decoded) {
+        var name = uniqueTimelineName(decoded.name);
+        state = {
+          name: name,
+          title: decoded.title || '',
+          lineStyle: decoded.lineStyle || 'solid',
+          compactLabels: !!decoded.compactLabels,
+          scaleMode: decoded.scaleMode === 'compressed' ? 'compressed' : 'linear', // backward-compat: older exports predate scale mode
+          events: decoded.events,
+          eras: Array.isArray(decoded.eras) ? decoded.eras : [], // backward-compat: older exports predate eras
+          tracks: Array.isArray(decoded.tracks) ? decoded.tracks : [], // backward-compat: older exports predate tracks
+          compareWith: null // never import another timeline's selection — the imported name may not even exist here
+        };
+        var maxId = 0;
+        state.events.forEach(function (ev) { if (typeof ev.id === 'number' && ev.id > maxId) maxId = ev.id; });
+        idCounter = Math.max(idCounter, maxId + 1);
+        var maxEraId = 0;
+        state.eras.forEach(function (era) { if (typeof era.id === 'number' && era.id > maxEraId) maxEraId = era.id; });
+        eraIdCounter = Math.max(eraIdCounter, maxEraId + 1);
+        ensureTracks(state);
+        TimelineStore.setCurrentName(name);
+        resetForm();
+        resetEraForm();
+        renderAll();
       }
-      if (!looksLikeTimeline(decoded)) {
-        alert('That doesn’t look like a timeline file exported from this page.');
-        return;
-      }
-      var name = uniqueTimelineName(decoded.name);
-      state = {
-        name: name,
-        title: decoded.title || '',
-        lineStyle: decoded.lineStyle || 'solid',
-        compactLabels: !!decoded.compactLabels,
-        scaleMode: decoded.scaleMode === 'compressed' ? 'compressed' : 'linear', // backward-compat: older exports predate scale mode
-        events: decoded.events,
-        eras: Array.isArray(decoded.eras) ? decoded.eras : [], // backward-compat: older exports predate eras
-        tracks: Array.isArray(decoded.tracks) ? decoded.tracks : [], // backward-compat: older exports predate tracks
-        compareWith: null // never import another timeline's selection — the imported name may not even exist here
-      };
-      var maxId = 0;
-      state.events.forEach(function (ev) { if (typeof ev.id === 'number' && ev.id > maxId) maxId = ev.id; });
-      idCounter = Math.max(idCounter, maxId + 1);
-      var maxEraId = 0;
-      state.eras.forEach(function (era) { if (typeof era.id === 'number' && era.id > maxEraId) maxEraId = era.id; });
-      eraIdCounter = Math.max(eraIdCounter, maxEraId + 1);
-      ensureTracks(state);
-      TimelineStore.setCurrentName(name);
-      resetForm();
-      resetEraForm();
-      renderAll();
-    };
-    reader.onerror = function () { alert('Couldn’t read that file.'); };
-    reader.readAsText(file);
+    });
   });
 
   /** Adopts a whole timeline object as the current one, under a name that
@@ -2539,7 +2520,23 @@
       'so try “Map + timeline print” to see the map and the timeline on one page.');
   });
 
-  /* ---------- share by link / QR (state-link.js, same pattern as 028) ---------- */
+  /* ---------- share a timeline: _shared/share.js (Path 6 P2) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the code would be too dense to scan at this size, rather
+     than drawn unscannably and only refused when the encoder itself threw),
+     download .json, and the system share where the browser has one.
+
+     Event photos: this tool used to hand-strip them out of the payload,
+     because a downscaled photo is still tens of kilobytes of base64 and a
+     URL bar — let alone a QR code — cannot carry one. share.js does that by
+     policy now, for the link and the code only, and says how many it left
+     out. The DOWNLOADED file keeps them, which is a route the shared
+     timeline never had before: photos reached another machine only through
+     Export JSON, and only if the teacher knew to use it.
+
+     `compareWith` is still dropped by hand, and it is not an image problem:
+     it names another timeline saved in THIS browser, so it is meaningless on
+     the receiving device. installTimeline() nulls it on arrival too. */
   var SHARE_PARAM = 'timeline';
 
   function setShareNote(text, isError) {
@@ -2548,116 +2545,58 @@
     els.shareNote.classList.toggle('error', !!isError);
   }
 
-  /* Event photos are base64'd into the saved timeline and run to hundreds of
-     kilobytes each — far past what a URL, let alone a QR code, can carry. The
-     link deliberately travels without them; everything else, including each
-     event's place, travels intact. */
+  /* The whole timeline, minus the one field that cannot mean anything
+     elsewhere. `v: 1` is put back by hand: nothing reads it today, which is
+     exactly why dropping it would have gone unnoticed while making every
+     link already in a teacher's email indistinguishable from a new one. */
   function buildSharePayload() {
     if (!state) return null;
     save();
     var payload = { v: 1 };
     Object.keys(state).forEach(function (k) {
-      if (k === 'events') {
-        payload.events = state.events.map(function (ev) {
-          var copy = {};
-          Object.keys(ev).forEach(function (f) { if (f !== 'photo') copy[f] = ev[f]; });
-          return copy;
-        });
-      } else if (k !== 'compareWith') {
-        payload[k] = state[k];
-      }
+      if (k !== 'compareWith') payload[k] = state[k];
     });
     return payload;
   }
 
-  function shareUrl() {
-    var payload = buildSharePayload();
-    return payload ? StateLink.buildShareUrl(SHARE_PARAM, payload) : null;
-  }
-
-  function countPhotos() {
-    return state ? state.events.filter(function (ev) { return !!ev.photo; }).length : 0;
-  }
-
-  function shareSuccessMessage() {
-    var msg = 'Link copied. Opening it anywhere loads this timeline — events, dates, places, eras and categories — and saves it there as a copy.';
-    var photos = countPhotos();
-    if (photos) {
-      msg += ' The ' + photos + ' event photo' + (photos === 1 ? '' : 's') +
-        ' stay on this device: pictures are too large to ride in a link. Use Export JSON to send everything as a file.';
-    }
-    return msg;
-  }
-
-  els.shareLinkBtn.addEventListener('click', function () {
-    var url = shareUrl();
-    if (!url) { setShareNote('Nothing to share yet.', true); return; }
-    var copy = (navigator.clipboard && navigator.clipboard.writeText)
-      ? navigator.clipboard.writeText(url) : Promise.reject();
-    copy.then(
-      function () { setShareNote(shareSuccessMessage()); },
-      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
-    );
+  Share.mount(els.shareBtn, {
+    getState: buildSharePayload,
+    param: SHARE_PARAM,
+    tool: 'timeline-builder',
+    title: 'Share this timeline',
+    noun: 'this timeline',
+    filename: function () { return (state && state.name) || 'timeline'; },
+    note: 'Opening the link or code anywhere saves this timeline there as a copy — events, dates, places, eras and categories — and never overwrites a timeline already on that device.',
+    successMessage: 'Link copied. Opening it anywhere loads this timeline — events, dates, places, eras and categories — and saves it there as a copy.',
+    emptyMessage: 'Nothing to share yet.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
   });
-
-  function drawShareQr(canvas, text) {
-    var qr = window.qrcode(0, 'L');
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount(), quiet = 4, px = 6;
-    var size = (count + quiet * 2) * px;
-    canvas.width = size; canvas.height = size;
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#16181d';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
-      }
-    }
-  }
-
-  els.shareQrBtn.addEventListener('click', function () {
-    var url = shareUrl();
-    if (!url) { setShareNote('Nothing to share yet.', true); return; }
-    try {
-      drawShareQr(els.shareCanvas, url);
-    } catch (e) {
-      // A QR code holds far less than a URL bar does. A timeline with long
-      // descriptions runs past it — say so rather than drawing a square
-      // nobody's phone can read.
-      setShareNote('This timeline is too long to fit in a QR code (' + Math.round(url.length / 1024) +
-        ' KB of link). Use “Copy link” instead — a pasted link has no such limit.', true);
-      return;
-    }
-    els.shareOverlay.hidden = false;
-    setShareNote(countPhotos()
-      ? 'Heads up: event photos stay on this device — they are too large to ride in the QR code. The rest of the timeline travels intact.'
-      : '');
-  });
-
-  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
-  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
 
   /** Consume a ?timeline= link on load. Always saves the arrival as a NEW
       uniquely-named timeline — a link a colleague sent can never silently
       replace whatever was open here. Returns true if it imported. */
   function importSharedTimeline() {
-    var raw = StateLink.getParam(SHARE_PARAM);
-    if (!raw) return false;
-    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't import it twice
-    var decoded = StateLink.decodeState(raw);
-    if (!looksLikeTimeline(decoded)) {
-      setShareNote('That shared link could not be read — it may have been cut short when it was pasted or emailed.', true);
-      return false;
-    }
-    delete decoded.v;
-    decoded.events.forEach(function (ev) { ev.photo = null; }); // photos never ride the link
-    var name = installTimeline(decoded);
-    setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your copy now — editing it does not change the sender’s. ' +
-      'Any photos the sender attached stayed on their device.');
-    return true;
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: looksLikeTimeline,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        delete decoded.v;
+        /* A link's photos were stripped to null by share.js; a file's are
+           real data URLs. Blank only what is not a usable string, so the two
+           routes do not have to be told apart here. */
+        var kept = 0;
+        decoded.events.forEach(function (ev) {
+          if (typeof ev.photo === 'string' && ev.photo) kept++;
+          else ev.photo = null;
+        });
+        var name = installTimeline(decoded);
+        setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your copy now — editing it does not change the sender’s. ' +
+          (kept ? 'Its ' + kept + ' photo' + (kept === 1 ? '' : 's') + ' came with it.'
+                : 'Any photos the sender attached stayed on their device — pictures are too large to ride in a link.'));
+        return true;
+      }
+    });
   }
 
   function setActiveView(name) {

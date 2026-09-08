@@ -6,6 +6,7 @@
   "scripts": {
     "test": "node Tools/board-check/run-suites.mjs",
     "test:name-picker": "node Tools/name-picker/test/smoke.mjs && node Tools/name-picker/test/drive-weighting.mjs",
+    "test:name-picker-share": "node Tools/name-picker/test/smoke-share.mjs",
     "test:seating": "node Tools/seating-chart/test/smoke-seating.mjs && node Tools/seating-chart/test/smoke-sub-packet.mjs && node Tools/seating-chart/test/smoke-zoom-pan.mjs && node Tools/seating-chart/test/drive-seating.mjs",
     "test:schedule": "node Tools/schedule/test/smoke.mjs",
     "test:schedule-visualizer": "node Tools/schedule-visualizer/test/smoke-recovery.mjs && node Tools/schedule-visualizer/test/smoke-evacuation.mjs",
@@ -86,6 +87,7 @@
     "test:civics-kit": "node Tools/civics-role-card-generator/test/smoke-simulation-kit.mjs",
     "test:civics-file": "node Tools/civics-role-card-generator/test/smoke-file-transfer.mjs",
     "test:timeline": "node Tools/timeline-builder/test/label-packing.test.mjs && node Tools/timeline-builder/test/smoke-map-print.mjs && node Tools/timeline-builder/test/smoke-story-worksheet.mjs",
+    "test:timeline-share": "node Tools/timeline-builder/test/smoke-share.mjs",
     "test:changed": "node Tools/board-check/run-suites.mjs --changed",
     "test:sw-update": "node Tools/service-worker/test/smoke-sw-update.mjs",
     "test:sw-tiers": "node Tools/service-worker/test/smoke-sw-tiers.mjs",

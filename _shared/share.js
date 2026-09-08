@@ -237,16 +237,24 @@
       '.share-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 6px}' +
       '.share-sheet-head h2{font-size:1.05rem;margin:0}' +
       '.share-sheet-close{width:auto;margin:0;padding:.2rem .6rem;font-size:1.2rem;line-height:1;background:transparent;color:inherit;border:1px solid var(--line,#dcdad2);border-radius:6px;cursor:pointer}' +
-      '.share-sheet-note{margin:0 0 10px;font-size:.85rem;color:var(--muted,#6b6a63)}' +
+      /* Muted text is the sheet's OWN ink faded, never var(--muted). A page
+         that defines --muted but not --card hands this sheet one half of its
+         palette: 007 defines a dark-theme --muted (near-white, for its own
+         #1a1a2e background) and no --card at all, so the sheet painted
+         rgba(234,234,234,.65) on its #fff fallback card — five serious
+         color-contrast violations, invisible to the site-wide axe sweep
+         because the sheet is a dialog behind a click. Fading `inherit` can
+         only ever be consistent with whatever surface the sheet resolved to. */
+      '.share-sheet-note{margin:0 0 10px;font-size:.85rem;color:inherit;opacity:.75}' +
       '.share-sheet-rows{display:flex;flex-direction:column;gap:6px;margin:0}' +
       '.share-sheet-rows button{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;margin:0;padding:.6rem .8rem;text-align:left;font:inherit;font-weight:600;background:var(--card-2,#f1f0ea);color:inherit;border:1px solid var(--line,#dcdad2);border-radius:8px;cursor:pointer}' +
       '.share-sheet-rows button:hover:not([disabled]){border-color:var(--accent,#1f3550)}' +
       '.share-sheet-rows button[disabled]{opacity:.55;cursor:not-allowed}' +
-      '.share-sheet-rows small{font-weight:400;color:var(--muted,#6b6a63);white-space:nowrap}' +
-      '.share-sheet-reason{margin:6px 0 0;font-size:.82rem;color:var(--muted,#6b6a63)}' +
+      '.share-sheet-rows small{font-weight:400;color:inherit;opacity:.75;white-space:nowrap}' +
+      '.share-sheet-reason{margin:6px 0 0;font-size:.82rem;color:inherit;opacity:.75}' +
       '.share-sheet-qr{margin:12px 0 0;text-align:center}' +
       '.share-sheet-qr canvas{display:block;margin:0 auto;image-rendering:pixelated;background:#fff}' +
-      '.share-sheet-qr p{margin:.5rem 0 0;font-size:.82rem;color:var(--muted,#6b6a63)}' +
+      '.share-sheet-qr p{margin:.5rem 0 0;font-size:.82rem;color:inherit;opacity:.75}' +
       '.share-sheet-status{margin:10px 0 0;font-size:.85rem;min-height:1.2em;word-break:break-word}' +
       '.share-sheet-status.error{color:var(--err,#a3372b)}' +
       '.share-sheet-url{display:block;width:100%;margin:6px 0 0;font:inherit;font-size:.8rem;padding:.4rem .5rem;border:1px solid var(--line,#dcdad2);border-radius:6px;background:var(--card,#fff);color:inherit}';
@@ -286,7 +294,7 @@
     var onMessage = opts.onMessage || function () {};
     var link = buildLink(opts);
     if (!link) {
-      onMessage(opts.emptyMessage || 'There is nothing to share yet.');
+      onMessage(opts.emptyMessage || 'There is nothing to share yet.', true);
       return { root: null, close: function () {}, link: null };
     }
     if (openSheet) openSheet.close();
@@ -369,10 +377,15 @@
     backdrop.appendChild(sheet);
     doc.body.appendChild(backdrop);
 
+    /* onMessage gets the error flag too. The sheet's own status line knows
+       which of its sentences is a failure; an adopter with a two-colour note
+       of its own (044's .saved / .err) would otherwise have to re-derive it
+       by matching on the wording, which breaks the moment a sentence here is
+       reworded. Adopters that take one argument are unaffected. */
     function say(text, isError) {
       status.textContent = text || '';
       status.classList.toggle('error', !!isError);
-      onMessage(text);
+      onMessage(text, !!isError);
     }
 
     copyBtn.addEventListener('click', function () {
@@ -457,7 +470,8 @@
    *                    may be a function, read when the sheet opens
    *   tool             the tool slug, written into the file header
    *   stripImages      false to keep images in the link (default true)
-   *   successMessage, emptyMessage, qrNote, onMessage(text), onOpen, onClose
+   *   successMessage, emptyMessage, qrNote, onMessage(text, isError), onOpen,
+   *   onClose
    *
    * Returns { open, close, destroy }.
    */

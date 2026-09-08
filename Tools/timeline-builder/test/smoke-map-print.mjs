@@ -257,25 +257,44 @@ await page.evaluate(() => {
 await page.reload({ waitUntil: 'networkidle' });
 await settle(page, 400);
 
+/* Since Path 6 P2 the button opens _shared/share.js's sheet, so the link
+   comes off its Copy link row. The sheet is a real modal with a backdrop:
+   it is closed in the same evaluate, or the next click on the page misses. */
+await page.click('#shareBtn');
+await settle(page, 250);
+ok(await page.isVisible('.share-sheet[role="dialog"]'), 'Share timeline… opens the shared sheet as a dialog');
+
+/* The photo warning is the sheet's own now, and share.js counts it rather
+   than the tool guessing: the tool hands over the WHOLE timeline and
+   share.js strips every data: image out of the link and the code by policy.
+   That is also why the downloaded file carries the photo, which is a route
+   this timeline had only through Export JSON before. */
+const sheetNote = await page.textContent('.share-sheet-note');
+ok(/1 image is left out of the link and QR code/.test(sheetNote),
+   'the sheet counts the one photo it left out: ' + JSON.stringify(sheetNote));
+ok(/downloaded file carries it/.test(sheetNote), 'and says the downloaded file still has it');
+
 const link = await page.evaluate(() => {
-  // Read the link through the same path the button uses, without depending on
+  // Read the link through the same path the row uses, without depending on
   // clipboard permissions in a headless context.
-  const btn = document.getElementById('shareLinkBtn');
   let captured = null;
   const realClipboard = navigator.clipboard;
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
     value: { writeText: t => { captured = t; return Promise.resolve(); } },
   });
-  btn.click();
+  document.querySelector('.share-sheet button[data-share="copy"]').click();
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: realClipboard });
+  window.Share.close();
   return captured;
 });
-ok(!!link && link.includes('timeline='), 'Copy link produces a ?timeline= URL');
+ok(!!link && link.includes('timeline='), 'the Copy link row produces a ?timeline= URL');
 ok(link.length < 12000, 'and the photo is not in it (link is ' + link.length + ' chars)');
+await settle(page, 200);
+ok(!(await page.$('.share-sheet')), 'and the sheet closes again');
 
 const noteAfterCopy = await page.textContent('#shareNote');
-ok(/photo/i.test(noteAfterCopy), 'with a visible note that photos stay on this device: ' + noteAfterCopy);
+ok(/Link copied/.test(noteAfterCopy), 'with the note under the toolbar recording the copy: ' + noteAfterCopy);
 
 const namesBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('gvb-timeline:list') || '[]'));
 await page.goto(link, { waitUntil: 'networkidle' });

@@ -35,16 +35,23 @@ const page = await prepPage(browser, BASE, { width: 1400, height: 1000 });
 
 const NAMES = ['Ada Lovelace', 'Marco Polo', 'Nellie Bly', 'Zheng He', 'Grace Hopper', 'Ida B Wells'];
 
-/** The URL the Copy Link button would put on the clipboard. */
-const shareLink = () => page.evaluate(() => {
-  let captured = null;
-  Object.defineProperty(navigator, 'clipboard', {
-    configurable: true,
-    value: { writeText: (t) => { captured = t; return Promise.resolve(); } },
+/** The URL the sheet's Copy link row would put on the clipboard. Opens the
+    sheet, clicks the row and CLOSES it again in the same call: since Path 6
+    P2 the sheet is a real modal with a backdrop, and leaving it open makes
+    the next click on the page miss. */
+const shareLink = async () => {
+  await page.click('#share-btn');
+  await settle(page, 200);
+  return page.evaluate(() => {
+    let captured = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: (t) => { captured = t; return Promise.resolve(); } },
+    });
+    document.querySelector('.share-sheet button[data-share="copy"]').click();
+    return new Promise(r => setTimeout(() => { window.Share.close(); r(captured); }, 60));
   });
-  document.getElementById('share-link-btn').click();
-  return new Promise(r => setTimeout(() => r(captured), 60));
-});
+};
 
 const groupsOnScreen = (p) => p.evaluate(() =>
   Array.from(document.querySelectorAll('#results .group-card')).map(c => ({
@@ -78,8 +85,8 @@ eq(totalMembers, NAMES.length, 'with everybody in it');
 
 /* ── 1. the link is built from the arrangement on screen ───────────────── */
 const url = await shareLink();
-ok(url && url.indexOf('groups=') !== -1, 'Copy Link produces a ?groups= link');
-ok(/Link copied/.test(await page.textContent('#share-note')), 'and says so');
+ok(url && url.indexOf('groups=') !== -1, 'the sheet\'s Copy link row produces a ?groups= link');
+ok(/Link copied/.test(await page.textContent('#share-note')), 'and the note under the export row says so');
 
 const payload = await page.evaluate(u => window.StateLink.decodeState(new URL(u).searchParams.get('groups')), url);
 eq(payload.v, 1, 'the payload is versioned');
@@ -128,7 +135,7 @@ eq(await other.isVisible('#print-tents-btn'), true, 'and table tents');
 const fresh = await prepPage(browser, BASE, { width: 1200, height: 900 });
 await fresh.goto(URL_PAGE, { waitUntil: 'networkidle' });
 await settle(fresh, 500);
-eq(await fresh.isVisible('#share-link-btn'), false, 'the share buttons are hidden until there is a grouping');
+eq(await fresh.isVisible('#share-btn'), false, 'the share button is hidden until there is a grouping');
 
 /* ── 7. a mangled link fails loudly ────────────────────────────────────── */
 const broken = await prepPage(browser, BASE, { width: 1200, height: 900 });
@@ -136,22 +143,32 @@ await broken.goto(URL_PAGE + '?groups=not-base64-%%%', { waitUntil: 'networkidle
 await settle(broken, 500);
 ok(/could not be read/.test(await broken.textContent('#share-note')), 'a mangled link says so rather than opening blank');
 
-/* ── 8. the QR path ────────────────────────────────────────────────────── */
-await page.click('#share-qr-btn');
-await settle(page, 400);
-const qr = await page.evaluate(() => ({
-  open: !document.getElementById('share-overlay').hidden,
-  w: document.getElementById('share-canvas').width,
-  note: document.getElementById('share-note').textContent,
-}));
-if (qr.open) {
-  ok(qr.w > 100, `a QR was drawn (${qr.w}px)`);
-  await page.click('#share-close-btn');
-  await settle(page, 200);
-  eq(await page.evaluate(() => document.getElementById('share-overlay').hidden), true, 'and closes again');
+/* ── 8. the shared sheet: its rows, its QR, and the way it closes ──────── */
+await page.click('#share-btn');
+await settle(page, 250);
+ok(await page.isVisible('.share-sheet[role="dialog"]'), 'Share grouping… opens the shared sheet as a dialog');
+const rows = await page.$$eval('.share-sheet-rows button', bs => bs.map(b => b.getAttribute('data-share')));
+ok(rows.includes('copy') && rows.includes('qr') && rows.includes('download'),
+   'with copy, QR and download rows: ' + JSON.stringify(rows));
+
+const qr = await page.evaluate(() => {
+  const b = document.querySelector('.share-sheet button[data-share="qr"]');
+  return { disabled: b.disabled, reason: (document.querySelector('.share-sheet-reason') || {}).textContent || '' };
+});
+if (!qr.disabled) {
+  await page.click('.share-sheet button[data-share="qr"]');
+  await settle(page, 250);
+  const w = await page.evaluate(() => document.querySelector('.share-sheet-qr canvas').width);
+  ok(w > 100, `a QR was drawn (${w}px)`);
 } else {
-  ok(/too big to fit in a QR/.test(qr.note), 'an over-large grouping is refused by name');
+  // A big class in many small groups outruns what a QR can be READ at. The
+  // budget is qr-draw.js's measured one, not the encoder's own limit, so the
+  // row is greyed out with the reason rather than drawn unscannably.
+  ok(/(KB|modules)/.test(qr.reason) && /Copy the link/.test(qr.reason), 'an over-large grouping greys the QR row out with a reason naming the size and the way round it: ' + JSON.stringify(qr.reason));
 }
+await page.keyboard.press('Escape');
+await settle(page, 200);
+ok(!(await page.$('.share-sheet')), 'Escape closes the sheet');
 
 /* ── 9. no console noise ───────────────────────────────────────────────── */
 for (const [name, p] of [['sender', page], ['receiver', other], ['broken-link', broken]]) {
