@@ -20,10 +20,25 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* The two tint pairs the share note sits on, in 001's values with dark
+     counterparts — ink-paper.css has no token for either. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share a chart: the sheet itself is _shared/share.js (Path 6 P3). This is
+     only the note under the toolbar that records what the sheet last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -102,9 +117,11 @@
       <p class="sub">Pick the unit sets you need, tweak the list, print a one-page reference chart.</p>
     </div>
     <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share chart&hellip;</button>
       <button class="secondary" id="printBtn">Print chart</button>
     </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="layout">
     <div>
@@ -227,21 +244,42 @@
   var els = {};
   ['templatePicker', 'chartGroups', 'noGroupsMsg', 'customGroup', 'customLine', 'addCustomBtn',
    'printBtn', 'printGroups', 'printTitle', 'colCount',
-   'presetElemBtn', 'presetMiddleBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'presetElemBtn', 'presetMiddleBtn',
+   'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { selected: {}, custom: {}, hidden: {}, columns: 2 };
 
   function uid() { return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
+  /* The four sets an empty install ticks for itself, below. They are written
+     to storage the first time this page is opened, which is what makes
+     "is there a saved chart here?" the wrong question to ask before replacing
+     one: a teacher who has only ever looked at this tool has a saved chart.
+     `load()` therefore reports whether what it read is somebody's WORK — a
+     custom line, a removed line, a column count or a set list that is not the
+     seed — rather than whether the key exists. */
+  var SEED_SETS = ['length_customary', 'length_metric', 'weight_customary', 'temperature'];
+
+  function isStarterChart(saved) {
+    if (!saved || typeof saved !== 'object') return true;
+    if (saved.custom && Object.keys(saved.custom).length) return false;
+    if (saved.hidden && Object.keys(saved.hidden).length) return false;
+    if (saved.columns && saved.columns !== 2) return false;
+    var on = Object.keys(saved.selected || {}).filter(function (k) { return saved.selected[k]; });
+    return on.length === SEED_SETS.length && SEED_SETS.every(function (k) { return on.indexOf(k) !== -1; });
+  }
+
   function load() {
+    var had = false;
     try {
       var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && typeof saved === 'object') state = saved;
+      if (saved && typeof saved === 'object') { state = saved; had = !isStarterChart(saved); }
     } catch (e) { /* ignore */ }
     if (!state.selected) state.selected = {};
     if (!state.custom) state.custom = {};
     if (!state.hidden) state.hidden = {};
     if (!state.columns) state.columns = 2;
+    return had;
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -369,14 +407,110 @@
     window.print();
   });
 
+  /* ---------- share a chart: _shared/share.js (Path 6 P3) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the payload is too dense to scan), download .json, and
+     the system share where the browser has one. A department that agrees on
+     one reference chart had no way to hand it over but the printed page,
+     which cannot be edited for next year.
+
+     What travels is the whole recipe rather than the rendered lines: which
+     built-in sets are ticked, which of their lines were removed, every custom
+     line, and the column count. The built-in tables themselves are in this
+     page, so a receiving device with an older or newer build renders its own
+     copy of them — the same reason 081 shares a seed rather than problems.
+
+     This tool keeps ONE chart, so an arriving link asks before replacing it,
+     and only when `load()` found real work: see `isStarterChart()` above. */
+  var SHARE_PARAM = 'chart';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  function chartSize(st) {
+    var sets = Object.keys(st.selected || {}).filter(function (k) { return st.selected[k]; }).length;
+    var custom = Object.keys(st.custom || {}).reduce(function (n, g) { return n + st.custom[g].length; }, 0);
+    return sets + ' unit set' + (sets === 1 ? '' : 's') +
+      (custom ? ' and ' + custom + ' custom line' + (custom === 1 ? '' : 's') : '');
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { return state; },
+    param: SHARE_PARAM,
+    tool: 'unit-conversion-chart-builder',
+    title: 'Share this chart',
+    noun: 'this chart',
+    filename: 'unit conversion chart',
+    note: 'The ticked unit sets, any lines removed from them, every custom line and the column count travel. The built-in conversion tables are in the page itself, so the receiving device prints them from its own copy.',
+    successMessage: 'Link copied. Opening it on another device offers this whole chart in place of whatever is there.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleChart(obj) {
+    return !!obj && typeof obj === 'object' && !Array.isArray(obj) &&
+      (!!obj.selected || !!obj.custom) &&
+      (obj.selected === undefined || typeof obj.selected === 'object') &&
+      (obj.custom === undefined || typeof obj.custom === 'object');
+  }
+
+  /** Normalises an arrival. A template key this build does not have is
+      dropped rather than kept as a tick nothing renders; a custom line keeps
+      its text and gets a local id, because nothing refers to one from
+      outside its own group. */
+  function normalizeChart(obj) {
+    var selected = {}, hidden = {}, custom = {};
+    Object.keys(obj.selected || {}).forEach(function (k) {
+      if (TEMPLATES[k] && obj.selected[k]) selected[k] = true;
+    });
+    Object.keys(obj.hidden || {}).forEach(function (k) {
+      if (!TEMPLATES[k]) return;
+      var lines = {};
+      Object.keys(obj.hidden[k] || {}).forEach(function (i) { if (obj.hidden[k][i]) lines[i] = true; });
+      if (Object.keys(lines).length) hidden[k] = lines;
+    });
+    Object.keys(obj.custom || {}).forEach(function (group) {
+      var rows = Array.isArray(obj.custom[group]) ? obj.custom[group] : [];
+      var kept = rows.filter(function (c) { return c && String(c.text || '').trim(); })
+        .map(function (c) { return { id: uid(), text: String(c.text) }; });
+      if (kept.length) custom[String(group)] = kept;
+    });
+    var columns = parseInt(obj.columns, 10);
+    return { selected: selected, custom: custom, hidden: hidden,
+             columns: (columns >= 1 && columns <= 3) ? columns : 2 };
+  }
+
+  function importSharedChart(hadSaved) {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleChart,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var incoming = normalizeChart(decoded);
+        if (hadSaved && !confirm('Replace the chart saved here with the shared one (' + chartSize(incoming) + ')?')) {
+          setShareNote('Kept the chart already on this device. The shared one was not loaded.');
+          return false;
+        }
+        state = incoming;
+        save();
+        setShareNote('Loaded a shared chart — ' + chartSize(state) + '.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
-  load();
+  var hadSaved = load();
+  /* The import runs BEFORE the starter sets are seeded, and the seeding is
+     skipped when it filed something: a shared chart of nothing but custom
+     lines would otherwise arrive with four unit sets nobody asked for
+     stapled to it. 069 had the same branch for the same reason. */
+  var imported = importSharedChart(hadSaved);
   buildTemplatePicker();
-  if (!Object.keys(state.selected).length) {
-    state.selected.length_customary = true;
-    state.selected.length_metric = true;
-    state.selected.weight_customary = true;
-    state.selected.temperature = true;
+  if (!imported && !Object.keys(state.selected).length) {
+    SEED_SETS.forEach(function (k) { state.selected[k] = true; });
     save();
     buildTemplatePicker();
   }

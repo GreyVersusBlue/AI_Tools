@@ -21,10 +21,25 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* The two tint pairs the share note sits on, in 001's values with dark
+     counterparts — ink-paper.css has no token for either. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share a slip: the sheet itself is _shared/share.js (Path 6 P3). This is
+     only the note under the toolbar that records what the sheet last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -99,9 +114,11 @@
       <p class="sub">A quick slip for a substitute to fill out by hand before they leave for the day.</p>
     </div>
     <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share slip&hellip;</button>
       <button class="secondary" id="printBtn">Print slips</button>
     </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;max-width:24rem;">
@@ -138,7 +155,8 @@
   ];
 
   var els = {};
-  ['copyCount', 'classPeriod', 'promptsWrap', 'addPromptBtn', 'printBtn', 'printArea', 'urgencyToggle'].forEach(function (id) { els[id] = document.getElementById(id); });
+  ['copyCount', 'classPeriod', 'promptsWrap', 'addPromptBtn', 'printBtn', 'printArea', 'urgencyToggle',
+   'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { copyCount: 2, prompts: [], classPeriod: '', urgencyBox: true };
 
@@ -150,14 +168,19 @@
   }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
+  /** True when there was a saved slip here — which is what tells an arriving
+      share link whether it is about to replace somebody's wording or the four
+      default prompts every empty install shows. */
   function load() {
+    var had = false;
     try {
       var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.prompts) && saved.prompts.length) state = saved;
+      if (saved && Array.isArray(saved.prompts) && saved.prompts.length) { state = saved; had = true; }
     } catch (e) { /* ignore */ }
     if (!state.prompts.length) state.prompts = DEFAULT_PROMPTS.map(function (t) { return { id: uid(), text: t }; });
     if (state.classPeriod == null) state.classPeriod = '';
     if (typeof state.urgencyBox !== 'boolean') state.urgencyBox = true; // added 2026-08; on for pre-existing saves
+    return had;
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -221,8 +244,80 @@
     window.print();
   });
 
+  /* ---------- share a slip: _shared/share.js (Path 6 P3) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the payload is too dense to scan), download .json, and
+     the system share where the browser has one. There was no route off this
+     device before except the printed slip, and a printed slip cannot be
+     re-worded by the teacher who receives it. A department that agrees on
+     one set of prompts is the case this is for.
+
+     This tool keeps ONE slip, so an arriving link has nowhere to land except
+     on top of what is here; it asks first, and only when `load()` found
+     something saved — the four default prompts an empty install shows are
+     not somebody's work. */
+  var SHARE_PARAM = 'slip';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { return state; },
+    param: SHARE_PARAM,
+    tool: 'sub-note-feedback-slip',
+    title: 'Share this slip',
+    noun: 'this slip',
+    filename: function () { return state.classPeriod ? 'sub note slip ' + state.classPeriod : 'sub note slip'; },
+    note: 'Every prompt travels, with the copies-to-print count, the pre-filled class or period and whether the “call me about this” box is on. Opening it replaces the slip on the receiving device, which is asked first.',
+    successMessage: 'Link copied. Opening it on another device offers this whole slip — every prompt, in this order — in place of whatever is there.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleSlip(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.prompts);
+  }
+
+  /** Normalises an arrival. Prompt ids are local to the device that renders
+      them — nothing outside this list refers to one — so a missing id is
+      filled in rather than being a reason to reject the slip. */
+  function normalizeSlip(obj) {
+    var count = parseInt(obj.copyCount, 10);
+    return {
+      copyCount: (isFinite(count) && count >= 1) ? Math.min(count, 20) : 2,
+      classPeriod: typeof obj.classPeriod === 'string' ? obj.classPeriod : '',
+      urgencyBox: typeof obj.urgencyBox === 'boolean' ? obj.urgencyBox : true,
+      prompts: obj.prompts.map(function (p) {
+        return { id: String(p && p.id || uid()), text: String(p && p.text || '') };
+      })
+    };
+  }
+
+  function importSharedSlip(hadSaved) {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleSlip,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var incoming = normalizeSlip(decoded);
+        if (hadSaved && !confirm('Replace the slip saved here with the shared one (' + incoming.prompts.length + ' prompts)?')) {
+          setShareNote('Kept the slip already on this device. The shared one was not loaded.');
+          return false;
+        }
+        state = incoming;
+        save();
+        setShareNote('Loaded a shared slip, ' + state.prompts.length + ' prompts' +
+          (state.classPeriod ? ' for ' + state.classPeriod : '') + '.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
-  load();
+  var hadSaved = load();
+  importSharedSlip(hadSaved);
   els.copyCount.value = state.copyCount;
   els.classPeriod.value = state.classPeriod;
   els.urgencyToggle.checked = state.urgencyBox;

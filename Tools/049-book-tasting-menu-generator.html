@@ -23,11 +23,26 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* The two tint pairs the share note sits on, in 001's values with dark
+     counterparts — ink-paper.css has no token for either. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share a menu: the sheet itself is _shared/share.js (Path 6 P3). This is
+     only the note beside the print controls that records what it last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -159,8 +174,10 @@
     </div>
   </div>
   <div class="btnrow">
+    <button type="button" class="secondary" id="shareBtn">&#128279; Share menu&hellip;</button>
     <button class="secondary" id="printBtn">Print</button>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 </div>
 
 <div id="printArea"></div>
@@ -172,7 +189,8 @@
   var SLIPS_KEY = 'btmg_slips_v1';
   var els = {};
   ['newTitle', 'newAuthor', 'newGenre', 'newCover', 'newBlurb', 'addBookBtn', 'booksWrap', 'bookCount', 'printBtn', 'printArea',
-   'slipOptions', 'slipRounds', 'slipCopies'].forEach(function (id) {
+   'slipOptions', 'slipRounds', 'slipCopies',
+   'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -186,9 +204,13 @@
     });
   }
 
+  /** True when there were books here already — which is what tells an
+      arriving share link whether it is about to replace somebody's stack.
+      An empty install seeds no books, so an empty list is the whole test. */
   function load() {
     try { books = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { books = []; }
     if (!Array.isArray(books)) books = [];
+    return books.length > 0;
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(books)); } catch (e) { /* storage full/blocked, e.g. too many cover images */ }
@@ -354,8 +376,95 @@
     window.print();
   });
 
+  /* ---------- share a menu: _shared/share.js (Path 6 P3) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the payload is too dense to scan), download .json, and
+     the system share where the browser has one. A book tasting stack is an
+     hour of typing blurbs, and until now the only way to give it to the
+     teacher next door was to print the menu they cannot edit.
+
+     THE COVER IMAGES DO NOT TRAVEL IN THE LINK. share.js strips every
+     data: image by policy — a dozen scanned covers is megabytes, far past
+     anything a URL can carry — and says how many it dropped; the downloaded
+     .json carries them whole. A menu that arrives without covers still
+     prints; the receiving teacher re-attaches the ones they want.
+
+     The response-slip settings do NOT travel either: they live in their own
+     key, they are a print run (how many slips to run off today) rather than
+     part of the menu, and the receiving device re-derives the course count
+     from the genres that did arrive.
+
+     This tool keeps ONE stack of books, so an arriving link has nowhere to
+     land except on top of it; it asks first, and only when `load()` found
+     books. */
+  var SHARE_PARAM = 'menu';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { return { books: books }; },
+    param: SHARE_PARAM,
+    tool: 'book-tasting-menu-generator',
+    title: 'Share this menu',
+    noun: 'this menu',
+    filename: 'book tasting menu',
+    note: 'Every book travels — title, author, genre and blurb — in the order the menu prints them. Cover images are too large for a link and are dropped from it; the downloaded file keeps them. Opening it replaces the books on the receiving device, which is asked first.',
+    successMessage: 'Link copied. Opening it on another device offers this whole stack of books in place of whatever is there.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleMenu(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.books);
+  }
+
+  /** Normalises an arrival. Ids are handed out locally — the genre is what
+      groups a book into a course and nothing refers to one by id — and a
+      cover that survived (a picked file rather than a link) is kept only if
+      it really is an image. */
+  function normalizeBooks(list) {
+    return list.map(function (b) {
+      b = b || {};
+      var cover = typeof b.cover === 'string' && /^data:image\//i.test(b.cover) ? b.cover : null;
+      return {
+        id: uid(),
+        title: String(b.title || ''),
+        author: String(b.author || ''),
+        genre: String(b.genre || ''),
+        blurb: String(b.blurb || ''),
+        cover: cover
+      };
+    }).filter(function (b) { return b.title.trim(); });
+  }
+
+  function importSharedMenu(hadSaved) {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleMenu,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var incoming = normalizeBooks(decoded.books);
+        if (hadSaved && !confirm('Replace the ' + books.length + ' book' + (books.length === 1 ? '' : 's') +
+            ' saved here with the shared menu (' + incoming.length + ')?')) {
+          setShareNote('Kept the books already on this device. The shared menu was not loaded.');
+          return false;
+        }
+        var withCovers = incoming.filter(function (b) { return b.cover; }).length;
+        books = incoming;
+        save();
+        setShareNote('Loaded a shared menu of ' + books.length + ' book' + (books.length === 1 ? '' : 's') +
+          (withCovers ? ', ' + withCovers + ' with covers.' : '. Cover images do not travel in a link — add them here.'));
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
-  load();
+  var hadSaved = load();
+  importSharedMenu(hadSaved);
   loadSlipSettings();
   renderBooks();
 })();
