@@ -1430,6 +1430,41 @@ console.log('\n066 — an arriving field is escaped before it is written as HTML
     JSON.stringify(await victim.textContent('#displayWork')));
 }
 
+/* ── 062: the arriving map question is DRAWN, not carried ───────────────── */
+/* The reason a map question costs about forty bytes of link is that what
+   travels is a descriptor — which dataset, which region, which crop — and the
+   receiving device renders it from the same vendored map data. Section 3
+   asserts the descriptor is in the payload and section 4 that the question is
+   filed; neither proves the receiving device can actually draw it, which is
+   the whole claim. This does, through the tool's own map module. */
+console.log('\n062 — an arriving map question is drawn from the receiving device’s own map data');
+{
+  const shared = { questions: [{ category: 'maps', area: 'europe', q: 'Which country is shaded on this map?', a: 'Portugal', map: { dataset: 'world', region: 'Portugal', context: 'europe' } }] };
+  const sender = await prepPage(browser, BASE, { width: 1200, height: 900 });
+  pages.push(['062-map-sender', sender]);
+  await sender.goto(BASE + '/Tools/062-geography-bee-quiz-generator.html', { waitUntil: 'load' });
+  await settle(sender, 700);
+  const url = await sender.evaluate(st => location.origin + location.pathname + '?' +
+    'quiz=' + encodeURIComponent(window.StateLink.encodeState(st)), shared);
+
+  const receiver = await prepPage(browser, BASE, { width: 1200, height: 900 });
+  pages.push(['062-map-receiver', receiver]);
+  await receiver.goto(url, { waitUntil: 'load' });
+  await settle(receiver, 900);
+
+  const drawn = await receiver.evaluate(async () => {
+    const hooks = window.__gbqTestHooks;
+    const q = hooks.allQuestions().filter(x => x.custom && x.map)[0];
+    if (!q) return 'the map question was not filed';
+    const m = await hooks.mapModule();
+    const res = await m.renderSnippet({ dataset: q.map.dataset, region: q.map.region, context: q.map.context, width: 300, ratio: 2.6 });
+    if (!res || !res.url) return 'no snippet came back';
+    return res.url.slice(0, 15) + ' ' + (res.width > 0 && res.height > 0 ? 'sized' : 'unsized');
+  });
+  eq(drawn, 'data:image/png; sized',
+    '062: the receiving device draws the shared region from its own map data: ' + JSON.stringify(drawn));
+}
+
 /* ── 061: the second generator, where the SEED is the payload ───────────── */
 /* 081 was the first and this is its twin, three increments later: nothing
    here is authored, so the link carries the four numbers that regenerate the
