@@ -244,8 +244,37 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
                        the year-end rollover takes it with the rest. */
   const SINCE_THE_MIGRATION = ['pcl_idnames_v1'];
 
+  /* Keys the old list DID have a chance to cover and did not, which a later
+     session has deliberately reclassified. This is a different excuse from the
+     one above and is kept apart from it on purpose: a key here IS something a
+     teacher can see change, so the reason has to say what changes and why it is
+     right. The assertion under this one makes the exemption one-directional —
+     only a key the registry marks `student` may appear, so this list can excuse
+     a settings→student correction and can never quietly excuse the dangerous
+     direction, which is the whole point of section 9.
+
+       apl_portfolios_v1  048's multi-portfolio store. The old list marks its
+                          predecessor apl_portfolio_v1 (which the registry still
+                          carries as `legacy: true`) student data, and 048's
+                          load() migrates that blob INTO this key — same piece
+                          titles, same artist names, same artist statements — so
+                          the mark was lost in exactly the migration that moved
+                          the data, and the two names classified the same records
+                          two different ways. Every other migrated pair in
+                          _shared/tool-registry.js (gtg:, gvb-grade-distribution:,
+                          gvb-bracket:) marks both sides. What a teacher sees
+                          change: the year-end rollover now takes last year's art
+                          portfolios with the rest of last year's students, which
+                          is what it already did to the leftovers of the same
+                          content under the old name. Decided and marked in #248;
+                          this shallow clone cannot date the key against the
+                          pre-registry 009 list, so it is filed here rather than
+                          claimed to be post-migration. */
+  const RECLASSIFIED_DELIBERATELY = ['apl_portfolios_v1'];
+
   const changed = [...probes]
     .filter(k => !SINCE_THE_MIGRATION.includes(k))
+    .filter(k => !RECLASSIFIED_DELIBERATELY.includes(k))
     .filter(k => oldClassify(k) !== REG.classifyKey(k));
 
   /* The one permitted difference among the keys that DID exist, and it is a fix
@@ -255,9 +284,10 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
   eq(changed, ['gvb-command-center:excluded:SAMPLE'],
     '9: the registry classifies every key 009 knew about exactly as 009 did, except the one dead rule');
 
-  const misfiled = SINCE_THE_MIGRATION.filter(k => REG.classifyKey(k) !== 'student');
+  const misfiled = [...SINCE_THE_MIGRATION, ...RECLASSIFIED_DELIBERATELY]
+    .filter(k => REG.classifyKey(k) !== 'student');
   eq(misfiled, [],
-    '9: every key excused as post-migration is one the registry marks student data');
+    '9: every excused key is one the registry marks student data, so neither list can excuse the dangerous direction');
 
   const OLD_LABELLED = ['np_rosters', 'seating-chart-v1', 'scv_calendar_v1', 'ct_prefs',
     'gvb-review-board:current', 'gvb-timeline:current', 'escape-room-builder:rooms',

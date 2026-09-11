@@ -20,15 +20,25 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
   /* Tool-local semantic tints, with 001's values — ink-paper.css owns the 11
      palette tokens and does not yet own these. */
-  :root { --err-bg: #fbecea; --err-line: #e6c6c1; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; --err-line: #6d3a33; }
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share a portfolio: the sheet itself is _shared/share.js (Path 6 P3). This
+     is only the note under the header that records what the sheet last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -169,7 +179,11 @@
       <h1>Student Art Portfolio Label &amp; QR Tag Maker</h1>
       <p class="tagline">Labels for physical art portfolios &mdash; each one can carry a photo thumbnail and a QR code holding the artist statement, no server or upload needed.</p>
     </div>
+    <div class="btn-row">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share this portfolio&hellip;</button>
+    </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="layout">
     <div class="editor">
@@ -268,7 +282,8 @@
   ['portfolioTitle', 'entriesList', 'addRowBtn', 'toggleImportBtn', 'importBox', 'importText', 'importBtn',
    'labelsPerPage', 'ecLevel', 'printBtn', 'printSheetBtn', 'previewGrid', 'previewNote', 'msg',
    'printArea', 'printHeaderTitle', 'printLabelGrid', 'printRefSheet',
-   'portfolioSelect', 'newPortfolioBtn', 'dupPortfolioBtn', 'renamePortfolioBtn', 'deletePortfolioBtn'
+   'portfolioSelect', 'newPortfolioBtn', 'dupPortfolioBtn', 'renamePortfolioBtn', 'deletePortfolioBtn',
+   'shareBtn', 'shareNote'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var store = { list: [], currentId: null };
@@ -706,8 +721,132 @@
     els.printArea.className = 'print-only';
   });
 
+  /* ---------- share a portfolio: _shared/share.js (Path 6 P3) ----------
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the payload is too dense to scan), download .json, and the
+     system share where the browser has one. The only route off this device
+     before was the printed label itself, and a printed label cannot be
+     re-typeset by the teacher who receives it; the case this is for is the art
+     teacher who builds the labels and the colleague with the good printer, or
+     the department that prints a show together.
+
+     WHAT TRAVELS INCLUDES THE ARTIST NAMES, and that is a decision, not an
+     oversight. _shared/tool-registry.js marks this tool's LEGACY key
+     `student: true` (and this round marks the live one too — see below), and
+     the site has not put a marked key's contents in a link before. The line
+     that decides it is not "is a child's name in the field" — #246 settled
+     that one on staff names — but WHAT THE FIELD IS FOR: every field here is
+     composed to be printed on a card and hung on a public wall with the
+     artist's name on it, which is the opposite of 077's accommodation ticks or
+     023's exit-ticket tallies, where the record exists because it is
+     confidential. The tool's own "Paste a list instead" box already accepts
+     exactly this data as tab-separated lines, so teacher-to-teacher hand-over
+     of it is a route the tool was built with; this is that route without the
+     retyping. The sheet's note says the artist names travel, in words, before
+     anything is copied.
+
+     PHOTOS NEVER RIDE THE LINK — share.js strips every data: image by policy
+     and the sheet says how many it dropped; the downloaded .json carries them
+     whole, which is the only way a thumbnail travels at all.
+
+     This tool keeps a LIBRARY of portfolios in one key, so an arrival has
+     somewhere to land that takes nothing away: it is filed BESIDE what is here
+     under a free name and the page switches to it, and there is no dialog —
+     #239's rule for the named-library tools, where the guard against loss is
+     the unique name rather than a question. */
+  var SHARE_PARAM = 'portfolio';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  /** `name`, or the first "name (2)", "name (3)"… not already in the library. */
+  function uniqueName(name) {
+    var taken = {};
+    store.list.forEach(function (p) { taken[p.name] = true; });
+    if (!taken[name]) return name;
+    var n = 2;
+    while (taken[name + ' (' + n + ')']) n++;
+    return name + ' (' + n + ')';
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      return {
+        name: state.name, title: state.title,
+        labelsPerPage: state.labelsPerPage, ecLevel: state.ecLevel,
+        entries: state.entries.map(function (e) {
+          return { title: e.title, artist: e.artist || '', description: e.description, image: e.image || '' };
+        })
+      };
+    },
+    param: SHARE_PARAM,
+    tool: 'art-portfolio-label-maker',
+    title: 'Share this portfolio',
+    noun: 'this portfolio',
+    filename: function () { return state.name || 'art portfolio'; },
+    note: 'Every entry travels — piece title, artist name and the artist statement that goes in the QR code — with the print layout. It lands as a new portfolio beside whatever the other teacher already has.',
+    successMessage: 'Link copied. Opening it on another device files this portfolio beside their own, entries and all.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausiblePortfolio(obj) {
+    return !!obj && typeof obj === 'object' && !Array.isArray(obj) && Array.isArray(obj.entries);
+  }
+
+  /** An arrival as a portfolio this device can hold. Entry ids are local — they
+      are the DOM row lookup and nothing outside this list refers to one — so
+      they are minted here rather than carried, and a link built before the
+      artist field existed still opens. */
+  function normalizePortfolio(obj) {
+    var p = {
+      id: uid(),
+      name: uniqueName(String(obj.name || '').trim() || 'Shared Portfolio'),
+      title: typeof obj.title === 'string' ? obj.title : '',
+      labelsPerPage: String(obj.labelsPerPage || '6'),
+      ecLevel: String(obj.ecLevel || 'Q'),
+      entries: obj.entries.map(function (e) {
+        return {
+          id: uid(),
+          title: String(e && e.title || ''),
+          artist: String(e && e.artist || ''),
+          description: String(e && e.description || ''),
+          image: typeof (e && e.image) === 'string' ? e.image : ''
+        };
+      })
+    };
+    return normalize(p);
+  }
+
+  function importSharedPortfolio() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausiblePortfolio,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var p = normalizePortfolio(decoded);
+        store.list.push(p);
+        store.currentId = p.id;
+        state = p;
+        save();
+        /* Always true of a link, by the image policy — 049's wording, and for
+           the same reason: a label with no thumbnail is the first thing the
+           receiving teacher will notice on the printed sheet. This tool has no
+           file importer to point them at, so the note does not promise one. */
+        var photos = p.entries.filter(function (e) { return e.image; }).length;
+        setShareNote('Loaded a shared portfolio as \u201c' + p.name + '\u201d, ' + p.entries.length +
+          ' entr' + (p.entries.length === 1 ? 'y' : 'ies') + '. Your other portfolios are untouched.' +
+          (photos ? '' : ' Photos do not travel in a link — add them here.'));
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
   load();
+  importSharedPortfolio();
   renderPortfolioSelect();
   els.portfolioTitle.value = state.title;
   els.labelsPerPage.value = state.labelsPerPage;

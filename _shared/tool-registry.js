@@ -491,6 +491,10 @@
       title: 'Testing Accommodations Reference Card Generator',
       file: 'Tools/077-testing-accommodations-card-generator.html',
       category: 'assessment-grading',
+      /* The share link carries the accommodation NAMES only — never the roster,
+         a tick or a note. The key stays student data; what travels is a subset
+         of it that has no student in it at all. */
+      share: { param: 'accommodations' },
       keys: [
         { k: 'tacg_cards_v1', student: true },
       ],
@@ -545,6 +549,7 @@
       title: 'QR Scavenger Hunt Builder',
       file: 'Tools/018-qr-scavenger-hunt-builder.html',
       category: 'games-rewards',
+      share: { param: 'hunt' },
       keys: [
         { k: 'qr-scavenger-hunt-sets' },
         { k: 'qr-scavenger-hunt-settings' },
@@ -555,6 +560,7 @@
       title: 'Digital Escape Room / Puzzle Lock Builder',
       file: 'Tools/019-escape-room-builder.html',
       category: 'games-rewards',
+      share: { param: 'room' },
       keys: [
         { k: 'escape-room-builder:rooms' },
         { k: 'escape-room-progress:' },
@@ -1381,9 +1387,17 @@
       title: 'Student Art Portfolio Label & QR Tag Maker',
       file: 'Tools/048-art-portfolio-label-maker.html',
       category: 'arts-pe',
+      share: { param: 'portfolio' },
+      /* Both keys are student data, and until 2026-09-11 only the legacy one
+         said so. load() migrates apl_portfolio_v1 INTO apl_portfolios_v1 — same
+         piece titles, same artist names, same statements — so the mark was lost
+         in exactly the migration that moved the data, and the year-end rollover
+         would have kept last year's portfolios while deleting the leftovers of
+         the same content under the old name. Every other migrated pair in this
+         file (gtg:, gvb-grade-distribution:, gvb-bracket:) marks both sides. */
       keys: [
         { k: 'apl_portfolio_v1', student: true, legacy: true },
-        { k: 'apl_portfolios_v1' },
+        { k: 'apl_portfolios_v1', student: true },
       ],
       reads: [
         'apl_portfolio_v1',
