@@ -41,6 +41,136 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 6 P3, increment 5 — the four builders that needed a decision first — 2026-09-11
+(#248, `CACHE_VERSION` v177).** **018** QR Scavenger Hunt Builder, **019** Digital Escape Room
+Builder, **048** Student Art Portfolio Label Maker and **077** Testing Accommodations Card
+Generator open `_shared/share.js`'s sheet and consume a link on load; none had share code,
+`state-link.js` or a link importer before. `share.js` and `qr-draw.js` go to **39 of 86** each,
+`state-link.js` to **40**. **Not one of the four was a copy**, which is what the previous handoff
+predicted and the first time in five increments that it has been true — the wiring took an hour
+and the four decisions took the rest.
+
+**077 is the sharpest per-field split on the site, and it is 073's rule applied to a product
+question.** `tacg_cards_v1` is one of the three keys `_shared/tool-registry.js` marks
+`student: true`, and a ticked box in it is a child's testing accommodation. What travels is the
+**list of accommodation names and nothing else**: no roster, no tick, no note, asserted as
+`absent` in the suite rather than inferred. The product answer — the thing that made the row
+shippable rather than a stall — is that **a card without its student is the department's
+wording**, the exact phrases a testing coordinator wants on every proctor's cards, which is
+precisely what teachers copy by hand today. An arrival **merges by name and asks nothing**
+(075's rule), and merging is not a nicety here: every tick is filed under
+`<student>|<typeId>`, so keeping the local ids is what keeps a ticked grid intact and a replace
+would have emptied it silently — 058's id-bearing cross-reference for the **third** time, in the
+one tool where the data is confidential. One branch: the six `DEFAULT_TYPES` an empty install
+shows are a seed, so on a device that has saved nothing the arrival **replaces** them instead of
+stapling six generic rows to the four that were sent (069 and 078 had the same branch; like
+theirs, it is only findable by reading `load()` — **third increment running**).
+
+**048 is the other marked key and it went the other way, which is the rule worth carrying.** The
+artist names travel. The line is not "is a child's name in the field" — #246 settled that on
+staff names — but **what the field is for**: every field in 048 is composed to be printed on a
+card and hung on a public wall with the artist's name on it, which is the opposite of an
+accommodation tick, whose record exists *because* it is confidential. The tool's own "Paste a
+list instead" box already accepts exactly this data as tab-separated lines, so teacher-to-teacher
+hand-over of it is a route the tool shipped with. So: **the registry's `student: true` governs
+what the device keeps and what the year-end rollover deletes; what governs a link is whether the
+field was authored to be published.** That sentence is the reusable half — it says 023's exit
+tallies never travel and 048's labels always may, without a new argument each time.
+
+**A registry correction fell out of reading 048:** `apl_portfolios_v1` was **not** marked
+`student: true` and the legacy `apl_portfolio_v1` was. `load()` migrates the legacy blob into the
+live one — same piece titles, same artist names, same statements — so **the mark was lost in
+exactly the migration that moved the data**, and Path 3 P6's rollover would have kept last year's
+portfolios while deleting the leftovers of the same content under the old name. Every other
+migrated pair in that file (`gtg:`, `gvb-grade-distribution:`, `gvb-bracket:`) marks both sides.
+Fixed in the same diff. **Worth a sweep by the next session that opens the registry:** this is a
+class of bug, not an instance — a `legacy: true` key marked `student` whose live successor is not.
+
+**018: the hunt travels, the run does not.** `state.run` — teams, join codes, check-in marks,
+hint penalties, the timer — lives *inside* the hunt object, and its team names are the one place
+a student's name plausibly appears in the tool. `getState()` takes the authored fields only and
+the receiving device builds its own empty run through `ensureRun()`. Station **code words do**
+travel: they print on both the Clue Card and the Answer Key, and a hunt whose words changed in
+transit hands the receiving teacher a key that does not match their own cards. 018 also predates
+`ink-paper.css` and paints its own dark palette with none of the sheet's tokens defined, so the
+sheet would have resolved its whole fallback set — a white card with dark ink floating over a
+dark page. It is handed that page's own surfaces through **one declaration block scoped to
+`.share-sheet-backdrop`**, which cannot leak into the page because the tokens are custom
+properties that inherit from there down. That is *not* adopting `a11y.js`; 018 is one of the
+fourteen pages with no theme at all, and giving it one is Path 5's job.
+
+**019 is the first adopter that already had a link of its own, and they are not the same link.**
+`escape-room-builder/lock.html?r=` is the room **as played** — for a phone at a station,
+deliberately without the answer key's wording or the hints' costs. The sheet's link is the room
+**as authored**, for another teacher's builder: accepted answers, hints and their costs, award
+letters, attempt caps, branch targets, story intro, print layout. Two links, two audiences, and
+the parameter is `room` for that reason. **The `roomId` is regenerated on arrival**, which is the
+*mirror image* of 058's preserve-the-id rule rather than a contradiction of it: 058 preserves ids
+its own stored data is filed under, while `roomId` identifies this copy **to the outside world** —
+`lock.html` keys a player's progress under `escape-room-progress:<roomId>` — so carrying it would
+resume a student three stations into a different teacher's room, with nothing on screen to say
+why. **The general rule, now that both halves exist: preserve an id that something you store
+refers to; mint a new one for an id that names this copy to somebody else.**
+
+**018 and 019 were both promised to Path 12 P2 (rank 40), and the decision recorded is: share
+now.** A station gaining a bank id is an *additive* field in a payload each tool validates itself;
+P3's premise is that a link is a tool's own ordinary state rather than a frozen format; and rank
+40 is twenty-odd sessions out, which is a long time to leave two builders with no way to hand
+over a hunt or a room. If P2 changes the payload shape, these two tools' `normalize*()` functions
+are where it lands, and both already default every field.
+
+**Verification** is four rows in `Tools/share/test/smoke-share-rollout.mjs` — **950 assertions**,
+up from 777 — and **no new file**, the fifth increment running. Two seeding shapes had to be
+added, which is the honest measure of how much of P3's table was fitted to the first nine rows: a
+library that lives inside **one key** as `{current, sets}` (018, 019, and for 019 through
+`_shared/store.js`'s `{v, data}` envelope) and one keyed by id in a **list** (048). Both go
+through the existing section 5b unchanged. Section 5c (the merge) grew a second row and a
+`mergePath`, because 075's merged list *is* its stored document while 077's is one field of it.
+019 alone asserts the fresh `roomId`, by comparing the two documents in the library rather than
+trusting the code that mints it. Locally: all eleven guards, `lint`,
+`check:precache -- --base origin/main` (v176 → v177 covering five precached files),
+`handoffs.test.mjs` (**282**), `test:theme` (**901**), the four tools' own suites, and
+`test:a11y -- --only` on all four pages — **no allowlist line added, eleven page-changing
+increments running**.
+
+**What went wrong, and what was not verified.** **The registry mark was the one thing in the
+increment a teacher can see change, and CI is what said so.** Section 9 of
+`Tools/tool-registry/test/registry-shape.test.mjs` replays 009's pre-migration classification of
+every key and refuses any silent disagreement — its own comment says a difference there is
+"somebody's roster either surviving a clear it should not have, or being deleted when it should
+not have been" — and marking `apl_portfolios_v1` is exactly such a difference. **It was right to
+fire, and the mark stayed**, because not marking it is the incoherent option: the old list marks
+the *predecessor*, and `load()` migrates that blob into this key, so the same records were
+classified two ways depending on which name they sat under. What it is **not** filed under is the
+existing `SINCE_THE_MIGRATION` list — that list means "no tool wrote this key when 009 held the
+lists", and **this clone is 52 commits deep and cannot establish that**, so filing it there would
+have been claiming something unverified. It went in a second list,
+`RECLASSIFIED_DELIBERATELY`, whose reason has to state what a teacher sees change (the year-end
+rollover now takes last year's art portfolios), and the `misfiled` assertion was extended to cover
+both lists — which makes either exemption **one-directional**: only a key the registry marks
+`student` may appear in one, so a list can excuse a settings→student correction and can never
+excuse the dangerous direction. Both halves were proved by breaking them on purpose (unmarking
+`tacg_cards_v1` fails assertion 9; listing `np_theme` as excused fails `misfiled`) and then
+restored. **The process mistake behind it: the PR was opened while the full local pass was at
+suite 82 of 156, and that pass caught this same failure at 140.** Waiting eleven minutes would
+have saved a CI round. Compounding it, the *first* full local run was launched under
+`timeout 1200`, was killed at 20 minutes 131 suites in, and **reported exit 0** — an incomplete
+run that looks exactly like a pass. Give a full local pass at least 2400s and read the summary
+line, never the exit code. Two smaller ones: 048's arrival note first told the receiving teacher
+to "open the shared `.json` file instead" and **048 has no file importer at all**, caught by
+re-reading rather than by any test (it uses 049's "add them here" now); and the first 048 suite row
+was seeded with the `{current, sets}` shape this tool does not use, so the page fell back to a
+blank starter portfolio and the payload had one entry instead of two — the suite caught it, but
+only because `expect` reads a *second* entry, and a one-entry fixture would have passed on an
+empty tool. **Not verified:** no QR from any of the four was scanned by a real camera; the
+system-share row is exercised nowhere; no file was downloaded by a real browser and re-opened by
+hand; the open sheet was scanned by axe in **light only**; 019's regenerated `roomId` was not
+checked against a real `lock.html` session on a second device; and nothing here was driven by a
+human clicking anything. The open sheet *was* looked at in a real browser on 018 (to confirm the
+dark token mapping) and 077. **CI: green in 30.7 min on the failing head and again on the fix;
+the full local pass was 155 of 156 in 32.5 min, the one failure being the section 9 assertion
+above.**
+
 **Path 6 P3, increment 4 — six more builders, and the first arrival that merges — 2026-09-08
 (#246, `CACHE_VERSION` v176).** **049** Book Tasting Menu Generator, **058** Duty Roster Builder,
 **074** Science Safety Label Maker, **075** Staff Directory Builder, **076** Sub Note / Feedback
