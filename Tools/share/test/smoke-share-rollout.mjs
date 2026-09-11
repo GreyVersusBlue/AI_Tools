@@ -592,6 +592,168 @@ const TOOLS = [
     mergeLocal: [{ id: 'x9', name: 'Priya Anand', room: '301', ext: '4301', subject: 'ELA' }],
     mergeKeeps: 'Priya Anand',
   },
+  /* ── increment 5: the four rows that are not a copy ──────────────────────
+     Every earlier row was wiring the same shape again. These four each needed a
+     decision written down first: 077 and 048 hold a key _shared/tool-registry.js
+     marks `student: true`, and 018 and 019 were both waiting on Path 12 P2. */
+  {
+    /* The sharpest per-field split on the site: `tacg_cards_v1` holds every
+       student's testing accommodations, and what travels is the LIST OF
+       ACCOMMODATION NAMES with no student attached to it. `absent` is the
+       assertion that matters here, not `expect`. */
+    n: '077', file: '077-testing-accommodations-card-generator.html', param: 'accommodations',
+    key: 'tacg_cards_v1', slug: 'testing-accommodations-card-generator',
+    merges: true, mergePath: 'types',
+    state: {
+      roster: ['Priya Raman', 'Dominic Ferraro', 'Wren Halvorsen'],
+      types: [
+        { id: 't-a', name: 'Braille edition' },
+        { id: 't-b', name: 'Scribe for written response' },
+      ],
+      assignments: { 'Priya Raman|t-a': true, 'Dominic Ferraro|t-b': true },
+      notes: { 'Priya Raman': 'Tests in room 114 with Ms Okafor' },
+    },
+    expect: p => [
+      [Array.isArray(p.types) && p.types.length === 2, 'the payload carries the accommodation list'],
+      [p.types.map(t => t.name).join('|') === 'Braille edition|Scribe for written response',
+        'with the department’s own wording, which is the whole point of sending it'],
+      [p.roster === undefined, 'and no roster'],
+      [p.assignments === undefined, 'no ticks'],
+      [p.notes === undefined, 'and no per-student note'],
+    ],
+    absent: ['Priya Raman', 'Dominic Ferraro', 'Wren Halvorsen', 'room 114', 'Okafor'],
+    arrived: page => page.$$eval('#typesWrap input', els => {
+      /* Every type is an editable input, so textContent is "" — 075's lesson,
+         and the reason this reads values. */
+      const names = els.map(e => e.value);
+      return names.indexOf('Braille edition') !== -1 ? 'Braille edition' : JSON.stringify(names);
+    }),
+    arrivedWant: 'Braille edition',
+    /* The merge fixture: a device with its own two accommodations, its own
+       roster and its own ticks. Nothing overlaps by name, so the first arrival
+       adds both; the second must add neither. */
+    mergeLocal: {
+      roster: ['Sunniva Aalto'],
+      types: [
+        { id: 't-local-1', name: 'Extended time' },
+        { id: 't-local-2', name: 'Small group setting' },
+      ],
+      assignments: { 'Sunniva Aalto|t-local-1': true },
+      notes: {},
+    },
+    mergeKeeps: 'Extended time',
+    /* The point of merging rather than replacing: a tick is filed under
+       `<student>|<typeId>`, so keeping the local ids is what keeps a ticked
+       grid intact. A replace would have emptied it silently — 058's lesson in
+       the one tool where the data is confidential. */
+    mergeKeepsToo: (doc) => [
+      ['the local accommodation keeps its id, so the ticks filed under it survive',
+        (doc.types || []).some(t => t.id === 't-local-1')],
+      ['and the tick itself is still there', doc.assignments && doc.assignments['Sunniva Aalto|t-local-1'] === true],
+      ['and the roster on the device is untouched', (doc.roster || []).join() === 'Sunniva Aalto'],
+      ['while the arrival got a local id rather than the sender’s',
+        (doc.types || []).every(t => t.id !== 't-a')],
+    ],
+  },
+  {
+    /* The other marked key, decided the other way: every field on a gallery
+       label is composed to be printed and hung on a public wall with the
+       artist's name on it. The photos are the half that does not travel. */
+    n: '048', file: '048-art-portfolio-label-maker.html', param: 'portfolio',
+    slug: 'art-portfolio-label-maker',
+    libraryList: { key: 'apl_portfolios_v1' }, docName: 'Kiln Show',
+    state: {
+      id: 'p-seed', name: 'Kiln Show', title: 'Rm 214 — Kiln Show',
+      labelsPerPage: '6', ecLevel: 'Q',
+      entries: [
+        { id: 'e1', title: 'Ridged Vessel', artist: 'Oleander B.', description: 'Wheel-thrown stoneware, celadon glaze, fired to cone 6.', image: 'data:image/png;base64,iVBORw0KGgo=' },
+        { id: 'e2', title: 'Pinch Pot Trio', artist: 'Takoda W.', description: 'Hand-built from three coils, each burnished with a river stone.', image: '' },
+      ],
+    },
+    expect: p => [
+      [p.entries.length === 2, 'the payload carries every entry'],
+      [p.entries[0].title === 'Ridged Vessel', 'with the piece title'],
+      [p.entries[0].artist === 'Oleander B.', 'the artist, which is the decision this row records'],
+      [p.entries[1].description.indexOf('river stone') !== -1, 'and the artist statement the QR code holds'],
+      [p.labelsPerPage === '6' && p.ecLevel === 'Q', 'plus the print layout it was laid out for'],
+      [p.entries[0].image === null, 'and the photo is dropped by the image policy, not carried'],
+    ],
+    arrived: page => page.$$eval('#entriesList input[data-title]', els => {
+      const titles = els.map(e => e.value);
+      return titles.indexOf('Ridged Vessel') !== -1 ? 'Ridged Vessel' : JSON.stringify(titles);
+    }),
+    arrivedWant: 'Ridged Vessel',
+    localField: 'entries.0.title',
+    imageField: 'entries.0.image',
+    imageStateField: 'entries.0.image',
+  },
+  {
+    /* A hunt travels; a Live Run does not. Both live in one object, which is
+       why `absent` carries the team name. */
+    n: '018', file: '018-qr-scavenger-hunt-builder.html', param: 'hunt',
+    slug: 'qr-scavenger-hunt-builder',
+    libraryKey: 'qr-scavenger-hunt-sets', docName: 'Library Hunt',
+    state: {
+      name: 'Library Hunt', cardsPerPage: '4', ecLevel: 'Q', showNumber: true,
+      stations: [
+        { label: 'Reference desk', content: 'Which shelf holds the atlases?', note: 'Behind the printer', qType: 'text', choices: [], correctChoice: 0, numericAnswer: '', tolerance: '0', hint: 'Look above the globe', hintPenalty: '30', codeWord: 'MERIDIAN' },
+        { label: 'Biography wall', content: 'Count the shelves.', note: '', qType: 'numeric', choices: [], correctChoice: 0, numericAnswer: '7', tolerance: '0', hint: '', hintPenalty: '0', codeWord: 'LANTERN' },
+      ],
+      run: {
+        teams: [{ name: 'Rosalind’s group', code: 'MK4T', marks: { 0: { at: 1, correct: true, attempts: 1 } }, attempts: {}, hintsUsed: {}, penaltyMs: 0 }],
+        timerRunning: false, timerStartedAt: null, timerElapsedMs: 0, raceStartAt: null, checkinStation: 0, stagger: true,
+      },
+    },
+    expect: p => [
+      [p.stations.length === 2, 'the payload carries every station'],
+      [p.stations[0].note === 'Behind the printer', 'including the teacher’s private note, which the receiving teacher is'],
+      [p.stations[0].hint === 'Look above the globe' && p.stations[0].hintPenalty === '30', 'the hint and what it costs'],
+      [p.stations[1].qType === 'numeric' && p.stations[1].numericAnswer === '7', 'the answer type and its answer'],
+      [p.stations[0].codeWord === 'MERIDIAN', 'and the printed code word, so the Answer Key still matches the Clue Cards'],
+      [p.run === undefined, 'and the Live Run does not travel at all'],
+    ],
+    absent: ['Rosalind', 'MK4T'],
+    arrived: page => page.$$eval('#stations-body input.f-label', els => {
+      const labels = els.map(e => e.value);
+      return labels.indexOf('Reference desk') !== -1 ? 'Reference desk' : JSON.stringify(labels);
+    }),
+    arrivedWant: 'Reference desk',
+    localField: 'stations.0.label',
+  },
+  {
+    /* The first adopter that already had a link of its own. This one is the
+       room as AUTHORED; lock.html?r= is the room as PLAYED. */
+    n: '019', file: '019-escape-room-builder.html', param: 'room',
+    slug: 'escape-room-builder',
+    libraryKey: 'escape-room-builder:rooms', docName: 'Vault of Ur',
+    freshIdField: 'roomId',
+    state: {
+      name: 'Vault of Ur', roomId: 'seedroom01', storyIntro: 'The archivist has lost the key.',
+      cardsPerPage: '4', ecLevel: 'Q', showNumber: true, randomizeStart: false,
+      countdownEnabled: true, countdownMinutes: 25, packetCardsPerPage: '2',
+      stations: [
+        { clue: 'I have keys but open no locks.', answers: 'keyboard, a keyboard', hint: 'It is on your desk', next: null, image: '', type: 'text', hintCost: 5, awardLetter: 'R', cipherPlain: '', cipherShift: 0, maxAttempts: 3, numericTolerance: null },
+        { clue: 'Decode the archivist’s note.', answers: 'the vault is open', hint: '', next: 'end', image: '', type: 'cipher', hintCost: 0, awardLetter: '', cipherPlain: 'the vault is open', cipherShift: 3, maxAttempts: 0, numericTolerance: null },
+      ],
+    },
+    expect: p => [
+      [p.stations.length === 2, 'the payload carries every station'],
+      [p.stations[0].answers === 'keyboard, a keyboard', 'with the accepted answers the student link deliberately never shows in full'],
+      [p.stations[0].hintCost === 5 && p.stations[0].maxAttempts === 3, 'the hint cost and the attempt cap'],
+      [p.stations[0].awardLetter === 'R', 'the letter it awards toward a meta-puzzle'],
+      [p.stations[1].next === 'end' && p.stations[1].cipherShift === 3, 'the branch target and the cipher shift'],
+      [p.storyIntro.indexOf('archivist') !== -1 && p.countdownMinutes === 25, 'and the story intro and countdown'],
+      [p.roomId === undefined, 'and NOT the roomId — a player’s progress is filed under it'],
+    ],
+    absent: ['seedroom01'],
+    arrived: page => page.$$eval('#stationsList textarea.f-clue', els => {
+      const clues = els.map(e => e.value);
+      return clues.some(c => c.indexOf('keys but open no locks') !== -1)
+        ? 'I have keys but open no locks.' : JSON.stringify(clues);
+    }),
+    arrivedWant: 'I have keys but open no locks.',
+    localField: 'stations.0.clue',
+  },
 ];
 
 /* ── 0. static: the four tags, in dependency order ──────────────────────── */
@@ -633,11 +795,41 @@ const shareLink = async (p) => {
 /** The localStorage entries that put `doc` in front of the teacher: one for a
     single-document tool, three for a library tool (the list, the blob under
     `name`, and the pointer at it). */
-const seedFor = (t, doc, name) => t.library
-  ? [[t.library.list, JSON.stringify([name])],
-     [t.library.data + name, JSON.stringify(doc)],
-     [t.library.current, name]]
-  : [[t.key, JSON.stringify(doc)]];
+const seedFor = (t, doc, name) => {
+  if (t.library) {
+    return [[t.library.list, JSON.stringify([name])],
+            [t.library.data + name, JSON.stringify(doc)],
+            [t.library.current, name]];
+  }
+  /* Increment 5's third storage shape: a library that lives inside ONE key as
+     { current, sets: { name: doc } } — 018 and 019 both. Seeded as the bare
+     object, which is what 018 writes and what _shared/store.js reads for 019 as
+     legacy version 0 before rewriting it as an envelope. */
+  if (t.libraryKey) return [[t.libraryKey, JSON.stringify({ current: name, sets: { [name]: doc } })]];
+  /* And 048's, which is a library too but keyed by id in a LIST rather than by
+     name in a map — the same claim (an arrival lands beside, nothing is lost)
+     over a third storage layout. */
+  if (t.libraryList) return [[t.libraryList.key, JSON.stringify({ list: [doc], currentId: doc.id })]];
+  return [[t.key, JSON.stringify(doc)]];
+};
+
+/** The names filed in a one-key library and the document under `name`, read
+    back out of storage. Handles both what the page was seeded with and the
+    { v, data } envelope _shared/store.js rewrites it as on the first save. */
+const readLibraryList = (page, key, name) => page.evaluate(([k, n]) => {
+  let store = null;
+  try { store = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { store = null; }
+  const list = (store && store.list) || [];
+  return { names: list.map(p => p && p.name), kept: list.filter(p => p && p.name === n)[0] || null };
+}, [key, name]);
+
+const readLibraryKey = (page, key, name) => page.evaluate(([k, n]) => {
+  let parsed = null;
+  try { parsed = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { parsed = null; }
+  const store = (parsed && typeof parsed === 'object' && parsed.data && !parsed.sets) ? parsed.data : parsed;
+  const sets = (store && store.sets) || {};
+  return { names: Object.keys(sets), kept: sets[n] || null };
+}, [key, name]);
 
 /** Writes `pairs` into localStorage before the page's own script runs — ONCE,
     however many times the page is navigated.
@@ -741,7 +933,7 @@ for (const t of TOOLS) {
   }
 
   /* ── 5b. saved beside, on a device that already has a library ──────────── */
-  if (t.library) {
+  if (t.library || t.libraryKey || t.libraryList) {
     /* The collision case, which is the only one that can lose work here: the
        teacher already has a document filed under the SAME NAME the link wants,
        with different content in it. */
@@ -765,10 +957,14 @@ for (const t of TOOLS) {
     ok(/Loaded a shared/.test(await mine.textContent('#shareNote')),
       `${t.n}: and the note says so: ` + JSON.stringify(await mine.textContent('#shareNote')));
 
-    const after = await mine.evaluate(([listKey, dataPrefix, name]) => ({
-      names: JSON.parse(localStorage.getItem(listKey) || '[]'),
-      kept: JSON.parse(localStorage.getItem(dataPrefix + name) || 'null'),
-    }), [t.library.list, t.library.data, t.docName]);
+    const after = t.libraryList
+      ? await readLibraryList(mine, t.libraryList.key, t.docName)
+      : t.libraryKey
+      ? await readLibraryKey(mine, t.libraryKey, t.docName)
+      : await mine.evaluate(([listKey, dataPrefix, name]) => ({
+        names: JSON.parse(localStorage.getItem(listKey) || '[]'),
+        kept: JSON.parse(localStorage.getItem(dataPrefix + name) || 'null'),
+      }), [t.library.list, t.library.data, t.docName]);
     eq(after.names.length, 2,
       `${t.n}: the saved list holds both, not one: ` + JSON.stringify(after.names));
     ok(after.names.indexOf(t.docName) !== -1,
@@ -782,8 +978,29 @@ for (const t of TOOLS) {
        cannot file a second copy of the same arrival. */
     await mine.reload({ waitUntil: 'load' });
     await settle(mine, 800);
-    const names2 = await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || '[]'), t.library.list);
+    const names2 = t.libraryList
+      ? (await readLibraryList(mine, t.libraryList.key, t.docName)).names
+      : t.libraryKey
+      ? (await readLibraryKey(mine, t.libraryKey, t.docName)).names
+      : await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || '[]'), t.library.list);
     eq(names2.length, 2, `${t.n}: a refresh does not file the same arrival a second time: ` + JSON.stringify(names2));
+
+    /* 019 alone: the id the arrival must NOT carry over. lock.html keys a
+       player's progress under `escape-room-progress:<roomId>`, so a copy that
+       kept the sender's id would resume a student's half-finished run of a
+       different teacher's room. Read off both documents in the library. */
+    if (t.freshIdField) {
+      const ids = await mine.evaluate(([k, field]) => {
+        let parsed = null;
+        try { parsed = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { parsed = null; }
+        const store = (parsed && parsed.data && !parsed.sets) ? parsed.data : parsed;
+        return Object.values((store && store.sets) || {}).map(d => d && d[field]);
+      }, [t.libraryKey, t.freshIdField]);
+      eq(ids.length, 2, `${t.n}: both rooms are there to compare ids: ` + JSON.stringify(ids));
+      ok(ids[0] && ids[1] && ids[0] !== ids[1],
+        `${t.n}: the arrival got its OWN ${t.freshIdField}, so a player's progress cannot carry across: ` +
+        JSON.stringify(ids));
+    }
   }
 
   /* ── 5c. merged beside, on the one tool whose arrival adds rows ───────── */
@@ -806,19 +1023,28 @@ for (const t of TOOLS) {
     ok(/Added \d+ from a shared/.test(await mine.textContent('#shareNote')),
       `${t.n}: and the note says how many it added: ` + JSON.stringify(await mine.textContent('#shareNote')));
 
-    const after = await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || '[]'), t.key);
-    eq(after.length, t.mergeLocal.length + t.state.length,
+    /* 075's merged list IS the stored document; 077's is one field of it
+       (`types`), because the rest of 077's document is the half that must not
+       travel at all. `mergePath` is which of the two this row is. */
+    const listOf = (doc) => (t.mergePath ? atPath(doc, t.mergePath) : doc) || [];
+    const after = listOf(await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), t.key));
+    eq(after.length, listOf(t.mergeLocal).length + listOf(t.state).length,
       `${t.n}: the saved list holds both sides of the merge: ` + JSON.stringify(after.map(r => r.name)));
     ok(after.some(r => r.name === t.mergeKeeps),
       `${t.n}: the row already on the device is still there`);
     ok(after.some(r => r.name === t.arrivedWant),
       `${t.n}: and the shared rows are there beside it`);
+    if (t.mergeKeepsToo) {
+      for (const [label, check] of t.mergeKeepsToo(await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), t.key))) {
+        ok(check, `${t.n}: ${label}`);
+      }
+    }
 
     /* The duplicate check is the guard against loss here, so it is what a
        second arrival of the same link must hit. */
     await mine.goto(url, { waitUntil: 'load' });
     await settle(mine, 900);
-    const twice = await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || '[]'), t.key);
+    const twice = listOf(await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), t.key));
     eq(twice.length, after.length,
       `${t.n}: opening the same link twice adds nobody a second time: ` + JSON.stringify(twice.map(r => r.name)));
     ok(/skipped \d+ already listed/.test(await mine.textContent('#shareNote')),

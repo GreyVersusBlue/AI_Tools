@@ -28,7 +28,10 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <!-- gvb:social:end -->
+<script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <script src="escape-room-builder/er-match.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -43,6 +46,12 @@
     --err-bg: #fbecea;   --err-line: #e6c6c1;
     --info-bg: #eaf1f5;  --info-line: #c9dbe3;
   }
+
+  /* Share a room: the sheet itself is _shared/share.js (Path 6 P3). This is
+     only the note under the toolbar that records what the sheet last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: 0 0 1rem; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --good: #63c08e;
     --good-bg: #173021;  --good-line: #2f5e42;
@@ -286,8 +295,10 @@
     <label for="setSwitch">Saved room:</label>
     <select id="setSwitch"></select>
     <button class="secondary" id="newSetBtn" type="button">New room</button>
+    <button class="secondary" id="shareBtn" type="button">&#128279; Share room&hellip;</button>
     <button class="danger" id="deleteSetBtn" type="button">Delete</button>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="layout">
     <div class="editor">
@@ -470,7 +481,7 @@
   Store.configure({ toolName: 'Escape Room Builder' });
 
   var els = {};
-  ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
+  ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName', 'shareBtn', 'shareNote',
    'chainPreview', 'stationsList', 'addStationBtn',
    'storyIntro', 'printCoverBtn', 'printCoverArea', 'coverTitle', 'coverStory',
    'playerLink', 'copyLinkBtn',
@@ -1476,7 +1487,151 @@
     }
   });
 
+  /* ---------- share a room: _shared/share.js (Path 6 P3) ----------
+     THIS PAGE ALREADY HAD A LINK, AND IT IS NOT THIS ONE. The Student link box
+     above builds `escape-room-builder/lock.html?r=…`: the room AS PLAYED, for a
+     phone at a station, carrying only what lock.html needs and deliberately not
+     the answer key's wording, the hints' costs or the print settings. This
+     button builds the room AS AUTHORED, for another teacher's builder — every
+     station's accepted answers, hints, letters, attempt caps, branch targets,
+     the story intro and the print layout — and it lands in their Saved room
+     list. Two links, two audiences; the first adopter in P3 where the tool
+     already had a link of its own, and the reason the parameter here is `room`
+     rather than anything lock.html reads.
+
+     THE roomId IS REGENERATED ON ARRIVAL, which is the mirror image of 058's
+     rule rather than a contradiction of it. 058 preserves duty ids because its
+     own stored assignments are filed under them; roomId is the opposite kind of
+     id — it identifies THIS COPY to the outside world, and lock.html keys a
+     player's progress under `escape-room-progress:<roomId>`. Carrying it over
+     would mean a student device that has already played the sender's room
+     resuming the receiver's copy three stations in, with no way to see why. A
+     fresh room gets a fresh id.
+
+     An arrival is filed BESIDE what is here under a free name, and asks
+     nothing — #239's rule for the library tools. Station images do not ride the
+     link (share.js strips every data: image by policy and the sheet says how
+     many); the downloaded .json carries them whole. */
+  var SHARE_PARAM = 'room';
+  var STATION_TYPES = ['text', 'digits', 'cipher'];
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  /** `name`, or the first "name (2)", "name (3)"… no saved room is using. */
+  function uniqueRoomName(name) {
+    var taken = loadStore().sets || {};
+    if (!taken[name]) return name;
+    var n = 2;
+    while (taken[name + ' (' + n + ')']) n++;
+    return name + ' (' + n + ')';
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      if (!state) return null;
+      return {
+        name: state.name, storyIntro: state.storyIntro || '',
+        cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel,
+        showNumber: state.showNumber !== false, randomizeStart: !!state.randomizeStart,
+        countdownEnabled: !!state.countdownEnabled, countdownMinutes: state.countdownMinutes,
+        packetCardsPerPage: state.packetCardsPerPage || '2',
+        stations: state.stations.map(function (st) {
+          return {
+            clue: st.clue, answers: st.answers, hint: st.hint || '', next: st.next,
+            image: st.image || '', type: st.type || 'text',
+            hintCost: st.hintCost || 0, awardLetter: st.awardLetter || '',
+            cipherPlain: st.cipherPlain || '', cipherShift: st.cipherShift || 0,
+            maxAttempts: st.maxAttempts || 0,
+            numericTolerance: st.numericTolerance === undefined ? null : st.numericTolerance
+          };
+        })
+      };
+    },
+    param: SHARE_PARAM,
+    tool: 'escape-room-builder',
+    title: 'Share this room',
+    noun: 'this room',
+    filename: function () { return (state && state.name) || 'escape room'; },
+    note: 'This is the room for another teacher to edit and print — every station with its accepted answers, hint, letter, attempt cap and branch, plus the story intro and print layout. It is not the student link: that one is in the box below and carries only what a phone at a station needs.',
+    successMessage: 'Link copied. Opening it in another teacher’s builder files this room beside their own, answer key and all.',
+    emptyMessage: 'There is no room to share yet.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleRoom(obj) {
+    return !!obj && typeof obj === 'object' && !Array.isArray(obj) && Array.isArray(obj.stations);
+  }
+
+  /** An arrival as a room this device can hold, with a new roomId and every
+      station field defaulted the way newSet() would leave it. */
+  function normalizeRoom(obj) {
+    var minutes = parseInt(obj.countdownMinutes, 10);
+    return {
+      name: uniqueRoomName(String(obj.name || '').trim() || 'Shared Escape Room'),
+      roomId: makeRoomId(),
+      storyIntro: typeof obj.storyIntro === 'string' ? obj.storyIntro : '',
+      cardsPerPage: String(obj.cardsPerPage || '4'),
+      ecLevel: String(obj.ecLevel || 'Q'),
+      showNumber: obj.showNumber !== false,
+      randomizeStart: !!obj.randomizeStart,
+      countdownEnabled: !!obj.countdownEnabled,
+      countdownMinutes: (isFinite(minutes) && minutes > 0) ? minutes : 20,
+      packetCardsPerPage: String(obj.packetCardsPerPage || '2'),
+      stations: obj.stations.map(function (st) {
+        st = (st && typeof st === 'object') ? st : {};
+        var next = null;
+        if (st.next === 'end') next = 'end';
+        else if (typeof st.next === 'number') next = st.next;
+        /* A puzzle type this build does not have would render a station with
+           no answer field at all, so an unknown one falls back to plain text —
+           the same shape 074 gave an unknown hazard symbol. */
+        var tol = Number(st.numericTolerance);
+        return {
+          clue: String(st.clue || ''), answers: String(st.answers || ''), hint: String(st.hint || ''),
+          next: next, image: typeof st.image === 'string' ? st.image : '',
+          type: STATION_TYPES.indexOf(st.type) !== -1 ? st.type : 'text',
+          hintCost: parseInt(st.hintCost, 10) || 0,
+          awardLetter: String(st.awardLetter || ''),
+          cipherPlain: String(st.cipherPlain || ''),
+          cipherShift: parseInt(st.cipherShift, 10) || 0,
+          maxAttempts: parseInt(st.maxAttempts, 10) || 0,
+          numericTolerance: (st.numericTolerance === null || st.numericTolerance === undefined ||
+            !isFinite(tol)) ? null : tol
+        };
+      })
+    };
+  }
+
+  /** Files an arriving room into the store and points `current` at it, so the
+      ordinary boot below opens it the way it opens any saved room. */
+  function importSharedRoom() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleRoom,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var room = normalizeRoom(decoded);
+        if (!room.stations.length) {
+          room.stations.push({ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0, maxAttempts: 0, numericTolerance: null });
+        }
+        var store = loadStore();
+        store.sets[room.name] = room;
+        store.current = room.name;
+        saveStore(store);
+        setShareNote('Loaded a shared room as \u201c' + room.name + '\u201d, ' + room.stations.length +
+          ' station' + (room.stations.length === 1 ? '' : 's') +
+          '. Your other rooms are untouched, and this copy has its own student link.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
+  importSharedRoom();
   var initial = loadStore();
   if (initial.current && initial.sets[initial.current]) {
     loadSetByName(initial.current);

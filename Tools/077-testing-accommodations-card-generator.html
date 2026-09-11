@@ -24,11 +24,27 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
+  /* The two tint pairs the share note sits on, in 001's values with dark
+     counterparts — ink-paper.css has no token for either. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share the accommodation list: the sheet itself is _shared/share.js
+     (Path 6 P3). This is only the note under the header that records what the
+     sheet last did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -104,9 +120,11 @@
       <p class="sub">Small per-student cards for testing day &mdash; stays entirely in your browser.</p>
     </div>
     <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share accommodation list&hellip;</button>
       <button class="secondary" id="printBtn">Print cards</button>
     </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <h2>Students</h2>
@@ -167,7 +185,7 @@
 
   var els = {};
   ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'typesWrap', 'addTypeBtn', 'assignTable', 'printBtn', 'printGrid',
-   'summaryLine', 'printWhoSelect', 'printColsSelect', 'filterSelect'].forEach(function (id) {
+   'summaryLine', 'printWhoSelect', 'printColsSelect', 'filterSelect', 'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -181,14 +199,22 @@
   }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
+  /** True when there was a saved card set here. An arriving accommodation
+      list needs to know: the six DEFAULT_TYPES an empty install shows are a
+      starter list, not a department's wording, and merging into them would
+      hand the receiving teacher six generic rows stapled to the four they
+      were sent. 069 and 078 each had this branch for the same reason, and
+      like theirs it is only findable by reading load(). */
   function load() {
+    var had = false;
     try {
       var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.roster)) state = saved;
+      if (saved && Array.isArray(saved.roster)) { state = saved; had = true; }
     } catch (e) { /* ignore */ }
     if (!state.types || !state.types.length) state.types = DEFAULT_TYPES.map(function (t) { return { id: uid(), name: t }; });
     if (!state.assignments) state.assignments = {};
     if (!state.notes) state.notes = {};
+    return had;
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -409,8 +435,105 @@
     window.print();
   });
 
+  /* ---------- share the accommodation list: _shared/share.js (Path 6 P3) ----------
+     WHAT TRAVELS IS THE LIST OF ACCOMMODATION TYPES AND NOTHING ELSE. No
+     student name, no tick, no note leaves this device — `tacg_cards_v1` is one
+     of the three keys _shared/tool-registry.js marks `student: true`, and a
+     ticked box here is a child's testing accommodation, which is the most
+     confidential thing this toolkit stores. 073 drew the same line on its own
+     marked key (share the milestone schedule, never a student's ticks); this is
+     that split applied to a sharper case, and the product answer is that a card
+     without its student is the DEPARTMENT'S WORDING — the exact phrases the
+     testing coordinator wants every proctor's cards to read, which is precisely
+     the thing that is worth agreeing on and copying by hand today.
+
+     An arrival therefore MERGES by name and asks nothing, the way 075's does:
+     adding a phrase to this list takes nothing away, and every existing tick is
+     filed under `<student>|<typeId>`, so keeping the local ids is what keeps a
+     ticked grid intact. Matching on the trimmed, case-folded name is the guard
+     against filing "Extended time" twice.
+
+     The one branch is the starter list: on a device that has never saved
+     anything, the six DEFAULT_TYPES are a seed rather than somebody's work, so
+     a shared list REPLACES them instead of merging into them. */
+  var SHARE_PARAM = 'accommodations';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { return { types: state.types.map(function (t) { return { id: t.id, name: t.name }; }) }; },
+    param: SHARE_PARAM,
+    tool: 'testing-accommodations-card-generator',
+    title: 'Share the accommodation list',
+    noun: 'this accommodation list',
+    filename: 'accommodation list',
+    note: 'Only the accommodation names travel — no student, no ticked box and no note ever leaves this device. Opening the link adds any wording the receiving device does not already have.',
+    successMessage: 'Link copied. It carries the accommodation wording only — no student, no tick, no note.',
+    emptyMessage: 'Add an accommodation type first — the list is what travels, not the students.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleList(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.types);
+  }
+
+  /** The arriving names, trimmed, blanks dropped, in the order they were sent. */
+  function incomingNames(decoded) {
+    var out = [];
+    decoded.types.forEach(function (t) {
+      var name = String(t && t.name != null ? t.name : '').trim();
+      if (name) out.push(name);
+    });
+    return out;
+  }
+
+  function importSharedList(hadSaved) {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleList,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var names = incomingNames(decoded);
+        if (!names.length) {
+          setShareNote('That link carried no accommodation names.', true);
+          return false;
+        }
+        /* Ids are local: every tick is filed under `<student>|<typeId>`, so an
+           arriving id would either mean nothing here or, worse, land on a type
+           this device already ticks. Fresh ids on the way in, local ids kept on
+           anything that matches by name. */
+        if (!hadSaved) {
+          state.types = names.map(function (n) { return { id: uid(), name: n }; });
+          save();
+          setShareNote('Loaded a shared accommodation list, ' + names.length + ' type' +
+            (names.length === 1 ? '' : 's') + '. Your students and ticks stay on this device — nothing came with it.');
+          return true;
+        }
+        var have = {};
+        state.types.forEach(function (t) { have[String(t.name || '').trim().toLowerCase()] = true; });
+        var added = 0, skipped = 0;
+        names.forEach(function (n) {
+          if (have[n.toLowerCase()]) { skipped++; return; }
+          have[n.toLowerCase()] = true;
+          state.types.push({ id: uid(), name: n });
+          added++;
+        });
+        save();
+        setShareNote('Added ' + added + ' from a shared accommodation list' +
+          (skipped ? ', skipped ' + skipped + ' already listed' : '') +
+          '. Every tick and note already here is untouched.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
-  load();
+  var hadSaved = load();
+  importSharedList(hadSaved);
   els.rosterInput.value = state.roster.join('\n');
   renderTypes();
   renderTable();

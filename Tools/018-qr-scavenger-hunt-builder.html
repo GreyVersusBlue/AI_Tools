@@ -22,7 +22,10 @@
 <meta name="twitter:image" content="https://greyversusblue.com/assets/og/guild-board.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%233B2A1A'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%237E2A20'/%3E%3Ccircle cx='13' cy='13' r='3.5' fill='%23A8443A'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
+<script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 
 <style>
   :root {
@@ -217,6 +220,22 @@
   }
   .back-link { display: inline-block; color: var(--text-dim); text-decoration: none; font-size: .85rem; padding: .3rem .5rem .3rem 0; }
   .back-link:hover { color: var(--accent); }
+
+  /* Share a hunt (Path 6 P3). This page predates ink-paper.css and paints its
+     own dark palette, so _shared/share.js's sheet would resolve its whole
+     fallback set — a white card with dark ink — and float a light dialog over
+     a dark page. Handing it this page's own surfaces is one declaration block
+     scoped to the backdrop it creates, so nothing leaks into the page: the
+     sheet's tokens are custom properties and inherit from there down. Not the
+     same as adopting a11y.js, which is Path 5's job and would be a re-skin. */
+  .share-sheet-backdrop {
+    --card: var(--surface); --card-2: var(--surface2); --ink: var(--text);
+    --line: var(--border); --err: var(--danger);
+  }
+  .share-note { max-width: 1100px; width: 100%; font-size: .8rem; line-height: 1.5; margin: 0 0 1rem;
+    padding: .55rem .75rem; border-radius: 8px; background: var(--surface2);
+    border: 1px solid var(--border); color: var(--text); word-break: break-word; }
+  .share-note.error { border-color: var(--danger); color: var(--danger); }
 </style>
 </head>
 <body>
@@ -231,8 +250,10 @@
   <label for="hunt-switch">Saved hunt:</label>
   <select id="hunt-switch"></select>
   <button class="btn-secondary" id="new-hunt-btn" type="button">New hunt</button>
+  <button class="btn-secondary" id="shareBtn" type="button">&#128279; Share hunt&hellip;</button>
   <button class="btn-danger" id="delete-hunt-btn" type="button">Delete</button>
 </div>
+<p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
 <div class="mode-tabs" id="mode-tabs">
   <button class="mode-tab active" id="tab-build" type="button">Build</button>
@@ -420,7 +441,7 @@
   var LEGACY_STORAGE_KEY = 'qr-scavenger-hunt-settings'; // single global blob, before named hunts existed
 
   var els = {};
-  ['hunt-toolbar', 'hunt-switch', 'new-hunt-btn', 'delete-hunt-btn', 'hunt-name',
+  ['hunt-toolbar', 'hunt-switch', 'new-hunt-btn', 'delete-hunt-btn', 'hunt-name', 'shareBtn', 'shareNote',
    'stations-body', 'add-row-btn', 'toggle-import', 'import-box', 'import-text', 'import-btn',
    'cards-per-page', 'ec-level', 'show-number', 'print-stations-btn', 'print-answers-btn', 'export-csv-btn',
    'print-clues-btn', 'print-clues-area', 'print-clues-grid',
@@ -1785,8 +1806,145 @@
     }
   });
 
+  /* ── Share a hunt: _shared/share.js (Path 6 P3) ───────────────────────────
+     One button opens the shared sheet — copy link, QR code (greyed out with
+     the reason when the payload is too dense to scan), download .json, and the
+     system share where the browser has one. There was no route off this device
+     before: the printed cards carry the stations, but a printed card cannot be
+     re-ordered, re-worded or re-coded by the teacher who gets it, and a hunt
+     is exactly the kind of thing a grade-level team builds once and runs four
+     times.
+
+     THE HUNT TRAVELS, THE RUN DOES NOT. `state.run` — the teams, their join
+     codes, every check-in mark, the hint penalties and the timer — is a live
+     session on this device, and its team names are the one place a student's
+     name plausibly appears in this tool. A shared hunt is a hunt to run, not a
+     race in progress, so getState() takes the authored fields only and the
+     receiving device builds its own empty run through ensureRun(). That is
+     073's per-field split applied to a tool whose two halves happen to live in
+     one object.
+
+     Station code words DO travel, because they are printed on both the Clue
+     Card and the Answer Key: a hunt whose words changed on the way over would
+     hand the receiving teacher a key that does not match their own cards.
+
+     This tool keeps a LIBRARY of hunts under one key, so an arrival lands
+     beside what is here under a free name and asks nothing — #239's rule,
+     where the guard against loss is the unique name rather than a dialog.
+
+     PATH 12 P2 (rank 40) will let a station pull its question from the shared
+     question bank. That was the reason this row sat unshared, and the decision
+     here is to share now: a station gaining a bank id is an ADDITIVE field in
+     a payload this tool validates itself, P3's whole premise is that a link is
+     a tool's own ordinary state rather than a frozen format, and rank 40 is
+     twenty-odd sessions away — which is a long time to leave a builder with no
+     way to hand over a hunt. */
+  var SHARE_PARAM = 'hunt';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  /** `name`, or the first "name (2)", "name (3)"… no saved hunt is using. */
+  function uniqueHuntName(name) {
+    var taken = loadStore().sets || {};
+    if (!taken[name]) return name;
+    var n = 2;
+    while (taken[name + ' (' + n + ')']) n++;
+    return name + ' (' + n + ')';
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      if (!state) return null;
+      return {
+        name: state.name,
+        cardsPerPage: state.cardsPerPage, ecLevel: state.ecLevel, showNumber: state.showNumber !== false,
+        stations: state.stations.map(function (s) {
+          return {
+            label: s.label, content: s.content, note: s.note,
+            qType: s.qType, choices: (s.choices || []).slice(), correctChoice: s.correctChoice,
+            numericAnswer: s.numericAnswer, tolerance: s.tolerance,
+            hint: s.hint || '', hintPenalty: s.hintPenalty || '0', codeWord: s.codeWord || ''
+          };
+        })
+      };
+    },
+    param: SHARE_PARAM,
+    tool: 'qr-scavenger-hunt-builder',
+    title: 'Share this hunt',
+    noun: 'this hunt',
+    filename: function () { return (state && state.name) || 'scavenger hunt'; },
+    note: 'Every station travels — its clue or link, your private note, the answer type, the hint and the printed code word — with the card layout. Your Live Run does not: teams, join codes, check-ins and the timer stay on this device.',
+    successMessage: 'Link copied. Opening it on another device files this hunt beside their own, stations and answer key and all. The Live Run stays here.',
+    emptyMessage: 'There is no hunt to share yet.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleHunt(obj) {
+    return !!obj && typeof obj === 'object' && !Array.isArray(obj) && Array.isArray(obj.stations);
+  }
+
+  /** An arrival as a hunt this device can hold: every station field defaulted
+      the way ensureStationDefaults() would, and no run — the receiving device
+      builds its own through ensureRun(). */
+  function normalizeHunt(obj) {
+    return {
+      name: uniqueHuntName(String(obj.name || '').trim() || 'Shared Hunt'),
+      cardsPerPage: String(obj.cardsPerPage || '4'),
+      ecLevel: String(obj.ecLevel || 'Q'),
+      showNumber: obj.showNumber !== false,
+      stations: obj.stations.map(function (s) {
+        var st = blankStation();
+        if (!s || typeof s !== 'object') return st;
+        st.label = String(s.label || '');
+        st.content = String(s.content || '');
+        st.note = String(s.note || '');
+        st.qType = Q_TYPES.indexOf(s.qType) !== -1 ? s.qType : 'text';
+        st.choices = Array.isArray(s.choices) ? s.choices.map(function (c) { return String(c == null ? '' : c); }) : [];
+        st.correctChoice = parseInt(s.correctChoice, 10) || 0;
+        st.numericAnswer = String(s.numericAnswer == null ? '' : s.numericAnswer);
+        st.tolerance = String(s.tolerance == null ? '0' : s.tolerance);
+        st.hint = String(s.hint || '');
+        st.hintPenalty = String(s.hintPenalty == null ? '0' : s.hintPenalty);
+        st.codeWord = String(s.codeWord || '');
+        return st;
+      })
+    };
+  }
+
+  /** Files an arriving hunt into the store and points `current` at it, so the
+      ordinary init below opens it the way it opens any saved hunt. Returns the
+      name it was filed under, or null. Runs AFTER migrateLegacySettings(),
+      because that migration bails the moment any named hunt exists (#239). */
+  function importSharedHunt() {
+    var filed = null;
+    Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleHunt,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var hunt = normalizeHunt(decoded);
+        if (!hunt.stations.length) hunt.stations.push(blankStation());
+        var store = loadStore();
+        store.sets[hunt.name] = hunt;
+        store.current = hunt.name;
+        saveStore(store);
+        filed = hunt.name;
+        setShareNote('Loaded a shared hunt as \u201c' + hunt.name + '\u201d, ' + hunt.stations.length +
+          ' station' + (hunt.stations.length === 1 ? '' : 's') +
+          '. Your other hunts are untouched, and your Live Run teams did not travel with it.');
+        return true;
+      }
+    });
+    return filed;
+  }
+
   // ── Init ─────────────────────────────────────────────────────────────────
   migrateLegacySettings();
+  importSharedHunt();
   var initialStore = loadStore();
   if (initialStore.current && initialStore.sets[initialStore.current]) {
     loadHuntByName(initialStore.current);
