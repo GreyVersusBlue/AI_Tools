@@ -22,6 +22,10 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -64,6 +68,12 @@
   .bulk-note { font-size: .8rem; line-height: 1.5; margin: 0 0 .2rem; padding: .55rem .7rem; border-radius: 6px;
     background: var(--info-bg); border: 1px solid var(--info-line); }
   .bulk-note.error { background: var(--err-bg); border-color: var(--err-line); }
+
+  /* Share your custom questions: the sheet itself is _shared/share.js (Path 6
+     P3). This is only the note under the header that records what it did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   input[type="text"], input[type="number"], select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
     background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
@@ -176,7 +186,11 @@
       <h1>Geography Bee / Map Skills Quiz Generator</h1>
       <p class="sub">Capitals, landmarks, map-reading skills, and outline-map questions &mdash; project one at a time, print a quiz with an answer key, or run it as a team tournament.</p>
     </div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share custom questions&hellip;</button>
+    </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <div class="controls">
@@ -607,7 +621,8 @@
    'mapGenDataset', 'mapGenCount', 'mapGenBtn', 'mapGenNote',
    'tourToggleBtn', 'tournamentCard', 'tourSetup', 'tourTeams', 'tourPoints', 'tourStartBtn', 'tourNames',
    'tourLive', 'tourBoard', 'tourTurn', 'tourRightBtn', 'tourWrongBtn', 'tourStandingsBtn', 'tourEndBtn',
-   'tourStandings', 'tourStandingsTitle', 'tourStandingsList', 'tourResumeBtn', 'tourNewBtn'
+   'tourStandings', 'tourStandingsTitle', 'tourStandingsList', 'tourResumeBtn', 'tourNewBtn',
+   'shareBtn', 'shareNote'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var custom = [];
@@ -1272,11 +1287,135 @@
     });
   });
 
+  /* ---------- share the custom bank: _shared/share.js (Path 6 P3) ----------
+     WHAT TRAVELS IS THE CUSTOM QUESTIONS — typed, bulk-pasted, or generated
+     against the outline maps. A map question is a three-word description
+     (which dataset, which region, which crop) and NOT a picture: the receiving
+     device draws its own from the same vendored map data, so the map half of
+     this tool travels in about forty bytes a question.
+
+     Three keys stay here. `gbq_disabled_v1` is which built-ins this teacher
+     switched off, and applying a sender's copy would take questions out of
+     the receiver's bank without asking — an arrival that does not stop to ask
+     must only add (053 writes this out in full). `gbq_settings_v1` is the
+     filter, format and quiz version of their last print run. And
+     `gbq_tournament_v1` is a GAME IN PROGRESS, with this room's team names
+     and this room's score: 018's rule, that the hunt travels and the Live Run
+     does not, in the tool it was written for. */
+  /** A key the tool itself declares, rather than one inherited from
+      Object.prototype — an arriving "constructor" would pass a bare lookup
+      and then render as a function on the board. */
+  function known(map, key) { return Object.prototype.hasOwnProperty.call(map, key); }
+
+  var SHARE_PARAM = 'quiz';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  /** A map descriptor worth carrying, or null. Anything the map module would
+      not recognise is dropped rather than sent: the question still reads and
+      the answer is still right, which is how the rest of this tool degrades
+      when the maps are unavailable. */
+  function shareableMap(map) {
+    if (!map || typeof map !== 'object') return null;
+    if (map.dataset !== 'us' && map.dataset !== 'world') return null;
+    var region = String(map.region == null ? '' : map.region).trim();
+    if (!region) return null;
+    var context = String(map.context == null ? '' : map.context).trim();
+    return { dataset: map.dataset, region: region, context: context || null };
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      if (!custom.length) return null;
+      return {
+        questions: custom.map(function (c) {
+          var row = { category: c.category, area: c.area, q: c.q, a: c.a };
+          var map = shareableMap(c.map);
+          if (map) row.map = map;
+          return row;
+        })
+      };
+    },
+    param: SHARE_PARAM,
+    tool: 'geography-bee-quiz-generator',
+    title: 'Share your custom questions',
+    noun: 'your custom questions',
+    filename: 'geography questions',
+    note: 'Only the questions you added travel — map questions as a region name, which the other device draws itself. Which built-ins you have switched off, your filters and any tournament in progress stay here.',
+    successMessage: 'Link copied. It carries your own questions only — the built-in bank is already on the other device.',
+    emptyMessage: 'Add or generate a question of your own first. The built-in bank is already on every device, so there would be nothing to send.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleBank(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.questions);
+  }
+
+  /** The arriving rows, trimmed, blanks dropped, with a category and region
+      this page has a filter for. */
+  function incomingQuestions(decoded) {
+    var out = [];
+    decoded.questions.forEach(function (row) {
+      if (!row || typeof row !== 'object') return;
+      var q = String(row.q == null ? '' : row.q).trim();
+      var a = String(row.a == null ? '' : row.a).trim();
+      if (!q || !a) return;
+      var category = String(row.category == null ? '' : row.category).trim();
+      out.push({
+        q: q, a: a,
+        category: known(CAT_LABELS, category) ? category : 'capitals',
+        area: isArea(row.area) ? row.area : 'global',
+        map: shareableMap(row.map)
+      });
+    });
+    return out;
+  }
+
+  function importSharedBank() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleBank,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var rows = incomingQuestions(decoded);
+        if (!rows.length) {
+          setShareNote('That link carried no questions.', true);
+          return false;
+        }
+        function fingerprint(row) {
+          return String(row.q).trim().toLowerCase() + '\u0000' + String(row.a).trim().toLowerCase();
+        }
+        var have = {};
+        custom.forEach(function (c) { have[fingerprint(c)] = true; });
+        var added = 0, skipped = 0;
+        rows.forEach(function (row) {
+          var fp = fingerprint(row);
+          if (have[fp]) { skipped++; return; }
+          have[fp] = true;
+          var saved = { id: uid(), category: row.category, area: row.area, q: row.q, a: row.a };
+          if (row.map) saved.map = row.map;
+          custom.push(saved);
+          added++;
+        });
+        saveCustom();
+        setShareNote('Added ' + added + ' from a shared question bank' +
+          (skipped ? ', skipped ' + skipped + ' already listed' : '') +
+          '. Your own questions, the built-ins you switched off and any game in progress are untouched.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
   loadCustom();
   loadDisabled();
   loadSettings();
   loadTournament();
+  importSharedBank();
   resetOrder();
   renderDisplay();
   renderBank();

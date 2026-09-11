@@ -794,6 +794,8 @@
       title: 'Math “Find the Mistake” Warm-Up Generator',
       file: 'Tools/066-math-find-the-mistake-generator.html',
       category: 'math',
+      /* The share link carries the teacher's own problems only. */
+      share: { param: 'mistakes' },
       keys: [
         { k: 'mftm_custom_v1' },
         { k: 'mftm_disabled_builtins_v1' },
@@ -804,6 +806,9 @@
       title: 'Fraction–Decimal–Percent Conversion Drill Generator',
       file: 'Tools/061-fraction-decimal-percent-drill-generator.html',
       category: 'math',
+      /* The share link carries the seed the sheet was drawn from, not its
+         rows — the receiving device regenerates the same worksheet. */
+      share: { param: 'drill' },
       keys: [
         { k: 'fdp_settings_v1' },
       ],
@@ -899,6 +904,8 @@
       title: 'Daily Editing / DOL Warm-Up Generator',
       file: 'Tools/055-daily-editing-warmup-generator.html',
       category: 'ela',
+      /* The share link carries the teacher's own sentences only. */
+      share: { param: 'editing' },
       keys: [
         { k: 'deg_custom_v1' },
         { k: 'deg_hidden_v1' },
@@ -1187,6 +1194,9 @@
       title: 'Geography Bee / Map Skills Quiz Generator',
       file: 'Tools/062-geography-bee-quiz-generator.html',
       category: 'social-studies',
+      /* The share link carries the custom questions only — never the
+         disabled built-ins, the filters, or a tournament in progress. */
+      share: { param: 'quiz' },
       keys: [
         { k: 'gbq_custom_v1' },
         { k: 'gbq_disabled_v1' },
@@ -1296,6 +1306,9 @@
       title: 'Cultural Trivia Card Generator',
       file: 'Tools/053-cultural-trivia-card-generator.html',
       category: 'world-language',
+      /* The share link carries the CUSTOM questions only — the built-in bank
+         ships with the page, and the hidden list and settings are this device's. */
+      share: { param: 'trivia' },
       keys: [
         { k: 'ctcg_custom_v1' },
         { k: 'ctcg_hidden_v1' },

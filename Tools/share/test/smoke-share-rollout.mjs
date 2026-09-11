@@ -754,13 +754,149 @@ const TOOLS = [
     arrivedWant: 'I have keys but open no locks.',
     localField: 'stations.0.clue',
   },
+  {
+    /* Increment 6, the bank-plus-settings group: a built-in bank that ships
+       with the page, the teacher's own additions beside it, and device
+       settings. What travels is the ADDITIONS — the built-ins are already on
+       the other machine — and what must not is the SUBTRACTIONS, which is
+       what `untouched` is here to prove. */
+    n: '053', file: '053-cultural-trivia-card-generator.html', param: 'trivia',
+    key: 'ctcg_custom_v1', slug: 'cultural-trivia-card-generator',
+    merges: true, mergeNameOf: r => r.q,
+    extraSeed: [['ctcg_hidden_v1', JSON.stringify(['b3', 'b11'])],
+                ['ctcg_settings_v1', JSON.stringify({ category: 'francophone', cardCount: '18' })]],
+    untouched: [['ctcg_hidden_v1', JSON.stringify(['b3', 'b11'])],
+                ['ctcg_settings_v1', JSON.stringify({ category: 'francophone', cardCount: '18' })]],
+    state: [
+      { id: 'c-a', category: 'hispanic', q: 'Which Andean instrument is a bundle of stopped pipes?', a: 'The zampoña' },
+      { id: 'c-b', category: 'francophone', q: 'Which Senegalese port city faces Gorée Island?', a: 'Dakar' },
+    ],
+    expect: p => [
+      [Array.isArray(p.questions) && p.questions.length === 2, 'the payload carries the custom bank'],
+      [p.questions[0].a === 'The zampoña', 'with the answer, not only the question'],
+      [p.questions[1].category === 'francophone', 'and the category it is filed under'],
+      [JSON.stringify(p).indexOf('Día de los Muertos') === -1,
+        'and not one built-in question, which is already on the other device'],
+      [p.hidden === undefined, 'the hidden built-ins do not travel — an arrival must not subtract'],
+      [p.settings === undefined && p.cardCount === undefined, 'and neither do the filter and the card count'],
+    ],
+    arrived: page => page.$eval('#bankList', el =>
+      el.textContent.indexOf('zampoña') !== -1 ? 'zampoña' : el.textContent.slice(0, 140)),
+    arrivedWant: 'zampoña',
+    mergeAdds: 'Which Andean instrument is a bundle of stopped pipes?',
+    arrivedNote: /Added \d+ from a shared/,
+    mergeLocal: [
+      { id: 'c-mine', category: 'global', q: 'Which Japanese craft folds paper without cutting it?', a: 'Origami (the classical kind)' },
+    ],
+    mergeKeeps: 'Which Japanese craft folds paper without cutting it?',
+  },
+  {
+    n: '055', file: '055-daily-editing-warmup-generator.html', param: 'editing',
+    key: 'deg_custom_v1', slug: 'daily-editing-warmup-generator',
+    merges: true, mergeNameOf: r => r.broken,
+    extraSeed: [['deg_hidden_v1', JSON.stringify(['b2'])],
+                ['deg_settings_v1', JSON.stringify({ category: 'homophones', sheetCount: '9' })]],
+    untouched: [['deg_hidden_v1', JSON.stringify(['b2'])],
+                ['deg_settings_v1', JSON.stringify({ category: 'homophones', sheetCount: '9' })]],
+    state: [
+      { id: 's-a', broken: 'the marching band play there first show friday', fixed: 'The marching band plays their first show Friday.', category: 'subject-verb' },
+      { id: 's-b', broken: 'wheres the rubric you promised us', fixed: 'Where’s the rubric you promised us?', category: 'punctuation' },
+    ],
+    expect: p => [
+      [Array.isArray(p.sentences) && p.sentences.length === 2, 'the payload carries the teacher’s own sentences'],
+      [p.sentences[0].fixed.indexOf('plays their first show') !== -1, 'with the corrected version, which is the answer key'],
+      [p.sentences[1].category === 'punctuation', 'and the error type it is filed under'],
+      [JSON.stringify(p).indexOf('their going to the movies') === -1, 'and no built-in sentence'],
+      [p.hidden === undefined && p.settings === undefined, 'and neither the hidden built-ins nor the filters'],
+    ],
+    arrived: page => page.$eval('#bankList', el =>
+      el.textContent.indexOf('marching band') !== -1 ? 'marching band' : el.textContent.slice(0, 140)),
+    arrivedWant: 'marching band',
+    mergeAdds: 'the marching band play there first show friday',
+    arrivedNote: /Added \d+ from a shared/,
+    mergeLocal: [
+      { id: 's-mine', broken: 'me and jamal was late to advisory', fixed: 'Jamal and I were late to advisory.', category: 'subject-verb' },
+    ],
+    mergeKeeps: 'me and jamal was late to advisory',
+  },
+  {
+    /* The map half of this tool travels as a REGION NAME, not a picture: the
+       receiving device draws its own from the same vendored map data. And the
+       tournament is 018's Live Run in the tool that rule was written for. */
+    n: '062', file: '062-geography-bee-quiz-generator.html', param: 'quiz',
+    key: 'gbq_custom_v1', slug: 'geography-bee-quiz-generator',
+    merges: true, mergeNameOf: r => r.q,
+    extraSeed: [['gbq_disabled_v1', JSON.stringify(['b4'])],
+                ['gbq_settings_v1', JSON.stringify({ category: 'capitals', region: 'africa', sheetCount: '14', format: 'mc', quizVersion: '3' })],
+                ['gbq_tournament_v1', JSON.stringify({ teams: [{ name: 'Team Kestrel', score: 7 }, { name: 'Team Anorak', score: 4 }], turn: 1, asked: 6, points: 2 })]],
+    untouched: [['gbq_disabled_v1', JSON.stringify(['b4'])],
+                ['gbq_tournament_v1', JSON.stringify({ teams: [{ name: 'Team Kestrel', score: 7 }, { name: 'Team Anorak', score: 4 }], turn: 1, asked: 6, points: 2 })]],
+    state: [
+      { id: 'q-a', category: 'landmarks', area: 'south-america', q: 'Which salt flat in Bolivia is the largest on Earth?', a: 'Salar de Uyuni' },
+      { id: 'q-b', category: 'maps', area: 'europe', q: 'Which country is shaded on this map?', a: 'Portugal', map: { dataset: 'world', region: 'Portugal', context: 'europe' } },
+    ],
+    expect: p => [
+      [Array.isArray(p.questions) && p.questions.length === 2, 'the payload carries the custom bank'],
+      [p.questions[0].a === 'Salar de Uyuni', 'with the answer'],
+      [p.questions[1].map && p.questions[1].map.region === 'Portugal' && p.questions[1].map.dataset === 'world',
+        'and a map question as a region name the other device can draw itself'],
+      [JSON.stringify(p.questions[1]).length < 400, 'which is a few dozen bytes rather than a picture'],
+      [JSON.stringify(p).indexOf('Team Kestrel') === -1, 'and the tournament in progress does not travel at all'],
+      [p.disabled === undefined && p.settings === undefined, 'nor the disabled built-ins or the filters'],
+    ],
+    absent: ['Team Kestrel', 'Team Anorak'],
+    arrived: page => page.$eval('#bankList', el =>
+      el.textContent.indexOf('Salar de Uyuni') !== -1 ? 'Salar de Uyuni' : el.textContent.slice(0, 140)),
+    arrivedWant: 'Salar de Uyuni',
+    mergeAdds: 'Which salt flat in Bolivia is the largest on Earth?',
+    arrivedNote: /Added \d+ from a shared/,
+    mergeLocal: [
+      { id: 'q-mine', category: 'capitals', area: 'asia', q: 'What is the capital of Kazakhstan?', a: 'Astana' },
+    ],
+    mergeKeeps: 'What is the capital of Kazakhstan?',
+  },
+  {
+    /* The one tool in the group that writes its fields with innerHTML, on
+       purpose — the built-ins are full of character entities and the add form
+       makes <br> out of a newline. A link is the first input this site has
+       had that did not come from the person at the keyboard, so an arriving
+       field is escaped and only <br> and entities are put back. */
+    n: '066', file: '066-math-find-the-mistake-generator.html', param: 'mistakes',
+    key: 'mftm_custom_v1', slug: 'math-find-the-mistake-generator',
+    merges: true, mergeNameOf: r => r.problem,
+    extraSeed: [['mftm_disabled_builtins_v1', JSON.stringify(['b5', 'b14'])]],
+    untouched: [['mftm_disabled_builtins_v1', JSON.stringify(['b5', 'b14'])]],
+    state: [
+      { id: 'p-a', band: 'middle', category: 'percents', problem: 'Increase 40 by 15%', work: '40 + 15 = 55', fix: '40 &times; 1.15 = 46', explain: 'A percent increase is multiplied, not added as a raw number.' },
+      { id: 'p-b', band: 'high', category: 'exponents', problem: 'Simplify: (2x)&sup3;', work: '(2x)&sup3; = 2x&sup3;', fix: '(2x)&sup3; = 8x&sup3;', explain: 'The exponent applies to the 2 as well as the x.<br>2&sup3; = 8.' },
+    ],
+    expect: p => [
+      [Array.isArray(p.problems) && p.problems.length === 2, 'the payload carries the custom problems'],
+      [p.problems[0].work === '40 + 15 = 55', 'with the deliberately wrong working'],
+      [p.problems[0].fix === '40 &times; 1.15 = 46', 'the correct solution, entities and all'],
+      [p.problems[1].explain.indexOf('<br>') !== -1, 'and the line break the tool’s own editor made'],
+      [p.problems[1].band === 'high', 'plus the grade band it is filed under'],
+      [JSON.stringify(p).indexOf('Machu Picchu') === -1 && p.disabled === undefined,
+        'and not the built-ins, nor which of them this teacher switched off'],
+    ],
+    arrived: page => page.$eval('#bankList', el =>
+      el.textContent.indexOf('Increase 40 by 15%') !== -1 ? 'Increase 40 by 15%' : el.textContent.slice(0, 140)),
+    arrivedWant: 'Increase 40 by 15%',
+    arrivedNote: /Added \d+ from a shared/,
+    mergeLocal: [
+      { id: 'p-mine', band: 'elementary', category: 'fractions', problem: 'Add: 1/4 + 1/4', work: '1/4 + 1/4 = 2/8', fix: '1/4 + 1/4 = 1/2', explain: 'Add the numerators only; the denominator stays.' },
+    ],
+    mergeKeeps: 'Add: 1/4 + 1/4',
+  },
 ];
 
 /* ── 0. static: the four tags, in dependency order ──────────────────────── */
 console.log('Share rollout — Path 6 P3, the builders that could not share');
 
 const ORDER = ['_shared/state-link.js', '_shared/vendor/qrcode/qrcode.js', '_shared/qr-draw.js', '_shared/share.js'];
-for (const t of [...TOOLS, { n: '081', file: '081-word-problem-warmup-generator.html' }]) {
+for (const t of [...TOOLS,
+                 { n: '081', file: '081-word-problem-warmup-generator.html' },
+                 { n: '061', file: '061-fraction-decimal-percent-drill-generator.html' }]) {
   const html = fs.readFileSync(path.join(SITE, 'Tools', t.file), 'utf8');
   const at = ORDER.map(src => html.indexOf(`src="../${src}"`));
   ok(at.every(i => i !== -1), `${t.n}: loads all four share scripts: ${JSON.stringify(ORDER.filter((s, i) => at[i] === -1))}`);
@@ -795,7 +931,13 @@ const shareLink = async (p) => {
 /** The localStorage entries that put `doc` in front of the teacher: one for a
     single-document tool, three for a library tool (the list, the blob under
     `name`, and the pointer at it). */
-const seedFor = (t, doc, name) => {
+const seedFor = (t, doc, name) => [...seedForDoc(t, doc, name), ...(t.extraSeed || [])];
+
+/** Just the document's own entries, before the tool's OTHER keys are added.
+    Increment 6's bank tools each write three or four keys and only one of
+    them is the bank, so `extraSeed` is how the rest get onto the device —
+    which is what makes "the arrival did not touch them" a real assertion. */
+const seedForDoc = (t, doc, name) => {
   if (t.library) {
     return [[t.library.list, JSON.stringify([name])],
             [t.library.data + name, JSON.stringify(doc)],
@@ -1014,7 +1156,7 @@ for (const t of TOOLS) {
     pages.push([t.n + '-merges', mine]);
     const asked = [];
     mine.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
-    await seed(mine, [[t.key, JSON.stringify(t.mergeLocal)]]);
+    await seed(mine, [[t.key, JSON.stringify(t.mergeLocal)], ...(t.extraSeed || [])]);
     await mine.goto(url, { waitUntil: 'load' });
     await settle(mine, 900);
 
@@ -1027,13 +1169,27 @@ for (const t of TOOLS) {
        (`types`), because the rest of 077's document is the half that must not
        travel at all. `mergePath` is which of the two this row is. */
     const listOf = (doc) => (t.mergePath ? atPath(doc, t.mergePath) : doc) || [];
+    /* What names a row, so the two claims below can be written once: 075 and
+       077 file people, increment 6's bank tools file questions. `mergeAdds`
+       is the arriving row's name where that is not the same string section 4
+       looks for on screen — a question is named by its whole text and no
+       assertion should read a 90-character sentence out of a rendered list. */
+    const nameOf = t.mergeNameOf || (r => r.name);
     const after = listOf(await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), t.key));
     eq(after.length, listOf(t.mergeLocal).length + listOf(t.state).length,
-      `${t.n}: the saved list holds both sides of the merge: ` + JSON.stringify(after.map(r => r.name)));
-    ok(after.some(r => r.name === t.mergeKeeps),
+      `${t.n}: the saved list holds both sides of the merge: ` + JSON.stringify(after.map(nameOf)));
+    ok(after.some(r => nameOf(r) === t.mergeKeeps),
       `${t.n}: the row already on the device is still there`);
-    ok(after.some(r => r.name === t.arrivedWant),
+    ok(after.some(r => nameOf(r) === (t.mergeAdds || t.arrivedWant)),
       `${t.n}: and the shared rows are there beside it`);
+    /* Increment 6's claim, and the reason those tools share the bank and not
+       the whole of storage: an arrival that never stops to ask must only ADD,
+       so the keys it has no business in are still byte-for-byte what they
+       were — the hidden built-ins, the filters, a tournament in progress. */
+    for (const [k, want] of (t.untouched || [])) {
+      eq(await mine.evaluate(key => localStorage.getItem(key), k), want,
+        `${t.n}: the arrival left ${k} exactly as it was`);
+    }
     if (t.mergeKeepsToo) {
       for (const [label, check] of t.mergeKeepsToo(await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), t.key))) {
         ok(check, `${t.n}: ${label}`);
@@ -1046,7 +1202,7 @@ for (const t of TOOLS) {
     await settle(mine, 900);
     const twice = listOf(await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), t.key));
     eq(twice.length, after.length,
-      `${t.n}: opening the same link twice adds nobody a second time: ` + JSON.stringify(twice.map(r => r.name)));
+      `${t.n}: opening the same link twice adds nobody a second time: ` + JSON.stringify(twice.map(nameOf)));
     ok(/skipped \d+ already listed/.test(await mine.textContent('#shareNote')),
       `${t.n}: and says it skipped them: ` + JSON.stringify(await mine.textContent('#shareNote')));
   }
@@ -1214,6 +1370,204 @@ console.log('\n081 — 081-word-problem-warmup-generator.html (a seed, not probl
   await settle(broken, 700);
   ok(/could not be read/.test(await broken.textContent('#shareNote')),
     '081: a mangled link says so rather than opening blank');
+}
+
+/* ── 066: the arriving field that is written with innerHTML ─────────────── */
+/* Every other adopter escapes what it prints. 066 does not, on purpose — its
+   problems are full of &minus; and &frac12; and its own editor turns a newline
+   into <br> — so it is the one tool where a payload is markup by the time it
+   reaches the board. A link is the first input on this site that did not come
+   from the teacher at this keyboard; this is the assertion that says so. */
+console.log('\n066 — an arriving field is escaped before it is written as HTML');
+{
+  const hostile = {
+    problems: [{
+      band: 'middle', category: 'other',
+      problem: 'Simplify: 6 &divide; 2<img src=x onerror="window.__pwned=1">',
+      work: '6 &divide; 2 = 4<script>window.__pwned=1<\/script>',
+      fix: '6 &divide; 2 = 3', explain: 'Division, not subtraction.<br>Check it.',
+    }],
+  };
+  const page = await prepPage(browser, BASE, { width: 1200, height: 900 });
+  pages.push(['066-hostile', page]);
+  await page.goto(BASE + '/Tools/066-math-find-the-mistake-generator.html', { waitUntil: 'load' });
+  await settle(page, 500);
+  const url = await page.evaluate(st => location.origin + location.pathname + '?' +
+    'mistakes=' + encodeURIComponent(window.StateLink.encodeState(st)), hostile);
+  const victim = await prepPage(browser, BASE, { width: 1200, height: 900 });
+  pages.push(['066-hostile-receiver', victim]);
+  await victim.goto(url, { waitUntil: 'load' });
+  await settle(victim, 800);
+
+  ok(/Added 1 from a shared/.test(await victim.textContent('#shareNote')),
+    '066: the hostile payload is still filed, because it is an ordinary problem with markup in it');
+  /* The projector shows the FIRST problem that passes the filters, and the
+     built-ins come first — so narrow the filters to the one combination no
+     built-in has (Other + middle) and the arrival is what is on the board. */
+  await victim.evaluate(() => {
+    document.querySelectorAll('#categoryFilterList input[data-cat]').forEach((cb) => {
+      if (cb.getAttribute('data-cat') !== 'other') { cb.checked = false; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+    });
+    document.querySelectorAll('#bandFilterList input[data-band]').forEach((cb) => {
+      if (cb.getAttribute('data-band') !== 'middle') { cb.checked = false; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+    });
+  });
+  await settle(victim, 300);
+  await victim.click('#revealBtn');
+  await settle(victim, 200);
+  eq(await victim.evaluate(() => window.__pwned === undefined), true,
+    '066: and nothing in it ran');
+  eq(await victim.evaluate(() => document.querySelectorAll('#displayProblem img, #bankList img').length), 0,
+    '066: the <img> arrived as text rather than as an element');
+  ok((await victim.textContent('#displayProblem')).indexOf('<img') !== -1,
+    '066: it is on the board, visibly, as the characters that were sent: ' +
+    JSON.stringify(await victim.textContent('#displayProblem')));
+  eq(await victim.evaluate(() => document.querySelectorAll('#displayExplain br').length), 1,
+    '066: while the <br> its own editor writes still comes through as a line break');
+  ok((await victim.innerHTML('#displayWork')).indexOf('&divide;') === -1 &&
+     (await victim.textContent('#displayWork')).indexOf('÷') !== -1,
+    '066: and a character entity still renders as its character: ' +
+    JSON.stringify(await victim.textContent('#displayWork')));
+}
+
+/* ── 062: the arriving map question is DRAWN, not carried ───────────────── */
+/* The reason a map question costs about forty bytes of link is that what
+   travels is a descriptor — which dataset, which region, which crop — and the
+   receiving device renders it from the same vendored map data. Section 3
+   asserts the descriptor is in the payload and section 4 that the question is
+   filed; neither proves the receiving device can actually draw it, which is
+   the whole claim. This does, through the tool's own map module. */
+console.log('\n062 — an arriving map question is drawn from the receiving device’s own map data');
+{
+  const shared = { questions: [{ category: 'maps', area: 'europe', q: 'Which country is shaded on this map?', a: 'Portugal', map: { dataset: 'world', region: 'Portugal', context: 'europe' } }] };
+  const sender = await prepPage(browser, BASE, { width: 1200, height: 900 });
+  pages.push(['062-map-sender', sender]);
+  await sender.goto(BASE + '/Tools/062-geography-bee-quiz-generator.html', { waitUntil: 'load' });
+  await settle(sender, 700);
+  const url = await sender.evaluate(st => location.origin + location.pathname + '?' +
+    'quiz=' + encodeURIComponent(window.StateLink.encodeState(st)), shared);
+
+  const receiver = await prepPage(browser, BASE, { width: 1200, height: 900 });
+  pages.push(['062-map-receiver', receiver]);
+  await receiver.goto(url, { waitUntil: 'load' });
+  await settle(receiver, 900);
+
+  const drawn = await receiver.evaluate(async () => {
+    const hooks = window.__gbqTestHooks;
+    const q = hooks.allQuestions().filter(x => x.custom && x.map)[0];
+    if (!q) return 'the map question was not filed';
+    const m = await hooks.mapModule();
+    const res = await m.renderSnippet({ dataset: q.map.dataset, region: q.map.region, context: q.map.context, width: 300, ratio: 2.6 });
+    if (!res || !res.url) return 'no snippet came back';
+    return res.url.slice(0, 15) + ' ' + (res.width > 0 && res.height > 0 ? 'sized' : 'unsized');
+  });
+  eq(drawn, 'data:image/png; sized',
+    '062: the receiving device draws the shared region from its own map data: ' + JSON.stringify(drawn));
+}
+
+/* ── 061: the second generator, where the SEED is the payload ───────────── */
+/* 081 was the first and this is its twin, three increments later: nothing
+   here is authored, so the link carries the four numbers that regenerate the
+   worksheet and the arrival does not stop to ask. The claim is checked
+   against the RENDERED rows on both machines, not against the seed having
+   arrived. */
+console.log('\n061 — 061-fraction-decimal-percent-drill-generator.html (a seed, not rows)');
+{
+  const PAGE_URL = BASE + '/Tools/061-fraction-decimal-percent-drill-generator.html';
+  const sender = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['061', sender]);
+  await sender.goto(PAGE_URL, { waitUntil: 'load' });
+  await settle(sender, 600);
+
+  /* A sheet this suite chose, not the default one, so "the same rows came
+     back" cannot pass by both machines happening to boot the same way. */
+  await sender.selectOption('#difficulty', 'hard');
+  await sender.selectOption('#givenForm', 'percent');
+  await sender.fill('#rowCount', '9');
+  await sender.click('#generateBtn');
+  await settle(sender, 400);
+
+  const seedValue = await sender.inputValue('#seedDisplay');
+  ok(/^\d+$/.test(seedValue), '061: a generated sheet has a numeric seed: ' + JSON.stringify(seedValue));
+  const senderRows = await sender.textContent('#worksheetTable');
+  const senderKey = await sender.textContent('#keyTable');
+  ok(senderRows && senderRows.length > 40, '061: and a worksheet of rows');
+
+  const url = await shareLink(sender);
+  ok(url && url.indexOf('drill=') !== -1, '061: Copy link produces a ?drill= link');
+  ok(/Link copied/.test(await sender.textContent('#shareNote')),
+    '061: and the note under the header says so');
+  const payload = await sender.evaluate(u =>
+    window.StateLink.decodeState(new URL(u).searchParams.get('drill')), url);
+  eq(String(payload.seed), seedValue, '061: the payload carries the seed on screen');
+  eq(payload.rowCount, 9, '061: and how many rows');
+  eq(payload.difficulty, 'hard', '061: the difficulty');
+  eq(payload.givenForm, 'percent', '061: and which form is given');
+  ok(payload.lockSeed === undefined,
+    '061: the lock-the-seed checkbox is a statement about the NEXT press of Generate and does not travel');
+  /* The rows themselves are NOT in the link — that is the whole design. */
+  /* Read the row off the ANSWER KEY: with "always percent" given, every
+     fraction cell on the worksheet itself is deliberately blank. */
+  const aFraction = (senderKey.match(/\d+\/\d+/) || [''])[0];
+  ok(aFraction.length > 2 && JSON.stringify(payload).indexOf(aFraction) === -1,
+    '061: and no row is in the payload at all: ' + JSON.stringify(payload));
+  ok(JSON.stringify(payload).length < 120, '061: the whole worksheet is under 120 bytes of link');
+
+  const receiver = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['061-receiver', receiver]);
+  const asked = [];
+  receiver.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
+  await receiver.goto(url, { waitUntil: 'load' });
+  await settle(receiver, 800);
+  eq(asked.length, 0, '061: an arriving sheet does not ask, because nothing here is anybody’s typing');
+  ok(/Loaded a shared drill sheet/.test(await receiver.textContent('#shareNote')),
+    '061: and it says what it did: ' + JSON.stringify(await receiver.textContent('#shareNote')));
+  eq(await receiver.textContent('#worksheetTable'), senderRows,
+    '061: the receiving device regenerates the same rows, in the same order');
+  eq(await receiver.textContent('#keyTable'), senderKey, '061: and the same answer key');
+  eq(await receiver.inputValue('#seedDisplay'), seedValue, '061: from the same seed');
+  eq(await receiver.inputValue('#rowCount'), '9', '061: with the controls set to what made it');
+  eq(await receiver.inputValue('#difficulty'), 'hard', '061: including the difficulty');
+  eq(new URL(receiver.url()).searchParams.get('drill'), null, '061: the parameter is consumed on open');
+
+  /* The failure this tool's own boot invites: generate() draws a NEW seed
+     unless the seed is locked, so a receiver that rebuilt by calling it would
+     show a different worksheet from the one it was sent — on a device whose
+     stored settings say "lock" as much as on one that does not. */
+  const locked = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['061-locked', locked]);
+  await seed(locked, [['fdp_settings_v1', JSON.stringify(
+    { difficulty: 'easy', givenForm: 'fraction', rowCount: 30, lockSeed: true, seed: 12345 })]]);
+  await locked.goto(url, { waitUntil: 'load' });
+  await settle(locked, 800);
+  eq(await locked.inputValue('#seedDisplay'), seedValue,
+    '061: a device with its own locked seed still shows the sheet it was sent');
+  eq(await locked.textContent('#worksheetTable'), senderRows, '061: row for row');
+  eq(await locked.isChecked('#lockSeed'), true,
+    '061: and its own lock-the-seed setting is left alone, because that is this device’s');
+
+  /* The sheet's own rows, the download envelope, and axe on it. */
+  await sender.click('#shareBtn');
+  await settle(sender, 250);
+  const rows = await sender.$$eval('.share-sheet-rows button', bs => bs.map(b => b.getAttribute('data-share')));
+  ok(rows.includes('copy') && rows.includes('qr') && rows.includes('download'),
+    '061: the sheet offers copy, QR and download: ' + JSON.stringify(rows));
+  ok(await sender.evaluate(() => !document.querySelector('.share-sheet button[data-share="qr"]').disabled),
+    '061: a seed always fits a QR code — that is the point of sharing one');
+  const scan = await a11yScan(sender, { impact: 'serious', include: '.share-sheet' });
+  eq(scan.length, 0, '061: no serious/critical axe violations on the open sheet: ' +
+    JSON.stringify(scan.map(v => v.id)));
+  await sender.keyboard.press('Escape');
+  await settle(sender, 200);
+
+  const broken = await prepPage(browser, BASE, { width: 1200, height: 900 });
+  pages.push(['061-broken', broken]);
+  await broken.goto(PAGE_URL + '?drill=not-base64-%%%', { waitUntil: 'load' });
+  await settle(broken, 700);
+  ok(/could not be read/.test(await broken.textContent('#shareNote')),
+    '061: a mangled link says so rather than opening blank');
+  ok((await broken.textContent('#worksheetTable')).length > 20,
+    '061: and the tool still generated its own sheet underneath it');
 }
 
 /* ── 9. no console noise, nowhere ───────────────────────────────────────── */

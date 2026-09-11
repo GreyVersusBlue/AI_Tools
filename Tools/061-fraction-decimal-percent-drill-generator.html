@@ -20,10 +20,26 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* The two tint pairs the share note sits on, in 001's values with dark
+     counterparts — ink-paper.css has no token for either. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share this sheet: the sheet itself is _shared/share.js (Path 6 P3). This
+     is only the note under the header that records what it did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -87,7 +103,11 @@
       <h1>Fraction&ndash;Decimal&ndash;Percent Conversion Drill Generator</h1>
       <p class="sub">Randomized conversion practice &mdash; one form given, two to fill in.</p>
     </div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share this sheet&hellip;</button>
+    </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <div class="controls">
@@ -218,10 +238,12 @@
   var els = {};
   ['difficulty', 'givenForm', 'rowCount', 'generateBtn', 'worksheetTable', 'keyTable',
    'printWorksheetBtn', 'printKeyBtn', 'printWorksheetTable', 'printKeyTable',
-   'seedDisplay', 'lockSeed'].forEach(function (id) {
+   'seedDisplay', 'lockSeed', 'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
+  var DIFFICULTIES = ['easy', 'medium', 'hard'];
+  var GIVEN_FORMS = ['random', 'fraction', 'decimal', 'percent'];
   var settings = { difficulty: 'medium', givenForm: 'random', rowCount: 12, lockSeed: false, seed: null };
   function loadSettings() {
     try {
@@ -259,6 +281,18 @@
     return Math.floor(Math.random() * 0xFFFFFFFF);
   }
 
+  /* The rows `settings` describes. Split out of generate() so a sheet that
+     arrived over a link is rebuilt from ITS seed — generate() draws a new one
+     unless the seed is locked, which would quietly hand the receiving teacher
+     a different worksheet from the one they were sent. */
+  function buildRows() {
+    var rng = makeRng(settings.seed);
+    rows = [];
+    for (var i = 0; i < settings.rowCount; i++) rows.push(makeRow(rng, settings.difficulty, settings.givenForm));
+    els.seedDisplay.value = settings.seed;
+    render();
+  }
+
   function generate() {
     settings.difficulty = els.difficulty.value;
     settings.givenForm = els.givenForm.value;
@@ -266,11 +300,7 @@
     settings.lockSeed = els.lockSeed.checked;
     settings.seed = nextSeed();
     saveSettings();
-    var rng = makeRng(settings.seed);
-    rows = [];
-    for (var i = 0; i < settings.rowCount; i++) rows.push(makeRow(rng, settings.difficulty, settings.givenForm));
-    els.seedDisplay.value = settings.seed;
-    render();
+    buildRows();
   }
 
   function render() {
@@ -301,13 +331,79 @@
     window.print();
   });
 
+  /* ---------- share this sheet: _shared/share.js (Path 6 P3) --------------
+     THE LINK IS THE WORKSHEET. Nothing here is authored — every row is drawn
+     by mulberry32 from the seed above — so what travels is the four numbers
+     that regenerate it: difficulty, which form is given, how many rows, and
+     the seed. The receiving device rebuilds the same sheet and the same
+     answer key, row for row, which is more than a list of rows would have
+     given it: it can print more copies, print the key on its own, or change
+     the difficulty and get a matched sheet.
+
+     081 is the tool this follows and its two rules hold here. Nothing is
+     anybody's typing, so an arrival NEVER STOPS TO ASK. And "lock seed" does
+     not travel: it is a statement about what the NEXT press of Generate
+     should do on this device, not about this sheet. */
+  var SHARE_PARAM = 'drill';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      if (settings.seed == null || !rows.length) return null;
+      return {
+        difficulty: settings.difficulty, givenForm: settings.givenForm,
+        rowCount: settings.rowCount, seed: settings.seed
+      };
+    },
+    param: SHARE_PARAM,
+    tool: 'fraction-decimal-percent-drill-generator',
+    title: 'Share this sheet',
+    noun: 'this drill sheet',
+    filename: 'conversion drill',
+    note: 'The link carries the seed this sheet was drawn from, not the rows — the other device generates the same sheet and the same answer key from it.',
+    successMessage: 'Link copied. Opening it builds this exact sheet on the other device.',
+    emptyMessage: 'Generate a sheet first — the link carries the seed it was drawn from.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleSheet(obj) {
+    return !!obj && typeof obj === 'object' && typeof obj.seed === 'number' &&
+      isFinite(obj.seed) && DIFFICULTIES.indexOf(obj.difficulty) !== -1;
+  }
+
+  function importSharedSheet() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleSheet,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        settings.difficulty = decoded.difficulty;
+        settings.givenForm = GIVEN_FORMS.indexOf(decoded.givenForm) === -1 ? 'random' : decoded.givenForm;
+        settings.rowCount = Math.max(4, Math.min(30, parseInt(decoded.rowCount, 10) || 12));
+        settings.seed = decoded.seed >>> 0;
+        saveSettings();
+        setShareNote('Loaded a shared drill sheet — the same ' + settings.rowCount +
+          ' rows and the same answer key as the device that sent it.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
   loadSettings();
+  var arrived = importSharedSheet();
   els.difficulty.value = settings.difficulty;
   els.givenForm.value = settings.givenForm;
   els.rowCount.value = settings.rowCount;
   els.lockSeed.checked = settings.lockSeed;
-  generate();
+  /* generate() draws a NEW seed unless the seed is locked, so a shared sheet
+     is rebuilt from the seed that arrived rather than generated. */
+  if (arrived) buildRows(); else generate();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

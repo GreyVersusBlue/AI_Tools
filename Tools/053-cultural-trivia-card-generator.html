@@ -22,6 +22,10 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -63,6 +67,12 @@
   .bulk-note { font-size: .8rem; line-height: 1.5; margin: 0 0 .2rem; padding: .55rem .7rem; border-radius: 6px;
     background: var(--info-bg); border: 1px solid var(--info-line); }
   .bulk-note.error { background: var(--err-bg); border-color: var(--err-line); }
+
+  /* Share your custom trivia: the sheet itself is _shared/share.js (Path 6
+     P3). This is only the note under the header that records what it did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   input[type="text"], select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
     background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
@@ -132,7 +142,11 @@
       <h1>Cultural Trivia Card Generator</h1>
       <p class="sub">Trivia about target-language countries and cultures &mdash; project for a warm-up or print as cards.</p>
     </div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share custom trivia&hellip;</button>
+    </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <div class="controls">
@@ -260,7 +274,7 @@
   var els = {};
   ['categoryFilter', 'applyFilterBtn', 'displayNum', 'displayCat', 'displayQ', 'displayA', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
    'cardCount', 'printBtn', 'newCategory', 'newQ', 'newA', 'addQBtn', 'bankCount', 'bankList',
-   'bulkInput', 'bulkImportBtn', 'bulkNote'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'bulkInput', 'bulkImportBtn', 'bulkNote', 'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var customQs = [];
   var hiddenIds = [];
@@ -457,10 +471,115 @@
     });
   });
 
+  /* ---------- share the custom bank: _shared/share.js (Path 6 P3) ----------
+     WHAT TRAVELS IS THE CUSTOM BANK AND NOTHING ELSE — the questions this
+     teacher typed or pasted in, which is the vocabulary 077 says to look for
+     in a bank-plus-settings tool. The thirty built-in questions are already
+     in every copy of this page, so sending them would be sending the receiver
+     their own file back, three kilobytes at a time.
+
+     The other two keys stay here, and the rule is the same one for both:
+     AN ARRIVAL ADDS, IT NEVER SUBTRACTS. `ctcg_hidden_v1` is a list of
+     built-ins this teacher has hidden, so applying a sender's copy would take
+     questions OUT of the receiver's rotation without asking — the one thing a
+     merge that does not ask must never do. `ctcg_settings_v1` is the category
+     filter and the card count, which are this device's last print job.
+
+     So an arrival merges, silently, the way 075's and 077's do: matching on
+     the trimmed, case-folded question and answer, minting local ids (nothing
+     stores a reference to one — the bank list's Delete button reads it back
+     out of the DOM), and leaving every custom question already here alone. */
+  /** A key the tool itself declares, rather than one inherited from
+      Object.prototype — an arriving "constructor" would pass a bare lookup
+      and then render as a function on the board. */
+  function known(map, key) { return Object.prototype.hasOwnProperty.call(map, key); }
+
+  var SHARE_PARAM = 'trivia';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      if (!customQs.length) return null;
+      return {
+        questions: customQs.map(function (c) {
+          return { category: c.category, q: c.q, a: c.a };
+        })
+      };
+    },
+    param: SHARE_PARAM,
+    tool: 'cultural-trivia-card-generator',
+    title: 'Share your custom trivia',
+    noun: 'your custom trivia',
+    filename: 'custom trivia',
+    note: 'Only the questions you added travel. The built-in bank is already on the other device, and which built-ins you have hidden, your category filter and your card count stay here.',
+    successMessage: 'Link copied. It carries your own questions only — the built-in trivia is already on the other device.',
+    emptyMessage: 'Add a question of your own first. The built-in bank is already on every device, so there would be nothing to send.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleBank(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.questions);
+  }
+
+  /** The arriving rows, trimmed, blanks dropped, categories checked against
+      the three this tool knows — an unknown one lands in Global Culture
+      rather than rendering as "undefined" on a projected card. */
+  function incomingQuestions(decoded) {
+    var out = [];
+    decoded.questions.forEach(function (row) {
+      if (!row || typeof row !== 'object') return;
+      var q = String(row.q == null ? '' : row.q).trim();
+      var a = String(row.a == null ? '' : row.a).trim();
+      if (!q || !a) return;
+      var cat = String(row.category == null ? '' : row.category).trim();
+      out.push({ q: q, a: a, category: known(CAT_LABELS, cat) ? cat : 'global' });
+    });
+    return out;
+  }
+
+  function importSharedBank() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleBank,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var rows = incomingQuestions(decoded);
+        if (!rows.length) {
+          setShareNote('That link carried no questions.', true);
+          return false;
+        }
+        var have = {};
+        function fingerprint(row) {
+          return String(row.q).trim().toLowerCase() + '\u0000' + String(row.a).trim().toLowerCase();
+        }
+        customQs.forEach(function (c) { have[fingerprint(c)] = true; });
+        var added = 0, skipped = 0;
+        rows.forEach(function (row) {
+          var fp = fingerprint(row);
+          if (have[fp]) { skipped++; return; }
+          have[fp] = true;
+          customQs.push({ id: uid(), category: row.category, q: row.q, a: row.a });
+          added++;
+        });
+        saveCustom();
+        setShareNote('Added ' + added + ' from a shared trivia bank' +
+          (skipped ? ', skipped ' + skipped + ' already listed' : '') +
+          '. Your own questions, your hidden built-ins and your filters are untouched.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
   loadCustom();
   loadHidden();
   loadSettings();
+  importSharedBank();
   resetOrder();
   renderDisplay();
   renderBank();
