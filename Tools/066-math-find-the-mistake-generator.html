@@ -20,6 +20,10 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -30,6 +34,17 @@
      001's --good value under a local name). Everything inside #printArea is
      paper — it is display:none on screen — so its greys are left alone. */
   :root[data-theme="dark"]:not(.a11y-filter-dark) { --ok: #63c08e; }
+  /* The two tint pairs the share note sits on, in 001's values with dark
+     counterparts — ink-paper.css has no token for either. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share your own problems: the sheet itself is _shared/share.js (Path 6
+     P3). This is only the note under the header that records what it did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -131,7 +146,11 @@
       <h1>Math &ldquo;Find the Mistake&rdquo; Warm-Up Generator</h1>
       <p class="sub">A worked problem with one intentional error &mdash; spot it, fix it, then check the correct solution.</p>
     </div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share your problems&hellip;</button>
+    </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card" id="filterCard">
     <h2>Filter by topic</h2>
@@ -268,6 +287,7 @@
 
   var els = {};
   ['displayNum', 'displayProblem', 'displayWork', 'displayFix', 'displayExplain', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
+   'shareBtn', 'shareNote',
    'sheetCount', 'buildSheetBtn', 'printBtn', 'sheetProblems', 'sheetKey',
    'newProblem', 'newWork', 'newFix', 'newExplain', 'newCategory', 'newBand', 'addProblemBtn', 'bankCount', 'bankList',
    'categoryFilterList', 'bandFilterList'].forEach(function (id) {
@@ -499,9 +519,130 @@
     });
   });
 
+  /* ---------- share your own problems: _shared/share.js (Path 6 P3) --------
+     WHAT TRAVELS IS THE PROBLEMS THIS TEACHER TYPED. The eighteen built-ins
+     ship with the page, and `mftm_disabled_builtins_v1` — which of them this
+     teacher has switched off — stays here, because an arrival that does not
+     stop to ask must only add: applying a sender's list would take problems
+     out of the receiver's shuffle and their worksheet without a word. 053
+     writes that rule out in full; this tool is the third instance of it.
+
+     THE ONE THING THIS TOOL NEEDS THAT THE OTHER BANK TOOLS DO NOT: every
+     field here is written to the page with innerHTML, on purpose — the
+     built-in problems are full of &minus;, &frac12; and &sup2;, and the add
+     form turns a teacher's newlines into <br>. That is safe for text typed
+     at this keyboard and it is NOT safe for text that arrived over a link,
+     which is the first input this site has ever had that did not come from
+     the person sitting in front of it. sanitizeRich() escapes an arriving
+     field and then puts back the two things this tool's own editor produces:
+     a <br>, and a character entity. Nothing else survives as markup. */
+  /** A key the tool itself declares, rather than one inherited from
+      Object.prototype — an arriving "constructor" would pass a bare lookup
+      and then render as a function on the board. */
+  function known(map, key) { return Object.prototype.hasOwnProperty.call(map, key); }
+
+  var SHARE_PARAM = 'mistakes';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  /** An arriving field, safe to hand to innerHTML: everything escaped, then
+      <br> and character entities (&minus;, &#8311;, &frac12;) restored. */
+  function sanitizeRich(value) {
+    return escapeHtml(String(value == null ? '' : value))
+      .replace(/&lt;br\s*\/?&gt;/gi, '<br>')
+      .replace(/&amp;(#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[a-zA-Z][a-zA-Z0-9]{1,31});/g, '&$1;');
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      if (!custom.length) return null;
+      return {
+        problems: custom.map(function (c) {
+          return { band: c.band, category: c.category, problem: c.problem, work: c.work, fix: c.fix, explain: c.explain };
+        })
+      };
+    },
+    param: SHARE_PARAM,
+    tool: 'math-find-the-mistake-generator',
+    title: 'Share your problems',
+    noun: 'your own problems',
+    filename: 'find the mistake problems',
+    note: 'Only the problems you added travel. The built-in bank is already on the other device, and which built-ins you have switched off stays here.',
+    successMessage: 'Link copied. It carries your own problems only — the built-in bank is already on the other device.',
+    emptyMessage: 'Add a problem of your own first. The built-in bank is already on every device, so there would be nothing to send.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleBank(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.problems);
+  }
+
+  /** The arriving rows: sanitized, blanks dropped, and filed under a topic
+      and grade band this page has a filter for — an unknown one would be a
+      problem no filter can reach, which reads on screen as a lost problem. */
+  function incomingProblems(decoded) {
+    var out = [];
+    decoded.problems.forEach(function (row) {
+      if (!row || typeof row !== 'object') return;
+      var problem = sanitizeRich(row.problem).trim();
+      var work = sanitizeRich(row.work).trim();
+      var fix = sanitizeRich(row.fix).trim();
+      if (!problem || !work || !fix) return;
+      var category = String(row.category == null ? '' : row.category).trim();
+      var band = String(row.band == null ? '' : row.band).trim();
+      out.push({
+        problem: problem, work: work, fix: fix, explain: sanitizeRich(row.explain).trim(),
+        category: known(CATEGORY_LABELS, category) ? category : 'other',
+        band: known(BAND_LABELS, band) ? band : 'middle'
+      });
+    });
+    return out;
+  }
+
+  function importSharedBank() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleBank,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var rows = incomingProblems(decoded);
+        if (!rows.length) {
+          setShareNote('That link carried no problems.', true);
+          return false;
+        }
+        function fingerprint(row) {
+          return String(row.problem).trim().toLowerCase() + '\u0000' + String(row.work).trim().toLowerCase();
+        }
+        var have = {};
+        custom.forEach(function (c) { have[fingerprint(c)] = true; });
+        var added = 0, skipped = 0;
+        rows.forEach(function (row) {
+          var fp = fingerprint(row);
+          if (have[fp]) { skipped++; return; }
+          have[fp] = true;
+          custom.push({
+            id: uid(), band: row.band, category: row.category,
+            problem: row.problem, work: row.work, fix: row.fix, explain: row.explain
+          });
+          added++;
+        });
+        saveCustom();
+        setShareNote('Added ' + added + ' from a shared problem bank' +
+          (skipped ? ', skipped ' + skipped + ' already listed' : '') +
+          '. Your own problems and the topics you have switched off are untouched.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
   loadCustom();
   loadDisabledBuiltins();
+  importSharedBank();
   renderCategoryFilter();
   renderBandFilter();
   populateNewCategorySelect();

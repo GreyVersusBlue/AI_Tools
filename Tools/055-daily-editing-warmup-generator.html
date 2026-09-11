@@ -21,6 +21,10 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -28,8 +32,23 @@
   /* Path 5 P3. --ok is the "corrected sentence" green — on screen in the
      projector display and the sentence bank, never on the printed sheet.
      The dark value is the site's --good dark (001, 006, 010). */
-  :root { --ok: #2c6e3f; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) { --ok: #63c08e; }
+  :root {
+    --ok: #2c6e3f;
+    --err-bg: #fbecea;  --err-line: #e6c6c1;
+    --info-bg: #eaf1f5; --info-line: #c9dbe3;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --ok: #63c08e;
+    --err-bg: #3a201c;  --err-line: #6d3a33;
+    --info-bg: #1b2a35; --info-line: #33505f;
+  }
+
+  /* Share your own sentences: the sheet itself is _shared/share.js (Path 6
+     P3). This is only the note under the header that records what it did.
+     The two tint pairs above are 001's, the reference adopter's. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -118,7 +137,11 @@
       <h1>Daily Editing / DOL Warm-Up Generator</h1>
       <p class="sub">A broken sentence a day &mdash; project it, reveal the fix, or print a worksheet with the answer key.</p>
     </div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share your sentences&hellip;</button>
+    </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <div class="btnrow" style="align-items:end;">
@@ -252,7 +275,8 @@
   var els = {};
   ['displayNum', 'displayBroken', 'displayFixed', 'displayCat', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
    'sheetCount', 'buildSheetBtn', 'printBtn', 'sheetProblems', 'sheetKey', 'categoryFilter',
-   'newBroken', 'newFixed', 'newCategory', 'addSentenceBtn', 'bankCount', 'bankList'].forEach(function (id) {
+   'newBroken', 'newFixed', 'newCategory', 'addSentenceBtn', 'bankCount', 'bankList',
+   'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -470,10 +494,109 @@
     });
   });
 
+  /* ---------- share your own sentences: _shared/share.js (Path 6 P3) -------
+     WHAT TRAVELS IS THE SENTENCES THIS TEACHER WROTE and nothing else. The
+     twenty-four built-ins are in every copy of this page already; the error
+     types are a fixed list in the source, so a shared sentence's category is
+     a word both devices already understand.
+
+     `deg_hidden_v1` and `deg_settings_v1` stay here, for the reason 053
+     writes out in full: an arrival that does not stop to ask must only ADD.
+     A sender's hidden list would take built-in sentences out of the
+     receiver's rotation; the settings are their last worksheet's error type
+     and length. So the arrival merges on the trimmed, case-folded pair of
+     broken and fixed sentence, mints local ids, and touches nothing else. */
+  /** A key the tool itself declares, rather than one inherited from
+      Object.prototype — an arriving "constructor" would pass a bare lookup
+      and then render as a function on the board. */
+  function known(map, key) { return Object.prototype.hasOwnProperty.call(map, key); }
+
+  var SHARE_PARAM = 'editing';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      if (!custom.length) return null;
+      return {
+        sentences: custom.map(function (c) {
+          return { broken: c.broken, fixed: c.fixed, category: c.category };
+        })
+      };
+    },
+    param: SHARE_PARAM,
+    tool: 'daily-editing-warmup-generator',
+    title: 'Share your sentences',
+    noun: 'your own sentences',
+    filename: 'editing sentences',
+    note: 'Only the sentences you added travel. The built-in bank is already on the other device, and which built-ins you have hidden, your error-type filter and your sheet length stay here.',
+    successMessage: 'Link copied. It carries your own sentences only — the built-in bank is already on the other device.',
+    emptyMessage: 'Add a sentence of your own first. The built-in bank is already on every device, so there would be nothing to send.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleBank(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.sentences);
+  }
+
+  /** The arriving rows, trimmed, blanks dropped, with an error type this
+      tool knows — anything else files under Other rather than printing a
+      category nobody can filter on. */
+  function incomingSentences(decoded) {
+    var out = [];
+    decoded.sentences.forEach(function (row) {
+      if (!row || typeof row !== 'object') return;
+      var broken = String(row.broken == null ? '' : row.broken).trim();
+      var fixed = String(row.fixed == null ? '' : row.fixed).trim();
+      if (!broken || !fixed) return;
+      var cat = String(row.category == null ? '' : row.category).trim();
+      out.push({ broken: broken, fixed: fixed, category: known(CAT_LABELS, cat) ? cat : 'other' });
+    });
+    return out;
+  }
+
+  function importSharedBank() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleBank,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var rows = incomingSentences(decoded);
+        if (!rows.length) {
+          setShareNote('That link carried no sentences.', true);
+          return false;
+        }
+        function fingerprint(row) {
+          return String(row.broken).trim().toLowerCase() + '\u0000' + String(row.fixed).trim().toLowerCase();
+        }
+        var have = {};
+        custom.forEach(function (c) { have[fingerprint(c)] = true; });
+        var added = 0, skipped = 0;
+        rows.forEach(function (row) {
+          var fp = fingerprint(row);
+          if (have[fp]) { skipped++; return; }
+          have[fp] = true;
+          custom.push({ id: uid(), broken: row.broken, fixed: row.fixed, category: row.category });
+          added++;
+        });
+        saveCustom();
+        setShareNote('Added ' + added + ' from a shared sentence bank' +
+          (skipped ? ', skipped ' + skipped + ' already listed' : '') +
+          '. Your own sentences, your hidden built-ins and your filters are untouched.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
   loadCustom();
   loadHidden();
   loadSettings();
+  importSharedBank();
   resetOrder();
   renderDisplay();
   renderBank();
