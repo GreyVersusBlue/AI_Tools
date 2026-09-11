@@ -41,6 +41,93 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 6 P3, increment 6 — the first five bank-plus-settings generators — 2026-09-11
+(#250, `CACHE_VERSION` v178).** **053** Cultural Trivia Card Generator, **055** Daily Editing /
+DOL Warm-Up Generator, **061** Fraction–Decimal–Percent Drill Generator, **062** Geography Bee /
+Map Skills Quiz Generator and **066** Math "Find the Mistake" Warm-Up Generator open
+`_shared/share.js`'s sheet and consume a link on load. `share.js` and `qr-draw.js` go to
+**44 of 86** each, `state-link.js` to **45**. This is the first increment into the group P3 has
+left, and four of the five are its defining shape: a built-in bank that ships with the page, the
+teacher's own additions beside it, and device settings in their own keys.
+
+**The answer to #248's question — what is the *vocabulary* here — is the same for all four, and
+it is the additions.** The built-in bank is in every copy of the page, so sending it would be
+sending a teacher their own file back, three kilobytes at a time. That half was easy and
+expected.
+
+**The half that was not is the rule this increment adds: an arrival may add, and it may never
+subtract.** Every one of these four tools keeps a second list — `ctcg_hidden_v1`, `deg_hidden_v1`,
+`gbq_disabled_v1`, `mftm_disabled_builtins_v1` — of built-ins the teacher has hidden or switched
+off. It is curation, it is exactly the kind of thing a department would want to agree on, and it
+is the one field that **cannot** ride a link that does not stop to ask: applying a sender's copy
+takes questions *out* of the receiver's rotation, their worksheet and their printed cards, with a
+note that says "Added 12". 075 and 077 earned the silent merge by only ever adding; a hidden list
+would spend that. So the hidden lists stay, and the rollout suite's new `untouched` option
+asserts it directly — after an arrival, those keys are byte-for-byte what they were. It is the
+first assertion in the suite about a key the payload never mentions, which is the only way to
+state a negative like this one.
+
+**062 answers "what about a picture?" without the image policy.** Its map questions are generated
+against the vendored outline-map data, and what is stored is a three-word descriptor — which
+dataset, which region, which crop — not a rendering. So a map question travels in about forty
+bytes and the receiving device draws its own. The tool's other key, `gbq_tournament_v1`, is a game
+in progress with this room's team names and this room's score, and it stays: 018's rule that the
+hunt travels and the Live Run does not, in the tool that rule was written for. The suite seeds a
+tournament and asserts the team names are nowhere in the payload.
+
+**066 is the tool that needed something no other adopter has, and it is worth stating generally.**
+Every field in it is written to the page with `innerHTML`, on purpose — its built-in problems are
+full of `&minus;`, `&frac12;` and `&sup2;`, and its add form turns a teacher's newline into a
+`<br>`. That is safe for text typed at this keyboard and it is not safe for text that arrived over
+a link, and **a link is the first input this site has ever had that did not come from the person
+sitting in front of it.** Nine increments of P3 walked past this because every other adopter
+escapes what it prints. `sanitizeRich()` escapes an arriving field and then restores the two things
+the tool's own editor produces: a `<br>`, and a character entity. The suite opens a payload
+carrying `<img src=x onerror=…>` and `<script>`, and checks that the problem is still filed, that
+it is visible on the board as the characters that were sent, that no element was created, and that
+`window.__pwned` is undefined — while the `<br>` still breaks a line and `&divide;` still renders
+as `÷`. **The general statement for the rest of P3: before wiring a tool, grep its own sinks. A
+tool that writes any state with `innerHTML` needs the arriving copy sanitized, and the storage
+shape says nothing about which tools those are** — the same lesson as #246's `load()` and boot
+block, in a third place.
+
+**061 is 081's twin and the cheapest row in the group.** It is a *seeded* generator: mulberry32
+draws every row from one number, so **the link is the worksheet** — difficulty, given form, row
+count and seed, under 120 bytes, and the receiving device regenerates the same rows and the same
+answer key. It is also strictly more than a list of rows would have been: the receiver can print
+more copies, print the key alone, or change the difficulty and get a matched sheet. 081's two
+rules held unchanged — nothing here is authored, so an arrival never asks; and "lock seed" is a
+statement about the *next* press of Generate and does not travel. The one thing that needed
+changing in the tool was its boot: `generate()` draws a **new** seed unless the seed is locked, so
+a receiver that rebuilt by calling it would have shown a different worksheet from the one it was
+sent — silently, and *more* often on a device whose stored settings say "lock". `buildRows()` is
+split out of it, and the suite checks both a clean device and one with its own locked seed.
+
+**A lookup bug that was in all five and would have been in the rest of the group.** The first
+draft validated an arriving category with `CAT_LABELS[cat] ? cat : 'global'`. An arriving category
+of `constructor` — or `toString`, or `__proto__` — passes that, because the lookup finds
+`Object.prototype`'s, and the value then renders on a projected card as a function body. Fixed
+with a `hasOwnProperty` helper in the four bank tools and a whitelist array in 061. **Any
+`known-value ? keep : fallback` check written against an object literal has this bug**, and this
+group is full of them.
+
+**The registry sweep #248 asked for, done, and it found nothing.** All 13 `legacy: true` keys in
+`_shared/tool-registry.js` were checked for the shape #248 hit — a legacy key marked
+`student: true` whose live successor is not — and `apl_portfolio_v1` / `apl_portfolios_v1` is the
+only legacy-plus-student pair in the file, already corrected in #248. The class of bug is real;
+there is exactly one instance of it and it is fixed.
+
+**What was not verified.** No QR from any of the five was scanned by a real camera; the
+`navigator.share` row is still exercised nowhere, five increments on; no file was downloaded by a
+real browser and re-opened by hand; the open sheet was scanned by axe in **light only** on these
+five; 062's arriving map question was checked as a descriptor in the payload and as a filed row,
+but no snippet was rendered from one on the receiving device; and nothing here was driven by a
+human clicking anything.
+
+Full `npm test` locally: **156 of 156 green, 36.0 min**; CI ran the full list (the registry is in
+the diff) green in **31.7 min**. `npm run test:share-rollout` is at **1162 assertions**, up from
+950.
+
 **Path 6 P3, increment 5 — the four builders that needed a decision first — 2026-09-11
 (#248, `CACHE_VERSION` v177).** **018** QR Scavenger Hunt Builder, **019** Digital Escape Room
 Builder, **048** Student Art Portfolio Label Maker and **077** Testing Accommodations Card

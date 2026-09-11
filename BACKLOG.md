@@ -63,10 +63,85 @@ yours.
 
 ## Where things stand — start here
 
-*Current as of `main` after PR #248, 2026-09-11. Rewrite this header when your phase
+*Current as of `main` after PR #250, 2026-09-11. Rewrite this header when your phase
 merges — that is step 6 of the definition of done, and it is not optional.*
 
-**Last shipped.** Rank 1 — **Path 6 P3's fifth increment: the four builders that needed a decision
+**Last shipped.** Rank 1 — **Path 6 P3's sixth increment: the first five bank-plus-settings
+generators** (#250, `CACHE_VERSION` **v178**). **053** Cultural Trivia, **055** Daily Editing / DOL,
+**061** Fraction–Decimal–Percent Drill, **062** Geography Bee and **066** Find the Mistake open
+`_shared/share.js`'s sheet and consume a link on load; `npm run check:adoption` puts **`share.js`
+and `qr-draw.js` at 44 of 86 each**, up from 39, and **`state-link.js` at 45**. **P3 is a 2+ row,
+so it stays.** Six things are worth carrying.
+
+(1) **#248's question had the same answer four times, and the answer's second half is the rule this
+increment adds.** What travels in a bank-plus-settings tool is the **additions** — the built-in
+bank is already in every copy of the page, so sending it is sending a teacher their own file back.
+What must not travel is the **subtractions**: every one of these tools keeps a list of built-ins
+the teacher has hidden or switched off, and applying a sender's copy takes questions *out* of the
+receiver's rotation, worksheet and printed cards, under a note that says "Added 12". **An arrival
+that does not stop to ask may only add.** 075 and 077 earned the silent merge by only ever adding;
+a hidden list would spend it. The rollout suite's new `untouched` option asserts the negative
+directly — after an arrival those keys are byte-for-byte what they were — and it is the suite's
+first assertion about a key the payload never mentions.
+
+(2) **066 needed something no other adopter has, and the general form is what to carry into the
+remaining eight.** Every field in 066 is written with `innerHTML`, on purpose: its built-ins are
+full of `&minus;` and `&frac12;`, and its editor makes `<br>` out of a newline — so an arriving
+payload is *markup* by the time it reaches the board. **A link is the first input this site has
+ever had that did not come from the person sitting in front of it.** Nine increments of P3 walked
+past this because every other adopter escapes what it prints. So: **before wiring a tool, grep its
+own sinks.** A tool that writes state with `innerHTML` needs the arriving copy sanitized, and — as
+with #246's `load()` and boot block — the storage shape does not say which tools those are. 066's
+`sanitizeRich()` escapes and restores exactly what its own editor produces (a `<br>`, a character
+entity); the suite opens a payload carrying `<img src=x onerror=…>` and checks nothing ran.
+
+(3) **061 is 081's twin and the group's cheapest row: the link IS the worksheet.** A seeded
+generator carries difficulty, given form, row count and seed in under 120 bytes and the receiver
+regenerates the same rows and the same key — strictly more than a list of rows, because the
+receiver can also print more copies or change the difficulty and get a matched sheet. The one
+change the tool needed was in its boot: `generate()` draws a **new** seed unless the seed is
+locked, so a receiver that rebuilt by calling it would silently show a *different* sheet, and more
+often on a device whose stored settings say "lock". `buildRows()` is split out of it. **Look for
+this in any generator: an arrival rebuilds from the seed it was sent, it does not call Generate.**
+
+(4) **062 answers "what about pictures" without the image policy.** Its map questions store a
+three-word descriptor — dataset, region, crop — not a rendering, so one travels in about forty
+bytes and the receiver draws its own from the same vendored data (asserted through the tool's own
+map module rather than inferred from the payload). Its `gbq_tournament_v1` is a game in progress
+and stays — 018's Live Run rule in the tool it was written for.
+
+(5) **A lookup bug that was in all five first drafts, and the rest of the group is full of the
+shape.** `CAT_LABELS[cat] ? cat : 'global'` accepts an arriving category of `constructor`, because
+the lookup finds `Object.prototype`'s, and the value then renders on a projected card as a
+function body. Any `known-value ? keep : fallback` written against an object literal has it; use
+`hasOwnProperty` or a whitelist array.
+
+(6) **The registry sweep #248 asked for is done and found nothing.** All 13 `legacy: true` keys
+were checked for a legacy key marked `student` whose live successor is not;
+`apl_portfolio_v1`/`apl_portfolios_v1` is the only legacy-plus-student pair in the file and #248
+had already fixed it. The class of bug is real; the instance count is one.
+
+CI ran the **full** list, because `_shared/tool-registry.js` is in the diff: green in **31.7
+minutes (16:27:51 → 16:59:34 UTC)**. Full `npm test` ran locally once, to completion: **156 of 156
+green, 36.0 min.** Locally: all eleven guards, `lint`, `check:precache -- --base origin/main`,
+`test:share-rollout` (**1162 assertions**, up from 950), `test:theme` (901), `test:share` (292),
+`test:send-to` (30), `test:registry` (39), `test:geo-bee` (136), and `test:a11y -- --only` on all
+five pages, **all clean, no allowlist line added**. **Not verified:** no QR from any of the five
+was scanned by a real camera; the system-share row is still exercised nowhere, six increments on;
+no file was downloaded by a real browser and re-opened by hand; the open sheet was scanned by axe
+in **light only** on these five; and nothing here was driven by a human clicking anything.
+
+**What the next P3 increment is.** **Eight bank-plus-settings tools are left — 014, 016, 023, 025,
+029, 038, 067, 071** — plus **046** (rank 2's first job) and **045** (waits for Path 10 P2/P3).
+023 still holds the group's one `student: true` key (`gvb-exit-ticket:tally`), and #248's rule
+answers it without a new argument: a tally is not a field authored to be published, so the
+exit-ticket *prompts* travel and the tallies never do. **053 and 062 were the two the phase text
+still promised to Path 12 P2, and they shipped here on #248's precedent — so that note is now
+clear of the row entirely.** Start each of the remaining eight with three questions: what is the
+vocabulary, what is the subtraction that must stay, and — new — what does this page write with
+`innerHTML`.
+
+Before it, rank 1 — **Path 6 P3's fifth increment: the four builders that needed a decision
 first** (#248, `CACHE_VERSION` **v177**). **018** QR Scavenger Hunt Builder, **019** Digital Escape
 Room Builder, **048** Student Art Portfolio Label Maker and **077** Testing Accommodations Card
 Generator open `_shared/share.js`'s sheet and consume a link on load; `npm run check:adoption` puts
@@ -1159,10 +1234,10 @@ file conflicted.
 | Read-only guards | **11**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands` and `adoption`. All run in CI. `check:precache` is one guard running **six** always-on checks since #191 (SHELLDEP is the sixth) plus the opt-in BUMP. `check:docs-commands`'s `KNOWN_MISSING` is **empty** since #195 |
 | Accessibility allowlist | **14 page-rule pairs on 14 pages, every one `color-contrast`** — unchanged by #248, which touched four pages, added a button and a note paragraph to each, and had **all four come back clean** from the site-wide sweep and from its rollout suite's `a11yScan` on the open share sheet. That is **eleven** page-changing increments in a row with no line added. **018 is the one worth noting**: it carries 14 allowed `color-contrast` violations already and paints its own dark palette with none of the sheet's tokens defined, so the sheet was handed that palette through one block scoped to `.share-sheet-backdrop` — and the sheet still came back clean, in light and on the page's own dark. Also unchanged by #246, which touched six pages, added a button and a note paragraph to each, and had **all six come back clean** from the site-wide sweep and from its rollout suite's `a11yScan` on the open share sheet. That is **ten** page-changing increments in a row with no line added. Also unchanged by #244, which touched five pages, added a button and (on three of them) a note paragraph, and had **all five come back clean** from the site-wide sweep and from its rollout suite's `a11yScan` on the open share sheet. That is **nine** page-changing increments in a row with no line added. Also unchanged by #239, which touched three pages, added a button and a note paragraph to each, and had **all three come back clean** from the site-wide sweep and from its rollout suite's `a11yScan` on the open share sheet. That is **eight** page-changing increments in a row with no line added, which is the standard a new tool is held to. Also unchanged by #237, #235, #233, #231, #229, #227 and #225, none of which added or deleted a line. #237 touched six pages, added a button and a note paragraph to each, and **all six came back clean from the site-wide sweep**; its rollout suite also scans the open share sheet with `a11yScan` on all six and found nothing. That is **seven** increments in a row that changed pages and did not need a line, which is the standard a new tool is held to |
 | Tool registry | 87 rows, **217 keys and 32 prefixes across 109 files**; since #248 **39 rows carry `share: { param }`** (35 after #246, (29 after #244, 24 after #242), the parameter their own `Share.receive()` reads, checked against each page's source by `handoffs.test.mjs` — `__scv_probe__` retired and `__gvb_save_probe__` declared for the first time, so the total is unchanged for two unrelated reasons; four IndexedDB databases declared; `check:registry` green, `dynamic` empty everywhere |
-| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `state-link.js` 40 · `qr-draw.js` 39 · `share.js` 39 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 9 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `handoffs.js` 1 · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `state-link.js` 45 · `qr-draw.js` 44 · `share.js` 44 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 9 · `webrtc-pair.js` 7 · `theme.css` 5 · `tool-registry.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `handoffs.js` 1 · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087**. 81 of them have recorded open ideas |
-| Tier 1 rows | **176**, a contiguous 1..176. **#248 changed nothing about the shape of the table**: it shipped one increment of rank 1, a 2+ row, so that row was rewritten rather than deleted, and it added no row of its own. Ranks, the count and the tool-number boundary (**95**) are as #246 left them. **Rank 1 is still Path 6 P3 and is still a 2+ row, so it is the next session's whole batch on its own**; rank 2 (P4's rollout) is a 1. Rank 14 still has **eleven** confirmed instances: #248 added none, the sixth page-changing increment running to turn up no shipped violation, and its rollout suite scanned the open sheet on four more pages — 018 among them, a page carrying 14 allowed violations of its own — to establish that rather than inferring it from a quiet sweep. Before it, **#246 changed nothing about the shape of the table** either: it shipped one increment of rank 1, a 2+ row, so that row was rewritten rather than deleted, and it added no row of its own. Ranks, the count and the tool-number boundary (**95**) are as #244 left them. **Rank 1 is still Path 6 P3 and is still a 2+ row, so it is the next session's whole batch on its own**; rank 2 (P4's rollout) is a 1. Rank 14 still has **eleven** confirmed instances: #246 added none, the fifth page-changing increment running to turn up no shipped violation, and its rollout suite scanned the open sheet on six more pages to establish that rather than inferring it from a quiet sweep. Before it, **#244 changed nothing about the shape of the table**: it shipped one increment of rank 1, a 2+ row, so that row was rewritten rather than deleted, and it added no row of its own. Ranks, the count and the tool-number boundary (**95**, measured by walking the table from the bottom, not by subtraction) are all as #239 and #242 left them. **Rank 1 is still Path 6 P3 and is still a 2+ row, so it is the next session's whole batch on its own** (see "How big a batch"); rank 2 (P4's rollout) is a 1. Rank 14 (the sweep's blind spot) still has **eleven** confirmed instances: #244 added none, which is the fourth page-changing increment running to turn up no shipped violation, and its rollout suite scanned the open sheet on five more pages to establish that rather than inferring it from a quiet sweep |
+| Tier 1 rows | **176**, a contiguous 1..176. **#250 changed nothing about the shape of the table**: it shipped one increment of rank 1, a 2+ row, so that row was rewritten rather than deleted, and it added no row of its own. Ranks, the count and the tool-number boundary (**95**) are as #248 left them. **Rank 1 is still Path 6 P3 and is still a 2+ row, so it is the next session's whole batch on its own**; rank 2 (P4's rollout) is a 1. Rank 14 still has **eleven** confirmed instances: #250 added none, the seventh page-changing increment running to turn up no shipped violation, and its rollout suite scanned the open sheet on five more pages to establish that rather than inferring it from a quiet sweep. Before it, **#248 changed nothing about the shape of the table**: it shipped one increment of rank 1, a 2+ row, so that row was rewritten rather than deleted, and it added no row of its own. Ranks, the count and the tool-number boundary (**95**) are as #246 left them. **Rank 1 is still Path 6 P3 and is still a 2+ row, so it is the next session's whole batch on its own**; rank 2 (P4's rollout) is a 1. Rank 14 still has **eleven** confirmed instances: #248 added none, the sixth page-changing increment running to turn up no shipped violation, and its rollout suite scanned the open sheet on four more pages — 018 among them, a page carrying 14 allowed violations of its own — to establish that rather than inferring it from a quiet sweep. Before it, **#246 changed nothing about the shape of the table** either: it shipped one increment of rank 1, a 2+ row, so that row was rewritten rather than deleted, and it added no row of its own. Ranks, the count and the tool-number boundary (**95**) are as #244 left them. **Rank 1 is still Path 6 P3 and is still a 2+ row, so it is the next session's whole batch on its own**; rank 2 (P4's rollout) is a 1. Rank 14 still has **eleven** confirmed instances: #246 added none, the fifth page-changing increment running to turn up no shipped violation, and its rollout suite scanned the open sheet on six more pages to establish that rather than inferring it from a quiet sweep. Before it, **#244 changed nothing about the shape of the table**: it shipped one increment of rank 1, a 2+ row, so that row was rewritten rather than deleted, and it added no row of its own. Ranks, the count and the tool-number boundary (**95**, measured by walking the table from the bottom, not by subtraction) are all as #239 and #242 left them. **Rank 1 is still Path 6 P3 and is still a 2+ row, so it is the next session's whole batch on its own** (see "How big a batch"); rank 2 (P4's rollout) is a 1. Rank 14 (the sweep's blind spot) still has **eleven** confirmed instances: #244 added none, which is the fourth page-changing increment running to turn up no shipped violation, and its rollout suite scanned the open sheet on five more pages to establish that rather than inferring it from a quiet sweep |
 | Dark mode (`npm run path5:next`) | **83 of 83** themed pages paint a native dark palette (**100%**) and **0** are left on a11y.css's CSS-filter invert. A further **14 live pages load no `a11y.js` at all** and get no theme either way: 002, 007, 016, 018, 035, 038, 044, 086, `classroom-label-maker/speak.html`, `ideas-backlog.html` and the four root landing-page variants — **none of them is a ranked row**, and 035 is a standing decision rather than an omission. The script's other half reads **`stage.js` at 9 adopters, 0 pages hand-rolling fullscreen**, so **Path 5 is finished on both counts and this script has nothing left to pick.** **Read these off the script, and be aware it was wrong until #214**: it walked the filesystem rather than `git ls-files`, so it counted `Tools/board-check/.offline-copy-staging/` and reported double everything on any tree where that folder exists; **97 live pages on its first line is right, 188 is the bug**. **The literal count predicted the chrome and missed the work in seven increments running** — #208's cheapest page was its most expensive (colours from a table in *script*); #212's cheapest needed `.paper-sheet` in its renderer; #214's real work was in two literals no count could see; #216's hardest decision (`.paper-sheet-off`) is invisible to any count; #218's two hardest calls were not colour changes at all; #221's was a `.paper-sheet` it had to **withhold**; #225's was a `.paper-sheet` it had to **stretch over an entire interactive viewer**; and #227 was not a palette round at all and still found a contrast bug the picker's count could never have named. **#229 is the end of that argument rather than another instance:** 034's literal count was never printed by the picker at all, because the page loaded no `a11y.js`, and the work turned out to be a token split, a data-driven ink and a print reset in `_shared/` |
 | Fullscreen | `_shared/stage.js` in **9** pages (001, 004, 010, 015, 021, 023, 024, 025, 072); **0** themed pages still hand-roll `requestFullscreen` — unchanged by #229, which added no stage. #227 took the last two — 001's Projector View and 004's whole page (mounted on `<body>`, as 010 is) — neither of which was ever on the P2 list. **One page outside the themed set still hand-rolls: 007**, which loads no `a11y.js`, so `path5:next` does not count it; it needs a theme before it needs a stage. 030 and 064 run a projector review game off a fixed `inset: 0` overlay rather than the Fullscreen API, and 017 has a *projector view* of the same shape — a fixed overlay the page shows and hides itself, with no `requestFullscreen` anywhere. Whether any of those three should become a stage is open and unclaimed |
 | Lint | clean |
@@ -1927,7 +2002,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 6 P3 — extend sharing to the builders that do not share yet. **Five increments shipped: #237 (v172) 052, 057, 070, 073, 079, 081, single-document; #239 (v173) 047, 065, 072, named-library; #244 (v175) 041, 051, 069, 082, 083, also named-library; #246 (v176) 049, 058, 074, 075, 076, 078, the rest of the single-document group; #248 (v177) 018, 019, 048, 077, the four that each needed a decision written down first.** The [Path 6](#path-6--share-everywhere) section lists every remaining generator/builder grouped by storage shape. **The single-document and named-library groups are now empty except two, and both are waiting on something:** **046** is rank 2's first job, because its hand-built `?timeline=` link cannot move onto the handoff table until the page loads the sheet; and **045** compiles other tools' storage and Path 10 P2/P3 are about to re-base it, so share it after those or accept that its payload changes shape. **So what is left of this row is the thirteen bank-plus-settings tools** — 014, 016, 023, 025, 029, 038, 053, 055, 061, 062, 066, 067, 071 — each a design question rather than wiring (023 holds a `student: true` key; 053 and 062 are promised to Path 12 P2). **Ask each one #248's question first: what is the *vocabulary* here, as against the settings and the built-in bank** — that is what made 077 shippable, and it is the shape a bank-plus-settings tool is most likely to have. Add a row to `Tools/share/test/smoke-share-rollout.mjs`'s table rather than a per-tool suite, and a whole section when a tool's arrival is a new kind (075's merge is 5c, which 077 now shares) | site | 2+ | `ckqo6p` 2026-09-11 15:17 UTC | [Path 6](#path-6--share-everywhere) |
+| 1 | Path 6 P3 — extend sharing to the builders that do not share yet. **Six increments shipped: #237 (v172) 052, 057, 070, 073, 079, 081, single-document; #239 (v173) 047, 065, 072, named-library; #244 (v175) 041, 051, 069, 082, 083, also named-library; #246 (v176) 049, 058, 074, 075, 076, 078, the rest of the single-document group; #248 (v177) 018, 019, 048, 077, the four that each needed a decision written down first; #250 (v178) 053, 055, 061, 062, 066, the first five bank-plus-settings generators.** The [Path 6](#path-6--share-everywhere) section lists every remaining generator/builder grouped by storage shape. **Two are waiting on something:** **046** is rank 2's first job, because its hand-built `?timeline=` link cannot move onto the handoff table until the page loads the sheet; and **045** compiles other tools' storage and Path 10 P2/P3 are about to re-base it, so share it after those or accept that its payload changes shape. **So what is left of this row is the eight remaining bank-plus-settings tools** — 014, 016, 023, 025, 029, 038, 067, 071 — each a design question rather than wiring (023 holds a `student: true` key, and #248's rule answers it: a tally is not a field authored to be published, so the prompts travel and the tallies never do). **Ask each one three questions before writing any code:** what is the *vocabulary* here as against the settings and the built-in bank (#248); what is the **subtraction** that must stay on the device, because an arrival that does not ask may only add (#250); and **what does this page write with `innerHTML`**, because an arriving field that reaches such a sink must be sanitized and no storage shape tells you which tools those are (#250, 066). Add a row to `Tools/share/test/smoke-share-rollout.mjs`'s table rather than a per-tool suite, and a whole section when a tool's arrival is a new kind (075's merge is 5c, which 077 now shares; 061 joined 081's generator section) | site | 2+ | | [Path 6](#path-6--share-everywhere) |
 | 2 | Path 6 P4 rollout — the mechanism shipped (#242, v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Left, all named by the phase text:** move the two hand-built links onto the table (**046 → 015** `?timeline=`, **056 → 028** `?worksheet=`) so their receivers' file and parameter stop being hard-coded; **decide** the two storage-shaped ones (**003 → 037** writes 037's keys through `rb-gdv-handoff.js`; **040 ← 039** reads 039's through `vfg-conjdrill-link.js`) — a table entry through the receiver's own importer, or a documented exception; then the new ones: **roster → groups → lab roles → seating** (006/007 → 002 → 022 → 005), **trivia → review board** (053 → 030, after rank 38), **rubric → grade distribution** by link rather than by storage. Each is one entry plus a row in `smoke-send-to.mjs`; a sender that does not yet load `share.js` (046) adopts the sheet first | site | 1 | | [Path 6](#path-6--share-everywhere) |
 | 3 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js` (005 photos first) | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 4 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
@@ -2835,10 +2910,11 @@ passing on the same empty page the site-wide sweep already covers. Look at them.
 ### Path 6 — "Share…" everywhere
 
 **Status.** P1 shipped 2026-09-04 (#178, `CACHE_VERSION` v146) with 064 as its single
-adopter. **P3 is five increments in and still open — #248 (v177) took 018, 019, 048 and 077,
-the four that each needed a decision written down before any wiring, taking `share.js` and
-`qr-draw.js` to 39 of 86 and `state-link.js` to 40. What is left of P3 is the thirteen
-bank-plus-settings tools, plus 046 (rank 2's job) and 045 (waits for Path 10).** Before it: #237 (v172) took 052, 057, 070, 073,
+adopter. **P3 is six increments in and still open — #250 (v178) took 053, 055, 061, 062 and 066,
+the first five of the bank-plus-settings group, taking `share.js` and `qr-draw.js` to 44 of 86
+and `state-link.js` to 45. What is left of P3 is the eight remaining bank-plus-settings tools,
+plus 046 (rank 2's job) and 045 (waits for Path 10).** Before it, #248 (v177) took 018, 019, 048
+and 077, the four that each needed a decision written down before any wiring. Before it: #237 (v172) took 052, 057, 070, 073,
 079 and 081 — the single-document builders — #239 (v173) took 047, 065 and 072, the
 named-library ones, #244 (v175) took five more of those (041, 051, 069, 082, 083), and #246
 (v176) took 049, 058, 074, 075, 076 and 078 — the rest of the single-document group that was a
@@ -2950,10 +3026,12 @@ download-as-file as the third option.
     (see below). 046 is rank 2's first job.
   - **A built-in bank plus custom additions plus device settings, where what a teacher would
     hand over is the *custom bank*, not the settings, and the two are separate keys:**
-    **014**, **016**, **023**, **025**, **029**, **038**, **053**, **055**, **061**, **062**,
-    **066**, **067**, **071**. Deciding what travels here is a real design question per tool,
-    not wiring, which is why they should not be batched with the first group. **This is all
-    that is left of P3** apart from 046 and 045.
+    **053**, **055**, **061**, **062** and **066** **shipped in #250** — four of them the shape
+    exactly, and **061** the one that is not (a *seeded* generator with a single settings key, so
+    its link is 081's: the seed, and the receiver regenerates the worksheet). **Left: 014**,
+    **016**, **023**, **025**, **029**, **038**, **067**, **071**. Deciding what travels here is a
+    real design question per tool, not wiring, which is why they should not be batched with the
+    first group. **This is all that is left of P3** apart from 046 and 045.
 
   **THIS ENUMERATION HAS NOW BEEN WRONG TWICE, AND BOTH TIMES IN THE SAME LIST.** #246 moved
   **038** out of the single-document group (it keeps device settings plus a name→pasted-text
@@ -2970,10 +3048,11 @@ download-as-file as the third option.
   **One still carries a `student: true` key and needs 073's per-field split before it can
   share anything:** 023 (`gvb-exit-ticket:tally`). 048 and 077 were the other two and both
   shipped in #248 — **read what they decided before deciding 023**, because they went
-  opposite ways and the rule that separates them is written down above. **Two are still
-  promised to Path 12 P2** (rank 40: 053, 062) — share them there or accept that their
-  payload shape changes when the question bank lands; 018 and 019 were the other two, and
-  #248 decided to share them now rather than wait.
+  opposite ways and the rule that separates them is written down above; applied to 023 it says
+  the exit-ticket *prompts* travel and a tally, which is not a field authored to be published,
+  never does. **The Path 12 P2 note is now clear:** 053 and 062 were the last two tools this
+  section still promised to rank 40, and #250 shared them on #248's precedent (018 and 019),
+  because a bank id is an additive field in a payload each tool validates itself.
   #244's own decisions and findings, which the next increment should follow or deliberately
   reverse: an assertion that has only ever seen one kind of fixture is a claim about the
   fixture, and section 6 of the rollout suite proved it — `Share.unwrap(file) === payload`
@@ -3020,6 +3099,21 @@ download-as-file as the third option.
   same idea inside one object — the hunt travels, the Live Run does not. Finally, a page with no
   `a11y.js` and its own dark palette (018) gets the sheet's tokens through **one block scoped to
   `.share-sheet-backdrop`**, which is not the same as adopting `a11y.js`.
+
+  #250's own decisions and findings, which the next increment should follow or deliberately
+  reverse: in a bank-plus-settings tool **what travels is the additions and what stays is the
+  subtractions** — the hidden/disabled built-in list of every tool in this group is curation that
+  *looks* shareable and cannot ride a link that does not ask, because applying it removes
+  questions from the receiver's rotation under a note that says "Added 12"; an arrival that merges
+  silently may only add, and the suite's `untouched` option asserts that negative against keys the
+  payload never mentions. **A tool that writes its state with `innerHTML` needs the arriving copy
+  sanitized** (066, the first such adopter in nine increments): a link is the first input this site
+  has had that did not come from the person at the keyboard, and the storage shape does not say
+  which tools those are — grep the sinks. **A seeded generator's arrival rebuilds from the seed it
+  was sent rather than calling the tool's own Generate** (061), which draws a new one unless the
+  seed is locked and would hand the receiving teacher a different worksheet, silently. And a
+  generated asset that is *described* rather than rendered travels for nothing: 062's map questions
+  are three words each and the receiver draws its own from the same vendored data.
 
 - **P4 — Cross-tool "Send to…". Mechanism shipped 2026-09-08 (#242, `CACHE_VERSION`
   v174); the rollout is rank 2.** The same sheet grows a "Send to <tool>" row driven by
