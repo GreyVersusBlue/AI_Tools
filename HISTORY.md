@@ -41,6 +41,85 @@ PR now runs no browser suite at all (the guards still run); and the selector rea
 page's static `src`/`href`/`import`/`fetch` references only — a page that builds a module
 path at runtime from a string would not link its folder to its suites.
 
+**Path 6 P3, increment 7 — five more bank-plus-settings tools, and three keys that turned out to be
+student data — 2026-09-12 (#252, `CACHE_VERSION` v179).** **014** Immersion Roleplay Scenario
+Generator, **023** Exit Ticket / Bell Ringer Generator, **025** Writing Prompt Generator, **067** Music
+Sight-Reading / Rhythm Warm-Up Generator and **071** Picture-Prompt Task Generator open
+`_shared/share.js`'s sheet and consume a link on load. `share.js` and `qr-draw.js` go to **49 of 86**
+each, `state-link.js` to **50**. Three of the eight remaining rows are left: 016, 029 and 038.
+
+**The three questions #250 left on the row were the right three, and the third one paid for itself
+on the first tool it was asked of.** What is the vocabulary: 014's custom scenarios, 023's and 025's
+prompt banks and planned sets, 071's active prompt set, 067's settings. What is the subtraction that
+must stay: nothing in this five is a hidden-built-ins list, and the answer instead came out as *what
+was never authored to be published* — 014's roster and pair-ups, 023's tally, triage names and
+student responses, 025's Writing Record, 071's images and pins. What does this page write with
+`innerHTML`: every one of the five escapes, so no second `sanitizeRich()` was needed — but the check
+took a minute each and would have been a link-borne script if any had not.
+
+**014 is the row where the fill-ins are the payload.** A custom scenario's `phrases` are the English
+prompts ("Ask for a table and say when"); the *fills* the teacher typed under them are the Spanish.
+They travel — and only for custom scenarios, and only from the class this device has open, and they
+are filed on arrival under the class the *receiving* device has open, because a custom scenario is
+new there and filing its fills takes nothing away. Fills on the **built-in** scenarios stay, for
+#250's reason exactly: they are keyed by a scenario id both devices share, so merging them would
+overwrite the receiver's own Spanish under the same English. The rollout suite's new `afterMerge`
+hook is what asserts the fills landed under the receiver's class and the fresh id — 058's
+"a relationship survived" assertion in one more shape.
+
+**023 and 025 are twins, and each carries two kinds of arrival at once.** The bank (My Prompts /
+custom prompts) *merges* by text; a planned prompt set is *saved beside* under a free name with fresh
+ids and its cursor at the start — a set's `cursor` and `startDate` are where *this* device is in the
+sequence, and they stay. That is #250's rule and #239's rule in one importer, and the note says both
+halves ("Added 2 from a shared prompt bank, and saved 1 prompt set beside your own"). Neither asks.
+
+**067 is 081's shape without the seed, and the honest claim is the weaker one.** "New pattern" is
+`Math.random`, so what a link carries is the recipe — time signature, measures, the values in the
+pool, the tempo marking, clef and range — and the receiving device rolls its *own* warm-up from it.
+The note says so in those words. Two settings are the device's rather than the warm-up's and do not
+travel: which panel was open, and whether this machine draws its note symbols or trusts its music
+font (the glyph probe decides that per machine). Adding a seed so the link is the exact exercise is
+a tool change of 061's kind and is written down below as an option, not done.
+
+**071 is a fourth library layout and the suite grew a hook instead of a fourth flag.** Its prompt sets
+live in one key as `{ v, activeId, sets: [...] }` — not 047's three keys, not 018's map-in-one-key,
+not 048's `{ list, currentId }`. Rather than a `libraryX` flag per layout, a row can now carry
+`libraryHooks: { seed, read }` and section 5b uses them. The images (`ppg_images_v1`, data: URLs)
+never travel, and here that is a decision as much as the image policy: a pin is a choice about one
+of *those* photos, so the pins stay with them.
+
+**Three keys that hold student names were not marked `student: true`, and reading the tools for what
+a link must never carry is how they were found.** `gvb-roleplay:roster` (014, `{ className:
+[studentName] }`), `gvb-exit-ticket:triage` (023, a student's name with a got/almost/reteach mark
+beside it), `gvb-writing-prompts:record` (025, a per-student log with the teacher's conference note
+under each entry — the tool's own store comment calls it a portfolio). All three are now marked, and
+filed in `registry-shape.test.mjs`'s `RECLASSIFIED_DELIBERATELY` with the reason, as #248 did for
+048: what a teacher sees change is that the year-end rollover takes these with last year's
+students. This is a different class of registry bug from #248's (a mark lost in a migration) and
+#250's sweep (a legacy key marked whose successor is not): **a key that was never marked at all
+because nobody read what it held.** The 29 unmarked keys of the eight tools this row covers have now
+been read; the rest of the registry has not.
+
+**029 was surveyed and deliberately left.** It already has a link of its own — `loadFromParams()`
+prefills every form field from `?name=&grade=&…`, which is how an external tool hands it a draft —
+so it is 019's shape (the sheet's link would be the *presets*, the vocabulary; the existing link is
+the draft), and `loadFromParams()` treats any parameter at all as a prefill, so the share parameter
+would have to be excluded from it. It also sits on `_shared/theme.css` rather than ink-paper, so the
+sheet needs 018's scoped token block. Two small jobs, but two more than a copy, and the batch was
+already five. **016** (2,826 lines, four keys, a checkout inventory that may hold student names) and
+**038** (a name→pasted-text map of datasets the tool's own comment says can contain student data)
+are the other two left, and 038 is the one that needs a decision written down before wiring.
+
+**What was not verified.** No QR from any of the five was scanned by a real camera; the
+`navigator.share` row is still exercised nowhere, seven increments on; no file was downloaded by a
+real browser and re-opened by hand; the open sheet was scanned by axe in **light only** on these five;
+014's arriving fills were checked in storage and on the custom list, but the stage's fill-in textareas
+were not read back for the arrived scenario; and nothing here was driven by a human clicking anything.
+
+Full `npm test` locally, to completion: **156 of 156 green, 33.8 min**; CI ran the full list (the
+registry is in the diff) green in **32.2 min**. `npm run test:share-rollout` is at **1380 assertions**,
+up from 1162.
+
 **Path 6 P3, increment 6 — the first five bank-plus-settings generators — 2026-09-11
 (#250, `CACHE_VERSION` v178).** **053** Cultural Trivia Card Generator, **055** Daily Editing /
 DOL Warm-Up Generator, **061** Fraction–Decimal–Percent Drill Generator, **062** Geography Bee /
