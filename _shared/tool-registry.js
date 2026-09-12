@@ -464,6 +464,9 @@
       title: 'Exit Ticket / Bell Ringer Generator',
       file: 'Tools/023-exit-ticket-generator.html',
       category: 'assessment-grading',
+      /* The share link carries the My Prompts bank and the prompt sets —
+         never a tally, a triage name, a response or a setting. */
+      share: { param: 'prompts' },
       keys: [
         { k: 'gvb-exit-ticket:activeSet' },
         { k: 'gvb-exit-ticket:categoryTally' },
@@ -472,7 +475,9 @@
         { k: 'gvb-exit-ticket:sets' },
         { k: 'gvb-exit-ticket:settings' },
         { k: 'gvb-exit-ticket:tally', student: true },
-        { k: 'gvb-exit-ticket:triage' },
+        /* { groupSize, students: [{ id, name, status }] } — names with a
+           got/almost/reteach mark beside each. */
+        { k: 'gvb-exit-ticket:triage', student: true },
       ],
       prefixes: [
         { p: 'gvb-exit-ticket:', legacy: true },
@@ -839,11 +844,16 @@
       title: 'Writing Prompt Generator',
       file: 'Tools/025-writing-prompt-generator.html',
       category: 'ela',
+      /* The share link carries the custom prompts and the prompt sets —
+         never the Writing Record, the history or the settings. */
+      share: { param: 'prompts' },
       keys: [
         { k: 'gvb-writing-prompts:activeSet' },
         { k: 'gvb-writing-prompts:custom' },
         { k: 'gvb-writing-prompts:history' },
-        { k: 'gvb-writing-prompts:record' },
+        /* { [studentName]: [{ date, promptText, note, ... }] } — the Writing
+           Record, keyed by the student's name with a conference note per entry. */
+        { k: 'gvb-writing-prompts:record', student: true },
         { k: 'gvb-writing-prompts:sets' },
         { k: 'gvb-writing-prompts:settings' },
       ],
@@ -1250,6 +1260,9 @@
       title: 'Immersion Roleplay Scenario Generator',
       file: 'Tools/014-roleplay-scenario-generator.html',
       category: 'world-language',
+      /* The share link carries the teacher's own scenarios with their
+         fill-ins — never the roster, the criteria or the built-in fills. */
+      share: { param: 'scenarios' },
       keys: [
         { k: 'gvb-roleplay:criteria' },
         { k: 'gvb-roleplay:current' },
@@ -1259,7 +1272,8 @@
         { k: 'gvb-roleplay:filter' },
         { k: 'gvb-roleplay:frames' },
         { k: 'gvb-roleplay:levelFilter' },
-        { k: 'gvb-roleplay:roster' },
+        /* { className: [studentName, ...] } — a per-class copy of the roster. */
+        { k: 'gvb-roleplay:roster', student: true },
         { k: 'gvb-roleplay:ttsLang' },
         { k: 'gvb-roleplay:usefulFills' },
       ],
@@ -1320,6 +1334,8 @@
       title: 'Picture-Prompt Speaking/Writing Task Generator',
       file: 'Tools/071-picture-prompt-generator.html',
       category: 'world-language',
+      /* The share link carries the active prompt set — never an image or a pin. */
+      share: { param: 'prompts' },
       keys: [
         { k: 'ppg_images_v1' },
         { k: 'ppg_print_count_v1' },
@@ -1421,6 +1437,9 @@
       title: 'Music Sight-Reading / Rhythm Warm-Up Generator',
       file: 'Tools/067-music-sightreading-generator.html',
       category: 'arts-pe',
+      /* The share link carries the warm-up settings; the receiving device
+         rolls its own patterns from them (there is no seed). */
+      share: { param: 'warmup' },
       keys: [
         { k: 'msrg_settings_v1' },
       ],

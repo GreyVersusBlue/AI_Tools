@@ -29,6 +29,10 @@
 <script src="writing-prompt-generator/wpg-prompts.js"></script>
 <script src="writing-prompt-generator/wpg-store.js"></script>
 <script src="writing-prompt-generator/wpg-rubric-link.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -44,7 +48,19 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .header-actions { display: flex; align-items: center; }
+  /* The two tint pairs the share note sits on, in 001's values with dark
+     counterparts — ink-paper.css has no token for either. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share your prompts: the sheet itself is _shared/share.js (Path 6 P3).
+     This is only the note under the header that records what it did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
+
+  .header-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
   .fs-btn {
     font-size: .85rem; font-weight: 700; padding: .5rem .9rem; border-radius: 7px;
     background: var(--card); color: var(--muted); border: 1px solid var(--line-strong);
@@ -409,11 +425,13 @@
       <h1>Writing Prompt Generator</h1>
     </div>
     <div class="header-actions">
+      <button type="button" class="fs-btn" id="shareBtn" title="Share your own prompts and prompt sets with another teacher">&#128279; Share prompts&hellip;</button>
       <button type="button" class="fs-btn" id="printPosterBtn" title="Print the current prompt as a wall poster" disabled>&#128424; Print poster</button>
       <button type="button" class="fs-btn" id="printHandoutBtn" title="Print the current prompt as two half-sheet handouts with writing lines" disabled>&#128221; Print half-sheets</button>
       <button type="button" class="fs-btn" id="fullscreenBtn" title="Toggle fullscreen (F)">&#9970; Fullscreen</button>
     </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="controls">
     <div class="band-tabs" id="bandTabs">
@@ -665,7 +683,7 @@
    'wordGoalDisplay','wordGoalInput','clearWordGoalBtn',
    'timerDisplay','timerPresetsRow','timerCustomInput','timerCustomSetBtn','timerStartBtn','timerPauseBtn','timerResetBtn',
    'includeCustomToggle','togglePromptsBtn','myPromptsPanel','customPromptText','customPromptBand',
-   'customPromptGenre','addCustomPromptBtn','customPromptsList',
+   'customPromptGenre','addCustomPromptBtn','customPromptsList','shareBtn','shareNote',
    'rosterLoadSelect','rosterNamesInput','rosterCount','buildRosterSheetBtn','printRosterSheetBtn',
    'rosterSheetPreview','rosterPrintArea',
    'recordRosterLoadSelect','recordStudentInput','recordStudentDatalist','recordDateInput',
@@ -2042,8 +2060,134 @@
   els.anonNextBtn.addEventListener('click', function () { anonStep(1); });
   els.anonCloseBtn.addEventListener('click', closeAnonOverlay);
 
+  /* ---------- share your prompts: _shared/share.js (Path 6 P3) ---------------
+     WHAT TRAVELS IS THE TEACHER'S OWN WORDING — the custom prompts, with
+     their band and genre, and the planned prompt sets. The built-in prompts
+     ship with the page.
+
+     What stays: `gvb-writing-prompts:record` is the Writing Record, a
+     per-student log keyed by the student's name with the teacher's
+     conference note under each entry — the most personal thing this tool
+     holds, and not a field anyone wrote to be published (#248's line);
+     `history` is which prompts this device has shown and when; `settings`
+     and `activeSet` are this device's. The suite asserts a student's name
+     and a conference note are nowhere in the payload.
+
+     Two kinds of arrival, as in 023: the custom prompts MERGE by text (they
+     may only add) and a prompt set is SAVED BESIDE under a free name with
+     fresh ids and its cursor at the start. Neither asks. */
+  var SHARE_PARAM = 'prompts';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      var custom = customPrompts.map(function (p) { return { text: p.text, band: p.band, genre: p.genre }; });
+      var sets = promptSets.filter(function (st) { return st.items.length; }).map(function (st) {
+        return { name: st.name, items: st.items.map(function (it) {
+          return { band: it.band, genre: it.genre, text: it.text, rubricName: it.rubricName || null };
+        }) };
+      });
+      if (!custom.length && !sets.length) return null;
+      return { custom: custom, sets: sets };
+    },
+    param: SHARE_PARAM,
+    tool: 'writing-prompt-generator',
+    title: 'Share your prompts',
+    noun: 'your prompts',
+    filename: 'writing prompts',
+    note: 'Only your own prompts travel — the custom prompts and your planned prompt sets. The Writing Record, your history and your settings stay on this device.',
+    successMessage: 'Link copied. It carries your custom prompts and sets only — no student, no record, no history.',
+    emptyMessage: 'Add a prompt of your own or build a prompt set first — the built-in prompts are already on every device.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausiblePrompts(obj) {
+    return !!obj && typeof obj === 'object' && (Array.isArray(obj.custom) || Array.isArray(obj.sets));
+  }
+
+  /** `name`, or `name (2)`, `name (3)`… — the first not already a set here. */
+  function uniqueSetName(name) {
+    var taken = {};
+    promptSets.forEach(function (st) { taken[String(st.name || '').trim().toLowerCase()] = true; });
+    if (!taken[name.toLowerCase()]) return name;
+    var n = 2;
+    while (taken[(name + ' (' + n + ')').toLowerCase()]) n++;
+    return name + ' (' + n + ')';
+  }
+
+  function importSharedPrompts() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausiblePrompts,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var validBands = Object.keys(WritingPrompts.PROMPTS);
+        var validGenres = WritingPrompts.GENRES.map(function (g) { return g.key; });
+        var custom = (Array.isArray(decoded.custom) ? decoded.custom : []).map(function (p) {
+          var text = String(p && p.text != null ? p.text : '').trim();
+          if (!text) return null;
+          return {
+            text: text,
+            band: p.band === 'both' || validBands.indexOf(p.band) !== -1 ? p.band : 'both',
+            genre: validGenres.indexOf(p.genre) !== -1 ? p.genre : validGenres[0]
+          };
+        }).filter(Boolean);
+        var sets = (Array.isArray(decoded.sets) ? decoded.sets : []).map(function (st) {
+          if (!st || typeof st !== 'object') return null;
+          var items = (Array.isArray(st.items) ? st.items : []).map(function (it) {
+            var text = String(it && it.text != null ? it.text : '').trim();
+            if (!text) return null;
+            return {
+              id: 'si' + Date.now() + Math.floor(Math.random() * 100000),
+              band: validBands.indexOf(it.band) !== -1 ? it.band : validBands[0],
+              genre: validGenres.indexOf(it.genre) !== -1 ? it.genre : validGenres[0],
+              text: text,
+              rubricName: typeof it.rubricName === 'string' && it.rubricName ? it.rubricName : null
+            };
+          }).filter(Boolean);
+          if (!items.length) return null;
+          return { name: String(st.name == null ? '' : st.name).trim() || 'Shared set', items: items };
+        }).filter(Boolean);
+        if (!custom.length && !sets.length) {
+          setShareNote('That link carried no prompts.', true);
+          return false;
+        }
+        var have = {};
+        customPrompts.forEach(function (p) { have[String(p.text).trim().toLowerCase()] = true; });
+        var added = 0, skipped = 0;
+        custom.forEach(function (p) {
+          var k = p.text.toLowerCase();
+          if (have[k]) { skipped++; return; }
+          have[k] = true;
+          customPrompts.push({ id: 'cp' + Date.now() + Math.floor(Math.random() * 100000), text: p.text, band: p.band, genre: p.genre });
+          added++;
+        });
+        if (added) persistCustom();
+        var savedSets = [];
+        sets.forEach(function (st) {
+          var name = uniqueSetName(st.name);
+          promptSets.push({ id: 'set' + Date.now() + Math.floor(Math.random() * 100000), name: name, startDate: null, cursor: 0, items: st.items });
+          savedSets.push(name);
+        });
+        if (savedSets.length) persistSets();
+        var msg = 'Added ' + added + ' from a shared prompt bank' +
+          (skipped ? ', skipped ' + skipped + ' already listed' : '');
+        if (savedSets.length) msg += ', and saved ' + savedSets.length + ' prompt set' + (savedSets.length === 1 ? '' : 's') +
+          ' beside your own (' + savedSets.join(', ') + ')';
+        setShareNote(msg + '. Your Writing Record, history and settings are untouched.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
   loadSaved();
+  importSharedPrompts();
   buildGenreSelect();
   buildCustomGenreSelect();
   buildSetItemGenreSelect();

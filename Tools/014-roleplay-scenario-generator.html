@@ -24,10 +24,26 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* The two tint pairs the share note sits on, in 001's values with dark
+     counterparts — ink-paper.css has no token for either. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share your own scenarios: the sheet itself is _shared/share.js (Path 6
+     P3). This is only the note under the header that records what it did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -187,7 +203,11 @@
       <h1>Immersion Roleplay Scenario Generator</h1>
       <p class="tagline">Real-life dialogue scenarios for partner speaking practice &mdash; works for any world language you teach</p>
     </div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share your scenarios&hellip;</button>
+    </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="toolbar">
     <label for="categorySelect" style="margin:0;font-weight:600;font-size:.85rem;">Category:</label>
@@ -668,7 +688,7 @@
    'rosterHubSelect', 'rosterHubLoadBtn', 'rosterStatus', 'pairUpBtn',
    'toggleAddBtn', 'addPanel', 'addTitle', 'addCategory', 'addRoleA', 'addRoleB', 'addSetup', 'addPhrases',
    'saveCustomBtn', 'cancelCustomBtn', 'customList',
-   'stage', 'printArea',
+   'stage', 'printArea', 'shareBtn', 'shareNote',
    'criteriaPanel', 'criteriaText', 'criteriaOn', 'toggleCriteriaBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -1393,7 +1413,155 @@
     }
   });
 
+  /* ---------- share your own scenarios: _shared/share.js (Path 6 P3) --------
+     WHAT TRAVELS IS THE CUSTOM SCENARIOS — title, roles, setup and the
+     scaffolding phrases — WITH THE CURRENT CLASS'S FILL-INS AND SENTENCE
+     FRAMES FOR EACH. The fills are the point: a scenario's phrases are the
+     English prompts, and the fills are the Spanish (or French, or Mandarin)
+     the teacher typed under them, which is exactly what one language teacher
+     wants from another. They ride along because a custom scenario is NEW on
+     the receiving device, so filing its fills there takes nothing away.
+
+     What stays, and why: the roster and the pair-ups (student names, per
+     class); the fills and frames on the BUILT-IN scenarios (merging those
+     onto the receiver's own copies would overwrite theirs — an arrival that
+     does not ask may only add, #250's rule); the useful-phrase fills, the
+     success criteria, the filters and the TTS language, all per class or per
+     device. The built-in scenarios ship with the page.
+
+     An arrival merges by title and setup, mints fresh ids (fills are filed
+     under the id, so the sender's id would land on nothing here), and files
+     the fills under the class this device has open. */
+  var SHARE_PARAM = 'scenarios';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  /** The strings in `arr`, trimmed, or null when none of them says anything. */
+  function textsOrNull(arr) {
+    if (!Array.isArray(arr)) return null;
+    var out = arr.map(function (t) { return String(t == null ? '' : t).trim(); });
+    return out.some(Boolean) ? out : null;
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      if (!customScenarios.length) return null;
+      return {
+        scenarios: customScenarios.map(function (sc) {
+          var row = { category: sc.category, title: sc.title, roles: sc.roles, setup: sc.setup, phrases: sc.phrases };
+          var fills = textsOrNull(fillsFor(sc.id)), frames = textsOrNull(framesFor(sc.id));
+          if (fills) row.fills = fills;
+          if (frames) row.frames = frames;
+          return row;
+        })
+      };
+    },
+    param: SHARE_PARAM,
+    tool: 'roleplay-scenario-generator',
+    title: 'Share your scenarios',
+    noun: 'your own scenarios',
+    filename: 'roleplay scenarios',
+    note: function () {
+      return 'Only the scenarios you wrote travel, with the fill-ins and sentence frames you typed for them in ' +
+        currentClass + '. Your roster, your fills on the built-in scenarios and your criteria stay here.';
+    },
+    successMessage: 'Link copied. It carries your own scenarios and their fill-ins — no roster, no built-in scenario.',
+    emptyMessage: 'Add a scenario of your own first. The built-in scenarios are already on every device, so there would be nothing to send.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleScenarios(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.scenarios);
+  }
+
+  function knownCategory(key) {
+    return CATEGORIES.some(function (c) { return c.key === key; });
+  }
+
+  /** The arriving scenarios, checked the way the add form checks its own:
+      a title, a setup, at least one phrase, and a category this page has a
+      filter for. */
+  function incomingScenarios(decoded) {
+    var out = [];
+    decoded.scenarios.forEach(function (row) {
+      if (!row || typeof row !== 'object') return;
+      var title = String(row.title == null ? '' : row.title).trim();
+      var setup = String(row.setup == null ? '' : row.setup).trim();
+      var phrases = (Array.isArray(row.phrases) ? row.phrases : []).map(function (t) { return String(t == null ? '' : t).trim(); }).filter(Boolean);
+      if (!title || !setup || !phrases.length) return;
+      var roles = Array.isArray(row.roles) ? row.roles : [];
+      var fills = textsOrNull(row.fills), frames = textsOrNull(row.frames);
+      out.push({
+        title: title, setup: setup, phrases: phrases,
+        category: knownCategory(row.category) ? row.category : 'social',
+        roles: [String(roles[0] == null ? '' : roles[0]).trim() || 'Person A', String(roles[1] == null ? '' : roles[1]).trim() || 'Person B'],
+        fills: fills ? fills.slice(0, phrases.length) : null,
+        frames: frames ? frames.slice(0, phrases.length) : null
+      });
+    });
+    return out;
+  }
+
+  function importSharedScenarios() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleScenarios,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var rows = incomingScenarios(decoded);
+        if (!rows.length) {
+          setShareNote('That link carried no scenarios.', true);
+          return false;
+        }
+        function fingerprint(sc) {
+          return String(sc.title).trim().toLowerCase() + '\u0000' + String(sc.setup).trim().toLowerCase();
+        }
+        var have = {};
+        customScenarios.forEach(function (sc) { have[fingerprint(sc)] = true; });
+        var added = 0, skipped = 0, filled = 0, firstId = null;
+        if (!fillsByClass[currentClass]) fillsByClass[currentClass] = {};
+        if (!framesByClass[currentClass]) framesByClass[currentClass] = {};
+        rows.forEach(function (row) {
+          var fp = fingerprint(row);
+          if (have[fp]) { skipped++; return; }
+          have[fp] = true;
+          var id = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+          if (!firstId) firstId = id;
+          customScenarios.push({ id: id, category: row.category, title: row.title, roles: row.roles, setup: row.setup, phrases: row.phrases, custom: true });
+          if (row.fills) { fillsByClass[currentClass][id] = row.fills; filled++; }
+          if (row.frames) framesByClass[currentClass][id] = row.frames;
+          added++;
+        });
+        saveCustomScenarios();
+        saveFills();
+        saveFrames();
+        rebuildScenarioIndex();
+        renderCustomList();
+        if (firstId) {
+          /* Put the first arrival on the stage, as saving one from the add
+             form does — and clear both filters, because a custom scenario has
+             no level and a level filter would hide it from the picker. */
+          filter = 'all';
+          levelFilter = 'all';
+          localStorage.setItem(FILTER_KEY, filter);
+          localStorage.setItem(LEVEL_FILTER_KEY, levelFilter);
+          setCurrent(firstId);
+        }
+        setShareNote('Added ' + added + ' from a shared scenario list' +
+          (skipped ? ', skipped ' + skipped + ' already listed' : '') +
+          (filled ? ', with fill-ins for ' + filled + ' filed under ' + currentClass : '') +
+          '. Your roster and your own fill-ins are untouched.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
+  importSharedScenarios();
   if (!currentId) {
     var list = filteredList();
     if (list.length) setCurrent(list[Math.floor(Math.random() * list.length)].id);

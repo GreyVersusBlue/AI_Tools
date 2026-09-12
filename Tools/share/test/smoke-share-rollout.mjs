@@ -888,6 +888,208 @@ const TOOLS = [
     ],
     mergeKeeps: 'Add: 1/4 + 1/4',
   },
+  {
+    /* Increment 7. The custom scenarios travel WITH the current class's
+       fill-ins for them — the Spanish under the English prompts, which is the
+       thing worth sending. Fills on the BUILT-IN scenarios stay: merging them
+       onto the receiver's own would overwrite theirs. */
+    n: '014', file: '014-roleplay-scenario-generator.html', param: 'scenarios',
+    key: 'gvb-roleplay:custom', slug: 'roleplay-scenario-generator',
+    merges: true, mergeNameOf: r => r.title,
+    extraSeed: [
+      ['gvb-roleplay:fills', JSON.stringify({ 'Period 4': {
+        'f1': ['Quisiera un cortado', '', '', '', ''],
+        'custom-seedA': ['Me gustaría reservar una mesa', 'Para cuatro personas'],
+      } })],
+      ['gvb-roleplay:frames', JSON.stringify({ 'Period 4': { 'custom-seedA': ['Quisiera reservar ___.', ''] } })],
+      ['gvb-roleplay:roster', JSON.stringify({ 'Period 4': ['Ximena Aldana', 'Bartholomew Quist'] })],
+      ['gvb-roleplay:criteria', JSON.stringify({ 'Period 4': 'Three full sentences each' })],
+      ['gvb-roleplay:currentClass', 'Period 4'],
+    ],
+    untouched: [
+      ['gvb-roleplay:roster', JSON.stringify({ 'Period 4': ['Ximena Aldana', 'Bartholomew Quist'] })],
+      ['gvb-roleplay:criteria', JSON.stringify({ 'Period 4': 'Three full sentences each' })],
+    ],
+    state: [
+      { id: 'custom-seedA', category: 'food', title: 'Booking a Table for a Birthday', roles: ['Caller', 'Restaurant host'],
+        setup: 'Phone a restaurant to reserve a table for four on Saturday; the first time is full.',
+        phrases: ['Ask for a table and say when', 'React to the first time being full and pick another'], custom: true },
+    ],
+    expect: p => [
+      [Array.isArray(p.scenarios) && p.scenarios.length === 1, 'the payload carries the custom scenario'],
+      [p.scenarios[0].phrases.length === 2 && p.scenarios[0].roles[1] === 'Restaurant host', 'with its phrases and roles'],
+      [p.scenarios[0].fills && p.scenarios[0].fills[0] === 'Me gustaría reservar una mesa', 'and the current class’s fill-ins for it, which is the point'],
+      [p.scenarios[0].frames && p.scenarios[0].frames[0] === 'Quisiera reservar ___.', 'and its sentence frames'],
+      [JSON.stringify(p).indexOf('Quisiera un cortado') === -1, 'but not the fill-ins on a built-in scenario'],
+      [JSON.stringify(p).indexOf('Ordering at a Caf') === -1, 'and no built-in scenario at all'],
+    ],
+    absent: ['Ximena Aldana', 'Bartholomew Quist', 'Three full sentences', 'Period 4'],
+    /* The arrival is put on the stage, as saving from the add form does. */
+    arrived: page => page.$eval('#stage h2', el => el.textContent),
+    arrivedWant: 'Booking a Table for a Birthday',
+    arrivedNote: /Added \d+ from a shared/,
+    mergeLocal: [
+      { id: 'custom-mine', category: 'travel', title: 'Lost Luggage at the Airport', roles: ['Traveller', 'Agent'],
+        setup: 'Your suitcase did not arrive.', phrases: ['Explain what happened'], custom: true },
+    ],
+    mergeKeeps: 'Lost Luggage at the Airport',
+    afterMerge: async (page) => {
+      const got = await page.evaluate(() => {
+        const custom = JSON.parse(localStorage.getItem('gvb-roleplay:custom') || '[]');
+        const arrived = custom.filter(c => c.title === 'Booking a Table for a Birthday')[0];
+        const fills = JSON.parse(localStorage.getItem('gvb-roleplay:fills') || '{}');
+        const cls = localStorage.getItem('gvb-roleplay:currentClass') || 'My Class';
+        return { id: arrived && arrived.id, fills: arrived ? (fills[cls] || {})[arrived.id] : null, cls };
+      });
+      return [
+        ['the arrival got a local id rather than the sender’s', !!got.id && got.id !== 'custom-seedA'],
+        [`and its fill-ins were filed under the class this device has open (${got.cls})`,
+          Array.isArray(got.fills) && got.fills[0] === 'Me gustaría reservar una mesa'],
+      ];
+    },
+  },
+  {
+    /* Two kinds of arrival in one tool: the My Prompts bank merges, a prompt
+       set is saved beside. The tally, the triage names and the responses are
+       the half that never travels. */
+    n: '023', file: '023-exit-ticket-generator.html', param: 'prompts',
+    key: 'gvb-exit-ticket:customPrompts', slug: 'exit-ticket-generator',
+    merges: true, mergeNameOf: r => r.text,
+    extraSeed: [
+      ['gvb-exit-ticket:sets', JSON.stringify([{ id: 'set-seed', name: 'Week 3 Warm-Ups', startDate: '2026-09-14', cursor: 1,
+        items: [{ id: 'si-1', category: 'science', text: 'Which variable did we hold constant today, and why?' },
+                { id: 'si-2', category: 'custom', text: 'Sketch the setup from memory.' }] }])],
+      ['gvb-exit-ticket:tally', JSON.stringify([3, 9, 2, 0])],
+      ['gvb-exit-ticket:triage', JSON.stringify({ groupSize: 4, students: [{ id: 't1', name: 'Oluwaseun Adebayo', status: 'reteach' }] })],
+      ['gvb-exit-ticket:discussion', JSON.stringify([{ id: 'd1', text: 'I think the pendulum swung slower because it was longer' }])],
+    ],
+    untouched: [
+      ['gvb-exit-ticket:tally', JSON.stringify([3, 9, 2, 0])],
+      ['gvb-exit-ticket:triage', JSON.stringify({ groupSize: 4, students: [{ id: 't1', name: 'Oluwaseun Adebayo', status: 'reteach' }] })],
+      ['gvb-exit-ticket:discussion', JSON.stringify([{ id: 'd1', text: 'I think the pendulum swung slower because it was longer' }])],
+    ],
+    state: [
+      { id: 'cp-a', text: 'What is one thing from today’s lab you would redo, and why?' },
+      { id: 'cp-b', text: 'Write the claim your group settled on in one sentence.' },
+    ],
+    expect: p => [
+      [Array.isArray(p.bank) && p.bank.length === 2, 'the payload carries the My Prompts bank'],
+      [p.bank[1].text.indexOf('claim your group') !== -1, 'with the teacher’s own wording'],
+      [Array.isArray(p.sets) && p.sets.length === 1 && p.sets[0].name === 'Week 3 Warm-Ups', 'and the planned prompt set'],
+      [p.sets[0].items.length === 2 && p.sets[0].items[0].category === 'science', 'with its prompts and their categories'],
+      [p.sets[0].cursor === undefined && p.sets[0].startDate === undefined, 'but not where this device is in it'],
+      [p.tally === undefined && p.triage === undefined && p.discussion === undefined, 'and no tally, no triage, no response'],
+    ],
+    absent: ['Oluwaseun', 'Adebayo', 'pendulum', '[3,9,2,0]', 'reteach'],
+    arrived: page => page.$eval('#bankList', el =>
+      el.textContent.indexOf('claim your group') !== -1 ? 'claim your group' : el.textContent.slice(0, 140)),
+    arrivedWant: 'claim your group',
+    arrivedNote: /Added \d+ from a shared/,
+    mergeLocal: [
+      { id: 'cp-mine', text: 'Rate today from 1 to 5 and say why.' },
+    ],
+    mergeKeeps: 'Rate today from 1 to 5 and say why.',
+    mergeAdds: 'What is one thing from today’s lab you would redo, and why?',
+    afterMerge: async (page) => {
+      /* The merge page is seeded with the SAME set the link carries, so this
+         is the collision case: the arrival must take the suffixed name and the
+         device's own copy, two prompts into its sequence, must be untouched. */
+      const sets = await page.evaluate(() => JSON.parse(localStorage.getItem('gvb-exit-ticket:sets') || '[]'));
+      const names = sets.map(x => x.name);
+      const mine = sets.filter(x => x.name === 'Week 3 Warm-Ups')[0];
+      const arrived = sets.filter(x => x.name === 'Week 3 Warm-Ups (2)')[0];
+      return [
+        ['the prompt set was saved beside the device’s own under a suffixed name: ' + JSON.stringify(names), !!mine && !!arrived],
+        ['with fresh ids for the set and its items', !!arrived && arrived.id !== 'set-seed' && arrived.items.every(it => it.id !== 'si-1' && it.id !== 'si-2')],
+        ['and its cursor at the start, since the sender’s progress is theirs', !!arrived && arrived.cursor === 0 && arrived.startDate === null],
+        ['while the device’s own copy keeps its id, its cursor and its start date', !!mine && mine.id === 'set-seed' && mine.cursor === 1 && mine.startDate === '2026-09-14'],
+      ];
+    },
+  },
+  {
+    /* 023's twin. The Writing Record — a per-student log with the teacher's
+       conference note — is the half that never travels. */
+    n: '025', file: '025-writing-prompt-generator.html', param: 'prompts',
+    key: 'gvb-writing-prompts:custom', slug: 'writing-prompt-generator',
+    merges: true, mergeNameOf: r => r.text,
+    extraSeed: [
+      ['gvb-writing-prompts:sets', JSON.stringify([{ id: 'set-seed', name: 'Memoir Unit', startDate: null, cursor: 2,
+        items: [{ id: 'si-1', band: 'ms', genre: 'narrative', text: 'Write about a time you changed your mind.', rubricName: 'Narrative 6-8' }] }])],
+      ['gvb-writing-prompts:record', JSON.stringify({ 'Priyanka Venkataraman': [
+        { id: 'r1', date: '2026-09-09', promptText: 'Write about a time you changed your mind.', band: 'ms', genre: 'narrative', rubricName: null, note: 'Strong opening; work on paragraphing' }] })],
+      ['gvb-writing-prompts:history', JSON.stringify([{ date: '2026-09-09', text: 'Write about a time you changed your mind.', band: 'ms', genre: 'narrative' }])],
+    ],
+    untouched: [
+      ['gvb-writing-prompts:record', JSON.stringify({ 'Priyanka Venkataraman': [
+        { id: 'r1', date: '2026-09-09', promptText: 'Write about a time you changed your mind.', band: 'ms', genre: 'narrative', rubricName: null, note: 'Strong opening; work on paragraphing' }] })],
+    ],
+    state: [
+      { id: 'cp-a', text: 'Describe the sound of your street at 6 a.m.', band: 'both', genre: 'descriptive' },
+      { id: 'cp-b', text: 'Argue for one change to the lunch schedule.', band: 'hs', genre: 'persuasive' },
+    ],
+    expect: p => [
+      [Array.isArray(p.custom) && p.custom.length === 2, 'the payload carries the custom prompts'],
+      [p.custom[1].band === 'hs' && p.custom[1].genre === 'persuasive', 'with the band and genre they are filed under'],
+      [Array.isArray(p.sets) && p.sets.length === 1 && p.sets[0].name === 'Memoir Unit', 'and the planned prompt set'],
+      [p.sets[0].items[0].rubricName === 'Narrative 6-8', 'including the rubric name each item points at'],
+      [p.sets[0].cursor === undefined, 'but not where this device is in it'],
+      [p.record === undefined && p.history === undefined, 'and no Writing Record and no history'],
+    ],
+    absent: ['Priyanka', 'Venkataraman', 'Strong opening', 'paragraphing', '2026-09-09'],
+    arrived: page => page.$eval('#customPromptsList', el =>
+      el.textContent.indexOf('6 a.m.') !== -1 ? '6 a.m.' : el.textContent.slice(0, 140)),
+    arrivedWant: '6 a.m.',
+    arrivedNote: /Added \d+ from a shared/,
+    mergeLocal: [
+      { id: 'cp-mine', text: 'Explain a rule at home you would rewrite.', band: 'ms', genre: 'expository' },
+    ],
+    mergeKeeps: 'Explain a rule at home you would rewrite.',
+    mergeAdds: 'Describe the sound of your street at 6 a.m.',
+    afterMerge: async (page) => {
+      const sets = await page.evaluate(() => JSON.parse(localStorage.getItem('gvb-writing-prompts:sets') || '[]'));
+      const mine = sets.filter(x => x.name === 'Memoir Unit')[0];
+      const arrived = sets.filter(x => x.name === 'Memoir Unit (2)')[0];
+      return [
+        ['the prompt set was saved beside the device’s own under a suffixed name: ' + JSON.stringify(sets.map(x => x.name)), !!mine && !!arrived],
+        ['with fresh ids and its cursor at the start', !!arrived && arrived.id !== 'set-seed' && arrived.items[0].id !== 'si-1' && arrived.cursor === 0],
+        ['while the device’s own copy keeps its id and its cursor', !!mine && mine.id === 'set-seed' && mine.cursor === 2],
+      ];
+    },
+  },
+  {
+    /* A library in one key, keyed by id in a list under { v, activeId, sets }
+       — a fourth layout, hence libraryHooks. The images are the half that
+       never travels, and here that is a decision as much as a policy. */
+    n: '071', file: '071-picture-prompt-generator.html', param: 'prompts',
+    slug: 'picture-prompt-task-generator', docName: 'Spanish 2 — past tense',
+    libraryHooks: {
+      seed: (doc) => [['ppg_prompt_sets_v1', JSON.stringify({ v: 1, activeId: doc.id, sets: [doc] })]],
+      read: (page, name) => page.evaluate((n) => {
+        let store = null;
+        try { store = JSON.parse(localStorage.getItem('ppg_prompt_sets_v1') || 'null'); } catch (e) { store = null; }
+        const sets = (store && store.sets) || [];
+        return { names: sets.map(x => x && x.name), kept: sets.filter(x => x && x.name === n)[0] || null };
+      }, name),
+    },
+    extraSeed: [['ppg_images_v1', JSON.stringify([{ id: 'img-1', src: 'data:image/png;base64,iVBORw0KGgo=', pinnedPrompts: { 'set-seed': 'p-1' } }])]],
+    state: {
+      id: 'set-seed', name: 'Spanish 2 — past tense', starter: null,
+      prompts: [{ id: 'p-1', text: 'Describe lo que hicieron las personas ayer.' }, { id: 'p-2', text: '¿Qué pasó justo antes de esta foto?' }],
+    },
+    expect: p => [
+      [p.name === 'Spanish 2 — past tense', 'the payload carries the set’s name'],
+      [Array.isArray(p.prompts) && p.prompts.length === 2 && p.prompts[0] === 'Describe lo que hicieron las personas ayer.', 'and its prompts, as text'],
+      [p.id === undefined && JSON.stringify(p).indexOf('p-1') === -1, 'but not its ids, which a pin on this device points at'],
+      [JSON.stringify(p).indexOf('data:image') === -1 && p.images === undefined, 'and no image — the pictures are the half that stays'],
+    ],
+    absent: ['iVBORw0KGgo', 'img-1', 'pinnedPrompts'],
+    arrived: page => page.$$eval('#promptsWrap input', els => {
+      const texts = els.map(e => e.value);
+      return texts.indexOf('¿Qué pasó justo antes de esta foto?') !== -1 ? '¿Qué pasó justo antes de esta foto?' : JSON.stringify(texts);
+    }),
+    arrivedWant: '¿Qué pasó justo antes de esta foto?',
+    localField: 'prompts.1.text',
+  },
 ];
 
 /* ── 0. static: the four tags, in dependency order ──────────────────────── */
@@ -896,7 +1098,8 @@ console.log('Share rollout — Path 6 P3, the builders that could not share');
 const ORDER = ['_shared/state-link.js', '_shared/vendor/qrcode/qrcode.js', '_shared/qr-draw.js', '_shared/share.js'];
 for (const t of [...TOOLS,
                  { n: '081', file: '081-word-problem-warmup-generator.html' },
-                 { n: '061', file: '061-fraction-decimal-percent-drill-generator.html' }]) {
+                 { n: '061', file: '061-fraction-decimal-percent-drill-generator.html' },
+                 { n: '067', file: '067-music-sightreading-generator.html' }]) {
   const html = fs.readFileSync(path.join(SITE, 'Tools', t.file), 'utf8');
   const at = ORDER.map(src => html.indexOf(`src="../${src}"`));
   ok(at.every(i => i !== -1), `${t.n}: loads all four share scripts: ${JSON.stringify(ORDER.filter((s, i) => at[i] === -1))}`);
@@ -952,6 +1155,10 @@ const seedForDoc = (t, doc, name) => {
      name in a map — the same claim (an arrival lands beside, nothing is lost)
      over a third storage layout. */
   if (t.libraryList) return [[t.libraryList.key, JSON.stringify({ list: [doc], currentId: doc.id })]];
+  /* Increment 7: a fourth layout (071 keeps { v, activeId, sets: [...] }) and
+     no appetite for a fourth flag. A row that keeps its library some other way
+     says how to seed it and how to read it back, and section 5b uses those. */
+  if (t.libraryHooks) return t.libraryHooks.seed(doc, name);
   return [[t.key, JSON.stringify(doc)]];
 };
 
@@ -1075,7 +1282,7 @@ for (const t of TOOLS) {
   }
 
   /* ── 5b. saved beside, on a device that already has a library ──────────── */
-  if (t.library || t.libraryKey || t.libraryList) {
+  if (t.library || t.libraryKey || t.libraryList || t.libraryHooks) {
     /* The collision case, which is the only one that can lose work here: the
        teacher already has a document filed under the SAME NAME the link wants,
        with different content in it. */
@@ -1099,7 +1306,9 @@ for (const t of TOOLS) {
     ok(/Loaded a shared/.test(await mine.textContent('#shareNote')),
       `${t.n}: and the note says so: ` + JSON.stringify(await mine.textContent('#shareNote')));
 
-    const after = t.libraryList
+    const after = t.libraryHooks
+      ? await t.libraryHooks.read(mine, t.docName)
+      : t.libraryList
       ? await readLibraryList(mine, t.libraryList.key, t.docName)
       : t.libraryKey
       ? await readLibraryKey(mine, t.libraryKey, t.docName)
@@ -1120,7 +1329,9 @@ for (const t of TOOLS) {
        cannot file a second copy of the same arrival. */
     await mine.reload({ waitUntil: 'load' });
     await settle(mine, 800);
-    const names2 = t.libraryList
+    const names2 = t.libraryHooks
+      ? (await t.libraryHooks.read(mine, t.docName)).names
+      : t.libraryList
       ? (await readLibraryList(mine, t.libraryList.key, t.docName)).names
       : t.libraryKey
       ? (await readLibraryKey(mine, t.libraryKey, t.docName)).names
@@ -1189,6 +1400,12 @@ for (const t of TOOLS) {
     for (const [k, want] of (t.untouched || [])) {
       eq(await mine.evaluate(key => localStorage.getItem(key), k), want,
         `${t.n}: the arrival left ${k} exactly as it was`);
+    }
+    /* And for a tool whose arrival files into MORE than the merged key —
+       014's fills for a new scenario, 023's and 025's prompt sets beside the
+       bank — what landed there, read by the row itself. */
+    if (t.afterMerge) {
+      for (const [label, check] of await t.afterMerge(mine)) ok(check, `${t.n}: ${label}`);
     }
     if (t.mergeKeepsToo) {
       for (const [label, check] of t.mergeKeepsToo(await mine.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), t.key))) {
@@ -1463,6 +1680,100 @@ console.log('\n062 — an arriving map question is drawn from the receiving devi
   });
   eq(drawn, 'data:image/png; sized',
     '062: the receiving device draws the shared region from its own map data: ' + JSON.stringify(drawn));
+}
+
+/* ── 067: the recipe travels, the patterns do not ───────────────────────── */
+/* 081 and 061 share a seed and the receiver regenerates the same sheet. 067
+   has no seed — "New pattern" is Math.random — so what a link can carry is the
+   SETTINGS, and the honest claim is the weaker one: the receiving device has
+   the same time signature, measure count, pool, tempo, clef and range, and
+   rolls its own warm-up from them. Two settings describe the device rather
+   than the warm-up and must not travel: which panel was open, and whether
+   this machine draws its note symbols or trusts its music font. */
+console.log('\n067 — 067-music-sightreading-generator.html (a recipe, not patterns)');
+{
+  const PAGE_URL = BASE + '/Tools/067-music-sightreading-generator.html';
+  const sender = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['067', sender]);
+  await sender.goto(PAGE_URL, { waitUntil: 'load' });
+  await settle(sender, 600);
+
+  /* Settings this suite chose, away from every default. */
+  await sender.selectOption('#timeSig', '3');
+  await sender.selectOption('#numMeasures', '6');
+  await sender.fill('#tempo', 'Dotted half = 60');
+  await sender.uncheck('#rhythmPool input[value="half"]');
+  await sender.check('#rhythmPool input[value="quarterRest"]');
+  await sender.selectOption('#notationMode', 'drawn');
+  await sender.click('#pitchTabBtn');
+  await sender.selectOption('#clefSelect', 'bass');
+  await sender.selectOption('#minNote', 'E2');
+  await sender.selectOption('#maxNote', 'A3');
+  await sender.click('#rhythmTabBtn');
+  await settle(sender, 300);
+
+  const url = await shareLink(sender);
+  ok(url && url.indexOf('warmup=') !== -1, '067: Copy link produces a ?warmup= link');
+  const payload = await sender.evaluate(u =>
+    window.StateLink.decodeState(new URL(u).searchParams.get('warmup')), url);
+  eq(payload.rhythm && payload.rhythm.timeSig, '3', '067: the payload carries the time signature (beats per measure)');
+  eq(payload.rhythm && payload.rhythm.numMeasures, '6', '067: the measure count');
+  eq(payload.rhythm && payload.rhythm.tempo, 'Dotted half = 60', '067: the tempo marking as typed');
+  eq(JSON.stringify(payload.rhythm && payload.rhythm.pool), JSON.stringify(['quarter', 'eighthPair', 'quarterRest']),
+    '067: exactly the note values that were ticked');
+  eq(payload.pitch && payload.pitch.clef, 'bass', '067: the clef');
+  ok(payload.pitch && payload.pitch.minNote === 'E2' && payload.pitch.maxNote === 'A3', '067: and the range');
+  ok(payload.rhythm.notation === undefined, '067: whether this machine draws its symbols is this machine’s and does not travel');
+  ok(payload.activeTab === undefined, '067: nor which panel was open');
+  ok(JSON.stringify(payload).indexOf('♩') === -1 && payload.measures === undefined,
+    '067: and no pattern is in the payload at all — there is no seed to regenerate one from');
+
+  const receiver = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['067-receiver', receiver]);
+  const asked = [];
+  receiver.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
+  await receiver.addInitScript(() => {
+    /* A device that had chosen "draw" for its own font reasons, and a
+       different everything else. */
+    localStorage.setItem('msrg_settings_v1', JSON.stringify({ v: 1, activeTab: 'pitch',
+      rhythm: { timeSig: '4', numMeasures: '4', tempo: 'Quarter note = 120', pool: ['quarter'], notation: 'font' },
+      pitch: { clef: 'treble', minNote: 'C4', maxNote: 'G5', numNotes: '8', showNames: true } }));
+  });
+  await receiver.goto(url, { waitUntil: 'load' });
+  await settle(receiver, 800);
+  eq(asked.length, 0, '067: an arriving recipe does not ask, because nothing here is anybody’s typing');
+  ok(/Loaded shared warm-up settings/.test(await receiver.textContent('#shareNote')),
+    '067: and it says what it did, and that the patterns are its own: ' + JSON.stringify(await receiver.textContent('#shareNote')));
+  eq(await receiver.inputValue('#timeSig'), '3', '067: the receiving device has the time signature');
+  eq(await receiver.inputValue('#numMeasures'), '6', '067: the measure count');
+  eq(await receiver.inputValue('#tempo'), 'Dotted half = 60', '067: the tempo marking');
+  eq(await receiver.isChecked('#rhythmPool input[value="quarterRest"]'), true, '067: the pool, ticked');
+  eq(await receiver.isChecked('#rhythmPool input[value="half"]'), false, '067: and unticked');
+  eq(await receiver.inputValue('#clefSelect'), 'bass', '067: the clef');
+  eq(await receiver.inputValue('#minNote'), 'E2', '067: and the range survived the clef change');
+  eq(await receiver.inputValue('#notationMode'), 'font', '067: while its own notation choice is left alone');
+  eq(await receiver.$$eval('#rhythmDisplay .measure', ms => ms.length), 6,
+    '067: and it rolled six measures of its own from those settings');
+  eq(new URL(receiver.url()).searchParams.get('warmup'), null, '067: the parameter is consumed on open');
+
+  await sender.click('#shareBtn');
+  await settle(sender, 250);
+  const rows = await sender.$$eval('.share-sheet-rows button', bs => bs.map(b => b.getAttribute('data-share')));
+  ok(rows.includes('copy') && rows.includes('qr') && rows.includes('download'),
+    '067: the sheet offers copy, QR and download: ' + JSON.stringify(rows));
+  ok(await sender.evaluate(() => !document.querySelector('.share-sheet button[data-share="qr"]').disabled),
+    '067: a recipe always fits a QR code');
+  const scan = await a11yScan(sender, { impact: 'serious', include: '.share-sheet' });
+  eq(scan.length, 0, '067: no serious/critical axe violations on the open sheet: ' + JSON.stringify(scan.map(v => v.id)));
+  await sender.keyboard.press('Escape');
+  await settle(sender, 200);
+
+  const broken = await prepPage(browser, BASE, { width: 1200, height: 900 });
+  pages.push(['067-broken', broken]);
+  await broken.goto(PAGE_URL + '?warmup=not-base64-%%%', { waitUntil: 'load' });
+  await settle(broken, 700);
+  ok(/could not be read/.test(await broken.textContent('#shareNote')),
+    '067: a mangled link says so rather than opening blank');
 }
 
 /* ── 061: the second generator, where the SEED is the payload ───────────── */

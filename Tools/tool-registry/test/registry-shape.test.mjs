@@ -270,7 +270,25 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
                           this shallow clone cannot date the key against the
                           pre-registry 009 list, so it is filed here rather than
                           claimed to be post-migration. */
-  const RECLASSIFIED_DELIBERATELY = ['apl_portfolios_v1'];
+  /*   gvb-roleplay:roster        014's per-class copy of a roster: { className:
+                                  [studentName, ...] }. A list of student names.
+       gvb-exit-ticket:triage     023's Paper Triage: { groupSize, students: [{
+                                  id, name, status }] } — a student's name with a
+                                  got / almost / reteach mark beside it, which is
+                                  a per-student assessment record.
+       gvb-writing-prompts:record 025's Writing Record: { [studentName]: [{ date,
+                                  promptText, note, ... }] } — keyed by the
+                                  student's name, with the teacher's conference
+                                  note under each entry. The tool's own store
+                                  comment calls it a per-student portfolio.
+                                  All three were read for #252 (Path 6 P3's
+                                  seventh increment) while deciding what a share
+                                  link must never carry, and the same reading
+                                  says the year-end rollover must take them:
+                                  what a teacher sees change is that these three
+                                  go with last year's students instead of
+                                  surviving into the next class. */
+  const RECLASSIFIED_DELIBERATELY = ['apl_portfolios_v1', 'gvb-roleplay:roster', 'gvb-exit-ticket:triage', 'gvb-writing-prompts:record'];
 
   const changed = [...probes]
     .filter(k => !SINCE_THE_MIGRATION.includes(k))
