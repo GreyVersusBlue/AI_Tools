@@ -26,7 +26,10 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/stage.js"></script>
+<script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <script src="exit-ticket-generator/etg-sequence.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -36,10 +39,19 @@
      palette tokens; these are the surfaces this page paints that the shared
      file has no name for. --desk is the table the handout preview lies on.
      Every text-on-tint pair clears WCAG AA in both themes. */
-  :root { --good: #2f7d4f; --warn: #a3791f; --info-bg: #eaf1f6; --info-line: #c9dce6; --desk: #d9d7cd; }
+  :root { --good: #2f7d4f; --warn: #a3791f; --info-bg: #eaf1f6; --info-line: #c9dce6; --desk: #d9d7cd;
+    --err-bg: #fbecea; --err-line: #e6c6c1; }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --good: #63c08e; --warn: #eac077; --info-bg: #1b2a35; --info-line: #33505f; --desk: #0e1014;
+    --err-bg: #3a201c; --err-line: #6d3a33;
   }
+
+  /* Share your prompts: the sheet itself is _shared/share.js (Path 6 P3).
+     This is only the note under the header that records what it did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -373,7 +385,11 @@
       <h1>Exit Ticket / Bell Ringer Generator</h1>
       <p class="tagline">A prompt bank with a projector-friendly display for warm-ups, plus a printable half-sheet or quarter-sheet handout for exit tickets.</p>
     </div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share your prompts&hellip;</button>
+    </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="tab-bar">
     <button type="button" class="tab-btn active" data-tab="bank">Prompt &amp; Display</button>
@@ -691,7 +707,7 @@
 
   var els = {};
   ['categorySelect', 'includeMineCheck', 'shuffleBtn', 'stage', 'promptText', 'metaRow', 'fullscreenBtn',
-   'customPrompt', 'useCustomBtn', 'newBankPrompt', 'addBankBtn', 'bankList', 'historyList',
+   'customPrompt', 'useCustomBtn', 'newBankPrompt', 'addBankBtn', 'bankList', 'historyList', 'shareBtn', 'shareNote',
    'handoutPromptDisplay', 'gotoBankBtn', 'perPageSelect', 'answerStyleSelect', 'answerStyleNote', 'answerSpaceSelect', 'answerSpaceNote',
    'showNameCheck', 'showDateCheck', 'printBtn', 'handoutPreview', 'printArea',
    'thinkTimeSelect', 'thinkTimer', 'slipModeSelect', 'differentSlipRow', 'reshuffleSlipsBtn',
@@ -2293,6 +2309,119 @@
   });
   els.gotoBankBtn.addEventListener('click', function () { switchTab('bank'); });
 
+  // ── Share your prompts: _shared/share.js (Path 6 P3) ─────────────────────
+  // WHAT TRAVELS IS THE TEACHER'S OWN WORDING: the My Prompts bank and the
+  // planned prompt sets. Those are the two things authored here, and the
+  // built-in categories ship with the page.
+  //
+  // Six keys stay, and the line is #248's — what governs a link is whether
+  // the field was authored to be published. `gvb-exit-ticket:tally` is a
+  // class's show-of-hands, the registry's one `student: true` key here, and
+  // the category tally is the same thing by topic; `triage` is a list of
+  // student names with a got/almost/reteach mark beside each; `discussion`
+  // is what students wrote; `settings` and `activeSet` are this device's.
+  // None of it was written to be handed to another teacher, and the suite
+  // asserts a triage name and a tally are nowhere in the payload.
+  //
+  // Two kinds of arrival in one tool: the bank MERGES by text (#250's rule —
+  // it may only add), and a prompt set is SAVED BESIDE under a free name with
+  // fresh ids and its cursor at the start (#239's rule). Neither asks.
+  var SHARE_PARAM = 'prompts';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      var bank = customBank.map(function (p) { return { text: p.text }; });
+      var sets = promptSets.filter(function (st) { return st.items.length; }).map(function (st) {
+        return { name: st.name, items: st.items.map(function (it) { return { category: it.category, text: it.text }; }) };
+      });
+      if (!bank.length && !sets.length) return null;
+      return { bank: bank, sets: sets };
+    },
+    param: SHARE_PARAM,
+    tool: 'exit-ticket-generator',
+    title: 'Share your prompts',
+    noun: 'your prompts',
+    filename: 'exit ticket prompts',
+    note: 'Only your own prompts travel — the My Prompts bank and your planned prompt sets. No tally, no triage name, no student response and none of your settings leave this device.',
+    successMessage: 'Link copied. It carries your prompt bank and sets only — no tally, no names, no responses.',
+    emptyMessage: 'Save a prompt to My Prompts or build a prompt set first — the built-in prompts are already on every device.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausiblePrompts(obj) {
+    return !!obj && typeof obj === 'object' && (Array.isArray(obj.bank) || Array.isArray(obj.sets));
+  }
+
+  function freshId(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  /** `name`, or `name (2)`, `name (3)`… — the first not already a set here. */
+  function uniqueSetName(name) {
+    var taken = {};
+    promptSets.forEach(function (st) { taken[String(st.name || '').trim().toLowerCase()] = true; });
+    if (!taken[name.toLowerCase()]) return name;
+    var n = 2;
+    while (taken[(name + ' (' + n + ')').toLowerCase()]) n++;
+    return name + ' (' + n + ')';
+  }
+
+  function importSharedPrompts() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausiblePrompts,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var validItemCats = CATEGORIES.map(function (c) { return c.key; }).concat(['custom', MINE_KEY]);
+        var texts = (Array.isArray(decoded.bank) ? decoded.bank : []).map(function (p) {
+          return String(p && p.text != null ? p.text : '').trim();
+        }).filter(Boolean);
+        var sets = (Array.isArray(decoded.sets) ? decoded.sets : []).map(function (st) {
+          if (!st || typeof st !== 'object') return null;
+          var items = (Array.isArray(st.items) ? st.items : []).map(function (it) {
+            var text = String(it && it.text != null ? it.text : '').trim();
+            if (!text) return null;
+            return { id: freshId('si'), category: validItemCats.indexOf(it.category) !== -1 ? it.category : 'custom', text: text };
+          }).filter(Boolean);
+          if (!items.length) return null;
+          return { name: String(st.name == null ? '' : st.name).trim() || 'Shared set', items: items };
+        }).filter(Boolean);
+        if (!texts.length && !sets.length) {
+          setShareNote('That link carried no prompts.', true);
+          return false;
+        }
+        var have = {};
+        customBank.forEach(function (p) { have[String(p.text).trim().toLowerCase()] = true; });
+        var added = 0, skipped = 0;
+        texts.forEach(function (t) {
+          var k = t.toLowerCase();
+          if (have[k]) { skipped++; return; }
+          have[k] = true;
+          customBank.push({ id: freshId(''), text: t });
+          added++;
+        });
+        if (added) saveCustomBank();
+        var savedSets = [];
+        sets.forEach(function (st) {
+          var name = uniqueSetName(st.name);
+          promptSets.push({ id: freshId('set'), name: name, startDate: null, cursor: 0, items: st.items });
+          savedSets.push(name);
+        });
+        if (savedSets.length) saveSets();
+        var msg = 'Added ' + added + ' from a shared prompt bank' +
+          (skipped ? ', skipped ' + skipped + ' already listed' : '');
+        if (savedSets.length) msg += ', and saved ' + savedSets.length + ' prompt set' + (savedSets.length === 1 ? '' : 's') +
+          ' beside your own (' + savedSets.join(', ') + ')';
+        setShareNote(msg + '. Your tally, triage, responses and settings are untouched.');
+        return true;
+      }
+    });
+  }
+
   // ── Boot ─────────────────────────────────────────────────────────────────
   customBank = loadCustomBank();
   renderBankList();
@@ -2351,6 +2480,8 @@
     selectedSetId = loadActiveSetId();
     if (selectedSetId && !promptSets.some(function (s) { return s.id === selectedSetId; })) selectedSetId = null;
   })();
+  /* After both the bank and the sets are in memory, before either is drawn. */
+  if (importSharedPrompts()) renderBankList();
   buildSetItemCategorySelect();
   renderSetSelects();
   renderSetEditor();

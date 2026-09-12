@@ -20,10 +20,25 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
+  /* The two tint pairs the share note sits on, in 001's values with dark
+     counterparts — ink-paper.css has no token for either. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share the warm-up settings: the sheet itself is _shared/share.js (Path 6
+     P3). This is only the note under the header that records what it did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -126,9 +141,11 @@
       <p class="sub">Randomized warm-up patterns for a projector display &mdash; band, chorus, or general music class.</p>
     </div>
     <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share settings&hellip;</button>
       <button class="secondary" id="printBtn">Print this warm-up</button>
     </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="tabs">
     <button type="button" class="tab-btn active" id="rhythmTabBtn">Rhythm Warm-Up</button>
@@ -272,7 +289,7 @@
    'printPitchArea', 'printPitchSub', 'printPitchDisplay',
    'lockRhythmToggle', 'lockPitchToggle',
    'bigModeToggle', 'bigModeWrap', 'bigMeasureDisplay', 'bigModeCounter', 'prevMeasureBtn', 'nextMeasureBtn',
-   'notationMode', 'glyphNotice'
+   'notationMode', 'glyphNotice', 'shareBtn', 'shareNote'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var mode = 'rhythm';
@@ -294,27 +311,30 @@
     return (data && data.v === 1) ? data : null;
   }
 
+  /** What the controls say right now, in the shape loadSettings() reads. */
+  function currentSettings() {
+    return {
+      v: 1,
+      activeTab: mode,
+      rhythm: {
+        timeSig: els.timeSig.value,
+        numMeasures: els.numMeasures.value,
+        tempo: els.tempo.value,
+        pool: selectedRhythmPool(),
+        notation: els.notationMode.value
+      },
+      pitch: {
+        clef: els.clefSelect.value,
+        minNote: els.minNote.value,
+        maxNote: els.maxNote.value,
+        numNotes: els.numNotes.value,
+        showNames: els.showNames.checked
+      }
+    };
+  }
   function saveSettings() {
     try {
-      var data = {
-        v: 1,
-        activeTab: mode,
-        rhythm: {
-          timeSig: els.timeSig.value,
-          numMeasures: els.numMeasures.value,
-          tempo: els.tempo.value,
-          pool: selectedRhythmPool(),
-          notation: els.notationMode.value
-        },
-        pitch: {
-          clef: els.clefSelect.value,
-          minNote: els.minNote.value,
-          maxNote: els.maxNote.value,
-          numNotes: els.numNotes.value,
-          showNames: els.showNames.checked
-        }
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(currentSettings()));
     } catch (e) { /* storage unavailable or full — settings just won't persist */ }
   }
 
@@ -736,6 +756,72 @@
     }
   });
 
+  /* ---------- share the warm-up settings: _shared/share.js (Path 6 P3) ------
+     THE LINK IS THE RECIPE, NOT THE PATTERNS. This tool has no seed (081 and
+     061 do): every press of "New pattern" is Math.random, so what a link can
+     carry is the settings a department agrees on — time signature, measures,
+     the note values in the pool, the tempo marking, the clef and range — and
+     the receiving device rolls its own warm-up from them. That is the honest
+     sentence on the note, and it is still the thing worth sending: "8 bars of
+     4/4, quarters and eighth pairs only" is what the band director and the
+     choir director are trying to keep in step.
+
+     Two settings stay. `notation` is whether THIS machine draws the symbols
+     or trusts its music font, which the glyph probe decides per device; and
+     `activeTab` is which panel was open. Nothing here is authored, so an
+     arrival does not stop to ask — 081's rule. */
+  var SHARE_PARAM = 'warmup';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  /** The settings without the two that describe this device. */
+  function shareableSettings(data) {
+    var r = data.rhythm || {}, pt = data.pitch || {};
+    return {
+      rhythm: { timeSig: r.timeSig, numMeasures: r.numMeasures, tempo: r.tempo, pool: r.pool },
+      pitch: { clef: pt.clef, minNote: pt.minNote, maxNote: pt.maxNote, numNotes: pt.numNotes, showNames: pt.showNames }
+    };
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () { return shareableSettings(currentSettings()); },
+    param: SHARE_PARAM,
+    tool: 'music-sightreading-generator',
+    title: 'Share the warm-up settings',
+    noun: 'these warm-up settings',
+    filename: 'warm-up settings',
+    note: 'The link carries the settings — time signature, measures, note values, tempo, clef and range — not the patterns on screen. The other device rolls its own warm-up from them.',
+    successMessage: 'Link copied. It carries the settings; the other device generates its own patterns from them.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleSettings(obj) {
+    return !!obj && typeof obj === 'object' &&
+      ((obj.rhythm && typeof obj.rhythm === 'object') || (obj.pitch && typeof obj.pitch === 'object'));
+  }
+
+  /** Applies an arrival and reports it; null when there was none. */
+  function importSharedSettings() {
+    var arrived = null;
+    Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleSettings,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        /* applySavedSettings() checks every value against the control's own
+           options and ignores what does not fit, which is the validation. */
+        arrived = { rhythm: decoded.rhythm || {}, pitch: decoded.pitch || {} };
+        if (typeof arrived.rhythm.tempo !== 'string') delete arrived.rhythm.tempo;
+        return true;
+      }
+    });
+    return arrived;
+  }
+
   /* ---------------- Boot ---------------- */
   runGlyphProbe();
   populateNoteSelects();
@@ -746,6 +832,20 @@
     setSelectIfValid(els.maxNote, savedSettings.pitch.maxNote);
   } else {
     applyClefDefaults();
+  }
+  var sharedSettings = importSharedSettings();
+  if (sharedSettings) {
+    /* On top of the saved ones, so what the link left out keeps this
+       device's value — and the range after the clef, because the clef's
+       change handler would otherwise reset it to the clef's defaults. */
+    applySavedSettings(sharedSettings);
+    setSelectIfValid(els.minNote, sharedSettings.pitch.minNote);
+    setSelectIfValid(els.maxNote, sharedSettings.pitch.maxNote);
+    saveSettings();
+    setShareNote('Loaded shared warm-up settings — ' + els.numMeasures.value + ' measures of ' +
+      els.timeSig.options[els.timeSig.selectedIndex].text + ', ' + els.clefSelect.value + ' clef ' +
+      els.minNote.value + '–' + els.maxNote.value +
+      '. The patterns below are this device\u2019s own roll of them.');
   }
   setMode(savedSettings && savedSettings.activeTab === 'pitch' ? 'pitch' : 'rhythm');
   /* A tempo marking typed as "&#9833; = 92" is itself a musical glyph. Only the

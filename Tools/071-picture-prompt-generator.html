@@ -23,6 +23,10 @@
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -36,6 +40,17 @@
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --warn-bg: #332711; --warn-bg-2: #3f2f14; --warn-line: #5e4a20; --warn-ink: #eac077;
   }
+  /* The two tint pairs the share note sits on, in 001's values with dark
+     counterparts — ink-paper.css has no token for either. */
+  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+
+  /* Share a prompt set: the sheet itself is _shared/share.js (Path 6 P3).
+     This is only the note under the header that records what it did. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
+    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -116,7 +131,11 @@
       <h1>Picture-Prompt Speaking/Writing Task Generator</h1>
       <p class="sub">Upload images, get a random prompt for a speaking or writing task in the target language.</p>
     </div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="shareBtn">&#128279; Share this prompt set&hellip;</button>
+    </div>
   </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
     <label for="imageInput">Upload images (you can select several at once)</label>
@@ -236,7 +255,8 @@
   ];
 
   var els = {};
-  ['imageInput', 'thumbGrid', 'promptsWrap', 'addPromptBtn', 'promptSetSelect', 'newSetBtn', 'restoreSetBtn', 'deleteSetBtn', 'newImageBtn', 'resetUsedBtn', 'printCount', 'printBtn', 'usedHint', 'stageCard', 'printArea'].forEach(function (id) {
+  ['imageInput', 'thumbGrid', 'promptsWrap', 'addPromptBtn', 'promptSetSelect', 'newSetBtn', 'restoreSetBtn', 'deleteSetBtn', 'newImageBtn', 'resetUsedBtn', 'printCount', 'printBtn', 'usedHint', 'stageCard', 'printArea',
+   'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -550,8 +570,88 @@
     window.print();
   });
 
+  /* ---------- share a prompt set: _shared/share.js (Path 6 P3) --------------
+     WHAT TRAVELS IS THE ACTIVE PROMPT SET — its name and its prompts — and
+     never a picture. The images are the teacher's own photos in `ppg_images_v1`
+     (data: URLs the link policy would drop anyway), and a pin is a choice
+     about one of THOSE photos, so the pins stay with them. The prompt set is
+     the vocabulary: "describe what the people are doing, in the past tense"
+     is what a Spanish 2 teacher hands to the other Spanish 2 teacher.
+
+     `ppg_prompt_sets_v1` is a library that lives in one key, keyed by id in a
+     list — 048's shape — so an arrival is SAVED BESIDE under a free name, gets
+     fresh ids, becomes the active set, and nothing asks (#239's rule). The
+     starter sets an empty install shows are never written until something
+     changes, so an arrival on a fresh device saves them too, exactly as
+     "+ New set" would. */
+  var SHARE_PARAM = 'prompts';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      var s = activeSet();
+      if (!s) return null;
+      var texts = s.prompts.map(function (p) { return String(p.text == null ? '' : p.text).trim(); }).filter(Boolean);
+      if (!texts.length) return null;
+      return { name: s.name, prompts: texts };
+    },
+    param: SHARE_PARAM,
+    tool: 'picture-prompt-task-generator',
+    title: 'Share this prompt set',
+    noun: 'this prompt set',
+    filename: function () { var s = activeSet(); return (s ? s.name : 'prompt set') + ' prompts'; },
+    note: 'Only the prompt set travels — its name and its prompts. Your images and the prompts pinned to them stay on this device.',
+    successMessage: 'Link copied. It carries the prompt set only — no image.',
+    emptyMessage: 'Add a prompt to this set first — the prompts are what travel, not the pictures.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleSet(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.prompts);
+  }
+
+  /** `name`, or `name (2)`, `name (3)`… — the first not already in the library. */
+  function uniqueSetName(name) {
+    var taken = {};
+    sets.forEach(function (s) { taken[String(s.name || '').trim().toLowerCase()] = true; });
+    if (!taken[name.toLowerCase()]) return name;
+    var n = 2;
+    while (taken[(name + ' (' + n + ')').toLowerCase()]) n++;
+    return name + ' (' + n + ')';
+  }
+
+  function importSharedSet() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleSet,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var texts = decoded.prompts.map(function (t) { return String(t == null ? '' : t).trim(); }).filter(Boolean);
+        if (!texts.length) {
+          setShareNote('That link carried no prompts.', true);
+          return false;
+        }
+        var name = uniqueSetName(String(decoded.name == null ? '' : decoded.name).trim() || 'Shared prompts');
+        var set = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name, starter: null,
+          prompts: texts.map(function (t) { return { id: uid(), text: t }; }) };
+        sets.push(set);
+        activeSetId = set.id;
+        saveSets();
+        setShareNote('Loaded a shared prompt set, \u201c' + name + '\u201d, ' + texts.length + ' prompt' +
+          (texts.length === 1 ? '' : 's') + ', saved beside your own sets. Your images and pins are untouched.');
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
   load();
+  importSharedSet();
   try { els.printCount.value = localStorage.getItem(PRINT_COUNT_KEY) || ''; } catch (e) { /* ignore */ }
   renderThumbs();
   renderSetPicker();
