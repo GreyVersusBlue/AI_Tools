@@ -104,6 +104,17 @@ every edit. The deduplication work that established them is summarised in
   `max-height` plus `overflow:hidden` inside `@media print` — size print boxes
   with `min-height` and let overflow be visible). Each is a floor: it reports
   only what it can see statically, and everything it prints is real.
+- **`npm run check:inline-sinks` is a ratchet on markup sinks in the pages that
+  take link input** (added 2026-09-23). ESLint does not see inline `<script>`, and a
+  share link (`share.js`, `state-link.js`, `handoffs.js`) is the first input on this
+  site that the person at the keyboard did not type. For every page that references one
+  of those files, the check counts the dynamic `innerHTML`/`outerHTML`/`srcdoc`
+  assignments and the `insertAdjacentHTML`/`document.write` calls in inline script,
+  and compares each count with `Tools/board-check/inline-sinks-baseline.json`. It fails
+  when a count goes up, and when a page starts taking link input without a baseline line.
+  It also fails when a count goes down, so lower the number in the same commit. Before
+  you add or raise a line, read that page's sinks with `--list <tool>` and escape or
+  sanitize what reaches them (#250's 066 `sanitizeRich()` is the example). It runs in CI.
 - **`npm run check:docs-commands` guards the claims the docs make about
   commands.** It fails when a tracked `.md` writes `npm run <name>` for a script
   `package.json` does not define, or `node <path>` for a file that is not in the
@@ -181,8 +192,9 @@ copy of the boilerplate:
   key, was deleted in Path 5 P1 — its key is still migrated once by a11y.js.
   Read `_shared/ink-paper.css`'s header before touching any of this.)
 - `<script src="../_shared/sw-register.js" defer></script>` — service-worker
-  registration. It exists and is precached; link it rather than inlining
-  its body, which is exactly:
+  registration, the update bar, the deferred precache pass, and (since v180) the
+  request for persistent storage. It exists and is precached; link it rather than
+  inlining it. Its core was once exactly:
 
   ```js
   if ('serviceWorker' in navigator) {
@@ -361,6 +373,10 @@ files must be added there too.
   column, pushed by itself — that table is the concurrency mechanism two
   parallel sessions use to avoid collision, and it has already failed once when
   it was skipped. See "How to work this list".
+- **The `BACKLOG.md` header is a current-state summary, capped at ~80 lines.** The story
+  of an increment goes in `HISTORY.md`. The header grew to ~1,900 lines of handoffs before
+  it was cut on 2026-09-23, and its numbers table carried each figure's history in the
+  cell. Replace a number; don't append "before it…" to it.
 - **A phase is not done until you have rewritten `BACKLOG.md`'s header and
   re-ranked,** after your PR is merged and the merge is confirmed — not before,
   so it records what landed rather than what you hoped would. **This happens after

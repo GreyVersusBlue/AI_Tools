@@ -288,3 +288,54 @@
     }).catch(function () {});
   });
 }());
+
+/* ── asking the browser to keep this site's data ────────────────────────
+   Everything a teacher saves — seating charts, rosters, points, hall-pass
+   logs — lives in this origin's localStorage and IndexedDB, and by default
+   that storage is "best effort": the browser may evict it under storage
+   pressure, and Safari clears script-written storage for a site not visited
+   in seven days. navigator.storage.persist() asks for it to be kept. Nothing
+   on the site asked until 2026-09-23 (a repo review found no call anywhere).
+
+   Kept separate from the worker code above on purpose: persistence has
+   nothing to do with service-worker support, and a browser without a worker
+   can still honour it. Four conditions, each for a reason:
+     - the API exists and this is not a file:// page (the offline copy —
+       each file there is its own origin and the answer means nothing);
+     - storage is not already persisted, so a granted site asks nothing;
+     - the origin actually holds something (localStorage.length > 0). Chrome
+       and Safari decide silently, but Firefox shows a permission prompt, and
+       a first-visit prompt before the teacher has saved anything is a prompt
+       they have no reason to accept;
+     - the page is not fullscreen or busy — the same suppression rule as the
+       update bar, so a projected page never grows a browser prompt. Such a
+       page asks on a later load instead.
+   It runs a few seconds after load, like the deferred precache pass, and
+   every failure is silent: not being granted is the status quo. */
+(function () {
+  'use strict';
+  var PERSIST_DELAY_MS = 5000;
+
+  function holdsData() {
+    try { return window.localStorage.length > 0; } catch (e) { return false; }
+  }
+
+  function quiet() {
+    return !document.fullscreenElement && window.TOOL_BUSY !== true;
+  }
+
+  function ask() {
+    var storage = navigator.storage;
+    if (!storage || typeof storage.persist !== 'function' ||
+        typeof storage.persisted !== 'function') return;
+    if (location.protocol === 'file:') return;
+    if (!holdsData() || !quiet()) return;
+    storage.persisted().then(function (already) {
+      if (!already) return storage.persist();
+    }).catch(function () {});
+  }
+
+  window.addEventListener('load', function () {
+    setTimeout(ask, PERSIST_DELAY_MS);
+  });
+}());

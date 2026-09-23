@@ -135,6 +135,13 @@ jobs:
         if: '!cancelled()'
         run: npm run check:print-clip
 
+      # 2026-09-23: ESLint does not see inline <script>, and a share link is
+      # input from outside the room. A ratchet on markup sinks in the inline
+      # scripts of pages that take link input (baseline only goes down).
+      - name: 'Guard: markup sinks on pages that take link input'
+        if: '!cancelled()'
+        run: npm run check:inline-sinks
+
       # Path 2 P5: ESLint over the standalone scripts (no-undef, no-unused-vars,
       # eqeqeq and the recommended set). Inline <script> in tool pages is out
       # of scope — see eslint.config.js.
