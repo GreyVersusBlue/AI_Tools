@@ -288,7 +288,29 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
                                   what a teacher sees change is that these three
                                   go with last year's students instead of
                                   surviving into the next class. */
-  const RECLASSIFIED_DELIBERATELY = ['apl_portfolios_v1', 'gvb-roleplay:roster', 'gvb-exit-ticket:triage', 'gvb-writing-prompts:record'];
+  /*   The 2026-09-23 audit read all 191 keys and prefixes that were still
+       unmarked. Five are student records whole, so the rollover now takes them:
+       gvb-rubric-builder:scores:<rubric>   003's { studentName: { selections,
+                                  overallComment } } — scored student work.
+       pct:lastValues             085's fill-ins for the last letter written:
+                                  Student, Parent/Guardian, Grade, Assignment.
+       gvb-number-talks:strategyLibrary  024's strategies "for this year", each
+                                  saved under a "Student name".
+       socsem:data:<seminar>      084's seminar document: a dated session with
+                                  its roster, speaking order and per-student
+                                  tallies. The question text goes with it.
+       gvb-field-trip:data:<trip> 043's slips for one dated trip: studentName,
+                                  a pasted class list, slips collected and a
+                                  chaperone per student. The trip text goes with it.
+       What a teacher sees change: the year-end rollover lists and clears these
+       with last year's students. Seven other keys mix student names into
+       teacher content (certificate presets, civics simulations, review boards,
+       016's checkout inventory, the sub plan's medical alerts, 038's datasets,
+       018's live-run teams). They are deliberately NOT marked, because the
+       rollover deletes whole keys and promises to keep templates. The fix is a
+       tool change that splits the student field out; BACKLOG rank 6 carries it. */
+  const RECLASSIFIED_DELIBERATELY = ['apl_portfolios_v1', 'gvb-roleplay:roster', 'gvb-exit-ticket:triage', 'gvb-writing-prompts:record',
+    'gvb-rubric-builder:scores:SAMPLE', 'pct:lastValues', 'gvb-number-talks:strategyLibrary', 'socsem:data:SAMPLE', 'gvb-field-trip:data:SAMPLE'];
 
   const changed = [...probes]
     .filter(k => !SINCE_THE_MIGRATION.includes(k))

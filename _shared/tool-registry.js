@@ -300,7 +300,7 @@
         { k: 'socsem:list' },
       ],
       prefixes: [
-        { p: 'socsem:data:' },
+        { p: 'socsem:data:', student: true },   // a dated seminar: its roster, speaking order and per-student tallies (2026-09-23 audit)
       ],
       reads: [
         'np_rosters',
@@ -434,7 +434,7 @@
       prefixes: [
         { p: 'gvb-rubric-builder:', legacy: true },
         { p: 'gvb-rubric-builder:data:' },
-        { p: 'gvb-rubric-builder:scores:' },
+        { p: 'gvb-rubric-builder:scores:', student: true },   // { studentName: { selections, overallComment } } — scored work (2026-09-23 audit)
       ],
       writes: [
         'gvb-grade-distribution:current',
@@ -651,7 +651,7 @@
       ],
       prefixes: [
         { p: 'gvb-field-trip:', legacy: true },
-        { p: 'gvb-field-trip:data:' },
+        { p: 'gvb-field-trip:data:', student: true },   // a dated trip: studentName, pasted class list, slips collected, chaperone per student (2026-09-23 audit)
       ],
       reads: [
         'np_rosters',
@@ -684,7 +684,7 @@
       category: 'docs-comm',
       keys: [
         { k: 'pct:custom' },
-        { k: 'pct:lastValues' },
+        { k: 'pct:lastValues', student: true },   // the last letter's fill-ins: Student, Parent/Guardian, Grade… (2026-09-23 audit)
       ],
       reads: [
         'np_rosters',
@@ -753,7 +753,7 @@
       keys: [
         { k: 'gvb-number-talks:myBank' },
         { k: 'gvb-number-talks:settings' },
-        { k: 'gvb-number-talks:strategyLibrary' },
+        { k: 'gvb-number-talks:strategyLibrary', student: true },   // this year's strategies, each under a "Student name" (2026-09-23 audit)
         { k: 'gvb-number-talks:stringHistory' },
       ],
       prefixes: [
