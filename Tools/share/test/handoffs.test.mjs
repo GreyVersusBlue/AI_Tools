@@ -90,7 +90,7 @@ console.log('\nhandoffs — the table');
 {
   const win = make();
   const H = win.Handoffs;
-  ok(Array.isArray(H.all) && H.all.length >= 4, 'the four handoffs of 2026-09-24 are declared');
+  ok(Array.isArray(H.all) && H.all.length >= 6, 'the six handoffs of 2026-09-24 are declared');
   for (const h of H.all) {
     ok(win.ToolRegistry.bySlug(h.from), `entry ${h.from} -> ${h.to}: the sender is a registry slug`);
     const t = win.ToolRegistry.bySlug(h.to);
@@ -194,6 +194,58 @@ console.log('\nhandoffs — map places to a timeline, a source to a worksheet, d
   /* The decided exception: no entry writes 037's grades. */
   eq(H.all.filter(h => h.to === 'grade-distribution-visualizer').length, 0,
     '003 -> 037 is NOT a link: it carries student names beside their scores, which are not written to be published');
+}
+
+/* ── 3c. the roster chain (2026-09-24) ──────────────────────────────────── */
+console.log('\nhandoffs — groups to lab roles, lab groups to a seating chart');
+{
+  const win = make();
+  const H = win.Handoffs;
+  const one = (from, to) => H.all.filter(h => h.from === from && h.to === to);
+
+  /* 006/007 -> 002 is decided NOT to be a link: 002 reads the same saved
+     class lists through roster.js on the same device. */
+  eq(H.all.filter(h => h.to === 'group-team-generator').length, 0,
+    '006/007 -> 002 is NOT a link: the roster already reaches 002 through roster.js, with no URL');
+
+  /* 002 -> 022: exactly 002's own share payload, cleaned. */
+  const lab = one('group-team-generator', 'lab-group-role-randomizer');
+  eq(lab.length, 1, '002 -> 022 is declared once');
+  ok(lab[0].sheet !== false, 'and it is a row in 002\'s sheet');
+  const lg = lab[0].transform({ v: 1, title: 'Period 3', groups: [
+    { label: 'Red', members: ['Ada', '  ', 'Bram'] }, { label: 'Blue', members: [] }, { label: 'Green', members: ['Cleo'] }],
+    roster: 'must not travel', pairHistory: {} });
+  eq(lg, { v: 1, name: 'Period 3', groups: [{ label: 'Red', members: ['Ada', 'Bram'] }, { label: 'Green', members: ['Cleo'] }] },
+    'labels and names travel; a blank name and an empty group do not, and nothing outside the groups does');
+  eq(lab[0].transform({}).name, 'Groups from the Group Generator', 'an untitled grouping still gives the class a name');
+  ok(H.url(lab[0], lg).url.indexOf('/Tools/022-lab-group-role-randomizer.html?labgroups=') !== -1,
+    '022\'s page and ?labgroups= come off the registry');
+
+  /* 022 -> 005: a whole section, one pod per group, everyone seated. */
+  const seat = one('lab-group-role-randomizer', 'seating-chart');
+  eq(seat.length, 1, '022 -> 005 is declared once');
+  eq(seat[0].sheet, false, 'with no sheet row: 022 sends from its own button');
+  const groups = [['Ada', 'Bram', 'Cleo', 'Dov'], ['Esme', 'Fitz', 'Gus', 'Hana', 'Ivo'], ['Juno']];
+  const sec = seat[0].transform({ name: 'Period 3', groups, roles: ['Recorder'], history: { Ada: ['Recorder'] } });
+  eq(sec.name, 'Period 3 — lab groups', 'the section is named after the lab class');
+  eq(sec.students.map(x => x.name), groups.flat(), 'every student, in group order');
+  eq(new Set(sec.students.map(x => x.id)).size, sec.students.length, 'with distinct ids');
+  eq(Object.keys(sec.assign).length, sec.students.length, 'and every one seated');
+  eq(new Set(Object.values(sec.assign)).size, sec.students.length, 'at a desk of their own');
+  const at = Object.fromEntries(Object.entries(sec.assign).map(([d, s]) => [sec.students.find(x => x.id === s).name, sec.desks.find(k => k.id === d)]));
+  const dist = (a, b) => Math.hypot(at[a].x - at[b].x, at[a].y - at[b].y);
+  ok(dist('Ada', 'Dov') < 142 * 1.2 && dist('Ada', 'Bram') < 142, 'a group of four is a 2×2 pod, within 005\'s neighbour distance');
+  ok(dist('Esme', 'Ivo') < 3 * 80 + 1, 'a group of five is a pod three rows deep');
+  ok(dist('Dov', 'Esme') > 106 + 40, 'and pods do not touch');
+  ok(sec.desks.every(d => d.x >= 0 && d.x <= 1280 - 106 && d.y >= 0 && d.y <= 900 - 70), 'every desk is inside 005\'s room');
+  ok(!/Recorder/.test(JSON.stringify(sec)), 'no role and no role history travels');
+  eq(sec.history, [], '(005\'s own seating history starts empty)');
+  eq(sec.apart, [], 'and no keep-apart pair');
+  const many = seat[0].transform({ name: 'Big', groups: Array.from({ length: 14 }, (_, i) => ['a' + i, 'b' + i, 'c' + i, 'd' + i]) });
+  ok(many.desks.every(d => d.x <= 1280 - 106 && d.y <= 900 - 70), 'fourteen groups of four still fit the room');
+  eq(seat[0].transform({ groups: [['  '], []] }).students, [], 'a blank group seats nobody');
+  ok(H.url(seat[0], { name: 'x', groups }).url.indexOf('/Tools/005-Seating%20Chart%20Generator.html?section=') !== -1,
+    '005\'s page and ?section= come off the registry');
 }
 
 /* ── 4. refusals ────────────────────────────────────────────────────────── */

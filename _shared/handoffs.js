@@ -23,6 +23,26 @@
        never writes 039's keys, so it cannot strand anything, and it is the
        one-click path on a device that already has both tools' data.
 
+   The roster chain (006/007 -> 002 -> 022 -> 005) was decided hop by hop
+   on 2026-09-24, each against the same rule:
+
+     006/007 -> 002 (roster -> groups) is NOT an entry. 002 already reads
+       every saved class list through _shared/roster.js's picker, on the
+       same device, with no URL at all. A link would put a class list into
+       browser history only to move it between two tabs of one browser —
+       the same trade 003 -> 037 declined. Across devices, 006's and 007's
+       own roster links already exist and are a teacher's deliberate choice.
+     002 -> 022 (groups -> lab roles) IS an entry. It carries exactly what
+       002's own sheet already publishes — group labels and who is in each —
+       and nothing 002's sheet does not. 022 keeps the groups as made and
+       hands out its roles; its role history, safety-contract status and
+       keep-apart pairs never came from 002 and do not go back.
+     022 -> 005 (lab groups -> seating) IS an entry, sent from 022's own
+       button (no sheet row: 022 has no share sheet). Only the names and who
+       sits with whom travel. Roles, role history, absences, who has not
+       signed a safety contract, and keep-apart pairs do not: those are
+       records about a student, not a seating plan written to be put up.
+
    This file is that list. A handoff is one declared entry:
 
        { from:  'cognates-false-friends-builder',   the sender's slug
@@ -65,6 +85,48 @@
 
   /** A place name as 015 would type it: no blank, no runaway length. */
   function clip(s, n) { return String(s == null ? '' : s).trim().slice(0, n); }
+
+  /** A list of groups, each a list of names: blank names dropped, every name
+      clipped, and a group with nobody left in it dropped. */
+  function nameGroups(groups) {
+    return (Array.isArray(groups) ? groups : []).map(function (g) {
+      return (Array.isArray(g) ? g : []).map(function (n) { return clip(n, 100); }).filter(Boolean);
+    }).filter(function (g) { return g.length; });
+  }
+
+  /* 005's room, as Tools/seating-chart/seating.mjs's ROOM has it. Only what a
+     pod layout needs; 005's own repair pass clamps anything outside it. */
+  var ROOM = { width: 1280, height: 900, deskW: 106, deskH: 70, top: 110 };
+
+  /** One pod per group: two desks across (one for a group of one), as many
+      rows as the group needs, the gaps 005's own "Add pod" leaves. Pods are
+      laid left to right, four to a row (five past twelve groups), centred.
+      Returns { desks, assign, students } with section-local ids. */
+  function podSeating(groups) {
+    var perRow = Math.max(1, Math.min(groups.length, groups.length > 12 ? 5 : 4));
+    var podW = 2 * ROOM.deskW + 10;
+    var gapX = perRow >= 5 ? 22 : 44;
+    var startX = Math.max(30, Math.round((ROOM.width - (perRow * podW + (perRow - 1) * gapX)) / 2));
+    var desks = [], assign = {}, students = [];
+    var y = ROOM.top;
+    for (var r = 0; r * perRow < groups.length; r++) {
+      var tallest = 0;
+      groups.slice(r * perRow, (r + 1) * perRow).forEach(function (g, c) {
+        var cols = g.length > 1 ? 2 : 1;
+        var x0 = startX + c * (podW + gapX);
+        tallest = Math.max(tallest, Math.ceil(g.length / cols));
+        g.forEach(function (name, i) {
+          var desk = { id: 'd' + (desks.length + 1), x: x0 + (i % cols) * (ROOM.deskW + 10),
+            y: y + Math.floor(i / cols) * (ROOM.deskH + 10), rot: 0, locked: false };
+          var student = { id: 's' + (students.length + 1), name: name };
+          desks.push(desk); students.push(student);
+          assign[desk.id] = student.id;
+        });
+      });
+      y += tallest * (ROOM.deskH + 10) - 10 + 44;
+    }
+    return { desks: desks, assign: assign, students: students };
+  }
 
   var HANDOFFS = [
     {
@@ -197,6 +259,54 @@
         return {
           name: clip(state && state.name, 200) || 'Drill vocabulary',
           words: lines.join('\n')
+        };
+      }
+    },
+    {
+      from: 'group-team-generator',
+      to: 'lab-group-role-randomizer',
+      label: 'Send to Lab Group & Role Randomizer',
+      note: 'the same groups, with lab roles',
+      sent: 'Sent the groups to the Lab Group & Role Randomizer in a new tab. They are saved there as a new lab class with roles handed out; editing it does not change this grouping.',
+      /* 002's state for this entry is its own share payload, { v, title,
+         groups: [{ label, members }] } — the sheet's getState. The same
+         labels and names travel, and nothing else: 002's roster, keep-apart
+         and keep-together rules, skill numbers and pairing memory stay. */
+      transform: function (state) {
+        var groups = (state && Array.isArray(state.groups) ? state.groups : []).map(function (g) {
+          return { label: clip(g && g.label, 80), members: nameGroups([g && g.members])[0] || [] };
+        }).filter(function (g) { return g.members.length; });
+        return {
+          v: 1,
+          name: clip(state && state.title, 200) || 'Groups from the Group Generator',
+          groups: groups
+        };
+      }
+    },
+    {
+      from: 'lab-group-role-randomizer',
+      to: 'seating-chart',
+      label: 'Send to Seating Chart',
+      note: 'each group sits together at a pod',
+      /* No sheet row: 022 has no share sheet. Its "Seat these groups" button
+         calls Handoffs.open() itself. */
+      sheet: false,
+      sent: 'Sent the groups to the Seating Chart Generator in a new tab, one pod of desks per group with everyone seated. It is added there as a new section; editing it does not change these groups.',
+      /* 022's state for this entry is { name, groups: [[name, …], …] } — the
+         names in each group of the last shuffle and nothing else. The result
+         is a whole 005 section, which 005's ?section= importer adds beside
+         the ones already there: a pod per group, seated in group order. */
+      transform: function (state) {
+        var seats = podSeating(nameGroups(state && state.groups));
+        return {
+          name: (clip(state && state.name, 180) || 'Lab class') + ' — lab groups',
+          students: seats.students,
+          apart: [],
+          together: [],
+          desks: seats.desks,
+          assign: seats.assign,
+          layouts: [],
+          history: []
         };
       }
     }
