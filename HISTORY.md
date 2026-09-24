@@ -9,6 +9,84 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 6 P4 rollout, increment 1: 046 → 015, 056 → 028 and 039 → 040 on the handoff table (2026-09-24, #257, `CACHE_VERSION` v182)
+
+The two senders that built another tool's link by hand now go through `_shared/handoffs.js`,
+so 015's and 028's file names and parameters come from the registry and no sender names them.
+The two storage-shaped handoffs are decided. `handoffs.js` goes to **4 of 86**, and `share.js`
+and `qr-draw.js` to **53**. The row **stays**: 053 → 030 and the roster chain are still to do.
+
+- **046 adopted the sheet first**, using the P3 notes: script order state-link → qrcode →
+  qr-draw → share → tool-registry → handoffs. It shares the **active project** as Export…
+  writes it (its name plus the project data). An arrival, by link or file, is **saved beside**
+  as a new project under `uniqueProjectName()` (the starter projects' existing helper, reused
+  after a duplicate declaration broke the page on the first try). Nothing is asked, because
+  it replaces nothing. Its Import… now goes through `Share.receiveFile()`, so the sheet's
+  Download opens there too. **What never travels:** the map picture (it lives in the IndexedDB
+  map cache, and an uploaded image is the teacher's), the saved label sets (workspace-wide),
+  and every other project. The sheet says so. The arrival note says to pick the base map or
+  search result again, and the labels stay where they are. A page opened with `?map=`, even a
+  mangled one, does **not** start its first-visit Wikimedia search. The registry row gets
+  `share: { param: 'map' }`.
+- **046 → 015 needed a hook in `share.js`.** The Send row hands its entry the sheet's payload.
+  046's timeline needs each label's latitude and longitude, which only the page can work out
+  from its calibration and pixel size. **`Share.mount(…, { sendState(entry) })`** lets the
+  page build what a Send row sends, or throw the sentence to show ("Set this map’s latitude
+  and longitude first…"). The entry's transform takes `{ name, places }`. The sheet row and the
+  old "Send places to Timeline Builder →" button both call it and build **the same link**.
+  `smoke-timeline-handoff.mjs` asserts that byte for byte.
+- **056 → 028 needed the opposite:** a handoff that is **not** a sheet row. It sends one
+  source, picked by that source's own button, not the packet the sheet shares. Entries may
+  now say **`sheet: false`**, and `share.js` skips them. `smoke-send-to.mjs` asserts that 056
+  declares one handoff and has no Send row. Its transform takes `{ source, letter,
+  packetTitle }`, and the 028 payload it builds is the one 056 used to build inline.
+- **The storage-shaped pair, decided (either is cheap to reverse):**
+  - **003 → 037 is a documented exception.** It stays a write to storage on the same device
+    through `rb-gdv-handoff.js`, and **never** becomes a link. What it hands over is every
+    student's name next to their rubric score. #248's rule is that a link carries a field only
+    if it was written to be published, and grades were not. A URL ends up in history, on
+    clipboards and in email. The rubric itself already shares through 003's sheet. The
+    exception is written in `handoffs.js`'s header and `rb-gdv-handoff.js`'s, and
+    `handoffs.test.mjs` asserts no entry targets 037. **This also settles the row's "rubric →
+    grade distribution by link rather than by storage": no.**
+  - **039 → 040 is an entry.** A word list is authored to be handed round, and 040's `?deck=`
+    importer already files 052's lists. 039's sheet gets "Send to Vocabulary Flashcards". The
+    vocabulary lines travel as typed, and the verbs and conjugation tables do not. A set with
+    no vocabulary refuses with a sentence (`sendState`). **040's read-only pull
+    (`vfg-conjdrill-link.js`) stays next to it:** it never writes 039's keys, so it cannot
+    strand anything, and it is the one-click path on a device that has both tools' data.
+- **Found by reading 046's sinks (#250's third question):** a project's choropleth key row
+  `hex` is written into a swatch's SVG markup (`choroSwatchSvg`, via `bmg-legend.js`). Once a
+  project can arrive from a link, that is an attribute injection. `bmg-store.js`'s normalizer
+  now keeps a row only if its hex matches `#[0-9a-f]{3,8}`, which covers the file importer
+  too. Every other arrival sink checked was safe: labels use `textContent`, legend captions use
+  `.value`, and marker and region colours are palette lookups. The project name is escaped in
+  the switcher. 046's inline-sink count (17) was already in the baseline, because the page
+  loaded `state-link.js` before, and it did not change.
+- **Deferred, with the reason:** **053 → 030** waits on Path 12 P1 (`_shared/question-bank.js`
+  with 030 as the front door). The row's "after rank 37" had drifted and now means that row.
+  **Roster → groups → lab roles → seating** was not started. Each link carries student names,
+  so each needs #248's question asked on its own. These tools already share rosters by link
+  among themselves, which is where the answer should start.
+
+**Suite changes.** `handoffs.test.mjs` 346 (a section for the three new entries and the 037
+exception). `smoke-send-to.mjs` 45 (046's row refuses on an uncalibrated map, 039's row
+opens 040 with the words, 056 has no row). `smoke-share-rollout.mjs` **1580** (a 046 table
+row through `libraryHooks`, and a hostile-hex section). `smoke-timeline-handoff.mjs` (the
+sheet row sends the button's link).
+
+**Not verified.** The hostile-hex section asserts what is **stored** after an arrival, not the
+drawn legend. Drawing it needs a rendered base map with shading, which the suite does not
+build. It was also not run against the unfixed store to watch it go red first. A shared 046
+project arrives with its picture missing: a built-in vector base map could be **redrawn
+automatically** from its id, but that was not built. The teacher re-picks it, as with
+Export/Import today. No 046 QR was scanned by a camera. The sheet was scanned by axe in light
+only.
+
+Local: `test:share-rollout` 1580, `test:send-to`, `test:share`, the touched tools' suites, `test:theme`,
+`test:a11y --only` on 046, 039 and 056, and every `check:*` guard. CI ran the full list (`_shared/` is
+in the diff) green in **33.6 min**.
+
 ## Path 6 P3, increment 8: 016, 029 and 038 share, and the P3 row closes (2026-09-24, #255, `CACHE_VERSION` v181)
 
 **016** QR Code Generator, **029** Prompt Builder and **038** Data Table → Chart Builder now open
