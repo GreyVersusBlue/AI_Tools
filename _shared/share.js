@@ -351,10 +351,14 @@
        tool in _shared/handoffs.js, when the page has loaded it. The payload
        handed to the transform is the IMAGE-STRIPPED state, because what
        comes out is a link and the policy above holds for every link this
-       sheet builds. Rows carry data-share="send:<receiver slug>". */
+       sheet builds. Rows carry data-share="send:<receiver slug>".
+       An entry marked `sheet: false` gets no row: its state is one item on
+       the page (056's per-source button), not the document the sheet
+       shares, so the page calls Handoffs.open() from its own control. */
     var sendRows = [];
     if (global.Handoffs && opts.tool) {
       global.Handoffs.from(opts.tool).forEach(function (entry) {
+        if (entry.sheet === false) return;
         var target = global.ToolRegistry && global.ToolRegistry.bySlug(entry.to);
         var b = row('send:' + entry.to, entry.label || ('Send to ' + (target ? target.title : entry.to)), entry.note || '');
         rows.appendChild(b);
@@ -434,7 +438,16 @@
 
     sendRows.forEach(function (sr) {
       sr.button.addEventListener('click', function () {
-        var r = global.Handoffs.open(sr.entry, link.payload);
+        /* opts.sendState(entry), when the page gives one, builds what this
+           handoff sends instead of the shared document: 046's timeline
+           needs each label's latitude and longitude, which only the page
+           on screen can work out. It throws an Error whose message is the
+           sentence to show when there is nothing to send yet. */
+        var sendPayload = link.payload;
+        if (typeof opts.sendState === 'function') {
+          try { sendPayload = stripImages(opts.sendState(sr.entry)).value; } catch (e) { say(e.message, true); return; }
+        }
+        var r = global.Handoffs.open(sr.entry, sendPayload);
         say(r.message, !r.ok);
       });
     });
@@ -494,7 +507,11 @@
    *                    when the sheet opens and given the link it is about
    *   filename, ext    the download name (sanitised; ".json" by default); filename
    *                    may be a function, read when the sheet opens
-   *   tool             the tool slug, written into the file header
+   *   tool             the tool slug, written into the file header, and the
+   *                    sender whose handoffs.js entries become Send rows
+   *   sendState(entry) what a Send row hands its entry's transform, when that
+   *                    is not the shared document; throw an Error to refuse
+   *                    with its message
    *   stripImages      false to keep images in the link (default true)
    *   successMessage, emptyMessage, qrNote, onMessage(text, isError), onOpen,
    *   onClose

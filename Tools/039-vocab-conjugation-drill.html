@@ -28,6 +28,8 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/tool-registry.js"></script>
+<script src="../_shared/handoffs.js"></script>
 <style>
   /* Path 5 P3. --good and --warn-ink are 001's values (the reference adopter);
      --desk is the table the printable sheet lies on, named the same way 015 and
@@ -1297,6 +1299,16 @@
     note: 'Opening the link or code anywhere saves this set there as a copy; it never overwrites a set already on that device.',
     emptyMessage: 'Nothing to share yet.',
     successMessage: 'Link copied. Opening it anywhere loads this set — words, verbs, person labels, and settings — and saves it there as a copy.',
+    /* The "Send to Vocabulary Flashcards" row (_shared/handoffs.js) sends
+       the vocabulary only; a set with none says so rather than opening an
+       empty word list in 040. */
+    sendState: function () {
+      var payload = buildSharePayload();
+      if (!payload || !String(payload.vocabText || '').trim()) {
+        throw new Error('This set has no vocabulary words to send yet. Add some “word: translation” lines first.');
+      }
+      return payload;
+    },
     onMessage: function (text) { setShareNote(text); }
   });
 

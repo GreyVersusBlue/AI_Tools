@@ -1084,6 +1084,7 @@
       title: 'Blank Map Generator',
       file: 'Tools/046-blank-map-generator.html',
       category: 'social-studies',
+      share: { param: 'map' },
       keys: [
         { k: '__bmg_probe__', transient: true },
         { k: 'bmg_project_v1', legacy: true },
