@@ -10,6 +10,10 @@
 <link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
 <link rel="stylesheet" href="../_shared/theme.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <style>
   *{ box-sizing: border-box; }
   html{ scroll-behavior: smooth; }
@@ -105,6 +109,17 @@
   }
   .preset-remove:hover{ opacity: 1; }
   .custom-preset-row:empty{ display: none; }
+
+  /* Share presets: the sheet itself is _shared/share.js (Path 6 P3). The page
+     is on theme.css, whose tokens have other names, so the sheet gets them
+     through one block scoped to its own backdrop — 018's arrangement. */
+  .share-sheet-backdrop{
+    --card: var(--color-surface); --card-2: var(--color-bg); --ink: var(--color-text);
+    --line: var(--color-divider); --accent: var(--color-accent); --err: var(--color-danger);
+  }
+  .share-note{ margin: var(--space-2) 0 0; padding: .5rem .75rem; font-size: 13px; line-height: 1.5;
+    background: var(--color-surface); border: 1px solid var(--color-divider); color: var(--color-text); word-break: break-word; }
+  .share-note.error{ border-color: var(--color-danger); color: var(--color-danger); }
 
   .history-item{ display: flex; align-items: flex-start; justify-content: space-between; gap: .6rem; padding: var(--space-2) 0; border-top: 1px dashed var(--color-divider); }
   .history-item:first-child{ border-top: none; }
@@ -218,9 +233,11 @@
         <button type="button" class="btn btn-secondary preset-btn" data-preset="vocabList">Vocab list</button>
         <button type="button" class="btn btn-secondary preset-btn" data-preset="exitTickets">Exit ticket prompts</button>
         <button type="button" class="btn btn-secondary" id="savePresetBtn">+ Save current as preset</button>
+        <button type="button" class="btn btn-secondary" id="shareBtn" title="Send your saved presets to another teacher">Share presets&hellip;</button>
         <button type="button" class="btn btn-ghost preset-btn-clear" id="clearAllTop">Clear all fields</button>
       </div>
       <div class="preset-row custom-preset-row" id="customPresetRow" style="margin-top: var(--space-2);"></div>
+      <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
     </div>
 
     <div class="card blueprint section">
@@ -446,7 +463,7 @@
       </div>
       <div class="action-row">
         <button type="button" class="btn btn-secondary" id="downloadBtn">Download .txt</button>
-        <button type="button" class="btn btn-secondary" id="shareBtn">Copy shareable link</button>
+        <button type="button" class="btn btn-secondary" id="draftLinkBtn" title="A link that opens this page with these answers filled in">Copy link to this draft</button>
         <button type="button" class="btn btn-secondary" id="webShareBtn" style="display:none;">Share to app&hellip;</button>
       </div>
     </div>
@@ -542,10 +559,13 @@
   const STORAGE_KEY = 'promptBuilderDraft_v2';
   const MODE_KEY = 'promptBuilderMode_v1';
 
+  /* Quotes too: preset names and placeholder keys are written into
+     attributes (aria-label, data-token, value), and since Path 6 P3 a preset
+     can arrive in a link that nobody at this keyboard typed. */
   function esc(str){
     const div = document.createElement('div');
     div.textContent = str;
-    return div.innerHTML;
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
   /* ---- {{placeholders}} -------------------------------------------------
      A saved preset is this tool's "saved prompt", and the thing that stops one
@@ -1348,15 +1368,15 @@
     URL.revokeObjectURL(url);
   });
 
-  // ---- shareable link ----
-  $('shareBtn').addEventListener('click', () => {
+  // ---- link to this draft (the ?field= prefill loadFromParams reads) ----
+  $('draftLinkBtn').addEventListener('click', () => {
     const params = new URLSearchParams();
     STATIC_IDS.forEach(id => { const v = val(id); if (v) params.set(id, v); });
     if (toolTypeSelect.value === 'other') params.set('toolTypeOther', toolTypeOther.value.trim());
     if (toneSelect.value === 'other') params.set('toneOther', toneOther.value.trim());
     Object.keys(dynamicValues).forEach(k => { if (dynamicValues[k]) params.set(k, dynamicValues[k]); });
     const url = location.origin + location.pathname + '?' + params.toString();
-    const shareStatus = () => showTempLabel($('shareBtn'), 'Link copied!');
+    const shareStatus = () => showTempLabel($('draftLinkBtn'), 'Link copied!');
     if (navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(url).then(shareStatus).catch(() => fallbackCopy(url, shareStatus));
     } else {
@@ -1391,6 +1411,133 @@
       });
     });
   });
+
+  /* ---- share presets: _shared/share.js (Path 6 P3) ----------------------
+     WHAT TRAVELS IS THE SAVED PRESETS — the teacher's own reusable prompt
+     shapes, {{placeholders}} and all. The built-in examples ship with the
+     page. This is not the "Copy link to this draft" button beside the
+     output: that link is the draft as answered (?topic=…&grade=…), which
+     loadFromParams() prefills; this one is the presets, under ?presets=.
+
+     What stays: the "Your name" field is taken out of every preset, because
+     it is the sender's name and would go into the receiver's prompts; the
+     draft, the placeholder values (never part of a preset, see
+     applyFieldsFromData), the prompt history with its pasted AI replies, and
+     the Simple/Advanced mode.
+
+     An arrival is SAVED BESIDE: a preset whose fields match one already here
+     is skipped, a name already taken gets " (2)", and nothing is removed —
+     the list is capped at CUSTOM_PRESETS_MAX and an arrival that will not fit
+     says so rather than pushing the teacher's oldest presets off the end.
+     It does not ask, and it does not touch the fields on screen. */
+  const SHARE_PARAM = 'presets';
+
+  function setShareNote(text, isError){
+    const note = $('shareNote');
+    note.textContent = text || '';
+    note.style.display = text ? '' : 'none';
+    note.classList.toggle('error', !!isError);
+  }
+
+  /** A preset's fields as they may travel or land: known fields only, strings
+      only, and never the sender's name. */
+  function cleanPresetData(data){
+    const out = {};
+    if (!data || typeof data !== 'object') return out;
+    STATIC_IDS.forEach(id => {
+      if (id === 'name') return;
+      if (typeof data[id] === 'string' && data[id].trim()) out[id] = data[id].slice(0, 2000);
+    });
+    if (typeof data.toolTypeOther === 'string' && data.toolTypeOther.trim()) out.toolTypeOther = data.toolTypeOther.slice(0, 500);
+    if (typeof data.toneOther === 'string' && data.toneOther.trim()) out.toneOther = data.toneOther.slice(0, 500);
+    const dyn = {};
+    if (data.dyn && typeof data.dyn === 'object'){
+      Object.keys(data.dyn).forEach(k => {
+        if (/^x_[A-Za-z0-9_]{1,40}$/.test(k) && typeof data.dyn[k] === 'string' && data.dyn[k].trim()) dyn[k] = data.dyn[k].slice(0, 2000);
+      });
+    }
+    if (Object.keys(dyn).length) out.dyn = dyn;
+    return out;
+  }
+  /** Two presets are the same preset when their fields say the same thing,
+      whatever they are called. */
+  function presetSignature(data){
+    const d = cleanPresetData(data);
+    const dyn = d.dyn || {};
+    delete d.dyn;
+    const flat = Object.keys(d).sort().map(k => k + '=' + d[k].trim());
+    Object.keys(dyn).sort().forEach(k => flat.push(k + '=' + dyn[k].trim()));
+    return flat.join('\n');
+  }
+
+  Share.mount($('shareBtn'), {
+    getState: () => {
+      const presets = loadCustomPresets().map(p => ({ name: String(p.name || 'Preset'), data: cleanPresetData(p.data) }))
+        .filter(p => Object.keys(p.data).length);
+      return presets.length ? { presets: presets } : null;
+    },
+    param: SHARE_PARAM,
+    tool: 'prompt-builder',
+    title: 'Share your presets',
+    noun: 'your presets',
+    filename: 'prompt presets',
+    note: 'Your saved presets travel, placeholders and all. Your name, this draft, the placeholder values and your prompt history stay on this device.',
+    successMessage: 'Link copied. It carries your saved presets only \u2014 not your name, this draft or your history.',
+    emptyMessage: 'Save a preset first (\u201c+ Save current as preset\u201d). The built-in examples are already on every device.',
+    onMessage: (text, isError) => setShareNote(text, isError)
+  });
+
+  function importSharedPresets(){
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: obj => !!obj && typeof obj === 'object' && Array.isArray(obj.presets),
+      onError: message => setShareNote(message, true),
+      onState: decoded => {
+        const arriving = decoded.presets.map(p => {
+          if (!p || typeof p !== 'object') return null;
+          const data = cleanPresetData(p.data);
+          if (!Object.keys(data).length) return null;
+          const name = String(p.name == null ? '' : p.name).trim().slice(0, 60) || 'Shared preset';
+          return { name: name, data: data };
+        }).filter(Boolean);
+        if (!arriving.length){
+          setShareNote('That link carried no presets.', true);
+          return false;
+        }
+        const list = loadCustomPresets();
+        const haveSig = new Set(list.map(p => presetSignature(p.data)));
+        const taken = new Set(list.map(p => String(p.name || '').trim().toLowerCase()));
+        const uniqueName = name => {
+          if (!taken.has(name.toLowerCase())) return name;
+          let n = 2;
+          while (taken.has((name + ' (' + n + ')').toLowerCase())) n++;
+          return name + ' (' + n + ')';
+        };
+        const added = [];
+        let skipped = 0, noRoom = 0;
+        arriving.forEach(p => {
+          const sig = presetSignature(p.data);
+          if (haveSig.has(sig)){ skipped++; return; }
+          if (list.length + added.length >= CUSTOM_PRESETS_MAX){ noRoom++; return; }
+          const name = uniqueName(p.name);
+          taken.add(name.toLowerCase());
+          haveSig.add(sig);
+          added.push({ name: name, data: p.data });
+        });
+        /* After the teacher's own, so the list they know keeps its order. */
+        if (added.length){
+          saveCustomPresetsList(list.concat(added));
+          renderCustomPresets();
+        }
+        let msg = 'Added ' + added.length + ' from a shared preset list' +
+          (skipped ? ', skipped ' + skipped + ' already listed' : '');
+        if (noRoom) msg += ', and left out ' + noRoom + ' because you already have ' + CUSTOM_PRESETS_MAX + ' presets (delete one and open the link again)';
+        msg += '.' + (added.length ? ' They are with your presets above \u2014 click one to use it. What you had typed is untouched.' : '');
+        setShareNote(msg, !added.length && !skipped);
+        return true;
+      }
+    });
+  }
 
   // ---- autosave to localStorage ----
   let saveTimer = null;
@@ -1466,6 +1613,9 @@
   form.addEventListener('change', () => { build(); saveDraft(); });
 
   // ---- init ----
+  /* Before loadFromParams(), which reads ANY parameter as a prefill: receive()
+     consumes ?presets= first, so a presets link is never mistaken for a draft. */
+  importSharedPresets();
   renderCustomPresets();
   renderPromptHistory();
   renderDynamicFields();

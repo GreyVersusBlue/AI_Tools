@@ -6,6 +6,12 @@
 // table-driven suite. Increment 4 adds six more single-document tools (049,
 // 058, 074, 076, 078) plus 075, which is the first adopter that MERGES an
 // arrival instead of replacing what is there, and section 5c is its.
+// Increment 8 closes the bank-plus-settings group: 029 and 016 are 5c rows
+// (saved presets and saved codes, which merge), and 038 has a section of its
+// own, because what it shares is the chart on screen with its data rather
+// than anything in storage. Two more sections pin what those three must not
+// do: file a Wi-Fi code or push a teacher's own codes off a full list (016),
+// and let an arriving preset write an attribute (029).
 //
 //   node Tools/share/test/smoke-share-rollout.mjs      (or: npm run test:share-rollout)
 //
@@ -1090,6 +1096,116 @@ const TOOLS = [
     arrivedWant: '¿Qué pasó justo antes de esta foto?',
     localField: 'prompts.1.text',
   },
+  {
+    /* Increment 8. The saved presets travel, {{placeholders}} and all, minus
+       the "Your name" field — it is the sender's name and would go into the
+       receiver's prompts. The draft, its placeholder values and the history
+       (with the AI replies pasted into it) never do. An arrival is saved
+       beside: a same-named preset with different fields takes " (2)". */
+    n: '029', file: '029-prompt-builder.html', param: 'presets',
+    key: 'promptBuilderCustomPresets_v1', slug: 'prompt-builder',
+    merges: true, mergeNameOf: r => r.name,
+    extraSeed: [
+      ['promptBuilderDraft_v2', JSON.stringify({ name: 'Ms. Quillfeather', topic: 'the Dust Bowl', toolType: 'a lesson plan', dyn: {}, tokens: { unit: 'Unit 4' } })],
+      ['promptBuilderHistory_v1', JSON.stringify([{ id: 'h1', text: 'Write a lesson plan on the Dust Bowl.', reply: 'Here is a draft lesson for Tobias Wrenfield', ts: 1757000000000 }])],
+      ['promptBuilderMode_v1', 'advanced'],
+    ],
+    untouched: [
+      ['promptBuilderHistory_v1', JSON.stringify([{ id: 'h1', text: 'Write a lesson plan on the Dust Bowl.', reply: 'Here is a draft lesson for Tobias Wrenfield', ts: 1757000000000 }])],
+      ['promptBuilderMode_v1', 'advanced'],
+    ],
+    state: [
+      { name: 'Weekly parent update', data: { name: 'Ms. Quillfeather', toolType: 'an email or letter', topic: 'what we covered in {{unit}}', tone: 'warm and encouraging', dyn: {} } },
+      { name: 'Station rotation', data: { toolType: 'a classroom activity or project', topic: '{{topic}}', length: 'one 45-minute period', dyn: {} } },
+    ],
+    expect: p => [
+      [Array.isArray(p.presets) && p.presets.length === 2, 'the payload carries both saved presets'],
+      [p.presets[0].name === 'Weekly parent update' && p.presets[0].data.topic === 'what we covered in {{unit}}', 'with their names and fields, placeholders intact'],
+      [p.presets[0].data.name === undefined, 'but not the sender’s name, which would go into the receiver’s prompts'],
+      [p.draft === undefined && p.history === undefined && p.tokens === undefined, 'and no draft, no history and no placeholder values'],
+    ],
+    absent: ['Quillfeather', 'Dust Bowl', 'Unit 4', 'Tobias', 'Wrenfield'],
+    arrived: page => page.$$eval('#customPresetRow [data-custom-i]', bs => {
+      const names = bs.map(b => b.textContent);
+      return names.indexOf('Station rotation') !== -1 ? 'Station rotation' : JSON.stringify(names);
+    }),
+    arrivedWant: 'Station rotation',
+    arrivedNote: /Added \d+ from a shared/,
+    mergeLocal: [
+      { name: 'Weekly parent update', data: { toolType: 'an email or letter', topic: 'field trip reminders', dyn: {} } },
+    ],
+    mergeKeeps: 'Weekly parent update',
+    afterMerge: async (page) => {
+      const got = await page.evaluate(() => ({
+        list: JSON.parse(localStorage.getItem('promptBuilderCustomPresets_v1') || '[]'),
+        topic: document.getElementById('topic').value,
+      }));
+      const names = got.list.map(x => x.name);
+      const mine = got.list.filter(x => x.name === 'Weekly parent update')[0];
+      return [
+        ['a same-named preset with different fields was saved beside under a suffixed name: ' + JSON.stringify(names),
+          names.indexOf('Weekly parent update (2)') !== -1],
+        ['while the device’s own keeps its fields', !!mine && mine.data.topic === 'field trip reminders'],
+        ['and the teacher’s own presets stay first, in their order', names[0] === 'Weekly parent update'],
+        /* loadFromParams() reads ANY parameter as a draft prefill, and wins over
+           the saved draft when it finds one. If ?presets= were still in the URL
+           when it ran, the draft on this device would not have been restored. */
+        ['a presets link is not mistaken for a draft prefill: the saved draft is still on screen (' + JSON.stringify(got.topic) + ')',
+          got.topic === 'the Dust Bowl'],
+      ];
+    },
+  },
+  {
+    /* Increment 8. The Recently generated codes travel; the check-out
+       inventory — an equipment list with who has each item — never does.
+       Wi-Fi codes are the other half that stays, and have their own section
+       below, because a row here asserts that every fixture code arrives. */
+    n: '016', file: '016-qr-code-generator.html', param: 'codes',
+    key: 'qr-code-generator-recent', slug: 'qr-code-generator',
+    merges: true, mergeNameOf: r => r.label,
+    extraSeed: [
+      ['qr-code-generator-inventory', JSON.stringify({ 'EMS-CB-014': { label: 'Chromebook 14', status: 'out', assignedTo: 'Marisol Etxeberria',
+        checkedOutAt: 1757000000000, checkedInAt: null, createdAt: 1757000000000, updatedAt: 1757000000000,
+        history: [{ event: 'out', who: 'Marisol Etxeberria', ts: 1757000000000 }] } })],
+      ['qr-code-generator-settings', JSON.stringify({ size: '320', fg: '#1a2b3c', bg: '#ffffff', ec: 'Q' })],
+    ],
+    untouched: [
+      ['qr-code-generator-inventory', JSON.stringify({ 'EMS-CB-014': { label: 'Chromebook 14', status: 'out', assignedTo: 'Marisol Etxeberria',
+        checkedOutAt: 1757000000000, checkedInAt: null, createdAt: 1757000000000, updatedAt: 1757000000000,
+        history: [{ event: 'out', who: 'Marisol Etxeberria', ts: 1757000000000 }] } })],
+      ['qr-code-generator-settings', JSON.stringify({ size: '320', fg: '#1a2b3c', bg: '#ffffff', ec: 'Q' })],
+    ],
+    state: [
+      { label: 'Station 1 slides', text: 'https://example.org/station-1', caption: 'Scan for Station 1', ts: 1757000000002 },
+      { label: 'Field trip sign-up', text: 'https://example.org/signup', caption: '', ts: 1757000000001 },
+    ],
+    expect: p => [
+      [Array.isArray(p.codes) && p.codes.length === 2, 'the payload carries the saved codes'],
+      [p.codes[0].label === 'Station 1 slides' && p.codes[0].text === 'https://example.org/station-1', 'with each label and what it encodes'],
+      [p.codes[0].caption === 'Scan for Station 1', 'and its caption'],
+      [p.codes[0].ts === undefined, 'but not when this device saved it'],
+      [p.inventory === undefined && p.settings === undefined, 'and no inventory and no settings'],
+    ],
+    absent: ['Marisol', 'Etxeberria', 'Chromebook', 'EMS-CB-014', '#1a2b3c'],
+    arrived: page => page.$eval('#recent-list', el =>
+      el.textContent.indexOf('Station 1 slides') !== -1 ? 'Station 1 slides' : el.textContent.slice(0, 140)),
+    arrivedWant: 'Station 1 slides',
+    arrivedNote: /Added \d+ from a shared/,
+    mergeLocal: [
+      { label: 'Library catalogue', text: 'https://example.org/library', caption: '', ts: 1757000000009 },
+    ],
+    mergeKeeps: 'Library catalogue',
+    afterMerge: async (page) => {
+      const got = await page.evaluate(() => ({
+        list: JSON.parse(localStorage.getItem('qr-code-generator-recent') || '[]'),
+        text: document.getElementById('qr-text').value,
+      }));
+      return [
+        ['the device’s own code stays on top of the list: ' + JSON.stringify(got.list.map(r => r.label)), got.list[0] && got.list[0].label === 'Library catalogue'],
+        ['and with nothing being edited, the first code that arrived is on the canvas', got.text === 'https://example.org/station-1'],
+      ];
+    },
+  },
 ];
 
 /* ── 0. static: the four tags, in dependency order ──────────────────────── */
@@ -1099,7 +1215,8 @@ const ORDER = ['_shared/state-link.js', '_shared/vendor/qrcode/qrcode.js', '_sha
 for (const t of [...TOOLS,
                  { n: '081', file: '081-word-problem-warmup-generator.html' },
                  { n: '061', file: '061-fraction-decimal-percent-drill-generator.html' },
-                 { n: '067', file: '067-music-sightreading-generator.html' }]) {
+                 { n: '067', file: '067-music-sightreading-generator.html' },
+                 { n: '038', file: '038-data-chart-builder.html' }]) {
   const html = fs.readFileSync(path.join(SITE, 'Tools', t.file), 'utf8');
   const at = ORDER.map(src => html.indexOf(`src="../${src}"`));
   ok(at.every(i => i !== -1), `${t.n}: loads all four share scripts: ${JSON.stringify(ORDER.filter((s, i) => at[i] === -1))}`);
@@ -1489,6 +1606,173 @@ for (const t of TOOLS) {
     JSON.stringify(await broken.textContent('#shareNote')));
   eq(new URL(broken.url()).searchParams.get(t.param), null,
     `${t.n}: and is cleared even though it was unusable, so a refresh does not repeat the failure`);
+}
+
+/* ── 038: the chart travels WITH its data, and only that one ────────────── */
+/* #252 left this row on a decision: a chart's settings are nothing without
+   its numbers, and the saved-dataset library is a name->pasted-text map the
+   page's own comment says can hold student data. Taken this way: the data in
+   the box travels as part of the chart the teacher is looking at when they
+   press Share (the sheet says so, and to check it for names), and the library
+   never does. The box is not persisted, so an arrival replaces nothing and
+   does not ask; it does not save the data into the library either. */
+console.log('\n038 — 038-data-chart-builder.html (a chart, with the data in the box)');
+{
+  const PAGE_URL = BASE + '/Tools/038-data-chart-builder.html';
+  const LIBRARY = JSON.stringify({ 'P3 reading scores': 'Student\tScore\nAnneliese Brightwater\t88\nCorwin Oduya\t72' });
+  const SETTINGS = JSON.stringify({ hasHeaders: true, chartType: 'pie', showValues: false });
+  const DATA = 'Condition\tReaction <b>Time</b> (s)\tSpread\nCold\t45\t3\nWarm\t31\t2\nHot\t22\t2';
+
+  const sender = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['038', sender]);
+  await seed(sender, [['data-chart-builder-datasets', LIBRARY]]);
+  await sender.goto(PAGE_URL, { waitUntil: 'load' });
+  await settle(sender, 600);
+  eq(await sender.isVisible('#shareBtn'), true, '038: the preview card has a Share button');
+
+  await sender.click('#shareBtn');
+  await settle(sender, 250);
+  await sender.evaluate(() => window.Share.close());
+  ok(/Paste some data/.test(await sender.textContent('#shareNote')),
+    '038: with nothing in the box, the button says what to do: ' + JSON.stringify(await sender.textContent('#shareNote')));
+
+  await sender.fill('#data-input', DATA);
+  await settle(sender, 500);
+  await sender.click('label[for="type-line"]');
+  await sender.fill('#chart-title', 'Reaction Time vs. Temperature');
+  await sender.fill('#y-axis-label', 'Seconds');
+  await sender.uncheck('#show-values');
+  await sender.check('#grayscale-mode');
+  await sender.check('#show-error-bars');
+  await settle(sender, 300);
+  await sender.selectOption('.err-col-select[data-col="1"]', '2');
+  await settle(sender, 300);
+
+  const url = await shareLink(sender);
+  ok(url && url.indexOf('chart=') !== -1, '038: Copy link produces a ?chart= link');
+  ok(/Link copied/.test(await sender.textContent('#shareNote')), '038: and the note says so');
+  const payload = await sender.evaluate(u => window.StateLink.decodeState(new URL(u).searchParams.get('chart')), url);
+  eq(payload.data, DATA, '038: the payload carries the data in the box, as pasted');
+  eq(payload.chartType, 'line', '038: the chart type');
+  eq(payload.title, 'Reaction Time vs. Temperature', '038: the title');
+  eq(payload.yLabel, 'Seconds', '038: the axis label');
+  ok(payload.showValues === false && payload.grayscale === true && payload.errorBars === true, '038: and the options');
+  eq(JSON.stringify(payload.errorCols), JSON.stringify({ 1: 2 }), '038: including which column is each series’ error bar');
+  const asText = JSON.stringify(payload);
+  for (const needle of ['Anneliese', 'Brightwater', 'Corwin', 'P3 reading scores']) {
+    ok(asText.indexOf(needle) === -1, `038: ${JSON.stringify(needle)} from the saved-dataset library is not in the payload`);
+  }
+
+  const receiver = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['038-receiver', receiver]);
+  const asked = [];
+  receiver.on('dialog', async d => { asked.push(d.message()); await d.dismiss(); });
+  await seed(receiver, [['data-chart-builder-datasets', LIBRARY], ['data-chart-builder-settings', SETTINGS]]);
+  await receiver.goto(url, { waitUntil: 'load' });
+  await settle(receiver, 900);
+  eq(asked.length, 0, '038: an arriving chart does not ask — the box is not saved, so nothing is replaced');
+  ok(/Loaded a shared chart \(3 rows\)/.test(await receiver.textContent('#shareNote')),
+    '038: and says what it loaded: ' + JSON.stringify(await receiver.textContent('#shareNote')));
+  eq(await receiver.inputValue('#data-input'), DATA, '038: the receiving device has the data in its box');
+  eq(await receiver.isChecked('#type-line'), true, '038: the chart type, though this device’s own default is pie');
+  eq(await receiver.inputValue('#chart-title'), 'Reaction Time vs. Temperature', '038: the title');
+  eq(await receiver.inputValue('#y-axis-label'), 'Seconds', '038: the axis label');
+  eq(await receiver.isChecked('#show-values'), false, '038: the options');
+  eq(await receiver.inputValue('.err-col-select[data-col="1"]'), '2', '038: and the error-bar column');
+  ok(await receiver.$('#chart-stage svg') !== null, '038: and it drew the chart');
+  /* The column header carried markup. Every sink this page writes it to
+     escapes, and this is where a link that did not would show. */
+  eq(await receiver.$$eval('#chart-stage b, #preview-table b, #value-cols-list b', els => els.length), 0,
+    '038: markup in an arriving header is text, not elements');
+  eq(await receiver.inputValue('#dataset-name'), 'Reaction Time vs. Temperature',
+    '038: the dataset name is filled in, so keeping it is one click');
+  eq(await receiver.evaluate(() => localStorage.getItem('data-chart-builder-datasets')), LIBRARY,
+    '038: but the data was not saved into the library without being asked');
+  eq(await receiver.evaluate(() => localStorage.getItem('data-chart-builder-settings')), SETTINGS,
+    '038: and this device’s remembered defaults are untouched');
+  eq(new URL(receiver.url()).searchParams.get('chart'), null, '038: the parameter is consumed on open');
+
+  await sender.click('#shareBtn');
+  await settle(sender, 250);
+  const rows = await sender.$$eval('.share-sheet-rows button', bs => bs.map(b => b.getAttribute('data-share')));
+  ok(rows.includes('copy') && rows.includes('qr') && rows.includes('download'),
+    '038: the sheet offers copy, QR and download: ' + JSON.stringify(rows));
+  ok(/student names/.test(await sender.textContent('.share-sheet')),
+    '038: and the sheet itself says the data travels and to check it for student names');
+  const sheetScan = await a11yScan(sender, { impact: 'serious', include: '.share-sheet' });
+  eq(sheetScan.length, 0, '038: no serious/critical axe violations on the open sheet: ' + JSON.stringify(sheetScan.map(v => v.id)));
+  await sender.keyboard.press('Escape');
+  await settle(sender, 200);
+
+  const broken = await prepPage(browser, BASE, { width: 1200, height: 900 });
+  pages.push(['038-broken', broken]);
+  await broken.goto(`${PAGE_URL}?chart=not-base64-%%%`, { waitUntil: 'load' });
+  await settle(broken, 700);
+  ok(/could not be read/.test(await broken.textContent('#shareNote')),
+    '038: a mangled link says so: ' + JSON.stringify(await broken.textContent('#shareNote')));
+}
+
+/* ── 016: a Wi-Fi code never travels, and a full list loses nothing ─────── */
+console.log('\n016 — 016-qr-code-generator.html (Wi-Fi codes, and a full Recent list)');
+{
+  const PAGE_URL = BASE + '/Tools/016-qr-code-generator.html';
+  const sender = await openSeeded('016-wifi', PAGE_URL, [['qr-code-generator-recent', JSON.stringify([
+    { label: 'Staff Wi-Fi', text: 'WIFI:T:WPA;S:EMS-Staff;P:hunter2secret;H:false;;', caption: '', ts: 2 },
+    { label: 'Morning slides', text: 'https://example.org/morning', caption: '', ts: 1 },
+  ])]]);
+  const url = await shareLink(sender);
+  const payload = await sender.evaluate(u => window.StateLink.decodeState(new URL(u).searchParams.get('codes')), url);
+  eq(payload.codes.length, 1, '016: a Wi-Fi code is left out of the link');
+  ok(JSON.stringify(payload).indexOf('hunter2secret') === -1, '016: so the network password is nowhere in it');
+
+  /* A link made by hand that carries one anyway is not filed. */
+  const crafted = await sender.evaluate(() => window.StateLink.encodeState({ codes: [
+    { label: 'Sneaky', text: 'WIFI:T:WPA;S:x;P:y;;', caption: '' },
+    { label: 'Hallway map', text: 'https://example.org/map', caption: '' }] }));
+  /* And a full Recent list: ten of the teacher's own, which an arrival must
+     not push off the end. */
+  const ten = Array.from({ length: 10 }, (_, i) => ({ label: 'Mine ' + i, text: 'https://example.org/mine-' + i, caption: '', ts: 100 - i }));
+  const full = await openSeeded('016-full', PAGE_URL + '?codes=' + crafted, [['qr-code-generator-recent', JSON.stringify(ten)]]);
+  const list = await full.evaluate(() => JSON.parse(localStorage.getItem('qr-code-generator-recent') || '[]'));
+  eq(list.length, 10, '016: a full Recent list stays at ten');
+  eq(JSON.stringify(list.map(r => r.label)), JSON.stringify(ten.map(r => r.label)),
+    '016: and holds exactly the teacher’s own ten, in order — the arrival did not push any off');
+  ok(/left out 1 because/.test(await full.textContent('#shareNote')),
+    '016: the note says one code would not fit, and why: ' + JSON.stringify(await full.textContent('#shareNote')));
+  ok(list.every(r => !/^WIFI:/i.test(r.text)), '016: and the crafted Wi-Fi code was not filed');
+}
+
+/* ── 029: an arriving preset is text in every attribute it reaches ─────── */
+/* 029's esc() went through textContent/innerHTML, which leaves quotes alone,
+   and preset names and {{placeholder}} keys are written into attributes
+   (aria-label, data-token, value). Nobody at this keyboard types a quote into
+   their own preset name to attack themselves; a link is another matter. */
+console.log('\n029 — 029-prompt-builder.html (an arriving preset in an attribute)');
+{
+  const PAGE_URL = BASE + '/Tools/029-prompt-builder.html';
+  const maker = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['029-maker', maker]);
+  await maker.goto(PAGE_URL, { waitUntil: 'load' });
+  await settle(maker, 400);
+  const evil = await maker.evaluate(() => window.StateLink.encodeState({ presets: [{
+    name: 'x" onmouseover="window.__pwned=1',
+    data: { toolType: 'a lesson plan', topic: '{{a" autofocus onfocus="window.__pwned=2}}', dyn: {} } }] }));
+  const victim = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['029-victim', victim]);
+  await victim.goto(PAGE_URL + '?presets=' + evil, { waitUntil: 'load' });
+  await settle(victim, 800);
+  ok(/Added 1 from a shared/.test(await victim.textContent('#shareNote')),
+    '029: the preset arrived: ' + JSON.stringify(await victim.textContent('#shareNote')));
+  /* Apply it, so the placeholder panel renders the key into data-token. */
+  await victim.click('#customPresetRow [data-custom-i]');
+  await settle(victim, 500);
+  await victim.hover('#customPresetRow [data-custom-i]');
+  await settle(victim, 200);
+  eq(await victim.$$eval('[onmouseover], [onfocus]', els => els.length), 0,
+    '029: no attribute was injected from the arriving name or placeholder');
+  eq(await victim.evaluate(() => window.__pwned === undefined), true, '029: and nothing ran');
+  eq(await victim.$eval('#customPresetRow [data-custom-i]', b => b.textContent), 'x" onmouseover="window.__pwned=1',
+    '029: the name is shown as the text it is');
 }
 
 /* ── 081: the generator, where the SEED is the payload ──────────────────── */

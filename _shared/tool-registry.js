@@ -579,6 +579,9 @@
       title: 'QR Code Generator',
       file: 'Tools/016-qr-code-generator.html',
       category: 'games-rewards',
+      /* The share link carries the Recently generated codes — never a Wi-Fi
+         code (it holds the password), the inventory or a bulk list. */
+      share: { param: 'codes' },
       keys: [
         { k: 'qr-code-generator-inventory' },
         { k: 'qr-code-generator-recent' },
@@ -630,6 +633,10 @@
       title: 'Prompt Builder',
       file: 'Tools/029-prompt-builder.html',
       category: 'docs-comm',
+      /* The share link carries the saved presets, minus the sender's name —
+         never the draft, the placeholder values or the history. The draft
+         has its own ?field= prefill link, which is not this. */
+      share: { param: 'presets' },
       keys: [
         { k: 'promptBuilderCustomPresets_v1' },
         { k: 'promptBuilderDraft_v2' },
@@ -1005,6 +1012,9 @@
       title: 'Data Table → Chart Builder',
       file: 'Tools/038-data-chart-builder.html',
       category: 'science',
+      /* The share link carries the chart on screen WITH the data in the box
+         — never the saved-dataset library. */
+      share: { param: 'chart' },
       keys: [
         { k: 'data-chart-builder-datasets' },
         { k: 'data-chart-builder-settings' },
