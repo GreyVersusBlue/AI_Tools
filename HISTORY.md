@@ -9,6 +9,77 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 6 P3, increment 8: 016, 029 and 038 share, and the P3 row closes (2026-09-24, #255, `CACHE_VERSION` v181)
+
+**016** QR Code Generator, **029** Prompt Builder and **038** Data Table → Chart Builder now open
+`_shared/share.js`'s sheet and consume a link on load. `share.js` and `qr-draw.js` go to **52 of
+86** and `state-link.js` to **53**. That was the last of the bank-plus-settings group, so **the
+P3 row was deleted from Tier 1** and every rank below it moved up by one. What P3 still names is
+two tools, and neither is a P3 job any more. **046** has always been the first job of the P4
+rollout (now rank 1). **045** is written into rank 28 (Path 10 P2) as "then give 045 the share
+sheet", because sharing it before the re-base would ship a payload that changes shape soon after.
+**The call, recorded so it can be reversed:** a session could argue that a 2+ row is only
+finished when its last tool ships. It was deleted anyway, because a row whose only remaining
+work is blocked on another row stalls the next session that picks it up.
+
+**Asking #250's three questions of each tool.**
+
+- **029: the vocabulary is the saved presets.** They travel with their `{{placeholders}}`, minus
+  the "Your name" field, which is the sender's name and would end up in the receiver's prompts. The
+  draft, the placeholder values, the history (which holds pasted AI replies) and the mode stay. An
+  arrival is saved beside the existing presets: identical fields are skipped, a taken name gets
+  " (2)", and nothing is pushed past the 20-preset cap. The cap was the subtraction. `unshift`
+  plus `slice(0, 20)` would have silently dropped the teacher's oldest presets. 029 already had a
+  link of its own, the `?field=` draft prefill, and `loadFromParams()` treated any parameter as
+  a prefill. So `Share.receive()` runs first and consumes `?presets=`. The rollout suite pins
+  that ordering by checking that the device's saved draft is still on screen after a presets
+  link opens. The old button moved from `#shareBtn` to `#draftLinkBtn` ("Copy link to this
+  draft").
+- **029's `innerHTML` answer was the finding.** `esc()` went through `textContent`/`innerHTML`,
+  which escapes `& < >` but not quotes. Preset names are written into `aria-label` and
+  placeholder keys into `data-token` and `value`. Harmless while every preset was typed at this
+  keyboard. Not harmless once a preset can arrive in a link. `esc()` now escapes `"` and `'`,
+  and a suite section opens a crafted preset whose name and placeholder carry `onmouseover` and
+  `autofocus onfocus`, then asserts no attribute was injected and nothing ran.
+- **038 needed the decision #252 left open, taken this way:** a chart's settings draw nothing
+  without its numbers, so what travels is **the chart on screen with the data in the box**. The
+  teacher picks a dataset by loading it into the box, and the sheet's note says to check it for
+  student names first. The saved-dataset library (a name → pasted-text map) never travels. The
+  box is not persisted, so an arrival replaces nothing and does not ask. It also does **not**
+  save the data into the library, because that stays the teacher's choice. The dataset name
+  field is filled in so saving is one click. Device defaults (`STORAGE_KEY`) are left alone. No
+  per-dataset row in the sheet was needed. Every sink an arriving header reaches already escaped
+  (checked by reading all 12, and by a fixture header carrying `<b>`).
+- **016: the vocabulary is Recently generated** (label, encoded text, caption). **Wi-Fi codes
+  stay:** a `WIFI:` code holds the network password in plain text, and a link travels much
+  further than a code printed on a wall. They are filtered on send and refused on arrival, and
+  the sheet says so. The check-out inventory stays too. It is teacher content that carries
+  `assignedTo`/`history[].who`, one of the seven mixed keys the 2026-09-23 audit left for rank 5.
+  Arrivals merge by text and fill free places in the 10-code list, never pushing the teacher's
+  codes off. A suite section seeds ten codes and asserts all ten are still there, in order.
+
+**Suite.** Two table rows (029 and 016, both 5c merges with `afterMerge`) plus three sections:
+038's own (no storage to seed, so it drives the page like 067's), 016's Wi-Fi and full-list
+guards, and 029's injection check. **1531** assertions, up from 1380.
+
+**What went wrong on the way.** 038's section failed twice before it passed, both times in
+the test rather than the tool. First, its chart-type radios are visually hidden, so
+`page.check('#type-line')` timed out (click the label). Second, the fixture was all-numeric,
+which puts the first value column at index 0, so the error-bar select the test wanted did not
+exist. A 20-line standalone probe of just those steps caught the second fix before another
+15-minute full run.
+
+**Not verified.** No sheet QR from these three was scanned by a real camera. `navigator.share`
+is still exercised nowhere. The open sheet was scanned by axe in light only. 016 and 038 run
+their own dark palettes, and the scoped token block was only looked at in code. No file from
+the Download row was re-opened by hand. Rank-number references in older Tier 2 prose and in
+two Standing decisions rows ("Rank 10", "Rank 12 (or 2)") were already stale and were not
+renumbered. Only the header, rank 1's own text and the Path 17 P5 row were.
+
+Local: `test:share-rollout` green, the touched tools' own suites, `test:registry`, handoffs,
+`test:theme`, `test:a11y --only` on all three pages, and every `check:*` guard. CI ran the full
+list (the registry is in the diff) green in **33.0 min**.
+
 ## The repo-review follow-ups — 2026-09-23 (`CACHE_VERSION` v180)
 
 Not a ranked row. Devon asked for a whole-repo review, then asked for its suggestions to be
