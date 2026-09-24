@@ -983,6 +983,7 @@
       title: 'Lab Group & Role Randomizer',
       file: 'Tools/022-lab-group-role-randomizer.html',
       category: 'science',
+      share: { param: 'labgroups' },
       keys: [
         { k: 'lgrr_current', student: true },
         { k: 'lgrr_rosters', student: true },

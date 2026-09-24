@@ -28,6 +28,14 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<!-- Path 6 P4's roster chain: share.js receives 002's groups (?labgroups=),
+     and the registry and handoff table send this page's groups to 005 as a
+     seating section. This page has no share sheet of its own; only
+     Share.receive() is used, so qr-draw.js is not loaded. -->
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/share.js"></script>
+<script src="../_shared/tool-registry.js"></script>
+<script src="../_shared/handoffs.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -361,6 +369,9 @@
           <button type="button" class="secondary" id="printCheckoutBtn">Print equipment checkout sheet</button>
         </div>
         <div class="btn-row">
+          <button type="button" class="secondary" id="seatBtn">Seat these groups in the Seating Chart</button>
+        </div>
+        <div class="btn-row">
           <button type="button" class="danger" id="resetHistoryBtn">Reset role history</button>
         </div>
         <p class="hint" id="historyHint"></p>
@@ -411,7 +422,7 @@
    'stationList', 'addStationBtn',
    'pairA', 'pairB', 'addPairBtn', 'pairList',
    'shuffleBtn', 'undoBtn', 'printBtn', 'printHistoryBtn', 'printFairnessBtn', 'printTentsBtn', 'printCheckoutBtn', 'resetHistoryBtn',
-   'historyHint', 'resultsArea', 'warnArea', 'printTitle', 'msg', 'rosterHubSelect', 'rosterHubLoadBtn'
+   'historyHint', 'resultsArea', 'warnArea', 'printTitle', 'msg', 'rosterHubSelect', 'rosterHubLoadBtn', 'seatBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
   els.printTitle = document.getElementById('print-title');
   els.nameCount = document.getElementById('name-count');
@@ -1701,7 +1712,82 @@
   }
   els.namesInput.addEventListener('input', function () { onNamesChanged(true); });
 
+  // ── Groups in and out: Path 6 P4's roster chain ────────────────────────
+  /* 002 -> 022 and 022 -> 005 are declared in _shared/handoffs.js, which says
+     why each hop may carry names. What arrives from 002 is its own share
+     payload — group labels and who is in each — and it is saved as a NEW
+     lab class beside the ones already here, never over one, with this
+     page's roles handed out inside the groups as they were made. What goes
+     to 005 is the names in each group of the last shuffle and nothing else:
+     not the roles, the role history, absences, keep-apart pairs or who has
+     not signed a safety contract. */
+  var SHARE_PARAM = 'labgroups';
+
+  function looksLikeGroups(o) {
+    return !!o && typeof o === 'object' && Array.isArray(o.groups) && o.groups.length > 0 &&
+      o.groups.every(function (g) { return g && Array.isArray(g.members); });
+  }
+
+  /* Role history is a plain object keyed by name, so a "name" that is one of
+     Object.prototype's own would read an inherited value and break the
+     shuffle. Typed at this keyboard that was never going to happen; arriving
+     in a link it could, so an arrival drops those three. */
+  var NOT_A_NAME = ['__proto__', 'constructor', 'prototype'];
+
+  /** Files an arrival as a new lab class and returns the sentence to show. */
+  function fileArrivedGroups(payload) {
+    var groups = payload.groups.map(function (g) {
+      return g.members.map(function (n) { return String(n == null ? '' : n).trim().slice(0, 100); })
+        .filter(function (n) { return n && NOT_A_NAME.indexOf(n) === -1; });
+    }).filter(function (g) { return g.length; });
+    if (!groups.length) return null;
+    var base = String(payload.name || '').trim().slice(0, 200) || 'Groups from the Group Generator';
+    state = normalizeRosterData({}, uniqueRosterName(base));
+    state.students = groups.map(function (g) { return g.join('\n'); }).join('\n');
+    var roleNames = state.roles.map(function (r) { return r.name; });
+    state.lastGroups = groups.map(function (members) {
+      var assignment = assignRolesForGroup(members, roleNames);
+      members.forEach(function (name) { recordHistory(name, assignment[name]); });
+      return { station: null, members: members.map(function (name) { return { name: name, role: assignment[name] }; }) };
+    });
+    state.checkoutLog = state.lastGroups.map(function () { return { outAt: null, inAt: null }; });
+    saveCurrent();
+    return 'Opened ' + groups.length + ' group' + (groups.length === 1 ? '' : 's') +
+      ' from a link as a new lab class, “' + state.name + '”, and handed out roles. ' +
+      'The groups are kept as they were made; Shuffle would regroup this class. Nothing else here changed.';
+  }
+
+  function receiveGroups() {
+    var outcome = null;
+    Share.receive({
+      param: SHARE_PARAM,
+      validate: looksLikeGroups,
+      onError: function (message) { outcome = { text: message, ok: false }; },
+      onState: function (payload) {
+        var text = fileArrivedGroups(payload);
+        outcome = text ? { text: text, ok: true } : { text: 'That link had groups with nobody in them, so there was nothing to open.', ok: false };
+      }
+    });
+    return outcome;
+  }
+
+  var SEATING_HANDOFF = Handoffs.from('lab-group-role-randomizer').filter(function (h) {
+    return h.to === 'seating-chart';
+  })[0];
+
+  els.seatBtn.addEventListener('click', function () {
+    if (!state || !state.lastGroups || !state.lastGroups.length) { showMsg('Shuffle groups first, then there is something to seat.'); return; }
+    var sent = Handoffs.open(SEATING_HANDOFF, {
+      name: state.name,
+      groups: state.lastGroups.map(function (g) { return g.members.map(function (m) { return m.name; }); })
+    });
+    showMsg(sent.message, sent.ok);
+  });
+
   // ── Init ─────────────────────────────────────────────────────────────────
+  /* Before the saved class is chosen, so an arrival becomes the current class
+     and an empty device does not seed a blank "New Roster" beside it. */
+  var arrived = receiveGroups();
   var current = getCurrentName();
   var all = loadAll();
   if (current && all[current]) {
@@ -1717,6 +1803,7 @@
      NEXT rename visible — and follows one already made if the names in the box
      have moved on since this roster last saw them. */
   if (state) { followRenames(); saveCurrent(); }
+  if (arrived) showMsg(arrived.text, arrived.ok);
 
 })();
 </script>

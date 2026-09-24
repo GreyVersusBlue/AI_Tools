@@ -24,6 +24,10 @@
 //   4. a page that loads share.js without handoffs.js has no Send row — the
 //      row is opt-in per page, not a site-wide surprise.
 //   5. no console errors and nothing left the site.
+//   6. the rollout's rows: 046, 039 and 056 (sheet: false).
+//   7. the roster chain: 002's sheet sends its grouping to 022, which files
+//      it as a new lab class with roles (and survives a hostile link); 022's
+//      "Seat these groups" button seats them in 005 as a new section.
 //
 // Exits 1 on any failure. Every name here is invented.
 
@@ -212,6 +216,122 @@ const clickSend = (p, slug) => p.evaluate((s) => {
   const packetRows = await openRows(packet);
   ok(!packetRows.some(r => r.indexOf('send:') === 0), 'but its sheet has no Send row — that handoff is one source, from its own button: ' + JSON.stringify(packetRows));
   await packet.keyboard.press('Escape');
+}
+
+/* ── 7. the roster chain: 002 -> 022 -> 005 (2026-09-24) ────────────────── */
+/* 006/007 -> 002 is deliberately NOT a handoff (002 reads the same saved
+   class lists through roster.js, on the same device, with no URL); that is
+   asserted in handoffs.test.mjs. What is driven here is the two hops that
+   are: 002's sheet sends its grouping to 022, 022 files it as a new lab class
+   with roles, and 022's own button seats those groups in 005 as a section. */
+console.log('\n002 → 022 → 005 — the roster chain');
+{
+  const NAMES = ['Ada Quill', 'Bram Sorrel', 'Cleo Varga', 'Dov Ansel', 'Esme Pruitt', 'Fitz Morrow', 'Gus Halden', 'Hana Obi'];
+  const groupsGen = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['002', groupsGen]);
+  await groupsGen.goto(BASE + '/Tools/002-group-team-generator.html', { waitUntil: 'load' });
+  await settle(groupsGen, 700);
+  await groupsGen.fill('#names-input', NAMES.join('\n'));
+  await groupsGen.dispatchEvent('#names-input', 'input');
+  await settle(groupsGen, 200);
+  await groupsGen.click('#generate-btn');
+  await settle(groupsGen, 400);
+  await groupsGen.click('#share-btn');
+  await settle(groupsGen, 250);
+  const gRows = await groupsGen.$$eval('.share-sheet-rows button', bs => bs.map(b => b.getAttribute('data-share')));
+  ok(gRows.includes('send:lab-group-role-randomizer'), '002\'s sheet has a Send to Lab Group & Role Randomizer row: ' + JSON.stringify(gRows));
+  const sentG = await clickSend(groupsGen, 'lab-group-role-randomizer');
+  eq(sentG.opened.length, 1, 'clicking it opens one tab');
+  const gUrl = sentG.opened[0] && sentG.opened[0].u;
+  ok(gUrl && gUrl.indexOf(BASE + '/Tools/022-lab-group-role-randomizer.html?labgroups=') === 0, 'at 022 with 022\'s parameter, off the registry: ' + JSON.stringify(gUrl && gUrl.slice(0, 90)));
+  const gPayload = await groupsGen.evaluate(u => window.StateLink.decodeState(new URL(u).searchParams.get('labgroups')), gUrl);
+  const sentNames = (gPayload.groups || []).flatMap(g => g.members).sort();
+  eq(JSON.stringify(sentNames), JSON.stringify(NAMES.slice().sort()), 'every name in the grouping travels, once');
+  eq(Object.keys(gPayload).sort().join(','), 'groups,name,v', 'and nothing but the name, the groups and a version');
+  ok(gPayload.groups.every(g => Object.keys(g).sort().join(',') === 'label,members'), 'each group is its label and members — no skill numbers, no pairing memory');
+
+  /* 022, on a device that already has a class with role history. */
+  const EXISTING = { name: 'Period 1', students: 'Ivo Lark\nJuno Pell', roles: [{ name: 'Recorder', description: '' }], stations: [], mode: 'count', splitValue: 2,
+    history: { 'Ivo Lark': ['Recorder'] }, lastGroups: null, checkoutLog: [], keepApart: [], absent: [] };
+  const lab = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['022', lab]);
+  await lab.addInitScript(v => {
+    if (localStorage.getItem('lgrr_rosters')) return;
+    localStorage.setItem('lgrr_rosters', JSON.stringify({ 'Period 1': JSON.parse(v) }));
+    localStorage.setItem('lgrr_current', 'Period 1');
+  }, JSON.stringify(EXISTING));
+  await lab.goto(BASE + '/Tools/022-lab-group-role-randomizer.html', { waitUntil: 'load' });
+  await settle(lab, 600);
+  const labBefore = await lab.evaluate(() => localStorage.getItem('lgrr_rosters'));
+  await lab.goto(gUrl, { waitUntil: 'load' });
+  await settle(lab, 800);
+  const labAll = await lab.evaluate(() => JSON.parse(localStorage.getItem('lgrr_rosters')));
+  eq(Object.keys(labAll).length, 2, '022 files the arrival as one new lab class: ' + JSON.stringify(Object.keys(labAll)));
+  eq(JSON.stringify(labAll['Period 1']), JSON.stringify(JSON.parse(labBefore)['Period 1']), 'the class already here is untouched, role history and all');
+  const arrivedName = Object.keys(labAll).find(n => n !== 'Period 1');
+  const arrivedClass = labAll[arrivedName];
+  eq(await lab.evaluate(() => localStorage.getItem('lgrr_current')), arrivedName, 'and the arrival is the class on screen');
+  eq(JSON.stringify(arrivedClass.lastGroups.map(g => g.members.map(m => m.name))), JSON.stringify(gPayload.groups.map(g => g.members)),
+    'the groups are kept exactly as 002 made them');
+  const roleNames = arrivedClass.roles.map(r => r.name);
+  ok(arrivedClass.lastGroups.every(g => g.members.every(m => roleNames.indexOf(m.role) !== -1)), 'every member was handed one of 022\'s roles');
+  ok(arrivedClass.lastGroups.every(g => new Set(g.members.map(m => m.role)).size === g.members.length), 'and no role twice in a group');
+  eq(arrivedClass.students.split('\n').sort().join('|'), NAMES.slice().sort().join('|'), 'its roster is the names that arrived');
+  eq((await lab.$$('#resultsArea .group-card')).length, gPayload.groups.length, 'the groups are on screen');
+  ok(/new lab class/.test(await lab.textContent('#msg')), '022 says what it did: ' + JSON.stringify(await lab.textContent('#msg')));
+  eq(new URL(lab.url()).searchParams.get('labgroups'), null, 'the parameter is consumed on open');
+
+  /* A hostile link: markup in a name renders as text; a prototype key is dropped rather than breaking the page. */
+  const hostileUrl = await lab.evaluate(() => window.StateLink.buildShareUrl('labgroups',
+    { v: 1, name: 'Hostile', groups: [{ label: 'x', members: ['<img src=x onerror="window.__pwned=1">', '__proto__', 'constructor', 'Real Kid'] }] },
+    { base: location.origin + location.pathname }));
+  await lab.goto(hostileUrl, { waitUntil: 'load' });
+  await settle(lab, 700);
+  eq(await lab.evaluate(() => document.querySelectorAll('#resultsArea img').length), 0, 'markup in an arriving name is text, not an element');
+  eq(await lab.evaluate(() => window.__pwned), undefined, 'and runs nothing');
+  const hostile = await lab.evaluate(() => JSON.parse(localStorage.getItem('lgrr_rosters'))['Hostile']);
+  eq(JSON.stringify(hostile && hostile.lastGroups[0].members.map(m => m.name)), JSON.stringify(['<img src=x onerror="window.__pwned=1">', 'Real Kid']),
+    'a name that is a key of Object.prototype is dropped, the rest arrive');
+
+  /* 022 -> 005, from 022's own button, on the arrived class. */
+  await lab.evaluate(n => { const sel = document.getElementById('rosterSwitch'); sel.value = n; sel.dispatchEvent(new Event('change')); }, arrivedName);
+  await settle(lab, 300);
+  const seat = await lab.evaluate(() => {
+    const opened = [];
+    window.open = (u, target, features) => { opened.push({ u, features }); return {}; };
+    document.getElementById('seatBtn').click();
+    return { opened, msg: document.getElementById('msg').textContent };
+  });
+  eq(seat.opened.length, 1, '"Seat these groups" opens one tab');
+  const sUrl = seat.opened[0] && seat.opened[0].u;
+  ok(sUrl && sUrl.indexOf(BASE + '/Tools/005-Seating%20Chart%20Generator.html?section=') === 0, 'at 005 with 005\'s parameter: ' + JSON.stringify(sUrl && sUrl.slice(0, 90)));
+  ok(/new tab/.test(seat.msg), 'and 022 says so: ' + JSON.stringify(seat.msg));
+  const sPayload = await lab.evaluate(u => window.StateLink.decodeState(new URL(u).searchParams.get('section')), sUrl);
+  const flat = JSON.stringify(sPayload);
+  ok(!/Recorder|Materials|Safety|Reporter/.test(flat), 'no role travels to the seating chart');
+
+  const seating = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['005', seating]);
+  await seating.goto(BASE + '/Tools/005-Seating%20Chart%20Generator.html', { waitUntil: 'load' });
+  await settle(seating, 800);
+  const secBefore = await seating.evaluate(() => JSON.parse(localStorage.getItem('seating-chart-v1')).sections.length);
+  await seating.goto(sUrl, { waitUntil: 'load' });
+  await settle(seating, 900);
+  const seatState = await seating.evaluate(() => JSON.parse(localStorage.getItem('seating-chart-v1')));
+  eq(seatState.sections.length, secBefore + 1, `005 adds the groups as one new section (had ${secBefore})`);
+  const sec = seatState.sections.find(x => x.id === seatState.active);
+  eq(sec && sec.name, arrivedName + ' — lab groups', 'named after the lab class, and it is the section on screen');
+  eq(sec && sec.students.length, NAMES.length, 'with every student');
+  eq(sec && Object.keys(sec.assign).length, NAMES.length, 'and every student seated');
+  const byId = Object.fromEntries((sec ? sec.students : []).map(x => [x.id, x.name]));
+  const deskOf = {};
+  for (const [d, sid] of Object.entries(sec ? sec.assign : {})) deskOf[byId[sid]] = sec.desks.find(k => k.id === d);
+  const near = (a, b) => Math.hypot(a.x - b.x, a.y - b.y) <= 142 * 1.5;
+  ok(arrivedClass.lastGroups.every(g => g.members.every(m => g.members.every(o => near(deskOf[m.name], deskOf[o.name])))),
+    'each group sits together at its own pod');
+  ok(arrivedClass.lastGroups.every((g, i) => arrivedClass.lastGroups.every((h, j) => i === j ||
+    g.members.every(m => h.members.every(o => Math.hypot(deskOf[m.name].x - deskOf[o.name].x, deskOf[m.name].y - deskOf[o.name].y) > 10)))),
+    'and no two students share a desk position');
 }
 
 /* ── 5. no console noise, nowhere ───────────────────────────────────────── */
