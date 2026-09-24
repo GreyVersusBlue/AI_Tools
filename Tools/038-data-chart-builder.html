@@ -128,6 +128,17 @@
   }
   .back-link { display: inline-block; color: var(--text-dim); text-decoration: none; font-size: .85rem; padding: .3rem .5rem .3rem 0; }
   .back-link:hover { color: var(--accent); }
+
+  /* Share this chart: the sheet itself is _shared/share.js (Path 6 P3). This
+     page has no a11y.js and its own dark palette, so the sheet gets its
+     tokens through one block scoped to its backdrop — 018's arrangement. */
+  .share-sheet-backdrop {
+    --card: var(--surface); --card-2: var(--surface2); --ink: var(--text);
+    --line: var(--border); --err: var(--danger);
+  }
+  .share-note { font-size: 0.78rem; line-height: 1.5; margin: 0.75rem 0 0; padding: 0.55rem 0.75rem; border-radius: 6px;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text); word-break: break-word; }
+  .share-note.error { border-color: var(--danger); color: var(--danger); }
 </style>
 </head>
 <body>
@@ -268,7 +279,9 @@
       <div class="btn-row">
         <button class="btn-primary" id="btn-png" disabled>Download PNG</button>
         <button class="btn-secondary" id="btn-svg" disabled>Download SVG</button>
+        <button type="button" class="btn-secondary" id="shareBtn" title="Send this chart, with its data, to another teacher">Share this chart&hellip;</button>
       </div>
+      <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
       <div class="btn-row">
         <button class="btn-secondary" id="btn-print-worksheet">Print blank worksheet (bar/line only)</button>
       </div>
@@ -279,6 +292,10 @@
   <div id="print-area"></div>
 </div>
 
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 <script>
 (function () {
   "use strict";
@@ -306,7 +323,7 @@
    'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg',
    'btn-choose-file', 'file-input', 'dataset-name', 'btn-save-dataset', 'saved-datasets-select',
    'btn-load-dataset', 'btn-delete-dataset', 'btn-undo-delete-dataset', 'grayscale-mode', 'show-error-bars', 'error-bars-config',
-   'btn-print-worksheet', 'print-area'
+   'btn-print-worksheet', 'print-area', 'shareBtn', 'shareNote'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
@@ -1213,10 +1230,125 @@
   function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   function escapeXML(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
 
+  // ── Share this chart: _shared/share.js (Path 6 P3) ──────────────────────
+  /* WHAT TRAVELS IS THE CHART ON SCREEN — the data in the box and every
+     choice made about it: chart type, columns, title, axis label, the
+     options. A chart's settings without its numbers draw nothing, so the
+     data has to go too; that is the decision #252 left on this row, and it
+     is taken this way: the pasted data travels ONLY as the chart the teacher
+     is looking at when they press Share, and the sheet says so in as many
+     words, with the reminder to check it for student names. Loading a saved
+     dataset into the box is how a teacher picks one; nothing else of the
+     library ever travels.
+
+     What stays: the saved-dataset library (a name->pasted-text map that can
+     hold student data, which this page's own comment above already says) and
+     this device's remembered defaults (STORAGE_KEY).
+
+     An arrival fills the box and draws the chart. Nothing is replaced — the
+     box is not persisted, so on a fresh load it is empty — so it does not
+     ask, and it does not save the data into the library: that stays the
+     teacher's choice, one click away, with the name already filled in. */
+  var SHARE_PARAM = 'chart';
+  var CHART_TYPES = ['bar', 'line', 'pie', 'scatter', 'box'];
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      if (!els.dataInput.value.trim() || !table) return null;
+      var errorCols = {};
+      Object.keys(errorColSelections).forEach(function (k) { errorCols[k] = errorColSelections[k]; });
+      return {
+        data: els.dataInput.value,
+        hasHeaders: els.hasHeaders.checked,
+        chartType: getChartType(),
+        categoryCol: parseInt(els.categoryCol.value, 10) || 0,
+        valueCols: getCheckedValueCols(),
+        scatterX: parseInt(els.scatterXCol.value, 10) || 0,
+        scatterY: parseInt(els.scatterYCol.value, 10) || 0,
+        trendline: els.showTrendline.checked,
+        errorBars: els.showErrorBars.checked,
+        errorCols: errorCols,
+        title: els.chartTitle.value,
+        yLabel: els.yAxisLabel.value,
+        showValues: els.showValues.checked,
+        sortValues: els.sortValues.checked,
+        grayscale: els.grayscaleMode.checked
+      };
+    },
+    param: SHARE_PARAM,
+    tool: 'data-chart-builder',
+    title: 'Share this chart',
+    noun: 'this chart',
+    filename: function () { return (els.chartTitle.value.trim() || els.filename.value.trim() || 'chart'); },
+    note: 'The data in the box travels with the chart \u2014 check it has no student names first. Your saved datasets stay on this device.',
+    successMessage: 'Link copied. It carries this chart and the data in the box \u2014 none of your saved datasets.',
+    emptyMessage: 'Paste some data and draw a chart first.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function isPlausibleChart(obj) {
+    return !!obj && typeof obj === 'object' && typeof obj.data === 'string' && !!obj.data.trim();
+  }
+
+  function importSharedChart() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: isPlausibleChart,
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (c) {
+        els.dataInput.value = c.data;
+        els.hasHeaders.checked = c.hasHeaders !== false;
+        var typeEl = document.getElementById('type-' + (CHART_TYPES.indexOf(c.chartType) !== -1 ? c.chartType : 'bar'));
+        if (typeEl) typeEl.checked = true;
+        els.showValues.checked = c.showValues !== false;
+        els.sortValues.checked = !!c.sortValues;
+        els.grayscaleMode.checked = !!c.grayscale;
+        els.showTrendline.checked = !!c.trendline;
+        els.showErrorBars.checked = !!c.errorBars;
+        els.chartTitle.value = String(c.title == null ? '' : c.title).slice(0, 80);
+        els.yAxisLabel.value = String(c.yLabel == null ? '' : c.yLabel).slice(0, 60);
+        handleParse();
+        if (!table) { setShareNote('That link carried no rows this page could chart.', true); return false; }
+        /* Column choices are indices into the table just parsed, so each is
+           applied only where that column exists here. */
+        var width = table.headers.length;
+        var inRange = function (n) { return typeof n === 'number' && n >= 0 && n < width; };
+        if (inRange(c.categoryCol)) els.categoryCol.value = c.categoryCol;
+        if (inRange(c.scatterX)) els.scatterXCol.value = c.scatterX;
+        if (inRange(c.scatterY)) els.scatterYCol.value = c.scatterY;
+        if (Array.isArray(c.valueCols) && c.valueCols.length) {
+          document.querySelectorAll('.value-col-cb').forEach(function (cb) {
+            cb.checked = c.valueCols.indexOf(parseInt(cb.value, 10)) !== -1;
+          });
+        }
+        errorColSelections = {};
+        if (c.errorCols && typeof c.errorCols === 'object') {
+          Object.keys(c.errorCols).forEach(function (k) {
+            var from = parseInt(k, 10), to = c.errorCols[k];
+            if (numericCols.indexOf(from) !== -1 && numericCols.indexOf(to) !== -1 && from !== to) errorColSelections[from] = to;
+          });
+        }
+        syncChartTypeUI();
+        scheduleRender();
+        if (!els.datasetName.value && els.chartTitle.value.trim()) els.datasetName.value = els.chartTitle.value.trim().slice(0, 60);
+        setShareNote('Loaded a shared chart (' + table.rows.length + ' row' + (table.rows.length === 1 ? '' : 's') +
+          '). It is not saved on this device until you click Save under Saved datasets.');
+        return true;
+      }
+    });
+  }
+
   // ── Init ─────────────────────────────────────────────────────────────────
   loadSettings();
   syncChartTypeUI();
   refreshSavedDatasetsSelect();
+  importSharedChart();
 
 })();
 </script>

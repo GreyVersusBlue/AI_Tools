@@ -22,11 +22,14 @@
 <meta name="twitter:image" content="https://greyversusblue.com/assets/og/guild-board.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%233B2A1A'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%237E2A20'/%3E%3Ccircle cx='13' cy='13' r='3.5' fill='%23A8443A'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
+<script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <script src="../_shared/qr-scan.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
 
 <style>
   :root {
@@ -429,6 +432,18 @@
   .cam-status { font-size: .85rem; color: var(--text-dim); margin: 0 0 .8rem; }
   .cam-status.ok { color: var(--success); }
   .cam-status.bad { color: var(--danger); }
+
+  /* Share your codes: the sheet itself is _shared/share.js (Path 6 P3). This
+     page has no a11y.js and its own dark palette, so the sheet gets its
+     tokens through one block scoped to its backdrop — 018's arrangement. */
+  .share-sheet-backdrop {
+    --card: var(--surface); --card-2: var(--surface2); --ink: var(--text);
+    --line: var(--border); --err: var(--danger);
+  }
+  .share-row { display: flex; justify-content: flex-end; margin-top: .75rem; }
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .75rem 0 0; padding: .55rem .75rem; border-radius: 6px;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text); word-break: break-word; }
+  .share-note.error { border-color: var(--danger); color: var(--danger); }
 
   /* Recently-generated list */
   .recent-list { display: flex; flex-direction: column; gap: .5rem; margin-top: .75rem; }
@@ -856,6 +871,10 @@
     <div class="card single-only">
       <div class="card-title">Recently generated</div>
       <div id="recent-list" class="recent-list"></div>
+      <div class="share-row">
+        <button type="button" class="btn-secondary" id="shareBtn" title="Send your saved codes to another teacher">Share these codes&hellip;</button>
+      </div>
+      <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
     </div>
 
     <div class="card scan-only" id="scan-result-card">
@@ -966,6 +985,8 @@
     btnCameraScan: document.getElementById('btn-camera-scan'),
     btnSaveRecent: document.getElementById('btn-save-recent'),
     recentList: document.getElementById('recent-list'),
+    shareBtn: document.getElementById('shareBtn'),
+    shareNote: document.getElementById('shareNote'),
     printImg: document.getElementById('print-img'),
     msg: document.getElementById('msg'),
     bulkText: document.getElementById('bulk-text'),
@@ -2114,6 +2135,107 @@
     render();
   });
 
+  // ── Share your codes: _shared/share.js (Path 6 P3) ──────────────────────
+  /* WHAT TRAVELS IS THE "RECENTLY GENERATED" LIST — each saved code's label,
+     what it encodes and its caption: the station links, the sign-up form,
+     the "scan for the slides" code a colleague wants to print too.
+
+     What stays, and why:
+       - Wi-Fi codes. A WIFI: code holds the network password in the clear,
+         and a link travels much further than a code printed on a wall. The
+         sheet's note says they were left out; making one on the other device
+         takes the same ten seconds it took here.
+       - The check-out inventory (INVENTORY_KEY). Its labels are the teacher's
+         equipment list, but every record carries who has the item and a
+         history of who had it (student names — see the registry row). Not a
+         field anybody authored to be published.
+       - Bulk mode's text and roster, the recently scanned list (session-only
+         by design), and this device's size/colour/EC defaults.
+
+     An arrival MERGES by encoded text, as saving to Recent already does: a
+     code already listed is skipped, and nothing is removed. The list is
+     capped at RECENT_MAX, so an arrival fills the free places and says how
+     many would not fit, rather than pushing the teacher's own codes off the
+     end. It does not ask. If nothing is being edited, the first code that
+     arrived is put on the canvas. */
+  var SHARE_PARAM = 'codes';
+
+  function isWifiCode(text) { return /^WIFI:/i.test(String(text || '')); }
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  Share.mount(els.shareBtn, {
+    getState: function () {
+      var list = loadRecent();
+      var codes = list.filter(function (r) { return r && r.text && !isWifiCode(r.text); }).map(function (r) {
+        return { label: String(r.label || ''), text: String(r.text), caption: String(r.caption || '') };
+      });
+      if (!codes.length) return null;
+      return { codes: codes };
+    },
+    param: SHARE_PARAM,
+    tool: 'qr-code-generator',
+    title: 'Share your codes',
+    noun: 'your codes',
+    filename: 'qr codes',
+    note: 'Your "Recently generated" codes travel: each label, what it encodes, and its caption. Wi-Fi codes (they hold the password), the check-out inventory and bulk lists stay on this device.',
+    successMessage: 'Link copied. It carries your saved codes only \u2014 no Wi-Fi password, no inventory, no roster.',
+    emptyMessage: 'Generate a code and click \u201cSave to Recent\u201d first. Wi-Fi codes are never shared.',
+    onMessage: function (text, isError) { setShareNote(text, isError); }
+  });
+
+  function importSharedCodes() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: function (obj) { return !!obj && typeof obj === 'object' && Array.isArray(obj.codes); },
+      onError: function (message) { setShareNote(message, true); },
+      onState: function (decoded) {
+        var arriving = decoded.codes.map(function (c) {
+          if (!c || typeof c !== 'object') return null;
+          var text = String(c.text == null ? '' : c.text);
+          if (!text.trim() || isWifiCode(text)) return null;
+          var label = String(c.label == null ? '' : c.label).trim().slice(0, 80) || text.slice(0, 40);
+          return { label: label, text: text.slice(0, 4000), caption: String(c.caption == null ? '' : c.caption).slice(0, 200) };
+        }).filter(Boolean);
+        if (!arriving.length) {
+          setShareNote('That link carried no codes.', true);
+          return false;
+        }
+        var list = loadRecent();
+        var have = {};
+        list.forEach(function (r) { if (r && r.text) have[r.text] = true; });
+        var added = [], skipped = 0, noRoom = 0;
+        arriving.forEach(function (c) {
+          if (have[c.text]) { skipped++; return; }
+          if (list.length + added.length >= RECENT_MAX) { noRoom++; return; }
+          have[c.text] = true;
+          added.push({ label: c.label, text: c.text, caption: c.caption, ts: Date.now() });
+        });
+        if (added.length) {
+          /* After the teacher's own, so their newest codes stay on top. */
+          saveRecentList(list.concat(added));
+          renderRecent();
+          if (!els.text.value.trim()) {
+            els.text.value = added[0].text;
+            els.captionText.value = added[0].caption || '';
+            els.filename.value = added[0].label;
+            els.charCount.textContent = added[0].text.length + ' character' + (added[0].text.length === 1 ? '' : 's');
+          }
+        }
+        var msg = 'Added ' + added.length + ' from a shared list of codes' +
+          (skipped ? ', skipped ' + skipped + ' already listed' : '');
+        if (noRoom) msg += ', and left out ' + noRoom + ' because Recently generated holds ' + RECENT_MAX + ' (remove one and open the link again)';
+        msg += '.' + (added.length ? ' They are under Recently generated \u2014 click one to show it.' : '');
+        setShareNote(msg, !added.length && !skipped);
+        return true;
+      }
+    });
+  }
+
   // ── Camera test scan (confirms a printed copy still reads) ──────────────
   var camScanHandle = null;
   var camOverlay = document.getElementById('cam-overlay');
@@ -2813,6 +2935,7 @@
   syncBulkSheetUI();
   populateRosterSelect();
   syncRosterModeUI();
+  importSharedCodes();
   renderRecent();
   renderScannedList();
   renderInventoryList();
