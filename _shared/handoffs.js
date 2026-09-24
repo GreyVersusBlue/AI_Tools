@@ -1,13 +1,27 @@
 /* handoffs.js — cross-tool "Send to…", declared once. Path 6 P4. `window.Handoffs`.
 
-   Three tools already hand their work to another tool, and each invented the
-   mechanism on its own: 046 builds 015's `?timeline=` link by hand, 056
-   builds 028's `?worksheet=` link by hand, and 003 WRITES straight into
-   037's localStorage through rubric-builder/rb-gdv-handoff.js (040 reads
-   039's storage the same way, in the other direction). Every one of them
-   hard-codes the other tool's file name and its parameter, so a receiver
-   that renames either silently strands the sender — and nothing on the site
-   can list which tool sends to which.
+   Before this file, three tools handed their work to another tool and each
+   invented the mechanism on its own: 046 built 015's `?timeline=` link by
+   hand, 056 built 028's `?worksheet=` link by hand, and 003 WRITES straight
+   into 037's localStorage through rubric-builder/rb-gdv-handoff.js (040
+   reads 039's storage the same way, in the other direction). Every one of
+   them hard-coded the other tool's file name and its parameter, so a
+   receiver that renamed either silently stranded the sender — and nothing
+   on the site could list which tool sends to which. 046 and 056 are entries
+   below now (Path 6 P4's rollout, 2026-09-24). The storage-shaped pair was
+   decided the same day and HISTORY.md has the reasoning:
+
+     003 -> 037 stays a same-device storage write and is NOT an entry. What
+       it hands over is every student's name beside their rubric score. A
+       link is a URL — it lives in history, on a clipboard, in an email —
+       and a field travels in one only if it was written to be published
+       (#248's rule). Grades were not. The rubric itself shares through
+       003's own sheet; the scores never leave the device.
+     039 -> 040 IS an entry (a word list is authored to be handed round),
+       so the drill set's sheet can send it to 040's own `?deck=` importer.
+       040's read-only "import from a drill set" pull stays beside it: it
+       never writes 039's keys, so it cannot strand anything, and it is the
+       one-click path on a device that already has both tools' data.
 
    This file is that list. A handoff is one declared entry:
 
@@ -49,6 +63,9 @@
     return String(term || '').replace(/:/g, '：').trim() + ': ' + String(definition || '').trim();
   }
 
+  /** A place name as 015 would type it: no blank, no runaway length. */
+  function clip(s, n) { return String(s == null ? '' : s).trim().slice(0, n); }
+
   var HANDOFFS = [
     {
       from: 'cognates-false-friends-builder',
@@ -72,6 +89,113 @@
         });
         return {
           name: ((state && state.lang) ? state.lang + ' ' : '') + 'cognates & false friends',
+          words: lines.join('\n')
+        };
+      }
+    },
+    {
+      from: 'blank-map-generator',
+      to: 'timeline-builder',
+      label: 'Send places to Timeline Builder',
+      note: 'each label becomes an event',
+      sent: 'Sent the labelled places to the Timeline Builder in a new tab, as events dated year 0 — set each event’s real year there. It saves as its own timeline; editing it does not change this map.',
+      /* 046's state for this entry is { name, places: [{ name, lat, lon }] }
+         — the page works out each label's coordinates from its calibration
+         (Share.mount's sendState), because only the map on screen knows its
+         own size. Every event lands at year 0: dates are the one thing a
+         map does not know, a teacher can see that 0 is a placeholder, and
+         015 stacks same-year labels into rows so twenty arrive readable.
+         Only a label's text and position travel — never the map image, its
+         markers, regions or worksheet settings. */
+      transform: function (state) {
+        var places = (state && state.places || []).filter(function (p) {
+          return p && clip(p.name, 200) && isFinite(p.lat) && isFinite(p.lon);
+        });
+        return {
+          v: 1,
+          name: clip(state && state.name, 200) || 'Places from a map',
+          events: places.map(function (p, i) {
+            var name = clip(p.name, 200);
+            return {
+              id: i + 1, track: 0, title: name, yearStart: 0, yearEnd: null, category: null,
+              place: { name: name, lat: Number(p.lat), lon: Number(p.lon) },
+              displayDate: null, description: '', photo: null
+            };
+          }),
+          eras: [],
+          tracks: [{ id: 0, name: 'Track A' }],
+          lineStyle: 'solid',
+          compactLabels: true,
+          scaleMode: 'linear'
+        };
+      }
+    },
+    {
+      from: 'dbq-source-packet-builder',
+      to: 'primary-source-analysis-generator',
+      label: 'Send to Primary Source Analysis',
+      note: 'one source becomes a worksheet',
+      /* No row in the sheet: what travels is ONE source, chosen by the
+         "Analysis worksheet →" button on that source's row, not the packet
+         the sheet shares. The page calls Handoffs.open() itself. */
+      sheet: false,
+      sent: 'Sent the source to Primary Source Analysis in a new tab, as a SOAPSTone worksheet. It saves there as its own worksheet; editing it does not change this packet.',
+      /* 056's state for this entry is { source: { title, text, citation },
+         letter: 'Source A', packetTitle }. Text sources only — an uploaded
+         image is base64 in the packet and never rides a link. Only the
+         source's own words, title and citation travel; the packet's
+         questions, rubric and other sources do not. SOAPSTone is 028's
+         framework for written sources (OPTIC is its visual one). */
+      transform: function (state) {
+        var src = (state && state.source) || {};
+        var letter = clip(state && state.letter, 40) || 'Source';
+        var titled = clip(src.title, 300) || letter;
+        var packetTitle = clip(state && state.packetTitle, 300) || 'DBQ packet';
+        return {
+          v: 1,
+          name: titled + ' — ' + packetTitle,
+          sourceTitle: titled,
+          sourceType: 'document',
+          sourceDescription: '',
+          sourceText: String(src.text || ''),
+          imageUrl: '',
+          imageDataUrl: '',
+          citationAuthor: '',
+          citationDate: '',
+          citationOrigin: clip(src.citation, 1000),
+          lineNumbers: false,
+          vocabSupport: '',
+          readingSupportEnabled: false,
+          readingSummary: '',
+          readingParaphrase: '',
+          framework: 'soapstone',
+          notes: {},
+          customQuestions: {},
+          answerLines: 4,
+          corroborationMode: false,
+          sourceBTitle: '', sourceBType: 'photo', sourceBDescription: '', sourceBText: '',
+          sourceBImageUrl: '', sourceBImageDataUrl: '',
+          sourceBCitationAuthor: '', sourceBCitationDate: '', sourceBCitationOrigin: '',
+          notesB: {}, comparisonNotes: {}
+        };
+      }
+    },
+    {
+      from: 'vocab-conjugation-drill',
+      to: 'vocab-flashcard-generator',
+      label: 'Send to Vocabulary Flashcards',
+      note: 'every word becomes a card',
+      sent: 'Sent the vocabulary to the Vocabulary Flashcard Generator in a new tab. It is saved there as its own word list; editing it does not change this set.',
+      /* 039's vocabulary is already "word: translation" per line, which is
+         040's own format, so the words travel as typed (blank lines
+         dropped). The verbs and their conjugation tables do not: a
+         flashcard has two sides and a conjugation table is not a card. */
+      transform: function (state) {
+        var lines = String(state && state.vocabText || '').split('\n')
+          .map(function (l) { return l.trim(); })
+          .filter(Boolean);
+        return {
+          name: clip(state && state.name, 200) || 'Drill vocabulary',
           words: lines.join('\n')
         };
       }

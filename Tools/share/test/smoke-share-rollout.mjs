@@ -1206,6 +1206,57 @@ const TOOLS = [
       ];
     },
   },
+  {
+    /* Path 6 P4's rollout: 046 took the sheet so its hand-built ?timeline=
+       link could become a declared handoff (smoke-send-to.mjs covers the
+       Send row). Its projects are a named library inside ONE key, keyed by
+       id in a list — libraryHooks. The active project travels; another
+       project and the workspace's saved label sets never do, and the map
+       picture is not in the project at all. */
+    n: '046', file: '046-blank-map-generator.html', param: 'map',
+    slug: 'blank-map-generator', docName: 'Silk Road stops',
+    libraryHooks: {
+      seed: (doc, name) => [['bmg_workspace_v1', JSON.stringify({
+        __v: 1, activeId: 'proj-seed',
+        labelSets: [{ id: 'ls-1', name: 'Pemberton private set', places: [{ name: 'Nowhere', lat: 1, lon: 2 }] }],
+        projects: [
+          { id: 'proj-other', name: 'Unit 9 quiz map', updatedAt: 1757000000000, data: { __v: 1, view: { x: 0, y: 0, scale: 1 }, labels: [{ id: 'l-9', x: 5, y: 5, text: 'Quizmap Secret' }], markers: [] } },
+          { id: 'proj-seed', name, updatedAt: 1757000000001, data: doc },
+        ],
+      })]],
+      read: (page, name) => page.evaluate((n) => {
+        let w = null;
+        try { w = JSON.parse(localStorage.getItem('bmg_workspace_v1') || 'null'); } catch (e) { w = null; }
+        const projects = (w && w.projects) || [];
+        const kept = projects.filter(p => p && p.name === n)[0];
+        return { names: projects.filter(p => p && p.name !== 'Unit 9 quiz map').map(p => p.name), kept: kept ? kept.data : null };
+      }, name),
+    },
+    state: {
+      __v: 1, mapId: 'vector:asia:60,0,20,150:land+borders', view: { x: 0, y: 0, scale: 1 },
+      labels: [{ id: 'l-1', x: 120, y: 80, text: 'Samarkand' }, { id: 'l-2', x: 300, y: 140, text: 'Kashgar' }],
+      markers: [{ id: 'm-1', x: 200, y: 100, color: 'red', size: 'medium' }],
+      worksheet: { title: 'Trade on the Silk Road' },
+    },
+    expect: p => [
+      [p.name === 'Silk Road stops', 'the payload carries the project’s name'],
+      [p.labels.length === 2 && p.labels[0].text === 'Samarkand', 'and its labels'],
+      [p.markers.length === 1, 'and its markers'],
+      [p.worksheet && p.worksheet.title === 'Trade on the Silk Road', 'and its worksheet settings'],
+      [p.projects === undefined && p.labelSets === undefined, 'but no other project and no saved label sets'],
+    ],
+    absent: ['Quizmap Secret', 'Unit 9 quiz map', 'Pemberton private set'],
+    arrived: page => page.evaluate(() => {
+      const w = JSON.parse(localStorage.getItem('bmg_workspace_v1') || 'null');
+      const active = w && w.projects.filter(p => p.id === w.activeId)[0];
+      const sel = document.getElementById('projectSwitcher');
+      const shown = sel && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : '';
+      if (!active || shown.indexOf(active.name) === -1) return 'switcher shows ' + JSON.stringify(shown);
+      return active.data.labels.map(l => l.text).indexOf('Samarkand') !== -1 ? 'Samarkand' : JSON.stringify(active.data.labels);
+    }),
+    arrivedWant: 'Samarkand',
+    localField: 'labels.0.text',
+  },
 ];
 
 /* ── 0. static: the four tags, in dependency order ──────────────────────── */
@@ -1773,6 +1824,41 @@ console.log('\n029 — 029-prompt-builder.html (an arriving preset in an attribu
   eq(await victim.evaluate(() => window.__pwned === undefined), true, '029: and nothing ran');
   eq(await victim.$eval('#customPresetRow [data-custom-i]', b => b.textContent), 'x" onmouseover="window.__pwned=1',
     '029: the name is shown as the text it is');
+}
+
+/* ── 046: an arriving shading key's colour is a colour, or it is dropped ── */
+/* Path 6 P4's rollout found one sink on 046 that an arrival reaches: a
+   choropleth key row's `hex` is written into a swatch's SVG markup
+   (bmg-legend.js). bmg-store.js now keeps a row only if its hex is a real
+   colour. Asserted on what the page STORES after the arrival — the render
+   path needs a drawn base map, which this suite does not build. */
+console.log('\n046 — 046-blank-map-generator.html (an arriving shading key)');
+{
+  const PAGE_URL = BASE + '/Tools/046-blank-map-generator.html';
+  const maker = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['046-maker', maker]);
+  await maker.goto(PAGE_URL + '?map=x', { waitUntil: 'load' });
+  await settle(maker, 400);
+  const evil = await maker.evaluate(() => window.StateLink.encodeState({
+    name: 'Shaded', __v: 1, mapId: 'vector:europe:72,34,-25,45:land:choro:abc', view: { x: 0, y: 0, scale: 1 },
+    labels: [], markers: [],
+    choropleth: { enabled: true, text: 'France, 3', classes: 5, ramp: 'blues', legendRows: [
+      { key: 'c0', label: 'low', hex: '#eff3ff' },
+      { key: 'c1', label: 'high', hex: '#000"/><img src=x onerror="window.__pwned=1' },
+    ] },
+  }));
+  const victim = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['046-victim', victim]);
+  await victim.goto(PAGE_URL + '?map=' + evil, { waitUntil: 'load' });
+  await settle(victim, 800);
+  ok(/Loaded a shared map project/.test(await victim.textContent('#shareNote')),
+    '046: the project arrived: ' + JSON.stringify(await victim.textContent('#shareNote')));
+  const rows = await victim.evaluate(() => {
+    const w = JSON.parse(localStorage.getItem('bmg_workspace_v1'));
+    return w.projects.filter(p => p.id === w.activeId)[0].data.choropleth.legendRows.map(r => r.hex);
+  });
+  eq(JSON.stringify(rows), JSON.stringify(['#eff3ff']), '046: the real colour is kept and the one carrying markup is dropped');
+  eq(await victim.evaluate(() => window.__pwned === undefined), true, '046: and nothing ran');
 }
 
 /* ── 081: the generator, where the SEED is the payload ──────────────────── */

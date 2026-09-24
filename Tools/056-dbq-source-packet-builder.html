@@ -28,6 +28,8 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/tool-registry.js"></script>
+<script src="../_shared/handoffs.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -1212,51 +1214,25 @@
 
   /* ---------- send one source to Primary Source Analysis (028) ----------
      The backlog's explicit pairing: a source in a packet becomes a full
-     OPTIC/SOAPSTone analysis worksheet in one click. This builds 028's own
-     round-1 ?worksheet= link with the same _shared/state-link.js encoder 028
-     uses to build it, so there is one format, not two. Text sources only:
-     an uploaded image is base64 in this packet and would blow past what a
-     URL can carry, which is the same rule both tools' share links follow. */
-  var PSA_PAGE = '028-primary-source-analysis-generator.html';
+     OPTIC/SOAPSTone analysis worksheet in one click. Since Path 6 P4's
+     rollout this is a declared handoff in _shared/handoffs.js
+     (dbq-source-packet-builder -> primary-source-analysis-generator): the
+     entry builds 028's worksheet, and 028's page and `?worksheet=` parameter
+     come from the tool registry, so nothing here names the other tool. The
+     entry has no row in the share sheet — it sends ONE source, picked by the
+     button on that source's row. Text sources only: an uploaded image is
+     base64 in this packet and would blow past what a URL can carry, which is
+     the same rule both tools' share links follow. */
+  var PSA_HANDOFF = Handoffs.from('dbq-source-packet-builder').filter(function (h) {
+    return h.to === 'primary-source-analysis-generator';
+  })[0];
 
-  function psaPayload(src, index) {
-    var letter = 'Source ' + LETTERS[index % 26];
-    var titled = (src.title || '').trim() || letter;
-    var packetTitle = (state.title || '').trim() || state.name || 'DBQ packet';
+  function psaState(src, index) {
     return {
-      v: 1,
-      name: titled + ' — ' + packetTitle,
-      sourceTitle: titled,
-      sourceType: 'document',
-      sourceDescription: '',
-      sourceText: src.text || '',
-      imageUrl: '',
-      imageDataUrl: '',
-      citationAuthor: '',
-      citationDate: '',
-      citationOrigin: (src.citation || '').trim(),
-      lineNumbers: false,
-      vocabSupport: '',
-      readingSupportEnabled: false,
-      readingSummary: '',
-      readingParaphrase: '',
-      // SOAPSTone is 028's framework for written sources; OPTIC is its
-      // visual-source framework, and only text sources come through here.
-      framework: 'soapstone',
-      notes: {},
-      customQuestions: {},
-      answerLines: 4,
-      corroborationMode: false,
-      sourceBTitle: '', sourceBType: 'photo', sourceBDescription: '', sourceBText: '',
-      sourceBImageUrl: '', sourceBImageDataUrl: '',
-      sourceBCitationAuthor: '', sourceBCitationDate: '', sourceBCitationOrigin: '',
-      notesB: {}, comparisonNotes: {}
+      source: { title: src.title || '', text: src.text || '', citation: src.citation || '' },
+      letter: 'Source ' + LETTERS[index % 26],
+      packetTitle: (state.title || '').trim() || state.name || 'DBQ packet'
     };
-  }
-
-  function psaUrl(src, index) {
-    var base = new URL(PSA_PAGE, window.location.href).toString();
-    return StateLink.buildShareUrl('worksheet', psaPayload(src, index), { base: base });
   }
 
   function renderSharedQ() {
@@ -1459,10 +1435,10 @@
         return;
       }
       save();
-      var opened = window.open(psaUrl(psaSrc, psaIdx), '_blank', 'noopener');
-      setShareNote(opened
+      var sent = Handoffs.open(PSA_HANDOFF, psaState(psaSrc, psaIdx));
+      setShareNote(sent.ok
         ? 'Sent Source ' + LETTERS[psaIdx % 26] + ' to Primary Source Analysis in a new tab, as a SOAPSTone worksheet. It saves there as its own worksheet; editing it does not change this packet.'
-        : 'Your browser blocked the new tab. Allow pop-ups for this site, then try again.', !opened);
+        : sent.message, !sent.ok);
       return;
     }
     if (resetCrop) {

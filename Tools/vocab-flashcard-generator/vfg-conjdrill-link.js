@@ -15,7 +15,13 @@
    the small shared vocabulary-item shape this tool already uses internally:
    { term, definition, example, pronunciation, partOfSpeech }. The drill
    tool only ever stores word/translation, so example/pronunciation/
-   partOfSpeech always come back empty — nothing is invented on import. */
+   partOfSpeech always come back empty — nothing is invented on import.
+
+   Since Path 6 P4 (2026-09-24) the other direction is a declared handoff
+   too: 039's share sheet has a "Send to Vocabulary Flashcards" row
+   (_shared/handoffs.js) that opens 040's own ?deck= importer. This pull
+   stays beside it — it only reads, so it cannot strand anything, and on a
+   device that already has both tools' data it is the one-click path. */
 (function (global) {
   'use strict';
 

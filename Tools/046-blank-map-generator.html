@@ -492,7 +492,9 @@
     <button id="btnExportProject" class="small">Export&hellip;</button>
     <button id="btnImportProject" class="small">Import&hellip;</button>
     <input type="file" id="importProjectInput" accept="application/json,.json" hidden data-no-pan>
+    <button id="shareBtn" class="small" title="Share this map project by link, QR code or file, or send its labelled places to another tool">Share&hellip;</button>
   </div>
+  <div id="shareNote" class="status no-print" role="status" hidden></div>
 
   <div class="card search-card no-print">
     <h2>Find a map</h2>
@@ -833,9 +835,17 @@
 <div id="worksheetPages" aria-hidden="true"></div>
 
 <script src="../_shared/vendor/jspdf/jspdf.umd.min.js"></script>
-<!-- Shared state-link encoder: used only by the "Send places to Timeline
-     Builder" handoff below, which builds a 015-format share URL. -->
+<!-- The share sheet (Path 6): state-link.js encodes the link, the vendored
+     encoder and qr-draw.js draw its QR code, share.js is the sheet. The
+     registry and handoffs.js give the sheet its "Send places to Timeline
+     Builder" row — 015's page and parameter come from the registry, not
+     from this file. -->
 <script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/share.js"></script>
+<script src="../_shared/tool-registry.js"></script>
+<script src="../_shared/handoffs.js"></script>
 <!-- Shared IndexedDB blob store: this tool's map cache (bmg-map-cache.js) is
      an adapter over it. A classic script, so it has to be loaded before the
      module below reads window.MediaDB. -->
@@ -1723,21 +1733,22 @@ el('btnSaveLabelSet').addEventListener('click', () => {
    fills in the dates rather than retyping twenty place names and their
    coordinates.
 
-   It goes through 015's own share-link format (`?timeline=`), the same way
-   056 hands a source to 028: one tool's export is the other's documented
-   import, so there is no third format to keep in sync and no cross-tool
-   storage key. Nothing is written to the timeline's storage from here —
-   015 saves it there, under its own new name, exactly as it would a link
-   from a colleague.
+   Since Path 6 P4's rollout this is a declared handoff in
+   _shared/handoffs.js (blank-map-generator -> timeline-builder): the entry
+   turns { name, places } into 015's timeline, and 015's page and `?timeline=`
+   parameter come from the tool registry, so nothing here names the other
+   tool. The same entry is the "Send places to Timeline Builder" row in this
+   page's share sheet. 015 files the arrival under its own new name, exactly
+   as it would a link from a colleague; nothing is written to its storage
+   from here.
 
-   Every event lands at year 0 with its title and place set. Dates are the
-   one thing a map genuinely does not know, and inventing a plausible-looking
-   year would be worse than an obvious blank: a teacher can see that year 0
-   is a placeholder, and 015 stacks same-year labels into rows rather than
-   printing them on top of each other, so twenty placeholders arrive
-   readable. */
-el('btnToTimeline').addEventListener('click', () => {
-  if (!isCalibrated(project.calibration) || !currentSize.width) { openCalibratePanel(); return; }
+   What this page contributes is the coordinates, which only the map on
+   screen can work out (its calibration against its own pixel size). It
+   throws the sentence to show when there is nothing to send. */
+function timelinePlaces() {
+  if (!isCalibrated(project.calibration) || !currentSize.width) {
+    throw new Error('Set this map’s latitude and longitude first (Calibrate), so each label has real coordinates to send.');
+  }
   const places = project.labels
     .filter(l => l.text)
     .map(l => {
@@ -1746,40 +1757,24 @@ el('btnToTimeline').addEventListener('click', () => {
     })
     .filter(p => isFinite(p.lat) && isFinite(p.lon));
   if (!places.length) {
-    setLabelSetStatus('This map has no text labels to send yet. Add labels for the places you want on the timeline first.', true);
-    return;
+    throw new Error('This map has no text labels to send yet. Add labels for the places you want on the timeline first.');
   }
+  /* The worksheet title is the closest thing this tool has to a name for
+     what the map is about, and a teacher who has typed one has already said
+     it better than any default could. */
+  return { name: (el('wsTitle').value || '').trim() || 'Places from a map', places };
+}
 
-  const payload = {
-    v: 1,
-    /* The worksheet title is the closest thing this tool has to a name for
-       what the map is about, and a teacher who has typed one has already
-       said it better than any default could. */
-    name: (el('wsTitle').value || '').trim() || 'Places from a map',
-    events: places.map((p, i) => ({
-      id: i + 1,
-      track: 0,
-      title: p.name,
-      yearStart: 0,
-      yearEnd: null,
-      category: null,
-      place: { name: p.name, lat: p.lat, lon: p.lon },
-      displayDate: null,
-      description: '',
-      photo: null
-    })),
-    eras: [],
-    tracks: [{ id: 0, name: 'Track A' }],
-    lineStyle: 'solid',
-    compactLabels: true,
-    scaleMode: 'linear'
-  };
+const TIMELINE_HANDOFF = Handoffs.from('blank-map-generator').find(h => h.to === 'timeline-builder');
 
-  const url = StateLink.buildShareUrl('timeline', payload, { base: new URL('015-timeline-builder.html', location.href).href });
-  const opened = window.open(url, '_blank', 'noopener');
-  setLabelSetStatus(opened
-    ? `Sent ${places.length} place${places.length === 1 ? '' : 's'} to the Timeline Builder in a new tab, as events dated year 0 — set each event's real year there. It saves as its own timeline; editing it does not change this map.`
-    : 'Your browser blocked the new tab. Allow pop-ups for this page and try again.', !opened);
+el('btnToTimeline').addEventListener('click', () => {
+  if (!isCalibrated(project.calibration) || !currentSize.width) { openCalibratePanel(); return; }
+  let state;
+  try { state = timelinePlaces(); } catch (e) { setLabelSetStatus(e.message, true); return; }
+  const r = Handoffs.open(TIMELINE_HANDOFF, state);
+  setLabelSetStatus(r.ok
+    ? `Sent ${state.places.length} place${state.places.length === 1 ? '' : 's'} to the Timeline Builder in a new tab, as events dated year 0 — set each event's real year there. It saves as its own timeline; editing it does not change this map.`
+    : r.message, !r.ok);
 });
 
 el('btnDeleteLabelSet').addEventListener('click', () => {
@@ -4615,32 +4610,97 @@ el('btnExportProject').addEventListener('click', () => {
 
 el('btnImportProject').addEventListener('click', () => el('importProjectInput').click());
 
+/* ---------- share this project (Path 6) ----------
+   The sheet shares the ACTIVE project exactly as Export… writes it — its name
+   plus the project data — and a link, QR code or file lands through the one
+   importer below, which files it as a new project beside everything already
+   here (a named library, so nothing is asked and nothing is replaced).
+   What never travels: the map picture (it lives in this browser's map cache,
+   and a teacher's own uploaded image is theirs to send), the saved label sets
+   (workspace-wide, not part of a map), and any other project. */
+const SHARE_PARAM = 'map';
+
+function setShareNote(msg, isErr) {
+  const box = el('shareNote');
+  box.hidden = !msg;
+  box.className = 'status no-print' + (isErr ? ' err' : '');
+  box.textContent = msg || '';
+}
+
+function isPlausibleProject(obj) {
+  return !!obj && typeof obj === 'object' && !Array.isArray(obj)
+    && obj.__v === 1 && !!obj.view && typeof obj.view === 'object'
+    && Array.isArray(obj.labels) && Array.isArray(obj.markers);
+}
+
+/** Links and files both land here. Returns the name the arrival was filed under, or null. */
+function adoptSharedProject(decoded, fallbackName) {
+  const { name, ...data } = decoded;
+  /* uniqueProjectName() (the starter projects' helper, below) suffixes a name
+     already taken, so an arrival never shares a name with a project it did
+     not replace. */
+  const filed = uniqueProjectName((typeof name === 'string' && name.trim()) || fallbackName);
+  return store.importProject(filed, data) ? filed : null;
+}
+
+function arrivalSentence(filed, how) {
+  const mapId = String(project && project.mapId || '');
+  let tail = '';
+  if (mapId.startsWith('upload:')) tail = ' Its map was an uploaded picture, which does not travel: upload the same image here and the labels stay where they are.';
+  else if (mapId) tail = ' If the map itself does not appear, pick the same base map or search result again; the labels stay where they are.';
+  return `${how} and saved it here as “${filed}”. Nothing you already had was replaced.${tail}`;
+}
+
 el('importProjectInput').addEventListener('change', () => {
   const file = el('importProjectInput').files && el('importProjectInput').files[0];
   el('importProjectInput').value = '';
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    let parsed;
-    try { parsed = JSON.parse(reader.result); } catch (e) {
-      alert("That file isn't valid JSON.");
-      return;
+  /* Through share.js's receiver, which unwraps the { aplp, state } envelope
+     the sheet's Download row writes as readily as a bare Export… file. */
+  Share.receiveFile(file, {
+    validate: isPlausibleProject,
+    fileErrorMessage: "That doesn't look like a map project file exported from this tool.",
+    unreadableMessage: "Couldn't read that file.",
+    onError: msg => setShareNote(msg, true),
+    onState: parsed => {
+      const filed = adoptSharedProject(parsed, file.name.replace(/\.json$/i, ''));
+      if (!filed) { setShareNote("That doesn't look like a map project file exported from this tool.", true); return; }
+      loadActiveProjectIntoUI({ skipSearch: true }).then(() => setShareNote(arrivalSentence(filed, 'Opened that file'), false));
     }
-    if (!parsed || typeof parsed !== 'object') {
-      alert("That doesn't look like a map project file exported from this tool.");
-      return;
-    }
-    const { name, ...data } = parsed;
-    const imported = store.importProject(name || file.name.replace(/\.json$/i, ''), data);
-    if (!imported) {
-      alert("That doesn't look like a map project file exported from this tool.");
-      return;
-    }
-    loadActiveProjectIntoUI();
-  };
-  reader.onerror = () => alert("Couldn't read that file.");
-  reader.readAsText(file);
+  });
 });
+
+Share.mount(el('shareBtn'), {
+  getState: () => {
+    const current = store.listProjects().find(p => p.id === store.getActiveId());
+    return { name: current ? current.name : 'Untitled map', ...project };
+  },
+  param: SHARE_PARAM,
+  tool: 'blank-map-generator',
+  title: 'Share this map project',
+  noun: 'this map project',
+  filename: () => {
+    const current = store.listProjects().find(p => p.id === store.getActiveId());
+    return `${current ? current.name : 'map'} map project`;
+  },
+  note: 'Opening the link or code anywhere saves this project there as a new project; it never replaces one already on that device. The labels, markers, regions, lines and settings travel. The map picture does not: a built-in or Wikimedia map is picked again there, and a map you uploaded has to be uploaded again.',
+  successMessage: 'Link copied. Opening it anywhere saves this map project there as a new project.',
+  sendState: () => timelinePlaces(),
+  onMessage: (text, isError) => setShareNote(text, isError),
+});
+
+/** Consume a ?map= link on load. Returns the name it was filed under, or null. */
+function receiveSharedProject() {
+  let filed = null;
+  Share.receive({
+    param: SHARE_PARAM,
+    validate: isPlausibleProject,
+    errorMessage: 'That shared link could not be read. It may have been cut short when it was pasted or emailed.',
+    onError: msg => setShareNote(msg, true),
+    onState: decoded => { filed = adoptSharedProject(decoded, 'Shared map'); return !!filed; },
+  });
+  return filed;
+}
 
 async function init() {
   if (!(await cache.isAvailable())) {
@@ -4648,7 +4708,12 @@ async function init() {
     el('storageWarn').textContent = "Your browser is blocking offline storage (private/incognito mode, or storage disabled), so downloaded maps won't be kept between visits.";
   }
   await refreshRecent();
-  await loadActiveProjectIntoUI();
+  /* A page opened from a link — even one too mangled to read — is not a
+     first visit, so it does not start a Wikimedia search on its own. */
+  const cameWithLink = !!StateLink.getParam(SHARE_PARAM);
+  const arrived = receiveSharedProject();
+  await loadActiveProjectIntoUI(cameWithLink ? { skipSearch: true } : undefined);
+  if (arrived) setShareNote(arrivalSentence(arrived, 'Loaded a shared map project'), false);
   renderStarters();
 }
 

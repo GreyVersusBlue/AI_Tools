@@ -148,6 +148,72 @@ const otherRows = await other.$$eval('.share-sheet-rows button', bs => bs.map(b 
 ok(!otherRows.some(r => r.indexOf('send:') === 0), 'and its sheet has no Send row: ' + JSON.stringify(otherRows));
 await other.keyboard.press('Escape');
 
+/* ── 6. the rollout's rows (2026-09-24) ─────────────────────────────────── */
+/* 046 -> 015 and 039 -> 040 are rows in their senders' sheets; 056 -> 028 is
+   declared with `sheet: false` and must NOT be one, because it sends a single
+   source from that source's own button. The full 046 flow on a calibrated map
+   is smoke-timeline-handoff.mjs; 056's button is smoke-essay-levels.mjs. */
+console.log('\n046, 039, 056 — the rollout\'s rows');
+const openRows = async (p) => {
+  await p.click('#shareBtn');
+  await settle(p, 250);
+  return p.$$eval('.share-sheet-rows button', bs => bs.map(b => b.getAttribute('data-share')));
+};
+const clickSend = (p, slug) => p.evaluate((s) => {
+  const opened = [];
+  window.open = (u, target, features) => { opened.push({ u, features }); return {}; };
+  document.querySelector('.share-sheet button[data-share="send:' + s + '"]').click();
+  const st = document.querySelector('.share-sheet-status');
+  const out = { opened, status: st.textContent, error: st.classList.contains('error') };
+  window.Share.close();
+  return out;
+}, slug);
+
+{
+  const map = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['046', map]);
+  /* An uncalibrated project with labels: the row is there, and refuses in words. */
+  await map.addInitScript(v => { if (!localStorage.getItem('bmg_workspace_v1')) localStorage.setItem('bmg_workspace_v1', v); }, JSON.stringify({
+    __v: 1, activeId: 'p1', labelSets: [],
+    projects: [{ id: 'p1', name: 'Rivers', updatedAt: 1, data: { __v: 1, mapId: 'vector:europe:72,34,-25,45:land', view: { x: 0, y: 0, scale: 1 }, labels: [{ id: 'l1', x: 10, y: 10, text: 'Danube' }], markers: [] } }],
+  }));
+  await map.goto(BASE + '/Tools/046-blank-map-generator.html', { waitUntil: 'load' });
+  await settle(map, 900);
+  const mapRows = await openRows(map);
+  ok(mapRows.includes('send:timeline-builder'), '046\'s sheet has a Send places to Timeline Builder row: ' + JSON.stringify(mapRows));
+  const refused = await clickSend(map, 'timeline-builder');
+  eq(refused.opened.length, 0, 'an uncalibrated map opens no tab');
+  ok(refused.error && /latitude and longitude/.test(refused.status), 'and says what to do first, as an error: ' + JSON.stringify(refused.status));
+
+  const drill = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['039', drill]);
+  await drill.addInitScript(() => {
+    if (localStorage.getItem('gvb-vocab-conj:list')) return;
+    localStorage.setItem('gvb-vocab-conj:list', JSON.stringify(['Food words']));
+    localStorage.setItem('gvb-vocab-conj:data:Food words', JSON.stringify({ name: 'Food words', mode: 'vocab', vocabText: 'la manzana: apple\nel pan: bread', persons: ['yo', 'tú', 'él/ella', 'nosotros', 'vosotros', 'ellos'], conjugations: [] }));
+    localStorage.setItem('gvb-vocab-conj:current', 'Food words');
+  });
+  await drill.goto(BASE + '/Tools/039-vocab-conjugation-drill.html', { waitUntil: 'load' });
+  await settle(drill, 800);
+  const drillRows = await openRows(drill);
+  ok(drillRows.includes('send:vocab-flashcard-generator'), '039\'s sheet has a Send to Vocabulary Flashcards row: ' + JSON.stringify(drillRows));
+  const sentDrill = await clickSend(drill, 'vocab-flashcard-generator');
+  eq(sentDrill.opened.length, 1, 'clicking it opens one tab');
+  const dUrl = sentDrill.opened[0] && sentDrill.opened[0].u;
+  ok(dUrl && dUrl.indexOf(BASE + '/Tools/' + RECEIVER + '?deck=') === 0, 'at 040 with 040\'s parameter: ' + JSON.stringify(dUrl));
+  const dPayload = await drill.evaluate(u => window.StateLink.decodeState(new URL(u).searchParams.get('deck')), dUrl);
+  eq(JSON.stringify(dPayload), JSON.stringify({ name: 'Food words', words: 'la manzana: apple\nel pan: bread' }), 'carrying the set\'s name and its words');
+
+  const packet = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['056', packet]);
+  await packet.goto(BASE + '/Tools/056-dbq-source-packet-builder.html', { waitUntil: 'load' });
+  await settle(packet, 800);
+  eq(await packet.evaluate(() => window.Handoffs.from('dbq-source-packet-builder').length), 1, '056 declares one handoff');
+  const packetRows = await openRows(packet);
+  ok(!packetRows.some(r => r.indexOf('send:') === 0), 'but its sheet has no Send row — that handoff is one source, from its own button: ' + JSON.stringify(packetRows));
+  await packet.keyboard.press('Escape');
+}
+
 /* ── 5. no console noise, nowhere ───────────────────────────────────────── */
 console.log('');
 for (const [name, p] of pages) {

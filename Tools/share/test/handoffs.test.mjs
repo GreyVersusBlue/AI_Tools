@@ -90,7 +90,7 @@ console.log('\nhandoffs — the table');
 {
   const win = make();
   const H = win.Handoffs;
-  ok(Array.isArray(H.all) && H.all.length >= 1, 'at least one handoff is declared');
+  ok(Array.isArray(H.all) && H.all.length >= 4, 'the four handoffs of 2026-09-24 are declared');
   for (const h of H.all) {
     ok(win.ToolRegistry.bySlug(h.from), `entry ${h.from} -> ${h.to}: the sender is a registry slug`);
     const t = win.ToolRegistry.bySlug(h.to);
@@ -145,6 +145,55 @@ console.log('\nhandoffs — cognates to flashcards');
   const b = H.open(entry, state);
   eq(b.ok, false, 'a blocked pop-up is reported, not swallowed');
   ok(/pop-ups/.test(b.message), 'and says what to do: ' + JSON.stringify(b.message));
+}
+
+/* ── 3b. the rollout's entries (2026-09-24) ─────────────────────────────── */
+console.log('\nhandoffs — map places to a timeline, a source to a worksheet, drill words to cards');
+{
+  const win = make();
+  const H = win.Handoffs;
+  const one = (from, to) => H.all.filter(h => h.from === from && h.to === to);
+
+  /* 046 -> 015. The page supplies the coordinates; the entry builds 015's timeline. */
+  const map = one('blank-map-generator', 'timeline-builder');
+  eq(map.length, 1, '046 -> 015 is declared once');
+  const tl = map[0].transform({ name: 'Silk Road', places: [
+    { name: 'Samarkand', lat: 39.65, lon: 66.96 }, { name: '  ', lat: 1, lon: 1 }, { name: 'Nowhere', lat: NaN, lon: 0 },
+    { name: 'Kashgar', lat: 39.47, lon: 75.99 }] });
+  eq(tl.name, 'Silk Road', 'the timeline is named after the map');
+  eq(tl.events.map(e => e.title), ['Samarkand', 'Kashgar'], 'every named place with real coordinates becomes an event; a blank or unplaced one does not');
+  eq(tl.events[0].place, { name: 'Samarkand', lat: 39.65, lon: 66.96 }, 'with its name and coordinates as 015 files a place');
+  ok(tl.events.every(e => e.yearStart === 0 && e.yearEnd === null), 'every event lands at year 0, the visible placeholder');
+  eq(tl.events.map(e => e.id), [1, 2], 'with 015-local ids from 1');
+  eq(map[0].transform({ places: [] }).name, 'Places from a map', 'an unnamed map still gives the timeline a name');
+  const tlUrl = H.url(map[0], { name: 'Silk Road', places: [{ name: 'Samarkand', lat: 39.65, lon: 66.96 }] }).url;
+  ok(tlUrl.indexOf('https://aspermylessonplan.com/Tools/015-timeline-builder.html?timeline=') === 0,
+    '015\'s page and ?timeline= come off the registry, not out of 046: ' + tlUrl.slice(0, 90));
+
+  /* 056 -> 028. One source, from its own row button; no row in the sheet. */
+  const psa = one('dbq-source-packet-builder', 'primary-source-analysis-generator');
+  eq(psa.length, 1, '056 -> 028 is declared once');
+  eq(psa[0].sheet, false, 'and it has no row in the share sheet — it sends one source, not the packet');
+  const ws = psa[0].transform({ source: { title: '', text: 'We the People…', citation: 'U.S. Constitution, 1787' }, letter: 'Source B', packetTitle: 'Founding documents' });
+  eq(ws.sourceTitle, 'Source B', 'an untitled source goes by its letter');
+  eq(ws.name, 'Source B — Founding documents', 'and the worksheet is named after it and the packet');
+  eq(ws.sourceText, 'We the People…', 'its text travels as typed');
+  eq(ws.citationOrigin, 'U.S. Constitution, 1787', 'its citation too');
+  eq(ws.framework, 'soapstone', 'as a SOAPSTone worksheet, 028\'s framework for written sources');
+  eq(ws.imageDataUrl, '', 'and never with a picture');
+  ok(H.url(psa[0], { source: { text: 'x' } }).url.indexOf('/Tools/028-primary-source-analysis-generator.html?worksheet=') !== -1,
+    '028\'s page and ?worksheet= come off the registry');
+
+  /* 039 -> 040. The words, not the verbs. */
+  const drill = one('vocab-conjugation-drill', 'vocab-flashcard-generator');
+  eq(drill.length, 1, '039 -> 040 is declared once');
+  const deck = drill[0].transform({ name: 'Spanish 1 — food', vocabText: 'la manzana: apple\n\n  el pan: bread  \n', conjugations: [{ verb: 'comer' }] });
+  eq(deck, { name: 'Spanish 1 — food', words: 'la manzana: apple\nel pan: bread' }, 'the vocabulary travels as 040\'s "term: definition" lines, blank lines dropped');
+  ok(JSON.stringify(deck).indexOf('comer') === -1, 'and the conjugation verbs do not travel');
+
+  /* The decided exception: no entry writes 037's grades. */
+  eq(H.all.filter(h => h.to === 'grade-distribution-visualizer').length, 0,
+    '003 -> 037 is NOT a link: it carries student names beside their scores, which are not written to be published');
 }
 
 /* ── 4. refusals ────────────────────────────────────────────────────────── */

@@ -23,7 +23,12 @@
 
    Never overwrites an existing assignment: always mints a new, unique name
    first (the same " (2)", " (3)"... dedup other saved-list tools in this
-   repo use for their own names), then points `:current` at the new one. */
+   repo use for their own names), then points `:current` at the new one.
+
+   Path 6 P4 (2026-09-24) decided this stays a same-device storage write and
+   does NOT become a _shared/handoffs.js link: what it carries is each
+   student's name beside their score, and a link — history, clipboard,
+   email — carries only fields written to be published. See handoffs.js. */
 (function (global) {
   'use strict';
 

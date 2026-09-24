@@ -110,6 +110,26 @@ const status = await page.textContent('#labelSetStatus');
 ok(/Sent \d+ place/.test(status), 'the map says how many places it sent: ' + JSON.stringify(status));
 ok(/year 0/.test(status), 'and that the dates are placeholders to fill in');
 
+/* ── 1b. the share sheet's Send row is the same handoff ──────────────────── */
+// Since Path 6 P4's rollout the button and the sheet's row both go through
+// _shared/handoffs.js, so they must build the very same link.
+await page.click('#shareBtn');
+await settle(page, 300);
+const sheetUrl = await page.evaluate(() => {
+  let captured = null;
+  const realOpen = window.open;
+  window.open = (u) => { captured = u; return { closed: false }; };
+  const b = document.querySelector('.share-sheet button[data-share="send:timeline-builder"]');
+  if (b) b.click();
+  window.open = realOpen;
+  const status = (document.querySelector('.share-sheet-status') || {}).textContent || '';
+  window.Share.close();
+  return { url: captured, status, hadRow: !!b };
+});
+ok(sheetUrl.hadRow, 'the share sheet has a "Send places to Timeline Builder" row');
+eq(sheetUrl.url, openedUrl, 'and it sends exactly the link the button sends');
+ok(/year 0/.test(sheetUrl.status), 'and says the dates are placeholders: ' + JSON.stringify(sheetUrl.status));
+
 /* ── 2. what arrives in the Timeline Builder ─────────────────────────────── */
 // Seed an existing timeline first: the import must land beside it, not on it.
 const timelinePage = await prepPage(browser, BASE, { width: 1500, height: 1000 });

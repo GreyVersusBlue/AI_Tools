@@ -99,8 +99,11 @@ function normalizeProjectData(p) {
   // to the raster already in the map cache, so a reload shows the same map
   // with the same key without re-reading a 250 KB data file.
   if (!Array.isArray(p.choropleth.legendRows)) p.choropleth.legendRows = [];
+  // A row's hex is written into a swatch's SVG markup (bmg-legend.js), and a
+  // project can arrive from a share link or a file (Path 6), so only a real
+  // colour survives — anything else would be markup in an attribute.
   p.choropleth.legendRows = p.choropleth.legendRows
-    .filter(r => r && typeof r.key === "string" && typeof r.hex === "string")
+    .filter(r => r && typeof r.key === "string" && typeof r.hex === "string" && /^#[0-9a-f]{3,8}$/i.test(r.hex))
     .map(r => ({ key: r.key, label: String(r.label || ""), hex: r.hex }));
   if (!p.choroLegendText || typeof p.choroLegendText !== "object") p.choroLegendText = {};
   p.worksheet = { ...blankWorksheetSettings(), ...(p.worksheet && typeof p.worksheet === "object" ? p.worksheet : {}) };
