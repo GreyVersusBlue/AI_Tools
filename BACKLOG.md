@@ -63,7 +63,7 @@ yours.
 
 ## Where things stand — start here
 
-*Current as of `main` after #257, 2026-09-24. **Keep this section under ~80 lines.** It is
+*Current as of `main` after #259, 2026-09-24. **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -76,29 +76,25 @@ were buried in it. It was moved **verbatim** to `HISTORY.md` ("BACKLOG header ha
 2026-09-04 → 2026-09-12"). The durable P3 guidance moved to the end of the Path 6 section in
 Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
-**Last shipped: Path 6 P4 rollout, increment 1 (#257, `CACHE_VERSION` v182).** Neither 046
-nor 056 builds another tool's link by hand any more. 015's and 028's file and parameter now come
-from the registry through `_shared/handoffs.js`. 046 took the share sheet first: it shares the
-active map project, and an arrival is saved as a new project beside the existing ones.
-- **Two new pieces in `share.js`:** a `sendState(entry)` option on `Share.mount`, so a page can
-  build what a Send row sends (046 works out each label's coordinates), and a `sheet: false`
-  flag on a handoff entry for one sent from the page's own control instead of the sheet
-  (056 sends one source).
-- **The storage-shaped pair is decided.** **039 → 040 is an entry.** **003 → 037 stays a
-  same-device write and is never a link**, because it carries student names beside their
-  scores. That also answers "rubric → grade distribution by link": no.
-- **Found and fixed:** a shared 046 project's shading-key colour reached SVG markup
-  unescaped. `bmg-store.js` now keeps only a real colour.
-- `test:share-rollout` is at **1580** assertions, `handoffs.test.mjs` at 346 and
-  `smoke-send-to.mjs` at 45. `HISTORY.md` has the detail and what was not verified.
+**Last shipped: Path 6 P4 rollout, increment 2 — the roster chain (#259, `CACHE_VERSION` v183).**
+Each hop was decided against #248's rule (a link carries a field only if it was written to be
+published):
+- **006/007 → 002 is not a link.** 002 reads the same saved class lists through `roster.js` on the
+  same device with no URL; 006's and 007's own roster links already cover another device.
+- **002 → 022 is a sheet row**: the grouping 002 already shares (labels and members). 022 takes
+  `?labgroups=` and files it as a **new** lab class with its roles handed out.
+- **022 → 005 is a `sheet: false` entry** sent from 022's new "Seat these groups" button: a new 005
+  section with one pod per group, everyone seated. Roles, role history, absences, safety-contract
+  status and keep-apart pairs stay in 022.
+- **Found and fixed:** a link-supplied name like `constructor` or `__proto__` would have broken
+  022, because its role history is a plain object keyed by name. Arrivals now drop those names.
+- `handoffs.test.mjs` is at **381**, `smoke-send-to.mjs` at **80**. `HISTORY.md` has what was not verified.
 - **Still not done from #254:** deleting rank 88's four dead trees. It is a one-line `git rm`.
 
-**Start here: rank 1 again, the rest of Path 6 P4's rollout.** The job left is the **roster →
-groups → lab roles → seating** chain (006/007 → 002 → 022 → 005). Every link in it carries
-student names, so ask #248's question of each one first. These tools already share rosters by
-link with one another, so start from what they send today. **053 → 030 waits on rank 38**
-(Path 12 P1, the question bank with 030 as the front door). The Send-row mechanics are
-settled: follow 039's entry for a whole document and 046's `sendState` for a derived one.
+**Start here: rank 1 is now blocked on rank 38, so take rank 2.** All that is left of Path 6 P4's
+rollout is **053 → 030**, and that waits on Path 12 P1 (the question bank with 030 as the front
+door). Rank 1 stays in the table as a pointer, not as work. **Rank 2 is Path 4 P4** (image-bearing
+tools onto `media-db.js`, 005's photos first), a 2+ row: do one increment and leave the row.
 
 **Decisions only Devon can make — surfaced, not taken.**
 - **Interleave per-tool improvements with platform work?** Standing decisions say "keep platform
@@ -114,14 +110,14 @@ settled: follow 039's entry for a whole document and 046's `sendState` for a der
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v182` — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v183` — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **258** in `PRECACHE_URLS`, **83** in the `SHELL_URLS` install tier |
 | Suites | **157** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **12**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`. All run in CI |
-| Inline markup sinks | **426** across the 53 pages that take link input (`check:inline-sinks` baseline) |
+| Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **14** page-rule pairs on 14 pages, all `color-contrast` |
 | Tool registry | 87 rows, **217 keys and 32 prefixes across 109 files**; **49 of 235** live entries marked `student` (was 44 before the 2026-09-23 audit); `check:registry` green |
-| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `qr-draw.js` 53 · `share.js` 53 · `state-link.js` 53 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 9 · `webrtc-pair.js` 7 · `tool-registry.js` 6 · `theme.css` 5 · `handoffs.js` 4 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `qr-draw.js` 53 · `share.js` 54 · `state-link.js` 54 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 9 · `webrtc-pair.js` 7 · `tool-registry.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087** |
 | Tier 1 rows | **175**, contiguous; per-tool rows start at rank **94** |
@@ -245,7 +241,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 shipped in #257 (v182):** 046 took the share sheet; **046 → 015** and **056 → 028** are table entries rather than links built by hand; **039 → 040** is an entry; **003 → 037 is a documented exception** (student scores never ride a link, which also settles "rubric → grade distribution by link": no); `share.js` gained `sendState(entry)` and `sheet: false`. **Left:** the **roster → groups → lab roles → seating** chain (006/007 → 002 → 022 → 005). Every link in it carries student names, so decide #248's question per hop before wiring it. **Then 053 → 030** once rank 38 (Path 12 P1) has shipped. Each is one entry plus a row in `smoke-send-to.mjs` | site | 1 | session vibrant-tesla (2026-09-24) | [Path 6](#path-6--share-everywhere) |
+| 1 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 (#257, v182):** 046 → 015, 056 → 028 (`sheet: false`) and 039 → 040 are entries; **003 → 037 is a documented exception** (student scores never ride a link); `share.js` gained `sendState(entry)` and `sheet: false`. **Increment 2 (#259, v183), the roster chain:** **002 → 022** is a sheet row and **022 → 005** a `sheet: false` entry from 022's "Seat these groups" button; **006/007 → 002 is not a link** (the roster already reaches 002 through `roster.js`). **Left: only 053 → 030, which is blocked on rank 38** (Path 12 P1, the question bank with 030 as the front door). Do not start this row until rank 38 has shipped; then it is one entry plus a row in `smoke-send-to.mjs` | site | ¼ | | [Path 6](#path-6--share-everywhere) |
 | 2 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js` (005 photos first) | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 3 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 4 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
@@ -1397,6 +1393,11 @@ download-as-file as the third option.
   beside scores are not written to be published). `Share.mount` takes `sendState(entry)` for a
   Send row whose payload is derived rather than the shared document. Left: the roster chain,
   and trivia → review board after Path 12 P1.
+  **Rollout increment 2 (#259, v183), the roster chain:** 002 → 022 is a sheet row (the grouping
+  002 already shares; 022 files it as a new lab class through `?labgroups=` and hands out roles);
+  022 → 005 is `sheet: false`, from 022's "Seat these groups" button (a new section, one pod per
+  group); **006/007 → 002 is not a link**, because 002 already reads the saved roster through
+  `roster.js` on the same device. Left: trivia → review board (053 → 030), after Path 12 P1.
 
 **Model.** Opus.
 

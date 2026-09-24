@@ -9,6 +9,60 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 6 P4 rollout, increment 2: the roster chain — 002 → 022 and 022 → 005, and 006/007 → 002 decided not a link (2026-09-24, #259, `CACHE_VERSION` v183)
+
+The roster → groups → lab roles → seating chain (006/007 → 002 → 022 → 005) was the part of the
+rollout that #257 left because every hop carries student names. Each hop was asked #248's
+question on its own: is the field written to be published? `handoffs.js` goes to **6 of 86**,
+`tool-registry.js` to **8**, and `share.js` and `state-link.js` to **54** (022 loads them to
+receive). What is left of the row is 053 → 030, blocked on Path 12 P1.
+
+- **006/007 → 002 is not an entry (the call, recorded so it can be reversed).** 002 already reads
+  every saved class list through `roster.js`'s picker on the same device, with no URL. A Send row
+  would put a class list into browser history only to move it between two tabs of one browser,
+  which is the trade 003 → 037 declined. Across devices, 006's and 007's own `?roster=` links
+  already exist and are a teacher's deliberate choice. `handoffs.test.mjs` asserts no entry
+  targets 002. A cheaper same-device shortcut (006 opening 002 with a roster *pre-selected* by
+  name, no names in the URL) was considered and not built. It would need a new 002 parameter,
+  and nothing asked for it.
+- **002 → 022 is a sheet row.** It carries exactly what 002's sheet already publishes, group
+  labels and members, so no new field reaches a URL. 022 takes `?labgroups=` (a new registry
+  `share.param`) and files the arrival as a **new** lab class under `uniqueRosterName()`, with the
+  groups as made and 022's default roles handed out by its own recency-aware assigner. The
+  receive runs **before** 022 picks its saved class, so an empty device does not also seed a blank
+  "New Roster". This follows 069/077's starter-template lesson from the other side.
+- **022 → 005 is `sheet: false`.** 022 has no share sheet, so the new "Seat these groups in the
+  Seating Chart" button calls `Handoffs.open()`, the way 056's source rows do. The transform builds
+  a whole 005 section: one pod per group (two desks across, as many rows as the group needs, the
+  gaps 005's own "Add pod" leaves), four pods to a row (five past twelve groups), everyone seated.
+  005's existing `?section=` importer adds it beside the others. **What never travels:** roles,
+  role history, absences, who has not signed a safety contract, and keep-apart pairs. Those are
+  records about a student, not a seating plan written to be put up.
+- **Found by reading 022's sinks (#250's third question):** all 25 inline sinks escape. But 022's
+  role history is a plain object keyed by student name, so an arriving name of `constructor` or
+  `__proto__` reads an inherited value and throws inside `recordHistory`, which breaks the page on
+  load. Typed at the keyboard this was never going to happen; in a link it can. Arrivals now drop
+  those names (and `prototype`). The suite's hostile-link section was run against the unfixed
+  page and went red (the page broke and every later assertion failed), then green with the fix.
+  **The same shape may exist in any tool that keys an object by a student name.** Nobody has
+  swept for it.
+
+**Suite changes.** `handoffs.test.mjs` **381** (section 3c: both transforms, the pod geometry
+inside 005's room with fourteen groups, and the not-a-link assertion for 002).
+`smoke-send-to.mjs` **80** (section 7 drives 002's sheet → 022 → 005 in a browser, including a
+hostile link with markup and prototype-key names). `inline-sinks-baseline.json` gains 022 at 25.
+
+**Not verified.** The seated pods were never looked at on screen; the assertions check desk
+coordinates and that group-mates are within 005's neighbour distance. 002's custom group labels
+("Red Team") do **not** survive into 022, which always numbers its groups; the payload carries
+them and 022 drops them. 022's safety gate is not applied to an arrival: a teacher who uses it
+should reshuffle, and the arrival note says Shuffle regroups. No QR was involved, so none was
+scanned. The new button was scanned by axe in light only (the page-level sweep).
+
+Local: `--only` share (19 suites), lab-group-role-randomizer, group-team-generator, seating-chart,
+tool-registry and theme; `test:a11y --only` 022 and 002; every `check:*` guard; lint. CI ran the
+full list (`_shared/` is in the diff) green in **33.8 min**.
+
 ## Path 6 P4 rollout, increment 1: 046 → 015, 056 → 028 and 039 → 040 on the handoff table (2026-09-24, #257, `CACHE_VERSION` v182)
 
 The two senders that built another tool's link by hand now go through `_shared/handoffs.js`,
