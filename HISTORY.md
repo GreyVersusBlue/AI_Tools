@@ -9,6 +9,74 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P2, increment 2: icons for 003, 009 and 011–027 (2026-09-25, #267, `CACHE_VERSION` v186)
+
+This is the second increment of rank 1, a 2+ row, so the row stays and is rewritten. It was
+built on Devon's machine with Blender 5.2.2 LTS, headless, in the same session as increment 1.
+
+What shipped:
+- **Nineteen icons** in `scene_icons.py`, in tool-number order:
+  - 003 Rubric: a scoring grid on a dog-eared sheet, with checks.
+  - 009 Backup: a storage box with its lid lifting.
+  - 011 Image → PDF: a photo over a dog-eared page.
+  - 012 Graph paper, with a plotted line.
+  - 013 Lab safety: goggles.
+  - 014 Roleplay: two speech bubbles.
+  - 015 Timeline: a rail with markers on posts.
+  - 016 QR: a tile with three finder squares.
+  - 017 Gallery walk: a poster on an easel, with a QR tag.
+  - 018 Scavenger hunt: a magnifying glass.
+  - 019 Escape room: a padlock.
+  - 020 Bracket: a four-team bracket on a board.
+  - 021 PE stations: three sports cones.
+  - 022 Lab groups: a flask and a die.
+  - 023 Exit ticket: an admission ticket.
+  - 024 Number talks: a chalkboard with + − × ÷.
+  - 025 Writing prompt: a pencil on a lined page.
+  - 026 Math drill: fanned flash cards reading "× =".
+  - 027 Novel study: an open book.
+
+  They are 370–1,336 B each, against the 1,434 B cap. 021 comes closest, because of its
+  cones' stripes.
+- **New primitives** for the remaining ~57: `prism` (an extruded outline), `rounded`, `disk`,
+  `tube_arc` (a bent tube kept under the crease angle), `dog_eared` and `lines_on`.
+- **The sprite** holds 29 symbols in 18,601 B, which projects to about 55 KB for all 86
+  (cap 120 KB). **29 landing rows** carry an icon. There was no change to the pipeline, the
+  validator or `sw.js`'s lists: the sprite was already precached in both tiers, and the 19
+  single-icon files are ledgered but not precached, as in increment 1.
+
+**Drafts rejected by eye** (each is recorded in its function's comments so nobody retries it):
+- **027:** the first open book was turned 90° wrong and read as a **keyboard**. The second
+  lay flat, the 30° camera saw it nearly edge-on, and its text lines **clotted into dark
+  bars**. It is now stood up 42° toward the viewer, like a book on a stand.
+- **026:** a lone × on a flash card read as **"close" or "delete"**. The card now reads "× =",
+  a sum waiting for its answer.
+- **024:** the ÷'s dots ran into the minus above them at 24 px, twice. The two rows of
+  symbols are further apart now.
+- **023:** a circle on the ticket's stub collided with the side notch, so it was dropped.
+- **Giggle check:** all 19 were looked at in both themes, magnified without smoothing at 24,
+  32 and 48 px. Nothing here reads as anything but itself. 013's goggles could pass for
+  glasses at 24 px, which the landing page never draws.
+
+**Render twice, compare.** `t021.svg` was rendered twice more and the sprite built twice:
+all byte-identical to the committed files.
+
+**What did not work.** One patch script aborted on its first unmatched string, which was the
+right behaviour, but its partner edit had looked applied until the preview showed otherwise.
+**Read the preview, not the script's exit.** The 024 and 027 edits were then made by hand.
+
+**Not verified.** The same gaps as increment 1: another machine or Blender patch, a
+projector, and 125–150% OS scaling. Each icon's name-to-picture fit was judged by one
+reviewer (this session). Nobody else has looked at the set yet.
+
+Local: every `check:*` guard, `lint`, `check:precache -- --base origin/main` (v185 → v186),
+`test:blender-art` (60), `test:a11y -- --only index` (no new allowlist line), and
+`offline:build` plus `offline:verify` ("all 29 tool icons draw from file://"). The landing
+page was checked at 1280 and 375 px in both themes: 29 icons, all drawn, no errors.
+CI ran every suite green in **34m16s**. **The PR description predicted a scoped run and was wrong:** `index.html` is on `select-suites.mjs`'s rule-1 site-wide list (the log says "site-wide: index.html — every suite runs"), so every icon increment pays the full run. The header now says so.
+
+---
+
 ## Path 21 P2, increment 1: the ten shell tools' icons, the sprite, the shortcut PNGs (2026-09-25, #265, `CACHE_VERSION` v185)
 
 Rank 1 is a 2+ row, so this is one increment and the row stays, rewritten. It was built on

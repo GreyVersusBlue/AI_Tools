@@ -70,7 +70,7 @@ without claiming or editing them and takes the next unclaimed row that is not Pa
 
 ## Where things stand — start here
 
-*Current as of `main` after #265, 2026-09-25. **Keep this section under ~80 lines.** It is
+*Current as of `main` after #267, 2026-09-25. **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -83,24 +83,25 @@ were buried in it. It was moved **verbatim** to `HISTORY.md` ("BACKLOG header ha
 2026-09-04 → 2026-09-12"). The durable P3 guidance moved to the end of the Path 6 section in
 Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
-**Last merged: #265, Path 21 P2 increment 1, the ten shell tools' icons. `CACHE_VERSION` v185.**
-- Icons for 001, 002, 004, 005, 006, 007, 008, 010, 032, 044; the sprite
-  `assets/art/icons/tools.svg` (6.3 KB for ten), built by `node Tools/blender-art/build-sprite.mjs`;
-  the ten landing rows show them; `manifest.json`'s four shortcuts have their own 96×96 PNGs.
-- **Settled:** landing icons are a fixed **32 px** with a **2.25** stroke on the 48 viewBox
-  (1.5 px). `check:art` now enforces the floor (STROKE), rebuilds the sprite (DERIVED) and ties
-  shortcut PNGs to `manifest.json` (MANIFEST, `use: "manifest"`).
-- **`file://` draws nothing for an external `<use>`.** The offline zip inlines the sprite, and
-  `offline:verify` now opens the landing page and checks every icon has ink.
+**Last merged: #267, Path 21 P2 increment 2, icons for 003, 009 and 011–027. `CACHE_VERSION` v186.**
+- **29 of 86 icons** are done. The sprite `assets/art/icons/tools.svg` holds 29 symbols
+  (18.6 KB, on course for about 55 KB of the 120 KB cap) and 29 landing rows show them.
+  Increment 1 (#265) set the rules: a fixed **32 px** landing size, a **2.25** stroke (1.5 px),
+  the sprite as a *derived* ledger entry that `check:art` rebuilds, and shortcut PNGs as
+  `use: "manifest"`. The offline zip inlines the sprite, because `file://` draws nothing
+  for an external `<use>`.
+- **Every icon increment runs the full CI (~34 min)**, because `index.html` is on the
+  selector's site-wide list. Plan for one CI round per increment plus the docs PR.
 - Blender on Devon's machine is a Steam install **not on PATH**; the README has the fix.
 - The one-line `git rm` of rank 95's four dead trees is **still not done**.
 
 **Start here. Which row depends on whether this machine has Blender.**
-- **Blender available:** take **rank 1**, Path 21 P2 increment 2: the next ~19 icons in
-  tool-number order (003, 009, 011–027), each a function in `scene_icons.py`, then
-  `build-sprite.mjs`, the rows in `index.html`, `CACHE_VERSION`. Read `HISTORY.md`'s P2 entry
-  and `scene_icons.py`'s header first: the style rules, and the drafts that failed by eye
-  (fingers, fries, a rude gesture, a chocolate bar, four laptops).
+- **Blender available:** take **rank 1**, Path 21 P2 increment 3: 028–031, 033–043, 045–048
+  (19 icons; 032 and 044 are done). Each is a function in `scene_icons.py`, then run
+  `node Tools/blender-art/build-sprite.mjs`, add the rows in `index.html` and bump
+  `CACHE_VERSION`. Read `scene_icons.py`'s header and `HISTORY.md`'s two P2 entries first.
+  They carry the style rules and every draft that failed by eye (fingers, fries, a rude
+  gesture, a chocolate bar, laptops, a keyboard, a "close" button).
 - **No Blender** (any cloud container): skip ranks 1–7 without claiming or editing them.
   Rank 8 (Path 6 P4) is blocked on rank 45, so take **rank 9**, Path 4 P4 (image-bearing tools
   onto `media-db.js`, 005's photos first), one increment.
@@ -118,8 +119,8 @@ Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v185` — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **265** in `PRECACHE_URLS`, **88** in the `SHELL_URLS` install tier. Bytes: **11.20 MB / 2.50 MB** summed on Devon's Windows checkout after #265. #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **18,006 B** ledgered, **9,754 B** of it shell (`check:art` enforces both) |
+| `CACHE_VERSION` | `v186` — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **265** in `PRECACHE_URLS`, **88** in the `SHELL_URLS` install tier. Bytes: **11.21 MB / 2.52 MB** summed on Devon's Windows checkout after #267. #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **43,050 B** ledgered, **22,086 B** of it shell (`check:art` enforces both) |
 | Suites | **158** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
@@ -129,7 +130,7 @@ Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087** |
 | Tier 1 rows | **182**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows proper start at rank **101** |
-| Art | **17** ledger entries: 10 tool icons, the sprite (on the ten landing rows), 4 shortcut PNGs (in `manifest.json`), the unlinked light/dark test tile. 83 of 86 pages carry a data-URI favicon; `assets/icons/` holds 4 PWA icons |
+| Art | **36** ledger entries: 29 tool icons, the sprite (on 29 landing rows), 4 shortcut PNGs (in `manifest.json`), the unlinked light/dark test tile. 83 of 86 pages carry a data-URI favicon; `assets/icons/` holds 4 PWA icons |
 | Dark mode / fullscreen | 83 of 83 themed pages native dark; `stage.js` on 9 pages. Path 5 is finished |
 | CI | Pull requests run `--changed` (a diff-scoped selection). A push to `main` runs everything, ~32 min. A PR touching `_shared/`, `package.json` or `Tools/board-check/` is site-wide |
 | Lint | clean |
@@ -256,7 +257,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 21 P2 — 86 tool icons in one style, as a `currentColor` SVG sprite on the landing rows. **Increment 1 done (#265, v185):** the ten shell tools (001, 002, 004–008, 010, 032, 044), the sprite `assets/art/icons/tools.svg` via `build-sprite.mjs`, the ten `index.html` rows (fixed 32 px, stroke 2.25 = 1.5 px), the four 96×96 shortcut PNGs in `manifest.json`, the sprite inlined into the offline zip. **Left: the other 76 icons, about 19 per increment in tool-number order (next: 003, 009, 011–027), four more increments;** each adds functions to `scene_icons.py`, re-runs `build-sprite.mjs`, adds the rows' `<svg class="tool-icon">` and bumps `CACHE_VERSION`. **Then the final call:** re-render the PWA app mark in the new style and swap it only if it survives the maskable safe zone at 48 px; per-page favicons stay unless the set holds at 16 px. **≤ 1.4 KB per icon, sprite ≤ 120 KB** (on course for ~54 KB). **Needs Blender locally; a session without `blender` on PATH skips it.** | site | 2+ | `p21p2i2` 2026-09-25 12:32 UTC | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
+| 1 | Path 21 P2 — 86 tool icons in one style, as a `currentColor` SVG sprite on the landing rows. **Increments 1 and 2 done (#265 v185, #267 v186): 29 of 86 icons.** Increment 1 set the rules: the sprite `assets/art/icons/tools.svg` via `build-sprite.mjs`, a fixed 32 px landing size with a 2.25 stroke (1.5 px), the four 96×96 shortcut PNGs in `manifest.json`, and the sprite inlined into the offline zip. Increment 2 added 003, 009 and 011–027. **Left: 57 icons in three increments of 19, in tool-number order:** 028–031, 033–043 and 045–048 next, then 049–067, then 068–086. Each adds functions to `scene_icons.py`, re-runs `build-sprite.mjs`, adds the rows' `<svg class="tool-icon">` and bumps `CACHE_VERSION`, and each costs a full ~34-min CI run (`index.html` is site-wide). **Then the final call:** re-render the PWA app mark in the new style and swap it only if it survives the maskable safe zone at 48 px; per-page favicons stay unless the set holds at 16 px. **≤ 1.4 KB per icon, sprite ≤ 120 KB** (on course for ~55 KB). **Needs Blender locally; a session without `blender` on PATH skips it.** | site | 2+ | | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
 | 2 | Path 21 P3 — landing-page hero, an isometric classroom diorama, as a WebP light/dark pair at 1× and 2× (**≤ 130 KB** for all four, shell tier, `alt=""`, no text over it). Manifest screenshots are **decided to stay Playwright captures**; regenerate them after the hero lands. **Needs Blender locally; a session without `blender` on PATH skips it.** | site | 1 | | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
 | 3 | Path 21 P4 — 080 Virtual Manipulatives rendered pieces: base-ten blocks, algebra tiles, fraction bars, pattern blocks, dice. One atlas per theme, **≤ 250 KB**. *a11y:* keep each piece's name and value as its accessible description; colour is never the only carrier (a negative tile gets a "−" or a pattern); greyscale-distinct families. **Needs Blender locally; a session without `blender` on PATH skips it.** | 080 | 1 | | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
 | 4 | Path 21 P4 — 071 picture-prompt starter images: 12 language-neutral scenes, no text baked in, site files and never copied into storage. **≤ 40 KB each, ≤ 480 KB total**, light-only. Student-facing, **authorized by Devon 2026-09-25**. *a11y:* real `alt` text describing each scene; greyscale-legible in print. **Needs Blender locally; a session without `blender` on PATH skips it.** | 071 | 1 | | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
@@ -2195,7 +2196,9 @@ reviewed nor diffed.
   PNGs, all as specified below. Three calls went beyond the spec: the landing size is a fixed
   32 px with a 2.25 stroke; the sprite is a *derived* ledger entry that `check:art` rebuilds;
   and shortcut icons are `use: "manifest"`. The offline zip needed the sprite inlined.
-  `HISTORY.md` has the detail. The four remaining increments follow the text below unchanged.
+  `HISTORY.md` has the detail. **Increment 2 shipped in #267, v186:** 003, 009 and 011–027,
+  plus new modelling primitives (`prism`, `rounded`, `tube_arc` and others). 29 of 86 are
+  done, and the three remaining increments follow the text below unchanged.
   - *The open call, decided here (reversible; recorded in `HISTORY.md`).* There is **no
     existing per-tool icon set to replace**; the landing rows have none. So the Blender set is
     **added**, and it replaces exactly two things. First, the generic `assets/icons/icon-192.png`
