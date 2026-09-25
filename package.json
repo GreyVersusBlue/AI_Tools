@@ -77,6 +77,7 @@
     "check:docs-commands": "node Tools/board-check/check-docs-commands.mjs",
     "check:adoption": "node Tools/board-check/check-adoption.mjs",
     "check:inline-sinks": "node Tools/board-check/check-inline-sinks.mjs",
+    "check:art": "node Tools/blender-art/validate-art.mjs",
     "phase4:next": "node Tools/board-check/list-base-css-candidates.mjs",
     "path5:next": "node Tools/board-check/list-dark-candidates.mjs",
     "offline:build": "node Tools/board-check/make-offline-copy.mjs",
@@ -107,6 +108,7 @@
     "test:media": "node Tools/media/test/media-db.test.mjs && node Tools/media/test/smoke-media-db.mjs",
     "test:seating-read": "node Tools/seating-read/test/seating-read.test.mjs",
     "test:select-suites": "node Tools/board-check/test/select-suites.test.mjs",
+    "test:blender-art": "node Tools/blender-art/test/validate-art.test.mjs",
     "lint": "eslint"
   },
   "devDependencies": {

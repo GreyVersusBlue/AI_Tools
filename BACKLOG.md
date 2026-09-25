@@ -514,7 +514,7 @@ one of them touches `_shared/`.
    toggled element.
 3. Green locally: `check:dedupe`, `check:tests`, `check:social`, `check:entities`,
    `check:hidden-flex`, `check:print-clip`, `check:registry`, `check:docs-commands`,
-   `lint`, `check:precache -- --base origin/main`, every touched tool's `test:<name>`, and
+   `lint`, `check:art`, `check:precache -- --base origin/main`, every touched tool's `test:<name>`, and
    `test:a11y -- --only <nnn>` for every touched page. **Never add an allowlist line.**
    A new tool comes in clean.
 4. A new `_shared/` module ships with a pure-logic Node suite and at most one adopter.

@@ -16,3 +16,6 @@ Tools/board-check/.offline-copy-staging/
 AI_Tools-offline.zip
 Tools/board-check/.sw-test-staging/
 Tools/board-check/.sw-tiers-staging/
+
+# Python bytecode from the Blender scene scripts (Tools/blender-art/)
+__pycache__/

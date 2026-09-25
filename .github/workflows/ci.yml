@@ -164,6 +164,14 @@ jobs:
         if: '!cancelled()'
         run: npm run check:docs-commands
 
+      # Path 21: the Blender art ledger. Blender never runs here; this checks
+      # that what a local session committed matches renders.json (hashes, caps,
+      # dimensions, the pinned LTS, dark twins, currentColor icons, contrast
+      # under text, orphans, alt on <img>). See Tools/blender-art/validate-art.mjs.
+      - name: 'Guard: Blender art ledger matches the tree'
+        if: '!cancelled()'
+        run: npm run check:art
+
       - name: 'Report: shared-file adoption'
         if: '!cancelled()'
         run: npm run check:adoption

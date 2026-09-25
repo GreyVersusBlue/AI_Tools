@@ -1,0 +1,7 @@
+# Path 21 art: SVG is text and must hash the same on every checkout, so it is
+# kept LF in the working tree even with core.autocrlf=true. The validator also
+# strips CR before hashing SVG; this makes the file on disk match as well.
+assets/art/**/*.svg text eol=lf
+Tools/*/art/**/*.svg text eol=lf
+Tools/blender-art/renders.json text eol=lf
+*.webp binary
