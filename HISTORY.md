@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## Path 21 ranked first: Blender-rendered art goes to the top of Tier 1 (2026-09-25, planning only, no `CACHE_VERSION` change)
+## Path 21 ranked first: Blender-rendered art goes to the top of Tier 1 (2026-09-25, #261, planning only, no `CACHE_VERSION` change)
 
 **Devon's instruction, 2026-09-25:** Blender-rendered art is the new top priority. **He
 authorized two things that are normally not a session's call: the re-rank itself, and any
