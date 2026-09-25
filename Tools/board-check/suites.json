@@ -70,6 +70,8 @@
     "Tools/qr-code-generator/test/smoke-checkout.mjs",
     "Tools/command-center/test/smoke-seating-panel.mjs",
     "Tools/command-center/test/smoke-remote-commands.mjs",
+    "Tools/class-screen/test/core.test.mjs",
+    "Tools/class-screen/test/smoke-class-screen.mjs",
     "Tools/gallery-walk-qr/test/smoke-projector.mjs",
     "Tools/gallery-walk-qr/test/smoke-scan-verify.mjs",
     "Tools/testing-accommodations-card-generator/test/smoke-filter.mjs",

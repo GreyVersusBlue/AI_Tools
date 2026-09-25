@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v186';
+const CACHE_VERSION = 'v187';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -386,6 +386,8 @@ const PRECACHE_URLS = [
   "Tools/vocab-flashcard-generator/vfg-printables.js",
   "Tools/vocab-flashcard-generator/vfg-store.js",
   "Tools/086-wiki-race.html",
+  "Tools/087-class-screen.html",
+  "Tools/class-screen/cs-core.js",
   "Tools/081-word-problem-warmup-generator.html",
   "Tools/025-writing-prompt-generator.html",
   "Tools/writing-prompt-generator/wpg-prompts.js",
