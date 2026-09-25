@@ -83,6 +83,7 @@ const EXCLUDED_PREFIXES = [
   'improvement prompts/',            // internal per-tool planning notes (80+ files)
   'prompts/',                        // internal planning notes
   'Tools/board-check/',              // dev/test tooling, including this generator itself
+  'Tools/blender-art/',              // Path 21's Blender scene scripts, ledger and validator: never shipped
   'Tools/New Designs/',              // design drafts, superseded
   'Tools/Old Designs/',              // design drafts, superseded
 ];

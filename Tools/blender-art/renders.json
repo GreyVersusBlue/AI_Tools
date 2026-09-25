@@ -1,0 +1,122 @@
+{
+  "//": [
+    "The Path 21 ledger. Each entry is a spec written by hand (path, script, subject, family, seed,",
+    "width, height, cap, theme, use, decorative, twin, underText.region/token/large) plus a record",
+    "the scene script rewrites when it renders (blender, sha256, bytes, tokens, underText.lumMin/lumMax).",
+    "Tools/blender-art/validate-art.mjs checks the record against the tree. Raise a cap only with a",
+    "capWhy in the same commit. See Tools/blender-art/README.md."
+  ],
+  "blender": "5.2",
+  "budget": {
+    "total": 2097152,
+    "shell": 256000
+  },
+  "families": {
+    "icon": {
+      "entryCap": 1434,
+      "total": 122880
+    },
+    "tile": {
+      "entryCap": 16384,
+      "total": 32768
+    }
+  },
+  "entries": [
+    {
+      "path": "assets/art/icons/t007.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "007",
+      "family": "icon",
+      "seed": 7,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "a98bda6678341c03d8d3eb9867b3e192c242226b0a6d2b16b7fcea2563e93e97",
+      "bytes": 727,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/test/tile-256-light.webp",
+      "script": "Tools/blender-art/scene_tile.py",
+      "subject": "test-tile",
+      "family": "tile",
+      "seed": 21,
+      "samples": 64,
+      "quality": 80,
+      "width": 256,
+      "height": 256,
+      "cap": 16384,
+      "theme": "light",
+      "use": "screen",
+      "twin": "assets/art/test/tile-256-dark.webp",
+      "decorative": true,
+      "underText": {
+        "region": [
+          40,
+          30,
+          176,
+          40
+        ],
+        "token": "--ink",
+        "large": false,
+        "lumMin": 0.6928,
+        "lumMax": 0.7802
+      },
+      "blender": "5.2.2",
+      "sha256": "4569ccd9f2344cea135e6d022e27818b1b797888e960d370231a3ab453824e18",
+      "bytes": 1054,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--line-strong",
+        "--paper"
+      ]
+    },
+    {
+      "path": "assets/art/test/tile-256-dark.webp",
+      "script": "Tools/blender-art/scene_tile.py",
+      "subject": "test-tile",
+      "family": "tile",
+      "seed": 21,
+      "samples": 64,
+      "quality": 80,
+      "width": 256,
+      "height": 256,
+      "cap": 16384,
+      "theme": "dark",
+      "use": "screen",
+      "twin": "assets/art/test/tile-256-light.webp",
+      "decorative": true,
+      "underText": {
+        "region": [
+          40,
+          30,
+          176,
+          40
+        ],
+        "token": "--ink",
+        "large": false,
+        "lumMin": 0.0138,
+        "lumMax": 0.023
+      },
+      "blender": "5.2.2",
+      "sha256": "a24879decf565c8021a03a4437a34347d1b71ee482084265c778a9f408bc0c5c",
+      "bytes": 776,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--line-strong",
+        "--paper"
+      ]
+    }
+  ]
+}

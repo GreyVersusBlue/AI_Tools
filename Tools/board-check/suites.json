@@ -171,7 +171,8 @@
     "Tools/media/test/smoke-media-db.mjs",
     "Tools/seating-read/test/seating-read.test.mjs",
     "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs",
-    "Tools/board-check/test/select-suites.test.mjs"
+    "Tools/board-check/test/select-suites.test.mjs",
+    "Tools/blender-art/test/validate-art.test.mjs"
   ],
   "expectedFailures": []
 }

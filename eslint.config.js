@@ -108,7 +108,7 @@ export default [
     // pattern here too, for the one file that lived there; gvb-save.js moved
     // into _shared/ and assets/ now holds only icons and screenshots.
     files: ['_shared/*.js', 'Tools/*/*.js', 'Tools/*/*.mjs', 'Tools/*/*/*.js'],
-    ignores: ['Tools/*/test/**', 'Tools/board-check/**', 'Tools/*/*.test.mjs'],
+    ignores: ['Tools/*/test/**', 'Tools/board-check/**', 'Tools/*/*.test.mjs', 'Tools/blender-art/**'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -127,8 +127,11 @@ export default [
   {
     // Node tooling and suites. Browser globals too: a suite's page.evaluate()
     // callbacks are browser code inside a Node file, and `document` inside
-    // one is not a bug.
-    files: ['Tools/board-check/*.mjs', 'Tools/*/test/*.mjs', 'Tools/*/*.test.mjs', 'Tools/*/*/build-*.mjs', 'eslint.config.js'],
+    // one is not a bug. Tools/blender-art/ (Path 21) is Node tooling that
+    // lives beside the tools rather than in board-check, so that an art edit
+    // is not site-wide in CI; its .mjs files would otherwise match the
+    // browser block's Tools/*/*.mjs and fail no-undef on `process`.
+    files: ['Tools/board-check/*.mjs', 'Tools/blender-art/*.mjs', 'Tools/*/test/*.mjs', 'Tools/*/*.test.mjs', 'Tools/*/*/build-*.mjs', 'eslint.config.js'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
