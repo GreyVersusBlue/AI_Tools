@@ -276,6 +276,18 @@
       ],
     },
     {
+      slug: 'class-screen',
+      title: 'Class Screen',
+      file: 'Tools/087-class-screen.html',
+      category: 'classroom-mgmt',
+      keys: [
+        { k: 'cls-screen:state' },
+      ],
+      reads: [
+        'np_rosters',
+      ],
+    },
+    {
       slug: 'duty-roster-builder',
       title: 'Duty Roster Builder',
       file: 'Tools/058-duty-roster-builder.html',

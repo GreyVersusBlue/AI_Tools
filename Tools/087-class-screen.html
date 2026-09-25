@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../manifest.json">
+<title>Class Screen</title>
+<meta name="description" content="A projector board you build from widgets: timers, a stopwatch, a clock, text boxes, YouTube videos, a traffic light, a name picker and dice, placed anywhere and saved as named screens.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='4' y='6' width='24' height='17' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Crect x='7' y='9' width='8' height='6' rx='1' fill='%232e6b8f'/%3E%3Crect x='17' y='13' width='8' height='7' rx='1' fill='%23a3372b'/%3E%3Cpath d='M12 27h8' stroke='%231f3550' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- Native dark from _shared/ink-paper.css; this page paints only tokens. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
+<script src="../_shared/a11y.js"></script>
+<script src="../_shared/stage.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
+<script src="class-screen/cs-core.js"></script>
+<link rel="stylesheet" href="../_shared/ink-paper.css">
+<link rel="stylesheet" href="../_shared/a11y.css">
+<style>
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Segoe UI", system-ui, sans-serif; line-height: 1.4;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ── header ─────────────────────────────────────────────────────────── */
+  .app-header {
+    display: flex; align-items: center; gap: .6rem 1rem; flex-wrap: wrap;
+    padding: .5rem 1rem; border-bottom: 1px solid var(--line); background: var(--card);
+  }
+  .app-header h1 { font-size: 1.15rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .85rem; }
+  .back-link:hover { color: var(--accent-2); }
+  .screen-bar { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-left: auto; }
+  .screen-bar label { font-size: .82rem; font-weight: 600; }
+  select, input[type="text"] {
+    font: inherit; font-size: .88rem; color: var(--ink); background: var(--card);
+    border: 1px solid var(--line-strong); border-radius: 6px; padding: .3rem .45rem;
+  }
+  button {
+    font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
+    background: var(--card); color: var(--ink); border: 1px solid var(--line-strong);
+    border-radius: 6px; padding: .3rem .65rem;
+  }
+  button:hover { background: var(--card-2); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible {
+    outline: 3px solid var(--accent-2); outline-offset: 2px;
+  }
+
+  /* ── stage: the board and the dock ──────────────────────────────────── */
+  #stage { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--paper); }
+  #stage.is-fullscreen { position: fixed; inset: 0; z-index: 50; }
+  #board {
+    position: relative; flex: 1; min-height: 0; overflow: hidden;
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--line) 1px, transparent 1.2px);
+    background-size: 24px 24px;
+  }
+  .board-empty {
+    position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
+    color: var(--muted); font-size: 1rem; padding: 1rem; pointer-events: none;
+  }
+  .dock {
+    display: flex; gap: .4rem; flex-wrap: wrap; justify-content: center; align-items: center;
+    padding: .45rem .6rem; background: var(--card); border-top: 1px solid var(--line);
+  }
+  .dock .dock-label { font-size: .8rem; color: var(--muted); font-weight: 600; margin-right: .2rem; }
+  .dock button { display: inline-flex; align-items: center; gap: .35rem; }
+  .dock svg { width: 18px; height: 18px; flex: none; }
+
+  /* ── widgets ────────────────────────────────────────────────────────── */
+  .w {
+    position: absolute; display: flex; flex-direction: column;
+    background: var(--card); color: var(--ink);
+    border: 1px solid var(--line-strong); border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+    min-width: 0; min-height: 0; overflow: hidden;
+  }
+  .w.dragging { box-shadow: 0 10px 28px rgba(0, 0, 0, .22); opacity: .96; }
+  .w-bar {
+    display: flex; align-items: center; gap: .25rem; flex: none;
+    background: var(--card-2); border-bottom: 1px solid var(--line);
+  }
+  .w-grip {
+    flex: 1; min-width: 0; text-align: left; border: 0; border-radius: 0; background: transparent;
+    cursor: grab; padding: .25rem .5rem; font-size: .78rem; color: var(--muted);
+    touch-action: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .w-grip:hover { background: transparent; color: var(--ink); }
+  .w.dragging .w-grip { cursor: grabbing; }
+  .w-close {
+    border: 0; background: transparent; padding: .1rem .5rem; font-size: 1rem; line-height: 1;
+    color: var(--muted); border-radius: 0;
+  }
+  .w-close:hover { color: var(--err); background: transparent; }
+  .w-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: .4rem .5rem; gap: .35rem; }
+  .w-resize {
+    position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize;
+    touch-action: none;
+    background: linear-gradient(135deg, transparent 50%, var(--line-strong) 50%, var(--line-strong) 60%, transparent 60%, transparent 72%, var(--line-strong) 72%, var(--line-strong) 82%, transparent 82%);
+  }
+  .w-foot { display: flex; gap: .3rem; flex-wrap: wrap; align-items: center; justify-content: center; flex: none; }
+  .w-foot button, .w-foot select, .w-foot input[type="text"] { font-size: .78rem; padding: .2rem .45rem; }
+  .w-foot label { font-size: .78rem; display: inline-flex; align-items: center; gap: .2rem; }
+  .w-foot input[type="text"] { width: 6.5em; }
+  .note { font-size: .78rem; color: var(--muted); text-align: center; margin: 0; }
+  .err-note { font-size: .8rem; color: var(--err); text-align: center; margin: 0; }
+
+  /* The big number/name area scales with the widget: it is a size container,
+     so cqw/cqh below are relative to it, not the window. */
+  .big { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; overflow: hidden; }
+  .big-text {
+    font-family: Consolas, "Courier New", monospace; font-weight: 700; line-height: 1;
+    font-size: min(24cqw, 70cqh); font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .big-name { font-weight: 700; line-height: 1.1; text-align: center; font-size: min(14cqw, 45cqh); padding: 0 .2em; overflow-wrap: anywhere; }
+  .big-date { display: block; font-family: inherit; font-weight: 600; font-size: min(7cqw, 18cqh); color: var(--muted); text-align: center; margin-top: .25em; }
+
+  /* text */
+  .text-area {
+    flex: 1; min-height: 0; width: 100%; resize: none; border: 0; background: transparent; color: var(--ink);
+    font: inherit; font-size: calc(var(--fs, 2) * 1rem); line-height: 1.25; padding: .1rem;
+  }
+
+  /* timer */
+  .w.timer-done { animation: done-flash 1s steps(2, jump-none) 6; border-color: var(--err); }
+  .w.timer-done .big-text { color: var(--err); }
+  @keyframes done-flash { 50% { background: var(--card-2); } }
+  @media (prefers-reduced-motion: reduce) { .w.timer-done { animation: none; } }
+
+  /* traffic light */
+  .lights { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; container-type: size; }
+  .light {
+    width: min(70cqw, 26cqh); aspect-ratio: 1; border-radius: 50%; padding: 0;
+    border: 3px solid var(--line-strong); opacity: .28;
+  }
+  .light:hover { opacity: .55; }
+  .light[aria-pressed="true"] { opacity: 1; box-shadow: 0 0 0 4px var(--card), 0 0 18px 4px var(--line-strong); }
+  .light.red, .light.red:hover { background: #d33a2c; }
+  .light.yellow, .light.yellow:hover { background: #f1b82d; }
+  .light.green, .light.green:hover { background: #2f9e57; }
+  .light-label { font-weight: 700; font-size: min(14cqw, 7cqh); }
+
+  /* dice */
+  .dice { flex: 1; min-height: 0; container-type: size; display: flex; flex-wrap: wrap; gap: 4cqmin; align-items: center; justify-content: center; }
+  .die {
+    position: relative; width: min(28cqw, 60cqh); aspect-ratio: 1;
+    border: 2px solid var(--ink); border-radius: 16%; background: var(--card);
+  }
+  .die .pip { position: absolute; width: 18%; height: 18%; border-radius: 50%; background: var(--ink); transform: translate(-50%, -50%); }
+
+  /* youtube */
+  .yt-frame { flex: 1; min-height: 0; width: 100%; border: 0; border-radius: 6px; background: #000; }
+  .yt-form { display: flex; flex-direction: column; gap: .4rem; justify-content: center; flex: 1; }
+  .yt-form label { font-size: .85rem; font-weight: 600; }
+  .yt-form input { width: 100%; }
+  .yt-offline { flex: 1; display: grid; place-items: center; text-align: center; color: var(--muted); font-size: .9rem; padding: .5rem; }
+
+  /* ── toast ──────────────────────────────────────────────────────────── */
+  .toast {
+    position: fixed; left: 50%; bottom: 4.2rem; transform: translateX(-50%); z-index: 60;
+    background: var(--ink); color: var(--paper); border-radius: 8px; padding: .45rem .6rem .45rem .9rem;
+    display: flex; gap: .7rem; align-items: center; font-size: .88rem; box-shadow: 0 6px 20px rgba(0,0,0,.25);
+  }
+  .toast button { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  @media (max-width: 640px) {
+    .app-header { padding: .4rem .6rem; }
+    .screen-bar { margin-left: 0; }
+    .dock .dock-label { display: none; }
+    .dock button span { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="app-header">
+  <a class="back-link" href="../index.html">← All tools</a>
+  <h1>Class Screen</h1>
+  <div class="screen-bar">
+    <label for="screenSelect">Screen</label>
+    <select id="screenSelect"></select>
+    <button type="button" id="newScreenBtn">New</button>
+    <button type="button" id="renameScreenBtn">Rename</button>
+    <button type="button" id="dupScreenBtn">Duplicate</button>
+    <button type="button" id="deleteScreenBtn">Delete</button>
+    <button type="button" id="clearScreenBtn">Clear</button>
+    <button type="button" id="fsBtn" class="primary">Fullscreen</button>
+  </div>
+</header>
+
+<main id="stage">
+  <div id="board" aria-label="Board">
+    <p class="board-empty" id="boardEmpty">Add a widget from the bar below. Drag it by its title, resize it from the corner, and it stays where you put it.</p>
+  </div>
+  <nav class="dock" id="dock" aria-label="Add a widget">
+    <span class="dock-label">Add:</span>
+  </nav>
+</main>
+
+<p class="sr-only" id="gripHelp">Arrow keys move this widget. Shift plus arrow keys resize it.</p>
+<div class="toast" id="toast" role="status" hidden><span id="toastText"></span><button type="button" id="toastUndo">Undo</button></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var Core = window.ClassScreenCore;
+  var KEY = 'cls-screen:state';
+  var ROSTER_HUB = '006-class-roster-hub.html';
+
+  if (window.Store && Store.configure) Store.configure({ toolName: 'Class Screen' });
+
+  var state = Core.normalizeState(window.Store ? Store.get(KEY, { version: 1, default: null }) : null);
+  var board = document.getElementById('board');
+  var boardEmpty = document.getElementById('boardEmpty');
+  var screenSelect = document.getElementById('screenSelect');
+  var instances = {};           // widget id -> { el, tick, destroy }
+  var saveTimer = 0;
+
+  /* ── persistence ──────────────────────────────────────────────────── */
+
+  function saveNow() {
+    clearTimeout(saveTimer); saveTimer = 0;
+    if (window.Store) Store.set(KEY, state, { version: 1 });
+  }
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 300);
+  }
+  window.addEventListener('pagehide', function () { if (saveTimer) saveNow(); });
+
+  function currentScreen() {
+    for (var i = 0; i < state.screens.length; i++) if (state.screens[i].id === state.current) return state.screens[i];
+    state.current = state.screens[0].id;
+    return state.screens[0];
+  }
+
+  /* ── small DOM helpers (no markup strings anywhere on this page) ───── */
+
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === 'text') n.textContent = v;
+      else if (k === 'className') n.className = v;
+      else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v === true ? '' : v);
+    });
+    (kids || []).forEach(function (c) { if (c) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return n;
+  }
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function icon(paths) {
+    var s = document.createElementNS(SVGNS, 'svg');
+    s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('fill', 'none'); s.setAttribute('aria-hidden', 'true');
+    paths.forEach(function (d) {
+      var p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', d); p.setAttribute('stroke', 'currentColor'); p.setAttribute('stroke-width', '2');
+      p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round');
+      s.appendChild(p);
+    });
+    return s;
+  }
+
+  /* ── sound: one short beep pattern, built on first use ─────────────── */
+
+  var audioCtx = null;
+  function unlockAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) { audioCtx = null; }
+  }
+  function beep() {
+    if (!audioCtx) return;
+    try {
+      var t = audioCtx.currentTime;
+      for (var i = 0; i < 3; i++) {
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.frequency.value = 880; o.type = 'sine';
+        g.gain.setValueAtTime(0.0001, t + i * 0.35);
+        g.gain.exponentialRampToValueAtTime(0.35, t + i * 0.35 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.35 + 0.25);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(t + i * 0.35); o.stop(t + i * 0.35 + 0.3);
+      }
+    } catch (e) {}
+  }
+
+  /* ── widget types ─────────────────────────────────────────────────── */
+  /* Each build(ctx) fills ctx.body and returns { tick?, destroy? }.
+     ctx.data is the live, saved object; call ctx.save() after changing it. */
+
+  var TYPES = {};
+
+  TYPES.text = {
+    title: 'Text', icon: ['M5 6h14', 'M12 6v13', 'M9 19h6'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var ta = el('textarea', { className: 'text-area', 'aria-label': 'Text box', placeholder: 'Type here…', spellcheck: 'true' });
+      ta.value = d.text;
+      ta.style.setProperty('--fs', d.size);
+      ta.addEventListener('input', function () { d.text = ta.value; ctx.save(); });
+      function step(dir) {
+        var i = Core.TEXT_SIZES.indexOf(d.size) + dir;
+        if (i < 0 || i >= Core.TEXT_SIZES.length) return;
+        d.size = Core.TEXT_SIZES[i]; ta.style.setProperty('--fs', d.size); ctx.save();
+      }
+      ctx.body.appendChild(ta);
+      ctx.body.appendChild(el('div', { className: 'w-foot' }, [
+        el('button', { type: 'button', text: 'A−', 'aria-label': 'Smaller text', onclick: function () { step(-1); } }),
+        el('button', { type: 'button', text: 'A+', 'aria-label': 'Larger text', onclick: function () { step(1); } })
+      ]));
+      return {};
+    }
+  };
+
+  TYPES.timer = {
+    title: 'Timer', icon: ['M12 8v5l3 2', 'M9 2h6', 'M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var shown = el('span', { className: 'big-text' });
+      var status = el('span', { className: 'sr-only', 'aria-live': 'assertive' });
+      var startBtn = el('button', { type: 'button', className: 'primary' });
+      var custom = el('input', { type: 'text', 'aria-label': 'Set time, minutes or m:ss', placeholder: 'm:ss', inputmode: 'numeric' });
+      var err = el('p', { className: 'err-note', hidden: true });
+      var sound = el('input', { type: 'checkbox' });
+      sound.checked = d.sound;
+
+      function running() { return d.endsAt > 0; }
+      function remainingMs() { return running() ? d.endsAt - Date.now() : d.remaining * 1000; }
+      function setDone(on) { ctx.el.classList.toggle('timer-done', on); }
+
+      function render() {
+        var ms = remainingMs();
+        shown.textContent = Core.formatClock(ms);
+        startBtn.textContent = running() ? 'Pause' : (ms <= 0 ? 'Restart' : 'Start');
+      }
+      function setDuration(sec) {
+        d.duration = sec; d.remaining = sec; d.endsAt = 0; setDone(false); ctx.save(); render();
+      }
+      function finish(announce) {
+        d.endsAt = 0; d.remaining = 0; ctx.save(); render(); setDone(true);
+        if (announce) {
+          status.textContent = 'Time is up.';
+          if (d.sound) beep();
+        }
+      }
+
+      startBtn.addEventListener('click', function () {
+        unlockAudio();
+        if (running()) {
+          d.remaining = Math.max(0, (d.endsAt - Date.now()) / 1000); d.endsAt = 0;
+        } else {
+          if (d.remaining <= 0) d.remaining = d.duration;
+          d.endsAt = Date.now() + d.remaining * 1000; setDone(false); status.textContent = '';
+        }
+        ctx.save(); render();
+      });
+      function plus(sec) {
+        if (running()) d.endsAt += sec * 1000;
+        else d.remaining = Math.min(24 * 3600, d.remaining + sec);
+        setDone(false); ctx.save(); render();
+      }
+      function applyCustom() {
+        var sec = Core.parseDuration(custom.value);
+        err.hidden = sec !== null;
+        if (sec === null) { err.textContent = 'Try 5, 4:30 or 1:00:00.'; return; }
+        custom.value = ''; setDuration(sec);
+      }
+      custom.addEventListener('keydown', function (e) { if (e.key === 'Enter') applyCustom(); });
+      sound.addEventListener('change', function () { d.sound = sound.checked; ctx.save(); });
+
+      var presets = el('div', { className: 'w-foot' });
+      [1, 2, 5, 10].forEach(function (m) {
+        presets.appendChild(el('button', { type: 'button', text: m + ' min', onclick: function () { setDuration(m * 60); } }));
+      });
+      ctx.body.appendChild(el('div', { className: 'big' }, [shown]));
+      ctx.body.appendChild(status);
+      ctx.body.appendChild(presets);
+      ctx.body.appendChild(el('div', { className: 'w-foot' }, [
+        startBtn,
+        el('button', { type: 'button', text: 'Reset', onclick: function () { setDuration(d.duration); } }),
+        el('button', { type: 'button', text: '+1:00', 'aria-label': 'Add one minute', onclick: function () { plus(60); } }),
+        custom,
+        el('button', { type: 'button', text: 'Set', onclick: applyCustom }),
+        el('label', null, [sound, 'Sound'])
+      ]));
+      ctx.body.appendChild(err);
+
+      if (running() && remainingMs() <= 0) finish(false);   // ran out while the page was closed
+      else if (!running() && d.remaining <= 0) setDone(true);
+      render();
+      return {
+        tick: function () {
+          if (running() && remainingMs() <= 0) finish(true);
+          else if (running()) render();
+        }
+      };
+    }
+  };
+
+  function formatElapsed(ms) {
+    ms = Math.max(0, ms);
+    var tenths = Math.floor(ms / 100) % 10;
+    var s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    return (h > 0 ? h + ':' + pad(m) : m) + ':' + pad(sec) + '.' + tenths;
+  }
+
+  TYPES.stopwatch = {
+    title: 'Stopwatch', icon: ['M12 9v4', 'M10 2h4', 'M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M19 5l-1.5 1.5'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var shown = el('span', { className: 'big-text' });
+      var btn = el('button', { type: 'button', className: 'primary' });
+      function elapsed() { return d.elapsed + (d.startedAt ? Date.now() - d.startedAt : 0); }
+      function render() { shown.textContent = formatElapsed(elapsed()); btn.textContent = d.startedAt ? 'Pause' : 'Start'; }
+      btn.addEventListener('click', function () {
+        if (d.startedAt) { d.elapsed = elapsed(); d.startedAt = 0; } else d.startedAt = Date.now();
+        ctx.save(); render();
+      });
+      ctx.body.appendChild(el('div', { className: 'big' }, [shown]));
+      ctx.body.appendChild(el('div', { className: 'w-foot' }, [
+        btn,
+        el('button', { type: 'button', text: 'Reset', onclick: function () { d.elapsed = 0; d.startedAt = 0; ctx.save(); render(); } })
+      ]));
+      render();
+      return { tick: function () { if (d.startedAt) render(); } };
+    }
+  };
+
+  TYPES.clock = {
+    title: 'Clock', icon: ['M12 7v5l3 3', 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var time = el('span', { className: 'big-text' });
+      var date = el('span', { className: 'big-date' });
+      var wrap = el('div', { className: 'big' }, [el('div', null, [time, date])]);
+      function render() {
+        var now = new Date();
+        var opts = { hour: 'numeric', minute: '2-digit', hour12: !d.h24 };
+        if (d.seconds) opts.second = '2-digit';
+        time.textContent = now.toLocaleTimeString([], opts);
+        date.textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+        date.hidden = !d.date;
+      }
+      function toggle(k, label) {
+        var cb = el('input', { type: 'checkbox' }); cb.checked = d[k];
+        cb.addEventListener('change', function () { d[k] = cb.checked; ctx.save(); render(); });
+        return el('label', null, [cb, label]);
+      }
+      ctx.body.appendChild(wrap);
+      ctx.body.appendChild(el('div', { className: 'w-foot' }, [toggle('h24', '24-hour'), toggle('seconds', 'Seconds'), toggle('date', 'Date')]));
+      render();
+      return { tick: render };
+    }
+  };
+
+  TYPES.youtube = {
+    title: 'YouTube', icon: ['M3 8.5a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z', 'M10 9.5v5l4.5-2.5z'],
+    build: function (ctx) {
+      var d = ctx.data;
+      function onOnline() { draw(); }
+      window.addEventListener('online', onOnline);
+      window.addEventListener('offline', onOnline);
+
+      function draw() {
+        ctx.body.textContent = '';
+        var parsed = Core.parseYouTube(d.url);
+        if (!parsed) return drawForm('');
+        if (!navigator.onLine) {
+          ctx.body.appendChild(el('div', { className: 'yt-offline' }, [
+            el('p', { text: 'This video needs the internet. It will load here as soon as you are back online. The rest of the board works offline.' })
+          ]));
+          ctx.body.appendChild(el('div', { className: 'w-foot' }, [changeBtn()]));
+          return;
+        }
+        ctx.body.appendChild(el('iframe', {
+          className: 'yt-frame',
+          src: Core.embedUrl(parsed),
+          title: 'YouTube video',
+          allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen',
+          allowfullscreen: true,
+          referrerpolicy: 'strict-origin-when-cross-origin',
+          loading: 'lazy'
+        }));
+        ctx.body.appendChild(el('div', { className: 'w-foot' }, [changeBtn()]));
+      }
+      function changeBtn() {
+        return el('button', { type: 'button', text: 'Change video', onclick: function () { drawForm(d.url); } });
+      }
+      function drawForm(prefill) {
+        ctx.body.textContent = '';
+        var id = ctx.id + '-yt';
+        var input = el('input', { type: 'text', id: id, placeholder: 'https://www.youtube.com/watch?v=…', autocomplete: 'off' });
+        input.value = prefill || '';
+        var err = el('p', { className: 'err-note', hidden: true });
+        function go() {
+          if (!Core.parseYouTube(input.value)) {
+            err.hidden = false; err.textContent = 'That is not a YouTube video or playlist link.';
+            return;
+          }
+          d.url = input.value.trim(); ctx.save(); draw();
+        }
+        input.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+        var buttons = [el('button', { type: 'button', className: 'primary', text: 'Show video', onclick: go })];
+        if (Core.parseYouTube(d.url)) buttons.push(el('button', { type: 'button', text: 'Cancel', onclick: draw }));
+        ctx.body.appendChild(el('div', { className: 'yt-form' }, [
+          el('label', { for: id, text: 'YouTube link' }), input,
+          el('div', { className: 'w-foot' }, buttons),
+          err,
+          el('p', { className: 'note', text: 'Plays through youtube-nocookie.com and needs the internet.' })
+        ]));
+      }
+      draw();
+      return {
+        destroy: function () {
+          window.removeEventListener('online', onOnline);
+          window.removeEventListener('offline', onOnline);
+        }
+      };
+    }
+  };
+
+  var LIGHT_LABELS = { red: 'Stop', yellow: 'Wait', green: 'Go' };
+  TYPES.traffic = {
+    title: 'Traffic light', icon: ['M8 3h8v18H8z', 'M12 7h.01', 'M12 12h.01', 'M12 17h.01'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var label = el('span', { className: 'light-label', 'aria-live': 'polite' });
+      var btns = {};
+      var box = el('div', { className: 'lights' });
+      Core.LIGHTS.forEach(function (c) {
+        btns[c] = el('button', { type: 'button', className: 'light ' + c, 'aria-label': c.charAt(0).toUpperCase() + c.slice(1) + ' — ' + LIGHT_LABELS[c],
+          onclick: function () { d.light = c; ctx.save(); render(); } });
+        box.appendChild(btns[c]);
+      });
+      box.appendChild(label);
+      function render() {
+        Core.LIGHTS.forEach(function (c) { btns[c].setAttribute('aria-pressed', String(d.light === c)); });
+        label.textContent = LIGHT_LABELS[d.light];
+      }
+      ctx.body.appendChild(box);
+      render();
+      return {};
+    }
+  };
+
+  TYPES.names = {
+    title: 'Name picker', icon: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4 21a8 8 0 0 1 16 0'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var used = [];                     // this session only: picks are never saved
+      var shown = el('span', { className: 'big-name', 'aria-live': 'polite' });
+      var note = el('p', { className: 'note' });
+      var selId = ctx.id + '-roster';
+      var sel = el('select', { id: selId });
+      var noRepeat = el('input', { type: 'checkbox' }); noRepeat.checked = true;
+      var pickBtn = el('button', { type: 'button', className: 'primary', text: 'Pick' });
+      var foot = el('div', { className: 'w-foot' }, [
+        el('label', { for: selId, className: 'sr-only', text: 'Class roster' }), sel, pickBtn,
+        el('label', null, [noRepeat, 'No repeats'])
+      ]);
+      var emptyBox = el('div', { className: 'yt-offline' }, [
+        el('p', null, ['No class rosters saved yet. Add one in ', el('a', { href: ROSTER_HUB, text: 'Class Roster Hub' }), ' and it appears here.'])
+      ]);
+      ctx.body.appendChild(el('div', { className: 'big' }, [shown]));
+      ctx.body.appendChild(emptyBox);
+      ctx.body.appendChild(foot);
+      ctx.body.appendChild(note);
+
+      function names() { return window.Roster && d.roster ? Roster.getRoster(d.roster) : []; }
+      function fillRosters() {
+        var list = window.Roster ? Roster.listRosters() : [];
+        sel.textContent = '';
+        list.forEach(function (n) { sel.appendChild(el('option', { value: n, text: n })); });
+        if (list.indexOf(d.roster) === -1) { d.roster = list[0] || ''; used = []; }
+        sel.value = d.roster;
+        emptyBox.hidden = list.length > 0;
+        shown.parentNode.hidden = !list.length;
+        foot.hidden = !list.length;
+        updateNote();
+      }
+      function updateNote() {
+        var all = names();
+        note.textContent = !all.length ? '' : noRepeat.checked ? (all.length - used.length) + ' of ' + all.length + ' left' : all.length + ' names';
+        note.hidden = !all.length;
+      }
+      sel.addEventListener('change', function () { d.roster = sel.value; used = []; shown.textContent = ''; ctx.save(); updateNote(); });
+      noRepeat.addEventListener('change', function () { used = []; updateNote(); });
+      pickBtn.addEventListener('click', function () {
+        var all = names();
+        if (!all.length) return;
+        var pool = noRepeat.checked ? all.filter(function (n) { return used.indexOf(n) === -1; }) : all;
+        if (!pool.length) { used = []; pool = all; }
+        var name = pool[Math.floor(Math.random() * pool.length)];
+        if (noRepeat.checked) used.push(name);
+        shown.textContent = name;
+        updateNote();
+      });
+      var unsub = window.Roster && Roster.onChange ? Roster.onChange(fillRosters) : null;
+      fillRosters();
+      return { destroy: function () { if (typeof unsub === 'function') unsub(); } };
+    }
+  };
+
+  var PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  TYPES.dice = {
+    title: 'Dice', icon: ['M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z', 'M9 9h.01', 'M15 15h.01', 'M12 12h.01'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var box = el('div', { className: 'dice' });
+      var status = el('p', { className: 'note', 'aria-live': 'polite' });
+      var countId = ctx.id + '-count';
+      var count = el('select', { id: countId });
+      for (var i = 1; i <= 6; i++) count.appendChild(el('option', { value: String(i), text: i + (i === 1 ? ' die' : ' dice') }));
+      count.value = String(d.count);
+      function render(announce) {
+        box.textContent = '';
+        d.values.forEach(function (v) {
+          var die = el('div', { className: 'die', role: 'img', 'aria-label': 'Die showing ' + v });
+          PIPS[v].forEach(function (p) {
+            var pip = el('span', { className: 'pip' });
+            pip.style.left = (22 + (p % 3) * 28) + '%';
+            pip.style.top = (22 + Math.floor(p / 3) * 28) + '%';
+            die.appendChild(pip);
+          });
+          box.appendChild(die);
+        });
+        var total = d.values.reduce(function (a, b) { return a + b; }, 0);
+        status.textContent = announce ? 'Rolled ' + d.values.join(', ') + (d.values.length > 1 ? ' — total ' + total : '') : (d.values.length > 1 ? 'Total ' + total : '');
+      }
+      function roll() {
+        d.values = d.values.map(function () { return 1 + Math.floor(Math.random() * 6); });
+        ctx.save(); render(true);
+      }
+      count.addEventListener('change', function () {
+        d.count = +count.value;
+        while (d.values.length < d.count) d.values.push(1);
+        d.values.length = d.count;
+        ctx.save(); render(false);
+      });
+      ctx.body.appendChild(box);
+      ctx.body.appendChild(status);
+      ctx.body.appendChild(el('div', { className: 'w-foot' }, [
+        el('label', { for: countId, className: 'sr-only', text: 'Number of dice' }), count,
+        el('button', { type: 'button', className: 'primary', text: 'Roll', onclick: roll })
+      ]));
+      render(false);
+      return {};
+    }
+  };
+
+  /* ── widget frame: drag, resize, keyboard, stacking ───────────────── */
+
+  function place(w) {
+    var inst = instances[w.id];
+    if (!inst) return;
+    inst.el.style.left = (w.x * 100) + '%';
+    inst.el.style.top = (w.y * 100) + '%';
+    inst.el.style.width = (w.w * 100) + '%';
+    inst.el.style.height = (w.h * 100) + '%';
+    inst.el.style.zIndex = String(w.z);
+  }
+
+  function bringToFront(w) {
+    var s = currentScreen();
+    var top = s.widgets.reduce(function (m, o) { return Math.max(m, o.z); }, 0);
+    if (w.z === top && s.widgets.filter(function (o) { return o.z === top; }).length === 1) return;
+    w.z = top + 1;
+    if (w.z > 9000) {                         // renumber before z grows without bound
+      s.widgets.slice().sort(function (a, b) { return a.z - b.z; }).forEach(function (o, i) { o.z = i + 1; place(o); });
+    }
+    place(w); save();
+  }
+
+  function mountWidget(w) {
+    var type = TYPES[w.type];
+    var title = type.title;
+    var grip = el('button', { type: 'button', className: 'w-grip', text: title, 'aria-label': 'Move ' + title, 'aria-describedby': 'gripHelp' });
+    var close = el('button', { type: 'button', className: 'w-close', text: '×', 'aria-label': 'Remove ' + title });
+    var body = el('div', { className: 'w-body' });
+    var resize = el('div', { className: 'w-resize', 'aria-hidden': 'true' });
+    var node = el('section', { className: 'w w-' + w.type, 'aria-label': title, 'data-id': w.id, 'data-type': w.type },
+      [el('div', { className: 'w-bar' }, [grip, close]), body, resize]);
+
+    instances[w.id] = { el: node };
+    board.appendChild(node);
+    place(w);
+
+    var api = type.build({ el: node, body: body, data: w.data, id: w.id, save: save }) || {};
+    instances[w.id].tick = api.tick;
+    instances[w.id].destroy = api.destroy;
+
+    node.addEventListener('pointerdown', function () { bringToFront(w); }, true);
+    close.addEventListener('click', function () { removeWidget(w.id); });
+    dragWith(grip, w, node, 'move');
+    dragWith(resize, w, node, 'resize');
+
+    grip.addEventListener('keydown', function (e) {
+      var dx = { ArrowLeft: -1, ArrowRight: 1 }[e.key] || 0;
+      var dy = { ArrowUp: -1, ArrowDown: 1 }[e.key] || 0;
+      if (!dx && !dy) return;
+      e.preventDefault();
+      var step = 0.01;
+      var r = e.shiftKey
+        ? { x: w.x, y: w.y, w: w.w + dx * step, h: w.h + dy * step }
+        : { x: w.x + dx * step, y: w.y + dy * step, w: w.w, h: w.h };
+      r = Core.clampRect(r);
+      w.x = r.x; w.y = r.y; w.w = r.w; w.h = r.h;
+      place(w); save();
+    });
+  }
+
+  function dragWith(handle, w, node, mode) {
+    handle.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      var rect = board.getBoundingClientRect();
+      var start = { px: e.clientX, py: e.clientY, x: w.x, y: w.y, w: w.w, h: w.h };
+      var moved = false;
+      handle.setPointerCapture(e.pointerId);
+      node.classList.add('dragging');
+      function move(ev) {
+        var dx = (ev.clientX - start.px) / rect.width;
+        var dy = (ev.clientY - start.py) / rect.height;
+        if (Math.abs(ev.clientX - start.px) + Math.abs(ev.clientY - start.py) > 2) moved = true;
+        var r = mode === 'move'
+          ? { x: start.x + dx, y: start.y + dy, w: start.w, h: start.h }
+          : { x: start.x, y: start.y, w: Math.min(start.w + dx, 1 - start.x), h: Math.min(start.h + dy, 1 - start.y) };
+        r = Core.clampRect(r);
+        w.x = r.x; w.y = r.y; w.w = r.w; w.h = r.h;
+        place(w);
+      }
+      function up() {
+        handle.removeEventListener('pointermove', move);
+        handle.removeEventListener('pointerup', up);
+        handle.removeEventListener('pointercancel', up);
+        node.classList.remove('dragging');
+        if (moved) save();
+      }
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', up);
+      handle.addEventListener('pointercancel', up);
+    });
+  }
+
+  function unmountAll() {
+    Object.keys(instances).forEach(function (id) {
+      var inst = instances[id];
+      if (inst.destroy) try { inst.destroy(); } catch (e) {}
+      inst.el.remove();
+    });
+    instances = {};
+  }
+
+  function renderBoard() {
+    unmountAll();
+    var s = currentScreen();
+    s.widgets.forEach(mountWidget);
+    boardEmpty.hidden = s.widgets.length > 0;
+    renderScreenBar();
+  }
+
+  function addWidget(type) {
+    var s = currentScreen();
+    if (s.widgets.length >= Core.MAX_WIDGETS) { showToast('This screen already holds ' + Core.MAX_WIDGETS + ' widgets.', false); return; }
+    var r = Core.placeNew(type, s.widgets);
+    var top = s.widgets.reduce(function (m, o) { return Math.max(m, o.z); }, 0);
+    var w = Core.normalizeWidget({ id: Core.newId('w'), type: type, x: r.x, y: r.y, w: r.w, h: r.h, z: top + 1, data: Core.defaultData(type) });
+    s.widgets.push(w);
+    mountWidget(w);
+    boardEmpty.hidden = true;
+    saveNow();
+    var inst = instances[w.id];
+    var first = inst.el.querySelector('.w-body textarea, .w-body input[type="text"]') || inst.el.querySelector('.w-grip');
+    first.focus();
+  }
+
+  var lastRemoved = null;
+  function removeWidget(id) {
+    var s = currentScreen();
+    var i = s.widgets.findIndex(function (o) { return o.id === id; });
+    if (i === -1) return;
+    var w = s.widgets.splice(i, 1)[0];
+    var inst = instances[id];
+    if (inst) { if (inst.destroy) try { inst.destroy(); } catch (e) {} inst.el.remove(); delete instances[id]; }
+    boardEmpty.hidden = s.widgets.length > 0;
+    lastRemoved = { screenId: s.id, widgets: [w] };
+    saveNow();
+    showToast(TYPES[w.type].title + ' removed.', true);
+  }
+
+  /* ── toast with undo ──────────────────────────────────────────────── */
+
+  var toast = document.getElementById('toast');
+  var toastText = document.getElementById('toastText');
+  var toastUndo = document.getElementById('toastUndo');
+  var toastTimer = 0;
+  function showToast(text, undoable) {
+    toastText.textContent = text;
+    toastUndo.hidden = !undoable;
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.hidden = true; lastRemoved = null; }, 7000);
+  }
+  toastUndo.addEventListener('click', function () {
+    toast.hidden = true;
+    if (!lastRemoved) return;
+    var s = state.screens.find(function (o) { return o.id === lastRemoved.screenId; });
+    if (s) {
+      lastRemoved.widgets.forEach(function (w) { if (s.widgets.length < Core.MAX_WIDGETS) s.widgets.push(w); });
+      state.current = s.id;
+      saveNow(); renderBoard();
+    }
+    lastRemoved = null;
+  });
+
+  /* ── screens ──────────────────────────────────────────────────────── */
+
+  function renderScreenBar() {
+    screenSelect.textContent = '';
+    state.screens.forEach(function (s) { screenSelect.appendChild(el('option', { value: s.id, text: s.name })); });
+    screenSelect.value = state.current;
+    document.getElementById('deleteScreenBtn').disabled = state.screens.length < 2;
+    document.getElementById('newScreenBtn').disabled = state.screens.length >= Core.MAX_SCREENS;
+    document.getElementById('dupScreenBtn').disabled = state.screens.length >= Core.MAX_SCREENS;
+  }
+  function uniqueName(base) {
+    var names = state.screens.map(function (s) { return s.name; });
+    if (names.indexOf(base) === -1) return base;
+    for (var i = 2; ; i++) if (names.indexOf(base + ' ' + i) === -1) return base + ' ' + i;
+  }
+  screenSelect.addEventListener('change', function () { state.current = screenSelect.value; saveNow(); renderBoard(); });
+  document.getElementById('newScreenBtn').addEventListener('click', function () {
+    var name = window.prompt('Name for the new screen:', uniqueName('Screen ' + (state.screens.length + 1)));
+    if (name === null) return;
+    var s = Core.blankScreen(name.trim().slice(0, 60) || uniqueName('Screen'));
+    state.screens.push(s); state.current = s.id; saveNow(); renderBoard();
+  });
+  document.getElementById('renameScreenBtn').addEventListener('click', function () {
+    var s = currentScreen();
+    var name = window.prompt('Rename this screen:', s.name);
+    if (name === null || !name.trim()) return;
+    s.name = name.trim().slice(0, 60); saveNow(); renderScreenBar();
+  });
+  document.getElementById('dupScreenBtn').addEventListener('click', function () {
+    var s = currentScreen();
+    var copy = Core.normalizeState({ screens: [JSON.parse(JSON.stringify(s))] }).screens[0];
+    copy.id = Core.newId('s');
+    copy.name = uniqueName(s.name + ' copy').slice(0, 60);
+    copy.widgets.forEach(function (w) { w.id = Core.newId('w'); });
+    state.screens.push(copy); state.current = copy.id; saveNow(); renderBoard();
+  });
+  document.getElementById('deleteScreenBtn').addEventListener('click', function () {
+    if (state.screens.length < 2) return;
+    var s = currentScreen();
+    if (!window.confirm('Delete the screen "' + s.name + '" and its ' + s.widgets.length + ' widgets?')) return;
+    state.screens = state.screens.filter(function (o) { return o.id !== s.id; });
+    state.current = state.screens[0].id; saveNow(); renderBoard();
+  });
+  document.getElementById('clearScreenBtn').addEventListener('click', function () {
+    var s = currentScreen();
+    if (!s.widgets.length) return;
+    var removed = s.widgets.slice();
+    s.widgets = [];
+    saveNow(); renderBoard();
+    lastRemoved = { screenId: s.id, widgets: removed };
+    showToast('Screen cleared.', true);
+  });
+
+  /* ── dock ─────────────────────────────────────────────────────────── */
+
+  var dock = document.getElementById('dock');
+  Core.TYPES.forEach(function (t) {
+    var b = el('button', { type: 'button', 'data-add': t, 'aria-label': 'Add ' + TYPES[t].title.toLowerCase() },
+      [icon(TYPES[t].icon), el('span', { text: TYPES[t].title })]);
+    b.addEventListener('click', function () { addWidget(t); });
+    dock.appendChild(b);
+  });
+
+  /* ── fullscreen, ticking, start ───────────────────────────────────── */
+
+  if (window.Stage) Stage.mount(document.getElementById('stage'), {
+    button: document.getElementById('fsBtn'),
+    labels: { enter: 'Fullscreen', exit: 'Exit fullscreen' }
+  });
+
+  setInterval(function () {
+    Object.keys(instances).forEach(function (id) {
+      var t = instances[id].tick;
+      if (t) try { t(); } catch (e) {}
+    });
+  }, 200);
+
+  renderBoard();
+
+  /* For the smoke suite: the saved state, read-only. */
+  window.__classScreen = { state: function () { return JSON.parse(JSON.stringify(state)); }, key: KEY };
+})();
+</script>
+<script src="../_shared/sw-register.js" defer></script>
+</body>
+</html>

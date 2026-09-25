@@ -129,7 +129,7 @@ Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 | Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `share.js` 54 · `state-link.js` 54 · `qr-draw.js` 53 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 9 · `tool-registry.js` 8 · `webrtc-pair.js` 7 · `handoffs.js` 6 · `theme.css` 5 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087** |
-| Tier 1 rows | **182**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows proper start at rank **101** |
+| Tier 1 rows | **187**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows proper start at rank **101**; 183–187 are Path 22 (Devon asked for it, did not rank it) |
 | Art | **36** ledger entries: 29 tool icons, the sprite (on 29 landing rows), 4 shortcut PNGs (in `manifest.json`), the unlinked light/dark test tile. 83 of 86 pages carry a data-URI favicon; `assets/icons/` holds 4 PWA icons |
 | Dark mode / fullscreen | 83 of 83 themed pages native dark; `stage.js` on 9 pages. Path 5 is finished |
 | CI | Pull requests run `--changed` (a diff-scoped selection). A push to `main` runs everything, ~32 min. A PR touching `_shared/`, `package.json` or `Tools/board-check/` is site-wide |
@@ -439,6 +439,11 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 180 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
 | 181 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
 | 182 | Snap-to-grid for base-ten blocks; export and data-driven piece families | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
+| 183 | Path 22 P1 — `087` Class Screen: the widget board (drag, resize, keyboard move, stacking), named screens saved automatically, fullscreen, and the first widgets — text, timer, stopwatch, clock, YouTube, traffic light, name picker on the shared roster, dice | 087 | 1 | `aqha85` 2026-09-25 18:12 UTC | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 184 | Path 22 P2 — more widgets: work symbols, noise meter (microphone stays local), drawing layer, image (`media-db.js`), QR (`qr-draw.js`), group maker, board backgrounds | 087 | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 185 | Path 22 P3 — screens by period: switch the screen from the bell schedule, starter templates, export and import a screen as a file | 087 | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 186 | Path 22 P4 — phone as remote over `webrtc-pair.js` (start the timer, pick a name, switch screens), the pattern 010's `cc-remote.js` already uses | 087 | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 187 | Path 22 P5 — one timer: extract the countdown into `_shared/` and use it from 004, 010 and 087 (010's "Reuse the real timer" quick win) | `_shared/` | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 
 ## How to work this list
 
@@ -2312,6 +2317,48 @@ local Chrome, per `CLAUDE.md`. CI remains the authority.
 generator folder, the palette read from the CSS, `currentColor` SVG icons as a sprite,
 WebP for renders, the icon-set call, screenshots staying Playwright, and the byte budgets.
 Each is cheap to reverse before P2's second increment and expensive after it.
+
+### Path 22 — Class Screen: a widget board for the projector
+
+**Why.** Devon asked for it on 2026-09-25: a page that works like ClassroomScreen — widgets
+placed anywhere on a projected board, saved screens, timers, text boxes — built the way
+this site builds everything else. **He made four scope calls in the same conversation, and
+they are not a session's to reverse:** no accounts or cloud sync; **no student voting,
+on purpose**; no Google or Microsoft integration; and **YouTube is in** — the one widget
+allowed to reach the network, because he asked for it. Imitating ClassroomScreen's
+behaviour is fine by him. The page keeps its own name and this site's palette anyway.
+He did not rank the rows, so they sit at the end of Tier 1 (183–187) until he does. Moving
+them up is a re-rank, and that is his call.
+
+**Why a new tool and not 010.** 010's Tier 2 "true classroom home screen" idea is close to
+this, but 010 is a fixed grid of cards with two suites built around that layout, and a
+free-form board is a different page. 087 starts clean. P4 and P5 then share code with 010
+rather than folding one page into the other.
+
+**Rules the path keeps.**
+- **A position is a fraction of the board, never pixels**, so a screen built on a laptop
+  lands in the same place on a 1080p projector.
+- **YouTube is the only thing that leaves the browser.** It uses
+  `youtube-nocookie.com/embed/`. Offline it shows a "needs internet" card instead of a
+  broken frame, and it never blocks the rest of the board. Every other widget works offline.
+- **No markup sinks.** Every widget builds its DOM with `createElement` and `textContent`,
+  so text a teacher types (and later a URL) never reaches `innerHTML`.
+- **Nothing student-facing beyond what the teacher projects.** No student devices, per
+  Devon's call above and the standing Path 8 decision.
+
+- **P1 — the board and the first widgets.** Drag by the title bar, resize from the corner,
+  arrow keys to move and Shift+arrows to resize, click to bring to front. Named screens are
+  saved automatically in one Store key. Fullscreen via `stage.js`. Widgets: text, timer,
+  stopwatch, clock, YouTube, traffic light, name picker (shared roster), dice.
+- **P2 — more widgets.** Work symbols, noise meter (Web Audio; the microphone stream never
+  leaves the page), a drawing layer, image (`media-db.js`, never localStorage), QR
+  (`qr-draw.js`), group maker, board backgrounds.
+- **P3 — screens by period.** Pick the screen from the bell schedule 010 already reads,
+  starter templates, and export or import a screen as a `.json` file.
+- **P4 — phone as remote.** Reuse `webrtc-pair.js` and the command-dispatch pattern of
+  010's `cc-remote.js`.
+- **P5 — one timer.** Extract the countdown into `_shared/` and use it from 004, 010 and
+  087. This is also 010's "Reuse the real timer" quick win.
 
 ---
 
