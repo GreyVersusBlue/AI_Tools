@@ -9,6 +9,58 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 22 P2: six more Class Screen widgets and screen backgrounds (2026-09-25, #272, `CACHE_VERSION` v188)
+
+Devon asked for P2–P5 to be worked straight away in the same conversation that shipped P1, so
+session `t4ktn1` claimed all four (#271) and is shipping them one PR each.
+
+**What shipped.** Six widgets, taking the dock from 8 to 14: work symbols, a noise meter, a
+drawing pad, a picture, a QR code and a group maker. Each screen also has a background: dots,
+grid, lines, plain, three tints (`color-mix` of `--accent-2`, `--accent` and `--err` into
+`--paper`), or a picture. There is a new suite, `smoke-widgets.mjs`, and 41 more core
+assertions.
+
+**Calls made, each cheap to reverse.**
+- **The drawing is a widget, not a layer over the whole board.** The row said "drawing layer".
+  A layer needs a board-wide mode switch, so it is either always catching the pointer or needs
+  one more toggle. A widget can simply be sized to the whole board.
+- **Pictures go in `gvb-media` under the namespace `class-screen`**, not in a database of their
+  own. The `_shared` registry row already declares that store and 009 backs it up. Records that
+  no screen points at are deleted at start and when an undo window closes, **never while an
+  undo could still need one**. So a picture removed and then undone comes back, and one removed
+  for good is gone after the next load.
+- **Groups, like name picks, are never saved.** Only the settings are (roster, by, n), so
+  `cls-screen:state` still holds no student data.
+- **The noise meter never starts itself.** Not on add and not after a reload. The microphone
+  opens only on Start, and Stop, removing the widget or switching screens releases it. The
+  dB-to-bar mapping is a guess: −60..0 dB across the bar, 4 dB per sensitivity step.
+- **The frame class is `wt-<type>` now, not `w-<type>`.** P1's text widget collided with the
+  frame's own `.w-*` parts, as P1's entry recorded. A new widget type can no longer do that.
+- **Core's "one of each widget fits with no overlap" now covers P1's eight only.** The fourteen
+  default sizes add up to about 125% of the board, so the property cannot hold for all of them.
+  A weaker assertion covers the fourteen: at least nine place before any overlap. This is a
+  changed requirement, not a loosened test: the old assertion is kept whole for the set it was
+  written for.
+
+**What went wrong on the way.**
+- **Headless Chromium's default fake microphone is silent**: a peak of 0, measured. The meter
+  read 0 while working correctly. The suite now writes a 440 Hz WAV and passes it as
+  `--use-file-for-fake-audio-capture`. Any future suite that measures sound needs the same.
+  `--use-fake-device-for-media-stream` alone proves only that `getUserMedia` resolves.
+- An AudioContext made after the permission promise resolved (outside the click) could start
+  suspended, so it is now made inside the click.
+- The group maker's columns first used `cqw` on the container element itself. `cqw` there
+  resolves against the viewport, not the element, so the groups stacked in one column. The
+  screenshot caught it; the suite did not.
+- A check the first draft wrote (`window.__micOpened`) read a counter the page never set, so it
+  could only pass. It was deleted rather than kept as decoration.
+
+**Not verified.** A real microphone in a real room. Drawing with a finger or pen on a tablet or
+smartboard. How big a picture a real browser's IndexedDB accepts before `put` rejects: the
+error path is written, but only the success path is tested.
+
+---
+
 ## Path 22 P1: `087` Class Screen, a widget board for the projector (2026-09-25, #269, `CACHE_VERSION` v187)
 
 **Why it exists.** Devon asked, in conversation, whether the site could have a page that works
