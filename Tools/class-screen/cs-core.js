@@ -10,6 +10,11 @@
      ClassScreenCore.normalizeStrokes(l)  → drawing strokes the page can trust
      ClassScreenCore.makeGroups(names, by, n, rng) → [[name, …], …]
      ClassScreenCore.mediaIds(state)      → every IndexedDB picture id still in use
+     ClassScreenCore.readPeriods(settings)→ 010's bell periods, cleaned
+     ClassScreenCore.periodAt(list, mins) → { current, next }
+     ClassScreenCore.fromTemplate(id)     → a new screen built from a starter
+     ClassScreenCore.exportScreen(s, med) → the .json file's object
+     ClassScreenCore.readImport(obj)      → { screen, media } | { error }
 
    Positions are FRACTIONS of the board (0..1), never pixels, so a screen laid
    out on a laptop lands in the same place on a 1080p projector.
@@ -69,6 +74,7 @@
   var PEN_SIZES = [2, 4, 8, 16];
   var MAX_POINTS = 8000, MAX_STROKES = 600;
   var MEDIA_ID_RE = /^[\w-]{1,60}$/;
+  var PERIOD_ID_RE = /^[\w-]{1,40}$/;
   function num(v, lo, hi, dflt) {
     var n = typeof v === 'number' ? v : NaN;
     if (!isFinite(n)) return dflt;
@@ -344,7 +350,7 @@
   }
 
   function blankScreen(name) {
-    return { id: newId('s'), name: name || 'Screen 1', bg: 'dots', bgImage: '', widgets: [] };
+    return { id: newId('s'), name: name || 'Screen 1', bg: 'dots', bgImage: '', period: '', widgets: [] };
   }
 
   function normalizeScreen(s, i) {
@@ -365,6 +371,7 @@
       name: name,
       bg: BACKGROUNDS.indexOf(s.bg) !== -1 ? s.bg : 'dots',
       bgImage: typeof s.bgImage === 'string' && MEDIA_ID_RE.test(s.bgImage) ? s.bgImage : '',
+      period: typeof s.period === 'string' && PERIOD_ID_RE.test(s.period) ? s.period : '',
       widgets: widgets
     };
   }
@@ -384,7 +391,7 @@
     }
     if (!screens.length) screens.push(blankScreen('Screen 1'));
     var current = isObj(raw) && typeof raw.current === 'string' && seen[raw.current] ? raw.current : screens[0].id;
-    return { current: current, screens: screens };
+    return { current: current, follow: isObj(raw) ? bool(raw.follow, false) : false, screens: screens };
   }
 
   /* Where a new widget goes: the first free spot in reading order (top-left
@@ -434,8 +441,169 @@
     return ids;
   }
 
+  /* ---- the bell schedule (owned by 010 Command Center) ----------------- */
+
+  function minutesOf(hhmm) {
+    var m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ''));
+    if (!m || +m[1] > 23 || +m[2] > 59) return null;
+    return +m[1] * 60 + +m[2];
+  }
+
+  /* 010 stores { periods: [{ id, label, start: 'HH:MM', end: 'HH:MM', … }] }
+     in 'gvb-command-center:settings'. This keeps the rows this page can use
+     (a usable id and two real times, end after start), sorted by start. It
+     never writes that key: the schedule is 010's. */
+  function readPeriods(settings) {
+    var out = [], seen = {};
+    var list = isObj(settings) && Array.isArray(settings.periods) ? settings.periods : [];
+    list.forEach(function (p) {
+      if (!isObj(p) || typeof p.id !== 'string' || !PERIOD_ID_RE.test(p.id) || seen[p.id]) return;
+      var s = minutesOf(p.start), e = minutesOf(p.end);
+      if (s === null || e === null || e <= s) return;
+      seen[p.id] = true;
+      out.push({ id: p.id, label: str(p.label, MAX_NAME, '').trim() || p.id, start: p.start, end: p.end, s: s, e: e });
+    });
+    out.sort(function (a, b) { return a.s - b.s; });
+    return out;
+  }
+
+  /* The period containing `mins` (minutes since midnight, fractions allowed),
+     and the next one to start. The same rule as 010's periodAt: start is
+     inside a period, end is not. */
+  function periodAt(list, mins) {
+    var current = null, next = null;
+    (list || []).forEach(function (p) {
+      if (mins >= p.s && mins < p.e) current = p;
+      if (p.s > mins && !next) next = p;
+    });
+    return { current: current, next: next };
+  }
+
+  function screenForPeriod(state, periodId) {
+    if (!periodId) return null;
+    var list = (state && state.screens) || [];
+    for (var i = 0; i < list.length; i++) if (list[i].period === periodId) return list[i];
+    return null;
+  }
+
+  /* ---- starter screens ------------------------------------------------- */
+
+  function tw(type, x, y, w, h, data) {
+    var d = defaultData(type);
+    Object.keys(data || {}).forEach(function (k) { d[k] = data[k]; });
+    return { type: type, x: x, y: y, w: w, h: h, data: d };
+  }
+  var TEMPLATES = [
+    { id: 'donow', name: 'Do Now', widgets: function () { return [
+      tw('text', 0.02, 0.03, 0.62, 0.62, { text: 'Do Now:\n', size: 3 }),
+      tw('timer', 0.66, 0.03, 0.32, 0.42, { duration: 300, remaining: 300 }),
+      tw('clock', 0.66, 0.48, 0.32, 0.2),
+      tw('symbols', 0.02, 0.68, 0.2, 0.3, { mode: 'silent' })
+    ]; } },
+    { id: 'groupwork', name: 'Group work', widgets: function () { return [
+      tw('groups', 0.02, 0.03, 0.56, 0.62),
+      tw('timer', 0.6, 0.03, 0.38, 0.4, { duration: 900, remaining: 900 }),
+      tw('symbols', 0.6, 0.46, 0.18, 0.34, { mode: 'group' }),
+      tw('noise', 0.8, 0.46, 0.18, 0.34),
+      tw('text', 0.02, 0.68, 0.56, 0.29, { text: 'Roles: reader, recorder, timekeeper, reporter', size: 2 })
+    ]; } },
+    { id: 'test', name: 'Test day', widgets: function () { return [
+      tw('text', 0.02, 0.03, 0.96, 0.28, { text: 'Test in progress. Phones away, eyes on your own paper.', size: 3 }),
+      tw('clock', 0.02, 0.34, 0.46, 0.3),
+      tw('timer', 0.52, 0.34, 0.46, 0.3, { duration: 2700, remaining: 2700 }),
+      tw('symbols', 0.02, 0.67, 0.22, 0.31, { mode: 'silent' }),
+      tw('traffic', 0.86, 0.67, 0.12, 0.31, { light: 'red' })
+    ]; } },
+    { id: 'reading', name: 'Independent reading', widgets: function () { return [
+      tw('timer', 0.02, 0.03, 0.46, 0.46, { duration: 1200, remaining: 1200 }),
+      tw('symbols', 0.52, 0.03, 0.22, 0.46, { mode: 'whisper' }),
+      tw('noise', 0.76, 0.03, 0.22, 0.46, { limit: 50 }),
+      tw('text', 0.02, 0.53, 0.96, 0.44, { text: 'When the timer ends, log your pages and one sentence about what happened.', size: 2 })
+    ]; } },
+    { id: 'exit', name: 'Exit ticket', widgets: function () { return [
+      tw('text', 0.02, 0.03, 0.6, 0.6, { text: 'Exit ticket:\n', size: 3 }),
+      tw('qr', 0.64, 0.03, 0.34, 0.6),
+      tw('timer', 0.02, 0.66, 0.4, 0.32, { duration: 180, remaining: 180 }),
+      tw('clock', 0.44, 0.66, 0.3, 0.32)
+    ]; } },
+    { id: 'break', name: 'Brain break', widgets: function () { return [
+      tw('youtube', 0.02, 0.03, 0.62, 0.7),
+      tw('timer', 0.66, 0.03, 0.32, 0.4, { duration: 180, remaining: 180 }),
+      tw('traffic', 0.66, 0.46, 0.12, 0.5, { light: 'green' }),
+      tw('dice', 0.8, 0.46, 0.18, 0.3)
+    ]; } }
+  ];
+  function fromTemplate(id) {
+    var t = null;
+    TEMPLATES.forEach(function (x) { if (x.id === id) t = x; });
+    if (!t) return null;
+    var list = t.widgets().map(function (w, i) { w.id = newId('w'); w.z = i + 1; return w; });
+    var screen = normalizeScreen({ id: newId('s'), name: t.name, bg: 'dots', widgets: list }, 0);
+    return screen;
+  }
+
+  /* ---- a screen as a file ---------------------------------------------- */
+
+  var EXPORT_KIND = 'gvb-class-screen';
+  var DATA_URL_RE = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+\/=]+$/;
+  var MAX_IMPORT_MEDIA = 20 * 1024 * 1024;     // characters of data URL, all pictures together
+
+  /* `media` is { id: dataUrl } for the pictures the screen points at. The
+     screen's period link is dropped: a period id means something only on the
+     machine whose bell schedule defined it. */
+  function exportScreen(screen, media) {
+    var copy = JSON.parse(JSON.stringify(screen));
+    copy.period = '';
+    var out = {};
+    mediaIds({ screens: [copy] }).forEach(function (id) { if (media && typeof media[id] === 'string') out[id] = media[id]; });
+    return { kind: EXPORT_KIND, version: 1, exportedAt: new Date().toISOString(), screen: copy, media: out };
+  }
+
+  /* Everything in the file is untrusted: the screen goes through
+     normalizeScreen like localStorage does, gets fresh ids so it can never
+     collide with a screen already here, and every picture must be an image
+     data URL. Picture ids are remapped too, and `rename` maps old → new so
+     the page can store the blobs under the new ids. */
+  function readImport(obj) {
+    if (!isObj(obj) || obj.kind !== EXPORT_KIND) return { error: 'That file is not a Class Screen export.' };
+    if (obj.version !== 1) return { error: 'That file was made by a newer version of Class Screen.' };
+    var screen = normalizeScreen(obj.screen, 0);
+    if (!screen) return { error: 'That file has no screen in it.' };
+    screen.id = newId('s');
+    screen.period = '';
+    screen.widgets.forEach(function (w) { w.id = newId('w'); });
+    var media = {}, rename = {}, total = 0;
+    var src = isObj(obj.media) ? obj.media : {};
+    var dropped = 0;
+    mediaIds({ screens: [screen] }).forEach(function (id) {
+      var url = src[id];
+      if (typeof url !== 'string' || !DATA_URL_RE.test(url) || total + url.length > MAX_IMPORT_MEDIA) { dropped++; return; }
+      total += url.length;
+      var nid = newId('img');
+      rename[id] = nid;
+      media[nid] = url;
+    });
+    if (screen.bgImage) {
+      if (rename[screen.bgImage]) screen.bgImage = rename[screen.bgImage];
+      else { screen.bgImage = ''; if (screen.bg === 'image') screen.bg = 'dots'; }
+    }
+    screen.widgets.forEach(function (w) {
+      if (w.type === 'image' && w.data.mediaId) w.data.mediaId = rename[w.data.mediaId] || '';
+    });
+    return { screen: screen, media: media, dropped: dropped };
+  }
+
   var ClassScreenCore = {
     TYPES: TYPES,
+    TEMPLATES: TEMPLATES.map(function (t) { return { id: t.id, name: t.name }; }),
+    fromTemplate: fromTemplate,
+    readPeriods: readPeriods,
+    periodAt: periodAt,
+    minutesOf: minutesOf,
+    screenForPeriod: screenForPeriod,
+    exportScreen: exportScreen,
+    readImport: readImport,
+    EXPORT_KIND: EXPORT_KIND,
     SYMBOLS: SYMBOLS,
     BACKGROUNDS: BACKGROUNDS,
     PENS: PENS,

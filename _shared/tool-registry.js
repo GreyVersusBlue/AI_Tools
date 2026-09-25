@@ -284,6 +284,7 @@
         { k: 'cls-screen:state' },
       ],
       reads: [
+        'gvb-command-center:settings',
         'np_rosters',
       ],
     },

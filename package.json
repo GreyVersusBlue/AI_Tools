@@ -24,7 +24,7 @@
     "test:conjdrill-share": "node Tools/vocab-conjugation-drill/test/smoke-share.mjs",
     "test:schedule-browser": "node Tools/schedule-browser/test/smoke-personal-notes.mjs && node Tools/schedule-browser/test/smoke-substitute-view.mjs && node Tools/schedule-browser/test/smoke-mode-tabs.mjs && node Tools/schedule-browser/test/smoke-dark-theme.mjs",
     "test:qr": "node Tools/qr-code-generator/test/smoke-roster.mjs && node Tools/qr-code-generator/test/smoke-checkout.mjs",
-    "test:class-screen": "node Tools/class-screen/test/core.test.mjs && node Tools/class-screen/test/smoke-class-screen.mjs && node Tools/class-screen/test/smoke-widgets.mjs",
+    "test:class-screen": "node Tools/class-screen/test/core.test.mjs && node Tools/class-screen/test/smoke-class-screen.mjs && node Tools/class-screen/test/smoke-widgets.mjs && node Tools/class-screen/test/smoke-periods.mjs",
     "test:command-center": "node Tools/command-center/test/smoke-seating-panel.mjs && node Tools/command-center/test/smoke-remote-commands.mjs",
     "test:gallery-walk": "node Tools/gallery-walk-qr/test/smoke-projector.mjs && node Tools/gallery-walk-qr/test/smoke-scan-verify.mjs",
     "test:accommodations": "node Tools/testing-accommodations-card-generator/test/smoke-filter.mjs",
