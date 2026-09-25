@@ -15,6 +15,7 @@ import path from 'node:path';
 import {
   SITE, validate, parsePalette, luminance, worstContrast, svgProblems, dimensions, hashFile,
 } from '../validate-art.mjs';
+import { assembleSprite, toSymbol } from '../build-sprite.mjs';
 
 let passed = 0, failed = 0;
 function ok(cond, label) {
@@ -53,6 +54,12 @@ png.write('IHDR', 12, 'latin1');
 png.writeUInt32BE(96, 16);
 png.writeUInt32BE(64, 20);
 ok(JSON.stringify(dimensions(png, 'a.png')) === '{"width":96,"height":64}', 'PNG dimensions from IHDR');
+const sym = toSymbol('<svg xmlns="http://www.w3.org/2000/svg" width="48" viewBox="0 0 48 48" stroke="currentColor"><path d="M0 0"/></svg>\n', 'assets/art/icons/t001.svg');
+ok(sym === '<symbol id="t001" viewBox="0 0 48 48" stroke="currentColor"><path d="M0 0"/></symbol>',
+  'a symbol keeps its icon\'s viewBox and stroke, drops xmlns and width, and is named for the file: ' + sym);
+let threw = false;
+try { toSymbol('<svg stroke="currentColor"><path/></svg>', 'x.svg'); } catch { threw = true; }
+ok(threw, 'an icon with no viewBox cannot become a symbol');
 
 /* ── 3. a fixture tree, broken one rule at a time ─────────────────────────── */
 
@@ -69,6 +76,7 @@ function fixture(mutate) {
   put('_shared/ink-paper.css', css);
   for (const e of baseLedger.entries) put(e.path, fs.readFileSync(path.join(SITE, ...e.path.split('/'))));
   put('index.html', '<!doctype html><title>x</title>');
+  put('manifest.json', fs.readFileSync(path.join(SITE, 'manifest.json')));
   put('sw.js', 'const SHELL_URLS = [\n  "index.html",\n];\n');
   const ledger = JSON.parse(JSON.stringify(baseLedger));
   const ctx = { root, put, ledger, entry: p => ledger.entries.find(e => e.path.endsWith(p)) };
@@ -125,7 +133,59 @@ breaks('an icon with a literal fill', 'SVG', c => {
   fs.writeFileSync(f, text);
   const e = c.entry('t007.svg');
   Object.assign(e, hashFile(Buffer.from(text), 't007.svg'));
+  resprite(c);       // the sprite carries the fill too, so this is SVG twice and nothing else
 });
+
+/* derived entries: the sprite */
+
+function resprite(c) {
+  const s = c.entry('tools.svg');
+  const text = assembleSprite(c.root, s);
+  c.put(s.path, text);
+  Object.assign(s, hashFile(Buffer.from(text), s.path));
+}
+breaks('a sprite edited by hand', 'DERIVED', c => {
+  const s = c.entry('tools.svg');
+  const f = path.join(c.root, ...s.path.split('/'));
+  const text = fs.readFileSync(f, 'utf8').replace(/<symbol id="t001"[\s\S]*?<\/symbol>/, '');
+  fs.writeFileSync(f, text);
+  Object.assign(s, hashFile(Buffer.from(text), s.path));
+});
+breaks('an icon the sprite does not list', 'DERIVED', c => {
+  c.entry('tools.svg').sources = c.entry('tools.svg').sources.filter(p => !p.endsWith('t001.svg'));
+  resprite(c);
+});
+breaks('a sprite source that is not in the ledger', 'DERIVED', c => {
+  c.entry('tools.svg').sources.push('assets/art/icons/t999.svg');
+});
+breaks('a derived entry with a seed of its own', 'LEDGER', c => { c.entry('tools.svg').seed = 1; });
+breaks('a derived entry with a Blender version of its own', 'LEDGER', c => { c.entry('tools.svg').blender = '5.2.2'; });
+ok(fixture(c => {
+  const f = path.join(c.root, 'assets', 'art', 'icons', 't001.svg');
+  fs.writeFileSync(f, fs.readFileSync(f, 'utf8').replace(/\n/g, '\r\n'));
+}).length === 0, 'a CRLF checkout of a source still assembles to the committed sprite');
+
+/* the stroke floor */
+
+breaks('icons held to a floor they miss', 'STROKE', c => { c.ledger.families.icon.minStrokePx = 2; });
+breaks('icons drawn smaller than their stroke allows', 'STROKE', c => { c.ledger.families.icon.displayPx = 24; });
+
+/* use "manifest": icons the OS draws */
+
+breaks('a manifest icon manifest.json does not name', 'MANIFEST', c => {
+  const m = fs.readFileSync(path.join(SITE, 'manifest.json'), 'utf8').replace('assets/art/shortcuts/t004-96.png', 'assets/icons/icon-192.png');
+  c.put('manifest.json', m);
+});
+breaks('a manifest icon that is not light', 'MANIFEST', c => { c.entry('t004-96.png').theme = 'dark'; });
+breaks('manifest.json naming on-screen art', 'MANIFEST', c => {
+  const m = fs.readFileSync(path.join(SITE, 'manifest.json'), 'utf8').replace('assets/art/shortcuts/t004-96.png', 'assets/art/icons/tools.svg');
+  c.put('manifest.json', m);
+  c.entry('t004-96.png').use = 'print';        // keep the renamed shortcut out of the picture
+});
+breaks('an unknown use', 'LEDGER', c => { c.entry('t007.svg').use = 'wallpaper'; });
+ok(fixture(c => {
+  delete c.entry('t004-96.png').twin;
+}).length === 0, 'a manifest icon needs no dark twin');
 breaks('a token ink-paper.css does not define', 'TOKEN', c => { c.entry('t007.svg').tokens = ['--not-a-token']; });
 breaks('a non-token colour with no why', 'TOKEN', c => { c.entry('t007.svg').extraColors = [{ hex: '#c0ffee' }]; });
 breaks('under-text luminance never recorded', 'CONTRAST', c => { delete c.entry('tile-256-light.webp').underText.lumMin; });

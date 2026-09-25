@@ -376,6 +376,63 @@ def render_to(scene, out_path):
         fail("Blender did not write " + out_path)
 
 
+def linear_to_srgb(c):
+    return c * 12.92 if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055
+
+
+def write_two_tone_png(render_path, out_path, bg_hex, fg_hex, levels=16):
+    """Re-write a render of flat fg-on-bg art as an indexed PNG whose palette
+    is `levels` exact blends of the two tokens.
+
+    Blender's own PNG writer has no palette mode, and its RGB output of a
+    96x96 line icon was 5.5-6.9 KB, over the shortcut cap of 4 KB; grayscale
+    fit but changed both token colours. Coverage is recovered per pixel from
+    linear luminance, which a linear mix of two colours preserves exactly, so
+    the endpoints are the tokens themselves and the edges are the render's
+    own antialiasing, quantized to `levels` steps. Pure stdlib (zlib, struct)."""
+    import struct
+    import zlib
+    img = bpy.data.images.load(render_path, check_existing=False)
+    w, h = img.size
+    ch = img.channels
+    px = list(img.pixels)
+    bpy.data.images.remove(img)
+    bg, fg = hex_to_linear(bg_hex), hex_to_linear(fg_hex)
+    lum = lambda c: 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    y_bg, y_fg = lum(bg), lum(fg)
+    pal = []
+    for k in range(levels):
+        t = k / (levels - 1)
+        pal.extend(int(round(255 * linear_to_srgb(bg[i] + (fg[i] - bg[i]) * t))) for i in range(3))
+    bits = 4 if levels <= 16 else 8
+    raw = bytearray()
+    for y in range(h):
+        row = h - 1 - y                       # Blender stores the bottom row first
+        idx = []
+        for x in range(w):
+            i = (row * w + x) * ch
+            y_px = lum([srgb_to_linear(px[i + j]) for j in range(3)])
+            t = min(1.0, max(0.0, (y_bg - y_px) / (y_bg - y_fg)))
+            idx.append(int(round(t * (levels - 1))))
+        raw.append(0)                          # filter type 0 (none) per row
+        if bits == 4:
+            idx += [0] * (len(idx) % 2)
+            raw.extend((idx[i] << 4) | idx[i + 1] for i in range(0, len(idx), 2))
+        else:
+            raw.extend(idx)
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
+
+    png = (b"\x89PNG\r\n\x1a\n"
+           + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, bits, 3, 0, 0, 0))
+           + chunk(b"PLTE", bytes(pal))
+           + chunk(b"IDAT", zlib.compress(bytes(raw), 9))
+           + chunk(b"IEND", b""))
+    with open(out_path, "wb") as fh:
+        fh.write(png)
+
+
 def luminance_under(out_path, region):
     """Min and max WCAG relative luminance inside region [x, y, w, h] (pixels,
     origin top left) of the file as written, lossy encoding included."""
@@ -434,9 +491,16 @@ def _segments(scene, cam, width, height):
         for p in mesh.polygons:
             for key in p.edge_keys:
                 edge_faces.setdefault(key, []).append(p.index)
+        # A loose edge (no face) is a "wire", drawn as it is: the marks an icon
+        # needs on a surface (a list's lines, a calendar's grid) without
+        # modelling them as faces, whose outlines would double every stroke.
+        for e in mesh.edges:
+            edge_faces.setdefault(e.key, [])
         for key in sorted(edge_faces):
             faces = edge_faces[key]
-            if len(faces) == 1:
+            if not faces:
+                kind = "wire"
+            elif len(faces) == 1:
                 kind = "boundary"
             elif len(faces) == 2:
                 a, b = (normals[f].dot(toward_cam) > 0 for f in faces)
@@ -519,9 +583,23 @@ def _fmt(v):
     return "0" if s in ("-0", "") else s
 
 
+def icon_polylines(scene, cam, width, height, tol=0.3):
+    """The scene's visible lines, projected, chained and simplified, in pixel
+    coordinates of a width x height frame (origin top left). The SVG writer
+    and the shortcut-PNG path both draw from this, so they cannot disagree."""
+    return [_rdp(l, tol) for l in _chain(_segments(scene, cam, width, height))]
+
+
+def _fmt_stroke(v):
+    # Two decimals, not _fmt's one: 2.25 through _fmt came out as "2.2", which
+    # is 1.47 px at the landing page's 32 px and under Path 21's 1.5 px floor.
+    # validate-art.mjs's STROKE rule now catches that.
+    return ("%.2f" % v).rstrip("0").rstrip(".")
+
+
 def export_svg_lines(scene, cam, entry, out_path, stroke_width=2.0, tol=0.3):
     width, height = entry["width"], entry["height"]
-    lines = [_rdp(l, tol) for l in _chain(_segments(scene, cam, width, height))]
+    lines = icon_polylines(scene, cam, width, height, tol)
     parts = []
     for line in lines:
         pts = [(_fmt(x), _fmt(y)) for x, y in line]
@@ -535,7 +613,7 @@ def export_svg_lines(scene, cam, entry, out_path, stroke_width=2.0, tol=0.3):
     parts.sort()
     svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" fill="none" '
            'stroke="currentColor" stroke-width="%s" stroke-linecap="round" stroke-linejoin="round">'
-           '<path d="%s"/></svg>\n') % (width, height, _fmt(stroke_width), "".join(parts))
+           '<path d="%s"/></svg>\n') % (width, height, _fmt_stroke(stroke_width), "".join(parts))
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(svg)

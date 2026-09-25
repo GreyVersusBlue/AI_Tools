@@ -406,7 +406,33 @@ function sanitizeEntryPoint(html) {
   }
   html = html.split(ideasLink).join('ideas backlog'); // de-link, keep the label as plain text
 
-  return html;
+  return inlineIconSprite(html);
+}
+
+// The landing rows draw their tool icons with <use href="assets/art/icons/
+// tools.svg#tNNN"> (Path 21 P2). Under file:// Chrome treats the sprite as
+// another origin and refuses it ("'file:' URLs are treated as unique
+// security origins"), so every icon is blank: seen on 2026-09-25, when
+// offline:verify still passed because it never opened the landing page. The
+// staged copy carries the sprite's symbols inline instead, in a zero-size
+// <svg> at the top of <body>, and each <use> points at its fragment.
+const SPRITE_REL = 'assets/art/icons/tools.svg';
+function inlineIconSprite(html) {
+  const refs = html.match(/href="assets\/art\/icons\/tools\.svg#t\d{3}"/g) || [];
+  if (!refs.length) return html;             // no icons on the landing page (yet, or any more)
+  const spritePath = path.join(STAGE_DIR, ...SPRITE_REL.split('/'));
+  if (!fs.existsSync(spritePath)) fail(`index.html uses ${SPRITE_REL}, but it was not staged`);
+  const sprite = fs.readFileSync(spritePath, 'utf8').replace(/\r\n/g, '\n').trim();
+  const inner = /^<svg\b[^>]*>([\s\S]*)<\/svg>$/.exec(sprite);
+  if (!inner) fail(`${SPRITE_REL} is not a single <svg> element`);
+  for (const ref of refs) {
+    const id = ref.slice(ref.indexOf('#') + 1, -1);
+    if (!inner[1].includes(`<symbol id="${id}"`)) fail(`index.html uses #${id}, which ${SPRITE_REL} does not define`);
+  }
+  assertExactlyOne(html, '<body>', 'index.html <body> tag');
+  html = html.replace('<body>', '<body>\n<svg aria-hidden="true" focusable="false" ' +
+    'style="position:absolute;width:0;height:0;overflow:hidden">' + inner[1] + '</svg>');
+  return html.replace(/href="assets\/art\/icons\/tools\.svg(#t\d{3})"/g, 'href="$1"');
 }
 
 function renameEntryPoint() {

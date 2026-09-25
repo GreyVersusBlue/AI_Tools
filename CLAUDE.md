@@ -160,7 +160,14 @@ every edit. The deduplication work that established them is summarised in
   colour; contrast under declared text holds 4.5:1; no art file under `assets/art/`
   or `Tools/*/art/` is missing from the ledger; and an `<img>` of an art file has
   the right `alt`. A new render gets its spec written into the ledger first; the
-  scene script fills in the record. Its test is `npm run test:blender-art`. Keep art
+  scene script fills in the record. Since Path 21 P2 it also checks that the icon
+  sprite (`assets/art/icons/tools.svg`, a *derived* entry with `sources` and no
+  seed or Blender of its own) is exactly what `node Tools/blender-art/build-sprite.mjs`
+  assembles, and lists every icon; that an icon's stroke is at least 1.5 px at the
+  landing page's 32 px; and that a `use: "manifest"` PNG (the shortcut icons) is
+  named by `manifest.json`. **Add a tool icon, then re-run `build-sprite.mjs`.** The
+  offline zip inlines the sprite into its landing page, because Chrome draws nothing
+  for an external `<use>` under `file://`. Its test is `npm run test:blender-art`. Keep art
   out of any folder named `test/`: `make-offline-copy.mjs` drops every such path
   from the offline zip, which is why the P1 test tile is not in it. It runs in CI.
 - **`npm run lint`** (ESLint, Path 2 P5) covers `_shared/*.js`, the per-tool

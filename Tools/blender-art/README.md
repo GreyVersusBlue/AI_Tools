@@ -24,6 +24,8 @@ reach a render.
 blender -b --factory-startup -P Tools/blender-art/scene_icons.py -- --entry assets/art/icons/t007.svg
 blender -b --factory-startup -P Tools/blender-art/scene_tile.py -- --entry assets/art/test/tile-256-light.webp
 blender -b --factory-startup -P Tools/blender-art/scene_tile.py -- --entry assets/art/test/tile-256-dark.webp
+blender -b --factory-startup -P Tools/blender-art/scene_icons.py -- --entry assets/art/shortcuts/t007-96.png
+node Tools/blender-art/build-sprite.mjs
 node Tools/blender-art/validate-art.mjs
 node Tools/blender-art/test/validate-art.test.mjs
 ```
@@ -41,6 +43,13 @@ rendered twice and compared.
   the SVG line exporter, and the ledger writer. Scene scripts import it and nothing else of
   their own.
 - `scene_icons.py`: the icon family, one function per tool keyed by the entry's `subject`.
+  Its header states the set's style (one stroke, auto-framing, what draws as a line). An
+  `.svg` entry is the line icon; a `.png` entry is the same scene's lines drawn as tubes
+  of `--ink` on `--paper` and rendered at 96×96 for a `manifest.json` shortcut.
+- `build-sprite.mjs`: assembles `assets/art/icons/tools.svg`, one `<symbol id="tNNN">` per
+  icon, from the entries its ledger entry lists in `sources`. Plain Node, no Blender.
+  **Run it after rendering or re-rendering any icon**; `check:art` fails if the sprite is
+  not exactly what this assembles or if an icon is missing from it.
 - `scene_tile.py`: the 256-px light/dark test tile (top-down family), which proves the
   raster path end to end: palette in both themes, WebP out, luminance under a declared text
   band.
@@ -74,6 +83,22 @@ arithmetic on the mesh.
 **Modelling for it:** a surface you want outlined should be a single flat face (a craft
 stick is one n-gon, whose boundary is its outline), and a container should be open (a cup's
 rim is a boundary, so it draws). A closed box draws its silhouette plus any crease over 35°.
+A **loose edge** (no face) is a *wire* and draws as it is: marks on a surface, such as a
+checklist's lines or a calendar's grid, are wires rather than faces, so each mark is one
+stroke and not an outline of two.
+
+**The stroke (decided in P2).** The landing page draws icons at a fixed **32 CSS px**, and
+the set's stroke is **2.25** on the 48-unit viewBox: exactly 1.5 px there, the Path 21
+floor. The ledger's icon family carries `displayPx: 32` and `minStrokePx: 1.5`, and
+`check:art` fails an icon below it. Drawing icons smaller than 32 px means raising the
+stroke first. (The stroke is written with two decimals; one decimal once turned 2.25 into
+2.2, which is 1.47 px.)
+
+**Shortcut PNGs.** Blender's PNG writer has no palette mode, and its RGB output of a 96×96
+line icon was 5.5–6.9 KB against the 4 KB cap. `art_common.write_two_tone_png` re-writes
+the render as a 16-colour indexed PNG whose palette is exact blends of `--paper` and
+`--ink`, recovering each pixel's coverage from linear luminance. The results are 0.8–1 KB.
+Pure stdlib (`zlib`, `struct`), so there is nothing to install.
 
 ## Determinism, measured 2026-09-25
 
@@ -83,3 +108,7 @@ the Cycles/OIDN/WebP path for both tiles and the exporter for the icon. That is 
 machine, one Blender build and one CPU. Nothing here promises another machine reproduces
 the bytes; the ledger's hash checks that the ledger matches the tree, not that a re-render
 would.
+
+P2 repeated it: `t004.svg` and `t010-96.png` rendered twice more with `--out`, and the
+sprite built twice. **All matched the committed files byte for byte** (Cycles CPU and the
+indexed PNG writer included). Same machine and build as above.
