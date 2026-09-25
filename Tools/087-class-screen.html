@@ -16,6 +16,8 @@
 <script src="../_shared/media-db.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
+<script src="../_shared/webrtc-pair.js"></script>
+<script src="class-screen/cs-remote.js"></script>
 <script src="class-screen/cs-core.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -242,6 +244,28 @@
   #board[data-bg="warm"] { background-image: none; background-color: color-mix(in srgb, var(--err) 10%, var(--paper)); }
   #board[data-bg="image"] { background-size: cover; background-position: center; background-repeat: no-repeat; }
 
+  /* phone remote */
+  .live-badge { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 700; color: var(--accent-2); }
+  .live-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2); }
+  #remoteDialog {
+    width: min(460px, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow: auto;
+    border: 1px solid var(--line-strong); border-radius: 12px; background: var(--card); color: var(--ink); padding: 1rem 1.1rem;
+  }
+  #remoteDialog::backdrop { background: rgba(0, 0, 0, .45); }
+  .rd-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
+  .rd-head h2 { margin: 0; font-size: 1.1rem; }
+  .rd-head button { border: 0; background: transparent; font-size: 1.3rem; line-height: 1; padding: .1rem .4rem; }
+  #remoteBody p { color: var(--muted); font-size: .9rem; margin: .4rem 0; }
+  #remoteBody ul { margin: .3rem 0 .6rem 1.1rem; padding: 0; font-size: .88rem; }
+  #remoteBody .rd-actions { display: flex; gap: .4rem; flex-wrap: wrap; margin: .5rem 0; }
+  #remoteBody canvas { display: block; margin: .4rem auto; max-width: 100%; height: auto !important; }
+  #remoteBody textarea { width: 100%; min-height: 3.2rem; font: .72rem/1.3 ui-monospace, monospace; color: var(--ink); background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px; }
+  #remoteBody video { display: block; width: 100%; border-radius: 6px; background: #000; }
+  #remoteBody .rd-url { font: .85rem ui-monospace, monospace; word-break: break-all; color: var(--ink); }
+  .rd-status { font-size: .85rem; min-height: 1.2em; }
+  .rd-status.bad { color: var(--err); }
+  .rd-status.good { color: var(--accent-2); }
+
   /* ── toast ──────────────────────────────────────────────────────────── */
   .toast {
     position: fixed; left: 50%; bottom: 4.2rem; transform: translateX(-50%); z-index: 60;
@@ -296,6 +320,8 @@
       </div>
     </details>
     <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <span class="live-badge" id="remoteLive" hidden><span class="dot" aria-hidden="true"></span>Phone connected</span>
+    <button type="button" id="remoteBtn">Phone remote</button>
     <button type="button" id="fsBtn" class="primary">Fullscreen</button>
   </div>
 </header>
@@ -308,6 +334,14 @@
     <span class="dock-label">Add:</span>
   </nav>
 </main>
+
+<dialog id="remoteDialog" aria-labelledby="remoteTitle">
+  <div class="rd-head">
+    <h2 id="remoteTitle">Phone remote</h2>
+    <button type="button" id="remoteClose" aria-label="Close">×</button>
+  </div>
+  <div id="remoteBody"></div>
+</dialog>
 
 <p class="sr-only" id="gripHelp">Arrow keys move this widget. Shift plus arrow keys resize it.</p>
 <div class="toast" id="toast" role="status" hidden><span id="toastText"></span><button type="button" id="toastUndo">Undo</button></div>
@@ -508,7 +542,13 @@
         tick: function () {
           if (running() && remainingMs() <= 0) finish(true);
           else if (running()) render();
-        }
+        },
+        remote: function (c) {
+          if (c.action === 'toggle') startBtn.click();
+          else if (c.action === 'reset') setDuration(d.duration);
+          else if (c.action === 'add') plus(60);
+        },
+        snap: function () { return { text: shown.textContent, running: running(), done: ctx.el.classList.contains('timer-done') }; }
       };
     }
   };
@@ -534,12 +574,17 @@
         ctx.save(); render();
       });
       ctx.body.appendChild(el('div', { className: 'big' }, [shown]));
+      function reset() { d.elapsed = 0; d.startedAt = 0; ctx.save(); render(); }
       ctx.body.appendChild(el('div', { className: 'w-foot' }, [
         btn,
-        el('button', { type: 'button', text: 'Reset', onclick: function () { d.elapsed = 0; d.startedAt = 0; ctx.save(); render(); } })
+        el('button', { type: 'button', text: 'Reset', onclick: reset })
       ]));
       render();
-      return { tick: function () { if (d.startedAt) render(); } };
+      return {
+        tick: function () { if (d.startedAt) render(); },
+        remote: function (c) { if (c.action === 'toggle') btn.click(); else reset(); },
+        snap: function () { return { text: formatElapsed(elapsed()).replace(/\.\d$/, ''), running: !!d.startedAt }; }
+      };
     }
   };
 
@@ -656,7 +701,10 @@
       }
       ctx.body.appendChild(box);
       render();
-      return {};
+      return {
+        remote: function (c) { d.light = c.color; ctx.save(); render(); },
+        snap: function () { return { light: d.light }; }
+      };
     }
   };
 
@@ -714,7 +762,11 @@
       });
       var unsub = window.Roster && Roster.onChange ? Roster.onChange(fillRosters) : null;
       fillRosters();
-      return { destroy: function () { if (typeof unsub === 'function') unsub(); } };
+      return {
+        destroy: function () { if (typeof unsub === 'function') unsub(); },
+        remote: function () { pickBtn.click(); },
+        snap: function () { return { name: shown.textContent, note: note.hidden ? '' : note.textContent, ready: names().length > 0 }; }
+      };
     }
   };
 
@@ -761,7 +813,7 @@
         el('button', { type: 'button', className: 'primary', text: 'Roll', onclick: roll })
       ]));
       render(false);
-      return {};
+      return { remote: roll, snap: function () { return { values: d.values.slice() }; } };
     }
   };
 
@@ -797,7 +849,10 @@
         el('label', { for: selId, className: 'sr-only', text: 'Choose a symbol' }), sel
       ]));
       render();
-      return {};
+      return {
+        remote: function (c) { d.mode = c.mode; ctx.save(); render(); },
+        snap: function () { return { mode: d.mode }; }
+      };
     }
   };
 
@@ -1209,7 +1264,11 @@
       makeBtn.addEventListener('click', make);
       var unsub = window.Roster && Roster.onChange ? Roster.onChange(fillRosters) : null;
       fillRosters();
-      return { destroy: function () { if (typeof unsub === 'function') unsub(); } };
+      return {
+        destroy: function () { if (typeof unsub === 'function') unsub(); },
+        remote: function () { if (!foot.hidden) make(); },
+        snap: function () { return { note: note.hidden ? '' : note.textContent }; }
+      };
     }
   };
 
@@ -1255,6 +1314,8 @@
     var api = type.build({ el: node, body: body, data: w.data, id: w.id, save: save }) || {};
     instances[w.id].tick = api.tick;
     instances[w.id].destroy = api.destroy;
+    instances[w.id].remote = api.remote;
+    instances[w.id].snap = api.snap;
 
     node.addEventListener('pointerdown', function () { bringToFront(w); }, true);
     close.addEventListener('click', function () { removeWidget(w.id); });
@@ -1611,6 +1672,187 @@
     }).catch(function (e) { showToast((e && e.message) || 'That screen could not be imported.', false); });
   });
 
+  /* ── phone remote ─────────────────────────────────────────────────── */
+  /* The phone (class-screen/remote.html) sends commands; each does what the
+     matching button on the board does, to the topmost widget of that type on
+     the current screen. The board answers with a snapshot, after every
+     command and once a second, so the phone can show the timer running. */
+
+  var CMD_TYPE = { timer: 'timer', stopwatch: 'stopwatch', pick: 'names', groups: 'groups', roll: 'dice', light: 'traffic', symbol: 'symbols' };
+  var SNAP_TYPES = ['timer', 'stopwatch', 'names', 'groups', 'dice', 'traffic', 'symbols'];
+  function topWidget(type) {
+    var best = null;
+    currentScreen().widgets.forEach(function (w) { if (w.type === type && (!best || w.z > best.z)) best = w; });
+    return best;
+  }
+  function applyRemote(msg) {
+    var c = Core.readCommand(msg);
+    if (!c) return false;
+    if (c.cmd === 'hello') return true;
+    if (c.cmd === 'screen') {
+      if (!state.screens.some(function (o) { return o.id === c.id; })) return false;
+      if (state.current !== c.id) { state.current = c.id; saveNow(); renderBoard(); }
+      return true;
+    }
+    var w = topWidget(CMD_TYPE[c.cmd]);
+    var inst = w && instances[w.id];
+    if (!inst || !inst.remote) return false;
+    inst.remote(c);
+    return true;
+  }
+  function remoteSnapshot() {
+    var s = currentScreen();
+    var snap = {
+      type: 'snapshot', v: 1, current: s.id,
+      screens: state.screens.map(function (o) { return { id: o.id, name: o.name }; }),
+      symbolList: Core.SYMBOLS.map(function (k) { return { id: k, label: SYMBOL_INFO[k].label }; })
+    };
+    SNAP_TYPES.forEach(function (t) {
+      var w = topWidget(t), inst = w && instances[w.id];
+      snap[t] = inst && inst.snap ? inst.snap() : null;
+    });
+    return snap;
+  }
+
+  var remoteDialog = document.getElementById('remoteDialog');
+  var remoteBody = document.getElementById('remoteBody');
+  var remoteLive = document.getElementById('remoteLive');
+  var remoteHost = null, pushTimer = 0, scanner = null;
+  var PHONE_PAGE = new URL('class-screen/remote.html', location.href).href;
+
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      if (document.querySelector('script[data-lazy="' + src + '"]')) { resolve(); return; }
+      var sc = el('script', { src: src, 'data-lazy': src });
+      sc.onload = resolve; sc.onerror = function () { reject(new Error('Could not load the camera scanner.')); };
+      document.head.appendChild(sc);
+    });
+  }
+  function stopScan() { if (scanner) { scanner.stop(); scanner = null; } }
+  function disconnect() {
+    clearInterval(pushTimer); pushTimer = 0;
+    stopScan();
+    if (remoteHost) remoteHost.close();
+    remoteHost = null;
+    remoteLive.hidden = true;
+  }
+  function pushSnapshot() { if (remoteHost && remoteHost.isOpen()) remoteHost.send(remoteSnapshot()); }
+  function setRdStatus(text, kind) {
+    var n = document.getElementById('rdStatus');
+    if (!n) return;
+    n.textContent = text; n.className = 'rd-status' + (kind ? ' ' + kind : '');
+  }
+
+  function rdIntro() {
+    remoteBody.textContent = '';
+    remoteBody.appendChild(el('p', { text: 'Run this board from your phone across the room. It connects directly over the classroom Wi-Fi: no app, no account, nothing sent to a server.' }));
+    remoteBody.appendChild(el('ul', null, [
+      el('li', { text: 'Switch screens' }),
+      el('li', { text: 'Start, pause and add time to the timer' }),
+      el('li', { text: 'Pick a name, make groups, roll the dice' }),
+      el('li', { text: 'Set the traffic light and the work symbol' })
+    ]));
+    remoteBody.appendChild(el('p', { text: 'First open this page on your phone:' }));
+    remoteBody.appendChild(el('p', { className: 'rd-url', text: PHONE_PAGE }));
+    remoteBody.appendChild(el('div', { className: 'rd-actions' }, [
+      el('button', { type: 'button', className: 'primary', id: 'rdStart', text: 'Start pairing', onclick: rdBegin })
+    ]));
+    remoteBody.appendChild(el('p', { className: 'rd-status', id: 'rdStatus', role: 'status' }));
+  }
+  function rdBegin() {
+    if (!window.ClassScreenRemote || !window.RTCPeerConnection) { setRdStatus('This browser cannot pair with a phone.', 'bad'); return; }
+    disconnect();
+    setRdStatus('Preparing a pairing code…');
+    ClassScreenRemote.host().then(function (h) {
+      remoteHost = h;
+      h.onOpen(function () {
+        remoteLive.hidden = false;
+        pushSnapshot();
+        clearInterval(pushTimer);
+        pushTimer = setInterval(pushSnapshot, 1000);
+        if (remoteDialog.open) rdConnected();
+      });
+      h.onMessage(function (msg) { applyRemote(msg); pushSnapshot(); });
+      h.onClose(function () {
+        clearInterval(pushTimer); pushTimer = 0; remoteLive.hidden = true;
+        if (remoteHost === h) remoteHost = null;
+        if (remoteDialog.open) { rdIntro(); setRdStatus('The phone disconnected.', 'bad'); }
+      });
+      rdOffer();
+    }, function (e) { setRdStatus('Could not start pairing: ' + ((e && e.message) || 'unknown error'), 'bad'); });
+  }
+  function rdOffer() {
+    remoteBody.textContent = '';
+    remoteBody.appendChild(el('p', { text: '1. On the phone page, tap “Scan the board’s code” and point it at this code.' }));
+    var canvas = el('canvas', { id: 'rdOffer', role: 'img', 'aria-label': 'Pairing code' });
+    remoteBody.appendChild(canvas);
+    var p = window.QrDraw ? QrDraw.draw(canvas, remoteHost.offerPayload, { maxPx: 420 }) : { ok: false, reason: 'The QR code maker did not load.' };
+    if (!p.ok) { canvas.hidden = true; remoteBody.appendChild(el('p', { className: 'rd-status bad', text: p.reason })); }
+    var offerText = el('textarea', { id: 'rdOfferText', readonly: true, 'aria-label': 'Pairing code as text' });
+    offerText.value = remoteHost.offerPayload;
+    remoteBody.appendChild(el('div', { className: 'rd-actions' }, [
+      el('button', { type: 'button', text: 'Copy code', onclick: function () {
+        (navigator.clipboard ? navigator.clipboard.writeText(remoteHost.offerPayload) : Promise.reject()).then(
+          function () { setRdStatus('Code copied.', 'good'); },
+          function () { offerText.hidden = false; offerText.select(); setRdStatus('Copy the code from the box.', ''); });
+      } })
+    ]));
+    offerText.hidden = true;
+    remoteBody.appendChild(offerText);
+    remoteBody.appendChild(el('p', { text: '2. The phone then shows its own code. Scan it with this computer’s camera, or paste it here:' }));
+    var answer = el('textarea', { id: 'rdAnswer', 'aria-label': 'The phone’s reply code', placeholder: 'Paste the phone’s reply code' });
+    var video = el('video', { autoplay: true, muted: true, playsinline: true, hidden: true });
+    remoteBody.appendChild(el('div', { className: 'rd-actions' }, [
+      el('button', { type: 'button', id: 'rdScan', text: 'Scan the phone’s code', onclick: function () {
+        setRdStatus('Starting the camera…');
+        Promise.all([loadScript('../_shared/vendor/jsqr/jsqr.js'), loadScript('../_shared/qr-scan.js')]).then(function () {
+          video.hidden = false;
+          scanner = QRScan.scanQRFromCamera(video, {
+            onResult: function (text) { stopScan(); video.hidden = true; rdConnect(text); },
+            onError: function (e) { video.hidden = true; setRdStatus('Camera unavailable: ' + e.message + ' Paste the code instead.', 'bad'); }
+          });
+          setRdStatus('Hold the phone’s code up to the camera.');
+        }, function (e) { setRdStatus(e.message, 'bad'); });
+      } })
+    ]));
+    remoteBody.appendChild(video);
+    remoteBody.appendChild(answer);
+    remoteBody.appendChild(el('div', { className: 'rd-actions' }, [
+      el('button', { type: 'button', className: 'primary', id: 'rdConnect', text: 'Connect', onclick: function () {
+        var v = answer.value.trim();
+        if (!v) { setRdStatus('Paste the phone’s reply code first.', 'bad'); return; }
+        rdConnect(v);
+      } }),
+      el('button', { type: 'button', text: 'Cancel', onclick: function () { disconnect(); rdIntro(); } })
+    ]));
+    remoteBody.appendChild(el('p', { className: 'rd-status', id: 'rdStatus', role: 'status' }));
+  }
+  function rdConnect(text) {
+    if (!remoteHost) return;
+    setRdStatus('Connecting…');
+    remoteHost.applyAnswer(text).then(function () {
+      setTimeout(function () {
+        if (remoteHost && !remoteHost.isOpen()) setRdStatus('Still trying. Both devices need to be on the same Wi-Fi.', 'bad');
+      }, 8000);
+    }, function (e) { setRdStatus((e && e.message) || 'That reply code did not work.', 'bad'); });
+  }
+  function rdConnected() {
+    stopScan();
+    remoteBody.textContent = '';
+    remoteBody.appendChild(el('p', { className: 'rd-status good', id: 'rdStatus', role: 'status', text: 'Phone connected. You can close this; the phone keeps working.' }));
+    remoteBody.appendChild(el('div', { className: 'rd-actions' }, [
+      el('button', { type: 'button', className: 'primary', text: 'Done', onclick: function () { remoteDialog.close(); } }),
+      el('button', { type: 'button', text: 'Disconnect', onclick: function () { disconnect(); rdIntro(); } })
+    ]));
+  }
+  document.getElementById('remoteBtn').addEventListener('click', function () {
+    if (remoteHost && remoteHost.isOpen()) rdConnected(); else if (!remoteHost) rdIntro();
+    remoteDialog.showModal();
+  });
+  document.getElementById('remoteClose').addEventListener('click', function () { remoteDialog.close(); });
+  remoteDialog.addEventListener('close', stopScan);
+  window.addEventListener('pagehide', disconnect);
+
   /* ── dock ─────────────────────────────────────────────────────────── */
 
   var dock = document.getElementById('dock');
@@ -1640,7 +1882,11 @@
   checkBell();
 
   /* For the smoke suite: the saved state, read-only. */
-  window.__classScreen = { state: function () { return JSON.parse(JSON.stringify(state)); }, key: KEY };
+  window.__classScreen = {
+    state: function () { return JSON.parse(JSON.stringify(state)); },
+    key: KEY,
+    remote: { apply: applyRemote, snapshot: remoteSnapshot }
+  };
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

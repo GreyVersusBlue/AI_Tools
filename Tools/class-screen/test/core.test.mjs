@@ -247,5 +247,17 @@ const evil = C.readImport({ kind: C.EXPORT_KIND, version: 1, screen: { name: 'E'
 eq(Object.keys(evil.media), [], 'only image data URLs are accepted');
 eq([evil.screen.bg, evil.screen.bgImage], ['dots', ''], 'a refused background falls back to dots');
 
+// ── P4: phone-remote commands ────────────────────────────────────────
+eq(C.readCommand({ cmd: 'timer', action: 'toggle' }), { cmd: 'timer', action: 'toggle' }, 'timer toggle');
+eq(C.readCommand({ cmd: 'timer', action: 'explode' }), null, 'unknown timer action refused');
+eq(C.readCommand({ cmd: 'screen', id: 's_abc-1' }), { cmd: 'screen', id: 's_abc-1' }, 'screen switch');
+eq(C.readCommand({ cmd: 'screen', id: '<img src=x>' }), null, 'a bad screen id refused');
+eq(C.readCommand({ cmd: 'light', color: 'purple' }), null, 'unknown light refused');
+eq(C.readCommand({ cmd: 'light', color: 'red', extra: 1 }), { cmd: 'light', color: 'red' }, 'extra fields dropped');
+eq(C.readCommand({ cmd: 'symbol', mode: 'ask3' }), { cmd: 'symbol', mode: 'ask3' }, 'symbol');
+eq(C.readCommand({ cmd: 'stopwatch', action: 'add' }), null, 'stopwatch has no add');
+for (const c of ['pick', 'groups', 'roll', 'hello']) eq(C.readCommand({ cmd: c }), { cmd: c }, c);
+for (const bad of [null, 'pick', [], { cmd: 5 }, { cmd: 'eval' }, { cmd: '__proto__' }]) eq(C.readCommand(bad), null, 'refused: ' + JSON.stringify(bad));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../../manifest.json">
+<title>Class Screen Remote</title>
+<meta name="description" content="Run a Class Screen board from your phone across the room: switch screens, run the timer, pick a name, make groups, roll dice, set the traffic light and the work symbol. Direct over the classroom Wi-Fi, no app and no account.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='10' y='4' width='12' height='24' rx='2.5' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Crect x='13' y='8' width='6' height='5' rx='1' fill='%232e6b8f'/%3E%3Ccircle cx='16' cy='23' r='1.6' fill='%23a3372b'/%3E%3C/svg%3E">
+<!-- Native dark from _shared/ink-paper.css; this page paints only tokens. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
+<script src="../../_shared/a11y.js"></script>
+<link rel="stylesheet" href="../../_shared/ink-paper.css">
+<link rel="stylesheet" href="../../_shared/a11y.css">
+<script src="../../_shared/webrtc-pair.js"></script>
+<script src="../../_shared/qr-scan.js"></script>
+<script src="../../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../../_shared/vendor/jsqr/jsqr.js"></script>
+<script src="../../_shared/qr-draw.js"></script>
+<script src="cs-remote.js"></script>
+<style>
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif; background: var(--paper); color: var(--ink);
+    min-height: 100vh; margin: 0; padding: 1rem .5rem 3rem; line-height: 1.45;
+  }
+  .container { max-width: 480px; margin: 0 auto; }
+  .app-header h1 { font-size: 1.3rem; margin: .1rem 0 .7rem; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: .85rem 1rem; margin-bottom: .8rem; }
+  .card p { margin: 0 0 .7rem; color: var(--muted); }
+  .row-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: .4rem; }
+  button, textarea, select {
+    font: inherit; font-size: .95rem; color: var(--ink);
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 8px; padding: .6rem .8rem;
+  }
+  button { cursor: pointer; font-weight: 600; }
+  button:hover:not(:disabled) { border-color: var(--accent-2); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  button:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 2px; }
+  .wide { width: 100%; margin-bottom: .5rem; }
+  .row { display: flex; gap: .45rem; flex-wrap: wrap; }
+  .row > * { flex: 1 1 auto; }
+  textarea { width: 100%; font: .75rem/1.3 ui-monospace, monospace; margin-bottom: .5rem; min-height: 3.5rem; }
+  select { width: 100%; }
+  /* The reply code runs to the card's edges: at 4 px a module (qr-draw.js's
+     measured floor) an 81-module pairing code needs 356 px, and a 390 px
+     phone has barely that once the page and card padding are gone. */
+  canvas { display: block; margin: 0 auto .7rem; }
+  .bleed { margin-left: calc(-1rem - 1px); margin-right: calc(-1rem - 1px); }
+  /* The viewfinder is black in both themes: it is a lens, not chrome. */
+  video { display: block; width: 100%; border-radius: 6px; background: #000; margin-bottom: .5rem; }
+  .status { font-size: .86rem; color: var(--muted); min-height: 1.2em; margin: .2rem 0 0; }
+  .status.bad { color: var(--err); }
+  .status.good { color: var(--accent-2); }
+  .live { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; color: var(--accent-2); font-weight: 700; margin-bottom: .7rem; }
+  .live .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent-2); }
+  .big { font-family: Consolas, "Courier New", monospace; font-weight: 700; font-size: 2.2rem; text-align: center; margin-bottom: .5rem; font-variant-numeric: tabular-nums; }
+  .name { text-align: center; font-size: 1.4rem; font-weight: 700; color: var(--accent-2); min-height: 1.4em; margin-bottom: .3rem; }
+  .note { text-align: center; font-size: .82rem; color: var(--muted); margin: 0 0 .5rem; min-height: 1.1em; }
+  .lights button { font-size: 1rem; }
+  .lights button[aria-pressed="true"] { outline: 3px solid var(--accent-2); outline-offset: 1px; }
+  .dot-red, .dot-yellow, .dot-green { display: inline-block; width: .8em; height: .8em; border-radius: 50%; margin-right: .35em; vertical-align: -1px; }
+  .dot-red { background: #d33a2c; } .dot-yellow { background: #f1b82d; } .dot-green { background: #2f9e57; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="app-header">
+    <a class="back-link" href="../087-class-screen.html">← Class Screen</a>
+    <h1>Class Screen Remote</h1>
+  </header>
+
+  <span class="live" id="liveBadge" hidden><span class="dot" aria-hidden="true"></span>Connected to the board</span>
+
+  <div class="card" id="setupCard">
+    <div id="step1">
+      <p>On the board's computer, open Class Screen and press <b>Phone remote</b>, then <b>Start pairing</b>. Scan the code it shows, or paste it below.</p>
+      <button type="button" class="primary wide" id="scanBtn">Scan the board’s code</button>
+      <video id="scanVideo" autoplay muted playsinline hidden></video>
+      <label for="pastePayload" class="row-label">Or paste the board’s code</label>
+      <textarea id="pastePayload" rows="3"></textarea>
+      <button type="button" class="wide" id="connectBtn">Connect</button>
+    </div>
+    <div id="step2" hidden>
+      <p>Now show this code to the board’s camera, or copy the text into the board’s box and press Connect.</p>
+      <div class="bleed"><canvas id="answerCanvas" role="img" aria-label="Reply code"></canvas></div>
+      <label for="answerText" class="row-label">Reply code as text</label>
+      <textarea id="answerText" rows="3" readonly></textarea>
+      <button type="button" class="wide" id="copyAnswerBtn">Copy code</button>
+    </div>
+    <p class="status" id="setupStatus" role="status"></p>
+  </div>
+
+  <div id="controls" hidden>
+    <div class="card">
+      <label for="screenPick" class="row-label">Screen</label>
+      <select id="screenPick"></select>
+    </div>
+
+    <div class="card" id="timerCard">
+      <div class="row-label">Timer</div>
+      <div class="big" id="timerText">--:--</div>
+      <div class="row">
+        <button type="button" class="primary" id="timerToggle">Start</button>
+        <button type="button" id="timerAdd">+1:00</button>
+        <button type="button" id="timerReset">Reset</button>
+      </div>
+      <p class="note" id="timerNote"></p>
+    </div>
+
+    <div class="card" id="swCard">
+      <div class="row-label">Stopwatch</div>
+      <div class="big" id="swText">--:--</div>
+      <div class="row">
+        <button type="button" class="primary" id="swToggle">Start</button>
+        <button type="button" id="swReset">Reset</button>
+      </div>
+    </div>
+
+    <div class="card" id="namesCard">
+      <div class="row-label">Name picker</div>
+      <div class="name" id="pickedName" aria-live="polite">—</div>
+      <p class="note" id="namesNote"></p>
+      <button type="button" class="primary wide" id="pickBtn">Pick a name</button>
+    </div>
+
+    <div class="card" id="groupsCard">
+      <div class="row-label">Group maker</div>
+      <p class="note" id="groupsNote"></p>
+      <button type="button" class="wide" id="groupsBtn">Make new groups</button>
+    </div>
+
+    <div class="card" id="trafficCard">
+      <div class="row-label">Traffic light</div>
+      <div class="row lights">
+        <button type="button" data-light="red"><span class="dot-red" aria-hidden="true"></span>Stop</button>
+        <button type="button" data-light="yellow"><span class="dot-yellow" aria-hidden="true"></span>Wait</button>
+        <button type="button" data-light="green"><span class="dot-green" aria-hidden="true"></span>Go</button>
+      </div>
+    </div>
+
+    <div class="card" id="symbolCard">
+      <label for="symbolPick" class="row-label">Work symbol</label>
+      <select id="symbolPick"></select>
+    </div>
+
+    <div class="card" id="diceCard">
+      <div class="row-label">Dice</div>
+      <p class="note" id="diceNote"></p>
+      <button type="button" class="wide" id="rollBtn">Roll</button>
+    </div>
+
+    <p class="status" id="emptyNote" hidden>This screen has no widgets the remote can run. Pick another screen, or add a timer, name picker, traffic light, work symbol, group maker or dice on the board.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var join = null, scanner = null, latest = null;
+
+  function setStatus(text, kind) {
+    $('setupStatus').textContent = text;
+    $('setupStatus').className = 'status' + (kind ? ' ' + kind : '');
+  }
+  function stopScan() { if (scanner) { scanner.stop(); scanner = null; } $('scanVideo').hidden = true; }
+  function send(msg) { if (join) join.send(msg); }
+
+  $('scanBtn').addEventListener('click', function () {
+    if (scanner) { stopScan(); $('scanBtn').textContent = 'Scan the board’s code'; return; }
+    $('scanVideo').hidden = false;
+    $('scanBtn').textContent = 'Stop scanning';
+    scanner = QRScan.scanQRFromCamera($('scanVideo'), {
+      onResult: function (text) { stopScan(); connect(text); },
+      onError: function (e) { stopScan(); $('scanBtn').textContent = 'Scan the board’s code'; setStatus('Camera unavailable: ' + e.message + ' Paste the code instead.', 'bad'); }
+    });
+  });
+  $('connectBtn').addEventListener('click', function () {
+    var v = $('pastePayload').value.trim();
+    if (!v) { setStatus('Paste the board’s code first.', 'bad'); return; }
+    connect(v);
+  });
+
+  function connect(offer) {
+    setStatus('Preparing a reply…');
+    ClassScreenRemote.join(offer).then(function (j) {
+      join = j;
+      j.onOpen(function () {
+        $('setupCard').hidden = true;
+        $('controls').hidden = false;
+        $('liveBadge').hidden = false;
+        send({ cmd: 'hello' });
+      });
+      j.onClose(function () {
+        join = null;
+        $('controls').hidden = true;
+        $('liveBadge').hidden = true;
+        $('setupCard').hidden = false;
+        $('step1').hidden = false; $('step2').hidden = true;
+        setStatus('Disconnected. Press Start pairing on the board again.', 'bad');
+      });
+      j.onMessage(function (data) { if (data && data.type === 'snapshot') { latest = data; render(); } });
+      $('step1').hidden = true; $('step2').hidden = false;
+      $('answerText').value = j.answerPayload;
+      var room = $('answerCanvas').parentNode.clientWidth;
+      var p = QrDraw.draw($('answerCanvas'), j.answerPayload, { maxPx: Math.min(480, room) });
+      $('answerCanvas').hidden = !p.ok;
+      setStatus(p.ok ? 'Waiting for the board…' : 'This screen is too narrow to show the reply as a code the board’s camera can read. Copy the text instead.', p.ok ? '' : 'bad');
+    }, function (e) { setStatus((e && e.message) || 'That code did not work.', 'bad'); });
+  }
+  $('copyAnswerBtn').addEventListener('click', function () {
+    var t = $('answerText');
+    (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(
+      function () { setStatus('Copied. Paste it into the board’s box.', 'good'); },
+      function () { t.select(); setStatus('Select the text and copy it.', ''); });
+  });
+
+  /* ── controls ──────────────────────────────────────────────────────── */
+
+  $('screenPick').addEventListener('change', function () { send({ cmd: 'screen', id: $('screenPick').value }); });
+  $('timerToggle').addEventListener('click', function () { send({ cmd: 'timer', action: 'toggle' }); });
+  $('timerAdd').addEventListener('click', function () { send({ cmd: 'timer', action: 'add' }); });
+  $('timerReset').addEventListener('click', function () { send({ cmd: 'timer', action: 'reset' }); });
+  $('swToggle').addEventListener('click', function () { send({ cmd: 'stopwatch', action: 'toggle' }); });
+  $('swReset').addEventListener('click', function () { send({ cmd: 'stopwatch', action: 'reset' }); });
+  $('pickBtn').addEventListener('click', function () { send({ cmd: 'pick' }); });
+  $('groupsBtn').addEventListener('click', function () { send({ cmd: 'groups' }); });
+  $('rollBtn').addEventListener('click', function () { send({ cmd: 'roll' }); });
+  $('symbolPick').addEventListener('change', function () { send({ cmd: 'symbol', mode: $('symbolPick').value }); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-light]'), function (b) {
+    b.addEventListener('click', function () { send({ cmd: 'light', color: b.getAttribute('data-light') }); });
+  });
+
+  function fillSelect(sel, items, value) {
+    var same = sel.options.length === items.length && items.every(function (it, i) { return sel.options[i].value === it.id && sel.options[i].textContent === it.label; });
+    if (!same) {
+      sel.textContent = '';
+      items.forEach(function (it) {
+        var o = document.createElement('option');
+        o.value = it.id; o.textContent = it.label;
+        sel.appendChild(o);
+      });
+    }
+    if (document.activeElement !== sel) sel.value = value;
+  }
+
+  /* Everything shown here comes from the board's snapshot, as text. */
+  function render() {
+    var s = latest;
+    fillSelect($('screenPick'), (s.screens || []).map(function (o) { return { id: String(o.id), label: String(o.name) }; }), String(s.current));
+    var any = false;
+
+    $('timerCard').hidden = !s.timer;
+    if (s.timer) {
+      any = true;
+      $('timerText').textContent = String(s.timer.text);
+      $('timerToggle').textContent = s.timer.running ? 'Pause' : (s.timer.done ? 'Restart' : 'Start');
+      $('timerNote').textContent = s.timer.done ? 'Time is up.' : '';
+    }
+    $('swCard').hidden = !s.stopwatch;
+    if (s.stopwatch) {
+      any = true;
+      $('swText').textContent = String(s.stopwatch.text);
+      $('swToggle').textContent = s.stopwatch.running ? 'Pause' : 'Start';
+    }
+    $('namesCard').hidden = !s.names;
+    if (s.names) {
+      any = true;
+      $('pickedName').textContent = s.names.name ? String(s.names.name) : '—';
+      $('namesNote').textContent = s.names.ready ? String(s.names.note || '') : 'No roster on the board yet.';
+      $('pickBtn').disabled = !s.names.ready;
+    }
+    $('groupsCard').hidden = !s.groups;
+    if (s.groups) { any = true; $('groupsNote').textContent = String(s.groups.note || ''); }
+    $('trafficCard').hidden = !s.traffic;
+    if (s.traffic) {
+      any = true;
+      Array.prototype.forEach.call(document.querySelectorAll('[data-light]'), function (b) {
+        b.setAttribute('aria-pressed', String(b.getAttribute('data-light') === s.traffic.light));
+      });
+    }
+    $('symbolCard').hidden = !s.symbols;
+    if (s.symbols) {
+      any = true;
+      fillSelect($('symbolPick'), (latest.symbolList || []).map(function (o) { return { id: String(o.id), label: String(o.label) }; }), String(s.symbols.mode));
+    }
+    $('diceCard').hidden = !s.dice;
+    if (s.dice) {
+      any = true;
+      var v = Array.isArray(s.dice.values) ? s.dice.values : [];
+      $('diceNote').textContent = v.length ? 'Showing ' + v.join(', ') + (v.length > 1 ? ' (total ' + v.reduce(function (a, b) { return a + b; }, 0) + ')' : '') : '';
+    }
+    $('emptyNote').hidden = any;
+  }
+
+  window.addEventListener('pagehide', function () { if (join) join.close(); });
+  /* For the smoke suite: the last snapshot, read-only. */
+  window.__csRemote = { latest: function () { return latest ? JSON.parse(JSON.stringify(latest)) : null; } };
+})();
+</script>
+<script src="../../_shared/sw-register.js" defer></script>
+</body>
+</html>

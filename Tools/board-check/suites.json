@@ -74,6 +74,7 @@
     "Tools/class-screen/test/smoke-class-screen.mjs",
     "Tools/class-screen/test/smoke-widgets.mjs",
     "Tools/class-screen/test/smoke-periods.mjs",
+    "Tools/class-screen/test/smoke-remote.mjs",
     "Tools/gallery-walk-qr/test/smoke-projector.mjs",
     "Tools/gallery-walk-qr/test/smoke-scan-verify.mjs",
     "Tools/testing-accommodations-card-generator/test/smoke-filter.mjs",
