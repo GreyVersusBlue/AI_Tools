@@ -9,6 +9,117 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P1: the Blender art pipeline, `Tools/blender-art/` (2026-09-25, #263, `CACHE_VERSION` v184)
+
+The first Path 21 row, built on Devon's Windows machine with **Blender 5.2.2 LTS** (a Steam
+install at `C:\Program Files (x86)\Steam\steamapps\common\Blender\`, **not on PATH**, so
+`blender --version` as written fails there and the full path works). Rank 1 is deleted and
+everything below moves up one.
+
+What shipped:
+- **`art_common.py`, the scene template.** The pin (the **5.2** LTS line, named once in
+  `renders.json`; any other line, a non-LTS build or a non-release build exits 2), the
+  palette parser, three cameras (`icon` three-quarter, `iso`, `topdown`), one light rig, the
+  world, the render settings, the WebP/PNG writer, luminance sampling, the SVG line exporter
+  and the ledger writer. Scene scripts: `scene_icons.py` (one function per tool) and
+  `scene_tile.py`.
+- **`renders.json`**, the ledger. The spec half is hand-written before a render, and the
+  script rewrites the record half.
+- **`validate-art.mjs`**, the 13th read-only guard, run as `npm run check:art`, plus
+  `test/validate-art.test.mjs` (`npm run test:blender-art`, pure Node, 45 assertions, one
+  broken fixture per rule). Wired into package.json, ci.yml, suites.json, CLAUDE.md's guard
+  list and step 3 of the definition of done. The validator is in eslint's Node block, and the
+  folder is in `make-offline-copy.mjs`'s exclusions.
+- **First outputs:** `assets/art/icons/t007.svg` (727 B, cap 1,434) and
+  `assets/art/test/tile-256-{light,dark}.webp` (1,054 B and 776 B, caps 16,384). They are in
+  `PRECACHE_URLS` only and linked from no page.
+
+**The calls made here, so they can be reversed cheaply.**
+- **The pin is the LTS line (5.2), not the patch (5.2.2).** Steam updates Blender silently,
+  and a patch-level pin would stop every script on the next update. Each entry still records
+  the exact version that made it, so a patch that changes pixels shows up as a hash diff on
+  the next re-render.
+- **No Freestyle.** 5.2.2 does not bundle the Freestyle SVG Exporter: `addons_core` has only
+  `io_curve_svg`, the importer. It is an extension on extensions.blender.org and was not
+  installed. Downloading it needed Devon's say-so, and the spec already named a fallback, so
+  icons use that fallback: `export_svg_lines` in `art_common.py`. It takes boundary,
+  silhouette and >35° crease edges, removes hidden lines with ray casts toward the ortho
+  camera, then projects, chains, simplifies (RDP 0.3 px) and rounds to 0.1. No add-on means
+  no add-on version to pin. What it cannot do is Freestyle's stylised strokes (tapering,
+  chaining by material), and nothing asked for those.
+- **The 007 motif is a cup of craft sticks with one drawn out**, not the tool's own
+  slot-machine or press-your-luck themes, because it is how classrooms pick names and it
+  survives 24 px.
+- **The rig lights from azimuth −110°** (left, a little behind), which is the upper left of
+  the frame for both the top-down and the three-quarter cameras. Energies were set once so a
+  face-up `--card` renders near its token (the first cut clipped light `--card` to pure white
+  and put dark `--card` at about 2.5× its token's luminance).
+- **`.gitattributes` keeps art SVG and `renders.json` LF** on a `core.autocrlf=true`
+  checkout. The validator strips CR before hashing SVG anyway, so this is belt and braces.
+
+**The acceptance test: render twice, compare.** Each of the three entries was rendered three
+times on this machine (once into the tree, twice with `--out` to scratch). **All three renders
+of each entry were byte-identical**: the two WebP tiles (Cycles CPU, 64 samples, OIDN, WebP
+q80) and the SVG. That is one machine, one build and one CPU. Another machine was not tried.
+
+**Broken on purpose, before trusting it.** With one byte of `tile-256-light.webp` overwritten
+and `t007.svg`'s cap lowered to 600, locally and not committed:
+
+```
+CAP       assets/art/icons/t007.svg
+          727 bytes, over its cap of 600
+HASH      assets/art/test/tile-256-light.webp
+          sha256 is d63fdca66ac7…, the ledger says 4569ccd9f234…
+
+validate-art: 2 problem(s) across 3 ledger entries.
+exit=1
+```
+
+Restored, it printed `3 ledger entries clean` and exited 0. The pin was broken the same way
+(renders.json set to `4.5`), and the icon script exited 2 with
+`Blender 5.2.2 LTS is running; renders.json pins the 4.5 LTS line`.
+
+**What did not work, in order.**
+- **The line simplifier erased every fully visible closed outline.** A closed loop has a
+  zero-length chord, so every point measured as distance 0 and the loop collapsed to a dot.
+  The only stick that was fully visible vanished from two drafts before this was found. It
+  now measures from the start point when the chord is degenerate.
+- **Three icon drafts were rejected by eye:** three equal sticks read as fingers at 48 px,
+  five read as fries, and one tall stick straight up the middle between two short ones read
+  as a rude gesture. The comment in `icon_007` says so, and says to keep the picked stick
+  off-centre and tilted. **Anyone drawing P2's icons should look at every one at 24 px with
+  that last failure in mind.**
+- **`__pycache__/` was committed once** (Blender imports the sibling modules and writes
+  bytecode next to them), then removed in an amended commit. `.gitignore` now has
+  `__pycache__/`.
+- **`make-offline-copy.mjs` drops any path containing `/test/`**, so `assets/art/test/` is
+  not in the offline zip. That is harmless for a tile nobody links, and `offline:verify`
+  passes. But **no real art may live in a folder named `test/`**; CLAUDE.md now says so.
+- **`node Tools/board-check/run-suites.mjs --help` does not print help. It starts all 158
+  suites.** It was killed by the closed pipe within a second, and no process was left
+  behind. Do not probe it that way.
+- **The precache totals are not comparable across checkouts.** Summing `sw.js`'s lists on
+  this Windows checkout gives 11.42 MB and 2.73 MB, against the 11.24 MB and 2.68 MB the
+  header carried from a Linux container. The art adds 2,557 bytes. The rest is CRLF in the
+  working tree. The header now says which checkout a figure came from.
+
+**Not verified.**
+- The Freestyle SVG Exporter itself: its version, and whether it would have met the
+  1.4 KB cap. It was never installed.
+- That a re-render on any other machine, or after a Blender patch update, reproduces the
+  hashes.
+- That the icon's strokes stay ≥ 1.5 px at the landing page's real size. There is no landing
+  size yet, because P2 decides it. At 24 px the 2-unit stroke on the 48 viewBox is 1 px.
+  P2 must either draw icons no smaller than 36 px or thicken the stroke.
+- Chrome and `file://` with an external `<use href>` sprite, which is P2's question.
+- Whether jsPDF (2.5.2) accepts WebP. 042's row needs this, and it was not needed here.
+- The tiles were looked at in a headless Chromium screenshot, not in the site, because
+  nothing links them.
+
+Local: every `check:*` guard, `lint`, `check:precache -- --base origin/main` (v183 → v184),
+`test:blender-art`, `test:select-suites`, `offline:build` and `offline:verify`. CI ran all 158 suites (`Tools/board-check/` was in the diff) green in **33m55s**, and
+`check:art` printed `3 ledger entries clean` on Linux, so the LF/CRLF handling held.
+
 ## Path 21 ranked first: Blender-rendered art goes to the top of Tier 1 (2026-09-25, #261, planning only, no `CACHE_VERSION` change)
 
 **Devon's instruction, 2026-09-25:** Blender-rendered art is the new top priority. **He
