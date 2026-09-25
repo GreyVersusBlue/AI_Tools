@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="../manifest.json">
 <title>Class Screen</title>
-<meta name="description" content="A projector board you build from widgets: timers, a stopwatch, a clock, text boxes, YouTube videos, a traffic light, a name picker and dice, placed anywhere and saved as named screens.">
+<meta name="description" content="A projector board you build from widgets: timers, a stopwatch, a clock, text boxes, YouTube videos, a traffic light, a name picker, dice, work symbols, a noise meter, drawing, pictures, QR codes and a group maker, placed anywhere and saved as named screens.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='4' y='6' width='24' height='17' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Crect x='7' y='9' width='8' height='6' rx='1' fill='%232e6b8f'/%3E%3Crect x='17' y='13' width='8' height='7' rx='1' fill='%23a3372b'/%3E%3Cpath d='M12 27h8' stroke='%231f3550' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
 <!-- Native dark from _shared/ink-paper.css; this page paints only tokens. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
@@ -13,6 +13,9 @@
 <script src="../_shared/stage.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/media-db.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
 <script src="class-screen/cs-core.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -162,6 +165,68 @@
   .yt-form input { width: 100%; }
   .yt-offline { flex: 1; display: grid; place-items: center; text-align: center; color: var(--muted); font-size: .9rem; padding: .5rem; }
 
+  /* work symbols */
+  .sym { flex: 1; min-height: 0; container-type: size; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; text-align: center; }
+  .sym svg { width: min(60cqw, 48cqh); height: min(60cqw, 48cqh); color: var(--accent-2); }
+  .sym-label { font-weight: 800; font-size: min(15cqw, 13cqh); line-height: 1.05; }
+  .sym-sub { color: var(--muted); font-size: min(8cqw, 7cqh); line-height: 1.15; }
+
+  /* noise meter */
+  .noise { flex: 1; min-height: 0; container-type: size; display: flex; align-items: center; justify-content: center; gap: 6cqw; }
+  .noise-track {
+    position: relative; width: min(24cqw, 30cqh); height: 92cqh; border-radius: 12px; flex: none;
+    border: 2px solid var(--line-strong); background: var(--card-2); overflow: hidden;
+  }
+  .noise-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: #2f9e57; transition: height .12s linear; }
+  .noise-fill.mid { background: #f1b82d; }
+  .noise-fill.high { background: #d33a2c; }
+  .noise-limit { position: absolute; left: -2px; right: -2px; height: 0; border-top: 3px dashed var(--ink); }
+  .noise-word { font-weight: 800; font-size: min(12cqw, 16cqh); line-height: 1.05; max-width: 50cqw; }
+  .w.noise-loud { animation: done-flash 1s steps(2, jump-none) infinite; border-color: var(--err); }
+  .w.noise-loud .noise-word { color: var(--err); }
+  @media (prefers-reduced-motion: reduce) { .w.noise-loud { animation: none; } }
+  .w-foot input[type="range"] { width: 5.5em; }
+
+  /* drawing */
+  .draw-wrap { flex: 1; min-height: 0; position: relative; border: 1px dashed var(--line); border-radius: 6px; }
+  .draw-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+  .pen { width: 1.6rem; height: 1.6rem; padding: 0; border-radius: 50%; border: 2px solid var(--line-strong); }
+  .pen[aria-pressed="true"] { outline: 3px solid var(--accent-2); outline-offset: 1px; }
+  .pen.ink, .pen.ink:hover { background: var(--ink); }
+  .pen.red, .pen.red:hover { background: var(--err); }
+  .pen.blue, .pen.blue:hover { background: var(--accent-2); }
+  .pen.green, .pen.green:hover { background: #2f9e57; }
+
+  /* image */
+  .pic { flex: 1; min-height: 0; width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
+  .pic.cover { object-fit: cover; }
+  .pick-form { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .45rem; text-align: center; }
+
+  /* QR */
+  .qr-box { flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden; }
+  .qr-box canvas { display: block; border-radius: 4px; }
+  .qr-caption { font-size: .8rem; color: var(--muted); text-align: center; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* groups */
+  /* The grid's own columns cannot use cq units (that would measure the
+     viewport: .groups is the container, not inside one), so they are rem. */
+  .groups { flex: 1; min-height: 0; overflow: auto; container-type: inline-size; display: grid; gap: .4rem; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); align-content: start; }
+  .group { border: 1px solid var(--line); border-radius: 8px; background: var(--card-2); padding: .3rem .45rem; }
+  .group h3 { margin: 0 0 .15rem; font-size: .8rem; color: var(--accent-2); }
+  .group ul { margin: 0; padding: 0; list-style: none; font-weight: 600; font-size: clamp(1rem, 3cqw, 2rem); line-height: 1.25; }
+
+  /* board backgrounds — every one painted from tokens, so dark comes free */
+  #board[data-bg="grid"] {
+    background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  #board[data-bg="lines"] { background-image: linear-gradient(transparent 31px, var(--line) 31px); background-size: 100% 32px; }
+  #board[data-bg="plain"] { background-image: none; }
+  #board[data-bg="blue"] { background-image: none; background-color: color-mix(in srgb, var(--accent-2) 16%, var(--paper)); }
+  #board[data-bg="slate"] { background-image: none; background-color: color-mix(in srgb, var(--accent) 16%, var(--paper)); }
+  #board[data-bg="warm"] { background-image: none; background-color: color-mix(in srgb, var(--err) 10%, var(--paper)); }
+  #board[data-bg="image"] { background-size: cover; background-position: center; background-repeat: no-repeat; }
+
   /* ── toast ──────────────────────────────────────────────────────────── */
   .toast {
     position: fixed; left: 50%; bottom: 4.2rem; transform: translateX(-50%); z-index: 60;
@@ -191,6 +256,18 @@
     <button type="button" id="dupScreenBtn">Duplicate</button>
     <button type="button" id="deleteScreenBtn">Delete</button>
     <button type="button" id="clearScreenBtn">Clear</button>
+    <label for="bgSelect">Background</label>
+    <select id="bgSelect">
+      <option value="dots">Dots</option>
+      <option value="grid">Grid</option>
+      <option value="lines">Lines</option>
+      <option value="plain">Plain</option>
+      <option value="blue">Blue</option>
+      <option value="slate">Slate</option>
+      <option value="warm">Warm</option>
+      <option value="image">Picture…</option>
+    </select>
+    <input type="file" id="bgFile" accept="image/*" hidden>
     <button type="button" id="fsBtn" class="primary">Fullscreen</button>
   </div>
 </header>
@@ -660,6 +737,454 @@
     }
   };
 
+  /* Work symbols: one big picture of how the room should sound. */
+  var SYMBOL_INFO = {
+    silent:  { label: 'Silent', sub: 'Voices off', icon: ['M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4z', 'M3 3l18 18'] },
+    whisper: { label: 'Whisper', sub: 'Only your neighbor hears you', icon: ['M7 9a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-4l-4 3v-3H9a2 2 0 0 1-2-2z', 'M3 12h1', 'M3 9h.5', 'M3 15h.5'] },
+    partner: { label: 'Partner talk', sub: 'Talk with one partner', icon: ['M7 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', 'M17 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', 'M2 20v-3a5 5 0 0 1 9 0v3', 'M13 20v-3a5 5 0 0 1 9 0v3'] },
+    group:   { label: 'Group work', sub: 'Talk with your group', icon: ['M12 7a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', 'M5 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z', 'M19 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z', 'M8 21v-5a4 4 0 0 1 8 0v5', 'M1.5 21v-3a3.5 3.5 0 0 1 5-3', 'M22.5 21v-3a3.5 3.5 0 0 0-5-3'] },
+    hands:   { label: 'Hands up', sub: 'Raise your hand to speak', icon: ['M9 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4z', 'M9 9v7', 'M9 16l-3 5', 'M9 16l3 5', 'M9 11l7-8', 'M9 11l-4 3'] },
+    ask3:    { label: 'Ask 3 before me', sub: 'Ask three classmates first', icon: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M9.5 8h3.5a2 2 0 0 1 0 4h-2h2a2 2 0 0 1 0 4H9.5'] }
+  };
+  TYPES.symbols = {
+    title: 'Work symbol', icon: ['M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4z'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var box = el('div', { className: 'sym', role: 'img' });
+      var selId = ctx.id + '-sym';
+      var sel = el('select', { id: selId });
+      Core.SYMBOLS.forEach(function (k) { sel.appendChild(el('option', { value: k, text: SYMBOL_INFO[k].label })); });
+      function render() {
+        var info = SYMBOL_INFO[d.mode];
+        box.textContent = '';
+        box.setAttribute('aria-label', info.label + ': ' + info.sub);
+        box.appendChild(icon(info.icon));
+        box.appendChild(el('span', { className: 'sym-label', text: info.label }));
+        box.appendChild(el('span', { className: 'sym-sub', text: info.sub }));
+        sel.value = d.mode;
+      }
+      sel.addEventListener('change', function () { d.mode = sel.value; ctx.save(); render(); });
+      ctx.body.appendChild(box);
+      ctx.body.appendChild(el('div', { className: 'w-foot' }, [
+        el('label', { for: selId, className: 'sr-only', text: 'Choose a symbol' }), sel
+      ]));
+      render();
+      return {};
+    }
+  };
+
+  /* Noise meter. The microphone starts only when the teacher presses Start,
+     is analysed in this page by Web Audio, and is never recorded, saved or
+     sent anywhere. Stopping, removing the widget or switching screens stops
+     every track, so the browser's "microphone in use" light goes out. */
+  TYPES.noise = {
+    title: 'Noise meter', icon: ['M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z', 'M5 11a7 7 0 0 0 14 0', 'M12 18v3'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var fill = el('div', { className: 'noise-fill' });
+      var limitLine = el('div', { className: 'noise-limit' });
+      var track = el('div', { className: 'noise-track', role: 'meter', 'aria-label': 'Noise level', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0' }, [fill, limitLine]);
+      var word = el('span', { className: 'noise-word', 'aria-live': 'polite', text: 'Off' });
+      var startBtn = el('button', { type: 'button', className: 'primary', text: 'Start' });
+      var sensId = ctx.id + '-sens', limId = ctx.id + '-lim';
+      var sens = el('input', { type: 'range', id: sensId, min: '1', max: '10', step: '1' });
+      var lim = el('input', { type: 'range', id: limId, min: '10', max: '100', step: '5' });
+      sens.value = String(d.sensitivity); lim.value = String(d.limit);
+      var err = el('p', { className: 'err-note', hidden: true });
+      var stream = null, actx = null, analyser = null, buf = null, loop = 0, level = 0, overSince = 0, lastAria = -1;
+
+      function placeLimit() { limitLine.style.bottom = d.limit + '%'; }
+      function setLoud(on) { ctx.el.classList.toggle('noise-loud', on); }
+      function sample() {
+        analyser.getFloatTimeDomainData(buf);
+        var sum = 0;
+        for (var i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+        var rms = Math.sqrt(sum / buf.length);
+        var db = rms > 0 ? 20 * Math.log10(rms) : -100;
+        /* -60 dB..0 dB is the bar, and each sensitivity step shifts it 4 dB. */
+        var target = Math.max(0, Math.min(100, (db + 60 + (d.sensitivity - 5) * 4) / 60 * 100));
+        level = level * 0.6 + target * 0.4;
+        var shown = Math.round(level);
+        fill.style.height = shown + '%';
+        fill.className = 'noise-fill' + (shown >= d.limit ? ' high' : shown >= d.limit * 0.75 ? ' mid' : '');
+        if (Math.abs(shown - lastAria) >= 5) { track.setAttribute('aria-valuenow', String(shown)); lastAria = shown; }
+        var now = Date.now();
+        if (shown >= d.limit) { if (!overSince) overSince = now; } else overSince = 0;
+        var loud = overSince && now - overSince > 800;
+        setLoud(!!loud);
+        var w = loud ? 'Too loud!' : shown >= d.limit * 0.75 ? 'Getting loud' : 'Good';
+        if (word.textContent !== w) word.textContent = w;
+      }
+      function stop() {
+        clearInterval(loop); loop = 0;
+        if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+        if (actx) try { actx.close(); } catch (e) {}
+        stream = null; actx = null; analyser = null; level = 0; overSince = 0;
+        fill.style.height = '0%'; track.setAttribute('aria-valuenow', '0'); lastAria = -1;
+        setLoud(false); word.textContent = 'Off'; startBtn.textContent = 'Start';
+      }
+      function start() {
+        err.hidden = true;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          err.hidden = false; err.textContent = 'This browser cannot use a microphone here.'; return;
+        }
+        startBtn.disabled = true;
+        /* Made inside the click, so Chrome's autoplay rule lets it run; one
+           made after the permission prompt resolves starts suspended. */
+        try { actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); }
+        catch (e) { actx = null; }
+        navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }).then(function (s) {
+          startBtn.disabled = false;
+          if (!ctx.el.isConnected || !actx) {
+            s.getTracks().forEach(function (t) { t.stop(); });
+            if (!actx) { err.hidden = false; err.textContent = 'This browser cannot measure sound here.'; }
+            return;
+          }
+          stream = s;
+          var src = actx.createMediaStreamSource(s);
+          analyser = actx.createAnalyser(); analyser.fftSize = 1024;
+          buf = new Float32Array(analyser.fftSize);
+          src.connect(analyser);
+          startBtn.textContent = 'Stop';
+          loop = setInterval(sample, 100);
+        }, function () {
+          startBtn.disabled = false;
+          if (actx) try { actx.close(); } catch (e) {}
+          actx = null;
+          err.hidden = false; err.textContent = 'The microphone is blocked. Allow it in the browser’s address bar, then press Start.';
+        });
+      }
+      startBtn.addEventListener('click', function () { if (stream) stop(); else start(); });
+      sens.addEventListener('input', function () { d.sensitivity = +sens.value; ctx.save(); });
+      lim.addEventListener('input', function () { d.limit = +lim.value; placeLimit(); ctx.save(); });
+
+      ctx.body.appendChild(el('div', { className: 'noise' }, [track, word]));
+      ctx.body.appendChild(el('div', { className: 'w-foot' }, [
+        startBtn,
+        el('label', { for: sensId }, ['Sensitivity', sens]),
+        el('label', { for: limId }, ['Limit', lim])
+      ]));
+      ctx.body.appendChild(err);
+      ctx.body.appendChild(el('p', { className: 'note', text: 'Nothing is recorded or sent.' }));
+      placeLimit();
+      return { destroy: stop };
+    }
+  };
+
+  /* Drawing. Strokes are saved as fractions of the widget, so resizing the
+     widget scales the drawing; pens are token names, so dark mode repaints. */
+  var PEN_TOKENS = { ink: '--ink', red: '--err', blue: '--accent-2' };
+  function penColour(c) {
+    if (c === 'green') return '#2f9e57';
+    return getComputedStyle(document.documentElement).getPropertyValue(PEN_TOKENS[c] || '--ink').trim() || '#000';
+  }
+  TYPES.draw = {
+    title: 'Drawing', icon: ['M4 20l4-1 11-11a2.1 2.1 0 0 0-3-3L5 16z', 'M14 7l3 3'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var canvas = el('canvas', { className: 'draw-canvas', role: 'img', 'aria-label': 'Drawing' });
+      var wrap = el('div', { className: 'draw-wrap' }, [canvas]);
+      var pen = 'ink', size = Core.PEN_SIZES[1];
+      var note = el('p', { className: 'note', hidden: true });
+      var penBtns = {};
+      var g = canvas.getContext('2d');
+      var cssW = 0, cssH = 0;
+
+      function scale() { return Math.max(0.5, Math.min(3, Math.min(cssW, cssH) / 300)); }
+      function strokeOn(st) {
+        var dpr = window.devicePixelRatio || 1;
+        g.strokeStyle = penColour(st.c);
+        g.lineWidth = st.s * scale() * dpr;
+        g.lineCap = 'round'; g.lineJoin = 'round';
+        g.beginPath();
+        g.moveTo(st.p[0] * canvas.width, st.p[1] * canvas.height);
+        if (st.p.length === 2) g.lineTo(st.p[0] * canvas.width + 0.01, st.p[1] * canvas.height);
+        for (var i = 2; i < st.p.length; i += 2) g.lineTo(st.p[i] * canvas.width, st.p[i + 1] * canvas.height);
+        g.stroke();
+      }
+      function paint() {
+        var r = wrap.getBoundingClientRect();
+        var dpr = window.devicePixelRatio || 1;
+        cssW = r.width; cssH = r.height;
+        var W = Math.max(1, Math.round(r.width * dpr)), H = Math.max(1, Math.round(r.height * dpr));
+        if (canvas.width !== W) canvas.width = W;
+        if (canvas.height !== H) canvas.height = H;
+        g.clearRect(0, 0, W, H);
+        d.strokes.forEach(strokeOn);
+      }
+      var cur = null;
+      canvas.addEventListener('pointerdown', function (e) {
+        if (e.button !== 0) return;
+        if (Core.strokePoints(d.strokes) >= Core.MAX_POINTS) {
+          note.hidden = false; note.textContent = 'This drawing is full. Clear it or undo some strokes to keep drawing.';
+          return;
+        }
+        e.preventDefault();
+        canvas.setPointerCapture(e.pointerId);
+        cur = { c: pen, s: size, p: [] };
+        d.strokes.push(cur);
+        addPoint(e);
+      });
+      function addPoint(e) {
+        var r = canvas.getBoundingClientRect();
+        var x = Math.round(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * 1000) / 1000;
+        var y = Math.round(Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) * 1000) / 1000;
+        var n = cur.p.length;
+        if (n && cur.p[n - 2] === x && cur.p[n - 1] === y) return;
+        cur.p.push(x, y);
+        paint();
+      }
+      canvas.addEventListener('pointermove', function (e) { if (cur) addPoint(e); });
+      function endStroke() {
+        if (!cur) return;
+        cur = null;
+        d.strokes = Core.normalizeStrokes(d.strokes);
+        ctx.save(); paint();
+      }
+      canvas.addEventListener('pointerup', endStroke);
+      canvas.addEventListener('pointercancel', endStroke);
+
+      var foot = el('div', { className: 'w-foot' });
+      Core.PENS.forEach(function (c) {
+        penBtns[c] = el('button', { type: 'button', className: 'pen ' + c, 'aria-label': c.charAt(0).toUpperCase() + c.slice(1) + ' pen',
+          onclick: function () { pen = c; renderPens(); } });
+        foot.appendChild(penBtns[c]);
+      });
+      var sizeId = ctx.id + '-size';
+      var sizeSel = el('select', { id: sizeId });
+      [['Thin', 2], ['Medium', 4], ['Thick', 8], ['Marker', 16]].forEach(function (o) { sizeSel.appendChild(el('option', { value: String(o[1]), text: o[0] })); });
+      sizeSel.value = String(size);
+      sizeSel.addEventListener('change', function () { size = +sizeSel.value; });
+      foot.appendChild(el('label', { for: sizeId, className: 'sr-only', text: 'Pen size' }));
+      foot.appendChild(sizeSel);
+      foot.appendChild(el('button', { type: 'button', text: 'Undo', onclick: function () { d.strokes.pop(); note.hidden = true; ctx.save(); paint(); } }));
+      foot.appendChild(el('button', { type: 'button', text: 'Clear', onclick: function () {
+        if (!d.strokes.length) return;
+        d.strokes = []; note.hidden = true; ctx.save(); paint();
+      } }));
+      function renderPens() { Core.PENS.forEach(function (c) { penBtns[c].setAttribute('aria-pressed', String(pen === c)); }); }
+
+      ctx.body.appendChild(wrap);
+      ctx.body.appendChild(foot);
+      ctx.body.appendChild(note);
+      renderPens();
+      var ro = window.ResizeObserver ? new ResizeObserver(paint) : null;
+      if (ro) ro.observe(wrap);
+      var mo = new MutationObserver(paint);
+      mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      requestAnimationFrame(paint);
+      return { destroy: function () { if (ro) ro.disconnect(); mo.disconnect(); } };
+    }
+  };
+
+  /* ── pictures: blobs in IndexedDB via media-db.js, never localStorage ─ */
+
+  var media = window.MediaDB ? MediaDB.store({ ns: 'class-screen' }) : null;
+  function savePicture(file) {
+    if (!media) return Promise.reject(new Error('This browser cannot store pictures for this page.'));
+    var keepPng = file && file.type === 'image/png';
+    return MediaDB.downscaleImage(file, { maxDim: 1920, type: keepPng ? 'image/png' : 'image/jpeg' }).then(function (out) {
+      var id = Core.newId('img');
+      return media.put(id, out.blob, { width: out.width, height: out.height, name: String(file.name || '').slice(0, 120) })
+        .then(function () { return id; });
+    });
+  }
+  /* Deletes the pictures no screen points at any more. Runs at start and
+     whenever the undo window closes, never while an undo could need one. */
+  function collectMedia() {
+    if (!media || lastRemoved) return;
+    var keep = Core.mediaIds(state);
+    media.list().then(function (recs) {
+      recs.forEach(function (r) { if (keep.indexOf(r.id) === -1) media.remove(r.id); });
+    });
+  }
+
+  TYPES.image = {
+    title: 'Picture', icon: ['M4 5h16v14H4z', 'M4 16l5-5 4 4 2-2 5 5', 'M15.5 9.5h.01'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var url = '';
+      var alive = true;
+      function revoke() { if (url) { URL.revokeObjectURL(url); url = ''; } }
+      function drawPicker(message) {
+        revoke();
+        ctx.body.textContent = '';
+        var fid = ctx.id + '-file';
+        var input = el('input', { type: 'file', id: fid, accept: 'image/*', className: 'sr-only' });
+        var err = el('p', { className: 'err-note', hidden: !message, text: message || '' });
+        var btn = el('button', { type: 'button', className: 'primary', text: 'Choose a picture', onclick: function () { input.click(); } });
+        input.addEventListener('change', function () {
+          var f = input.files && input.files[0];
+          if (!f) return;
+          btn.disabled = true; btn.textContent = 'Saving…';
+          savePicture(f).then(function (id) {
+            if (!alive) return;
+            d.mediaId = id; d.alt = String(f.name || '').replace(/\.[a-z0-9]+$/i, '').slice(0, 200);
+            saveNow(); show(); collectMedia();
+          }, function (e) {
+            if (!alive) return;
+            drawPicker((e && e.message) || 'That picture could not be saved.');
+          });
+        });
+        var kids = [el('label', { for: fid, className: 'sr-only', text: 'Picture file' }), input, btn, err,
+          el('p', { className: 'note', text: 'The picture is kept in this browser only.' })];
+        if (d.mediaId) kids.splice(3, 0, el('button', { type: 'button', text: 'Cancel', onclick: show }));
+        ctx.body.appendChild(el('div', { className: 'pick-form' }, kids));
+      }
+      function show() {
+        if (!d.mediaId || !media) return drawPicker(media ? '' : 'This browser cannot store pictures for this page.');
+        media.getBlob(d.mediaId).then(function (blob) {
+          if (!alive) return;
+          if (!blob) return drawPicker('This picture is no longer stored in this browser. Choose it again.');
+          revoke();
+          url = URL.createObjectURL(blob);
+          ctx.body.textContent = '';
+          var img = el('img', { className: 'pic' + (d.fit === 'cover' ? ' cover' : ''), src: url, alt: d.alt || 'Picture' });
+          var fitId = ctx.id + '-fit';
+          var fit = el('select', { id: fitId });
+          fit.appendChild(el('option', { value: 'contain', text: 'Fit' }));
+          fit.appendChild(el('option', { value: 'cover', text: 'Fill' }));
+          fit.value = d.fit;
+          fit.addEventListener('change', function () { d.fit = fit.value; img.classList.toggle('cover', d.fit === 'cover'); ctx.save(); });
+          ctx.body.appendChild(img);
+          ctx.body.appendChild(el('div', { className: 'w-foot' }, [
+            el('button', { type: 'button', text: 'Change', onclick: function () { drawPicker(''); } }),
+            el('label', { for: fitId, className: 'sr-only', text: 'Picture fit' }), fit,
+            el('button', { type: 'button', text: 'Describe', onclick: function () {
+              var a = window.prompt('Describe this picture for screen readers:', d.alt);
+              if (a === null) return;
+              d.alt = a.trim().slice(0, 200); img.alt = d.alt || 'Picture'; ctx.save();
+            } })
+          ]));
+        });
+      }
+      show();
+      return { destroy: function () { alive = false; revoke(); } };
+    }
+  };
+
+  /* QR code: a link or short text for phones in the room to scan. Drawn by
+     _shared/qr-draw.js, which refuses a code too dense to scan at this size
+     and says so, instead of drawing one nobody can read. */
+  TYPES.qr = {
+    title: 'QR code', icon: ['M4 4h6v6H4z', 'M14 4h6v6h-6z', 'M4 14h6v6H4z', 'M14 14h2v2h-2z', 'M18 18h2v2h-2z', 'M18 14h2', 'M14 18v2'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var ro = null;
+      function drawForm() {
+        if (ro) { ro.disconnect(); ro = null; }
+        ctx.body.textContent = '';
+        var id = ctx.id + '-qrtext';
+        var input = el('input', { type: 'text', id: id, placeholder: 'https://…', autocomplete: 'off' });
+        input.value = d.text;
+        function go() {
+          var t = input.value.trim();
+          if (!t) return;
+          d.text = t.slice(0, 500); ctx.save(); drawCode();
+        }
+        input.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+        var buttons = [el('button', { type: 'button', className: 'primary', text: 'Show code', onclick: go })];
+        if (d.text) buttons.push(el('button', { type: 'button', text: 'Cancel', onclick: drawCode }));
+        ctx.body.appendChild(el('div', { className: 'yt-form' }, [
+          el('label', { for: id, text: 'Link or text' }), input,
+          el('div', { className: 'w-foot' }, buttons)
+        ]));
+      }
+      function drawCode() {
+        if (!d.text) return drawForm();
+        ctx.body.textContent = '';
+        var canvas = el('canvas', { role: 'img', 'aria-label': 'QR code for ' + d.text });
+        var box = el('div', { className: 'qr-box' }, [canvas]);
+        var err = el('p', { className: 'err-note', hidden: true });
+        ctx.body.appendChild(box);
+        ctx.body.appendChild(err);
+        ctx.body.appendChild(el('p', { className: 'qr-caption', text: d.text, title: d.text }));
+        ctx.body.appendChild(el('div', { className: 'w-foot' }, [el('button', { type: 'button', text: 'Change', onclick: drawForm })]));
+        var lastSize = -1;
+        function fit() {
+          var r = box.getBoundingClientRect();
+          var size = Math.floor(Math.min(r.width, r.height));
+          if (size === lastSize || size <= 0) return;
+          lastSize = size;
+          if (!window.QrDraw || !window.qrcode) { err.hidden = false; err.textContent = 'The QR code maker did not load.'; return; }
+          var p = QrDraw.draw(canvas, d.text, { maxPx: size });
+          canvas.hidden = !p.ok;
+          err.hidden = p.ok;
+          if (!p.ok) err.textContent = p.reason.replace(/ of link/g, '').replace(/Copy the link or download the file instead\./, 'Make the widget bigger or the text shorter.');
+        }
+        ro = window.ResizeObserver ? new ResizeObserver(fit) : null;
+        if (ro) ro.observe(box);
+        requestAnimationFrame(fit);
+      }
+      drawCode();
+      return { destroy: function () { if (ro) ro.disconnect(); } };
+    }
+  };
+
+  /* Group maker, on the same shared rosters as the name picker. Like the
+     picker's picks, the groups are never saved: only the roster's name is. */
+  TYPES.groups = {
+    title: 'Group maker', icon: ['M8 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', 'M16 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', 'M3 21v-4h10v4z', 'M11 21v-4h10v4z'],
+    build: function (ctx) {
+      var d = ctx.data;
+      var out = el('div', { className: 'groups', 'aria-live': 'polite', role: 'region', 'aria-label': 'Groups', tabindex: '0' });
+      var selId = ctx.id + '-groster', byId = ctx.id + '-by', nId = ctx.id + '-n';
+      var sel = el('select', { id: selId });
+      var by = el('select', { id: byId });
+      by.appendChild(el('option', { value: 'size', text: 'Groups of' }));
+      by.appendChild(el('option', { value: 'count', text: 'Number of groups' }));
+      by.value = d.by;
+      var n = el('select', { id: nId });
+      for (var i = 2; i <= 12; i++) n.appendChild(el('option', { value: String(i), text: String(i) }));
+      n.value = String(d.n);
+      var makeBtn = el('button', { type: 'button', className: 'primary', text: 'Make groups' });
+      var foot = el('div', { className: 'w-foot' }, [
+        el('label', { for: selId, className: 'sr-only', text: 'Class roster' }), sel,
+        el('label', { for: byId, className: 'sr-only', text: 'Group by' }), by,
+        el('label', { for: nId, className: 'sr-only', text: 'How many' }), n,
+        makeBtn
+      ]);
+      var emptyBox = el('div', { className: 'yt-offline' }, [
+        el('p', null, ['No class rosters saved yet. Add one in ', el('a', { href: ROSTER_HUB, text: 'Class Roster Hub' }), ' and it appears here.'])
+      ]);
+      var note = el('p', { className: 'note' });
+      ctx.body.appendChild(out);
+      ctx.body.appendChild(emptyBox);
+      ctx.body.appendChild(foot);
+      ctx.body.appendChild(note);
+
+      function names() { return window.Roster && d.roster ? Roster.getRoster(d.roster) : []; }
+      function fillRosters() {
+        var list = window.Roster ? Roster.listRosters() : [];
+        sel.textContent = '';
+        list.forEach(function (r) { sel.appendChild(el('option', { value: r, text: r })); });
+        if (list.indexOf(d.roster) === -1) d.roster = list[0] || '';
+        sel.value = d.roster;
+        emptyBox.hidden = list.length > 0;
+        out.hidden = foot.hidden = !list.length;
+        note.textContent = list.length ? names().length + ' names' : '';
+        note.hidden = !list.length;
+      }
+      function make() {
+        var groups = Core.makeGroups(names(), d.by, d.n);
+        out.textContent = '';
+        groups.forEach(function (gr, k) {
+          var ul = el('ul');
+          gr.forEach(function (nm) { ul.appendChild(el('li', { text: nm })); });
+          out.appendChild(el('div', { className: 'group' }, [el('h3', { text: 'Group ' + (k + 1) }), ul]));
+        });
+        note.textContent = groups.length + ' groups from ' + names().length + ' names';
+      }
+      sel.addEventListener('change', function () { d.roster = sel.value; out.textContent = ''; ctx.save(); fillRosters(); });
+      by.addEventListener('change', function () { d.by = by.value; ctx.save(); });
+      n.addEventListener('change', function () { d.n = +n.value; ctx.save(); });
+      makeBtn.addEventListener('click', make);
+      var unsub = window.Roster && Roster.onChange ? Roster.onChange(fillRosters) : null;
+      fillRosters();
+      return { destroy: function () { if (typeof unsub === 'function') unsub(); } };
+    }
+  };
+
   /* ── widget frame: drag, resize, keyboard, stacking ───────────────── */
 
   function place(w) {
@@ -690,7 +1215,9 @@
     var close = el('button', { type: 'button', className: 'w-close', text: '×', 'aria-label': 'Remove ' + title });
     var body = el('div', { className: 'w-body' });
     var resize = el('div', { className: 'w-resize', 'aria-hidden': 'true' });
-    var node = el('section', { className: 'w w-' + w.type, 'aria-label': title, 'data-id': w.id, 'data-type': w.type },
+    /* 'wt-' + type, not 'w-' + type: the frame's own parts are .w-bar,
+       .w-body and so on, and P1's text widget collided with one. */
+    var node = el('section', { className: 'w wt-' + w.type, 'aria-label': title, 'data-id': w.id, 'data-type': w.type },
       [el('div', { className: 'w-bar' }, [grip, close]), body, resize]);
 
     instances[w.id] = { el: node };
@@ -769,7 +1296,43 @@
     s.widgets.forEach(mountWidget);
     boardEmpty.hidden = s.widgets.length > 0;
     renderScreenBar();
+    renderBackground();
   }
+
+  /* ── backgrounds ──────────────────────────────────────────────────── */
+
+  var bgSelect = document.getElementById('bgSelect');
+  var bgFile = document.getElementById('bgFile');
+  var bgUrl = '', bgToken = 0;
+  function renderBackground() {
+    var s = currentScreen();
+    var token = ++bgToken;
+    if (bgUrl) { URL.revokeObjectURL(bgUrl); bgUrl = ''; }
+    board.style.backgroundImage = '';
+    bgSelect.value = s.bg;
+    if (s.bg !== 'image') { board.setAttribute('data-bg', s.bg); return; }
+    board.setAttribute('data-bg', 'plain');
+    if (!media || !s.bgImage) return;
+    media.getBlob(s.bgImage).then(function (blob) {
+      if (token !== bgToken || !blob) return;
+      bgUrl = URL.createObjectURL(blob);
+      board.setAttribute('data-bg', 'image');
+      board.style.backgroundImage = 'url("' + bgUrl + '")';
+    });
+  }
+  bgSelect.addEventListener('change', function () {
+    var s = currentScreen();
+    if (bgSelect.value === 'image') { bgFile.value = ''; bgFile.click(); bgSelect.value = s.bg; return; }
+    s.bg = bgSelect.value; s.bgImage = ''; saveNow(); renderBackground(); collectMedia();
+  });
+  bgFile.addEventListener('change', function () {
+    var f = bgFile.files && bgFile.files[0];
+    if (!f) return;
+    var s = currentScreen();
+    savePicture(f).then(function (id) {
+      s.bg = 'image'; s.bgImage = id; saveNow(); renderBackground(); collectMedia();
+    }, function (e) { showToast((e && e.message) || 'That picture could not be saved.', false); });
+  });
 
   function addWidget(type) {
     var s = currentScreen();
@@ -811,7 +1374,7 @@
     toastUndo.hidden = !undoable;
     toast.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toast.hidden = true; lastRemoved = null; }, 7000);
+    toastTimer = setTimeout(function () { toast.hidden = true; lastRemoved = null; collectMedia(); }, 7000);
   }
   toastUndo.addEventListener('click', function () {
     toast.hidden = true;
@@ -866,7 +1429,7 @@
     var s = currentScreen();
     if (!window.confirm('Delete the screen "' + s.name + '" and its ' + s.widgets.length + ' widgets?')) return;
     state.screens = state.screens.filter(function (o) { return o.id !== s.id; });
-    state.current = state.screens[0].id; saveNow(); renderBoard();
+    state.current = state.screens[0].id; saveNow(); renderBoard(); collectMedia();
   });
   document.getElementById('clearScreenBtn').addEventListener('click', function () {
     var s = currentScreen();
@@ -903,6 +1466,7 @@
   }, 200);
 
   renderBoard();
+  collectMedia();
 
   /* For the smoke suite: the saved state, read-only. */
   window.__classScreen = { state: function () { return JSON.parse(JSON.stringify(state)); }, key: KEY };
