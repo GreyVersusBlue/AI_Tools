@@ -9,6 +9,135 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P2, increment 1: the ten shell tools' icons, the sprite, the shortcut PNGs (2026-09-25, #265, `CACHE_VERSION` v185)
+
+Rank 1 is a 2+ row, so this is one increment and the row stays, rewritten. It was built on
+Devon's Windows machine with **Blender 5.2.2 LTS**, run headless from its full Steam path
+(it is still not on PATH).
+
+What shipped:
+- **Ten icons**: 001 hall pass (an open door), 002 groups (three pawns on one base), 004
+  timer (an hourglass), 005 seating (four chairs in two rows), 006 roster (a clipboard
+  checklist), 007 name picker (the P1 cup of sticks), 008 points (a thick award star), 010
+  command center (a monitor with dashboard panels), 032 calendar (a month page, one day
+  circled) and 044 sub plans (a tabbed folder with a page of plans). All are in
+  `scene_icons.py`, 383–994 B each against the 1,434 B cap.
+- **`assets/art/icons/tools.svg`**: one `<symbol id="tNNN">` per icon, 6,269 B for ten.
+  That puts all 86 on course for about 54 KB against the 120 KB cap. It is built by the new
+  `Tools/blender-art/build-sprite.mjs`.
+- **`index.html`**: the ten landing rows carry
+  `<svg class="tool-icon" aria-hidden="true"><use href="assets/art/icons/tools.svg#tNNN"/></svg>`,
+  floated beside the name at a fixed 32 px, in `--ink` and in `--accent` on row hover.
+- **`manifest.json`**: the four shortcuts (007, 004, 005, 010) point at their own 96×96
+  PNGs in `assets/art/shortcuts/` (762–989 B each), in place of the generic `icon-192.png`.
+- **`validate-art.mjs`** gained three rules, **DERIVED**, **STROKE** and **MANIFEST**, plus a
+  fourth `use` value, `manifest`. Its test went from 45 to 60 assertions, with one broken
+  fixture per new rule.
+- **The offline zip** inlines the sprite (see below). `verify-offline-copy.mjs` now opens the
+  landing page, which it never did before, and counts ink pixels in every icon.
+- `sw.js`: the sprite and the four PNGs are in `PRECACHE_URLS` **and** `SHELL_URLS`.
+  `t007.svg` left the precache, because nothing links a single icon now; the sprite carries
+  it. The ten single-icon SVGs stay in the tree as the reviewable, ledgered render outputs.
+
+**The calls made here, so they can be reversed cheaply.**
+- **Landing size and stroke, settled together: 32 CSS px and a stroke of 2.25 on the 48
+  viewBox**, which is exactly 1.5 px. The alternatives were 24 px with a stroke of 3, which
+  clotted the denser icons (002, 032) at 48 px, or 36 px with 2.0, which is too big beside a
+  1.08rem name. The icon family in `renders.json` carries `displayPx: 32` and
+  `minStrokePx: 1.5`, and the new **STROKE** rule fails any icon under the floor. It reads
+  the file's own viewBox, not the ledger's width. **Do not draw these icons under 32 px**
+  without raising the stroke first.
+- **Framing is automatic.** `frame()` centres every icon and fits its longer side to 80% of
+  the frame, so the set shares one optical size. That re-rendered **007**: same motif, same
+  sticks, but larger and with the new stroke. Its P1 geometry filled only 69% of the frame,
+  noticeably smaller than the rest.
+- **A derived file's ledger entry.** The sprite is *assembled*, not rendered, so its entry
+  carries `sources` (the icons, in order) and a `script` that is a Node `.mjs`. It carries
+  **no `seed` and no `blender`**: nothing random goes into it and Blender never touches it.
+  The sources carry both, and the PIN rule applies to them. The validator fails a derived
+  entry that has either field, so neither can drift into meaning something. **DERIVED**
+  re-assembles the sprite with `build-sprite.mjs`'s own `assembleSprite()` and fails on any
+  byte of drift. It also fails when an icon entry is missing from the sources, so a new icon
+  cannot be rendered and forgotten. Because the builder is pure Node, CI checks the sprite
+  instead of trusting it.
+- **`use: "manifest"`** is for icons the OS draws (the shortcut PNGs). The OS picks what is
+  behind them, so they need no dark twin, and the TWIN rule applies only to `screen`.
+  **MANIFEST** fails one that is not a light PNG or that `manifest.json` does not name, and
+  fails `manifest.json` naming art whose use is not `manifest`.
+- **Shortcut PNGs are 16-colour indexed PNGs of exact `--paper`/`--ink` blends.** The icon's
+  own 48-unit polylines are drawn as `--ink` emission tubes, with round joins, over a
+  `--paper` world. Cycles renders them top-down, and `art_common.write_two_tone_png`
+  re-writes the result. Blender's RGB PNG writer gave **5.5–6.9 KB**, over the 4 KB cap.
+  `color_mode = 'BW'` fit (3.86 KB for 010) but turned both tokens grey. The indexed writer
+  recovers each pixel's coverage from linear luminance (a linear mix of two colours keeps
+  it exact), so the endpoints are the tokens themselves. It is pure stdlib. The icon sits
+  at 64 px inside the 96 px square, which clears a circular launcher mask.
+- **Placement in the row:** the icon floats inside the name column, rather than taking a new
+  grid column, so the five-column grid, the phone layout and the pin-clone code are
+  untouched. `display: flow-root` on the name and pitch keeps a long pitch beside the icon
+  instead of wrapping under it. The first cut did wrap under, on 004's two-line pitch.
+- **The rows without icons (76 of 86) are unindented for now**, so the list is uneven until
+  the set is finished. Reserving blank space on every row would have been the other choice,
+  and it looked like missing images.
+
+**Render twice, compare.** `t004.svg` and `t010-96.png` were rendered twice more with
+`--out`, and the sprite was built twice. **All matched the committed files byte for byte**,
+including Cycles CPU and the indexed PNG writer. That is one machine and one build, as in P1.
+
+**What did not work, in order.**
+- **001's first door was edge-on.** Hinged on the left jamb and swung toward the viewer, the
+  open panel lay along the camera's line of sight and drew as a sliver. Hinged on the right,
+  it reads.
+- **005 failed twice by eye before it worked.** Six bare desk slabs read as a **chocolate
+  bar**, and desk tops with a chair back behind each read as **four open laptops**. Chairs
+  with wire legs read as seating. Both failures are recorded in `icon_005`'s docstring so
+  nobody retries them. Every icon was checked at 24, 32 and 48 px in both themes, magnified
+  without smoothing, with the P1 rude-gesture failure in mind. None of the ten has a
+  silhouette that invites a joke. 002's pawns and 032's grid are dense at 24 px, but the
+  page never draws them that small.
+- **The stroke formatter rounded 2.25 to "2.2"**, which is 1.47 px at 32 px and under the
+  floor, because the SVG writer formatted every number to one decimal. It is fixed (the
+  stroke keeps two decimals), and the STROKE rule now makes that failure loud.
+- **Chrome draws nothing for an external `<use>` under `file://`**, exactly as the spec
+  feared. The console says "'file:' URLs are treated as unique security origins", and all
+  ten icons were blank in the staged landing page. **`offline:verify` passed anyway,**
+  because its entry list never included the landing page. `make-offline-copy.mjs` now
+  inlines the sprite's symbols in a zero-size `<svg>` at the top of the staged page's
+  `<body>` and points each `<use>` at `#tNNN`. The verifier opens the landing page with every
+  category expanded and fails any icon with fewer than 20 dark pixels. **Broken on
+  purpose:** a build with the symbols' paths stripped failed with
+  `10 of 10 tool icons drew nothing from file://`. The unfixed build also fails, on the
+  console errors.
+- **`offline:build` stages from `git ls-files`**, so new, untracked art is not in the zip
+  until it is `git add`ed. The first rebuild failed with "tools.svg was not staged" for that
+  reason. It fails loudly, which is right, but run `git add` before `offline:build`.
+- **The verifier's first icon check timed out** on icons inside collapsed categories, which
+  are invisible to a screenshot. It now opens every `<details class="cat">` first.
+- **Shell escaping cost three rounds**: a `python -` heredoc hung on the Windows Store stub,
+  and two `node -e` regexes were mangled by bash quoting. Write scratch scripts to files.
+  `.claude/launch.json`'s `python -m http.server` hits the same stub on this machine, so the
+  landing page was checked through `harness.mjs`'s `serve()` with Playwright instead.
+
+**Not verified.**
+- **The shortcut PNGs in a real launcher.** They were checked at 96 px, inside a circular
+  mask and at 48 px in Chromium, but never in an installed PWA's long-press menu on Android
+  or Windows. That belongs on the parked device-check list.
+- A re-render on any other machine or Blender patch.
+- **The precache byte totals.** A sum of the files `sw.js` names on this Windows checkout
+  gave **11.20 MB and 2.50 MB** (265 and 88 entries), below the 11.42 / 2.73 MB that #263
+  recorded from what should be the same kind of checkout. The art added about 15 KB, so the
+  gap is not this PR. It was **not reconciled**. The header carries the new measurement and
+  says so.
+- How the icons look on a projector or at 125–150% OS scaling. They were checked at 1× and
+  as magnified pixels only.
+
+Local: every `check:*` guard, `lint`, `check:precache -- --base origin/main` (v184 → v185),
+`test:blender-art` (60), `test:a11y -- --only index` (no new allowlist line; `color-contrast`
+×24 is the known unstable count), `smoke-sw-tiers`, `smoke-storage-persist`, `smoke-theme`,
+`registry-shape`, `offline:build` and `offline:verify`. CI ran all 158 suites (`Tools/board-check/` was in the diff) green in **33m45s**.
+
+---
+
 ## Path 21 P1: the Blender art pipeline, `Tools/blender-art/` (2026-09-25, #263, `CACHE_VERSION` v184)
 
 The first Path 21 row, built on Devon's Windows machine with **Blender 5.2.2 LTS** (a Steam
