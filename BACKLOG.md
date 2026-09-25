@@ -70,7 +70,7 @@ without claiming or editing them and takes the next unclaimed row that is not Pa
 
 ## Where things stand — start here
 
-*Current as of `main` after #267, 2026-09-25. **Keep this section under ~80 lines.** It is
+*Current as of `main` after #269, 2026-09-25. **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -83,15 +83,15 @@ were buried in it. It was moved **verbatim** to `HISTORY.md` ("BACKLOG header ha
 2026-09-04 → 2026-09-12"). The durable P3 guidance moved to the end of the Path 6 section in
 Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
-**Last merged: #267, Path 21 P2 increment 2, icons for 003, 009 and 011–027. `CACHE_VERSION` v186.**
-- **29 of 86 icons** are done. The sprite `assets/art/icons/tools.svg` holds 29 symbols
-  (18.6 KB, on course for about 55 KB of the 120 KB cap) and 29 landing rows show them.
-  Increment 1 (#265) set the rules: a fixed **32 px** landing size, a **2.25** stroke (1.5 px),
-  the sprite as a *derived* ledger entry that `check:art` rebuilds, and shortcut PNGs as
-  `use: "manifest"`. The offline zip inlines the sprite, because `file://` draws nothing
-  for an external `<use>`.
+**Last merged: #269, Path 22 P1 — `087` Class Screen, a widget board for the projector. `CACHE_VERSION` v187.**
+- **Devon asked for Path 22 directly (2026-09-25)** and made its scope calls himself: no accounts,
+  no student voting, no Google/Microsoft, YouTube in. P2–P5 are ranks **183–186**, at the end
+  because he did not rank them. `HISTORY.md` has the calls and what P1 did not verify.
+- **Path 21 icons: 29 of 86 done** (#267). The sprite rules from #265 hold: 32 px landing size,
+  a 2.25 stroke, the sprite a *derived* ledger entry. 087 has no icon yet and needs one, which
+  makes **30 of 87 left for Blender** — increment 3 or a later one should add `t087`.
 - **Every icon increment runs the full CI (~34 min)**, because `index.html` is on the
-  selector's site-wide list. Plan for one CI round per increment plus the docs PR.
+  selector's site-wide list. #269 took 34 min for the same reason.
 - Blender on Devon's machine is a Steam install **not on PATH**; the README has the fix.
 - The one-line `git rm` of rank 95's four dead trees is **still not done**.
 
@@ -119,19 +119,19 @@ Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v186` — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **265** in `PRECACHE_URLS`, **88** in the `SHELL_URLS` install tier. Bytes: **11.21 MB / 2.52 MB** summed on Devon's Windows checkout after #267. #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **43,050 B** ledgered, **22,086 B** of it shell (`check:art` enforces both) |
-| Suites | **158** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| `CACHE_VERSION` | `v187` — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **267** in `PRECACHE_URLS`, **88** in the `SHELL_URLS` install tier. Bytes: **11.21 MB / 2.52 MB** summed on Devon's Windows checkout after #267, before #269 added 087's two files (not re-measured). #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **43,050 B** ledgered, **22,086 B** of it shell (`check:art` enforces both) |
+| Suites | **160** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **14** page-rule pairs on 14 pages, all `color-contrast` |
-| Tool registry | 87 rows, **217 keys and 32 prefixes across 109 files**; **49 of 235** live entries marked `student`; `check:registry` green |
-| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `share.js` 54 · `state-link.js` 54 · `qr-draw.js` 53 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 9 · `tool-registry.js` 8 · `webrtc-pair.js` 7 · `handoffs.js` 6 · `theme.css` 5 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Tool registry | 88 rows, **218 keys and 32 prefixes across 110 files**; **49** entries marked `student` (087's one key, `cls-screen:state`, is not student data: name picks are never saved). The live-entry denominator was 235 in this cell; counting non-`legacy` keys and prefixes gives 238 before #269 and 239 after, so the old figure used a rule not written down. Re-measure before quoting one; `check:registry` green |
+| Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 79 · `a11y.js` 79 · `ink-paper.css` 72 · `base.css` 68 · `share.js` 54 · `state-link.js` 54 · `qr-draw.js` 53 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 7 · `handoffs.js` 6 · `theme.css` 5 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
-| Tools | 86 (`001`–`086`); next free number **087** |
-| Tier 1 rows | **187**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows proper start at rank **101**; 183–187 are Path 22 (Devon asked for it, did not rank it) |
+| Tools | 87 (`001`–`087`); next free number **088** |
+| Tier 1 rows | **186**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows proper start at rank **101**; 183–186 are Path 22 P2–P5 (Devon asked for the path, did not rank it) |
 | Art | **36** ledger entries: 29 tool icons, the sprite (on 29 landing rows), 4 shortcut PNGs (in `manifest.json`), the unlinked light/dark test tile. 83 of 86 pages carry a data-URI favicon; `assets/icons/` holds 4 PWA icons |
-| Dark mode / fullscreen | 83 of 83 themed pages native dark; `stage.js` on 9 pages. Path 5 is finished |
+| Dark mode / fullscreen | 83 of 83 themed pages native dark; `stage.js` on 10 pages (087 has no palette literals of its own and adopted native dark from the start). Path 5 is finished |
 | CI | Pull requests run `--changed` (a diff-scoped selection). A push to `main` runs everything, ~32 min. A PR touching `_shared/`, `package.json` or `Tools/board-check/` is site-wide |
 | Lint | clean |
 
@@ -439,11 +439,10 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 180 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
 | 181 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
 | 182 | Snap-to-grid for base-ten blocks; export and data-driven piece families | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
-| 183 | Path 22 P1 — `087` Class Screen: the widget board (drag, resize, keyboard move, stacking), named screens saved automatically, fullscreen, and the first widgets — text, timer, stopwatch, clock, YouTube, traffic light, name picker on the shared roster, dice | 087 | 1 | `aqha85` 2026-09-25 18:12 UTC | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
-| 184 | Path 22 P2 — more widgets: work symbols, noise meter (microphone stays local), drawing layer, image (`media-db.js`), QR (`qr-draw.js`), group maker, board backgrounds | 087 | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
-| 185 | Path 22 P3 — screens by period: switch the screen from the bell schedule, starter templates, export and import a screen as a file | 087 | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
-| 186 | Path 22 P4 — phone as remote over `webrtc-pair.js` (start the timer, pick a name, switch screens), the pattern 010's `cc-remote.js` already uses | 087 | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
-| 187 | Path 22 P5 — one timer: extract the countdown into `_shared/` and use it from 004, 010 and 087 (010's "Reuse the real timer" quick win) | `_shared/` | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 183 | Path 22 P2 — more widgets: work symbols, noise meter (microphone stays local), drawing layer, image (`media-db.js`), QR (`qr-draw.js`), group maker, board backgrounds | 087 | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 184 | Path 22 P3 — screens by period: switch the screen from the bell schedule, starter templates, export and import a screen as a file | 087 | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 185 | Path 22 P4 — phone as remote over `webrtc-pair.js` (start the timer, pick a name, switch screens), the pattern 010's `cc-remote.js` already uses | 087 | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 186 | Path 22 P5 — one timer: extract the countdown into `_shared/` and use it from 004, 010 and 087 (010's "Reuse the real timer" quick win) | `_shared/` | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 
 ## How to work this list
 
@@ -2327,7 +2326,7 @@ they are not a session's to reverse:** no accounts or cloud sync; **no student v
 on purpose**; no Google or Microsoft integration; and **YouTube is in** — the one widget
 allowed to reach the network, because he asked for it. Imitating ClassroomScreen's
 behaviour is fine by him. The page keeps its own name and this site's palette anyway.
-He did not rank the rows, so they sit at the end of Tier 1 (183–187) until he does. Moving
+He did not rank the rows, so they sit at the end of Tier 1 (183–186 now P1 has shipped) until he does. Moving
 them up is a re-rank, and that is his call.
 
 **Why a new tool and not 010.** 010's Tier 2 "true classroom home screen" idea is close to
@@ -2346,7 +2345,7 @@ rather than folding one page into the other.
 - **Nothing student-facing beyond what the teacher projects.** No student devices, per
   Devon's call above and the standing Path 8 decision.
 
-- **P1 — the board and the first widgets.** Drag by the title bar, resize from the corner,
+- **P1 — shipped in #269 (v187).** The board and the first widgets. Drag by the title bar, resize from the corner,
   arrow keys to move and Shift+arrows to resize, click to bring to front. Named screens are
   saved automatically in one Store key. Fullscreen via `stage.js`. Widgets: text, timer,
   stopwatch, clock, YouTube, traffic light, name picker (shared roster), dice.
