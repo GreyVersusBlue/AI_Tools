@@ -51,7 +51,7 @@ const widget = (type) => page.locator(`#board .w[data-type="${type}"]`);
 // ── empty start ──────────────────────────────────────────────────────
 ok(await page.locator('#boardEmpty').isVisible(), 'empty board shows the hint');
 eq((await st()).screens.length, 1, 'one screen to start');
-eq(await page.locator('#dock button[data-add]').count(), 8, 'dock offers eight widgets');
+eq(await page.locator('#dock button[data-add]').count(), 14, 'dock offers fourteen widgets');
 
 // ── add every widget ─────────────────────────────────────────────────
 for (const t of ['text', 'timer', 'stopwatch', 'clock', 'youtube', 'traffic', 'names', 'dice']) {
@@ -131,7 +131,7 @@ eq(await timer.locator('.big-text').textContent(), '0:02', 'custom 2s');
 await timer.getByRole('button', { name: 'Start', exact: true }).click();
 await settle(page, 300);
 ok((await cur()).widgets.find((w) => w.type === 'timer').data.endsAt > 0, 'running timer saves its end time');
-await page.waitForFunction(() => document.querySelector('.w-timer').classList.contains('timer-done'), null, { timeout: 5000 }).catch(() => {});
+await page.waitForFunction(() => document.querySelector('.w[data-type="timer"]').classList.contains('timer-done'), null, { timeout: 5000 }).catch(() => {});
 ok(await timer.evaluate((n) => n.classList.contains('timer-done')), 'timer flags done at zero');
 eq(await timer.locator('.big-text').textContent(), '0:00', 'timer shows 0:00');
 eq(await timer.locator('[aria-live="assertive"]').textContent(), 'Time is up.', 'time-up is announced');

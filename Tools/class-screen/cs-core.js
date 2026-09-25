@@ -7,6 +7,9 @@
      ClassScreenCore.clampRect(rect)      → a rect that stays on the board
      ClassScreenCore.formatClock(ms)      → "4:05", "1:02:03"
      ClassScreenCore.parseDuration(text)  → seconds | null
+     ClassScreenCore.normalizeStrokes(l)  → drawing strokes the page can trust
+     ClassScreenCore.makeGroups(names, by, n, rng) → [[name, …], …]
+     ClassScreenCore.mediaIds(state)      → every IndexedDB picture id still in use
 
    Positions are FRACTIONS of the board (0..1), never pixels, so a screen laid
    out on a laptop lands in the same place on a 1080p projector.
@@ -23,7 +26,8 @@
 (function (global) {
   'use strict';
 
-  var TYPES = ['text', 'timer', 'stopwatch', 'clock', 'youtube', 'traffic', 'names', 'dice'];
+  var TYPES = ['text', 'timer', 'stopwatch', 'clock', 'youtube', 'traffic', 'names', 'dice',
+               'symbols', 'noise', 'draw', 'image', 'qr', 'groups'];
 
   /* Default size of a new widget, as a fraction of the board. */
   var DEFAULT_SIZE = {
@@ -34,7 +38,13 @@
     youtube:   { w: 0.36, h: 0.40 },
     traffic:   { w: 0.12, h: 0.40 },
     names:     { w: 0.28, h: 0.30 },
-    dice:      { w: 0.24, h: 0.24 }
+    dice:      { w: 0.24, h: 0.24 },
+    symbols:   { w: 0.18, h: 0.30 },
+    noise:     { w: 0.24, h: 0.36 },
+    draw:      { w: 0.40, h: 0.45 },
+    image:     { w: 0.30, h: 0.34 },
+    qr:        { w: 0.20, h: 0.36 },
+    groups:    { w: 0.40, h: 0.40 }
   };
 
   var MIN_W = 0.08, MIN_H = 0.08;
@@ -43,6 +53,22 @@
   var TEXT_SIZES = [1, 1.5, 2, 3, 4, 6];
   var LIGHTS = ['red', 'yellow', 'green'];
 
+  /* Work symbols: what the room should sound like right now. */
+  var SYMBOLS = ['silent', 'whisper', 'partner', 'group', 'hands', 'ask3'];
+
+  /* Screen backgrounds. Every one is painted from ink-paper tokens, so each
+     has a dark counterpart for free; 'image' is a teacher's picture kept in
+     IndexedDB (media-db.js), never in this state. */
+  var BACKGROUNDS = ['dots', 'grid', 'lines', 'plain', 'blue', 'slate', 'warm', 'image'];
+
+  /* Drawing: pen colours are token names, resolved when painted, so a
+     drawing made in light mode reads in dark mode too. Points are fractions
+     of the widget, so a drawing scales with its widget. The cap keeps one
+     busy drawing from filling localStorage: ~8,000 points is about 60 KB. */
+  var PENS = ['ink', 'red', 'blue', 'green'];
+  var PEN_SIZES = [2, 4, 8, 16];
+  var MAX_POINTS = 8000, MAX_STROKES = 600;
+  var MEDIA_ID_RE = /^[\w-]{1,60}$/;
   function num(v, lo, hi, dflt) {
     var n = typeof v === 'number' ? v : NaN;
     if (!isFinite(n)) return dflt;
@@ -178,6 +204,12 @@
       case 'traffic': return { light: 'green' };
       case 'names': return { roster: '' };
       case 'dice': return { count: 2, values: [1, 1] };
+      case 'symbols': return { mode: 'silent' };
+      case 'noise': return { sensitivity: 5, limit: 70 };
+      case 'draw': return { strokes: [] };
+      case 'image': return { mediaId: '', alt: '', fit: 'contain' };
+      case 'qr': return { text: '' };
+      case 'groups': return { roster: '', by: 'size', n: 4 };
     }
     return {};
   }
@@ -217,8 +249,86 @@
         }
         return { count: count, values: out };
       }
+      case 'symbols':
+        return { mode: SYMBOLS.indexOf(d.mode) !== -1 ? d.mode : dd.mode };
+      case 'noise':
+        return {
+          sensitivity: Math.round(num(d.sensitivity, 1, 10, dd.sensitivity)),
+          limit: Math.round(num(d.limit, 10, 100, dd.limit))
+        };
+      case 'draw':
+        return { strokes: normalizeStrokes(d.strokes) };
+      case 'image':
+        return {
+          mediaId: typeof d.mediaId === 'string' && MEDIA_ID_RE.test(d.mediaId) ? d.mediaId : '',
+          alt: str(d.alt, 200, ''),
+          fit: d.fit === 'cover' ? 'cover' : 'contain'
+        };
+      case 'qr':
+        return { text: str(d.text, MAX_URL, '') };
+      case 'groups':
+        return {
+          roster: str(d.roster, 200, ''),
+          by: d.by === 'count' ? 'count' : 'size',
+          n: Math.round(num(d.n, 2, 12, dd.n))
+        };
     }
     return dd;
+  }
+
+  /* Strokes: { c: pen, s: size, p: [x0, y0, x1, y1, …] } with every point a
+     fraction of the widget, rounded to 3 places. Bad points end a stroke
+     rather than poisoning it; the point cap drops the newest strokes. */
+  function normalizeStrokes(list) {
+    var out = [], total = 0;
+    if (!Array.isArray(list)) return out;
+    for (var i = 0; i < list.length && out.length < MAX_STROKES; i++) {
+      var st = list[i];
+      if (!isObj(st) || !Array.isArray(st.p)) continue;
+      var pts = [];
+      for (var j = 0; j + 1 < st.p.length; j += 2) {
+        var x = st.p[j], y = st.p[j + 1];
+        if (typeof x !== 'number' || typeof y !== 'number' || !isFinite(x) || !isFinite(y)) break;
+        pts.push(round3(Math.min(1, Math.max(0, x))), round3(Math.min(1, Math.max(0, y))));
+      }
+      if (pts.length < 2) continue;
+      if (total + pts.length / 2 > MAX_POINTS) break;
+      total += pts.length / 2;
+      out.push({ c: PENS.indexOf(st.c) !== -1 ? st.c : 'ink', s: PEN_SIZES.indexOf(st.s) !== -1 ? st.s : PEN_SIZES[1], p: pts });
+    }
+    return out;
+  }
+  function strokePoints(strokes) {
+    return (strokes || []).reduce(function (n, st) { return n + st.p.length / 2; }, 0);
+  }
+
+  /**
+   * Splits `names` into groups, shuffled by `rng` (Math.random by default).
+   * by 'size': groups of n, and a remainder too small to stand alone (under
+   * half of n) is spread one each over the other groups rather than left as
+   * a group of one. by 'count': exactly n groups (fewer if there are fewer
+   * names), sizes differing by at most one.
+   */
+  function makeGroups(names, by, n, rng) {
+    rng = rng || Math.random;
+    var list = (names || []).slice();
+    for (var i = list.length - 1; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1));
+      var t = list[i]; list[i] = list[j]; list[j] = t;
+    }
+    n = Math.max(1, Math.floor(n) || 1);
+    if (!list.length) return [];
+    var count;
+    if (by === 'count') count = Math.min(n, list.length);
+    else {
+      count = Math.max(1, Math.floor(list.length / n));
+      var rem = list.length - count * n;
+      if (rem >= Math.ceil(n / 2) || count === 0) count += 1;
+    }
+    var groups = [];
+    for (var g = 0; g < count; g++) groups.push([]);
+    list.forEach(function (name, k) { groups[k % count].push(name); });
+    return groups;
   }
 
   function normalizeWidget(w) {
@@ -234,7 +344,7 @@
   }
 
   function blankScreen(name) {
-    return { id: newId('s'), name: name || 'Screen 1', widgets: [] };
+    return { id: newId('s'), name: name || 'Screen 1', bg: 'dots', bgImage: '', widgets: [] };
   }
 
   function normalizeScreen(s, i) {
@@ -253,6 +363,8 @@
     return {
       id: typeof s.id === 'string' && /^[\w-]{1,40}$/.test(s.id) ? s.id : newId('s'),
       name: name,
+      bg: BACKGROUNDS.indexOf(s.bg) !== -1 ? s.bg : 'dots',
+      bgImage: typeof s.bgImage === 'string' && MEDIA_ID_RE.test(s.bgImage) ? s.bgImage : '',
       widgets: widgets
     };
   }
@@ -308,8 +420,31 @@
     return clampRect({ x: best.x, y: best.y, w: size.w, h: size.h });
   }
 
+  /* Every media id the state still points at: image widgets and image
+     backgrounds, on every screen. The page deletes IndexedDB records that are
+     not in this list, so a removed image does not sit on the disk forever. */
+  function mediaIds(state) {
+    var ids = [];
+    ((state && state.screens) || []).forEach(function (s) {
+      if (s.bgImage && ids.indexOf(s.bgImage) === -1) ids.push(s.bgImage);
+      (s.widgets || []).forEach(function (w) {
+        if (w.type === 'image' && w.data && w.data.mediaId && ids.indexOf(w.data.mediaId) === -1) ids.push(w.data.mediaId);
+      });
+    });
+    return ids;
+  }
+
   var ClassScreenCore = {
     TYPES: TYPES,
+    SYMBOLS: SYMBOLS,
+    BACKGROUNDS: BACKGROUNDS,
+    PENS: PENS,
+    PEN_SIZES: PEN_SIZES,
+    MAX_POINTS: MAX_POINTS,
+    normalizeStrokes: normalizeStrokes,
+    strokePoints: strokePoints,
+    makeGroups: makeGroups,
+    mediaIds: mediaIds,
     DEFAULT_SIZE: DEFAULT_SIZE,
     TEXT_SIZES: TEXT_SIZES,
     LIGHTS: LIGHTS,
