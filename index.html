@@ -453,6 +453,14 @@
     font-size:1.08rem;line-height:1.22;letter-spacing:-.01em;
   }
   .pitch{display:block;font-size:.86rem;color:var(--dim);margin-top:.12rem;}
+  /* Path 21 P2: the Blender-drawn tool icons, from one sprite. Decorative (the
+     row's text is the name) and currentColor, so dark mode is free. Drawn at
+     a fixed 32px because the set's stroke (2.25 on a 48 viewBox) is 1.5px
+     there, Path 21's floor; do not draw them smaller. Floated so the name and
+     pitch wrap beside the icon without changing the row's grid. */
+  .tool-icon{float:left;width:32px;height:32px;margin:.15rem .75rem 0 0;color:var(--ink);transition:color .14s var(--ease);}
+  .row:hover .tool-icon,.row:focus-visible .tool-icon{color:var(--accent);}
+  .tool-icon ~ .name,.tool-icon ~ .pitch{display:flow-root;}  /* a long pitch stays beside the icon, not under it */
 
   .tags{display:flex;gap:.34rem;flex-wrap:wrap;justify-content:flex-end;}
   .tags span{
@@ -841,6 +849,7 @@
        data-filter-tags="randomizer roster projector groups">
       <span class="per"><span class="lbl">Per</span><b>1</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Name Picker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
+        <svg class="tool-icon" aria-hidden="true"><use href="assets/art/icons/tools.svg#t007"/></svg>
         <span class="name">Name Picker</span>
         <span class="pitch">5 seconds. Pick a name, move on.</span>
         <span class="comment" aria-hidden="true">The wheel doesn&rsquo;t lie. Mostly.</span>
@@ -857,6 +866,7 @@
        data-filter-tags="seating roster groups printable">
       <span class="per"><span class="lbl">Per</span><b>2</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Seating Chart Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
+        <svg class="tool-icon" aria-hidden="true"><use href="assets/art/icons/tools.svg#t005"/></svg>
         <span class="name">Seating Chart Generator</span>
         <span class="pitch">Build it once, reshuffle whenever you need to.</span>
         <span class="comment" aria-hidden="true">Never once caused a diplomatic incident. Allegedly.</span>
@@ -873,6 +883,7 @@
        data-filter-tags="timer projector randomizer">
       <span class="per"><span class="lbl">Per</span><b>12</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Classroom Timer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
+        <svg class="tool-icon" aria-hidden="true"><use href="assets/art/icons/tools.svg#t004"/></svg>
         <span class="name">Classroom Timer</span>
         <span class="pitch">Big-digit projector timer with countdown, transition, random-interval, stopwatch, and round-robin modes.</span>
         <span class="comment" aria-hidden="true">Readable from the back row. Even without your glasses.</span>
@@ -889,6 +900,7 @@
        data-filter-tags="groups randomizer roster">
       <span class="per"><span class="lbl">Per</span><b>16</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Group / Team Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
+        <svg class="tool-icon" aria-hidden="true"><use href="assets/art/icons/tools.svg#t002"/></svg>
         <span class="name">Group / Team Generator</span>
         <span class="pitch">Random groups with constraints &mdash; keep certain students apart, balance skill levels.</span>
         <span class="comment" aria-hidden="true">Never puts the same two together twice. Mostly by request.</span>
@@ -905,6 +917,7 @@
        data-filter-tags="behavior tracker roster">
       <span class="per"><span class="lbl">Per</span><b>17</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Behavior &amp; Points Tracker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
+        <svg class="tool-icon" aria-hidden="true"><use href="assets/art/icons/tools.svg#t008"/></svg>
         <span class="name">Behavior &amp; Points Tracker</span>
         <span class="pitch">Tap a behavior, then tap a student &mdash; a running per-student point tally you can project during class.</span>
         <span class="comment" aria-hidden="true">Never forgets who was helping. Or who wasn&rsquo;t.</span>
@@ -921,6 +934,7 @@
        data-filter-tags="tracker behavior">
       <span class="per"><span class="lbl">Per</span><b>23</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Digital Hall Pass / Sign-Out Log to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
+        <svg class="tool-icon" aria-hidden="true"><use href="assets/art/icons/tools.svg#t001"/></svg>
         <span class="name">Digital Hall Pass / Sign-Out Log</span>
         <span class="pitch">Tap a destination, tap a student, and the live board tracks who&rsquo;s out and for how long &mdash; sign them back in and print the day&rsquo;s log.</span>
         <span class="comment" aria-hidden="true">Knows exactly how long &ldquo;just the bathroom&rdquo; really takes.</span>
@@ -937,6 +951,7 @@
        data-filter-tags="roster reference tracker">
       <span class="per"><span class="lbl">Per</span><b>24</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Class Roster Hub to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
+        <svg class="tool-icon" aria-hidden="true"><use href="assets/art/icons/tools.svg#t006"/></svg>
         <span class="name">Class Roster Hub</span>
         <span class="pitch">Build and save a class roster once &mdash; Name Picker, Seating Chart, Group/Team Generator, and four more tools can all load it straight in instead of starting over.</span>
         <span class="comment" aria-hidden="true">Types your roster once. Remembers it everywhere.</span>
@@ -953,6 +968,7 @@
        data-filter-tags="projector timer schedule">
       <span class="per"><span class="lbl">Per</span><b>26</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Command Center (Daily Dashboard) to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
+        <svg class="tool-icon" aria-hidden="true"><use href="assets/art/icons/tools.svg#t010"/></svg>
         <span class="name">Command Center (Daily Dashboard)</span>
         <span class="pitch">A timer, today&rsquo;s school-calendar day type and pacing note, and a no-repeats roster quick-call, side by side on one projector page.</span>
         <span class="comment" aria-hidden="true">Runs the whole period without a single tab switch.</span>
@@ -1042,6 +1058,7 @@
        data-filter-tags="schedule planning charts">
       <span class="per"><span class="lbl">Per</span><b>11</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin School Calendar Visualizer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
+        <svg class="tool-icon" aria-hidden="true"><use href="assets/art/icons/tools.svg#t032"/></svg>
         <span class="name">School Calendar Visualizer</span>
         <span class="pitch">Build a full-year calendar template — holidays, half days, workdays, grading periods — and lay lesson pacing on top: paste a lesson list or import the county pacing spreadsheet, and bumps or snow days reflow the whole sequence.</span>
         <span class="comment" aria-hidden="true">Sees the whole year coming. Still not ready for it.</span>
@@ -1058,6 +1075,7 @@
        data-filter-tags="sub-plans export printable">
       <span class="per"><span class="lbl">Per</span><b>9</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Sub Plan Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
+        <svg class="tool-icon" aria-hidden="true"><use href="assets/art/icons/tools.svg#t044"/></svg>
         <span class="name">Sub Plan Builder</span>
         <span class="pitch">Fill in the boilerplate once, then export a ready-to-print sub plan.</span>
         <span class="comment" aria-hidden="true">Covers your class. Doesn't cover for you.</span>

@@ -32,6 +32,21 @@
 //   ALT       an <img> in a live page (index.html, Tools/*.html) showing an art
 //             file with no alt attribute, a decorative one with non-empty alt,
 //             or a meaningful one with empty alt.
+//   DERIVED   a derived entry (one with "sources", assembled by a Node script
+//             rather than rendered: the icon sprite) whose file is not exactly
+//             what build-sprite.mjs assembles from its sources; a source that
+//             is not a rendered SVG entry; or an entry of a family the sprite
+//             draws from that the sprite does not list, so an icon cannot be
+//             rendered and forgotten. A derived entry has no seed and no
+//             blender of its own (LEDGER if it does): its sources carry both.
+//   STROKE    an SVG in a family that declares displayPx and minStrokePx whose
+//             stroke-width, drawn at displayPx, is under minStrokePx. The icon
+//             family is drawn at 32 px on the landing page and held to 1.5 px.
+//   MANIFEST  a use:"manifest" entry (an icon the OS draws: manifest.json's
+//             shortcuts) that is not a light PNG, or that manifest.json does
+//             not name; or a manifest.json icon under assets/art/ whose entry
+//             is not use:"manifest". The OS picks what is behind it, so it
+//             needs no dark twin, which is why it is not use:"screen".
 //
 // It does not duplicate check:precache, which already fails a referenced file
 // missing from PRECACHE_URLS. Its pure-Node test is test/validate-art.test.mjs,
@@ -41,11 +56,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { assembleSprite } from './build-sprite.mjs';
 
 export const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const LEDGER_REL = 'Tools/blender-art/renders.json';
 const REQUIRED = ['path', 'script', 'family', 'seed', 'width', 'height', 'cap', 'theme', 'use', 'decorative',
   'blender', 'sha256', 'bytes'];
+// A derived entry is assembled, not rendered: no seed and no blender.
+const REQUIRED_DERIVED = ['path', 'script', 'family', 'sources', 'width', 'height', 'cap', 'theme', 'use',
+  'decorative', 'sha256', 'bytes'];
+const USES = ['screen', 'print', 'content', 'manifest'];
+const isDerived = e => e.sources !== undefined;
 const RASTER = /\.(webp|png)$/i;
 
 /* ── palette, mirrored from art_common.py's parser ───────────────────────── */
@@ -213,15 +234,19 @@ export function validate(root = SITE) {
   const byPath = new Map();
   for (const e of entries) {
     const where = e.path || '(entry with no path)';
-    const missing = REQUIRED.filter(k => e[k] === undefined || e[k] === null || e[k] === '');
+    const missing = (isDerived(e) ? REQUIRED_DERIVED : REQUIRED).filter(k => e[k] === undefined || e[k] === null || e[k] === '');
     if (missing.length) add('LEDGER', where, 'missing ' + missing.join(', '));
+    if (isDerived(e)) {
+      for (const k of ['seed', 'blender']) if (e[k] !== undefined) add('LEDGER', where, `a derived entry has no ${k} of its own; its sources carry it`);
+      if (!/\.mjs$/.test(String(e.script))) add('LEDGER', where, `a derived entry is assembled by a Node script, not ${e.script}`);
+    }
     if (byPath.has(e.path)) add('LEDGER', where, 'listed twice');
     byPath.set(e.path, e);
     const fam = families[e.family];
     if (!fam) add('LEDGER', where, `unknown family "${e.family}"`);
     else if (e.cap > fam.entryCap && !e.capWhy) add('LEDGER', where, `cap ${e.cap} is above the ${e.family} family's ${fam.entryCap} with no capWhy`);
     if (!['light', 'dark', 'both'].includes(e.theme)) add('LEDGER', where, `theme "${e.theme}" is not light, dark or both`);
-    if (!['screen', 'print', 'content'].includes(e.use)) add('LEDGER', where, `use "${e.use}" is not screen, print or content`);
+    if (!USES.includes(e.use)) add('LEDGER', where, `use "${e.use}" is not ${USES.join(', ')}`);
     if (e.blender && pinned && !String(e.blender).startsWith(pinned + '.')) {
       add('PIN', where, `made by Blender ${e.blender}; renders.json pins the ${pinned} LTS line`);
     }
@@ -235,6 +260,7 @@ export function validate(root = SITE) {
     const full = path.join(root, ...e.path.split('/'));
     if (!fs.existsSync(full)) { add('MISSING', where, 'in the ledger, not in the tree'); continue; }
     const buf = fs.readFileSync(full);
+    const fam = families[e.family];
     const { sha256, bytes } = hashFile(buf, e.path);
     actualBytes.set(e.path, bytes);
     familyBytes[e.family] = (familyBytes[e.family] || 0) + bytes;
@@ -247,6 +273,15 @@ export function validate(root = SITE) {
       add('SIZE', where, `${dim.width}×${dim.height}, the ledger says ${e.width}×${e.height}`);
     }
     if (/\.svg$/i.test(e.path)) for (const p of svgProblems(buf.toString('utf8'))) add('SVG', where, 'carries ' + p);
+    if (/\.svg$/i.test(e.path) && dim && fam && fam.displayPx && fam.minStrokePx && !isDerived(e)) {
+      // The file's own viewBox, not the ledger's width: SIZE reports those disagreeing.
+      const sw = /^<svg\b[^>]*\sstroke-width="([\d.]+)"/.exec(buf.toString('utf8'));
+      const px = sw ? (+sw[1] * fam.displayPx) / dim.width : 0;
+      if (!sw) add('STROKE', where, 'no stroke-width on its root <svg>');
+      else if (px < fam.minStrokePx - 1e-9) {
+        add('STROKE', where, `stroke-width ${sw[1]} on a ${dim.width}-unit viewBox is ${px.toFixed(2)} px at ${fam.displayPx} px, under ${fam.minStrokePx}`);
+      }
+    }
   }
 
   for (const e of entries) {
@@ -277,6 +312,59 @@ export function validate(root = SITE) {
         if (worst < floor) add('CONTRAST', where, `${u.token} over luminance ${u.lumMin}–${u.lumMax} is ${worst.toFixed(2)}:1 in ${theme}, under ${floor}:1`);
       }
     }
+  }
+
+  for (const d of entries.filter(e => e.path && isDerived(e))) {
+    const where = d.path;
+    if (!Array.isArray(d.sources) || !d.sources.length) { add('DERIVED', where, '"sources" must list the entries it is assembled from'); continue; }
+    const srcs = d.sources.map(p => byPath.get(p));
+    d.sources.forEach((p, i) => {
+      const s = srcs[i];
+      if (!s) add('DERIVED', where, `source ${p} is not in the ledger`);
+      else if (isDerived(s)) add('DERIVED', where, `source ${p} is itself derived`);
+      else if (!/\.svg$/i.test(p)) add('DERIVED', where, `source ${p} is not an SVG`);
+    });
+    // A missing source or sprite is MISSING's to report; only compare when all are there.
+    const full = path.join(root, ...d.path.split('/'));
+    const present = [d.path, ...d.sources].every(p => fs.existsSync(path.join(root, ...p.split('/'))));
+    if (present && d.sources.every(p => /\.svg$/i.test(p))) {
+      let want = null;
+      try { want = hashFile(Buffer.from(assembleSprite(root, d), 'utf8'), d.path).sha256; } catch (err) { add('DERIVED', where, err.message); }
+      if (want && want !== hashFile(fs.readFileSync(full), d.path).sha256) {
+        add('DERIVED', where, 'is not what its sources assemble to; run node Tools/blender-art/build-sprite.mjs');
+      }
+    }
+    const fams = new Set(srcs.filter(Boolean).map(s => s.family));
+    const listed = new Set(d.sources);
+    for (const e of entries) {
+      if (e.path && fams.has(e.family) && !isDerived(e) && !listed.has(e.path)) {
+        add('DERIVED', e.path, `a ${e.family} entry that ${d.path} does not list in its sources`);
+      }
+    }
+  }
+
+  const manifestSrcs = new Set();
+  const manifestPath = path.join(root, 'manifest.json');
+  if (fs.existsSync(manifestPath)) {
+    const collect = v => {
+      if (Array.isArray(v)) v.forEach(collect);
+      else if (v && typeof v === 'object') {
+        for (const [k, x] of Object.entries(v)) {
+          if (k === 'src' && typeof x === 'string') manifestSrcs.add(path.posix.normalize(x.replace(/^\.\//, '')));
+          else collect(x);
+        }
+      }
+    };
+    try { collect(JSON.parse(fs.readFileSync(manifestPath, 'utf8'))); } catch (err) { add('MANIFEST', 'manifest.json', 'does not parse: ' + err.message); }
+  }
+  for (const e of entries) {
+    if (!e.path || e.use !== 'manifest') continue;
+    if (!/\.png$/i.test(e.path) || e.theme !== 'light') add('MANIFEST', e.path, 'an icon the OS draws must be a light PNG');
+    if (!manifestSrcs.has(e.path)) add('MANIFEST', e.path, 'use "manifest", but manifest.json does not name it');
+  }
+  for (const src of manifestSrcs) {
+    const e = byPath.get(src);
+    if (e && e.use !== 'manifest') add('MANIFEST', src, `manifest.json names it, but its entry's use is "${e.use}", not "manifest"`);
   }
 
   for (const [name, fam] of Object.entries(families)) {

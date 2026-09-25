@@ -31,7 +31,9 @@ import { launch, SITE } from './harness.mjs';
 
 const ZIP_PATH = path.join(SITE, 'AI_Tools-offline.zip');
 
+const LANDING = 'Click Me! (Start Here).html';     // the staged index.html; see make-offline-copy.mjs
 const ENTRIES = [
+  LANDING,
   'Tools/046-blank-map-generator.html',
   'Tools/035-schedule-visualizer.html',
   'Tools/036-final_grade_checker.html',
@@ -137,6 +139,48 @@ for (const rel of ENTRIES) {
     } catch (e) {
       errors.push(`Tools/046-blank-map-generator.html: built-in base map did not render — ${e}`);
     }
+  }
+
+  // Deeper check for the landing page: every tool icon has to put ink on the
+  // screen. An external <use href="…tools.svg#t007"> draws nothing under
+  // file:// (the builder inlines the sprite for that reason), and a blank
+  // <svg> throws no error, so "no console errors" alone would not catch a
+  // regression. Each icon is screenshotted and its dark-on-light pixels
+  // counted in a blank page's canvas.
+  if (rel === LANDING && !pageErrs.length) {
+    // Categories are <details>; a closed one hides its rows from a screenshot.
+    await page.evaluate(() => document.querySelectorAll('#rows details.cat').forEach(d => { d.open = true; }));
+    const icons = page.locator('#rows .cat:not(.cat-pinned) .tool-icon');
+    const n = await icons.count();
+    if (!n) errors.push(`${LANDING}: no .tool-icon on the landing page`);
+    const shots = [];
+    for (let i = 0; i < n; i++) {
+      const el = icons.nth(i);
+      await el.scrollIntoViewIfNeeded();
+      const href = await el.locator('use').getAttribute('href');
+      shots.push({ href, png: (await el.screenshot()).toString('base64') });
+    }
+    const scratchPage = await browser.newPage();
+    const blank = [];
+    for (const s of shots) {
+      const ink = await scratchPage.evaluate(async b64 => {
+        const img = new Image();
+        img.src = 'data:image/png;base64,' + b64;
+        await img.decode();
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        const x = c.getContext('2d');
+        x.drawImage(img, 0, 0);
+        const d = x.getImageData(0, 0, c.width, c.height).data;
+        let dark = 0;
+        for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] < 300) dark++;
+        return dark;
+      }, s.png);
+      if (ink < 20) blank.push(`${s.href} (${ink} ink pixels)`);
+    }
+    await scratchPage.close();
+    if (blank.length) errors.push(`${LANDING}: ${blank.length} of ${n} tool icons drew nothing from file://:\n    ` + blank.join('\n    '));
+    else if (n) console.log(`  ok  ${LANDING}: all ${n} tool icons draw from file://`);
   }
 
   await page.close();

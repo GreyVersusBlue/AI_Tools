@@ -5,3 +5,4 @@ assets/art/**/*.svg text eol=lf
 Tools/*/art/**/*.svg text eol=lf
 Tools/blender-art/renders.json text eol=lf
 *.webp binary
+assets/art/**/*.png binary
