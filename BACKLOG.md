@@ -70,7 +70,7 @@ without claiming or editing them and takes the next unclaimed row that is not Pa
 
 ## Where things stand — start here
 
-*Current as of `main` after #272, 2026-09-25. **Keep this section under ~80 lines.** It is
+*Current as of `main` after #274, 2026-09-25. **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -83,14 +83,14 @@ were buried in it. It was moved **verbatim** to `HISTORY.md` ("BACKLOG header ha
 2026-09-04 → 2026-09-12"). The durable P3 guidance moved to the end of the Path 6 section in
 Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
-**Last merged: #272, Path 22 P2 — six more Class Screen widgets and screen backgrounds. `CACHE_VERSION` v188.**
+**Last merged: #274, Path 22 P3 — Class Screen screens by period, starter screens, export/import. `CACHE_VERSION` v189.**
 - **Devon asked for Path 22 directly (2026-09-25)** and made its scope calls himself: no accounts,
   no student voting, no Google/Microsoft, YouTube in. On the same day he asked for P2–P5 to be
-  worked straight away. P2 shipped in #272. **P3–P5 (now ranks 183–185) are claimed by session
-  `t4ktn1` and are in flight, one PR each**. Do not take them.
-- P2 added work symbols, a noise meter, drawing, pictures (IndexedDB), QR and a group maker.
-  **What it did not verify:** a real microphone in a real room. Headless Chromium's fake mic is
-  silent, so the suite feeds it a WAV file.
+  worked straight away. P2 shipped in #272 and P3 in #274. **P4–P5 (now ranks 183–184) are
+  claimed by session `t4ktn1` and in flight**. Do not take them.
+- P3: a screen can follow 010's bell schedule, which it reads and never writes. It adds six
+  starter screens and a `.json` export/import. **P2 and P3 did not verify** a real microphone
+  or a real school day. The suites use a WAV file and a pinned clock.
 - **Path 21 icons: 29 of 86 done** (#267). The sprite rules from #265 hold: 32 px landing size,
   a 2.25 stroke, the sprite a *derived* ledger entry. 087 has no icon yet and needs one, which
   makes **30 of 87 left for Blender** — increment 3 or a later one should add `t087`.
@@ -123,17 +123,17 @@ Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v188` — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **267** in `PRECACHE_URLS`, **88** in the `SHELL_URLS` install tier. Bytes: **11.21 MB / 2.52 MB** summed on Devon's Windows checkout after #267, before #269 and #272 grew 087 (not re-measured). #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **43,050 B** ledgered, **22,086 B** of it shell (`check:art` enforces both) |
-| Suites | **161** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| `CACHE_VERSION` | `v189` — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **267** in `PRECACHE_URLS`, **88** in the `SHELL_URLS` install tier. Bytes: **11.21 MB / 2.52 MB** summed on Devon's Windows checkout after #267, before #269, #272 and #274 grew 087 (not re-measured). #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **43,050 B** ledgered, **22,086 B** of it shell (`check:art` enforces both) |
+| Suites | **162** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **14** page-rule pairs on 14 pages, all `color-contrast` |
-| Tool registry | 88 rows, **218 keys and 32 prefixes across 110 files**; **49** entries marked `student` (087's one key, `cls-screen:state`, is not student data: name picks are never saved). The live-entry denominator was 235 in this cell; counting non-`legacy` keys and prefixes gives 238 before #269 and 239 after, so the old figure used a rule not written down. Re-measure before quoting one; `check:registry` green |
+| Tool registry | 88 rows, **218 keys and 32 prefixes across 110 files** (087 now also `reads` 010's settings); **49** entries marked `student` (087's one key, `cls-screen:state`, is not student data: name picks are never saved). The live-entry denominator was 235 in this cell; counting non-`legacy` keys and prefixes gives 238 before #269 and 239 after, so the old figure used a rule not written down. Re-measure before quoting one; `check:registry` green |
 | Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 79 · `a11y.js` 79 · `ink-paper.css` 72 · `base.css` 68 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 7 · `handoffs.js` 6 · `theme.css` 5 · `media-db.js` 2 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 87 (`001`–`087`); next free number **088** |
-| Tier 1 rows | **185**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows proper start at rank **101**; 183–185 are Path 22 P3–P5 (Devon asked for them, did not rank them) |
+| Tier 1 rows | **184**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows proper start at rank **101**; 183–184 are Path 22 P4–P5 (Devon asked for them, did not rank them) |
 | Art | **36** ledger entries: 29 tool icons, the sprite (on 29 landing rows), 4 shortcut PNGs (in `manifest.json`), the unlinked light/dark test tile. 83 of 86 pages carry a data-URI favicon; `assets/icons/` holds 4 PWA icons |
 | Dark mode / fullscreen | 83 of 83 themed pages native dark; `stage.js` on 10 pages (087 has no palette literals of its own and adopted native dark from the start). Path 5 is finished |
 | CI | Pull requests run `--changed` (a diff-scoped selection). A push to `main` runs everything, ~32 min. A PR touching `_shared/`, `package.json` or `Tools/board-check/` is site-wide |
@@ -443,9 +443,8 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 180 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
 | 181 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
 | 182 | Snap-to-grid for base-ten blocks; export and data-driven piece families | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
-| 183 | Path 22 P3 — screens by period: switch the screen from the bell schedule, starter templates, export and import a screen as a file | 087 | 1 | `t4ktn1` 2026-09-25 21:56 UTC (Devon asked for P2–P5 directly) | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
-| 184 | Path 22 P4 — phone as remote over `webrtc-pair.js` (start the timer, pick a name, switch screens), the pattern 010's `cc-remote.js` already uses | 087 | 1 | `t4ktn1` 2026-09-25 21:56 UTC (Devon asked for P2–P5 directly) | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
-| 185 | Path 22 P5 — one timer: extract the countdown into `_shared/` and use it from 004, 010 and 087 (010's "Reuse the real timer" quick win) | `_shared/` | 1 | `t4ktn1` 2026-09-25 21:56 UTC (Devon asked for P2–P5 directly) | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 183 | Path 22 P4 — phone as remote over `webrtc-pair.js` (start the timer, pick a name, switch screens), the pattern 010's `cc-remote.js` already uses | 087 | 1 | `t4ktn1` 2026-09-25 21:56 UTC (Devon asked for P2–P5 directly) | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 184 | Path 22 P5 — one timer: extract the countdown into `_shared/` and use it from 004, 010 and 087 (010's "Reuse the real timer" quick win) | `_shared/` | 1 | `t4ktn1` 2026-09-25 21:56 UTC (Devon asked for P2–P5 directly) | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 
 ## How to work this list
 
@@ -2329,7 +2328,7 @@ they are not a session's to reverse:** no accounts or cloud sync; **no student v
 on purpose**; no Google or Microsoft integration; and **YouTube is in** — the one widget
 allowed to reach the network, because he asked for it. Imitating ClassroomScreen's
 behaviour is fine by him. The page keeps its own name and this site's palette anyway.
-He did not rank the rows, so they sit at the end of Tier 1 (183–185 now P2 has shipped) until he does. Moving
+He did not rank the rows, so they sit at the end of Tier 1 (183–184 now P3 has shipped) until he does. Moving
 them up is a re-rank, and that is his call.
 
 **Why a new tool and not 010.** 010's Tier 2 "true classroom home screen" idea is close to
@@ -2356,8 +2355,9 @@ rather than folding one page into the other.
   starts only on Start and never leaves the page), a drawing pad widget (not a board-wide
   layer), pictures (`media-db.js`, namespace `class-screen`), QR (`qr-draw.js`), a group maker,
   and a background per screen. The frame class is now `wt-<type>`.
-- **P3 — screens by period.** Pick the screen from the bell schedule 010 already reads,
-  starter templates, and export or import a screen as a `.json` file.
+- **P3 — shipped in #274 (v189).** Link a screen to one of 010's bell periods, and "Follow
+  the bell" switches the board when that period starts. Six starter screens. Export and import
+  of one screen as `.json`, pictures included. The screen actions moved into a More menu.
 - **P4 — phone as remote.** Reuse `webrtc-pair.js` and the command-dispatch pattern of
   010's `cc-remote.js`.
 - **P5 — one timer.** Extract the countdown into `_shared/` and use it from 004, 010 and

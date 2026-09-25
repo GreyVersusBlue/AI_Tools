@@ -9,6 +9,43 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 22 P3: Class Screen screens by period, starter screens, export and import (2026-09-25, #274, `CACHE_VERSION` v189)
+
+**What shipped.**
+- A screen can be linked to one of 010's bell periods, and **Follow the bell** switches the board
+  to that period's screen when the period starts, and when the page opens mid-period.
+- Six starter screens: Do Now, Group work, Test day, Independent reading, Exit ticket and Brain
+  break.
+- Export and import of one screen as a `.json` file, pictures included.
+- A More menu for the screen actions.
+- A new suite, `smoke-periods.mjs`, and 52 more core assertions.
+
+**Calls made, each cheap to reverse.**
+- **The bell schedule stays 010's.** 087 reads `gvb-command-center:settings` and never writes
+  it, and the registry row says so (`reads`). There is no second place to enter bell times. A
+  teacher with no 010 schedule sees "No bell times", and Follow the bell is disabled.
+- **The board switches only when a period starts** (and when the page opens mid-period). It
+  never switches continuously, so between bells a teacher's own choice of screen stands. This
+  is the same courtesy 010 shows its roster. Turning Follow on mid-period switches at once,
+  because that is what pressing it asks for.
+- **One screen per period.** Linking a second screen moves the link, and the toast names the
+  screen that lost it.
+- **An exported screen carries no period link.** A period id means something only on the
+  machine whose schedule defined it.
+- **An import is untrusted like localStorage.** It goes through `normalizeScreen`, gets fresh
+  screen, widget and picture ids, and accepts only `data:image/(png|jpeg|webp|gif);base64`
+  pictures, 20 MB of data URL in all. A refused background falls back to dots.
+- **The screen actions moved into a More menu** (`<details>`), because the header had reached
+  two rows at 1400 px. The suites open it through a `more()` helper.
+
+**What went wrong on the way.** The first import named a copy of "Do Now 2" as "Do Now 2 2".
+`uniqueName` now counts on from a trailing number.
+
+**Not verified.** A real school day: the bell switching ran only under a pinned `page.clock`.
+Importing a file exported by a different browser.
+
+---
+
 ## Path 22 P2: six more Class Screen widgets and screen backgrounds (2026-09-25, #272, `CACHE_VERSION` v188)
 
 Devon asked for P2–P5 to be worked straight away in the same conversation that shipped P1, so
