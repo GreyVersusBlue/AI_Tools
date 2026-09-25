@@ -150,6 +150,19 @@ every edit. The deduplication work that established them is summarised in
   yourself when you write that header. Direct and indirect are reported
   separately (`1 (+1 via a module)`); the plain number is the direct count the
   header has always carried.
+- **`npm run check:art` guards the Path 21 art ledger** (added 2026-09-25).
+  Blender runs only on Devon's Windows machine (`Tools/blender-art/README.md` has
+  the pin, 5.2 LTS, and the command lines), so CI never re-renders anything. What it
+  checks is that `Tools/blender-art/renders.json` matches the tree: every output
+  present, under its byte cap, with the ledger's SHA-256 and dimensions, made by the
+  pinned LTS line; family totals and the 2 MB / 250 KB-shell budget; an on-screen
+  raster has a dark twin; an SVG icon is `currentColor` with no fill or literal
+  colour; contrast under declared text holds 4.5:1; no art file under `assets/art/`
+  or `Tools/*/art/` is missing from the ledger; and an `<img>` of an art file has
+  the right `alt`. A new render gets its spec written into the ledger first; the
+  scene script fills in the record. Its test is `npm run test:blender-art`. Keep art
+  out of any folder named `test/`: `make-offline-copy.mjs` drops every such path
+  from the offline zip, which is why the P1 test tile is not in it. It runs in CI.
 - **`npm run lint`** (ESLint, Path 2 P5) covers `_shared/*.js`, the per-tool
   modules, `sw.js`, the tooling and every suite — not inline `<script>` in the
   tool pages. Rules that matter: `no-undef`, `no-unused-vars`, `eqeqeq`. A new
