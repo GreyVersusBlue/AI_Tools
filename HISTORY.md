@@ -9,6 +9,81 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 ranked first: Blender-rendered art goes to the top of Tier 1 (2026-09-25, planning only, no `CACHE_VERSION` change)
+
+**Devon's instruction, 2026-09-25:** Blender-rendered art is the new top priority. **He
+authorized two things that are normally not a session's call: the re-rank itself, and any
+student-facing art among these rows.** Blender runs only on his local Windows machine,
+headless (`blender -b -P script.py`), never in a container. This entry is the record of both
+authorizations. `BACKLOG.md`'s "How big a batch", "Picking a row", the scope rule and the
+Standing decisions table all point here. The authorization covers Path 21's rows and nothing
+else.
+
+What changed, all in `BACKLOG.md`. Nothing was built.
+- **A new Path 21** at the end of the path list: why, where it runs, where the generator lives,
+  phases P1–P4, verification and decisions.
+- **Eight new Tier 1 rows at ranks 1–8.** P1 is the pipeline (1 session); P2 is the 86 icons
+  (2+, in increments); P3 is the landing hero (1); P4 is five per-tool rows in the order Devon
+  listed them: 080 (1), 071 (1), 042 (½), 030 (½), 046 (1). Every existing row kept its
+  relative order and moved down eight, to **1..183**. The per-tool boundary moved from 94 to
+  **102**. The old rank 1 (Path 6 P4, blocked) is rank 9 and now says "blocked on rank 46",
+  which is Path 12 P1.
+- **Every Path 21 row says it needs Blender locally, and a session without `blender` on PATH
+  skips it.** Skipping means no claim and no edit, and the session takes the next row that is
+  not Path 21. So a cloud session starts at rank 9.
+
+**The calls this session made, so they can be reversed cheaply.** None of these is Devon's;
+each is a default.
+- **The generator lives in a new `Tools/blender-art/`, not `Tools/board-check/`.** First,
+  `select-suites.mjs` rule 1 makes any `board-check` edit site-wide in CI, and every icon
+  increment would pay the full run for it. Second, `Tools/a11y-sweep/` and `Tools/theme/` are
+  already non-tool folders under `Tools/`. Outputs go to `assets/art/` (site-level) and
+  `Tools/<tool-folder>/art/` (per-tool), never into the generator folder. That folder is never
+  precached and has to be added to `make-offline-copy.mjs`'s exclusions. `.blend` files are not
+  committed: a scene is its script.
+- **The palette is parsed from `_shared/ink-paper.css` at render time** (light from `:root`,
+  dark from the `[data-theme="dark"]` block), so there is no second copy of it to drift.
+- **Icons are `currentColor` SVG from Freestyle, served as one sprite**, so dark mode costs no
+  second file. **Renders are WebP written by Blender itself**, so no encoder is vendored. PNG is
+  used only for manifest icons, and for jsPDF if it refuses WebP.
+- **The icon-set open call.** No per-tool icon set exists to replace: the landing rows have
+  none, and 83 of 86 pages carry a one-off data-URI favicon (029, 031 and 044 have none). So the
+  set is added. It replaces the generic `icon-192.png` on the manifest's four shortcuts. The
+  favicons stay. The app icon is swapped in the last increment only if the new mark stays
+  legible in the maskable safe zone.
+- **Manifest screenshots stay Playwright captures, not renders.** The install sheet presents
+  them as the app itself.
+- **Byte budgets.** 2 MB for the whole path, against **11.24 MB** precached today. At most
+  250 KB of it goes in the shell tier, which is **2.68 MB** today. There is a cap per row. Both
+  totals were measured on 2026-09-25 by summing the files named in `sw.js`'s two lists
+  (258 and 83 entries, none missing), with a throwaway script that was not committed. Re-measure
+  rather than quote them.
+- **Contrast under text is measured at render time.** The scene script records the luminance
+  under a declared text region, and the validator asserts 4.5:1 in both themes, because axe
+  reports text over a background image as incomplete rather than failing it.
+
+**Not verified. None of this could be checked here, because there is no Blender in this
+container.**
+- Whether Blender 4.5 LTS still bundles the Freestyle SVG Exporter or whether it now comes
+  from the Extensions platform.
+- That Blender's WebP output is available and adequate at the caps.
+- That Cycles on CPU with a fixed seed is byte-identical across two runs. P1's acceptance test
+  exists to find out.
+- That an external `<use href>` sprite renders from the `file://` offline zip. It probably does
+  not in Chrome, and P2 says what to do if so.
+- Whether 042's print and PDF path accepts WebP.
+
+Every one of these is written into the row as a thing to check, not as a fact. Also: the
+eslint config lints `Tools/*/*.mjs` as a *browser* file (`eslint.config.js`, line 110), so P1's
+Node validator will fail `no-undef` on `process` until its path joins the Node block. That was
+read off the config and is recorded in the P1 text.
+
+**What this session did not touch.** The Tier 2 prose cites Tier 1 ranks in about a dozen
+places, such as the Path 6 section's "rank 2" and the Cross-cutting ".share-note — rank 11".
+Most of those were already stale before today, and they were left alone. The header's and
+Standing decisions' rank citations were updated. No row was claimed: this was a planning
+change to `BACKLOG.md` and `HISTORY.md` only, with no implementation to collide with.
+
 ## Path 6 P4 rollout, increment 2: the roster chain — 002 → 022 and 022 → 005, and 006/007 → 002 decided not a link (2026-09-24, #259, `CACHE_VERSION` v183)
 
 The roster → groups → lab roles → seating chain (006/007 → 002 → 022 → 005) was the part of the
