@@ -23,6 +23,7 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/stage.js"></script>
+<script src="../_shared/countdown.js"></script>
 <script src="../_shared/tool-registry.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
@@ -598,12 +599,20 @@
   /* =====================================================================
      PANEL: Timer
 
-     Still this page's own simplified timer rather than the Classroom Timer's,
-     but it no longer forgets itself: the end time is stored, so a stray
-     refresh mid-activity picks the countdown back up where it was instead of
-     resetting to five minutes.
+     The clock is _shared/countdown.js's (Path 22 P5), the same one 087 Class
+     Screen's timer runs on. `cd` is the truth; `timerState` is the view the
+     rest of this page and the phone remote's snapshot have always read
+     (whole seconds), recomputed from `cd` by syncTimer(). The end time is
+     stored, so a stray refresh mid-activity picks the countdown back up.
      ===================================================================== */
+  var cd = Countdown.create(300000);
   var timerState = { total: 300, remaining: 300, running: false, endAt: 0 };
+  function syncTimer() {
+    timerState.total = Math.round(cd.totalMs / 1000);
+    timerState.remaining = Math.round(Countdown.left(cd, Date.now()) / 1000);
+    timerState.running = Countdown.isRunning(cd);
+    timerState.endAt = cd.endAt;
+  }
   var tickHandle = null, audioCtx = null, Sounds = null;
   import('./classroom-timer/ct-sounds.js').then(function (m) { Sounds = m; }).catch(function () { /* fall back to beep() */ });
 
@@ -614,23 +623,18 @@
   }
   function restoreTimer() {
     var t = settings.timer;
-    timerState.total = (settings.timerMinutes || 5) * 60;
-    timerState.remaining = timerState.total;
-    timerState.running = false;
-    timerState.endAt = 0;
-    if (!t || typeof t !== 'object') return;
-    if (t.total > 0) { timerState.total = t.total; timerState.remaining = t.total; }
-    if (t.running && t.endAt > Date.now()) {
-      timerState.remaining = Math.round((t.endAt - Date.now()) / 1000);
-      timerState.running = true;
-      timerState.endAt = t.endAt;
-    } else if (t.running) {
-      /* It ran out while the page was closed. Showing 00:00 is honest; firing
-         the alert now, ten minutes late, is not. */
-      timerState.remaining = 0;
-    } else if (typeof t.remaining === 'number') {
-      timerState.remaining = Math.max(0, Math.min(t.total || timerState.total, t.remaining));
-    }
+    var total = (settings.timerMinutes || 5) * 60;
+    if (!t || typeof t !== 'object') { cd = Countdown.create(total * 1000); syncTimer(); return; }
+    if (t.total > 0) total = t.total;
+    /* Ran out while the page was closed: Countdown.restore brings it back
+       finished (00:00), and nothing rings. Showing 00:00 is honest; firing
+       the alert now, ten minutes late, is not. */
+    cd = Countdown.restore({
+      totalMs: total * 1000,
+      endAt: t.running ? t.endAt : 0,
+      leftMs: typeof t.remaining === 'number' ? t.remaining * 1000 : total * 1000
+    }, Date.now()).c;
+    syncTimer();
   }
 
   PANELS.timer = {
@@ -670,7 +674,8 @@
       });
       el.querySelector('#resetBtn').addEventListener('click', function () {
         pauseTimer();
-        timerState.remaining = timerState.total;
+        Countdown.reset(cd);
+        syncTimer();
         persistTimer();
         renderTimer();
       });
@@ -702,11 +707,9 @@
     if (choice === 'none') return;
     if (Sounds) { Sounds.unlock(); Sounds.play(choice, 0.7); } else beep();
   }
-  function formatTime(sec) {
-    sec = Math.max(0, Math.round(sec));
-    var m = Math.floor(sec / 60), s = sec % 60;
-    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-  }
+  /* mm:ss rounded to the nearest second, the display this page has always
+     had; past an hour it now reads h:mm:ss instead of "75:00". */
+  function formatTime(sec) { return Countdown.format(sec * 1000, { pad: true, round: 'round' }); }
   function renderTimer() {
     var display = document.getElementById('timerDisplay');
     var ringFg = document.getElementById('ringFg');
@@ -724,45 +727,40 @@
   function setMinutes(min) {
     min = Math.max(1, Math.min(180, Math.round(min) || 1));
     pauseTimer();
-    timerState.total = min * 60;
-    timerState.remaining = timerState.total;
+    Countdown.setTotal(cd, min * 60000);
+    syncTimer();
     persistTimer();
     renderTimer();
   }
   function startTimer() {
-    if (timerState.remaining <= 0) timerState.remaining = timerState.total;
     if (Sounds) Sounds.unlock();
-    timerState.running = true;
     /* Driven off a wall-clock end time rather than a decrementing counter, so a
        backgrounded tab (which browsers throttle to once a minute) still shows
        the right number the moment it comes back. */
-    timerState.endAt = Date.now() + timerState.remaining * 1000;
+    Countdown.start(cd, Date.now());
+    syncTimer();
     persistTimer();
     if (tickHandle) clearInterval(tickHandle);
     tickHandle = setInterval(tickTimer, 250);
     renderTimer();
   }
   function pauseTimer() {
-    timerState.running = false;
-    timerState.endAt = 0;
+    Countdown.pause(cd, Date.now());
+    syncTimer();
     if (tickHandle) { clearInterval(tickHandle); tickHandle = null; }
     persistTimer();
     renderTimer();
   }
   function tickTimer() {
-    if (!timerState.running) return;
-    var left = Math.round((timerState.endAt - Date.now()) / 1000);
-    if (left <= 0) {
-      timerState.remaining = 0;
+    if (!Countdown.isRunning(cd)) return;
+    if (Countdown.expire(cd, Date.now())) {
       pauseTimer();
-      renderTimer();
       playAlert();
       return;
     }
-    if (left !== timerState.remaining) {
-      timerState.remaining = left;
-      renderTimer();
-    }
+    var before = timerState.remaining;
+    syncTimer();
+    if (timerState.remaining !== before) renderTimer();
   }
 
   /* =====================================================================

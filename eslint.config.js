@@ -50,6 +50,7 @@ const SITE_GLOBALS = {
   StudentDetails: 'readonly',
   ToolRegistry: 'readonly',
   ThemeToggle: 'readonly',
+  Countdown: 'readonly',
   // _shared/vendor/
   jspdf: 'readonly',
   XLSX: 'readonly',
