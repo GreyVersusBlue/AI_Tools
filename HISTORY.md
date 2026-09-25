@@ -9,6 +9,77 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 22 P1: `087` Class Screen, a widget board for the projector (2026-09-25, #269, `CACHE_VERSION` v187)
+
+**Why it exists.** Devon asked, in conversation, whether the site could have a page that works
+like ClassroomScreen: widgets on a projected board, saved screens, timers, text boxes. He then
+made four scope calls himself, and they are recorded here so no session reverses them by accident:
+
+- **No accounts or cloud sync.** Screens live in localStorage like everything else here, and
+  009 Backup & Restore already covers them through the registry row.
+- **No student voting, on purpose.** Nothing in Path 22 runs on a student device. This matches
+  the standing Path 8 decision.
+- **No Google or Microsoft integration.**
+- **YouTube is in.** It is the one widget allowed to reach the network, which is a deliberate
+  exception to "nothing leaves the browser". 086 Wiki Race was the precedent for a page that
+  needs the internet. Embeds go through `youtube-nocookie.com`.
+
+He also said imitating ClassroomScreen was fine. The page is still called Class Screen and uses
+this site's palette, because a name of our own costs nothing.
+
+**What shipped.**
+- `Tools/087-class-screen.html`, with logic in `Tools/class-screen/cs-core.js`
+  (`window.ClassScreenCore`):
+  - Widgets: text, timer, stopwatch, clock, YouTube, traffic light, name picker on
+    `np_rosters` through `roster.js`, and dice.
+  - Named screens (New, Rename, Duplicate, Delete, Clear) in one Store key, `cls-screen:state`.
+  - Fullscreen through `stage.js`, and native dark from the start.
+- Wired into `index.html` (Classroom Management, 11 tools; counts 86 → 87; a changelog entry),
+  `README.md`, the registry, `sw.js`, `suites.json` and `test:class-screen`.
+
+**Calls a session made, and why. Each is cheap to reverse.**
+- **A new tool, not 010.** 010's Tier 2 "true classroom home screen" idea is close. But 010 is a
+  fixed grid with two suites built around it, and a free-form board is a different page. I had
+  first told Devon I would grow 010, then changed course once I was in the code. P4 and P5 are
+  where the two pages share code.
+- **Positions are fractions of the board**, not pixels, so one screen fits a laptop and a
+  projector. The smoke suite reloads at a different window size and checks the position.
+- **New widgets fill the board in reading order, top-left first.** Centre-first was built first
+  and failed its own test: the first widget sat in the middle and split the board, so one of each
+  of the eight types no longer fit without overlap. When nothing is free, the widget goes where
+  it covers least.
+- **Name picks are never saved.** Only the roster name is, so `cls-screen:state` holds no
+  student data and its registry row is not `student: true`. The cost is that "no repeats" resets
+  on reload.
+- **Last writer wins across tabs.** There is no cross-tab merge. Two open copies of Class Screen
+  overwrite each other's saves.
+- **No markup sinks.** Every widget builds its DOM with `createElement` and `textContent`. The
+  page takes no link input, so `check:inline-sinks` does not cover it, but the rule holds anyway.
+- **P2–P5 went at the end of Tier 1 (183–186).** Devon did not rank them, and ranking is his call.
+
+**What went wrong on the way.**
+- The text widget's frame (`.w-text`, built from `'w-' + type`) and its textarea shared a class,
+  so the textarea's rules applied to the whole widget. Screenshots caught it; the suites did not.
+  The textarea is `.text-area` now. Any new widget type whose name makes `.w-<type>` collide with
+  an existing class has the same problem.
+- The dice drew no pips. A 3×3 CSS grid of empty spans inside an `aspect-ratio` box resolved to
+  0×0 tracks in this Chromium, so the pips are absolutely positioned now. The smoke suite asserts
+  that pips have a size, because only the screenshot noticed.
+- `cs-core.js` was written with the dual-export idiom, but the root `package.json` is
+  `"type": "module"`, so Node's `require()` returned an empty namespace. It is a plain global
+  script now, and `core.test.mjs` runs it in a `vm` context.
+
+**Not verified.**
+- A real video playing: the harness aborts offsite requests, so only the embed `src` is asserted.
+  If YouTube ever insists on a Referer, `file://` (the offline zip) will not play it.
+- Real fullscreen on a projector, touch dragging on a tablet, and the timer's beep through real
+  speakers.
+- The `v187` byte totals in `BACKLOG.md` were not re-measured. 087 adds about 56 KB (43 KB page, 13 KB module) to the
+  deferred tier and nothing to the shell.
+- 087 has no Path 21 icon yet. It needs one in a Blender session.
+
+---
+
 ## Path 21 P2, increment 2: icons for 003, 009 and 011–027 (2026-09-25, #267, `CACHE_VERSION` v186)
 
 This is the second increment of rank 1, a 2+ row, so the row stays and is rewritten. It was
