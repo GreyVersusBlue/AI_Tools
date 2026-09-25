@@ -70,7 +70,7 @@ without claiming or editing them and takes the next unclaimed row that is not Pa
 
 ## Where things stand — start here
 
-*Current as of `main` after #259, 2026-09-24. **Keep this section under ~80 lines.** It is
+*Current as of `main` after #261, 2026-09-25. **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -83,51 +83,55 @@ were buried in it. It was moved **verbatim** to `HISTORY.md` ("BACKLOG header ha
 2026-09-04 → 2026-09-12"). The durable P3 guidance moved to the end of the Path 6 section in
 Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
-**Last shipped: Path 6 P4 rollout, increment 2 — the roster chain (#259, `CACHE_VERSION` v183).**
-Each hop was decided against #248's rule (a link carries a field only if it was written to be
-published):
-- **006/007 → 002 is not a link.** 002 reads the same saved class lists through `roster.js` on the
-  same device with no URL; 006's and 007's own roster links already cover another device.
-- **002 → 022 is a sheet row**: the grouping 002 already shares (labels and members). 022 takes
-  `?labgroups=` and files it as a **new** lab class with its roles handed out.
-- **022 → 005 is a `sheet: false` entry** sent from 022's new "Seat these groups" button: a new 005
-  section with one pod per group, everyone seated. Roles, role history, absences, safety-contract
-  status and keep-apart pairs stay in 022.
-- **Found and fixed:** a link-supplied name like `constructor` or `__proto__` would have broken
-  022, because its role history is a plain object keyed by name. Arrivals now drop those names.
-- `handoffs.test.mjs` is at **381**, `smoke-send-to.mjs` at **80**. `HISTORY.md` has what was not verified.
-- **Still not done from #254:** deleting rank 88's four dead trees. It is a one-line `git rm`.
+**Last merged: #261, Path 21 ranked first. Planning only; `CACHE_VERSION` is still v183.**
+- Devon (2026-09-25) put **Blender-rendered art** at the top of Tier 1. He authorized the
+  re-rank and the student-facing art among these rows; neither is normally a session's call.
+- The eight rows are ranks **1–8**:
+  - rank 1: the pipeline
+  - rank 2: the 86 icons
+  - rank 3: the landing hero
+  - ranks 4–8: per-tool art for 080, 071, 042, 030 and 046
+- Every other row moved down eight, unchanged, to **1..183**. The reasoning, and the list of
+  what could not be verified without Blender, is in `HISTORY.md`.
+- The last code merge was #259 (Path 6 P4, the roster chain, v183). The one-line `git rm` of
+  rank 96's four dead trees is **still not done**.
 
-**Start here: rank 1 is now blocked on rank 38, so take rank 2.** All that is left of Path 6 P4's
-rollout is **053 → 030**, and that waits on Path 12 P1 (the question bank with 030 as the front
-door). Rank 1 stays in the table as a pointer, not as work. **Rank 2 is Path 4 P4** (image-bearing
-tools onto `media-db.js`, 005's photos first), a 2+ row: do one increment and leave the row.
+**Start here. Which row depends on whether this machine has Blender.**
+- **Blender on PATH** (Devon's local Windows machine; check with `blender --version`): take
+  **rank 1**, Path 21 P1, the pipeline. It is a 1-session row, so it is the whole batch. The
+  Path 21 section in Tier 2 has the scene template, palette, determinism rules, formats, caps
+  and the validator spec. Build the validator, break it on purpose once, and wire it into CI;
+  then the guard count below becomes 13.
+- **No Blender** (any cloud container): skip ranks 1–8 without claiming or editing them.
+  Rank 9 (Path 6 P4) is only a pointer, blocked on rank 46 (Path 12 P1). So take
+  **rank 10**, Path 4 P4 (the image-bearing tools onto `media-db.js`, 005's photos first). It
+  is a 2+ row: do one increment and leave the row.
 
 **Decisions only Devon can make — surfaced, not taken.**
 - **Interleave per-tool improvements with platform work?** Standing decisions say "keep platform
-  first", so every teacher-visible per-tool idea sits at rank 94 or below behind 93 platform rows.
-  That was a session's call on 2026-09-05; re-ranking is not a session's call. Worth Devon's
-  five minutes.
+  first", so every teacher-visible per-tool idea outside Path 21 sits at rank 102 or below. Path
+  21 shows Devon will re-rank when he wants something first; the general question is still his.
 - **A periodic human device check.** Everything a session cannot do is collected in the parked
-  list under Cross-cutting ("Parked — needs a person"), now including the recurring "not
-  verified" items (camera-scanned QR, system share, pairing QR, real-printer dark-mode print,
-  persistent-storage grants). About 30 minutes with a phone, a laptop and a printer.
+  list under Cross-cutting ("Parked — needs a person"): camera-scanned QR, system share, the
+  pairing QR, real-printer dark-mode print and persistent-storage grants. It takes about 30
+  minutes with a phone, a laptop and a printer.
 
-**Numbers (2026-09-24; re-measure, do not carry forward):**
+**Numbers (2026-09-25; re-measure, do not carry forward):**
 
 | Fact | Value |
 |---|---|
 | `CACHE_VERSION` | `v183` — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **258** in `PRECACHE_URLS`, **83** in the `SHELL_URLS` install tier |
+| Precache entries | **258** in `PRECACHE_URLS` (**11.24 MB**), **83** in the `SHELL_URLS` install tier (**2.68 MB**). Path 21's budget is 2 MB more, at most 250 KB of it shell |
 | Suites | **157** in `Tools/board-check/suites.json`; `expectedFailures` empty |
-| Read-only guards | **12**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`. All run in CI |
+| Read-only guards | **12**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`. All run in CI. Path 21 P1 adds a 13th |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **14** page-rule pairs on 14 pages, all `color-contrast` |
-| Tool registry | 87 rows, **217 keys and 32 prefixes across 109 files**; **49 of 235** live entries marked `student` (was 44 before the 2026-09-23 audit); `check:registry` green |
-| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `qr-draw.js` 53 · `share.js` 54 · `state-link.js` 54 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 9 · `webrtc-pair.js` 7 · `tool-registry.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Tool registry | 87 rows, **217 keys and 32 prefixes across 109 files**; **49 of 235** live entries marked `student`; `check:registry` green |
+| Shared-file adoption (of 86) | `sw-register.js` 85 · `a11y.css` 78 · `a11y.js` 78 · `ink-paper.css` 71 · `base.css` 68 · `share.js` 54 · `state-link.js` 54 · `qr-draw.js` 53 · `store.js` 36 · `roster.js` 32 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 9 · `tool-registry.js` 8 · `webrtc-pair.js` 7 · `handoffs.js` 6 · `theme.css` 5 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `media-db.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 86 (`001`–`086`); next free number **087** |
-| Tier 1 rows | **175**, contiguous; per-tool rows start at rank **94** |
+| Tier 1 rows | **183**, contiguous. Ranks 1–8 are Path 21 (Blender only); per-tool rows proper start at rank **102** |
+| Art | No per-tool icons or illustrations yet. 83 of 86 pages carry a data-URI favicon; `assets/` holds 4 PWA icons and 2 screenshots |
 | Dark mode / fullscreen | 83 of 83 themed pages native dark; `stage.js` on 9 pages. Path 5 is finished |
 | CI | Pull requests run `--changed` (a diff-scoped selection). A push to `main` runs everything, ~32 min. A PR touching `_shared/`, `package.json` or `Tools/board-check/` is site-wide |
 | Lint | clean |
