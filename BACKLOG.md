@@ -439,10 +439,10 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 180 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
 | 181 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
 | 182 | Snap-to-grid for base-ten blocks; export and data-driven piece families | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
-| 183 | Path 22 P2 — more widgets: work symbols, noise meter (microphone stays local), drawing layer, image (`media-db.js`), QR (`qr-draw.js`), group maker, board backgrounds | 087 | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
-| 184 | Path 22 P3 — screens by period: switch the screen from the bell schedule, starter templates, export and import a screen as a file | 087 | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
-| 185 | Path 22 P4 — phone as remote over `webrtc-pair.js` (start the timer, pick a name, switch screens), the pattern 010's `cc-remote.js` already uses | 087 | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
-| 186 | Path 22 P5 — one timer: extract the countdown into `_shared/` and use it from 004, 010 and 087 (010's "Reuse the real timer" quick win) | `_shared/` | 1 |  | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 183 | Path 22 P2 — more widgets: work symbols, noise meter (microphone stays local), drawing layer, image (`media-db.js`), QR (`qr-draw.js`), group maker, board backgrounds | 087 | 1 | `t4ktn1` 2026-09-25 21:56 UTC (Devon asked for 183–186 directly) | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 184 | Path 22 P3 — screens by period: switch the screen from the bell schedule, starter templates, export and import a screen as a file | 087 | 1 | `t4ktn1` 2026-09-25 21:56 UTC (Devon asked for 183–186 directly) | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 185 | Path 22 P4 — phone as remote over `webrtc-pair.js` (start the timer, pick a name, switch screens), the pattern 010's `cc-remote.js` already uses | 087 | 1 | `t4ktn1` 2026-09-25 21:56 UTC (Devon asked for 183–186 directly) | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 186 | Path 22 P5 — one timer: extract the countdown into `_shared/` and use it from 004, 010 and 087 (010's "Reuse the real timer" quick win) | `_shared/` | 1 | `t4ktn1` 2026-09-25 21:56 UTC (Devon asked for 183–186 directly) | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 
 ## How to work this list
 
