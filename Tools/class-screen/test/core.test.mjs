@@ -180,5 +180,72 @@ eq(C.mediaIds({ screens: [
 eq(C.TYPES.length, 14, 'fourteen widget types');
 C.TYPES.forEach((t) => ok(C.DEFAULT_SIZE[t], `a default size for ${t}`));
 
+// ── P3: periods, starters, files ─────────────────────────────────────
+const bell = C.readPeriods({ periods: [
+  { id: 'p2', label: 'Period 2', start: '08:55', end: '09:45' },
+  { id: 'p1', label: 'Period 1', start: '08:00', end: '08:50' },
+  { id: 'p1', label: 'Duplicate', start: '10:00', end: '10:30' },
+  { id: 'bad id', label: 'X', start: '11:00', end: '11:30' },
+  { id: 'p9', label: 'Backwards', start: '12:00', end: '11:00' },
+  { id: 'p8', label: 'Nonsense', start: '25:00', end: '26:00' },
+  { id: 'lunch', label: '', start: '11:35', end: '12:10' },
+  'junk', null
+] });
+eq(bell.map((p) => p.id), ['p1', 'p2', 'lunch'], 'bell periods: sorted, junk and duplicates dropped');
+eq(bell[2].label, 'lunch', 'a blank label falls back to the id');
+eq(C.readPeriods(null), [], 'no settings, no periods');
+eq(C.readPeriods({ periods: 'x' }), [], 'a bad periods value, no periods');
+eq(C.periodAt(bell, 8 * 60).current.id, 'p1', 'the start minute is inside a period');
+eq(C.periodAt(bell, 8 * 60 + 50).current, null, 'the end minute is not');
+eq(C.periodAt(bell, 8 * 60 + 50).next.id, 'p2', 'between bells, the next period is known');
+eq(C.periodAt(bell, 9 * 60 + 10).current.id, 'p2', 'mid-period');
+eq(C.periodAt([], 600), { current: null, next: null }, 'no schedule, no period');
+eq(C.normalizeState({ follow: 'yes', screens: [] }).follow, false, 'follow must be a boolean');
+eq(C.normalizeState({ follow: true, screens: [] }).follow, true, 'follow survives');
+const linked = C.normalizeState({ screens: [{ id: 'a', period: 'p1', widgets: [] }, { id: 'b', period: 'no good!', widgets: [] }] });
+eq(linked.screens.map((x) => x.period), ['p1', ''], 'a bad period id is dropped');
+eq(C.screenForPeriod(linked, 'p1').id, 'a', 'screen for a period');
+eq(C.screenForPeriod(linked, 'p2'), null, 'no screen for an unlinked period');
+eq(C.screenForPeriod(linked, ''), null, 'no period, no screen');
+
+eq(C.TEMPLATES.length, 6, 'six starter screens');
+for (const t of C.TEMPLATES) {
+  const sc = C.fromTemplate(t.id);
+  ok(sc && sc.name === t.name && sc.widgets.length >= 4, `starter ${t.id} builds`);
+  eq(C.normalizeState({ screens: [sc] }).screens[0], sc, `starter ${t.id} is already normal`);
+  const hitAny = sc.widgets.some((p, i) => sc.widgets.some((q, j) => i !== j && hit(p, q)));
+  ok(!hitAny, `starter ${t.id} has no overlapping widgets`);
+}
+eq(C.fromTemplate('nope'), null, 'unknown starter');
+ok(C.fromTemplate('donow').id !== C.fromTemplate('donow').id, 'each starter gets a fresh id');
+
+const PNG = 'data:image/png;base64,iVBORw0KGgo=';
+const orig = C.normalizeState({ screens: [{ id: 's1', name: 'Mine', period: 'p1', bg: 'image', bgImage: 'imgBG', widgets: [
+  { id: 'w1', type: 'image', data: { mediaId: 'imgA', alt: 'A' } },
+  { id: 'w2', type: 'image', data: { mediaId: 'imgGone' } },
+  { id: 'w3', type: 'text', data: { text: 'hi' } }
+] }] }).screens[0];
+const file = C.exportScreen(orig, { imgA: PNG, imgBG: PNG, unrelated: PNG });
+eq(file.kind, C.EXPORT_KIND, 'export kind');
+eq(Object.keys(file.media).sort(), ['imgA', 'imgBG'], 'export carries only the pictures the screen uses');
+eq(file.screen.period, '', 'export drops the period link');
+eq(orig.period, 'p1', 'and does not touch the screen it copied');
+const back = C.readImport(JSON.parse(JSON.stringify(file)));
+ok(!back.error, 'the export reads back');
+ok(back.screen.id !== 's1' && back.screen.widgets.every((w) => !/^w[123]$/.test(w.id)), 'import gets fresh ids');
+const newA = back.screen.widgets[0].data.mediaId;
+ok(newA && newA !== 'imgA' && back.media[newA] === PNG, 'picture ids are remapped with their data');
+ok(back.screen.bgImage && back.media[back.screen.bgImage] === PNG, 'background picture remapped');
+eq(back.screen.widgets[1].data.mediaId, '', 'a picture missing from the file is emptied');
+eq(back.dropped, 1, 'and counted');
+eq(back.screen.widgets[2].data.text, 'hi', 'other widgets come through');
+eq(C.readImport({ kind: 'other' }).error, 'That file is not a Class Screen export.', 'wrong kind refused');
+eq(C.readImport({ kind: C.EXPORT_KIND, version: 2, screen: {} }).error, 'That file was made by a newer version of Class Screen.', 'newer version refused');
+eq(C.readImport({ kind: C.EXPORT_KIND, version: 1, screen: 'x' }).error, 'That file has no screen in it.', 'no screen refused');
+const evil = C.readImport({ kind: C.EXPORT_KIND, version: 1, screen: { name: 'E', bg: 'image', bgImage: 'b', widgets: [{ type: 'image', data: { mediaId: 'a' } }] },
+  media: { a: 'javascript:alert(1)', b: 'data:text/html;base64,PGI+' } });
+eq(Object.keys(evil.media), [], 'only image data URLs are accepted');
+eq([evil.screen.bg, evil.screen.bgImage], ['dots', ''], 'a refused background falls back to dots');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

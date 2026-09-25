@@ -39,6 +39,21 @@
   .back-link:hover { color: var(--accent-2); }
   .screen-bar { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-left: auto; }
   .screen-bar label { font-size: .82rem; font-weight: 600; }
+  .screen-bar .follow { display: inline-flex; align-items: center; gap: .25rem; }
+  .menu { position: relative; }
+  .menu summary {
+    list-style: none; cursor: pointer; font-size: .85rem; font-weight: 600;
+    border: 1px solid var(--line-strong); border-radius: 6px; padding: .3rem .65rem; background: var(--card);
+  }
+  .menu summary::-webkit-details-marker { display: none; }
+  .menu summary::after { content: " ▾"; }
+  .menu summary:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 2px; }
+  .menu-pop {
+    position: absolute; right: 0; top: calc(100% + 4px); z-index: 70; min-width: 11rem;
+    display: flex; flex-direction: column; gap: .25rem; padding: .35rem;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  }
+  .menu-pop button { text-align: left; }
   select, input[type="text"] {
     font: inherit; font-size: .88rem; color: var(--ink); background: var(--card);
     border: 1px solid var(--line-strong); border-radius: 6px; padding: .3rem .45rem;
@@ -252,10 +267,11 @@
     <label for="screenSelect">Screen</label>
     <select id="screenSelect"></select>
     <button type="button" id="newScreenBtn">New</button>
-    <button type="button" id="renameScreenBtn">Rename</button>
-    <button type="button" id="dupScreenBtn">Duplicate</button>
-    <button type="button" id="deleteScreenBtn">Delete</button>
-    <button type="button" id="clearScreenBtn">Clear</button>
+    <label for="templateSelect" class="sr-only">New screen from a starter</label>
+    <select id="templateSelect"></select>
+    <label for="periodSelect">Period</label>
+    <select id="periodSelect"></select>
+    <label class="follow" title="Switch to each period's screen when its bell rings (bell times come from Command Center)"><input type="checkbox" id="followBell"> Follow the bell</label>
     <label for="bgSelect">Background</label>
     <select id="bgSelect">
       <option value="dots">Dots</option>
@@ -268,6 +284,18 @@
       <option value="image">Picture…</option>
     </select>
     <input type="file" id="bgFile" accept="image/*" hidden>
+    <details class="menu" id="moreMenu">
+      <summary>More</summary>
+      <div class="menu-pop">
+        <button type="button" id="renameScreenBtn">Rename</button>
+        <button type="button" id="dupScreenBtn">Duplicate</button>
+        <button type="button" id="exportScreenBtn">Export screen</button>
+        <button type="button" id="importScreenBtn">Import screen</button>
+        <button type="button" id="clearScreenBtn">Clear</button>
+        <button type="button" id="deleteScreenBtn">Delete</button>
+      </div>
+    </details>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
     <button type="button" id="fsBtn" class="primary">Fullscreen</button>
   </div>
 </header>
@@ -1392,8 +1420,15 @@
 
   function renderScreenBar() {
     screenSelect.textContent = '';
-    state.screens.forEach(function (s) { screenSelect.appendChild(el('option', { value: s.id, text: s.name })); });
+    var bell = readBell();
+    var byId = {};
+    bell.forEach(function (p) { byId[p.id] = p; });
+    state.screens.forEach(function (s) {
+      var tag = s.period && byId[s.period] ? ' (' + byId[s.period].label + ')' : '';
+      screenSelect.appendChild(el('option', { value: s.id, text: s.name + tag }));
+    });
     screenSelect.value = state.current;
+    renderPeriodBar(bell);
     document.getElementById('deleteScreenBtn').disabled = state.screens.length < 2;
     document.getElementById('newScreenBtn').disabled = state.screens.length >= Core.MAX_SCREENS;
     document.getElementById('dupScreenBtn').disabled = state.screens.length >= Core.MAX_SCREENS;
@@ -1401,6 +1436,7 @@
   function uniqueName(base) {
     var names = state.screens.map(function (s) { return s.name; });
     if (names.indexOf(base) === -1) return base;
+    base = base.replace(/ \d+$/, '');      // "Do Now 2" taken → "Do Now 3", not "Do Now 2 2"
     for (var i = 2; ; i++) if (names.indexOf(base + ' ' + i) === -1) return base + ' ' + i;
   }
   screenSelect.addEventListener('change', function () { state.current = screenSelect.value; saveNow(); renderBoard(); });
@@ -1441,6 +1477,140 @@
     showToast('Screen cleared.', true);
   });
 
+  /* ── starter screens ──────────────────────────────────────────────── */
+
+  var templateSelect = document.getElementById('templateSelect');
+  templateSelect.appendChild(el('option', { value: '', text: 'Starter screen…' }));
+  Core.TEMPLATES.forEach(function (t) { templateSelect.appendChild(el('option', { value: t.id, text: t.name })); });
+  templateSelect.addEventListener('change', function () {
+    var id = templateSelect.value;
+    templateSelect.value = '';
+    if (!id) return;
+    if (state.screens.length >= Core.MAX_SCREENS) { showToast('You already have ' + Core.MAX_SCREENS + ' screens.', false); return; }
+    var sc = Core.fromTemplate(id);
+    sc.name = uniqueName(sc.name);
+    state.screens.push(sc); state.current = sc.id; saveNow(); renderBoard();
+    showToast('Added the “' + sc.name + '” screen. Change anything on it.', false);
+  });
+
+  /* ── periods: the bell schedule is 010 Command Center's ───────────── */
+  /* This page reads 'gvb-command-center:settings' and never writes it. A
+     screen can be linked to one period; with "Follow the bell" on, the board
+     switches to that period's screen when the period starts (and when the
+     page opens mid-period). Between bells a teacher's own choice stands. */
+
+  var BELL_KEY = 'gvb-command-center:settings';
+  var COMMAND_CENTER = '010-command-center-dashboard.html';
+  var periodSelect = document.getElementById('periodSelect');
+  var followBell = document.getElementById('followBell');
+  function readBell() {
+    try { return Core.readPeriods(JSON.parse(localStorage.getItem(BELL_KEY) || '{}')); } catch (e) { return []; }
+  }
+  function nowMinutes() {
+    var d = new Date();
+    return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+  }
+  function renderPeriodBar(bell) {
+    var s = currentScreen();
+    periodSelect.textContent = '';
+    periodSelect.appendChild(el('option', { value: '', text: bell.length ? 'No period' : 'No bell times' }));
+    bell.forEach(function (p) { periodSelect.appendChild(el('option', { value: p.id, text: p.label + ' (' + p.start + ')' })); });
+    periodSelect.value = bell.some(function (p) { return p.id === s.period; }) ? s.period : '';
+    periodSelect.title = bell.length ? 'Which period this screen is for' : 'Add bell times in Command Center to link screens to periods';
+    followBell.checked = state.follow;
+    followBell.disabled = !bell.length;
+  }
+  periodSelect.addEventListener('change', function () {
+    var s = currentScreen();
+    var id = periodSelect.value;
+    var moved = '';
+    state.screens.forEach(function (o) { if (o !== s && id && o.period === id) { o.period = ''; moved = o.name; } });
+    s.period = id;
+    saveNow(); renderScreenBar();
+    if (id) {
+      var label = periodSelect.options[periodSelect.selectedIndex].text.replace(/ \(.*\)$/, '');
+      showToast(label + ' now opens “' + s.name + '”' + (moved ? ', not “' + moved + '”' : '') + '.', false);
+    }
+  });
+  followBell.addEventListener('change', function () {
+    state.follow = followBell.checked; saveNow();
+    lastPeriodId = undefined;
+    if (state.follow) checkBell();
+  });
+  var lastPeriodId;                       // undefined until the first check
+  function checkBell() {
+    var bell = readBell();
+    var at = Core.periodAt(bell, nowMinutes());
+    var id = at.current ? at.current.id : '';
+    if (id === lastPeriodId) return;
+    lastPeriodId = id;
+    if (!state.follow || !id) return;
+    var target = Core.screenForPeriod(state, id);
+    if (!target || target.id === state.current) return;
+    state.current = target.id; saveNow(); renderBoard();
+    showToast(at.current.label + ': showing “' + target.name + '”.', false);
+  }
+  setInterval(checkBell, 5000);
+  window.addEventListener('storage', function (e) { if (e.key === BELL_KEY) { renderScreenBar(); checkBell(); } });
+
+  /* ── a screen as a file: export and import ────────────────────────── */
+
+  var moreMenu = document.getElementById('moreMenu');
+  moreMenu.addEventListener('click', function (e) { if (e.target.closest('.menu-pop button')) moreMenu.open = false; });
+  document.addEventListener('pointerdown', function (e) { if (moreMenu.open && !moreMenu.contains(e.target)) moreMenu.open = false; });
+  moreMenu.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && moreMenu.open) { moreMenu.open = false; moreMenu.querySelector('summary').focus(); }
+  });
+
+  function download(name, text) {
+    var blob = new Blob([text], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = el('a', { href: url, download: name });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+  function fileName(name) {
+    return 'class-screen-' + (name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'screen') + '.json';
+  }
+  document.getElementById('exportScreenBtn').addEventListener('click', function () {
+    var s = currentScreen();
+    var ids = Core.mediaIds({ screens: [s] });
+    var urls = {};
+    Promise.all(ids.map(function (id) {
+      if (!media) return null;
+      return media.getBlob(id).then(function (b) {
+        return b ? MediaDB.toDataUrl(b).then(function (u) { urls[id] = u; }) : null;
+      });
+    })).then(function () {
+      var missing = ids.filter(function (id) { return !urls[id]; }).length;
+      download(fileName(s.name), JSON.stringify(Core.exportScreen(s, urls)));
+      showToast('Exported “' + s.name + '”' + (missing ? ' (' + missing + ' picture' + (missing > 1 ? 's' : '') + ' could not be read)' : '') + '.', false);
+    });
+  });
+  var importFile = document.getElementById('importFile');
+  document.getElementById('importScreenBtn').addEventListener('click', function () { importFile.value = ''; importFile.click(); });
+  importFile.addEventListener('change', function () {
+    var f = importFile.files && importFile.files[0];
+    if (!f) return;
+    if (state.screens.length >= Core.MAX_SCREENS) { showToast('You already have ' + Core.MAX_SCREENS + ' screens.', false); return; }
+    if (f.size > 30 * 1024 * 1024) { showToast('That file is too big to be a Class Screen export.', false); return; }
+    f.text().then(function (text) {
+      var obj;
+      try { obj = JSON.parse(text); } catch (e) { showToast('That file is not a Class Screen export.', false); return; }
+      var r = Core.readImport(obj);
+      if (r.error) { showToast(r.error, false); return; }
+      var ids = Object.keys(r.media);
+      return Promise.all(ids.map(function (id) {
+        if (!media) return Promise.reject(new Error('This browser cannot store pictures for this page.'));
+        return media.put(id, MediaDB.dataUrlToBlob(r.media[id]), { name: 'imported' });
+      })).then(function () {
+        r.screen.name = uniqueName(r.screen.name);
+        state.screens.push(r.screen); state.current = r.screen.id; saveNow(); renderBoard();
+        showToast('Imported “' + r.screen.name + '”' + (r.dropped ? ' (' + r.dropped + ' picture' + (r.dropped > 1 ? 's' : '') + ' left out)' : '') + '.', false);
+      });
+    }).catch(function (e) { showToast((e && e.message) || 'That screen could not be imported.', false); });
+  });
+
   /* ── dock ─────────────────────────────────────────────────────────── */
 
   var dock = document.getElementById('dock');
@@ -1467,6 +1637,7 @@
 
   renderBoard();
   collectMedia();
+  checkBell();
 
   /* For the smoke suite: the saved state, read-only. */
   window.__classScreen = { state: function () { return JSON.parse(JSON.stringify(state)); }, key: KEY };

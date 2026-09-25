@@ -47,6 +47,8 @@ await settle(page);
 const st = () => page.evaluate(() => __classScreen.state());
 const cur = async () => { const s = await st(); return s.screens.find((x) => x.id === s.current); };
 const widget = (type) => page.locator(`#board .w[data-type="${type}"]`);
+// Rename, Duplicate, Export, Import, Clear and Delete live in the More menu.
+const more = async (id) => { if (!(await page.locator('#moreMenu').evaluate((d) => d.open))) await page.click('#moreMenu summary'); await page.click(id); };
 
 // ── empty start ──────────────────────────────────────────────────────
 ok(await page.locator('#boardEmpty').isVisible(), 'empty board shows the hint');
@@ -243,14 +245,14 @@ const s1 = (await st()).screens[0].id;
 await page.selectOption('#screenSelect', s1);
 eq(await page.locator('#board .w').count(), 8, 'switching back shows the first screen');
 page.__promptAnswer = undefined;
-await page.click('#dupScreenBtn');
+await more('#dupScreenBtn');
 eq((await st()).screens.length, 3, 'duplicate adds a screen');
 eq(await page.locator('#board .w').count(), 8, 'the copy has every widget');
 const ids = (await st()).screens.flatMap((s) => s.widgets.map((w) => w.id));
 eq(new Set(ids).size, ids.length, 'the copy has fresh widget ids');
-await page.click('#deleteScreenBtn');
+await more('#deleteScreenBtn');
 eq((await st()).screens.length, 2, 'delete removes the current screen');
-await page.click('#clearScreenBtn');
+await more('#clearScreenBtn');
 eq(await page.locator('#board .w').count(), 0, 'clear empties the screen');
 await page.click('#toastUndo');
 eq(await page.locator('#board .w').count(), 8, 'clear can be undone');
