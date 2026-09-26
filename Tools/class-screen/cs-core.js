@@ -15,6 +15,7 @@
      ClassScreenCore.fromTemplate(id)     → a new screen built from a starter
      ClassScreenCore.exportScreen(s, med) → the .json file's object
      ClassScreenCore.readImport(obj)      → { screen, media } | { error }
+     ClassScreenCore.readCommand(msg)     → a phone-remote command, or null
 
    Positions are FRACTIONS of the board (0..1), never pixels, so a screen laid
    out on a laptop lands in the same place on a 1080p projector.
@@ -593,8 +594,32 @@
     return { screen: screen, media: media, dropped: dropped };
   }
 
+  /* ---- the phone remote's commands -------------------------------------- */
+
+  /* A command arrives from another device, so it is untrusted like a file:
+     anything not in this vocabulary is dropped, and every argument is checked
+     here before the page acts on it. Each one does what the matching button
+     on the board does, to the topmost widget of that type on the screen. */
+  var TIMER_ACTIONS = ['toggle', 'reset', 'add'];
+  function readCommand(m) {
+    if (!isObj(m) || typeof m.cmd !== 'string') return null;
+    switch (m.cmd) {
+      case 'screen': return typeof m.id === 'string' && /^[\w-]{1,40}$/.test(m.id) ? { cmd: 'screen', id: m.id } : null;
+      case 'timer': return TIMER_ACTIONS.indexOf(m.action) !== -1 ? { cmd: 'timer', action: m.action } : null;
+      case 'stopwatch': return m.action === 'toggle' || m.action === 'reset' ? { cmd: 'stopwatch', action: m.action } : null;
+      case 'pick': return { cmd: 'pick' };
+      case 'groups': return { cmd: 'groups' };
+      case 'roll': return { cmd: 'roll' };
+      case 'light': return LIGHTS.indexOf(m.color) !== -1 ? { cmd: 'light', color: m.color } : null;
+      case 'symbol': return SYMBOLS.indexOf(m.mode) !== -1 ? { cmd: 'symbol', mode: m.mode } : null;
+      case 'hello': return { cmd: 'hello' };
+    }
+    return null;
+  }
+
   var ClassScreenCore = {
     TYPES: TYPES,
+    readCommand: readCommand,
     TEMPLATES: TEMPLATES.map(function (t) { return { id: t.id, name: t.name }; }),
     fromTemplate: fromTemplate,
     readPeriods: readPeriods,
