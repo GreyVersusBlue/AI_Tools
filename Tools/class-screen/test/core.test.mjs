@@ -13,8 +13,10 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const src = fs.readFileSync(path.join(here, '..', 'cs-core.js'), 'utf8');
+const countdown = fs.readFileSync(path.join(here, '..', '..', '..', '_shared', 'countdown.js'), 'utf8');
 const ctx = { window: {}, URL };
 vm.createContext(ctx);
+vm.runInContext(countdown, ctx);
 vm.runInContext(src, ctx);
 const C = ctx.window.ClassScreenCore;
 

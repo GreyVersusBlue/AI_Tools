@@ -127,7 +127,6 @@ await board.waitForSelector('#rdOffer', { timeout: 8000 });
 await board.addScriptTag({ content: fs.readFileSync(path.join(ROOT, '_shared', 'vendor', 'jsqr', 'jsqr.js'), 'utf8') });
 const offer = await board.locator('#rdOffer').evaluate((c) => {
   const d = c.getContext('2d').getImageData(0, 0, c.width, c.height);
-  // eslint-disable-next-line no-undef
   const r = jsQR(d.data, d.width, d.height);
   return r ? r.data : null;
 });

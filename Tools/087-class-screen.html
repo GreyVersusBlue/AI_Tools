@@ -18,6 +18,7 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/webrtc-pair.js"></script>
 <script src="class-screen/cs-remote.js"></script>
+<script src="../_shared/countdown.js"></script>
 <script src="class-screen/cs-core.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -474,8 +475,19 @@
       var sound = el('input', { type: 'checkbox' });
       sound.checked = d.sound;
 
-      function running() { return d.endsAt > 0; }
-      function remainingMs() { return running() ? d.endsAt - Date.now() : d.remaining * 1000; }
+      /* The clock itself is _shared/countdown.js's; this widget keeps its
+         saved shape (duration and remaining in seconds, endsAt in epoch ms)
+         and maps it onto a Countdown state. */
+      var restored = Countdown.restore({ totalMs: d.duration * 1000, endAt: d.endsAt, leftMs: d.remaining * 1000 }, Date.now());
+      var c = restored.c;
+      function sync() {
+        d.duration = Math.max(1, Math.round(c.totalMs / 1000));
+        d.endsAt = c.endAt;
+        d.remaining = c.leftMs / 1000;
+        ctx.save();
+      }
+      function running() { return Countdown.isRunning(c); }
+      function remainingMs() { return Countdown.left(c, Date.now()); }
       function setDone(on) { ctx.el.classList.toggle('timer-done', on); }
 
       function render() {
@@ -484,10 +496,10 @@
         startBtn.textContent = running() ? 'Pause' : (ms <= 0 ? 'Restart' : 'Start');
       }
       function setDuration(sec) {
-        d.duration = sec; d.remaining = sec; d.endsAt = 0; setDone(false); ctx.save(); render();
+        Countdown.setTotal(c, sec * 1000); setDone(false); sync(); render();
       }
       function finish(announce) {
-        d.endsAt = 0; d.remaining = 0; ctx.save(); render(); setDone(true);
+        sync(); render(); setDone(true);
         if (announce) {
           status.textContent = 'Time is up.';
           if (d.sound) beep();
@@ -496,18 +508,15 @@
 
       startBtn.addEventListener('click', function () {
         unlockAudio();
-        if (running()) {
-          d.remaining = Math.max(0, (d.endsAt - Date.now()) / 1000); d.endsAt = 0;
-        } else {
-          if (d.remaining <= 0) d.remaining = d.duration;
-          d.endsAt = Date.now() + d.remaining * 1000; setDone(false); status.textContent = '';
-        }
-        ctx.save(); render();
+        var wasDone = Countdown.isDone(c);
+        Countdown.toggle(c, Date.now());
+        if (running()) { setDone(false); status.textContent = ''; }
+        else if (wasDone) setDone(true);
+        sync(); render();
       });
       function plus(sec) {
-        if (running()) d.endsAt += sec * 1000;
-        else d.remaining = Math.min(24 * 3600, d.remaining + sec);
-        setDone(false); ctx.save(); render();
+        Countdown.add(c, sec * 1000, Date.now());
+        setDone(false); sync(); render();
       }
       function applyCustom() {
         var sec = Core.parseDuration(custom.value);
@@ -535,18 +544,18 @@
       ]));
       ctx.body.appendChild(err);
 
-      if (running() && remainingMs() <= 0) finish(false);   // ran out while the page was closed
-      else if (!running() && d.remaining <= 0) setDone(true);
+      if (restored.expired) finish(false);   // ran out while the page was closed: no late alarm
+      else if (Countdown.isDone(c)) setDone(true);
       render();
       return {
         tick: function () {
-          if (running() && remainingMs() <= 0) finish(true);
+          if (Countdown.expire(c, Date.now())) finish(true);
           else if (running()) render();
         },
-        remote: function (c) {
-          if (c.action === 'toggle') startBtn.click();
-          else if (c.action === 'reset') setDuration(d.duration);
-          else if (c.action === 'add') plus(60);
+        remote: function (cmd) {
+          if (cmd.action === 'toggle') startBtn.click();
+          else if (cmd.action === 'reset') setDuration(d.duration);
+          else if (cmd.action === 'add') plus(60);
         },
         snap: function () { return { text: shown.textContent, running: running(), done: ctx.el.classList.contains('timer-done') }; }
       };

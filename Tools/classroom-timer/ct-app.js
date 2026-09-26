@@ -28,14 +28,13 @@ function effectiveVolume() {
   return prefs.sound.muted ? 0 : prefs.sound.volume;
 }
 
+/* _shared/countdown.js's formatter (Path 22 P5), with the display this page
+   has always had: nearest second, zero-padded minutes. 010 and 087 run their
+   whole countdown on that file; this page's phase engine (agenda, round
+   robin, overtime) still keeps its own endAt/remainingAtPause, and moving it
+   onto a Countdown state is a backlog row of its own. */
 function formatTime(ms) {
-  const totalSec = Math.max(0, Math.round(ms / 1000));
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  const mm = String(m).padStart(2, '0');
-  const ss = String(s).padStart(2, '0');
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  return window.Countdown.format(ms, { pad: true, round: 'round' });
 }
 
 function setRing(fraction) {

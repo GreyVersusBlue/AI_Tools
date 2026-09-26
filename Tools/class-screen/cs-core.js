@@ -26,6 +26,8 @@
    string and drops the rest. One bad widget loses that widget, never the
    screen; one bad screen loses that screen, never the others.
 
+   Needs _shared/countdown.js loaded first (formatClock, parseDuration).
+
    Classic script publishing window.ClassScreenCore. The root package.json is
    "type": "module", so Node cannot require() this file; the unit test runs it
    in a vm context instead (test/core.test.mjs). */
@@ -156,31 +158,13 @@
 
   /* ---- time ------------------------------------------------------------- */
 
-  function formatClock(ms) {
-    var s = Math.max(0, Math.ceil(ms / 1000));
-    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-    return h > 0 ? h + ':' + pad(m) + ':' + pad(sec) : m + ':' + pad(sec);
-  }
+  /* The countdown arithmetic, formatting and parsing are _shared/countdown.js's
+     (Path 22 P5), so this page, 010 and 004 agree on them. These two names
+     stay because the page and the suites already call them. */
+  function formatClock(ms) { return global.Countdown.format(ms); }
 
   /* "5" → 300 (minutes), "4:30" → 270, "1:00:00" → 3600, "90s" → 90. */
-  function parseDuration(text) {
-    if (typeof text !== 'string') return null;
-    text = text.trim().toLowerCase();
-    var n;
-    if (/^\d+(\.\d+)?$/.test(text)) n = Math.round(parseFloat(text) * 60);
-    else if (/^\d+s$/.test(text)) n = parseInt(text, 10);
-    else if (/^\d+:\d{1,2}$/.test(text)) {
-      var a = text.split(':');
-      if (+a[1] > 59) return null;
-      n = +a[0] * 60 + +a[1];
-    } else if (/^\d+:\d{1,2}:\d{1,2}$/.test(text)) {
-      var b = text.split(':');
-      if (+b[1] > 59 || +b[2] > 59) return null;
-      n = +b[0] * 3600 + +b[1] * 60 + +b[2];
-    } else return null;
-    return n > 0 && n <= MAX_TIMER_S ? n : null;
-  }
+  function parseDuration(text) { return global.Countdown.parse(text); }
 
   /* ---- geometry --------------------------------------------------------- */
 
