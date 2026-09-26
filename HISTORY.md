@@ -9,6 +9,44 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 22 P5: one shared countdown for 004, 010 and 087 (2026-09-25, #278, `CACHE_VERSION` v191)
+
+**What shipped.**
+- `_shared/countdown.js` (`window.Countdown`). It holds a `{ totalMs, endAt, leftMs }` state
+  driven off a wall-clock end time, with start, pause, toggle, reset, setTotal, add and expire.
+  Every function takes `now`.
+- `restore()`, which brings back a timer that ran out while the page was closed as finished,
+  with a flag so that nothing rings late.
+- `format()` and `parse()`.
+- The file is in `SHELL_URLS` and `PRECACHE_URLS`, is declared in `eslint.config.js`, and has a
+  new suite, `Tools/countdown/test/countdown.test.mjs` (`test:countdown`, 56 assertions).
+
+**Who uses it.**
+- **087**: the timer widget runs on it and keeps its saved shape, and `cs-core`'s `formatClock`
+  and `parseDuration` delegate to it.
+- **010**: the Timer panel runs on it. `timerState` stays as the whole-second view that the
+  remote snapshot and the Space key read.
+- **004**: the formatter only, with the same output as before.
+
+**Calls made, each cheap to reverse.**
+- **004's phase engine was not rewritten under this row.** Agenda, round robin, random and
+  overtime keep their own `endAt`/`remainingAtPause`. 004 is a shell tool with mirror and
+  remote suites, and rewriting its engine in the same PR as a new shared file would have hidden
+  whichever of the two broke. Moving 004 onto a `Countdown` state is its own backlog row now.
+- **The display rounding each tool had is kept.** 004 and 010 round to the nearest second and
+  pad (`04:05`); 087 rounds up (`4:05`, and never `0:00` while time is left). The file supports
+  both, and the default is round-up. Making all three agree is a visible change and is left
+  for a person to want.
+- **010 shows h:mm:ss past an hour now**, instead of "75:00". That is the only display change
+  in this PR.
+- **010 now rings at true zero.** Before, it rang when the rounded seconds reached 0, up to half
+  a second early.
+
+**Not verified.** A backgrounded tab over a long timer on real hardware; the arithmetic is
+wall-clock, so it should be exact, but only the suites have run it.
+
+---
+
 ## Path 22 P4: run Class Screen from a phone (2026-09-25, #276, `CACHE_VERSION` v190)
 
 **What shipped.**

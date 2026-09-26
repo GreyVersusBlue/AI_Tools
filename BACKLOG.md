@@ -70,7 +70,7 @@ without claiming or editing them and takes the next unclaimed row that is not Pa
 
 ## Where things stand — start here
 
-*Current as of `main` after #276, 2026-09-26. **Keep this section under ~80 lines.** It is
+*Current as of `main` after #278, 2026-09-26. **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -83,14 +83,15 @@ were buried in it. It was moved **verbatim** to `HISTORY.md` ("BACKLOG header ha
 2026-09-04 → 2026-09-12"). The durable P3 guidance moved to the end of the Path 6 section in
 Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
-**Last merged: #276, Path 22 P4 — run Class Screen from a phone. `CACHE_VERSION` v190.**
+**Last merged: #278, Path 22 P5 — one shared countdown (`_shared/countdown.js`) for 004, 010 and 087. `CACHE_VERSION` v191.**
 - **Devon asked for Path 22 directly (2026-09-25)** and made its scope calls himself: no accounts,
   no student voting, no Google/Microsoft, YouTube in. On the same day he asked for P2–P5 to be
-  worked straight away. P2 shipped in #272, P3 in #274 and P4 in #276. **P5 (now rank 183) is
-  claimed by session `t4ktn1` and in flight.** Do not take it.
-- P4: `Tools/class-screen/remote.html` pairs a phone with the board over `webrtc-pair.js`.
-  **Not verified on real devices.** The P2–P4 suites use a WAV file, a pinned clock and two
-  headless pages; the person-at-a-device list under Cross-cutting covers what they cannot.
+  worked straight away: P2 #272, P3 #274, P4 #276, P5 #278. **Path 22 P1–P5 are done.**
+- He then asked for the session's recommendations to be added **at the end of the list**. They
+  are **ranks 183–191, Path 22 P6–P14**, still unranked by him. P13 finishes P5: 004's phase
+  engine moves onto `countdown.js`, which so far only 010 and 087 run on.
+- **Not verified on real devices:** the P2–P4 suites use a WAV file, a pinned clock and two
+  headless pages. The person-at-a-device list under Cross-cutting covers what they cannot.
 - **Path 21 icons: 29 of 86 done** (#267). The sprite rules from #265 hold: 32 px landing size,
   a 2.25 stroke, the sprite a *derived* ledger entry. 087 has no icon yet and needs one, which
   makes **30 of 87 left for Blender** — increment 3 or a later one should add `t087`.
@@ -123,17 +124,17 @@ Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v190` — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **269** in `PRECACHE_URLS`, **88** in the `SHELL_URLS` install tier. Bytes: **11.21 MB / 2.52 MB** summed on Devon's Windows checkout after #267, before #269–#276 grew 087 and added its phone page (not re-measured). #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **43,050 B** ledgered, **22,086 B** of it shell (`check:art` enforces both) |
-| Suites | **163** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| `CACHE_VERSION` | `v191` — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **270** in `PRECACHE_URLS`, **89** in the `SHELL_URLS` install tier. Bytes: **11.21 MB / 2.52 MB** summed on Devon's Windows checkout after #267, before #269–#276 grew 087 and added its phone page (not re-measured). #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **43,050 B** ledgered, **22,086 B** of it shell (`check:art` enforces both) |
+| Suites | **164** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **14** page-rule pairs on 14 pages, all `color-contrast` |
 | Tool registry | 88 rows, **218 keys and 32 prefixes across 110 files** (087 now also `reads` 010's settings); **49** entries marked `student` (087's one key, `cls-screen:state`, is not student data: name picks are never saved). The live-entry denominator was 235 in this cell; counting non-`legacy` keys and prefixes gives 238 before #269 and 239 after, so the old figure used a rule not written down. Re-measure before quoting one; `check:registry` green |
-| Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 79 · `a11y.js` 79 · `ink-paper.css` 72 · `base.css` 68 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `media-db.js` 2 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 79 · `a11y.js` 79 · `ink-paper.css` 72 · `base.css` 68 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `media-db.js` 2 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 87 (`001`–`087`); next free number **088** |
-| Tier 1 rows | **183**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows proper start at rank **101**; 183 is Path 22 P5 (Devon asked for it, did not rank it) |
+| Tier 1 rows | **191**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows proper start at rank **101**; 183–191 are Path 22 P6–P14 (added at the end at Devon's request, not ranked by him) |
 | Art | **36** ledger entries: 29 tool icons, the sprite (on 29 landing rows), 4 shortcut PNGs (in `manifest.json`), the unlinked light/dark test tile. 83 of 86 pages carry a data-URI favicon; `assets/icons/` holds 4 PWA icons |
 | Dark mode / fullscreen | 83 of 83 themed pages native dark; `stage.js` on 10 pages (087 has no palette literals of its own and adopted native dark from the start). Path 5 is finished |
 | CI | Pull requests run `--changed` (a diff-scoped selection). A push to `main` runs everything, ~32 min. A PR touching `_shared/`, `package.json` or `Tools/board-check/` is site-wide |
@@ -443,7 +444,15 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 180 | Buzz-in from student devices (deferred); map-question tournaments | 062 | ½ | | [062 Geography Bee / Map Skills Quiz Generator](#062--geography-bee--map-skills-quiz-generator) |
 | 181 | A student-facing fill-in mode; review-game theme packs | 064 | ½ | | [064 Historical Figure / Country Trading Card Maker](#064--historical-figure--country-trading-card-maker) |
 | 182 | Snap-to-grid for base-ten blocks; export and data-driven piece families | 080 | ½ | | [080 Virtual Manipulatives Board](#080--virtual-manipulatives-board) |
-| 183 | Path 22 P5 — one timer: extract the countdown into `_shared/` and use it from 004, 010 and 087 (010's "Reuse the real timer" quick win) | `_shared/` | 1 | `t4ktn1` 2026-09-25 21:56 UTC (Devon asked for P2–P5 directly) | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 183 | Path 22 P6 — present mode and spotlight: lock the layout (no drags, no close buttons, dock hidden) and double-click a widget to fill the board, Esc back | 087 | ½ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 184 | Path 22 P7 — keyboard and clicker shortcuts (Space timer, N pick, ←/→ screens) with a `?` help overlay | 087 | ¼ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 185 | Path 22 P8 — linked widgets: when a timer ends, flash the board, set the traffic light or tick the next agenda item | 087 | ½ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 186 | Path 22 P9 — more widgets: agenda checklist, visual (pie) timer, sequence timer (think/pair/share), countdown to the bell, team scoreboard, spinner wheel | 087 | 1 | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 187 | Path 22 P10 — two tabs and memory: warn or reload when another tab saves, keep name-picker no-repeats for the browser session, undo moves and resizes | 087 | ½ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 188 | Path 22 P11 — layout comforts: snap to grid, minimize to a chip, per-widget colour, screen thumbnails, a large-text projector theme | 087 | ½ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 189 | Path 22 P12 — another site tool as a widget (same-origin frame, e.g. 024 Number Talks, 080 Manipulatives) | 087 | 1 | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 190 | Path 22 P13 — 004's phase engine (agenda, round robin, random, overtime) onto `_shared/countdown.js` | 004 | ½ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 191 | Path 22 P14 — one remote wrapper: `cc-remote.js` and `cs-remote.js` onto a single `_shared/` file | `_shared/` | ¼ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 
 ## How to work this list
 
@@ -2327,7 +2336,7 @@ they are not a session's to reverse:** no accounts or cloud sync; **no student v
 on purpose**; no Google or Microsoft integration; and **YouTube is in** — the one widget
 allowed to reach the network, because he asked for it. Imitating ClassroomScreen's
 behaviour is fine by him. The page keeps its own name and this site's palette anyway.
-He did not rank the rows, so they sit at the end of Tier 1 (183 now P4 has shipped) until he does. Moving
+He did not rank the rows, so they sit at the end of Tier 1 (183–191 now P5 has shipped and P6–P14 were added) until he does. Moving
 them up is a re-rank, and that is his call.
 
 **Why a new tool and not 010.** 010's Tier 2 "true classroom home screen" idea is close to
@@ -2360,8 +2369,44 @@ rather than folding one page into the other.
 - **P4 — shipped in #276 (v190).** `Tools/class-screen/remote.html` and `cs-remote.js`. A phone
   paired over `webrtc-pair.js` switches screens and runs the timer, stopwatch, name picker,
   groups, dice, light and symbol. Commands are checked by `ClassScreenCore.readCommand`.
-- **P5 — one timer.** Extract the countdown into `_shared/` and use it from 004, 010 and
-  087. This is also 010's "Reuse the real timer" quick win.
+- **P5 — shipped in #278 (v191).** `_shared/countdown.js`. 087's timer widget and 010's
+  Timer panel run on it; 004 shares its formatter only. P13 moves 004's phase engine onto it.
+
+**P6–P14 were proposed by session `t4ktn1` on 2026-09-26** from a brainstorm Devon asked for.
+He asked for them to be added at the end of the list, so they are ranks 183–191 and are not
+ranked against anything else. Moving them up is a re-rank, which is his call.
+- **P6 — present mode and spotlight.** A lock toggle for the projector: no dragging, no close
+  buttons, the dock and header hidden, so a tap on a smartboard cannot move a widget.
+  Double-clicking a widget fills the board with it; Esc goes back.
+- **P7 — shortcuts.** Space starts or pauses the topmost timer, N picks a name, ←/→ switch
+  screens, and `?` shows the list. A presentation clicker sends ←/→ and PageUp/PageDown, so it
+  can then run the board. Keys go through `Stage.isTyping` so text boxes still type.
+- **P8 — linked widgets.** When a timer ends, it can also flash the board, set the traffic
+  light, or tick the next agenda item (P9). The link is per timer, chosen in its foot.
+- **P9 — more widgets.**
+  - An agenda checklist ("Today we will…", ticked off as the lesson goes).
+  - A visual timer (a shrinking pie, which reads from the back of the room and helps younger
+    students and IEP accommodations).
+  - A sequence timer (Think 1:00 → Pair 2:00 → Share 3:00, each step labelled), which should
+    run on `countdown.js`.
+  - A countdown to the bell, from 010's schedule.
+  - A team points scoreboard (projector-only, so not voting).
+  - A spinner wheel for any list.
+- **P10 — two tabs and memory.** Last writer wins across tabs today (P1's `HISTORY.md` entry).
+  At least warn "this screen is open in another tab", or reload on `storage`. The name picker's
+  "no repeats" resets on reload; keeping it for the browser session only (`sessionStorage`)
+  still saves no student data. Undo covers removals only; moves and resizes should undo too.
+- **P11 — layout comforts.** Snap to grid or alignment guides, minimize a widget to a chip, a
+  colour per widget (tokens only), screen thumbnails in the switcher, and a large-text,
+  high-contrast projector theme.
+- **P12 — another site tool as a widget.** A same-origin frame of another tool (024 Number
+  Talks, 080 Manipulatives), precached so it works offline. It needs a design for sizing, and
+  a list of which tools behave inside a frame.
+- **P13 — 004 onto `countdown.js`.** Move 004's phase engine off `phase.endAt` and
+  `remainingAtPause` onto a `Countdown` state, keeping 004's display and its mirror and remote
+  suites green. P5 left this for its own PR on purpose.
+- **P14 — one remote wrapper.** `cs-remote.js` is a classic-script copy of `cc-remote.js`'s
+  channel plumbing. Move both onto one `_shared/` file, and 004's `ct-mirror.js` too if it fits.
 
 ---
 
