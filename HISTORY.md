@@ -9,6 +9,50 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 22 P4: run Class Screen from a phone (2026-09-25, #276, `CACHE_VERSION` v190)
+
+**What shipped.**
+- `Tools/class-screen/remote.html`, the phone page, and `Tools/class-screen/cs-remote.js`.
+- A **Phone remote** dialog on the board. The two sides pair through `_shared/webrtc-pair.js`:
+  the offer goes as a QR code drawn by `qr-draw.js`, the reply as a QR code or pasted text, and
+  there is no server.
+- The phone can switch screens, run the timer (start/pause, +1:00, reset) and the stopwatch,
+  pick a name, make groups, roll the dice, and set the traffic light and the work symbol.
+- A new suite, `smoke-remote.mjs`. It checks the dispatch, then pairs the two pages for real
+  and drives each from the other.
+
+**Calls made, each cheap to reverse.**
+- **Each command acts on the topmost widget of its type on the current screen**, and does what
+  that widget's own button does. For the timer, the remote literally clicks the button. There
+  is no widget picker on the phone. A screen with two timers is rare, and the phone would need
+  to know which is which.
+- **The command vocabulary is checked in `ClassScreenCore.readCommand`.** Anything outside it
+  is dropped before the page acts, the same rule as a file import.
+- **The phone is the teacher's own device.** It shows the name that was just picked, as 010's
+  remote does. Nothing here runs on a student device, per Path 8.
+- **`cs-remote.js` copies `cc-remote.js`'s thirty lines of channel plumbing** rather than
+  importing across tool folders: that file is an ES module and 087 is a classic script. A third
+  caller should move both onto one copy in `_shared/`, and a backlog row says so.
+- **The board loads the camera scanner (jsQR, ~250 KB) only when "Scan the phone's code" is
+  pressed.** Nothing else on the board needs it.
+- **The phone's reply QR runs to the card's edges.** An 81-module pairing code needs 356 px at
+  `qr-draw.js`'s measured 4 px floor, and the first layout gave it 334 on a 390 px phone.
+  `qr-draw.js` refused to draw it, which is the budget doing its job. On a narrower phone, the
+  page says to copy the text instead.
+
+**What went wrong on the way.**
+- The first snapshot sent the symbol choices and the symbol widget's state under the same key
+  (`symbols`), so one overwrote the other. The list is `symbolList`.
+- The joining side's data channel can arrive already open. Then no `open` event fires for it,
+  so `cs-remote.js` fires its open handlers itself when that happens.
+
+**Not verified.** Two real devices on real school Wi-Fi: the suite pairs two headless pages on
+one machine. The camera scan in either direction (the suite reads the QR with jsQR and pastes
+the reply). Whether the timer's beep plays when a remote command, not a click on the board,
+started the AudioContext.
+
+---
+
 ## Path 22 P3: Class Screen screens by period, starter screens, export and import (2026-09-25, #274, `CACHE_VERSION` v189)
 
 **What shipped.**
