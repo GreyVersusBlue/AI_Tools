@@ -254,10 +254,12 @@ function repairSection(s, index, rng) {
       name: str(st.name).trim(),
       note: str(st.note),
       flag: bool(st.flag),
-      // Only ever a data: URL this tool generated itself (see scg-photo.js) —
-      // anything else (a bare http(s) URL, garbage) is dropped rather than
-      // trusted into an <img src>.
-      photo: str(st.photo).slice(0, 11) === 'data:image/' ? str(st.photo) : '',
+      // Only ever a photo this tool made itself (see scg-photo.js): an
+      // `idb:` reference to the shared media store, or — from a file saved
+      // before Path 4 P4, or a browser without IndexedDB — the data: URL
+      // itself. Anything else (a bare http(s) URL, garbage) is dropped rather
+      // than trusted into an <img src>.
+      photo: isPhotoValue(st.photo) ? str(st.photo) : '',
     }));
   const studentIds = new Set(students.map(st => st.id));
 
@@ -663,25 +665,77 @@ export function estimateStorageBytes(str) {
   return String(str ?? '').length * 2;
 }
 
-/** How much of the one saved key a chart is using, and where it's going —
-    photos are the thing that actually grows without bound, so they get their
-    own line rather than being buried inside a section's total. */
+/** How much of the one saved key a chart is using, and where it's going.
+    Since Path 4 P4 a photo is normally an `idb:` reference of a few bytes and
+    its image lives in IndexedDB, so `photoBytes` is only what photos still
+    cost THIS key — the data URLs not yet moved. `storedPhotoCount` is how many
+    are kept in the media store instead; `photoCount` is both. */
 export function storageReport(state) {
   const whole = estimateStorageBytes(JSON.stringify({ ...state, __v: SCHEMA_VERSION }));
   const bySection = state.sections.map(s => {
-    const photoBytes = s.students.reduce((t, st) => t + estimateStorageBytes(st.photo || ''), 0);
+    const photoBytes = s.students.reduce((t, st) => t + (isInlinePhoto(st.photo) ? estimateStorageBytes(st.photo) : 0), 0);
     const photoCount = s.students.filter(st => st.photo).length;
+    const storedPhotoCount = s.students.filter(st => isPhotoRef(st.photo)).length;
     return {
       id: s.id,
       name: s.name,
       bytes: estimateStorageBytes(JSON.stringify(s)),
       photoBytes,
       photoCount,
+      storedPhotoCount,
     };
   });
   const photoBytes = bySection.reduce((t, s) => t + s.photoBytes, 0);
   const photoCount = bySection.reduce((t, s) => t + s.photoCount, 0);
-  return { totalBytes: whole, quotaBytes: QUOTA_BYTES, pct: whole / QUOTA_BYTES, photoBytes, photoCount, bySection };
+  const storedPhotoCount = bySection.reduce((t, s) => t + s.storedPhotoCount, 0);
+  return { totalBytes: whole, quotaBytes: QUOTA_BYTES, pct: whole / QUOTA_BYTES, photoBytes, photoCount, storedPhotoCount, bySection };
+}
+
+/* ---------------------------------------------------------------------------
+   Photo references (Path 4 P4)
+
+   A student's `photo` is one of three things: '' (none), an `idb:<id>`
+   reference to a Blob in the shared media store (_shared/media-db.js,
+   namespace `seating`), or a data:image/ URL. The reference is what this tool
+   writes now; the data URL is what it wrote before, what a .json file carries,
+   and the fallback when IndexedDB will not take a write. The page turns every
+   data URL it finds into a reference once the Blob is safely stored, so the
+   one localStorage key stops carrying tens of KB per face.
+
+   These helpers are pure — no IndexedDB, no DOM — so the suite can pin them.
+--------------------------------------------------------------------------- */
+export const PHOTO_REF_PREFIX = 'idb:';
+const PHOTO_REF_RE = /^idb:[A-Za-z0-9_-]{1,40}$/;
+
+export function isPhotoRef(v) { return typeof v === 'string' && PHOTO_REF_RE.test(v); }
+export function isInlinePhoto(v) { return typeof v === 'string' && v.slice(0, 11) === 'data:image/'; }
+export function isPhotoValue(v) { return isPhotoRef(v) || isInlinePhoto(v); }
+
+/** Every `idb:` reference a chart still points at, across every section. */
+export function photoRefsIn(state) {
+  const out = new Set();
+  for (const s of (state && state.sections) || []) {
+    for (const st of s.students || []) if (isPhotoRef(st.photo)) out.add(st.photo);
+  }
+  return out;
+}
+
+/** A deep copy of one section with each student's photo put through `fn`. */
+export function mapSectionPhotos(section, fn) {
+  if (!section) return section;
+  const copy = JSON.parse(JSON.stringify(section));
+  for (const st of copy.students || []) st.photo = fn(st.photo || '');
+  return copy;
+}
+
+/** The same over a whole chart. The live state is never touched. */
+export function mapStatePhotos(state, fn) {
+  if (!state) return state;
+  const copy = JSON.parse(JSON.stringify(state));
+  for (const s of copy.sections || []) {
+    for (const st of s.students || []) st.photo = fn(st.photo || '');
+  }
+  return copy;
 }
 
 /* ---------------------------------------------------------------------------

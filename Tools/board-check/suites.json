@@ -128,6 +128,7 @@
     "Tools/novel-study-circles-manager/test/smoke-multi-book-unit.mjs",
     "Tools/seating-chart/test/drive-seating.mjs",
     "Tools/seating-chart/test/smoke-share.mjs",
+    "Tools/seating-chart/test/smoke-photos.mjs",
     "Tools/geography-bee-quiz-generator/test/smoke-multiple-choice.mjs",
     "Tools/current-events-discussion-guide-generator/test/smoke-comparison.mjs",
     "Tools/primary-source-analysis-generator/test/smoke-corroboration.mjs",
