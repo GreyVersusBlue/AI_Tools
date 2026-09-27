@@ -9,6 +9,49 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P4, increment 1: 005's student photos move into `media-db.js` (2026-09-27, #280, `CACHE_VERSION` v192)
+
+**What shipped.**
+- 005 kept each photo as a data URL inside `seating-chart-v1`. Every one of its 60 undo steps
+  held a copy too. Photos are now Blobs in `gvb-media` under the `seating/` namespace, and the
+  chart holds `idb:<id>`. `repairState` accepts only `^idb:[A-Za-z0-9_-]{1,40}$` or a
+  `data:image/` URL.
+- `Tools/seating-chart/scg-photo.js` became the photo store (`fromFile`, `hydrate`, `migrate`,
+  `gc`, `clearAll`), and its copy of the downscaler is gone: `MediaDB.downscaleImage` now runs
+  at 160 px. Two copies remain, 015 and 028.
+- New suite `smoke-photos.mjs` (39 assertions, port 8238). The pure helpers in `seating.mjs`
+  (`isPhotoRef`, `photoRefsIn`, `mapStatePhotos`, `mapSectionPhotos`, `storageReport`'s new
+  `storedPhotoCount`) are pinned in `smoke-seating.mjs`.
+
+**Calls made, each cheap to reverse.**
+- **A data-URL cache in memory, not object URLs.** A desk thumbnail is about 5–10 KB, and the
+  cache keeps rendering, printing, Save to file and the share sheet synchronous. That meant
+  neither `gvb-save.js`'s export nor `share.js` had to learn to await. A tool with big images
+  (028's 1600 px documents) should not copy this. It needs object URLs and an async export.
+- **Refs out, data URLs in, at the edges.** Save to file and the share sheet get the photos
+  inlined, so a file is portable and `share.js` still strips and counts them for the link.
+  Open file and a pre-#280 chart are migrated on load. Identical images are stored once.
+- **Orphan GC at boot only, with a 10-minute grace period.** Within a session the undo stack
+  can bring a removed photo back. Another tab may have stored a photo it has not yet saved.
+- **No IndexedDB means inline, as before**, not an error. The photo is kept either way.
+- **Erase clears `seating/`.** A reference whose image is missing draws the empty circle, and
+  the status bar says so once.
+- **`__seatingBooted` stays synchronous.** It is the "module failed to load" sentinel read at
+  2.5 s, not a test flag. I nearly delayed it behind the IndexedDB work, which would have
+  shown the boot warning on a slow disk. `__seatingPhotosSettled` is the suites' flag.
+
+**Not verified.** A real teacher profile with 150 photos: migration runs sequentially and was
+timed only on fixtures. Firefox and Safari: the suite is Chromium only. The year-end rollover
+(rank 12) empties the key but not `seating/`, so those photos become orphans until 005 is
+next opened. That row should clear the namespace directly.
+
+**What went wrong locally.** The full run on Devon's Windows checkout failed two suites that
+CI passed: `schedule-browser/smoke-dark-theme` (CRLF in its expected text) and
+`music-sightreading-generator/smoke-glyph-fallback` (font metrics). They are unrelated to this
+change and not root-caused. They will show up in any Windows full run.
+
+---
+
 ## Path 22 P5: one shared countdown for 004, 010 and 087 (2026-09-25, #278, `CACHE_VERSION` v191)
 
 **What shipped.**
