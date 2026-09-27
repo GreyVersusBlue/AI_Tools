@@ -30,6 +30,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/media-db.js"></script>
 <script src="seating-chart/scg-photo.js"></script>
 <link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
 <link rel="stylesheet" href="../_shared/theme.css">
@@ -551,7 +552,8 @@
           substitute matching faces to names. <b>Bulk photo import</b> matches a whole folder of
           image files to roster names by filename in one go (&ldquo;Ada Lovelace.jpg&rdquo;,
           &ldquo;lovelace_ada_2.png&rdquo; and similar all match). Photos are downscaled before
-          saving and stay in this browser like everything else.</p>
+          saving and stay in this browser like everything else; <b>Save to file</b> carries
+          them with the charts.</p>
         <p class="hint"><b>Notes stay with the chart</b> in this browser and inside any file you
           export, and they never appear on the printed page. Keep them short and practical
           &mdash; &ldquo;front row, vision&rdquo; rather than anything from a medical or IEP
@@ -757,6 +759,7 @@ import {
   assignSeats, checkConstraints, pickNext, parseRoster,
   gridDesks, rowDesks, nextSpot, contentBox,
   storageReport, matchPhotoFilenames,
+  photoRefsIn, mapSectionPhotos, mapStatePhotos,
   todayISO, suggestQuarter, newHistoryEntry, checkHistoryConstraints,
   studentHistoryRows, classHistorySummary,
 } from './seating-chart/seating.mjs';
@@ -791,6 +794,9 @@ let dragFromDeskId = null;
 let scale = 1;
 
 const el = id => document.getElementById(id);
+/* A student's photo as an <img src>: '' when there is none, or when its image
+   is not in this browser (see Tools/seating-chart/scg-photo.js). */
+const photoSrc = photo => window.SeatingPhoto.src(photo);
 const uid = () => Math.random().toString(36).slice(2, 9);
 function sec(){ return state.sections.find(s => s.id === state.active) || state.sections[0]; }
 function studentById(id){ return sec().students.find(s => s.id === id); }
@@ -1182,9 +1188,9 @@ el('photoFile').addEventListener('change', function (){
   const id = photoTargetId;
   photoTargetId = null;
   if (!file || !id) { input.value = ''; return; }
-  window.SeatingPhoto.downscaleImage(file).then(dataUrl => {
+  window.SeatingPhoto.fromFile(file).then(photo => {
     const st = studentById(id);
-    if (st){ pushUndo(); st.photo = dataUrl; renderAll(); }
+    if (st){ pushUndo(); st.photo = photo; renderAll(); }
     input.value = '';
   }).catch(() => {
     say('Could not read that image file.', 'bad');
@@ -1212,9 +1218,9 @@ el('bulkPhotoFile').addEventListener('change', function (){
   Promise.all(matches.map(m => {
     const file = byName.get(m.filename);
     if (!file) return Promise.resolve();
-    return window.SeatingPhoto.downscaleImage(file).then(dataUrl => {
+    return window.SeatingPhoto.fromFile(file).then(photo => {
       const st = s.students.find(x => x.id === m.studentId);
-      if (st) st.photo = dataUrl;
+      if (st) st.photo = photo;
     }).catch(() => { /* one bad file in a batch shouldn't stop the rest */ });
   })).then(() => {
     renderAll();
@@ -1232,12 +1238,13 @@ function renderRoster(){
   const list = el('rosterList');
   list.innerHTML = '';
   sec().students.forEach(st => {
+    const thumb = photoSrc(st.photo);
     const row = document.createElement('div');
     row.className = 'stu' + (st.flag ? ' flagged' : '');
     row.innerHTML = `
       <button type="button" class="icon-btn" style="padding:0;" title="${st.photo ? 'Change' : 'Add'} photo for ${esc(st.name)}"
               aria-label="${st.photo ? 'Change' : 'Add'} photo for ${esc(st.name)}" onclick="choosePhoto('${st.id}')">
-        ${st.photo ? `<img class="thumb" src="${esc(st.photo)}" alt="">` : `<span class="thumb-placeholder" aria-hidden="true"></span>`}
+        ${thumb ? `<img class="thumb" src="${esc(thumb)}" alt="">` : `<span class="thumb-placeholder" aria-hidden="true"></span>`}
       </button>
       <span class="nm">${esc(st.name)}${st.note ? ` <span class="note">(${esc(st.note)})</span>` : ''}</span>
       ${st.photo ? `<button class="icon-btn" title="Remove photo for ${esc(st.name)}"
@@ -1256,10 +1263,12 @@ function renderRoster(){
 }
 
 /* ---- storage-usage readout (P12) ----
-   Photos are base64 text inside the one localStorage key this tool writes,
-   with no server-side limit to fall back on — the failure mode without this
-   is a silent write failure that loses a period's work. Measured against the
-   ~5MB most browsers cap a single origin's localStorage at. */
+   The one localStorage key this tool writes, measured against the ~5MB most
+   browsers cap a single origin's localStorage at — the failure mode without
+   this is a silent write failure that loses a period's work. Since Path 4 P4
+   photos are kept in the shared image store (IndexedDB) and cost this key a
+   few bytes each; the only photos still counted here are ones not yet moved,
+   or ones a browser without IndexedDB had to keep inline. */
 function renderStorage(){
   const box = el('storageBox');
   if (!box) return;
@@ -1268,12 +1277,14 @@ function renderStorage(){
   const quotaKb = Math.round(report.quotaBytes / 1024);
   const pct = Math.min(100, report.pct * 100);
   box.className = 'storage' + (report.pct > 0.85 ? ' crit' : report.pct > 0.6 ? ' warn' : '');
-  const photoLine = report.photoCount
-    ? ` &mdash; ${report.photoCount} photo${report.photoCount === 1 ? '' : 's'} (~${Math.round(report.photoBytes / 1024)} KB)`
-    : '';
+  const inlineCount = report.photoCount - report.storedPhotoCount;
+  const photoLine = !report.photoCount ? ''
+    : !inlineCount
+      ? ` &mdash; ${report.photoCount} photo${report.photoCount === 1 ? '' : 's'}, kept in this browser’s image store`
+      : ` &mdash; ${report.photoCount} photo${report.photoCount === 1 ? '' : 's'}, ${inlineCount} of them in this list (~${Math.round(report.photoBytes / 1024)} KB)`;
   box.innerHTML = `<div>${kb.toLocaleString()} KB of ~${quotaKb.toLocaleString()} KB used (${pct.toFixed(1)}%)${photoLine}</div>`
     + `<div class="bar"><div class="fill" style="width:${pct}%;"></div></div>`
-    + (report.pct > 0.85 ? `<div>Getting close to what this browser will hold. Photos are the biggest thing here — remove a few, or use <b>Save to file</b> and start a fresh browser profile.</div>` : '');
+    + (report.pct > 0.85 ? `<div>Getting close to what this browser will hold. Inline photos are the biggest thing here — remove a few, or use <b>Save to file</b> and start a fresh browser profile.</div>` : '');
 }
 
 /* ============================================================
@@ -1519,7 +1530,7 @@ function renderFloor(){
       : `Seat ${i + 1} of ${total}, empty`;
     node.innerHTML =
         `<button class="seat" data-id="${d.id}" aria-label="${esc(label)}"${st ? ' draggable="true"' : ''}>`
-      +   (st && st.photo ? `<img class="photo" src="${esc(st.photo)}" alt="">` : '')
+      +   (st && photoSrc(st.photo) ? `<img class="photo" src="${esc(photoSrc(st.photo))}" alt="">` : '')
       +   `<span>${st ? esc(st.name) : 'empty'}</span>`
       + `</button>`
       + `<span class="selnote">moving</span>`
@@ -1859,10 +1870,10 @@ function deskNodeForPrint(d, i, total, s, opts){
     ? `Seat ${i + 1} of ${total}, ${st.name}${st.flag ? ', flagged' : ''}${d.locked ? ', pinned' : ''}`
     : `Seat ${i + 1} of ${total}, empty`;
   const hideText = opts.showNames === false;
-  const showPhoto = st && opts.showPhotos !== false && st.photo;
+  const showPhoto = st && opts.showPhotos !== false && photoSrc(st.photo);
   const text = hideText ? '' : (st ? esc(st.name) : 'empty');
   node.innerHTML = `<span class="seat" aria-label="${esc(label)}">`
-    + (showPhoto ? `<img class="photo" src="${esc(st.photo)}" alt="">` : '')
+    + (showPhoto ? `<img class="photo" src="${esc(showPhoto)}" alt="">` : '')
     + `<span>${text}</span></span>`
     + (d.locked ? `<span class="lockbadge" aria-hidden="true">pinned</span>` : '')
     + `<span class="seatnum" aria-hidden="true">${i + 1}</span>`;
@@ -2140,13 +2151,44 @@ function setState(next){
   selectedStudent = null; dragStudentId = null; dragFromDeskId = null;
   pickedSet = new Set(); pickedSection = null; lastPicked = null;
   applyZoom(); renderAll();
-  if (erasing && autosaver) autosaver.stop();   // kill a timer already in flight
+  if (erasing){
+    if (autosaver) autosaver.stop();   // kill a timer already in flight
+    window.SeatingPhoto.clearAll();    // "erase" means the faces too
+  } else {
+    settlePhotos();                    // an opened file carries data: URLs; store them
+  }
+}
+
+/* ---- photos: IndexedDB behind the chart (Path 4 P4) ----
+   The chart holds `idb:` references; the images are in the shared media store.
+   On load: read the images the chart points at, move any data: URL photo (a
+   chart saved before this, or an opened file) into the store, save the smaller
+   chart, then — at boot only — delete stored photos nothing points at. A
+   reference whose image is gone renders as the empty circle and is said so
+   once, rather than silently. Resolves when all of that is done or has given
+   up. */
+function settlePhotos({ collect = false } = {}){
+  const P = window.SeatingPhoto;
+  let missing = [];
+  return P.hydrate(photoRefsIn(state))
+    .then(m => { missing = m; return P.migrate(() => state); })
+    .then(moved => {
+      if (moved) slot.save(state);
+      // Only the parts that draw a face: renderAll() would also reset the
+      // status bar, and boot may have just put "Imported …" there.
+      renderRoster(); renderFloor(); renderStorage();
+      if (missing.length) say(`${missing.length} photo${missing.length === 1 ? ' is' : 's are'} no longer in this browser. `
+        + 'Restore a backup that includes images, or add them again.', 'bad');
+      return collect ? P.gc(photoRefsIn(state)) : 0;
+    })
+    .catch(() => 0);
 }
 
 function mountBar(){
   const bar = mountSaveBar(el('saveBar'), slot, {
     buttons: ['export', 'import', 'reset'],
-    getState: () => state,
+    // The file is portable: each `idb:` photo goes out as its data: URL.
+    getState: () => mapStatePhotos(state, window.SeatingPhoto.inline),
     setState,
     onMessage: text => say(text, /blocks storage|could not|not a valid/i.test(text) ? 'bad' : 'good'),
   });
@@ -2183,7 +2225,10 @@ function mountBar(){
      the link and the QR by policy, says how many it left out, and the
      downloaded file keeps them. */
   Share.mount(el('shareBtn'), {
-    getState: () => sec(),
+    // Photos go in as data: URLs so the sheet can strip and count them for the
+    // link and the download can carry them — an `idb:` reference means nothing
+    // on another device.
+    getState: () => mapSectionPhotos(sec(), window.SeatingPhoto.inline),
     param: 'section',
     tool: 'seating-chart',
     title: 'Share this section',
@@ -2249,6 +2294,9 @@ function boot(){
       + 'to bring it back. Nothing is uploaded either way.</p>';
   }
   window.__seatingBooted = true;
+  /* The page is usable at once; photos fill in when IndexedDB answers.
+     __seatingPhotosSettled is for the suites to wait on. */
+  settlePhotos({ collect: true }).then(() => { window.__seatingPhotosSettled = true; });
 }
 
 // The inline handlers in the markup need these on the window; a module's scope is

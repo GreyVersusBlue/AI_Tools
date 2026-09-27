@@ -166,6 +166,11 @@
       file: 'Tools/005-Seating%20Chart%20Generator.html',
       category: 'classroom-mgmt',
       share: { param: 'section' },
+      /* Student photos are not in this key since Path 4 P4: the chart holds
+         `idb:` references and the images are in `gvb-media` (declared on the
+         site row above) under the `seating/` namespace. They are student
+         data; a year-end clear that empties this key leaves them as orphans,
+         which the tool deletes on its next load. */
       keys: [
         { k: 'seating-chart-v1', student: true },
       ],

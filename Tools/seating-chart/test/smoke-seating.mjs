@@ -12,6 +12,7 @@ import {
   neighborMap, togetherGroups, apartMap, assignSeats, checkConstraints,
   pickNext, parseRoster, gridDesks, rowDesks, nextSpot, contentBox, snap,
   QUOTA_BYTES, estimateStorageBytes, storageReport, matchPhotoFilenames,
+  PHOTO_REF_PREFIX, isPhotoRef, isInlinePhoto, isPhotoValue, photoRefsIn, mapSectionPhotos, mapStatePhotos,
   todayISO, suggestQuarter, seatKey, frontRowDeskIds, newHistoryEntry,
   seatHistoryMap, frontRowStatus, checkHistoryConstraints,
   studentHistoryRows, classHistorySummary,
@@ -114,6 +115,8 @@ console.log('seating chart — pure logic\n');
           { id: 'b', name: '   ' },                       // no name: dropped
           { name: 'Marco Polo' },                          // no id: generated
           { id: 'x', name: 'Zheng He', photo: 'https://evil.example/x.png' },  // not a data: URL: dropped
+          { id: 'r', name: 'Ibn Battuta', photo: 'idb:lx2k9a4f7q' },            // a media-store reference: kept
+          { id: 'q', name: 'Sacagawea', photo: 'idb:../../etc"><script>' },     // a reference that is not one: dropped
         ],
         apart: [['a', 'gone'], ['a', 'a'], ['a', 'x'], ['a', 'x']],
         together: [['a', 'x']],                            // also in apart: dropped
@@ -138,11 +141,13 @@ console.log('seating chart — pure logic\n');
 
   eq(s.sections.length, 1, 'repair drops a non-object section');
   eq(s.sections[0].name, 'Honors GT', 'repair trims the section name');
-  eq(s.sections[0].students.length, 3, 'repair drops a nameless student');
+  eq(s.sections[0].students.length, 5, 'repair drops a nameless student');
   ok(s.sections[0].students.every(st => st.id && typeof st.note === 'string' && typeof st.flag === 'boolean' && typeof st.photo === 'string'),
     'repair fills id, note, flag and photo on every student');
   eq(s.sections[0].students.find(st => st.id === 'a').photo, 'data:image/jpeg;base64,AAAA', 'repair keeps a real data: URL photo');
   eq(s.sections[0].students.find(st => st.id === 'x').photo, '', 'repair drops a photo that is not a data: URL');
+  eq(s.sections[0].students.find(st => st.id === 'r').photo, 'idb:lx2k9a4f7q', 'repair keeps an idb: reference to the media store');
+  eq(s.sections[0].students.find(st => st.id === 'q').photo, '', 'repair drops an idb: string outside the reference alphabet');
   eq(s.sections[0].apart.length, 1, 'repair drops pairs pointing at removed students and dedupes');
   eq(s.sections[0].together.length, 0, 'repair drops a pair that is both apart and together');
   eq(s.active, s.sections[0].id, 'repair repoints an active id that goes nowhere');
@@ -396,6 +401,50 @@ console.log('seating chart — pure logic\n');
   eq(report.bySection.length, 3, 'storageReport breaks the total down by section');
   eq(report.bySection[0].name, 'Honors GT', 'the per-section breakdown is named');
   ok(report.pct > 0 && report.pct < 1, 'a small chart reports well under 100% of quota');
+
+  // Path 4 P4: a photo in the media store costs this key its reference only.
+  state.sections[0].students[1].photo = 'idb:abc123';
+  const moved = storageReport(state);
+  eq(moved.photoCount, 2, 'photoCount counts inline and stored photos alike');
+  eq(moved.storedPhotoCount, 1, 'storedPhotoCount counts the ones kept in the media store');
+  eq(moved.photoBytes, report.photoBytes, 'photoBytes is only what inline photos cost this key');
+}
+
+/* ------------------------------------ photo references (Path 4 P4) ---- */
+{
+  eq(PHOTO_REF_PREFIX, 'idb:', 'the reference prefix is idb:');
+  ok(isPhotoRef('idb:lx2k9a4f7q'), 'an idb: id in the reference alphabet is a reference');
+  ok(!isPhotoRef('idb:'), 'an empty id is not');
+  ok(!isPhotoRef('idb:a/b'), 'a slash is not in the alphabet (it is the namespace separator)');
+  ok(!isPhotoRef('idb:' + 'a'.repeat(41)), 'nor is an over-long id');
+  ok(!isPhotoRef('data:image/png;base64,AAAA'), 'a data URL is not a reference');
+  ok(isInlinePhoto('data:image/png;base64,AAAA'), 'a data:image/ URL is an inline photo');
+  ok(!isInlinePhoto('data:text/html,<b>'), 'a data URL of another type is not');
+  ok(isPhotoValue('idb:x') && isPhotoValue('data:image/jpeg;base64,A') && !isPhotoValue('blob:x') && !isPhotoValue(''),
+    'isPhotoValue is exactly the union of the two');
+
+  const st = freshState(rngFrom(41));
+  st.sections[0].students = [
+    { id: 'a', name: 'Ada', note: '', flag: false, photo: 'idb:one' },
+    { id: 'b', name: 'Bo', note: '', flag: false, photo: 'data:image/png;base64,AA' },
+    { id: 'c', name: 'Cy', note: '', flag: false, photo: '' },
+  ];
+  st.sections[1].students = [{ id: 'd', name: 'Di', note: '', flag: false, photo: 'idb:one' },
+                             { id: 'e', name: 'Ed', note: '', flag: false, photo: 'idb:two' }];
+  deep([...photoRefsIn(st)].sort(), ['idb:one', 'idb:two'], 'photoRefsIn collects each reference once, across sections');
+  eq(photoRefsIn(null).size, 0, 'and tolerates no state at all');
+
+  const resolve = p => (p === 'idb:one' ? 'data:image/jpeg;base64,ONE' : isInlinePhoto(p) ? p : '');
+  const out = mapStatePhotos(st, resolve);
+  deep(out.sections[0].students.map(x => x.photo), ['data:image/jpeg;base64,ONE', 'data:image/png;base64,AA', ''],
+    'mapStatePhotos puts every photo through the function');
+  eq(out.sections[1].students[1].photo, '', 'an unresolvable reference comes out however the function says');
+  eq(st.sections[0].students[0].photo, 'idb:one', 'and the live state is not touched');
+
+  const one = mapSectionPhotos(st.sections[1], resolve);
+  deep(one.students.map(x => x.photo), ['data:image/jpeg;base64,ONE', ''], 'mapSectionPhotos does the same for one section');
+  eq(st.sections[1].students[0].photo, 'idb:one', 'again without touching the original');
+  eq(mapSectionPhotos(undefined, resolve), undefined, 'and passes "no section" through');
 }
 
 /* --------------------------------------------- bulk photo import (P12/QW) ---- */
