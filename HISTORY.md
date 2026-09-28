@@ -9,6 +9,99 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P4, increment 4: 028's source images move into `media-db.js` (2026-09-28, #290, `CACHE_VERSION` v197)
+
+**What shipped.**
+- 028 Primary Source Analysis Worksheet Generator kept each Source A / Source B upload as a
+  data URL inside its worksheet's key (`gvb-primary-source:data:<name>`, fields `imageDataUrl`
+  and `sourceBImageDataUrl`), and a second full copy in the source library
+  (`gvb-primary-source:library`) once it was saved there. Uploads are now Blobs in `gvb-media`
+  under the `psa/` namespace, and those fields hold `idb:h<32 hex>`.
+- `Tools/primary-source-analysis-generator/psa-image.js` (`window.PsaImage`: `fromFile`,
+  `hydrate`, `store`, `inline`, `gc`, `url`, `isMissing`) is the image store. It is 056's
+  `dbq-image.js` with a downscaling `fromFile()`.
+- 028's inline `downscaleImage()` is deleted. `MediaDB.downscaleImage` runs at the same 1600 px
+  and JPEG 0.82. **One copy remains: 015's `tlb-photo.js`.**
+- `_shared/media-db.js`: `downscaleImage` takes an opt-in `background` colour, painted under
+  the image before drawing. `smoke-media-db` asserts both halves: `'#fff'` puts a transparent
+  PNG on white, and without it the output is black as before.
+- New suite `smoke-images.mjs` (port 8446, `test:primary-source-images`, 76 assertions).
+- `_shared/tool-registry.js`: a comment on 028's row. Comments only; no key changed.
+
+**Calls made, each cheap to reverse.**
+- **The field names were kept.** `imageDataUrl` now usually holds a reference, which reads
+  oddly. Renaming it would have broken every exported file and every share link already in a
+  teacher's email, plus every file an older cached copy of the page writes. A value is one of
+  three things: `''`, `idb:<id>`, or `data:image/…` (an arrival not yet moved, or no IndexedDB).
+- **A crop is parameters, not a new Blob.** It already was. `imageCrop` is a normalized rect
+  that 028 draws with CSS transforms over a real `<img>`, never a canvas, because an image
+  pasted by URL is cross-origin and would taint one. Storing the cropped pixels would:
+  - add a second record per crop;
+  - make every re-drag a write;
+  - lose the whole image, which the side-by-side callout prints with the detail outlined.
+  So nothing about crops changed, and `smoke-crop.mjs` passed untouched. The new suite seeds a
+  cropped pre-migration worksheet and checks the crop, the callout and the enlarged detail
+  still print from the stored image.
+- **Still downscaled**, unlike 056. 028 always threw the original away, and every worksheet a
+  teacher has was built on the 1600 px copy. A worksheet prints an image at most 3.2 inches
+  tall.
+- **The white matte had to survive.** The inline copy painted `#fff` under the image before a
+  JPEG re-encode, so a transparent PNG came out white. The shared one did not; it would have
+  come out black on paper. I added the option opt-in, so 005 and 019 get byte-identical output,
+  rather than change the default under them. Arguably white is right for every JPEG caller; that
+  is a one-line change if someone wants it.
+- **Object URLs and content-hash ids**, for 056's reasons. Measured: a 2400×1800 noise PNG
+  (12.6 MB) stores as ~1.0 MB of JPEG, which is ~1.3 MB as the data URL localStorage used to
+  hold. Two of those in one worksheet, plus its library copy, was past the ~5 MB ceiling.
+- **A file's images are stored before the worksheet is saved.** 056 saves an import first and
+  moves its images after, so a big one has to fit in localStorage for a moment. 028's
+  `importSheetFromFile` blanks anything in the file that is not a `data:image/`, stores the
+  rest, and only then calls `adoptWorksheet(…, true)`. That `true` is the only path that
+  accepts an `idb:` value from outside, and by then every such value was made in this browser.
+  A link (always text-only after share.js) is adopted untrusted and moved at boot.
+- **A failed save is said, not thrown.** `Store.save()` (028's own local `var Store`, not
+  `_shared/store.js`) threw an uncaught `QuotaExceededError` on every keystroke once full.
+  `save()` now reports it in the share note, which clears when a save works again.
+- **The size warning now fires only for an inline value**, the only kind that weighs on
+  localStorage. The same `<p>` says "missing from this browser's storage" for a dangling ref.
+- **Orphan GC at boot only, 10-minute grace**, the same as 005/019/056.
+- **Two near-identical modules on purpose.** `psa-image.js` and `dbq-image.js` differ only in
+  namespace, owner tag and `fromFile()`. CLAUDE.md's "one adopter per new module" and the
+  brief's per-tool folder won over extracting a `_shared/` helper with two callers. When a third
+  big-image tool moves (042's images are small, so probably 015 or 071), extract it.
+
+**Found and fixed on the way.** The two upload previews had no `alt` (axe `image-alt`, serious).
+The site sweep opens 028 with no upload, so it never saw them. The new suite scans with both
+uploads showing, scoped to the image cards, because 028's `.preview-note` contrast is already
+on the allowlist. I checked the scoped scan catches a planted missing `alt` before trusting it.
+
+**Found, not fixed.** The source-description hint still says "Since this is a static site,
+there's no image upload". That has been false since uploads were added. It is one sentence,
+but it was not this row's.
+
+**What did not work first.** Nothing shipped red. The suite's first run failed its two unscoped
+axe scans: one real finding (`image-alt`, fixed) and one allowlisted one (`.preview-note`).
+`run-suites --only 028` matches nothing, because `--only` takes the tool's folder name
+(`--only primary-source-analysis-generator`), not its number.
+
+**Verified.** Every `check:*` guard, lint, `check:precache -- --base origin/main`,
+`test:primary-source`, the new suite, `test:a11y -- --only 028`, and the other media-db suites
+(`smoke-media-db`, 056, 019, 005). All ran locally on sandbox Chromium; the three 028-folder
+suites plus the new one also passed three repeats. CI passed first time (full run, 38 min,
+site-wide because `_shared/` changed).
+
+**Not verified.**
+- No real phone, and no real camera photos: every image was synthetic (1×1 PNGs and a noise
+  PNG).
+- No quota pressure: the failed-save message was not exercised in 028's suite (056's suite
+  covers the same pattern).
+- A real teacher profile with many worksheets: migration is sequential and was timed only on
+  fixtures.
+- Firefox and Safari: Chromium only.
+- Printing to a real printer from object URLs.
+
+---
+
 ## Path 21 P2, increment 4: icons for 049–067 (2026-09-28, #288, `CACHE_VERSION` v196)
 
 This is the fourth increment of rank 1, a 2+ row, so the row stays and is rewritten. It was
