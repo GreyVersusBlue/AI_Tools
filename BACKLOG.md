@@ -70,7 +70,7 @@ without claiming or editing them and takes the next unclaimed row that is not Pa
 
 ## Where things stand — start here
 
-*Current as of `main` after #280, 2026-09-27. **Keep this section under ~80 lines.** It is
+*Current as of `main` after #282, 2026-09-28. **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -83,13 +83,17 @@ were buried in it. It was moved **verbatim** to `HISTORY.md` ("BACKLOG header ha
 2026-09-04 → 2026-09-12"). The durable P3 guidance moved to the end of the Path 6 section in
 Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
-**Last merged: #280, Path 4 P4 increment 1 — 005's student photos moved out of localStorage into `media-db.js` (`gvb-media`, namespace `seating/`). `CACHE_VERSION` v192.**
-- The chart now holds `idb:` references. Save to file and the share sheet still put data URLs
-  inline, and a chart saved before this is migrated on load. `smoke-photos.mjs` is the pattern
-  for the next adopter. **019 station images are next.**
+**Last merged: #282, Path 4 P4 increment 2 — 019's station images moved out of localStorage into `media-db.js` (`gvb-media`, namespace `escape-room/`). `CACHE_VERSION` v193.**
+- Rooms hold `idb:` references; the student link, QR payload, packet and share file still get
+  data URLs, because `lock.html` reads the image from its own URL on a student phone. 005 (#280)
+  and 019 are the two patterns. **056/028 source libraries are next**, and they are the first
+  with big images (028 keeps 1600 px), so the in-memory data-URL cache both used is the wrong
+  model there: see `HISTORY.md`'s #282 entry.
+- **Found in #282, not fixed:** each station's QR code encodes the whole room, so one real photo
+  makes every QR in a 019 room fail to build. Pre-existing; noted under 019 in Tier 2.
 - **On Devon's Windows checkout two suites fail locally that CI passes:** `schedule-browser/
   smoke-dark-theme` (the expected text has CRLF) and `music-sightreading-generator/
-  smoke-glyph-fallback` (font metrics). Neither is touched by #280. Not root-caused.
+  smoke-glyph-fallback` (font metrics). Neither is touched by #282. Not root-caused.
 - **Devon asked for Path 22 directly (2026-09-25)** and made its scope calls himself: no accounts,
   no student voting, no Google/Microsoft, YouTube in. On the same day he asked for P2–P5 to be
   worked straight away: P2 #272, P3 #274, P4 #276, P5 #278. **Path 22 P1–P5 are done.**
@@ -114,8 +118,8 @@ Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
   They carry the style rules and every draft that failed by eye (fingers, fries, a rude
   gesture, a chocolate bar, laptops, a keyboard, a "close" button).
 - **No Blender** (any cloud container): skip ranks 1–7 without claiming or editing them.
-  Rank 8 (Path 6 P4) is blocked on rank 45, so take **rank 9**, Path 4 P4 increment 2
-  (019 station images onto `media-db.js`; 005 shows the shape), one increment.
+  Rank 8 (Path 6 P4) is blocked on rank 45, so take **rank 9**, Path 4 P4 increment 3
+  (056/028 source libraries onto `media-db.js`), one increment.
 
 **Decisions only Devon can make — surfaced, not taken.**
 - **Interleave per-tool improvements with platform work?** Standing decisions say "keep platform
@@ -130,14 +134,14 @@ Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v192` — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **270** in `PRECACHE_URLS`, **89** in the `SHELL_URLS` install tier. Bytes: **11.21 MB / 2.52 MB** summed on Devon's Windows checkout after #267, before #269–#276 grew 087 and added its phone page (not re-measured). #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **43,050 B** ledgered, **22,086 B** of it shell (`check:art` enforces both) |
-| Suites | **165** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| `CACHE_VERSION` | `v193` — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **271** in `PRECACHE_URLS`, **89** in the `SHELL_URLS` install tier. Bytes: **11.21 MB / 2.52 MB** summed on Devon's Windows checkout after #267, before #269–#276 grew 087 and added its phone page (not re-measured). #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **43,050 B** ledgered, **22,086 B** of it shell (`check:art` enforces both) |
+| Suites | **166** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **14** page-rule pairs on 14 pages, all `color-contrast` |
 | Tool registry | 88 rows, **218 keys and 32 prefixes across 111 files** (087 now also `reads` 010's settings); **49** entries marked `student` (087's one key, `cls-screen:state`, is not student data: name picks are never saved). The live-entry denominator was 235 in this cell; counting non-`legacy` keys and prefixes gives 238 before #269 and 239 after, so the old figure used a rule not written down. Re-measure before quoting one; `check:registry` green |
-| Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 79 · `a11y.js` 79 · `ink-paper.css` 72 · `base.css` 68 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `media-db.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 79 · `a11y.js` 79 · `ink-paper.css` 72 · `base.css` 68 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `media-db.js` 4 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 87 (`001`–`087`); next free number **088** |
 | Tier 1 rows | **191**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows proper start at rank **101**; 183–191 are Path 22 P6–P14 (added at the end at Devon's request, not ranked by him) |
@@ -276,7 +280,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 6 | Path 21 P4 — 030 review-game art: board backdrop, category and point-value tiles, projected. **≤ 200 KB** for both themes. *a11y:* text is always drawn over them, so every tile's luminance is recorded and **4.5:1 asserted in both themes** by the validator. **Needs Blender locally; a session without `blender` on PATH skips it.** | 030 | ½ | | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
 | 7 | Path 21 P4 — 046 relief heightmap: a shaded-relief layer under the default world base map, from a public-domain DEM (not committed; source, licence and SHA-256 in the README). Off by default and disabled in choropleth mode. **≤ 400 KB** for a 2048-px light/dark pair. *a11y:* luminance range capped so label ink holds 4.5:1 over the whole image; the toggle has an accessible name. **Needs Blender locally; a session without `blender` on PATH skips it.** | 046 | 1 | | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
 | 8 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 (#257, v182):** 046 → 015, 056 → 028 (`sheet: false`) and 039 → 040 are entries; **003 → 037 is a documented exception** (student scores never ride a link); `share.js` gained `sendState(entry)` and `sheet: false`. **Increment 2 (#259, v183), the roster chain:** **002 → 022** is a sheet row and **022 → 005** a `sheet: false` entry from 022's "Seat these groups" button; **006/007 → 002 is not a link** (the roster already reaches 002 through `roster.js`). **Left: only 053 → 030, which is blocked on rank 45** (Path 12 P1, the question bank with 030 as the front door). Do not start this row until rank 45 has shipped; then it is one entry plus a row in `smoke-send-to.mjs` | site | ¼ | | [Path 6](#path-6--share-everywhere) |
-| 9 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js`. **Increment 1 done (#280, v192): 005's photos** are `idb:` references into `gvb-media` `seating/`, with migrate-on-load, inline data URLs for file and share, boot-time orphan GC and an inline fallback without IndexedDB (`Tools/seating-chart/scg-photo.js`, `smoke-photos.mjs`). **Left, in this order:** 019 station images, 056/028 source libraries, 042 logo/signature, 015, 041, 071, 080 snapshots, 030 clue images. Two downscaler copies remain (015's `tlb-photo.js`, 028 inline); remove each as its tool migrates | site | 2+ | `p4p4i2` 2026-09-27 23:27 UTC | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 9 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js`. **Increment 1 done (#280, v192): 005's photos** (`seating/`, `Tools/seating-chart/scg-photo.js`, `smoke-photos.mjs`). **Increment 2 done (#282, v193): 019's station images** (`escape-room/`, `Tools/escape-room-builder/er-image.js`, `smoke-images.mjs`): every saved room migrated on load, data URLs out to the student link, QR, packet and share file, dedup against what is already stored, boot-time orphan GC, inline fallback without IndexedDB. **Left, in this order:** 056/028 source libraries (big images: object URLs and an async export, not 005's data-URL cache), 042 logo/signature, 015, 041, 071, 080 snapshots, 030 clue images. Two downscaler copies remain (015's `tlb-photo.js`, 028 inline); remove each as its tool migrates. 019's row in `_shared/tool-registry.js` still lacks the where-the-images-went comment 005's has | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 10 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 11 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 12 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
@@ -4703,7 +4707,11 @@ printed debrief for every team at the end.
   a shared device — QR requires every student to have a camera, which is not
   a safe assumption.
 - **Skipped — Round 4 considered this and passed.** **Estimated payload size warning.** The whole room rides in the QR; a room
-  with several images will silently produce an unscannable code (P3). *(The
+  with several images will silently produce an unscannable code (P3). **Measured 2026-09-28
+  (#282): worse than that.** One real photo (~33 KB as a data URL, against a QR's ~3 KB) on
+  any station makes every station's code fail to build, and the page says "Could not build a QR
+  code". Clue images reach students only through the copied student link. Fixing it is a product
+  call: keep images out of the QR payload, or give each station a payload of its own. *(The
   new per-station fields are all a few bytes and omitted when unused, so the
   existing try/catch QR-generation error remains the only size guard.)*
 - **Station numbering that survives reordering**, so a reprint doesn't
