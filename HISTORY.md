@@ -9,6 +9,108 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P2, increment 3: icons for 028–031, 033–043 and 045–048 (2026-09-28, #286, `CACHE_VERSION` v195)
+
+This is the third increment of rank 1, a 2+ row, so the row stays and is rewritten. It was
+built on Devon's machine with Blender 5.2.2 LTS, headless, from the Steam path (still not on
+PATH). Devon's prompt for this session named rank 9 (028's images) but said to take rank 1
+if Blender was there, so this is rank 1 and 028's images are still next on rank 9.
+
+What shipped:
+- **Nineteen icons** in `scene_icons.py`, in tool-number order:
+  - 028 Primary source: a document scroll, rolled top and bottom.
+  - 029 Prompt builder: a written page, its last line ending at a cursor, with a
+    four-point sparkle.
+  - 030 Review game: a board of flat tiles under a header band, one tile taken.
+  - 031 Doc merger: three fanned pages held by one paper clip.
+  - 033 SSR log: a closed book standing, a bookmark out of its top.
+  - 034 Schedule browser: a wall clock at ten past ten.
+  - 035 Layout visualizer: a floor plan, hallway and rooms, with a map pin.
+  - 036 Final grade checker: a calculator.
+  - 037 Grade distribution: a five-bar histogram in a bell, on an axis.
+  - 038 Chart builder: a pie chart with one slice pulled out.
+  - 039 Vocab drill (world languages): a globe on its stand.
+  - 040 Vocab flashcards: cards on a ring, the front one showing "A" and definition lines.
+  - 041 Formula sheet: a square root over an x, and a right triangle.
+  - 042 Certificates: an award rosette with two tails.
+  - 043 Permission slip: a school bus.
+  - 045 Sub binder: a ring binder with divider tabs out of its open edge.
+  - 046 Blank map: a folded map, a route to a circled stop.
+  - 047 Art critique: a painter's palette and brush.
+  - 048 Portfolio label: a hanging tag with QR finders, askew on its string.
+
+  They are 369–1,323 B each, against the 1,434 B cap. 047 comes closest.
+- **The sprite** holds 48 symbols in 32,548 B (cap 120 KB), which still projects to about
+  55 KB for all 86. **48 landing rows** carry an icon. No new primitives this time. The
+  sprite was already precached in both tiers, and the 19 single-icon files are ledgered but
+  not precached, as before.
+- **`verify-offline-copy.mjs`** now calls `emulateMedia({ reducedMotion: 'reduce' })` before
+  it counts icon ink on the landing page. See below.
+
+**Drafts rejected by eye** (each is recorded in its function's docstring so nobody retries it):
+- **029 failed twice.** A chat window over a pill-shaped input field read as a **transistor
+  radio**. Text lines broken by empty rounded slots read as the **sliders of a mixing desk**.
+  A plain written page with a cursor and the sparkle reads.
+- **030:** every tile raised as a box doubled its edges, and the board **clotted into one
+  dark block** at 32 px. Flat tiles on a flat board are single outlines. It is still one of
+  the denser icons, about as heavy as 016.
+- **033 and 045** were turned toward their covers, which hid the page edge and the tabs. They
+  read as a **notepad** and a **tablet**. Both are now square to the camera's azimuth.
+- **039:** a real globe's 23° tilt laid the equator nearly edge-on to the 30° camera, the
+  lines vanished, and it read as a **round mirror on a stand**. Upright, with three latitude
+  rings and a meridian turned 55°, it is a globe.
+- **040:** four word cards pinned to a board were a **cluttered grid** at 24 px.
+- **048:** hung straight, the tag and its string loop read as a **shopping bag**. It hangs
+  askew now, with a smaller loop.
+- **Giggle check:** all 19 were looked at in both themes at 24, 32 and 48 px, and at a
+  pixelated 4× of the 32 px render. Nothing reads as anything rude. 029's cursor sits close
+  enough to its line's end to make a small ⊥ at 32 px; it is a cursor, and was kept.
+
+**The offline check had a timing race, and this increment exposed it.** The first
+`offline:verify` after the build passed. The second failed with `1 of 48 tool icons drew
+nothing from file://: #t004 (0 ink pixels)`. 004 is increment 1's hourglass and was not
+touched. The landing rows fade in (`.row.ink`, 0.45 s), opening a `<details>` category
+restarts that animation, and the verifier screenshots the first icon at once. So it could be
+caught at opacity ~0. The page already drops the fade under `prefers-reduced-motion`, so the
+verifier now asks for that. Three runs after the fix all passed. **Not proven:** the failure
+was seen once in two runs and was not reproduced on demand before the fix. The explanation
+fits the code, and the fix removes the animation either way. `offline:verify` does not run in
+CI (Standing decisions has "run it on `main`" as an unwired default), which is why nobody
+had seen this before.
+
+**What did not work in the session.**
+- **The checkout was switched to `main` under this session**, eight seconds before the
+  implementation commit (reflog: `checkout: moving from claude/path21-icons-p21p2i3 to main`
+  at 22:39:33, not run by this session). So the commit landed on local `main`. It was caught
+  by the `git branch --show-current` check before the push, the commit was moved to its
+  branch, and local `main` was reset to `origin/main`. Nothing reached `origin/main`. Whatever
+  switched it (a parallel session or GitHub Desktop) was not identified. **Check the branch
+  immediately before every commit and push, not once at the start.**
+- **A `python -` heredoc hung** on the Windows Store stub again, exactly as increment 1
+  recorded, and had to be killed. It was a leftover in a one-line claim script. Write scratch
+  scripts to files, and never call `python` on this machine.
+- A regex-based insert into `index.html` failed on its CRLF line endings, although Git Bash's
+  `grep -c $'\r'` reported none. The insert was redone as a plain string search that keeps
+  each line's own ending.
+
+**Render twice, compare.** `t039.svg` and `t047.svg` were rendered again with `--out`, and the
+sprite was rebuilt. All were byte-identical to the committed files.
+
+**Not verified.** The same gaps as before: another machine or Blender patch, a projector,
+and 125–150% OS scaling. Each icon's name-to-picture fit was judged by one reviewer (this
+session). The landing page was checked at 1280 px only this time, not at 375 px. The icon
+column is a fixed 32 px float that increments 1 and 2 checked at 375, and nothing about it
+changed.
+
+Local: every `check:*` guard, `lint`, `check:precache -- --base origin/main` (v194 → v195),
+`check:art` (broken once on purpose: a corrupted `t030.svg` gave HASH plus DERIVED and exit 1),
+`test:blender-art` (60), `test:a11y -- --only index` (no new allowlist line; `color-contrast`
+×24 is the known unstable count), and `offline:build` plus `offline:verify` ("all 48 tool
+icons draw from file://", three runs). The landing page showed 48 icons at 32 px with no
+console errors in both themes. CI ran every suite green in **37m26s** (`index.html` and `Tools/board-check/` are both site-wide).
+
+---
+
 ## Path 4 P4, increment 3: 056's source images move into `media-db.js` (2026-09-28, #284, `CACHE_VERSION` v194)
 
 **What shipped.**
