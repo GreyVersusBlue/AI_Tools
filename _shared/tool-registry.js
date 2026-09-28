@@ -1136,6 +1136,11 @@
       file: 'Tools/015-timeline-builder.html',
       category: 'social-studies',
       share: { param: 'timeline' },
+      /* Event photos are not in these keys since Path 4 P4: each event's
+         `photo` holds an `idb:` reference and the images are in `gvb-media`
+         (declared on the site row above) under the `tlb/` namespace. Teacher
+         content, not student data. Photos no saved timeline points at are
+         deleted when the tool next loads. */
       keys: [
         { k: 'gvb-timeline:current' },
         { k: 'gvb-timeline:list' },

@@ -157,7 +157,13 @@ const arrived = await receiver.evaluate(() => {
 });
 ok(/^Voyages/.test(arrived.name), 'a .json written by the share sheet opens in Import JSON: ' + arrived.name);
 eq(arrived.data.events.length, 2, 'with every event');
-eq(arrived.data.events[0].photo, PNG, 'and the photo, which no link could have carried');
+/* Since Path 4 P4 the photo is moved into IndexedDB before the timeline is
+   saved, so the saved value is a reference; the bytes behind it are what
+   must still be the file's photo, exactly. */
+ok(/^idb:h[0-9a-f]{32}$/.test(arrived.data.events[0].photo),
+   'and the photo, which no link could have carried, stored in IndexedDB: ' + arrived.data.events[0].photo);
+eq(await receiver.evaluate((ref) => window.TimelineImage.inline(ref), arrived.data.events[0].photo), PNG,
+   'with exactly the bytes the file carried');
 const after = await receiver.evaluate(() => JSON.parse(localStorage.getItem('gvb-timeline:list') || '[]'));
 ok(before.every(n => after.includes(n)), 'nothing already saved here was replaced');
 
@@ -191,13 +197,17 @@ eq(await receiver.evaluate(() => localStorage.getItem('gvb-timeline:current')), 
    The receiving side blanks an image only when it is NOT a usable string,
    so a link's null is blanked and a file's pixels are not — the same rule
    028 needed in the first increment. */
-const link = await page.evaluate(() => {
+const link = await page.evaluate(async () => {
   let captured = null;
   const real = navigator.clipboard;
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true, value: { writeText: (t) => { captured = t; return Promise.resolve(); } },
   });
   document.getElementById('shareBtn').click();
+  // Since Path 4 P4 the sheet opens once the stored photo has been read back.
+  for (let i = 0; i < 100 && !document.querySelector('.share-sheet button[data-share="copy"]'); i++) {
+    await new Promise(r => setTimeout(r, 20));
+  }
   document.querySelector('.share-sheet button[data-share="copy"]').click();
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: real });
   window.Share.close();

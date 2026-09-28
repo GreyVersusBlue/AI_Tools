@@ -12,7 +12,8 @@
    URL anyway. This is that pattern, generalised, plus the downscaler that
    three tools had already copy-pasted from each other (Tools/timeline-builder/
    tlb-photo.js at 480 px, Tools/seating-chart/scg-photo.js at 160 px, 028
-   inline at 1600 px — three sizes, one identical function).
+   inline at 1600 px — three sizes, one identical function; Path 4 P4 removed
+   all three, and a fourth, 042's cam-logo.js).
 
    WHAT IS STORED, AND WHERE.
 
@@ -422,6 +423,219 @@
     });
   }
 
+  /* ---- images: the half every image-bearing tool shares ---------------
+     056's dbq-image.js, 028's psa-image.js and 042's cam-image.js grew as
+     near-copies, one per Path 4 P4 increment; 015 made it four, so the
+     shared half lives here and each tool keeps only its own fromFile()
+     settings and helpers. `MediaDB.images({ ns, owner })` is one tool's
+     image layer over this store:
+
+       A VALUE is one of three strings: '' (none), `idb:<id>` (a Blob in
+       `gvb-media` under the namespace) or `data:image/…` (an image not yet
+       moved, an arrival, or a browser with no IndexedDB). A tool keeps its
+       field names and puts whichever of the three in them.
+
+       IDS ARE THE CONTENT'S HASH: `h` + the first 128 bits of SHA-256, so the
+       same picture in two documents, a library and an imported file is one
+       record, and a migration that runs twice stores nothing the second time.
+       Without crypto.subtle (a non-secure context) the id is random and
+       nothing is deduplicated; the image is still kept.
+
+       DISPLAY IS OBJECT URLS. hydrate() gives every stored image one; url()
+       hands it back synchronously for an <img src>. A Blob read from
+       IndexedDB is disk-backed, so this holds almost nothing in memory. Only
+       what leaves the browser (an export, a share sheet's download) reads the
+       bytes, asynchronously, through inline(). 005 and 019 keep a data-URL
+       cache instead, because a synchronous consumer of theirs carries the
+       image out; they do not use this.
+
+       GC IS FOR BOOT ONLY, and spares anything saved in the last ten minutes:
+       an image another open tab has just stored but not yet written into its
+       saved document looks exactly like an orphan in between.
+
+     Nothing here reads or writes localStorage: which documents hold which
+     values is the tool's business. */
+
+  var IMAGE_PREFIX = 'idb:';
+  var IMAGE_REF_RE = /^idb:[A-Za-z0-9_-]{1,40}$/;
+  var IMAGE_GC_GRACE_MS = 10 * 60 * 1000;
+
+  function isImageRef(v) { return typeof v === 'string' && IMAGE_REF_RE.test(v); }
+  function isInlineImage(v) { return typeof v === 'string' && v.slice(0, 11) === 'data:image/'; }
+
+  function randomImageId() {
+    return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function hex(buf) {
+    return Array.prototype.map.call(new Uint8Array(buf), function (b) {
+      return (b < 16 ? '0' : '') + b.toString(16);
+    }).join('');
+  }
+
+  /** The id a blob is stored under: its content hash where the browser can
+      compute one, otherwise a random id. */
+  function imageIdFor(blob) {
+    var subtle = global.crypto && global.crypto.subtle;
+    if (!subtle || !blob || typeof blob.arrayBuffer !== 'function') return Promise.resolve(randomImageId());
+    return blob.arrayBuffer()
+      .then(function (buf) { return subtle.digest('SHA-256', buf); })
+      .then(function (d) { return 'h' + hex(d).slice(0, 32); }, function () { return randomImageId(); });
+  }
+
+  function makeImages(opts) {
+    opts = opts || {};
+    if (!opts.ns) throw new Error('MediaDB.images: a namespace is required.');
+    var ns = opts.ns;
+    var meta = { tool: opts.owner || ns };
+    var urls = {};       // 'idb:<id>' -> object URL
+    var blobs = {};      // 'idb:<id>' -> Blob, for keepAlive() (the object URL holds it anyway)
+    var missing = {};    // 'idb:<id>' -> true once a read found nothing
+    var handle = null;
+
+    function db() {
+      if (!handle) handle = makeStore({ ns: ns });
+      return handle;
+    }
+
+    /** What an <img src> gets: the data URL itself, the object URL of a
+        stored image, or '' when there is nothing to show (not read yet, or
+        gone). Never anything else, so it is safe to put in an attribute. */
+    function url(image) {
+      if (isInlineImage(image)) return image;
+      if (isImageRef(image)) return urls[image] || '';
+      return '';
+    }
+
+    /** A reference whose image is not in this browser. Only true once
+        hydrate() has looked for it. */
+    function isMissing(image) { return isImageRef(image) && !!missing[image]; }
+
+    function remember(ref, blob) {
+      if (!urls[ref]) urls[ref] = URL.createObjectURL(blob);
+      blobs[ref] = blob;
+      delete missing[ref];
+      return ref;
+    }
+
+    /** Store one blob; resolves to its reference. Rejects with a
+        teacher-readable message when the browser refuses. */
+    function keep(blob) {
+      return imageIdFor(blob).then(function (id) {
+        return db().put(id, blob, meta).then(function () { return remember(IMAGE_PREFIX + id, blob); });
+      });
+    }
+
+    /** keep(), or the blob's data URL when IndexedDB will not take it — the
+        value a tool's fromFile() hands back, so an upload is never lost. */
+    function keepOrInline(blob) {
+      return keep(blob)['catch'](function () { return toDataUrl(blob); });
+    }
+
+    /** Read the images behind `refs` and give each an object URL. Resolves
+        to the distinct references that have no image in this browser. */
+    function hydrate(refs) {
+      var todo = [];
+      Array.from(refs || []).forEach(function (r) {
+        if (isImageRef(r) && !urls[r] && todo.indexOf(r) === -1) todo.push(r);
+      });
+      if (!todo.length) return Promise.resolve([]);
+      function lost(ref) { missing[ref] = true; return ref; }
+      return Promise.all(todo.map(function (ref) {
+        return db().getBlob(ref.slice(IMAGE_PREFIX.length)).then(function (blob) {
+          if (!blob) return lost(ref);
+          remember(ref, blob);
+          return null;
+        }, function () { return lost(ref); });
+      })).then(function (gone) { return gone.filter(Boolean); });
+    }
+
+    /** Move data: URL images into the store, each distinct one once (by hash,
+        so one already stored is simply the same record). Resolves to a map
+        from data URL to reference, which the caller applies to FRESH copies
+        of what it saves — not to copies read before these writes, which
+        another tab could have changed meanwhile. The first failed write stops
+        the pass: that image and the rest stay inline, still saved, and the
+        next load tries again. An image is stored as it came. */
+    function storeAll(values) {
+      var todo = [];
+      (values || []).forEach(function (v) {
+        if (isInlineImage(v) && todo.indexOf(v) === -1) todo.push(v);
+      });
+      var map = {};
+      if (!todo.length) return Promise.resolve(map);
+      return todo.reduce(function (p, dataUrl) {
+        return p.then(function (go) {
+          if (!go) return false;
+          var blob;
+          try { blob = dataUrlToBlob(dataUrl); } catch (e) { return true; }   // a malformed one stays as it is
+          return keep(blob).then(function (ref) { map[dataUrl] = ref; return true; },
+                                 function () { return false; });
+        });
+      }, Promise.resolve(true)).then(function () { return map; });
+    }
+
+    /** The value as it leaves this browser: a data URL, or null for a
+        reference with nothing behind it (a dangling `idb:` would name an
+        image on the receiving device, or nothing) and for anything that is
+        not an image. Reads the stored bytes, so it is async. */
+    function inline(image) {
+      if (isInlineImage(image)) return Promise.resolve(image);
+      if (!isImageRef(image)) return Promise.resolve(null);
+      return db().getBlob(image.slice(IMAGE_PREFIX.length)).then(function (blob) {
+        return blob ? toDataUrl(blob) : null;
+      })['catch'](function () { return null; });
+    }
+
+    /** Write the images behind `refs` again from memory. For a delete that
+        can be undone: on delete it re-stamps them, so a GC in another tab
+        spares them for its grace period; on undo it puts back any that went
+        anyway. Resolves to how many were written; a reference this tab never
+        read is skipped. */
+    function keepAlive(refs) {
+      var todo = Array.from(refs || []).filter(function (r) { return isImageRef(r) && blobs[r]; });
+      return Promise.all(todo.map(function (ref) {
+        return db().put(ref.slice(IMAGE_PREFIX.length), blobs[ref], meta).then(function () {
+          delete missing[ref];
+          return 1;
+        }, function () { return 0; });
+      })).then(function (done) { return done.reduce(function (a, b) { return a + b; }, 0); });
+    }
+
+    /** Delete stored images nothing saved points at any more. `keepRefs` is
+        every reference still in use. Run at boot only. Resolves to the count. */
+    function gc(keepRefs) {
+      var keepSet = new Set(Array.from(keepRefs || []));
+      var cutoff = Date.now() - IMAGE_GC_GRACE_MS;
+      return db().list().then(function (recs) {
+        var dead = recs.filter(function (r) {
+          return !keepSet.has(IMAGE_PREFIX + r.id) && (Number(r.savedAt) || 0) < cutoff;
+        });
+        return Promise.all(dead.map(function (r) {
+          var ref = IMAGE_PREFIX + r.id;
+          if (urls[ref]) { URL.revokeObjectURL(urls[ref]); delete urls[ref]; }
+          delete blobs[ref];
+          return db().remove(r.id);
+        })).then(function () { return dead.length; });
+      });
+    }
+
+    return {
+      NS: ns,
+      isRef: isImageRef,
+      isInline: isInlineImage,
+      isMissing: isMissing,
+      url: url,
+      keep: keep,
+      keepOrInline: keepOrInline,
+      hydrate: hydrate,
+      store: storeAll,
+      inline: inline,
+      keepAlive: keepAlive,
+      gc: gc
+    };
+  }
+
   /* ---- the module ------------------------------------------------------ */
 
   var shared = makeStore({});
@@ -448,6 +662,13 @@
     downscaleImage: downscaleImage,
     toDataUrl: toDataUrl,
     dataUrlToBlob: dataUrlToBlob,
+
+    /** One tool's image layer: MediaDB.images({ ns, owner }). See above. */
+    images: makeImages,
+    IMAGE_GC_GRACE_MS: IMAGE_GC_GRACE_MS,
+    isImageRef: isImageRef,
+    isInlineImage: isInlineImage,
+    imageIdFor: imageIdFor,
 
     /* pure, and exported because the suite asserts them directly */
     fitDimensions: fitDimensions,

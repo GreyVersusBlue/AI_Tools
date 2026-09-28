@@ -29,7 +29,8 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="timeline-builder/tlb-layout.js"></script>
-<script src="timeline-builder/tlb-photo.js"></script>
+<script src="../_shared/media-db.js"></script>
+<script src="timeline-builder/tlb-image.js"></script>
 <script src="timeline-builder/tlb-store.js"></script>
 <script src="timeline-builder/tlb-places.js"></script>
 <script src="timeline-builder/tlb-story.js"></script>
@@ -114,6 +115,10 @@
 
   .photo-preview { display: flex; align-items: center; gap: .6rem; margin-bottom: .8rem; }
   .photo-preview img { width: 3.5rem; height: 3.5rem; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); }
+  /* A photo whose stored image is gone (Path 4 P4): said on its event, never
+     drawn as a broken <img>. */
+  .photo-missing { font-size: .85rem; color: var(--ink); }
+  .event-list .row-item .d .photo-missing { font-size: inherit; font-style: italic; }
 
   .view-toggle { display: flex; gap: .4rem; margin-bottom: 1rem; }
   .view-toggle button { width: auto; margin: 0; }
@@ -520,6 +525,7 @@
         <input type="file" id="evPhoto" aria-label="Event photo" accept="image/*">
         <div class="photo-preview" id="evPhotoPreview" style="display:none;">
           <img id="evPhotoImg" alt="">
+          <span class="photo-missing" id="evPhotoMissing" role="status" hidden>This photo is missing from this browser’s storage. Remove it, or upload it again.</span>
           <button type="button" class="secondary small" id="evPhotoRemove">Remove photo</button>
         </div>
         <div class="warn-banner" id="storageWarn"></div>
@@ -726,7 +732,7 @@
    'eraLabel','eraYearStart','eraYearEnd','eraColor','saveEraBtn','cancelEraEditBtn','eraList',
    'evTrackRow','evTrack','evTitle','evYearStart','evYearEnd','evCategory','categoryOptions','evDisplayDate','evDescription','evPhoto',
    'evPlace','placeOptions','evLat','evLon',
-   'evPhotoPreview','evPhotoImg','evPhotoRemove','storageWarn',
+   'evPhotoPreview','evPhotoImg','evPhotoMissing','evPhotoRemove','storageWarn',
    'saveEventBtn','cancelEditBtn','eventList','printMode','printBtn',
    'tiledPrintToggleBtn','tiledPrintPanel','tileCols','tileRows','btnTiledPrintGo','btnTiledPrintClose','tiledPrintPages',
    'mapPrintToggleBtn','mapPrintPanel','mapExtent','mapStyle','mapPinCount','btnMapPrintGo','btnMapPrintClose','mapPrintPages',
@@ -742,7 +748,7 @@
 
   var state = null; // { name, title, lineStyle, compactLabels, scaleMode, events: [...], eras: [...], tracks: [{id,name}] }
   var editingId = null;
-  var pendingPhoto = null; // data URL staged for the event being added/edited
+  var pendingPhoto = null; // the photo value staged for the event being added/edited: `idb:<id>`, or a data URL with no IndexedDB (tlb-image.js)
   var idCounter = 1;
   var editingEraId = null;
   var eraIdCounter = 1;
@@ -753,6 +759,25 @@
     return String(s || '').replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
+  }
+
+  /** What an <img src> gets for an event's photo: a data: image, an object
+      URL, or '' when there is nothing to show (none, not read yet, or
+      missing). TimelineImage.url() returns nothing else, and it is escaped
+      on top of that wherever it goes into markup. */
+  function photoSrc(ev) {
+    return ev && ev.photo ? TimelineImage.url(ev.photo) : '';
+  }
+
+  /** The editor's photo preview for the staged value: the image, the
+      missing-photo note, or nothing. */
+  function showPendingPhoto() {
+    var src = pendingPhoto ? TimelineImage.url(pendingPhoto) : '';
+    var gone = !!pendingPhoto && TimelineImage.isMissing(pendingPhoto);
+    els.evPhotoImg.hidden = !src;
+    if (src) els.evPhotoImg.src = src; else els.evPhotoImg.removeAttribute('src');
+    els.evPhotoMissing.hidden = !gone;
+    els.evPhotoPreview.style.display = (src || gone) ? 'flex' : 'none';
   }
 
   function save() {
@@ -795,7 +820,7 @@
     els.evDisplayDate.value = '';
     els.evDescription.value = '';
     els.evPhoto.value = '';
-    els.evPhotoPreview.style.display = 'none';
+    showPendingPhoto();
     els.saveEventBtn.textContent = 'Add event';
     els.cancelEditBtn.style.display = 'none';
   }
@@ -813,12 +838,7 @@
     els.evLon.value = (ev.place && typeof ev.place.lon === 'number') ? ev.place.lon : '';
     els.evDisplayDate.value = ev.displayDate || '';
     els.evDescription.value = ev.description || '';
-    if (ev.photo) {
-      els.evPhotoImg.src = ev.photo;
-      els.evPhotoPreview.style.display = 'flex';
-    } else {
-      els.evPhotoPreview.style.display = 'none';
-    }
+    showPendingPhoto();
     els.saveEventBtn.textContent = 'Save changes';
     els.cancelEditBtn.style.display = '';
   }
@@ -826,17 +846,18 @@
   els.evPhoto.addEventListener('change', function () {
     var file = els.evPhoto.files[0];
     if (!file) return;
-    TimelinePhoto.downscaleImage(file).then(function (dataUrl) {
-      pendingPhoto = dataUrl;
-      els.evPhotoImg.src = dataUrl;
-      els.evPhotoPreview.style.display = 'flex';
+    // Downscaled to 480 px and into IndexedDB (tlb-image.js); the event keeps
+    // an `idb:` reference, or the data URL where IndexedDB is unavailable.
+    TimelineImage.fromFile(file).then(function (value) {
+      pendingPhoto = value;
+      showPendingPhoto();
     }).catch(function (err) { alert(err.message); });
   });
 
   els.evPhotoRemove.addEventListener('click', function () {
     pendingPhoto = null;
     els.evPhoto.value = '';
-    els.evPhotoPreview.style.display = 'none';
+    showPendingPhoto();
   });
 
   /* ---------- place ----------
@@ -1030,7 +1051,10 @@
     sorted.forEach(function (ev) {
       var row = document.createElement('div');
       row.className = 'row-item';
-      var thumb = ev.photo ? '<img class="thumb" src="' + ev.photo + '" alt="">' : '';
+      var src = photoSrc(ev);
+      var thumb = src ? '<img class="thumb" src="' + escapeHtml(src) + '" alt="">' : '';
+      var missingTag = TimelineImage.isMissing(ev.photo)
+        ? ' &middot; <span class="photo-missing">photo missing from this browser</span>' : '';
       var trackTag = state.tracks.length > 1 ? ' &middot; ' + escapeHtml(trackName(ev.track)) : '';
       var catTag = ev.category ? ' &middot; ' + escapeHtml(ev.category) : '';
       // 📍 only when the place can actually be pinned, so the list doubles as
@@ -1039,7 +1063,7 @@
         ? ' &middot; ' + (TimelinePlaces.hasCoords(ev.place) ? '📍' : '') + escapeHtml(ev.place.name) : '';
       row.innerHTML = thumb +
         '<div class="info"><div class="t">' + escapeHtml(ev.title) + '</div>' +
-        '<div class="d">' + escapeHtml(TimelineLayout.formatDateLabel(ev)) + trackTag + catTag + placeTag + '</div></div>';
+        '<div class="d">' + escapeHtml(TimelineLayout.formatDateLabel(ev)) + trackTag + catTag + placeTag + missingTag + '</div></div>';
       var btns = document.createElement('div');
       btns.className = 'btns';
       var editBtn = document.createElement('button');
@@ -1290,7 +1314,7 @@
           (blanked
             ? '<div class="lbl-title"><span class="lbl-blank">&nbsp;</span></div>'
             : '<div class="lbl-title">' + escapeHtml(p.event.title) + '</div>') +
-          ((p.event.photo && !blanked) ? '<img src="' + p.event.photo + '" alt="">' : '');
+          ((photoSrc(p.event) && !blanked) ? '<img src="' + escapeHtml(photoSrc(p.event)) + '" alt="">' : '');
         lane.appendChild(label);
         built.push({ p: p, el: label, blanked: blanked });
       });
@@ -1305,7 +1329,8 @@
         return {
           x: b.p.x,
           w: labelWidthPx,
-          h: measured > 0 ? measured : TimelineLayout.estimateLabelHeightPx(b.p.event, {
+          // A photo that cannot be shown reserves no room for itself.
+          h: measured > 0 ? measured : TimelineLayout.estimateLabelHeightPx(Object.assign({}, b.p.event, { photo: photoSrc(b.p.event) }), {
             remPx: remPx, widthPx: labelWidthPx, blanked: b.blanked
           })
         };
@@ -1444,7 +1469,7 @@
       var placeHtml = (mode === 'full' && ev.place && ev.place.name)
         ? '<div class="pe-place">📍 ' + escapeHtml(ev.place.name) + '</div>' : '';
       return '<div class="print-event ' + (state.lineStyle !== 'solid' ? state.lineStyle : '') + '" style="' + borderStyle + '">' +
-        (mode === 'full' && ev.photo ? '<img src="' + ev.photo + '" alt="">' : '') +
+        (mode === 'full' && photoSrc(ev) ? '<img src="' + escapeHtml(photoSrc(ev)) + '" alt="">' : '') +
         '<div><div class="pe-date"' + (catColor ? ' style="color:' + catColor + ';"' : '') + '>' + dateHtml +
         (showTrackTag ? '<span class="pe-track">' + escapeHtml(trackName(ev.track)) + '</span>' : '') + '</div>' +
         '<div class="pe-title">' + titleHtml + '</div>' +
@@ -1593,11 +1618,7 @@
 
       // Same reason as the single-page print / blank map's tiled print: wait
       // for every <img> (event photos) before printing so nothing prints blank.
-      await Promise.all([].slice.call(container.querySelectorAll('img')).map(function (img) {
-        return img.complete ? Promise.resolve() : new Promise(function (resolve) {
-          img.onload = resolve; img.onerror = resolve;
-        });
-      }));
+      await waitForImages(container);
 
       setTiledPrintPageSize();
       els.tiledPrintPanel.hidden = true;
@@ -1609,6 +1630,21 @@
       btn.disabled = false;
       btn.textContent = origLabel;
     }
+  }
+
+  /** Resolves once every <img> in `container` has loaded or failed. A photo
+      whose stored image is missing never gets an <img> (photoSrc() is ''),
+      and a failed load resolves too, so a gone photo cannot hang a print.
+      Since Path 4 P4 a photo is an object URL, which loads asynchronously
+      even when a data URL would have been ready, so the plain Print button
+      waits here as well. */
+  function waitForImages(container) {
+    return Promise.all([].slice.call(container.querySelectorAll('img')).map(function (im) {
+      return im.complete ? Promise.resolve() : new Promise(function (resolve) {
+        im.addEventListener('load', resolve, { once: true });
+        im.addEventListener('error', resolve, { once: true });
+      });
+    }));
   }
 
   /** Landscape orientation for the tiled and map+timeline prints only —
@@ -1814,11 +1850,7 @@
 
       // Same reason as every other print path here: wait for the map image
       // (a fresh data URL) and any event photos, so nothing prints blank.
-      await Promise.all([].slice.call(container.querySelectorAll('img')).map(function (im) {
-        return im.complete ? Promise.resolve() : new Promise(function (resolve) {
-          im.onload = resolve; im.onerror = resolve;
-        });
-      }));
+      await waitForImages(container);
 
       setTiledPrintPageSize(); // landscape, shared with the tiled print
       els.mapPrintPanel.hidden = true;
@@ -2137,7 +2169,8 @@
     els.storyEventTitle.textContent = ev.title;
     els.storyPlace.textContent = (ev.place && ev.place.name) ? '📍 ' + ev.place.name : '';
     els.storyDesc.textContent = ev.description || '';
-    if (ev.photo) { els.storyPhoto.src = ev.photo; els.storyPhoto.hidden = false; }
+    var storySrc = photoSrc(ev);
+    if (storySrc) { els.storyPhoto.src = storySrc; els.storyPhoto.hidden = false; }
     else { els.storyPhoto.removeAttribute('src'); els.storyPhoto.hidden = true; }
 
     els.storyCounter.textContent = (i + 1) + ' of ' + story.steps.length;
@@ -2422,15 +2455,22 @@
 
   els.exportTimelineBtn.addEventListener('click', function () {
     if (!state) return;
-    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = sanitizeFilename(state.name) + '.json';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    save();
+    // The photos come out of IndexedDB as data: URLs (tlb-image.js), so the
+    // file is the whole timeline on any device; a missing one is null.
+    TimelineImage.forExport(state).then(function (copy) {
+      var blob = new Blob([JSON.stringify(copy, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = sanitizeFilename(copy.name) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    })['catch'](function (e) {
+      setShareNote('Could not read this timeline’s photos to export it (' + ((e && e.message) || 'unknown error') + ').', true);
+    });
   });
 
   els.importTimelineBtn.addEventListener('click', function () { els.importTimelineFile.click(); });
@@ -2450,32 +2490,47 @@
       fileErrorMessage: 'That doesn’t look like a timeline file exported from this page.',
       unreadableMessage: 'Couldn’t read that file.',
       onState: function (decoded) {
-        var name = uniqueTimelineName(decoded.name);
-        state = {
-          name: name,
-          title: decoded.title || '',
-          lineStyle: decoded.lineStyle || 'solid',
-          compactLabels: !!decoded.compactLabels,
-          scaleMode: decoded.scaleMode === 'compressed' ? 'compressed' : 'linear', // backward-compat: older exports predate scale mode
-          events: decoded.events,
-          eras: Array.isArray(decoded.eras) ? decoded.eras : [], // backward-compat: older exports predate eras
-          tracks: Array.isArray(decoded.tracks) ? decoded.tracks : [], // backward-compat: older exports predate tracks
-          compareWith: null // never import another timeline's selection — the imported name may not even exist here
-        };
-        var maxId = 0;
-        state.events.forEach(function (ev) { if (typeof ev.id === 'number' && ev.id > maxId) maxId = ev.id; });
-        idCounter = Math.max(idCounter, maxId + 1);
-        var maxEraId = 0;
-        state.eras.forEach(function (era) { if (typeof era.id === 'number' && era.id > maxEraId) maxEraId = era.id; });
-        eraIdCounter = Math.max(eraIdCounter, maxEraId + 1);
-        ensureTracks(state);
-        TimelineStore.setCurrentName(name);
-        resetForm();
-        resetEraForm();
-        renderAll();
+        /* Photos first. Only a real inline image is kept from a file (someone
+           else's `idb:` reference names an image in THEIR browser), and those
+           go into IndexedDB BEFORE the timeline is saved, so a file full of
+           photos never has to fit in localStorage first. An image already
+           stored is the same record. */
+        TimelineImage.acceptArrival(decoded);
+        TimelineImage.store(TimelineImage.valuesIn(decoded)).then(function (map) {
+          TimelineImage.apply(decoded, map);
+          adoptImportedFile(decoded);
+        });
       }
     });
   });
+
+  /** A timeline from a file, its photos already moved: saved under a name
+      that collides with nothing, and opened. */
+  function adoptImportedFile(decoded) {
+    var name = uniqueTimelineName(decoded.name);
+    state = {
+      name: name,
+      title: decoded.title || '',
+      lineStyle: decoded.lineStyle || 'solid',
+      compactLabels: !!decoded.compactLabels,
+      scaleMode: decoded.scaleMode === 'compressed' ? 'compressed' : 'linear', // backward-compat: older exports predate scale mode
+      events: decoded.events,
+      eras: Array.isArray(decoded.eras) ? decoded.eras : [], // backward-compat: older exports predate eras
+      tracks: Array.isArray(decoded.tracks) ? decoded.tracks : [], // backward-compat: older exports predate tracks
+      compareWith: null // never import another timeline's selection — the imported name may not even exist here
+    };
+    var maxId = 0;
+    state.events.forEach(function (ev) { if (typeof ev.id === 'number' && ev.id > maxId) maxId = ev.id; });
+    idCounter = Math.max(idCounter, maxId + 1);
+    var maxEraId = 0;
+    state.eras.forEach(function (era) { if (typeof era.id === 'number' && era.id > maxEraId) maxEraId = era.id; });
+    eraIdCounter = Math.max(eraIdCounter, maxEraId + 1);
+    ensureTracks(state);
+    TimelineStore.setCurrentName(name);
+    resetForm();
+    resetEraForm();
+    renderAll();
+  }
 
   /** Adopts a whole timeline object as the current one, under a name that
       can't collide with anything already saved, and re-seeds the id counters
@@ -2559,8 +2614,13 @@
     return payload;
   }
 
-  Share.mount(els.shareBtn, {
-    getState: buildSharePayload,
+  /* Since Path 4 P4 a photo is an `idb:` reference, and reading its bytes
+     back is asynchronous while share.js's getState() is not. So, as in 056
+     and 028, the button does not use Share.mount(): its click builds the
+     portable copy first (TimelineImage.forExport) and then opens the sheet
+     with Share.open(), handing it that finished copy. share.js still strips
+     the photos from the link and the code, and the download keeps them. */
+  var SHARE_OPTS = {
     param: SHARE_PARAM,
     tool: 'timeline-builder',
     title: 'Share this timeline',
@@ -2570,6 +2630,23 @@
     successMessage: 'Link copied. Opening it anywhere loads this timeline — events, dates, places, eras and categories — and saves it there as a copy.',
     emptyMessage: 'Nothing to share yet.',
     onMessage: function (text, isError) { setShareNote(text, isError); }
+  };
+  function openShareSheet(payload) {
+    Share.open(Object.assign({}, SHARE_OPTS, {
+      opener: els.shareBtn,
+      getState: function () { return payload; }
+    }));
+  }
+  var sharing = false;
+  els.shareBtn.addEventListener('click', function () {
+    if (sharing) return;
+    var payload = buildSharePayload();
+    // Nothing stored to read back: the sheet opens at once, as it always has.
+    if (!payload || !TimelineImage.hasStoredPhoto(payload)) { openShareSheet(payload); return; }
+    sharing = true;
+    TimelineImage.forExport(payload).then(openShareSheet)['catch'](function (e) {
+      setShareNote('Could not read this timeline’s photos to share it (' + ((e && e.message) || 'unknown error') + ').', true);
+    }).then(function () { sharing = false; });
   });
 
   /** Consume a ?timeline= link on load. Always saves the arrival as a NEW
@@ -2582,18 +2659,22 @@
       onError: function (message) { setShareNote(message, true); },
       onState: function (decoded) {
         delete decoded.v;
-        /* A link's photos were stripped to null by share.js; a file's are
-           real data URLs. Blank only what is not a usable string, so the two
-           routes do not have to be told apart here. */
-        var kept = 0;
-        decoded.events.forEach(function (ev) {
-          if (typeof ev.photo === 'string' && ev.photo) kept++;
-          else ev.photo = null;
+        /* A link's photos were stripped to null by share.js. Only a real
+           inline image is kept from outside (tlb-image.js); an `idb:`
+           reference names an image in the SENDER's browser and is dropped. */
+        var kept = TimelineImage.acceptArrival(decoded);
+        function arrive() {
+          var name = installTimeline(decoded);
+          setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your copy now — editing it does not change the sender’s. ' +
+            (kept ? 'Its ' + kept + ' photo' + (kept === 1 ? '' : 's') + ' came with it.'
+                  : 'Any photos the sender attached stayed on their device — pictures are too large to ride in a link.'));
+        }
+        // A link built by hand can still carry one: stored first, then saved.
+        if (!kept) { arrive(); return true; }
+        linkArrival = TimelineImage.store(TimelineImage.valuesIn(decoded)).then(function (map) {
+          TimelineImage.apply(decoded, map);
+          arrive();
         });
-        var name = installTimeline(decoded);
-        setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your copy now — editing it does not change the sender’s. ' +
-          (kept ? 'Its ' + kept + ' photo' + (kept === 1 ? '' : 's') + ' came with it.'
-                : 'Any photos the sender attached stayed on their device — pictures are too large to ride in a link.'));
         return true;
       }
     });
@@ -2618,9 +2699,88 @@
   els.printMode.addEventListener('change', renderPrintPreview);
 
   els.printBtn.addEventListener('click', function () {
-    document.getElementById('printArea').innerHTML = '<div class="print-view">' + printViewHtml(els.printMode.value) + '</div>';
-    window.print();
+    var area = document.getElementById('printArea');
+    area.innerHTML = '<div class="print-view">' + printViewHtml(els.printMode.value) + '</div>';
+    waitForImages(area).then(function () { window.print(); });
   });
+
+  /* ---------- photos: IndexedDB behind every saved timeline (Path 4 P4) ----------
+     Every saved timeline's events hold `idb:` references; the photos are in
+     the shared media store (tlb-image.js). At boot: move any data: URL photo
+     (a timeline saved before this, or a browser that had no IndexedDB) into
+     the store, in EVERY saved timeline and not only the open one, writing
+     back only the timelines that changed; give every stored photo an object
+     URL, including the timelines the compare view can open; say once which
+     photos are missing; then — at boot only, with media-db.js's ten-minute
+     grace — delete stored photos no saved timeline points at. 015 has no
+     undo for a deleted event or timeline, so nothing else needs keeping.
+     __timelinePhotosSettled is for the suite. */
+  var linkArrival = null; // a hand-built link's inline photos, being stored
+
+  /** [{ name, timeline }] for the open timeline and every other saved one,
+      read fresh. */
+  function everyTimeline() {
+    var out = state ? [{ name: state.name, timeline: state }] : [];
+    TimelineStore.listTimelines().forEach(function (name) {
+      if (state && name === state.name) return;
+      var t = TimelineStore.loadTimeline(name);
+      if (t && typeof t === 'object' && Array.isArray(t.events)) out.push({ name: name, timeline: t });
+    });
+    return out;
+  }
+  function everyPhoto() {
+    var out = [];
+    everyTimeline().forEach(function (x) { out = out.concat(TimelineImage.valuesIn(x.timeline)); });
+    return out;
+  }
+
+  /** Swap each moved data: URL for its reference in the open timeline and in
+      FRESH copies of the others, and write back only what changed. */
+  function applyStoredPhotos(map) {
+    if (state && TimelineImage.apply(state, map)) {
+      if (pendingPhoto && map[pendingPhoto]) pendingPhoto = map[pendingPhoto];
+      save();
+    }
+    TimelineStore.listTimelines().forEach(function (name) {
+      if (state && name === state.name) return;
+      var t = TimelineStore.loadTimeline(name);
+      if (t && typeof t === 'object' && TimelineImage.apply(t, map)) TimelineStore.writeTimeline(name, t);
+    });
+  }
+
+  function sayMissingPhotos() {
+    var count = 0, seen = {}, where = [];
+    everyTimeline().forEach(function (x) {
+      TimelineImage.valuesIn(x.timeline).forEach(function (v) {
+        if (!TimelineImage.isMissing(v)) return;
+        if (!seen[v]) { seen[v] = 1; count++; }
+        if (where.indexOf(x.name) === -1) where.push(x.name);
+      });
+    });
+    if (!count) return;
+    var msg = (count === 1 ? '1 event photo' : count + ' event photos') + ' in ' +
+      where.map(function (n) { return '“' + n + '”'; }).join(', ') +
+      (count === 1 ? ' is' : ' are') + ' missing from this browser’s storage. Edit the event to upload the photo again.';
+    var before = els.shareNote.style.display === 'none' ? '' : els.shareNote.textContent;
+    setShareNote(before ? before + ' ' + msg : msg, true);
+  }
+
+  function settlePhotos() {
+    return Promise.resolve(linkArrival)
+      .then(function () { return TimelineImage.store(everyPhoto()); })
+      .then(function (map) {
+        if (Object.keys(map).length) applyStoredPhotos(map);
+        return TimelineImage.hydrate(everyPhoto());
+      })
+      .then(function () {
+        if (state) {
+          showPendingPhoto();
+          renderAll();
+        }
+        sayMissingPhotos();
+        return TimelineImage.gc(everyPhoto().filter(TimelineImage.isRef));
+      })['catch'](function () { /* reads never block the page; a failed save says so in save() */ });
+  }
 
   /* ---------- boot ----------
      A shared link wins over whatever was last open, but only by *adding* a
@@ -2632,6 +2792,7 @@
     newTimeline('New Timeline');
   }
   importSharedTimeline();
+  settlePhotos().then(function () { window.__timelinePhotosSettled = true; });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

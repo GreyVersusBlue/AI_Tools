@@ -1,9 +1,10 @@
 /* Timeline Builder — localStorage persistence.
    A list of named timelines, same shape as the other multi-sheet tools.
-   Embedded event photos are the one real size risk here (localStorage is
-   typically capped around 5-10MB per origin) — photos are downscaled before
-   they ever reach this module (see tlb-photo.js), and saveTimeline() reports
-   the serialized size back so the UI can warn well before that ceiling. */
+   Event photos used to be the one real size risk here (localStorage is
+   typically capped around 5-10MB per origin). Since Path 4 P4 a photo is an
+   `idb:` reference to a Blob in IndexedDB (see tlb-image.js), so a timeline
+   is a few KB; saveTimeline() still reports the serialized size, because a
+   browser with no IndexedDB keeps its photos inline, as before. */
 (function (global) {
   'use strict';
 
@@ -41,6 +42,17 @@
     }
   }
 
+  /** Rewrite a saved timeline WITHOUT making it the open one — for moving
+      the photos of timelines nobody has open. Returns {ok, error}. */
+  function writeTimeline(name, state) {
+    try {
+      localStorage.setItem(DATA_PREFIX + name, JSON.stringify(state));
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e };
+    }
+  }
+
   function loadTimeline(name) { return safeParse(localStorage.getItem(DATA_PREFIX + name), null); }
 
   function deleteTimeline(name) {
@@ -57,7 +69,7 @@
   }
 
   global.TimelineStore = {
-    listTimelines: listTimelines, saveTimeline: saveTimeline, loadTimeline: loadTimeline,
+    listTimelines: listTimelines, saveTimeline: saveTimeline, writeTimeline: writeTimeline, loadTimeline: loadTimeline,
     deleteTimeline: deleteTimeline, getCurrentName: getCurrentName, setCurrentName: setCurrentName,
     WARN_BYTES: WARN_BYTES
   };

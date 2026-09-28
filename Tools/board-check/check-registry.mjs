@@ -131,8 +131,12 @@ const IDB_RE = /indexedDB\s*\.\s*open\s*\(\s*([^,)]+?)\s*[,)]/g;
    all, and without this the database would drop out of the scan — the same
    silent disappearance STORE_WRITE_RE exists to stop one layer down. A call
    with an explicit `db:` names its own database (bmg-maps, whose records
-   predate the module); a call without one is in the shared default. */
-const MEDIA_STORE_RE = /MediaDB\s*\.\s*store\s*\(\s*\{([^}]*)\}/g;
+   predate the module); a call without one is in the shared default.
+   MediaDB.images({ ns }) (Path 4 P4 increment 6) is a tool's image layer
+   over a namespaced handle and always lives in the shared default, so it is
+   matched the same way: without it, the four tools that moved to it would
+   drop out of the scan. */
+const MEDIA_STORE_RE = /MediaDB\s*\.\s*(?:store|images)\s*\(\s*\{([^}]*)\}/g;
 const MEDIA_DEFAULT_DB = 'gvb-media';
 /* _shared/store.js is the site's storage primitive, so a tool that adopts it
    stops calling localStorage at all. Without these two, every adopter would

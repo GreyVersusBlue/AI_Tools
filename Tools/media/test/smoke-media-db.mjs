@@ -264,6 +264,73 @@ await settle(page, 400);
   await page.evaluate(() => window.MediaDB.store({ ns: 'suite' }).clear());
 }
 
+/* ── 7. MediaDB.images(): the image layer 056, 028, 042 and 015 share ──── */
+{
+  // Each tool's own suite drives its adopter end to end; this pins the
+  // factory's contract in one place, so a change to it fails here first
+  // rather than in four tool suites for four apparently different reasons.
+  const r = await page.evaluate(async () => {
+    const M = window.MediaDB;
+    const img = M.images({ ns: 'suite-img', owner: 'suite' });
+    const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==';
+    const map = await img.store([png, png, 'not an image', '']);
+    const ref = map[png];
+    const again = await img.store([png]);
+    const recs = await M.store({ ns: 'suite-img' }).list();
+    const back = await img.inline(ref);
+    const shown = img.url(ref);
+    // A second layer over the same namespace starts cold: nothing hydrated.
+    const cold = M.images({ ns: 'suite-img' });
+    const coldBefore = cold.url(ref);
+    const lost = await cold.hydrate([ref, 'idb:hnothere', ref]);
+    const coldShown = cold.url(ref).slice(0, 5);
+    // GC: a fresh record is spared by the grace period, a backdated one goes.
+    const s = M.store({ ns: 'suite-img' });
+    const rec = await s.get(ref.slice(4));
+    const spared = await cold.gc([]);
+    await new Promise(res => {
+      const open = indexedDB.open('gvb-media');
+      open.onsuccess = () => {
+        const t = open.result.transaction('blobs', 'readwrite');
+        const o = t.objectStore('blobs');
+        o.put(Object.assign({}, rec, { id: 'suite-img/' + rec.id, savedAt: Date.now() - 11 * 60 * 1000 }));
+        t.oncomplete = () => { open.result.close(); res(); };
+      };
+    });
+    // The collecting layer is the cold one, standing in for another tab: this
+    // tab's layer still holds the bytes, which is what keepAlive() is for.
+    const kept = await cold.gc([ref]);
+    const collected = await cold.gc([]);
+    const after = await s.list();
+    const revived = await img.keepAlive([ref]);
+    const afterKeep = await s.list();
+    await s.clear();
+    return {
+      ref, again: again[png], count: recs.length, owner: recs[0] && recs[0].tool,
+      back: back === png, shown: shown.slice(0, 5), coldBefore, lost: lost.join(','),
+      coldMissing: cold.isMissing('idb:hnothere'), coldShown,
+      unsafe: [img.url('javascript:alert(1)'), img.url('idb:../x'), img.url(null)],
+      danglingInline: await img.inline('idb:hnothere'), junkInline: await img.inline('x'),
+      spared, kept, collected, after: after.length, revived, afterKeep: afterKeep.length,
+      noNs: (() => { try { M.images({}); return 'no throw'; } catch (e) { return 'threw'; } })(),
+    };
+  });
+  ok(/^idb:h[0-9a-f]{32}$/.test(r.ref), '7: a stored image is referenced by its content hash (' + r.ref + ')');
+  eq([r.again, r.count], [r.ref, 1], '7: the same image stored twice is one record');
+  eq(r.owner, 'suite', '7: the record carries the owner tag');
+  ok(r.back, '7: inline() reads the stored bytes back to the same data URL');
+  eq(r.shown, 'blob:', '7: url() of a stored image is an object URL');
+  eq(r.coldBefore, '', '7: a layer that has not hydrated shows nothing yet');
+  eq([r.lost, r.coldMissing, r.coldShown], ['idb:hnothere', true, 'blob:'],
+    '7: hydrate() reads what is there and names what is not, once each');
+  eq(r.unsafe, ['', '', ''], '7: url() hands back nothing that is not a data: image or an object URL');
+  eq([r.danglingInline, r.junkInline], [null, null], '7: inline() of a dangling reference or junk is null');
+  eq([r.spared, r.kept, r.collected, r.after], [0, 0, 1, 0],
+    '7: gc() spares a fresh orphan and a kept reference, and collects an old orphan');
+  eq([r.revived, r.afterKeep], [1, 1], '7: keepAlive() writes a collected image back from memory');
+  eq(r.noNs, 'threw', '7: a layer needs a namespace — the shared database is never used bare');
+}
+
 await page.close();
 await browser.close();
 server.close();
