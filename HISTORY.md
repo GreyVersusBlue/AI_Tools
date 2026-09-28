@@ -9,6 +9,119 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P2, increment 5: icons for 068–087, the set is complete (2026-09-28, #296, `CACHE_VERSION` v200)
+
+This is the fifth and last icon increment of rank 1, a 2+ row, so the row stays and is rewritten:
+only **the final call** (the PWA app mark) is left, and it was not started. It was built on
+Devon's machine with Blender 5.2.2 LTS, headless, from the Steam path (still not on PATH). **All
+87 landing rows now carry an icon.**
+
+What shipped:
+- **Twenty icons** in `scene_icons.py`, in tool-number order, with their specs written into
+  `renders.json` first:
+  - 068 Parent contact log: a desk telephone, handset on the cradle, a dial on the front (684 B).
+  - 069 PE warm-up circuit: a running shoe, sole line and laces (587 B).
+  - 070 Peer feedback checklist: two written pages with arrows between them, papers traded (629 B).
+  - 071 Picture-prompt generator: a camera (969 B, the largest of the twenty).
+  - 072 Plot diagram: the plot mountain, snow on its peak, on a level line that runs out both
+    sides for exposition and resolution (285 B, the smallest).
+  - 073 Science fair tracker: a trifold display board (512 B).
+  - 074 Safety label maker: a flammable hazard diamond (612 B).
+  - 075 Staff directory: a staff ID badge, strap, head and shoulders, name line (687 B).
+  - 076 Sub note slip: a handwritten sticky note, its corner curling (487 B).
+  - 077 Testing accommodations: headphones, for read-aloud (711 B).
+  - 078 Unit conversion chart: a ruler with inch ticks on one edge and centimetre ticks on the
+    other (546 B).
+  - 079 Verb conjugation poster: a wall banner on a rod, a title over two columns (579 B).
+  - 080 Virtual manipulatives: three unit cubes and a pointer dragging a fourth (751 B).
+  - 081 Word problem warm-up: a steaming mug with a question mark on its side (822 B).
+  - 082 Citation generator: two slab quotation marks (327 B).
+  - 083 Propaganda analysis: a megaphone with sound arcs (574 B).
+  - 084 Socratic seminar: a Greek column (517 B).
+  - 085 Parent communication templates: an envelope, flap open, a letter coming out (402 B).
+  - 086 Wiki race: a chequered flag on its pole (704 B).
+  - 087 Class screen: a projector screen on a tripod, a clock and two panels on it (577 B).
+
+  They run 285–969 B, against the 1,434 B cap. No new primitive was needed.
+- **The sprite** holds 87 symbols in **58,032 B** (cap 120 KB), close to the ~60 KB every earlier
+  increment projected. Its `sources` went from 67 to 87. Art in the ledger is now 123,072 B, of
+  which 61,517 B is shell tier (budgets 2 MB and 250 KB).
+- **`index.html`**: 20 more `<svg class="tool-icon">` rows, 87 in all. **`sw.js`**: v199 → v200.
+  No precached file was added; the single-icon SVGs stay ledgered and unprecached, as before.
+
+**Judgement calls**, each one function to swap if a better idea comes along:
+- **077 headphones.** The card covers extended time, a separate setting and read-aloud. A clock is
+  034's and an hourglass 004's, so read-aloud got the picture. It is the weakest tie of the twenty.
+- **081 mug.** "Warm-up" taken literally, with a question mark for the word problem. 055 and 067
+  are also warm-ups and use other motifs, so there is no clash, but the pun carries it.
+- **084 column.** Socratic seminar → Socrates → Athens. The page's own image is the inner/outer
+  fishbowl; a fishbowl was considered and not drawn, because a bowl with a fish in it says "pets"
+  before it says "discussion".
+- **070 two pages trading places.** "Peer" is the partner; a checklist on a clipboard is 006's.
+- **080 unit cubes and a pointer.** The page offers base-ten blocks, fraction tiles, algebra tiles
+  and a number line, and none of those survived 32 px (below). Plain unit cubes are not one of the
+  page's four sets; the pointer says "on a screen".
+- **087 next to 010.** On the landing page, Class Screen's row sits directly under Command Center's
+  monitor. Both are screens with panels on them. The tripod keeps them apart at 32 px, so it was
+  kept, but they are the two closest icons in the set.
+- **086's flag** shares "a flag on a pole" with 053's trivia flag, which is small and beside a
+  question mark. The grid makes 086 read as chequered.
+
+**Drafts rejected by eye** (each is recorded in its function's docstring so nobody retries it):
+- **069:** a jump rope, two handles on a hanging loop, read as a **horseshoe magnet**.
+- **072:** the mountain as a solid prism read as a **wedge of cheese**. It is flat now, and a
+  first flat cut with a long ground line drew the mountain too small; the line was shortened.
+- **075:** a rotary card file read as a **toaster**; its front cards hid the rest.
+- **076:** a slip under a push pin read as an **ID badge**, the pin as a head. 075 took the idea.
+- **077:** a bubble answer sheet, twelve bubbles, read as an **abacus** and came to **1,868 B**,
+  over the cap. It is the only draft the cap would have refused on its own.
+- **080 failed three times:** a base-ten rod lying down read as a **harmonica**; fraction tiles (a
+  whole, two halves, three thirds) read as a **brick wall**; four cubes under the dragged one
+  **clumped** into a single shape. Three cubes with a clear gap to the fourth read.
+- **084:** five flutes on a narrow shaft **clotted into a dark bar**. It is wider now, with three.
+- **078** was first drawn thin and long, and at 32 px was only a ticked strip. It is chunkier.
+- **Giggle check:** all twenty were looked at in both themes at 24, 32 and 48 px, and at a
+  pixelated 4× of the 32 px render. Nothing reads as anything rude. 082 was drawn as slab quote
+  marks rather than round commas on purpose: a round ball with a curling tail, outlined, is a
+  tadpole.
+
+**Render twice, compare.** `t080.svg` and `t086.svg` were rendered again with `--out`, and the
+sprite was built twice. All were byte-identical to the committed files.
+
+**What did not work in the session.**
+- **`sed -i` on `BACKLOG.md` for the claim rewrote the whole working copy to LF.** The commit was
+  unaffected (the index is LF), and the file was re-checked-out to get CRLF back. Use the editor
+  for edits to tracked text files here, as #288 already said about heredocs.
+- **PowerShell turned `068` into `68`** when the render helper took the tool numbers as an
+  untyped list, and every render failed "no renders.json entry for t68.svg". Pass them as strings.
+- **`gh run watch` exited 1 about six minutes into a run that was still going.** Its exit status
+  said nothing about CI. A loop over `gh run view --json status,conclusion` was used instead.
+
+**Not verified.**
+- **A second reviewer.** Every icon in the set, all 87, has been judged only by the session that
+  drew it. The set is finished, so this is now the biggest gap it has.
+- A projector, 125–150% OS scaling, another machine, and another Blender patch.
+- No local full `npm test` was run; CI ran every suite.
+
+Local, before the merge: every `check:*` guard, `lint`, `check:precache -- --base origin/main`
+(v199 → v200), `check:art` (broken once on purpose: a corrupted `t084.svg` gave HASH plus DERIVED
+and exit 1; clean after restoring it), `test:blender-art` (60), `test:a11y -- --only index` (no new
+allowlist line; `color-contrast` ×8 this run, the known unstable count), and `offline:build` plus
+`offline:verify` ("all 87 tool icons draw from file://", three runs). The landing page at 1280 and
+375 px, in both themes, showed 87 icons in 87 rows, 87 unique, all 32×32, no console errors.
+**CI, and merged on green.** The PR ran every suite (`index.html` is site-wide): **170 of 170
+green in 37.1 min** (run 36415212216, 37m59s end to end). `class-screen/smoke-class-screen`,
+which crashed once in #294's local run, passed; it was not run locally here. #296 was marked
+ready and squash-merged (89a38fc) only after that, unlike #288. The push-to-`main` run on 89a38fc (36419154619, every suite) went **green in 38m21s**.
+
+**The rank-1 row after this.** It is rewritten to hold only the final call, the app mark, and its
+Size went from **2+ to ½**. That is this session's call: what is left is one render of four PNGs
+and two looks (48 px in the maskable safe zone, 16 px for the favicons), which is the size of
+#265's shortcut PNGs, not of another icon increment. The row now says to delete itself when the call is
+made, including when the call is "keep the current mark". Reverse it by setting the Size back.
+
+---
+
 ## Path 4 P4, increment 6: 015's event photos move into `media-db.js`, and the image layer is shared (2026-09-28, #294, `CACHE_VERSION` v199)
 
 **What shipped.**
