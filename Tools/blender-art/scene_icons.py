@@ -1134,6 +1134,344 @@ def icon_048(pal, rand):
     wire("string", [loop], wood, parent=tag)
 
 
+def dome(name, r, mat, loc=(0.0, 0.0, 0.0), rot=(0.0, 0.0, 0.0), parent=None):
+    """The top half of a sphere, open underneath, so its rim is a boundary
+    and draws whole."""
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=24, v_segments=12, radius=r)
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < -1e-4], context="VERTS")
+    return _place(_mesh_object(name, bm, mat, parent), loc, rot)
+
+
+def icon_049(pal, rand):
+    """049 Book Tasting Menu: a serving cloche lifted off a plate, a book
+    under it. The dish is the book."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("tasting", rot=(0.0, 0.0, FACING - 20.0))
+    cylinder("plate", 1.4, 0.08, wood, loc=(0.0, 0.0, 0.04), r2=1.25, segments=40, parent=g)
+    box("book", (1.1, 0.75, 0.24), body, loc=(0.0, 0.05, 0.2), rot=(0.0, 0.0, -12.0), parent=g)
+    hinge = group("hinge", rot=(-38.0, 0.0, 0.0), loc=(0.0, 1.05, 0.1))
+    hinge.parent = g
+    dome("cloche", 1.05, body, loc=(0.0, -1.05, 0.0), parent=hinge)
+    sphere("knob", 0.14, wood, loc=(0.0, -1.05, 1.15), parent=hinge)
+
+
+def icon_050(pal, rand):
+    """050 Civics Simulation: a ballot box, a marked ballot going into its
+    slot. The simulation ends in a vote."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("ballot", rot=(0.0, 0.0, FACING - 25.0))
+    w, d, h = 1.7, 1.2, 1.35
+    box("box", (w, d, h), wood, loc=(0.0, 0.0, h / 2), parent=g)
+    wire("slot", [[(-0.5, -0.07, h + 0.005), (0.5, -0.07, h + 0.005), (0.5, 0.07, h + 0.005),
+                   (-0.5, 0.07, h + 0.005), (-0.5, -0.07, h + 0.005)]], wood, parent=g)
+    paper = flat("paper", [(-0.4, 0.0), (0.4, 0.0), (0.4, 0.95), (-0.4, 0.95)], body,
+                 loc=(0.0, 0.0, h - 0.25), parent=g)
+    y = -0.01
+    wire("mark", [rect(-0.25, 0.45, 0.0, 0.7, y=y),
+                  [(-0.22, y, 0.58), (-0.14, y, 0.49), (0.02, y, 0.76)],
+                  [(0.08, y, 0.58), (0.28, y, 0.58)]], body, parent=paper)
+    wire("label", [rect(-0.45, 0.45, 0.45, 0.8, y=-d / 2 - 0.01)], body, parent=g)
+
+
+def icon_051(pal, rand):
+    """051 Classroom Label Maker: a sticker label, one corner peeling up,
+    printed with a speaker and a word: the object's name, and how to say it."""
+    body = art.token_material(pal, "--card")
+    g = group("label", rot=(-10.0, 0.0, FACING - 18.0))
+    w, h = 2.3, 1.2
+    pts = rounded(w, h, 0.18, segments=3)
+    pts = pts[:12] + [(w / 2 - 0.45, -h / 2), (w / 2, -h / 2 + 0.45)]
+    flat("sticker", pts, body, parent=g)
+    flat("peel", [(w / 2 - 0.45, -h / 2), (w / 2, -h / 2 + 0.45), (w / 2 - 0.45, -h / 2 + 0.45)], body,
+         loc=(0.0, -0.03, 0.0), parent=g)
+    y = -0.01
+    lines = [rect(-0.85, -0.12, -0.72, 0.12, y=y),
+             [(-0.72, y, 0.12), (-0.52, y, 0.3), (-0.52, y, -0.3), (-0.72, y, -0.12)]]
+    for r in (0.2, 0.36):
+        lines.append([(-0.52 + r * math.cos(math.radians(a)), y, r * math.sin(math.radians(a))) for a in range(-45, 46, 15)])
+    lines += [[(0.0, y, 0.18), (0.8, y, 0.18)], [(0.0, y, -0.14), (0.5, y, -0.14)]]
+    wire("print", lines, body, parent=g)
+
+
+def icon_052(pal, rand):
+    """052 Cognates & False Friends: a Venn diagram, two words' circles
+    overlapping, an equals sign in what they share."""
+    body = art.token_material(pal, "--card")
+    g = group("venn", rot=(-15.0, 0.0, FACING - 15.0))
+    y = 0.0
+    wire("rings", [circle(-0.5, 0.0, 0.85, y=y, segments=32), circle(0.5, 0.0, 0.85, y=y, segments=32),
+                   [(-0.14, y, 0.08), (0.14, y, 0.08)], [(-0.14, y, -0.08), (0.14, y, -0.08)]], body, parent=g)
+
+
+def icon_053(pal, rand):
+    """053 Cultural Trivia Cards: a thick question mark and a flag waving
+    on its pole, a question about a country. The first cut flew a square
+    flag level with the question mark, and the pair read as the letters
+    "?F". The flag now waves, from a taller pole with a ball on top."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("trivia", rot=(0.0, 0.0, FACING - 20.0))
+    tube_arc("hook", 0.45, 0.13, -90.0, 180.0, body, loc=(-0.35, 0.0, 1.05), parent=g)
+    cylinder("stem", 0.13, 0.4, body, loc=(-0.35, 0.0, 0.4), segments=12, caps=False, parent=g)
+    sphere("dot", 0.16, body, loc=(-0.35, 0.0, -0.05), parent=g)
+    cylinder("pole", 0.05, 2.6, wood, loc=(0.6, 0.0, 0.9), segments=10, parent=g)
+    sphere("finial", 0.1, wood, loc=(0.6, 0.0, 2.25), parent=g)
+    top = [(0.05 + 0.95 * i / 8, 0.55 + 0.1 * math.sin(math.pi * 2 * i / 8)) for i in range(9)]
+    bot = [(0.05 + 0.95 * i / 8, 0.1 * math.sin(math.pi * 2 * i / 8)) for i in range(8, -1, -1)]
+    flat("flag", top + bot, wood, loc=(0.6, 0.0, 1.5), parent=g)
+
+
+def icon_054(pal, rand):
+    """054 Current Events Discussion: a newspaper, a masthead over a photo
+    and columns of type, bent a little at its fold. The first cut folded the
+    lower half out flat toward the viewer, and it read as an open laptop."""
+    body = art.token_material(pal, "--card")
+    g = group("paper", rot=(0.0, 0.0, FACING - 18.0))
+    w = 1.8
+    low = flat("lower", [(-w / 2, -1.2), (w / 2, -1.2), (w / 2, 0.0), (-w / 2, 0.0)], body, rot=(18.0, 0.0, 0.0), parent=g)
+    top = flat("upper", [(-w / 2, 0.0), (w / 2, 0.0), (w / 2, 1.3), (-w / 2, 1.3)], body, rot=(-6.0, 0.0, 0.0), parent=g)
+    y = -0.01
+    lines = [[(-0.7, y, 1.12), (0.7, y, 1.12)], [(-0.7, y, 0.96), (0.7, y, 0.96)],
+             rect(-0.7, 0.2, -0.05, 0.75, y=y)]
+    lines += lines_on(0.1, 0.7, (0.72, 0.52, 0.32), y, short=(2,))
+    wire("type", lines, body, parent=top)
+    wire("more", [[(-0.7, y, z), (-0.1, y, z)] for z in (-0.25, -0.5, -0.75)] +
+         [[(0.1, y, z), (0.7, y, z)] for z in (-0.25, -0.5)], body, parent=low)
+
+
+def icon_055(pal, rand):
+    """055 Daily Editing Warm-Up: a sentence strip reading "ABC", a big
+    check mark over its corner: the spelling checked. Two cuts failed first,
+    both as illegible bars at 32 px: a long strip with three word lines and a
+    proofreader's caret, then a shorter one whose middle word carried a
+    spell checker's wavy underline, which vanished and left a card."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("strip", rot=(-10.0, 0.0, FACING - 15.0))
+    prism("strip", rounded(2.4, 1.2, 0.14), 0.05, body, parent=g)
+    y = -0.035
+    arc = lambda cx, cz, r, a0, a1, n=6: [(cx + r * math.cos(math.radians(a0 + (a1 - a0) * i / n)), y,
+                                           cz + r * math.sin(math.radians(a0 + (a1 - a0) * i / n))) for i in range(n + 1)]
+    lines = [[(-0.95, y, -0.3), (-0.72, y, 0.3), (-0.49, y, -0.3)], [(-0.86, y, -0.08), (-0.58, y, -0.08)]]   # A
+    lines.append([(-0.3, y, -0.3), (-0.3, y, 0.3)] + arc(-0.12, 0.15, 0.15, 90, -90) +
+                 arc(-0.1, -0.15, 0.15, 90, -90) + [(-0.3, y, -0.3)])                                     # B
+    lines.append(arc(0.35, 0.0, 0.3, 50, 310, 8))                                                          # C
+    wire("letters", lines, body, parent=g)
+    wire("check", [[(0.5, -0.06, -0.15), (0.82, -0.06, -0.62), (1.5, -0.06, 0.5)]], wood, parent=g)
+
+
+def icon_056(pal, rand):
+    """056 DBQ / Source Packet: a quill standing in an inkwell, the pen the
+    old documents were written with."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("quill", rot=(0.0, 0.0, FACING - 20.0))
+    cylinder("well", 0.62, 0.55, wood, loc=(0.0, 0.0, 0.275), r2=0.52, segments=32, parent=g)
+    cylinder("neck", 0.28, 0.16, wood, loc=(0.0, 0.0, 0.63), segments=24, caps=False, parent=g)
+    f = group("feather", rot=(0.0, 28.0, 0.0), loc=(0.0, 0.0, 0.45))
+    f.parent = g
+    vane = []
+    for i in range(13):
+        t = i / 12.0
+        vane.append((0.34 * math.sin(math.pi * t) ** 0.8, 0.6 + 1.9 * t))
+    for i in range(12, -1, -1):
+        t = i / 12.0
+        vane.append((-0.2 * math.sin(math.pi * t) ** 0.8, 0.6 + 1.9 * t))
+    flat("vane", vane[1:-1], body, parent=f)
+    y = -0.01
+    barbs = [[(0.0, y, 0.0), (0.0, y, 2.5)]]
+    barbs += [[(0.0, y, z), (0.24, y, z + 0.22)] for z in (1.0, 1.5, 2.0)]
+    wire("shaft", barbs, body, parent=f)
+
+
+def icon_057(pal, rand):
+    """057 Dichotomous Key: a beetle, seen from above and in front, the
+    kind of specimen a classification key sorts."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("beetle", rot=(-60.0, 0.0, FACING - 15.0))
+    shell = [(0.7 * math.cos(2 * math.pi * i / 28), 0.95 * math.sin(2 * math.pi * i / 28) - 0.2) for i in range(28)]
+    prism("shell", shell, 0.3, body, parent=g)
+    prism("head", disk(0.34, 16, cz=1.0), 0.24, wood, parent=g)
+    y = -0.16
+    lines = [[(0.0, y, 0.72), (0.0, y, -1.1)]]
+    for s in (-1, 1):
+        for z0, z1 in ((0.35, 0.65), (0.0, -0.05), (-0.35, -0.75)):
+            lines.append([(s * 0.66, 0.0, z0), (s * 1.1, 0.0, z1)])
+        lines.append([(s * 0.18, 0.0, 1.28), (s * 0.45, 0.0, 1.7)])
+    wire("legs", lines, wood, parent=g)
+
+
+def icon_058(pal, rand):
+    """058 Duty Roster: a coach's whistle on a ring, the duty teacher's
+    kit for the hallway, the cafeteria and the bus line."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("whistle", rot=(0.0, 0.0, FACING - 30.0))
+    cylinder("barrel", 0.62, 0.7, body, rot=(90.0, 0.0, 0.0), segments=32, parent=g)
+    box("mouth", (1.3, 0.5, 0.42), body, loc=(-0.85, 0.0, 0.41), parent=g)
+    tube_arc("ring", 0.24, 0.05, 0.0, 360.0, wood, minor=8, loc=(0.6, 0.0, 0.7), rot=(0.0, 0.0, 90.0), parent=g)
+
+
+def icon_059(pal, rand):
+    """059 Experiment Design Planner: a light bulb, the hypothesis the plan
+    starts from."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("bulb", rot=(0.0, 0.0, FACING))
+    r, cz = 0.85, 1.45
+    sphere("glass", r, body, loc=(0.0, 0.0, cz), parent=g)
+    cylinder("neck", 0.36, 0.45, body, loc=(0.0, 0.0, 0.78), r2=0.55, caps=False, segments=24, parent=g)
+    cylinder("base", 0.36, 0.5, wood, loc=(0.0, 0.0, 0.3), segments=24, parent=g)
+    wire("thread", [_ring_xy(0.0, 0.0, z, 0.37, segments=20) for z in (0.2, 0.36)], wood, parent=g)
+    fil = []
+    for x, z in ((-0.25, 1.25), (-0.12, 1.55), (0.0, 1.3), (0.12, 1.55), (0.25, 1.25)):
+        fil.append((x, -math.sqrt(max(r * r - x * x - (z - cz) ** 2, 0.0)) - 0.03, z))
+    wire("filament", [fil], body, parent=g)
+
+
+def icon_060(pal, rand):
+    """060 Fitness & Skill Tracker: a dumbbell, two plates a side."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("dumbbell", rot=(0.0, 12.0, FACING - 30.0))
+    cylinder("bar", 0.1, 2.6, wood, rot=(0.0, 90.0, 0.0), segments=12, parent=g)
+    for i, s in enumerate((-1.0, 1.0)):
+        cylinder("plate.a%d" % i, 0.62, 0.2, body, loc=(s * 0.72, 0.0, 0.0), rot=(0.0, 90.0, 0.0), segments=28, parent=g)
+        cylinder("plate.b%d" % i, 0.48, 0.18, body, loc=(s * 0.93, 0.0, 0.0), rot=(0.0, 90.0, 0.0), segments=28, parent=g)
+
+
+def icon_061(pal, rand):
+    """061 Fraction, Decimal, Percent Drill: a percent sign on a round
+    badge. The first cut built the sign solid, two tori and a bar; each torus
+    drew an inner and an outer circle, so the rings read as "@" and the bar's
+    capped end as a hockey stick. Drawn as single strokes on a disc it is a
+    percent sign."""
+    body = art.token_material(pal, "--card")
+    g = group("percent", rot=(0.0, 0.0, FACING - 22.0))
+    prism("badge", disk(1.1, 40), 0.2, body, parent=g)
+    y = -0.105
+    wire("sign", [circle(-0.36, 0.38, 0.2, y=y, segments=14), circle(0.36, -0.38, 0.2, y=y, segments=14),
+                  [(-0.45, y, -0.62), (0.45, y, 0.62)]], body, parent=g)
+
+
+def icon_062(pal, rand):
+    """062 Geography Bee / Map Skills: a compass lying nearly flat, its
+    needle on the N. 039 has the globe and 046 the map; this is the
+    map-skills tool. The first cut stood it up with a bail ring on top, and it
+    read as a stopwatch, which is 004's job."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("compass", rot=(-58.0, 0.0, FACING - 15.0))
+    prism("case", disk(1.0, 40), 0.24, wood, parent=g)
+    y = -0.125
+    lines = [circle(0.0, 0.0, 0.84, y=y, segments=32)]
+    for a in (0, 180, 270):
+        c, s = math.cos(math.radians(a)), math.sin(math.radians(a))
+        lines.append([(0.66 * c, y, 0.66 * s), (0.84 * c, y, 0.84 * s)])
+    lines.append([(0.0, y, 0.5), (0.16, y, 0.0), (0.0, y, -0.62), (-0.16, y, 0.0), (0.0, y, 0.5)])
+    lines.append([(-0.16, y, 0.0), (0.16, y, 0.0)])
+    lines.append([(-0.1, y, 0.58), (-0.1, y, 0.8), (0.1, y, 0.58), (0.1, y, 0.8)])         # N
+    wire("face", lines, body, parent=g)
+
+
+def _jigsaw(s, knobs):
+    """(x, z) points of a jigsaw piece of side s. knobs gives each edge,
+    bottom, right, top, left, as +1 (a knob), -1 (a socket) or 0 (flat)."""
+    h = s / 2
+    corners = [(-h, -h), (h, -h), (h, h), (-h, h)]
+    r = s * 0.16
+    pts = []
+    for e in range(4):
+        (x0, z0), (x1, z1) = corners[e], corners[(e + 1) % 4]
+        pts.append((x0, z0))
+        k = knobs[e]
+        if k == 0:
+            continue
+        dx, dz = (x1 - x0) / s, (z1 - z0) / s
+        nx, nz = dz, -dx                                  # the outward normal
+        mx, mz = (x0 + x1) / 2, (z0 + z1) / 2
+        cx, cz = mx + nx * k * r * 1.1, mz + nz * k * r * 1.1
+        pts.append((mx - dx * r * 0.6, mz - dz * r * 0.6))
+        for i in range(9):
+            # Round the knob's circle from the edge's start side, over its
+            # outermost point, to its end side, overhanging the neck a little.
+            t = math.radians(-35.0 + 250.0 * i / 8)
+            pts.append((cx + r * (-dx * math.cos(t) + nx * k * math.sin(t)),
+                        cz + r * (-dz * math.cos(t) + nz * k * math.sin(t))))
+        pts.append((mx + dx * r * 0.6, mz + dz * r * 0.6))
+    return pts
+
+
+def icon_063(pal, rand):
+    """063 Grammar Mad Libs: two jigsaw pieces, the second lifting into
+    place: the word that fills the blank."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("jigsaw", rot=(-15.0, 0.0, FACING - 18.0))
+    prism("piece.0", _jigsaw(1.2, (0, 1, 1, 0)), 0.18, wood, loc=(-0.62, 0.0, 0.0), parent=g)
+    prism("piece.1", _jigsaw(1.2, (1, 0, -1, -1)), 0.18, body, loc=(0.75, -0.05, 0.35), rot=(0.0, -12.0, 0.0), parent=g)
+
+
+def icon_064(pal, rand):
+    """064 Historical Figure Trading Cards: a framed portrait, head and
+    shoulders."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("portrait", rot=(0.0, 0.0, FACING - 20.0))
+    box("frame", (1.75, 0.14, 2.2), wood, parent=g)
+    y = -0.075
+    lines = [rect(-0.66, -0.88, 0.66, 0.88, y=y), circle(0.0, 0.3, 0.3, y=y, segments=16)]
+    lines.append([(-0.5 + 1.0 * i / 12, y, -0.62 + 0.5 * math.sin(math.pi * i / 12)) for i in range(13)])
+    lines.append([(-0.5, y, -0.62), (0.5, y, -0.62)])
+    wire("sitter", lines, body, parent=g)
+
+
+def icon_065(pal, rand):
+    """065 Lab Report Template: a microscope, arm, stage and a tube tipped
+    back to its eyepiece."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("microscope", rot=(0.0, 0.0, FACING - 30.0))
+    box("foot", (1.6, 0.9, 0.18), wood, loc=(0.0, 0.0, 0.09), parent=g)
+    prism("arm", [(0.35, 0.18), (0.75, 0.18), (0.75, 1.15), (0.2, 1.95), (-0.05, 1.8), (0.4, 1.1)], 0.3, wood, parent=g)
+    box("stage", (1.1, 0.8, 0.08), body, loc=(-0.1, 0.0, 0.8), parent=g)
+    cylinder("tube", 0.2, 1.25, body, loc=(-0.25, 0.0, 1.62), rot=(0.0, -22.0, 0.0), segments=20, parent=g)
+    cylinder("lens", 0.14, 0.25, body, loc=(-0.02, 0.0, 1.0), r2=0.09, rot=(0.0, -22.0, 0.0), segments=16, parent=g)
+    cylinder("eyepiece", 0.24, 0.16, body, loc=(-0.49, 0.0, 2.2), rot=(0.0, -22.0, 0.0), segments=20, parent=g)
+
+
+def icon_066(pal, rand):
+    """066 Math Find the Mistake: a warning sign, a triangle with an
+    exclamation mark. Something in the working is wrong."""
+    body = art.token_material(pal, "--card")
+    g = group("warning", rot=(0.0, 0.0, FACING - 20.0))
+    tri = []
+    for a in (90.0, 210.0, 330.0):
+        cx, cz = 0.95 * math.cos(math.radians(a)), 0.95 * math.sin(math.radians(a))
+        for k in range(4):
+            b = math.radians(a - 60.0 + 40.0 * k)
+            tri.append((cx + 0.2 * math.cos(b), cz + 0.2 * math.sin(b)))
+    prism("sign", tri, 0.2, body, parent=g)
+    y = -0.105
+    wire("mark", [[(0.0, y, 0.55), (0.0, y, -0.12)], circle(0.0, -0.36, 0.06, y=y, segments=10)], body, parent=g)
+
+
+def icon_067(pal, rand):
+    """067 Music Sight-Reading: two eighth notes joined by a beam."""
+    body = art.token_material(pal, "--card")
+    g = group("notes", rot=(0.0, 0.0, FACING - 20.0))
+    head = [(0.38 * math.cos(2 * math.pi * i / 20), 0.26 * math.sin(2 * math.pi * i / 20)) for i in range(20)]
+    for i, (x, z) in enumerate(((-0.75, -0.9), (0.6, -0.55))):
+        prism("head.%d" % i, head, 0.16, body, loc=(x, 0.0, z), rot=(0.0, 20.0, 0.0), parent=g)
+        top = 1.2 + (x + 0.75) * 0.25
+        box("stem.%d" % i, (0.08, 0.08, top - z), body, loc=(x + 0.32, 0.0, (top + z) / 2), parent=g)
+    prism("beam", [(-0.47, 1.05), (0.96, 1.4), (0.96, 1.7), (-0.47, 1.35)], 0.16, body, parent=g)
+
+
 ICONS = {
     "001": icon_001, "002": icon_002, "003": icon_003, "004": icon_004, "005": icon_005,
     "006": icon_006, "007": icon_007, "008": icon_008, "009": icon_009, "010": icon_010,
@@ -1145,6 +1483,10 @@ ICONS = {
     "036": icon_036, "037": icon_037, "038": icon_038, "039": icon_039, "040": icon_040,
     "041": icon_041, "042": icon_042, "043": icon_043, "044": icon_044, "045": icon_045,
     "046": icon_046, "047": icon_047, "048": icon_048,
+    "049": icon_049, "050": icon_050, "051": icon_051, "052": icon_052, "053": icon_053,
+    "054": icon_054, "055": icon_055, "056": icon_056, "057": icon_057, "058": icon_058,
+    "059": icon_059, "060": icon_060, "061": icon_061, "062": icon_062, "063": icon_063,
+    "064": icon_064, "065": icon_065, "066": icon_066, "067": icon_067,
 }
 
 
