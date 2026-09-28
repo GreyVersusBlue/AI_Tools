@@ -33,6 +33,8 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="escape-room-builder/er-match.js"></script>
+<script src="../_shared/media-db.js"></script>
+<script src="escape-room-builder/er-image.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -111,6 +113,9 @@
      picture is often a transparent line drawing, and dark ink on a dark mat is
      nothing at all. Same reason escape-room-builder/lock.html keeps its. */
   .station-image-thumb img { width: 2.6rem; height: 2.6rem; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); background: #fff; }
+  /* A station whose image reference has nothing behind it in this browser
+     (Path 4 P4): said on the card, never an empty frame. */
+  .station-image-missing { font-size: .78rem; color: var(--err); border: 1px dashed var(--err); border-radius: 6px; padding: .35rem .5rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
@@ -499,6 +504,25 @@
   // `next` is null for "auto — next in order", or a 0-based station index for branching.
   var state = null;
 
+  var ER = window.EscapeRoomImage;
+  /* False until boot has read this browser's images, so a reference is not
+     reported missing merely because it has not been read yet. */
+  var imagesSettled = false;
+
+  /** 1-based numbers of this room's stations whose image is gone. */
+  function missingImageStations() {
+    if (!imagesSettled || !state) return [];
+    var out = [];
+    state.stations.forEach(function (st, i) { if (ER.isMissing(st.image)) out.push(i + 1); });
+    return out;
+  }
+  function missingImagesText(nums) {
+    return (nums.length === 1 ? 'Station ' + nums[0] + '’s image is' : 'Stations ' + nums.join(', ') + ' have images that are') +
+      ' no longer in this browser, so the student link, QR codes and printouts leave ' +
+      (nums.length === 1 ? 'it' : 'them') + ' out. Remove ' + (nums.length === 1 ? 'it' : 'them') +
+      ' and add ' + (nums.length === 1 ? 'it' : 'them') + ' again, or restore a backup that includes images.';
+  }
+
   // ── Persisted rooms, keyed by name (same locally-saved trust level as any ─
   //    other tool state in this toolkit) ─────────────────────────────────────
   //
@@ -670,7 +694,11 @@
         '<div class="field-row"><label>Clue image (optional)</label>' +
           '<div class="station-image-row">' +
             (s.image
-              ? '<div class="station-image-thumb"><img src="' + escapeAttr(s.image) + '" alt=""><button type="button" class="icon-btn danger" data-remove-image title="Remove image">&#10005;</button></div>'
+              ? '<div class="station-image-thumb">' +
+                  (imagesSettled && ER.isMissing(s.image)
+                    ? '<span class="station-image-missing">Image missing from this browser</span>'
+                    : '<img src="' + escapeAttr(ER.src(s.image)) + '" alt="">') +
+                  '<button type="button" class="icon-btn danger" data-remove-image title="Remove image" aria-label="Remove image for station ' + (i + 1) + '">&#10005;</button></div>'
               : '<input type="file" class="f-image" accept="image/*" aria-label="Image for station ' + (i + 1) + '">') +
           '</div>' +
           '<div class="hint" style="margin:-.4rem 0 .6rem;">Shrunk automatically before it\'s saved. Adding a photo makes every station\'s QR code bigger — if a code stops scanning, remove the image or lower error correction.</div></div>' +
@@ -761,33 +789,12 @@
     }
   });
 
-  // ── Clue image upload — downscaled to a small data URL before saving, the
-  //    same pattern as Certificate & Award Maker's logo upload, since a
-  //    station image travels inside the QR-encoded room payload alongside
-  //    every other station's text and has to stay small to keep fitting. ──
-  var STATION_IMAGE_MAX_DIMENSION = 320;
-  function downscaleStationImage(file) {
-    return new Promise(function (resolve, reject) {
-      var reader = new FileReader();
-      reader.onerror = function () { reject(new Error('Could not read that image file.')); };
-      reader.onload = function () {
-        var img = new Image();
-        img.onerror = function () { reject(new Error('Could not decode that image file.')); };
-        img.onload = function () {
-          var scale = Math.min(1, STATION_IMAGE_MAX_DIMENSION / Math.max(img.width, img.height));
-          var w = Math.max(1, Math.round(img.width * scale));
-          var h = Math.max(1, Math.round(img.height * scale));
-          var canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.6));
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
+  // ── Clue image upload. Downscaled to 320 px by MediaDB.downscaleImage
+  //    (the inline copy that lived here was one of three) and kept in the
+  //    shared media store; the station holds an `idb:` reference. See
+  //    escape-room-builder/er-image.js for why, and for the fallback. The
+  //    image still travels inside the student link and QR payload, as a data
+  //    URL, so it has to stay small. ──
   els.stationsList.addEventListener('change', function (e) {
     if (!e.target.classList.contains('f-image')) return;
     var cardEl = e.target.closest('.station-card');
@@ -795,8 +802,8 @@
     var i = parseInt(cardEl.dataset.idx, 10);
     var file = e.target.files && e.target.files[0];
     if (!file) return;
-    downscaleStationImage(file).then(function (dataUrl) {
-      state.stations[i].image = dataUrl;
+    ER.fromFile(file).then(function (image) {
+      state.stations[i].image = image;
       renderStations();
       save();
       scheduleRender();
@@ -892,7 +899,7 @@
         return {
           idx: i, clue: (s.clue || '').trim(), answers: answers, hint: (s.hint || '').trim(),
           hintCost: Math.max(0, parseInt(s.hintCost, 10) || 0),
-          next: s.next, image: s.image || '',
+          next: s.next, image: ER.src(s.image),
           type: type, cipherShift: clampShift(s.cipherShift),
           awardLetter: (s.awardLetter || '').trim().slice(0, 1).toUpperCase(),
           maxAttempts: Math.max(0, parseInt(s.maxAttempts, 10) || 0),
@@ -1036,6 +1043,8 @@
     renderChainPreview(valid);
 
     if (!valid.length) {
+      var missingHere = missingImageStations();
+      if (missingHere.length) showMsg(missingImagesText(missingHere));
       els.cardsPreview.innerHTML = '<p class="empty-hint">Add at least one station with a clue and an accepted answer to see a preview.</p>';
       els.answerPreview.innerHTML = '';
       els.playerLink.value = '';
@@ -1070,9 +1079,13 @@
       }
     });
 
+    var problems = [];
     if (failures.length) {
-      showMsg('Could not build a QR code for: ' + failures.join(', ') + '. Try shortening that clue or lowering error correction.');
+      problems.push('Could not build a QR code for: ' + failures.join(', ') + '. Try shortening that clue or lowering error correction.');
     }
+    var missing = missingImageStations();
+    if (missing.length) problems.push(missingImagesText(missing));
+    if (problems.length) showMsg(problems.join(' '));
 
     els.previewNote.textContent = valid.length + ' station' + (valid.length === 1 ? '' : 's') + ' ready.';
     els.printCodesBtn.disabled = false;
@@ -1542,7 +1555,7 @@
         stations: state.stations.map(function (st) {
           return {
             clue: st.clue, answers: st.answers, hint: st.hint || '', next: st.next,
-            image: st.image || '', type: st.type || 'text',
+            image: ER.src(st.image), type: st.type || 'text',
             hintCost: st.hintCost || 0, awardLetter: st.awardLetter || '',
             cipherPlain: st.cipherPlain || '', cipherShift: st.cipherShift || 0,
             maxAttempts: st.maxAttempts || 0,
@@ -1592,7 +1605,7 @@
         var tol = Number(st.numericTolerance);
         return {
           clue: String(st.clue || ''), answers: String(st.answers || ''), hint: String(st.hint || ''),
-          next: next, image: typeof st.image === 'string' ? st.image : '',
+          next: next, image: ER.isInline(st.image) ? st.image : '',   // never another browser's idb: reference
           type: STATION_TYPES.indexOf(st.type) !== -1 ? st.type : 'text',
           hintCost: parseInt(st.hintCost, 10) || 0,
           awardLetter: String(st.awardLetter || ''),
@@ -1645,6 +1658,33 @@
       newSet('New Escape Room');
     }
   }
+
+  /* ---------- images: IndexedDB behind the rooms (Path 4 P4) ----------
+     Every saved room's stations hold `idb:` references; the images are in the
+     shared media store. On load: read every image any room points at, move
+     any data: URL image (a room saved before this, or one that arrived by
+     link) into the store, save the smaller rooms, then — at boot only —
+     delete stored images no room points at. A reference whose image is gone
+     is shown on its station and said in the message line on every render
+     until it is dealt with. __escapeImagesSettled is for the suite. */
+  function settleImages() {
+    var latest = null;
+    function allRooms() {
+      latest = loadStore();
+      if (state) latest.sets[state.name] = state;
+      return Object.keys(latest.sets).map(function (k) { return latest.sets[k]; });
+    }
+    return ER.hydrate(ER.imagesIn(allRooms()))
+      .then(function () { return ER.migrate(allRooms); })
+      .then(function (moved) {
+        if (moved) saveStore(latest);
+        imagesSettled = true;
+        if (state) { renderStations(); render(); }
+        return ER.gc(ER.imagesIn(allRooms()).filter(ER.isRef));
+      })
+      ['catch'](function () { imagesSettled = true; });
+  }
+  settleImages().then(function () { window.__escapeImagesSettled = true; });
 
 })();
 </script>
