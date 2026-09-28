@@ -148,6 +148,11 @@ for (const rel of ENTRIES) {
   // regression. Each icon is screenshotted and its dark-on-light pixels
   // counted in a blank page's canvas.
   if (rel === LANDING && !pageErrs.length) {
+    // Opening a category restarts its rows' 0.45 s fade-in, and the first
+    // icon is screenshotted at once, so it could be caught at opacity ~0 and
+    // counted blank (#t004, 0 ink pixels, 1 run in 2 on 2026-09-28). The page
+    // drops the fade under prefers-reduced-motion; ask for that.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     // Categories are <details>; a closed one hides its rows from a screenshot.
     await page.evaluate(() => document.querySelectorAll('#rows details.cat').forEach(d => { d.open = true; }));
     const icons = page.locator('#rows .cat:not(.cat-pinned) .tool-icon');

@@ -738,6 +738,79 @@ def icon_027(pal, rand):
     wire("text", lines, body, parent=g)
 
 
+def icon_028(pal, rand):
+    """028 Primary Source Analysis: a document scroll, rolled at the top and
+    the bottom, with lines of old handwriting between. Every other page icon
+    in the set is a modern sheet; the rolls are what make this one a source."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("scroll", rot=(-12.0, 0.0, FACING - 18.0))
+    flat("sheet", [(-0.8, -0.95), (0.8, -0.95), (0.8, 0.95), (-0.8, 0.95)], body, parent=g)
+    for i, z in enumerate((1.05, -1.05)):
+        cylinder("roll.%d" % i, 0.16, 1.9, wood, loc=(0.0, 0.06, z), rot=(0.0, 90.0, 0.0),
+                 segments=16, parent=g)
+    wire("hand", lines_on(-0.55, 0.55, (0.55, 0.22, -0.11, -0.44), -0.01, short=(3,)), body, parent=g)
+
+
+def icon_029(pal, rand):
+    """029 Prompt Builder: a written prompt, its last line ending at a text
+    cursor, with the four-point sparkle that has come to mean AI. Two cuts
+    failed first: a chat window over a pill-shaped input field read as a
+    transistor radio, and text lines broken by empty slots read as the
+    sliders of a mixing desk."""
+    body = art.token_material(pal, "--card")
+    g = group("prompt", rot=(-15.0, 0.0, FACING - 15.0))
+    flat("sheet", dog_eared(1.7, 2.2, 0.4), body, parent=g)
+    y = -0.01
+    lines = lines_on(-0.62, 0.55, (0.45, 0.1, -0.25), y)
+    lines.append([(-0.62, y, -0.6), (-0.05, y, -0.6)])
+    lines.append([(0.1, y, -0.78), (0.1, y, -0.42)])                   # the cursor
+    wire("prompt", lines, body, parent=g)
+    flat("sparkle", _star(4, 0.5, 0.13), body, loc=(0.9, -0.05, 1.1), parent=g)
+
+
+def icon_030(pal, rand):
+    """030 Quiz / Review Game Board: a game board of raised tiles under a
+    header band, one tile already taken. Separate tiles with gaps between,
+    not a ruled grid, so it cannot be mistaken for 032's calendar. The first
+    cut raised every tile as a box, and their doubled edges clotted into one
+    dark block at 32 px; flat tiles on a flat board draw as single outlines."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("board", rot=(-8.0, 0.0, FACING - 20.0))
+    flat("board", [(-1.25, -0.98), (1.25, -0.98), (1.25, 0.98), (-1.25, 0.98)], wood, loc=(0.0, 0.0, 0.0), parent=g)
+    y = -0.06
+    flat("header", [(-1.1, 0.58), (1.1, 0.58), (1.1, 0.84), (-1.1, 0.84)], body, loc=(0.0, y, 0.0), parent=g)
+    tile = [(-0.3, -0.16), (0.3, -0.16), (0.3, 0.16), (-0.3, 0.16)]
+    for r, z in enumerate((0.22, -0.23, -0.68)):
+        for c, x in enumerate((-0.76, 0.0, 0.76)):
+            if (r, c) == (1, 2):
+                continue                                   # answered already
+            flat("tile.%d.%d" % (r, c), tile, body, loc=(x, y, z), parent=g)
+
+
+def icon_031(pal, rand):
+    """031 Word Doc Merger: three pages fanned out and held together by one
+    paper clip, several documents made one."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("merge", rot=(-8.0, 0.0, FACING - 18.0))
+    page = dog_eared(1.45, 1.9, 0.38)
+    flat("page.2", page, body, loc=(0.42, 0.2, 0.18), rot=(0.0, 9.0, 0.0), parent=g)
+    flat("page.1", page, body, loc=(0.2, 0.1, 0.08), rot=(0.0, 3.0, 0.0), parent=g)
+    front = flat("page.0", page, body, loc=(0.0, 0.0, 0.0), rot=(0.0, -4.0, 0.0), parent=g)
+    wire("text", lines_on(-0.5, 0.42, (0.35, 0.05, -0.25, -0.55), -0.01, short=(3,)), body, parent=front)
+    # A paper clip over the top edge, left of the fold: an inner loop inside an
+    # outer one, as the wire runs.
+    y, x0, top = -0.03, -0.35, 1.12
+    clip = [(x0 + 0.1, y, 0.62), (x0 + 0.1, y, top - 0.12)]
+    clip += [(x0 + 0.1 * math.cos(math.radians(a)), y, top - 0.12 + 0.1 * math.sin(math.radians(a))) for a in range(0, 181, 30)]
+    clip += [(x0 - 0.1, y, 0.5)]
+    clip += [(x0 + 0.04 + 0.14 * math.cos(math.radians(a)), y, 0.5 + 0.14 * math.sin(math.radians(a))) for a in range(180, 361, 30)]
+    clip += [(x0 + 0.18, y, top + 0.05)]
+    wire("clip", [clip], wood, parent=front)
+
+
 def icon_032(pal, rand):
     """032 School Calendar: a wall calendar page with two binding rings and a
     month grid, one day circled."""
@@ -759,6 +832,202 @@ def icon_032(pal, rand):
         wire("ring.%d" % i, [ring + [ring[0]]], wood, parent=g)
 
 
+def icon_033(pal, rand):
+    """033 SSR Log Tracker: a closed book standing up, a bookmark out of its
+    top, the reader's place. Closed, so it is not 027's open book: covers, a
+    page block between them and the page edges showing on the right."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    # Turned square to the camera's azimuth so the page edges show as much as
+    # the cover; turned toward the cover, the first cut read as a notepad.
+    g = group("book", rot=(0.0, 0.0, FACING - 45.0))
+    w, t, h = 1.5, 0.5, 2.1
+    for i, y in enumerate((-t / 2, t / 2)):
+        box("cover.%d" % i, (w, 0.07, h), wood, loc=(0.0, y, 0.0), parent=g)
+    box("spine", (0.07, t + 0.07, h), wood, loc=(-w / 2, 0.0, 0.0), parent=g)
+    box("pages", (w - 0.12, t - 0.07, h - 0.14), body, loc=(-0.03, 0.0, 0.0), parent=g)
+    flat("mark", [(0.18, 0.7), (0.46, 0.7), (0.46, 1.42), (0.32, 1.3), (0.18, 1.42)], body,
+         loc=(0.0, 0.0, 0.0), parent=g)
+    y = -t / 2 - 0.04
+    x = w / 2 - 0.08
+    wire("title", [[(-0.45, y, 0.55), (0.45, y, 0.55)], [(-0.3, y, 0.3), (0.3, y, 0.3)],
+                   [(x, -0.08, -0.9), (x, -0.08, 0.9)], [(x, 0.08, -0.9), (x, 0.08, 0.9)]], body, parent=g)
+
+
+def icon_034(pal, rand):
+    """034 Schedule Browser: a wall clock, the bell schedule's own face,
+    reading ten past ten."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("clock", rot=(0.0, 0.0, FACING - 22.0))
+    prism("case", disk(1.15, 40), 0.24, wood, parent=g)
+    y = -0.125
+    lines = [circle(0.0, 0.0, 0.98, y=y, segments=32)]
+    for i in range(12):
+        a = math.radians(90.0 - 30.0 * i)
+        r0 = 0.72 if i % 3 == 0 else 0.82
+        lines.append([(r0 * math.cos(a), y, r0 * math.sin(a)), (0.9 * math.cos(a), y, 0.9 * math.sin(a))])
+    for ang, ln in ((150.0, 0.45), (30.0, 0.68)):               # hour at ten, minute at two
+        a = math.radians(ang)
+        lines.append([(0.0, y, 0.0), (ln * math.cos(a), y, ln * math.sin(a))])
+    wire("face", lines, body, parent=g)
+
+
+def icon_035(pal, rand):
+    """035 School Layout Visualizer: a floor plan, a hallway through the
+    middle and rooms on both sides, with a map pin standing on one room."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("plan", rot=(-55.0, 0.0, FACING - 15.0))
+    flat("sheet", [(-1.25, -0.95), (1.25, -0.95), (1.25, 0.95), (-1.25, 0.95)], body, parent=g)
+    y = -0.01
+    lines = [rect(-1.05, -0.75, 1.05, 0.75, y=y),
+             [(-1.05, y, 0.15), (1.05, y, 0.15)], [(-1.05, y, -0.15), (1.05, y, -0.15)]]
+    lines += [[(x, y, 0.15), (x, y, 0.75)] for x in (-0.35, 0.35)]
+    lines += [[(x, y, -0.15), (x, y, -0.75)] for x in (-0.5, 0.2)]
+    wire("rooms", lines, body, parent=g)
+    bpy.context.view_layer.update()
+    tip = g.matrix_world @ Vector((0.7, 0.0, 0.45))              # the room top right
+    pin = group("pin", loc=tuple(tip))
+    cylinder("point", 0.0, 0.6, wood, loc=(0.0, 0.0, 0.3), r2=0.2, segments=16, caps=False, parent=pin)
+    sphere("head", 0.3, wood, loc=(0.0, 0.0, 0.78), parent=pin)
+
+
+def icon_036(pal, rand):
+    """036 Final Grade Checker: a calculator, a display over a keypad. The
+    grade is a calculation, and the tool's job is checking it."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("calculator", rot=(-15.0, 0.0, FACING - 18.0))
+    prism("case", rounded(1.5, 2.1, 0.16), 0.22, wood, parent=g)
+    y = -0.115
+    lines = [rect(-0.55, 0.45, 0.55, 0.85, y=y)]
+    for r, z in enumerate((0.12, -0.3, -0.72)):
+        for c, x in enumerate((-0.4, 0.0, 0.4)):
+            lines.append(rect(x - 0.13, z - 0.13, x + 0.13, z + 0.13, y=y))
+    wire("keys", lines, body, parent=g)
+
+
+def icon_037(pal, rand):
+    """037 Grade Distribution Visualizer: a histogram, five bars in a bell,
+    on an axis."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("histogram", rot=(0.0, 0.0, FACING - 20.0))
+    for i, hgt in enumerate((0.45, 1.05, 1.75, 1.3, 0.6)):
+        x = -0.92 + i * 0.46
+        box("bar.%d" % i, (0.4, 0.3, hgt), body, loc=(x, 0.0, hgt / 2), parent=g)
+    wire("axis", [[(-1.3, -0.2, 2.0), (-1.3, -0.2, -0.05), (1.3, -0.2, -0.05)]], wood, parent=g)
+
+
+def icon_038(pal, rand):
+    """038 Data Table to Chart Builder: a pie chart standing up, one slice
+    pulled out. 037 already has the bars."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("pie", rot=(-18.0, 0.0, FACING - 25.0))
+    r = 1.0
+    rest = [(0.0, 0.0)] + [(r * math.cos(math.radians(a)), r * math.sin(math.radians(a)))
+                          for a in range(70, 361, 10)]
+    prism("pie", rest, 0.28, body, parent=g)
+    wire("cut", [[(0.0, -0.15, 0.0), (r * math.cos(math.radians(200)), -0.15, r * math.sin(math.radians(200)))]],
+         body, parent=g)
+    d = 0.24
+    ox, oz = d * math.cos(math.radians(35)), d * math.sin(math.radians(35))
+    wedge = [(ox, oz)] + [(ox + r * math.cos(math.radians(a)), oz + r * math.sin(math.radians(a)))
+                          for a in range(0, 71, 10)]
+    prism("slice", wedge, 0.28, wood, loc=(0.0, -0.06, 0.0), parent=g)
+
+
+def icon_039(pal, rand):
+    """039 Vocab & Conjugation Drill: a globe on its stand, for the world
+    languages it drills. Three latitude rings and one meridian sit just proud
+    of the sphere, so the far halves are hidden by it. The first cut tilted
+    the axis 23 degrees like a real globe; that laid the equator nearly
+    edge-on to the 30-degree camera, the lines vanished, and it read as a
+    round mirror on a stand. Upright, the rings are open ellipses."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    r, cz = 0.9, 1.35
+    globe = group("globe", rot=(0.0, 0.0, FACING), loc=(0.0, 0.0, cz))
+    sphere("earth", r, body, parent=globe)
+    k = r * 1.03
+    rings = [_ring_xy(0.0, 0.0, k * math.sin(math.radians(lat)), k * math.cos(math.radians(lat)), segments=24)
+             for lat in (-35.0, 0.0, 35.0)]
+    phi = math.radians(55.0)          # a meridian turned away from face-on, so it is an ellipse
+    rings.append([(k * math.cos(t) * math.cos(phi), k * math.cos(t) * math.sin(phi), k * math.sin(t))
+                  for t in (2 * math.pi * i / 24 for i in range(25))])
+    wire("lines", rings, body, parent=globe)
+    tube_arc("arc", r + 0.14, 0.05, 120.0, 270.0, wood, parent=globe)
+    cylinder("stem", 0.07, cz - r - 0.14 - 0.12, wood, loc=(0.0, 0.0, 0.12 + (cz - r - 0.26) / 2), segments=12)
+    cylinder("base", 0.62, 0.12, wood, loc=(0.0, 0.0, 0.06), segments=32)
+
+
+def icon_040(pal, rand):
+    """040 Vocabulary Flashcard & Word Wall: vocabulary cards on a ring, the
+    front one showing a capital A beside its definition lines. 026's fanned
+    cards are maths; the letter and the ring make these words. A first cut,
+    four cards pinned to a board, was a cluttered grid at 24 px."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("cards", rot=(-10.0, 0.0, FACING - 18.0))
+    card = [(-0.95, -0.6), (0.95, -0.6), (0.95, 0.6), (-0.95, 0.6)]
+    flat("card.1", card, body, loc=(0.3, 0.12, 0.28), rot=(0.0, 7.0, 0.0), parent=g)
+    front = flat("card.0", card, body, parent=g)
+    y = -0.01
+    wire("word", [[(-0.7, y, -0.35), (-0.42, y, 0.35), (-0.14, y, -0.35)], [(-0.59, y, -0.08), (-0.25, y, -0.08)],
+                  [(0.1, y, 0.12), (0.72, y, 0.12)], [(0.1, y, -0.18), (0.5, y, -0.18)],
+                  circle(-0.78, 0.44, 0.08, y=y, segments=10)], body, parent=front)
+    tube_arc("ring", 0.24, 0.035, -60.0, 240.0, wood, minor=8, loc=(-0.78, 0.06, 0.44),
+             rot=(0.0, 0.0, 90.0), parent=g)
+
+
+def icon_041(pal, rand):
+    """041 Formula Reference Sheet Builder: a sheet with a square root over
+    an x and a right triangle below it."""
+    body = art.token_material(pal, "--card")
+    g = group("formulas", rot=(-22.0, 0.0, FACING - 15.0))
+    flat("sheet", dog_eared(1.7, 2.2, 0.4), body, parent=g)
+    y = -0.01
+    lines = [[(-0.62, y, 0.5), (-0.5, y, 0.56), (-0.34, y, 0.2), (-0.16, y, 0.8), (0.55, y, 0.8)]]    # the radical
+    lines += [[(0.0, y, 0.62), (0.34, y, 0.3)], [(0.0, y, 0.3), (0.34, y, 0.62)]]                      # x
+    lines.append([(-0.55, y, -0.8), (0.55, y, -0.8), (-0.55, y, -0.1), (-0.55, y, -0.8)])              # triangle
+    lines.append([(-0.55, y, -0.62), (-0.37, y, -0.62), (-0.37, y, -0.8)])                            # its right angle
+    wire("math", lines, body, parent=g)
+
+
+def icon_042(pal, rand):
+    """042 Certificate & Award Maker: an award rosette, a pleated disc with
+    a round centre and two ribbon tails. 008 is the star; this is the prize."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("rosette", rot=(0.0, 0.0, FACING - 22.0))
+    pleats = [((1.0 if i % 2 == 0 else 0.86) * math.cos(math.pi * i / 14),
+               (1.0 if i % 2 == 0 else 0.86) * math.sin(math.pi * i / 14)) for i in range(28)]
+    prism("pleats", pleats, 0.12, wood, loc=(0.0, 0.0, 0.45), parent=g)
+    prism("centre", disk(0.55, 28), 0.1, body, loc=(0.0, -0.1, 0.45), parent=g)
+    for i, s in enumerate((-1.0, 1.0)):
+        flat("tail.%d" % i, [(-0.22, 0.0), (0.22, 0.0), (0.22, -1.25), (0.0, -1.05), (-0.22, -1.25)], wood,
+             loc=(s * 0.3, 0.1, 0.0), rot=(0.0, -s * 16.0, 0.0), parent=g)
+
+
+def icon_043(pal, rand):
+    """043 Field Trip Permission Slip: a school bus, side on, the trip
+    itself. A long body with a row of windows, a hood, two wheels."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("bus", rot=(0.0, 0.0, FACING - 30.0))
+    box("body", (2.5, 1.0, 1.15), body, loc=(-0.2, 0.0, 0.8), parent=g)
+    box("hood", (0.5, 0.9, 0.6), body, loc=(1.3, 0.0, 0.53), parent=g)
+    y = -0.505
+    lines = [rect(x, 0.9, x + 0.36, 1.2, y=y) for x in (-1.3, -0.84, -0.38, 0.08)]
+    lines.append(rect(0.62, 0.34, 0.9, 1.2, y=y))                   # the door
+    lines.append([(-1.45, y, 0.7), (0.5, y, 0.7)])                  # the stripe
+    wire("side", lines, body, parent=g)
+    for i, x in enumerate((-0.95, 0.85)):
+        cylinder("wheel.%d" % i, 0.28, 0.16, wood, loc=(x, -0.46, 0.25), rot=(90.0, 0.0, 0.0), segments=20, parent=g)
+
+
 def icon_044(pal, rand):
     """044 Sub Plan Builder: a tabbed folder, open a little, with a page of
     plans standing up out of it."""
@@ -774,13 +1043,108 @@ def icon_044(pal, rand):
          loc=(0.0, -0.02, 0.0), rot=(18.0, 0.0, 0.0), parent=g)
 
 
+def icon_045(pal, rand):
+    """045 Sub Binder / Day Bundle: a ring binder standing closed, divider
+    tabs sticking out of its open edge, a label on the cover. The tabs are
+    what separate it from 044's folder and 033's book."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    # Square to the camera's azimuth so the open edge and its tabs show; turned
+    # toward the cover, the tabs were hidden and it read as a tablet.
+    g = group("binder", rot=(0.0, 0.0, FACING - 45.0))
+    w, t, h = 1.6, 0.6, 2.1
+    for i, y in enumerate((-t / 2, t / 2)):
+        box("cover.%d" % i, (w, 0.07, h), wood, loc=(0.0, y, 0.0), parent=g)
+    box("spine", (0.07, t + 0.07, h), wood, loc=(-w / 2, 0.0, 0.0), parent=g)
+    box("pages", (w - 0.2, t - 0.12, h - 0.2), body, loc=(-0.06, 0.0, 0.0), parent=g)
+    for i, (z, y) in enumerate(((0.62, -0.14), (0.05, 0.0), (-0.52, 0.14))):
+        box("tab.%d" % i, (0.34, 0.03, 0.34), body, loc=(w / 2 + 0.08, y, z), parent=g)
+    wire("label", [rect(-0.45, 0.25, 0.35, 0.72, y=-t / 2 - 0.04)], body, parent=g)
+
+
+def icon_046(pal, rand):
+    """046 Blank Map Generator: a folded paper map in four panels, a route
+    wandering across it to a circled stop."""
+    body = art.token_material(pal, "--card")
+    g = group("map", rot=(-12.0, 0.0, FACING - 12.0))
+    xs, dy, h = (-1.2, -0.4, 0.4, 1.2), 0.34, 1.7
+    ys = [0.0 if i % 2 == 0 else -dy for i in range(4)]
+    bm = bmesh.new()
+    lo = [bm.verts.new((x, y, 0.0)) for x, y in zip(xs, ys)]
+    hi = [bm.verts.new((x, y, h)) for x, y in zip(xs, ys)]
+    for i in range(3):
+        bm.faces.new((lo[i], lo[i + 1], hi[i + 1], hi[i]))
+    bm.normal_update()
+    _mesh_object("map", bm, body, parent=g)
+
+    def on(x, z):
+        """A point on the folded surface, just in front of it."""
+        for i in range(3):
+            if xs[i] <= x <= xs[i + 1]:
+                f = (x - xs[i]) / (xs[i + 1] - xs[i])
+                return (x, ys[i] + (ys[i + 1] - ys[i]) * f - 0.02, z)
+        return (x, -0.02, z)
+    route = [on(-1.0 + 0.2 * i, 0.4 + 0.28 * math.sin(i * 1.1)) for i in range(10)]
+    stop = [on(0.95 + 0.15 * math.cos(2 * math.pi * i / 12), 1.2 + 0.15 * math.sin(2 * math.pi * i / 12))
+            for i in range(12)]
+    wire("route", [route + [on(0.85, 1.08)], stop + [stop[0]]], body, parent=g)
+
+
+def icon_047(pal, rand):
+    """047 Art Critique Worksheet Generator: a painter's palette with its
+    thumb hole and dabs of paint, a brush laid across it."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("palette", rot=(-35.0, 0.0, FACING - 15.0))
+    # An oval with a bite out of its lower right, where the brushes rest.
+    pts = []
+    for i in range(32):
+        a = 2 * math.pi * i / 32
+        k = 0.72 if 290.0 <= math.degrees(a) <= 335.0 else 1.0
+        pts.append((1.25 * k * math.cos(a), 0.95 * k * math.sin(a)))
+    prism("board", pts, 0.08, body, parent=g)
+    y = -0.045
+    dabs = [circle(cx, cz, 0.15, y=y, segments=10) for cx, cz in ((-0.7, 0.3), (-0.25, 0.6), (0.3, 0.62), (0.75, 0.3))]
+    wire("paint", dabs + [circle(-0.55, -0.35, 0.18, y=y, segments=12)], body, parent=g)
+    b = group("brush", rot=(0.0, -30.0, 0.0), loc=(0.35, -0.2, -0.35))
+    b.parent = g
+    cylinder("handle", 0.07, 1.6, wood, loc=(0.0, 0.0, -0.5), rot=(0.0, 90.0, 0.0), r2=0.04, segments=10, parent=b)
+    cylinder("tip", 0.09, 0.4, wood, loc=(0.0, 0.0, 0.0), rot=(0.0, 90.0, 0.0), r2=0.0, segments=10, parent=b)
+
+
+def icon_048(pal, rand):
+    """048 Art Portfolio Label & QR Tag: a hanging tag on a loop of string,
+    a QR code's finder squares on it and a name line."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("tag", rot=(0.0, 0.0, FACING - 20.0))
+    # Hanging askew. Hung straight, the tag and its loop read as a shopping bag.
+    tag = prism("tag", [(-0.8, -1.0), (0.8, -1.0), (0.8, 0.7), (0.35, 1.15), (-0.35, 1.15), (-0.8, 0.7)], 0.06,
+                body, rot=(0.0, -22.0, 0.0), parent=g)
+    y = -0.035
+    lines = [circle(0.0, 0.85, 0.12, y=y, segments=12)]
+    for cx, cz in ((-0.38, 0.2), (0.38, 0.2), (-0.38, -0.44)):
+        lines.append(rect(cx - 0.22, cz - 0.22, cx + 0.22, cz + 0.22, y=y))
+    lines.append([(0.18, y, -0.3), (0.58, y, -0.3)])
+    lines.append([(0.18, y, -0.56), (0.48, y, -0.56)])
+    wire("print", lines, body, parent=tag)
+    # The string is a loop up out of the hole, as a tag hangs.
+    loop = [(0.2 * math.cos(math.radians(a)) + 0.12 * (1 + math.sin(math.radians(a))), y - 0.02,
+             1.2 + 0.35 * math.sin(math.radians(a))) for a in range(-90, 271, 30)]
+    wire("string", [loop], wood, parent=tag)
+
+
 ICONS = {
     "001": icon_001, "002": icon_002, "003": icon_003, "004": icon_004, "005": icon_005,
     "006": icon_006, "007": icon_007, "008": icon_008, "009": icon_009, "010": icon_010,
     "011": icon_011, "012": icon_012, "013": icon_013, "014": icon_014, "015": icon_015,
     "016": icon_016, "017": icon_017, "018": icon_018, "019": icon_019, "020": icon_020,
     "021": icon_021, "022": icon_022, "023": icon_023, "024": icon_024, "025": icon_025,
-    "026": icon_026, "027": icon_027, "032": icon_032, "044": icon_044,
+    "026": icon_026, "027": icon_027, "028": icon_028, "029": icon_029, "030": icon_030,
+    "031": icon_031, "032": icon_032, "033": icon_033, "034": icon_034, "035": icon_035,
+    "036": icon_036, "037": icon_037, "038": icon_038, "039": icon_039, "040": icon_040,
+    "041": icon_041, "042": icon_042, "043": icon_043, "044": icon_044, "045": icon_045,
+    "046": icon_046, "047": icon_047, "048": icon_048,
 }
 
 

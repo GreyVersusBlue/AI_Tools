@@ -564,6 +564,85 @@
       ]
     },
     {
+      "path": "assets/art/icons/t028.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "028",
+      "family": "icon",
+      "seed": 28,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "66af35c347b12c40aa3aafb4c0d5ba9649e01f9abb0b8cf73a6fec9fccb63428",
+      "bytes": 472,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t029.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "029",
+      "family": "icon",
+      "seed": 29,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "10c2e095d929b33e8f6eadf7d308608a32935f8a5aa41c4b131b8f0c739c3ff6",
+      "bytes": 409,
+      "tokens": [
+        "--card"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t030.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "030",
+      "family": "icon",
+      "seed": 30,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "f3e843b967d721a60761d5723246e0c0cb49073d4eb3b1346ce049da7c00cfec",
+      "bytes": 562,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t031.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "031",
+      "family": "icon",
+      "seed": 31,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "1da456bbfda069f1ccd253f48065dbe0f4c32d8c6335fcfe31c5f69425df3f2a",
+      "bytes": 536,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
       "path": "assets/art/icons/t032.svg",
       "script": "Tools/blender-art/scene_icons.py",
       "subject": "032",
@@ -584,6 +663,225 @@
       ]
     },
     {
+      "path": "assets/art/icons/t033.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "033",
+      "family": "icon",
+      "seed": 33,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "2cc1919e5d59ae18fc5864243065997ca77bb4934ef698135ff112ff03eaa82d",
+      "bytes": 700,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t034.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "034",
+      "family": "icon",
+      "seed": 34,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "bafcfc9b7e4abb067b1c2c7a713367e26dbdbc4099cb0c2fecbd99d5033f9b94",
+      "bytes": 1035,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t035.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "035",
+      "family": "icon",
+      "seed": 35,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "277b6b73a527c64aef875ecae790137fef13ccf2406fe2077fde2cfdc03b6ce4",
+      "bytes": 565,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t036.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "036",
+      "family": "icon",
+      "seed": 36,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "2a42fa5b690aac7480f41e17ca98e6e08d3c8b5232ec475576bfdb53b8aefd73",
+      "bytes": 769,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t037.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "037",
+      "family": "icon",
+      "seed": 37,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "58ffed0ca53c58e522b5d3f637788b8056befbbd58e310b3657a2cb8f1b590d5",
+      "bytes": 789,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t038.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "038",
+      "family": "icon",
+      "seed": 38,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "c800d7b32f746957ae2d4f968a4e76548bcac531482ff95fd11acfdca7a069ec",
+      "bytes": 661,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t039.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "039",
+      "family": "icon",
+      "seed": 39,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "d7ffa351569d837d36e79c04c94c70d36e11f35500ff6e64841c075b05ae6b27",
+      "bytes": 1312,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t040.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "040",
+      "family": "icon",
+      "seed": 40,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "6aeb5c354e81fec16ed89b70f87e33f1734ba31b06b3f3dd7cffb621ec072e28",
+      "bytes": 742,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t041.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "041",
+      "family": "icon",
+      "seed": 41,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "ca25f0b04352b683ab35abb82fe123af15debf22c4ec3cd9a2c622f9a50bec11",
+      "bytes": 369,
+      "tokens": [
+        "--card"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t042.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "042",
+      "family": "icon",
+      "seed": 42,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "834eabb1364294da31ccf9256a22e166f8c459b4c610cd41fe28d020d7894131",
+      "bytes": 1111,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t043.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "043",
+      "family": "icon",
+      "seed": 43,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "4916f2b39113b7308c2499bdee7f736972c5c1611eb520e31fb2fa026e40dc73",
+      "bytes": 855,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
       "path": "assets/art/icons/t044.svg",
       "script": "Tools/blender-art/scene_icons.py",
       "subject": "044",
@@ -598,6 +896,85 @@
       "blender": "5.2.2",
       "sha256": "1f2d5a72f7bac7356339d9ad21a03bd66e0d349588a037d3665c4e235859dd8d",
       "bytes": 383,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t045.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "045",
+      "family": "icon",
+      "seed": 45,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "362bab6fca91412eee3f691069b91c3b364edf1bcdd50bb29bf0c5efb92043ee",
+      "bytes": 949,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t046.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "046",
+      "family": "icon",
+      "seed": 46,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "4e53de9e8d0eda184c97061253756f52979dd17f16205b2409cbc9de7810a7e7",
+      "bytes": 473,
+      "tokens": [
+        "--card"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t047.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "047",
+      "family": "icon",
+      "seed": 47,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "7f223173d319404ab16460d3552b657ea8fa372a2f9f5ff168a3a234209d5c3b",
+      "bytes": 1323,
+      "tokens": [
+        "--card",
+        "--card-2"
+      ]
+    },
+    {
+      "path": "assets/art/icons/t048.svg",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "048",
+      "family": "icon",
+      "seed": 48,
+      "width": 48,
+      "height": 48,
+      "cap": 1434,
+      "theme": "both",
+      "use": "screen",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "cc3e306cc2a82c5e480e143163f3474c556b2f902f9bcde16b62b30dadc79767",
+      "bytes": 695,
       "tokens": [
         "--card",
         "--card-2"
@@ -635,8 +1012,27 @@
         "assets/art/icons/t025.svg",
         "assets/art/icons/t026.svg",
         "assets/art/icons/t027.svg",
+        "assets/art/icons/t028.svg",
+        "assets/art/icons/t029.svg",
+        "assets/art/icons/t030.svg",
+        "assets/art/icons/t031.svg",
         "assets/art/icons/t032.svg",
-        "assets/art/icons/t044.svg"
+        "assets/art/icons/t033.svg",
+        "assets/art/icons/t034.svg",
+        "assets/art/icons/t035.svg",
+        "assets/art/icons/t036.svg",
+        "assets/art/icons/t037.svg",
+        "assets/art/icons/t038.svg",
+        "assets/art/icons/t039.svg",
+        "assets/art/icons/t040.svg",
+        "assets/art/icons/t041.svg",
+        "assets/art/icons/t042.svg",
+        "assets/art/icons/t043.svg",
+        "assets/art/icons/t044.svg",
+        "assets/art/icons/t045.svg",
+        "assets/art/icons/t046.svg",
+        "assets/art/icons/t047.svg",
+        "assets/art/icons/t048.svg"
       ],
       "width": 48,
       "height": 48,
@@ -644,8 +1040,8 @@
       "theme": "both",
       "use": "screen",
       "decorative": true,
-      "sha256": "fa2d55e48161f608a308f9e2c8a7f7b88ab871f0147c3bcf2420680cd97232dd",
-      "bytes": 18601
+      "sha256": "4d93eb81296e8bd907ee9d9d6fd7223592dae411342739e93a1c7ea49d8aedc2",
+      "bytes": 32548
     },
     {
       "path": "assets/art/shortcuts/t007-96.png",
