@@ -9,6 +9,101 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P2, increment 4: icons for 049–067 (2026-09-28, #288, `CACHE_VERSION` v196)
+
+This is the fourth increment of rank 1, a 2+ row, so the row stays and is rewritten. It was
+built on Devon's machine with Blender 5.2.2 LTS, headless, from the Steam path. One increment
+is left: 068–086 plus 087, twenty icons.
+
+What shipped:
+- **Nineteen icons** in `scene_icons.py`, in tool-number order:
+  - 049 Book tasting menu: a serving cloche lifted off a plate, a book under it.
+  - 050 Civics simulation: a ballot box, a marked ballot going into its slot.
+  - 051 Classroom label maker: a sticker label peeling at one corner, printed with a speaker
+    and a word.
+  - 052 Cognates and false friends: a Venn diagram with "=" in the overlap.
+  - 053 Cultural trivia cards: a question mark and a flag waving on its pole.
+  - 054 Current events discussion: a newspaper, masthead, photo and columns, bent at its fold.
+  - 055 Daily editing warm-up: a strip reading "ABC" with a big check over its corner.
+  - 056 DBQ / source packet: a quill standing in an inkwell.
+  - 057 Dichotomous key: a beetle.
+  - 058 Duty roster: a coach's whistle on a ring.
+  - 059 Experiment design planner: a light bulb.
+  - 060 Fitness and skill tracker: a dumbbell, two plates a side.
+  - 061 Fraction, decimal, percent drill: a percent sign on a round badge.
+  - 062 Geography bee / map skills: a compass lying nearly flat, its needle on the N.
+  - 063 Grammar mad libs: two jigsaw pieces, the second lifting into place.
+  - 064 Historical figure trading cards: a framed portrait, head and shoulders.
+  - 065 Lab report template: a microscope.
+  - 066 Math find the mistake: a warning sign, a triangle with an exclamation mark.
+  - 067 Music sight-reading: two eighth notes joined by a beam.
+
+  They run 480–1,111 B each, against the 1,434 B cap. 063 comes closest.
+- **One new primitive, `dome()`**: the top half of a UV sphere, open underneath, so its rim is a
+  boundary and draws whole. 049's cloche is the first user.
+- **The sprite** holds 67 symbols in 46,470 B (cap 120 KB), on course for about 60 KB at 87.
+  **67 landing rows** carry an icon. `renders.json` got the 19 specs first, as the ledger rule
+  says, and the sprite's `sources` went from 48 to 67.
+
+**Judgement calls.** 057's beetle, 063's jigsaw and 066's warning sign tie to their tools less
+tightly than the rest: a beetle is a *specimen* a key sorts, not the key; a jigsaw is "the word
+that fits the blank"; a warning sign is "something here is wrong". Tighter ideas were
+considered and dropped because they repeated motifs already in the set (a branching key is
+020's bracket; a sentence with a blank is 055's strip). Each is one function to swap if a
+better idea comes along.
+
+**Drafts rejected by eye** (each is recorded in its function's docstring so nobody retries it):
+- **053:** a square flag flown level with the question mark read as the letters **"?F"**. The
+  flag now waves, from a taller pole with a ball on top.
+- **054:** the lower half folded out flat toward the viewer read as an open **laptop**. It is
+  bent only a little at its fold now.
+- **055 failed twice**, both times as a **blank card** at 32 px: a long strip with three word
+  lines and a proofreader's caret, then a shorter one with a spell checker's wavy underline,
+  which vanished. Big letters and a big check read.
+- **061:** built solid, as two tori and a bar, each torus drew two circles, so the rings read as
+  **"@" signs** and the bar's capped end as a **hockey stick**. Single strokes on a disc read as
+  a percent sign.
+- **062:** stood up with a bail ring, it read as a **stopwatch**, which is 004's job. It lies
+  nearly flat now.
+- **Giggle check:** all 19 were looked at in both themes at 24, 32 and 48 px, and at a pixelated
+  4× of the 32 px render. Nothing reads as anything rude. 049 could pass for a desk bell at
+  24 px; at 32 px the book under it shows.
+
+**Merged before green.** Devon asked for #288 to be squash-merged (11cf4de) before its PR CI
+had finished. That breaks this repo's merge-on-green rule, and he chose it knowingly. The PR run
+(36375115434) started at 03:47 UTC and was still running at the 03:59 merge. It finished green
+at 04:25. The push-to-`main` run on 11cf4de (36375838993, every suite, because `index.html` is
+site-wide) went **green in 37m47s**, so nothing broken reached `main`. That was luck, not a
+check: the rule stands. The merge's push also cancelled the still-running `main` run for the
+claim commit 4b84a58, which only touched `BACKLOG.md`.
+
+**What did not work in the session.**
+- **`scene_icons.py` is CRLF in the working tree too** (`core.autocrlf=true`), and an edit that
+  assumed LF missed. Assume every tracked text file here is CRLF on this machine, except what
+  `.gitattributes` pins to LF (the art SVGs and `renders.json`).
+- **A heredoc carrying Python with apostrophes broke Git Bash's quoting.** Write scratch files
+  with the editor, not with a heredoc.
+- **The merge before green**, above. It is recorded here so it is not read later as the normal
+  way this repo merges.
+
+**Render twice, compare.** `t055.svg` and `t063.svg` were rendered again with `--out`, and the
+sprite was rebuilt. All were byte-identical to the committed files.
+
+**Not verified.** Another machine or Blender patch, a projector, 125–150% OS scaling, and a
+second reviewer: every icon in the set, all 67, has been judged only by the session that drew
+it. No local full `npm test` was run. #288's own PR CI did not finish before the merge (both
+CI runs were green afterwards; see above).
+`offline:verify` still does not run in CI.
+
+Local, before the merge: every `check:*` guard, `lint`, `check:precache -- --base origin/main`
+(v195 → v196), `check:art` (broken once on purpose: a corrupted `t061.svg` gave HASH plus
+DERIVED and exit 1; clean after restoring it), `test:blender-art` (60), `test:a11y -- --only
+index` (no new allowlist line), and `offline:build` plus `offline:verify` ("all 67 tool icons
+draw from file://", two runs). The landing page at 1280 and 375 px, in both themes, showed 67
+icons, all 32×32, no duplicates, no console errors.
+
+---
+
 ## Path 21 P2, increment 3: icons for 028–031, 033–043 and 045–048 (2026-09-28, #286, `CACHE_VERSION` v195)
 
 This is the third increment of rank 1, a 2+ row, so the row stays and is rewritten. It was
