@@ -39,6 +39,7 @@
     "test:number-talks": "node Tools/number-talks-board/test/smoke-session-record.mjs && node Tools/number-talks-board/test/smoke-strategy-library.mjs && node Tools/number-talks-board/test/smoke-stage.mjs",
     "test:escape-room": "node Tools/escape-room-builder/test/smoke-test-run.mjs",
     "test:escape-room-images": "node Tools/escape-room-builder/test/smoke-images.mjs",
+    "test:dbq-images": "node Tools/dbq-source-packet-builder/test/smoke-images.mjs",
     "test:lab-safety": "node Tools/lab-safety-contract-tracker/test/smoke-contact-sheet.mjs",
     "test:ssr": "node Tools/ssr-log-tracker/test/smoke-genres.mjs",
     "test:mad-libs": "node Tools/grammar-mad-libs/test/smoke-storage.mjs",

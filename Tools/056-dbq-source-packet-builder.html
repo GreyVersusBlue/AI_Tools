@@ -30,6 +30,8 @@
 <script src="../_shared/share.js"></script>
 <script src="../_shared/tool-registry.js"></script>
 <script src="../_shared/handoffs.js"></script>
+<script src="../_shared/media-db.js"></script>
+<script src="dbq-source-packet-builder/dbq-image.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -327,7 +329,13 @@
       localStorage.setItem(DATA_PREFIX + name, JSON.stringify(data));
       localStorage.setItem(CURRENT_KEY, name);
       return true;
-    } catch (e) { return false; } // storage full/blocked, e.g. large images
+    } catch (e) { return false; } // storage full/blocked; save() says so
+  }
+  /* A packet that is not the open one, written back after its images moved
+     into IndexedDB. Not saveNamed(): that also makes it the current packet. */
+  function writeNamed(name, data) {
+    try { localStorage.setItem(DATA_PREFIX + name, JSON.stringify(data)); return true; }
+    catch (e) { return false; }
   }
   function loadNamed(name) {
     try { return JSON.parse(localStorage.getItem(DATA_PREFIX + name) || 'null'); } catch (e) { return null; }
@@ -362,8 +370,15 @@
     q = (q && typeof q === 'object') ? q : {};
     return { id: (typeof q.id === 'string' && q.id) ? q.id : uid(), text: typeof q.text === 'string' ? q.text : '' };
   }
-  function repairSource(s) {
+  /* `trusted` is true for what this browser saved itself (a packet, the
+     library), where an image may be an `idb:` reference into its own media
+     store. A packet arriving from outside — a link, a file — is not trusted:
+     a reference in it names an image in the SENDER's browser, or in this one
+     by accident, so only a data: URL image is kept from it. */
+  function repairSource(s, trusted) {
     s = (s && typeof s === 'object') ? s : {};
+    var image = null;
+    if (DbqImage.isInline(s.image) || (trusted && DbqImage.isRef(s.image))) image = s.image;
     return {
       id: (typeof s.id === 'string' && s.id) ? s.id : uid(),
       /* Which library entry this source came from, or null. Absent on every
@@ -374,7 +389,7 @@
       title: typeof s.title === 'string' ? s.title : '',
       type: s.type === 'image' ? 'image' : 'text',
       text: typeof s.text === 'string' ? s.text : '',
-      image: (typeof s.image === 'string' && /^data:image\//.test(s.image)) ? s.image : null,
+      image: image,
       imgW: (isFinite(Number(s.imgW)) && Number(s.imgW) > 0) ? Math.round(Number(s.imgW)) : 0,
       imgH: (isFinite(Number(s.imgH)) && Number(s.imgH) > 0) ? Math.round(Number(s.imgH)) : 0,
       crop: normCrop(s.crop),
@@ -437,7 +452,7 @@
     return { style: r.style === 'checklist' ? 'checklist' : 'grid', levels: levels, rows: rows };
   }
 
-  function repairPacket(data, fallbackName) {
+  function repairPacket(data, fallbackName, trusted) {
     data = (data && typeof data === 'object') ? data : {};
     var name = (typeof data.name === 'string' && data.name.trim()) ? data.name : (fallbackName || 'New Packet');
     var essay = typeof data.essayPrompt === 'string' ? data.essayPrompt : '';
@@ -456,7 +471,7 @@
       rubricEnabled: data.rubricEnabled === true,
       rubric: repairRubric(data.rubric),
       sharedQuestions: Array.isArray(data.sharedQuestions) && data.sharedQuestions.length ? data.sharedQuestions.map(repairQuestion) : defaultSharedQuestions(),
-      sources: Array.isArray(data.sources) && data.sources.length ? data.sources.map(repairSource) : [blankSource()]
+      sources: Array.isArray(data.sources) && data.sources.length ? data.sources.map(function (s) { return repairSource(s, trusted); }) : [blankSource()]
     };
   }
 
@@ -517,7 +532,7 @@
     try { legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || 'null'); } catch (e) { /* ignore */ }
     if (legacy && typeof legacy === 'object') {
       var name = (legacy.title && String(legacy.title).trim()) || 'My Packet';
-      saveNamed(name, repairPacket(legacy, name));
+      saveNamed(name, repairPacket(legacy, name, true));
     }
   }
   function load() {
@@ -530,7 +545,7 @@
       if (loaded) currentName = names[0];
     }
     if (loaded) {
-      state = repairPacket(loaded, currentName);
+      state = repairPacket(loaded, currentName, true);
     } else {
       // Brand-new install: nothing saved anywhere yet. Open on the worked
       // example instead of a blank shell, so a first look (or a live demo)
@@ -539,8 +554,21 @@
     }
     save();
   }
+  /* A save that fails is said, not swallowed. It used to be: saveNamed()
+     returned false on a full localStorage and nothing read it, so a packet
+     with a large image stopped saving without a word. Images are in
+     IndexedDB now, which makes this rare, but a browser with no IndexedDB
+     still keeps them inline — and a full disk is a full disk. */
+  var saveFailed = false;
   function save() {
-    saveNamed(state.name, state);
+    if (saveNamed(state.name, state)) {
+      if (saveFailed) { saveFailed = false; setShareNote(''); }
+      return;
+    }
+    saveFailed = true;
+    setShareNote('Could not save “' + state.name + '”: this browser’s storage for this site is full. ' +
+      'Your latest changes are on screen but will be lost when you close the tab. Export JSON keeps a copy; ' +
+      'Backup & Restore shows what is using the space.', true);
   }
 
   /* ---------- source library ----------
@@ -550,10 +578,12 @@
      without guessing by title — two different letters from 1776 can share a
      title, and a teacher who renames a source still means the same source.
 
-     Images ride along as data URLs, exactly as they do inside a packet.
-     That is the same quota exposure the tool already has, so the failure is
-     handled the same way it is for packets — reported to the teacher rather
-     than swallowed — and the note says which source was too big. */
+     An image is an `idb:` reference here, as it is inside a packet, so saving
+     a source to the library no longer copies its bytes a second time: the
+     library entry and every packet built from it share one stored image
+     (dbq-source-packet-builder/dbq-image.js). Where IndexedDB is missing an
+     image is still inline, and a write that fails is reported to the
+     teacher rather than swallowed, with the source named. */
   function loadBank() {
     try {
       var a = JSON.parse(localStorage.getItem(BANK_KEY) || '[]');
@@ -562,7 +592,7 @@
   }
   function repairBankEntry(e) {
     if (!e || typeof e !== 'object') return null;
-    var src = repairSource(e.source);
+    var src = repairSource(e.source, true);
     return {
       bankId: (typeof e.bankId === 'string' && e.bankId) ? e.bankId : uid(),
       savedAt: (typeof e.savedAt === 'string') ? e.savedAt : '',
@@ -584,7 +614,7 @@
   /** A copy of a source with fresh ids, for moving between the library and a
       packet. `bankId` is carried deliberately — that link is the point. */
   function copySource(src, bankId) {
-    var copy = repairSource(JSON.parse(JSON.stringify(src)));
+    var copy = repairSource(JSON.parse(JSON.stringify(src)), true);
     copy.id = uid();
     copy.bankId = bankId || null;
     copy.questions = copy.questions.map(function (q) { return { id: uid(), text: q.text }; });
@@ -1009,13 +1039,14 @@
     // except for the "in this packet" flags, which is why it re-renders here
     // rather than once at boot.
     if (!els.bankPanel.hidden) renderBank();
-    setShareNote('');
+    // A failed save keeps saying so until one succeeds (see save()).
+    if (!saveFailed) setShareNote('');
   }
 
   function switchTo(name) {
     var loaded = loadNamed(name);
     if (!loaded) return;
-    state = repairPacket(loaded, name);
+    state = repairPacket(loaded, name, true);
     try { localStorage.setItem(CURRENT_KEY, name); } catch (e) { /* ignore */ }
     renderAll();
   }
@@ -1075,14 +1106,27 @@
      hand-drew its own QR at 6 px per module up to the encoder's own limit,
      and only said "too long" when the encoder threw.
 
-     The state handed over is the WHOLE packet, uploaded images included.
-     An image is base64 in src.image and can run to a megabyte, far past what
-     a URL (let alone a QR code) can carry — share.js strips every data:
-     image out of the link and QR payload by policy and says so, and the
-     DOWNLOADED file keeps them. That is the change here: the tool used to
-     build a stripped payload by hand and had no route at all that carried
-     the images except the separate Export JSON button. */
+     The state handed over is the WHOLE packet, uploaded images included,
+     each as a data: URL — share.js strips every data: image out of the link
+     and QR payload by policy and says so, and the DOWNLOADED file keeps
+     them, so it opens complete on any device.
+
+     Since Path 4 P4 the packet holds `idb:` references, and reading the
+     bytes back out of IndexedDB is asynchronous while share.js's getState()
+     is not. So the button does not use Share.mount(): its click builds the
+     portable copy first (packetForExport) and then opens the sheet with
+     Share.open(), handing it that finished copy. share.js is untouched, and
+     a reference never reaches a file, a link or a QR code. */
   var SHARE_PARAM = 'packet';
+
+  /** A copy of `packet` with every image as a data: URL (or null where the
+      stored image is gone), for anything that leaves this browser. */
+  function packetForExport(packet) {
+    var copy = JSON.parse(JSON.stringify(packet));
+    return Promise.all(copy.sources.map(function (s) {
+      return DbqImage.inline(s.image).then(function (v) { s.image = v; });
+    })).then(function () { return copy; });
+  }
 
   function setShareNote(text, isError) {
     if (!els.shareNote) return;
@@ -1097,21 +1141,12 @@
   function imagesKeptOnDevice() {
     var labels = [];
     state.sources.forEach(function (s, i) {
-      if (s.type === 'image' && s.image) labels.push('Source ' + LETTERS[i % 26] + (s.title.trim() ? ' (' + s.title.trim() + ')' : ''));
+      if (s.type === 'image' && DbqImage.url(s.image)) labels.push('Source ' + LETTERS[i % 26] + (s.title.trim() ? ' (' + s.title.trim() + ')' : ''));
     });
     return labels;
   }
 
-  Share.mount(els.shareBtn, {
-    getState: function () {
-      save();
-      // v rides along as it always has: nothing reads it today, but a link
-      // already in a teacher's email carries it and dropping it silently
-      // would make the two generations of payload indistinguishable.
-      var payload = { v: 1 };
-      Object.keys(state).forEach(function (k) { payload[k] = state[k]; });
-      return payload;
-    },
+  var SHARE_OPTS = {
     param: SHARE_PARAM,
     tool: 'dbq-source-packet-builder',
     title: 'Share this packet',
@@ -1128,6 +1163,32 @@
     },
     successMessage: 'Link copied. Opening it anywhere loads this packet: title, context, sources, citations, and questions, and saves it there as a new packet.',
     onMessage: function (text) { setShareNote(text); }
+  };
+  function openShareSheet(copy) {
+    // v rides along as it always has: nothing reads it today, but a link
+    // already in a teacher's email carries it and dropping it silently
+    // would make the two generations of payload indistinguishable.
+    var payload = { v: 1 };
+    Object.keys(copy).forEach(function (k) { payload[k] = copy[k]; });
+    Share.open(Object.assign({}, SHARE_OPTS, {
+      opener: els.shareBtn,
+      getState: function () { return payload; }
+    }));
+  }
+  var sharing = false;
+  els.shareBtn.addEventListener('click', function () {
+    if (sharing) return;
+    save();
+    // Nothing stored to read back (a text-only packet, or no IndexedDB): the
+    // sheet opens at once, as it always has.
+    if (!state.sources.some(function (s) { return DbqImage.isRef(s.image); })) {
+      openShareSheet(JSON.parse(JSON.stringify(state)));
+      return;
+    }
+    sharing = true;
+    packetForExport(state).then(openShareSheet)['catch'](function (e) {
+      setShareNote('Could not read this packet’s images to share it (' + ((e && e.message) || 'unknown error') + ').', true);
+    }).then(function () { sharing = false; });
   });
 
   /* Round 2 added level / organizer / rubric fields to the payload. They are
@@ -1150,10 +1211,10 @@
       saved is touched, repair, save, open. Returns the name. */
   function adoptPacket(decoded, fallbackName) {
     var name = uniqueName((decoded.name && String(decoded.name).trim()) || fallbackName);
-    var packet = repairPacket(decoded, name);
+    var packet = repairPacket(decoded, name);   // untrusted: data: images only
     packet.name = name;
-    saveNamed(name, packet);
     state = packet;
+    save();
     renderAll();
     return name;
   }
@@ -1175,15 +1236,21 @@
   /* ---------- JSON export / import (carries images; the honest "send everything" path) ---------- */
   function exportPacket() {
     save();
-    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = (state.name || 'dbq-packet').replace(/[^a-z0-9\-_ ]/gi, '').trim() + '.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // The images come out of IndexedDB as data: URLs, so the file is the
+    // whole packet on any device (packetForExport).
+    packetForExport(state).then(function (copy) {
+      var blob = new Blob([JSON.stringify(copy, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = (copy.name || 'dbq-packet').replace(/[^a-z0-9\-_ ]/gi, '').trim() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    })['catch'](function (e) {
+      setShareNote('Could not read this packet’s images to export it (' + ((e && e.message) || 'unknown error') + ').', true);
+    });
   }
 
   /* Through _shared/share.js's receiver (Path 6 P2), which unwraps the
@@ -1197,7 +1264,12 @@
       onError: function (message) { setShareNote(message, true); },
       onState: function (parsed) {
         var name = adoptPacket(parsed, 'Imported packet');
-        setShareNote('Opened that file and saved it here as “' + name + '”. Nothing you already had was replaced.');
+        var said = 'Opened that file and saved it here as “' + name + '”. Nothing you already had was replaced.';
+        if (!saveFailed) setShareNote(said);
+        // Its images arrive inline, and a big one can fill localStorage before
+        // it is moved: move them into IndexedDB now, and say it again once the
+        // packet has saved.
+        settleImages(false).then(function () { if (!saveFailed) setShareNote(said); });
       }
     });
   }
@@ -1221,8 +1293,9 @@
      come from the tool registry, so nothing here names the other tool. The
      entry has no row in the share sheet — it sends ONE source, picked by the
      button on that source's row. Text sources only: an uploaded image is
-     base64 in this packet and would blow past what a URL can carry, which is
-     the same rule both tools' share links follow. */
+     megabytes (kept in IndexedDB since Path 4 P4) and would blow past what a
+     URL can carry, which is the same rule both tools' share links follow. So
+     no image, and no `idb:` reference, ever rides this handoff. */
   var PSA_HANDOFF = Handoffs.from('dbq-source-packet-builder').filter(function (h) {
     return h.to === 'primary-source-analysis-generator';
   })[0];
@@ -1264,18 +1337,23 @@
       var label = 'Source ' + LETTERS[i % 26];
       var imgPreview = '';
       var imgMissingHint = '';
-      if (src.type === 'image' && !src.image) {
+      var shown = escapeAttr(DbqImage.url(src.image));
+      if (src.type === 'image' && DbqImage.isMissing(src.image)) {
+        // Saved here once, but the stored image is gone (site data cleared,
+        // or a backup restored without its images). Said, never a blank gap.
+        imgMissingHint = '<p class="hint img-missing" role="note">This source’s image is missing from this browser’s storage. Upload it again to complete this source.</p>';
+      } else if (src.type === 'image' && !src.image) {
         // Shared links and QR codes never carry image pixel data (see the
         // share-note copy), and a JSON import can also arrive here if the
         // sender's own image failed to read. Say so instead of a silent gap.
         imgMissingHint = '<p class="hint">No image on this device yet. Shared links and QR codes do not carry image data. Upload one to complete this source here.</p>';
       }
-      if (src.type === 'image' && src.image) {
+      if (src.type === 'image' && shown) {
         imgPreview =
           '<label>Crop</label>' +
           '<p class="crop-hint">Drag on the photo to select the region that prints.</p>' +
           '<div class="crop-tool" data-crop-src="' + src.id + '">' +
-          '<img src="' + src.image + '" alt="" draggable="false">' +
+          '<img src="' + shown + '" alt="" draggable="false">' +
           '<div class="crop-box" style="' + cropBoxStyle(src.crop) + '"></div>' +
           '</div>' +
           '<div class="btnrow" style="margin-bottom:.6rem;">' +
@@ -1283,11 +1361,11 @@
           '</div>' +
           '<label>Print width (% of column)</label>' +
           '<div class="scale-row">' +
-          '<input type="range" min="20" max="100" step="5" value="' + (src.widthPct || 100) + '" data-field="widthPct" data-src="' + src.id + '">' +
+          '<input type="range" min="20" max="100" step="5" value="' + (src.widthPct || 100) + '" data-field="widthPct" data-src="' + src.id + '" aria-label="Print width of ' + escapeAttr(label) + ', percent of column">' +
           '<span class="scale-val">' + (src.widthPct || 100) + '%</span>' +
           '</div>' +
           '<label>Preview at print size</label>' +
-          '<div class="crop-frame" style="' + cropFrameStyle(src) + '"><img src="' + src.image + '" alt="" style="' + cropImgStyle(src.crop) + '"></div>';
+          '<div class="crop-frame" style="' + cropFrameStyle(src) + '"><img src="' + shown + '" alt="" style="' + cropImgStyle(src.crop) + '"></div>';
       }
       var questions = src.questions.map(function (q) {
         return '<div class="qrow" data-src="' + src.id + '" data-q="' + q.id + '"><input type="text" data-field="qtext" value="' + escapeAttr(q.text) + '" placeholder="Source-specific question">' +
@@ -1304,7 +1382,7 @@
         '<label>Type</label><select data-field="type" data-src="' + src.id + '" aria-label="Type of ' + escapeAttr(label) + '"><option value="text"' + (src.type === 'text' ? ' selected' : '') + '>Text</option><option value="image"' + (src.type === 'image' ? ' selected' : '') + '>Image</option></select>' +
         (src.type === 'text'
           ? '<label>Source text</label><textarea data-field="text" data-src="' + src.id + '" aria-label="Text of ' + escapeAttr(label) + '">' + escapeHtml(src.text) + '</textarea>'
-          : imgMissingHint + imgPreview + '<label>Upload image</label><input type="file" accept="image/*" data-field="image" data-src="' + src.id + '">') +
+          : imgMissingHint + imgPreview + '<label>Upload image</label><input type="file" accept="image/*" data-field="image" data-src="' + src.id + '" aria-label="Upload image for ' + escapeAttr(label) + '">') +
         '<label>Citation</label><input type="text" data-field="citation" data-src="' + src.id + '" value="' + escapeAttr(src.citation) + '" placeholder="e.g. Letter from John Adams, 1776">' +
         '<label>Source-specific questions</label>' + questions +
         '<button type="button" class="secondary small" data-add-q="' + src.id + '">+ Add question</button>' +
@@ -1362,23 +1440,27 @@
     var src = findSource(srcId);
     var file = ev.target.files && ev.target.files[0];
     if (!src || !file) return;
-    var reader = new FileReader();
-    reader.onload = function () {
-      src.image = reader.result;
+    // Into IndexedDB as uploaded (dbq-source-packet-builder/dbq-image.js);
+    // the source keeps an `idb:` reference, or the data URL where there is no
+    // IndexedDB to take it.
+    DbqImage.fromFile(file).then(function (value) {
+      src.image = value;
       src.imgW = 0; src.imgH = 0;
       src.crop = { x: 0, y: 0, w: 1, h: 1 };
       if (typeof src.widthPct !== 'number') src.widthPct = 100;
       save(); renderSources();
       var probe = new Image();
       probe.onload = function () {
-        // A fresh upload always matches src.image at this point (no
-        // re-upload race in this single-file <input>), so it's safe to store.
+        // Only if the source still shows this upload: a second pick that
+        // finished first must not get this one's size.
+        if (src.image !== value) return;
         src.imgW = probe.naturalWidth; src.imgH = probe.naturalHeight;
         save(); renderSources();
       };
-      probe.src = src.image;
-    };
-    reader.readAsDataURL(file);
+      probe.src = DbqImage.url(value);
+    }, function (e) {
+      setShareNote((e && e.message) || 'Could not read that image file.', true);
+    });
   });
 
   /* crop-box drag-to-select: pointerdown starts a rubber-band rectangle
@@ -1598,8 +1680,9 @@
     var sourcesHtml = state.sources.map(function (src, i) {
       var label = 'Source ' + LETTERS[i % 26];
       var body;
-      if (src.type === 'image' && src.image) {
-        body = '<div class="crop-frame" style="' + cropFrameStyle(src) + '"><img src="' + src.image + '" alt="" style="' + cropImgStyle(src.crop) + '"></div>';
+      var shown = escapeAttr(DbqImage.url(src.image));
+      if (src.type === 'image' && shown) {
+        body = '<div class="crop-frame" style="' + cropFrameStyle(src) + '"><img src="' + shown + '" alt="" style="' + cropImgStyle(src.crop) + '"></div>';
       } else if (src.type === 'image') {
         // Arrived via a shared link/QR/JSON import that could not carry the
         // image itself (see the share-note copy) — say so on paper too,
@@ -1660,6 +1743,86 @@
     window.print();
   });
 
+  /* ---------- images: IndexedDB behind the packets and the library (Path 4 P4) ----------
+     Every saved packet's image sources, and every library entry's, hold
+     `idb:` references; the images are in the shared media store. On load:
+     give every image any packet or library entry points at an object URL,
+     move any data: URL image (a packet saved before this, or one that
+     arrived in a file) into the store, write the smaller packets back, then —
+     at boot only — delete stored images nothing points at. A reference whose
+     image is gone is marked on its source and said once, naming the packets
+     it is in. __dbqImagesSettled is for the suite. */
+
+  /** [{ where, source }] for every source this browser has saved: the open
+      packet, every other saved packet (read fresh), and the library. */
+  function everySource() {
+    var out = [];
+    state.sources.forEach(function (s) { out.push({ where: state.name, source: s }); });
+    listNames().forEach(function (name) {
+      if (name === state.name) return;
+      var p = loadNamed(name);
+      ((p && Array.isArray(p.sources)) ? p.sources : []).forEach(function (s) {
+        if (s && typeof s === 'object') out.push({ where: name, source: s });
+      });
+    });
+    loadBank().forEach(function (e) { out.push({ where: null, source: e.source }); });
+    return out;
+  }
+  function everyImage() {
+    return everySource().map(function (x) { return x.source.image; }).filter(Boolean);
+  }
+
+  /** Swap each moved data: URL for its reference in FRESH copies of every
+      packet and the library, and write back only what changed. */
+  function applyStoredImages(map) {
+    function swap(s) {
+      if (s && typeof s.image === 'string' && map[s.image]) { s.image = map[s.image]; return true; }
+      return false;
+    }
+    var openChanged = false;
+    state.sources.forEach(function (s) { if (swap(s)) openChanged = true; });
+    if (openChanged) save();
+    listNames().forEach(function (name) {
+      if (name === state.name) return;
+      var p = loadNamed(name);
+      var changed = false;
+      ((p && Array.isArray(p.sources)) ? p.sources : []).forEach(function (s) { if (swap(s)) changed = true; });
+      if (changed) writeNamed(name, p);
+    });
+    var bank = loadBank();
+    var bankChanged = false;
+    bank.forEach(function (e) { if (swap(e.source)) bankChanged = true; });
+    if (bankChanged) writeBank(bank);
+  }
+
+  function sayMissing() {
+    var places = [];
+    var count = 0, seen = {};
+    everySource().forEach(function (x) {
+      if (!DbqImage.isMissing(x.source.image)) return;
+      if (!seen[x.source.image]) { seen[x.source.image] = 1; count++; }
+      var place = x.where === null ? 'the source library' : '“' + x.where + '”';
+      if (places.indexOf(place) === -1) places.push(place);
+    });
+    if (!count) return;
+    setShareNote((count === 1 ? '1 image' : count + ' images') + ' saved in ' + places.join(', ') +
+      (count === 1 ? ' is' : ' are') + ' missing from this browser’s storage. Each source that lost its picture says so; ' +
+      'upload the image again on that source to fix it.', true);
+  }
+
+  function settleImages(isBoot) {
+    return DbqImage.hydrate(everyImage())
+      .then(function () { return DbqImage.store(everyImage()); })
+      .then(function (map) {
+        if (Object.keys(map).length) applyStoredImages(map);
+        renderSources();
+        if (!els.bankPanel.hidden) renderBank();
+        if (!isBoot) return null;
+        sayMissing();
+        return DbqImage.gc(everyImage().filter(DbqImage.isRef));
+      })['catch'](function () { /* reads never block the page; writes said so in save() */ });
+  }
+
   /* ---------- boot ---------- */
   migrateLegacyIfNeeded();
   if (!importSharedPacket()) {
@@ -1669,6 +1832,7 @@
     load();
     renderAll();
   }
+  settleImages(true).then(function () { window.__dbqImagesSettled = true; });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
