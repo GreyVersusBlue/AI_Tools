@@ -12,6 +12,7 @@
     "test:schedule-visualizer": "node Tools/schedule-visualizer/test/smoke-recovery.mjs && node Tools/schedule-visualizer/test/smoke-evacuation.mjs",
     "test:pe-stations": "node Tools/pe-tournament-stations/test/smoke-pe-stations.mjs && node Tools/pe-tournament-stations/test/smoke-pe-remote.mjs",
     "test:certificate": "node Tools/certificate-award-maker/test/smoke-stock-inset.mjs",
+    "test:certificate-images": "node Tools/certificate-award-maker/test/smoke-images.mjs",
     "test:hall-pass": "node Tools/hall-pass-log/test/smoke-export.mjs && node Tools/hall-pass-log/test/smoke-hallway-sync.mjs",
     "test:roster-hub": "node Tools/class-roster-hub/test/smoke-export.mjs && node Tools/class-roster-hub/test/smoke-share-target.mjs && node Tools/class-roster-hub/test/smoke-roster-writes.mjs && node Tools/class-roster-hub/test/smoke-bulk-import.mjs && node Tools/class-roster-hub/test/smoke-share.mjs",
     "test:backup": "node Tools/backup-restore/test/smoke-restore-diff.mjs && node Tools/backup-restore/test/smoke-transfer.mjs",

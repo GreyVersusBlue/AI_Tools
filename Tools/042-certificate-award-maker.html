@@ -33,7 +33,8 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="certificate-award-maker/cam-store.js"></script>
 <script src="certificate-award-maker/cam-borders.js"></script>
-<script src="certificate-award-maker/cam-logo.js"></script>
+<script src="../_shared/media-db.js"></script>
+<script src="certificate-award-maker/cam-image.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -132,6 +133,7 @@
   button.danger:hover { background: var(--err); color: var(--accent-ink); }
 
   .logo-preview { display: flex; align-items: center; gap: .6rem; margin: .5rem 0 .8rem; }
+  .img-missing { margin: 0; font-size: .82rem; color: var(--ink); max-width: 16rem; }
   .logo-preview img { width: 2.6rem; height: 2.6rem; object-fit: contain; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--card); }
 
   .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
@@ -293,6 +295,7 @@
         <input type="file" id="logoFile" accept="image/*">
         <div class="logo-preview" id="logoPreview" style="display:none;">
           <img id="logoPreviewImg" alt="">
+          <p class="img-missing" id="logoMissing" style="display:none;">This logo is missing from this browser’s storage. Remove it, or upload it again.</p>
           <button type="button" class="secondary small" id="logoRemove">Remove logo</button>
         </div>
       </div>
@@ -349,6 +352,7 @@
         <input type="file" id="signatureFile" accept="image/*">
         <div class="logo-preview" id="signaturePreview" style="display:none;">
           <img id="signaturePreviewImg" alt="">
+          <p class="img-missing" id="signatureMissing" style="display:none;">This signature image is missing from this browser’s storage. Remove it, or upload it again.</p>
           <button type="button" class="secondary small" id="signatureRemove">Remove signature image</button>
         </div>
 
@@ -430,10 +434,10 @@
   var els = {};
   ['toolbar','presetSwitch','newPresetBtn','deletePresetBtn','presetName',
    'deleteUndoBar','deleteUndoName','undoDeleteBtn',
-   'themeSwatches','borderSwatches','logoFile','logoPreview','logoPreviewImg','logoRemove',
+   'themeSwatches','borderSwatches','logoFile','logoPreview','logoPreviewImg','logoMissing','logoRemove',
    'singleFields','batchFields','studentName','batchNames','camRosterSelect','camLoadRosterBtn',
    'awardTitle','awardTitleCustom','reason','certDate','signature',
-   'signatureFile','signaturePreview','signaturePreviewImg','signatureRemove',
+   'signatureFile','signaturePreview','signaturePreviewImg','signatureMissing','signatureRemove',
    'qrUrl','printBtn','showGuides','stockInset',
    'orientTabs','perPageTabs','camPageSizeStyle',
    'previewArea','previewNote','viewToggle'
@@ -462,7 +466,7 @@
       name: name,
       theme: 'elegant',
       border: 'double-line',
-      logo: '', // downscaled data URL of an uploaded crest/mascot, or '' for none
+      logo: '', // uploaded crest/mascot: 'idb:<id>' (cam-image.js), a data URL, or '' for none
       mode: 'single',
       studentName: '',
       batchNames: '',
@@ -471,7 +475,7 @@
       reason: '',
       certDate: todayLocalISO(),
       signature: '',
-      signatureImage: '', // downscaled data URL of an uploaded signature, or '' for none
+      signatureImage: '', // uploaded signature: 'idb:<id>', a data URL, or '' for none
       qrUrl: '', // optional link to a note/video/portfolio page, or '' for no QR code
       orientation: 'landscape', // 'landscape' | 'portrait'
       perPage: 1, // 1 | 2 — certificates per printed sheet
@@ -575,23 +579,35 @@
     });
   }
 
-  /* ---------- logo upload ---------- */
+  /* ---------- logo and signature images ----------
+     Both are kept by cam-image.js (Path 4 P4): a saved value is usually an
+     `idb:` reference, and CamImage.url() is what an <img> may show — '' while
+     it is still being read, or when this browser no longer has it. */
+  function updateImagePreview(value, wrap, img, missingNote) {
+    if (!value) { wrap.style.display = 'none'; return; }
+    var src = CamImage.url(value);
+    if (src) img.src = src; else img.removeAttribute('src');
+    img.style.display = src ? '' : 'none';
+    missingNote.style.display = CamImage.isMissing(value) ? '' : 'none';
+    wrap.style.display = 'flex';
+  }
   function updateLogoPreview() {
-    if (settings.logo) {
-      els.logoPreviewImg.src = settings.logo;
-      els.logoPreview.style.display = 'flex';
-    } else {
-      els.logoPreview.style.display = 'none';
-    }
+    updateImagePreview(settings.logo, els.logoPreview, els.logoPreviewImg, els.logoMissing);
+  }
+  function updateSignaturePreview() {
+    updateImagePreview(settings.signatureImage, els.signaturePreview, els.signaturePreviewImg, els.signatureMissing);
   }
 
-  function updateSignaturePreview() {
-    if (settings.signatureImage) {
-      els.signaturePreviewImg.src = settings.signatureImage;
-      els.signaturePreview.style.display = 'flex';
-    } else {
-      els.signaturePreview.style.display = 'none';
-    }
+  /* Read the open preset's stored images, then draw them. */
+  var imagesShowing = Promise.resolve();
+  function showPresetImages() {
+    var s = settings;
+    return (imagesShowing = CamImage.hydrate(CamImage.valuesIn(s)).then(function () {
+      if (settings !== s) return;
+      updateLogoPreview();
+      updateSignaturePreview();
+      renderAll();
+    }));
   }
 
   /* ---------- roster loading (read-only reuse of Name Picker rosters) ----------
@@ -702,10 +718,11 @@
     var qrDataUrl = qrUrl ? getQrDataUrl(qrUrl) : null;
     var effTitle = title || effectiveTitle();
     var effReason = (reason != null && reason !== '') ? reason : settings.reason;
+    var logoSrc = CamImage.url(settings.logo), sigSrc = CamImage.url(settings.signatureImage);
     return (
       '<div class="cert theme-' + settings.theme + '" style="aspect-ratio:' + w + '/' + h + ';' + stockInsetVars() + '">' +
         CertificateBorders.borderSvg(settings.border, w, h) +
-        (settings.logo ? '<img class="cert-logo" src="' + settings.logo + '" alt="">' : '') +
+        (logoSrc ? '<img class="cert-logo" src="' + logoSrc + '" alt="">' : '') +
         (qrDataUrl ? '<img class="cert-qr" src="' + qrDataUrl + '" alt="QR code linking to more about this award" title="Scan for more">' : '') +
         '<div class="cert-kicker">' + escapeHtml(kickerFor(effTitle)) + '</div>' +
         '<div class="cert-name">' + escapeHtml(name) + '</div>' +
@@ -714,8 +731,8 @@
         '<div class="cert-footer">' +
           '<div class="cert-sig-wrap"><div class="cert-sig-spacer"></div><div class="line">' + escapeHtml(formattedDate()) + '</div></div>' +
           '<div class="cert-sig-wrap">' +
-            (settings.signatureImage
-              ? '<img class="cert-sig-img" src="' + settings.signatureImage + '" alt="Signature">'
+            (sigSrc
+              ? '<img class="cert-sig-img" src="' + sigSrc + '" alt="Signature">'
               : '<div class="cert-sig-spacer"></div>') +
             '<div class="line">' + escapeHtml(settings.signature || ' ') + '</div>' +
           '</div>' +
@@ -920,6 +937,7 @@
     els.toolbar.style.display = '';
     viewMode = 'single';
     renderAll();
+    showPresetImages();
   }
 
   /* ---------- wiring ---------- */
@@ -957,15 +975,21 @@
   }
   els.undoDeleteBtn.addEventListener('click', function () {
     if (!lastDeleted) return;
-    CertificateStore.savePreset(lastDeleted.name, lastDeleted.data);
+    var back = lastDeleted;
+    CertificateStore.savePreset(back.name, back.data);
     hideDeleteUndo();
-    loadPresetByName(lastDeleted.name);
+    // Another tab may have booted and collected its images meanwhile.
+    CamImage.keepAlive(CamImage.valuesIn(back.data)).then(function () {
+      loadPresetByName(back.name);
+    });
   });
 
   els.deletePresetBtn.addEventListener('click', function () {
     if (!settings) return;
     if (!confirm('Delete "' + settings.name + '" completely? This can’t be undone.')) return;
     lastDeleted = { name: settings.name, data: JSON.parse(JSON.stringify(settings)) };
+    // Re-stamp its images so a GC in another tab spares them while undo is offered.
+    CamImage.keepAlive(CamImage.valuesIn(lastDeleted.data));
     CertificateStore.deletePreset(settings.name);
     showDeleteUndo(lastDeleted.name);
     var remaining = CertificateStore.listPresets();
@@ -1025,8 +1049,10 @@
   els.logoFile.addEventListener('change', function () {
     var file = els.logoFile.files[0];
     if (!file) return;
-    CertificateLogo.downscaleImage(file).then(function (dataUrl) {
-      settings.logo = dataUrl;
+    var target = settings;
+    CamImage.fromFile(file).then(function (value) {
+      target.logo = value;
+      if (target !== settings) { CertificateStore.updatePreset(target.name, target); return; }
       updateLogoPreview();
       renderAll();
     }).catch(function () {
@@ -1045,8 +1071,10 @@
   els.signatureFile.addEventListener('change', function () {
     var file = els.signatureFile.files[0];
     if (!file) return;
-    CertificateLogo.downscaleImage(file).then(function (dataUrl) {
-      settings.signatureImage = dataUrl;
+    var target = settings;
+    CamImage.fromFile(file).then(function (value) {
+      target.signatureImage = value;
+      if (target !== settings) { CertificateStore.updatePreset(target.name, target); return; }
       updateSignaturePreview();
       renderAll();
     }).catch(function () {
@@ -1102,6 +1130,37 @@
     if (existing.length) loadPresetByName(existing[0]);
     else newPreset('My Certificate');
   }
+
+  /* Path 4 P4: move any data: URL image in ANY saved preset (the open one and
+     every other, and one promoted from the legacy key) into the media store,
+     writing back only the presets that changed; then delete stored images
+     nothing points at. Boot only — within a session the delete undo can bring
+     a preset back — and cam-image.js's grace period spares another tab's
+     just-stored upload. `__camImagesSettled` is the suites' flag. */
+  window.__camImagesSettled = false;
+  function everySavedValue() {
+    var values = CamImage.valuesIn(settings);
+    CertificateStore.listPresets().forEach(function (n) {
+      if (settings && n === settings.name) return;
+      values = values.concat(CamImage.valuesIn(CertificateStore.loadPreset(n)));
+    });
+    if (lastDeleted) values = values.concat(CamImage.valuesIn(lastDeleted.data));
+    return values;
+  }
+  imagesShowing.then(function () {
+    return CamImage.store(everySavedValue());
+  }).then(function (map) {
+    if (!Object.keys(map).length) return;
+    CertificateStore.listPresets().forEach(function (n) {
+      if (settings && n === settings.name) return;
+      var fresh = CertificateStore.loadPreset(n);
+      if (CamImage.apply(fresh, map)) CertificateStore.updatePreset(n, fresh);
+    });
+    if (CamImage.apply(settings, map)) { persist(); return showPresetImages(); }
+  }).then(function () {
+    return CamImage.gc(everySavedValue().filter(CamImage.isRef));
+  }).catch(function () { /* the images stay where they are; the next load tries again */ })
+    .then(function () { window.__camImagesSettled = true; });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
