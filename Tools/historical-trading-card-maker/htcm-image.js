@@ -5,11 +5,12 @@
    rather than black, since cards land on white printed paper.
 
    Adapted from the clue-image pipeline in Tools/030-review-game-board.html.
-   That makes this the fifth copy of the downscale pattern in the repo
-   (seating-chart, timeline-builder, certificate-award-maker, review-game-board
-   have their own) — extracting a shared _shared/image-import.js and pointing
-   all five at it is the agreed follow-up, out of scope for this tool's
-   upgrade round. */
+   When written it was the fifth copy of the downscale pattern in the repo.
+   The shared one now exists — MediaDB.downscaleImage in _shared/media-db.js,
+   with the same white matte as its opt-in `background` — and seating-chart
+   (#280), escape-room-builder (#282), primary-source-analysis-generator
+   (#290) and certificate-award-maker (Path 4 P4 increment 5) have moved onto
+   it. This copy has not: 064 is not on Path 4 P4's list. */
 (function () {
   'use strict';
 

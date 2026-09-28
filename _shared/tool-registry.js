@@ -619,8 +619,18 @@
       title: 'Certificate & Award Maker',
       file: 'Tools/042-certificate-award-maker.html',
       category: 'games-rewards',
+      /* The logo/crest and signature images are not in these keys since Path 4
+         P4: a preset's `logo` and `signatureImage` hold an `idb:` reference
+         (the field names were kept), and the images are in `gvb-media`
+         (declared on the site row above) under the `cam/` namespace, 200 px
+         PNGs stored once however many presets use them. Teacher content, not
+         student data. Images nothing saved points at are deleted when the tool
+         next loads. `:last` is the pre-presets single slot: it is promoted to a
+         preset named "My Certificate" and then removed, which is why it is a
+         key here and no longer only in `reads`. */
       keys: [
         { k: 'gvb-certificate-maker:current' },
+        { k: 'gvb-certificate-maker:last' },
         { k: 'gvb-certificate-maker:list' },
       ],
       prefixes: [
@@ -628,7 +638,6 @@
         { p: 'gvb-certificate-maker:data:' },
       ],
       reads: [
-        'gvb-certificate-maker:last',
         'np_rosters',
       ],
     },
