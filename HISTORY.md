@@ -9,6 +9,105 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P4, increment 5: 042's logo and signature move into `media-db.js` (2026-09-28, #292, `CACHE_VERSION` v198)
+
+**What shipped.**
+- 042 Certificate & Award Maker kept its logo/crest and its signature image as PNG data URLs
+  inside every named preset (`gvb-certificate-maker:data:<name>`, fields `logo` and
+  `signatureImage`), so the same crest in ten presets was ten copies. They are now Blobs in
+  `gvb-media` under the `cam/` namespace, and those fields hold `idb:h<32 hex>`.
+- `Tools/certificate-award-maker/cam-image.js` (`window.CamImage`: `fromFile`, `hydrate`,
+  `store`, `apply`, `keepAlive`, `gc`, `url`, `isMissing`, `valuesIn`) is the image store.
+  **`cam-logo.js` is deleted**; its downscaler is `MediaDB.downscaleImage(file, { maxDim: 200,
+  type: 'image/png' })`, the same 200 px PNG with no background, so a crest's transparency
+  survives.
+- `cam-store.js` gained `updatePreset(name, settings)`, which rewrites a saved preset without
+  making it the open one, for the migration of presets that are not open.
+- New suite `smoke-images.mjs` (port 8447, `test:certificate-images`, 72 assertions).
+- `_shared/tool-registry.js`: a comment on 042's row, and `gvb-certificate-maker:last` moved
+  from `reads` to `keys` (see below). `check:registry` decided that.
+
+**Calls made, each cheap to reverse.**
+- **Object URLs, not a data-URL cache**, though 042's images are small. Measured in the suite:
+  an 800×640 synthetic crest stores as **3,869 bytes** of PNG, a 900×240 signature as
+  **4,251**, and the worst case, 800×800 of noise, as **50,047** (65 KB as a data URL). By size
+  alone either would do. The deciding question is what 005 and 019 asked: who needs the bytes?
+  In 005 and 019 a synchronous consumer carries the image out of the page (019's student link
+  and QR codes, 005's Save to file and share sheet). **042 has no route off the device**: it
+  loads no `share.js` or `state-link.js`, has no export, no file and no link. Every consumer is
+  an `<img src>`: two previews, the live certificate, the batch grid and the printed sheets. An
+  object URL is a short string, so a 30-name batch grid is not 30 copies of each image inside
+  one `innerHTML` string, which is what a data URL put there before. So there was no export
+  round trip to test, and none was invented.
+- **Content-hash ids**, as 056 and 028 do, so the crest in two presets is one record and a
+  second migration stores nothing.
+- **The field names were kept**, for 028's reason: a preset an older cached page writes still
+  reads correctly. A value is `''`, `idb:<id>` or `data:image/…`.
+- **Every preset is migrated at boot, not only the open one**, and only presets that changed
+  are written back (the suite checks a preset with no images is byte-identical afterwards, and
+  that the open preset stays open).
+- **The legacy `:last` slot is removed after it is promoted.** It was only ever read while the
+  preset list was empty, which never happens again once "My Certificate" exists, and it held
+  the images as data URLs, which is what this row exists to move out of localStorage. Removing
+  it made it a key the tool writes, so `check:registry` required it in `keys`.
+- **The delete undo.** GC runs at boot only, with the 10-minute grace, so the open tab never
+  collects an image a still-undoable deleted preset points at (`lastDeleted` is also in the
+  keep set, for form). The gap was another tab booting during the 10-second undo window with
+  an image stored more than 10 minutes ago. `keepAlive()` closes it twice over: delete
+  re-stamps the preset's records, so the other tab's grace period spares them, and undo writes
+  the bytes back from memory if they went anyway. The suite removes the record behind the
+  page's back and checks undo restores it.
+- **A missing image** says so on its preview ("This logo is missing from this browser's
+  storage. Remove it, or upload it again."), and the certificate and the print leave the
+  `<img>` out: the logo is simply absent and the signature falls back to the plain line.
+- **No IndexedDB means inline, as before**: `fromFile()` hands back the downscaled data URL.
+- **`CamImage.url()` only returns a `data:image/` value or a `blob:` URL**, so the two
+  `innerHTML` sinks that take an image now take a narrower value than before (any string).
+  042 takes no link input and has no `check:inline-sinks` baseline line; its count did not move.
+- **A third near-copy, not an extraction.** `cam-image.js` is `psa-image.js` with a PNG
+  `fromFile()`, a `keepAlive()` and preset helpers. #290 said to extract the shared half into
+  `_shared/` "when a third big-image tool moves"; 042 is not a big-image tool, and extracting
+  would have made this PR site-wide for a module with one new caller. It is now three copies
+  (`dbq-image.js`, `psa-image.js`, `cam-image.js`), so **015 should extract it**.
+
+**A correction: the downscaler count in #282's and #290's handoffs was wrong.** Both said "one
+downscaler copy remains: 015's `tlb-photo.js`". `cam-logo.js` was another, and it was in
+the precache list the whole time. Counted properly on 2026-09-28 (`git grep` for `toDataURL(` /
+`toBlob(` beside a long-edge cap, live pages only, the two dead design trees excluded): before
+this PR there were **eight** hand-rolled "picked image → cap the long edge → re-encode for
+storage" functions outside `media-db.js`; after it, **seven**:
+- on Path 4 P4's list: **015** `tlb-photo.js` (480 px JPEG), **030** `readAndDownscaleImage`
+  (1000 px JPEG), **041** `readAndDownscaleImage` (PNG, caller's size), **071**
+  `downscaleDataUrl` (JPEG 0.82, takes a data URL, not a file);
+- not on it: **035**'s trace-image import (1600 px JPEG 0.85), **044**'s seating-chart
+  attachment (900 px PNG, embedded in a .docx), **064** `htcm-image.js` (1000 px JPEG on
+  white; its header, which called 042's copy one of five, is corrected in this PR).
+- **011** is not a copy: its size presets re-encode pages for a PDF at export time, and its
+  440 px canvas is a before/after preview. Different job, left out of the count.
+
+**What did not work first.** Nothing. The suite passed its first run, which is the case to
+distrust, so two deliberate breakages were run against it: undo without `keepAlive()` fails
+"writes the image back from memory", and a certificate built from the raw field instead of
+`CamImage.url()` fails both missing-image print checks. (The first breakage did *not* fail
+"the signature still shows", because the object URL outlives its record in the same tab; the
+record assertion is the one that matters.)
+
+**Verified.** Every `check:*` guard, lint, `check:precache -- --base origin/main`, both 042
+suites (three repeats each), `test:a11y -- --only 042` with no new allowlist line, and a full
+local `run-suites` on sandbox Chromium (169 green, 40.5 min). CI passed first time
+(full run, 37 min, site-wide because `_shared/tool-registry.js` and `package.json` changed).
+
+**Not verified.**
+- No real scanned or photographed signature and no real school crest: every image was
+  synthetic (canvas-drawn crest, strokes and noise, and 1×1 PNGs).
+- No printer: the printed sheets were checked in the DOM, not on paper.
+- No real phone, no quota pressure, and no real teacher profile with many presets.
+- The cross-tab case was simulated by deleting the record from the same tab, not by a second
+  tab booting.
+- Chromium only.
+
+---
+
 ## Path 4 P4, increment 4: 028's source images move into `media-db.js` (2026-09-28, #290, `CACHE_VERSION` v197)
 
 **What shipped.**

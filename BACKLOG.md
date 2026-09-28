@@ -70,7 +70,7 @@ without claiming or editing them and takes the next unclaimed row that is not Pa
 
 ## Where things stand — start here
 
-*Current as of `main` after #290, 2026-09-28. **Keep this section under ~80 lines.** It is
+*Current as of `main` after #292, 2026-09-28. **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -79,78 +79,67 @@ done).*
 **Why it is short.** It had grown to ~1,900 lines of handoffs by 2026-09-23; those moved
 verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12"). Search there for a PR number.
 
-**Last merged: #290, Path 4 P4 increment 4, 028's Source A/B images and library into
-`media-db.js`. `CACHE_VERSION` v197.**
-- 028's uploads are Blobs in `gvb-media` under `psa/`; `imageDataUrl` / `sourceBImageDataUrl`
-  keep their names and hold `idb:h<hash>`. `psa-image.js` is 056's `dbq-image.js` plus a
-  downscaling `fromFile()`. **The two are near-copies on purpose**; when a third big-image
-  tool moves, extract the shared half into `_shared/`.
-- **028's inline downscaler is gone.** `MediaDB.downscaleImage` gained an opt-in `background`
-  option (028 passes `#fff`). **One downscaler copy remains: 015's `tlb-photo.js`.**
-- A crop stays parameters, not a Blob (reasoning in `HISTORY.md`'s #290 entry).
-- **Found, not fixed:** 028's source-description hint still says "there's no image upload".
-  It was wrong before #290 too.
-- **Nothing in #290 was tried on a real phone, with real camera photos, or under quota
-  pressure.** Chromium only.
+**Last merged: #292, Path 4 P4 increment 5, 042's logo and signature into `media-db.js`.
+`CACHE_VERSION` v198.**
+- 042's images are Blobs in `gvb-media` under `cam/` (content-hash ids); `logo` and
+  `signatureImage` keep their names and hold `idb:h<hash>`. `cam-image.js` replaced
+  `cam-logo.js`. **Object URLs**, although a crest is ~4 KB: 042 has no link, export or file,
+  so every consumer is an `<img>` (the reasoning and the numbers are in `HISTORY.md`).
+- **Correction: "one downscaler copy remains: 015's `tlb-photo.js`" (#282, #290) was wrong.**
+  `cam-logo.js` was another. **Seven** hand-rolled downscalers remain: 015, 030, 041, 071 (on
+  P4's list) and 035, 044, 064 (not on it). 011's is a different job.
+- `dbq-image.js`, `psa-image.js` and `cam-image.js` are now three near-copies. **015 should
+  extract the shared half into `_shared/`** before it adds a fourth.
+- **Nothing in #292 was tried with a real crest or scanned signature, on a printer, on a
+  phone, or with a real second tab.** Chromium only.
+- **Found in #290, not fixed:** 028's source-description hint still says "there's no image upload".
 - **Every icon so far was judged by one reviewer, the session that drew it** (67 of 86, #288).
-  Nobody else has looked at the set.
-- **The checkout was switched to `main` under #286's session** by something else, seconds before
-  a commit. It has not recurred since. Check `git branch --show-current` before *every* commit and push.
-- **Found in #282, not fixed:** each station's QR code encodes the whole room, so one real photo
-  makes every QR in a 019 room fail to build. Pre-existing; noted under 019 in Tier 2.
+- **The checkout was switched to `main` under #286's session** by something else. It has not
+  recurred. Check `git branch --show-current` before *every* commit and push.
+- **Found in #282, not fixed:** each station's QR code in 019 encodes the whole room, so one
+  real photo makes every QR in the room fail to build. Noted under 019 in Tier 2.
 - **On Devon's Windows checkout two suites fail locally that CI passes:** `schedule-browser/
-  smoke-dark-theme` (the expected text has CRLF) and `music-sightreading-generator/
-  smoke-glyph-fallback` (font metrics). Not root-caused.
-- **Path 22 P1–P5 are done** (Devon's call, 2026-09-25). His later asks sit **at the end of
-  the list** as ranks 183–191, Path 22 P6–P14, still unranked by him. P13 finishes P5: 004's
-  phase engine moves onto `countdown.js`, which so far only 010 and 087 run on.
-- **Path 21 icons: 67 of 86 done** (#288). The last increment (068–086) adds `t087` too, which
-  makes it 20 icons. Each icon increment runs the full CI (~34–37 min), because `index.html`
-  is on the selector's site-wide list. Blender on Devon's machine is a Steam install **not on
-  PATH**; the README has the fix.
+  smoke-dark-theme` (CRLF) and `music-sightreading-generator/smoke-glyph-fallback` (font
+  metrics). Not root-caused.
+- **Path 22 P1–P5 are done.** His later asks are ranks 183–191 (P6–P14), unranked by him.
+- **Path 21 icons: 67 of 86 done** (#288). The last increment (068–086 plus `t087`) is 20
+  icons, and runs the full CI (~35 min). Blender on Devon's machine is not on PATH; see its README.
 - The one-line `git rm` of rank 95's four dead trees is **still not done**.
 
 **Start here. Which row depends on whether this machine has Blender.**
-- **Blender available:** take **rank 1**, Path 21 P2 increment 5, the last one: 068–086 plus
-  087 (20 icons). Each is a function in `scene_icons.py`, then run
-  `node Tools/blender-art/build-sprite.mjs`, add the rows in `index.html` and bump
-  `CACHE_VERSION`. Read `scene_icons.py`'s header and `HISTORY.md`'s four P2 entries first. They
-  carry the style rules and every draft that failed by eye. After that, the row's "final call"
-  (the PWA app mark) is what is left.
+- **Blender available:** take **rank 1**, Path 21 P2 increment 5: 068–086 plus 087. Read
+  `scene_icons.py`'s header and `HISTORY.md`'s four P2 entries first. After that, the row's
+  "final call" (the PWA app mark) is what is left.
 - **No Blender** (any cloud container): skip ranks 1–7 without claiming or editing them.
-  Rank 8 (Path 6 P4) is blocked on rank 45, so take **rank 9**, Path 4 P4 increment 5: **042's
-  logo and signature** onto `media-db.js`, one increment. 042's images are small, so decide
-  data-URL cache (005/019) versus object URLs (056/028) from what its consumers need, and write
-  the call down. Copy 028's module and suite shape (`psa-image.js`, `test/smoke-images.mjs`).
-- A prompt that names a row wins over the rule above (#284 and #290 were both named rank 9).
+  Rank 8 (Path 6 P4) is blocked on rank 45, so take **rank 9**, Path 4 P4 increment 6:
+  **015 Timeline Builder's photos** onto `media-db.js`, deleting `tlb-photo.js`, and extract
+  the shared half of the three `*-image.js` modules into `_shared/` in the same PR.
+- A prompt that names a row wins over the rule above.
 
 **Decisions only Devon can make — surfaced, not taken.**
-- **Interleave per-tool improvements with platform work?** Standing decisions say "keep platform
-  first", so every teacher-visible per-tool idea outside Path 21 sits at rank 101 or below. Path
-  21 shows Devon will re-rank when he wants something first; the general question is still his.
-- **A periodic human device check.** Everything a session cannot do is collected in the parked
-  list under Cross-cutting ("Parked — needs a person"): camera-scanned QR, system share, the
-  pairing QR, real-printer dark-mode print and persistent-storage grants. It takes about 30
-  minutes with a phone, a laptop and a printer.
+- **Interleave per-tool improvements with platform work?** Standing decisions say "keep
+  platform first"; every per-tool idea outside Path 21 sits at rank 101 or below.
+- **A periodic human device check** (about 30 minutes with a phone, a laptop and a printer):
+  the parked list under Cross-cutting ("Parked — needs a person").
 
-**Numbers (2026-09-28, after #290; re-measure, do not carry forward):**
+**Numbers (2026-09-28, after #292; re-measure, do not carry forward):**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v197` — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **273** in `PRECACHE_URLS`, **89** in the `SHELL_URLS` install tier. Bytes: **11.21 MB / 2.52 MB** summed on Devon's Windows checkout after #267, before #269–#276 grew 087 and added its phone page (not re-measured). #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **99,548 B** ledgered, **49,955 B** of it shell (the sprite plus the 4 shortcut PNGs) (`check:art` enforces both) |
-| Suites | **168** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| `CACHE_VERSION` | `v198` — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **273** in `PRECACHE_URLS`, **89** in `SHELL_URLS`. Bytes last summed on Devon's Windows checkout after #267 (11.21 MB / 2.52 MB), not re-measured. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **99,548 B** ledgered, **49,955 B** of it shell (`check:art` enforces both) |
+| Suites | **169** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **14** page-rule pairs on 14 pages, all `color-contrast` |
-| Tool registry | 88 rows, **218 keys and 32 prefixes across 114 files** (087 now also `reads` 010's settings); **49** entries marked `student` (087's one key, `cls-screen:state`, is not student data: name picks are never saved). The live-entry denominator was 235 in this cell; counting non-`legacy` keys and prefixes gives 238 before #269 and 239 after, so the old figure used a rule not written down. Re-measure before quoting one; `check:registry` green |
-| Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 79 · `a11y.js` 79 · `ink-paper.css` 72 · `base.css` 68 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `media-db.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Tool registry | 88 rows, **219 keys and 32 prefixes across 115 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
+| Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 79 · `a11y.js` 79 · `ink-paper.css` 72 · `base.css` 68 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `media-db.js` 7 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 87 (`001`–`087`); next free number **088** |
-| Tier 1 rows | **191**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows proper start at rank **101**; 183–191 are Path 22 P6–P14 (added at the end at Devon's request, not ranked by him) |
-| Art | **74** ledger entries: 67 tool icons, the sprite (on 67 landing rows), 4 shortcut PNGs (in `manifest.json`), the unlinked light/dark test tile. 83 of 86 pages carry a data-URI favicon; `assets/icons/` holds 4 PWA icons |
-| Dark mode / fullscreen | 83 of 83 themed pages native dark; `stage.js` on 10 pages (087 has no palette literals of its own and adopted native dark from the start). Path 5 is finished |
-| CI | Pull requests run `--changed` (a diff-scoped selection). A push to `main` runs everything, ~32 min. A PR touching `_shared/`, `package.json` or `Tools/board-check/` is site-wide |
+| Tier 1 rows | **191**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows start at rank **101**; 183–191 are Path 22 P6–P14 |
+| Art | **74** ledger entries: 67 tool icons, the sprite, 4 shortcut PNGs, the test tile |
+| Dark mode / fullscreen | 83 of 83 themed pages native dark; `stage.js` on 10 pages. Path 5 is finished |
+| CI | Pull requests run `--changed`; a push to `main` runs everything, ~32 min. A PR touching `_shared/`, `package.json` or `Tools/board-check/` is site-wide (#292's took 37 min) |
 | Lint | clean |
 
 ### Standing decisions
@@ -283,7 +272,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 6 | Path 21 P4 — 030 review-game art: board backdrop, category and point-value tiles, projected. **≤ 200 KB** for both themes. *a11y:* text is always drawn over them, so every tile's luminance is recorded and **4.5:1 asserted in both themes** by the validator. **Needs Blender locally; a session without `blender` on PATH skips it.** | 030 | ½ | | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
 | 7 | Path 21 P4 — 046 relief heightmap: a shaded-relief layer under the default world base map, from a public-domain DEM (not committed; source, licence and SHA-256 in the README). Off by default and disabled in choropleth mode. **≤ 400 KB** for a 2048-px light/dark pair. *a11y:* luminance range capped so label ink holds 4.5:1 over the whole image; the toggle has an accessible name. **Needs Blender locally; a session without `blender` on PATH skips it.** | 046 | 1 | | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
 | 8 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 (#257, v182):** 046 → 015, 056 → 028 (`sheet: false`) and 039 → 040 are entries; **003 → 037 is a documented exception** (student scores never ride a link); `share.js` gained `sendState(entry)` and `sheet: false`. **Increment 2 (#259, v183), the roster chain:** **002 → 022** is a sheet row and **022 → 005** a `sheet: false` entry from 022's "Seat these groups" button; **006/007 → 002 is not a link** (the roster already reaches 002 through `roster.js`). **Left: only 053 → 030, which is blocked on rank 45** (Path 12 P1, the question bank with 030 as the front door). Do not start this row until rank 45 has shipped; then it is one entry plus a row in `smoke-send-to.mjs` | site | ¼ | | [Path 6](#path-6--share-everywhere) |
-| 9 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js`. **Done: 005's photos (#280, v192, `scg-photo.js`), 019's station images (#282, v193, `er-image.js`), 056's packet and library images (#284, v194, `dbq-image.js`, `smoke-images.mjs` port 8240), 028's Source A/B images and library (#290, v197, `Tools/primary-source-analysis-generator/psa-image.js`, `smoke-images.mjs` port 8446).** 056 and 028 set the big-image shape: content-hash ids (stored once across documents, library and imports), object URLs for display, bytes read back only for Export JSON and the share sheet (the button builds the copy, then `Share.open()`; `share.js` untouched), a file's images stored before it is saved, an `idb:` ref from a file or link dropped. 028 kept its field names (`imageDataUrl` holds the ref) so old files and links import; its downscaler is gone (`MediaDB.downscaleImage` at 1600 px / 0.82 with the new `background: '#fff'`). **Left, in this order:** **042 logo/signature next** (small images: pick data-URL cache or object URLs from what its consumers need and record the call), then 015 (and its `tlb-photo.js` downscaler, the last copy), 041, 071, 080 snapshots, 030 clue images. `psa-image.js` and `dbq-image.js` are near-copies: extract the shared half into `_shared/` when a third big-image tool moves | site | 2+ | p4p4i5-042 2026-09-28 | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 9 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js`. **Done: 005's photos (#280, v192, `scg-photo.js`), 019's station images (#282, v193, `er-image.js`), 056's packet and library images (#284, v194, `dbq-image.js`), 028's Source A/B images and library (#290, v197, `psa-image.js`), 042's logo and signature (#292, v198, `Tools/certificate-award-maker/cam-image.js`, `smoke-images.mjs` port 8447).** The shape: content-hash ids (stored once across documents), the field names kept (`idb:<id>` in them), migration of every saved document at boot writing back only what changed, orphan GC at boot only with a 10-minute grace, a missing image said on its preview and left out of print, inline data URLs when there is no IndexedDB. Display follows who needs the bytes: a data-URL cache when a synchronous consumer carries the image out (005, 019), object URLs when every consumer is an `<img>` (056, 028, 042); export and share inline the bytes (028's `worksheetForExport`). **Left, in this order:** **015 next** (its `tlb-photo.js` downscaler goes, and `dbq-image.js`, `psa-image.js` and `cam-image.js` are now three near-copies: extract their shared half into `_shared/` in the same PR), then 041, 071, 080 snapshots, 030 clue images. Seven hand-rolled downscalers remain: 015, 030, 041, 071 on this list; 035, 044, 064 off it (#292's `HISTORY.md` entry has the count) | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 10 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 11 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 12 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
@@ -965,7 +954,7 @@ the ~5 MB ceiling (005, 015, 019, 028, 041, 042, 056, 071, 080); `bmg-map-cache.
 is the IndexedDB pattern everyone cites and nobody has extracted.
 
 **Status.** P1 shipped 2026-09-04 (#173, `CACHE_VERSION` v142), P2 the same day (#174,
-v143), P3 the same day (#182, v148, with 046 as its single adopter). P4 is in progress: 005 (#280), 019 (#282), 056 (#284) and 028 (#290) have moved; 042 is next. P5 open. What
+v143), P3 the same day (#182, v148, with 046 as its single adopter). P4 is in progress: 005 (#280), 019 (#282), 056 (#284), 028 (#290) and 042 (#292) have moved; 015 is next. P5 open. What
 actually landed, and what each phase got wrong on the way, is in `HISTORY.md`.
 
 **Phases.**
