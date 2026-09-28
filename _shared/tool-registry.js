@@ -1142,6 +1142,14 @@
       file: 'Tools/028-primary-source-analysis-generator.html',
       category: 'social-studies',
       share: { param: 'worksheet' },
+      /* Uploaded Source A / B images are not in these keys since Path 4 P4:
+         a worksheet's `imageDataUrl` / `sourceBImageDataUrl`, and a library
+         entry's `imageDataUrl` (`gvb-primary-source:library`), hold an `idb:`
+         reference (the field names were kept for old files and links), and
+         the images are in `gvb-media` (declared on the site row above) under
+         the `psa/` namespace, downscaled to 1600 px and stored once however
+         many worksheets use them. Teacher content, not student data. Images
+         nothing saved points at are deleted when the tool next loads. */
       keys: [
         { k: 'gvb-primary-source:current' },
         { k: 'gvb-primary-source:library' },

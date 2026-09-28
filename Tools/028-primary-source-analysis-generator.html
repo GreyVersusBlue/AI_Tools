@@ -31,6 +31,8 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/media-db.js"></script>
+<script src="primary-source-analysis-generator/psa-image.js"></script>
 <style>
   /* Path 5 P3. --good and the info tint are 001's values (the reference
      adopter); --desk is the table the worksheet lies on, named the same way
@@ -402,11 +404,11 @@
         <input type="url" id="imageUrl" placeholder="https://example.com/image.jpg">
 
         <label for="imageFile">Or upload an image from your computer (optional)</label>
-        <p class="hint">Embeds the file directly in this worksheet's saved data &mdash; no hosting needed. Takes priority over the Image URL above if both are set.</p>
+        <p class="hint">Kept in this browser's image storage &mdash; no hosting needed. Export worksheet carries it to another device. Takes priority over the Image URL above if both are set.</p>
         <input type="file" id="imageFile" accept="image/*">
-        <p class="hint">Large photos are automatically resized (long edge capped at 1600px) before they're saved, to keep this worksheet from eating too much of the browser's storage.</p>
+        <p class="hint">Large photos are automatically resized (long edge capped at 1600px) before they're saved, which is still more detail than a printed page shows.</p>
         <div id="imageFilePreviewWrap" style="display:none;margin:-.3rem 0 .8rem;">
-          <img id="imageFilePreview" style="max-width:100%;max-height:8rem;border:1px solid var(--line-strong);border-radius:6px;">
+          <img id="imageFilePreview" alt="Uploaded Source A image" style="max-width:100%;max-height:8rem;border:1px solid var(--line-strong);border-radius:6px;">
           <button type="button" class="secondary small" id="clearImageFileBtn" style="margin-top:.4rem;">Remove uploaded image</button>
           <p id="imageSizeWarning" class="hint" style="display:none;color:var(--err);font-weight:600;margin:.4rem 0 0;"></p>
         </div>
@@ -457,7 +459,7 @@
           <label for="sourceBImageFile">Or upload a Source B image from your computer (optional)</label>
           <input type="file" id="sourceBImageFile" accept="image/*">
           <div id="sourceBImageFilePreviewWrap" style="display:none;margin:.4rem 0 .8rem;">
-            <img id="sourceBImageFilePreview" style="max-width:100%;max-height:8rem;border:1px solid var(--line-strong);border-radius:6px;">
+            <img id="sourceBImageFilePreview" alt="Uploaded Source B image" style="max-width:100%;max-height:8rem;border:1px solid var(--line-strong);border-radius:6px;">
             <button type="button" class="secondary small" id="clearSourceBImageFileBtn" style="margin-top:.4rem;">Remove uploaded image</button>
             <p id="sourceBImageSizeWarning" class="hint" style="display:none;color:var(--err);font-weight:600;margin:.4rem 0 0;"></p>
           </div>
@@ -603,6 +605,12 @@
       localStorage.setItem(CURRENT_KEY, name);
     },
     load: function (name) { return safeParse(localStorage.getItem(DATA_PREFIX + name), null); },
+    /* A worksheet that is not the open one, written back after its images
+       moved into IndexedDB. Not save(): that also makes it the current one. */
+    write: function (name, state) {
+      try { localStorage.setItem(DATA_PREFIX + name, JSON.stringify(state)); return true; }
+      catch (e) { return false; }
+    },
     remove: function (name) {
       var names = Store.list().filter(function (n) { return n !== name; });
       localStorage.setItem(LIST_KEY, JSON.stringify(names));
@@ -1116,38 +1124,14 @@
   function nlToBr(s) { return escapeHtml(s).replace(/\n/g, '<br>'); }
   function repeatHtml(html, n) { var out = ''; for (var i = 0; i < n; i++) out += html; return out; }
 
-  /* ---------- uploaded image: downscale before storing (P12) ---------- */
-  var IMAGE_MAX_DIMENSION = 1600; // px, long edge
-  var IMAGE_JPEG_QUALITY = 0.82;
+  /* ---------- uploaded images (Path 4 P4) ----------
+     An upload is downscaled (1600 px long edge, JPEG 0.82, on white — what
+     this tool has always stored) by MediaDB.downscaleImage and kept in the
+     shared media store; imageDataUrl / sourceBImageDataUrl hold its `idb:`
+     reference. See primary-source-analysis-generator/psa-image.js. Only a
+     value still inline (no IndexedDB in this browser) weighs on localStorage,
+     so only that one gets the size warning. */
   var IMAGE_WARN_BYTES = 1.5 * 1024 * 1024; // ~1.5MB stored payload — a big share of localStorage's ~5MB cap once the rest of the worksheet is counted
-
-  function downscaleImage(file) {
-    return new Promise(function (resolve, reject) {
-      var reader = new FileReader();
-      reader.onerror = function () { reject(new Error('Could not read that image file.')); };
-      reader.onload = function () {
-        var img = new Image();
-        img.onerror = function () { reject(new Error('Could not decode that image file.')); };
-        img.onload = function () {
-          var scale = Math.min(1, IMAGE_MAX_DIMENSION / Math.max(img.width, img.height));
-          var w = Math.max(1, Math.round(img.width * scale));
-          var h = Math.max(1, Math.round(img.height * scale));
-          var canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          var ctx = canvas.getContext('2d');
-          // A white matte under a transparent PNG, because the re-encode below is
-          // JPEG and has no alpha. Nothing to do with the theme: without it a
-          // transparent source comes out black on paper.
-          ctx.fillStyle = '#fff';
-          ctx.fillRect(0, 0, w, h);
-          ctx.drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', IMAGE_JPEG_QUALITY));
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  }
 
   function estimateDataUrlBytes(dataUrl) {
     if (!dataUrl) return 0;
@@ -1156,8 +1140,13 @@
     return Math.round(b64.length * 0.75);
   }
 
-  function warnIfLargeImage(dataUrl, warningEl) {
-    var bytes = estimateDataUrlBytes(dataUrl);
+  function warnIfLargeImage(value, warningEl) {
+    if (PsaImage.isMissing(value)) {
+      warningEl.textContent = 'This image is missing from this browser’s storage. Upload it again to put it back on the worksheet.';
+      warningEl.style.display = '';
+      return;
+    }
+    var bytes = PsaImage.isInline(value) ? estimateDataUrlBytes(value) : 0;
     if (bytes > IMAGE_WARN_BYTES) {
       warningEl.textContent = 'This image is about ' + (bytes / (1024 * 1024)).toFixed(1) +
         ' MB once stored — that’s a large share of the browser’s ~5MB storage limit shared by all your saved worksheets. Consider a smaller or simpler image if you run into a storage error.';
@@ -1328,9 +1317,22 @@
     return parts.join('');
   }
 
+  /* A save that fails is said, not thrown. Store.save() threw on a full
+     localStorage and nothing caught it. Images are in IndexedDB now, which
+     makes this rare, but a browser with no IndexedDB still keeps them inline. */
+  var saveFailed = false;
   function save() {
     if (!state) return;
-    Store.save(state.name, state);
+    try {
+      Store.save(state.name, state);
+    } catch (e) {
+      saveFailed = true;
+      setShareNote('Could not save “' + state.name + '”: this browser’s storage for this site is full. ' +
+        'Your latest changes are on screen but will be lost when you close the tab. Export worksheet keeps a copy; ' +
+        'Backup & Restore shows what is using the space.', true);
+      return;
+    }
+    if (saveFailed) { saveFailed = false; setShareNote(''); }
   }
 
   function refreshSwitcher() {
@@ -1437,8 +1439,8 @@
       description: state[k.desc] || '',
       text: state[k.text] || '',
       imageUrl: state[k.imageUrl] || '',
-      // Already downscaled on upload (1600px long edge, JPEG) — the library
-      // stores what the worksheet stores, never the raw file.
+      // The same `idb:` reference the worksheet holds, so saving to the
+      // library stores no second copy of the image (it used to).
       imageDataUrl: state[k.imageData] || '',
       citationAuthor: state[k.citeAuthor] || '',
       citationDate: state[k.citeDate] || '',
@@ -1546,7 +1548,8 @@
       var meta = document.createElement('div');
       meta.className = 'lib-entry-meta';
       meta.textContent = sourceTypeLabel(entry.type) + ' · saved ' + (entry.savedAt || 'earlier') +
-        (entry.imageDataUrl ? ' · has an uploaded image' : '');
+        (entry.imageDataUrl ? (PsaImage.isMissing(entry.imageDataUrl)
+          ? ' · its uploaded image is missing from this browser' : ' · has an uploaded image') : '');
       row.appendChild(meta);
 
       if ((entry.tags || []).length) {
@@ -1804,7 +1807,7 @@
   function cropStateKeys(letter) { return SOURCE_FIELD_KEYS[letter]; }
   function currentImageSrc(letter) {
     var k = cropStateKeys(letter);
-    return state[k.imageData] || state[k.imageUrl] || '';
+    return PsaImage.url(state[k.imageData]) || state[k.imageUrl] || '';
   }
 
   function renderCropPanel(letter) {
@@ -1979,8 +1982,9 @@
     if (state[k.title]) parts.push('<div><span class="meta-k">Source:</span> ' + escapeHtml(state[k.title]) + '</div>');
     parts.push('<div><span class="meta-k">Type:</span> ' + escapeHtml(sourceTypeLabel(state[k.type])) + '</div>');
     parts.push('</div>');
-    var imgSrc = state[k.imageData] || state[k.imageUrl];
+    var imgSrc = PsaImage.url(state[k.imageData]) || state[k.imageUrl];
     if (imgSrc) parts.push(sourceImageHtml(imgSrc, state[k.title], normCrop(state[k.crop]), state[k.detail] === true));
+    else if (PsaImage.isMissing(state[k.imageData])) parts.push('<div class="source-desc empty">Image not available on this device.</div>');
     if (state[k.desc]) {
       parts.push('<div class="source-desc"><span class="meta-k">Description:</span> ' + nlToBr(state[k.desc]) + '</div>');
     } else if (!state[k.text]) {
@@ -2210,14 +2214,7 @@
     els.readingSummary.value = state.readingSummary || '';
     els.readingParaphrase.value = state.readingParaphrase || '';
     els.imageFile.value = '';
-    renderCropPanels();
-    if (state.imageDataUrl) {
-      els.imageFilePreview.src = state.imageDataUrl;
-      els.imageFilePreviewWrap.style.display = '';
-    } else {
-      els.imageFilePreviewWrap.style.display = 'none';
-    }
-    updateImageSizeWarning();
+    renderImagePreviews();
     els.answerLines.value = state.answerLines || 4;
 
     els.levelSelect.value = currentLevel();
@@ -2238,16 +2235,26 @@
     els.sourceBCitationDate.value = state.sourceBCitationDate || '';
     els.sourceBCitationOrigin.value = state.sourceBCitationOrigin || '';
     els.sourceBImageFile.value = '';
-    if (state.sourceBImageDataUrl) {
-      els.sourceBImageFilePreview.src = state.sourceBImageDataUrl;
-      els.sourceBImageFilePreviewWrap.style.display = '';
-    } else {
-      els.sourceBImageFilePreviewWrap.style.display = 'none';
-    }
-    updateSourceBImageSizeWarning();
 
     renderFrameworkPicker();
     renderNotesEditor();
+  }
+
+  /* The editor's upload previews, their notes and the crop panels. A stored
+     image's object URL exists only once psa-image.js has read it, so this
+     runs again when settleImages() finishes. The wrap shows whenever there is
+     an upload, even a missing one, so "Remove uploaded image" stays reachable. */
+  function renderImagePreviews() {
+    [[state.imageDataUrl, els.imageFilePreviewWrap, els.imageFilePreview],
+     [state.sourceBImageDataUrl, els.sourceBImageFilePreviewWrap, els.sourceBImageFilePreview]].forEach(function (x) {
+      var shown = PsaImage.url(x[0]);
+      x[1].style.display = x[0] ? '' : 'none';
+      if (shown) { if (x[2].getAttribute('src') !== shown) x[2].src = shown; x[2].style.display = ''; }
+      else { x[2].removeAttribute('src'); x[2].style.display = 'none'; }
+    });
+    updateImageSizeWarning();
+    updateSourceBImageSizeWarning();
+    renderCropPanels();
   }
 
   function renderAll() {
@@ -2273,7 +2280,7 @@
     if (!state.notes) state.notes = {};
     if (!state.customQuestions) state.customQuestions = {};
     if (!state.sourceType) state.sourceType = 'photo';
-    if (!state.imageDataUrl) state.imageDataUrl = '';
+    if (typeof state.imageDataUrl !== 'string') state.imageDataUrl = '';
     /* Crops arrive missing on every worksheet saved before this round, and on
        every shared link built before it — normCrop turns undefined into "the
        whole image", so those all print exactly as they did. */
@@ -2423,14 +2430,11 @@
   els.sourceBImageFile.addEventListener('change', function () {
     var file = els.sourceBImageFile.files && els.sourceBImageFile.files[0];
     if (!file) return;
-    downscaleImage(file).then(function (dataUrl) {
-      state.sourceBImageDataUrl = dataUrl;
+    PsaImage.fromFile(file).then(function (value) {
+      state.sourceBImageDataUrl = value;
       state.sourceBImageCrop = { x: 0, y: 0, w: 1, h: 1 };
       state.sourceBImageDetail = false;
-      els.sourceBImageFilePreview.src = dataUrl;
-      els.sourceBImageFilePreviewWrap.style.display = '';
-      updateSourceBImageSizeWarning();
-      renderCropPanels();
+      renderImagePreviews();
       renderPreview();
     }).catch(function (err) {
       alert(err.message);
@@ -2443,9 +2447,7 @@
     state.sourceBImageCrop = { x: 0, y: 0, w: 1, h: 1 };
     state.sourceBImageDetail = false;
     els.sourceBImageFile.value = '';
-    els.sourceBImageFilePreviewWrap.style.display = 'none';
-    updateSourceBImageSizeWarning();
-    renderCropPanels();
+    renderImagePreviews();
     renderPreview();
   });
 
@@ -2511,16 +2513,15 @@
   els.imageFile.addEventListener('change', function () {
     var file = els.imageFile.files && els.imageFile.files[0];
     if (!file) return;
-    downscaleImage(file).then(function (dataUrl) {
-      state.imageDataUrl = dataUrl;
+    // Downscaled and into IndexedDB (psa-image.js); the worksheet keeps an
+    // `idb:` reference, or the data URL where there is no IndexedDB.
+    PsaImage.fromFile(file).then(function (value) {
+      state.imageDataUrl = value;
       // A crop is a rectangle on a particular picture: keeping it across an
       // upload would silently point at the wrong part of the new one.
       state.imageCrop = { x: 0, y: 0, w: 1, h: 1 };
       state.imageDetail = false;
-      els.imageFilePreview.src = dataUrl;
-      els.imageFilePreviewWrap.style.display = '';
-      updateImageSizeWarning();
-      renderCropPanels();
+      renderImagePreviews();
       renderPreview();
     }).catch(function (err) {
       alert(err.message);
@@ -2533,9 +2534,7 @@
     state.imageCrop = { x: 0, y: 0, w: 1, h: 1 };
     state.imageDetail = false;
     els.imageFile.value = '';
-    els.imageFilePreviewWrap.style.display = 'none';
-    updateImageSizeWarning();
-    renderCropPanels();
+    renderImagePreviews();
     renderPreview();
   });
 
@@ -2588,17 +2587,36 @@
       (obj.synthesisNotes === undefined || typeof obj.synthesisNotes === 'string');
   }
 
+  /** A copy of `sheet` with both uploads as data: URLs ('' where the stored
+      image is gone), for anything that leaves this browser. A reference never
+      reaches a file, a link or a QR code. */
+  function worksheetForExport(sheet) {
+    var copy = JSON.parse(JSON.stringify(sheet));
+    return Promise.all(['imageDataUrl', 'sourceBImageDataUrl'].map(function (f) {
+      return PsaImage.inline(copy[f]).then(function (v) { copy[f] = v; });
+    })).then(function () { return copy; });
+  }
+  function hasStoredImage(sheet) {
+    return PsaImage.isRef(sheet.imageDataUrl) || PsaImage.isRef(sheet.sourceBImageDataUrl);
+  }
+
   function exportSheet() {
     save();
-    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = (state.name || 'worksheet').replace(/[^a-z0-9\-_ ]/gi, '').trim() + '.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // The images come out of IndexedDB as data: URLs, so the file is the
+    // whole worksheet on any device.
+    worksheetForExport(state).then(function (copy) {
+      var blob = new Blob([JSON.stringify(copy, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = (copy.name || 'worksheet').replace(/[^a-z0-9\-_ ]/gi, '').trim() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    })['catch'](function (e) {
+      setShareNote('Could not read this worksheet’s images to export it (' + ((e && e.message) || 'unknown error') + ').', true);
+    });
   }
 
   /* Through _shared/share.js's receiver (Path 6 P2), which unwraps the
@@ -2611,8 +2629,22 @@
       fileErrorMessage: 'That file is not a worksheet this tool can open. It should be a .json saved by “Export worksheet”, or downloaded from the share sheet.',
       onError: function (message) { setShareNote(message, true); },
       onState: function (parsed) {
-        var name = adoptWorksheet(parsed, 'imported');
-        setShareNote('Opened that file and saved it here as “' + name + '”. Nothing you already had was replaced.');
+        // Its images arrive inline and can be large: move them into the store
+        // BEFORE the worksheet is saved, so a big one never has to fit in
+        // localStorage first. An image already stored is the same record.
+        // Anything in the file that is not a data: image (someone else's
+        // `idb:` reference, say) is dropped first, so the only references
+        // adoptWorksheet is told to trust are the ones made here.
+        ['imageDataUrl', 'sourceBImageDataUrl'].forEach(function (f) {
+          if (!PsaImage.isInline(parsed[f])) parsed[f] = '';
+        });
+        PsaImage.store([parsed.imageDataUrl, parsed.sourceBImageDataUrl]).then(function (map) {
+          ['imageDataUrl', 'sourceBImageDataUrl'].forEach(function (f) {
+            if (map[parsed[f]]) parsed[f] = map[parsed[f]];
+          });
+          var name = adoptWorksheet(parsed, 'imported', true);
+          if (name && !saveFailed) setShareNote('Opened that file and saved it here as “' + name + '”. Nothing you already had was replaced.');
+        });
       }
     });
   }
@@ -2649,16 +2681,12 @@
     els.shareNote.classList.toggle('error', !!isError);
   }
 
-  Share.mount(els.shareBtn, {
-    getState: function () {
-      if (!state) return null;
-      save();
-      // v rides along as it always has — see the note in 056; a link already
-      // in a teacher's email carries it.
-      var payload = { v: 1 };
-      Object.keys(state).forEach(function (k) { payload[k] = state[k]; });
-      return payload;
-    },
+  /* Since Path 4 P4 an upload is an `idb:` reference, and reading its bytes
+     back is asynchronous while share.js's getState() is not. So, as in 056,
+     the button does not use Share.mount(): its click builds the portable copy
+     first (worksheetForExport) and then opens the sheet with Share.open(),
+     handing it that finished copy. share.js is untouched. */
+  var SHARE_OPTS = {
     param: SHARE_PARAM,
     tool: 'primary-source-analysis-generator',
     title: 'Share this worksheet',
@@ -2668,11 +2696,32 @@
     emptyMessage: 'Nothing to share yet.',
     successMessage: 'Link copied. Opening it anywhere loads this worksheet — framework, source text, citation, and your notes — and saves it there as a copy.',
     onMessage: function (text) { setShareNote(text); }
+  };
+  function openShareSheet(copy) {
+    // v rides along as it always has — see the note in 056; a link already
+    // in a teacher's email carries it.
+    var payload = { v: 1 };
+    Object.keys(copy).forEach(function (k) { payload[k] = copy[k]; });
+    Share.open(Object.assign({}, SHARE_OPTS, {
+      opener: els.shareBtn,
+      getState: function () { return payload; }
+    }));
+  }
+  var sharing = false;
+  els.shareBtn.addEventListener('click', function () {
+    if (!state || sharing) return;
+    save();
+    // Nothing stored to read back: the sheet opens at once, as it always has.
+    if (!hasStoredImage(state)) { openShareSheet(JSON.parse(JSON.stringify(state))); return; }
+    sharing = true;
+    worksheetForExport(state).then(openShareSheet)['catch'](function (e) {
+      setShareNote('Could not read this worksheet’s images to share it (' + ((e && e.message) || 'unknown error') + ').', true);
+    }).then(function () { sharing = false; });
   });
 
   /** Files and links both land here: unique the name so nothing already
       saved is touched, save, open. Returns the name it was filed under. */
-  function adoptWorksheet(decoded, suffix) {
+  function adoptWorksheet(decoded, suffix, fromOwnStore) {
     var name = (decoded.name && String(decoded.name).trim()) || 'Shared worksheet';
     var existing = Store.list();
     if (existing.indexOf(name) !== -1) {
@@ -2684,11 +2733,22 @@
     delete copy.v;
     copy.name = name;
     /* A link never carries image pixels — share.js strips them by policy and
-       leaves null behind — but a downloaded file does, so only a value that
-       is not a usable string is blanked. loadSheetByName defaults the rest. */
-    if (typeof copy.imageDataUrl !== 'string') copy.imageDataUrl = '';
-    if (typeof copy.sourceBImageDataUrl !== 'string') copy.sourceBImageDataUrl = '';
-    Store.save(name, copy);
+       leaves null behind — but a downloaded file does. Only a data: image is
+       kept from outside. An `idb:` reference names an image in the SENDER's
+       browser (or one here by accident) and is dropped; the one exception is
+       a reference this page itself just put there, moving a file's images
+       into the store before saving (`fromOwnStore`). */
+    ['imageDataUrl', 'sourceBImageDataUrl'].forEach(function (f) {
+      var v = copy[f];
+      if (!(PsaImage.isInline(v) || (fromOwnStore && PsaImage.isRef(v)))) copy[f] = '';
+    });
+    try {
+      Store.save(name, copy);
+    } catch (e) {
+      setShareNote('Could not save “' + name + '”: this browser’s storage for this site is full. ' +
+        'Backup & Restore shows what is using the space.', true);
+      return null;
+    }
     loadSheetByName(name);
     return name;
   }
@@ -2702,6 +2762,7 @@
       onError: function (message) { setShareNote(message, true); },
       onState: function (decoded) {
         var name = adoptWorksheet(decoded, 'shared');
+        if (!name) return true;
         setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your copy now — editing it does not change the sender’s.');
         return true;
       }
@@ -2726,6 +2787,90 @@
     window.print();
   });
 
+  /* ---------- images: IndexedDB behind the worksheets and the library (Path 4 P4) ----------
+     Every saved worksheet's uploads, and every library entry's, hold `idb:`
+     references; the images are in the shared media store. On load: give
+     every image anything saved points at an object URL, move any data: URL
+     image (a worksheet saved before this, or a link built by hand) into the
+     store, write the smaller worksheets back, then — at boot only — delete
+     stored images nothing points at. A reference whose image is gone is
+     said on its source and once in the note, naming where it is.
+     __psaImagesSettled is for the suite. */
+  var IMAGE_FIELDS = ['imageDataUrl', 'sourceBImageDataUrl'];
+
+  /** [{ where, holder }] for every object this browser has saved an image
+      field on: the open worksheet, every other one (read fresh), the library. */
+  function everyHolder() {
+    var out = [{ where: state.name, holder: state }];
+    Store.list().forEach(function (name) {
+      if (name === state.name) return;
+      var w = Store.load(name);
+      if (w && typeof w === 'object') out.push({ where: name, holder: w });
+    });
+    Library.all().forEach(function (e) { if (e && typeof e === 'object') out.push({ where: null, holder: e }); });
+    return out;
+  }
+  function everyImage() {
+    var out = [];
+    everyHolder().forEach(function (x) {
+      IMAGE_FIELDS.forEach(function (f) { if (x.holder[f]) out.push(x.holder[f]); });
+    });
+    return out;
+  }
+
+  /** Swap each moved data: URL for its reference in FRESH copies of every
+      worksheet and the library, and write back only what changed. */
+  function applyStoredImages(map) {
+    function swap(o) {
+      var changed = false;
+      IMAGE_FIELDS.forEach(function (f) {
+        if (typeof o[f] === 'string' && map[o[f]]) { o[f] = map[o[f]]; changed = true; }
+      });
+      return changed;
+    }
+    if (swap(state)) save();
+    Store.list().forEach(function (name) {
+      if (name === state.name) return;
+      var w = Store.load(name);
+      if (w && typeof w === 'object' && swap(w)) Store.write(name, w);
+    });
+    var lib = Library.all();
+    var libChanged = false;
+    lib.forEach(function (e) { if (e && typeof e === 'object' && swap(e)) libChanged = true; });
+    if (libChanged) Library.write(lib);
+  }
+
+  function sayMissing() {
+    var places = [];
+    var count = 0, seen = {};
+    everyHolder().forEach(function (x) {
+      IMAGE_FIELDS.forEach(function (f) {
+        var v = x.holder[f];
+        if (!PsaImage.isMissing(v)) return;
+        if (!seen[v]) { seen[v] = 1; count++; }
+        var place = x.where === null ? 'the source library' : '“' + x.where + '”';
+        if (places.indexOf(place) === -1) places.push(place);
+      });
+    });
+    if (!count) return;
+    setShareNote((count === 1 ? '1 uploaded image' : count + ' uploaded images') + ' saved in ' + places.join(', ') +
+      (count === 1 ? ' is' : ' are') + ' missing from this browser’s storage. Upload the image again on that source to put it back.', true);
+  }
+
+  function settleImages(isBoot) {
+    return PsaImage.hydrate(everyImage())
+      .then(function () { return PsaImage.store(everyImage()); })
+      .then(function (map) {
+        if (Object.keys(map).length) applyStoredImages(map);
+        renderImagePreviews();
+        renderLibrary();
+        renderPreview();
+        if (!isBoot) return null;
+        sayMissing();
+        return PsaImage.gc(everyImage().filter(PsaImage.isRef));
+      })['catch'](function () { /* reads never block the page; a failed save says so in save() */ });
+  }
+
   /* ---------- boot ---------- */
   bindCropControls('A');
   bindCropControls('B');
@@ -2738,6 +2883,7 @@
       newSheet('New Worksheet');
     }
   }
+  settleImages(true).then(function () { window.__psaImagesSettled = true; });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

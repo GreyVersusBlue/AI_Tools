@@ -391,6 +391,11 @@
    *            wants kept (transparency does not survive JPEG).
    *   as       'blob' (default, for this store) or 'dataUrl' (for a tool still
    *            saving into localStorage, or building a JSON export).
+   *   background  a CSS colour painted under the image before it is drawn, or
+   *            nothing (the default). JPEG has no alpha, so a transparent PNG
+   *            re-encoded as one comes out black where it was clear; 028 passes
+   *            '#fff' because its images go on paper. Opt-in so the tools
+   *            already calling this get byte-identical output.
    */
   function downscaleImage(file, opts) {
     opts = opts || {};
@@ -405,7 +410,9 @@
       if (!fit.w || !fit.h) throw new Error('Could not read that image’s size.');
       var canvas = document.createElement('canvas');
       canvas.width = fit.w; canvas.height = fit.h;
-      canvas.getContext('2d').drawImage(src, 0, 0, fit.w, fit.h);
+      var ctx = canvas.getContext('2d');
+      if (opts.background) { ctx.fillStyle = opts.background; ctx.fillRect(0, 0, fit.w, fit.h); }
+      ctx.drawImage(src, 0, 0, fit.w, fit.h);
       if (typeof src.close === 'function') src.close();   // an ImageBitmap holds memory
       return canvasToBlob(canvas, type, quality).then(function (blob) {
         var out = { blob: wantUrl ? null : blob, dataUrl: null, width: fit.w, height: fit.h, type: blob.type || type };

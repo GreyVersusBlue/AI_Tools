@@ -128,6 +128,23 @@ await settle(page, 400);
       c2.toBlob(res, 'image/png');
     });
     const notUpscaled = await window.MediaDB.downscaleImage(tiny, { maxDim: 1600 });
+    // A fully transparent PNG: re-encoded as JPEG it is black unless a
+    // background is painted first (028 passes '#fff' for paper).
+    const clear = await new Promise(res => {
+      const c3 = document.createElement('canvas');
+      c3.width = 8; c3.height = 8;
+      c3.toBlob(res, 'image/png');
+    });
+    const centre = async (blob) => {
+      const bmp = await createImageBitmap(blob);
+      const c4 = document.createElement('canvas');
+      c4.width = bmp.width; c4.height = bmp.height;
+      const g4 = c4.getContext('2d');
+      g4.drawImage(bmp, 0, 0);
+      return Array.from(g4.getImageData(4, 4, 1, 1).data.slice(0, 3));
+    };
+    const matted = await window.MediaDB.downscaleImage(clear, { background: '#fff' });
+    const unmatted = await window.MediaDB.downscaleImage(clear, {});
 
     return {
       srcBytes: src.size,
@@ -135,6 +152,7 @@ await settle(page, 400);
       thumb: [thumb.width, thumb.height],
       urlBlob: asUrl.blob, urlHead: (asUrl.dataUrl || '').slice(0, 30),
       notUpscaled: [notUpscaled.width, notUpscaled.height],
+      matted: await centre(matted.blob), unmatted: await centre(unmatted.blob),
     };
   });
   eq(r.big, [480, 120], '4: the long edge lands on maxDim, aspect kept');
@@ -144,6 +162,8 @@ await settle(page, 400);
   eq(r.urlBlob, null, '4: as:"dataUrl" returns no blob');
   ok(/^data:image\/jpeg;base64,/.test(r.urlHead), '4: ...it returns a data URL, for a tool still saving into localStorage');
   eq(r.notUpscaled, [40, 20], '4: a small image is left alone rather than blown up');
+  ok(r.matted.every(v => v > 245), '4: background:"#fff" puts a transparent PNG on white: ' + JSON.stringify(r.matted));
+  ok(r.unmatted.every(v => v < 10), '4: ...and without it the output is unchanged (black), so existing callers see no difference: ' + JSON.stringify(r.unmatted));
 }
 
 /* ── 5. the adopter reads what it wrote before this module existed ───────── */
