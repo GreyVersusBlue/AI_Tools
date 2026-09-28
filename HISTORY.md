@@ -9,6 +9,162 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P4, increment 6: 015's event photos move into `media-db.js`, and the image layer is shared (2026-09-28, #294, `CACHE_VERSION` v199)
+
+**What shipped.**
+- **`MediaDB.images({ ns, owner })`** in `_shared/media-db.js` is the shared half of the
+  three near-copy modules:
+  - content-hash ids;
+  - `remember` and object URLs;
+  - `hydrate`;
+  - `store(values)`, returning a map;
+  - `inline`;
+  - `isMissing`;
+  - `keepAlive`;
+  - boot-only `gc` with the 10-minute grace.
+
+  `dbq-image.js`, `psa-image.js` and `cam-image.js` now hold only their `fromFile()` settings and
+  helpers. Their globals and exports are unchanged, and their suites (69, 76 and 72 assertions)
+  passed unchanged, which is the proof the extraction changed no behaviour. `smoke-media-db`
+  gained 12 assertions pinning the factory itself.
+- **015 Timeline Builder.** Each event's `photo` used to be a JPEG data URL inside
+  `gvb-timeline:data:<name>`. The photos are now Blobs in `gvb-media` under `tlb/`, and `photo`
+  holds `idb:h<32 hex>`.
+  - `Tools/timeline-builder/tlb-image.js` (`window.TimelineImage`) replaces `tlb-photo.js`,
+    which is deleted.
+  - Uploads go through `MediaDB.downscaleImage` at the same 480 px and JPEG 0.72.
+  - `tlb-store.js` gained `writeTimeline()`, which rewrites a timeline without making it the
+    open one.
+- **Six** hand-rolled downscalers remain: 030, 041 and 071 are on P4's list; 035, 044 and 064
+  are not.
+- New suite `Tools/timeline-builder/test/smoke-photos.mjs` (port 8448, `test:timeline-photos`,
+  83 assertions).
+- `check-registry.mjs` now matches `MediaDB.images({…})` as well as `MediaDB.store({…})`.
+- `_shared/tool-registry.js` has a comment on 015's row. Keys are unchanged; `check:registry`
+  decided that.
+
+**Calls made, each cheap to reverse.**
+- **A factory on `media-db.js`, not a new `_shared/media-images.js`.** Every adopter already
+  links and precaches `media-db.js`. A new file would have meant a new `SHELL_URLS` and
+  `PRECACHE_URLS` entry, a `SITE_GLOBALS` line and a new `<script>` tag on four pages, all for a
+  layer that is a thin wrapper over `makeStore()`. The cost is that 005, 019 and 046 load about
+  4 KB they never call. The factory has no `db:` option, so everything it stores is in
+  `gvb-media`.
+- **The registry scan had to learn the new call.** Without that change, 028, 042, 056 and 015
+  would have silently dropped out of `gvb-media`'s attribution; they call `MediaDB.images()`,
+  not `MediaDB.store()`. The attributed set was compared before and after and is identical
+  apart from 015 being added.
+- **Where the three copies differed:**
+  - 056's `inline()` returned `null` for a dangling reference and 028's returned `''`. The
+    shared one returns `null`, and `PsaImage.inline` maps that to `''`.
+  - `keepAlive()` and its Blob map were 042's alone. The layer now always keeps the Blob map,
+    which costs nothing extra because each object URL holds its Blob anyway.
+- **Display: object URLs, not a data-URL cache.** Measured in the suite, a 480×360 photo is
+  **9,584 bytes** of JPEG for a smooth scene and **70,260** for noise, the worst case (91 KB as
+  the data URL each event used to hold). By size alone either approach would do, so the
+  question was the one 005 and 019 asked: who needs the bytes synchronously?
+  - Every on-page consumer is an `<img>`:
+    - the editor preview;
+    - the event list;
+    - the timeline and compare canvases, including the wall print, the map + timeline print and
+      the worksheet;
+    - the print list;
+    - story mode.
+  - Only Export JSON and the share sheet carry photos out, and they now read the bytes back
+    asynchronously (`TimelineImage.forExport`), as 028's `worksheetForExport` does. The share
+    button uses `Share.open()` after that read, not `Share.mount()`.
+  - A data-URL cache would also have kept a full base64 copy of every photo inside four
+    `innerHTML` strings on every `renderAll()`.
+- **The plain Print button now waits for images too.** Before, it set `innerHTML` and called
+  `window.print()` immediately, which worked because a data URL is effectively ready. An object
+  URL loads asynchronously, so Print now goes through the same `waitForImages()` as the wall and
+  map prints. That wait resolves on `error` as well as `load`, and a missing photo never gets an
+  `<img>` at all, so a gone photo cannot hang any of the three prints.
+- **`background: '#fff'`.** `tlb-photo.js` painted nothing under the image, so a transparent
+  PNG (clip art) came out as a black square. Every place a photo shows is a white card or paper.
+  Photos already saved are not re-encoded.
+- **Every saved timeline is migrated at boot, not only the open one.** Only timelines that
+  changed are written back: the suite checks that a timeline with no photo is byte-identical
+  afterwards and that the open one stays open. All timelines are also hydrated, because the
+  compare view draws another saved timeline's photos.
+- **What an arrival may carry.** A file or a link keeps a photo only if it matches
+  `^data:image/(png|jpeg|gif|webp);base64,…$`; everything else becomes null. That covers an
+  `idb:` reference from someone else's browser, and also a string that merely starts with
+  `data:image/`, which before this reached `innerHTML` raw. Inline photos are stored before the
+  timeline is saved, for a file and for a hand-built link alike.
+- **Image `src` values in markup are escaped** on top of that: `TimelineImage.url()` returns
+  only a `data:image/` or `blob:` value, and it is passed through `escapeHtml()` at each of the
+  four `innerHTML` sites. `check:inline-sinks` for 015 stayed at 17.
+- **No `keepAlive` in 015.** 015 has no undo: deleting an event is immediate, and deleting a
+  timeline asks "can't be undone". GC runs at boot only, with the grace period. A photo uploaded
+  but not yet saved is spared by the grace period, and the suite checks that an old unsaved
+  upload is collected on a later load.
+- **A missing photo** is named on its event in the list ("photo missing from this browser"), in
+  the editor, and once in the note, which names the timeline. It is left out of the timeline,
+  print, story mode and every print path. The dangling reference is kept in the saved timeline,
+  because a restore from 009 could bring the image back.
+
+**Two `smoke-share.mjs` assertions changed, neither loosened.**
+- "and the photo, which no link could have carried" used to compare the imported timeline's
+  saved photo with the file's inline PNG. The photo is now moved into IndexedDB before saving,
+  so the suite asserts a hash reference *and* that the bytes read back through
+  `TimelineImage.inline()` are exactly the file's PNG.
+- The link capture clicked Share and read the sheet's rows in the same synchronous `evaluate`.
+  The sheet now opens after the stored photo is read back, so the capture waits for the rows
+  (up to 2 s).
+
+**What did not work first.**
+- `smoke-share.mjs` failed on exactly those two assertions, which is how they were found.
+- `smoke-media-db`'s new `keepAlive` check failed on its first run because it collected with the
+  same layer that then tried to write the image back. That layer had dropped the Blob, as it
+  should. 042's real case is another tab collecting, so the test now collects with a second,
+  cold layer.
+- `smoke-photos.mjs` passed first time, which is the case to distrust, so the code was broken
+  on purpose four ways, and each breakage failed its assertions:
+  - `forExport()` not inlining failed 6 assertions, covering export, the sheet and the link.
+  - A file import without `acceptArrival()` failed 4.
+  - `photoSrc()` falling back to the raw reference failed 7, including both print paths and the
+    console-error check.
+  - Closed timelines not written back failed 4.
+
+  The crafted `onerror` value in the file fixture stayed inert even with `acceptArrival()`
+  removed, because of the escaping.
+
+**Verified.**
+- Every `check:*` guard, lint, and `check:precache -- --base origin/main`.
+- 015's five suites plus the new one.
+- 046's `smoke-timeline-handoff`.
+- The 056, 028 and 042 image suites, and `smoke-media-db`.
+- `run-suites --repeat 3 --only timeline-builder`: the same outcome in all three passes.
+- `test:a11y -- --only 015`, with no new allowlist line.
+- CI passed first time: the full run, 37 min, site-wide because `_shared/` changed.
+- A local full `run-suites` on sandbox Chromium (170 suites, 41.6 min): 169 passed.
+
+**Found, not fixed: `class-screen/smoke-class-screen.mjs` crashed once in that local run.** It
+exited without a FAIL line: `dialog.accept: Protocol error (Page.handleJavaScriptDialog): No
+dialog is showing`, thrown from its `page.on('dialog', d => d.accept(…))` handler at line 38.
+The rejected `accept()` promise is not caught, so a dialog that closes before the handler
+answers it (most likely when a navigation dismisses it) kills the process.
+- It did not reproduce: `run-suites --repeat 3 --only class-screen` was green three times, and
+  CI passed it on the same code.
+- 087 loads `media-db.js` but calls nothing this PR changed, and it opens no dialog around an
+  image.
+- CLAUDE.md says a crash is a harness bug to root-cause. The likely fix is a `.catch(() => {})`
+  on that `accept()`, but that suite was not this PR's, so the fix is left for the next session
+  in `Tools/class-screen/`.
+
+**Not verified.**
+- **No real camera photos.** Every image was synthetic: 1×1 PNGs, a canvas gradient scene and
+  canvas noise.
+- **No printer.** The three print paths were checked in the DOM with `window.print` stubbed,
+  not on paper.
+- **No real phone and no quota pressure.** The "too large" save message was not exercised.
+- **No real teacher profile** with many timelines and photos: migration is sequential and was
+  timed only on fixtures.
+- **Chromium only.** Firefox and Safari were not tried.
+
+---
+
 ## Path 4 P4, increment 5: 042's logo and signature move into `media-db.js` (2026-09-28, #292, `CACHE_VERSION` v198)
 
 **What shipped.**
