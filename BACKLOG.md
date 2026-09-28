@@ -89,6 +89,8 @@ image layer. `CACHE_VERSION` v199.**
   list) and 035, 044, 064 (not on it).
 - **Nothing in #294 was tried with a real camera photo, on a printer, on a phone, or under
   quota pressure.** Chromium only.
+- **Found in #294's local run, not fixed:** `class-screen/smoke-class-screen` crashed once on an
+  uncaught `dialog.accept` rejection (line 38); it did not reproduce in three repeats. See `HISTORY.md`.
 - **Found in #290, not fixed:** 028's source-description hint still says "there's no image upload".
 - **Every icon so far was judged by one reviewer, the session that drew it** (67 of 86, #288).
 - **The checkout was switched to `main` under #286's session** by something else. It has not

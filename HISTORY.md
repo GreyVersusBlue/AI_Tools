@@ -138,8 +138,20 @@ to add a to-do to this file, it belongs there instead.
 - `run-suites --repeat 3 --only timeline-builder`: the same outcome in all three passes.
 - `test:a11y -- --only 015`, with no new allowlist line.
 - CI passed first time: the full run, 37 min, site-wide because `_shared/` changed.
-- A local full `run-suites` on sandbox Chromium was still running when this entry was written;
-  every suite through 162 of 170 had passed.
+- A local full `run-suites` on sandbox Chromium (170 suites, 41.6 min): 169 passed.
+
+**Found, not fixed: `class-screen/smoke-class-screen.mjs` crashed once in that local run.** It
+exited without a FAIL line: `dialog.accept: Protocol error (Page.handleJavaScriptDialog): No
+dialog is showing`, thrown from its `page.on('dialog', d => d.accept(…))` handler at line 38.
+The rejected `accept()` promise is not caught, so a dialog that closes before the handler
+answers it (most likely when a navigation dismisses it) kills the process.
+- It did not reproduce: `run-suites --repeat 3 --only class-screen` was green three times, and
+  CI passed it on the same code.
+- 087 loads `media-db.js` but calls nothing this PR changed, and it opens no dialog around an
+  image.
+- CLAUDE.md says a crash is a harness bug to root-cause. The likely fix is a `.catch(() => {})`
+  on that `accept()`, but that suite was not this PR's, so the fix is left for the next session
+  in `Tools/class-screen/`.
 
 **Not verified.**
 - **No real camera photos.** Every image was synthetic: 1×1 PNGs, a canvas gradient scene and
