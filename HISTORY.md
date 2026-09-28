@@ -9,6 +9,97 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P4, increment 3: 056's source images move into `media-db.js` (2026-09-28, #284, `CACHE_VERSION` v194)
+
+**What shipped.**
+- 056 DBQ / Source Packet Builder kept every uploaded image as a full-size data URL inside its
+  packet's key (`dbq:data:<name>`), and a second full copy inside the source library
+  (`dbq:bank`) once it was saved there. Images are now Blobs in `gvb-media` under the `dbq/`
+  namespace, and a source holds `idb:h<32 hex>`.
+- `Tools/dbq-source-packet-builder/dbq-image.js` (`window.DbqImage`: `fromFile`, `hydrate`,
+  `store`, `inline`, `gc`, `url`, `isMissing`) is the image store.
+- New suite `smoke-images.mjs` (port 8240, `test:dbq-images`, 69 assertions).
+- `_shared/tool-registry.js`: comments on 056's and 019's rows saying where the images went
+  (019's was owed from #282). Comments only.
+
+**056 alone, not 056 and 028.** The row allowed either. 056 turned out to touch packets, the
+library, share, Export/Import JSON, crop, print, the save path and a new suite. 028 is 2,745
+lines with two image slots of its own (Source A and B), its own library
+(`gvb-primary-source:library`), worksheet links and an inline downscaler. Both in one PR would
+have been one very large diff over two tools. 028 is increment 4, and row 9 says so.
+
+**What was measured, and what it changed.** 056 **never downscaled**: `FileReader.readAsDataURL`
+on the raw file. A 1600×1200 noise PNG, which the suite uploads, is **5,645,169 bytes**, or about
+**7.3 MB as a data URL**. Before this change, one such photo could not be saved at all, and the
+save failure was swallowed (next paragraph). So the "big images" the row warned about are bigger
+in 056 than in 028 (1600 px JPEG at 0.82, ~1.5 MB warn line).
+
+**Calls made, each cheap to reverse.**
+- **Kept as uploaded, not downscaled.** The crop tool prints an enlarged detail of a scanned
+  document, and the crop and width have always been settings beside an untouched original.
+  IndexedDB has room for that. If export files prove too big in practice, a 2400 px downscale
+  through `MediaDB.downscaleImage` is a one-line change in `fromFile()`.
+- **Object URLs for display, no data-URL cache.** A `getBlob()` from IndexedDB is disk-backed, so
+  an object URL per stored image holds almost nothing in memory. Only Export JSON and the share
+  sheet read the bytes, asynchronously, through `inline()`. Object URLs are revoked when `gc()`
+  deletes the record; one for an image deleted mid-session lives until the tab closes.
+- **`share.js`'s `getState()` is synchronous and was left that way.** The share button no longer
+  uses `Share.mount()`. Its click builds the portable copy (`packetForExport`, every `idb:` ref
+  read back to a data URL) and then calls `Share.open()` with a `getState` that returns that
+  finished copy. share.js still strips and counts the images for the link and the file carries
+  them. A packet with no stored image opens the sheet synchronously, as before; the existing
+  essay-levels suite depends on that, and it is the right behaviour anyway. Teaching `share.js` to
+  take a promise would have made every one of its 54 adopters' sheets async for one caller.
+- **Ids are the content hash** (`h` + the first 128 bits of SHA-256), not random as in 005/019.
+  "Identical images are stored once, including against what is already stored" then holds
+  without a lookup: the same picture in three packets, the library and an imported file is one
+  record, and a migration that runs twice writes the same record. Without `crypto.subtle` the id
+  is random and nothing is deduplicated. Saving a source to the library used to copy its bytes a
+  second time; now it copies a reference.
+- **Migration walks every saved packet and the library, not only the open one**, and writes back
+  fresh copies, only where something changed. The open packet saves through `save()`; the others
+  through a new `writeNamed()`, because `saveNamed()` also makes a packet current.
+- **Trusted versus untrusted repair.** `repairSource(s, trusted)` accepts an `idb:` ref only from
+  this browser's own saves (packets, library, copies). A link or a file is untrusted and keeps
+  only `data:image/`, exactly as before. The suite checks a link carrying someone else's ref.
+- **A failed save is said now.** `saveNamed()` returned false on a full localStorage and nothing
+  read it. `save()` now shows "Could not save …: this browser's storage for this site is full",
+  as an error in the share note, which stays until a save works again (`renderAll()` no longer
+  clears it while a save is failing). The library already reported its own failures.
+- **A missing image**: its source says so ("missing from this browser's storage. Upload it
+  again"), the note says it once at boot with the packets it is in, and print says "Image not
+  available on this device" rather than a blank box. Axe-clean in both themes.
+- **Orphan GC at boot only, 10-minute grace**, the same as 005 and 019. A library entry alone is
+  enough to keep an image; the suite backdates one to prove it.
+- **No IndexedDB means inline, as before.**
+- **The 056 → 028 handoff carries text only** (`psaState()` sends title, text and citation), so
+  no image and no `idb:` ref rides it, and 028 needs nothing on arrival from 056.
+
+**Found and fixed on the way.** An image source's upload input and print-width slider had no
+accessible name (axe `label`, serious). The site sweep opens 056 on its text-only example, so it
+never rendered either control. Both now have an `aria-label`, and the suite scans a source that
+shows its image.
+
+**Found, not fixed.** `renderSources()` still writes `src.image` into `innerHTML`. It is now
+passed through `escapeAttr()`, which it was not before (a `data:image/` string from an imported
+file could carry a `"`), but the page still builds its source blocks as HTML strings.
+`check:inline-sinks` counts are unchanged.
+
+**The Blender question.** This machine had Blender (5.2.2 LTS), so `BACKLOG.md`'s rule would have
+sent the session to rank 1. Devon's prompt for this session named rank 9 and gave a detailed brief
+for it, so rank 9 was worked and Path 21 was left unclaimed.
+
+**The local full run** (167 suites, 39.7 min, site-wide because `_shared/` and `sw.js` changed) failed only
+the two known Windows suites, `schedule-browser/smoke-dark-theme` and
+`music-sightreading-generator/smoke-glyph-fallback`. CI passed on the first run.
+
+**Not verified.** A real teacher profile with many large images: migration is sequential and was
+timed only on fixtures. Firefox and Safari: Chromium only. Export JSON with several multi-MB
+images: one was exported (about 7.3 MB of JSON); memory use for more was not measured. Printing to
+a real printer from object URLs.
+
+---
+
 ## Path 4 P4, increment 2: 019's station images move into `media-db.js` (2026-09-28, #282, `CACHE_VERSION` v193)
 
 **What shipped.**

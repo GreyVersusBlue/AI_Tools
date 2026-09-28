@@ -70,7 +70,7 @@ without claiming or editing them and takes the next unclaimed row that is not Pa
 
 ## Where things stand — start here
 
-*Current as of `main` after #282, 2026-09-28. **Keep this section under ~80 lines.** It is
+*Current as of `main` after #284, 2026-09-28. **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -83,12 +83,13 @@ were buried in it. It was moved **verbatim** to `HISTORY.md` ("BACKLOG header ha
 2026-09-04 → 2026-09-12"). The durable P3 guidance moved to the end of the Path 6 section in
 Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
 
-**Last merged: #282, Path 4 P4 increment 2 — 019's station images moved out of localStorage into `media-db.js` (`gvb-media`, namespace `escape-room/`). `CACHE_VERSION` v193.**
-- Rooms hold `idb:` references; the student link, QR payload, packet and share file still get
-  data URLs, because `lock.html` reads the image from its own URL on a student phone. 005 (#280)
-  and 019 are the two patterns. **056/028 source libraries are next**, and they are the first
-  with big images (028 keeps 1600 px), so the in-memory data-URL cache both used is the wrong
-  model there: see `HISTORY.md`'s #282 entry.
+**Last merged: #284, Path 4 P4 increment 3 — 056's source images moved out of localStorage into `media-db.js` (`gvb-media`, namespace `dbq/`). `CACHE_VERSION` v194.**
+- 056 never downscaled: one real photo was past the site's ~5 MB and the save failed silently.
+  Images are now kept as uploaded, by content hash (one record however many packets and library
+  entries use it), shown through object URLs, and read back only for Export JSON and the share
+  sheet. `share.js` is untouched: the button builds the portable copy, then calls `Share.open()`.
+  A failed save is said now. **028 is next** (increment 4); see `HISTORY.md`'s #284 entry.
+- 005 (#280), 019 (#282) and 056 (#284) are the three patterns; 056's is the one for big images.
 - **Found in #282, not fixed:** each station's QR code encodes the whole room, so one real photo
   makes every QR in a 019 room fail to build. Pre-existing; noted under 019 in Tier 2.
 - **On Devon's Windows checkout two suites fail locally that CI passes:** `schedule-browser/
@@ -118,8 +119,11 @@ Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
   They carry the style rules and every draft that failed by eye (fingers, fries, a rude
   gesture, a chocolate bar, laptops, a keyboard, a "close" button).
 - **No Blender** (any cloud container): skip ranks 1–7 without claiming or editing them.
-  Rank 8 (Path 6 P4) is blocked on rank 45, so take **rank 9**, Path 4 P4 increment 3
-  (056/028 source libraries onto `media-db.js`), one increment.
+  Rank 8 (Path 6 P4) is blocked on rank 45, so take **rank 9**, Path 4 P4 increment 4
+  (028's two image slots and its library onto `media-db.js`, replacing its inline downscaler),
+  one increment. Copy 056's shape (`dbq-image.js`), not 005's or 019's.
+- #284 was worked on a machine **with** Blender, because Devon's prompt named rank 9. The
+  rule above stands; a prompt that names a row wins over it.
 
 **Decisions only Devon can make — surfaced, not taken.**
 - **Interleave per-tool improvements with platform work?** Standing decisions say "keep platform
@@ -130,18 +134,18 @@ Tier 2. Nothing was summarised away; search `HISTORY.md` for a PR number.
   pairing QR, real-printer dark-mode print and persistent-storage grants. It takes about 30
   minutes with a phone, a laptop and a printer.
 
-**Numbers (2026-09-25; re-measure, do not carry forward):**
+**Numbers (2026-09-28; re-measure, do not carry forward):**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v193` — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **271** in `PRECACHE_URLS`, **89** in the `SHELL_URLS` install tier. Bytes: **11.21 MB / 2.52 MB** summed on Devon's Windows checkout after #267, before #269–#276 grew 087 and added its phone page (not re-measured). #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **43,050 B** ledgered, **22,086 B** of it shell (`check:art` enforces both) |
-| Suites | **166** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| `CACHE_VERSION` | `v194` — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **272** in `PRECACHE_URLS`, **89** in the `SHELL_URLS` install tier. Bytes: **11.21 MB / 2.52 MB** summed on Devon's Windows checkout after #267, before #269–#276 grew 087 and added its phone page (not re-measured). #263 recorded 11.42 / 2.73 from the same kind of checkout and the gap is **not reconciled** (the art added ~15 KB), so re-measure rather than compare. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **43,050 B** ledgered, **22,086 B** of it shell (`check:art` enforces both) |
+| Suites | **167** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **14** page-rule pairs on 14 pages, all `color-contrast` |
-| Tool registry | 88 rows, **218 keys and 32 prefixes across 111 files** (087 now also `reads` 010's settings); **49** entries marked `student` (087's one key, `cls-screen:state`, is not student data: name picks are never saved). The live-entry denominator was 235 in this cell; counting non-`legacy` keys and prefixes gives 238 before #269 and 239 after, so the old figure used a rule not written down. Re-measure before quoting one; `check:registry` green |
-| Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 79 · `a11y.js` 79 · `ink-paper.css` 72 · `base.css` 68 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `media-db.js` 4 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Tool registry | 88 rows, **218 keys and 32 prefixes across 113 files** (087 now also `reads` 010's settings); **49** entries marked `student` (087's one key, `cls-screen:state`, is not student data: name picks are never saved). The live-entry denominator was 235 in this cell; counting non-`legacy` keys and prefixes gives 238 before #269 and 239 after, so the old figure used a rule not written down. Re-measure before quoting one; `check:registry` green |
+| Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 79 · `a11y.js` 79 · `ink-paper.css` 72 · `base.css` 68 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `media-db.js` 5 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 87 (`001`–`087`); next free number **088** |
 | Tier 1 rows | **191**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows proper start at rank **101**; 183–191 are Path 22 P6–P14 (added at the end at Devon's request, not ranked by him) |
@@ -280,7 +284,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 6 | Path 21 P4 — 030 review-game art: board backdrop, category and point-value tiles, projected. **≤ 200 KB** for both themes. *a11y:* text is always drawn over them, so every tile's luminance is recorded and **4.5:1 asserted in both themes** by the validator. **Needs Blender locally; a session without `blender` on PATH skips it.** | 030 | ½ | | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
 | 7 | Path 21 P4 — 046 relief heightmap: a shaded-relief layer under the default world base map, from a public-domain DEM (not committed; source, licence and SHA-256 in the README). Off by default and disabled in choropleth mode. **≤ 400 KB** for a 2048-px light/dark pair. *a11y:* luminance range capped so label ink holds 4.5:1 over the whole image; the toggle has an accessible name. **Needs Blender locally; a session without `blender` on PATH skips it.** | 046 | 1 | | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
 | 8 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 (#257, v182):** 046 → 015, 056 → 028 (`sheet: false`) and 039 → 040 are entries; **003 → 037 is a documented exception** (student scores never ride a link); `share.js` gained `sendState(entry)` and `sheet: false`. **Increment 2 (#259, v183), the roster chain:** **002 → 022** is a sheet row and **022 → 005** a `sheet: false` entry from 022's "Seat these groups" button; **006/007 → 002 is not a link** (the roster already reaches 002 through `roster.js`). **Left: only 053 → 030, which is blocked on rank 45** (Path 12 P1, the question bank with 030 as the front door). Do not start this row until rank 45 has shipped; then it is one entry plus a row in `smoke-send-to.mjs` | site | ¼ | | [Path 6](#path-6--share-everywhere) |
-| 9 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js`. **Increment 1 done (#280, v192): 005's photos** (`seating/`, `Tools/seating-chart/scg-photo.js`, `smoke-photos.mjs`). **Increment 2 done (#282, v193): 019's station images** (`escape-room/`, `Tools/escape-room-builder/er-image.js`, `smoke-images.mjs`): every saved room migrated on load, data URLs out to the student link, QR, packet and share file, dedup against what is already stored, boot-time orphan GC, inline fallback without IndexedDB. **Left, in this order:** 056/028 source libraries (big images: object URLs and an async export, not 005's data-URL cache), 042 logo/signature, 015, 041, 071, 080 snapshots, 030 clue images. Two downscaler copies remain (015's `tlb-photo.js`, 028 inline); remove each as its tool migrates. 019's row in `_shared/tool-registry.js` still lacks the where-the-images-went comment 005's has | site | 2+ | `p4p4i3` 2026-09-28 01:25 UTC | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 9 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js`. **Done: 005's photos (#280, v192, `scg-photo.js`), 019's station images (#282, v193, `er-image.js`), 056's packet and library images (#284, v194, `Tools/dbq-source-packet-builder/dbq-image.js`, `smoke-images.mjs` on port 8240).** 056 set the big-image shape: kept as uploaded, content-hash ids (stored once across packets, library and imports), object URLs for display, bytes read back only for Export JSON and the share sheet (the button builds the copy, then `Share.open()`; `share.js` untouched). **Left, in this order:** **028 next** (Source A and B slots, its own `gvb-primary-source:library`, worksheet links, and its inline 1600 px downscaler, which `MediaDB.downscaleImage` replaces at the same size and 0.82; the 056 → 028 handoff carries text only, so nothing arrives with images), then 042 logo/signature, 015 (and its `tlb-photo.js` downscaler), 041, 071, 080 snapshots, 030 clue images. 028 declares its own local `var Store`, which shadows `_shared/store.js`: do not confuse them | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 10 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 11 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 12 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
@@ -962,7 +966,7 @@ the ~5 MB ceiling (005, 015, 019, 028, 041, 042, 056, 071, 080); `bmg-map-cache.
 is the IndexedDB pattern everyone cites and nobody has extracted.
 
 **Status.** P1 shipped 2026-09-04 (#173, `CACHE_VERSION` v142), P2 the same day (#174,
-v143), P3 the same day (#182, v148, with 046 as its single adopter). P4–P5 open. What
+v143), P3 the same day (#182, v148, with 046 as its single adopter). P4 is in progress: 005 (#280), 019 (#282) and 056 (#284) have moved; 028 is next. P5 open. What
 actually landed, and what each phase got wrong on the way, is in `HISTORY.md`.
 
 **Phases.**
