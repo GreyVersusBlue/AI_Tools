@@ -584,6 +584,11 @@
       file: 'Tools/019-escape-room-builder.html',
       category: 'games-rewards',
       share: { param: 'room' },
+      /* Station clue images are not in this key since Path 4 P4: each station
+         holds an `idb:` reference and the images are in `gvb-media` (declared
+         on the site row above) under the `escape-room/` namespace. Rooms and
+         their images are teacher content, not student data. Images no saved
+         room points at are deleted when the tool next loads. */
       keys: [
         { k: 'escape-room-builder:rooms' },
         { k: 'escape-room-progress:' },
@@ -1153,6 +1158,12 @@
       file: 'Tools/056-dbq-source-packet-builder.html',
       category: 'social-studies',
       share: { param: 'packet' },
+      /* Uploaded source images are not in these keys since Path 4 P4: an image
+         source in a packet or in the library (`dbq:bank`) holds an `idb:`
+         reference, and the images are in `gvb-media` (declared on the site row
+         above) under the `dbq/` namespace, kept at full size and stored once
+         however many packets use them. Teacher content, not student data.
+         Images nothing saved points at are deleted when the tool next loads. */
       keys: [
         { k: 'dbq_packet_v1', legacy: true },
         { k: 'dbq:bank' },
