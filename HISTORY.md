@@ -9,6 +9,86 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P4, increment 2: 019's station images move into `media-db.js` (2026-09-28, #282, `CACHE_VERSION` v193)
+
+**What shipped.**
+- 019 Escape Room Builder kept each clue image as a data URL inside `escape-room-builder:rooms`,
+  beside every other saved room. Images are now Blobs in `gvb-media` under the `escape-room/`
+  namespace, and a station holds `idb:<id>`.
+- `Tools/escape-room-builder/er-image.js` (`window.EscapeRoomImage`: `fromFile`, `hydrate`,
+  `migrate`, `gc`, `src`, `isMissing`) is the image store. The inline downscaler in the page is
+  gone; `MediaDB.downscaleImage` runs at the same 320 px and JPEG 0.6. **One downscaler copy
+  remains: 015's `tlb-photo.js`, plus 028's inline one.**
+- New suite `smoke-images.mjs` (port 8239, `test:escape-room-images`, 56 assertions).
+
+**Who reads the image, and what each now gets.** Every reader was found before the shape changed.
+The editor thumbnail, the teacher test run, the printed packet, the student link and every
+station's QR payload, and the share sheet all read through `EscapeRoomImage.src()`, which hands
+back a data URL. `lock.html` reads the image out of its own URL, on a student phone that has never
+seen this browser's IndexedDB, so the student link has to carry the bytes; the suite opens
+`lock.html` from the built link and checks it draws the image. `monitor.html` reads no images.
+
+**Calls made, each cheap to reverse.**
+- **`gvb-media`, not beside the clue audio.** The brief said 019's clue audio was already in
+  IndexedDB. It is not: 019 has no audio. The audio database is `rgb-audio`, and it belongs to
+  030 Review Game Board (`Tools/review-game-board/rgb-audio-db.js`). 019's images go in the shared
+  store because that is what `media-db.js` is for, and one database is one registry row. When 030's
+  clue images move (the last row of P4), the same question is real for it: its audio has its own
+  database with a record shape and a duplicate-on-copy ownership rule that predate `media-db.js`,
+  so moving the audio is a separate decision from moving the images.
+- **A data-URL cache in memory, as 005 did, not object URLs.** Measured: a 1200×900 noise photo,
+  the worst case for JPEG, stores as **25,166 bytes** and is **33 KB** as a data URL. More to the
+  point, every consumer needs the data URL itself and synchronously: `render()` builds the student
+  link and the QR codes on every keystroke, and the share sheet's `getState()` is synchronous. An
+  object URL would only move the base64 step into each of them.
+- **Migration walks every saved room, not only the open one**, and saves them all together. A
+  room nobody opens would otherwise keep its images in localStorage forever, and GC has to know
+  every room's references anyway.
+- **Identical images are stored once, including against what is already stored.** 005's migration
+  deduplicated within one pass. Here a room that comes back by link, or a copy of a room, would
+  have doubled its images, so `migrate()` also matches against the cache `hydrate()` just filled.
+- **A room arriving by link keeps only `data:image/` values.** Before this, `normalizeRoom()` took
+  any string. An `idb:` reference from someone else's browser would name one of this browser's
+  images, or nothing. It is dropped, and the suite checks that.
+- **Orphan GC at boot only, with a 10-minute grace period**, the same as 005. Deleting a room or
+  a station leaves its images until the next load. 019 has no "erase everything" button, so there
+  is no `clearAll()`.
+- **No IndexedDB means inline, as before.** The image is kept either way.
+- **A missing image is shown on its station ("Image missing from this browser") and named in the
+  message line on every render until it is removed.** 005 says it once. 019's message line is
+  rebuilt on each render, and a missing image changes what the student link carries, so it keeps
+  saying so. The state is axe-clean in both themes.
+- **`_shared/` was not touched.** 005's registry row carries a comment saying where its photos
+  went; 019's row does not yet, because a parallel session owned `_shared/` this round. The next
+  session in `_shared/tool-registry.js` should add it (row 9 says so). `check:registry` does not
+  need it.
+
+**Found, not fixed: a real photo breaks every station's QR code.** Each station's QR code encodes
+the whole room, images included, and a QR code holds at most about 3 KB. One 33 KB photo on any
+station makes every code in the room fail to build, and the page says "Could not build a QR code
+for: Station 1, Station 2…". The editor's hint says a photo "makes every station's QR code bigger";
+in practice it makes them impossible, so clue images reach students only through the copied
+student link. This predates this change (reproduced on `main`). The fix is a product call (images
+out of the QR payload, or a per-station payload) and is a new Tier 2 note under 019.
+
+**Also found:** a room whose saved `ecLevel` is not one the select offers (M, Q, H; the suite's
+first fixture used `'L'`) blanks the select, and every QR code fails to build. No current path
+writes such a value that I could find; noted, not fixed.
+
+**What went wrong this session.** The implementation commit landed on local `main`, not the
+feature branch: the reflog shows a `checkout … to main` this session did not run, most likely
+the parallel Blender session sharing the same working tree. It was caught before any push to
+`main` (the PR create failed with "no commits between") and moved. Two sessions in one checkout
+is the hazard; check `git branch --show-current` before every commit when another is running.
+The full local run (38 min, site-wide because `sw.js` changed a precache URL) failed only the two
+known Windows suites.
+
+**Not verified.** A real teacher profile with many illustrated rooms: migration is sequential and
+was timed only on fixtures. Firefox and Safari: the suite is Chromium only. A real phone scanning
+the student link after the change.
+
+---
+
 ## Path 4 P4, increment 1: 005's student photos move into `media-db.js` (2026-09-27, #280, `CACHE_VERSION` v192)
 
 **What shipped.**
