@@ -1472,6 +1472,332 @@ def icon_067(pal, rand):
     prism("beam", [(-0.47, 1.05), (0.96, 1.4), (0.96, 1.7), (-0.47, 1.35)], 0.16, body, parent=g)
 
 
+def icon_068(pal, rand):
+    """068 Parent/Guardian Contact Log: a desk telephone, the handset on
+    its cradle and a dial on the front: the call home the log records."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("phone", rot=(0.0, 0.0, FACING - 20.0))
+    prism("body", [(-0.95, 0.0), (0.95, 0.0), (0.7, 0.75), (-0.7, 0.75)], 1.1, wood, parent=g)
+    prism("handset", [(-1.05, 0.7), (-0.55, 0.7), (-0.45, 0.92), (0.45, 0.92), (0.55, 0.7), (1.05, 0.7),
+                      (0.98, 1.08), (0.72, 1.22), (-0.72, 1.22), (-0.98, 1.08)], 0.4, body,
+          loc=(0.0, -0.05, 0.02), parent=g)
+    y = -0.56
+    wire("dial", [circle(0.0, 0.36, 0.26, y=y, segments=16), circle(0.0, 0.36, 0.08, y=y, segments=8)], body, parent=g)
+
+
+def icon_069(pal, rand):
+    """069 PE Warm-Up Circuit: a running shoe, sole, laces and heel, what
+    the class warms up in. The first cut was a jump rope, two handles on a
+    hanging loop, and it read as a horseshoe magnet."""
+    body = art.token_material(pal, "--card")
+    g = group("shoe", rot=(0.0, 0.0, FACING - 20.0))
+    prism("shoe", [(-1.35, 0.0), (1.25, 0.0), (1.45, 0.12), (1.5, 0.28), (1.4, 0.42), (0.9, 0.55), (0.35, 0.75),
+                   (0.0, 1.05), (-0.2, 1.1), (-0.45, 0.88), (-0.8, 0.9), (-1.15, 1.0), (-1.3, 0.85), (-1.38, 0.4)],
+          0.7, body, parent=g)
+    y = -0.36
+    lines = [[(-1.36, y, 0.22), (1.49, y, 0.22)]]
+    for t in (0.25, 0.5, 0.75):
+        cx, cz = 0.9 - 0.9 * t, 0.55 + 0.5 * t
+        lines.append([(cx + 0.02, y, cz + 0.03), (cx - 0.12, y, cz - 0.22)])
+    wire("sole", lines, body, parent=g)
+
+
+def icon_070(pal, rand):
+    """070 Peer Feedback Checklist: two written pages and the arrows
+    between them: trade papers with a partner."""
+    body = art.token_material(pal, "--card")
+    g = group("swap", rot=(-5.0, 0.0, FACING - 15.0))
+    for i, s in enumerate((-1.0, 1.0)):
+        p = flat("page.%d" % i, dog_eared(0.95, 1.25, 0.25), body, loc=(s * 0.75, 0.0, 0.0), parent=g)
+        wire("lines.%d" % i, lines_on(-0.3, 0.3, (0.25, -0.05, -0.35), -0.01, short=(2,)), body, parent=p)
+    y = -0.02
+    top = [(0.75 * math.cos(math.radians(180.0 - 180.0 * i / 12)), y, 0.72 + 0.4 * math.sin(math.radians(180.0 - 180.0 * i / 12)))
+           for i in range(13)]
+    bot = [(-p[0], y, -p[2]) for p in top]
+    wire("arrows", [top, [(0.6, y, 0.88), (0.75, y, 0.72), (0.9, y, 0.88)],
+                    bot, [(-0.6, y, -0.88), (-0.75, y, -0.72), (-0.9, y, -0.88)]], body, parent=g)
+
+
+def icon_071(pal, rand):
+    """071 Picture-Prompt Generator: a camera, where the pictures come
+    from."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("camera", rot=(0.0, 0.0, FACING - 25.0))
+    box("body", (1.9, 0.75, 1.15), wood, loc=(0.0, 0.0, 0.575), parent=g)
+    box("hump", (0.7, 0.55, 0.28), wood, loc=(-0.2, 0.0, 1.29), parent=g)
+    cylinder("button", 0.12, 0.12, body, loc=(0.6, 0.0, 1.21), segments=12, parent=g)
+    cylinder("lens", 0.44, 0.4, body, loc=(0.05, -0.575, 0.55), rot=(90.0, 0.0, 0.0), segments=32, parent=g)
+    wire("glass", [circle(0.05, 0.55, 0.28, y=-0.785, segments=20)], body, parent=g)
+    wire("flash", [rect(0.5, 0.8, 0.8, 0.98, y=-0.38)], body, parent=g)
+
+
+def icon_072(pal, rand):
+    """072 Plot Diagram Builder: the plot mountain itself, a long rising
+    slope to the climax and a short fall, snow on its peak, standing on a
+    level line that runs out both sides: exposition and resolution. The
+    first cut was a solid prism, and its thickness read as a wedge of
+    cheese."""
+    body = art.token_material(pal, "--card")
+    g = group("mountain", rot=(0.0, 0.0, FACING - 5.0))
+    m = flat("mountain", [(-1.1, 0.0), (1.0, 0.0), (0.35, 1.55)], body, parent=g)
+    y = -0.01
+    wire("snow", [[(-0.39, y, 0.95), (-0.2, y, 0.82), (0.0, y, 0.95), (0.2, y, 0.8), (0.4, y, 0.92), (0.62, y, 0.9)],
+                  [(-1.45, y, 0.0), (1.35, y, 0.0)]], body, parent=m)
+
+
+def icon_073(pal, rand):
+    """073 Science Fair Project Tracker: a trifold display board, a title
+    across the middle panel and pages on all three."""
+    body = art.token_material(pal, "--card")
+    g = group("board", rot=(0.0, 0.0, FACING - 15.0))
+    h = 1.5
+    c = flat("centre", [(-0.65, 0.0), (0.65, 0.0), (0.65, h), (-0.65, h)], body, parent=g)
+    wl = flat("wing.l", [(-0.65, 0.0), (0.0, 0.0), (0.0, h), (-0.65, h)], body, loc=(-0.65, 0.0, 0.0),
+              rot=(0.0, 0.0, 40.0), parent=g)
+    wr = flat("wing.r", [(0.0, 0.0), (0.65, 0.0), (0.65, h), (0.0, h)], body, loc=(0.65, 0.0, 0.0),
+              rot=(0.0, 0.0, -40.0), parent=g)
+    y = -0.01
+    wire("title", [rect(-0.45, 1.15, 0.45, 1.38, y=y), rect(-0.4, 0.35, 0.4, 0.95, y=y)], body, parent=c)
+    wire("left", [rect(-0.52, 0.7, -0.13, 1.2, y=y), rect(-0.52, 0.2, -0.13, 0.55, y=y)], body, parent=wl)
+    wire("right", [rect(0.13, 0.7, 0.52, 1.2, y=y), rect(0.13, 0.2, 0.52, 0.55, y=y)], body, parent=wr)
+
+
+def icon_074(pal, rand):
+    """074 Science Safety Label Maker: a hazard diamond with a flame in
+    it, the flammable label on a lab cabinet."""
+    body = art.token_material(pal, "--card")
+    g = group("hazard", rot=(0.0, 0.0, FACING - 20.0))
+    c = s = math.sqrt(0.5)
+    diamond = [(x * c - z * s, x * s + z * c) for x, z in rounded(1.7, 1.7, 0.18, segments=3)]
+    prism("sign", diamond, 0.14, body, parent=g)
+    y = -0.08
+    flame = [(-0.05, -0.38), (-0.3, -0.3), (-0.38, -0.08), (-0.3, 0.15), (-0.12, 0.35), (-0.1, 0.15), (0.02, 0.25),
+             (0.08, 0.5), (0.25, 0.3), (0.33, 0.05), (0.28, -0.2), (0.12, -0.36), (-0.05, -0.38)]
+    wire("mark", [[(x, y, z) for x, z in flame], [(-0.4, y, -0.52), (0.4, y, -0.52)],
+                  [(0.0, y, 1.0), (1.0, y, 0.0), (0.0, y, -1.0), (-1.0, y, 0.0), (0.0, y, 1.0)]], body, parent=g)
+
+
+def icon_075(pal, rand):
+    """075 Staff Directory Builder: a staff ID badge, a strap through its
+    slot, a head and shoulders over a name. The first cut was a rotary card
+    file, and with its front cards hiding the rest it read as a toaster.
+    (076's first cut, a slip under a push pin, read as this badge, which is
+    how the badge was found.)"""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("badge", rot=(-8.0, 0.0, FACING - 18.0))
+    prism("card", rounded(1.5, 2.0, 0.16, segments=3), 0.06, body, parent=g)
+    y = -0.04
+    lines = [rect(-0.25, 0.72, 0.25, 0.8, y=y), circle(0.0, 0.3, 0.2, y=y, segments=14),
+             [(-0.4 + 0.8 * i / 10, y, -0.28 + 0.3 * math.sin(math.pi * i / 10)) for i in range(11)],
+             [(-0.4, y, -0.28), (0.4, y, -0.28)], [(-0.45, y, -0.6), (0.45, y, -0.6)]]
+    wire("print", lines, body, parent=g)
+    wire("strap", [[(-0.18, 0.0, 0.76), (-0.18, 0.0, 1.35), (0.18, 0.0, 1.35), (0.18, 0.0, 0.76)]], wood, parent=g)
+
+
+def icon_076(pal, rand):
+    """076 Sub Note / Feedback Slip: a sticky note, handwritten, its
+    bottom corner curling up: the note the sub leaves on the desk. The first
+    cut, a slip under a push pin, read as an ID badge (the pin was the
+    head); 075 took that idea."""
+    body = art.token_material(pal, "--card")
+    g = group("note", rot=(-8.0, 0.0, FACING - 15.0))
+    s, c = 0.9, 0.45
+    p = flat("slip", [(-s, -s), (s - c, -s), (s, -s + c), (s, s), (-s, s)], body, rot=(0.0, 6.0, 0.0), parent=g)
+    flat("curl", [(s - c, -s), (s, -s + c), (s - c * 0.9, -s + c * 0.9)], body, loc=(0.0, -0.06, 0.0), parent=p)
+    y = -0.01
+    hand = [[(-0.6 + 1.2 * i / 12 * w, y, z + 0.06 * math.sin(math.pi * i / 2.0)) for i in range(13)]
+            for z, w in ((0.45, 1.0), (0.1, 1.0), (-0.25, 0.6))]
+    wire("hand", hand, body, parent=p)
+
+
+def icon_077(pal, rand):
+    """077 Testing Accommodations Cards: headphones, for the read-aloud
+    accommodation. A judgement call: the card covers extended time and a
+    separate setting too, but a clock is 034's and an hourglass 004's. The
+    first cut was a bubble answer sheet; twelve bubbles read as an abacus and
+    came to 1,868 B, over the cap."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("headphones", rot=(0.0, 0.0, FACING - 10.0))
+    tube_arc("band", 0.95, 0.09, 8.0, 172.0, wood, segments=20, loc=(0.0, 0.0, 0.0), parent=g)
+    for i, s in enumerate((-1.0, 1.0)):
+        prism("cup.%d" % i, rounded(0.62, 0.8, 0.26, segments=3), 0.34, body, loc=(s * 1.0, 0.0, -0.05),
+              rot=(0.0, 0.0, 90.0), parent=g)
+        prism("pad.%d" % i, rounded(0.5, 0.66, 0.2, segments=3), 0.14, wood, loc=(s * 0.77, 0.0, -0.05),
+              rot=(0.0, 0.0, 90.0), parent=g)
+
+
+def icon_078(pal, rand):
+    """078 Unit Conversion Chart: a ruler with a scale on each edge,
+    inches along the top and centimetres along the bottom."""
+    body = art.token_material(pal, "--card")
+    g = group("ruler", rot=(0.0, -30.0, FACING - 20.0))
+    prism("ruler", [(-1.3, -0.45), (1.3, -0.45), (1.3, 0.45), (-1.3, 0.45)], 0.1, body, parent=g)
+    y = -0.055
+    ticks = []
+    for i in range(5):
+        x = -1.0 + i * 0.5
+        ticks.append([(x, y, 0.45), (x, y, 0.1 if i % 2 == 0 else 0.25)])
+    for i in range(8):
+        x = -1.05 + i * 0.3
+        ticks.append([(x, y, -0.45), (x, y, -0.28)])
+    wire("ticks", ticks, body, parent=g)
+
+
+def icon_079(pal, rand):
+    """079 Verb Conjugation Poster: a wall banner hung from a rod, a title
+    over two columns of endings."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("poster", rot=(0.0, 0.0, FACING - 15.0))
+    cylinder("rod", 0.07, 2.1, wood, loc=(0.0, 0.0, 1.4), rot=(0.0, 90.0, 0.0), segments=10, parent=g)
+    for i, s in enumerate((-1.0, 1.0)):
+        sphere("knob.%d" % i, 0.11, wood, loc=(s * 1.1, 0.0, 1.4), parent=g)
+    wire("cord", [[(-0.8, 0.0, 1.45), (0.0, 0.0, 1.95), (0.8, 0.0, 1.45)]], wood, parent=g)
+    p = flat("sheet", [(-0.85, 1.35), (-0.85, -0.9), (0.0, -0.6), (0.85, -0.9), (0.85, 1.35)], body, parent=g)
+    y = -0.01
+    lines = [[(-0.55, y, 1.05), (0.55, y, 1.05)], [(0.0, y, 0.8), (0.0, y, -0.35)]]
+    lines += lines_on(-0.6, -0.15, (0.5, 0.0), y) + lines_on(0.15, 0.6, (0.5, 0.0), y)
+    wire("text", lines, body, parent=p)
+
+
+def icon_080(pal, rand):
+    """080 Virtual Manipulatives Board: unit cubes, two on the floor and
+    one stacked, and a pointer dragging a fourth into place: blocks you move
+    on a screen. A pile of four under the dragged one clumped into one
+    shape at 32 px. Two cuts failed before that: base-ten blocks (a ten rod lying
+    down and three loose units), whose rod read as a harmonica at 32 px,
+    and fraction tiles (a whole over two halves over three thirds), which
+    read as a brick wall."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("cubes", rot=(0.0, 0.0, FACING - 20.0))
+    u, gap = 0.62, 0.05
+    for i, (x, z) in enumerate(((-0.67, 0.0), (0.0, 0.0), (-0.67, 0.67))):
+        box("cube.%d" % i, (u, u, u), body, loc=(x, 0.0, z + u / 2), parent=g)
+    box("cube.3", (u, u, u), body, loc=(0.95, 0.0, 1.25), rot=(0.0, 0.0, 12.0), parent=g)
+    arrow = [(0.0, 0.0), (0.0, -0.8), (0.2, -0.6), (0.36, -0.95), (0.5, -0.88), (0.34, -0.55), (0.6, -0.55)]
+    prism("pointer", arrow, 0.06, wood, loc=(1.0, -0.5, 1.2), parent=g)
+
+
+def icon_081(pal, rand):
+    """081 Word Problem Warm-Up: a steaming mug with a question mark on
+    its side, the warm-up question."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("mug", rot=(0.0, 0.0, FACING - 20.0))
+    cup("mug", 0.6, 1.2, 32, wood).parent = g
+    tube_arc("handle", 0.35, 0.08, -80.0, 80.0, wood, loc=(0.68, 0.0, 0.6), parent=g)
+    steam = []
+    for x in (-0.2, 0.2):
+        steam.append([(x + 0.1 * math.sin(math.pi * 2 * i / 8), 0.0, 1.4 + 0.08 * i) for i in range(9)])
+    y = -0.67
+    q = [(0.18 * math.cos(math.radians(a)), y, 0.75 + 0.18 * math.sin(math.radians(a))) for a in range(160, -61, -20)]
+    q.append((0.0, y, 0.45))
+    wire("marks", steam + [q, circle(0.0, 0.3, 0.03, y=y, segments=6)], body, parent=g)
+
+
+def _slab_quote(x0):
+    """(x, z) points of one slab-serif closing quote mark, left edge at x0."""
+    return [(x0, 0.6), (x0 + 0.6, 0.6), (x0 + 0.6, 0.05), (x0 + 0.2, -0.55), (x0 + 0.05, -0.55),
+            (x0 + 0.3, 0.0), (x0, 0.0)]
+
+
+def icon_082(pal, rand):
+    """082 Citation Generator: a pair of heavy quotation marks, the words
+    someone else wrote."""
+    body = art.token_material(pal, "--card")
+    g = group("quotes", rot=(0.0, 0.0, FACING - 20.0))
+    prism("mark.0", _slab_quote(-0.75), 0.25, body, parent=g)
+    prism("mark.1", _slab_quote(0.15), 0.25, body, parent=g)
+
+
+def icon_083(pal, rand):
+    """083 Propaganda Analysis: a megaphone, sound coming out of its
+    mouth: persuasion at volume."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("megaphone", rot=(0.0, 0.0, FACING - 20.0))
+    cylinder("horn", 0.25, 1.6, body, loc=(0.2, 0.0, 0.0), r2=0.8, rot=(0.0, 90.0, 0.0), caps=False, segments=32, parent=g)
+    cylinder("mouthpiece", 0.18, 0.3, wood, loc=(-0.75, 0.0, 0.0), rot=(0.0, 90.0, 0.0), segments=16, parent=g)
+    box("grip", (0.2, 0.2, 0.6), wood, loc=(-0.2, 0.0, -0.45), parent=g)
+    y = 0.0
+    arcs = [[(1.15 + r * math.cos(math.radians(a)), y, r * math.sin(math.radians(a))) for a in range(-40, 41, 10)]
+            for r in (0.35, 0.6)]
+    wire("sound", arcs, body, parent=g)
+
+
+def icon_084(pal, rand):
+    """084 Socratic Seminar: a Greek column, plinth, fluted shaft and
+    capital: Socrates' Athens."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("column", rot=(0.0, 0.0, FACING))
+    box("plinth", (1.6, 1.6, 0.2), wood, loc=(0.0, 0.0, 0.1), parent=g)
+    cylinder("shaft", 0.62, 1.4, body, loc=(0.0, 0.0, 0.9), r2=0.56, caps=False, segments=32, parent=g)
+    cylinder("echinus", 0.58, 0.16, body, loc=(0.0, 0.0, 1.68), r2=0.76, caps=False, segments=32, parent=g)
+    box("abacus", (1.6, 1.6, 0.18), wood, loc=(0.0, 0.0, 1.85), parent=g)
+    flutes = []
+    for a in (-128.0, -90.0, -52.0):
+        c, s = math.cos(math.radians(a)), math.sin(math.radians(a))
+        flutes.append([(0.63 * c, 0.63 * s, 0.35), (0.57 * c, 0.57 * s, 1.48)])
+    wire("flutes", flutes, body, parent=g)
+
+
+def icon_085(pal, rand):
+    """085 Parent Communication Templates: an envelope, its flap open and
+    a letter coming out."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("mail", rot=(0.0, 0.0, FACING - 20.0))
+    flat("back", [(-1.1, 0.0), (1.1, 0.0), (1.1, 1.3), (0.0, 2.0), (-1.1, 1.3)], wood, loc=(0.0, 0.1, 0.0), parent=g)
+    letter = flat("letter", [(-0.9, 0.3), (0.9, 0.3), (0.9, 1.9), (-0.9, 1.9)], body, loc=(0.0, 0.05, 0.0), parent=g)
+    wire("text", lines_on(-0.6, 0.6, (1.65, 1.45, 1.25), -0.01, short=(2,)), body, parent=letter)
+    flat("front", [(-1.1, 0.0), (1.1, 0.0), (1.1, 1.3), (0.0, 0.7), (-1.1, 1.3)], wood, parent=g)
+
+
+def icon_086(pal, rand):
+    """086 Wiki Race: a chequered flag on its pole, the finish."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("flag", rot=(0.0, 0.0, FACING - 20.0))
+    cylinder("pole", 0.06, 2.8, wood, loc=(-1.0, 0.0, 0.9), segments=10, parent=g)
+    sphere("finial", 0.1, wood, loc=(-1.0, 0.0, 2.35), parent=g)
+    wave = lambda x: 0.12 * math.sin(math.pi * 2 * (x + 0.95) / 1.95)
+    xs = [-0.95 + 1.95 * i / 12 for i in range(13)]
+    top = [(x, 2.2 + wave(x)) for x in xs]
+    bot = [(x, 1.0 + wave(x)) for x in reversed(xs)]
+    p = flat("flag", top + bot, body, parent=g)
+    y = -0.01
+    lines = []
+    for k in (1, 2):
+        lines.append([(x, y, 1.0 + 0.4 * k + wave(x)) for x in xs])
+    for k in (1, 2, 3):
+        x = -0.95 + 1.95 * k / 4
+        lines.append([(x, y, 1.0 + wave(x)), (x, y, 2.2 + wave(x))])
+    wire("checks", lines, body, parent=p)
+
+
+def icon_087(pal, rand):
+    """087 Class Screen: a projector screen on a tripod, widgets on it: a
+    clock and two panels."""
+    body = art.token_material(pal, "--card")
+    wood = art.token_material(pal, "--card-2")
+    g = group("screen", rot=(0.0, 0.0, FACING - 20.0))
+    cylinder("case", 0.1, 2.3, wood, loc=(0.0, 0.0, 2.3), rot=(0.0, 90.0, 0.0), segments=12, parent=g)
+    s = flat("screen", [(-1.05, 0.9), (1.05, 0.9), (1.05, 2.22), (-1.05, 2.22)], body, parent=g)
+    y = -0.01
+    wire("widgets", [circle(-0.55, 1.56, 0.3, y=y, segments=16), rect(-0.1, 1.72, 0.75, 1.98, y=y),
+                     rect(-0.1, 1.12, 0.75, 1.52, y=y)], body, parent=s)
+    legs = [[(0.0, 0.08, 0.9), (0.0, 0.08, 0.45)]]
+    for a in (90.0, 210.0, 330.0):
+        legs.append([(0.0, 0.08, 0.45), (0.6 * math.cos(math.radians(a)), 0.08 + 0.6 * math.sin(math.radians(a)), 0.0)])
+    wire("tripod", legs, wood, parent=g)
+
+
 ICONS = {
     "001": icon_001, "002": icon_002, "003": icon_003, "004": icon_004, "005": icon_005,
     "006": icon_006, "007": icon_007, "008": icon_008, "009": icon_009, "010": icon_010,
@@ -1487,6 +1813,10 @@ ICONS = {
     "054": icon_054, "055": icon_055, "056": icon_056, "057": icon_057, "058": icon_058,
     "059": icon_059, "060": icon_060, "061": icon_061, "062": icon_062, "063": icon_063,
     "064": icon_064, "065": icon_065, "066": icon_066, "067": icon_067,
+    "068": icon_068, "069": icon_069, "070": icon_070, "071": icon_071, "072": icon_072,
+    "073": icon_073, "074": icon_074, "075": icon_075, "076": icon_076, "077": icon_077,
+    "078": icon_078, "079": icon_079, "080": icon_080, "081": icon_081, "082": icon_082,
+    "083": icon_083, "084": icon_084, "085": icon_085, "086": icon_086, "087": icon_087,
 }
 
 
