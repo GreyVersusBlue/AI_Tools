@@ -27,6 +27,8 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/media-db.js"></script>
+<script src="picture-prompt-generator/ppg-image.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -88,6 +90,11 @@
   .thumb-grid { display: flex; flex-wrap: wrap; gap: .5rem; }
   .thumb-wrap { position: relative; }
   .thumb-wrap img { width: 5rem; height: 5rem; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); }
+  /* A picture not drawn yet (reading it out of IndexedDB) or gone from this
+     browser: a tile the size of a thumbnail, with its delete button. */
+  .thumb-wrap .thumb-missing { display: flex; align-items: center; justify-content: center; text-align: center;
+    width: 5rem; height: 5rem; padding: .25rem; border-radius: 6px; border: 1px dashed var(--line-strong);
+    background: var(--card-2); color: var(--muted); font-size: .7rem; line-height: 1.2; }
   .thumb-wrap .del { position: absolute; top: -6px; right: -6px; width: 1.2rem; height: 1.2rem; border-radius: 50%; background: var(--card); border: 1px solid var(--line-strong); color: var(--err); font-size: .75rem; line-height: 1; cursor: pointer; }
 
   .prompt-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
@@ -187,7 +194,6 @@
   var PROMPTS_KEY = 'ppg_prompts_v1';        /* pre-2026-08-12: one flat prompt list */
   var SETS_KEY = 'ppg_prompt_sets_v1';       /* now: named sets, one per language taught */
   var PRINT_COUNT_KEY = 'ppg_print_count_v1';
-  var MAX_IMAGE_DIM = 1400;
 
   var DEFAULT_PROMPTS = [
     'Describe what you see in as much detail as possible.',
@@ -275,25 +281,6 @@
   }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
-  function downscaleDataUrl(dataUrl, maxDim, cb) {
-    var img = new Image();
-    img.onload = function () {
-      var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
-      if (!w || !h || (w <= maxDim && h <= maxDim)) { cb(dataUrl); return; }
-      var scale = maxDim / Math.max(w, h);
-      var cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
-      try {
-        var canvas = document.createElement('canvas');
-        canvas.width = cw; canvas.height = ch;
-        var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, cw, ch);
-        cb(canvas.toDataURL('image/jpeg', 0.82));
-      } catch (e) { cb(dataUrl); }
-    };
-    img.onerror = function () { cb(dataUrl); };
-    img.src = dataUrl;
-  }
-
   function starterPrompts(starterId) {
     var s = STARTER_SETS.filter(function (x) { return x.id === starterId; })[0];
     return (s ? s.prompts : []).map(function (t) { return { id: uid(), text: t }; });
@@ -329,8 +316,7 @@
   }
 
   function load() {
-    try { images = JSON.parse(localStorage.getItem(IMAGES_KEY) || '[]'); } catch (e) { images = []; }
-    if (!Array.isArray(images)) images = [];
+    images = readImages();
 
     var stored = null;
     try { stored = JSON.parse(localStorage.getItem(SETS_KEY) || 'null'); } catch (e) { stored = null; }
@@ -360,6 +346,12 @@
       try { localStorage.removeItem(PROMPTS_KEY); } catch (e) { /* storage blocked */ }
     }
   }
+  /** The saved list, read fresh. An entry that is not an object is dropped. */
+  function readImages() {
+    var list;
+    try { list = JSON.parse(localStorage.getItem(IMAGES_KEY) || '[]'); } catch (e) { list = []; }
+    return Array.isArray(list) ? list.filter(function (img) { return img && typeof img === 'object'; }) : [];
+  }
   function saveImages() {
     try { localStorage.setItem(IMAGES_KEY, JSON.stringify(images)); } catch (e) { /* storage full/blocked */ }
   }
@@ -378,37 +370,56 @@
     return (img && img.pinnedPrompts) ? (img.pinnedPrompts[activeSetId] || null) : null;
   }
 
+  /* ---------- the pictures: ppg-image.js over the shared media store (Path 4 P4) ----------
+     `src` holds an `idb:` reference (or, before the boot pass has moved it
+     or with no IndexedDB, a data URL). PicturePromptImage.url() is the only
+     thing that turns one into an <img src>: an object URL, a well-formed data
+     URL, or '' — never the raw value. '' means not read yet, or gone. */
+  function srcOf(img) { return img ? PicturePromptImage.url(img.src) : ''; }
+  function isGone(img) {
+    return !srcOf(img) && (imagesSettled || !PicturePromptImage.isRef(img && img.src));
+  }
+  /** Indexes of the pictures that can be shown right now. */
+  function showable() {
+    var out = [];
+    images.forEach(function (img, i) { if (srcOf(img)) out.push(i); });
+    return out;
+  }
+
   function renderThumbs() {
     els.thumbGrid.innerHTML = images.map(function (img) {
-      return '<div class="thumb-wrap" data-id="' + img.id + '"><img src="' + img.src + '" alt=""><span class="del" data-del="' + img.id + '">&times;</span></div>';
+      var src = srcOf(img);
+      return '<div class="thumb-wrap" data-id="' + escapeHtml(img.id) + '">' +
+        (src ? '<img src="' + escapeHtml(src) + '" alt="">'
+             : '<span class="thumb-missing">' + (isGone(img) ? 'Picture missing from this browser' : 'Loading…') + '</span>') +
+        '<span class="del" data-del="' + escapeHtml(img.id) + '">&times;</span></div>';
     }).join('');
   }
   els.thumbGrid.addEventListener('click', function (ev) {
     var id = ev.target.getAttribute('data-del');
     if (!id) return;
     images = images.filter(function (i) { return i.id !== id; });
-    usedIndexes = [];
+    /* Indexes shift when one goes, so the projected card is cleared rather
+       than left pointing at whichever picture now has its old index. */
+    usedIndexes = []; currentImageIdx = -1; currentPromptIdx = -1;
     saveImages(); renderThumbs(); renderStageEmpty();
   });
 
+  /* Each picked picture is downscaled (past 1400 px) and stored by
+     ppg-image.js; they are added in the order they were picked. A file that
+     is not a picture this browser can open is named in the note, and the
+     rest still go in. */
   els.imageInput.addEventListener('change', function () {
     var files = Array.prototype.slice.call(els.imageInput.files || []);
     if (!files.length) return;
-    var remaining = files.length;
-    function done() {
-      remaining--;
-      if (remaining === 0) { saveImages(); renderThumbs(); els.imageInput.value = ''; }
-    }
-    files.forEach(function (file) {
-      var reader = new FileReader();
-      reader.onload = function () {
-        downscaleDataUrl(reader.result, MAX_IMAGE_DIM, function (finalSrc) {
-          images.push({ id: uid(), src: finalSrc, pinnedPrompts: {} });
-          done();
-        });
-      };
-      reader.onerror = function () { done(); };
-      reader.readAsDataURL(file);
+    var problems = [];
+    Promise.all(files.map(function (file) {
+      return PicturePromptImage.fromFile(file)['catch'](function (e) { problems.push(e.message); return null; });
+    })).then(function (values) {
+      values.forEach(function (v) { if (v) images.push({ id: uid(), src: v, pinnedPrompts: {} }); });
+      saveImages(); renderThumbs(); els.imageInput.value = '';
+      if (currentImageIdx === -1) renderStageEmpty();
+      if (problems.length) setShareNote(problems.join(' '), true);
     });
   });
 
@@ -423,8 +434,9 @@
 
   function renderPrompts() {
     els.promptsWrap.innerHTML = activePrompts().map(function (p) {
-      return '<div class="prompt-row" data-id="' + p.id + '"><input type="text" data-prompt="' + p.id + '" value="' + escapeAttr(p.text) + '" aria-label="Prompt text">' +
-        '<button type="button" class="danger small" data-del-prompt="' + p.id + '">&times;</button></div>';
+      var pid = escapeHtml(p.id);
+      return '<div class="prompt-row" data-id="' + pid + '"><input type="text" data-prompt="' + pid + '" value="' + escapeAttr(p.text) + '" aria-label="Prompt text">' +
+        '<button type="button" class="danger small" data-del-prompt="' + pid + '">&times;</button></div>';
     }).join('');
   }
   els.promptsWrap.addEventListener('input', function (ev) {
@@ -498,20 +510,29 @@
   });
 
   function renderStageEmpty() {
-    els.stageCard.innerHTML = '<p class="empty-hint">Upload at least one image to get started.</p>';
+    var hint = document.createElement('p');
+    hint.className = 'empty-hint';
+    hint.textContent = images.length && !showable().length && imagesSettled
+      ? 'None of the saved pictures is in this browser’s storage any more. Upload them again to get started.'
+      : 'Upload at least one image to get started.';
+    els.stageCard.replaceChildren(hint);
     els.usedHint.textContent = '';
   }
 
   function usedHintText() {
     if (currentImageIdx === -1 || !images.length) return '';
     if (!usedIndexes.length) return 'Reset — every image can appear again. Click "New random image" to continue.';
-    return usedIndexes.length + ' of ' + images.length + ' images shown this round';
+    return usedIndexes.length + ' of ' + showable().length + ' images shown this round';
   }
 
   function pickNewImage() {
-    if (!images.length) { renderStageEmpty(); return; }
-    if (usedIndexes.length >= images.length) usedIndexes = [];
-    var available = images.map(function (_, i) { return i; }).filter(function (i) { return usedIndexes.indexOf(i) === -1; });
+    /* Only a picture that can be drawn goes up on the projector; a missing
+       one stays in the list, flagged on its thumbnail, until it is deleted. */
+    var ready = showable();
+    if (!ready.length) { renderStageEmpty(); return; }
+    usedIndexes = usedIndexes.filter(function (i) { return ready.indexOf(i) !== -1; });
+    if (usedIndexes.length >= ready.length) usedIndexes = [];
+    var available = ready.filter(function (i) { return usedIndexes.indexOf(i) === -1; });
     currentImageIdx = available[Math.floor(Math.random() * available.length)];
     usedIndexes.push(currentImageIdx);
     var img = images[currentImageIdx];
@@ -523,12 +544,12 @@
   }
 
   function renderStage() {
-    if (currentImageIdx === -1 || !images[currentImageIdx]) { renderStageEmpty(); return; }
+    if (currentImageIdx === -1 || !images[currentImageIdx] || !srcOf(images[currentImageIdx])) { renderStageEmpty(); return; }
     var img = images[currentImageIdx];
     var prompt = currentPromptIdx !== -1 ? activePrompts()[currentPromptIdx] : null;
     var task = prompt ? prompt.text : '';
     var isPinned = !!(prompt && pinnedIdFor(img) === prompt.id);
-    els.stageCard.innerHTML = '<img src="' + img.src + '" alt=""><div class="task-text">' + escapeHtml(task) + '</div>' +
+    els.stageCard.innerHTML = '<img src="' + escapeHtml(srcOf(img)) + '" alt=""><div class="task-text">' + escapeHtml(task) + '</div>' +
       (prompt ? '<button type="button" class="pin-btn' + (isPinned ? ' pinned' : '') + '" id="pinPromptBtn">' +
         (isPinned ? '📌 Pinned to this image — click to unpin' : '📌 Pin this prompt to this image') + '</button>' : '');
     els.usedHint.textContent = usedHintText();
@@ -555,20 +576,36 @@
   });
 
   els.printBtn.addEventListener('click', function () {
-    if (!images.length) { alert('Upload at least one image first.'); return; }
+    /* A picture missing from this browser is left off the cards. */
+    var ready = showable().map(function (i) { return images[i]; });
+    if (!ready.length) { alert(images.length ? 'None of the saved pictures is in this browser’s storage. Upload them again first.' : 'Upload at least one image first.'); return; }
     var requested = parseInt(els.printCount.value, 10);
-    var count = (requested && requested > 0) ? Math.min(requested, images.length) : images.length;
-    var subset = images.slice(0, count);
+    var count = (requested && requested > 0) ? Math.min(requested, ready.length) : ready.length;
+    var subset = ready.slice(0, count);
     var list = activePrompts();
     var cards = subset.map(function (img) {
       var pinId = pinnedIdFor(img);
       var pinnedIdx = pinId ? list.findIndex(function (p) { return p.id === pinId; }) : -1;
       var p = pinnedIdx !== -1 ? list[pinnedIdx].text : (list.length ? list[Math.floor(Math.random() * list.length)].text : '');
-      return '<div class="print-card"><img src="' + img.src + '" alt=""><div class="ptext">' + escapeHtml(p) + '</div></div>';
+      return '<div class="print-card"><img src="' + escapeHtml(srcOf(img)) + '" alt=""><div class="ptext">' + escapeHtml(p) + '</div></div>';
     }).join('');
     els.printArea.innerHTML = '<div class="print-grid">' + cards + '</div>';
-    window.print();
+    // A stored picture is an object URL, which loads asynchronously; a data
+    // URL was ready at once, which is why this never had to wait before.
+    waitForImages(els.printArea).then(function () { window.print(); });
   });
+
+  /** Resolves once every <img> under `root` has loaded or failed, so a gone
+      picture can never hang the print. */
+  function waitForImages(root) {
+    return Promise.all(Array.prototype.map.call(root.querySelectorAll('img'), function (img) {
+      if (img.complete) return null;
+      return new Promise(function (resolve) {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }));
+  }
 
   /* ---------- share a prompt set: _shared/share.js (Path 6 P3) --------------
      WHAT TRAVELS IS THE ACTIVE PROMPT SET — its name and its prompts — and
@@ -649,6 +686,53 @@
     });
   }
 
+  /* ---------- pictures: IndexedDB behind the list (Path 4 P4) ----------
+     At boot: move any data: URL picture (a list saved before this, or one
+     saved by a browser that had no IndexedDB) into the store, writing the
+     key back only if something moved; give every stored picture an object
+     URL; say once how many are missing; then — at boot only, with
+     media-db.js's ten-minute grace — delete stored pictures the list no
+     longer points at. A deleted thumbnail has no undo, so nothing else needs
+     keeping. __pictureImagesSettled is for the suite. */
+  var imagesSettled = false;
+
+  /** Swap each moved data: URL for its reference in the list in memory and
+      in a FRESH read of the key, and write back only if it changed. */
+  function applyStoredImages(map) {
+    PicturePromptImage.apply(images, map);
+    var fresh = readImages();
+    if (PicturePromptImage.apply(fresh, map)) {
+      try { localStorage.setItem(IMAGES_KEY, JSON.stringify(fresh)); } catch (e) { /* storage full/blocked */ }
+    }
+  }
+
+  function sayMissingImages() {
+    var count = images.filter(isGone).length;
+    if (!count) return;
+    var msg = (count === 1 ? '1 saved picture is' : count + ' saved pictures are') +
+      ' missing from this browser’s storage and left out of the prompts and the printed cards. Delete ' +
+      (count === 1 ? 'it' : 'them') + ' with the × on ' + (count === 1 ? 'its' : 'their') + ' thumbnail, then upload again.';
+    var before = els.shareNote.style.display === 'none' ? '' : els.shareNote.textContent;
+    setShareNote(before ? before + ' ' + msg : msg, true);
+  }
+
+  function settleImages() {
+    return PicturePromptImage.store(PicturePromptImage.valuesIn(images))
+      .then(function (map) {
+        if (Object.keys(map).length) applyStoredImages(map);
+        return PicturePromptImage.hydrate(PicturePromptImage.valuesIn(images));
+      })
+      .then(function () {
+        imagesSettled = true;
+        renderThumbs();
+        if (currentImageIdx !== -1) renderStage(); else renderStageEmpty();
+        sayMissingImages();
+        var keep = PicturePromptImage.valuesIn(images).concat(PicturePromptImage.valuesIn(readImages()));
+        return PicturePromptImage.gc(keep.filter(PicturePromptImage.isRef));
+      })['catch'](function () { /* reads never block the page */ })
+      .then(function () { imagesSettled = true; window.__pictureImagesSettled = true; });
+  }
+
   /* ---------- boot ---------- */
   load();
   importSharedSet();
@@ -657,6 +741,7 @@
   renderSetPicker();
   renderPrompts();
   renderStageEmpty();
+  settleImages();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
