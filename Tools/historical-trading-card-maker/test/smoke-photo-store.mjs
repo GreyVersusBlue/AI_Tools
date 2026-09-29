@@ -15,7 +15,8 @@
 //      keep crop, shape and filter; a deck with no photo is written back
 //      byte-identical; the legacy htcm_cards_v2 key is not touched; each
 //      distinct photo is stored once; the list, the preview and the print run
-//      draw the same photo from an object URL, and print waits for it.
+//      draw the same photo from an object URL, and print waits for it; the
+//      PNG/PDF canvas export draws it too.
 //   2. A reload reads them back and stores nothing twice.
 //   3. An upload is downscaled by MediaDB.downscaleImage to 1000 px JPEG on a
 //      white mat, as readAndDownscale() always stored; a renamed deck shares
@@ -27,7 +28,8 @@
 //   6. An orphaned record is deleted on the next load; one younger than the
 //      grace period, or referenced only by a deck that is not open, is not.
 //   7. A photo whose image is gone says so in the list and in a note, is
-//      never a broken <img>, leaves the card's window empty in print, is
+//      never a broken <img>, leaves the card's window empty in print (and a
+//      canvas export still finishes), is
 //      axe-clean in both themes, and Print still reaches window.print(). A
 //      crafted value in a saved key never reaches the page as markup.
 //   8. With no IndexedDB, photos stay inline, as before.
@@ -150,6 +152,15 @@ eq((await shownAs(page, '#previewFront .pwin img')).join(), RED, 'the preview dr
 ok(await printed(page), 'print waits until every printed photo has loaded');
 eq((await shownAs(page, '#printArea .pwin img')).join(), [RED, BLUE].join(), 'and prints both photos');
 ok(await page.isHidden('#photoNote'), 'nothing is reported missing');
+/* PNG/PDF/zip export draws the stored photo onto a canvas from its object URL. */
+const exported = await page.evaluate(() => new Promise(res => {
+  const e = JSON.parse(localStorage.getItem('htcm:data:Rome')).cards[0];
+  e.image.shape = 'rrect'; e.image.filter = 'none';
+  window.HtcmExport.renderCardCanvas(e, 'front', { theme: 'classic' }, canvas => {
+    res(Array.from(canvas.getContext('2d').getImageData(375, 245, 1, 1).data));
+  });
+}));
+ok(exported[0] > 200 && exported[1] < 60 && exported[2] < 60, 'the canvas export draws the stored photo: ' + exported);
 
 /* ── 2. a reload reads them back and stores nothing twice ─────────────── */
 const before = await rawStored(page, DATA + 'Rome');
@@ -302,6 +313,13 @@ ok(await printed(page), 'Print still reaches window.print()');
 eq(await page.$$eval('#printArea .pwin', els => els.length), 3, 'the missing and crafted photos keep their windows in print');
 eq(await page.$$eval('#printArea .pwin img', els => els.length), 1, 'but draw nothing in them — no broken <img>');
 eq(await page.evaluate(() => window.__pwned), undefined, 'a crafted value in a saved key never reaches the page as markup');
+const goneExport = await page.evaluate(g => new Promise(res => {
+  const e = JSON.parse(localStorage.getItem('htcm:data:Rome copy')).cards[1];
+  e.image.src = g; e.image.shape = 'rrect'; e.image.filter = 'none';
+  const t = setTimeout(() => res('hung'), 5000);
+  window.HtcmExport.renderCardCanvas(e, 'front', { theme: 'classic' }, canvas => { clearTimeout(t); res(canvas.width); });
+}), GONE);
+eq(goneExport, 750, 'the canvas export of a card whose photo is gone still finishes');
 const noteV = await a11yScan(page, { impact: 'serious', include: '#photoNote' });
 eq(noteV.length, 0, 'the missing-photo note passes axe: ' + JSON.stringify(noteV.map(v => v.id)));
 await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
