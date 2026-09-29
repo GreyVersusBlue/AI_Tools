@@ -43,6 +43,12 @@
     }
   }
 
+  /** Rewrite a sheet already in the list without making it the open one —
+      for the boot pass that moves every sheet's diagrams into IndexedDB. */
+  function writeSheet(name, state) {
+    localStorage.setItem(DATA_PREFIX + name, JSON.stringify(state));
+  }
+
   function getCurrentName() { return localStorage.getItem(CURRENT_KEY); }
   function setCurrentName(name) {
     if (name) localStorage.setItem(CURRENT_KEY, name);
@@ -51,6 +57,6 @@
 
   global.FormulaSheetStore = {
     listSheets: listSheets, saveSheet: saveSheet, loadSheet: loadSheet,
-    deleteSheet: deleteSheet, getCurrentName: getCurrentName, setCurrentName: setCurrentName
+    deleteSheet: deleteSheet, writeSheet: writeSheet, getCurrentName: getCurrentName, setCurrentName: setCurrentName
   };
 })(window);
