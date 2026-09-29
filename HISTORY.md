@@ -9,6 +9,102 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P4, increment 10: 064's card photos move into `media-db.js` (2026-09-29, #304, `CACHE_VERSION` v204)
+
+Rank 9 is a 2+ row, and it stays: **035's floor-plan trace image (increment 11) is the last tool
+left on it.** This session had no Blender (huginn), so it skipped ranks 1–7 without touching them.
+Rank 8 is still blocked on rank 45.
+
+**064's shape.** Named decks (`htcm:data:<name>`, listed in `htcm:list`), each a v2 document with
+`cards[]`. A card's photo is an **object**, `image: { src, w, h, crop, shape, filter }`, or `null`,
+and `src` was a 1000 px JPEG 0.72 data URL from `htcm-image.js`'s `readAndDownscale()`. Other
+things checked before designing:
+- **Only `src` moves.** `w`/`h` (the crop editor's maths), `crop`, `shape` and `filter` are a few
+  numbers and stay in the deck. `htcm-store.js`'s `repairImage()` now accepts an `idb:` reference as
+  well as a data URL, so a migrated photo survives the repair every load runs.
+- **The legacy keys** (`htcm_cards_v2`, `htcm_cards_v1`) are a one-release backup that
+  `loadCurrent()` reads only when no named deck exists. They still hold data URLs. The boot pass
+  leaves them alone, on purpose: they are a backup, and the suite checks that they stay
+  byte-identical.
+- **The review game** (`htcm:game`) holds card ids, not photos. It adds nothing to GC's keep-set.
+- **064 links `share.js`**, and `getState()` is synchronous. So the Share button now does what 015,
+  056 and 028 do: it builds a portable copy with `forExport()`, then calls `Share.open()`. A
+  `?deck=` link still carries no photo (share.js strips them). The downloaded `.json` carries data
+  URLs, and the suite asserts that no `idb:` reaches it. 064 has no file import, so the link is the
+  only arrival path besides a 009 restore.
+- **The canvas exporter** (`htcm-export.js`, PNG/PDF/zip) draws from an object URL, which does not
+  taint the canvas.
+
+**What shipped.**
+- `htcm-image.js` (`window.HtcmImage`) is rewritten over `MediaDB.images({ ns: 'htcm' })`. It keeps
+  its file name, so the precache list did not change. It provides `fromFile()` (resolving to
+  `{ src, w, h }`, the same 1000 px JPEG 0.72 on white), `url()`/`isValue` (strict),
+  `valuesIn`, `apply`, `acceptArrival`, `hasStored`, `forExport`, and an `approxKb()` that is 0
+  for a stored photo. **`readAndDownscale()` is deleted.** It was the last copy of 030's
+  hand-rolled pipeline.
+- At boot, every deck's inline photos are stored. Only changed decks are written back; decks that
+  are not open go through a new `HtcmStore.writeDeck()`. Then the open deck is hydrated and
+  redrawn (the list, the preview, and the game if it is open), missing photos are reported, and GC
+  runs. Switching decks hydrates the one opened.
+- `HtcmImage.url()` is now the only route into an `<img src>`: the list thumbnail, the card
+  renderer, the photo editor and the canvas exporter.
+- A missing photo is reported in a new `#photoNote` ("1 photo in "Rome copy" is missing…") and on
+  its card in the list. Its photo window is left **empty but kept** on screen, in print and in
+  PNG/PDF. Keeping the window means the layout does not move, so the stats-clip warning measures the
+  same card.
+- Print waits for images.
+- The storage-full warning blames photos only when the deck really holds them inline.
+- New suite `smoke-photo-store.mjs` (port **8452**, `test:trading-cards-photo-store`, 63
+  assertions). `smoke-photo.mjs`'s "stored re-encoded" check now reads the JPEG out of the store.
+- The registry got a comment on 064's row. Its keys are unchanged.
+
+**Found and fixed.**
+- **`htcm-render.js` put `image.src` into markup unescaped.** Before this change, a saved value
+  like `data:image/png;base64,AAAA" onerror="…` passed `repairImage()`'s `^data:image\/` test and
+  went into the card HTML raw. The same was true of the list thumbnail in the page. Reaching it
+  needed a hand-edited key or a 009 restore of a crafted backup: share links strip images, and 064
+  has no file import. Now `url()` validates the value and the render escapes it.
+
+**Calls made, each cheap to reverse.**
+- **A missing photo keeps its window.** 030 and 071 leave a missing picture off entirely. On a
+  trading card, dropping the window would move the name and stats up and change what prints. An
+  empty shaped window with its rim is the honest version.
+- **The legacy backup keys are not migrated.** Also, a photo that exists only in them is not in the
+  keep-set: nothing in them is a reference.
+- **Not student data.** The photos are teacher-chosen figures, flags and places. A class-built deck
+  *could* hold a student's drawing, but these keys are deck content, judged as 015's and 030's
+  were. No `student: true`.
+
+**What did not work first, and what the suite does not catch.**
+- The existing `smoke-photo.mjs` failed one assertion after the change, as expected: it checked
+  for a `data:image/jpeg` value in the key. It was updated to read the blob's type from the store.
+  The assertion still checks the re-encode.
+- The new suite passed its first run. It was then broken on purpose 10 ways, one pattern at a time
+  (each asserted to match exactly once). 9 breaks fail it:
+  - no migration write-back: 4 assertions;
+  - no hydrate on deck switch: time-out, exit 1;
+  - no white mat: 1;
+  - a lax link arrival: 3;
+  - share without `forExport`: 2;
+  - GC keeping nothing: 2, then a crash, exit 1;
+  - a note that never shows: 1;
+  - a raw `url()`: 3;
+  - **no print-wait: 1.** Section 1 prints the deck while the preview shows only one card's photo,
+    so BLUE is first decoded by the print.
+  - the canvas exporter reading raw `src`: 2. **This check was added after the PR opened.** The
+    first draft of this entry claimed PNG/PDF export of a stored photo was covered by
+    `smoke-photo.mjs`, but that suite's pixel check builds its own inline photo. Now the new suite
+    renders a stored card through `HtcmExport.renderCardCanvas`, reads a red pixel out of the photo
+    window, and checks that a card whose photo is gone still finishes rendering.
+- **Removing the escape in `htcm-render.js` is not caught**, as in #300 and #302: `url()`'s
+  validation alone keeps a crafted value out. Each layer is proven only with the other in place.
+- `run-suites --repeat 3 --only historical-trading-card-maker`: all 5 suites green in every pass
+  (2.9 min).
+
+**Not verified.** Nothing was tried with a real phone photo, a HEIC file, a printer, under real
+quota pressure, or in Safari or Firefox. The canvas render behind PNG/PDF/zip is asserted with a
+stored photo, but the jsPDF and JSZip wrapping around it was not re-run with one.
+
 ## Path 4 P4, increment 9: 030's clue images move into `media-db.js` (2026-09-29, #302, `CACHE_VERSION` v203)
 
 Rank 9 is a 2+ row, and it stays: 030 was the last tool on P4's original list, but this session
