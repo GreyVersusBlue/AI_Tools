@@ -1798,6 +1798,61 @@ def icon_087(pal, rand):
     wire("tripod", legs, wood, parent=g)
 
 
+# --------------------------------------------------------------------------
+# The app mark
+# --------------------------------------------------------------------------
+
+# index.html's red-pen circle (the .grade path, drawn round every row's grade,
+# in a 44-unit box centred on 22,22): four cubic Beziers, a hand-drawn loop
+# that overshoots its start. The app mark reuses it rather than a true circle,
+# so the installed icon and the landing page draw the same pen stroke.
+PEN_LOOP = (((22.0, 5.0), (10.0, 4.0), (4.0, 11.0), (4.5, 21.5)),
+            ((4.5, 21.5), (5.0, 33.0), (14.0, 40.0), (23.0, 39.5)),
+            ((23.0, 39.5), (34.0, 39.0), (40.5, 31.0), (39.5, 20.5)),
+            ((39.5, 20.5), (38.6, 11.0), (31.0, 5.6), (22.5, 5.4)))
+
+
+def pen_loop(rx, rz, cx=0.0, cz=0.0, y=0.0, steps=10):
+    """PEN_LOOP as one open wire, about rx by rz, centred on (cx, cz)."""
+    pts = []
+    for n, (p0, p1, p2, p3) in enumerate(PEN_LOOP):
+        for i in range(0 if n == 0 else 1, steps + 1):
+            t = i / steps
+            a, b, c, d = (1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3
+            x = a * p0[0] + b * p1[0] + c * p2[0] + d * p3[0]
+            v = a * p0[1] + b * p1[1] + c * p2[1] + d * p3[1]
+            pts.append((cx + (x - 22.0) / 17.5 * rx, y, cz - (v - 22.0) / 17.5 * rz))
+    return [pts]
+
+
+def icon_app(pal, rand):
+    """The app mark (manifest.json's icons): a graded page. The old mark was
+    the landing page's own joke, a blue A circled in red pen, drawn flat; this
+    is the same grade on a dog-eared page in the set's three-quarter view, the
+    grade in single pen strokes and the loop index.html's .grade path. The
+    loop is the one line in the set that is not --ink: its material is --err,
+    and the app-mark renderer draws each ink its entry names in that token.
+
+    It is "A+", the landing page's first grade, and not "A": a lone monoline A
+    in a hand-drawn red circle is the anarchy sign, which is the first thing
+    a seventh grader would say about the first cut. The + makes it a grade."""
+    body = art.token_material(pal, "--card")
+    pen = art.token_material(pal, "--err")
+    g = group("page", rot=(0.0, 0.0, FACING - 20.0))
+    flat("page", dog_eared(2.0, 2.4, 0.5), body, parent=g)
+    y = -0.02
+    # A monoline A (two strokes meeting at the apex, and a crossbar), then the +.
+    cx, apex, base, half = -0.18, 0.56, -0.38, 0.33
+    at = lambda z: half * (apex - z) / (apex - base)
+    zb = 0.0
+    plus, arm = (0.45, 0.2), 0.16
+    wire("grade", [[(cx - half, y, base), (cx, y, apex), (cx + half, y, base)],
+                   [(cx - at(zb), y, zb), (cx + at(zb), y, zb)],
+                   [(plus[0] - arm, y, plus[1]), (plus[0] + arm, y, plus[1])],
+                   [(plus[0], y, plus[1] - arm), (plus[0], y, plus[1] + arm)]], body, parent=g)
+    wire("pen", pen_loop(0.86, 0.74, cx=0.04, cz=0.1, y=y), pen, parent=g)
+
+
 ICONS = {
     "001": icon_001, "002": icon_002, "003": icon_003, "004": icon_004, "005": icon_005,
     "006": icon_006, "007": icon_007, "008": icon_008, "009": icon_009, "010": icon_010,
@@ -1817,6 +1872,7 @@ ICONS = {
     "073": icon_073, "074": icon_074, "075": icon_075, "076": icon_076, "077": icon_077,
     "078": icon_078, "079": icon_079, "080": icon_080, "081": icon_081, "082": icon_082,
     "083": icon_083, "084": icon_084, "085": icon_085, "086": icon_086, "087": icon_087,
+    "app": icon_app,
 }
 
 
@@ -1871,6 +1927,38 @@ def emission_material(pal, token):
     return mat
 
 
+def draw_lines(lines, to_world, r, mat, z=0.0, split=False):
+    """Polylines as tubes of radius r in one emission material, with a disc at
+    every joint for round caps and joins, as the SVG's stroke-linecap and
+    stroke-linejoin are round. A tube pinches where a polyline turns sharply
+    (the app mark's A, at 512 px, showed its apex disc as a knob), so split
+    draws every segment as its own straight tube; the shortcut PNGs predate it
+    and keep the joined tubes, byte for byte."""
+    cu = bpy.data.curves.new("lines", "CURVE")
+    cu.dimensions = "3D"
+    cu.bevel_depth = r
+    cu.bevel_resolution = 2
+    cu.use_fill_caps = True
+    joints = set()
+    for line in lines:
+        pts = [to_world(x, y) for x, y in line]
+        for run in ([pts[i:i + 2] for i in range(len(pts) - 1)] if split else [pts]):
+            sp = cu.splines.new("POLY")
+            sp.points.add(len(run) - 1)
+            for p, co in zip(sp.points, run):
+                p.co = (co[0], co[1], z, 1.0)
+        joints.update((round(x, 3), round(y, 3)) for x, y, _ in pts)
+    ob = bpy.data.objects.new("lines", cu)
+    ob.data.materials.append(mat)
+    bpy.context.scene.collection.objects.link(ob)
+    bm = bmesh.new()
+    for x, y in sorted(joints):
+        ring = [bm.verts.new((x + r * math.cos(2 * math.pi * i / 12), y + r * math.sin(2 * math.pi * i / 12), z))
+                for i in range(12)]
+        bm.faces.new(ring)
+    _mesh_object("joints", bm, mat)
+
+
 def render_shortcut(entry, out_path, lines, icon_px):
     """Draw the icon's own 48-unit polylines as tubes of --ink on --paper and
     render them top-down: the shortcut PNG is the landing icon, rasterised by
@@ -1883,29 +1971,7 @@ def render_shortcut(entry, out_path, lines, icon_px):
     off = (size - icon_px) / 2.0
     r = STROKE * k / 2.0
     to_world = lambda x, y: (off + x * k - size / 2.0, size / 2.0 - (off + y * k), 0.0)
-    cu = bpy.data.curves.new("lines", "CURVE")
-    cu.dimensions = "3D"
-    cu.bevel_depth = r
-    cu.bevel_resolution = 2
-    cu.use_fill_caps = True
-    joints = set()
-    for line in lines:
-        pts = [to_world(x, y) for x, y in line]
-        sp = cu.splines.new("POLY")
-        sp.points.add(len(pts) - 1)
-        for p, co in zip(sp.points, pts):
-            p.co = (co[0], co[1], co[2], 1.0)
-        joints.update((round(x, 3), round(y, 3)) for x, y, _ in pts)
-    ob = bpy.data.objects.new("lines", cu)
-    ob.data.materials.append(ink)
-    scene.collection.objects.link(ob)
-    # Round caps and joins, as the SVG's stroke-linecap/linejoin are round.
-    bm = bmesh.new()
-    for x, y in sorted(joints):
-        ring = [bm.verts.new((x + r * math.cos(2 * math.pi * i / 12), y + r * math.sin(2 * math.pi * i / 12), 0.0))
-                for i in range(12)]
-        bm.faces.new(ring)
-    _mesh_object("joints", bm, ink)
+    draw_lines(lines, to_world, r, ink)
     art.add_camera(scene, "topdown", size, size, ortho_scale=float(size))
     art.set_world(scene, pal, "--paper", strength=1.0)
     art.set_render(scene, entry)
@@ -1914,6 +1980,80 @@ def render_shortcut(entry, out_path, lines, icon_px):
     art.render_to(scene, tmp)
     art.write_two_tone_png(tmp, out_path, pal["--paper"], pal["--ink"])
     os.remove(tmp)
+
+
+# The maskable safe zone: a launcher may crop a maskable icon to any shape that
+# contains the centred circle of radius 40% of its width, so nothing may reach
+# past it. SAFE leaves a hair inside that line.
+SAFE = 0.39
+
+
+def appmark_scale(entry, layers):
+    """Pixels per 48-unit icon unit for an app-mark entry. fit "any" draws the
+    icon as the landing page frames it (longer side 80% of the square); fit
+    "maskable" shrinks it until every point of every stroke, cap included,
+    lies inside the safe circle."""
+    size, stroke = entry["width"], entry["stroke"]
+    if entry["fit"] == "any":
+        return size / 48.0
+    reach = max(math.hypot(x - 24.0, y - 24.0) for _, lines in layers for line in lines for x, y in line)
+    return SAFE * size / (reach + stroke / 2.0)
+
+
+def render_appmark(entry, out_path, layers):
+    """The app mark: each (token, lines) layer drawn as tubes of that token on
+    --paper, later layers on top, rendered top-down and re-written as an
+    indexed PNG of exact token blends. Full-bleed paper, no transparency: the
+    platform masks it (a maskable icon, iOS's apple-touch-icon) or shows the
+    square."""
+    size = entry["width"]
+    scene = art.reset_scene()
+    pal = art.palette("light")
+    k = appmark_scale(entry, layers)
+    off = size / 2.0 - 24.0 * k
+    r = entry["stroke"] * k / 2.0
+    to_world = lambda x, y: (off + x * k - size / 2.0, size / 2.0 - (off + y * k), 0.0)
+    # Later layers on top: each earlier one a tube's width further from the
+    # camera, which the top-down camera sits 20 units above the origin, so
+    # nothing may be stacked upward past it (the first cut did, and the pen
+    # layer lost its caps to the clip).
+    n = len(layers)
+    for i, (token, lines) in enumerate(layers):
+        draw_lines(lines, to_world, r, emission_material(pal, token), z=-(n - 1 - i) * (2.0 * r + 1.0), split=True)
+    art.add_camera(scene, "topdown", size, size, ortho_scale=float(size))
+    art.set_world(scene, pal, "--paper", strength=1.0)
+    art.set_render(scene, entry)
+    scene.cycles.use_denoising = False
+    tmp = out_path + ".render.png"
+    art.render_to(scene, tmp)
+    art.write_tone_png(tmp, out_path, pal["--paper"], [pal[t] for t, _ in layers], levels=entry.get("levels", 8))
+    os.remove(tmp)
+    print("blender-art: %s strokes are %.2f px wide, %.2f px when shown at 48 px"
+          % (entry["path"], 2.0 * r, 2.0 * r * 48.0 / size))
+
+
+# The exporter simplifies to 0.3 units, a third of a pixel at the landing
+# page's 32-48 px. The app mark is drawn at up to 512 px, where that is 3 px
+# and the pen loop came out as a visible polygon; 0.03 is a third of a pixel
+# there.
+APPMARK_TOL = 0.03
+
+
+def line_layers(scene, cam, inks):
+    """The scene's lines split by ink: an object whose material token is one
+    of inks draws in it, and everything else in inks[0]. Each pass hides the
+    other inks' objects from the exporter only (hide_render); they still
+    occlude, because the ray cast reads the viewport depsgraph."""
+    meshes = [o for o in scene.objects if o.type == "MESH"]
+    ink_of = lambda o: next((m["token"] for m in o.data.materials if m and m.get("token") in inks), inks[0])
+    layers = []
+    for token in inks:
+        for o in meshes:
+            o.hide_render = ink_of(o) != token
+        layers.append((token, art.icon_polylines(scene, cam, 48, 48, tol=APPMARK_TOL)))
+    for o in meshes:
+        o.hide_render = False
+    return layers
 
 
 def main():
@@ -1931,7 +2071,11 @@ def main():
     art.add_light_rig(scene)
     art.set_world(scene, pal)
     bpy.context.view_layer.update()
-    if is_png:
+    if entry["family"] == "appmark":
+        layers = line_layers(scene, cam, entry["inks"])
+        render_appmark(entry, out_path, layers)
+        tokens = {"--paper"} | {t for t, lines in layers if lines}
+    elif is_png:
         lines = art.icon_polylines(scene, cam, w, h)
         render_shortcut(entry, out_path, lines, entry.get("iconPx", 64))
         tokens = {"--ink", "--paper"}

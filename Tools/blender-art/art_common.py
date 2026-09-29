@@ -433,6 +433,72 @@ def write_two_tone_png(render_path, out_path, bg_hex, fg_hex, levels=16):
         fh.write(png)
 
 
+def write_tone_png(render_path, out_path, bg_hex, fg_hexes, levels=8):
+    """write_two_tone_png for more than one ink: an indexed PNG whose palette
+    is bg plus, for each ink, `levels - 1` exact blends of bg toward it.
+
+    Each pixel is taken as a blend of bg and ONE ink: for every ink, the
+    coverage t that best explains the pixel is its projection onto the bg->ink
+    line in linear RGB, and the ink whose line passes closest wins. Luminance
+    alone cannot say which ink a pixel is, which is why the two-tone writer's
+    trick does not carry over. A pixel where two inks cross takes whichever is
+    nearer; with a drawing's own antialiasing that is a pixel or two. Pure
+    stdlib, like the two-tone writer."""
+    import struct
+    import zlib
+    img = bpy.data.images.load(render_path, check_existing=False)
+    w, h = img.size
+    ch = img.channels
+    px = list(img.pixels)
+    bpy.data.images.remove(img)
+    bg = hex_to_linear(bg_hex)
+    inks = [hex_to_linear(f) for f in fg_hexes]
+    steps = levels - 1
+    count = 1 + steps * len(inks)
+    if count > 256:
+        fail("write_tone_png: %d colours do not fit an 8-bit palette" % count)
+    pal = [int(round(255 * linear_to_srgb(c))) for c in bg]
+    for fg in inks:
+        for k in range(1, levels):
+            t = k / steps
+            pal.extend(int(round(255 * linear_to_srgb(bg[i] + (fg[i] - bg[i]) * t))) for i in range(3))
+    bits = 4 if count <= 16 else 8
+    dirs = [[fg[i] - bg[i] for i in range(3)] for fg in inks]
+    norms = [sum(d * d for d in dv) for dv in dirs]
+    raw = bytearray()
+    for y in range(h):
+        row = h - 1 - y                       # Blender stores the bottom row first
+        idx = []
+        for x in range(w):
+            i = (row * w + x) * ch
+            p = [srgb_to_linear(px[i + j]) - bg[j] for j in range(3)]
+            best, pick = None, 0
+            for n, (dv, nn) in enumerate(zip(dirs, norms)):
+                t = min(1.0, max(0.0, sum(p[j] * dv[j] for j in range(3)) / nn))
+                err = sum((p[j] - t * dv[j]) ** 2 for j in range(3))
+                if best is None or err < best:
+                    best, level = err, int(round(t * steps))
+                    pick = 0 if level == 0 else 1 + n * steps + (level - 1)
+            idx.append(pick)
+        raw.append(0)                          # filter type 0 (none) per row
+        if bits == 4:
+            idx += [0] * (len(idx) % 2)
+            raw.extend((idx[i] << 4) | idx[i + 1] for i in range(0, len(idx), 2))
+        else:
+            raw.extend(idx)
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
+
+    png = (b"\x89PNG\r\n\x1a\n"
+           + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, bits, 3, 0, 0, 0))
+           + chunk(b"PLTE", bytes(pal))
+           + chunk(b"IDAT", zlib.compress(bytes(raw), 9))
+           + chunk(b"IEND", b""))
+    with open(out_path, "wb") as fh:
+        fh.write(png)
+
+
 def luminance_under(out_path, region):
     """Min and max WCAG relative luminance inside region [x, y, w, h] (pixels,
     origin top left) of the file as written, lossy encoding included."""

@@ -30,6 +30,10 @@
     "sprite": {
       "entryCap": 122880,
       "total": 122880
+    },
+    "appmark": {
+      "entryCap": 24576,
+      "total": 65536
     }
   },
   "entries": [
@@ -2009,6 +2013,118 @@
         "--accent-2",
         "--card",
         "--line-strong",
+        "--paper"
+      ]
+    },
+    {
+      "path": "assets/icons/icon-192.png",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "app",
+      "family": "appmark",
+      "seed": 1,
+      "samples": 32,
+      "fit": "any",
+      "stroke": 2.25,
+      "inks": [
+        "--ink",
+        "--err"
+      ],
+      "width": 192,
+      "height": 192,
+      "cap": 24576,
+      "theme": "light",
+      "use": "manifest",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "1cb353a0e442fe3dc5518e12d2806b6db292672266f2fec3017bbc72e15fc0f5",
+      "bytes": 2295,
+      "tokens": [
+        "--err",
+        "--ink",
+        "--paper"
+      ]
+    },
+    {
+      "path": "assets/icons/icon-512.png",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "app",
+      "family": "appmark",
+      "seed": 1,
+      "samples": 32,
+      "fit": "any",
+      "stroke": 2.25,
+      "inks": [
+        "--ink",
+        "--err"
+      ],
+      "width": 512,
+      "height": 512,
+      "cap": 24576,
+      "theme": "light",
+      "use": "manifest",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "61df48c51ffeec145bd3cabc722b8763ed12d7e23e14128e15ded824e995de2c",
+      "bytes": 5903,
+      "tokens": [
+        "--err",
+        "--ink",
+        "--paper"
+      ]
+    },
+    {
+      "path": "assets/icons/icon-maskable-192.png",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "app",
+      "family": "appmark",
+      "seed": 1,
+      "samples": 32,
+      "fit": "maskable",
+      "stroke": 2.25,
+      "inks": [
+        "--ink",
+        "--err"
+      ],
+      "width": 192,
+      "height": 192,
+      "cap": 24576,
+      "theme": "light",
+      "use": "manifest",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "2bddb0205dcc34a4d6dbf8847242e0ef61299853579de8546915537fa03cfa68",
+      "bytes": 1608,
+      "tokens": [
+        "--err",
+        "--ink",
+        "--paper"
+      ]
+    },
+    {
+      "path": "assets/icons/icon-maskable-512.png",
+      "script": "Tools/blender-art/scene_icons.py",
+      "subject": "app",
+      "family": "appmark",
+      "seed": 1,
+      "samples": 32,
+      "fit": "maskable",
+      "stroke": 2.25,
+      "inks": [
+        "--ink",
+        "--err"
+      ],
+      "width": 512,
+      "height": 512,
+      "cap": 24576,
+      "theme": "light",
+      "use": "manifest",
+      "decorative": true,
+      "blender": "5.2.2",
+      "sha256": "4d7f90906c9266cf0bfcd8c397ae49bd1f2a1842864802385d015551e5dab90a",
+      "bytes": 4651,
+      "tokens": [
+        "--err",
+        "--ink",
         "--paper"
       ]
     }
