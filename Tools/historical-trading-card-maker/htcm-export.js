@@ -116,9 +116,11 @@
         var withDefs = frameSvg.slice(0, tagEnd + 1) + global.HtcmFrames.defsInner() + frameSvg.slice(tagEnd + 1);
         svgToImage(withDefs, W, H, function (img) { frameImg = img; step(); });
       }
-      if (!isBack && entry.image) {
+      // A photo not in this browser (HtcmImage.url() gives '') is left off.
+      var photoSrc = (!isBack && entry.image) ? global.HtcmImage.url(entry.image.src) : '';
+      if (photoSrc) {
         pending++;
-        loadImage(entry.image.src, function (img) { photoImg = img; step(); });
+        loadImage(photoSrc, function (img) { photoImg = img; step(); });
       }
       if (!isBack) {
         entry.stats.forEach(function (s, i) {

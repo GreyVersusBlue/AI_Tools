@@ -223,6 +223,8 @@
   .stat-warn { color: var(--err); font-size: .78rem; font-weight: 600; margin: -.35rem 0 .6rem; }
   .entry-row .warn-badge { color: var(--err); font-size: .72rem; font-weight: 700; margin-left: .5rem; }
   .entry-row .kb-badge { color: var(--muted); font-size: .72rem; margin-left: .5rem; }
+  /* A card photo whose image is not in this browser (htcm-image.js). */
+  .photo-note { color: var(--err); font-size: .85rem; font-weight: 600; margin: 0 0 .6rem; }
 
   .save-warn {
     display: none; background: var(--card); border: 1.5px solid var(--err); border-radius: 8px;
@@ -498,6 +500,7 @@
 
   <div class="card">
     <h2>Cards (<span id="entryCount">0</span>)</h2>
+    <p class="photo-note" id="photoNote" role="status" hidden></p>
     <div id="entriesWrap"></div>
   </div>
 </div>
@@ -531,6 +534,7 @@
 <div id="printArea"></div>
 
 <script src="historical-trading-card-maker/htcm-store.js"></script>
+<script src="../_shared/media-db.js"></script>
 <script src="historical-trading-card-maker/htcm-image.js"></script>
 <script src="historical-trading-card-maker/htcm-frames.js"></script>
 <script src="historical-trading-card-maker/htcm-themes.js"></script>
@@ -555,7 +559,7 @@
    'adjustBtn', 'newStars', 'setNameInput', 'numberBtn', 'pngBtn', 'pdfBtn', 'zipBtn',
    'deckSelect', 'newDeckBtn', 'renameDeckBtn', 'deleteDeckBtn',
    'rosterBtn', 'rosterOverlay', 'rosterText', 'rosterAddBtn', 'rosterCancelBtn', 'rosterClassSelect',
-   'shareBtn', 'shareNote',
+   'shareBtn', 'shareNote', 'photoNote',
    'sampleDeckBtn', 'sampleSelect',
    'gmTeamCount', 'gmTeamNames', 'gmStartBtn', 'gmResumeBtn', 'gmSetupNote', 'gameOverlay', 'gmRound',
    'gmScores', 'gmCloseBtn', 'gmEndBtn', 'gmTeamALabel', 'gmTeamBLabel', 'gmCardA', 'gmCardB',
@@ -597,9 +601,14 @@
     if (result.ok) {
       els.saveWarn.classList.remove('show');
     } else {
+      // Since Path 4 P4 photos are in IndexedDB (htcm-image.js); only a
+      // browser without it still keeps them inside the deck, costing room here.
+      var inlineKb = totalImageKb();
       els.saveWarn.textContent = '⚠ Couldn’t save your cards — browser storage is full. ' +
-        'Photos take the most room (about ' + totalImageKb() + ' KB across this deck); ' +
-        'delete a card or two, or remove some photos, and the deck will save again.';
+        (inlineKb
+          ? 'Photos take the most room (about ' + inlineKb + ' KB across this deck, kept inside it because this browser has no separate image storage); ' +
+            'delete a card or two, or remove some photos, and the deck will save again.'
+          : 'Delete a deck you are done with, or clear saved work in another tool on this site, and the deck will save again.');
       els.saveWarn.classList.add('show');
     }
     return result.ok;
@@ -640,8 +649,13 @@
   function renderEntries() {
     els.entryCount.textContent = entries.length;
     els.entriesWrap.innerHTML = entries.map(function (e) {
-      var img = e.image ? '<img class="thumb" src="' + e.image.src + '" alt="">' : '';
-      var kb = e.image ? '<span class="kb-badge">' + HtcmImage.approxKb(e.image.src) + ' KB photo</span>' : '';
+      // HtcmImage.url() is the only way a photo reaches an <img src>.
+      var src = e.image ? HtcmImage.url(e.image.src) : '';
+      var img = src ? '<img class="thumb" src="' + escapeHtml(src) + '" alt="">' : '';
+      var inlineKb = e.image ? HtcmImage.approxKb(e.image.src) : 0;
+      var kb = !e.image ? '' : HtcmImage.isMissing(e.image.src)
+        ? '<span class="warn-badge">photo missing from this browser</span>'
+        : (inlineKb ? '<span class="kb-badge">' + inlineKb + ' KB photo</span>' : '');
       var warn = entryOverflows(e) ? '<span class="warn-badge">&#9888; stats clip when printed</span>' : '';
       return '<div class="entry-row" data-id="' + e.id + '">' + img +
         '<div class="info"><div class="ename">' + escapeHtml(e.name) + '</div>' +
@@ -718,17 +732,20 @@
   els.newImage.addEventListener('change', function () {
     var file = els.newImage.files && els.newImage.files[0];
     if (!file) { pendingImage = null; previewId = null; updatePreview(); return; }
-    HtcmImage.readAndDownscale(file, function (scaled) {
+    // Downscaled and stored in the media store on pick (htcm-image.js); the
+    // card saves only the reference. A photo picked and never saved is an
+    // orphan the next boot's GC removes.
+    HtcmImage.fromFile(file).then(function (scaled) {
       pendingImage = {
         src: scaled.src, w: scaled.w, h: scaled.h,
         crop: { x: 0.5, y: 0.5, scale: 1 }, shape: 'rrect', filter: 'none'
       };
       previewId = null;
       updatePreview();
-    }, function (msg) {
+    }, function (e) {
       pendingImage = null;
       els.newImage.value = '';
-      alert(msg);
+      alert((e && e.message) || 'That file could not be read as an image.');
       updatePreview();
     });
   });
@@ -844,6 +861,8 @@
     renderThemeSwatches();
     applyCardSize();
     renderEntries();
+    sayMissingPhotos();
+    if (photosSettled) showPhotos();   // a deck switched to after boot
   }
   els.deckSelect.addEventListener('change', function () {
     var name = els.deckSelect.value;
@@ -916,8 +935,13 @@
     };
   }
 
-  Share.mount(els.shareBtn, {
-    getState: buildSharePayload,
+  /* Since Path 4 P4 a photo's `src` is an `idb:` reference, and reading its
+     bytes back is asynchronous while share.js's getState() is not. So, as in
+     015, 056 and 028, the button does not use Share.mount(): its click builds
+     the portable copy first (HtcmImage.forExport) and then opens the sheet
+     with Share.open(), handing it that finished copy. share.js still strips
+     the photos from the link and the code, and the download keeps them. */
+  var SHARE_OPTS = {
     param: SHARE_PARAM,
     tool: 'historical-trading-card-maker',
     title: 'Share this deck',
@@ -927,6 +951,23 @@
     emptyMessage: 'Add at least one card first.',
     successMessage: 'Link copied. Opening it anywhere saves this deck there as a new deck — card text, stats, themes, and rarity travel; it never overwrites a deck already on that device.',
     onMessage: function (text) { setShareNote(text); }
+  };
+  function openShareSheet(payload) {
+    Share.open(Object.assign({}, SHARE_OPTS, {
+      opener: els.shareBtn,
+      getState: function () { return payload; }
+    }));
+  }
+  var sharing = false;
+  els.shareBtn.addEventListener('click', function () {
+    if (sharing) return;
+    var payload = buildSharePayload();
+    // Nothing stored to read back: the sheet opens at once, as it always has.
+    if (!payload || !HtcmImage.hasStored(payload)) { openShareSheet(payload); return; }
+    sharing = true;
+    HtcmImage.forExport(payload).then(openShareSheet)['catch'](function (e) {
+      setShareNote('Could not read this deck’s photos to share it (' + ((e && e.message) || 'unknown error') + ').', true);
+    }).then(function () { sharing = false; });
   });
 
   /** Consume a ?deck= link on load. Saves the arrival as a new, uniquely-named
@@ -948,10 +989,17 @@
       name = name + ' (shared)';
       while (existing.indexOf(name) !== -1) name = name + ' 2';
     }
+    /* share.js strips photos from a link. Only a real inline image is kept
+       from outside (htcm-image.js); an `idb:` reference names a photo in the
+       SENDER's browser and is dropped. One a hand-built link does carry is
+       saved inline and moved into the media store by the boot pass below. */
+    var kept = HtcmImage.acceptArrival(decoded);
     var fresh = HtcmStore.repairDoc({ cards: decoded.cards, settings: decoded.settings });
     HtcmStore.saveDeck(name, fresh);
     openDeck(name, fresh);
-    setShareNote('Opened from a shared link and saved here as “' + name + '”. It’s your copy now — photos stayed behind, so add them here if you want them.');
+    setShareNote('Opened from a shared link and saved here as “' + name + '”. It’s your copy now — ' +
+      (kept ? (kept === 1 ? 'its photo came with it.' : 'its ' + kept + ' photos came with it.')
+            : 'photos stayed behind, so add them here if you want them.'));
     return true;
   }
 
@@ -1367,8 +1415,22 @@
       HtcmFrames.defsSvg() +
       '<div class="section-label">Card fronts</div>' + frontPages.join('') +
       '<div class="section-label">Card backs (row-mirrored to align when you flip the printed front stack and reprint)</div>' + backPages.join('');
-    window.print();
+    waitForImages(els.printArea).then(function () { window.print(); });
   });
+
+  /** Resolves once every <img> under `root` has loaded or failed, so a gone
+      photo can never hang the print. A stored photo is an object URL, which
+      loads asynchronously; a data URL was ready at once, which is why this
+      never had to wait before. */
+  function waitForImages(root) {
+    return Promise.all(Array.prototype.map.call(root.querySelectorAll('img'), function (img) {
+      if (img.complete) return null;
+      return new Promise(function (resolve) {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }));
+  }
 
   /* ---------- review game ----------
      The rules live in htcm-game.js; this is only the projector view. The big
@@ -1602,6 +1664,91 @@
     }
   });
 
+  /* ---------- card photos: IndexedDB behind every saved deck (Path 4 P4) ----------
+     Every saved deck's photos hold `idb:` references; the images are in the
+     shared media store (htcm-image.js). At boot: move any data: URL photo (a
+     deck saved before this, one saved in a browser that had no IndexedDB, or
+     one a link carried) into the store, in EVERY saved deck and not only the
+     open one, writing back only the decks that changed; give every stored
+     photo of the open deck an object URL and redraw; say which are missing;
+     then — at boot only, with media-db.js's ten-minute grace — delete stored
+     photos no saved deck points at. Deleting a card or a deck, or renaming a
+     deck, deletes nothing at that moment; this pass does, next time. The
+     legacy keys (htcm_cards_v2/v1) are left alone: they are a backup, and a
+     photo in them is still a data URL. __photosSettled is for the suite. */
+
+  /** [{ name, deck }] for the open deck and every other saved one, read fresh. */
+  function everyDeck() {
+    var out = [{ name: deckName, deck: doc }];
+    HtcmStore.listDecks().forEach(function (name) {
+      if (name === deckName) return;
+      var d = HtcmStore.loadDeck(name);
+      if (d) out.push({ name: name, deck: d });
+    });
+    return out;
+  }
+  function everyPhoto() {
+    var out = [];
+    everyDeck().forEach(function (x) { out = out.concat(HtcmImage.valuesIn(x.deck)); });
+    return out;
+  }
+
+  /** Swap each moved data: URL for its reference in the open deck and in
+      FRESH copies of the others, and write back only what changed. */
+  function applyStoredPhotos(map) {
+    if (HtcmImage.apply(doc, map)) save();
+    if (pendingImage) HtcmImage.apply({ cards: [{ image: pendingImage }] }, map);
+    HtcmStore.listDecks().forEach(function (name) {
+      if (name === deckName) return;
+      var d = HtcmStore.loadDeck(name);
+      if (d && HtcmImage.apply(d, map)) {
+        try { HtcmStore.writeDeck(name, d); } catch (e) { /* smaller than before, so this cannot run out of room */ }
+      }
+    });
+  }
+
+  function sayMissingPhotos() {
+    var count = 0, seen = {};
+    // Hydrating only the open deck means only its photos are known missing.
+    HtcmImage.valuesIn(doc).forEach(function (v) {
+      if (!HtcmImage.isMissing(v) || seen[v]) return;
+      seen[v] = 1; count++;
+    });
+    els.photoNote.hidden = !count;
+    els.photoNote.textContent = count
+      ? (count === 1 ? '1 photo' : count + ' photos') + ' in “' + deckName + '”' +
+        (count === 1 ? ' is' : ' are') + ' missing from this browser’s storage, so ' + (count === 1 ? 'its card prints' : 'their cards print') +
+        ' with an empty photo window. Edit the card and choose the photo again.'
+      : '';
+  }
+
+  /** Give the open deck's stored photos object URLs, then redraw everything
+      that shows one and say what is missing. */
+  function showPhotos() {
+    var shownDeck = deckName;
+    return HtcmImage.hydrate(HtcmImage.valuesIn(doc)).then(function (gone) {
+      if (shownDeck !== deckName) return gone;   // switched away meanwhile; openDeck() hydrates the new one
+      renderEntries();
+      updatePreview();
+      if (game && !els.gameOverlay.hidden) renderGame();
+      sayMissingPhotos();
+      return gone;
+    });
+  }
+
+  var photosSettled = false;   // until then, the boot pass hydrates the open deck
+  function settlePhotos() {
+    return HtcmImage.store(everyPhoto())
+      .then(function (map) {
+        if (Object.keys(map).length) applyStoredPhotos(map);
+        return showPhotos();
+      })
+      .then(function () {
+        return HtcmImage.gc(everyPhoto().filter(HtcmImage.isRef));
+      })['catch'](function () { /* reads never block the page */ })
+      .then(function () { photosSettled = true; });
+  }
+
   /* ---------- boot ---------- */
   document.body.insertAdjacentHTML('afterbegin', HtcmFrames.defsSvg());
   populateRosterClassSelect();
@@ -1617,6 +1764,7 @@
     renderEntries();
     updateFormMode();
   }
+  settlePhotos().then(function () { window.__photosSettled = true; });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

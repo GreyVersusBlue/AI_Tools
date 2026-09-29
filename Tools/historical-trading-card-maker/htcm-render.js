@@ -3,7 +3,7 @@
    PNG/PDF exporter all build cards through these two functions, so what the
    teacher sees on screen is byte-for-byte the markup that prints. Entries are
    schema-v2 card objects (see htcm-store.js). */
-/* global HtcmThemes, HtcmFrames, HtcmPhoto -- classic script; these come from the sibling htcm-*.js files the page loads first */
+/* global HtcmThemes, HtcmFrames, HtcmPhoto, HtcmImage -- classic script; these come from the sibling htcm-*.js files the page loads first */
 (function () {
   'use strict';
 
@@ -93,11 +93,15 @@
       plus a rim stroke in the theme accent tracing the same shape. */
   function photoWindowHtml(image) {
     var shape = HtcmFrames.SHAPES[image.shape] ? image.shape : 'rrect';
+    // HtcmImage.url() is the only way a photo reaches an <img src>: a
+    // well-formed data URL, an object URL, or '' — a photo not read yet or
+    // not in this browser, which leaves the window empty rather than broken.
+    var src = HtcmImage.url(image.src);
     var rim = '<svg class="pwin-rim" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
       '<path d="' + HtcmFrames.shapePath(shape, 100, 100) + '" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
     return '<div class="pwin shape-' + shape + (MEDALLION[shape] ? ' medallion' : '') +
       '" style="clip-path:url(#htcm-clip-' + shape + ')">' +
-      '<img src="' + image.src + '" alt="" style="' + HtcmPhoto.photoStyle(image) + '">' + rim + '</div>';
+      (src ? '<img src="' + escapeHtml(src) + '" alt="" style="' + HtcmPhoto.photoStyle(image) + '">' : '') + rim + '</div>';
   }
 
   /** Front of a card: photo (if any), name, stat lines. null → an invisible

@@ -58,7 +58,11 @@ ok(await page.isVisible('#adjustBtn'), 'picking a photo reveals the Adjust butto
 await page.click('#addEntryBtn');
 await settle(page);
 const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('htcm:data:My cards')).cards[0].image);
-ok(stored && /^data:image\/jpeg/.test(stored.src), 'the photo is stored re-encoded by the downscaler');
+// Since Path 4 P4 the deck holds a reference and the JPEG is in gvb-media
+// (smoke-photo-store.mjs covers the move); the re-encode is still asserted.
+ok(stored && /^idb:h[0-9a-f]{32}$/.test(stored.src), 'the photo is stored as a media-store reference');
+eq(await page.evaluate(src => window.MediaDB.store({ ns: 'htcm' }).getBlob(src.slice(4)).then(b => b && b.type), stored.src),
+   'image/jpeg', 'the photo is stored re-encoded by the downscaler');
 eq(stored.shape, 'rrect', 'the default window shape is the rounded rect');
 near(stored.crop.x, 0.5, 0.001, 'the default focal point is centered');
 ok(await page.evaluate(() => !!document.querySelector('#previewFront .pwin.shape-rrect')),
