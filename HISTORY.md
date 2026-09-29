@@ -9,6 +9,108 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P2, the last call: the PWA app mark in the icon set's style (2026-09-29, #306, `CACHE_VERSION` v205)
+
+Rank 1 was a ½ row whose deliverable was a decision: re-render the app mark in the icon set's
+style, and swap it only if it survives the maskable safe zone at 48 px. **It was swapped.** The row
+is deleted and Path 21 P2 is finished.
+
+**The machine.** This was huginn, Devon's Linux box, which every earlier handoff said had neither
+Node nor Blender. Both were on PATH this time: `node` v22.11.0 in `~/.local/bin`, and `blender` in
+`~/.local/bin` as a symlink to a **5.2.2 LTS tarball** in `~/.local/blender/`. The tarball was
+installed at 11:27 local that day, and its build hash is `d13f752e3b9c`, the same build as the
+Windows Steam install. So the prompt's rule ("Blender on PATH → rank 1") sent this session to rank
+1 instead of the rank 9 the prompt spent most of its words on. `CLAUDE.md`, the header and the
+Path 21 section all said Blender runs only on the Windows machine. They now name both machines.
+
+**What shipped.**
+- The four manifest icons (`assets/icons/icon-192`, `-512`, `icon-maskable-192`, `-512`) are
+  re-rendered. `index.html`'s `apple-touch-icon` is `icon-192`, so it changed with them. The paths
+  are the same, so `manifest.json` and `PRECACHE_URLS` did not change. **14,457 B** replace 49,056 B,
+  and the shell tier gets about 34.6 KB lighter.
+- **The mark:** a dog-eared page in the icon camera, with "A+" in single `--ink` strokes, circled in
+  `--err` by **`index.html`'s own red-pen `.grade` path**. `PEN_LOOP` in `scene_icons.py` holds its
+  four Béziers. The old mark was the same idea drawn flat: a blue serif A in a red ring, the landing
+  page's "every tool gets an A" joke.
+- `scene_icons.py`: subject `"app"`. `line_layers()` exports each ink's lines separately; the other
+  inks' objects are hidden from the exporter but still occlude. `render_appmark()` handles
+  `fit: "any"` (framed as the landing icon is, longer side 80%) and `fit: "maskable"` (scaled until
+  every stroke, caps included, is inside a radius of 39%). `draw_lines()` is factored out of
+  `render_shortcut()`.
+- `art_common.write_tone_png`: the two-tone indexed writer generalized to several inks. Each pixel
+  goes to the ink whose `--paper`→ink line in linear RGB passes closest to it. Luminance alone,
+  which is the two-tone writer's trick, cannot tell two inks apart.
+- `validate-art.mjs`: a new rule, **SAFE**. An `appmark` entry needs `fit`, `stroke` and `inks`. A
+  maskable PNG is decoded (`decodePng`: node:zlib, 8-bit RGB/RGBA or indexed, all five row filters)
+  and fails on any pixel outside the 40% circle that is not its top-left colour. The test grows from
+  60 to 68 assertions.
+- `renders.json`: the `appmark` family (24 KB per entry, 64 KB in total) and four entries (98 in
+  all). The ledger now holds 137,529 B, 75,974 B of it in the shell tier.
+- `Tools/blender-art/README.md`: an app-mark section, huginn as a second machine, and the
+  cross-machine determinism result below.
+
+**Calls made, each cheap to reverse.**
+- **Swap, not keep.** Under a circle mask and a squircle mask at 48 px, the page, the loop and the
+  "A+" are each distinct. The maskable strokes are 1.66 px at 48 px, over the set's 1.5 px floor.
+  Zero pixels fall outside the safe zone, and SAFE now enforces that. At 32 px the "+" gets small,
+  but the row's test was 48.
+- **Keep the per-page favicons.** At 16 px the new mark is grey mush, while the old ring-and-A still
+  reads. So the landing tab still shows the old mark, and the installed app shows the new one. They
+  share the motif, and they are no longer the same drawing.
+- **Full-bleed `--paper`, no transparency**, for `any` as well as `maskable`. The old `any` icons had
+  a rounded tile on white corners. iOS rounds the apple-touch-icon itself, so a full square is right
+  there. On a desktop that shows `any` unmasked, it is a near-white square.
+- **`manifest.json`'s `background_color` (#F6F7F9) was not changed** to `--paper` (#FAFAF8). The
+  splash-screen difference is imperceptible, and touching `manifest.json` makes CI run everything
+  (~35 min).
+- **`--err`, not the landing page's `--pen`,** for the loop. `--pen` (#B7362C) is defined in
+  `index.html`, not `ink-paper.css`, and the palette parser reads only `ink-paper.css`. `--err`
+  (#A3372B) is the nearest token.
+
+**What did not work first.**
+- **The first cut was the anarchy sign.** A lone monoline A inside a hand-drawn red circle is Ⓐ.
+  The set's rule is to ask what a seventh grader would say, and that is what one would say. It
+  became "A+", which is the landing page's first grade and cannot be read as anything but a grade.
+  `icon_app`'s docstring records this, so nobody retries it.
+- **The pen layer rendered clipped, with no round caps.** Layers were stacked *upward* in z
+  (`i * (2r + 1)`), and the top-down camera sits only 20 units above the origin. The red layer's
+  tubes (z 13–37 at 512 px) crossed the camera, and its cap discs at z = 25 were behind it. They
+  now stack downward.
+- **The A's apex showed a knob.** A joined polyline tube pinches where it turns sharply, and the
+  round-join disc then sticks out past it. That is invisible at the shortcuts' 96 px and obvious at
+  512. The app mark draws every segment as its own straight tube (`split=True`). The shortcuts keep
+  the joined tubes, and their four PNGs re-render byte-identical, which was checked.
+- **The pen loop came out as a visible polygon.** The exporter simplifies to 0.3 units, a third of
+  a pixel at 48 px but 3 px at 512. The app mark uses `APPMARK_TOL = 0.03`.
+- **Two of seven deliberate breaks of SAFE were not caught at first:** a radius of 0.5 instead of
+  0.4, and a Sub-filter predictor zeroed in `decodePng`. The committed icons use only filter 0, and
+  the "any" icon overflows both radii. Two cases were added: a one-pixel image pinned at 45% and at
+  38%, and a hand-filtered 5-row RGB PNG using each filter once. Now 7 of 7 are caught, including an
+  Average predictor off by a shift, a Paeth tie-break swap and an Up predictor zeroed. The decoder
+  was also checked against PIL's pixel sums on the six real files, including the old RGB ones,
+  which do use filters.
+
+**Found: cross-machine determinism, measured for the first time.** On huginn, with the same Blender
+build as the Windows machine, the four shortcut PNGs and `t001`, `t007`, `t032` and `t087.svg`
+re-rendered **byte for byte** against the Windows renders. The line exporter and the flat emission
+path are portable. **The lit test tile is not:** `tile-256-light.webp` came out 1,050 B against
+1,054 B, differing by at most 6/255 on 2.4% of its pixels (Cycles lighting with OIDN on a different
+CPU). P3's hero and P4's pieces are lit rasters, so a re-render on the other machine will show hash
+diffs that are noise. Render each lit entry on one machine, and say which in the entry's increment.
+
+**Not verified.**
+- A real installed PWA on Android, iOS, Windows or ChromeOS, or a real launcher's mask. In headless
+  Chrome 154, `Page.getAppManifest` reports no errors, and the only installability complaint is
+  `in-incognito`, which comes from the throwaway profile. All four icons and the apple-touch-icon
+  decode at their stated sizes. This belongs on the parked device-check list with #265's shortcut
+  PNGs.
+- How the mark looks on a dark launcher, or at 125–150% scaling. It was checked on a dark surround
+  under two masks, magnified, and at 16/32/48 px only.
+
+CI on #306 ran the scoped selection green in 1m37s. Local: every `check:*` guard, `lint`, and `check:precache -- --base origin/main` (v204 → v205). The
+suites `--changed` selects (`smoke-sw-update`, `smoke-sw-tiers`, `smoke-storage-persist`,
+`test:blender-art`). The four app-mark entries rendered twice, byte-identical.
+
 ## Path 4 P4, increment 10: 064's card photos move into `media-db.js` (2026-09-29, #304, `CACHE_VERSION` v204)
 
 Rank 9 is a 2+ row, and it stays: **035's floor-plan trace image (increment 11) is the last tool
