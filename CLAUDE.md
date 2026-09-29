@@ -151,8 +151,9 @@ every edit. The deduplication work that established them is summarised in
   separately (`1 (+1 via a module)`); the plain number is the direct count the
   header has always carried.
 - **`npm run check:art` guards the Path 21 art ledger** (added 2026-09-25).
-  Blender runs only on Devon's Windows machine (`Tools/blender-art/README.md` has
-  the pin, 5.2 LTS, and the command lines), so CI never re-renders anything. What it
+  Blender runs only on Devon's machines, his Windows box and (since 2026-09-29) huginn
+  (`Tools/blender-art/README.md` has the pin, 5.2 LTS, and the command lines), so CI never
+  re-renders anything. What it
   checks is that `Tools/blender-art/renders.json` matches the tree: every output
   present, under its byte cap, with the ledger's SHA-256 and dimensions, made by the
   pinned LTS line; family totals and the 2 MB / 250 KB-shell budget; an on-screen
@@ -165,7 +166,9 @@ every edit. The deduplication work that established them is summarised in
   seed or Blender of its own) is exactly what `node Tools/blender-art/build-sprite.mjs`
   assembles, and lists every icon; that an icon's stroke is at least 1.5 px at the
   landing page's 32 px; and that a `use: "manifest"` PNG (the shortcut icons) is
-  named by `manifest.json`. **Add a tool icon, then re-run `build-sprite.mjs`.** The
+  named by `manifest.json`. Since #306 it also checks the PWA app mark (`assets/icons/`, family
+  `appmark`): a maskable PNG with any non-background pixel outside the 40% safe circle fails
+  **SAFE**. **Add a tool icon, then re-run `build-sprite.mjs`.** The
   offline zip inlines the sprite into its landing page, because Chrome draws nothing
   for an external `<use>` under `file://`. Its test is `npm run test:blender-art`. Keep art
   out of any folder named `test/`: `make-offline-copy.mjs` drops every such path
