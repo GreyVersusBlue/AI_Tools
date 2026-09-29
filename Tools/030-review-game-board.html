@@ -32,6 +32,8 @@
 <script src="../_shared/roster.js"></script>
 <script src="review-game-board/rgb-store.js"></script>
 <script src="review-game-board/rgb-bank-store.js"></script>
+<script src="../_shared/media-db.js"></script>
+<script src="review-game-board/rgb-image.js"></script>
 <script type="module">
   // rgb-audio-db.js is an ES module, which evaluates AFTER the classic
   // inline <script> further down (module scripts are deferred to after the
@@ -173,6 +175,8 @@
     border: 1px solid var(--line-strong); background: var(--card); cursor: pointer; display: block;
   }
   .clue-image-size { font-size: .65rem; color: var(--muted); }
+  /* A stored picture whose image is not in this browser (rgb-image.js). */
+  .clue-image-size.missing { color: var(--err); font-weight: 600; text-align: center; }
 
   /* Audio cell: same idea as the image cell — a couple of small buttons
      until there's a clip, then a compact play control. Narrower controls
@@ -338,6 +342,7 @@
     <input type="file" id="importBoardFile" accept="application/json,.json" style="display:none;">
     <button class="danger" id="deleteBoardBtn">Delete</button>
   </div>
+  <p class="import-status error" id="imageNote" role="status" hidden></p>
 
   <div class="card" id="setupCard">
     <label for="boardName">Board name</label>
@@ -365,9 +370,9 @@
 
     <div class="tab-panel active" id="tab-manual">
       <p class="hint">Each question can carry a picture &mdash; a map, a diagram, a political cartoon, a primary
-        source. Use <b>+ Image</b> on a row. Pictures are shrunk on the way in, stored inside the board (so they
-        travel with a JSON export), shown with the clue on the projector, and printed on the practice quiz and
-        answer key.</p>
+        source. Use <b>+ Image</b> on a row. Pictures are shrunk on the way in, kept in this browser&rsquo;s image
+        storage (and carried inside a JSON export), shown with the clue on the projector, and printed on the
+        practice quiz and answer key.</p>
       <div id="categoriesEditor"></div>
       <div class="board-actions">
         <button type="button" class="secondary" id="addCategoryBtn">+ Add category</button>
@@ -536,7 +541,7 @@
   }
 
   var els = {};
-  ['toolbar','boardSwitch','newBoardBtn','editBoardBtn','resetGameBtn','deleteBoardBtn','storageLine',
+  ['toolbar','boardSwitch','newBoardBtn','editBoardBtn','resetGameBtn','deleteBoardBtn','storageLine','imageNote',
    'printAnswerKeyBtn', 'printQuizBtn', 'exportBoardBtn', 'importBoardBtn', 'importBoardFile', 'printArea',
    'setupCard','boardName','categoriesEditor','addCategoryBtn','buildFromManualBtn',
    'importFile','downloadTemplateBtn','importStatus',
@@ -614,11 +619,12 @@
   }
 
   /* ---------- persistence ---------- */
-  /** Saving can now fail for a reason it never could before: clue images are
-      stored inline, and localStorage caps out around 5 MB for the whole site
-      (P12). A silent write failure would lose a game mid-lesson, so say what
-      happened and what to do about it — once per session, not on every
-      keystroke-triggered save. */
+  /** Saving can fail when localStorage is full — it caps out around 5 MB for
+      the whole site (P12). Clue images used to be the usual cause; since Path
+      4 P4 they are in IndexedDB (rgb-image.js) and only a browser without it
+      keeps them inside the board. A silent write failure would lose a game
+      mid-lesson, so say what happened and what to do about it — once per
+      session, not on every keystroke-triggered save. */
   var quotaWarned = false;
   function save() {
     if (!state) return;
@@ -629,16 +635,19 @@
     } catch (e) {
       if (quotaWarned) return;
       quotaWarned = true;
+      var inlineImages = ReviewBoardImage.valuesIn(state).some(ReviewBoardImage.isInline);
       alert('This browser is out of storage space, so the board could not be saved.\n\n' +
-        'Clue images are the usual cause — they are kept inside the board. Remove an image, ' +
-        'or delete a board you are done with, then try again. Export the board to JSON first ' +
-        'if you want to keep it.');
+        (inlineImages
+          ? 'This board keeps its clue images inside it, because this browser has no separate image storage. Remove an image, or delete a board you are done with, then try again. '
+          : 'Delete a board you are done with, or clear saved work in another tool on this site, then try again. ') +
+        'Export the board to JSON first if you want to keep it.');
     }
   }
 
   /* ---------- how full the drawer is ------------------------------------
-     Clue images are the first thing in this tool that can realistically fill
-     localStorage, and the failure they cause is the worst kind: it arrives
+     Clue images were the first thing in this tool that could realistically
+     fill localStorage (they are in IndexedDB since Path 4 P4, except in a
+     browser without it), and the failure is the worst kind: it arrives
      mid-lesson, on a save the teacher did not initiate, and the only signal
      before this was an alert *after* the write had already failed.
 
@@ -661,7 +670,10 @@
     if (!r || !r.cap) { els.storageLine.textContent = ''; els.storageLine.className = 'storage-line'; return; }
     var pct = Math.round(r.pct * 100);
     var other = Math.max(0, r.total - r.boards);
-    var parts = [r.boards > 4096
+    // Whether any board is saved is a count, not a size: a board without
+    // inline pictures is a couple of KB, which a byte threshold (it was 4 KB,
+    // from when pictures lived in the boards) reported as "no boards".
+    var parts = [ReviewBoardStore.listBoards().length
       ? 'Saved boards are using about ' + fmtMB(r.boards)
       : 'No boards saved yet'];
     if (other > 64 * 1024) parts.push('other tools on this site another ' + fmtMB(other));
@@ -670,10 +682,10 @@
     var level = '';
     if (r.pct >= 0.9) {
       level = ' danger';
-      msg += ' Nearly full \u2014 the next save with an image in it is likely to fail. Export a board to JSON and delete it, or remove some clue images.';
+      msg += ' Nearly full \u2014 the next save is likely to fail. Export a board to JSON and delete it, or clear saved work in another tool.';
     } else if (r.pct >= 0.7) {
       level = ' warn';
-      msg += ' Worth watching \u2014 clue images are the usual cause, and a board that will not save loses a game mid-lesson.';
+      msg += ' Worth watching \u2014 a board that will not save loses a game mid-lesson. Export a board you are done with and remove it.';
     }
     els.storageLine.className = 'storage-line' + level;
     els.storageLine.textContent = msg;
@@ -700,59 +712,28 @@
   /* ---------- an image inside a clue -------------------------------------
      A map, a diagram, a political cartoon, a primary source: for a social
      studies or science review, the picture often *is* the question. The image
-     is downscaled hard on import and kept inline as a data URL on the clue, so
-     it travels with the board through save, JSON export and import, exactly
-     like the question text does — nothing to lose track of, nothing to upload.
+     is downscaled hard on import (1000 px, JPEG 0.72, white under any
+     transparency) and, since Path 4 P4, kept in the shared media store
+     (rgb-image.js over _shared/media-db.js): `clue.image` holds `idb:<id>`,
+     or the data URL itself in a browser with no IndexedDB. It still travels
+     with the board through JSON export and import, as a data URL, exactly
+     like the question text does.
 
-     IMAGE_MAX_DIM is deliberately modest. localStorage caps out around 5 MB
-     for the whole origin and every saved board shares it (P12), while a
-     projected clue image is only ever a few hundred CSS pixels tall. 1000px
-     on the long edge is plenty for a projector and for a printed quiz, and
-     JPEG at 0.72 keeps a photo of a document around 100 KB rather than the
-     several MB a phone camera hands over.
+     ReviewBoardImage.url() is the only way a value reaches an <img src>: it
+     returns a well-formed data URL, an object URL or '', and every markup
+     site escapes it on top of that.
   ---------------------------------------------------------------------- */
-  var IMAGE_MAX_DIM = 1000;
-  var IMAGE_QUALITY = 0.72;
-
-  function isClueImage(v) {
-    return typeof v === 'string' && /^data:image\//.test(v);
-  }
+  function isClueImage(v) { return ReviewBoardImage.isValue(v); }
 
   function approxKb(dataUrl) {
     // base64 carries 3 bytes per 4 characters; close enough to show a teacher.
     return Math.max(1, Math.round(dataUrl.length * 0.75 / 1024));
   }
 
-  /** Reads a picked file, scales its long edge down to maxDim, and hands back a
-      JPEG data URL. PNG sources with transparency get a white matte rather than
-      black, since these land on a white printed page as often as a dark board. */
-  function readAndDownscaleImage(file, maxDim, cb, onError) {
-    var reader = new FileReader();
-    reader.onload = function () {
-      var img = new Image();
-      img.onload = function () {
-        var scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
-        var w = Math.max(1, Math.round(img.naturalWidth * scale));
-        var h = Math.max(1, Math.round(img.naturalHeight * scale));
-        var canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        var ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, w, h);
-        ctx.drawImage(img, 0, 0, w, h);
-        cb(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
-      };
-      img.onerror = function () { onError('That file could not be read as an image.'); };
-      img.src = reader.result;
-    };
-    reader.onerror = function () { onError('That file could not be read.'); };
-    reader.readAsDataURL(file);
-  }
-
-  /** The image cell of one clue row. The data URL lives on the row element
+  /** The image cell of one clue row. The value lives on the row element
       (`row.__clueImage`) rather than in an attribute — readManualEditor()
-      reads it back from there — because a 100 KB base64 string in a DOM
-      attribute is a lot of markup to carry around for no benefit. */
+      reads it back from there. A stored picture whose image is not in this
+      browser says so where the thumbnail would be, with Remove still on it. */
   function buildClueImageCell(row, initialImage) {
     var cell = document.createElement('div');
     cell.className = 'clue-image-cell';
@@ -783,11 +764,18 @@
 
     function sync() {
       var has = isClueImage(row.__clueImage);
-      thumb.style.display = has ? '' : 'none';
+      var src = has ? ReviewBoardImage.url(row.__clueImage) : '';
+      thumb.style.display = src ? '' : 'none';
       removeBtn.style.display = has ? '' : 'none';
       addBtn.style.display = has ? 'none' : '';
-      sizeNote.textContent = has ? approxKb(row.__clueImage) + ' KB' : '';
-      if (has) thumb.src = row.__clueImage;
+      sizeNote.classList.toggle('missing', has && !src);
+      if (!has) sizeNote.textContent = '';
+      else if (!src) sizeNote.textContent = ReviewBoardImage.isMissing(row.__clueImage)
+        ? 'Image missing from this browser \u2014 add it again' : 'Loading image\u2026';
+      // A stored picture's size is the store's business; only an inline one
+      // still costs this page's localStorage, so only that one is sized here.
+      else sizeNote.textContent = ReviewBoardImage.isInline(row.__clueImage) ? approxKb(row.__clueImage) + ' KB' : 'Saved';
+      if (src) thumb.src = src; else thumb.removeAttribute('src');
     }
 
     addBtn.addEventListener('click', function () { fileInput.click(); });
@@ -797,10 +785,10 @@
       var file = fileInput.files && fileInput.files[0];
       fileInput.value = '';
       if (!file) return;
-      readAndDownscaleImage(file, IMAGE_MAX_DIM, function (dataUrl) {
-        row.__clueImage = dataUrl;
+      ReviewBoardImage.fromFile(file).then(function (value) {
+        row.__clueImage = value;
         sync();
-      }, function (msg) { alert(msg); });
+      }, function (e) { alert((e && e.message) || 'That file could not be read as an image.'); });
     });
 
     cell.appendChild(thumb);
@@ -810,6 +798,7 @@
     cell.appendChild(fileInput);
 
     row.__clueImage = isClueImage(initialImage) ? initialImage : null;
+    row.__syncClueImage = sync;   // so a hydrate that lands after the editor opened can redraw it
     sync();
     return cell;
   }
@@ -1291,6 +1280,7 @@
     assignDailyDouble();
     clearUndoStack();
     renderBoard();
+    sayMissingImages();
   }
 
   /** Clears any existing Daily Double flag, then — if the option is on —
@@ -1343,6 +1333,7 @@
     refreshSwitcher();
     clearUndoStack();
     renderBoard();
+    if (imagesSettled) showImages();   // a board switched to after boot
   }
 
   /* ---------- printable answer key ---------- */
@@ -1350,8 +1341,9 @@
     var rows = [];
     state.categories.forEach(function (cat) {
       cat.clues.forEach(function (cl) {
-        var keyImg = isClueImage(cl.image)
-          ? '<img class="key-img" src="' + escapeHtml(cl.image) + '" alt="">' : '';
+        // A picture not in this browser is left off the page, not drawn broken.
+        var keySrc = ReviewBoardImage.url(cl.image);
+        var keyImg = keySrc ? '<img class="key-img" src="' + escapeHtml(keySrc) + '" alt="">' : '';
         // Audio can't print — flag that one exists so a teacher scanning a
         // paper answer key knows to play it from the device instead.
         var keyAudioNote = cl.audioId ? ' <em>(has an audio clip — play from the device)</em>' : '';
@@ -1367,8 +1359,22 @@
   els.printAnswerKeyBtn.addEventListener('click', function () {
     if (!state) return;
     els.printArea.innerHTML = answerKeyHtml();
-    window.print();
+    waitForImages(els.printArea).then(function () { window.print(); });
   });
+
+  /** Resolves once every <img> under `root` has loaded or failed, so a gone
+      picture can never hang the print. A stored picture is an object URL,
+      which loads asynchronously; a data URL was ready at once, which is why
+      this never had to wait before. */
+  function waitForImages(root) {
+    return Promise.all(Array.prototype.map.call(root.querySelectorAll('img'), function (img) {
+      if (img.complete) return null;
+      return new Promise(function (resolve) {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }));
+  }
 
   /** A blank, student-facing version of the whole board — one page, every
       question numbered with room to write, no answers. For absent students
@@ -1381,8 +1387,8 @@
         n++;
         // The picture has to come along: "which region does this map show?"
         // is unanswerable on a sheet of paper without it.
-        var quizImg = isClueImage(cl.image)
-          ? '<img class="quiz-img" src="' + escapeHtml(cl.image) + '" alt="">' : '';
+        var quizSrc = ReviewBoardImage.url(cl.image);
+        var quizImg = quizSrc ? '<img class="quiz-img" src="' + escapeHtml(quizSrc) + '" alt="">' : '';
         var quizAudioNote = cl.audioId ? ' <em>(🔊 audio clip — play from the device)</em>' : '';
         items.push(
           '<div class="quiz-item"><p class="quiz-q"><b>' + n + '.</b> [' + escapeHtml(cat.name) + ' &mdash; ' + cl.points + ' pts] ' +
@@ -1398,7 +1404,7 @@
   els.printQuizBtn.addEventListener('click', function () {
     if (!state) return;
     els.printArea.innerHTML = studentQuizHtml();
-    window.print();
+    waitForImages(els.printArea).then(function () { window.print(); });
   });
 
   /* ---------- JSON export / import ---------- */
@@ -1433,10 +1439,11 @@
           used: !!(cl && cl.used),
           dailyDouble: false
         };
-        // Only a real image data URL survives an import — anything else in that
-        // field (a remote URL, a script-ish string) is dropped rather than put
-        // into an <img src>.
-        if (isClueImage(cl && cl.image)) out.image = cl.image;
+        // Only a real inline image survives an import (rgb-image.js's strict
+        // test) — an `idb:` reference names a picture in the browser that
+        // exported the file, and anything else (a remote URL, a script-ish
+        // string) is dropped rather than put into an <img src>.
+        if (ReviewBoardImage.isInline(cl && cl.image)) out.image = cl.image;
         // By the time normalizeBoard() sees it, an imported audioId has
         // already been through materializeImportedAudio() (a freshly stored
         // local IndexedDB clip) or been stripped — never a raw pointer from
@@ -1459,9 +1466,9 @@
     };
   }
 
-  /** A clip's blob, base64-encoded as a data: URL — the same shape
-      readAndDownscaleImage() hands clue images in, so an exported audio
-      clue round-trips through JSON exactly like an image one already does. */
+  /** A clip's blob, base64-encoded as a data: URL — the same shape an
+      exported clue image takes, so an audio clue round-trips through JSON
+      exactly like an image one does. */
   function blobToDataUrl(blob) {
     return new Promise(function (resolve, reject) {
       var reader = new FileReader();
@@ -1483,28 +1490,35 @@
     // exported file is self-contained and the audio survives on a different
     // device. Works on a plain deep copy; the live `state` (and its
     // audioIds, which only mean anything on THIS device) is never touched.
-    var payload = JSON.parse(JSON.stringify(state));
-    var jobs = [];
-    payload.categories.forEach(function (c) {
-      c.clues.forEach(function (cl) {
-        if (!cl.audioId || !window.RGBAudioDB) return;
-        var id = cl.audioId;
-        delete cl.audioId;
-        jobs.push(window.RGBAudioDB.getClip(id).then(function (record) {
-          if (record) return blobToDataUrl(record.blob).then(function (dataUrl) { cl.audio = dataUrl; });
-        }).catch(function () { /* clip unavailable — exports without it rather than failing the whole board */ }));
+    // Pictures go the same way: rgb-image.js's forExport() makes that copy
+    // with every stored picture read back as a data URL (a gone one left
+    // off), so no `idb:` reference ever reaches the file.
+    save();
+    ReviewBoardImage.forExport(state).then(function (payload) {
+      var jobs = [];
+      payload.categories.forEach(function (c) {
+        c.clues.forEach(function (cl) {
+          if (!cl.audioId || !window.RGBAudioDB) return;
+          var id = cl.audioId;
+          delete cl.audioId;
+          jobs.push(window.RGBAudioDB.getClip(id).then(function (record) {
+            if (record) return blobToDataUrl(record.blob).then(function (dataUrl) { cl.audio = dataUrl; });
+          }).catch(function () { /* clip unavailable — exports without it rather than failing the whole board */ }));
+        });
       });
-    });
-    Promise.all(jobs).then(function () {
-      var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = sanitizeFilename(state.name) + '.json';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      return Promise.all(jobs).then(function () {
+        var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = sanitizeFilename(payload.name) + '.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      });
+    })['catch'](function (e) {
+      alert('Could not read this board\u2019s pictures to export it (' + ((e && e.message) || 'unknown error') + ').');
     });
   });
 
@@ -1559,7 +1573,17 @@
       }
       materializeImportedAudio(decoded).then(function () {
         var name = uniqueBoardName(decoded.name || 'Imported Board');
-        state = normalizeBoard(decoded, name);
+        var arrived = normalizeBoard(decoded, name);
+        /* normalizeBoard() kept only real inline pictures. They are stored
+           before the board is saved, so their bytes never land in
+           localStorage; a picture the store refuses stays inline, still saved. */
+        return ReviewBoardImage.store(ReviewBoardImage.valuesIn(arrived)).then(function (map) {
+          ReviewBoardImage.apply(arrived, map);
+          return ReviewBoardImage.hydrate(ReviewBoardImage.valuesIn(arrived));
+        })['catch'](function () { /* reads never block an import */ }).then(function () { return { name: name, board: arrived }; });
+      }).then(function (got) {
+        var name = got.name;
+        state = got.board;
         assignDailyDouble();
         save(); // an image- or audio-carrying board can outgrow storage — save() explains it rather than throwing
         ReviewBoardStore.setCurrentName(name);
@@ -1568,6 +1592,7 @@
         els.boardCard.style.display = '';
         els.toolbar.style.display = '';
         renderBoard();
+        sayMissingImages();
       });
     };
     reader.onerror = function () { alert('Couldn’t read that file.'); };
@@ -1585,6 +1610,7 @@
     els.importFile.value = '';
     els.importStatus.textContent = '';
     pendingRosterTeams = null;
+    sayMissingImages();   // state is null here: the editor says it per row instead
     if (els.rosterTeamsStatus) { els.rosterTeamsStatus.textContent = ''; els.rosterTeamsStatus.className = 'import-status'; }
     populateRosterSelect();
     if (prefillCategories && prefillCategories.length) {
@@ -1720,8 +1746,10 @@
     var cat = state.categories[catIdx];
     var clue = cat.clues[clueIdx];
     els.overlayQuestion.textContent = clue.question;
-    if (isClueImage(clue.image)) {
-      els.overlayImage.src = clue.image;
+    // A picture not in this browser (or not read yet) is simply not shown.
+    var overlaySrc = ReviewBoardImage.url(clue.image);
+    if (overlaySrc) {
+      els.overlayImage.src = overlaySrc;
       els.overlayImage.classList.add('show');
     } else {
       els.overlayImage.classList.remove('show');
@@ -1769,7 +1797,7 @@
     els.overlayQuestion.style.display = '';
     if (currentClue) {
       var ddClue = state.categories[currentClue.catIdx].clues[currentClue.clueIdx];
-      if (isClueImage(ddClue.image)) els.overlayImage.classList.add('show');
+      if (ReviewBoardImage.url(ddClue.image)) els.overlayImage.classList.add('show');
       showOverlayAudioFor(ddClue, overlayAudioToken);
     }
     els.showAnswerBtn.style.display = '';
@@ -2261,6 +2289,91 @@
     renderBankList();
   });
 
+  /* ---------- clue images: IndexedDB behind every saved board (Path 4 P4) ----------
+     Every saved board's clues hold `idb:` references; the pictures are in the
+     shared media store (rgb-image.js). At boot: move any data: URL picture (a
+     board saved before this, or one saved in a browser that had no
+     IndexedDB) into the store, in EVERY saved board and not only the open
+     one, writing back only the boards that changed; give every stored picture
+     of the open board an object URL; say once which pictures are missing;
+     then — at boot only, with media-db.js's ten-minute grace — delete stored
+     pictures no saved board points at. Deleting a board, removing a picture
+     or saving an edited board under a new name deletes nothing at that
+     moment; this pass does, next time. The question bank carries no
+     pictures, so it adds nothing to the keep-set. Switching boards hydrates
+     the one opened (loadBoardByName). __clueImagesSettled is for the suite. */
+
+  /** [{ name, board }] for the open board and every other saved one, read fresh. */
+  function everyBoard() {
+    var out = state ? [{ name: state.name, board: state }] : [];
+    ReviewBoardStore.listBoards().forEach(function (name) {
+      if (state && name === state.name) return;
+      var b = ReviewBoardStore.loadBoard(name);
+      if (b && typeof b === 'object' && Array.isArray(b.categories)) out.push({ name: name, board: b });
+    });
+    return out;
+  }
+  function everyImage() {
+    var out = [];
+    everyBoard().forEach(function (x) { out = out.concat(ReviewBoardImage.valuesIn(x.board)); });
+    return out;
+  }
+
+  /** Swap each moved data: URL for its reference in the open board and in
+      FRESH copies of the others, and write back only what changed. */
+  function applyStoredImages(map) {
+    if (state && ReviewBoardImage.apply(state, map)) save();
+    ReviewBoardStore.listBoards().forEach(function (name) {
+      if (state && name === state.name) return;
+      var b = ReviewBoardStore.loadBoard(name);
+      if (b && typeof b === 'object' && ReviewBoardImage.apply(b, map)) {
+        try { ReviewBoardStore.writeBoard(name, b); } catch (e) { /* smaller than before, so this cannot run out of room */ }
+      }
+    });
+  }
+
+  function sayMissingImages() {
+    if (!state) { els.imageNote.hidden = true; els.imageNote.textContent = ''; return; }
+    var count = 0, seen = {};
+    // Hydrating only the open board means only its pictures are known missing.
+    ReviewBoardImage.valuesIn(state).forEach(function (v) {
+      if (!ReviewBoardImage.isMissing(v) || seen[v]) return;
+      seen[v] = 1; count++;
+    });
+    els.imageNote.hidden = !count;
+    els.imageNote.textContent = count
+      ? (count === 1 ? '1 clue image' : count + ' clue images') + ' on \u201c' + state.name + '\u201d' +
+        (count === 1 ? ' is' : ' are') + ' missing from this browser\u2019s storage, so ' + (count === 1 ? 'it is' : 'they are') +
+        ' left off the projector and the printouts. Use Edit questions to add ' + (count === 1 ? 'it' : 'them') + ' again.'
+      : '';
+  }
+
+  /** Give the open board's stored pictures object URLs, then redraw any
+      editor rows already showing them and say what is missing. */
+  function showImages() {
+    if (!state) return Promise.resolve();
+    return ReviewBoardImage.hydrate(ReviewBoardImage.valuesIn(state)).then(function (gone) {
+      Array.prototype.forEach.call(els.categoriesEditor.querySelectorAll('.clue-row'), function (row) {
+        if (row.__syncClueImage) row.__syncClueImage();
+      });
+      sayMissingImages();
+      return gone;
+    });
+  }
+
+  var imagesSettled = false;   // until then, the boot pass hydrates the open board
+  function settleImages() {
+    return ReviewBoardImage.store(everyImage())
+      .then(function (map) {
+        if (Object.keys(map).length) applyStoredImages(map);
+        return showImages();
+      })
+      .then(function () {
+        return ReviewBoardImage.gc(everyImage().filter(ReviewBoardImage.isRef));
+      })['catch'](function () { /* reads never block the page */ })
+      .then(function () { imagesSettled = true; renderStorageLine(); });
+  }
+
   /* ---------- boot ---------- */
   var current = ReviewBoardStore.getCurrentName();
   if (current && ReviewBoardStore.loadBoard(current)) {
@@ -2269,6 +2382,7 @@
     showSetup();
   }
   renderStorageLine();
+  settleImages().then(function () { window.__clueImagesSettled = true; });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

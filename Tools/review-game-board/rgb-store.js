@@ -40,6 +40,13 @@
     localStorage.setItem(CURRENT_KEY, name);
   }
 
+  /** Rewrites one saved board in place and nothing else: the list and the
+      open board are left alone. For the boot pass that moves clue images into
+      the media store (rgb-image.js), which touches boards that are not open. */
+  function writeBoard(name, state) {
+    localStorage.setItem(DATA_PREFIX + name, JSON.stringify(state));
+  }
+
   function loadBoard(name) {
     return safeParse(localStorage.getItem(DATA_PREFIX + name), null);
   }
@@ -72,8 +79,9 @@
      leave a megabyte of padding behind in a teacher's browser.
 
      Sizes are in UTF-16 code units, which is what browsers actually charge
-     for: a data URL is ASCII so a character is 2 bytes, and clue images are
-     what fills this up. Every other key on the origin counts toward the same
+     for. Clue images used to be what filled this up, as data URLs inside
+     the boards; since Path 4 P4 they are in IndexedDB (rgb-image.js), and
+     only a browser with no IndexedDB still keeps them inline here. Every other key on the origin counts toward the same
      cap, so the total covers the whole origin and the boards figure is broken out
      separately — "your boards are 3 MB" is the actionable half, but a teacher
      hitting the wall because of some other tool deserves to see that too. */
@@ -138,6 +146,7 @@
     forgetCapacity: forgetCapacity,
     listBoards: listBoards,
     saveBoard: saveBoard,
+    writeBoard: writeBoard,
     loadBoard: loadBoard,
     deleteBoard: deleteBoard,
     getCurrentName: getCurrentName,

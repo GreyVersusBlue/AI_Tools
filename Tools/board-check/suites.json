@@ -87,6 +87,7 @@
     "Tools/formula-sheet-builder/test/smoke-diagrams.mjs",
     "Tools/prompt-builder/test/smoke-placeholders.mjs",
     "Tools/review-game-board/test/smoke-clue-image.mjs",
+    "Tools/review-game-board/test/smoke-clue-image-store.mjs",
     "Tools/exit-ticket-generator/test/smoke-response-area.mjs",
     "Tools/exit-ticket-generator/test/sequence-logic.test.mjs",
     "Tools/exit-ticket-generator/test/smoke-prompt-sets.mjs",
