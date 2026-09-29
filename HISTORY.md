@@ -9,6 +9,111 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P4, increment 9: 030's clue images move into `media-db.js` (2026-09-29, #302, `CACHE_VERSION` v203)
+
+Rank 9 is a 2+ row, and it stays: 030 was the last tool on P4's original list, but this session
+added **064 and 035** to it (see "Calls made"). This session had no Blender, so it skipped ranks
+1–7 without touching them. Rank 8 is blocked on rank 45. It also merged #301, the previous
+session's step-6 PR, which was green but had been left open.
+
+**030's shape.** It is 041's shape: named documents (`gvb-review-board:data:<name>`, listed in
+`gvb-review-board:list`), each with `categories[].clues[]`, and a clue's `image` was a
+1000 px JPEG 0.72 data URL made by the page's `readAndDownscaleImage()`. A clue with no picture
+has no `image` field at all, and that is kept. Other things checked before designing:
+- **Clue audio** is in its own IndexedDB, `rgb-audio`, with ids owned per board: a rename
+  duplicates each clip, and a delete deletes them. It is untouched. Export inlines each clip as
+  `audio`, and import turns it back into a fresh clip. Pictures now take the same export route
+  (`forExport` first, then the audio pass on that copy).
+- **The question bank holds no pictures.** `rgb-bank-store.js` normalizes each entry to text
+  fields, and a pulled entry becomes a text-only clue. So the bank adds nothing to GC's keep-set,
+  which `rgb-image.js`'s header says. If rank 45 ever puts pictures in the bank, that changes.
+- **027 writes 030 boards** (`gvb-review-board:data:`) with no pictures, so it needs nothing.
+- **030 does not link `share.js`.** There is no link path, no `check:inline-sinks` line and no
+  rollout row. The only arrivals are an imported JSON file and a 009 restore.
+
+**What shipped.**
+- `Tools/review-game-board/rgb-image.js` (`window.ReviewBoardImage`) is built over
+  `MediaDB.images({ ns: 'rgb' })`. It provides `fromFile()` (the same 1000 px JPEG 0.72, with
+  `background: '#fff'`), `valuesIn`, `apply`, `acceptArrival`, `forExport` and a strict
+  `url()`/`isValue`. `readAndDownscaleImage()` is deleted.
+- At boot, every board's inline pictures are stored, and only changed boards are written back.
+  Boards that are not open go through a new `ReviewBoardStore.writeBoard()`, which does not touch
+  the list or the current key. Then the open board is hydrated, missing pictures are reported
+  once in a new `#imageNote`, and GC runs. Switching boards hydrates the one opened.
+- **Content-hash ids replace per-board ownership for pictures.** "Save under a new name" shares
+  the records rather than copying them. Deleting a board or removing a picture deletes nothing
+  at that moment; GC does it at the next boot.
+- The quota alert and the storage readout no longer blame clue images, except the alert does
+  when the board really keeps them inline (a browser with no IndexedDB).
+- Print waits for images (answer key and practice quiz).
+- New suite `smoke-clue-image-store.mjs` (port **8451**, `test:review-board-image-store`,
+  85 assertions). `smoke-clue-image.mjs` was updated for references: its storage-readout half
+  still runs.
+- The registry got a comment on 030's row. Its keys are unchanged.
+
+**Found and fixed.**
+- **The storage readout said "No boards saved yet" whenever the boards used under 4 KB.** That
+  threshold was only right while pictures lived in the boards. With pictures out, every
+  text-only board is under it, so the old suite's readout check failed. The fix is in the tool:
+  it counts boards now. The assertion was not touched.
+- **The markup path was one layer, not two.** The old code escaped `src` at the print sites but
+  accepted any `data:image/…` prefix. A crafted value in a saved key (a hand edit, or a 009
+  restore of a crafted backup) was escaped but still drawn. Now `ReviewBoardImage.url()` returns
+  only a well-formed base64 data URL, an object URL or `''`, and the value is escaped as well.
+  The overlay and the editor thumbnail set `.src` from `url()` too.
+
+**Calls made, each cheap to reverse.**
+- **064 and 035 join P4, as increments 10 and 11. 044 does not.** Each of the three has its own
+  downscaler, but only two of them store the result:
+  - 064 keeps card photos in localStorage (`htcm-store.js`, `image: { src, w, h, … }`, 1000 px
+    JPEG). Its `htcm-image.js` was adapted from 030's pipeline, so it is 030's problem again, and
+    the smaller file. It goes next.
+  - 035 keeps a 1600 px JPEG 0.85 floor-plan trace image per floor inside its blueprint key. It
+    is a synchronous canvas consumer (`_traceImageCache`), which is 005/019's data-URL-cache
+    shape, in a 20,576-line file. It goes last.
+  - 044's seating-chart attachment is "never saved" by design: it lives in the tab and goes into
+    a .docx. There is nothing to migrate.
+  - Adding rows to an existing 2+ row is not a re-rank.
+- **Not student data.** Clue pictures are the teacher's maps, cartoons and sources. A teacher
+  *could* project a photo of student work. That is judged per key, and these keys are board
+  content, as 015's and 071's are. No `student: true`.
+- **An editor thumbnail for a stored picture says "Saved", not a size.** Only an inline picture
+  still costs localStorage, so only that one shows KB.
+
+**What did not work first, and what the suite does not catch.**
+- The first run of the old suite hung for over four minutes. The cause was not found: it was
+  killed, not diagnosed. The run was stale anyway, because it started before the suite was
+  updated. Every later run took about 25 s.
+- My first attempt to kill that run with `pkill -f "node Tools/review-game-board"` matched its
+  own shell and killed the new run too (exit 144). Use `pgrep` first, or a narrower pattern.
+- The new suite passed its first run. It was broken on purpose 11 ways by a script that asserts
+  each pattern matches exactly once. 8 failed it at first:
+  - no write-back failed 4 assertions;
+  - no white mat failed 1;
+  - a raw `src` fallback failed 3;
+  - a lax import failed 4;
+  - export without `forExport` failed 5;
+  - GC keeping nothing failed 7;
+  - a note that never shows failed 1;
+  - import without storing failed 3.
+- Three breaks were not caught at first:
+  - **No hydrate on board switch** passed, because the switched-to board's only picture was also
+    on the open board and already hydrated. The seed now gives Deltas a picture (GREEN) that only
+    it holds. That break now fails 1 assertion.
+  - **No print-wait** passed, as in #300. The prints were running after the overlay had decoded
+    the same pictures. Two changes fixed it: section 1 now prints before any picture is shown,
+    and the print stub records `complete && naturalWidth` at the moment it is called. That break
+    now fails 1 assertion. **This is the first P4 suite that proves its print-wait.**
+  - **Removing the escape on the quiz `src`** still passes, and is expected to: `url()`
+    validation alone keeps a crafted value out. Each layer is proven only with the other one in
+    place, as #300 found.
+- `run-suites --repeat 3 --only review-game-board`: all 4 suites green in every pass (5.4 min).
+
+**Not verified.** Nothing was tried with a real phone photo, a HEIC file, a printer or a projector,
+under real quota pressure, or in Safari or Firefox. A board saved by an older cached copy of the
+page after migration (inline pictures again) is covered only by the next boot's migration pass,
+which the suite exercises with seeded boards, not with a second page version.
+
 ## Path 4 P4, increment 8: 071's pictures move into `media-db.js` (2026-09-29, #300, `CACHE_VERSION` v202)
 
 Rank 9 is a 2+ row, so it stays, rewritten: **030's clue images are next and last.**
