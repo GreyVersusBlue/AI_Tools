@@ -9,6 +9,81 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P4, increment 7: 041's formula diagrams move into `media-db.js` (2026-09-29, #298, `CACHE_VERSION` v201)
+
+Rank 9 is a 2+ row, so it stays, rewritten: **071 is next**. This session had no Blender, so it
+skipped ranks 1–7 without touching them. Rank 8 is blocked on rank 45.
+
+**What shipped.**
+- **041 Formula Sheet Builder.** Each formula's `image` used to be a PNG data URL inside
+  `gvb-formula-sheet:data:<name>`. The diagrams are now Blobs in `gvb-media` under `fsb/`, and
+  `image` holds `idb:h<32 hex>`. The field name is unchanged.
+  - `Tools/formula-sheet-builder/fsb-image.js` (`window.FormulaSheetImage`) is `fromFile()` plus
+    the sheet helpers (`valuesIn`, `apply`, `acceptArrival`, `forExport`, `hasStoredImage`), built
+    over `MediaDB.images()`. The page's `readAndDownscaleImage()` is deleted.
+  - `fsb-store.js` gained `writeSheet()`, which rewrites a sheet without making it the open one.
+  - At boot, every saved sheet's inline diagrams are stored, and only the sheets that changed are
+    written back. The open sheet is hydrated, a missing diagram is reported once, and then GC
+    runs, as in 015. A sheet switched to after boot is hydrated when it opens.
+  - Export JSON and the share sheet read the bytes back through `forExport()`. The Share button
+    moved from `Share.mount()` to `Share.open()` after that read, the pattern 015, 028 and 056
+    use.
+  - Print waits for images, and the wait resolves on `error` too.
+- New suite `Tools/formula-sheet-builder/test/smoke-diagrams.mjs` (port 8449,
+  `test:formula-sheet-diagrams`, 77 assertions). A registry comment was added on 041's row; its
+  keys are unchanged.
+
+**Calls made, each cheap to reverse.**
+- **Still 200 px PNG with no background.** 015 paints white under a JPEG. A formula diagram is
+  line art, and it was always a PNG, so its transparency never came out black and needs no mat.
+  The suite checks that a transparent corner is still alpha 0. The measured size is a
+  200×150 line diagram stored as 1,838 B.
+- **Only the open sheet is hydrated, not every sheet.** 015 hydrates everything because its
+  compare view draws other timelines. 041 has no view that shows a sheet other than the open
+  one. The missing-diagram note therefore names only the open sheet, and a switched-to sheet
+  flags its own missing diagrams on each formula instead.
+- **A hand-built link's inline image is saved inline first and moved by the boot pass.** A file
+  import instead stores the image before it saves the sheet. The link path runs synchronously
+  inside `Share.receive`, and the boot pass runs straight after it, so there is no window in
+  which a teacher can act on an unmoved sheet.
+- **A value that is not a stored or inline image shows "Diagram missing from this browser"**
+  on its formula, not "Loading…". Such a value could only come from something written before
+  this change or by hand.
+
+**Found and fixed on the way: a markup hole.** Before this change, `item.image` went into both
+`innerHTML` sites raw. A link's images were stripped by share.js, but a **file** import carried
+`image` through `normalizeItem()` untouched, so a crafted `.json` could inject markup, for
+example an `onerror` attribute. Imports now keep only
+`^data:image/(png|jpeg|gif|webp);base64,…$` values, and every `src` is escaped as well.
+`check:inline-sinks` for 041 stayed at 14.
+
+**What did not work first.** Nothing failed, which is the case to distrust. The code was broken
+on purpose four ways, and each break failed the suite:
+- `forExport()` not inlining failed 8 assertions.
+- A file import without `acceptArrival()` failed the crafted-value check.
+- A raw `src` fallback failed on 11 console errors (`ERR_UNKNOWN_URL_SCHEME` for `idb:`).
+- Closed sheets not written back failed "no image bytes left in a key".
+
+The first attempt at the forExport break was a `sed` whose pattern did not match, so it passed.
+Check that a deliberate break actually applied before you believe its result.
+
+**Verified.**
+- `smoke-diagrams` passed 77 of 77, `smoke-allowed` 31 of 31, and `smoke-share-rollout` 1,580 of
+  1,580. The rollout suite includes 041's image-policy row, whose fixture image is now migrated
+  before the download check reads it back, byte for byte.
+- `run-suites --repeat 3 --only formula-sheet-builder` gave the same outcome on every pass.
+- `test:a11y -- --only 041` was clean.
+- Every `check:*` guard, lint, and `check:precache -- --base origin/main` passed.
+- CI passed first time: the site-wide run, 37 min.
+
+**Not verified:**
+- a real camera photo or scanned diagram;
+- a printer;
+- a phone;
+- quota pressure;
+- 009 restoring an `fsb/` record (009 backs up `gvb-media` whole, so this is expected to work
+  but was not tested).
+
 ## Path 21 P2, increment 5: icons for 068–087, the set is complete (2026-09-28, #296, `CACHE_VERSION` v200)
 
 This is the fifth and last icon increment of rank 1, a 2+ row, so the row stays and is rewritten:
