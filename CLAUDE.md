@@ -409,6 +409,11 @@ files must be added there too.
   session should start and anything you found or got wrong, delete the rows that
   shipped and renumber so ranks stay a contiguous 1..N. Add the `HISTORY.md`
   entry in the same commit, and merge that too.
+- **End every session by writing the next session's prompt** (Devon, 2026-09-29). After your
+  PR and its step-6 follow-up are both merged, write a self-contained prompt for the next
+  session: the row and why, what to read first, the traps you hit, the machine setup, and the
+  instruction that it too ends with a PR, a merge and a prompt of its own. Put it in your final
+  message and in the step-6 PR's body. `BACKLOG.md`'s "Definition of done" step 7 has the rest.
 - **Write down what did not work.** The most valuable line in any of these
   documents has consistently been the one recording a tool that was never
   committed, a number that was 3× too high, or a check that would have passed on

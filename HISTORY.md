@@ -9,6 +9,113 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P4, increment 8: 071's pictures move into `media-db.js` (2026-09-29, #300, `CACHE_VERSION` v202)
+
+Rank 9 is a 2+ row, so it stays, rewritten: **030's clue images are next and last.**
+This session had no Blender, so it skipped ranks 1–7 without touching them. Rank 8 is blocked on
+rank 45.
+
+**071's shape.** It is unlike every earlier adopter. There is no document that holds images:
+`ppg_images_v1` *is* the library, a flat list of `{ id, src, pinnedPrompts }`. The prompt sets
+(`ppg_prompt_sets_v1`, and the legacy `ppg_prompts_v1` they migrate from) never mention a picture.
+A pin is `pinnedPrompts[setId] = promptId` on the picture's own entry. Nothing arrives from
+outside either: the share link carries a prompt set only (#239), and there is no file import. So
+the module has no `acceptArrival`/`forExport`, only what the one list needs.
+
+**What shipped.**
+- `src` holds `idb:h<32 hex>` and the pictures are Blobs in `gvb-media` under `ppg/`. The field
+  name, the entry ids and the pins are unchanged.
+  - `Tools/picture-prompt-generator/ppg-image.js` (`window.PicturePromptImage`) is `fromFile()`
+    plus `valuesIn`, `apply` and `isValid`, built over `MediaDB.images()`. The page's
+    `downscaleDataUrl()` is deleted.
+  - At boot, inline pictures are stored, and the key is written back only if one moved (applied
+    to a fresh read of the key too). Then everything is hydrated, a missing picture is reported
+    once, and GC runs.
+- A missing picture shows as a "Picture missing from this browser" tile with its ×. It is never
+  drawn by "New random image", never printed, and not counted in the round. When every picture
+  is gone, the stage says so.
+- Print waits for images.
+- New suite `smoke-picture-store.mjs` (port 8450, `test:picture-prompt-store`, 63 assertions).
+  The registry got a comment on 071's row; its keys are unchanged.
+
+**Calls made, each cheap to reverse.**
+- **A picture within 1400 px is kept as it came, not re-encoded.** That is what
+  `downscaleDataUrl()` did, and it matters here: a small PNG keeps its transparency and an
+  animated GIF keeps moving. Every earlier adopter always re-encodes. `fromFile()` measures the
+  picture with an `<img>` first.
+- **Past 1400 px it is still 0.82 JPEG, now on a white mat.** A transparent PNG that large used to
+  come out black. The measured size of a 2800×1400 test picture is 9,971 B.
+- **An undecodable file (HEIC from an iPhone) is refused, and its name goes in the note.** It used
+  to be saved as a data URL that never drew. The other files in the same pick still go in, in the
+  order they were picked (it used to be completion order).
+- **Not student data.** These are the teacher's prompt photos, and the tool is teacher-device-only.
+  A teacher *could* upload a class photo; that is judged per key, and this key is library content,
+  as 015's event photos are. No `student: true`.
+- **Deleting a thumbnail now clears the projected card.** Indexes shift on a delete. Before, the
+  stale index let a later set switch redraw the wrong picture. This was found in passing.
+
+**Found and fixed: a markup hole.** `img.src` and `img.id` went into three `innerHTML` sites raw,
+along with prompt ids in a fourth. Nothing arrives by link or file, but a hand-edited key or a
+**009 restore of a crafted backup** could inject an attribute. Now `PicturePromptImage.url()` is
+the only way a value reaches `src`, and it returns only a well-formed base64 `data:image/…` URL,
+an object URL, or `''`; the value is escaped as well. Ids are escaped too. A new dynamic sink
+(`renderStageEmpty`'s text) was rewritten with `textContent`, so `check:inline-sinks` for 071
+stays at 5.
+
+**What did not work first.**
+- The suite passed first time. It was broken on purpose seven ways (each break asserted to apply
+  exactly once, by a script, after #298's silent `sed`), and six failed it:
+  - no write-back failed 4 assertions;
+  - always downscaling failed 4;
+  - a raw `src` fallback failed 3;
+  - picking from every picture failed 3;
+  - GC keeping nothing failed 6;
+  - no white mat failed 1.
+- **The print-wait break did not fail, even after the stub was changed to check the images at the
+  moment `print()` is called.** Every printed picture is already on screen as a thumbnail, so
+  Chromium has it decoded and `complete` is true at once. The wait is defensive, the same as
+  041's, and **no suite proves it**.
+- The raw-`src` break did not make `__pwned` fire, because escaping still held. Each of the two
+  layers (validation, escaping) is proven only in combination. The suite catches losing the
+  validation, not losing the escape.
+- `--repeat 3` found a flake in the new suite: "the pin still works" failed 1 in 3. It was a test
+  bug. The random draw sometimes lands on the seeded picture that is already pinned in English,
+  so the click unpins it. The assertion is now a toggle from the starting state. `--repeat 5`
+  was then stable.
+- **This machine (huginn) had no Node.** Node 22.23.3 was installed into the session scratchpad
+  from nodejs.org (SHA-256 checked), `npm ci` was run, and the browser suites ran against the
+  system Google Chrome 154 via `PW_CHROMIUM_EXECUTABLE=/usr/bin/google-chrome`. That is newer than
+  the pinned Playwright's build, so CI is the authority.
+
+**Verified.**
+- `smoke-picture-store` 63/63, `smoke-prompt-sets` 37/37, `smoke-share-rollout` 1,580/1,580 and
+  `smoke-dark-rollout` 901/901 passed.
+- `test:a11y -- --only 071` was clean.
+- Every `check:*` guard, lint, and `check:precache -- --base origin/main` passed.
+- CI passed first time: the site-wide run (the PR touched `_shared/tool-registry.js` and
+  `package.json`), 38 min.
+
+**Not verified:**
+- a real phone photo, or a real HEIC;
+- an animated GIF actually still animating after the move (the byte-for-byte check covers a PNG
+  only);
+- a printer;
+- a projector;
+- quota pressure;
+- 009 restoring a `ppg/` record.
+
+**080 leaves P4's list.** The list named "080 snapshots", but 080 Virtual Manipulatives Board
+never stores one. `snapshotEl()` draws the board to a canvas, shows it, and offers a
+`toDataURL` download link. Its only other keys are the boards (piece positions), the working
+board, and `vmb_snap_v1`, which is the snap-to-grid checkbox, not a snapshot. There is nothing to
+migrate. That leaves 030's clue images as P4's last tool.
+
+**New standing instruction from Devon (2026-09-29): every session ends by writing the next
+session's prompt**, after its PR and its step-6 PR are merged. It goes in the final message and
+in the step-6 PR's body. It was added as step 7 of "Definition of done" in `BACKLOG.md` and to
+`CLAUDE.md`'s backlog section. It lives in the PR body rather than a file because `CLAUDE.md`
+forbids a second planning file.
+
 ## Path 4 P4, increment 7: 041's formula diagrams move into `media-db.js` (2026-09-29, #298, `CACHE_VERSION` v201)
 
 Rank 9 is a 2+ row, so it stays, rewritten: **071 is next**. This session had no Blender, so it

@@ -70,7 +70,7 @@ without claiming or editing them and takes the next unclaimed row that is not Pa
 
 ## Where things stand — start here
 
-*Current as of `main` after #298, 2026-09-29. **Keep this section under ~80 lines.** It is
+*Current as of `main` after #300, 2026-09-29. **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -79,26 +79,23 @@ done).*
 **Why it is short.** It had grown to ~1,900 lines of handoffs by 2026-09-23; those moved
 verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12"). Search there for a PR number.
 
-**Last merged: #298, Path 4 P4 increment 7, 041's formula diagrams onto `MediaDB.images()`
-(`Tools/formula-sheet-builder/fsb-image.js`). `CACHE_VERSION` v201.**
-- **Five** hand-rolled downscalers remain: 030 and 071 on P4's list; 035, 044, 064 off it.
-- It also closed a markup hole: an imported sheet file's `image` went into `innerHTML` raw.
-  Now only real inline images arrive, and every `src` is escaped.
-- Nothing in #298 was tried with a real photo, a printer or a phone.
+**Last merged: #300, Path 4 P4 increment 8, 071's pictures onto `MediaDB.images()`
+(`Tools/picture-prompt-generator/ppg-image.js`). `CACHE_VERSION` v202.**
+- **Four** hand-rolled downscalers remain: 030 on P4's list; 035, 044, 064 off it.
+- It closed a markup hole: a saved `src`/id went into `innerHTML` raw (reachable by a 009
+  restore of a crafted backup). **080 stores no snapshot** — it is a download only — so it
+  leaves P4's list; **030 is next.**
+- No suite proves 071's print-wait (the pictures are already decoded as thumbnails). Nothing in
+  #300 was tried with a real photo, HEIC, printer or projector.
 
-**Before that, #296** (Path 21 P2 increment 5, v200): all 87 landing rows carry an icon; the
-sprite is 87 symbols in 58,032 B. Only rank 1's final call, the PWA app mark, is left. Every
-icon was judged by the session that drew it; none has been seen on a projector.
+**Before that, #298** (041's diagrams, v201) and **#296** (Path 21 P2 increment 5, v200: all
+87 landing rows carry an icon; only rank 1's final call, the PWA app mark, is left).
 
 **Before that, #294** (Path 4 P4 increment 6, v199):
 - `MediaDB.images({ ns, owner })` in `_shared/media-db.js` is the one copy of the shared image
   layer. **The next tool to move uses it** and writes no fourth copy.
 - Nothing in #294 was tried with a real camera photo, a printer, a phone, or quota pressure.
-- `class-screen/smoke-class-screen` crashed once in #294's local run (uncaught `dialog.accept`
-  rejection, line 38). It has not recurred since: three repeats, then #296's full CI.
 - **Found in #290, not fixed:** 028's source-description hint still says "there's no image upload".
-- **The checkout was switched to `main` under #286's session** by something else. It has not
-  recurred. Check `git branch --show-current` before *every* commit and push.
 - **Found in #282, not fixed:** each station's QR code in 019 encodes the whole room, so one
   real photo makes every QR in the room fail to build. Noted under 019 in Tier 2.
 - **On Devon's Windows checkout two suites fail locally that CI passes:** `schedule-browser/
@@ -114,12 +111,16 @@ icon was judged by the session that drew it; none has been seen on a projector.
   set's style. Swap it only if it survives the maskable safe zone at 48 px. Keep the per-page
   favicons unless the set holds at 16 px. Read #265's `HISTORY.md` entry first: its shortcut
   PNGs are the closest precedent. When it ships, delete the row; rank 2 (P3, the hero) is next.
-- **No Blender** (any cloud container): skip ranks 1–7 without claiming or editing them.
-  Rank 8 (Path 6 P4) is blocked on rank 45, so take **rank 9**, Path 4 P4 increment 8:
-  **071's picture-prompt images** onto `MediaDB.images()`, deleting its `downscaleDataUrl`.
-  071 keeps a flat image list (`IMAGES_KEY`) and sets that refer to it, not per-document fields,
-  so read its storage shape first. 041's `fsb-image.js` (#298) is the newest adopter to copy.
+- **No Blender** (huginn, any cloud container): skip ranks 1–7 without claiming or editing them.
+  Rank 8 (Path 6 P4) is blocked on rank 45, so take **rank 9**, Path 4 P4 increment 9:
+  **030's clue images** onto `MediaDB.images()`, deleting its hand-rolled downscaler. Its clue
+  *audio* is already in an IndexedDB of its own (`rgb-audio`, registry `idb:`); leave that alone.
+  030 also has a question bank (`gvb-review-board-bank:entries`) — check whether bank entries
+  carry images too. 071's `ppg-image.js` (#300) and 041's `fsb-image.js` (#298) are the ones to copy.
 - A prompt that names a row wins over the rule above.
+- **End every session by writing the prompt for the next one** (Devon, 2026-09-29): after the
+  step-6 merge, put it in your final message *and* in the handoff PR's body, so it is in
+  GitHub as well as the chat. See "Definition of done", step 7.
 
 **Decisions only Devon can make — surfaced, not taken.**
 - **Interleave per-tool improvements with platform work?** Standing decisions say "keep
@@ -127,18 +128,18 @@ icon was judged by the session that drew it; none has been seen on a projector.
 - **A periodic human device check** (about 30 minutes with a phone, a laptop and a printer):
   the parked list under Cross-cutting ("Parked — needs a person").
 
-**Numbers (2026-09-29, after #298; re-measure, do not carry forward):**
+**Numbers (2026-09-29, after #300; re-measure, do not carry forward):**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v201` — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **274** in `PRECACHE_URLS`, **89** in `SHELL_URLS`. Bytes last summed on Devon's Windows checkout after #267 (11.21 MB / 2.52 MB), not re-measured. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **123,072 B** ledgered, **61,517 B** of it shell (`check:art` enforces both) |
-| Suites | **171** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| `CACHE_VERSION` | `v202` — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **275** in `PRECACHE_URLS`, **89** in `SHELL_URLS`. Bytes last summed on Devon's Windows checkout after #267 (11.21 MB / 2.52 MB), not re-measured. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **123,072 B** ledgered, **61,517 B** of it shell (`check:art` enforces both) |
+| Suites | **172** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **14** page-rule pairs on 14 pages, all `color-contrast` |
-| Tool registry | 88 rows, **219 keys and 32 prefixes across 117 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 79 · `a11y.js` 79 · `ink-paper.css` 72 · `base.css` 68 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `qr-scan.js` 10 · `stage.js` 10 · `media-db.js` 9 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Tool registry | 88 rows, **219 keys and 32 prefixes across 118 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
+| Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 79 · `a11y.js` 79 · `ink-paper.css` 72 · `base.css` 68 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `media-db.js` 10 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
 | Tools | 87 (`001`–`087`); next free number **088** |
 | Tier 1 rows | **191**, contiguous. Ranks 1–7 are Path 21 (Blender only); per-tool rows start at rank **101**; 183–191 are Path 22 P6–P14 |
@@ -210,6 +211,10 @@ session hitting one of these ships rather than stalls.
   `PW_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium`. The pinned Playwright's browser is
   not there and `playwright install` is a silent no-op. CI has the right browser and is
   the authority.
+- **huginn (Devon's Linux box) has no Node on PATH.** #300's session installed Node 22 from
+  nodejs.org into its scratchpad (SHA-256 checked against `SHASUMS256.txt`), ran `npm ci`, and
+  ran browser suites with `PW_CHROMIUM_EXECUTABLE=/usr/bin/google-chrome` (Chrome 154, newer
+  than the pinned Playwright's; CI is the authority). No `blender` there either.
 - **One suite at a time.** Suites bind fixed ports; a background `npm test` plus a
   foreground suite produces failures that are not real. New suites take a port above
   **8405**.
@@ -277,7 +282,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 6 | Path 21 P4 — 030 review-game art: board backdrop, category and point-value tiles, projected. **≤ 200 KB** for both themes. *a11y:* text is always drawn over them, so every tile's luminance is recorded and **4.5:1 asserted in both themes** by the validator. **Needs Blender locally; a session without `blender` on PATH skips it.** | 030 | ½ | | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
 | 7 | Path 21 P4 — 046 relief heightmap: a shaded-relief layer under the default world base map, from a public-domain DEM (not committed; source, licence and SHA-256 in the README). Off by default and disabled in choropleth mode. **≤ 400 KB** for a 2048-px light/dark pair. *a11y:* luminance range capped so label ink holds 4.5:1 over the whole image; the toggle has an accessible name. **Needs Blender locally; a session without `blender` on PATH skips it.** | 046 | 1 | | [Path 21](#path-21--blender-rendered-art-one-pipeline-one-style-offline-sized) |
 | 8 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 (#257, v182):** 046 → 015, 056 → 028 (`sheet: false`) and 039 → 040 are entries; **003 → 037 is a documented exception** (student scores never ride a link); `share.js` gained `sendState(entry)` and `sheet: false`. **Increment 2 (#259, v183), the roster chain:** **002 → 022** is a sheet row and **022 → 005** a `sheet: false` entry from 022's "Seat these groups" button; **006/007 → 002 is not a link** (the roster already reaches 002 through `roster.js`). **Left: only 053 → 030, which is blocked on rank 45** (Path 12 P1, the question bank with 030 as the front door). Do not start this row until rank 45 has shipped; then it is one entry plus a row in `smoke-send-to.mjs` | site | ¼ | | [Path 6](#path-6--share-everywhere) |
-| 9 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js`. **Done: 005's photos (#280, v192, `scg-photo.js`), 019's station images (#282, v193, `er-image.js`), 056's packet and library images (#284, v194, `dbq-image.js`), 028's Source A/B images and library (#290, v197, `psa-image.js`), 042's logo and signature (#292, v198, `cam-image.js`), 015's event photos (#294, v199, `Tools/timeline-builder/tlb-image.js`, `smoke-photos.mjs` port 8448), 041's formula diagrams (#298, v201, `Tools/formula-sheet-builder/fsb-image.js`, `smoke-diagrams.mjs` port 8449), and the shared half of the image modules extracted as `MediaDB.images({ ns, owner })` in `_shared/media-db.js` (#294).** The shape: content-hash ids (stored once across documents), the field names kept (`idb:<id>` in them), migration of every saved document at boot writing back only what changed, orphan GC at boot only with a 10-minute grace, a missing image said on its preview and left out of print, inline data URLs when there is no IndexedDB. Display follows who needs the bytes: a data-URL cache when a synchronous consumer carries the image out (005, 019), object URLs via `MediaDB.images()` when every consumer is an `<img>` (056, 028, 042, 015, 041); export and share inline the bytes. A new adopter is a per-tool module holding only `fromFile()` and its helpers over `MediaDB.images()`. **Left, in this order:** **071 next** (its `downscaleDataUrl` goes), then 080 snapshots, 030 clue images. Five hand-rolled downscalers remain: 030, 071 on this list; 035, 044, 064 off it | site | 2+ | p4p4i8 (071) | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 9 | Path 4 P4 — migrate the image-bearing tools onto `media-db.js`. **Done: 005's photos (#280, v192, `scg-photo.js`), 019's station images (#282, v193, `er-image.js`), 056's packet and library images (#284, v194, `dbq-image.js`), 028's Source A/B images and library (#290, v197, `psa-image.js`), 042's logo and signature (#292, v198, `cam-image.js`), 015's event photos (#294, v199, `Tools/timeline-builder/tlb-image.js`, `smoke-photos.mjs` port 8448), 041's formula diagrams (#298, v201, `Tools/formula-sheet-builder/fsb-image.js`, `smoke-diagrams.mjs` port 8449), 071's prompt pictures (#300, v202, `Tools/picture-prompt-generator/ppg-image.js`, `smoke-picture-store.mjs` port 8450; a flat list, not documents), and the shared half of the image modules extracted as `MediaDB.images({ ns, owner })` in `_shared/media-db.js` (#294).** The shape: content-hash ids (stored once across documents), the field names kept (`idb:<id>` in them), migration of every saved document at boot writing back only what changed, orphan GC at boot only with a 10-minute grace, a missing image said on its preview and left out of print, inline data URLs when there is no IndexedDB. Display follows who needs the bytes: a data-URL cache when a synchronous consumer carries the image out (005, 019), object URLs via `MediaDB.images()` when every consumer is an `<img>` (056, 028, 042, 015, 041); export and share inline the bytes. A new adopter is a per-tool module holding only `fromFile()` and its helpers over `MediaDB.images()`. **Left:** **030's clue images**, the last on the list (its downscaler goes; its clue audio is already in `rgb-audio`). **080 is off the list**: it never stores a snapshot, only offers it as a download (#300's session read the code). Four hand-rolled downscalers remain: 030 on this list; 035, 044, 064 off it | site | 2+ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 10 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 11 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 12 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
@@ -543,6 +548,11 @@ one of them touches `_shared/`.
    hoped would. Take the adoption row from `npm run check:adoption` and confirm the
    result with `npm run check:adoption -- --check`; do not re-derive it by grep. Add a `HISTORY.md` entry for what shipped and what you got wrong. Commit
    and merge that too.
+7. **Write the next session's prompt** (Devon's standing instruction, 2026-09-29). Once the
+   step-6 PR is merged, write a self-contained prompt for the next session: which row, why
+   that one, what to read first, the traps you found, the port a new suite takes, the
+   machine setup, and that it too must end with a PR, a merge and a prompt of its own. Put it
+   in your final message and in the step-6 PR's body. Every command it names, you have run.
 
 **On writing that honestly.** The most valuable line in any of these documents has
 consistently been the one recording what did not work — the tool that was never
@@ -1003,8 +1013,10 @@ actually landed, and what each phase got wrong on the way, is in `HISTORY.md`.
 - **P4 — Migrate the image-bearing tools** to `media-db.js`, one or two per PR,
   keeping JSON export portable (export inlines blobs as data URLs on the way out;
   import rehydrates). Order by risk: 005 photos, 019 station images, 056/028 source
-  libraries, 042 logo/signature, 015, 041, 071, 080 snapshots, 030 clue images
+  libraries, 042 logo/signature, 015, 041, 071, 030 clue images
   (which currently live in localStorage while clue audio is already in IndexedDB).
+  *080 snapshots were on this list and are not stored anywhere — a canvas and a
+  download link only — so there is nothing to migrate (found 2026-09-29, #300's session).*
 - **P5 — 009 upgrades that fall out of the above.** Restore preview/diff ("3
   rosters replaced, 2 added, 1 untouched") built on registry metadata; per-tool
   restore as a shared control any tool can host; a storage-usage readout on
