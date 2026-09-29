@@ -2,7 +2,7 @@
 //
 //   node Tools/blender-art/validate-art.mjs
 //
-// Blender runs only on Devon's Windows machine, so CI can never re-render
+// Blender runs only on Devon's machines (Windows, and huginn), so CI can never re-render
 // anything. What it can do is check that what a local session committed is
 // what the ledger (Tools/blender-art/renders.json) says it is, and that the
 // ledger keeps the promises Path 21 makes. This never calls Blender and reads
@@ -54,6 +54,16 @@
 //             its background, the colour of its top-left pixel. A launcher
 //             may crop to any shape containing that circle, so this is the
 //             claim "survives the safe zone" read off the file itself.
+//   IMG       an <img> in a live page whose src is an entry that declares a
+//             "density" (the landing hero: one file per pixel density), and
+//             whose width/height attributes are missing or are not that
+//             entry's size divided by its density, so the page would shift on
+//             load or scale the art; a srcset candidate that is not a ledger
+//             entry of the same family and theme at that size times its
+//             descriptor ("2x" is twice the CSS size); or an on-screen entry
+//             shown on a page whose twin that page never shows, so one theme
+//             would get the other theme's picture. A "density" that is not a
+//             positive integer is LEDGER.
 //
 // It does not duplicate check:precache, which already fails a referenced file
 // missing from PRECACHE_URLS. Its pure-Node test is test/validate-art.test.mjs,
@@ -313,6 +323,9 @@ export function validate(root = SITE) {
     else if (e.cap > fam.entryCap && !e.capWhy) add('LEDGER', where, `cap ${e.cap} is above the ${e.family} family's ${fam.entryCap} with no capWhy`);
     if (!['light', 'dark', 'both'].includes(e.theme)) add('LEDGER', where, `theme "${e.theme}" is not light, dark or both`);
     if (!USES.includes(e.use)) add('LEDGER', where, `use "${e.use}" is not ${USES.join(', ')}`);
+    if (e.density !== undefined && !(Number.isInteger(e.density) && e.density > 0)) {
+      add('LEDGER', where, `density must be a positive integer, not ${JSON.stringify(e.density)}`);
+    }
     if (e.family === 'appmark') {
       if (!['any', 'maskable'].includes(e.fit)) add('SAFE', where, `an app mark's fit must be "any" or "maskable", not "${e.fit}"`);
       if (!(e.stroke > 0)) add('SAFE', where, 'an app mark needs its stroke, in units of the 48-unit icon');
@@ -456,9 +469,14 @@ export function validate(root = SITE) {
 
   for (const f of artFilesOnDisk(root)) if (!byPath.has(f)) add('ORPHAN', f, 'an art file the ledger does not list');
 
+  const resolveOn = (base, url) => {
+    if (/^(data:|https?:|\/\/)/i.test(url)) return null;
+    try { return path.posix.normalize(path.posix.join(base, decodeURI(url.split(/[?#]/)[0]))); } catch { return null; }
+  };
   for (const page of livePages(root)) {
     const html = fs.readFileSync(path.join(root, ...page.split('/')), 'utf8');
     const base = path.posix.dirname(page);
+    const shown = new Set();
     for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
       const tag = m[0];
       const src = /\ssrc\s*=\s*["']([^"']+)["']/i.exec(tag);
@@ -471,6 +489,29 @@ export function validate(root = SITE) {
       if (!alt) add('ALT', page, `<img src="${src[1]}"> has no alt attribute`);
       else if (entry.decorative && alt[2].trim() !== '') add('ALT', page, `${target} is decorative; its alt should be ""`);
       else if (!entry.decorative && alt[2].trim() === '') add('ALT', page, `${target} is meaningful; its alt must describe it`);
+      shown.add(target);
+      if (entry.density === undefined) continue;
+      const attr = name => { const a = new RegExp(`\\s${name}\\s*=\\s*["']?([^"'\\s>]+)`, 'i').exec(tag); return a ? a[1] : null; };
+      const cssW = entry.width / entry.density, cssH = entry.height / entry.density;
+      if (attr('width') !== String(cssW) || attr('height') !== String(cssH)) {
+        add('IMG', page, `<img src="${src[1]}"> needs width="${cssW}" height="${cssH}" (its ${entry.width}×${entry.height} at ${entry.density}x), has ${attr('width')}×${attr('height')}`);
+      }
+      const set = /\ssrcset\s*=\s*(["'])(.*?)\1/is.exec(tag);
+      for (const cand of set ? set[2].split(',').map(c => c.trim()).filter(Boolean) : []) {
+        const [url, desc = '1x'] = cand.split(/\s+/);
+        const x = /^(\d+(?:\.\d+)?)x$/.exec(desc);
+        const t = resolveOn(base, url);
+        const c = t && byPath.get(t);
+        if (!x) { add('IMG', page, `srcset candidate "${cand}" is not a density ("2x") descriptor`); continue; }
+        if (!c) { add('IMG', page, `srcset candidate ${url} is not a ledger entry`); continue; }
+        shown.add(t);
+        if (c.family !== entry.family || c.theme !== entry.theme) add('IMG', page, `srcset candidate ${t} is ${c.family}/${c.theme}, the src is ${entry.family}/${entry.theme}`);
+        else if (c.width !== cssW * +x[1] || c.height !== cssH * +x[1]) add('IMG', page, `srcset candidate ${t} is ${c.width}×${c.height}, but ${x[1]}x of ${cssW}×${cssH} is ${cssW * +x[1]}×${cssH * +x[1]}`);
+      }
+    }
+    for (const t of shown) {
+      const e = byPath.get(t);
+      if (e.use === 'screen' && e.twin && !shown.has(e.twin)) add('IMG', page, `shows ${t} but never its ${e.theme === 'light' ? 'dark' : 'light'} twin ${e.twin}`);
     }
   }
   return problems;

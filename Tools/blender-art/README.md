@@ -26,6 +26,7 @@ blender -b --factory-startup -P Tools/blender-art/scene_tile.py -- --entry asset
 blender -b --factory-startup -P Tools/blender-art/scene_tile.py -- --entry assets/art/test/tile-256-dark.webp
 blender -b --factory-startup -P Tools/blender-art/scene_icons.py -- --entry assets/art/shortcuts/t007-96.png
 blender -b --factory-startup -P Tools/blender-art/scene_icons.py -- --entry assets/icons/icon-maskable-512.png
+blender -b --factory-startup -t 4 -P Tools/blender-art/scene_hero.py -- --entry assets/art/hero/classroom-1x-light.webp
 node Tools/blender-art/build-sprite.mjs
 node Tools/blender-art/validate-art.mjs
 node Tools/blender-art/test/validate-art.test.mjs
@@ -54,6 +55,8 @@ rendered twice and compared.
 - `scene_tile.py`: the 256-px light/dark test tile (top-down family), which proves the
   raster path end to end: palette in both themes, WebP out, luminance under a declared text
   band.
+- `scene_hero.py`: the landing page's hero (Path 21 P3), an isometric classroom diorama,
+  four entries from one scene: light/dark at 1x (360x300) and 2x (720x600). See below.
 - `renders.json`: the ledger. The spec half (path, script, subject, family, seed, samples,
   quality, width, height, cap, theme, use, twin, decorative, `underText.region/token/large`)
   is written by hand *before* a render. The record half is written by the script.
@@ -123,6 +126,26 @@ is "A+" and not "A" because a monoline A in a hand-drawn red circle is the anarc
 - Full-bleed `--paper`, no transparency: the platform masks the square.
 - **Favicons stay.** At 16 px the page, loop and "A+" merge into grey. The per-page data-URI
   favicons (the old ring-and-A) remain the tab mark.
+
+## The hero (Path 21 P3, 2026-09-29)
+
+`assets/art/hero/classroom-{1x,2x}-{light,dark}.webp`, 64,832 B for the four, in the shell
+tier. `index.html` shows it beside the heading as two `<img>`s, one per theme, each with a
+`1x, 2x` `srcset`, `width="360" height="300"` and `alt=""`; CSS off `[data-theme]` hides
+the other theme's. It is hidden under 760 px, where the tool list comes first.
+
+- **Transparent background** (`"alpha": true` in the entry, `film_transparent` in the
+  scene): `index.html` has its own `--paper` (#F6F7F9), not ink-paper.css's (#FAFAF8), so a
+  rendered backdrop would show as a faint rectangle.
+- **`"exposure"`** (stops, default 0) is set to 1.5 on the dark pair. The dark tokens lit
+  by the one rig came out nearly black, and the room did not separate from the page.
+- **`"density"`** names the pixel density a file is for. `check:art`'s **IMG** rule uses it:
+  the `<img>` must carry the 1x size, each `srcset` candidate must be a ledger entry of the
+  same family and theme at that size times its descriptor, and a page showing one theme's
+  file must show its twin too.
+- **Render with `-t 4`.** Four threads and the default (eight on huginn) gave different
+  bytes for the same scene (23,916 B against 23,914 B). The committed four were rendered
+  on **huginn** with `-t 4`, twice each, and each pair was byte-identical.
 
 ## Determinism, measured 2026-09-25
 

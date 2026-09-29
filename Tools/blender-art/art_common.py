@@ -341,7 +341,9 @@ def set_render(scene, entry):
     # AgX's filmic shoulder desaturating the palette.
     scene.view_settings.view_transform = "Standard"
     scene.view_settings.look = "None"
-    scene.view_settings.exposure = 0.0
+    # Stops, per entry, default 0. The dark hero needs about one: the dark
+    # tokens lit by the one rig came out nearly black against the page.
+    scene.view_settings.exposure = float(entry.get("exposure", 0.0))
     scene.view_settings.gamma = 1.0
     scene.display_settings.display_device = "sRGB"
     # No clock: every metadata stamp off (the render-time and date stamps
@@ -357,7 +359,9 @@ def set_render(scene, entry):
     ext = os.path.splitext(entry["path"])[1].lower()
     if ext == ".webp":
         fmt.file_format = "WEBP"
-        fmt.color_mode = "RGB"
+        # "alpha": true for art drawn on a page whose own paper shows through
+        # (the hero); it goes with scene.render.film_transparent.
+        fmt.color_mode = "RGBA" if entry.get("alpha") else "RGB"
         fmt.quality = int(entry.get("quality", 80))
     elif ext == ".png":
         fmt.file_format = "PNG"

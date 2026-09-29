@@ -244,11 +244,12 @@
     gap:2.5rem;
   }
   .hero-main{flex:1;min-width:0;}
-  .hero-side{
-    flex-shrink:0;position:relative;
-    display:flex;flex-direction:column;align-items:flex-end;gap:1.1rem;
-    padding-top:1.9rem;
-  }
+  .hero-side{flex:0 1 360px;min-width:0;}
+  .hero-art{display:block;width:100%;max-width:360px;height:auto;}
+  :root[data-theme="dark"] .hero-art-light,
+  :root:not([data-theme="dark"]) .hero-art-dark{display:none;}
+  /* the memo sits under the lede; the stamp lands on its top right corner */
+  .memo-wrap{position:relative;max-width:22rem;padding-top:.4rem;}
   .memo{
     display:grid;grid-template-columns:auto 1fr;gap:.12rem 1rem;
     font-family:var(--mono);font-size:.78rem;color:var(--ink);
@@ -717,7 +718,9 @@
   /* ============ responsive ============ */
   @media (max-width:760px){
     .hero-grid{flex-direction:column;gap:1.3rem;}
-    .hero-side{align-items:flex-start;padding-top:0;width:100%;}
+    /* phones: the tool list comes first, so the diorama gives up its room */
+    .hero-side{display:none;}
+    .memo-wrap{display:flex;flex-direction:column;max-width:none;padding-top:0;}
     /* rein the stamp in: full desktop tracking + 7° rotation overflows a
        phone viewport and forces sideways scroll */
     .stamp{position:static;align-self:flex-end;margin-bottom:.6rem;
@@ -776,16 +779,27 @@
           <strong>No install, no account, no upload</strong> &mdash; open the file and use it.
           Works offline once loaded.
         </p>
+        <div class="memo-wrap">
+          <span class="stamp" aria-hidden="true"><b>Reviewed</b>as per my lesson plan</span>
+          <dl class="memo ink" style="--d:100ms">
+            <dt>To</dt><dd>All staff</dd>
+            <dt>From</dt><dd>D. Moore</dd>
+            <dt>Date</dt><dd id="memo-date">2026-09-29</dd>
+            <dt>CC</dt><dd>Whoever asked for the link again</dd>
+            <dt>Attach</dt><dd>87 files <span class="note">(browser-only, nothing to install)</span></dd>
+          </dl>
+        </div>
       </div>
-      <div class="hero-side">
-        <span class="stamp" aria-hidden="true"><b>Reviewed</b>as per my lesson plan</span>
-        <dl class="memo ink" style="--d:100ms">
-          <dt>To</dt><dd>All staff</dd>
-          <dt>From</dt><dd>D. Moore</dd>
-          <dt>Date</dt><dd id="memo-date">2026-09-25</dd>
-          <dt>CC</dt><dd>Whoever asked for the link again</dd>
-          <dt>Attach</dt><dd>87 files <span class="note">(browser-only, nothing to install)</span></dd>
-        </dl>
+      <!-- Path 21 P3: the Blender-rendered hero (Tools/blender-art/scene_hero.py).
+           Decorative, so alt=""; nothing is drawn over it. One <img> per theme,
+           the other hidden off [data-theme], which a11y.js owns. -->
+      <div class="hero-side ink" style="--d:200ms">
+        <img class="hero-art hero-art-light" src="assets/art/hero/classroom-1x-light.webp"
+             srcset="assets/art/hero/classroom-1x-light.webp 1x, assets/art/hero/classroom-2x-light.webp 2x"
+             width="360" height="300" alt="">
+        <img class="hero-art hero-art-dark" src="assets/art/hero/classroom-1x-dark.webp"
+             srcset="assets/art/hero/classroom-1x-dark.webp 1x, assets/art/hero/classroom-2x-dark.webp 2x"
+             width="360" height="300" alt="">
       </div>
     </div>
   </header>
@@ -2436,9 +2450,13 @@
         <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       <h2>Progress report</h2>
-      <span class="tally">66 recent entries</span>
+      <span class="tally">67 recent entries</span>
     </summary>
     <ul class="log">
+      <li>
+        <time datetime="2026-09-29">Sep 29, 2026</time>
+        <span><b>A classroom up top.</b> The landing page has a small rendered classroom beside the heading, in a light and a dark version that follow the theme. It is decoration only, and it is cached for offline use like the rest of the page.</span>
+      </li>
       <li>
         <time datetime="2026-09-25">Sep 25, 2026</time>
         <span><b>One timer underneath.</b> Command Center&rsquo;s timer and Class Screen&rsquo;s now run on the same shared countdown, and Classroom Timer shares its display. A timer that ran out while the page was closed comes back finished and quiet on all of them.</span>
@@ -2718,7 +2736,7 @@
     </div>
     <div class="meta">
       <span>Questions, bugs, contributions &mdash; email <span class="handle">@dsmoore</span>. Please advise.</span>
-      <span class="rhs">Built by D. Moore + Claude · rev <span id="rev">2026-09-25</span></span>
+      <span class="rhs">Built by D. Moore + Claude · rev <span id="rev">2026-09-29</span></span>
     </div>
   </footer>
 
