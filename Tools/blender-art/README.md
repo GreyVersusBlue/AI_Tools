@@ -11,7 +11,7 @@ file is how to run it.
 | | |
 |---|---|
 | Blender | **5.2 LTS** (made with 5.2.2 LTS, build `d13f752e3b9c`, 2026-09-15). The line is named once, in `renders.json`'s top-level `"blender"`; every scene script exits 2 if the running Blender is another line, not LTS, or not a release build. Each entry records the exact version that made it. |
-| Where | Devon's Windows machine only, the Steam install at `C:\Program Files (x86)\Steam\steamapps\common\Blender\`. **It is not on PATH**; put it there for the session with `$env:Path += ";C:\Program Files (x86)\Steam\steamapps\common\Blender"`. Steam updates it silently, so a new *patch* release keeps working and a new *line* stops the scripts until the pin moves (its own increment: re-render everything and read the hash diffs). |
+| Where | Devon's Windows machine, the Steam install at `C:\Program Files (x86)\Steam\steamapps\common\Blender\`. **It is not on PATH**; put it there for the session with `$env:Path += ";C:\Program Files (x86)\Steam\steamapps\common\Blender"`. Steam updates it silently, so a new *patch* release keeps working and a new *line* stops the scripts until the pin moves (its own increment: re-render everything and read the hash diffs). **Also huginn**, Devon's Linux box, since 2026-09-29: `blender` on PATH is a symlink in `~/.local/bin` to a 5.2.2 LTS tarball in `~/.local/blender/`. |
 | Add-ons | **None.** The Freestyle SVG Exporter is not bundled with 5.2.2 (only the SVG *importer*, `io_curve_svg`, is in `addons_core`); it is an extension on extensions.blender.org and is not installed. Icons use the fallback Path 21 names instead, a line exporter in `art_common.py` (see below). If the extension is ever adopted, record its version here and do not commit it. |
 | Render | Cycles on CPU, seed from the ledger, `use_animated_seed` off, fixed samples, adaptive sampling off, OIDN on CPU, `Standard` view transform, every metadata stamp off. |
 
@@ -25,6 +25,7 @@ blender -b --factory-startup -P Tools/blender-art/scene_icons.py -- --entry asse
 blender -b --factory-startup -P Tools/blender-art/scene_tile.py -- --entry assets/art/test/tile-256-light.webp
 blender -b --factory-startup -P Tools/blender-art/scene_tile.py -- --entry assets/art/test/tile-256-dark.webp
 blender -b --factory-startup -P Tools/blender-art/scene_icons.py -- --entry assets/art/shortcuts/t007-96.png
+blender -b --factory-startup -P Tools/blender-art/scene_icons.py -- --entry assets/icons/icon-maskable-512.png
 node Tools/blender-art/build-sprite.mjs
 node Tools/blender-art/validate-art.mjs
 node Tools/blender-art/test/validate-art.test.mjs
@@ -100,6 +101,29 @@ the render as a 16-colour indexed PNG whose palette is exact blends of `--paper`
 `--ink`, recovering each pixel's coverage from linear luminance. The results are 0.8–1 KB.
 Pure stdlib (`zlib`, `struct`), so there is nothing to install.
 
+## The app mark (Path 21 P2's last call, 2026-09-29)
+
+`manifest.json`'s four icons, `assets/icons/icon-192`/`-512` and `icon-maskable-192`/`-512`
+(and `index.html`'s `apple-touch-icon`, which is `icon-192`), are the `appmark` family,
+rendered by `scene_icons.py` from subject `"app"`: a dog-eared page in the icon camera with
+"A+" in single strokes, circled by `index.html`'s own red-pen `.grade` path (`PEN_LOOP`). It
+is "A+" and not "A" because a monoline A in a hand-drawn red circle is the anarchy sign.
+
+- **Two inks.** The loop's material is `--err`; everything else draws in `--ink`. The entry's
+  `inks` lists them, `line_layers()` exports each ink's lines separately (the others still
+  occlude), and `art_common.write_tone_png` writes an indexed PNG whose palette is `--paper`
+  plus exact blends toward each ink. Each pixel is assigned to the ink whose `--paper`→ink
+  line in linear RGB passes closest to it; luminance alone cannot tell two inks apart.
+- **`fit`.** `"any"` draws the icon as the landing page frames it (its longer side 80% of the
+  square). `"maskable"` shrinks it until every stroke, cap included, lies inside the circle
+  of radius 39% of the width; the safe zone is 40%. `check:art`'s **SAFE** rule decodes each
+  maskable PNG and fails any non-background pixel outside 40%.
+- **`stroke`** is the set's 2.25 on the 48-unit icon: 2.25 px when an `any` icon is shown at
+  48 px, 1.66 px for a maskable one. Each render prints both numbers.
+- Full-bleed `--paper`, no transparency: the platform masks the square.
+- **Favicons stay.** At 16 px the page, loop and "A+" merge into grey. The per-page data-URI
+  favicons (the old ring-and-A) remain the tab mark.
+
 ## Determinism, measured 2026-09-25
 
 Each of the three entries was rendered three times on this machine (once into the tree,
@@ -112,3 +136,11 @@ would.
 P2 repeated it: `t004.svg` and `t010-96.png` rendered twice more with `--out`, and the
 sprite built twice. **All matched the committed files byte for byte** (Cycles CPU and the
 indexed PNG writer included). Same machine and build as above.
+
+**Across machines, 2026-09-29.** Blender 5.2.2 LTS (build `d13f752e3b9c`, the same build) on
+Devon's Linux box, huginn, re-rendered the four shortcut PNGs and `t001`, `t007`, `t032` and
+`t087.svg` **byte for byte** against the Windows renders. The line exporter and the flat
+emission path are portable. **The lit test tile is not:** `tile-256-light.webp` came out
+1,050 bytes against the committed 1,054, differing by at most 6/255 on 2.4% of its pixels
+(Cycles lighting with OIDN on a different CPU). A lit raster re-rendered on another machine
+will show a hash diff that is noise, not a change.

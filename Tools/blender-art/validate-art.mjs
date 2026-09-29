@@ -47,6 +47,13 @@
 //             not name; or a manifest.json icon under assets/art/ whose entry
 //             is not use:"manifest". The OS picks what is behind it, so it
 //             needs no dark twin, which is why it is not use:"screen".
+//   SAFE      an app-mark entry (family "appmark": manifest.json's own icons)
+//             with no fit ("any" or "maskable"), no stroke or no inks; or a
+//             fit:"maskable" PNG with any pixel outside the maskable safe
+//             zone (the centred circle of radius 40% of its width) that is not
+//             its background, the colour of its top-left pixel. A launcher
+//             may crop to any shape containing that circle, so this is the
+//             claim "survives the safe zone" read off the file itself.
 //
 // It does not duplicate check:precache, which already fails a referenced file
 // missing from PRECACHE_URLS. Its pure-Node test is test/validate-art.test.mjs,
@@ -55,6 +62,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { assembleSprite } from './build-sprite.mjs';
 
@@ -159,6 +167,64 @@ export function dimensions(buf, rel) {
   return null;
 }
 
+/** Decode a PNG to { width, height, rgb(x, y) } with node:zlib: 8-bit RGB or
+ *  RGBA, or indexed at 1/2/4/8 bits, no interlace. Enough for the app mark;
+ *  anything else is null. */
+export function decodePng(buf) {
+  if (buf.length < 33 || buf.toString('latin1', 1, 4) !== 'PNG') return null;
+  let off = 8, ihdr = null, plte = null;
+  const idat = [];
+  while (off + 8 <= buf.length) {
+    const len = buf.readUInt32BE(off), kind = buf.toString('latin1', off + 4, off + 8);
+    const data = buf.subarray(off + 8, off + 8 + len);
+    if (kind === 'IHDR') ihdr = data;
+    else if (kind === 'PLTE') plte = data;
+    else if (kind === 'IDAT') idat.push(data);
+    off += 12 + len;
+  }
+  if (!ihdr) return null;
+  const width = ihdr.readUInt32BE(0), height = ihdr.readUInt32BE(4);
+  const depth = ihdr[8], type = ihdr[9];
+  const channels = { 2: 3, 3: 1, 6: 4 }[type];
+  if (!channels || ihdr[12] !== 0 || (type !== 3 && depth !== 8) || (type === 3 && !plte)) return null;
+  const raw = zlib.inflateSync(Buffer.concat(idat));
+  const stride = Math.ceil((width * channels * depth) / 8), bpp = Math.max(1, (channels * depth) / 8);
+  const rows = [];
+  let prev = Buffer.alloc(stride);
+  for (let y = 0; y < height; y++) {
+    const f = raw[y * (stride + 1)], line = Buffer.from(raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1)));
+    for (let i = 0; i < stride; i++) {
+      const a = i >= bpp ? line[i - bpp] : 0, b = prev[i], c = i >= bpp ? prev[i - bpp] : 0;
+      const pa = Math.abs(b - c), pb = Math.abs(a - c), pc = Math.abs(a + b - 2 * c);
+      const pred = [0, a, b, (a + b) >> 1, pa <= pb && pa <= pc ? a : pb <= pc ? b : c][f];
+      line[i] = (line[i] + pred) & 0xff;
+    }
+    rows.push(line);
+    prev = line;
+  }
+  const rgb = (x, y) => {
+    const line = rows[y];
+    if (type !== 3) return [0, 1, 2].map(j => line[x * channels + j]);
+    const bit = x * depth, idx = (line[bit >> 3] >> (8 - depth - (bit & 7))) & ((1 << depth) - 1);
+    return [0, 1, 2].map(j => plte[idx * 3 + j]);
+  };
+  return { width, height, rgb };
+}
+
+/** How many pixels of a decoded image lie outside the centred circle of
+ *  radius frac × width and differ from its top-left pixel. */
+export function outsideSafeZone(img, frac = 0.4) {
+  const bg = img.rgb(0, 0).join();
+  const cx = img.width / 2, cy = img.height / 2, r = frac * img.width;
+  let n = 0;
+  for (let y = 0; y < img.height; y++) {
+    for (let x = 0; x < img.width; x++) {
+      if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) > r && img.rgb(x, y).join() !== bg) n++;
+    }
+  }
+  return n;
+}
+
 /** The problems an SVG icon has, as short strings; empty when it is clean. */
 export function svgProblems(text) {
   const out = [];
@@ -247,6 +313,11 @@ export function validate(root = SITE) {
     else if (e.cap > fam.entryCap && !e.capWhy) add('LEDGER', where, `cap ${e.cap} is above the ${e.family} family's ${fam.entryCap} with no capWhy`);
     if (!['light', 'dark', 'both'].includes(e.theme)) add('LEDGER', where, `theme "${e.theme}" is not light, dark or both`);
     if (!USES.includes(e.use)) add('LEDGER', where, `use "${e.use}" is not ${USES.join(', ')}`);
+    if (e.family === 'appmark') {
+      if (!['any', 'maskable'].includes(e.fit)) add('SAFE', where, `an app mark's fit must be "any" or "maskable", not "${e.fit}"`);
+      if (!(e.stroke > 0)) add('SAFE', where, 'an app mark needs its stroke, in units of the 48-unit icon');
+      if (!Array.isArray(e.inks) || !e.inks.length) add('SAFE', where, 'an app mark needs its inks, the tokens its lines are drawn in');
+    }
     if (e.blender && pinned && !String(e.blender).startsWith(pinned + '.')) {
       add('PIN', where, `made by Blender ${e.blender}; renders.json pins the ${pinned} LTS line`);
     }
@@ -273,6 +344,12 @@ export function validate(root = SITE) {
       add('SIZE', where, `${dim.width}×${dim.height}, the ledger says ${e.width}×${e.height}`);
     }
     if (/\.svg$/i.test(e.path)) for (const p of svgProblems(buf.toString('utf8'))) add('SVG', where, 'carries ' + p);
+    if (e.fit === 'maskable') {
+      const img = /\.png$/i.test(e.path) ? decodePng(buf) : null;
+      const n = img ? outsideSafeZone(img) : -1;
+      if (n < 0) add('SAFE', where, 'a maskable icon must be a PNG this check can decode (8-bit RGB/RGBA or indexed)');
+      else if (n) add('SAFE', where, `${n} pixel(s) outside the maskable safe zone (radius 40% of the width) are not background`);
+    }
     if (/\.svg$/i.test(e.path) && dim && fam && fam.displayPx && fam.minStrokePx && !isDerived(e)) {
       // The file's own viewBox, not the ledger's width: SIZE reports those disagreeing.
       const sw = /^<svg\b[^>]*\sstroke-width="([\d.]+)"/.exec(buf.toString('utf8'));

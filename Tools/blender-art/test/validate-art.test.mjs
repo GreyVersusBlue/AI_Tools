@@ -12,8 +12,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import {
-  SITE, validate, parsePalette, luminance, worstContrast, svgProblems, dimensions, hashFile,
+  SITE, validate, parsePalette, luminance, worstContrast, svgProblems, dimensions, hashFile, decodePng, outsideSafeZone,
 } from '../validate-art.mjs';
 import { assembleSprite, toSymbol } from '../build-sprite.mjs';
 
@@ -182,6 +183,51 @@ breaks('manifest.json naming on-screen art', 'MANIFEST', c => {
   c.put('manifest.json', m);
   c.entry('t004-96.png').use = 'print';        // keep the renamed shortcut out of the picture
 });
+/* the app mark: manifest.json's own icons, and the maskable safe zone */
+
+const hex = rgb => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('');
+const markAny = decodePng(fs.readFileSync(path.join(SITE, 'assets', 'icons', 'icon-192.png')));
+const markMask = decodePng(fs.readFileSync(path.join(SITE, 'assets', 'icons', 'icon-maskable-192.png')));
+ok(markMask && markMask.width === 192 && hex(markMask.rgb(0, 0)) === pal.light['--paper'],
+  'the maskable app mark decodes, and its background is --paper exactly: ' + (markMask && hex(markMask.rgb(0, 0))));
+ok(markMask && outsideSafeZone(markMask) === 0, 'the committed maskable mark stays inside the safe zone');
+ok(markAny && outsideSafeZone(markAny) > 0, 'the "any" mark, drawn larger, would not: the count is not vacuous');
+// The radius is 40% of the width, not "somewhere near the edge": one dark
+// pixel at 45% counts, one at 38% does not.
+const dot = (x, y) => ({ width: 100, height: 100, rgb: (px, py) => (px === x && py === y ? [0, 0, 0] : [255, 255, 255]) });
+ok(outsideSafeZone(dot(94, 50)) === 1 && outsideSafeZone(dot(87, 50)) === 0, 'the safe zone is the circle of radius 40%');
+// Every PNG row filter, decoded: the app mark's own writer only uses filter 0,
+// so a 5-row RGB image is filtered here by hand, one filter per row.
+{
+  const w = 3, rows = [0, 1, 2, 3, 4].map(y => Buffer.from([...Array(w * 3)].map((_, i) => (y * 53 + i * 29 + (i % 3) * 7) & 0xff)));
+  const paeth = (a, b, c) => { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); return pa <= pb && pa <= pc ? a : pb <= pc ? b : c; };
+  const raw = [];
+  rows.forEach((line, y) => {
+    const prev = y ? rows[y - 1] : Buffer.alloc(w * 3);
+    raw.push(y);
+    for (let i = 0; i < line.length; i++) {
+      const a = i >= 3 ? line[i - 3] : 0, b = prev[i], c = i >= 3 ? prev[i - 3] : 0;
+      raw.push((line[i] - [0, a, b, (a + b) >> 1, paeth(a, b, c)][y]) & 0xff);
+    }
+  });
+  const chunk = (kind, data) => {
+    const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
+    return Buffer.concat([len, Buffer.from(kind, 'latin1'), data, Buffer.alloc(4)]);   // the decoder ignores CRCs
+  };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(rows.length, 4); ihdr[8] = 8; ihdr[9] = 2;
+  const file = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr),
+    chunk('IDAT', zlib.deflateSync(Buffer.from(raw))), chunk('IEND', Buffer.alloc(0))]);
+  const img = decodePng(file);
+  const good = img && rows.every((line, y) => [...Array(w)].every((_, x) => img.rgb(x, y).join() === [...line.subarray(x * 3, x * 3 + 3)].join()));
+  ok(good, 'decodePng undoes all five row filters (None, Sub, Up, Average, Paeth)');
+}
+breaks('a maskable icon that reaches past the safe zone', 'SAFE', c => {
+  const bytes = fs.readFileSync(path.join(SITE, 'assets', 'icons', 'icon-192.png'));
+  c.put('assets/icons/icon-maskable-192.png', bytes);
+  Object.assign(c.entry('icon-maskable-192.png'), hashFile(bytes, 'x.png'));
+});
+breaks('an app mark with no fit', 'SAFE', c => { delete c.entry('icon-maskable-512.png').fit; });
+breaks('an app mark with no inks', 'SAFE', c => { c.entry('icon-192.png').inks = []; });
 breaks('an unknown use', 'LEDGER', c => { c.entry('t007.svg').use = 'wallpaper'; });
 ok(fixture(c => {
   delete c.entry('t004-96.png').twin;
