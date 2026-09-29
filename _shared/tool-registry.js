@@ -1217,6 +1217,13 @@
       file: 'Tools/064-historical-trading-card-maker.html',
       category: 'social-studies',
       share: { param: 'deck' },
+      /* Card photos are not in these keys since Path 4 P4: a card's
+         `image.src` holds an `idb:` reference and the photos are in
+         `gvb-media` (declared on the site row above) under the `htcm/`
+         namespace; crop, shape and filter stay in the deck. Pictures of
+         historical figures, flags and places — teacher content, not student
+         data. Photos no saved deck points at are deleted when the tool next
+         loads. The legacy keys still hold data URLs; they are a backup. */
       keys: [
         { k: 'htcm_cards_v1', legacy: true },
         { k: 'htcm_cards_v2', legacy: true },

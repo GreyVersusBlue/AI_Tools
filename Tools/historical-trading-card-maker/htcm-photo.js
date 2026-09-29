@@ -132,7 +132,8 @@
     img.onload = function () { // fills w/h for images imported before v2 kept them
       if (!state.w) { state.w = img.naturalWidth; state.h = img.naturalHeight; }
     };
-    img.src = image.src;
+    var shown = global.HtcmImage.url(image.src);   // an object URL for a stored photo
+    if (shown) img.src = shown; else img.removeAttribute('src');
 
     /* drag to pan: pointer movement maps 1:1 onto the cover-fitted image's
        hidden overflow, so the photo follows the finger */

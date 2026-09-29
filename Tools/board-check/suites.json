@@ -114,6 +114,7 @@
     "Tools/verb-conjugation-poster-generator/test/smoke-panel-colors.mjs",
     "Tools/historical-trading-card-maker/test/smoke-card-size.mjs",
     "Tools/historical-trading-card-maker/test/smoke-photo.mjs",
+    "Tools/historical-trading-card-maker/test/smoke-photo-store.mjs",
     "Tools/lab-report-template-builder/test/smoke-typed-columns.mjs",
     "Tools/dichotomous-key-builder/test/smoke-trace-path.mjs",
     "Tools/music-sightreading-generator/test/smoke-glyph-fallback.mjs",

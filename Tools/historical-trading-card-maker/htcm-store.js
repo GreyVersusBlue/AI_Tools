@@ -12,7 +12,7 @@
      { v: 2,
        cards: [{
          id, name,
-         image: null | { src, w, h,                 // downscaled master + px size
+         image: null | { src, w, h,                 // downscaled master (`idb:<id>`, htcm-image.js) + px size
                          crop: { x, y, scale },     // normalized focal point, zoom >= 1
                          shape: 'rrect',            // rrect|circle|oval|hex|shield|arch
                          filter: 'none' },          // none|sepia|gray
@@ -55,7 +55,10 @@
   function repairImage(img) {
     // v1 stored the image as a bare data-URL string; v2 wraps it in an object.
     if (typeof img === 'string' && /^data:image\//.test(img)) img = { src: img };
-    if (!img || typeof img !== 'object' || typeof img.src !== 'string' || !/^data:image\//.test(img.src)) return null;
+    // Since Path 4 P4 `src` is usually `idb:<id>`, a photo in the shared
+    // media store (htcm-image.js); a data URL is one not yet moved there.
+    if (!img || typeof img !== 'object' || typeof img.src !== 'string' ||
+        !(/^data:image\//.test(img.src) || /^idb:[A-Za-z0-9_-]{1,40}$/.test(img.src))) return null;
     return {
       src: img.src,
       // w/h unknown for migrated v1 images; filled lazily on first render.
@@ -157,6 +160,13 @@
     }
   }
 
+  /** Rewrites one saved deck in place and nothing else: the list and the
+      current deck are left alone. For the boot pass that moves photos into
+      the media store (htcm-image.js), which touches decks that are not open. */
+  function writeDeck(name, doc) {
+    localStorage.setItem(DATA_PREFIX + name, JSON.stringify(doc));
+  }
+
   /** A repaired v2 document, or null if the deck doesn't exist. */
   function loadDeck(name) {
     var doc = readJson(DATA_PREFIX + name);
@@ -198,6 +208,7 @@
     DEFAULT_DECK: DEFAULT_DECK,
     listDecks: listDecks,
     saveDeck: saveDeck,
+    writeDeck: writeDeck,
     loadDeck: loadDeck,
     deleteDeck: deleteDeck,
     loadCurrent: loadCurrent,
