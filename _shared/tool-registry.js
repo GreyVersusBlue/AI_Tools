@@ -550,6 +550,12 @@
       title: 'Quiz / Review Game Board',
       file: 'Tools/030-review-game-board.html',
       category: 'games-rewards',
+      /* Clue images are not in these keys since Path 4 P4: a clue's `image`
+         holds an `idb:` reference and the pictures are in `gvb-media`
+         (declared on the site row above) under the `rgb/` namespace. Teacher
+         content (maps, cartoons, primary sources), not student data. Pictures
+         no saved board points at are deleted when the tool next loads. Clue
+         audio is separate, in `rgb-audio` below; the bank holds no pictures. */
       keys: [
         { k: 'gvb-review-board-bank:entries' },
         { k: 'gvb-review-board:__probe' },

@@ -7,8 +7,10 @@
 // text-only board limits the tool to recall questions.
 //
 // The three things worth holding still:
-//   1. an imported image is downscaled hard — it is kept inline in the board,
-//      and localStorage caps out around 5 MB for the whole site (P12);
+//   1. an imported image is downscaled hard — 1000 px JPEG, as it always was.
+//      Since Path 4 P4 it is kept in the shared media store and the clue
+//      holds an `idb:` reference (smoke-clue-image-store.mjs covers the move,
+//      GC, a missing picture and the no-IndexedDB fallback);
 //   2. it survives the whole round trip — editor -> saved board -> projected
 //      clue -> printed quiz and answer key -> JSON export -> JSON import;
 //   3. a Daily Double keeps it hidden behind the wager panel, because a
@@ -82,7 +84,10 @@ await clueRows[0].$eval('input[type="file"]', (input, b64) => {
 await page.waitForFunction(
   () => !!document.querySelector('#categoriesEditor .clue-row').__clueImage, null, { timeout: 10000 });
 
-const stored = await page.evaluate(() => document.querySelector('#categoriesEditor .clue-row').__clueImage);
+const REF = /^idb:h[0-9a-f]{32}$/;
+const storedRef = await page.evaluate(() => document.querySelector('#categoriesEditor .clue-row').__clueImage);
+ok(REF.test(storedRef), 'the picked image is kept in the media store, as a reference: ' + JSON.stringify(storedRef));
+const stored = await page.evaluate(v => window.ReviewBoardImage.inline(v), storedRef);
 ok(/^data:image\/jpeg/.test(stored), 'the stored image is re-encoded as JPEG, not kept as the original PNG');
 ok(stored.length < bigPng.length / 4,
    `downscaled hard: ${Math.round(stored.length / 1024)} KB vs ${Math.round(bigPng.length / 1024)} KB`);
@@ -94,7 +99,7 @@ const dims = await page.evaluate(src => new Promise(res => {
 eq(dims.w, 1000, 'long edge capped at 1000px');
 eq(dims.h, Math.round(1000 * BIG_H / BIG_W), 'aspect ratio preserved');
 ok(await page.isVisible('#categoriesEditor .clue-image-thumb'), 'a thumbnail appears in the editor');
-ok(/KB/.test(await page.textContent('#categoriesEditor .clue-image-size')), 'the editor shows the size it took');
+eq(await page.textContent('#categoriesEditor .clue-image-size'), 'Saved', 'the editor says it is kept');
 
 // A second, image-free clue so the "no image" path is exercised too.
 await page.click('#categoriesEditor .cat-actions button.secondary');
@@ -109,7 +114,7 @@ await settle(page, 400);
 /* ── it reached the saved board, and only the clue that has one ────────── */
 const saved = await page.evaluate(() =>
   JSON.parse(localStorage.getItem('gvb-review-board:data:Map Skills Review')));
-ok(/^data:image\/jpeg/.test(saved.categories[0].clues[0].image), 'the image is saved with the board');
+eq(saved.categories[0].clues[0].image, storedRef, 'the image is saved with the board, as its reference');
 eq(saved.categories[0].clues[1].image, undefined, 'a clue with no picture carries no image field');
 
 /* ── projected: the image shows with the clue ──────────────────────────── */
@@ -169,9 +174,10 @@ await settle(page, 300);
 eq(await page.$$eval('#printArea .key-img', e => e.length), 1, 'the answer key prints a thumbnail of it');
 
 /* ── JSON export/import round trip ─────────────────────────────────────── */
-const roundTripped = await page.evaluate(() => {
-  const exported = JSON.parse(JSON.stringify(
-    JSON.parse(localStorage.getItem('gvb-review-board:data:Map Skills Review'))));
+const roundTripped = await page.evaluate(async () => {
+  // What Export JSON writes: every stored picture read back as a data URL.
+  const exported = await window.ReviewBoardImage.forExport(
+    JSON.parse(localStorage.getItem('gvb-review-board:data:Map Skills Review')));
   // Same shape the file-import path receives, including a hostile image field
   // on the second clue that must not survive.
   exported.categories[0].clues[1].image = 'javascript:alert(1)';
@@ -190,14 +196,16 @@ const imported = await page.evaluate(() => {
   const last = names[names.length - 1];
   return JSON.parse(localStorage.getItem('gvb-review-board:data:' + last));
 });
-ok(/^data:image\/jpeg/.test(imported.categories[0].clues[0].image), 'the image survives a JSON export/import');
+ok(/^data:image\/jpeg/.test(roundTripped.categories[0].clues[0].image), 'the exported file carries the image as a data URL');
+eq(imported.categories[0].clues[0].image, storedRef, 'the image survives a JSON export/import, back in the store as the same record');
 eq(imported.categories[0].clues[1].image, undefined, 'a non-image string in that field is dropped on import');
 
 
 /* ── the storage readout ───────────────────────────────────────────────────
-   Clue images are the first thing in this tool that can realistically fill
-   localStorage, and the failure they cause arrives mid-lesson, on a save the
-   teacher never pressed. The only signal before this was an alert AFTER the
+   Clue images were the first thing in this tool that could realistically
+   fill localStorage (only a browser without IndexedDB still keeps them
+   there), and the failure arrives mid-lesson, on a save the teacher never
+   pressed. The only signal before this was an alert AFTER the
    write had already failed.
 
    The measurement itself is the risky part, because there is no API that
@@ -243,7 +251,7 @@ await settle(page, 600);
 const warnLine = await page.textContent('#storageLine');
 const warnClass = await page.$eval('#storageLine', e => e.className);
 ok(/warn|danger/.test(warnClass), 'past ~70% the line changes tone: ' + warnClass);
-ok(/clue images|Export a board|remove/i.test(warnLine),
+ok(/Export a board|remove/i.test(warnLine),
    'and says what to do about it rather than only stating a number: ' + warnLine);
 
 ok(await fillTo(0.95), 'and the origin can be filled further');
