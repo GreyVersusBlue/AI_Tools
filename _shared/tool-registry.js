@@ -1404,6 +1404,12 @@
       category: 'world-language',
       /* The share link carries the active prompt set — never an image or a pin. */
       share: { param: 'prompts' },
+      /* The pictures are not in these keys since Path 4 P4: each entry of
+         `ppg_images_v1` keeps its id and pins, and its `src` holds an `idb:`
+         reference; the images are in `gvb-media` (declared on the site row
+         above) under the `ppg/` namespace. The teacher's own prompt photos,
+         not student data. Pictures the list no longer points at are deleted
+         when the tool next loads. */
       keys: [
         { k: 'ppg_images_v1' },
         { k: 'ppg_print_count_v1' },
