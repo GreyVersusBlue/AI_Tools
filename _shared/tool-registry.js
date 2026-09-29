@@ -775,6 +775,11 @@
       file: 'Tools/041-formula-sheet-builder.html',
       category: 'math',
       share: { param: 'sheet' },
+      /* Formula diagrams are not in these keys since Path 4 P4: each item's
+         `image` holds an `idb:` reference and the images are in `gvb-media`
+         (declared on the site row above) under the `fsb/` namespace. Teacher
+         content, not student data. Diagrams no saved sheet points at are
+         deleted when the tool next loads. */
       keys: [
         { k: 'gvb-formula-sheet:current' },
         { k: 'gvb-formula-sheet:list' },

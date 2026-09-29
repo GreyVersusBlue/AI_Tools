@@ -26,6 +26,8 @@
 <script src="../_shared/a11y.js"></script>
 <script src="formula-sheet-builder/fsb-templates.js"></script>
 <script src="formula-sheet-builder/fsb-store.js"></script>
+<script src="../_shared/media-db.js"></script>
+<script src="formula-sheet-builder/fsb-image.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -115,6 +117,10 @@
     border-radius: 50%; line-height: 1; background: var(--card); border: 1px solid var(--line-strong); color: var(--muted); cursor: pointer;
   }
   .item-thumb-remove:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
+  /* A diagram whose image is not in this browser: said where the thumbnail
+     would be, with the remove button still on it. */
+  .item-thumb-missing { display: inline-block; font-size: .76rem; font-weight: 600; color: var(--err); background: var(--err-bg);
+    border: 1px dashed var(--err-line); border-radius: 4px; padding: .2rem 1.1rem .2rem .45rem; }
 
   /* ---- per-item worked example / variable key inline editor ---- */
   .item-edit-panel { border: 1px solid var(--line); border-radius: 7px; padding: .6rem .7rem; margin-top: .5rem; background: var(--card-2); }
@@ -350,39 +356,29 @@
   document.body.appendChild(imageFileInput);
   var pendingImageIndex = -1;
 
-  /** Downscales an uploaded image to at most maxDim px on its longest side
-      before it's stored as a data URL — a formula sheet diagram only needs
-      to be legible at thumbnail size, and localStorage/JSON export both
-      have a real size cost to keeping the original photo resolution. */
-  function readAndDownscaleImage(file, maxDim, cb) {
-    var reader = new FileReader();
-    reader.onload = function () {
-      var img = new Image();
-      img.onload = function () {
-        var scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
-        var w = Math.max(1, Math.round(img.naturalWidth * scale));
-        var h = Math.max(1, Math.round(img.naturalHeight * scale));
-        var canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        cb(canvas.toDataURL('image/png'));
-      };
-      img.onerror = function () { alert('Could not read that image.'); };
-      img.src = reader.result;
-    };
-    reader.onerror = function () { alert('Could not read that file.'); };
-    reader.readAsDataURL(file);
-  }
-
+  /* A picked diagram is downscaled and stored by fsb-image.js (Path 4 P4):
+     `image` then holds an `idb:` reference, or the PNG's data URL when this
+     browser has no IndexedDB. The row it was picked for is looked up again
+     when the file is ready, by object, so a reorder in between cannot put it
+     on the wrong formula. */
   imageFileInput.addEventListener('change', function () {
     var file = imageFileInput.files && imageFileInput.files[0];
     imageFileInput.value = '';
-    if (!file || pendingImageIndex < 0) return;
-    var idx = pendingImageIndex;
-    readAndDownscaleImage(file, 200, function (dataUrl) {
-      if (state.items[idx]) { state.items[idx].image = dataUrl; renderAll(); }
+    if (!file || pendingImageIndex < 0 || !state.items[pendingImageIndex]) return;
+    var item = state.items[pendingImageIndex];
+    FormulaSheetImage.fromFile(file).then(function (value) {
+      if (state.items.indexOf(item) === -1) return;   // the formula was removed meanwhile
+      item.image = value;
+      renderAll();
+    }, function (e) {
+      alert((e && e.message) || 'Could not read that image.');
     });
   });
+
+  /** What an <img src> gets for a diagram: a data: or blob: URL, or '' when
+      there is nothing to show (none, or gone from this browser). Escaped at
+      every markup site on top of that. */
+  function imageSrc(image) { return FormulaSheetImage.url(image); }
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
@@ -433,8 +429,13 @@
           : '') +
         (item.workedExample ? '<div class="item-example">Example: ' + escapeHtml(item.workedExample) + '</div>' : '') +
         (item.image
-          ? '<div class="item-thumb-wrap"><img class="item-thumb" src="' + item.image + '" alt="Diagram for ' + escapeHtml(item.name) + '">' +
-            '<button type="button" class="item-thumb-remove" data-remove-image="' + i + '" title="Remove diagram">&times;</button></div>'
+          ? '<div class="item-thumb-wrap">' +
+              (imageSrc(item.image)
+                ? '<img class="item-thumb" src="' + escapeHtml(imageSrc(item.image)) + '" alt="Diagram for ' + escapeHtml(item.name) + '">'
+                : '<span class="item-thumb-missing">' + (FormulaSheetImage.isRef(item.image) && !FormulaSheetImage.isMissing(item.image)
+                    ? 'Loading diagram…'
+                    : 'Diagram missing from this browser — add it again') + '</span>') +
+            '<button type="button" class="item-thumb-remove" data-remove-image="' + i + '" title="Remove diagram" aria-label="Remove diagram">&times;</button></div>'
           : '');
       row.appendChild(fields);
 
@@ -599,7 +600,8 @@
             ? '<div class="fexample"><span class="fexample-label">Example:</span> ' + escapeHtml(item.workedExample) + '</div>'
             : '';
           return '<div class="formula">' +
-            (item.image ? '<img class="fimg" src="' + item.image + '" alt="">' : '') +
+            // A diagram not in this browser is left off the page, not drawn broken.
+            (imageSrc(item.image) ? '<img class="fimg" src="' + escapeHtml(imageSrc(item.image)) + '" alt="">' : '') +
             '<div class="fname">' + escapeHtml(item.name) + '</div>' +
             '<div class="fexpr">' + escapeHtml(item.expression) + '</div>' +
             (item.note ? '<div class="fnote">' + escapeHtml(item.note) + '</div>' : '') +
@@ -746,6 +748,7 @@
     FormulaSheetStore.setCurrentName(name);
     openEditIndex = -1;
     renderAll();
+    if (imagesSettled) showImages();   // a sheet switched to after boot
   }
 
   /* ---------- wiring ---------- */
@@ -882,8 +885,22 @@
       for (var k = 0; k < dims.perPage; k++) { cells += '<div class="cut-cell">' + oneCopy + '</div>'; }
       printArea.innerHTML = '<div class="print-page-grid pp-' + dims.perPage + '">' + cells + '</div>';
     }
-    window.print();
+    // A stored diagram is an object URL, which loads asynchronously; a data
+    // URL was ready at once, which is why this never had to wait before.
+    waitForImages(printArea).then(function () { window.print(); });
   });
+
+  /** Resolves once every <img> under `root` has loaded or failed, so a gone
+      diagram can never hang the print. */
+  function waitForImages(root) {
+    return Promise.all(Array.prototype.map.call(root.querySelectorAll('img'), function (img) {
+      if (img.complete) return null;
+      return new Promise(function (resolve) {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }));
+  }
 
   /* ---------- JSON export/import ---------- */
   function sanitizeFilename(s) {
@@ -907,15 +924,22 @@
 
   els.exportSheetBtn.addEventListener('click', function () {
     if (!state) return;
-    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = sanitizeFilename(state.name) + '.json';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    save();
+    // The diagrams come out of IndexedDB as data: URLs (fsb-image.js), so the
+    // file is the whole sheet on any device; a missing one is ''.
+    FormulaSheetImage.forExport(state).then(function (copy) {
+      var blob = new Blob([JSON.stringify(copy, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = sanitizeFilename(copy.name) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    })['catch'](function (e) {
+      setShareNote('Could not read this sheet’s diagrams to export it (' + ((e && e.message) || 'unknown error') + ').', true);
+    });
   });
 
   els.importSheetBtn.addEventListener('click', function () { els.importSheetFile.click(); });
@@ -936,16 +960,26 @@
         return;
       }
       var name = uniqueSheetName(decoded.name || decoded.title || 'Imported Sheet');
-      state = {
+      var arrived = {
         name: name,
         title: decoded.title || '',
         columns: decoded.columns || 2,
         pageSize: PAGE_SIZES[decoded.pageSize] ? decoded.pageSize : 'full',
         items: decoded.items.map(normalizeItem)
       };
-      FormulaSheetStore.setCurrentName(name);
-      openEditIndex = -1;
-      renderAll();
+      /* Only a real inline image is kept from a file (fsb-image.js); an
+         `idb:` reference names a diagram in another browser. What is kept is
+         stored before the sheet is saved, so it never lands in localStorage. */
+      FormulaSheetImage.acceptArrival(arrived);
+      FormulaSheetImage.store(FormulaSheetImage.valuesIn(arrived)).then(function (map) {
+        FormulaSheetImage.apply(arrived, map);
+        return FormulaSheetImage.hydrate(FormulaSheetImage.valuesIn(arrived));
+      })['catch'](function () { /* a diagram the store refused stays inline, still saved */ }).then(function () {
+        state = arrived;
+        FormulaSheetStore.setCurrentName(name);
+        openEditIndex = -1;
+        renderAll();
+      });
     };
     reader.onerror = function () { alert('Couldn’t read that file.'); };
     reader.readAsText(file);
@@ -960,10 +994,16 @@
      button: a link whose sheet is called the same thing as one on this device
      lands as "… (2)" and the teacher's own copy is untouched.
 
-     The diagrams pasted onto formulas are data: URLs and share.js strips them
-     from the link by policy, saying how many it dropped. The Download row
-     still carries them, which is the difference between the two rows and is
-     why the note below does not promise the pictures travel. */
+     The diagrams pasted onto formulas leave as data: URLs and share.js strips
+     them from the link by policy, saying how many it dropped. The Download
+     row still carries them, which is the difference between the two rows and
+     is why the note below does not promise the pictures travel.
+
+     Since Path 4 P4 a diagram is an `idb:` reference, and reading its bytes
+     back is asynchronous while share.js's getState() is not. So, as in 056,
+     028 and 015, the button does not use Share.mount(): its click builds the
+     portable copy first (FormulaSheetImage.forExport) and then opens the
+     sheet with Share.open(), handing it that finished copy. */
   var SHARE_PARAM = 'sheet';
 
   function setShareNote(text, isError) {
@@ -972,8 +1012,7 @@
     els.shareNote.classList.toggle('error', !!isError);
   }
 
-  Share.mount(els.shareBtn, {
-    getState: function () { save(); return state; },
+  var SHARE_OPTS = {
     param: SHARE_PARAM,
     tool: 'formula-sheet-builder',
     title: 'Share this formula sheet',
@@ -982,6 +1021,23 @@
     note: 'Every formula with its variables and worked example, the printed title, the column count and print size, and which formulas are ticked as allowed on the assessment. Opening the link saves this sheet on the receiving device as a new saved sheet; nothing already saved there is changed.',
     successMessage: 'Link copied. Opening it anywhere saves this sheet there alongside whatever is already saved.',
     onMessage: function (text, isError) { setShareNote(text, isError); }
+  };
+  function openShareSheet(payload) {
+    Share.open(Object.assign({}, SHARE_OPTS, {
+      opener: els.shareBtn,
+      getState: function () { return payload; }
+    }));
+  }
+  var sharing = false;
+  els.shareBtn.addEventListener('click', function () {
+    if (sharing || !state) return;
+    save();
+    // Nothing stored to read back: the sheet opens at once, as it always has.
+    if (!FormulaSheetImage.hasStoredImage(state)) { openShareSheet(state); return; }
+    sharing = true;
+    FormulaSheetImage.forExport(state).then(openShareSheet)['catch'](function (e) {
+      setShareNote('Could not read this sheet’s diagrams to share it (' + ((e && e.message) || 'unknown error') + ').', true);
+    }).then(function () { sharing = false; });
   });
 
   /** The same test the Import JSON button already applies to a picked file, so
@@ -1016,12 +1072,96 @@
         var wanted = String(decoded.name || decoded.title || '').trim() || 'Shared Sheet';
         var name = uniqueSheetName(wanted);
         state = normalizeSheet(decoded, name);
+        /* share.js stripped a link's diagrams to null. Only a real inline
+           image is kept from outside (fsb-image.js); an `idb:` reference
+           names a diagram in the SENDER's browser and is dropped. A link
+           built by hand can still carry one: settleImages() stores it before
+           anything else, and until then it is saved inline, as a sheet from
+           a browser without IndexedDB would be. */
+        FormulaSheetImage.acceptArrival(state);
         FormulaSheetStore.setCurrentName(name);
         openEditIndex = -1;
         setShareNote('Loaded a shared formula sheet as “' + name + '”. Nothing already saved here was changed.');
         return true;
       }
     });
+  }
+
+  /* ---------- diagrams: IndexedDB behind every saved sheet (Path 4 P4) ----------
+     Every saved sheet's formulas hold `idb:` references; the diagrams are in
+     the shared media store (fsb-image.js). At boot: move any data: URL
+     diagram (a sheet saved before this, an arrival, or a browser that had no
+     IndexedDB) into the store, in EVERY saved sheet and not only the open
+     one, writing back only the sheets that changed; give every stored
+     diagram of the open sheet an object URL; say once which diagrams are
+     missing; then — at boot only, with media-db.js's ten-minute grace —
+     delete stored diagrams no saved sheet points at. 041 has no undo for a
+     removed diagram, formula or sheet, so nothing else needs keeping.
+     Switching sheets hydrates the one opened (loadSheetByName).
+     __formulaImagesSettled is for the suite. */
+
+  /** [{ name, sheet }] for the open sheet and every other saved one, read fresh. */
+  function everySheet() {
+    var out = state ? [{ name: state.name, sheet: state }] : [];
+    FormulaSheetStore.listSheets().forEach(function (name) {
+      if (state && name === state.name) return;
+      var s = FormulaSheetStore.loadSheet(name);
+      if (s && typeof s === 'object' && Array.isArray(s.items)) out.push({ name: name, sheet: s });
+    });
+    return out;
+  }
+  function everyImage() {
+    var out = [];
+    everySheet().forEach(function (x) { out = out.concat(FormulaSheetImage.valuesIn(x.sheet)); });
+    return out;
+  }
+
+  /** Swap each moved data: URL for its reference in the open sheet and in
+      FRESH copies of the others, and write back only what changed. */
+  function applyStoredImages(map) {
+    if (state && FormulaSheetImage.apply(state, map)) save();
+    FormulaSheetStore.listSheets().forEach(function (name) {
+      if (state && name === state.name) return;
+      var s = FormulaSheetStore.loadSheet(name);
+      if (s && typeof s === 'object' && FormulaSheetImage.apply(s, map)) FormulaSheetStore.writeSheet(name, s);
+    });
+  }
+
+  function sayMissingImages() {
+    var count = 0, seen = {};
+    // Hydrating only the open sheet means only its diagrams are known missing.
+    FormulaSheetImage.valuesIn(state).forEach(function (v) {
+      if (!FormulaSheetImage.isMissing(v)) return;
+      if (!seen[v]) { seen[v] = 1; count++; }
+    });
+    if (!count) return;
+    var msg = (count === 1 ? '1 diagram' : count + ' diagrams') + ' on “' + state.name + '”' +
+      (count === 1 ? ' is' : ' are') + ' missing from this browser’s storage and left off the sheet. Use the picture button on the formula to add it again.';
+    var before = els.shareNote.style.display === 'none' ? '' : els.shareNote.textContent;
+    setShareNote(before ? before + ' ' + msg : msg, true);
+  }
+
+  /** Give the open sheet's stored diagrams object URLs, then redraw. */
+  function showImages() {
+    if (!state) return Promise.resolve();
+    return FormulaSheetImage.hydrate(FormulaSheetImage.valuesIn(state)).then(function (gone) {
+      if (state) renderAll();
+      return gone;
+    });
+  }
+
+  var imagesSettled = false;   // until then, the boot pass hydrates the open sheet
+  function settleImages() {
+    return FormulaSheetImage.store(everyImage())
+      .then(function (map) {
+        if (Object.keys(map).length) applyStoredImages(map);
+        return showImages();
+      })
+      .then(function () {
+        sayMissingImages();
+        return FormulaSheetImage.gc(everyImage().filter(FormulaSheetImage.isRef));
+      })['catch'](function () { /* reads never block the page */ })
+      .then(function () { imagesSettled = true; });
   }
 
   /* ---------- boot ----------
@@ -1041,6 +1181,7 @@
   } else {
     renderAll();
   }
+  settleImages().then(function () { window.__formulaImagesSettled = true; });
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
