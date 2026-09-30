@@ -9,6 +9,69 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P4, 080: the Virtual Manipulatives pieces as one rendered atlas (2026-09-30, #311, `CACHE_VERSION` v207)
+
+Rank 1 was a 1-session row: 080's pieces rendered in Blender. It shipped, the row is deleted, and
+every rank below it moved up one. Rendered on **huginn** (Blender 5.2.2 LTS, `-t 4`), three
+times: all three byte-identical.
+
+**What shipped.**
+- `Tools/blender-art/scene_pieces.py` renders one ledger entry,
+  `Tools/virtual-manipulatives-board/art/pieces.webp`, 1248×720 (2x of a 624×360 CSS atlas),
+  **43,318 B** against a 256,000 B cap. It holds 23 cells: base-ten unit, rod and flat; algebra
+  ±1, ±x, ±x²; a fraction tile's shaded and empty segment; six d6 faces; six pattern blocks. One
+  Blender unit is 260 CSS px, so the rig's area lights, twelve units off, light every cell alike.
+- The entry's `cells` is the atlas layout in CSS px, written by hand. The page's `CELLS` is the
+  same table. Every piece is a div with `background-position` into the atlas, and
+  `smoke-rendered-pieces.mjs` (port 8453) fails if the two tables part. Broken on purpose once:
+  moving the unit's cell 1 px in the page gave `unit is drawn from its ledger cell (got "-268px
+  -35px", want "-268px -34px")`.
+- Two new piece families, which the row asked for: pattern blocks (six shapes, their conventional
+  colours as declared extras) and a d6 that saves the face it shows and re-rolls from a ⚄ button.
+- Every piece is `role="img"` with its name and value ("Algebra tile, negative x", "Fraction
+  tile, one quarter shaded: 1/4", "Die showing 4"). **The row said this already existed. It did
+  not:** the pieces had no accessible name at all.
+- The snapshot draws from the atlas at 2x, with labels set in their computed colour.
+- `check:art`: a `sheet` use; `underText` as a list of named regions; a **GREY** rule.
+  `validate-art.test.mjs` has cases for each (87 pass).
+
+**Calls made (reversible).**
+- **One light atlas, not one per theme.** The row assumed the pieces were drawn on a themed
+  canvas. In fact the board is a `.paper-sheet`, which ink-paper.css keeps light in both
+  themes, deliberately, and the snapshot paints white. A dark atlas would never be shown. The
+  new `use: "sheet"` needs no twin and must be `light`. The suite fails if the board ever
+  follows the theme; that would be the moment to render the twin.
+- **Colour is never the only carrier, measured.**
+  - The old positive algebra tile (#2c6e3f, luminance 0.12) and negative (#a3372b, 0.11) were
+    the same grey. Positive is now pale green `#b4e0bf` with `--ink` text. Negative stays
+    `--err` with white text and gets an inset white ring.
+  - The shaded fraction segment is burnt orange `#b8621b` with white "1/n".
+  - Measured greyscale ratios on the file: 3.59–3.61:1 for the algebra pairs and 3.70:1 for
+    shaded/empty, held to 3:1 (WCAG's non-text floor).
+  - Label contrast per region: 6.3–7.2:1.
+- **No thousand-cube.** Straight down, it is a hundred-flat. The row listed it; the top-down
+  camera it also specified cannot tell the two apart.
+- **Fraction tiles keep 080's meaning**: a whole of n segments with one shaded, not the
+  standard fraction-bar set. Changing that is a product change, not art.
+- Pattern blocks do not rotate. Rank 179 (snap-to-grid and data-driven families) is where that
+  belongs.
+
+**What went wrong, or was not verified.**
+- **The row was written without reading the page.** It said 080 draws on a canvas and reads the
+  atlas with `drawImage`. 080 drew DOM divs; only the snapshot used a canvas. The first hour
+  went on reading, not rendering.
+- The first render showed pinholes where four bevelled cubes met on the flat (fixed with a
+  backing plate), and dark specks where the negative ring's bars overlapped (fixed by making
+  the bars meet end to side).
+- **Found, not fixed:** 080's number-line snapshot never draws its markers. It walks the wrap's
+  direct children, and the markers are inside `#nlMarkers`. The bug predates this PR.
+- **Found and fixed in step 6:** the batch-size table in `BACKLOG.md` read `| 0 | **one** |`.
+  An earlier step-6 renumbering regex had decremented it as if it were a rank. Mine did the
+  same before I caught it. **A renumbering script must only touch the Tier 1 table.**
+- The browser suites ran under system Chrome 154 (`PW_CHROMIUM_EXECUTABLE=/usr/bin/google-chrome`),
+  because the pinned Playwright's Chromium is not installed on huginn. CI passed.
+- Not checked: the offline zip, a real projector, a phone.
+
 ## Path 21: where Blender runs, huginn or Windows (2026-09-29, docs only)
 
 Devon's instruction: work that needs only basic headless Blender can run on huginn, and work
