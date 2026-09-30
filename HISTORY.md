@@ -9,6 +9,46 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P4, 042: rendered certificate seals and ribbons (2026-09-30, #315, `CACHE_VERSION` v209)
+
+Rank 1 was a ½-session row: foil seals and ribbons for 042 Certificate & Award Maker, replacing the
+glyph `.cert-seal` and giving the Ribbon template a real ribbon. It shipped, and the row is
+deleted. Rendered on **huginn** (5.2.2 LTS, `-t 4`), twice each: all ten were byte-identical.
+
+**What shipped.**
+- `Tools/blender-art/scene_seals.py`, ten entries in a new `seals` family:
+  - Six seals (gold, silver, bronze, red, blue, green), 320×320. Each has a serrated rim, a
+    ring of beads and a raised star, with **no text**.
+  - Four ribbon-tail pairs, 320×472.
+  - **84,170 B** in all, against 120 KB.
+- The ribbon's canvas is the seal's width, with the seal's centre at the same height in both.
+  The page stacks the two at one corner, and the tails come out from under the seal.
+- 042 has Seal and Ribbon swatch pickers, whose chips are the renders themselves. The art is
+  decorative (`alt=""`), printed, light only, and transparent.
+- `smoke-seals.mjs` (port 8455, 29 assertions) covers:
+  - The pickers match the ledger, and every file loads.
+  - The ribbon is behind the seal.
+  - The seal covers no text in either orientation, even with a long name.
+  - A planted `onerror` value in a preset renders nothing.
+  - The Ribbon template's default, and old presets rendering unchanged.
+  - The print area carries the seal.
+
+**Calls made (reversible).**
+- **Bottom centre, not a corner.** The first placement was top left, mirroring the QR code.
+  The suite's overlap check failed at once: 042's text stacks from the top, not the middle,
+  and a long name reaches the top corners. The free space is between the date and signature
+  lines.
+- **A saved value only selects from a fixed table.** `normalizeSettings` turns anything else
+  into `none`, so no preset text reaches a `src`.
+- **New presets start with no seal, and presets from before render unchanged.** Picking the
+  Ribbon template with no seal chosen puts a gold seal with blue tails on.
+- The dead `.cert-seal` rule is deleted. No markup had used it since an earlier redesign; the
+  row's "replace the glyph" was already true of the page.
+
+**What was not verified.** Chrome's print-to-PDF carries the WebP seal; I checked that by
+rasterizing the PDF. A real printer did not: gold foil through a school laser printer is a grey
+disc, and nobody has seen how grey. The offline zip was not built.
+
 ## Path 21 P4, 071: twelve starter pictures (2026-09-30, #313, `CACHE_VERSION` v208)
 
 Rank 1 was a 1-session row: a starter set of pictures for 071 Picture-Prompt, so the tool works
