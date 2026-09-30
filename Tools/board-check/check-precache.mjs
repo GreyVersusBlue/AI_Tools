@@ -24,7 +24,9 @@
 // Six checks always, and a seventh with `--base <ref>`:
 //
 //   1. MISSING   — every same-origin src/href on a live page resolves to a file
-//                  that exists AND is listed in PRECACHE_URLS.
+//                  that exists AND is listed in PRECACHE_URLS. So does every URL
+//                  in a srcset (since v206: the landing hero's 2x files are named
+//                  only there, and a src/href scan could not see them).
 //   2. MANIFEST  — every local file manifest.json names (icons, screenshots,
 //                  shortcut icons) is listed too. This is a separate check on
 //                  purpose: the maskable icons were missed for exactly this
@@ -40,7 +42,7 @@
 //                  decides what arrives first, so a shell entry the full list
 //                  forgot would be cached at install and then never counted.
 //   6. SHELLDEP  — every subresource a shell PAGE loads eagerly (a <script src>,
-//                  a <link href>, an <img src>) is in SHELL_URLS too. A shell page
+//                  a <link href>, an <img src> or srcset) is in SHELL_URLS too. A shell page
 //                  whose script arrives with the deferred pass is broken, not slow,
 //                  for a teacher who installs and goes offline inside that window.
 //                  Only eager tags count: a library injected on demand behind a
@@ -153,14 +155,22 @@ function livePages() {
 }
 
 const REF = /(?:src|href)\s*=\s*["']([^"']+)["']/gi;
+const SRCSET = /\ssrcset\s*=\s*["']([^"']+)["']/gi;
+/** The URLs of a srcset value: each comma-separated candidate's first token. */
+const srcsetUrls = value => value.split(',').map(c => c.trim().split(/\s+/)[0]).filter(Boolean);
+/** Every src/href value in html, then every srcset candidate. */
+function refsIn(html) {
+  const out = [...html.matchAll(REF)].map(m => m[1]);
+  for (const m of html.matchAll(SRCSET)) out.push(...srcsetUrls(m[1]));
+  return out;
+}
 const missing = new Map();
 
 for (const page of livePages()) {
   const abs = path.join(SITE, page);
   if (!fs.existsSync(abs)) continue;
   const html = fs.readFileSync(abs, 'utf8');
-  for (const m of html.matchAll(REF)) {
-    const raw = m[1];
+  for (const raw of refsIn(html)) {
     if (/^(https?:|data:|mailto:|tel:|#|javascript:|blob:)/i.test(raw)) continue;
     const clean = decodeURIComponent(raw.split('#')[0].split('?')[0]);
     if (!clean) continue;
@@ -214,15 +224,19 @@ if (fs.existsSync(manifestPath)) {
   // another page says nothing about the install tier, and matching it would
   // drag the whole site into the shell one link at a time.
   const SUBRESOURCE = /<(?:script|link|img)\b[^>]*?\b(?:src|href)\s*=\s*["']([^"']+)["']/gi;
+  const SUBSET = /<(?:img|source)\b[^>]*?\ssrcset\s*=\s*["']([^"']+)["']/gi;
+  const scanned = new Set();   // './' and 'index.html' are both shell entries; scan the page once
   for (const u of shell) {
     let page = decodeURIComponent(u);
     if (page === './') page = 'index.html';
-    if (!page.endsWith('.html')) continue;
+    if (!page.endsWith('.html') || scanned.has(page)) continue;
+    scanned.add(page);
     const abs = path.join(SITE, page);
     if (!fs.existsSync(abs)) continue;
     const html = fs.readFileSync(abs, 'utf8');
-    for (const m of html.matchAll(SUBRESOURCE)) {
-      const raw = m[1];
+    const eager = [...html.matchAll(SUBRESOURCE)].map(m => m[1]);
+    for (const m of html.matchAll(SUBSET)) eager.push(...srcsetUrls(m[1]));
+    for (const raw of eager) {
       if (/^(https?:|data:|mailto:|tel:|#|javascript:|blob:)/i.test(raw)) continue;
       const clean = decodeURIComponent(raw.split('#')[0].split('?')[0]);
       if (!clean) continue;

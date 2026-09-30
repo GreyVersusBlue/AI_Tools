@@ -168,7 +168,11 @@ every edit. The deduplication work that established them is summarised in
   landing page's 32 px; and that a `use: "manifest"` PNG (the shortcut icons) is
   named by `manifest.json`. Since #306 it also checks the PWA app mark (`assets/icons/`, family
   `appmark`): a maskable PNG with any non-background pixel outside the 40% safe circle fails
-  **SAFE**. **Add a tool icon, then re-run `build-sprite.mjs`.** The
+  **SAFE**. Since Path 21 P3 (the landing hero) an `<img>` of an entry that declares a
+  `density` must carry its 1x `width`/`height`, its `srcset` must name same-theme entries at
+  the right sizes, and a page showing one theme's picture must show its twin (**IMG**).
+  `check:precache` reads `srcset` too, since the hero's 2x files are named nowhere else.
+  **Add a tool icon, then re-run `build-sprite.mjs`.** The
   offline zip inlines the sprite into its landing page, because Chrome draws nothing
   for an external `<use>` under `file://`. Its test is `npm run test:blender-art`. Keep art
   out of any folder named `test/`: `make-offline-copy.mjs` drops every such path

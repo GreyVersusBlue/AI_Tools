@@ -245,14 +245,39 @@ breaks('dark text over a dark render', 'CONTRAST', c => {
   Object.assign(c.entry('tile-256-dark.webp').underText, { lumMin: 0.3, lumMax: 0.9 });
 });
 breaks('an art file the ledger does not list', 'ORPHAN', c => c.put('Tools/some-tool/art/stray.webp', 'x'));
-breaks('an <img> of an art file with no alt', 'ALT', c => c.put('index.html', '<img src="assets/art/test/tile-256-light.webp">'));
-breaks('a decorative <img> with alt text', 'ALT', c => c.put('Tools/001-x.html', '<img src="../assets/art/test/tile-256-light.webp" alt="a tile">'));
-ok(fixture(c => c.put('Tools/001-x.html', '<img src="../assets/art/test/tile-256-light.webp" alt="">')).length === 0,
+breaks('an <img> of an art file with no alt', 'ALT', c => c.put('index.html', '<img src="assets/art/test/tile-256-light.webp"><img src="assets/art/test/tile-256-dark.webp" alt="">'));
+breaks('a decorative <img> with alt text', 'ALT', c => c.put('Tools/001-x.html', '<img src="../assets/art/test/tile-256-light.webp" alt="a tile"><img src="../assets/art/test/tile-256-dark.webp" alt="">'));
+ok(fixture(c => c.put('Tools/001-x.html', '<img src="../assets/art/test/tile-256-light.webp" alt=""><img src="../assets/art/test/tile-256-dark.webp" alt="">')).length === 0,
   'a decorative <img> with alt="" passes');
 breaks('a meaningful <img> with empty alt', 'ALT', c => {
   c.entry('tile-256-light.webp').decorative = false;
-  c.put('index.html', '<img src="assets/art/test/tile-256-light.webp" alt="">');
+  c.put('index.html', '<img src="assets/art/test/tile-256-light.webp" alt=""><img src="assets/art/test/tile-256-dark.webp" alt="">');
 });
+
+/* IMG: the landing hero, one file per density and theme. */
+const H = 'assets/art/hero/classroom-';
+const heroImg = (theme, o = {}) => `<img src="${o.src || H + '1x-' + theme + '.webp'}"` +
+  ` srcset="${o.srcset || `${H}1x-${theme}.webp 1x, ${H}2x-${theme}.webp 2x`}"` +
+  ` ${o.size === undefined ? 'width="360" height="300"' : o.size} alt="">`;
+const hero = (light = {}, dark = {}) => heroImg('light', light) + (dark === null ? '' : heroImg('dark', dark));
+ok(fixture(c => c.put('index.html', hero())).length === 0, 'the hero as index.html shows it passes');
+breaks('a hero <img> with no width and height', 'IMG', c => c.put('index.html', hero({ size: '' })));
+breaks('a hero <img> sized at its pixels, not its CSS size', 'IMG', c => c.put('index.html', hero({ size: 'width="720" height="600"' })));
+breaks('a 2x candidate that is the 1x file', 'IMG', c => c.put('index.html', hero({ srcset: `${H}1x-light.webp 2x` })));
+// Each case below keeps every twin shown, so only the rule it names can fire:
+// the first cut of these went red through the twin check instead, and four
+// deliberate breaks of the rule itself passed (HISTORY.md, Path 21 P3).
+breaks('srcset candidates from the other theme', 'IMG', c => c.put('index.html',
+  hero({ srcset: `${H}1x-light.webp 1x, ${H}2x-dark.webp 2x` }, { srcset: `${H}1x-dark.webp 1x, ${H}2x-light.webp 2x` })));
+breaks('a srcset candidate the ledger does not list', 'IMG', c => c.put('index.html',
+  hero({ srcset: `${H}1x-light.webp 1x, ${H}3x-light.webp 3x` }, { srcset: `${H}1x-dark.webp 1x, ${H}3x-dark.webp 3x` })));
+breaks('a width descriptor in the srcset', 'IMG', c => c.put('index.html',
+  hero({ srcset: `${H}1x-light.webp 360w` }, { srcset: `${H}1x-dark.webp 360w` })));
+breaks('the dark 2x in a srcset with no light 2x anywhere', 'IMG', c => c.put('index.html',
+  hero({ srcset: `${H}1x-light.webp 1x` })));
+breaks('the light hero shown without its dark twin', 'IMG', c => c.put('index.html', hero({}, null)));
+breaks('a tile shown without its dark twin', 'IMG', c => c.put('index.html', '<img src="assets/art/test/tile-256-light.webp" alt="">'));
+breaks('a density that is not a positive integer', 'LEDGER', c => { c.entry('classroom-1x-light.webp').density = 1.5; });
 
 console.log(`validate-art.test: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

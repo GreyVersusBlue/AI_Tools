@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v205';
+const CACHE_VERSION = 'v206';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -175,6 +175,10 @@ const SHELL_URLS = [
   "_shared/vendor/barlow/barlow-latin-ext-500-normal.woff2",
   "_shared/vendor/barlow/barlow-latin-ext-600-normal.woff2",
   "_shared/vendor/barlow/barlow-latin-ext-700-normal.woff2",
+  "assets/art/hero/classroom-1x-dark.webp",
+  "assets/art/hero/classroom-1x-light.webp",
+  "assets/art/hero/classroom-2x-dark.webp",
+  "assets/art/hero/classroom-2x-light.webp",
   "assets/art/icons/tools.svg",
   "assets/art/shortcuts/t004-96.png",
   "assets/art/shortcuts/t005-96.png",
@@ -445,6 +449,10 @@ const PRECACHE_URLS = [
   "_shared/vendor/barlow/barlow-latin-ext-500-normal.woff2",
   "_shared/vendor/barlow/barlow-latin-ext-600-normal.woff2",
   "_shared/vendor/barlow/barlow-latin-ext-700-normal.woff2",
+  "assets/art/hero/classroom-1x-dark.webp",
+  "assets/art/hero/classroom-1x-light.webp",
+  "assets/art/hero/classroom-2x-dark.webp",
+  "assets/art/hero/classroom-2x-light.webp",
   "assets/art/icons/tools.svg",
   "assets/art/shortcuts/t004-96.png",
   "assets/art/shortcuts/t005-96.png",
