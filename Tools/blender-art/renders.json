@@ -42,6 +42,10 @@
     "pieces": {
       "entryCap": 256000,
       "total": 256000
+    },
+    "prompts": {
+      "entryCap": 40960,
+      "total": 491520
     }
   },
   "entries": [
@@ -2599,6 +2603,1303 @@
         "--card",
         "--err",
         "--ink"
+      ]
+    },
+    {
+      "path": "Tools/picture-prompt-generator/art/market.webp",
+      "script": "Tools/blender-art/scene_prompts.py",
+      "subject": "market",
+      "family": "prompts",
+      "seed": 71,
+      "samples": 64,
+      "quality": 78,
+      "width": 960,
+      "height": 720,
+      "cap": 40960,
+      "theme": "light",
+      "use": "content",
+      "decorative": false,
+      "colors": {
+        "wood": "#b07a4a",
+        "wood-dark": "#7a5230",
+        "sky": "#9cc9e8",
+        "leaf": "#5b9a4a",
+        "grass": "#8cbf6e",
+        "sand": "#e8d6a8",
+        "wall": "--card-2",
+        "skin1": "#f1c9a8",
+        "skin2": "#c68c5f",
+        "skin3": "#8a5a3b",
+        "hair1": "#3b2a20",
+        "hair2": "#c99a55",
+        "red": "--err",
+        "yellow": "#f2c230",
+        "orange": "#e8843a",
+        "green": "#3f9a55",
+        "pink": "#eaa2b8"
+      },
+      "extraColors": [
+        {
+          "hex": "#b07a4a",
+          "why": "071 content picture: wood (tables, crates, floors): ink-paper has no brown"
+        },
+        {
+          "hex": "#7a5230",
+          "why": "071 content picture: dark wood (legs, trunks, a wardrobe)"
+        },
+        {
+          "hex": "#9cc9e8",
+          "why": "071 content picture: sky, water and window glass: --accent-2 is too dark to read as glass"
+        },
+        {
+          "hex": "#5b9a4a",
+          "why": "071 content picture: tree leaves"
+        },
+        {
+          "hex": "#8cbf6e",
+          "why": "071 content picture: grass"
+        },
+        {
+          "hex": "#e8d6a8",
+          "why": "071 content picture: sand and a dirt path"
+        },
+        {
+          "hex": "#f1c9a8",
+          "why": "071 content picture: a light skin tone; people in the scenes need skin, in a range of tones"
+        },
+        {
+          "hex": "#c68c5f",
+          "why": "071 content picture: a medium skin tone"
+        },
+        {
+          "hex": "#8a5a3b",
+          "why": "071 content picture: a dark skin tone"
+        },
+        {
+          "hex": "#3b2a20",
+          "why": "071 content picture: dark hair"
+        },
+        {
+          "hex": "#c99a55",
+          "why": "071 content picture: fair hair"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "071 content picture: yellow (a balloon, a bus, a shirt): a colour students name"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "071 content picture: orange (fruit, a cat, a candle flame)"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "071 content picture: green (vegetables, a chalkboard, a tractor)"
+        },
+        {
+          "hex": "#eaa2b8",
+          "why": "071 content picture: pink (a cake, a pig's snout)"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "7161963a455b86cb212bfc941818f5bf988ed5f8e4c78cedb251ab2bab44cbb0",
+      "bytes": 15494,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--card-2",
+        "--err",
+        "--line",
+        "--line-strong",
+        "--muted"
+      ]
+    },
+    {
+      "path": "Tools/picture-prompt-generator/art/kitchen.webp",
+      "script": "Tools/blender-art/scene_prompts.py",
+      "subject": "kitchen",
+      "family": "prompts",
+      "seed": 72,
+      "samples": 64,
+      "quality": 78,
+      "width": 960,
+      "height": 720,
+      "cap": 40960,
+      "theme": "light",
+      "use": "content",
+      "decorative": false,
+      "colors": {
+        "wood": "#b07a4a",
+        "wood-dark": "#7a5230",
+        "sky": "#9cc9e8",
+        "leaf": "#5b9a4a",
+        "grass": "#8cbf6e",
+        "sand": "#e8d6a8",
+        "wall": "--card-2",
+        "skin1": "#f1c9a8",
+        "skin2": "#c68c5f",
+        "skin3": "#8a5a3b",
+        "hair1": "#3b2a20",
+        "hair2": "#c99a55",
+        "red": "--err",
+        "yellow": "#f2c230",
+        "orange": "#e8843a",
+        "green": "#3f9a55",
+        "pink": "#eaa2b8"
+      },
+      "extraColors": [
+        {
+          "hex": "#b07a4a",
+          "why": "071 content picture: wood (tables, crates, floors): ink-paper has no brown"
+        },
+        {
+          "hex": "#7a5230",
+          "why": "071 content picture: dark wood (legs, trunks, a wardrobe)"
+        },
+        {
+          "hex": "#9cc9e8",
+          "why": "071 content picture: sky, water and window glass: --accent-2 is too dark to read as glass"
+        },
+        {
+          "hex": "#5b9a4a",
+          "why": "071 content picture: tree leaves"
+        },
+        {
+          "hex": "#8cbf6e",
+          "why": "071 content picture: grass"
+        },
+        {
+          "hex": "#e8d6a8",
+          "why": "071 content picture: sand and a dirt path"
+        },
+        {
+          "hex": "#f1c9a8",
+          "why": "071 content picture: a light skin tone; people in the scenes need skin, in a range of tones"
+        },
+        {
+          "hex": "#c68c5f",
+          "why": "071 content picture: a medium skin tone"
+        },
+        {
+          "hex": "#8a5a3b",
+          "why": "071 content picture: a dark skin tone"
+        },
+        {
+          "hex": "#3b2a20",
+          "why": "071 content picture: dark hair"
+        },
+        {
+          "hex": "#c99a55",
+          "why": "071 content picture: fair hair"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "071 content picture: yellow (a balloon, a bus, a shirt): a colour students name"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "071 content picture: orange (fruit, a cat, a candle flame)"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "071 content picture: green (vegetables, a chalkboard, a tractor)"
+        },
+        {
+          "hex": "#eaa2b8",
+          "why": "071 content picture: pink (a cake, a pig's snout)"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "73787282301595ad2d2434ef49fec0a2e33183350de8c40f985f0ede287269ad",
+      "bytes": 10878,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--card-2",
+        "--err",
+        "--ink",
+        "--line-strong",
+        "--muted"
+      ]
+    },
+    {
+      "path": "Tools/picture-prompt-generator/art/park.webp",
+      "script": "Tools/blender-art/scene_prompts.py",
+      "subject": "park",
+      "family": "prompts",
+      "seed": 73,
+      "samples": 64,
+      "quality": 78,
+      "width": 960,
+      "height": 720,
+      "cap": 40960,
+      "theme": "light",
+      "use": "content",
+      "decorative": false,
+      "colors": {
+        "wood": "#b07a4a",
+        "wood-dark": "#7a5230",
+        "sky": "#9cc9e8",
+        "leaf": "#5b9a4a",
+        "grass": "#8cbf6e",
+        "sand": "#e8d6a8",
+        "wall": "--card-2",
+        "skin1": "#f1c9a8",
+        "skin2": "#c68c5f",
+        "skin3": "#8a5a3b",
+        "hair1": "#3b2a20",
+        "hair2": "#c99a55",
+        "red": "--err",
+        "yellow": "#f2c230",
+        "orange": "#e8843a",
+        "green": "#3f9a55",
+        "pink": "#eaa2b8"
+      },
+      "extraColors": [
+        {
+          "hex": "#b07a4a",
+          "why": "071 content picture: wood (tables, crates, floors): ink-paper has no brown"
+        },
+        {
+          "hex": "#7a5230",
+          "why": "071 content picture: dark wood (legs, trunks, a wardrobe)"
+        },
+        {
+          "hex": "#9cc9e8",
+          "why": "071 content picture: sky, water and window glass: --accent-2 is too dark to read as glass"
+        },
+        {
+          "hex": "#5b9a4a",
+          "why": "071 content picture: tree leaves"
+        },
+        {
+          "hex": "#8cbf6e",
+          "why": "071 content picture: grass"
+        },
+        {
+          "hex": "#e8d6a8",
+          "why": "071 content picture: sand and a dirt path"
+        },
+        {
+          "hex": "#f1c9a8",
+          "why": "071 content picture: a light skin tone; people in the scenes need skin, in a range of tones"
+        },
+        {
+          "hex": "#c68c5f",
+          "why": "071 content picture: a medium skin tone"
+        },
+        {
+          "hex": "#8a5a3b",
+          "why": "071 content picture: a dark skin tone"
+        },
+        {
+          "hex": "#3b2a20",
+          "why": "071 content picture: dark hair"
+        },
+        {
+          "hex": "#c99a55",
+          "why": "071 content picture: fair hair"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "071 content picture: yellow (a balloon, a bus, a shirt): a colour students name"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "071 content picture: orange (fruit, a cat, a candle flame)"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "071 content picture: green (vegetables, a chalkboard, a tractor)"
+        },
+        {
+          "hex": "#eaa2b8",
+          "why": "071 content picture: pink (a cake, a pig's snout)"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "2625500037e635673fb90748c38ac9e57bb5a6efd4e972b171942f70e9f6554c",
+      "bytes": 13380,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--err",
+        "--ink",
+        "--line-strong",
+        "--muted"
+      ]
+    },
+    {
+      "path": "Tools/picture-prompt-generator/art/classroom.webp",
+      "script": "Tools/blender-art/scene_prompts.py",
+      "subject": "classroom",
+      "family": "prompts",
+      "seed": 74,
+      "samples": 64,
+      "quality": 78,
+      "width": 960,
+      "height": 720,
+      "cap": 40960,
+      "theme": "light",
+      "use": "content",
+      "decorative": false,
+      "colors": {
+        "wood": "#b07a4a",
+        "wood-dark": "#7a5230",
+        "sky": "#9cc9e8",
+        "leaf": "#5b9a4a",
+        "grass": "#8cbf6e",
+        "sand": "#e8d6a8",
+        "wall": "--card-2",
+        "skin1": "#f1c9a8",
+        "skin2": "#c68c5f",
+        "skin3": "#8a5a3b",
+        "hair1": "#3b2a20",
+        "hair2": "#c99a55",
+        "red": "--err",
+        "yellow": "#f2c230",
+        "orange": "#e8843a",
+        "green": "#3f9a55",
+        "pink": "#eaa2b8"
+      },
+      "extraColors": [
+        {
+          "hex": "#b07a4a",
+          "why": "071 content picture: wood (tables, crates, floors): ink-paper has no brown"
+        },
+        {
+          "hex": "#7a5230",
+          "why": "071 content picture: dark wood (legs, trunks, a wardrobe)"
+        },
+        {
+          "hex": "#9cc9e8",
+          "why": "071 content picture: sky, water and window glass: --accent-2 is too dark to read as glass"
+        },
+        {
+          "hex": "#5b9a4a",
+          "why": "071 content picture: tree leaves"
+        },
+        {
+          "hex": "#8cbf6e",
+          "why": "071 content picture: grass"
+        },
+        {
+          "hex": "#e8d6a8",
+          "why": "071 content picture: sand and a dirt path"
+        },
+        {
+          "hex": "#f1c9a8",
+          "why": "071 content picture: a light skin tone; people in the scenes need skin, in a range of tones"
+        },
+        {
+          "hex": "#c68c5f",
+          "why": "071 content picture: a medium skin tone"
+        },
+        {
+          "hex": "#8a5a3b",
+          "why": "071 content picture: a dark skin tone"
+        },
+        {
+          "hex": "#3b2a20",
+          "why": "071 content picture: dark hair"
+        },
+        {
+          "hex": "#c99a55",
+          "why": "071 content picture: fair hair"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "071 content picture: yellow (a balloon, a bus, a shirt): a colour students name"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "071 content picture: orange (fruit, a cat, a candle flame)"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "071 content picture: green (vegetables, a chalkboard, a tractor)"
+        },
+        {
+          "hex": "#eaa2b8",
+          "why": "071 content picture: pink (a cake, a pig's snout)"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "b5364716c44e25d606e97ea4287b8eca5e7c9a3c4958de9c40e1b39bc5867483",
+      "bytes": 14638,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--err",
+        "--line-strong",
+        "--muted"
+      ]
+    },
+    {
+      "path": "Tools/picture-prompt-generator/art/bus-stop.webp",
+      "script": "Tools/blender-art/scene_prompts.py",
+      "subject": "bus-stop",
+      "family": "prompts",
+      "seed": 75,
+      "samples": 64,
+      "quality": 78,
+      "width": 960,
+      "height": 720,
+      "cap": 40960,
+      "theme": "light",
+      "use": "content",
+      "decorative": false,
+      "colors": {
+        "wood": "#b07a4a",
+        "wood-dark": "#7a5230",
+        "sky": "#9cc9e8",
+        "leaf": "#5b9a4a",
+        "grass": "#8cbf6e",
+        "sand": "#e8d6a8",
+        "wall": "--card-2",
+        "skin1": "#f1c9a8",
+        "skin2": "#c68c5f",
+        "skin3": "#8a5a3b",
+        "hair1": "#3b2a20",
+        "hair2": "#c99a55",
+        "red": "--err",
+        "yellow": "#f2c230",
+        "orange": "#e8843a",
+        "green": "#3f9a55",
+        "pink": "#eaa2b8"
+      },
+      "extraColors": [
+        {
+          "hex": "#b07a4a",
+          "why": "071 content picture: wood (tables, crates, floors): ink-paper has no brown"
+        },
+        {
+          "hex": "#7a5230",
+          "why": "071 content picture: dark wood (legs, trunks, a wardrobe)"
+        },
+        {
+          "hex": "#9cc9e8",
+          "why": "071 content picture: sky, water and window glass: --accent-2 is too dark to read as glass"
+        },
+        {
+          "hex": "#5b9a4a",
+          "why": "071 content picture: tree leaves"
+        },
+        {
+          "hex": "#8cbf6e",
+          "why": "071 content picture: grass"
+        },
+        {
+          "hex": "#e8d6a8",
+          "why": "071 content picture: sand and a dirt path"
+        },
+        {
+          "hex": "#f1c9a8",
+          "why": "071 content picture: a light skin tone; people in the scenes need skin, in a range of tones"
+        },
+        {
+          "hex": "#c68c5f",
+          "why": "071 content picture: a medium skin tone"
+        },
+        {
+          "hex": "#8a5a3b",
+          "why": "071 content picture: a dark skin tone"
+        },
+        {
+          "hex": "#3b2a20",
+          "why": "071 content picture: dark hair"
+        },
+        {
+          "hex": "#c99a55",
+          "why": "071 content picture: fair hair"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "071 content picture: yellow (a balloon, a bus, a shirt): a colour students name"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "071 content picture: orange (fruit, a cat, a candle flame)"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "071 content picture: green (vegetables, a chalkboard, a tractor)"
+        },
+        {
+          "hex": "#eaa2b8",
+          "why": "071 content picture: pink (a cake, a pig's snout)"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "c997f4d64c36d06f911aa954e21f887b2fbf99db948fd28631e2e00123c04dcb",
+      "bytes": 12742,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--err",
+        "--ink",
+        "--line",
+        "--line-strong",
+        "--muted"
+      ]
+    },
+    {
+      "path": "Tools/picture-prompt-generator/art/doctor.webp",
+      "script": "Tools/blender-art/scene_prompts.py",
+      "subject": "doctor",
+      "family": "prompts",
+      "seed": 76,
+      "samples": 64,
+      "quality": 78,
+      "width": 960,
+      "height": 720,
+      "cap": 40960,
+      "theme": "light",
+      "use": "content",
+      "decorative": false,
+      "colors": {
+        "wood": "#b07a4a",
+        "wood-dark": "#7a5230",
+        "sky": "#9cc9e8",
+        "leaf": "#5b9a4a",
+        "grass": "#8cbf6e",
+        "sand": "#e8d6a8",
+        "wall": "--card-2",
+        "skin1": "#f1c9a8",
+        "skin2": "#c68c5f",
+        "skin3": "#8a5a3b",
+        "hair1": "#3b2a20",
+        "hair2": "#c99a55",
+        "red": "--err",
+        "yellow": "#f2c230",
+        "orange": "#e8843a",
+        "green": "#3f9a55",
+        "pink": "#eaa2b8"
+      },
+      "extraColors": [
+        {
+          "hex": "#b07a4a",
+          "why": "071 content picture: wood (tables, crates, floors): ink-paper has no brown"
+        },
+        {
+          "hex": "#7a5230",
+          "why": "071 content picture: dark wood (legs, trunks, a wardrobe)"
+        },
+        {
+          "hex": "#9cc9e8",
+          "why": "071 content picture: sky, water and window glass: --accent-2 is too dark to read as glass"
+        },
+        {
+          "hex": "#5b9a4a",
+          "why": "071 content picture: tree leaves"
+        },
+        {
+          "hex": "#8cbf6e",
+          "why": "071 content picture: grass"
+        },
+        {
+          "hex": "#e8d6a8",
+          "why": "071 content picture: sand and a dirt path"
+        },
+        {
+          "hex": "#f1c9a8",
+          "why": "071 content picture: a light skin tone; people in the scenes need skin, in a range of tones"
+        },
+        {
+          "hex": "#c68c5f",
+          "why": "071 content picture: a medium skin tone"
+        },
+        {
+          "hex": "#8a5a3b",
+          "why": "071 content picture: a dark skin tone"
+        },
+        {
+          "hex": "#3b2a20",
+          "why": "071 content picture: dark hair"
+        },
+        {
+          "hex": "#c99a55",
+          "why": "071 content picture: fair hair"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "071 content picture: yellow (a balloon, a bus, a shirt): a colour students name"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "071 content picture: orange (fruit, a cat, a candle flame)"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "071 content picture: green (vegetables, a chalkboard, a tractor)"
+        },
+        {
+          "hex": "#eaa2b8",
+          "why": "071 content picture: pink (a cake, a pig's snout)"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "d702e6047544a2d335d97fc1dbf95a0beff38869f3cab0e9f8d9da37a002c52a",
+      "bytes": 10280,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--card-2",
+        "--err",
+        "--ink",
+        "--line-strong",
+        "--muted"
+      ]
+    },
+    {
+      "path": "Tools/picture-prompt-generator/art/beach.webp",
+      "script": "Tools/blender-art/scene_prompts.py",
+      "subject": "beach",
+      "family": "prompts",
+      "seed": 77,
+      "samples": 64,
+      "quality": 78,
+      "width": 960,
+      "height": 720,
+      "cap": 40960,
+      "theme": "light",
+      "use": "content",
+      "decorative": false,
+      "colors": {
+        "wood": "#b07a4a",
+        "wood-dark": "#7a5230",
+        "sky": "#9cc9e8",
+        "leaf": "#5b9a4a",
+        "grass": "#8cbf6e",
+        "sand": "#e8d6a8",
+        "wall": "--card-2",
+        "skin1": "#f1c9a8",
+        "skin2": "#c68c5f",
+        "skin3": "#8a5a3b",
+        "hair1": "#3b2a20",
+        "hair2": "#c99a55",
+        "red": "--err",
+        "yellow": "#f2c230",
+        "orange": "#e8843a",
+        "green": "#3f9a55",
+        "pink": "#eaa2b8"
+      },
+      "extraColors": [
+        {
+          "hex": "#b07a4a",
+          "why": "071 content picture: wood (tables, crates, floors): ink-paper has no brown"
+        },
+        {
+          "hex": "#7a5230",
+          "why": "071 content picture: dark wood (legs, trunks, a wardrobe)"
+        },
+        {
+          "hex": "#9cc9e8",
+          "why": "071 content picture: sky, water and window glass: --accent-2 is too dark to read as glass"
+        },
+        {
+          "hex": "#5b9a4a",
+          "why": "071 content picture: tree leaves"
+        },
+        {
+          "hex": "#8cbf6e",
+          "why": "071 content picture: grass"
+        },
+        {
+          "hex": "#e8d6a8",
+          "why": "071 content picture: sand and a dirt path"
+        },
+        {
+          "hex": "#f1c9a8",
+          "why": "071 content picture: a light skin tone; people in the scenes need skin, in a range of tones"
+        },
+        {
+          "hex": "#c68c5f",
+          "why": "071 content picture: a medium skin tone"
+        },
+        {
+          "hex": "#8a5a3b",
+          "why": "071 content picture: a dark skin tone"
+        },
+        {
+          "hex": "#3b2a20",
+          "why": "071 content picture: dark hair"
+        },
+        {
+          "hex": "#c99a55",
+          "why": "071 content picture: fair hair"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "071 content picture: yellow (a balloon, a bus, a shirt): a colour students name"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "071 content picture: orange (fruit, a cat, a candle flame)"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "071 content picture: green (vegetables, a chalkboard, a tractor)"
+        },
+        {
+          "hex": "#eaa2b8",
+          "why": "071 content picture: pink (a cake, a pig's snout)"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "e2cec98d3f20c738fbff3b76e0bded5348fec9d06fe52da898bd0aa01ac22aa9",
+      "bytes": 13002,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--err",
+        "--line-strong"
+      ]
+    },
+    {
+      "path": "Tools/picture-prompt-generator/art/cafe.webp",
+      "script": "Tools/blender-art/scene_prompts.py",
+      "subject": "cafe",
+      "family": "prompts",
+      "seed": 78,
+      "samples": 64,
+      "quality": 78,
+      "width": 960,
+      "height": 720,
+      "cap": 40960,
+      "theme": "light",
+      "use": "content",
+      "decorative": false,
+      "colors": {
+        "wood": "#b07a4a",
+        "wood-dark": "#7a5230",
+        "sky": "#9cc9e8",
+        "leaf": "#5b9a4a",
+        "grass": "#8cbf6e",
+        "sand": "#e8d6a8",
+        "wall": "--card-2",
+        "skin1": "#f1c9a8",
+        "skin2": "#c68c5f",
+        "skin3": "#8a5a3b",
+        "hair1": "#3b2a20",
+        "hair2": "#c99a55",
+        "red": "--err",
+        "yellow": "#f2c230",
+        "orange": "#e8843a",
+        "green": "#3f9a55",
+        "pink": "#eaa2b8"
+      },
+      "extraColors": [
+        {
+          "hex": "#b07a4a",
+          "why": "071 content picture: wood (tables, crates, floors): ink-paper has no brown"
+        },
+        {
+          "hex": "#7a5230",
+          "why": "071 content picture: dark wood (legs, trunks, a wardrobe)"
+        },
+        {
+          "hex": "#9cc9e8",
+          "why": "071 content picture: sky, water and window glass: --accent-2 is too dark to read as glass"
+        },
+        {
+          "hex": "#5b9a4a",
+          "why": "071 content picture: tree leaves"
+        },
+        {
+          "hex": "#8cbf6e",
+          "why": "071 content picture: grass"
+        },
+        {
+          "hex": "#e8d6a8",
+          "why": "071 content picture: sand and a dirt path"
+        },
+        {
+          "hex": "#f1c9a8",
+          "why": "071 content picture: a light skin tone; people in the scenes need skin, in a range of tones"
+        },
+        {
+          "hex": "#c68c5f",
+          "why": "071 content picture: a medium skin tone"
+        },
+        {
+          "hex": "#8a5a3b",
+          "why": "071 content picture: a dark skin tone"
+        },
+        {
+          "hex": "#3b2a20",
+          "why": "071 content picture: dark hair"
+        },
+        {
+          "hex": "#c99a55",
+          "why": "071 content picture: fair hair"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "071 content picture: yellow (a balloon, a bus, a shirt): a colour students name"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "071 content picture: orange (fruit, a cat, a candle flame)"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "071 content picture: green (vegetables, a chalkboard, a tractor)"
+        },
+        {
+          "hex": "#eaa2b8",
+          "why": "071 content picture: pink (a cake, a pig's snout)"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "0a9919ddba74a1504ed7342a80cea86b3ddb44112d142bd748b7f57b41377105",
+      "bytes": 13056,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--card-2",
+        "--err",
+        "--ink",
+        "--line-strong",
+        "--muted"
+      ]
+    },
+    {
+      "path": "Tools/picture-prompt-generator/art/library.webp",
+      "script": "Tools/blender-art/scene_prompts.py",
+      "subject": "library",
+      "family": "prompts",
+      "seed": 79,
+      "samples": 64,
+      "quality": 78,
+      "width": 960,
+      "height": 720,
+      "cap": 40960,
+      "theme": "light",
+      "use": "content",
+      "decorative": false,
+      "colors": {
+        "wood": "#b07a4a",
+        "wood-dark": "#7a5230",
+        "sky": "#9cc9e8",
+        "leaf": "#5b9a4a",
+        "grass": "#8cbf6e",
+        "sand": "#e8d6a8",
+        "wall": "--card-2",
+        "skin1": "#f1c9a8",
+        "skin2": "#c68c5f",
+        "skin3": "#8a5a3b",
+        "hair1": "#3b2a20",
+        "hair2": "#c99a55",
+        "red": "--err",
+        "yellow": "#f2c230",
+        "orange": "#e8843a",
+        "green": "#3f9a55",
+        "pink": "#eaa2b8"
+      },
+      "extraColors": [
+        {
+          "hex": "#b07a4a",
+          "why": "071 content picture: wood (tables, crates, floors): ink-paper has no brown"
+        },
+        {
+          "hex": "#7a5230",
+          "why": "071 content picture: dark wood (legs, trunks, a wardrobe)"
+        },
+        {
+          "hex": "#9cc9e8",
+          "why": "071 content picture: sky, water and window glass: --accent-2 is too dark to read as glass"
+        },
+        {
+          "hex": "#5b9a4a",
+          "why": "071 content picture: tree leaves"
+        },
+        {
+          "hex": "#8cbf6e",
+          "why": "071 content picture: grass"
+        },
+        {
+          "hex": "#e8d6a8",
+          "why": "071 content picture: sand and a dirt path"
+        },
+        {
+          "hex": "#f1c9a8",
+          "why": "071 content picture: a light skin tone; people in the scenes need skin, in a range of tones"
+        },
+        {
+          "hex": "#c68c5f",
+          "why": "071 content picture: a medium skin tone"
+        },
+        {
+          "hex": "#8a5a3b",
+          "why": "071 content picture: a dark skin tone"
+        },
+        {
+          "hex": "#3b2a20",
+          "why": "071 content picture: dark hair"
+        },
+        {
+          "hex": "#c99a55",
+          "why": "071 content picture: fair hair"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "071 content picture: yellow (a balloon, a bus, a shirt): a colour students name"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "071 content picture: orange (fruit, a cat, a candle flame)"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "071 content picture: green (vegetables, a chalkboard, a tractor)"
+        },
+        {
+          "hex": "#eaa2b8",
+          "why": "071 content picture: pink (a cake, a pig's snout)"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "f829b3665723a5168ac5a0459ac14232b8d903e8cab098483dcd7c41ef146772",
+      "bytes": 16722,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card-2",
+        "--err",
+        "--ink",
+        "--line-strong",
+        "--muted"
+      ]
+    },
+    {
+      "path": "Tools/picture-prompt-generator/art/party.webp",
+      "script": "Tools/blender-art/scene_prompts.py",
+      "subject": "party",
+      "family": "prompts",
+      "seed": 80,
+      "samples": 64,
+      "quality": 78,
+      "width": 960,
+      "height": 720,
+      "cap": 40960,
+      "theme": "light",
+      "use": "content",
+      "decorative": false,
+      "colors": {
+        "wood": "#b07a4a",
+        "wood-dark": "#7a5230",
+        "sky": "#9cc9e8",
+        "leaf": "#5b9a4a",
+        "grass": "#8cbf6e",
+        "sand": "#e8d6a8",
+        "wall": "--card-2",
+        "skin1": "#f1c9a8",
+        "skin2": "#c68c5f",
+        "skin3": "#8a5a3b",
+        "hair1": "#3b2a20",
+        "hair2": "#c99a55",
+        "red": "--err",
+        "yellow": "#f2c230",
+        "orange": "#e8843a",
+        "green": "#3f9a55",
+        "pink": "#eaa2b8"
+      },
+      "extraColors": [
+        {
+          "hex": "#b07a4a",
+          "why": "071 content picture: wood (tables, crates, floors): ink-paper has no brown"
+        },
+        {
+          "hex": "#7a5230",
+          "why": "071 content picture: dark wood (legs, trunks, a wardrobe)"
+        },
+        {
+          "hex": "#9cc9e8",
+          "why": "071 content picture: sky, water and window glass: --accent-2 is too dark to read as glass"
+        },
+        {
+          "hex": "#5b9a4a",
+          "why": "071 content picture: tree leaves"
+        },
+        {
+          "hex": "#8cbf6e",
+          "why": "071 content picture: grass"
+        },
+        {
+          "hex": "#e8d6a8",
+          "why": "071 content picture: sand and a dirt path"
+        },
+        {
+          "hex": "#f1c9a8",
+          "why": "071 content picture: a light skin tone; people in the scenes need skin, in a range of tones"
+        },
+        {
+          "hex": "#c68c5f",
+          "why": "071 content picture: a medium skin tone"
+        },
+        {
+          "hex": "#8a5a3b",
+          "why": "071 content picture: a dark skin tone"
+        },
+        {
+          "hex": "#3b2a20",
+          "why": "071 content picture: dark hair"
+        },
+        {
+          "hex": "#c99a55",
+          "why": "071 content picture: fair hair"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "071 content picture: yellow (a balloon, a bus, a shirt): a colour students name"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "071 content picture: orange (fruit, a cat, a candle flame)"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "071 content picture: green (vegetables, a chalkboard, a tractor)"
+        },
+        {
+          "hex": "#eaa2b8",
+          "why": "071 content picture: pink (a cake, a pig's snout)"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "06b5c2d90a872c48025b38d9de05824f1968f7405ec43b4ad51064e7d52bb0f3",
+      "bytes": 12808,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--card-2",
+        "--err",
+        "--line-strong",
+        "--muted"
+      ]
+    },
+    {
+      "path": "Tools/picture-prompt-generator/art/bedroom.webp",
+      "script": "Tools/blender-art/scene_prompts.py",
+      "subject": "bedroom",
+      "family": "prompts",
+      "seed": 81,
+      "samples": 64,
+      "quality": 78,
+      "width": 960,
+      "height": 720,
+      "cap": 40960,
+      "theme": "light",
+      "use": "content",
+      "decorative": false,
+      "colors": {
+        "wood": "#b07a4a",
+        "wood-dark": "#7a5230",
+        "sky": "#9cc9e8",
+        "leaf": "#5b9a4a",
+        "grass": "#8cbf6e",
+        "sand": "#e8d6a8",
+        "wall": "--card-2",
+        "skin1": "#f1c9a8",
+        "skin2": "#c68c5f",
+        "skin3": "#8a5a3b",
+        "hair1": "#3b2a20",
+        "hair2": "#c99a55",
+        "red": "--err",
+        "yellow": "#f2c230",
+        "orange": "#e8843a",
+        "green": "#3f9a55",
+        "pink": "#eaa2b8"
+      },
+      "extraColors": [
+        {
+          "hex": "#b07a4a",
+          "why": "071 content picture: wood (tables, crates, floors): ink-paper has no brown"
+        },
+        {
+          "hex": "#7a5230",
+          "why": "071 content picture: dark wood (legs, trunks, a wardrobe)"
+        },
+        {
+          "hex": "#9cc9e8",
+          "why": "071 content picture: sky, water and window glass: --accent-2 is too dark to read as glass"
+        },
+        {
+          "hex": "#5b9a4a",
+          "why": "071 content picture: tree leaves"
+        },
+        {
+          "hex": "#8cbf6e",
+          "why": "071 content picture: grass"
+        },
+        {
+          "hex": "#e8d6a8",
+          "why": "071 content picture: sand and a dirt path"
+        },
+        {
+          "hex": "#f1c9a8",
+          "why": "071 content picture: a light skin tone; people in the scenes need skin, in a range of tones"
+        },
+        {
+          "hex": "#c68c5f",
+          "why": "071 content picture: a medium skin tone"
+        },
+        {
+          "hex": "#8a5a3b",
+          "why": "071 content picture: a dark skin tone"
+        },
+        {
+          "hex": "#3b2a20",
+          "why": "071 content picture: dark hair"
+        },
+        {
+          "hex": "#c99a55",
+          "why": "071 content picture: fair hair"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "071 content picture: yellow (a balloon, a bus, a shirt): a colour students name"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "071 content picture: orange (fruit, a cat, a candle flame)"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "071 content picture: green (vegetables, a chalkboard, a tractor)"
+        },
+        {
+          "hex": "#eaa2b8",
+          "why": "071 content picture: pink (a cake, a pig's snout)"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "579ad10cc7516f13c0808279e51f0e52f2b5e3c8791b85c1cc76233d6f639313",
+      "bytes": 11934,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--card-2",
+        "--err",
+        "--ink",
+        "--line-strong"
+      ]
+    },
+    {
+      "path": "Tools/picture-prompt-generator/art/farm.webp",
+      "script": "Tools/blender-art/scene_prompts.py",
+      "subject": "farm",
+      "family": "prompts",
+      "seed": 82,
+      "samples": 64,
+      "quality": 78,
+      "width": 960,
+      "height": 720,
+      "cap": 40960,
+      "theme": "light",
+      "use": "content",
+      "decorative": false,
+      "colors": {
+        "wood": "#b07a4a",
+        "wood-dark": "#7a5230",
+        "sky": "#9cc9e8",
+        "leaf": "#5b9a4a",
+        "grass": "#8cbf6e",
+        "sand": "#e8d6a8",
+        "wall": "--card-2",
+        "skin1": "#f1c9a8",
+        "skin2": "#c68c5f",
+        "skin3": "#8a5a3b",
+        "hair1": "#3b2a20",
+        "hair2": "#c99a55",
+        "red": "--err",
+        "yellow": "#f2c230",
+        "orange": "#e8843a",
+        "green": "#3f9a55",
+        "pink": "#eaa2b8"
+      },
+      "extraColors": [
+        {
+          "hex": "#b07a4a",
+          "why": "071 content picture: wood (tables, crates, floors): ink-paper has no brown"
+        },
+        {
+          "hex": "#7a5230",
+          "why": "071 content picture: dark wood (legs, trunks, a wardrobe)"
+        },
+        {
+          "hex": "#9cc9e8",
+          "why": "071 content picture: sky, water and window glass: --accent-2 is too dark to read as glass"
+        },
+        {
+          "hex": "#5b9a4a",
+          "why": "071 content picture: tree leaves"
+        },
+        {
+          "hex": "#8cbf6e",
+          "why": "071 content picture: grass"
+        },
+        {
+          "hex": "#e8d6a8",
+          "why": "071 content picture: sand and a dirt path"
+        },
+        {
+          "hex": "#f1c9a8",
+          "why": "071 content picture: a light skin tone; people in the scenes need skin, in a range of tones"
+        },
+        {
+          "hex": "#c68c5f",
+          "why": "071 content picture: a medium skin tone"
+        },
+        {
+          "hex": "#8a5a3b",
+          "why": "071 content picture: a dark skin tone"
+        },
+        {
+          "hex": "#3b2a20",
+          "why": "071 content picture: dark hair"
+        },
+        {
+          "hex": "#c99a55",
+          "why": "071 content picture: fair hair"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "071 content picture: yellow (a balloon, a bus, a shirt): a colour students name"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "071 content picture: orange (fruit, a cat, a candle flame)"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "071 content picture: green (vegetables, a chalkboard, a tractor)"
+        },
+        {
+          "hex": "#eaa2b8",
+          "why": "071 content picture: pink (a cake, a pig's snout)"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "4705fa8bf904fe288ee3f4f4e5086b343937335aedf3f3df5f522d21dead92e2",
+      "bytes": 12520,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--err",
+        "--ink",
+        "--line-strong",
+        "--muted"
       ]
     }
   ]
