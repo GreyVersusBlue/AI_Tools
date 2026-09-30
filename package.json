@@ -60,6 +60,7 @@
     "test:picture-prompt-store": "node Tools/picture-prompt-generator/test/smoke-picture-store.mjs",
     "test:picture-prompt-starters": "node Tools/picture-prompt-generator/test/smoke-starter-pictures.mjs",
     "test:review-board-image-store": "node Tools/review-game-board/test/smoke-clue-image-store.mjs",
+    "test:review-board-art": "node Tools/review-game-board/test/smoke-board-art.mjs",
     "test:trading-cards-photo-store": "node Tools/historical-trading-card-maker/test/smoke-photo-store.mjs",
     "test:verb-poster": "node Tools/verb-conjugation-poster-generator/test/smoke-panel-colors.mjs",
     "test:trading-cards": "node Tools/historical-trading-card-maker/test/smoke-card-size.mjs && node Tools/historical-trading-card-maker/test/smoke-photo.mjs && node Tools/historical-trading-card-maker/test/smoke-share.mjs && node Tools/historical-trading-card-maker/test/smoke-game.mjs",

@@ -21,9 +21,10 @@
 //   SIZE      an output whose pixel dimensions are not the ledger's.
 //   PIN       an entry made by a Blender outside the pinned LTS line.
 //   TWIN      an on-screen raster without a dark (or light) twin that points back.
-//             use "sheet" is art drawn only on a .paper-sheet surface, which
-//             ink-paper.css keeps light in both themes (080's board): it is
-//             light-only and needs no twin, the way print art does.
+//             use "sheet" is art drawn only on a surface the page keeps the
+//             same in both themes (080's .paper-sheet board, 030's navy
+//             projector board): it is rendered once, as theme "light", and
+//             needs no twin, the way print art does.
 //   SVG       an icon carrying a literal colour, a fill, a style attribute or
 //             an embedded raster; icons are stroke="currentColor" and nothing else.
 //   TOKEN     a material token that ink-paper.css does not define, or a
@@ -34,7 +35,10 @@
 //             "underText" is one region or, for an atlas with a label on
 //             several cells, a list of named regions, each held to its own
 //             token (080's algebra tiles: --ink on the pale positive tiles,
-//             --accent-ink on the red negative ones).
+//             --accent-ink on the red negative ones). A region whose text is
+//             not an ink-paper colour names it as "hex" with a "why" instead
+//             of "token" (030's board is navy and gold, its own colours in
+//             both themes); a hex with no why is a CONTRAST failure.
 //   GREY      an entry that declares "grey" (pairs of named cells a reader must
 //             tell apart without colour, and a minRatio) with a pair that has
 //             no measured contrast, or one under minRatio. The scene script
@@ -337,7 +341,7 @@ export function validate(root = SITE) {
     else if (e.cap > fam.entryCap && !e.capWhy) add('LEDGER', where, `cap ${e.cap} is above the ${e.family} family's ${fam.entryCap} with no capWhy`);
     if (!['light', 'dark', 'both'].includes(e.theme)) add('LEDGER', where, `theme "${e.theme}" is not light, dark or both`);
     if (!USES.includes(e.use)) add('LEDGER', where, `use "${e.use}" is not ${USES.join(', ')}`);
-    if (e.use === 'sheet' && e.theme !== 'light') add('LEDGER', where, 'a sheet entry is drawn on paper that stays light in both themes, so its theme is "light"');
+    if (e.use === 'sheet' && e.theme !== 'light') add('LEDGER', where, 'a sheet entry is drawn on a surface that is the same in both themes, so it is rendered once, as theme "light"');
     if (e.density !== undefined && !(Number.isInteger(e.density) && e.density > 0)) {
       add('LEDGER', where, `density must be a positive integer, not ${JSON.stringify(e.density)}`);
     }
@@ -408,13 +412,16 @@ export function validate(root = SITE) {
     for (const u of e.underText ? [].concat(e.underText) : []) {
       const theme = e.theme === 'dark' ? 'dark' : 'light';
       const name = u.name ? ` (region ${u.name})` : '';
-      const text = palette && palette[theme][u.token];
-      if (!text) add('CONTRAST', where, `text token "${u.token}"${name} is not in ink-paper.css`);
+      const own = typeof u.hex === 'string' && /^#[0-9a-f]{6}$/i.test(u.hex) ? u.hex.toLowerCase() : null;
+      const text = u.token ? palette && palette[theme][u.token] : own;
+      const label = u.token || u.hex;
+      if (!u.token && own && !u.why) add('CONTRAST', where, `text colour ${u.hex}${name} is not a token and has no "why"`);
+      else if (!text) add('CONTRAST', where, u.token ? `text token "${u.token}"${name} is not in ink-paper.css` : `text colour${name} is neither a token nor a #rrggbb hex`);
       else if (typeof u.lumMin !== 'number' || typeof u.lumMax !== 'number') add('CONTRAST', where, `under-text luminance${name} was never recorded`);
       else {
         const floor = u.large ? 3 : 4.5;
         const worst = worstContrast(luminance(text), u.lumMin, u.lumMax);
-        if (worst < floor) add('CONTRAST', where, `${u.token} over luminance ${u.lumMin}–${u.lumMax}${name} is ${worst.toFixed(2)}:1 in ${theme}, under ${floor}:1`);
+        if (worst < floor) add('CONTRAST', where, `${label} over luminance ${u.lumMin}–${u.lumMax}${name} is ${worst.toFixed(2)}:1 in ${theme}, under ${floor}:1`);
       }
     }
     const g = e.grey;

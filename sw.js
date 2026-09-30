@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v209';
+const CACHE_VERSION = 'v210';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -362,6 +362,10 @@ const PRECACHE_URLS = [
   "Tools/016-qr-code-generator.html",
   "Tools/018-qr-scavenger-hunt-builder.html",
   "Tools/030-review-game-board.html",
+  "Tools/review-game-board/art/backdrop.webp",
+  "Tools/review-game-board/art/cell.webp",
+  "Tools/review-game-board/art/cell-hover.webp",
+  "Tools/review-game-board/art/header.webp",
   "Tools/review-game-board/rgb-audio-db.js",
   "Tools/review-game-board/rgb-bank-store.js",
   "Tools/review-game-board/rgb-image.js",

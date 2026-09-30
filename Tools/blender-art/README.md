@@ -30,6 +30,7 @@ blender -b --factory-startup -t 4 -P Tools/blender-art/scene_hero.py -- --entry 
 blender -b --factory-startup -t 4 -P Tools/blender-art/scene_pieces.py -- --entry Tools/virtual-manipulatives-board/art/pieces.webp
 blender -b --factory-startup -t 4 -P Tools/blender-art/scene_prompts.py -- --entry Tools/picture-prompt-generator/art/market.webp
 blender -b --factory-startup -t 4 -P Tools/blender-art/scene_seals.py -- --entry Tools/certificate-award-maker/art/seal-gold.webp
+blender -b --factory-startup -t 4 -P Tools/blender-art/scene_board.py -- --entry Tools/review-game-board/art/cell.webp
 node Tools/blender-art/build-sprite.mjs
 node Tools/blender-art/validate-art.mjs
 node Tools/blender-art/test/validate-art.test.mjs
@@ -63,6 +64,7 @@ rendered twice and compared.
 - `scene_pieces.py`: 080 Virtual Manipulatives' pieces, one atlas. See below.
 - `scene_prompts.py`: 071's twelve starter pictures, one entry per scene. See below.
 - `scene_seals.py`: 042's certificate seals and ribbon tails. See below.
+- `scene_board.py`: 030's board backdrop and 9-slice tiles. See below.
 - `renders.json`: the ledger. The spec half (path, script, subject, family, seed, samples,
   quality, width, height, cap, theme, use, twin, decorative, `underText.region/token/large`)
   is written by hand *before* a render. The record half is written by the script.
@@ -212,6 +214,22 @@ total.
 - **Placement:** 042 puts the seal bottom centre, between the date and signature lines.
   `smoke-seals.mjs` fails if it covers any text, in either orientation.
 - Rendered on **huginn** with `-t 4`, twice each: **all ten byte-identical.**
+
+## 030's board (Path 21 P4, 2026-09-30)
+
+`Tools/review-game-board/art/backdrop.webp` (1600×900) and three 9-slice tiles, `header`, `cell` and
+`cell-hover` (192×96): **5,348 B** for the four, against the row's 200 KB.
+
+- **The tiles are `border-image` sources.** The entry's `slice` (24 file px) is where the page cuts
+  them, drawn at a 12 px border, so the bevel keeps its shape at any column width. Everything a
+  tile draws (the bevel, the header's gold rim) lies inside the slice, and the middle is flat.
+- **The text is 030's `--gold`, not an ink-paper token.** So each tile's `underText` names it as
+  `hex` with a `why`, and `check:art` holds the rendered middle to it: 4.5:1 on the header, and 3:1
+  on the point tiles, whose 1.3rem bold text is large. The measured ratio is at least 5.5:1 everywhere.
+- **`use: "sheet"`, rendered once.** The board is navy and gold in both themes by design (030's
+  `:root` says so), the same situation as 080's paper board.
+- **A played clue keeps the flat `--board-used`**, with no art, so it reads as spent.
+- Rendered on **huginn** with `-t 4`, twice each: **all four byte-identical.**
 
 ## Determinism, measured 2026-09-25
 
