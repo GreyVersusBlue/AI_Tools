@@ -244,6 +244,17 @@ ok(fixture(c => {
 breaks('dark text over a dark render', 'CONTRAST', c => {
   Object.assign(c.entry('tile-256-dark.webp').underText, { lumMin: 0.3, lumMax: 0.9 });
 });
+/* 080's atlas: a sheet entry, a list of under-text regions, and the greyscale record. */
+const P = 'pieces.webp';
+// underText goes too, or its tokens are read in the dark palette and CONTRAST fires as well.
+breaks('a sheet entry that claims the dark theme', 'LEDGER', c => { c.entry(P).theme = 'dark'; delete c.entry(P).underText; });
+ok(fixture(c => { delete c.entry(P).twin; }).length === 0, 'a sheet entry needs no dark twin');
+breaks('the same atlas as a screen entry, with no twin', 'TWIN', c => { c.entry(P).use = 'screen'; });
+breaks('one of several under-text regions never measured', 'CONTRAST', c => { delete c.entry(P).underText[3].lumMax; });
+breaks('one region held to the wrong token', 'CONTRAST', c => { c.entry(P).underText[0].token = '--accent-ink'; });
+breaks('a greyscale pair never measured', 'GREY', c => { delete c.entry(P).grey.measured['alg-pos1|alg-neg1']; });
+breaks('a greyscale pair under its floor', 'GREY', c => { c.entry(P).grey.measured['frac-fill|frac-empty'] = 1.4; });
+breaks('a grey record with no floor', 'GREY', c => { delete c.entry(P).grey.minRatio; });
 breaks('an art file the ledger does not list', 'ORPHAN', c => c.put('Tools/some-tool/art/stray.webp', 'x'));
 breaks('an <img> of an art file with no alt', 'ALT', c => c.put('index.html', '<img src="assets/art/test/tile-256-light.webp"><img src="assets/art/test/tile-256-dark.webp" alt="">'));
 breaks('a decorative <img> with alt text', 'ALT', c => c.put('Tools/001-x.html', '<img src="../assets/art/test/tile-256-light.webp" alt="a tile"><img src="../assets/art/test/tile-256-dark.webp" alt="">'));

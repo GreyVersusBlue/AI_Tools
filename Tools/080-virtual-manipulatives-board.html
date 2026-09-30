@@ -84,28 +84,29 @@
   .piece .dup { position: absolute; top: -8px; right: 12px; width: 18px; height: 18px; border-radius: 50%; background: var(--card); border: 1px solid var(--line-strong); color: var(--accent-2); font-size: 11px; line-height: 16px; text-align: center; cursor: pointer; display: none; z-index: 2; }
   .piece:hover .del, .piece:hover .dup { display: block; }
 
-  /* Every base-ten piece is built from the same 26px square as a single unit,
-     so ten units laid in a row really are the length of a ten-rod and a
-     hundred-flat really is ten rods. Before this the rod was 249px against
-     ten 26px units (260px) — close enough to look right and wrong enough to
-     undercut the one thing base-ten blocks exist to show. */
-  .unit-block { width: 26px; height: 26px; background: #2e6b8f; border: 1px solid #1f3550; }
-  .ten-block { display: flex; }
-  .ten-block .seg { width: 26px; height: 26px; background: #2e6b8f; border: 1px solid #1f3550; }
-  .hundred-block { display: grid; grid-template-columns: repeat(10, 26px); width: 260px; }
-  .hundred-block .seg { width: 26px; height: 26px; background: #1f3550; border: 1px solid #14243a; }
-
-  .fraction-tile { display: flex; border: 1px solid var(--ink); }
-  .fraction-tile .seg { width: 26px; height: 40px; border-right: 1px solid var(--ink); display: flex; align-items: center; justify-content: center; }
-  .fraction-tile .seg:last-child { border-right: none; }
-  .fraction-tile .seg.filled { background: #e2a640; }
-
-  .algebra-tile { display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .8rem; border: 1px solid #333; color: #fff; }
-  .algebra-tile.pos { background: #2c6e3f; }
-  .algebra-tile.neg { background: #a3372b; }
-  .algebra-tile.unit { width: 30px; height: 30px; }
-  .algebra-tile.xterm { width: 30px; height: 100px; }
-  .algebra-tile.x2term { width: 100px; height: 100px; }
+  /* Every piece is one cell of one rendered atlas (Path 21 P4), drawn at its
+     CSS size from a 2x file: Tools/blender-art/scene_pieces.py makes it and
+     renders.json's "cells" is where each piece sits in it, the same numbers
+     as CELLS in the script below. Every base-ten piece is built from the same
+     26px square as a single unit, so ten units laid in a row really are the
+     length of a ten-rod and a hundred-flat really is ten rods.
+     The board is a .paper-sheet, light in both themes, so there is one atlas
+     and the label colours below are the light tokens in both themes too. */
+  .piece-art {
+    background: url("virtual-manipulatives-board/art/pieces.webp") no-repeat;
+    background-size: 624px 360px;
+  }
+  .fraction-tile { display: flex; }
+  .fraction-tile .seg { display: flex; align-items: center; justify-content: center; }
+  /* The fraction's name on its shaded part, so the tile says what it is
+     without anyone counting segments; --accent-ink over the rendered orange
+     is measured at 4.5:1 or better in renders.json. */
+  .fraction-tile .lbl { font-size: 10px; font-weight: 700; color: var(--accent-ink); letter-spacing: -.02em; }
+  .algebra-tile { display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .8rem; }
+  .algebra-tile.pos { color: var(--ink); }
+  .algebra-tile.neg { color: var(--accent-ink); }
+  .piece .roll { position: absolute; top: -8px; right: 32px; width: 18px; height: 18px; border-radius: 50%; background: var(--card); border: 1px solid var(--line-strong); color: var(--ink); font-size: 11px; line-height: 16px; text-align: center; cursor: pointer; display: none; z-index: 2; }
+  .piece:hover .roll { display: block; }
 
   .nl-controls { display: flex; gap: .8rem; align-items: end; margin-bottom: 1rem; }
   .nl-controls label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
@@ -134,7 +135,7 @@
     <div>
       <a class="back-link" href="../index.html">&larr; Toolkit</a>
       <h1>Virtual Manipulatives Board</h1>
-      <p class="sub">Drag base-ten blocks, fraction tiles, and algebra tiles to demonstrate live &mdash; snapshot the board when you're done.</p>
+      <p class="sub">Drag base-ten blocks, fraction tiles, algebra tiles, pattern blocks and dice to demonstrate live &mdash; snapshot the board when you're done.</p>
     </div>
   </div>
 
@@ -180,6 +181,17 @@
       <button data-add="alg-negx">&minus;x</button>
       <button data-add="alg-posx2">+x&sup2;</button>
       <button data-add="alg-negx2">&minus;x&sup2;</button>
+      <span class="divider"></span>
+      <span class="group-label">Pattern Blocks</span>
+      <button data-add="pb-hex">Hexagon</button>
+      <button data-add="pb-trapezoid">Trapezoid</button>
+      <button data-add="pb-rhombus">Rhombus</button>
+      <button data-add="pb-thin">Thin rhombus</button>
+      <button data-add="pb-square">Square</button>
+      <button data-add="pb-triangle">Triangle</button>
+      <span class="divider"></span>
+      <span class="group-label">Dice</span>
+      <button data-add="die">Roll a die</button>
     </div>
     <div class="btnrow">
       <button class="action secondary" id="clearBoardBtn">Clear board</button>
@@ -276,62 +288,117 @@
     return { left: 16 + col * 60, top: 16 + row * 60 };
   }
 
-  function addPieceEl(inner, type, w, h) {
+  /* ---------- the rendered pieces ----------
+     Each piece is one cell of the atlas, [x, y, w, h] in CSS px at 1x. These
+     numbers are renders.json's "cells" for pieces.webp, which the scene
+     script rendered into; smoke-rendered-pieces.mjs fails if they part. */
+  var ATLAS_URL = 'virtual-manipulatives-board/art/pieces.webp';
+  var CELLS = {
+    'hundred': [0, 0, 260, 260], 'ten': [268, 0, 260, 26], 'unit': [268, 34, 26, 26],
+    'alg-pos1': [302, 34, 30, 30], 'alg-neg1': [340, 34, 30, 30],
+    'frac-fill': [378, 34, 26, 40], 'frac-empty': [412, 34, 26, 40],
+    'alg-posx2': [268, 82, 100, 100], 'alg-negx2': [376, 82, 100, 100],
+    'alg-posx': [484, 82, 30, 100], 'alg-negx': [522, 82, 30, 100],
+    'die-1': [268, 190, 52, 52], 'die-2': [328, 190, 52, 52], 'die-3': [388, 190, 52, 52],
+    'die-4': [448, 190, 52, 52], 'die-5': [508, 190, 52, 52], 'die-6': [568, 190, 52, 52],
+    'pb-hex': [0, 268, 104, 90], 'pb-trapezoid': [112, 268, 104, 45], 'pb-rhombus': [224, 268, 78, 45],
+    'pb-thin': [310, 268, 97, 26], 'pb-square': [415, 268, 52, 52], 'pb-triangle': [475, 268, 52, 45]
+  };
+  var atlas = new Image();
+  atlas.src = ATLAS_URL;
+
+  /** A div showing one atlas cell at its CSS size; `html` is its label, if any. */
+  function cellHtml(key, cls, html) {
+    var c = CELLS[key];
+    return '<div class="piece-art ' + (cls || '') + '" data-cell="' + key + '" style="width:' + c[2] + 'px;height:' + c[3] +
+      'px;background-position:' + (-c[0]) + 'px ' + (-c[1]) + 'px;">' + (html || '') + '</div>';
+  }
+
+  /* What each piece is called, for a screen reader: the rendered picture is
+     decoration, and this is the piece's name and value. */
+  var FRACTION_WORDS = { 2: 'half', 3: 'third', 4: 'quarter', 5: 'fifth', 6: 'sixth', 7: 'seventh', 8: 'eighth',
+    9: 'ninth', 10: 'tenth', 11: 'eleventh', 12: 'twelfth' };
+  var PATTERN_NAMES = {
+    'pb-hex': 'yellow hexagon', 'pb-trapezoid': 'red trapezoid', 'pb-rhombus': 'blue rhombus',
+    'pb-thin': 'tan thin rhombus', 'pb-square': 'orange square', 'pb-triangle': 'green triangle'
+  };
+  var ALGEBRA = {
+    'alg-pos1': ['pos', '+1', 'positive one'], 'alg-neg1': ['neg', '&minus;1', 'negative one'],
+    'alg-posx': ['pos', '+x', 'positive x'], 'alg-negx': ['neg', '&minus;x', 'negative x'],
+    'alg-posx2': ['pos', '+x&sup2;', 'positive x squared'], 'alg-negx2': ['neg', '&minus;x&sup2;', 'negative x squared']
+  };
+
+  function addPieceEl(inner, type, name) {
     var pos = nextPos();
     var piece = document.createElement('div');
     piece.className = 'piece';
     piece.style.left = pos.left + 'px';
     piece.style.top = pos.top + 'px';
     piece.setAttribute('data-piece-type', type);
+    piece.setAttribute('role', 'img');
+    piece.setAttribute('aria-label', name);
     piece.innerHTML = inner + '<span class="dup" title="Duplicate">&#10064;</span><span class="del" title="Delete">&times;</span>';
     board.appendChild(piece);
     makeDraggable(piece, board);
     piece.querySelector('.del').addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
     piece.querySelector('.del').addEventListener('click', function () { piece.remove(); touch(); });
     piece.querySelector('.dup').addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
-    piece.querySelector('.dup').addEventListener('click', function () { addByType(type); });
+    piece.querySelector('.dup').addEventListener('click', function () { addByType(piece.getAttribute('data-piece-type')); });
     touch();
     return piece;
   }
 
-  function addUnit() { return addPieceEl('<div class="unit-block"></div>', 'unit'); }
-  function addTen() {
-    var segs = '';
-    for (var i = 0; i < 10; i++) segs += '<div class="seg"></div>';
-    return addPieceEl('<div class="ten-block">' + segs + '</div>', 'ten');
-  }
-  function addHundred() {
-    var segs = '';
-    for (var i = 0; i < 100; i++) segs += '<div class="seg"></div>';
-    return addPieceEl('<div class="hundred-block">' + segs + '</div>', 'hundred');
-  }
+  function addUnit() { return addPieceEl(cellHtml('unit'), 'unit', 'Unit block, 1'); }
+  function addTen() { return addPieceEl(cellHtml('ten'), 'ten', 'Ten rod, 10'); }
+  function addHundred() { return addPieceEl(cellHtml('hundred'), 'hundred', 'Hundred flat, 100'); }
   function addFraction(n) {
-    var segs = '<div class="seg filled"></div>';
-    for (var i = 1; i < n; i++) segs += '<div class="seg"></div>';
-    return addPieceEl('<div class="fraction-tile">' + segs + '</div>', 'fraction-' + n);
+    var segs = cellHtml('frac-fill', 'seg filled', '<span class="lbl">1/' + n + '</span>');
+    for (var i = 1; i < n; i++) segs += cellHtml('frac-empty', 'seg');
+    return addPieceEl('<div class="fraction-tile">' + segs + '</div>', 'fraction-' + n,
+      'Fraction tile, one ' + FRACTION_WORDS[n] + ' shaded: 1/' + n);
   }
   function addAlgebra(kind) {
-    var map = {
-      'alg-pos1': ['algebra-tile pos unit', '+1'],
-      'alg-neg1': ['algebra-tile neg unit', '&minus;1'],
-      'alg-posx': ['algebra-tile pos xterm', '+x'],
-      'alg-negx': ['algebra-tile neg xterm', '&minus;x'],
-      'alg-posx2': ['algebra-tile pos x2term', '+x&sup2;'],
-      'alg-negx2': ['algebra-tile neg x2term', '&minus;x&sup2;']
-    };
-    var spec = map[kind];
+    var spec = ALGEBRA[kind];
     if (!spec) return null;
-    return addPieceEl('<div class="' + spec[0] + '">' + spec[1] + '</div>', kind);
+    return addPieceEl(cellHtml(kind, 'algebra-tile ' + spec[0], spec[1]), kind, 'Algebra tile, ' + spec[2]);
+  }
+  function addPattern(kind) {
+    return addPieceEl(cellHtml(kind), kind, 'Pattern block, ' + PATTERN_NAMES[kind]);
+  }
+  /* A die is saved as the face it shows ('die-4'), so a board reloads with the
+     same roll; "Roll a die" and the ⚄ button roll it. */
+  function rollFace() { return 1 + Math.floor(Math.random() * 6); }
+  function setDie(piece, face) {
+    var art = piece.querySelector('.piece-art'), c = CELLS['die-' + face];
+    art.setAttribute('data-cell', 'die-' + face);
+    art.style.backgroundPosition = (-c[0]) + 'px ' + (-c[1]) + 'px';
+    piece.setAttribute('data-piece-type', 'die-' + face);
+    piece.setAttribute('aria-label', 'Die showing ' + face);
+  }
+  function addDie(face) {
+    var piece = addPieceEl(cellHtml('die-' + face), 'die-' + face, 'Die showing ' + face);
+    var roll = document.createElement('span');
+    roll.className = 'roll';
+    roll.title = 'Roll';
+    roll.textContent = '\u2684';
+    piece.appendChild(roll);
+    roll.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
+    roll.addEventListener('click', function () { setDie(piece, rollFace()); touch(); });
+    return piece;
   }
 
   function addByType(type) {
+    type = String(type);
     if (type === 'unit') return addUnit();
     if (type === 'ten') return addTen();
     if (type === 'hundred') return addHundred();
-    if (String(type).indexOf('fraction-') === 0) {
-      var denom = parseInt(String(type).slice('fraction-'.length), 10);
-      return (denom >= 2 && denom <= 12) ? addFraction(denom) : null;
+    if (type.indexOf('fraction-') === 0) {
+      var denom = parseInt(type.slice('fraction-'.length), 10);
+      return FRACTION_WORDS[denom] ? addFraction(denom) : null;
     }
+    if (type === 'die') return addDie(rollFace());
+    if (/^die-[1-6]$/.test(type)) return addDie(parseInt(type.slice(4), 10));
+    if (PATTERN_NAMES[type]) return addPattern(type);
     return addAlgebra(type);
   }
 
@@ -699,42 +766,49 @@
     else if (!isEmptyBoard()) setStatus('Restored the board from your last session.');
   }
 
-  /* ---------- snapshot ---------- */
+  /* ---------- snapshot ----------
+     Drawn at 2x, from the same atlas the board shows: each [data-cell] is
+     copied out of pieces.webp at its 2x pixels, and each label is set in its
+     own computed colour and font. The board is light in both themes, so the
+     export is the board as it looks. */
+  var SNAP_SCALE = 2;
   function isTransparent(color) {
     return !color || color === 'transparent' || /rgba\([^)]*,\s*0\s*\)/.test(color);
   }
-  function drawSeg(ctx, rect, segEl) {
-    var sRect = segEl.getBoundingClientRect();
-    var x = sRect.left - rect.left, y = sRect.top - rect.top;
-    var color = getComputedStyle(segEl).backgroundColor;
-    if (!isTransparent(color)) {
-      ctx.fillStyle = color;
-      ctx.fillRect(x, y, sRect.width, sRect.height);
+  function drawCell(ctx, rect, el) {
+    var r = el.getBoundingClientRect(), c = CELLS[el.getAttribute('data-cell')];
+    var x = r.left - rect.left, y = r.top - rect.top;
+    if (c && atlas.complete && atlas.naturalWidth) {
+      ctx.drawImage(atlas, c[0] * SNAP_SCALE, c[1] * SNAP_SCALE, c[2] * SNAP_SCALE, c[3] * SNAP_SCALE, x, y, r.width, r.height);
+    } else {
+      ctx.fillStyle = '#888';
+      ctx.fillRect(x, y, r.width, r.height);
     }
-    ctx.strokeStyle = '#333';
-    ctx.strokeRect(x, y, sRect.width, sRect.height);
+  }
+  function drawLabel(ctx, rect, el) {
+    var r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+    ctx.fillStyle = cs.color;
+    ctx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(el.textContent, r.left - rect.left + r.width / 2, r.top - rect.top + r.height / 2);
   }
   function snapshotEl(containerEl, previewLabel) {
     var rect = containerEl.getBoundingClientRect();
     var canvas = document.createElement('canvas');
-    canvas.width = rect.width; canvas.height = rect.height;
+    canvas.width = Math.round(rect.width * SNAP_SCALE); canvas.height = Math.round(rect.height * SNAP_SCALE);
+    canvas.style.width = rect.width + 'px';
     var ctx = canvas.getContext('2d');
+    ctx.scale(SNAP_SCALE, SNAP_SCALE);
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, rect.width, rect.height);
     Array.prototype.forEach.call(containerEl.children, function (child) {
       if (child.classList.contains('piece')) {
-        var wrapper = child.firstElementChild;
-        var segs = wrapper ? wrapper.querySelectorAll('.seg') : [];
-        if (segs.length) {
-          Array.prototype.forEach.call(segs, function (segEl) { drawSeg(ctx, rect, segEl); });
-        } else {
-          var cRect = child.getBoundingClientRect();
-          var x = cRect.left - rect.left, y = cRect.top - rect.top;
-          ctx.fillStyle = getComputedStyle(wrapper || child).backgroundColor || '#888';
-          ctx.fillRect(x, y, cRect.width, cRect.height);
-          ctx.strokeStyle = '#333';
-          ctx.strokeRect(x, y, cRect.width, cRect.height);
-        }
+        Array.prototype.forEach.call(child.querySelectorAll('[data-cell]'), function (el) {
+          drawCell(ctx, rect, el);
+          var text = el.classList.contains('algebra-tile') ? el : el.querySelector('.lbl');
+          if (text && text.textContent) drawLabel(ctx, rect, text);
+        });
       } else if (child.classList.contains('nl-marker')) {
         var mRect = child.getBoundingClientRect();
         var mx = mRect.left - rect.left, my = mRect.top - rect.top;
@@ -749,7 +823,7 @@
       }
     });
     ctx.strokeStyle = '#999';
-    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeRect(0, 0, rect.width, rect.height);
     var preview = document.getElementById('snapshotPreview');
     preview.innerHTML = '<p style="font-size:.85rem;color:var(--muted);margin:0 0 .4rem;">' + previewLabel + ' &mdash; right-click to save, or use the download link below.</p>';
     preview.appendChild(canvas);

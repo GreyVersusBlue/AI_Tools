@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v206';
+const CACHE_VERSION = 'v207';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -390,6 +390,7 @@ const PRECACHE_URLS = [
   "Tools/078-unit-conversion-chart-builder.html",
   "Tools/079-verb-conjugation-poster-generator.html",
   "Tools/080-virtual-manipulatives-board.html",
+  "Tools/virtual-manipulatives-board/art/pieces.webp",
   "Tools/039-vocab-conjugation-drill.html",
   "Tools/040-vocab-flashcard-generator.html",
   "Tools/vocab-flashcard-generator/vfg-conjdrill-link.js",

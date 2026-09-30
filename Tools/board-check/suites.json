@@ -119,6 +119,7 @@
     "Tools/dichotomous-key-builder/test/smoke-trace-path.mjs",
     "Tools/music-sightreading-generator/test/smoke-glyph-fallback.mjs",
     "Tools/virtual-manipulatives-board/test/smoke-snap-grid.mjs",
+    "Tools/virtual-manipulatives-board/test/smoke-rendered-pieces.mjs",
     "Tools/art-portfolio-label-maker/test/smoke-reference-sheet.mjs",
     "Tools/civics-role-card-generator/test/smoke-assign-roster.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-staggered-starts.mjs",
