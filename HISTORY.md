@@ -9,6 +9,64 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P4, 071: twelve starter pictures (2026-09-30, #313, `CACHE_VERSION` v208)
+
+Rank 1 was a 1-session row: a starter set of pictures for 071 Picture-Prompt, so the tool works
+before a teacher uploads anything. It is student-facing, and Devon authorized it on 2026-09-25.
+It shipped, and the row is deleted. Rendered on **huginn** (Blender 5.2.2 LTS, `-t 4`).
+
+**What shipped.**
+- `Tools/blender-art/scene_prompts.py`: twelve ledger entries, one scene function each. The
+  scenes are a market, kitchen, park, classroom, bus stop, doctor's office, beach, café, library,
+  birthday party, bedroom and farm. Each is 960×720 WebP (10,280–16,722 B), **157,454 B** for the
+  twelve, against 40 KB each and 480 KB total.
+- They are small isometric dioramas in the hero's style, with **people doing different things**,
+  because 071's prompts ask who is in the picture and what they are doing. There is no text: a
+  bus-stop sign is a red plate.
+- `071`: a built-in set shown by path, never copied into storage. Each has alt text describing
+  its scene, on the stage and on the printed cards. A tick box sits under the upload.
+  - One new key, `ppg_starter_pictures_v1` (registry row updated): the choice, if one was made,
+    and prompts pinned to starter pictures. It holds ids, never picture data.
+- `smoke-starter-pictures.mjs` (port 8454, 45 assertions):
+  - The ledger and the page agree, and every file loads at its size.
+  - A fresh install works with nothing uploaded.
+  - `ppg_images_v1` stays empty.
+  - Pins survive a reload, and print has twelve alts.
+  - The default follows the teacher's own pictures.
+
+**Calls made (reversible).**
+- **The default.** Until the tick box is used, the starters are in the pool exactly while
+  there are no pictures of the teacher's own. A fresh install works immediately, and a teacher's
+  first upload is not dealt into twelve scenes they never chose (the old suites upload one picture
+  and expect to see it). Once the box is used, the choice is kept.
+- **Six more scenes than the row named** (a café, a library, a party, a bedroom, a farm, a
+  beach), to reach its twelve.
+- **The backdrop is exactly `--paper`.** A Light Path mix shows camera rays the world at strength 1,
+  which `Standard` displays as the token. Every other ray gets art_common's dim world, so the
+  lighting matches every other family. A printed card has no grey box.
+- **Colours:** tokens where one fits. Grass, sand, wood, sky, three skin tones and two hair
+  colours are extras declared with reasons.
+
+**Found and fixed.**
+- **A pin on any 071 picture was lost on reload.** A pin names a prompt by id, and the starter
+  prompt sets are never written until something changes, so their ids are new on every load. It
+  predates this PR: it hit uploaded pictures too. Pinning now saves the sets as well.
+  `smoke-starter-pictures` asserts a pin survives a reload; nothing did before.
+
+**What went wrong, or was not verified.**
+- **Same-machine determinism is not universal.** Each scene was rendered twice on huginn with
+  `-t 4`. Ten were byte-identical; `park` and `library` each differed in one patch of about 25×12
+  px, by at most 7/255, with equal byte counts. #308 had recorded that same machine, same `-t`
+  gives the same bytes; that holds for most lit renders, not all. The ledger hashes what was
+  committed.
+- First-pass fixes before the commit:
+  - The beach's lying figure went through the sand and its surf lines read as a running track.
+  - The bus's windows were on the far side.
+  - A park tree hid the children.
+  - Window frames showed dark specks where coplanar bars crossed (the same fault as 080's ring).
+- In greyscale the park's pond sits close to the grass. It still reads, but it is the weakest scene.
+- Not checked: a real black-and-white printer, the offline zip, a phone.
+
 ## Path 21 P4, 080: the Virtual Manipulatives pieces as one rendered atlas (2026-09-30, #311, `CACHE_VERSION` v207)
 
 Rank 1 was a 1-session row: 080's pieces rendered in Blender. It shipped, the row is deleted, and
