@@ -65,7 +65,9 @@ yours.
 2026-09-25 he put Blender-rendered art at the top of Tier 1 (ranks 1–8 as he placed them; 1–5 since P1, P2 and P3 shipped in #263, #306 and #308) and authorized the
 student-facing art among those rows (071's picture prompts). That is recorded in `HISTORY.md`
 ("Path 21 ranked first"). It does not extend to any other row. **Every Path 21 row needs Blender
-locally: on Devon's Windows machine, or, since 2026-09-29, on huginn.** A session without `blender` on PATH skips those rows
+locally: on Devon's Windows machine, or, since 2026-09-29, on huginn.** A row that needs
+Blender's full feature set on a GPU says "Windows machine only" and huginn skips it; none of
+ranks 1–5 does. A session without `blender` on PATH skips those rows
 without claiming or editing them and takes the next unclaimed row that is not Path 21.
 
 ## Where things stand — start here
@@ -165,7 +167,7 @@ session hitting one of these ships rather than stalls.
 | Path 8 | Is a paired *student* device ever in scope? | **No.** Teacher-device-only. |
 | Rank 68 (Path 17 P5) | Is an on-demand, non-precached Tesseract download acceptable under the offline promise? | **Default: no.** "Every tool keeps working offline once the site has been visited" is the first sentence of `CLAUDE.md` and the reason there is no CDN anywhere on this site; a feature that silently needs the network on first use is a different promise, and a teacher meets it in the one room where the wifi is bad. Vendoring a full Tesseract build (~10 MB+) into the precache is the other option and is worse. **So: no OCR until someone reverses this**, and the honest version of the row is "OCR is out of scope", not "OCR, pending a decision". This is the one question here that is about what the product *is* rather than how it is built — it is the first row to bring to Devon if he ever does want to spend a decision — it sits at rank 71, roughly thirty rounds out at two rows a session, so it is not urgent. |
 | Any time | Should CI also run `offline:build` + `offline:verify`? | **Default: yes, on `main` only, not on pull requests.** Nobody has wired it; it is not a ranked row and would fit inside any site-level round. |
-| Ranks 1–5 | Path 21: Blender-rendered art first, including student-facing art? | **Decided by Devon, 2026-09-25**, not by a session: Path 21 ranks first, and its student-facing rows (071's picture prompts) are authorized. Blender runs only on his local Windows machine, headless; a session without `blender` on PATH skips these rows. The build defaults the path section writes down (the generator in `Tools/blender-art/`, the palette parsed from `ink-paper.css`, `currentColor` SVG icons, WebP renders, screenshots staying Playwright, the byte budgets) are a session's calls and are reversible; `HISTORY.md` has the reasoning. |
+| Ranks 1–5 | Path 21: Blender-rendered art first, including student-facing art? | **Decided by Devon, 2026-09-25**, not by a session: Path 21 ranks first, and its student-facing rows (071's picture prompts) are authorized. Blender runs only on his own machines, headless: huginn or Windows for basic work (all five rows today), the Windows machine only for a row that needs a GPU and says so (2026-09-29); a session without `blender` on PATH skips these rows. The build defaults the path section writes down (the generator in `Tools/blender-art/`, the palette parsed from `ink-paper.css`, `currentColor` SVG icons, WebP renders, screenshots staying Playwright, the byte budgets) are a session's calls and are reversible; `HISTORY.md` has the reasoning. |
 | ~~Any time~~ **decided** | Interleave the per-tool ideas with the platform work, or keep platform first? | **Keep platform first** — the order the table is in. The path survey's argument stands: most per-tool work depends on a `_shared/` service that does not exist yet, and the two biggest rollouts of 2026-09-04 were pure adoption precisely because the services had shipped first. This was "left for Devon" until 2026-09-05. Reversing it is a re-rank, which is still not a session's call. |
 
 ### Live blockers and corrections carried forward
@@ -2091,9 +2093,24 @@ raster art is the four PWA icons in `assets/icons/` and the two Playwright scree
 `assets/screenshots/`. Where a tool needs a picture it draws one on a canvas (080's pieces,
 042's `.cert-seal`, which is a glyph at 2.6rem) or asks the teacher to upload one (071).
 
-**Where it runs. This constraint shapes every phase.** Blender runs **only on Devon's local
-Windows machine, headless**: `blender -b -P <script>.py -- <args>`. It never runs in a
-container. A cloud session has no Blender, and none is to be installed, downloaded or vendored:
+**Where it runs. This constraint shapes every phase.** Blender runs **only on Devon's own
+machines, headless**: `blender -b -P <script>.py -- <args>`. It never runs in a
+container. Two machines, split by what the row needs (Devon, 2026-09-29):
+
+- **Basic headless Blender: huginn or the Windows machine.** huginn is Devon's Linux box,
+  Blender 5.2.2 LTS on PATH, Cycles on the CPU only (no HIP), 14 GB of RAM with little swap
+  free: render with `-t 4`, one render at a time. **Every Path 21 row today is basic**,
+  because the pipeline renders Cycles on the CPU by design (GPU and CPU differ) at icon and
+  thumbnail sizes.
+- **The full feature set on a real GPU: the Windows machine only.** A row that needs it
+  (GPU Cycles, a large lit scene, anything huginn would run out of memory on) **says
+  "Windows machine only" in its row**, and a session on huginn skips it even though
+  `blender --version` works there. None does yet.
+
+Lit rasters differ by a few levels in 255 between the two machines, so every file of one
+entry renders on one machine, and the PR names it.
+
+A cloud session has no Blender, and none is to be installed, downloaded or vendored:
 the binary is ~300 MB and is a tool, not a site file. So:
 
 - **Every Path 21 row needs Blender locally. A session without `blender` on PATH skips it.**

@@ -151,7 +151,8 @@ every edit. The deduplication work that established them is summarised in
   separately (`1 (+1 via a module)`); the plain number is the direct count the
   header has always carried.
 - **`npm run check:art` guards the Path 21 art ledger** (added 2026-09-25).
-  Blender runs only on Devon's machines, his Windows box and (since 2026-09-29) huginn
+  Blender runs only on Devon's machines, his Windows box and (since 2026-09-29) huginn;
+  a row that needs the full feature set on a GPU says "Windows machine only"
   (`Tools/blender-art/README.md` has the pin, 5.2 LTS, and the command lines), so CI never
   re-renders anything. What it
   checks is that `Tools/blender-art/renders.json` matches the tree: every output

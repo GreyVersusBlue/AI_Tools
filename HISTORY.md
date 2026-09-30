@@ -9,6 +9,15 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21: where Blender runs, huginn or Windows (2026-09-29, docs only)
+
+Devon's instruction: work that needs only basic headless Blender can run on huginn, and work
+that needs the full feature set on a GPU runs on his Windows machine and says so in its row.
+Every Path 21 row today is basic, because the pipeline renders Cycles on the CPU by design,
+so all five stay open to both machines. `BACKLOG.md`'s "Where it runs", its Path 21 decision
+row, `CLAUDE.md` and `Tools/blender-art/README.md` say so. Checked on huginn that day: Eevee,
+Workbench and CPU Cycles all render headless, and Cycles finds no GPU device (no HIP).
+
 ## Path 21 P3: the landing-page hero, an isometric classroom diorama (2026-09-29, #308, `CACHE_VERSION` v206)
 
 Rank 1 was a 1-session row: the landing page's hero, an isometric classroom diorama as a WebP
