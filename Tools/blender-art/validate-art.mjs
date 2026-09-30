@@ -21,6 +21,9 @@
 //   SIZE      an output whose pixel dimensions are not the ledger's.
 //   PIN       an entry made by a Blender outside the pinned LTS line.
 //   TWIN      an on-screen raster without a dark (or light) twin that points back.
+//             use "sheet" is art drawn only on a .paper-sheet surface, which
+//             ink-paper.css keeps light in both themes (080's board): it is
+//             light-only and needs no twin, the way print art does.
 //   SVG       an icon carrying a literal colour, a fill, a style attribute or
 //             an embedded raster; icons are stroke="currentColor" and nothing else.
 //   TOKEN     a material token that ink-paper.css does not define, or a
@@ -28,6 +31,17 @@
 //   CONTRAST  an under-text entry with no luminance recorded, or one whose
 //             recorded range does not hold 4.5:1 (3:1 when the entry says the
 //             text is large) against its text token in its own theme.
+//             "underText" is one region or, for an atlas with a label on
+//             several cells, a list of named regions, each held to its own
+//             token (080's algebra tiles: --ink on the pale positive tiles,
+//             --accent-ink on the red negative ones).
+//   GREY      an entry that declares "grey" (pairs of named cells a reader must
+//             tell apart without colour, and a minRatio) with a pair that has
+//             no measured contrast, or one under minRatio. The scene script
+//             measures each pair's mean relative luminance on the written file
+//             (which is the greyscale conversion) and records the ratio; this
+//             holds the record to the floor, so a colour-only difference
+//             cannot come back in a re-render.
 //   ORPHAN    a file under assets/art/ or Tools/*/art/ the ledger does not list.
 //   ALT       an <img> in a live page (index.html, Tools/*.html) showing an art
 //             file with no alt attribute, a decorative one with non-empty alt,
@@ -83,7 +97,7 @@ const REQUIRED = ['path', 'script', 'family', 'seed', 'width', 'height', 'cap', 
 // A derived entry is assembled, not rendered: no seed and no blender.
 const REQUIRED_DERIVED = ['path', 'script', 'family', 'sources', 'width', 'height', 'cap', 'theme', 'use',
   'decorative', 'sha256', 'bytes'];
-const USES = ['screen', 'print', 'content', 'manifest'];
+const USES = ['screen', 'print', 'content', 'manifest', 'sheet'];
 const isDerived = e => e.sources !== undefined;
 const RASTER = /\.(webp|png)$/i;
 
@@ -323,6 +337,7 @@ export function validate(root = SITE) {
     else if (e.cap > fam.entryCap && !e.capWhy) add('LEDGER', where, `cap ${e.cap} is above the ${e.family} family's ${fam.entryCap} with no capWhy`);
     if (!['light', 'dark', 'both'].includes(e.theme)) add('LEDGER', where, `theme "${e.theme}" is not light, dark or both`);
     if (!USES.includes(e.use)) add('LEDGER', where, `use "${e.use}" is not ${USES.join(', ')}`);
+    if (e.use === 'sheet' && e.theme !== 'light') add('LEDGER', where, 'a sheet entry is drawn on paper that stays light in both themes, so its theme is "light"');
     if (e.density !== undefined && !(Number.isInteger(e.density) && e.density > 0)) {
       add('LEDGER', where, `density must be a positive integer, not ${JSON.stringify(e.density)}`);
     }
@@ -390,16 +405,26 @@ export function validate(root = SITE) {
       for (const t of e.tokens || []) if (!(t in palette.light)) add('TOKEN', where, `"${t}" is not a token in ink-paper.css`);
       for (const c of e.extraColors || []) if (!c || !c.why) add('TOKEN', where, `non-token colour ${c && c.hex} has no "why"`);
     }
-    const u = e.underText;
-    if (u) {
+    for (const u of e.underText ? [].concat(e.underText) : []) {
       const theme = e.theme === 'dark' ? 'dark' : 'light';
+      const name = u.name ? ` (region ${u.name})` : '';
       const text = palette && palette[theme][u.token];
-      if (!text) add('CONTRAST', where, `text token "${u.token}" is not in ink-paper.css`);
-      else if (typeof u.lumMin !== 'number' || typeof u.lumMax !== 'number') add('CONTRAST', where, 'under-text luminance was never recorded');
+      if (!text) add('CONTRAST', where, `text token "${u.token}"${name} is not in ink-paper.css`);
+      else if (typeof u.lumMin !== 'number' || typeof u.lumMax !== 'number') add('CONTRAST', where, `under-text luminance${name} was never recorded`);
       else {
         const floor = u.large ? 3 : 4.5;
         const worst = worstContrast(luminance(text), u.lumMin, u.lumMax);
-        if (worst < floor) add('CONTRAST', where, `${u.token} over luminance ${u.lumMin}–${u.lumMax} is ${worst.toFixed(2)}:1 in ${theme}, under ${floor}:1`);
+        if (worst < floor) add('CONTRAST', where, `${u.token} over luminance ${u.lumMin}–${u.lumMax}${name} is ${worst.toFixed(2)}:1 in ${theme}, under ${floor}:1`);
+      }
+    }
+    const g = e.grey;
+    if (g) {
+      const pairs = Array.isArray(g.pairs) ? g.pairs : [];
+      if (!pairs.length || !(g.minRatio > 1)) add('GREY', where, '"grey" needs its pairs and a minRatio above 1');
+      for (const [a, b] of pairs) {
+        const got = (g.measured || {})[`${a}|${b}`];
+        if (typeof got !== 'number') add('GREY', where, `${a} against ${b} was never measured`);
+        else if (got < g.minRatio) add('GREY', where, `${a} against ${b} is ${got}:1 in greyscale, under ${g.minRatio}:1`);
       }
     }
   }

@@ -27,6 +27,7 @@ blender -b --factory-startup -P Tools/blender-art/scene_tile.py -- --entry asset
 blender -b --factory-startup -P Tools/blender-art/scene_icons.py -- --entry assets/art/shortcuts/t007-96.png
 blender -b --factory-startup -P Tools/blender-art/scene_icons.py -- --entry assets/icons/icon-maskable-512.png
 blender -b --factory-startup -t 4 -P Tools/blender-art/scene_hero.py -- --entry assets/art/hero/classroom-1x-light.webp
+blender -b --factory-startup -t 4 -P Tools/blender-art/scene_pieces.py -- --entry Tools/virtual-manipulatives-board/art/pieces.webp
 node Tools/blender-art/build-sprite.mjs
 node Tools/blender-art/validate-art.mjs
 node Tools/blender-art/test/validate-art.test.mjs
@@ -57,6 +58,7 @@ rendered twice and compared.
   band.
 - `scene_hero.py`: the landing page's hero (Path 21 P3), an isometric classroom diorama,
   four entries from one scene: light/dark at 1x (360x300) and 2x (720x600). See below.
+- `scene_pieces.py`: 080 Virtual Manipulatives' pieces, one atlas. See below.
 - `renders.json`: the ledger. The spec half (path, script, subject, family, seed, samples,
   quality, width, height, cap, theme, use, twin, decorative, `underText.region/token/large`)
   is written by hand *before* a render. The record half is written by the script.
@@ -146,6 +148,31 @@ the other theme's. It is hidden under 760 px, where the tool list comes first.
 - **Render with `-t 4`.** Four threads and the default (eight on huginn) gave different
   bytes for the same scene (23,916 B against 23,914 B). The committed four were rendered
   on **huginn** with `-t 4`, twice each, and each pair was byte-identical.
+
+## 080's pieces (Path 21 P4, 2026-09-30)
+
+`Tools/virtual-manipulatives-board/art/pieces.webp`, 1248×720 (2x of a 624×360 CSS atlas),
+43,318 B against a 250 KB cap. Base-ten unit, rod and flat; algebra tiles ±1, ±x, ±x²; a
+fraction tile's shaded and empty segment; the six faces of a d6; the six pattern blocks.
+
+- **One atlas, light only, `use: "sheet"`.** 080's board is a `.paper-sheet`, which
+  ink-paper.css keeps light in both themes, so a dark atlas would never be shown.
+  `check:art` lets a `sheet` entry go without a twin and requires it to be `light`;
+  `smoke-rendered-pieces.mjs` fails if the board ever follows the theme.
+- **`cells`** in the entry is where each piece is, in CSS px at 1x. The page's `CELLS`
+  is the same table, and the suite holds the two together.
+- **`underText` is a list** of named regions here, one per label, each with its own token
+  (`--ink` on the pale positive tiles, `--accent-ink` on the red negatives and the shaded
+  fraction segment).
+- **`grey`** names the pairs a reader must tell apart without colour and a `minRatio` (3,
+  WCAG's non-text floor). The script measures each pair's mean luminance on the written
+  file, records the ratio, and fails under the floor; `check:art`'s **GREY** rule holds the
+  record. A negative tile also carries an inset white ring, so the sign is never colour alone.
+- **`pieceColors` and `extraColors`**: tokens where one fits; six declared non-token
+  colours (the conventional pattern-block colours, a pale green, a burnt orange), each
+  with its reason. The scene refuses an undeclared colour.
+- Rendered on **huginn** with `-t 4`, three times: byte-identical.
+- **Left out on purpose:** the thousand-cube. Straight down, it is a hundred-flat.
 
 ## Determinism, measured 2026-09-25
 

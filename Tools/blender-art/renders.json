@@ -38,6 +38,10 @@
     "hero": {
       "entryCap": 46080,
       "total": 133120
+    },
+    "pieces": {
+      "entryCap": 256000,
+      "total": 256000
     }
   },
   "entries": [
@@ -2264,6 +2268,337 @@
         "--line",
         "--line-strong",
         "--muted"
+      ]
+    },
+    {
+      "path": "Tools/virtual-manipulatives-board/art/pieces.webp",
+      "script": "Tools/blender-art/scene_pieces.py",
+      "subject": "manipulatives",
+      "family": "pieces",
+      "seed": 80,
+      "samples": 64,
+      "quality": 90,
+      "alpha": true,
+      "density": 2,
+      "width": 1248,
+      "height": 720,
+      "cap": 256000,
+      "theme": "light",
+      "use": "sheet",
+      "decorative": true,
+      "cells": {
+        "hundred": [
+          0,
+          0,
+          260,
+          260
+        ],
+        "ten": [
+          268,
+          0,
+          260,
+          26
+        ],
+        "unit": [
+          268,
+          34,
+          26,
+          26
+        ],
+        "alg-pos1": [
+          302,
+          34,
+          30,
+          30
+        ],
+        "alg-neg1": [
+          340,
+          34,
+          30,
+          30
+        ],
+        "frac-fill": [
+          378,
+          34,
+          26,
+          40
+        ],
+        "frac-empty": [
+          412,
+          34,
+          26,
+          40
+        ],
+        "alg-posx2": [
+          268,
+          82,
+          100,
+          100
+        ],
+        "alg-negx2": [
+          376,
+          82,
+          100,
+          100
+        ],
+        "alg-posx": [
+          484,
+          82,
+          30,
+          100
+        ],
+        "alg-negx": [
+          522,
+          82,
+          30,
+          100
+        ],
+        "die-1": [
+          268,
+          190,
+          52,
+          52
+        ],
+        "die-2": [
+          328,
+          190,
+          52,
+          52
+        ],
+        "die-3": [
+          388,
+          190,
+          52,
+          52
+        ],
+        "die-4": [
+          448,
+          190,
+          52,
+          52
+        ],
+        "die-5": [
+          508,
+          190,
+          52,
+          52
+        ],
+        "die-6": [
+          568,
+          190,
+          52,
+          52
+        ],
+        "pb-hex": [
+          0,
+          268,
+          104,
+          90
+        ],
+        "pb-trapezoid": [
+          112,
+          268,
+          104,
+          45
+        ],
+        "pb-rhombus": [
+          224,
+          268,
+          78,
+          45
+        ],
+        "pb-thin": [
+          310,
+          268,
+          97,
+          26
+        ],
+        "pb-square": [
+          415,
+          268,
+          52,
+          52
+        ],
+        "pb-triangle": [
+          475,
+          268,
+          52,
+          45
+        ]
+      },
+      "pieceColors": {
+        "unit": "--accent-2",
+        "ten": "--accent-2",
+        "hundred": "--accent",
+        "frac-fill": "#b8621b",
+        "frac-empty": "--card",
+        "alg-pos": "#b4e0bf",
+        "alg-neg": "--err",
+        "neg-ring": "--card",
+        "die": "--card",
+        "pip": "--ink",
+        "pb-hex": "#f2c230",
+        "pb-trapezoid": "--err",
+        "pb-rhombus": "--accent-2",
+        "pb-thin": "#d8c39a",
+        "pb-square": "#e8843a",
+        "pb-triangle": "#3f9a55"
+      },
+      "extraColors": [
+        {
+          "hex": "#b8621b",
+          "why": "the fraction tile's shaded part: ink-paper has no warm mid-tone, and white label text needs it dark enough for 4.5:1 while --card beside it needs 3:1 in greyscale"
+        },
+        {
+          "hex": "#b4e0bf",
+          "why": "a positive algebra tile: a pale green, so positive and negative differ in luminance and not only in hue; ink-paper has no green"
+        },
+        {
+          "hex": "#f2c230",
+          "why": "pattern blocks' conventional yellow hexagon, which teachers name by colour"
+        },
+        {
+          "hex": "#d8c39a",
+          "why": "pattern blocks' conventional tan thin rhombus"
+        },
+        {
+          "hex": "#e8843a",
+          "why": "pattern blocks' conventional orange square"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "pattern blocks' conventional green triangle"
+        }
+      ],
+      "underText": [
+        {
+          "name": "alg-pos1",
+          "region": [
+            618,
+            82,
+            32,
+            32
+          ],
+          "token": "--ink",
+          "large": false,
+          "lumMin": 0.4564,
+          "lumMax": 0.4802
+        },
+        {
+          "name": "alg-neg1",
+          "region": [
+            694,
+            82,
+            32,
+            32
+          ],
+          "token": "--accent-ink",
+          "large": false,
+          "lumMin": 0.0932,
+          "lumMax": 0.0977
+        },
+        {
+          "name": "alg-posx",
+          "region": [
+            982,
+            234,
+            32,
+            60
+          ],
+          "token": "--ink",
+          "large": false,
+          "lumMin": 0.4745,
+          "lumMax": 0.4802
+        },
+        {
+          "name": "alg-negx",
+          "region": [
+            1058,
+            234,
+            32,
+            60
+          ],
+          "token": "--accent-ink",
+          "large": false,
+          "lumMin": 0.0938,
+          "lumMax": 0.0977
+        },
+        {
+          "name": "alg-posx2",
+          "region": [
+            596,
+            234,
+            80,
+            60
+          ],
+          "token": "--ink",
+          "large": false,
+          "lumMin": 0.4802,
+          "lumMax": 0.4802
+        },
+        {
+          "name": "alg-negx2",
+          "region": [
+            812,
+            234,
+            80,
+            60
+          ],
+          "token": "--accent-ink",
+          "large": false,
+          "lumMin": 0.0977,
+          "lumMax": 0.0977
+        },
+        {
+          "name": "frac-fill",
+          "region": [
+            764,
+            92,
+            36,
+            32
+          ],
+          "token": "--accent-ink",
+          "large": false,
+          "lumMin": 0.1489,
+          "lumMax": 0.1535
+        }
+      ],
+      "grey": {
+        "pairs": [
+          [
+            "alg-pos1",
+            "alg-neg1"
+          ],
+          [
+            "alg-posx",
+            "alg-negx"
+          ],
+          [
+            "alg-posx2",
+            "alg-negx2"
+          ],
+          [
+            "frac-fill",
+            "frac-empty"
+          ]
+        ],
+        "minRatio": 3,
+        "measured": {
+          "alg-pos1|alg-neg1": 3.59,
+          "alg-posx|alg-negx": 3.61,
+          "alg-posx2|alg-negx2": 3.61,
+          "frac-fill|frac-empty": 3.7
+        }
+      },
+      "blender": "5.2.2",
+      "sha256": "fcbd7e1f20f1efc9777628b2e5ea297f6523edad47b9827e4b5c0ac7a8275284",
+      "bytes": 43318,
+      "tokens": [
+        "--accent",
+        "--accent-2",
+        "--card",
+        "--err",
+        "--ink"
       ]
     }
   ]

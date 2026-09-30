@@ -173,6 +173,9 @@ every edit. The deduplication work that established them is summarised in
   `density` must carry its 1x `width`/`height`, its `srcset` must name same-theme entries at
   the right sizes, and a page showing one theme's picture must show its twin (**IMG**).
   `check:precache` reads `srcset` too, since the hero's 2x files are named nowhere else.
+  Since Path 21 P4 (080's pieces) a `use: "sheet"` entry, art drawn only on a
+  `.paper-sheet`, is light-only with no twin; `underText` may be a list of named regions; and an entry
+  declaring `grey` pairs must record each pair's greyscale contrast at its `minRatio` (**GREY**).
   **Add a tool icon, then re-run `build-sprite.mjs`.** The
   offline zip inlines the sprite into its landing page, because Chrome draws nothing
   for an external `<use>` under `file://`. Its test is `npm run test:blender-art`. Keep art
