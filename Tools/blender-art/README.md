@@ -29,6 +29,7 @@ blender -b --factory-startup -P Tools/blender-art/scene_icons.py -- --entry asse
 blender -b --factory-startup -t 4 -P Tools/blender-art/scene_hero.py -- --entry assets/art/hero/classroom-1x-light.webp
 blender -b --factory-startup -t 4 -P Tools/blender-art/scene_pieces.py -- --entry Tools/virtual-manipulatives-board/art/pieces.webp
 blender -b --factory-startup -t 4 -P Tools/blender-art/scene_prompts.py -- --entry Tools/picture-prompt-generator/art/market.webp
+blender -b --factory-startup -t 4 -P Tools/blender-art/scene_seals.py -- --entry Tools/certificate-award-maker/art/seal-gold.webp
 node Tools/blender-art/build-sprite.mjs
 node Tools/blender-art/validate-art.mjs
 node Tools/blender-art/test/validate-art.test.mjs
@@ -61,6 +62,7 @@ rendered twice and compared.
   four entries from one scene: light/dark at 1x (360x300) and 2x (720x600). See below.
 - `scene_pieces.py`: 080 Virtual Manipulatives' pieces, one atlas. See below.
 - `scene_prompts.py`: 071's twelve starter pictures, one entry per scene. See below.
+- `scene_seals.py`: 042's certificate seals and ribbon tails. See below.
 - `renders.json`: the ledger. The spec half (path, script, subject, family, seed, samples,
   quality, width, height, cap, theme, use, twin, decorative, `underText.region/token/large`)
   is written by hand *before* a render. The record half is written by the script.
@@ -194,6 +196,22 @@ fraction tile's shaded and empty segment; the six faces of a d6; the six pattern
   `library` were not.** Each differed in one patch of about 25×12 px, by at most 7/255, and the byte
   counts were equal. It is thread-timing noise on one CPU, not a change in the scene. It means "same
   machine, same `-t`, same bytes" holds for most lit renders, not all.
+
+## 042's seals and ribbons (Path 21 P4, 2026-09-30)
+
+`Tools/certificate-award-maker/art/seal-{gold,silver,bronze,red,blue,green}.webp` (320×320) and
+`ribbon-{blue,red,gold,green}.webp` (320×472): **84,170 B** for the ten, against a 120 KB family
+total.
+
+- **The seal** is a foil sticker seen straight down: a serrated rim, a raised ring of beads, and a
+  raised star. **There is no text**, because award titles change.
+- **The ribbon's canvas is the seal's width**, and the seal's centre sits `SEAL_CY` (1.1 units) below
+  the top in both images. The page lays them at the same top-left corner, and the tails come out
+  from under the seal.
+- **`use: "print"`, light only, transparent.** The certificate templates' papers differ.
+- **Placement:** 042 puts the seal bottom centre, between the date and signature lines.
+  `smoke-seals.mjs` fails if it covers any text, in either orientation.
+- Rendered on **huginn** with `-t 4`, twice each: **all ten byte-identical.**
 
 ## Determinism, measured 2026-09-25
 

@@ -152,7 +152,16 @@
     padding: calc(6% + var(--ins-pad, 0%)) calc(8% + var(--ins-pad, 0%));
   }
   .cert-border { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-  .cert-seal { font-size: 2.6rem; margin-bottom: .5rem; }
+  /* The seal and its ribbon tails (Path 21 P4): Blender renders from
+     certificate-award-maker/art/, ledgered in Tools/blender-art/renders.json.
+     They sit bottom centre, between the date line and the signature line:
+     the text stacks from the top (a long name reaches the top corners), and
+     the footer's two lines are pushed to the sides, so that is the space
+     nothing else uses. smoke-seals.mjs checks it covers no text. Both images share one grid: equal width,
+     the same top, the seal's centre the same distance down in each, so the
+     tails come out from under the seal. No text is baked into either. */
+  .cert-award { position: absolute; bottom: calc(5% + var(--ins-y, 0%)); left: 44.5%; width: 11%; aspect-ratio: 320 / 472; pointer-events: none; }
+  .cert-award img { position: absolute; top: 0; left: 0; width: 100%; height: auto; }
   .cert-logo { max-height: 3.4rem; max-width: 40%; object-fit: contain; margin-bottom: .5rem; }
   .cert-qr { position: absolute; top: calc(7% + var(--ins-y, 0%)); right: calc(7% + var(--ins-x, 0%)); width: 3.2rem; height: 3.2rem; image-rendering: pixelated; }
   .cert-kicker { font-size: 1rem; letter-spacing: .18em; text-transform: uppercase; margin-bottom: .6rem; }
@@ -289,6 +298,11 @@
         <div class="swatches" id="themeSwatches"></div>
         <label>Border</label>
         <div class="swatches" id="borderSwatches"></div>
+        <label>Seal</label>
+        <div class="swatches" id="sealSwatches"></div>
+        <label>Ribbon</label>
+        <p class="hint">Hangs from under the seal, so it shows when there is one.</p>
+        <div class="swatches" id="ribbonSwatches"></div>
 
         <label for="logoFile">Logo / crest (optional)</label>
         <p class="hint">Upload a school crest or class mascot to show on the certificate. Shrunk automatically before it's saved.</p>
@@ -431,10 +445,26 @@
     { key: 'ribbon', label: 'Ribbon', swatch: 'linear-gradient(90deg,#1e3a5f,#b08d2f)' }
   ];
 
+  /* Seals and ribbons are rendered art (Path 21 P4). A saved value that is
+     not one of these keys is 'none' (normalizeSettings), so nothing a preset
+     holds is ever written into a src. */
+  var ART_DIR = 'certificate-award-maker/art/';
+  var SEALS = ['none', 'gold', 'silver', 'bronze', 'red', 'blue', 'green'];
+  var RIBBONS = ['none', 'blue', 'red', 'gold', 'green'];
+  function artItems(keys, prefix) {
+    return keys.map(function (k) {
+      return {
+        key: k,
+        label: k === 'none' ? 'None' : k.charAt(0).toUpperCase() + k.slice(1),
+        swatch: k === 'none' ? 'var(--card)' : 'url(' + ART_DIR + prefix + k + '.webp) center / contain no-repeat, var(--card)'
+      };
+    });
+  }
+
   var els = {};
   ['toolbar','presetSwitch','newPresetBtn','deletePresetBtn','presetName',
    'deleteUndoBar','deleteUndoName','undoDeleteBtn',
-   'themeSwatches','borderSwatches','logoFile','logoPreview','logoPreviewImg','logoMissing','logoRemove',
+   'themeSwatches','borderSwatches','sealSwatches','ribbonSwatches','logoFile','logoPreview','logoPreviewImg','logoMissing','logoRemove',
    'singleFields','batchFields','studentName','batchNames','camRosterSelect','camLoadRosterBtn',
    'awardTitle','awardTitleCustom','reason','certDate','signature',
    'signatureFile','signaturePreview','signaturePreviewImg','signatureMissing','signatureRemove',
@@ -480,7 +510,9 @@
       orientation: 'landscape', // 'landscape' | 'portrait'
       perPage: 1, // 1 | 2 — certificates per printed sheet
       showGuides: false, // draw the boundary content is kept inside
-      stockInset: 0 // inches of pre-printed border to keep clear on every edge
+      stockInset: 0, // inches of pre-printed border to keep clear on every edge
+      seal: 'none', // a SEALS key: the rendered foil seal, top left
+      ribbon: 'none' // a RIBBONS key: ribbon tails behind the seal
     };
   }
 
@@ -494,6 +526,8 @@
     if (typeof s.signatureImage !== 'string') s.signatureImage = '';
     s.showGuides = !!s.showGuides;
     s.stockInset = STOCK_INSETS.indexOf(Number(s.stockInset)) === -1 ? 0 : Number(s.stockInset);
+    if (SEALS.indexOf(s.seal) === -1) s.seal = 'none';
+    if (RIBBONS.indexOf(s.ribbon) === -1) s.ribbon = 'none';
     return s;
   }
 
@@ -560,9 +594,40 @@
   function buildThemeSwatches() {
     buildSwatches(els.themeSwatches, THEMES, settings.theme, function (key) {
       settings.theme = key;
+      /* The Ribbon template gets a real ribbon: picking it with no seal
+         chosen yet puts a gold seal with blue tails on. A seal already
+         chosen is left alone. */
+      if (key === 'ribbon' && settings.seal === 'none') {
+        settings.seal = 'gold';
+        if (settings.ribbon === 'none') settings.ribbon = 'blue';
+        buildAwardSwatches();
+      }
       buildThemeSwatches();
       renderAll();
     });
+  }
+
+  function buildAwardSwatches() {
+    buildSwatches(els.sealSwatches, artItems(SEALS, 'seal-'), settings.seal, function (key) {
+      settings.seal = key;
+      buildAwardSwatches();
+      renderAll();
+    });
+    buildSwatches(els.ribbonSwatches, artItems(RIBBONS, 'ribbon-'), settings.ribbon, function (key) {
+      settings.ribbon = key;
+      buildAwardSwatches();
+      renderAll();
+    });
+  }
+
+  /** The seal and ribbon for one certificate, or '' for none. Decorative:
+      the certificate's own text says what the award is. */
+  function awardHtml() {
+    if (SEALS.indexOf(settings.seal) < 1) return '';
+    return '<div class="cert-award">' +
+      (RIBBONS.indexOf(settings.ribbon) > 0 ? '<img class="cert-ribbon" src="' + ART_DIR + 'ribbon-' + settings.ribbon + '.webp" alt="">' : '') +
+      '<img class="cert-seal" src="' + ART_DIR + 'seal-' + settings.seal + '.webp" alt="">' +
+      '</div>';
   }
 
   function borderItems() {
@@ -722,6 +787,7 @@
     return (
       '<div class="cert theme-' + settings.theme + '" style="aspect-ratio:' + w + '/' + h + ';' + stockInsetVars() + '">' +
         CertificateBorders.borderSvg(settings.border, w, h) +
+        awardHtml() +
         (logoSrc ? '<img class="cert-logo" src="' + logoSrc + '" alt="">' : '') +
         (qrDataUrl ? '<img class="cert-qr" src="' + qrDataUrl + '" alt="QR code linking to more about this award" title="Scan for more">' : '') +
         '<div class="cert-kicker">' + escapeHtml(kickerFor(effTitle)) + '</div>' +
@@ -914,6 +980,7 @@
 
     buildThemeSwatches();
     buildBorderSwatches();
+    buildAwardSwatches();
   }
 
   function newPreset(name) {
