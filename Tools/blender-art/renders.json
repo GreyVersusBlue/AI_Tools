@@ -46,6 +46,10 @@
     "prompts": {
       "entryCap": 40960,
       "total": 491520
+    },
+    "seals": {
+      "entryCap": 20480,
+      "total": 122880
     }
   },
   "entries": [
@@ -3901,6 +3905,424 @@
         "--line-strong",
         "--muted"
       ]
+    },
+    {
+      "path": "Tools/certificate-award-maker/art/seal-gold.webp",
+      "script": "Tools/blender-art/scene_seals.py",
+      "subject": "seal-gold",
+      "family": "seals",
+      "seed": 42,
+      "samples": 64,
+      "quality": 85,
+      "alpha": true,
+      "width": 320,
+      "height": 320,
+      "cap": 20480,
+      "theme": "light",
+      "use": "print",
+      "decorative": true,
+      "colors": {
+        "face": "#c9a23a"
+      },
+      "extraColors": [
+        {
+          "hex": "#c9a23a",
+          "why": "042 certificate seal: gold foil: a certificate seal's conventional metal; ink-paper has no gold"
+        },
+        {
+          "hex": "#b8bcc2",
+          "why": "042 certificate seal: silver foil"
+        },
+        {
+          "hex": "#a8683a",
+          "why": "042 certificate seal: bronze foil"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "042 certificate seal: a green foil seal and ribbon; ink-paper has no green"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "db4215e36d4744d1b4232043e9c40927b5cbe54b141553b1992464d54da52b9b",
+      "bytes": 9616,
+      "tokens": []
+    },
+    {
+      "path": "Tools/certificate-award-maker/art/seal-silver.webp",
+      "script": "Tools/blender-art/scene_seals.py",
+      "subject": "seal-silver",
+      "family": "seals",
+      "seed": 43,
+      "samples": 64,
+      "quality": 85,
+      "alpha": true,
+      "width": 320,
+      "height": 320,
+      "cap": 20480,
+      "theme": "light",
+      "use": "print",
+      "decorative": true,
+      "colors": {
+        "face": "#b8bcc2"
+      },
+      "extraColors": [
+        {
+          "hex": "#c9a23a",
+          "why": "042 certificate seal: gold foil: a certificate seal's conventional metal; ink-paper has no gold"
+        },
+        {
+          "hex": "#b8bcc2",
+          "why": "042 certificate seal: silver foil"
+        },
+        {
+          "hex": "#a8683a",
+          "why": "042 certificate seal: bronze foil"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "042 certificate seal: a green foil seal and ribbon; ink-paper has no green"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "0a8d0882cf57718334a5027877ddce0d7e1e89af541792888f887a497aae5048",
+      "bytes": 8134,
+      "tokens": []
+    },
+    {
+      "path": "Tools/certificate-award-maker/art/seal-bronze.webp",
+      "script": "Tools/blender-art/scene_seals.py",
+      "subject": "seal-bronze",
+      "family": "seals",
+      "seed": 44,
+      "samples": 64,
+      "quality": 85,
+      "alpha": true,
+      "width": 320,
+      "height": 320,
+      "cap": 20480,
+      "theme": "light",
+      "use": "print",
+      "decorative": true,
+      "colors": {
+        "face": "#a8683a"
+      },
+      "extraColors": [
+        {
+          "hex": "#c9a23a",
+          "why": "042 certificate seal: gold foil: a certificate seal's conventional metal; ink-paper has no gold"
+        },
+        {
+          "hex": "#b8bcc2",
+          "why": "042 certificate seal: silver foil"
+        },
+        {
+          "hex": "#a8683a",
+          "why": "042 certificate seal: bronze foil"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "042 certificate seal: a green foil seal and ribbon; ink-paper has no green"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "da0941ae16b0c18099d2b1226dad7ce29102743d48e69749343674125315657f",
+      "bytes": 8850,
+      "tokens": []
+    },
+    {
+      "path": "Tools/certificate-award-maker/art/seal-red.webp",
+      "script": "Tools/blender-art/scene_seals.py",
+      "subject": "seal-red",
+      "family": "seals",
+      "seed": 45,
+      "samples": 64,
+      "quality": 85,
+      "alpha": true,
+      "width": 320,
+      "height": 320,
+      "cap": 20480,
+      "theme": "light",
+      "use": "print",
+      "decorative": true,
+      "colors": {
+        "face": "--err"
+      },
+      "extraColors": [
+        {
+          "hex": "#c9a23a",
+          "why": "042 certificate seal: gold foil: a certificate seal's conventional metal; ink-paper has no gold"
+        },
+        {
+          "hex": "#b8bcc2",
+          "why": "042 certificate seal: silver foil"
+        },
+        {
+          "hex": "#a8683a",
+          "why": "042 certificate seal: bronze foil"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "042 certificate seal: a green foil seal and ribbon; ink-paper has no green"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "125b4beb293f55d7b786e0bc3e8d02bd8712ff7efc9d6d1253b3d30e4b2e273e",
+      "bytes": 8648,
+      "tokens": [
+        "--err"
+      ]
+    },
+    {
+      "path": "Tools/certificate-award-maker/art/seal-blue.webp",
+      "script": "Tools/blender-art/scene_seals.py",
+      "subject": "seal-blue",
+      "family": "seals",
+      "seed": 46,
+      "samples": 64,
+      "quality": 85,
+      "alpha": true,
+      "width": 320,
+      "height": 320,
+      "cap": 20480,
+      "theme": "light",
+      "use": "print",
+      "decorative": true,
+      "colors": {
+        "face": "--accent-2"
+      },
+      "extraColors": [
+        {
+          "hex": "#c9a23a",
+          "why": "042 certificate seal: gold foil: a certificate seal's conventional metal; ink-paper has no gold"
+        },
+        {
+          "hex": "#b8bcc2",
+          "why": "042 certificate seal: silver foil"
+        },
+        {
+          "hex": "#a8683a",
+          "why": "042 certificate seal: bronze foil"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "042 certificate seal: a green foil seal and ribbon; ink-paper has no green"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "1e307d4e51665649082161c1cc2423100f940ddc28c8069b0ab9bb8a5bcfd918",
+      "bytes": 8484,
+      "tokens": [
+        "--accent-2"
+      ]
+    },
+    {
+      "path": "Tools/certificate-award-maker/art/seal-green.webp",
+      "script": "Tools/blender-art/scene_seals.py",
+      "subject": "seal-green",
+      "family": "seals",
+      "seed": 47,
+      "samples": 64,
+      "quality": 85,
+      "alpha": true,
+      "width": 320,
+      "height": 320,
+      "cap": 20480,
+      "theme": "light",
+      "use": "print",
+      "decorative": true,
+      "colors": {
+        "face": "#3f9a55"
+      },
+      "extraColors": [
+        {
+          "hex": "#c9a23a",
+          "why": "042 certificate seal: gold foil: a certificate seal's conventional metal; ink-paper has no gold"
+        },
+        {
+          "hex": "#b8bcc2",
+          "why": "042 certificate seal: silver foil"
+        },
+        {
+          "hex": "#a8683a",
+          "why": "042 certificate seal: bronze foil"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "042 certificate seal: a green foil seal and ribbon; ink-paper has no green"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "3161f044e395fa8fae274b4bf315754f6a2bad2f199ac70c23a4baf5c55a013b",
+      "bytes": 8538,
+      "tokens": []
+    },
+    {
+      "path": "Tools/certificate-award-maker/art/ribbon-blue.webp",
+      "script": "Tools/blender-art/scene_seals.py",
+      "subject": "ribbon-blue",
+      "family": "seals",
+      "seed": 48,
+      "samples": 64,
+      "quality": 85,
+      "alpha": true,
+      "width": 320,
+      "height": 472,
+      "cap": 20480,
+      "theme": "light",
+      "use": "print",
+      "decorative": true,
+      "colors": {
+        "ribbon": "--accent-2"
+      },
+      "extraColors": [
+        {
+          "hex": "#c9a23a",
+          "why": "042 certificate seal: gold foil: a certificate seal's conventional metal; ink-paper has no gold"
+        },
+        {
+          "hex": "#b8bcc2",
+          "why": "042 certificate seal: silver foil"
+        },
+        {
+          "hex": "#a8683a",
+          "why": "042 certificate seal: bronze foil"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "042 certificate seal: a green foil seal and ribbon; ink-paper has no green"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "2fd35a782b0d8c08f610671c5fedb99ddc0b29338f9fecf6b9a76ed038a7767a",
+      "bytes": 7606,
+      "tokens": [
+        "--accent-2"
+      ]
+    },
+    {
+      "path": "Tools/certificate-award-maker/art/ribbon-red.webp",
+      "script": "Tools/blender-art/scene_seals.py",
+      "subject": "ribbon-red",
+      "family": "seals",
+      "seed": 49,
+      "samples": 64,
+      "quality": 85,
+      "alpha": true,
+      "width": 320,
+      "height": 472,
+      "cap": 20480,
+      "theme": "light",
+      "use": "print",
+      "decorative": true,
+      "colors": {
+        "ribbon": "--err"
+      },
+      "extraColors": [
+        {
+          "hex": "#c9a23a",
+          "why": "042 certificate seal: gold foil: a certificate seal's conventional metal; ink-paper has no gold"
+        },
+        {
+          "hex": "#b8bcc2",
+          "why": "042 certificate seal: silver foil"
+        },
+        {
+          "hex": "#a8683a",
+          "why": "042 certificate seal: bronze foil"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "042 certificate seal: a green foil seal and ribbon; ink-paper has no green"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "ca4449ad294c7dbac182c41500a68478dae1a4f044393a760ac8fc4e1b10ca47",
+      "bytes": 8060,
+      "tokens": [
+        "--err"
+      ]
+    },
+    {
+      "path": "Tools/certificate-award-maker/art/ribbon-gold.webp",
+      "script": "Tools/blender-art/scene_seals.py",
+      "subject": "ribbon-gold",
+      "family": "seals",
+      "seed": 50,
+      "samples": 64,
+      "quality": 85,
+      "alpha": true,
+      "width": 320,
+      "height": 472,
+      "cap": 20480,
+      "theme": "light",
+      "use": "print",
+      "decorative": true,
+      "colors": {
+        "ribbon": "#c9a23a"
+      },
+      "extraColors": [
+        {
+          "hex": "#c9a23a",
+          "why": "042 certificate seal: gold foil: a certificate seal's conventional metal; ink-paper has no gold"
+        },
+        {
+          "hex": "#b8bcc2",
+          "why": "042 certificate seal: silver foil"
+        },
+        {
+          "hex": "#a8683a",
+          "why": "042 certificate seal: bronze foil"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "042 certificate seal: a green foil seal and ribbon; ink-paper has no green"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "6f2cde5fc032cb3d0d5b9ec4f237c06ad732a297ad4a6af007a53b9fc139aaea",
+      "bytes": 8262,
+      "tokens": []
+    },
+    {
+      "path": "Tools/certificate-award-maker/art/ribbon-green.webp",
+      "script": "Tools/blender-art/scene_seals.py",
+      "subject": "ribbon-green",
+      "family": "seals",
+      "seed": 51,
+      "samples": 64,
+      "quality": 85,
+      "alpha": true,
+      "width": 320,
+      "height": 472,
+      "cap": 20480,
+      "theme": "light",
+      "use": "print",
+      "decorative": true,
+      "colors": {
+        "ribbon": "#3f9a55"
+      },
+      "extraColors": [
+        {
+          "hex": "#c9a23a",
+          "why": "042 certificate seal: gold foil: a certificate seal's conventional metal; ink-paper has no gold"
+        },
+        {
+          "hex": "#b8bcc2",
+          "why": "042 certificate seal: silver foil"
+        },
+        {
+          "hex": "#a8683a",
+          "why": "042 certificate seal: bronze foil"
+        },
+        {
+          "hex": "#3f9a55",
+          "why": "042 certificate seal: a green foil seal and ribbon; ink-paper has no green"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "fb555fc2b6ec07bb3a3add66a6b9cad91627b4acbfa18a6f73919a3cfcdd5556",
+      "bytes": 7972,
+      "tokens": []
     }
   ]
 }
