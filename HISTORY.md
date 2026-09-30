@@ -9,6 +9,43 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P4, 030: rendered board art (2026-09-30, #317, `CACHE_VERSION` v210)
+
+Rank 1 was a ½-session row: board art for 030 Review Game Board, projected, with every tile's
+text contrast recorded and asserted. It shipped, and the row is deleted. Rendered on **huginn**
+(5.2.2 LTS, `-t 4`), twice each: all four byte-identical.
+
+**What shipped.**
+- `Tools/blender-art/scene_board.py`, four entries in a new `board` family:
+  - `backdrop` (1600×900), behind the grid.
+  - `header`, `cell` and `cell-hover` (192×96 each), as 9-slice `border-image` sources.
+  - **5,348 B** in all, against 200 KB.
+- `check:art`: an `underText` region may name its text colour as `hex` with a `why`, in place of
+  a token. 030's gold is its own colour, not ink-paper's. A hex with no why is CONTRAST; four new
+  cases are in `validate-art.test.mjs` (91 pass).
+- `smoke-board-art.mjs` (port 8456, 16 assertions) covers:
+  - The CSS draws exactly the ledgered files, at their sizes and slice.
+  - The page's `--gold` is the ledger's text colour.
+  - Hover and keyboard focus get the lifted tile.
+  - A played clue has no art.
+  - The dark theme draws the same board.
+  - A deliberate break (hover pointing at the plain tile) failed two named assertions.
+
+**Calls made (reversible).**
+- **9-slice, not a stretched picture.** The columns are fluid. Everything the tile draws (the
+  bevel, the header's rim) lies inside the 24 px slice, and the middle is flat.
+- **Rendered once, `use: "sheet"`.** The row asked for "both themes", but 030's board is navy and
+  gold in both themes on purpose. The validator's wording for `sheet` now says "a surface the
+  page keeps the same in both themes", covering 080's paper and 030's board.
+- **A played clue keeps the flat `--board-used`.** Its dim #3a4470 text is below 4.5:1 by
+  design: a spent clue is a disabled control, which WCAG exempts. So it gets no art and makes no
+  contrast claim, and the row's "every tile" holds for every tile that is art.
+- **The lit navy is lighter and greyer than the flat CSS navy it replaced** (middle luminance
+  0.04–0.06 against 0.03). The gold holds at least 5.5:1 over it.
+
+**What was not verified.** A real projector, and whether the backdrop's frame reads at the back
+of a room. The offline zip was not built.
+
 ## Path 21 P4, 042: rendered certificate seals and ribbons (2026-09-30, #315, `CACHE_VERSION` v209)
 
 Rank 1 was a ½-session row: foil seals and ribbons for 042 Certificate & Award Maker, replacing the
