@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v207';
+const CACHE_VERSION = 'v208';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -331,6 +331,18 @@ const PRECACHE_URLS = [
   "Tools/069-pe-warmup-circuit-generator.html",
   "Tools/070-peer-feedback-checklist-generator.html",
   "Tools/071-picture-prompt-generator.html",
+  "Tools/picture-prompt-generator/art/beach.webp",
+  "Tools/picture-prompt-generator/art/bedroom.webp",
+  "Tools/picture-prompt-generator/art/bus-stop.webp",
+  "Tools/picture-prompt-generator/art/cafe.webp",
+  "Tools/picture-prompt-generator/art/classroom.webp",
+  "Tools/picture-prompt-generator/art/doctor.webp",
+  "Tools/picture-prompt-generator/art/farm.webp",
+  "Tools/picture-prompt-generator/art/kitchen.webp",
+  "Tools/picture-prompt-generator/art/library.webp",
+  "Tools/picture-prompt-generator/art/market.webp",
+  "Tools/picture-prompt-generator/art/park.webp",
+  "Tools/picture-prompt-generator/art/party.webp",
   "Tools/picture-prompt-generator/ppg-image.js",
   "Tools/072-plot-diagram-builder.html",
   "Tools/028-primary-source-analysis-generator.html",

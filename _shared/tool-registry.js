@@ -1428,6 +1428,9 @@
         { k: 'ppg_print_count_v1' },
         { k: 'ppg_prompt_sets_v1' },
         { k: 'ppg_prompts_v1' },
+        /* Whether the twelve starter pictures (site files, never copied into
+           storage) are in the pool, and the prompts pinned to them. */
+        { k: 'ppg_starter_pictures_v1' },
       ],
     },
     {

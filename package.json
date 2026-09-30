@@ -57,6 +57,7 @@
     "test:manipulatives": "node Tools/virtual-manipulatives-board/test/smoke-boards.mjs && node Tools/virtual-manipulatives-board/test/smoke-snap-grid.mjs && node Tools/virtual-manipulatives-board/test/smoke-rendered-pieces.mjs",
     "test:picture-prompt": "node Tools/picture-prompt-generator/test/smoke-prompt-sets.mjs",
     "test:picture-prompt-store": "node Tools/picture-prompt-generator/test/smoke-picture-store.mjs",
+    "test:picture-prompt-starters": "node Tools/picture-prompt-generator/test/smoke-starter-pictures.mjs",
     "test:review-board-image-store": "node Tools/review-game-board/test/smoke-clue-image-store.mjs",
     "test:trading-cards-photo-store": "node Tools/historical-trading-card-maker/test/smoke-photo-store.mjs",
     "test:verb-poster": "node Tools/verb-conjugation-poster-generator/test/smoke-panel-colors.mjs",
