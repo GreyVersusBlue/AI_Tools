@@ -255,6 +255,13 @@ breaks('one region held to the wrong token', 'CONTRAST', c => { c.entry(P).under
 breaks('a greyscale pair never measured', 'GREY', c => { delete c.entry(P).grey.measured['alg-pos1|alg-neg1']; });
 breaks('a greyscale pair under its floor', 'GREY', c => { c.entry(P).grey.measured['frac-fill|frac-empty'] = 1.4; });
 breaks('a grey record with no floor', 'GREY', c => { delete c.entry(P).grey.minRatio; });
+/* 030's board: text in a colour that is not an ink-paper token, declared with a why. */
+const C = 'review-game-board/art/cell.webp';
+breaks('a text colour that is not a token, with no why', 'CONTRAST', c => { delete c.entry(C).underText[0].why; });
+breaks('a text colour that is not a hex', 'CONTRAST', c => { c.entry(C).underText[0].hex = 'gold'; });
+breaks('gold text over a tile too light for it', 'CONTRAST', c => { Object.assign(c.entry(C).underText[0], { lumMin: 0.3, lumMax: 0.5, large: false }); });
+ok(fixture(c => { Object.assign(c.entry(C).underText[0], { lumMin: 0.12, lumMax: 0.14 }); }).length === 0,
+  'large gold text at 3:1 or better passes');
 breaks('an art file the ledger does not list', 'ORPHAN', c => c.put('Tools/some-tool/art/stray.webp', 'x'));
 breaks('an <img> of an art file with no alt', 'ALT', c => c.put('index.html', '<img src="assets/art/test/tile-256-light.webp"><img src="assets/art/test/tile-256-dark.webp" alt="">'));
 breaks('a decorative <img> with alt text', 'ALT', c => c.put('Tools/001-x.html', '<img src="../assets/art/test/tile-256-light.webp" alt="a tile"><img src="../assets/art/test/tile-256-dark.webp" alt="">'));

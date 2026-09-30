@@ -240,19 +240,29 @@
   .team-chip.flash-up { animation: scoreFlashUp 900ms ease-out; }
   .team-chip.flash-down { animation: scoreFlashDown 900ms ease-out; }
 
-  .board-grid { background: var(--board-bg); border-radius: 10px; padding: 1rem; overflow-x: auto; }
+  /* The board art (Path 21 P4): Blender renders in review-game-board/art/,
+     ledgered in Tools/blender-art/renders.json. The backdrop is the panel
+     behind the grid; the header and point tiles are 9-slice border-images,
+     cut at 24 file px and drawn at a 12px border, so a bevel keeps its shape
+     at any column width and only the flat middle stretches. The gold text
+     sits on that middle, and check:art holds it to 4.5:1 there. Like the
+     rest of the board they are the same in both themes. A used tile keeps
+     the flat --board-used, so a played clue reads as spent at a glance. */
+  .board-grid { background: var(--board-bg) url("review-game-board/art/backdrop.webp") center / cover no-repeat; border-radius: 10px; padding: 1rem; overflow-x: auto; }
   .board-cols { display: grid; gap: .5rem; }
   .cat-header {
     color: var(--gold); font-weight: 700; text-align: center; text-transform: uppercase;
-    font-size: .85rem; padding: .5rem .3rem; letter-spacing: .03em;
+    font-size: .85rem; padding: .1rem .1rem; letter-spacing: .03em;
+    border: 12px solid transparent; border-image: url("review-game-board/art/header.webp") 24 fill / 12px stretch;
   }
   .cell {
-    background: var(--board-cell); color: var(--gold); border: none; border-radius: 6px;
+    background: none; color: var(--gold); border: 12px solid transparent; border-radius: 0;
+    border-image: url("review-game-board/art/cell.webp") 24 fill / 12px stretch;
     font-family: Consolas, monospace; font-size: 1.3rem; font-weight: 700;
-    padding: 1.1rem .5rem; width: 100%; cursor: pointer;
+    padding: .45rem 0; width: 100%; cursor: pointer;
   }
-  .cell:hover { background: var(--board-cell-hover); }
-  .cell.used { background: var(--board-used); color: #3a4470; cursor: default; }
+  .cell:hover, .cell:focus-visible { border-image-source: url("review-game-board/art/cell-hover.webp"); }
+  .cell.used, .cell.used:hover { border-image: none; background: var(--board-used); color: #3a4470; cursor: default; }
   .cell.blank { visibility: hidden; }
 
   /* ---- reveal overlay ---- */

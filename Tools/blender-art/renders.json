@@ -50,6 +50,10 @@
     "seals": {
       "entryCap": 20480,
       "total": 122880
+    },
+    "board": {
+      "entryCap": 81920,
+      "total": 204800
     }
   },
   "entries": [
@@ -4322,6 +4326,254 @@
       "blender": "5.2.2",
       "sha256": "fb555fc2b6ec07bb3a3add66a6b9cad91627b4acbfa18a6f73919a3cfcdd5556",
       "bytes": 7972,
+      "tokens": []
+    },
+    {
+      "path": "Tools/review-game-board/art/backdrop.webp",
+      "script": "Tools/blender-art/scene_board.py",
+      "subject": "backdrop",
+      "family": "board",
+      "seed": 30,
+      "samples": 64,
+      "quality": 80,
+      "width": 1600,
+      "height": 900,
+      "cap": 81920,
+      "theme": "light",
+      "use": "sheet",
+      "decorative": true,
+      "colors": {
+        "panel": "#0d1b4c",
+        "field": "#10225a"
+      },
+      "extraColors": [
+        {
+          "hex": "#0d1b4c",
+          "why": "030's --board-bg: the board is navy in both themes, a page-local colour, not an ink-paper token"
+        },
+        {
+          "hex": "#10225a",
+          "why": "the board backdrop's raised field, one step lighter than --board-bg"
+        },
+        {
+          "hex": "#1a2d6e",
+          "why": "030's --board-cell, the point-value tile"
+        },
+        {
+          "hex": "#24398a",
+          "why": "030's --board-cell-hover"
+        },
+        {
+          "hex": "#13245e",
+          "why": "the category header tile, between --board-bg and --board-cell"
+        },
+        {
+          "hex": "#f0c419",
+          "why": "030's --gold, the header tile's rim and the board's text"
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "e824e5a048596fe75abcea3efb8f4396f7fe923f75bc8c657b144fc51b1a98df",
+      "bytes": 4246,
+      "tokens": []
+    },
+    {
+      "path": "Tools/review-game-board/art/header.webp",
+      "script": "Tools/blender-art/scene_board.py",
+      "subject": "header",
+      "family": "board",
+      "seed": 31,
+      "samples": 64,
+      "quality": 88,
+      "width": 192,
+      "height": 96,
+      "cap": 16384,
+      "theme": "light",
+      "use": "sheet",
+      "decorative": true,
+      "slice": 24,
+      "bevel": 0.12,
+      "colors": {
+        "tile": "#13245e",
+        "rim": "#f0c419"
+      },
+      "extraColors": [
+        {
+          "hex": "#0d1b4c",
+          "why": "030's --board-bg: the board is navy in both themes, a page-local colour, not an ink-paper token"
+        },
+        {
+          "hex": "#10225a",
+          "why": "the board backdrop's raised field, one step lighter than --board-bg"
+        },
+        {
+          "hex": "#1a2d6e",
+          "why": "030's --board-cell, the point-value tile"
+        },
+        {
+          "hex": "#24398a",
+          "why": "030's --board-cell-hover"
+        },
+        {
+          "hex": "#13245e",
+          "why": "the category header tile, between --board-bg and --board-cell"
+        },
+        {
+          "hex": "#f0c419",
+          "why": "030's --gold, the header tile's rim and the board's text"
+        }
+      ],
+      "underText": [
+        {
+          "name": "middle",
+          "region": [
+            24,
+            24,
+            144,
+            48
+          ],
+          "large": false,
+          "hex": "#f0c419",
+          "why": "030's --gold, the text on every board tile in both themes; not an ink-paper token",
+          "lumMin": 0.0391,
+          "lumMax": 0.0409
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "a2281d9fd8018b7b5baa3355d24273ddd28d44e1b6afac0a7033650da3dbb3d9",
+      "bytes": 486,
+      "tokens": []
+    },
+    {
+      "path": "Tools/review-game-board/art/cell.webp",
+      "script": "Tools/blender-art/scene_board.py",
+      "subject": "cell",
+      "family": "board",
+      "seed": 32,
+      "samples": 64,
+      "quality": 88,
+      "width": 192,
+      "height": 96,
+      "cap": 16384,
+      "theme": "light",
+      "use": "sheet",
+      "decorative": true,
+      "slice": 24,
+      "bevel": 0.12,
+      "colors": {
+        "tile": "#1a2d6e"
+      },
+      "extraColors": [
+        {
+          "hex": "#0d1b4c",
+          "why": "030's --board-bg: the board is navy in both themes, a page-local colour, not an ink-paper token"
+        },
+        {
+          "hex": "#10225a",
+          "why": "the board backdrop's raised field, one step lighter than --board-bg"
+        },
+        {
+          "hex": "#1a2d6e",
+          "why": "030's --board-cell, the point-value tile"
+        },
+        {
+          "hex": "#24398a",
+          "why": "030's --board-cell-hover"
+        },
+        {
+          "hex": "#13245e",
+          "why": "the category header tile, between --board-bg and --board-cell"
+        },
+        {
+          "hex": "#f0c419",
+          "why": "030's --gold, the header tile's rim and the board's text"
+        }
+      ],
+      "underText": [
+        {
+          "name": "middle",
+          "region": [
+            24,
+            24,
+            144,
+            48
+          ],
+          "large": true,
+          "hex": "#f0c419",
+          "why": "030's --gold, the text on every board tile in both themes; not an ink-paper token",
+          "lumMin": 0.0462,
+          "lumMax": 0.0483
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "0dcdf3f250737b56ea72e807617a5921530052b5c2f40f7e3f10406c1ab24c54",
+      "bytes": 332,
+      "tokens": []
+    },
+    {
+      "path": "Tools/review-game-board/art/cell-hover.webp",
+      "script": "Tools/blender-art/scene_board.py",
+      "subject": "cell-hover",
+      "family": "board",
+      "seed": 33,
+      "samples": 64,
+      "quality": 88,
+      "width": 192,
+      "height": 96,
+      "cap": 16384,
+      "theme": "light",
+      "use": "sheet",
+      "decorative": true,
+      "slice": 24,
+      "bevel": 0.12,
+      "colors": {
+        "tile": "#24398a"
+      },
+      "extraColors": [
+        {
+          "hex": "#0d1b4c",
+          "why": "030's --board-bg: the board is navy in both themes, a page-local colour, not an ink-paper token"
+        },
+        {
+          "hex": "#10225a",
+          "why": "the board backdrop's raised field, one step lighter than --board-bg"
+        },
+        {
+          "hex": "#1a2d6e",
+          "why": "030's --board-cell, the point-value tile"
+        },
+        {
+          "hex": "#24398a",
+          "why": "030's --board-cell-hover"
+        },
+        {
+          "hex": "#13245e",
+          "why": "the category header tile, between --board-bg and --board-cell"
+        },
+        {
+          "hex": "#f0c419",
+          "why": "030's --gold, the header tile's rim and the board's text"
+        }
+      ],
+      "underText": [
+        {
+          "name": "middle",
+          "region": [
+            24,
+            24,
+            144,
+            48
+          ],
+          "large": true,
+          "hex": "#f0c419",
+          "why": "030's --gold, the text on every board tile in both themes; not an ink-paper token",
+          "lumMin": 0.0583,
+          "lumMax": 0.0624
+        }
+      ],
+      "blender": "5.2.2",
+      "sha256": "f1b8de97a0117e670133dd28b36918e76ce6b8be4e5062866d614616e59ff25d",
+      "bytes": 284,
       "tokens": []
     }
   ]
