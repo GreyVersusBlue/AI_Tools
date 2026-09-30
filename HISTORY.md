@@ -9,6 +9,109 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P3: the landing-page hero, an isometric classroom diorama (2026-09-29, #308, `CACHE_VERSION` v206)
+
+Rank 1 was a 1-session row: the landing page's hero, an isometric classroom diorama as a WebP
+light/dark pair at 1× and 2×. It shipped. The row is deleted, and every rank below it moves up one.
+**All four files were rendered on huginn** (Blender 5.2.2 LTS, build `d13f752e3b9c`), not on the
+Windows machine.
+
+**What shipped.**
+- `Tools/blender-art/scene_hero.py` builds one scene that becomes four ledger entries,
+  `assets/art/hero/classroom-{1x,2x}-{light,dark}.webp`: 360×300 and 720×600, **64,832 B** in all
+  (11,022 + 9,038 + 23,916 + 20,856) against the row's 130 KB. The new `hero` family has caps of
+  18 KB per 1× file, 45 KB per 2× file and 130 KB in total. All four are in `SHELL_URLS`, so the
+  ledger's shell share goes from 75,974 B to 140,806 B of the 256,000 B budget.
+- The scene is a cut-away room seen from the iso camera. It has a slab, two walls, a window that is
+  a real opening, and a board with chalk marks (no text). It also has a wall clock, a pin board, two
+  rows of four desks with chairs, the teacher's desk with an apple, papers and 007's cup of sticks,
+  and a bookcase with a globe. Every material is a token.
+- `art_common.set_render` has two optional per-entry fields, and both default to the old behaviour.
+  The icon and tile renders are untouched.
+  - `"alpha": true` writes RGBA WebP.
+  - `"exposure"` is in stops.
+- `index.html`: the diorama takes the header's right column, and the memo and its stamp move under
+  the lede. The diorama is two `<img>`s, one per theme, each with a `1x, 2x` srcset,
+  `width="360" height="300"` and `alt=""`. `:root[data-theme="dark"]` hides the light one and the
+  reverse hides the dark one. Nothing is drawn over it. Under 760 px it is hidden. The memo date,
+  rev and changelog are bumped, per the page's own revision note.
+- `check:art` has a new rule, **IMG**. An entry may declare a `density`. An `<img>` of such an entry
+  must carry its 1× `width`/`height`. Every `srcset` candidate must be a ledger entry of the same
+  family and theme at that size times its descriptor. A page that shows one theme's file must show
+  its twin too. That last part applies to every on-screen raster, not just the hero.
+- `check:precache` reads `srcset` in MISSING and SHELLDEP. Before this, the hero's 2× files were
+  named nowhere it looked, so dropping one from either list would have passed. It also stopped
+  scanning `index.html` twice in SHELLDEP, because the shell lists the page as both `./` and
+  `index.html`, and every SHELLDEP there was printed twice.
+- `assets/screenshots/landing-wide.png` is regenerated with the hero in it.
+
+**Calls made, each cheap to reverse.**
+- **A transparent background.** `index.html` has its own palette: its `--paper` is #F6F7F9 light
+  and #121A22 dark, while ink-paper.css's is #FAFAF8 and #14171c. A rendered backdrop would show as
+  a faint rectangle in both themes. The render uses `film_transparent`, so the page's own paper
+  shows through.
+- **The dark pair is lifted 1.5 stops** (`"exposure": 1.5`). With the one rig and exposure 0, the
+  dark tokens came out nearly black, and the room did not separate from the page. 1.0 and 1.5 were
+  compared at 1×, and 1.5 won narrowly. The left wall stays dark in both, because the rig lights
+  from the left and that wall's inner face is in its own shadow. That is real lighting, not a
+  defect, and the rig was not tuned for one scene.
+- **The layout.** The diorama sits beside the heading, and the memo moves under the lede. At
+  1280×720 the search box moved from y≈436 to y≈566 and is still above the fold. A full-width band
+  was rejected, because it would have pushed the search below the fold.
+- **Hidden on phones (< 760 px).** The page exists to find a tool, and on a phone the diorama would
+  push the search down by about 320 px. The files are still in the shell and still download there.
+  Below 760 px the layout is what it was before, stamp over memo.
+- **Two `<img>`s, not `<picture>`.** Theme is `data-theme` on `<html>`, which a11y.js owns, not a
+  media query, so `<source media>` cannot pick it. Both files are precached at install anyway, so
+  the hidden one costs no extra network.
+- **`--pen` is not used.** The red in the scene (apple, cup, cards, the mark on the papers) is
+  ink-paper's `--err`, as in #306.
+
+**What did not work first.**
+- **The sky panel behind the window showed above the left wall.** It was 0.6 units outside the wall.
+  From an iso camera, anything behind a wall projects *higher* on screen, so it poked out over the
+  wall's top edge as a blue bar. It now sits just behind the opening and is no bigger than the wall.
+  It also has `visible_shadow` off, so it never blocks the light through the window.
+- **A dark speck at the top of the back corner.** Both walls' boxes included the corner block, and
+  the two bevelled overlaps fought. The right wall now owns the corner.
+- **The first layout had three desks per row** and left the front-right floor empty. It is now two
+  rows of four.
+- **One render was killed with exit 137,** almost certainly by the OOM killer. huginn had 331 MB of
+  swap free, and each render peaks at about 740 MB resident. Every later render used `-t 4`, one at
+  a time.
+- **The thread count changes the bytes.** A render of the 2× light scene with Blender's default
+  thread count (8 on huginn) was 23,914 B. The same scene with `-t 4` was 23,916 B. With `-t 4`, all
+  four files rendered twice were **byte-identical** under `cmp`. So "same machine, same build"
+  is not enough for a lit raster: the thread count is part of it too. The README's hero command pins
+  `-t 4`. Whether the icons' line exporter or the flat-emission PNGs care was not tested. They take no
+  Cycles lighting, so probably not.
+- **4 of 8 deliberate breaks of IMG passed the first cut of its tests.** These were a dropped theme
+  check, a `720w` descriptor read as 1×, an unknown `srcset` candidate skipped, and `srcset`
+  candidates not counted as shown. Each case had gone red through the twin check instead of the rule
+  it named, so the rule under test was never isolated. The cases were rewritten so that every twin
+  is shown and only the named check can fire, and one case was added: the dark 2× shown with no
+  light 2× anywhere. Now 8 of 8 are caught. The ALT cases also had to gain the dark tile's `<img>`,
+  because the twin check (correctly) flagged the light tile shown alone.
+- **Regenerating the manifest screenshots also rewrote `name-picker-narrow.png`,** although Name
+  Picker did not change. That change was Chrome 154 on huginn rendering differently, not a redesign,
+  so it was reverted. `landing-wide.png` was kept.
+- **`test:select-suites` took about ten minutes on huginn,** and it is pure Node. It passed (92).
+  Nobody measured why it is slow. It was running alongside a Blender-heavy session with swap
+  nearly full.
+
+**Not verified.**
+- Safari, iOS and Firefox showing an alpha WebP. Chrome 154 (headless, via Playwright) is the
+  only browser the page was looked at in.
+- A Windows re-render. This is a lit raster, so expect hash noise (see #306 and the thread-count
+  finding above).
+- How the hero looks at 125–150% zoom or with the a11y panel's larger text steps. The header was
+  checked at 1280, 900 and 390 px, in both themes, and at DPR 2 (the 2× files are picked).
+
+Local: every `check:*` guard, `lint`, and `check:precache -- --base origin/main` (v205 → v206).
+Also `test:a11y -- --only index`, `test:theme` (901), `test:blender-art` (79),
+`test:select-suites` (92), `test:sw-update` (18), `test:sw-tiers` (22), `test:storage-persist` (8),
+and `offline:build` plus `offline:verify` (the zip carries the hero). CI on #308 ran every suite (`index.html` and `Tools/board-check/` were in the diff) green in **38m33s**.
+
 ## Path 21 P2, the last call: the PWA app mark in the icon set's style (2026-09-29, #306, `CACHE_VERSION` v205)
 
 Rank 1 was a ½ row whose deliverable was a decision: re-render the app mark in the icon set's
