@@ -9,6 +9,82 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 21 P4, 046: shaded relief under the World base map, and Path 21 is finished (2026-10-01, AI-03, `CACHE_VERSION` v213)
+
+Rank 1 was a 1-session row: a shaded-relief layer under 046's default world base map, from a
+public-domain DEM that is not committed. It shipped, and the row is deleted. It was the last
+Path 21 row, so **Path 21 is finished.** Work started under session `p21p4relief`, which died
+with its scene script and ledger entry uncommitted. AI-01 saved them as WIP commit `e9d7e13` on
+`claude/p21p4-046-relief-p21p4relief`, and AI-03 cherry-picked that onto `main` and finished it.
+Committed locally for the nightly merge, so there is no PR number here.
+
+**What shipped.**
+- `Tools/blender-art/scene_relief.py` and a `relief` ledger family (cap 400 KB).
+  `Tools/blank-map-generator/art/relief-world.webp` is 2048×990, **29,726 B**, luminance
+  0.5638–1.0.
+- The DEM is NOAA ETOPO2v2g, which is public domain. The entry's `dem` records its URL, SHA-256
+  and licence, and the README says how to fetch it.
+- `bmg-vector.js`:
+  - The `world` preset names its relief file. `hasRelief()` is new.
+  - `renderBaseMapCanvas()` multiplies the relief over the land fill, clipped to land, under the
+    borders. It refuses to draw relief when there are data fills.
+  - `baseMapId()` adds `+relief`, and `sameBaseMap()` strips it, so toggling relief keeps the labels.
+  - The title gains "shaded relief".
+- 046 gets a **"Shaded relief"** checkbox beside "Show borders". It is off by default and named
+  by its label. It is disabled, with the reason in its title, on presets without relief and while
+  the map is shaded by data.
+- `smoke-relief.mjs` (port **8459**, 29 assertions):
+  - The ledger's bounds, projection, aspect, width, bytes and under-text region match the page's
+    preset.
+  - The id rules, the toggle's name, default state and disabled states.
+  - The Himalaya darken and the sea does not.
+  - The darkest composite pixel stays above the 4.5:1 line for `--ink`.
+  - Shading by data drops the relief, and removing it restores the relief.
+  - No offsite request.
+- `check:art` needed no change. `use: "sheet"` and a whole-image `underText` were already rules.
+
+**What went wrong first, so the next person skips it.**
+- **The WIP's material rendered a blank sheet.** It emitted `--paper` at `floor` 0.6 on top of a
+  full `--paper` diffuse. Every pixel clipped to white: 3,674 bytes, luminance 1.0–1.0. The fix
+  splits the material: emission `floor`, diffuse `1 - floor`. With that split, exaggeration 20
+  was still invisible, and 120 reads as quiet hill shading.
+- **Tune at low resolution first.** A full 2048 px render takes about 2.5 minutes on huginn
+  (peak RSS 4.8 GB, `-t 4`). AI-03 tuned with a throwaway wrapper, deliberately not committed.
+  It imported `scene_relief`, wrapped `art_common.find_entry` to shrink the entry's width and
+  height (512 or 1024 px) and override `floor`/`exaggeration`/`exposure` from the environment,
+  and passed `--out` so the ledger was left alone.
+- **The first suite run caught a real bug.** "Remove shading" redrew the map while the relief box
+  was still disabled from the shading, so the relief did not come back. `useBuiltInBaseMap()` now
+  syncs the control before reading it.
+
+**Calls made (reversible).**
+- **One light file, not "a light/dark pair".** 046's viewer is a `.paper-sheet` and its raster has
+  fixed light colours, so dark mode shows the same map. Checked by eye in both themes in Chromium:
+  identical. This is the same call as 080 and 030.
+- **Multiply over the land fill, inside the raster**, rather than a separate `<img>` layer. Every
+  export path (print, PDF, PNG, worksheets, poster tiles) already draws that raster, so they all
+  get the relief for free. The time-slice series never draws relief, because it is always shaded.
+- **World only.** A continent crop would need its own render matching its bounds. The row says
+  "treat each other projection as its own entry", and none was asked for.
+- **Not persisted per project.** The checkbox is page state like "Show borders". The map a project
+  keeps does carry `+relief` in its id, so a reload shows the relief it was made with.
+
+**What was not verified.**
+- Printing on paper, and how the relief reads on a projector.
+- The land style's composite contrast (about 7.5:1) is arithmetic from the measured floor, not
+  sampled. The suite samples the outline style.
+- The offline zip was not built.
+- **The full `npm test` on huginn was not green, for reasons outside this change.** Four suites
+  crashed under memory pressure during the full run and passed alone: `hall-pass-log` `smoke-export`
+  and `smoke-hallway-sync`, and `class-roster-hub` `smoke-export` and `smoke-bulk-import`. Three
+  fail the same way on unmodified `main` (`0b7eeae`, checked in a detached worktree):
+  - `class-screen` `smoke-periods` and `smoke-widgets`: the `.a11y-widget` intercepts a click.
+  - `share` `smoke-share-rollout`: "Target crashed".
+
+  These were not root-caused here. CI is the authority on them.
+- Determinism holds on huginn only: three renders, byte-identical, `a7ec4da3…`. A render on the
+  Windows machine would likely differ by noise, as the test tile did on 2026-09-29.
+
 ## 019: each station QR carries its own station (2026-10-01, #320, `CACHE_VERSION` v212)
 
 A standalone bug fix, ahead of Path 18 P1/P2, from the 2026-10-01 audit's AI-05. #282 found it and

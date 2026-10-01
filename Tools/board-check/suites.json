@@ -170,6 +170,7 @@
     "Tools/primary-source-analysis-generator/test/smoke-images.mjs",
     "Tools/blank-map-generator/test/smoke-timeline-handoff.mjs",
     "Tools/blank-map-generator/test/smoke-label-colors.mjs",
+    "Tools/blank-map-generator/test/smoke-relief.mjs",
     "Tools/service-worker/test/smoke-sw-update.mjs",
     "Tools/service-worker/test/smoke-sw-tiers.mjs",
     "Tools/service-worker/test/smoke-storage-persist.mjs",
