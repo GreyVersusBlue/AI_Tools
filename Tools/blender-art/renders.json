@@ -4609,9 +4609,9 @@
         "sha256": "18b61c497a3d96b2f7768ff1b2402f14c78f18be1119eeeafd59a9d79e26b038",
         "licence": "Public domain: a work of the U.S. Government (NOAA NCEI), not subject to copyright in the United States"
       },
-      "exaggeration": 20,
-      "floor": 0.6,
-      "exposure": 0.0,
+      "exaggeration": 120,
+      "floor": 0.3,
+      "exposure": 0.3,
       "underText": {
         "name": "whole map",
         "region": [
@@ -4621,8 +4621,16 @@
           990
         ],
         "token": "--ink",
-        "large": false
-      }
+        "large": false,
+        "lumMin": 0.5638,
+        "lumMax": 1.0
+      },
+      "blender": "5.2.2",
+      "sha256": "a7ec4da31fd93f39bee6ae5207ce4e132a1bd2bf2dc8e290e8ae1cac123d5999",
+      "bytes": 29726,
+      "tokens": [
+        "--paper"
+      ]
     }
   ]
 }

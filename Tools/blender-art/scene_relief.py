@@ -21,17 +21,21 @@ How it is made:
   * Below sea level is flattened to sea level. The relief is drawn only on
     land (046 clips it to the landmass), and a flat sea costs nothing in the
     WebP.
-  * Heights are exaggerated ("exaggeration") because at 20 km a pixel the
-    real Himalaya are a fraction of a pixel tall.
+  * Heights are exaggerated ("exaggeration", 120) because at 20 km a pixel
+    the real Himalaya are a fraction of a pixel tall. 20 rendered a blank
+    sheet; 120 reads as quiet hill shading at 2048 px.
   * The surface is --paper, lit by the one rig, straight down. The scene is
     built a tenth of a unit tall so the rig's area lights, twelve units away,
     light the whole world evenly: a unit-sized frame showed a 20% falloff
     from one side of the map to the other.
-  * THE LUMINANCE CAP. The material also emits --paper at "floor". A slope
-    facing away from every light still shows that much, so the darkest pixel
-    in the file cannot fall below it, and the page's label ink and coastline
-    strokes hold their contrast everywhere over the relief. The entry's
-    underText covers the whole image and records what the file measured.
+  * THE LUMINANCE CAP. The material emits --paper at "floor" and is lit
+    with a diffuse --paper scaled by (1 - floor), so the two add back up to
+    --paper. A slope facing away from every light still shows the floor, so
+    the darkest pixel in the file cannot fall below it, and the page's label
+    ink and coastline strokes hold their contrast everywhere over the
+    relief. The entry's underText covers the whole image and records what
+    the file measured. "exposure" lifts flat ground to about --paper, so the
+    relief, which 046 multiplies over its land fill, darkens only slopes.
 
 Light only, use "sheet": 046's viewer is a .paper-sheet whose map keeps its
 fixed light colours in both themes.
@@ -147,12 +151,17 @@ def build_mesh(entry, z_m):
 
 
 def relief_material(pal, floor):
-    """--paper, matte, plus an emission of --paper at `floor`: the cap."""
+    """--paper, matte, split between an emission of --paper at `floor` (the
+    cap) and a diffuse share of (1 - floor), so the two add back up to
+    --paper rather than past it. The first cut emitted `floor` on top of a
+    full --paper diffuse and rendered solid white."""
     mat = art.token_material(pal, "--paper", roughness=1.0)
     bsdf = next(n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
     if "Specular IOR Level" in bsdf.inputs:
         bsdf.inputs["Specular IOR Level"].default_value = 0.0
-    bsdf.inputs["Emission Color"].default_value = art.hex_to_linear(pal["--paper"]) + (1.0,)
+    paper = art.hex_to_linear(pal["--paper"])
+    bsdf.inputs["Base Color"].default_value = tuple(c * (1.0 - float(floor)) for c in paper) + (1.0,)
+    bsdf.inputs["Emission Color"].default_value = paper + (1.0,)
     bsdf.inputs["Emission Strength"].default_value = float(floor)
     return mat
 
