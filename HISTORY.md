@@ -85,6 +85,12 @@ and the suite scans that state.
 - **Not verified:** a real two-device WebRTC handoff (the suite asserts the object
   `host.sendProject` is given), the offline zip, and precache bytes (not re-summed; one ~5 KB
   module was added). The full suite list was not run locally; CI's push-to-main run is the check.
+- **#321 was merged before its CI finished (Devon asked), and that run was red on two things,
+  both in the new suite, not the tool.** Lint: `exportFullProject` in its `/* global */` line was
+  only ever named as a string. (Lint was run locally before the suite was written, and not again.)
+  A race: section 5 waited for "floor 1 holds an `idb:` reference" after the import, which was
+  already true from the upload before it. On CI's slower runner it read the pre-import floors.
+  The follow-up PR fixes both; the wait now names the imported blueprint itself. `--repeat 3` was green.
 
 ## Path 21 P4, 030: rendered board art (2026-09-30, #317, `CACHE_VERSION` v210)
 

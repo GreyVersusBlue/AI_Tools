@@ -29,7 +29,7 @@
 //
 // No console errors, ever. Exits 1 on any failure. Every name is invented.
 
-/* global serializeFullProject, saveSnapshot, restoreSnapshot, exportFullProject -- page globals read inside page.evaluate() */
+/* global serializeFullProject, saveSnapshot, restoreSnapshot -- page globals read inside page.evaluate() */
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
 
 const PORT = 8457;
@@ -224,7 +224,14 @@ await page.setInputFiles('#bp-import-file', {
   name: 'larkspur-blueprint.json', mimeType: 'application/json',
   buffer: Buffer.from(JSON.stringify(blueprint(PURPLE, null))),
 });
-await page.waitForFunction(() => { const b = JSON.parse(localStorage.getItem('stviz_blueprint')); return /^idb:/.test(b.floors[0].traceImage.dataUrl); }, null, { timeout: 10000 });
+/* Wait for the imported blueprint itself, not just "floor 1 holds a reference":
+   it already did (the upload above), which raced the import on a slower CI box. */
+const before5 = values(await saved())[0];
+await page.waitForFunction(prev => {
+  const b = JSON.parse(localStorage.getItem('stviz_blueprint'));
+  const v = b.floors[0].traceImage && b.floors[0].traceImage.dataUrl;
+  return b.floors[1].traceImage === null && /^idb:/.test(v || '') && v !== prev;
+}, before5, { timeout: 10000 });
 bp = await saved();
 const vPurple = values(bp)[0];
 ok(isRef(vPurple) && !(await rawKey(page, KEY)).includes('data:image'), 'an imported file\'s inline image is moved into the store');
