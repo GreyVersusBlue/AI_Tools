@@ -34,12 +34,12 @@ watching it. Three rules follow from that, and they override any older wording i
 The rule is the **Size** column, because a fixed count means something different at rank 2
 than at rank 7:
 
-| Size | Take | Why |
-|---|---|---|
-| ¼ | up to **4**, and they may share one PR when they are the same kind of work | CI is ~21 minutes per PR and is the real bottleneck, so rows-per-PR is nearly free while PRs-per-session is not |
-| ½ | **2**, occasionally 3 | |
-| 1 | **one** | |
-| 2+ | **that row is the whole batch** | never pair it with anything |
+| Size | Take (several sessions at once) | Take in wave mode (see below) | Why |
+|---|---|---|---|
+| ¼ | up to **4**, and they may share one PR when they are the same kind of work | up to **8**, same kind of work | CI is ~21 minutes per PR and is the real bottleneck, so rows-per-PR is nearly free while PRs-per-session is not |
+| ½ | **2**, occasionally 3 | up to **5** | |
+| 1 | **one** | up to **2** | |
+| 2+ | **that row is the whole batch** | one increment each of up to **2** different rows, never two in the same area | never pair it with anything outside wave mode |
 
 **A 2+ row will not finish in one session, and that is expected.** Do one increment of it —
 Path 5 P3 says "batches of ~6" and means it — ship that, and **leave the row in place**, with
@@ -50,11 +50,14 @@ whole, are both worse than one honest increment.
 **Do not mix sizes to fill a quota.** Four ¼ rows is a good batch; two ¼ rows and a 2+ row is
 not, because the 2+ row will absorb whatever time the others leave and finish neither well.
 
-**Whatever the batch size, step 6 happens after each merge — never saved for the end.** This
-is the rule most likely to be dropped as batches grow, and it is the one with a recorded
-failure behind it: a session working two phases meant to write both handoffs at the end, its
-first PR merged with its row still in the ranked table, and the next session spent about an
-hour building something that already existed. See the note in "Where things stand".
+**Whatever the batch size, step 6 ships in the same PR as the work (2026-10-01) — never saved
+for the end.** This is the rule most likely to be dropped as batches grow, and it is the one
+with a recorded failure behind it: a session working two phases meant to write both handoffs
+at the end, its first PR merged with its row still in the ranked table, and the next session
+spent about an hour building something that already existed. Putting the handoff in the work
+PR removes that failure (the row cannot merge without its table edit) and drops a second PR,
+a second CI round and a second full-suite run on `main` per batch. See the note in "Where
+things stand".
 
 The two things that still are not a session's call, because they change what the product is
 rather than how it is built: **promoting anything student-facing** (see the scope rule under
@@ -491,7 +494,10 @@ Every session is on a branch named `claude/<something>-<code>`; `<code>` is your
 code — read it off your own branch name, do not invent one. To claim a row, put
 `` `<code>` <YYYY-MM-DD HH:MM UTC> `` in its **Claimed** cell and **push that
 claim-only commit by itself, before writing any implementation code**, so a concurrent
-session sees the claim before picking its own batch. **A claim is only visible if it
+session sees the claim before picking its own batch. **End the claim commit's message with
+`[skip ci]`** (2026-10-01): it changes one cell of a Markdown file, and without the tag it
+triggers a ~32-minute full-suite run on `main`. (Single-operator wave mode below drops the
+claim altogether.) **A claim is only visible if it
 reaches `main`'s view of the table** — a claim commit pushed to a feature branch that
 nobody fetches is invisible until the PR merges, which is how #239 and #240 (2026-09-08)
 built the same increment twice with both sessions having "claimed" it. So, also: fetch
@@ -519,7 +525,7 @@ one of them touches `_shared/`.
 
 ### Definition of done, every phase
 
-1. Row claimed here and pushed before any code.
+1. Row claimed here and pushed before any code (`[skip ci]`; not needed in wave mode).
 2. One phase per PR, following `CLAUDE.md` — shared boilerplate linked rather than
    inlined, one vendored copy of any library in `_shared/vendor/`, `lib/` not `libs/`,
    `PRECACHE_URLS` (and `SHELL_URLS` only for a shell tool or `_shared/`) plus
@@ -533,16 +539,48 @@ one of them touches `_shared/`.
    A new tool comes in clean.
 4. A new `_shared/` module ships with a pure-logic Node suite and at most one adopter.
 5. Squash-merged to `main` after CI is green; merge confirmed before the session ends.
-6. **Then rewrite this file's "Where things stand" header and re-rank.** After the merge
-   is confirmed — not before, so it records what actually landed rather than what you
-   hoped would. Take the adoption row from `npm run check:adoption` and confirm the
-   result with `npm run check:adoption -- --check`; do not re-derive it by grep. Add a `HISTORY.md` entry for what shipped and what you got wrong. Commit
-   and merge that too.
+6. **Rewrite this file's "Where things stand" header and re-rank in the same PR as the work**
+   (Devon, 2026-10-01; it used to be a second PR after the merge). Do it as the last commits
+   before merge. Put `#PENDING` where the PR number goes and replace it with the real number
+   once the PR is open, which is before it merges. **If CI fails and the fix changes what
+   shipped, correct the handoff before merging**, so it records what landed rather than what
+   you hoped would. Take the adoption row from `npm run check:adoption` and confirm the
+   result with `npm run check:adoption -- --check`; do not re-derive it by grep. Add a
+   `HISTORY.md` entry for what shipped and what you got wrong.
 7. **Write the next session's prompt** (Devon's standing instruction, 2026-09-29). Once the
-   step-6 PR is merged, write a self-contained prompt for the next session: which row, why
-   that one, what to read first, the traps you found, the port a new suite takes, the
-   machine setup, and that it too must end with a PR, a merge and a prompt of its own. Put it
-   in your final message and in the step-6 PR's body. Every command it names, you have run.
+   PR is merged, write a self-contained prompt for the next session: which row, why that one,
+   what to read first, the traps you found, the port a new suite takes, the machine setup,
+   and that it too must end with a PR, a merge and a prompt of its own. Put it in your final
+   message and in the work PR's body. Every command it names, you have run.
+
+### Single-operator wave mode
+
+Added 2026-10-01 at Devon's direction, to cut CI. **It applies whenever one session is the
+only one working this repo**: check the Claimed column and `git branch -r` for branches from
+other sessions in the last 24 hours, and if there are none, you are the only operator. It
+does not replace the multi-session rules above; it relaxes them for that case.
+
+1. **One branch per wave**, named `claude/wave-<date>-<code>`. Push it to `origin` after every
+   row or every hour, whichever comes first: that is the backup for work that otherwise
+   lives only on Huginn, and a branch push without a PR opens no CI run.
+2. **No claim commits.** List the wave's rows in the PR description. If a second session
+   appears (another branch shows up, or a claim appears in the table), stop and fall back to
+   normal claims.
+3. **Run the narrow suites while you work** (`npm test -- --changed`, the touched tool's
+   `test:<name>`). Run the **full local suite once before opening the PR**, in the
+   background, with no Blender render running: Huginn has about 14 GB, so one heavy job at a
+   time (Path 21 renders use `-t 4`, one at a time).
+4. **One PR per wave, with the handoff already in it** (step 6). CI then runs once.
+5. **Wave sizes are the "wave mode" column of the table above.** If a suite is red in CI, fix
+   it on the same branch; do not split the wave. If a red result cannot be bisected inside
+   the wave, drop back to the multi-session caps and tell Devon.
+6. **Keep real-hardware rows out of the wave** (GPU, phone, speakers, printer).
+7. **Rebase on `origin/main` before the PR**, and re-read the next `HISTORY.md` decision
+   number just before closeout.
+
+**Do not use wave mode** for a row that changes a storage key or `_shared/` files many tools
+use, or that ends a 2+ row: those go alone, because a red CI there is hard to bisect inside
+a large wave.
 
 **On writing that honestly.** The most valuable line in any of these documents has
 consistently been the one recording what did not work — the tool that was never
