@@ -30,8 +30,8 @@ the page said "Could not build a QR code for: Station 1, Station 2, …".
     solving there);
   - `hintCost` (the running score).
 
-Measured with the suite's 4-station room: each station link is 360–480 characters. The student
-link with the photo is over 33 KB.
+Measured with the suite's 4-station room: the station links are 318–360 characters. The
+student link with the photo is 45,492.
 
 The picture now prints under the station's QR code (`.p-img`). `lock.html` shows "This clue has a
 picture. Look at it on the printed station card." for `imageOnCard`. It also gates a stub, which
@@ -78,7 +78,7 @@ instead of an empty message line). It now asserts the message line is empty.
 **What was not verified.**
 - A real phone camera scanning a printed card.
 - A phone with an older cached `lock.html` (reasoned from the code, not driven).
-- Whether a student link carrying a 33 KB photo is accepted by GitHub Pages on a first,
+- Whether a 45 KB student link carrying a photo is accepted by GitHub Pages on a first,
   uncached visit. The test server's 16 KB header limit rejects one, which is why the legacy
   fixture uses a 1×1 image. That link was always this size, so this is a question about the
   student link, not about this fix.
