@@ -102,21 +102,14 @@ ok(/^data:image\/jpeg/.test(photoSrc) && photoSrc.length > 20000,
 /* ── 1. every station's code builds ────────────────────────────────────── */
 const msg = await page.textContent('#msg');
 ok(!/Could not build a QR code/.test(msg), 'no station\'s code fails to build: ' + JSON.stringify(msg));
-const cards = await page.$$eval('#cardsPreview .preview-card', els => els.map(e => ({
+const cards = await page.$$eval('#cards-preview .preview-card', els => els.map(e => ({
   w: e.querySelector('canvas').width, link: e.querySelector('.p-content').textContent,
 })));
 eq(cards.length, 4, 'all four stations have a preview card');
 ok(cards.every(c => c.w === 200), 'and every one has its code drawn');
 
 /* ── 2. what each code carries ─────────────────────────────────────────── */
-await page.addScriptTag({ url: BASE + '/_shared/vendor/jsqr/jsqr.js' });
-const scanned = await page.$$eval('#cardsPreview .preview-card canvas', els => els.map(cv => {
-  const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height);
-  const r = window.jsQR(d.data, d.width, d.height);
-  return r ? r.data : null;
-}));
 cards.forEach((c, n) => {
-  eq(scanned[n], c.link, `station ${n + 1}'s code scans as the link shown under it`);
   const room = decodeR(c.link);
   eq(new URL(c.link).searchParams.get('s'), String(n), `station ${n + 1}'s link names its station`);
   eq(room.id, 'cryptammon1', `station ${n + 1}'s link carries the room id lock.html keys progress by`);
@@ -155,7 +148,7 @@ await lock.click('#hintBtn');
 await settle(lock, 150);
 ok(/Starts with A/.test(await text()), 'the hint opens');
 await answer('ammon');
-ok(/Go find Station 2/.test(await text()), 'a right answer sends the player on to Station 2: ' + JSON.stringify((await text()).slice(0, 200)));
+ok(/clue is waiting at Station 2/.test(await text()), 'a right answer sends the player on to Station 2: ' + JSON.stringify((await text()).slice(0, 200)));
 eq(await lock.$$eval('.letter-box.filled', els => els.map(e => e.textContent).join('')), '',
   'the strip is not drawn on the gate');
 await open(cards[1].link);
@@ -165,7 +158,7 @@ ok(/picture/i.test(await lock.textContent('.clue-photo-note') || ''), 'and says 
 eq(await lock.$$eval('.letter-box.filled', els => els.map(e => e.textContent).join('')), 'S', 'the letter earned at station 1 is kept');
 await answer('ramesses');
 await open(cards[2].link);
-ok(/Go find Station 4/.test(await text()), 'the branch skipped station 3: its code gates to Station 4');
+ok(/clue is waiting at Station 4/.test(await text()), 'the branch skipped station 3: its code gates to Station 4');
 await open(cards[3].link);
 ok((await text()).includes(ROOM.stations[3].clue), 'station 4\'s code shows its clue');
 await answer('4');
@@ -184,10 +177,22 @@ const printed = await page.$$eval('#printQrGrid .p-card', els => els.map(e => {
 }));
 eq(printed.length, 4, 'four printed station cards');
 ok(printed.every(p => p.canvas === 600), 'each with its code drawn');
+/* The printed code is the one a phone reads, so it is the one decoded: with
+   the vendored jsQR, off the canvas, and compared with the preview's link. */
+await page.addScriptTag({ url: BASE + '/_shared/vendor/jsqr/jsqr.js' });
+const scanned = await page.$$eval('#printQrGrid .p-card canvas', els => els.map(cv => {
+  const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height);
+  const r = window.jsQR(d.data, d.width, d.height);
+  return r ? r.data : null;
+}));
+cards.forEach((c, n) => eq(scanned[n], c.link, `station ${n + 1}'s printed code scans as its link`));
 eq(printed[1].img, photoSrc, 'station 2\'s printed card carries the photo');
 ok(printed.filter(p => p.img).length === 1, 'and no other card has one');
 
 /* ── 4. a code printed before this change still plays ──────────────────── */
+/* With a 1×1 picture: a code from before could only ever have been built
+   around a tiny one, which is the bug. */
+const TINY = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGO4o6HxHwAFPAIsDsQvxQAAAABJRU5ErkJggg==';
 const legacy = await page.evaluate(([room]) => {
   const old = { id: 'oldcrypt01', title: 'Old Crypt', stations: [
     { clue: 'Old one?', answers: ['yes'], hint: '', next: null, image: room },
@@ -197,13 +202,13 @@ const legacy = await page.evaluate(([room]) => {
   url.searchParams.set('r', btoa(unescape(encodeURIComponent(JSON.stringify(old)))));
   url.searchParams.set('s', '0');
   return url.href;
-}, [photoSrc]);
+}, [TINY]);
 await open(legacy);
 ok((await text()).includes('Old one?'), 'a whole-room code from before still shows its station');
-eq(await lock.getAttribute('img.clue-image', 'src'), photoSrc, 'and still draws the image it carried');
+eq(await lock.getAttribute('img.clue-image', 'src'), TINY, 'and still draws the image it carried');
 eq(await lock.$('.clue-photo-note'), null, 'with no printed-card note');
 await answer('yes');
-ok(/Go find Station 2/.test(await text()), 'and still advances');
+ok(/clue is waiting at Station 2/.test(await text()), 'and still advances');
 
 /* ── no console noise ──────────────────────────────────────────────────── */
 for (const [name, p] of [['builder', page], ['lock.html', lock]]) {

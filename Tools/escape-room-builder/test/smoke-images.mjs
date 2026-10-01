@@ -300,10 +300,9 @@ const inlineSaved = await saved(noIdb);
 ok(/^data:image\/jpeg/.test(inlineSaved.sets['Vault of Ur'].stations[0].image),
   'the new image is saved inline in the key, as before Path 4 P4, rather than lost');
 eq(inlineSaved.sets['Vault of Ur'].stations[1].image, RED, 'and the old inline one is left exactly as it was');
-/* Not `#msg === ''`: a real photo (~33 KB as a data URL) is far past what a QR
-   code holds, and every station's code carries the whole room, so the page
-   already says it cannot build them. That predates Path 4 P4; see HISTORY.md. */
-ok(!/no longer in this browser/.test(await noIdb.textContent('#msg')), 'and nothing is reported missing');
+/* A station's QR code no longer carries any image (smoke-station-qr.mjs), so
+   an inline image cannot make the page say it could not build a code. */
+eq(await noIdb.textContent('#msg'), '', 'and nothing is reported missing, and every station\'s code builds');
 
 /* ── 10. no console noise ──────────────────────────────────────────────── */
 for (const [name, p] of [['with IndexedDB', page], ['without IndexedDB', noIdb]]) {

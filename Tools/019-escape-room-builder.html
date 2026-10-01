@@ -208,6 +208,7 @@
       page-break-inside: avoid; margin: 4px;
     }
     .print-qr-grid .p-card canvas { width: 100%; height: auto; max-width: 320px; }
+    .print-qr-grid .p-card .p-img { display: block; max-width: 100%; max-height: 2.4in; margin: 8px auto 0; }
     .print-qr-grid .p-card .p-num { font-size: .75rem; letter-spacing: .08em; color: #555; text-transform: uppercase; }
     .print-qr-grid .p-card .p-name { font-size: 1.2rem; font-weight: 700; margin: 4px 0 8px; }
 
@@ -701,7 +702,7 @@
                   '<button type="button" class="icon-btn danger" data-remove-image title="Remove image" aria-label="Remove image for station ' + (i + 1) + '">&#10005;</button></div>'
               : '<input type="file" class="f-image" accept="image/*" aria-label="Image for station ' + (i + 1) + '">') +
           '</div>' +
-          '<div class="hint" style="margin:-.4rem 0 .6rem;">Shrunk automatically before it\'s saved. Adding a photo makes every station\'s QR code bigger — if a code stops scanning, remove the image or lower error correction.</div></div>' +
+          '<div class="hint" style="margin:-.4rem 0 .6rem;">Shrunk automatically before it\'s saved. It prints on this station\'s QR card and in the paper packet, and rides the student link; it is never put inside a QR code, so it can\'t make one too big to scan.</div></div>' +
         (type === 'cipher'
           ? '<div class="field-row"><label>Secret message to encode (this becomes the answer)</label>' +
               '<input type="text" class="f-cipher-plain" value="' + escapeAttr(s.cipherPlain || '') + '" placeholder="e.g. the vault is open"></div>' +
@@ -793,8 +794,8 @@
   //    (the inline copy that lived here was one of three) and kept in the
   //    shared media store; the station holds an `idb:` reference. See
   //    escape-room-builder/er-image.js for why, and for the fallback. The
-  //    image still travels inside the student link and QR payload, as a data
-  //    URL, so it has to stay small. ──
+  //    image still travels inside the student link as a data URL, so it has
+  //    to stay small; a station's QR code never carries it (stationPayloadFor). ──
   els.stationsList.addEventListener('change', function (e) {
     if (!e.target.classList.contains('f-image')) return;
     var cardEl = e.target.closest('.station-card');
@@ -991,6 +992,46 @@
     return url.href;
   }
 
+  // ── A printed station's own code ──────────────────────────────────────────
+  // Each station's QR code used to carry the whole room, images and all, so
+  // one photo (tens of KB as a data URL, against the ~1.6 KB a code holds at
+  // error correction Q) made every station's code fail to build (#282). A
+  // station's code now carries that station and nothing else it can show:
+  // its own entry, minus the image, and a stub for every other station. The
+  // stubs keep only what lock.html reads off stations the player is not
+  // standing at — how many there are (the "Station 2 of 5" badge, the gate,
+  // the monitor's total), which of them award a letter (the strip's empty
+  // slots; the letter itself is learned by solving that station, so it is
+  // '?' here) and what their hints cost (the running score). The payload is
+  // still a room in the same `r` format, so a phone holding an older cached
+  // lock.html plays it too, and every code printed before this still works.
+  // The picture is printed on the station's card instead; `imageOnCard`
+  // tells lock.html to say so. The student link above is unchanged — it is a
+  // link, not a code, and still carries the whole room.
+  function stationPayloadFor(room, n) {
+    var out = {
+      id: room.id,
+      title: room.title,
+      stations: room.stations.map(function (st, i) {
+        var copy = {};
+        if (i !== n) {
+          if (st.hintCost) copy.hintCost = st.hintCost;
+          if (st.awardLetter) copy.awardLetter = '?';
+          return copy;
+        }
+        Object.keys(st).forEach(function (k) { if (k !== 'image') copy[k] = st[k]; });
+        if (st.image) copy.imageOnCard = 1;
+        return copy;
+      }),
+    };
+    if (room.timerMinutes) out.timerMinutes = room.timerMinutes;
+    return out;
+  }
+
+  function stationLinkFor(room, n, startHere) {
+    return playerLinkFor(stationPayloadFor(room, n), n, startHere);
+  }
+
   // ── QR generation (same offline library + drawing approach as the QR ────
   //    Scavenger Hunt Builder / Gallery Walk QR tools in this toolkit) ──────
   function buildQR(text, ecLevel) {
@@ -1012,8 +1053,14 @@
     for (var r = 0; r < count; r++) {
       for (var col = 0; col < count; col++) {
         if (qr.isDark(r, col)) {
-          var x = (quietModules + col) * px, y = (quietModules + r) * px;
-          c.fillRect(Math.floor(x), Math.floor(y), Math.ceil(px) + 1, Math.ceil(px) + 1);
+          // Rounded edges, so neighbouring modules meet exactly. This used to
+          // paint each dark module ceil(px) + 1 wide, which eats the light
+          // modules between them: at 600 px a 93-module code drawn that way
+          // would not decode with the vendored jsQR, and drawn this way does
+          // (test/smoke-station-qr.mjs decodes every printed code).
+          var x0 = Math.round((quietModules + col) * px), x1 = Math.round((quietModules + col + 1) * px);
+          var y0 = Math.round((quietModules + r) * px), y1 = Math.round((quietModules + r + 1) * px);
+          c.fillRect(x0, y0, x1 - x0, y1 - y0);
         }
       }
     }
@@ -1064,7 +1111,7 @@
     els.cardsPreview.innerHTML = '';
     valid.forEach(function (s, n) {
       try {
-        var link = playerLinkFor(room, n, els.randomizeStart.checked);
+        var link = stationLinkFor(room, n, els.randomizeStart.checked);
         var qr = buildQR(link, ecLevel);
         var card = document.createElement('div');
         card.className = 'preview-card';
@@ -1081,7 +1128,7 @@
 
     var problems = [];
     if (failures.length) {
-      problems.push('Could not build a QR code for: ' + failures.join(', ') + '. Try shortening that clue or lowering error correction.');
+      problems.push('Could not build a QR code for: ' + failures.join(', ') + '. Try shortening that station’s clue, answers or hint, or lowering error correction.');
     }
     var missing = missingImageStations();
     if (missing.length) problems.push(missingImagesText(missing));
@@ -1313,10 +1360,12 @@
       var label = s.clue.length > 40 ? s.clue.slice(0, 40) + '…' : s.clue;
       var typeTag = s.type === 'cipher' ? ' · Cipher' : (s.type === 'digits' ? ' · Digit Lock' : '');
       card.innerHTML = (showNum ? '<div class="p-num">Station ' + (n + 1) + typeTag + '</div>' : '') +
-        '<div class="p-name">' + escapeHtml(state.name || 'Escape Room') + '</div><canvas></canvas>';
+        '<div class="p-name">' + escapeHtml(state.name || 'Escape Room') + '</div><canvas></canvas>' +
+        // The picture its code leaves out (see stationPayloadFor).
+        (s.image ? '<img class="p-img" src="' + escapeAttr(s.image) + '" alt="Clue picture for station ' + (n + 1) + '">' : '');
       els.printQrGrid.appendChild(card);
       try {
-        drawQR(card.querySelector('canvas'), buildQR(playerLinkFor(room, n, els.randomizeStart.checked), ecLevel), 600);
+        drawQR(card.querySelector('canvas'), buildQR(stationLinkFor(room, n, els.randomizeStart.checked), ecLevel), 600);
       } catch (err) { /* already reported in the live preview */ }
     });
   }

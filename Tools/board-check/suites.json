@@ -99,6 +99,7 @@
     "Tools/number-talks-board/test/smoke-strategy-library.mjs",
     "Tools/escape-room-builder/test/smoke-test-run.mjs",
     "Tools/escape-room-builder/test/smoke-images.mjs",
+    "Tools/escape-room-builder/test/smoke-station-qr.mjs",
     "Tools/lab-safety-contract-tracker/test/smoke-contact-sheet.mjs",
     "Tools/ssr-log-tracker/test/smoke-genres.mjs",
     "Tools/grammar-mad-libs/test/smoke-storage.mjs",
