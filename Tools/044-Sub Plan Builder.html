@@ -10,6 +10,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/media-db.js"></script>
 <style>
   :root {
     --ink: #1f2430;
@@ -1155,31 +1156,14 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   let seatingChartImage = null; // { base64, dataUrl, widthPx, heightPx } | null
   const SEATING_CHART_MAX_DIM = 900;
 
+  // The site's one downscaler (_shared/media-db.js), asked for a PNG data URL
+  // at the same 900 px this page's own copy used. Nothing is stored.
   function readImageFileToPng(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error('could not read that file'));
-      reader.onload = () => {
-        const img = new Image();
-        img.onerror = () => reject(new Error('that does not look like an image'));
-        img.onload = () => {
-          const srcW = img.naturalWidth, srcH = img.naturalHeight;
-          if (!srcW || !srcH) { reject(new Error('that image has no size')); return; }
-          const scale = Math.min(1, SEATING_CHART_MAX_DIM / Math.max(srcW, srcH));
-          const w = Math.max(1, Math.round(srcW * scale));
-          const h = Math.max(1, Math.round(srcH * scale));
-          const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          let dataUrl;
-          try { dataUrl = canvas.toDataURL('image/png'); }
-          catch (e) { reject(new Error('could not process that image')); return; }
-          resolve({ dataUrl, base64: dataUrl.split(',')[1], widthPx: w, heightPx: h });
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    });
+    return window.MediaDB.downscaleImage(file, { maxDim: SEATING_CHART_MAX_DIM, type: 'image/png', as: 'dataUrl' })
+      .then(out => {
+        if (!out.dataUrl || out.dataUrl.indexOf('data:image/png') !== 0) throw new Error('could not process that image');
+        return { dataUrl: out.dataUrl, base64: out.dataUrl.split(',')[1], widthPx: out.width, heightPx: out.height };
+      }, () => { throw new Error('that does not look like an image'); });
   }
 
   function setSeatingChartUI() {

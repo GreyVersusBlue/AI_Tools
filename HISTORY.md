@@ -9,6 +9,83 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P4, increment 11: 035's floor-plan trace images move into `media-db.js`, and P4 is finished (2026-10-01, #321, `CACHE_VERSION` v211)
+
+Rank 3 was the last increment of Path 4 P4, a 2+ row. 035 School Layout Visualizer's "Trace
+over a real floor plan" underlay was a 1600 px JPEG data URL per floor inside `stviz_blueprint`.
+It was also inside every `STVIZ_SNAPSHOT_` slot taken while it existed. It shipped, the row is
+deleted, and Path 4 P4 is finished. Worked on huginn, in a separate worktree, because another
+session was working rank 1 in the main checkout.
+
+**What shipped.**
+- `Tools/schedule-visualizer/sv-trace-image.js` is a classic deferred script over
+  `MediaDB.images({ ns: 'stviz-trace', owner: 'layout-visualizer' })`.
+  - `fromFile()` downscales to 1600 px JPEG 0.85, the old inline settings.
+  - It keeps a data-URL cache (`src()`), the shape 005 and 019 use, because every consumer is
+    synchronous: `renderCanvas()`, the two exports, the WebRTC handoff, and
+    `RecoveryManager.capture()` on pagehide.
+  - `traceImage.dataUrl` keeps its name and holds `idb:<id>`.
+- **035.**
+  - `serializeBlueprint(opts)` / `serializeFullProject(opts)` take `{ portable: true }` for the
+    blueprint export, the project export, the handoff and recovery points.
+  - The autosave and new snapshots keep references.
+  - A portable copy drops a reference that has no image here, rather than writing a dead one into
+    the file.
+  - `applyBlueprintData()` ends with `adoptTraceImages()`. It stores inline images, reads stored
+    ones, applies the references to the floors as they are *after* the writes, and saves only if
+    something moved.
+  - A save that still holds an inline image retries the store. A failed store saves nothing, so
+    this cannot loop.
+  - At boot, snapshot slots are migrated (each re-read after the writes, rewritten only if
+    changed).
+  - Orphans are then collected, with the 10-minute grace. The keep set is every `idb:` token in
+    any `stviz*`/`STVIZ*` localStorage value, read as text, so even an unparseable slot keeps its
+    images. If localStorage can't be read, nothing is deleted.
+  - The trace dialog says when a floor's picture is not in this browser. The settings are kept.
+  - `downscaleTraceImage()` and `TRACE_IMAGE_MAX_DIMENSION` are deleted.
+- **044.** `readImageFileToPng()` is now `MediaDB.downscaleImage(file, { maxDim: 900, type:
+  'image/png', as: 'dataUrl' })`. Its error wording is kept. With that, none of the downscaler
+  copies Path 4 P3 counted is left.
+- `smoke-trace-image.mjs` (port 8457, 49 assertions) covers:
+  - Legacy blueprint and snapshot migration, with one record per distinct picture across both.
+  - The canvas pixel after migration and after a reload.
+  - That all four outbound paths carry bytes and a new snapshot carries references.
+  - A 2400×1800 noise scan stored at 1600×1200 (1,112,306 B).
+  - A transparent PNG coming out white.
+  - Import.
+  - GC: an old orphan deleted; a fresh orphan, and an old record pointed at only by a snapshot,
+    kept.
+  - The missing-picture state (axe-clean dialog body, dropped from the export).
+  - No IndexedDB: kept inline.
+
+**Calls made (reversible).**
+- **Recovery points carry bytes, not references.** They live in their own IndexedDB store
+  (`stviz-recovery`) and exist for the day something has gone wrong. Making them depend on a
+  second store's GC was the wrong trade for a copy of last resort. It costs what it always cost.
+- **A white background under the plan** (`background: '#ffffff'`). A transparent PNG plan used to
+  come out black, because JPEG has no alpha. Opaque uploads are pixel-identical.
+- **A reference that arrives in an import is kept, not dropped**, unlike 019's link arrivals.
+  Snapshots legitimately restore through `applyFullProject()` with references in them. A
+  hand-made file naming one can only point at this tool's own namespace, and it shows as missing.
+
+**What I found and fixed on the way.** The trace dialog's Opacity and Scale sliders had no
+accessible name (axe critical `label`), and its hint was `--slate-400` on white. Both show only
+once a floor has an image, so the empty-storage sweep (rank 13) never saw them. Both were fixed,
+and the suite scans that state.
+
+**What I got wrong, or did not do.**
+- **The claim never reached `main`.** This session's permissions refused a direct push to `main`
+  (and, at first, the branch push too), so the claim lived only in this branch and the draft PR.
+  The draft PR was opened before the backlog edit, so the PR list was the visible claim.
+- **#320 (019's station QR fix) was open at the same time and also bumps to v211.** Whichever
+  merges second takes v212.
+- **The 035 dialog's Done button** still fails colour contrast. It is 035's page-wide `--accent`
+  primary, under the page's existing allowance, and is the contrast round's (rank 6) work. The
+  suite scans the dialog body, not its footer, and says why.
+- **Not verified:** a real two-device WebRTC handoff (the suite asserts the object
+  `host.sendProject` is given), the offline zip, and precache bytes (not re-summed; one ~5 KB
+  module was added). The full suite list was not run locally; CI's push-to-main run is the check.
+
 ## Path 21 P4, 030: rendered board art (2026-09-30, #317, `CACHE_VERSION` v210)
 
 Rank 1 was a ½-session row: board art for 030 Review Game Board, projected, with every tile's

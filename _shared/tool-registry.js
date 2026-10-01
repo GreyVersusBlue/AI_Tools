@@ -340,6 +340,12 @@
       title: 'School Layout Visualizer',
       file: 'Tools/035-schedule-visualizer.html',
       category: 'scheduling-subs',
+      /* Each floor's trace image is not in `stviz_blueprint` since Path 4 P4:
+         `traceImage.dataUrl` holds an `idb:` reference and the images are in
+         `gvb-media` (declared on the site row above) under the `stviz-trace/`
+         namespace, and so do the snapshot slots taken since. A floor plan is
+         teacher content, not student data. Images no saved blueprint or
+         snapshot points at are deleted when the tool next loads. */
       keys: [
         { k: 'stviz_blueprint' },
         { k: 'stviz_onboarded' },
