@@ -44,6 +44,10 @@
   <script src="../_shared/qr-scan.js" defer></script>
   <script src="../_shared/vendor/qrcode/qrcode.js" defer></script>
   <script src="../_shared/vendor/jsqr/jsqr.js" defer></script>
+  <!-- Path 4 P4: each floor's trace image is a Blob in the shared media store;
+       the blueprint key holds an idb: reference. See sv-trace-image.js. -->
+  <script src="../_shared/media-db.js" defer></script>
+  <script src="schedule-visualizer/sv-trace-image.js" defer></script>
   <script type="module">
     import { drawQR, startHost, startJoin } from './schedule-visualizer/sv-handoff.js';
     window.SVHandoff = { drawQR, startHost, startJoin };
@@ -4883,15 +4887,19 @@
         <label for="trace-image-file" style="display:block;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">Image File</label>
         <input type="file" id="trace-image-file" accept="image/*" style="width:100%;">
       </div>
+      <p id="trace-image-missing" hidden style="font-size:13px;color:var(--slate-700);margin-bottom:var(--sp-4);">
+        This floor’s plan image isn’t in this browser any more (its saved images may have been cleared).
+        The settings below are kept — pick the file again to put the picture back.
+      </p>
       <div id="trace-image-controls" style="display:none;">
         <div style="margin-bottom:var(--sp-4);">
-          <label style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">
+          <label for="trace-image-opacity" style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">
             <span>Opacity</span><span id="trace-image-opacity-val">35%</span>
           </label>
           <input type="range" id="trace-image-opacity" min="5" max="90" value="35" style="width:100%;">
         </div>
         <div style="margin-bottom:var(--sp-4);">
-          <label style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">
+          <label for="trace-image-scale" style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">
             <span>Scale</span><span id="trace-image-scale-val">100%</span>
           </label>
           <input type="range" id="trace-image-scale" min="10" max="300" value="100" style="width:100%;">
@@ -4906,7 +4914,7 @@
             <input type="number" id="trace-image-offset-y" class="rp-input" value="0" style="width:100%;">
           </div>
         </div>
-        <p style="font-size:11px;color:var(--slate-400);line-height:1.5;margin-bottom:var(--sp-2);">Nudge and scale the photo so its walls line up with the grid, then place tiles on top of it.</p>
+        <p style="font-size:11px;color:var(--slate-600);line-height:1.5;margin-bottom:var(--sp-2);">Nudge and scale the photo so its walls line up with the grid, then place tiles on top of it.</p>
       </div>
     </div>
     <div class="modal-foot">
@@ -5581,10 +5589,24 @@ function rebuildRoomRegistry() {
 let _autosaveTimer = null;
 let _lastBlueprintSaveTime = null;
 
+/** A floor's trace image with its bytes in it, or null if they are not here. */
+function portableTraceImage(t) {
+  if (!t) return null;
+  const src = traceImageSrc(t.dataUrl);
+  return src ? { ...t, dataUrl: src } : null;
+}
+
 /**
  * Serialize the full blueprint state into a portable object.
+ *
+ * Path 4 P4: a floor's trace image is saved as an `idb:` reference, which
+ * means nothing outside this browser. `{ portable: true }` puts the image
+ * bytes back (a data URL) for everything that leaves it or must stand alone —
+ * the JSON exports, the handoff, a recovery point — and drops a reference
+ * whose image is not here rather than writing a dead one into a file.
  */
-function serializeBlueprint() {
+function serializeBlueprint(opts) {
+  const portable = !!(opts && opts.portable);
   const bp = AppState.blueprint;
   const s  = AppState.settings;
 
@@ -5606,7 +5628,7 @@ function serializeBlueprint() {
       gridRows:         f.gridRows,
       cells,
       heatExcludeZones: JSON.parse(JSON.stringify(f.heatExcludeZones || [])),
-      traceImage:       f.traceImage ? { ...f.traceImage } : null,
+      traceImage:       portable ? portableTraceImage(f.traceImage) : (f.traceImage ? { ...f.traceImage } : null),
     };
   });
 
@@ -5751,6 +5773,7 @@ function applyBlueprintData(data) {
   if (typeof FloorManager !== 'undefined') FloorManager.renderTabs();
   if (typeof sizeVizCanvas === 'function') sizeVizCanvas();
   if (typeof clearHistory === 'function') clearHistory();
+  adoptTraceImages();   // Path 4 P4: read stored trace images, store arriving ones
 
   return true;
 }
@@ -5798,6 +5821,11 @@ function saveBlueprintToLocalStorage() {
     updateSaveIndicator();
     rebuildRoomRegistry();
     checkStorageHeadroom();
+    // A trace image still inline (IndexedDB refused it last time, or it came
+    // back by undo) gets another try at the media store; that pass saves again
+    // only if it moved something, so this cannot loop.
+    const ti = window.SVTraceImage;
+    if (ti && ti.valuesIn(AppState.blueprint.floors).some(ti.isInline)) adoptTraceImages();
   } catch(e) {
     console.warn('[STVIZ] Blueprint auto-save failed:', e);
     if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
@@ -5810,7 +5838,8 @@ function saveBlueprintToLocalStorage() {
 }
 
 /* ── Storage headroom warning (P12) — a blueprint with a traced image plus
-   snapshots is the largest payload on the site, and a silent write failure
+   snapshots was the largest payload on the site (since Path 4 P4 the images
+   are in IndexedDB and the key holds a reference), and a silent write failure
    loses a period's worth of layout work with no indication anything went
    wrong. `estimateLocalStorageBytes()` is a character-count proxy for bytes
    (UTF-16 in practice runs closer to 2x this for non-ASCII text, so it's a
@@ -5948,7 +5977,7 @@ function loadBlueprintFromLocalStorage() {
    JSON EXPORT
 =============================================== */
 document.getElementById('btn-export-blueprint').addEventListener('click', () => {
-  const payload  = serializeBlueprint();
+  const payload  = serializeBlueprint({ portable: true });
   const filename = generateExportFilename();
   const json     = JSON.stringify(payload, null, 2);
   const blob     = new Blob([json], { type: 'application/json' });
@@ -6586,8 +6615,14 @@ function resizeCanvas(cols, rows, clearTiles) {
    CANVAS — RENDERING
 =============================================== */
 /* R61: Trace-image underlay — cache decoded <img> elements by dataUrl so
-   renderCanvas() (called on nearly every interaction) doesn't re-decode. */
+   renderCanvas() (called on nearly every interaction) doesn't re-decode.
+   Path 4 P4: the saved value is an idb: reference; traceImageSrc() turns it
+   into the data URL sv-trace-image.js holds, synchronously. */
 const _traceImageCache = new Map();
+function traceImageSrc(value) {
+  if (window.SVTraceImage) return window.SVTraceImage.src(value);
+  return (typeof value === 'string' && value.startsWith('data:image/')) ? value : '';
+}
 function getTraceImageEl(dataUrl) {
   if (!dataUrl) return null;
   let img = _traceImageCache.get(dataUrl);
@@ -6604,7 +6639,8 @@ function drawTraceImage() {
   const floor = getActiveFloorData();
   const t = floor && floor.traceImage;
   if (!t || !t.dataUrl) return;
-  const img = getTraceImageEl(t.dataUrl);
+  const img = getTraceImageEl(traceImageSrc(t.dataUrl));
+  if (!img) return;   // a stored image not read yet, or not in this browser
   if (!img.complete || !img.naturalWidth) return;
   const scale = (typeof t.scale === 'number' && t.scale > 0) ? t.scale : 1;
   ctx.save();
@@ -8301,36 +8337,17 @@ function initCorridorLabelModal() {
 /* ==============================================
    R61: TRACE IMAGE — real floor plan underlay
 =============================================== */
-const TRACE_IMAGE_MAX_DIMENSION = 1600; // px, long edge — enough detail to trace walls from
-
-/** Downscale an uploaded photo/scan to a data URL sized for localStorage. */
-function downscaleTraceImage(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Could not read that image file.'));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('Could not decode that image file.'));
-      img.onload = () => {
-        const scale = Math.min(1, TRACE_IMAGE_MAX_DIMENSION / Math.max(img.width, img.height));
-        const w = Math.max(1, Math.round(img.width * scale));
-        const h = Math.max(1, Math.round(img.height * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
+/* The image itself is downscaled (1600 px, JPEG 0.85) and stored by
+   Tools/schedule-visualizer/sv-trace-image.js — Path 4 P4 moved it out of the
+   blueprint key and into the shared media store. */
 
 function openTraceImageModal() {
   const floor = getActiveFloorData();
   const t = floor.traceImage;
   document.getElementById('trace-image-file').value = '';
   document.getElementById('trace-image-controls').style.display = t ? '' : 'none';
+  document.getElementById('trace-image-missing').hidden =
+    !(t && window.SVTraceImage && window.SVTraceImage.isMissing(t.dataUrl));
   document.getElementById('trace-image-opacity').value = Math.round((t ? t.opacity : 0.35) * 100);
   document.getElementById('trace-image-opacity-val').textContent = Math.round((t ? t.opacity : 0.35) * 100) + '%';
   document.getElementById('trace-image-scale').value = Math.round((t ? t.scale : 1) * 100);
@@ -8355,10 +8372,12 @@ function initTraceImageModal() {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     try {
-      const dataUrl = await downscaleTraceImage(file);
+      if (!window.SVTraceImage) throw new Error('The image store did not load on this page.');
+      const value = await window.SVTraceImage.fromFile(file);
       const t = ensureTraceImage();
-      t.dataUrl = dataUrl;
+      t.dataUrl = value;
       document.getElementById('trace-image-controls').style.display = '';
+      document.getElementById('trace-image-missing').hidden = true;
       renderCanvas();
       scheduleBlueprintAutosave();
       showToast('Floor plan image added — adjust opacity/scale to line it up.', 'success');
@@ -8401,10 +8420,92 @@ function initTraceImageModal() {
     const floor = getActiveFloorData();
     floor.traceImage = null;
     document.getElementById('trace-image-controls').style.display = 'none';
+    document.getElementById('trace-image-missing').hidden = true;
     renderCanvas();
     scheduleBlueprintAutosave();
     showToast('Trace image removed.', 'info');
   });
+}
+
+/* Path 4 P4: move every inline trace image on the live floors into the media
+   store and read every stored one into memory. Runs after any blueprint is
+   applied (boot, import, handoff, snapshot or recovery restore) and after a
+   save that still holds an inline image. Passes are chained so two never
+   interleave. The writes come first; the references are then applied to the
+   floors as they are NOW, so an edit made meanwhile is not lost, and the
+   blueprint is saved again only if something moved. */
+let _traceAdoption = Promise.resolve();
+function adoptTraceImages() {
+  const api = window.SVTraceImage;
+  if (!api) return _traceAdoption;
+  _traceAdoption = _traceAdoption.then(() => {
+    const values = api.valuesIn(AppState.blueprint.floors);
+    if (!values.length) return null;
+    return api.hydrate(values)
+      .then(() => api.store(api.valuesIn(AppState.blueprint.floors)))
+      .then(map => {
+        let moved = 0;
+        for (const f of AppState.blueprint.floors) {
+          const t = f.traceImage;
+          if (t && map[t.dataUrl]) { t.dataUrl = map[t.dataUrl]; moved++; }
+        }
+        if (moved) saveBlueprintToLocalStorage();
+        renderCanvas();
+      });
+  }).catch(e => console.warn('[STVIZ] Trace image store:', e));
+  return _traceAdoption;
+}
+
+/* At boot: the snapshot slots taken before Path 4 P4 carry their trace images
+   inline, one copy per slot. Move those into the store too (the same picture is
+   one record, by content hash) and rewrite only the slots that changed, each
+   re-read after the writes. A slot that does not parse is left as it is. */
+function migrateSnapshotTraceImages(api) {
+  const read = (i) => { try { return JSON.parse(localStorage.getItem(snapshotKey(i))); } catch (e) { return null; } };
+  const floorsOf = (snap) => (snap && snap.data && snap.data.blueprint && Array.isArray(snap.data.blueprint.floors))
+    ? snap.data.blueprint.floors : [];
+  const values = [];
+  for (let i = 0; i < SNAPSHOT_TOTAL; i++) {
+    api.valuesIn(floorsOf(read(i))).filter(api.isInline).forEach(v => values.push(v));
+  }
+  if (!values.length) return Promise.resolve(0);
+  return api.store(values).then(map => {
+    let moved = 0;
+    for (let i = 0; i < SNAPSHOT_TOTAL; i++) {
+      const snap = read(i);
+      let n = 0;
+      for (const f of floorsOf(snap)) {
+        const t = f && f.traceImage;
+        if (t && map[t.dataUrl]) { t.dataUrl = map[t.dataUrl]; n++; }
+      }
+      if (!n) continue;
+      try { localStorage.setItem(snapshotKey(i), JSON.stringify(snap)); moved += n; }
+      catch (e) { /* smaller than what is there, so this should not fail; if it does, the slot is untouched */ }
+    }
+    if (moved) renderSnapshotList();
+    return moved;
+  });
+}
+
+/* At boot only: once the saved blueprint has been adopted, delete stored trace
+   images nothing points at — not the live floors, and not any snapshot slot or
+   set-aside unreadable copy (scanned as text for `idb:` references, so a slot
+   that no longer parses still protects its images). If localStorage cannot be
+   read, nothing is deleted. */
+function bootTraceImages() {
+  const api = window.SVTraceImage;
+  const done = () => { window.__traceImagesSettled = true; };
+  if (!api) { done(); return; }
+  adoptTraceImages().then(() => migrateSnapshotTraceImages(api)).then(() => {
+    const keep = new Set(api.valuesIn(AppState.blueprint.floors).filter(api.isRef));
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i) || '';
+        if (/^stviz|^STVIZ/.test(k)) api.refsInText(localStorage.getItem(k)).forEach(r => keep.add(r));
+      }
+    } catch (e) { return 0; }
+    return api.gc(keep);
+  }).catch(() => 0).then(done);
 }
 
 /* ==============================================
@@ -8436,7 +8537,7 @@ function startHandoffSend() {
     host.onOpen(() => {
       document.getElementById('handoff-offer-status').textContent = 'Connected — sending project…';
       try {
-        host.sendProject(serializeFullProject());
+        host.sendProject(serializeFullProject({ portable: true }));
         document.getElementById('handoff-offer-status').textContent = 'Project sent. The other device will show a confirmation once it applies it.';
       } catch (e) {
         document.getElementById('handoff-offer-status').textContent = 'Send failed: ' + e.message;
@@ -17233,14 +17334,15 @@ function initOnboardingAndHelp() {
 =============================================== */
 const PROJECT_FILE_TYPE = 'stviz-project';
 
-function serializeFullProject() {
+/** `opts.portable` as serializeBlueprint(): the image bytes, not references. */
+function serializeFullProject(opts) {
   return {
     fileType: PROJECT_FILE_TYPE,
     version:  1,
     schemaVersion: 31,
     savedAt:  new Date().toISOString(),
     settings: { ...AppState.settings },
-    blueprint: serializeBlueprint(),
+    blueprint: serializeBlueprint(opts),
     groups: AppState.schedules.groups.map(g => ({
       name: g.name, grade: g.grade, color: g.color,
       size: (Number.isFinite(Number(g.size)) && Number(g.size) > 0) ? Math.round(Number(g.size)) : null,  // R59
@@ -17257,7 +17359,7 @@ function serializeFullProject() {
 
 function exportFullProject() {
   try {
-    const payload  = serializeFullProject();
+    const payload  = serializeFullProject({ portable: true });
     const school   = AppState.settings.schoolName
       .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
     const date     = new Date().toISOString().slice(0, 10);
@@ -17469,6 +17571,7 @@ function init() {
   } else {
     rebuildRoomRegistry();
   }
+  bootTraceImages();
 
   updateStatusBar();
   updateUndoRedoButtons();
@@ -17701,7 +17804,9 @@ const RecoveryManager = {
     if (!force && !this._dirty) return Promise.resolve(null);
     if (this._capturing) return Promise.resolve(null);
     let payload;
-    try { payload = serializeFullProject(); }
+    // Portable: a recovery point is the copy of last resort, so it carries the
+    // trace images themselves rather than references into another store.
+    try { payload = serializeFullProject({ portable: true }); }
     catch (e) { return Promise.resolve(null); }   // never let this break an edit
     this._capturing = true;
     this._dirty = false;
