@@ -120,6 +120,8 @@ cards.forEach((c, n) => {
   ok(!c.link.includes('data:image') && !JSON.stringify(room).includes('data:image'), `and no image bytes`);
   ok(c.link.length < 1000, `station ${n + 1}'s link is ${c.link.length} characters`);
 });
+console.log(`  (station links: ${cards.map(c => c.link.length).join(', ')} characters; ` +
+  `the student link with the photo: ${(await page.inputValue('#playerLink')).length})`);
 eq(decodeR(cards[1].link).stations[1].next, 3, 'a branch survives in the station that takes it');
 
 /* ── 5. the student link still carries everything ──────────────────────── */

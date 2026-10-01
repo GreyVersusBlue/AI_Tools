@@ -9,6 +9,80 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 019: each station QR carries its own station (2026-10-01, #320, `CACHE_VERSION` v211)
+
+A standalone bug fix, ahead of Path 18 P1/P2, from the 2026-10-01 audit's AI-05. #282 found it and
+left it noted under 019 in Tier 2 and in the header. It had no ranked row, so there was no claim
+cell to fill. Both notes are deleted.
+
+**Root cause.** `render()` and `buildPrintCodes()` built every station's code from
+`playerLinkFor(room, n)`. That is the whole room (every clue, answer and image), base64 in `r=`, plus
+`s=n`. A 320 px JPEG clue photo is about 33 KB as a data URL. A QR code holds about 1.6 KB at
+error correction Q. So one photo on any station made every station's `qrcode.make()` throw, and
+the page said "Could not build a QR code for: Station 1, Station 2, …".
+
+**The fix.** `stationPayloadFor(room, n)` builds a room-shaped payload in the same `r=` format:
+- **The station's own entry**, minus `image`. `imageOnCard: 1` takes its place when it had one.
+- **A stub per other station**, carrying only what `lock.html` reads off stations the player is
+  not standing at:
+  - the count (badge, gate, monitor total);
+  - `awardLetter: '?'` for letter stations (the strip's empty slots; the real letter is learned by
+    solving there);
+  - `hintCost` (the running score).
+
+Measured with the suite's 4-station room: each station link is 360–480 characters. The student
+link with the photo is over 33 KB.
+
+The picture now prints under the station's QR code (`.p-img`). `lock.html` shows "This clue has a
+picture. Look at it on the printed station card." for `imageOnCard`. It also gates a stub, which
+the builder never produces.
+
+**Backwards compatible both ways, which is why the format was kept, not replaced:**
+- A code printed before this (the whole room) plays exactly as before, image included.
+- A phone holding an older cached `lock.html` plays a new code. It reads a stub as a station with
+  nothing to show and never opens one, because a station code only opens its own station. It
+  just does not show the printed-card note.
+
+**Also fixed: 019's `drawQR`** painted every dark module `ceil(px) + 1` px wide, eating the
+light modules between them. Decoding with the vendored jsQR, measured, not estimated:
+- A 61-module code at 200 px and a 93-module code at 600 px failed.
+- The same codes drawn with rounded edges (`lock.html`'s `drawLockQR` approach, now used here)
+  decoded.
+
+The new suite decodes every printed code off its canvas. The 200 px on-screen preview of a
+93-module code still does not decode. That is a preview, not what gets taped up, and it is left
+alone.
+
+**Calls made (reversible).**
+- **Images leave the codes entirely** rather than riding the code of the one station that has
+  them. One photo is 20× a code's capacity, so no per-station budget could carry it.
+- **The student link is unchanged.** It still carries the whole room and every image, because it
+  is a link, not a code.
+- **The other stations' letters are '?'**, not the real letters. That is less to read off a code.
+  The old format exposed every answer anyway.
+
+**Tests.** `smoke-station-qr.mjs` (`test:escape-room-station-qr`, port **8458**: 8457 is
+promised to rank 3's 035 suite in the header) has 68 assertions. It was committed red first. On
+the old page it fails with the exact #282 message. It covers:
+- a real photo through the picker;
+- every code building, decoded with jsQR;
+- no image bytes in any code;
+- a four-station room with a branch, a costed hint and two letters, played on a fresh device
+  from the station codes alone, to "Final score: 290" and "SK";
+- the photo on the printed card;
+- a pre-fix whole-room code still playing.
+
+`smoke-images.mjs` step 9 had worked around the bug (it asserted "nothing reported missing"
+instead of an empty message line). It now asserts the message line is empty.
+
+**What was not verified.**
+- A real phone camera scanning a printed card.
+- A phone with an older cached `lock.html` (reasoned from the code, not driven).
+- Whether a student link carrying a 33 KB photo is accepted by GitHub Pages on a first,
+  uncached visit. The test server's 16 KB header limit rejects one, which is why the legacy
+  fixture uses a 1×1 image. That link was always this size, so this is a question about the
+  student link, not about this fix.
+
 ## Path 21 P4, 030: rendered board art (2026-09-30, #317, `CACHE_VERSION` v210)
 
 Rank 1 was a ½-session row: board art for 030 Review Game Board, projected, with every tile's
