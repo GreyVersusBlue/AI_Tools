@@ -61,6 +61,10 @@
      these are often transparent line drawings, and dark ink on a dark mat is
      nothing at all. */
   .clue-image { display: block; width: 100%; max-height: 260px; object-fit: contain; border-radius: 8px; margin-bottom: .8rem; background: #fff; }
+  .clue-photo-note {
+    background: var(--info-bg); border: 1px solid var(--info-line); border-radius: 8px;
+    padding: .55rem .8rem; margin: 0 0 .8rem; font-size: .95rem;
+  }
   label { display: block; font-weight: 600; font-size: .88rem; margin-bottom: .4rem; }
   input[type="text"] {
     width: 100%; font-family: inherit; font-size: 1.15rem; color: var(--ink);
@@ -481,7 +485,7 @@
       '<p class="room-title">' + escapeHtml(room.title || 'Escape Room') + '</p>' +
       '<span class="station-badge">Station ' + (idx + 1) + ' of ' + room.stations.length + (hasScoring ? ' · Score: ' + computeScore() : '') + '</span>' +
       lettersStripHtml() +
-      (station.image ? '<img class="clue-image" src="' + escapeHtml(station.image) + '" alt="Clue image">' : '') +
+      clueImageHtml(station) +
       '<div class="clue-box">' + escapeHtml(station.clue || '(no clue text)') + '</div>' +
       '<div class="feedback show bad">🔒 Too many misses in a row — locked out for <strong><span id="lockoutSeconds">' + secondsLeft + '</span>s</strong>.' +
         (station.hint ? ' Read the hint below while you wait.' : '') + '</div>' +
@@ -505,8 +509,28 @@
     }, 500);
   }
 
+  // A printed station's code carries its own station and a stub for every
+  // other one (019's stationPayloadFor), and never the clue picture, which is
+  // printed on the station's card instead. A code from before that change
+  // carries the whole room, pictures included, and draws them as it always did.
+  function clueImageHtml(station) {
+    if (station.image) return '<img class="clue-image" src="' + escapeHtml(station.image) + '" alt="Clue image">';
+    if (station.imageOnCard) return '<p class="clue-photo-note">📷 This clue has a picture. Look at it on the printed station card.</p>';
+    return '';
+  }
+
   function renderClue(idx) {
     var station = room.stations[idx];
+    // A stub has no clue to show. The builder never makes a code that lands
+    // here (a station's code only opens its own station), but a link with
+    // its `s` cut off would, and the right answer is the gate's.
+    if (!Array.isArray(station.answers)) {
+      card.innerHTML =
+        '<div class="gate-icon">🔒</div>' +
+        '<p class="room-title">' + escapeHtml(room.title || 'Escape Room') + '</p>' +
+        '<p class="gate-text">Your next clue is waiting at <strong>Station ' + (idx + 1) + '</strong>. Scan that station’s code.</p>';
+      return;
+    }
     var type = station.type || 'text';
     var misses = progress.misses[idx] || 0;
     var cost = station.hintCost || 0;
@@ -552,7 +576,7 @@
       '<p class="room-title">' + escapeHtml(room.title || 'Escape Room') + '</p>' +
       '<span class="station-badge">Station ' + (idx + 1) + ' of ' + room.stations.length + (hasScoring ? ' · Score: ' + computeScore() : '') + '</span>' +
       lettersStripHtml() +
-      (station.image ? '<img class="clue-image" src="' + escapeHtml(station.image) + '" alt="Clue image">' : '') +
+      clueImageHtml(station) +
       '<div class="clue-box">' + escapeHtml(station.clue || '(no clue text)') + '</div>' +
       cipherHtml +
       '<form id="answerForm" autocomplete="off">' + answerFieldHtml + '</form>' +

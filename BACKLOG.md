@@ -95,8 +95,6 @@ row is deleted and Path 4 P4 is finished.**
 - `MediaDB.images({ ns, owner })` in `_shared/media-db.js` is the one copy of the shared image
   layer (#294). A future image-bearing tool uses it and writes no new copy.
 - **Found in #290, not fixed:** 028's source-description hint still says "there's no image upload".
-- **Found in #282, not fixed:** each station's QR code in 019 encodes the whole room, so one
-  real photo makes every QR in the room fail to build. Noted under 019 in Tier 2.
 - **On Devon's Windows checkout two suites fail locally that CI passes:** `schedule-browser/
   smoke-dark-theme` (CRLF) and `music-sightreading-generator/smoke-glyph-fallback` (font
   metrics). Not root-caused.
@@ -1971,7 +1969,8 @@ station cards: 019 has branching, images, answer validation, a `lock.html` playe
 and a WebRTC `monitor.html`; 018 has teams, timing, hints-with-penalty and a
 leaderboard. 018's last round "only widened the gap between the two station data
 shapes". 019's most valuable open item is a non-QR fallback (not every student has a
-working camera); the whole room rides in a QR with no payload-size warning.
+working camera). Since #320 each printed station code carries only its own station (no
+images; the picture prints on the card), so a code's size no longer grows with the room.
 
 **Phases.**
 
@@ -1982,7 +1981,8 @@ working camera); the whole room rides in a QR with no payload-size warning.
   a reprint doesn't invalidate codes already taped to the wall. *Fable for merging
   two divergent models without losing either tool's behavior.*
 - **P2 — Both tools on the schema**, plus the payload budget from Path 6 (Share
-  sheet) and a printed short-code fallback typed into `lock.html`.
+  sheet) on each station's own code (one station per code since #320) and a printed
+  short-code fallback typed into `lock.html`.
 - **P3 — Feature parity.** 019 gains teams/timing/hints/leaderboard; 018 gains
   per-answer branching, "a required set in any order", station images, and the
   player page. Questions come from the bank (Path 12).
@@ -4741,14 +4741,6 @@ printed debrief for every team at the end.
 - **Non-QR fallback.** A printed short code students type into `lock.html` on
   a shared device — QR requires every student to have a camera, which is not
   a safe assumption.
-- **Skipped — Round 4 considered this and passed.** **Estimated payload size warning.** The whole room rides in the QR; a room
-  with several images will silently produce an unscannable code (P3). **Measured 2026-09-28
-  (#282): worse than that.** One real photo (~33 KB as a data URL, against a QR's ~3 KB) on
-  any station makes every station's code fail to build, and the page says "Could not build a QR
-  code". Clue images reach students only through the copied student link. Fixing it is a product
-  call: keep images out of the QR payload, or give each station a payload of its own. *(The
-  new per-station fields are all a few bytes and omitted when unused, so the
-  existing try/catch QR-generation error remains the only size guard.)*
 - **Station numbering that survives reordering**, so a reprint doesn't
   invalidate the codes already taped to the wall.
 

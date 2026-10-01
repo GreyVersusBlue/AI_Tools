@@ -14,9 +14,10 @@
    WHY A DATA-URL CACHE AND NOT OBJECT URLS, as 005 did. A 320 px JPEG at 0.6
    is a few tens of KB (measured in test/smoke-images.mjs), and more to the
    point every consumer of the image needs the data URL itself, synchronously:
-   the student link and every station's QR code carry the image INSIDE the
-   URL, because lock.html runs on a student's phone that has never seen this
-   browser's IndexedDB. render() builds those links on every keystroke, and
+   the student link carries the image INSIDE the URL, because lock.html runs
+   on a student's phone that has never seen this browser's IndexedDB, and the
+   printed station cards and packet draw it. (A station's QR code never
+   carries it; see stationPayloadFor in the page.) render() builds those links on every keystroke, and
    the share sheet's getState() is synchronous. An object URL would only move
    the base64 step into each of them. Only boot and a new image touch
    IndexedDB.
