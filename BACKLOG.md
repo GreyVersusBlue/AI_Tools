@@ -80,7 +80,15 @@ done).*
 **Why it is short.** It had grown to ~1,900 lines of handoffs by 2026-09-23; those moved
 verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12"). Search there for a PR number.
 
-**Last merged: #326, which landed three sessions' work that had been committed only to huginn's local
+**Last merged: #328, Path 4 P5 in part (`CACHE_VERSION` v216). Rank 2 stays, cut to its last half.**
+- 009 can lock a backup with a passphrase (`backup-restore/br-crypto.js`, AES-GCM, PBKDF2 600k;
+  off by default, never on the year-end archive). The landing app bar shows "N KB saved · backed up
+  N days ago", linking to 009. Suite `smoke-encrypted.mjs`, port 8461.
+- The row's restore preview/diff had **already shipped** (`smoke-restore-diff.mjs`); the row was stale.
+- 009 had a literal NUL byte in its source, so `grep` silently printed nothing for it. Use `grep -a` on
+  any page you suspect; 009's is fixed (`'\ufffd'`, and why it cannot be `'\u0000'` is in `HISTORY.md`).
+
+**Before that, #326, which landed three sessions' work that had been committed only to huginn's local
 `main` (AI-03, AI-07, AI-09; `CACHE_VERSION` v215).** Old rank 1 (Path 21 P4, 046's shaded relief; Path 21 is
 finished), old ranks 5, 6 and 12 (the accessibility group) and old rank 8 (`check:entities` follows arrays).
 - The 14 `color-contrast` allowances are fixed in the tools and `allowlist.json` is **empty**. The sweep
@@ -91,17 +99,7 @@ finished), old ranks 5, 6 and 12 (the accessibility group) and old rank 8 (`chec
 **Before that, #324: a new tool outside the ranked list, 088 Braille Reading Trainer (v214)**, asked for
 directly by Devon. World Language, now 8 tools. Its translator is hand-checked, not checked against liblouis.
 
-**Before that, #321, Path 4 P4 increment 11, 035's floor-plan trace images. `CACHE_VERSION` v211. The
-row is deleted and Path 4 P4 is finished.**
-- Each floor's trace image is a Blob in `gvb-media` (`stviz-trace/`), and `traceImage.dataUrl` holds
-  `idb:<id>`, through `Tools/schedule-visualizer/sv-trace-image.js`. It keeps a data-URL cache, like
-  005 and 019. Snapshots hold references. Exports, the handoff and recovery points carry the bytes.
-- 044's PNG downscaler is `MediaDB.downscaleImage` now. **No downscaler Path 4 P4 counted is left.**
-  011's PDF presets and 046's locator thumbnail still scale images, but they were never on that list.
-- **The empty-storage sweep missed two shipped violations** in 035's trace dialog (unnamed sliders,
-  `--slate-400` hint). Both were fixed. The sweep has a seeded pass now (AI-07), which a dialog still escapes.
-
-**Before that, #317** (030's board art, v210), **#315** (042's seals, v209), **#313** (071's twelve starter pictures, v208: a pin on any 071 picture was lost on reload, fixed), **#311** (080's piece atlas, v207), **#308** (the landing hero, v206), **#306** (the PWA app mark, v205), **#304** (064's card photos, v204) and **#302** (030's clue images, v203).
+**Before that, #321** (035's trace images onto `media-db.js`, v211; Path 4 P4 is finished), **#317** (030's board art, v210), **#315** (042's seals, v209), **#313** (071's twelve starter pictures, v208: a pin on any 071 picture was lost on reload, fixed), **#311** (080's piece atlas, v207), **#308** (the landing hero, v206), **#306** (the PWA app mark, v205), **#304** (064's card photos, v204) and **#302** (030's clue images, v203).
 - `MediaDB.images({ ns, owner })` in `_shared/media-db.js` is the one copy of the shared image
   layer (#294). A future image-bearing tool uses it and writes no new copy.
 - **Found in #290, not fixed:** 028's source-description hint still says "there's no image upload".
@@ -112,11 +110,15 @@ row is deleted and Path 4 P4 is finished.**
 - The one-line `git rm` of rank 83's four dead trees is **still not done**.
 
 **Start here.** Path 21 is finished (046's relief was its last row, AI-03), so no row needs Blender.
-- Rank 1 (Path 6 P4) is blocked on rank 34, so take **rank 2**, Path 4 P5: 009 Backup & Restore's restore
-  preview and diff, per-tool restore, a storage readout and optional encrypted backup (1 session, the
-  whole batch). Since Path 4 P4 finished, a backup's `gvb-media` holds every tool's images, so the
-  readout has real numbers to show. **Read 009 before trusting the row.** A new suite takes port **8461**
-  (8458 is 019's `smoke-station-qr.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's smoke suite).
+- Rank 1 (Path 6 P4) is blocked on rank 34, so take **rank 2**, the rest of Path 4 P5: per-tool restore
+  as a shared control any tool can host (½). It needs 009's `recordDiff`/merge logic moved out of 009's
+  inline script into `_shared/`, and `ToolRegistry` to pick one tool's keys. Pair it with another ½ or two
+  ¼ rows. A new suite takes port **8462** (8458 is 019's `smoke-station-qr.mjs`, 8459 is 046's
+  `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's `smoke-encrypted.mjs`).
+- **huginn's shared checkout** (`/home/devon/projects/AI_Tools`) still has local `main` 8 commits ahead
+  of the old origin. Their content is all on origin now (#326), and copies are on `backup/ai-03-relief` and
+  `backup/ai-07-ai-09-local-main`. Nobody has reset it, in case a session is still using it. Work in your
+  own worktree and never commit to that `main`.
 - A prompt that names a row wins over the rule above.
 - **End every session by writing the prompt for the next one** (Devon, 2026-09-29): after the
   step-6 merge, put it in your final message *and* in the handoff PR's body, so it is in
@@ -128,16 +130,16 @@ row is deleted and Path 4 P4 is finished.**
 - **A periodic human device check** (about 30 minutes with a phone, a laptop and a printer):
   the parked list under Cross-cutting ("Parked — needs a person").
 
-**Numbers (2026-10-01, after #321; re-measure, do not carry forward):**
+**Numbers (2026-10-02, after #328; re-measure, do not carry forward):**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v215` — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **311** in `PRECACHE_URLS`, **93** in `SHELL_URLS`. Bytes last summed on Devon's Windows checkout after #267 (11.21 MB / 2.52 MB), not re-measured. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **185** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| `CACHE_VERSION` | `v216` — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **312** in `PRECACHE_URLS`, **93** in `SHELL_URLS`. Bytes last summed on Devon's Windows checkout after #267 (11.21 MB / 2.52 MB), not re-measured. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
+| Suites | **186** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
-| Accessibility allowlist | **0**. The sweep scans 88 pages empty and 36 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
+| Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 36 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
 | Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 80 · `a11y.js` 80 · `ink-paper.css` 73 · `base.css` 68 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `media-db.js` 14 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
