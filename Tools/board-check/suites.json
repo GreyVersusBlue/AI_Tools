@@ -172,6 +172,7 @@
     "Tools/primary-source-analysis-generator/test/smoke-images.mjs",
     "Tools/blank-map-generator/test/smoke-timeline-handoff.mjs",
     "Tools/blank-map-generator/test/smoke-label-colors.mjs",
+    "Tools/blank-map-generator/test/smoke-relief.mjs",
     "Tools/service-worker/test/smoke-sw-update.mjs",
     "Tools/service-worker/test/smoke-sw-tiers.mjs",
     "Tools/service-worker/test/smoke-storage-persist.mjs",
@@ -196,6 +197,8 @@
     "Tools/seating-read/test/seating-read.test.mjs",
     "Tools/a11y-sweep/test/smoke-a11y-sweep.mjs",
     "Tools/board-check/test/select-suites.test.mjs",
+    "Tools/board-check/test/check-entities.test.mjs",
+    "Tools/daily-editing-warmup-generator/test/smoke-entities.mjs",
     "Tools/blender-art/test/validate-art.test.mjs"
   ],
   "expectedFailures": []

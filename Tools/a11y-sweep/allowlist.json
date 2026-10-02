@@ -6,48 +6,5 @@
     "same way suites.json's expectedFailures cannot outlive the bug: fix the page, remove the entry.",
     "Never add an entry to silence a new finding without a reason that names where the fix belongs."
   ],
-  "pages": {
-    "index.html": {
-      "color-contrast": "baseline 2026-09-03: 8 × elements must meet minimum color contrast ratio thresholds (e.g. a[data-tool=\"seating-chart\"] > .per > .lbl); fix in the tool, then remove this line"
-    },
-    "Tools/002-group-team-generator.html": {
-      "color-contrast": "baseline 2026-09-03: 18 × elements must meet minimum color contrast ratio thresholds (e.g. .col-left > .card:nth-child(1) > .card-title); fix in the tool, then remove this line"
-    },
-    "Tools/005-Seating Chart Generator.html": {
-      "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. #status > b); fix in the tool, then remove this line"
-    },
-    "Tools/007-Name Picker.html": {
-      "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. #emptyStateBtn); fix in the tool, then remove this line"
-    },
-    "Tools/012-graph-paper-generator.html": {
-      "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. .preview-note); fix in the tool, then remove this line"
-    },
-    "Tools/016-qr-code-generator.html": {
-      "color-contrast": "baseline 2026-09-03: 26 × elements must meet minimum color contrast ratio thresholds (e.g. .col-left > .card:nth-child(1) > .card-title); fix in the tool, then remove this line"
-    },
-    "Tools/018-qr-scavenger-hunt-builder.html": {
-      "color-contrast": "baseline 2026-09-03: 14 × elements must meet minimum color contrast ratio thresholds (e.g. label[for=\"hunt-name\"]); fix in the tool, then remove this line"
-    },
-    "Tools/026-math-drill-generator.html": {
-      "color-contrast": "baseline 2026-09-03: 1 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
-    },
-    "Tools/028-primary-source-analysis-generator.html": {
-      "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. .preview-note); fix in the tool, then remove this line"
-    },
-    "Tools/029-prompt-builder.html": {
-      "color-contrast": "baseline 2026-09-03: 23 × elements must meet minimum color contrast ratio thresholds (e.g. .privacy-banner); fix in the tool, then remove this line"
-    },
-    "Tools/035-schedule-visualizer.html": {
-      "color-contrast": "baseline 2026-09-03: 6 × elements must meet minimum color contrast ratio thresholds (e.g. #tool-classroom); fix in the tool, then remove this line"
-    },
-    "Tools/038-data-chart-builder.html": {
-      "color-contrast": "baseline 2026-09-03: 9 × elements must meet minimum color contrast ratio thresholds (e.g. .col-left > .card:nth-child(1) > .card-title); fix in the tool, then remove this line"
-    },
-    "Tools/039-vocab-conjugation-drill.html": {
-      "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
-    },
-    "Tools/040-vocab-flashcard-generator.html": {
-      "color-contrast": "baseline 2026-09-03: 2 × elements must meet minimum color contrast ratio thresholds (e.g. #previewNote); fix in the tool, then remove this line"
-    }
-  }
+  "pages": {}
 }

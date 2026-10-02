@@ -4,6 +4,7 @@
 //   node Tools/a11y-sweep/test/smoke-a11y-sweep.mjs             (all pages)
 //   node Tools/a11y-sweep/test/smoke-a11y-sweep.mjs --only 046  (one page, by number or name)
 //   node Tools/a11y-sweep/test/smoke-a11y-sweep.mjs --all-impacts  (also print moderate/minor, not failing)
+//   node Tools/a11y-sweep/test/smoke-a11y-sweep.mjs --empty-only   (skip the seeded pass)
 //   node Tools/a11y-sweep/test/smoke-a11y-sweep.mjs --baseline     (record every unallowed finding
 //                                                                   into the allowlist, dated, and exit 0)
 //
@@ -23,8 +24,17 @@
 // allow for it — and an allowance that no longer fires is ALSO a failure, so
 // the list can only shrink as pages are fixed.
 //
+// Every page that has saved state worth showing is then scanned a SECOND time,
+// labelled "[seeded]", with the localStorage in ../seeds.mjs written before
+// its first script runs: the shared roster on every page that reads it, and a
+// per-tool fixture on the pages whose violations shipped from behind saved
+// state (#202, #206, #210 and seven more; seeds.mjs lists them). The empty
+// pass alone could not see any of those. A seeded page has its own allowlist
+// entry, "<page> [seeded]", so the two states are judged separately.
+//
 // What this does not cover, on purpose: states behind a click (a modal, a
-// second tab of a tool), which are per-tool suite territory; moderate and
+// second tab of a tool, a mode the tool always opens out of — seeds.mjs names
+// the ones it knows), which are per-tool suite territory; moderate and
 // minor impacts, which are printed with --all-impacts but never fail; and
 // colour contrast on text the tool draws on <canvas>. It is a floor.
 //
@@ -33,7 +43,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 import { serve, launch, prepPage, settle, a11yScan, SITE } from '../../board-check/harness.mjs';
+import { ROSTERS, PAGE_SEEDS } from '../seeds.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = 8403;
@@ -42,6 +54,7 @@ const argv = process.argv.slice(2);
 const only = argv.includes('--only') ? argv[argv.indexOf('--only') + 1] : null;
 const allImpacts = argv.includes('--all-impacts');
 const baseline = argv.includes('--baseline');
+const emptyOnly = argv.includes('--empty-only');
 const ALLOWLIST_PATH = path.join(HERE, '..', 'allowlist.json');
 
 const allowlist = JSON.parse(fs.readFileSync(ALLOWLIST_PATH, 'utf8'));
@@ -50,6 +63,41 @@ const allowed = allowlist.pages || {};
 const pages = ['index.html', ...fs.readdirSync(path.join(SITE, 'Tools')).filter(f => /^\d{3}-.*\.html$/.test(f)).sort().map(f => 'Tools/' + f)];
 const selected = only ? pages.filter(p => p.includes(only)) : pages;
 if (!selected.length) { console.error(`smoke-a11y-sweep: --only ${only} matched no page`); process.exit(1); }
+
+// Which pages touch the shared roster comes from the registry, not a list kept
+// here: a new roster reader is seeded the day its registry row says so.
+const registryCtx = { window: {} };
+vm.createContext(registryCtx);
+vm.runInContext(fs.readFileSync(path.join(SITE, '_shared', 'tool-registry.js'), 'utf8'), registryCtx);
+const usesRoster = k => k === 'np_rosters' || (k && k.k === 'np_rosters');
+const rosterPages = new Set(registryCtx.window.ToolRegistry.tools
+  .filter(t => (t.keys || []).some(usesRoster) || (t.reads || []).some(usesRoster))
+  .map(t => decodeURIComponent(t.file)));
+for (const num of Object.keys(PAGE_SEEDS)) {
+  if (!pages.some(p => p.startsWith(`Tools/${num}-`))) { console.error(`smoke-a11y-sweep: seeds.mjs seeds ${num}, which is no page`); process.exit(1); }
+}
+const seedFor = p => {
+  const num = (p.match(/^Tools\/(\d{3})-/) || [])[1];
+  const own = num && PAGE_SEEDS[num] ? PAGE_SEEDS[num]() : null;
+  if (!own && !rosterPages.has(p) && num !== '009') return null;
+  return { ...ROSTERS, ...(own || {}) };
+};
+const scans = [];
+for (const p of selected) {
+  scans.push({ p, key: p, seed: null });
+  const seed = emptyOnly ? null : seedFor(p);
+  if (seed) scans.push({ p, key: `${p} [seeded]`, seed });
+}
+
+// Jump every finite CSS animation to its end before scanning. index.html fades
+// its categories in on a stagger that outlasts settle(), so axe used to read
+// the last few mid-fade: the page's contrast count was 8, 24 or 35 depending
+// on timing, with the file untouched. Infinite animations are left running.
+const finishAnimations = page => page.evaluate(() => {
+  for (const a of document.getAnimations()) {
+    if (a.effect && a.effect.getComputedTiming().endTime !== Infinity) a.finish();
+  }
+});
 
 let passed = 0, failed = 0;
 const fails = [];
@@ -64,21 +112,30 @@ const started = Date.now();
 const advisory = [];
 
 try {
-  for (const p of selected) {
+  for (const { p, key, seed } of scans) {
     const page = await prepPage(browser, BASE, { width: 1280, height: 900 });
+    if (seed) {
+      await page.addInitScript(entries => {
+        if (sessionStorage.getItem('__a11ySeeded')) return;
+        for (const [k, v] of Object.entries(entries)) localStorage.setItem(k, v);
+        sessionStorage.setItem('__a11ySeeded', '1');
+      }, seed);
+    }
     try {
       await page.goto(`${BASE}/${encodeURI(p)}`, { waitUntil: 'load', timeout: 30000 });
       await settle(page, 500);
+      await finishAnimations(page);
       const violations = await a11yScan(page, { impact: allImpacts ? 'minor' : 'serious' });
       const serious = violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
       const lesser = violations.filter(v => v.impact !== 'serious' && v.impact !== 'critical');
-      const allow = allowed[p] || {};
-      const label = p.replace(/^Tools\//, '');
+      const allow = allowed[key] || {};
+      const label = key.replace(/^Tools\//, '');
+      if (seed && page.__errs.length) ok(false, `${label}: the seed raised a page error — ${page.__errs[0]}`);
       if (baseline) {
-        const entry = allowed[p] || (allowed[p] = {});
+        const entry = allowed[key] || (allowed[key] = {});
         for (const v of serious) if (!entry[v.id]) entry[v.id] = `baseline ${new Date().toISOString().slice(0, 10)}: ${v.count} × ${v.help.toLowerCase()} (e.g. ${v.nodes[0]}); fix in the tool, then remove this line`;
         for (const id of Object.keys(entry)) if (!serious.some(v => v.id === id)) delete entry[id];
-        if (!Object.keys(entry).length) delete allowed[p];
+        if (!Object.keys(entry).length) delete allowed[key];
         console.log(`  ${label}: ${serious.length} serious/critical recorded`);
         continue;
       }
@@ -94,7 +151,7 @@ try {
       const allowedHere = serious.filter(v => allow[v.id]);
       if (allowedHere.length) console.log(`  allowed ${label}: ${allowedHere.map(v => `${v.id} ×${v.count}`).join(', ')}`);
     } catch (e) {
-      ok(false, `${p}: scan crashed — ${String(e.message || e).split('\n')[0]}`);
+      ok(false, `${key}: scan crashed — ${String(e.message || e).split('\n')[0]}`);
     } finally {
       await page.context().close();
     }
@@ -117,7 +174,7 @@ if (advisory.length) {
   console.log('\nModerate/minor (advisory, not counted):');
   for (const a of advisory) console.log('  ' + a);
 }
-console.log(`\nAccessibility sweep — axe-core over ${selected.length} page${selected.length === 1 ? '' : 's'} in ${Math.round((Date.now() - started) / 1000)}s`);
+console.log(`\nAccessibility sweep — axe-core over ${selected.length} page${selected.length === 1 ? '' : 's'}, ${scans.length - selected.length} of them again seeded, in ${Math.round((Date.now() - started) / 1000)}s`);
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) {
   console.log('\nfailures:');

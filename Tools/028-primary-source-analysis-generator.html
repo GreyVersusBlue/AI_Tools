@@ -39,9 +39,9 @@
      015, 023, 039 and 040 name theirs because ink-paper.css has no token for
      it. --good is read from script for the library note, which is screen
      chrome and so needs the dark value too. */
-  :root { --good: #2f7d4f; --info-bg: #eaf1f5; --desk: #d9d7cd; }
+  :root { --good: #2f7d4f; --info-bg: #eaf1f5; --desk: #d9d7cd; --desk-muted: #53524b; }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
-    --good: #63c08e; --info-bg: #1b2a35; --desk: #0e1014;
+    --good: #63c08e; --info-bg: #1b2a35; --desk: #0e1014; --desk-muted: var(--muted);
   }
   * { box-sizing: border-box; }
   body {
@@ -119,7 +119,7 @@
 
   .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
   .preview-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .7rem; margin-bottom: .9rem; }
-  .preview-note { font-size: .8rem; color: var(--muted); margin: 0; }
+  .preview-note { font-size: .8rem; color: var(--desk-muted); margin: 0; }
   .view-tabs { display: flex; gap: .4rem; }
   .view-tab {
     font-family: inherit; font-size: .8rem; font-weight: 700; cursor: pointer;

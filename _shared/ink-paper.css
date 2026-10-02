@@ -60,10 +60,12 @@
    accent-ink on an accent fill. Worst case is 4.76 (light muted on card-2)
    and 5.78 (dark muted on card-2). Do not lighten a dark value or darken a
    light one without redoing that math.
-   `--line-strong` is the one asymmetry: dark's clears the 3:1 that WCAG
-   1.4.11 asks of a control border (3.00 on card), light's does not (1.82).
-   Raising light's is a restyle of 74 shipped pages, so it is recorded as a
-   follow-up under Path 5 rather than smuggled in here. */
+   `--line-strong` is the control border, and WCAG 1.4.11 asks 3:1 of it
+   rather than 4.5: it clears that on paper, card and card-2 in both themes,
+   worst case 3.07 (light on card-2) and 3.14 (dark on card-2). Light's was
+   #c3c0b6 (1.82 on card) and dark's #626c78 (2.64 on card-2) until AI-07
+   raised both; axe never reports this, so redo the math by hand if you move
+   either. `--line` is a divider, not a control edge, and stays faint. */
 
 :root {
   /* The light values, named once. The dark block never touches these, so a
@@ -75,7 +77,7 @@
   --card-light: #fff;
   --card-2-light: #f1f0ea;
   --line-light: #dcdad2;
-  --line-strong-light: #c3c0b6;
+  --line-strong-light: #8c897f;
   --accent-light: #1f3550;
   --accent-2-light: #2e6b8f;
   --accent-ink-light: #fff;
@@ -110,7 +112,7 @@
   --card: #1d2229;
   --card-2: #262c34;
   --line: #363c45;
-  --line-strong: #626c78;
+  --line-strong: #6e7885;
   --accent: #7fb2e5;
   --accent-2: #a8cdf2;
   --accent-ink: #101720;
