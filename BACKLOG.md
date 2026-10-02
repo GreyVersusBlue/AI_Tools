@@ -95,9 +95,9 @@ row is deleted and Path 4 P4 is finished.**
 - `MediaDB.images({ ns, owner })` in `_shared/media-db.js` is the one copy of the shared image
   layer (#294). A future image-bearing tool uses it and writes no new copy.
 - **Found in #290, not fixed:** 028's source-description hint still says "there's no image upload".
-- **On Devon's Windows checkout two suites fail locally that CI passes:** `schedule-browser/
-  smoke-dark-theme` (CRLF) and `music-sightreading-generator/smoke-glyph-fallback` (font
-  metrics). Not root-caused.
+- **The two Windows-only suite failures are fixed (AI-34 part, v213):** `.gitattributes` pins LF
+  and 067's glyph probe no longer calls Windows' music font missing. An existing Windows clone
+  needs `git rm -rq --cached .` then `git reset -q --hard` once. `HISTORY.md` has it.
 - **Path 22 P1–P5 are done.** His later asks are ranks 176–184 (P6–P14), unranked by him.
 - The one-line `git rm` of rank 88's four dead trees is **still not done**.
 
