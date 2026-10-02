@@ -9,6 +9,49 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Shared-baseline adoption sweep: `a11y.js`, `ink-paper.css` and `base.css` on the pages that skipped them (2026-10-02, AI-35, `CACHE_VERSION` v219)
+
+Old rank 76, deleted; the table is renumbered to 172 rows. Split from AI-08, which recounted it.
+
+- **The row's "light pages first" list was half wrong.** It named 002, 007, 044 and 086 as light. **002 and 007 are
+  dark by default** (002 on the same slate `:root` as 016/018/038, byte-identical across all four; 007 on its theme
+  picker's "Press Your Luck" look). Only 044 and 086 were light.
+- **002, 016, 018, 038: on `ink-paper.css`'s tokens, native dark.** Their private names stay as aliases
+  (`--bg: var(--paper)`, `--surface: var(--card)`, `--text: var(--ink)`, `--danger: var(--err)`…); `--success` and
+  `--warn` keep a value per theme (the old dark ones are dark's). **Decision, reversible: these pages now follow the
+  teacher's theme like the other 85, so a light-OS teacher sees them light for the first time.** The alternative, dark in
+  both themes, would have left the a11y widget's dark switch dead on four pages. White text on an accent or err fill is
+  `var(--accent-ink)`; 016's `#qr-stage`, 018's `.preview-card` and 038's `#chart-stage` (what is scanned or printed)
+  are `.paper-sheet`. The `.share-sheet-backdrop` token bridges 016/018/038 carried for `share.js` are deleted: the
+  page's tokens are the sheet's now.
+- **044's private `:root` was ink-paper's light values copied inline** (`--ink`, `--paper`, `--line`, `--muted`, `--err`);
+  it links `ink-paper.css`, keeps `--accent` (#2e4c6d, not ink-paper's), `--accent-dark`, `--ok` and the warn tints with
+  a dark value each, and its `#fff` chrome is `--card`/`--card-2`/`--accent-ink`.
+- **007 loads `a11y.js` with `A11Y_NATIVE_THEME` but no `ink-paper.css`.** Its palette is its own theme picker, ten
+  dark looks and one light; the invert filter would have turned the dark ones light. Decision: the site's dark switch
+  re-skins only Classroom Light, with a rule on `<body>` (it has to outrank the inline values `applyTheme()` writes on
+  `<html>`). `smoke-dark-rollout` drives it in both themes. It still hand-rolls fullscreen; `path5:next` now lists it.
+- **010, 032, 046, 087 link `base.css`**, and lost the rules `phase4:next` named (010: `.app-header h1`, `.back-link`,
+  `:hover`; the others `:hover`). Two leaks had to be closed by hand, because base.css's rules add properties a
+  variant did not set: 010's `.card` gained `margin-bottom: 0` (its cards sit in a grid gap), 087's `.app-header`
+  `justify-content: normal; margin-bottom: 0`. `phase4:next` is now "nothing left to migrate".
+- **What still skips a file, and why — every one deliberate, so the row is closed rather than left open:**
+  `a11y.js`: 035 (rank 5, Devon's call) and **086, whose header records a user-approved exception: it is handed to
+  students as one standalone file and must not link `_shared/`.** `ink-paper.css`: 004 and 007 (own palettes, native
+  dark), 005/011/029/031/036 (on `theme.css`, the older design system), 034 (emailed as a standalone copy), 035, 086.
+  `base.css`: those, plus 002/016/018/038/044, which have only per-tool variants of its selectors — linking it would
+  add nothing but leaks.
+- **Trap: `--danger: var(--err)` on `:root` resolves once, at the root.** A `.paper-sheet` restoring `--err` does not
+  re-resolve the alias inside it, so the aliased names are dark-valued inside a sheet. Nothing on these four pages
+  reads them there today (the sheets use literals); a future sheet should use the ink-paper names directly.
+- **Verified:** `smoke-dark-rollout` 966/0 (increment 14 adds 002, 016, 018, 038, 044 to `PAGES`, axe in dark on each,
+  and drives 007 in both themes; its first run read 007's body mid-way through a 0.4 s background transition, so it
+  waits for the colour now). `run-suites --changed --base HEAD`: 36 of 39 green. The three red are **not this change**:
+  `class-screen` `smoke-widgets`/`smoke-periods` (the `.a11y-widget` intercepts a click — fails identically with 087
+  restored to HEAD, and recorded twice above) and `smoke-share-rollout` ("Target crashed", as under AI-08). Guards all
+  green, `lint`, `test:theme`'s `smoke-theme` 53/0, `check:adoption --check`. Looked at screenshots of 002 light, 016 dark,
+  038 light, 044 dark and 007's Classroom Light in dark. **Not verified:** a full `npm test`; a real projector; printing.
+
 ## Shared-baseline tidies: one `a11y.*` per page, `.share-note` and the header rules in `base.css` (2026-10-02, AI-08, `CACHE_VERSION` v218)
 
 Old ranks 6, 7 and 81, deleted; the table is renumbered to 173 rows. Rank 5 (035's private theme) is Devon's call and

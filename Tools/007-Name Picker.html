@@ -22,6 +22,9 @@
 <meta name="twitter:image" content="https://greyversusblue.com/assets/og/guild-board.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%233B2A1A'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%237E2A20'/%3E%3Ccircle cx='13' cy='13' r='3.5' fill='%23A8443A'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
+<script src="../_shared/a11y.js"></script>
+<link rel="stylesheet" href="../_shared/a11y.css">
 <script src="../_shared/store.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
@@ -234,6 +237,15 @@ kbd{background:var(--name-bg);border:1px solid var(--accent);border-radius:4px;p
 /* === ENHANCED NAME CARD READABILITY === */
 .name-card{text-shadow:0 1px 2px rgba(0,0,0,0.85),0 0 6px rgba(0,0,0,0.5);}
 body.theme-classroom .name-card{text-shadow:0 1px 1px rgba(255,255,255,0.7),0 0 3px rgba(255,255,255,0.5);}
+/* Theme here is the THEME picker's, not a11y.js's: ten of its eleven looks are
+   dark already and a projected game keeps its look in either site theme. So
+   a11y.js loads with A11Y_NATIVE_THEME (its invert filter would turn the dark
+   looks light) and the site's dark switch re-skins the one light look,
+   Classroom Light, to this twin (AI-35). It is set on <body> so it outranks
+   the inline values applyTheme() writes on <html>; --accent-fill stays the
+   light theme's #2563eb, which is what keeps white button text at 4.5:1. */
+:root[data-theme="dark"]:not(.a11y-filter-dark) body.theme-classroom{--bg:#14171c;--surface:#1d2229;--text:#e9e7e0;--accent:#7fb2e5;--winner-text:#14171c;}
+:root[data-theme="dark"]:not(.a11y-filter-dark) body.theme-classroom .name-card{text-shadow:none;}
 .name-card.absent-card{opacity:0.32;filter:grayscale(0.7) blur(0.5px);}
 .name-card.lucky-card::before{content:'⭐';position:absolute;top:-12px;right:-10px;font-size:1.5em;animation:luckyStar 2.4s ease-in-out infinite;filter:drop-shadow(0 0 5px #ffd700);pointer-events:none;z-index:2;}
 @keyframes luckyStar{0%,100%{transform:rotate(-15deg) scale(1);}50%{transform:rotate(15deg) scale(1.2);}}
