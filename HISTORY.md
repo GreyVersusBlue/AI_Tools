@@ -9,6 +9,45 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## `check:entities` follows array data to a text sink, and 055 has a suite (2026-10-02, AI-09, no `CACHE_VERSION` bump)
+
+Old rank 8, deleted; the table is renumbered to 179 rows. Nothing shipped to a page: the guard
+and two suites changed, so `sw.js` is untouched.
+
+**Two rules added to `Tools/board-check/check-entities.mjs`.**
+- **An entity in the string argument of `escapeHtml`/`escapeAttr` (and the `esc` spellings) is
+  reported wherever the result goes.** The `&` is escaped, so the entity can only render as
+  text. No dataflow. It finds nothing today, because 065 and 057 were fixed in #216; it is
+  there so they cannot come back.
+- **An entity in an array/object initialiser (`var ROWS = [ … ]`) is followed by name, up to
+  six hops, through variables assigned from it and functions that return it, to a text sink
+  that reads `name.prop` or `name[i]`.** 055 is exactly that: `BUILTIN` → `allSentences()` →
+  `filteredSentences()` → `all` → `item` → `item.broken` on `textContent`. A hit that
+  reaches `innerHTML` is not reported, and a `.length` read does not count.
+
+**What the number now means. It did not move: 313 before and 313 after.** The 313 are literals
+whose sink the guard still cannot see, and the new rule reclassified none of them, because
+055 was the only real case and #208 had already fixed it. The old figures in the backlog
+(325, then 312) were never re-measured against the code. The honest reading is that the data
+rule found no live bug on the tree today, not that 313 literals are proved safe.
+
+**Tried and dropped.** The first draft tainted object *keys* too (`{ broken: c.broken }` marks
+`broken`) and flagged 078, 080, 083 and 046 on names alone (`.columns`, `.min`, `.level`,
+`.label`). A name-based taint with a loose "mentions" test marks any variable that ever sees the
+data, so the final version taints a variable or function only when its value *starts with* a
+tainted name, and a sink only counts a property or index read off one. This is still
+name-based and single-file. Two functions that reuse a variable name, one fed from the array
+and one not, can produce a false positive; if that happens, scope the taint to the function.
+
+**The suites.** `Tools/board-check/test/check-entities.test.mjs` (`test:check-entities`, pure
+Node) pins 055's pre-fix shape as a finding and the quiet cases around it. `Tools/daily-editing-warmup-generator/test/smoke-entities.mjs`
+(`test:daily-editing-warmup`, 16 assertions) steps through every built-in sentence on the
+projector, builds a 30-line worksheet and key, reads the bank, and round-trips a typed
+sentence containing `&amp;` and `&rsquo;` through the projector, worksheet, key and bank. It
+was checked against the bug: with `&rsquo;` put back into two of 055's sentences it failed
+4 of 16 assertions, and passes with the tree as it is. **Not verified here:** a full `npm test`
+(Huginn is short of RAM; only these two suites, `select-suites`, and the guards were run).
+
 ## The accessibility group: the contrast round, `--line-strong` at 3:1, a seeded axe sweep (2026-10-02, AI-07, `CACHE_VERSION` v215)
 
 Three rows worked as one batch: old rank 5 (the contrast round), rank 6 (light `--line-strong`)
