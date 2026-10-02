@@ -73,16 +73,28 @@ const probe = await page.evaluate(() => {
   };
   return {
     control: measure('￿'),
-    letter: measure('A'),
+    narrow: measure('i'),
+    wide: measure('W'),
     half: measure('\u{1D15E}'),
   };
 });
 ok(probe.control > 0, 'the control character measures as a real box, not zero width');
-ok(Math.abs(probe.letter - probe.control) > 0.5, 'a character the font definitely has measures differently from the box');
+// Two letters, not one: in Segoe UI at 100px 'A' is 64.52px and the box is
+// 64.56px, so a single letter can sit inside the probe's 0.5px tolerance by
+// coincidence (it did, on Windows, until 2026-10-01). 'i' and 'W' are far
+// apart in any proportional font, so at most one of them can match the box.
+ok(Math.abs(probe.narrow - probe.control) > 0.5 || Math.abs(probe.wide - probe.control) > 0.5,
+   'a character the font definitely has measures differently from the box: ' + JSON.stringify(probe));
 
 const detected = await page.evaluate(() => document.getElementById('glyphNotice').textContent);
 const probeSaysMissing = /no font for/.test(detected);
 console.log(`  (this machine ${probeSaysMissing ? 'lacks' : 'has'} the musical symbol font)`);
+// The tool's verdict on the half note has to agree with measuring it alone.
+// Its probe once measured the note and the U+FFFF control side by side in one
+// line, which on Windows made every music glyph come out box-width and told
+// every Windows machine it had no music font (fixed 2026-10-01).
+eq(/half note/.test(detected), Math.abs(probe.half - probe.control) < 0.5,
+   'the tool calls the half note missing exactly when it measures as the box');
 
 /* ── 2. Automatic follows the probe ──────────────────────────────────────── */
 eq(await page.inputValue('#notationMode'), 'auto', 'the tool starts on Automatic');

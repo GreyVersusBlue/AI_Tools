@@ -9,6 +9,51 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-34 (part): the two suites that failed only on Windows (2026-10-01, `CACHE_VERSION` v213)
+
+From the 2026-10-01 audit's AI-34. Only this part is done. Its other items (the missing guard
+scripts, the precache byte re-measure, the og:image TODOs) are still open.
+
+The header had carried "two suites fail locally that CI passes" since before #290, guessed as
+CRLF and font metrics and never root-caused. Both guesses were right about the trigger. One of
+them was hiding a real tool bug.
+
+**`schedule-browser/smoke-dark-theme`: CRLF.** Git for Windows ships `core.autocrlf=true` in its
+*system* gitconfig (`C:/Program Files/Git/etc/gitconfig`), and `.gitattributes` only pinned the
+Path 21 SVGs and `renders.json`. So 472 files were CRLF on Devon's checkout and LF in CI. The
+index was LF throughout; only the working tree differed. The suite slices 034's `<style>` at
+`'<style>
+'` and closes the palette at `'
+}'`, so on CRLF every slice came back empty: six
+FAILs, all "got null". The fix is in two places:
+- `.gitattributes` now opens with `* text=auto eol=lf`, so every text file is LF on disk on every
+  machine. There are no `.bat`/`.ps1` files in the tree that would want CRLF. An existing clone
+  has to re-check-out once to pick it up: `git rm -rq --cached .` then `git reset -q --hard`, on a
+  clean tree. That took this checkout from 472 CRLF files to 0.
+- The suite's `read()` strips CR, so it no longer depends on how the files reached the disk (the
+  offline zip, a copy, another git config).
+
+**`music-sightreading-generator/smoke-glyph-fallback`: font metrics, plus a real probe bug.**
+- *The failing assertion was a coincidence.* It checked that `'A'` measures differently from the
+  U+FFFF box. In Segoe UI at 100px, `'A'` is 64.516px and the box is 64.563px, inside the 0.5px
+  tolerance. It now checks `'i'` and `'W'`, which are far apart in any proportional font, so at
+  most one of them can match the box.
+- *The tool's probe was wrong on every Windows machine.* `glyphMissing()` put the character and
+  the U+FFFF control in two spans **on the same line**. Measured that way in Windows Chromium,
+  ♩, 𝅗𝅥, 𝄽 and 𝄞 all came out at exactly the box's 64.5625px. Measured alone they are 39.2, 39.2,
+  34.8 and 55.8px, and forcing "Font symbols" shows Segoe UI Symbol drawing all of them
+  correctly. So every Windows teacher got the drawn fallback plus a notice saying their computer
+  has no font for the notes. The drawn shapes are fine, so nothing was broken, but the notice was
+  false. The likely mechanism is Chrome shaping the whole line as one run and choosing fallback
+  for the run rather than per span; that is not verified. `probeWidth()` now measures each
+  character on its own line. A new assertion holds the tool's half-note verdict equal to a
+  standalone measurement, so the side-by-side version cannot come back unnoticed.
+- On Windows the suite now takes its "has the font" branch (18 assertions); CI's Linux runner
+  has no music font and still takes the "lacks" branch.
+
+**Not verified:** that Linux CI's verdict is unchanged by the probe fix. It should be, since a
+missing glyph alone is still the box, and CI is the authority on that.
+
 ## 019: each station QR carries its own station (2026-10-01, #320, `CACHE_VERSION` v212)
 
 A standalone bug fix, ahead of Path 18 P1/P2, from the 2026-10-01 audit's AI-05. #282 found it and
