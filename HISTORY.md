@@ -9,6 +9,46 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P5, part: 009's passphrase lock and the landing page's backup readout (2026-10-02, #328, `CACHE_VERSION` v216)
+
+**Read 009 before trusting the row, as the handoff said, and it was right to:** the row's
+first item, the restore preview/diff, had already shipped (`fb177c8`, `smoke-restore-diff.mjs`,
+record-level counts per mode and what Replace removes). The row and 009's Tier 2 "Quick Wins"
+still listed it as open. Both are corrected; old rank 137 is cut down to what is really left of
+it (per-record "keep the newer", which needs timestamps no tool writes).
+
+**What shipped.**
+- `Tools/backup-restore/br-crypto.js`: an optional passphrase lock on a downloaded backup.
+  AES-GCM-256, key from PBKDF2-SHA-256 at 600,000 iterations, 16-byte salt and 12-byte IV,
+  all WebCrypto. The locked file is still JSON naming its format and `exportedAt`, so the
+  restore card recognises it and asks for the passphrase; then it goes through the same
+  preview and Restore as any backup. The label is **not** copied to the outside (teachers
+  write class names into it). A wrong passphrase and a damaged file are one error (GCM's tag).
+- `index.html`'s app bar: "N KB saved · backed up N days ago" (or "never backed up", in
+  `--err`), linking to 009, hidden when nothing is saved. It counts localStorage only:
+  `navigator.storage.estimate()` includes the site's own precache, ~11 MB, and would make an
+  empty profile look full. It skips `gvb-home-*`, `gvb-a11y-prefs` and the backup stamp, so
+  its figure can differ slightly from 009's banner, which skips registry-transient keys.
+- `smoke-encrypted.mjs` (port **8461**, `test:backup-encrypted`): the file holds no name, key
+  or roster name; a wrong passphrase writes nothing; the right one restores byte-identically;
+  a plain file never asks; the readout's three states; axe on the unlock form and the app bar.
+
+**Decisions, cheap to reverse.** The lock is **off by default**, and the year-end archive is
+**never** locked: a passphrase forgotten over the summer is a lost year, which is the failure
+this page exists to prevent. Minimum passphrase length 8, with a confirm field. Device-to-device
+transfer is not locked (it never touches disk).
+
+**Found on the way.** 009's group id was built with a literal NUL byte in the source, which is
+why `grep` called the page binary and printed nothing for every search of it. Writing it as
+`\u0000` broke download (every row came back unselected): the HTML parser had always turned
+that NUL into U+FFFD inside `<script>`, and the id round-trips through a `data-id` attribute,
+where `\u0000` also becomes U+FFFD and then matches nothing. It is `\ufffd` now, with a comment.
+
+**Not done / not verified.** Per-tool restore as a shared control (the row's remaining half).
+The lock under `file://` in the offline zip: Chrome treats `file://` as a secure context, so
+`crypto.subtle` should exist, and the option hides itself where it does not, but neither was
+run. The dark-theme contrast of the flagged readout was not scanned (light only).
+
 ## Landing three sessions' stranded work: AI-03, AI-07, AI-09 (2026-10-02, #326, `CACHE_VERSION` v215)
 
 Three sessions (AI-03 on 2026-10-01, AI-07 and AI-09 on the morning of 2026-10-02) committed straight
