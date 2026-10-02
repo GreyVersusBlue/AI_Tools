@@ -504,6 +504,7 @@
         <select id="baseMapSelect" class="styleSelect" data-no-pan aria-label="Built-in base map"></select>
         <select id="baseMapStyleSelect" class="styleSelect" data-no-pan aria-label="Base map style"></select>
         <label class="baseMapCheck"><input type="checkbox" id="baseMapBorders" checked data-no-pan> Show borders</label>
+        <label class="baseMapCheck" id="baseMapReliefLabel"><input type="checkbox" id="baseMapRelief" data-no-pan> Shaded relief</label>
         <button id="btnBaseMap" class="small primary">Use this base map</button>
         <button id="btnChoroToggle" class="small toggle" title="Shade each state or country according to a number you paste in — population, rainfall, votes, anything with one value per place.">Shade by data&hellip;</button>
       </div>
@@ -878,7 +879,7 @@ import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, fromLatLon, formatLatLon, computeGraticule, computeScaleBar } from './blank-map-generator/bmg-latlong.js';
 import * as cache from './blank-map-generator/bmg-map-cache.js';
 import {
-  BASE_MAP_PRESETS, BASE_MAP_STYLES, findPreset, baseMapId, buildBaseMapRecord,
+  BASE_MAP_PRESETS, BASE_MAP_STYLES, findPreset, baseMapId, buildBaseMapRecord, hasRelief,
   listRegionNames, sameBaseMap, presetFromBaseMapId, loadDividedGeoJson,
   renderBaseMapCanvas, NATURAL_EARTH_ATTRIBUTION,
 } from './blank-map-generator/bmg-vector.js';
@@ -2555,6 +2556,23 @@ const BASE_MAP_DEFAULT_HINT = el('baseMapHint').textContent;
 function renderBaseMapHint() {
   const preset = findPreset(el('baseMapSelect').value);
   el('baseMapHint').textContent = (preset && preset.note) ? preset.note : BASE_MAP_DEFAULT_HINT;
+  syncReliefControl();
+}
+
+// Shaded relief: off by default, only on a preset with a relief render (the
+// whole world), and never under data shading, where hill shading behind the
+// bands would read as data. Disabled rather than hidden, with the reason in
+// its title, so a teacher who saw it on the world map can find out why it
+// went grey.
+const RELIEF_TITLE = 'Hills and mountains shaded on the land, drawn from a public-domain elevation model.';
+function syncReliefControl() {
+  const preset = findPreset(el('baseMapSelect').value);
+  const box = el('baseMapRelief');
+  let why = '';
+  if (!hasRelief(preset)) why = 'Shaded relief is only drawn on the World base map.';
+  else if (project.choropleth && project.choropleth.enabled) why = 'Shaded relief is off while the map is shaded by data: hill shading behind the bands would read as data.';
+  box.disabled = !!why;
+  el('baseMapReliefLabel').title = why || RELIEF_TITLE;
 }
 el('baseMapSelect').addEventListener('change', renderBaseMapHint);
 renderBaseMapHint();
@@ -2580,10 +2598,12 @@ async function useBuiltInBaseMap() {
     // second visit reuses the stored raster rather than re-rendering it (and
     // never re-reads the vector data). Shading adds a `:choro:<hash>` suffix,
     // so plain base maps keep their own clean records.
-    const id = baseMapId(preset, style, borders, choroKey);
+    syncReliefControl();               // the shading state may have just changed
+    const relief = !el('baseMapRelief').disabled && el('baseMapRelief').checked && !shaded;
+    const id = baseMapId(preset, style, borders, choroKey, relief);
     let record = await cache.getCachedMap(id).catch(() => null);
     if (!record) {
-      record = await buildBaseMapRecord(preset, { style, borders, fills: shaded ? choro.fills : null, choroKey });
+      record = await buildBaseMapRecord(preset, { style, borders, fills: shaded ? choro.fills : null, choroKey, relief });
       await cache.putCachedMap(record).catch(() => {});
     }
     // Re-shading (or un-shading) a map the project is already on is the same
@@ -2730,6 +2750,7 @@ function syncChoroControls() {
   el('choroRampSelect').value = c.ramp;
   el('btnChoroToggle').classList.toggle('active', !el('choroPanel').hidden);
   el('btnChoroClear').disabled = !c.enabled;
+  syncReliefControl();
 }
 
 el('btnChoroToggle').addEventListener('click', () => {
@@ -3079,6 +3100,7 @@ function displayMap(record, opts = {}) {
       project.choropleth.enabled = false;
       project.choropleth.legendRows = [];
     }
+    syncReliefControl();
   }
   // A built-in base map knows its own projection and extent exactly — it was
   // drawn to them (see bmg-vector.js) — so it calibrates itself instead of

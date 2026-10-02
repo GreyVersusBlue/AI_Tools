@@ -572,7 +572,7 @@
         x += w;
       }
       var legendText = l + ': ' + count + ' (' + fmt(pct, 1) + '%)';
-      legend += '<rect x="' + lx + '" y="' + (legendY - 11) + '" width="11" height="11" fill="' + fill + '" stroke="#c3c0b6"/>' +
+      legend += '<rect x="' + lx + '" y="' + (legendY - 11) + '" width="11" height="11" fill="' + fill + '" stroke="#8c897f"/>' +
         '<text x="' + (lx + 16) + '" y="' + legendY + '" font-size="12" font-family="Segoe UI, Arial, sans-serif" fill="#1f2430">' + escapeXml(legendText) + '</text>';
       lx += 16 + legendText.length * 6.6 + 18;
     });
@@ -581,7 +581,7 @@
       '<rect width="' + W + '" height="' + H + '" fill="#fff"/>' +
       '<text x="' + pad + '" y="18" font-size="14" font-weight="700" font-family="Segoe UI, Arial, sans-serif" fill="#1f2430">' + escapeXml((data.name || 'Assignment') + ' — Letter-grade breakdown') + '</text>' +
       '<text x="' + pad + '" y="34" font-size="11" font-family="Segoe UI, Arial, sans-serif" fill="#6b6a63">' + escapeXml(nCaption(data)) + '</text>' +
-      '<rect x="' + pad + '" y="' + barY + '" width="' + barW + '" height="' + barH + '" fill="none" stroke="#c3c0b6"/>' +
+      '<rect x="' + pad + '" y="' + barY + '" width="' + barW + '" height="' + barH + '" fill="none" stroke="#8c897f"/>' +
       segs + legend +
       '</svg>';
   }
@@ -610,7 +610,7 @@
       '<rect width="' + W + '" height="' + H + '" fill="#fff"/>' +
       '<text x="' + padL + '" y="20" font-size="14" font-weight="700" font-family="Segoe UI, Arial, sans-serif" fill="#1f2430">' + escapeXml((data.name || 'Assignment') + ' — Score histogram (bucket width ' + data.bucketWidth + ')') + '</text>' +
       '<text x="' + padL + '" y="36" font-size="11" font-family="Segoe UI, Arial, sans-serif" fill="#6b6a63">' + escapeXml(nCaption(data)) + '</text>' +
-      '<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (padL + plotW) + '" y2="' + (padT + plotH) + '" stroke="#c3c0b6" stroke-width="1.5"/>' +
+      '<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (padL + plotW) + '" y2="' + (padT + plotH) + '" stroke="#8c897f" stroke-width="1.5"/>' +
       bars + labels +
       '</svg>';
   }

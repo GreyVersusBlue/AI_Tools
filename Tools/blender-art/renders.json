@@ -54,6 +54,10 @@
     "board": {
       "entryCap": 81920,
       "total": 204800
+    },
+    "relief": {
+      "entryCap": 409600,
+      "total": 409600
     }
   },
   "entries": [
@@ -4575,6 +4579,58 @@
       "sha256": "f1b8de97a0117e670133dd28b36918e76ce6b8be4e5062866d614616e59ff25d",
       "bytes": 284,
       "tokens": []
+    },
+    {
+      "path": "Tools/blank-map-generator/art/relief-world.webp",
+      "script": "Tools/blender-art/scene_relief.py",
+      "subject": "world",
+      "family": "relief",
+      "seed": 46,
+      "samples": 32,
+      "quality": 80,
+      "width": 2048,
+      "height": 990,
+      "cap": 409600,
+      "theme": "light",
+      "use": "sheet",
+      "decorative": true,
+      "bounds": {
+        "north": 84,
+        "south": -90,
+        "west": -180,
+        "east": 180
+      },
+      "projection": "equirectangular",
+      "dem": {
+        "name": "NOAA ETOPO2v2g (2006), 2-arc-minute global relief, grid-registered, 2-byte integers, little-endian",
+        "url": "https://www.ngdc.noaa.gov/mgg/global/relief/ETOPO2/ETOPO2v2-2006/ETOPO2v2g/raw_binary/ETOPO2v2g_i2_LSB.zip",
+        "zipSha256": "5abee949869d313494b9840a9739688cddac96fd8c587be18235389f6f13e1ca",
+        "file": "ETOPO2v2g_i2_LSB.bin",
+        "sha256": "18b61c497a3d96b2f7768ff1b2402f14c78f18be1119eeeafd59a9d79e26b038",
+        "licence": "Public domain: a work of the U.S. Government (NOAA NCEI), not subject to copyright in the United States"
+      },
+      "exaggeration": 120,
+      "floor": 0.3,
+      "exposure": 0.3,
+      "underText": {
+        "name": "whole map",
+        "region": [
+          0,
+          0,
+          2048,
+          990
+        ],
+        "token": "--ink",
+        "large": false,
+        "lumMin": 0.5638,
+        "lumMax": 1.0
+      },
+      "blender": "5.2.2",
+      "sha256": "a7ec4da31fd93f39bee6ae5207ce4e132a1bd2bf2dc8e290e8ae1cac123d5999",
+      "bytes": 29726,
+      "tokens": [
+        "--paper"
+      ]
     }
   ]
 }

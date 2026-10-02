@@ -66,7 +66,7 @@
       --slate-300: #aab6c4; --slate-200: #cdd6df; --slate-100: #e5eaef;
       --slate-50: #f3f5f8;
       --white: #ffffff;
-      --accent: #3b82f6; --accent-dk: #2563eb; --accent-lt: #dbeafe;
+      --accent: #3b82f6; --accent-dk: #1d4ed8; --accent-lt: #dbeafe;
       --success: #10b981; --success-lt: #d1fae5;
       --warn: #f59e0b; --warn-lt: #fef3c7;
       --error: #ef4444;
@@ -737,7 +737,7 @@
     }
     .rp-empty-icon svg { width: 24px; height: 24px; stroke: var(--slate-400); fill: none; }
     .rp-empty-title { font-size: 13px; font-weight: 600; color: var(--slate-600); margin-bottom: var(--sp-2); }
-    .rp-empty-desc { font-size: 12px; line-height: 1.5; }
+    .rp-empty-desc { font-size: 12px; line-height: 1.5; color: var(--slate-500); }
 
     /* Context Menu */
     #bp-context-menu {
@@ -2417,7 +2417,7 @@
     #app-footer .footer-sep { color: var(--navy-600); }
     #app-footer .footer-spacer { flex: 1; }
     #app-footer .footer-version {
-      font-family: var(--font-mono); font-size: 10.5px; color: var(--navy-400);
+      font-family: var(--font-mono); font-size: 10.5px; color: var(--navy-300);
       letter-spacing: 0.02em; white-space: nowrap;
     }
 
@@ -2472,8 +2472,9 @@
       font-family: var(--font-ui); font-size: 13px; font-weight: 600; cursor: pointer;
       border: 1px solid transparent; transition: background 0.15s, border-color 0.15s, color 0.15s;
     }
-    .modal-btn.primary { background: var(--accent); color: var(--white); }
-    .modal-btn.primary:hover { background: var(--accent-dk); }
+    /* --accent-dk, not --accent: white on #3b82f6 is 3.67:1, on #1d4ed8 6.70:1. */
+    .modal-btn.primary { background: var(--accent-dk); color: var(--white); }
+    .modal-btn.primary:hover { filter: brightness(0.9); }
     .modal-btn.ghost { background: var(--white); color: var(--slate-600); border-color: var(--slate-200); }
     .modal-btn.ghost:hover { background: var(--slate-50); border-color: var(--slate-300); }
     .modal-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; }

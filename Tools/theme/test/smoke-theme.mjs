@@ -177,6 +177,34 @@ for (const token of ['--ink', '--paper', '--card', '--card-2', '--line', '--line
   ok(light, `ink-paper.css defines ${token}`);
 }
 
+// --line-strong is the control border. WCAG 1.4.11 asks 3:1 of it against what
+// it sits on, and axe never checks a border, so this is the only thing that
+// would notice it slipping back (light's was 1.82 on card until AI-07).
+{
+  const hexOf = (block, name) => {
+    const m = block.match(new RegExp(`\\${name}\\s*:\\s*(#[0-9a-fA-F]{3,6})\\s*;`));
+    if (!m) return null;
+    const h = m[1].slice(1);
+    return h.length === 3 ? '#' + [...h].map(c => c + c).join('') : m[1];
+  };
+  const lum = hex => {
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const rootBlock = (inkPaper.match(/:root\s*\{[\s\S]*?\n\}/) || [''])[0];
+  const darkBlock = (inkPaper.match(/:root\[data-theme="dark"\]:not\(\.a11y-filter-dark\)\s*\{[\s\S]*?\n\}/) || [''])[0];
+  for (const [theme, block, suffix] of [['light', rootBlock, '-light'], ['dark', darkBlock, '']]) {
+    const border = hexOf(block, '--line-strong' + suffix);
+    for (const surface of ['--paper', '--card', '--card-2']) {
+      const bg = hexOf(block, surface + suffix);
+      const r = border && bg ? ratio(border, bg) : 0;
+      ok(r >= 3, `${theme} --line-strong on ${surface} is ${r.toFixed(2)}:1 (WCAG 1.4.11 asks 3:1)`);
+    }
+  }
+}
+
 /* ── 2. the two pages, in a browser ────────────────────────────────────── */
 
 const base = `http://127.0.0.1:${PORT}`;

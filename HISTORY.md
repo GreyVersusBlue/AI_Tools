@@ -9,6 +9,24 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Landing three sessions' stranded work: AI-03, AI-07, AI-09 (2026-10-02, `CACHE_VERSION` v215)
+
+Three sessions (AI-03 on 2026-10-01, AI-07 and AI-09 on the morning of 2026-10-02) committed straight
+to huginn's local `main` and never pushed; meanwhile origin took #323 (v213), #324 (v214) and #325. AI-03
+had labelled its work v213, which #323 had also used. The eight commits existed only on that disk.
+This session pushed them as `backup/ai-03-relief` and `backup/ai-07-ai-09-local-main` first, then
+merged local `main` into a branch off origin in its own worktree (the shared checkout was not touched,
+in case one of those sessions was still alive), resolved `sw.js` to **v215** (free on origin; AI-07 had
+taken it locally), kept both sides' `HISTORY.md` entries, and merged the `BACKLOG.md` header by hand:
+AI-09's re-ranked table (179 rows), with origin's 088 facts (88 tools, 89 registry rows, adoption of 88).
+088 passes the now-empty a11y allowlist and the seeded sweep (`test:a11y`, 89 pages, run locally).
+
+**What went wrong, and the rule it breaks:** a session that cannot push should stop and say so, not keep
+committing to a shared `main`; and a later session that finds local `main` ahead of origin should not
+build on top of it. AI-07 and AI-09 did the second. Each entry below is theirs as written; the
+"on local `main`" wording in them is history now. Not verified here: the full `npm test` (CI's push run
+is the authority), and whether AI-07/AI-09's sessions are still running on huginn and will try to push.
+
 ## 088 Braille Reading Trainer, a new tool at Devon's request (2026-10-02, #324, `CACHE_VERSION` v214)
 
 Not a backlog row: Devon asked for it directly ("Duolingo, but braille… I'm not sure what
@@ -111,6 +129,200 @@ FAILs, all "got null". The fix is in two places:
 
 **Not verified:** that Linux CI's verdict is unchanged by the probe fix. It should be, since a
 missing glyph alone is still the box, and CI is the authority on that.
+## `check:entities` follows array data to a text sink, and 055 has a suite (2026-10-02, AI-09, no `CACHE_VERSION` bump)
+
+Old rank 8, deleted; the table is renumbered to 179 rows. Nothing shipped to a page: the guard
+and two suites changed, so `sw.js` is untouched.
+
+**Two rules added to `Tools/board-check/check-entities.mjs`.**
+- **An entity in the string argument of `escapeHtml`/`escapeAttr` (and the `esc` spellings) is
+  reported wherever the result goes.** The `&` is escaped, so the entity can only render as
+  text. No dataflow. It finds nothing today, because 065 and 057 were fixed in #216; it is
+  there so they cannot come back.
+- **An entity in an array/object initialiser (`var ROWS = [ … ]`) is followed by name, up to
+  six hops, through variables assigned from it and functions that return it, to a text sink
+  that reads `name.prop` or `name[i]`.** 055 is exactly that: `BUILTIN` → `allSentences()` →
+  `filteredSentences()` → `all` → `item` → `item.broken` on `textContent`. A hit that
+  reaches `innerHTML` is not reported, and a `.length` read does not count.
+
+**What the number now means. It did not move: 313 before and 313 after.** The 313 are literals
+whose sink the guard still cannot see, and the new rule reclassified none of them, because
+055 was the only real case and #208 had already fixed it. The old figures in the backlog
+(325, then 312) were never re-measured against the code. The honest reading is that the data
+rule found no live bug on the tree today, not that 313 literals are proved safe.
+
+**Tried and dropped.** The first draft tainted object *keys* too (`{ broken: c.broken }` marks
+`broken`) and flagged 078, 080, 083 and 046 on names alone (`.columns`, `.min`, `.level`,
+`.label`). A name-based taint with a loose "mentions" test marks any variable that ever sees the
+data, so the final version taints a variable or function only when its value *starts with* a
+tainted name, and a sink only counts a property or index read off one. This is still
+name-based and single-file. Two functions that reuse a variable name, one fed from the array
+and one not, can produce a false positive; if that happens, scope the taint to the function.
+
+**The suites.** `Tools/board-check/test/check-entities.test.mjs` (`test:check-entities`, pure
+Node) pins 055's pre-fix shape as a finding and the quiet cases around it. `Tools/daily-editing-warmup-generator/test/smoke-entities.mjs`
+(`test:daily-editing-warmup`, 16 assertions) steps through every built-in sentence on the
+projector, builds a 30-line worksheet and key, reads the bank, and round-trips a typed
+sentence containing `&amp;` and `&rsquo;` through the projector, worksheet, key and bank. It
+was checked against the bug: with `&rsquo;` put back into two of 055's sentences it failed
+4 of 16 assertions, and passes with the tree as it is. **Not verified here:** a full `npm test`
+(Huginn is short of RAM; only these two suites, `select-suites`, and the guards were run).
+
+## The accessibility group: the contrast round, `--line-strong` at 3:1, a seeded axe sweep (2026-10-02, AI-07, `CACHE_VERSION` v215)
+
+Three rows worked as one batch: old rank 5 (the contrast round), rank 6 (light `--line-strong`)
+and rank 12 (the axe sweep only ever saw empty storage). All three are deleted, and the table
+is renumbered to 180 rows.
+
+**The contrast round. The audit said 21 allowances; the repo had 14** (14 pages, all
+`color-contrast`), and every one is fixed in the tool, not allowed. `allowlist.json` is now
+`"pages": {}`. Fixed by family:
+- **002, 016, 018, 038**, the four pages on the old private dark palette: `--text-dim` went from
+  `#7b82a8` (4.48 on `--surface`, 3.98 on `--surface2`) to `#8a91b6` (5.45 / 4.84). The checked
+  toggle label is `var(--bg)` on `--accent` (6.13), not white (3.07). 038's empty hint sits on
+  the white chart stage and gets its own `#5a6080`.
+- **012, 026, 028, 039, 040**, muted text on the grey `--desk` mat (3.76): a page token,
+  `--desk-muted`, which is `#53524b` in light (5.44) and `var(--muted)` in dark.
+- **005, 029**, text muted by `opacity` (0.5–0.65): raised to 0.7–0.8. 029's red privacy banner
+  had inherited `header.page-head p { opacity: .65 }` (2.88:1); the banner is excluded now.
+- **007**: white on `#e94560` is 3.83. The default theme names an `--accent-fill` of `#c9304a`
+  (5.24) for the two filled buttons; `applyTheme()` sets it to each theme's accent otherwise.
+  **Not checked: the other ten 007 themes.** The sweep only sees the default.
+- **035**, default palette only: `--accent-dk` is `#1d4ed8` (5.49 on `--accent-lt`), the
+  onboarding button fills with `--accent-dk`, the right panel's empty text is `--slate-500`, and
+  the footer version is `--navy-300`. **Not checked: green-gold.** White on its `--accent-dk`
+  is 3.88, better than the 3.67 it had and still short.
+- **index.html.** The "unstable count" (8/24/35 with the file untouched) was the entrance
+  choreography. Categories fade in on a stagger that outlasts the sweep's 500 ms settle, so axe
+  read whichever were mid-fade. **The sweep now finishes every finite CSS animation before it
+  scans** (`finishAnimations`), so it measures the state a teacher looks at. That exposed
+  one real failure the fade had hidden. The "Reviewed" stamp lands at opacity .8, which is 3.88:1
+  in `--pen`. It lands at .9 now (4.95).
+
+**`--line-strong`.** Light was `#c3c0b6`, 1.82:1 on card. It is now `#8c897f`: 3.50 on card,
+3.35 on paper, 3.07 on card-2. **Dark failed too and nobody had said so.** `#626c78` is 3.00 on
+card, which is what the ink-paper header quoted, but 2.64 on card-2. It is now `#6e7885`, 3.14 at
+worst. `smoke-theme.mjs` computes all six pairs from `ink-paper.css` and fails under 3:1, because
+axe never checks a border. 037's SVG chart strokes hard-coded `#c3c0b6` and follow the new
+value. **This is a visible restyle of every ink-paper page**, and the reason it had been
+deferred; control edges are darker everywhere. **The Blender art**, the hero, 071's pictures
+and the test tile, was rendered with the old light value. Re-rendering would come out a shade
+darker, and `check:art` does not notice, since it checks token names, not values.
+
+**The seeded sweep.** `smoke-a11y-sweep.mjs` scans every page empty, then scans again, labelled
+`[seeded]`, any page with saved state worth showing. It writes `Tools/a11y-sweep/seeds.mjs`
+before the page's first script runs:
+- the shared `np_rosters` on every page the registry says reads or writes it;
+- a per-tool fixture for the 13 tools whose violations had shipped from behind saved state
+  (001, 003, 009, 027, 030, 037, 042, 043, 046, 068, 073, 075, 077).
+
+The fixtures came from those tools' own suites where one already seeded the key, and from their
+`load()` code where none did. **Each was checked to render**, by comparing the empty and seeded
+page: 075's directory goes from 0 to 18 inputs, 077's grid 0 to 9, 073's 1 to 10 checkboxes,
+030's board 0 to 4 cells, and 001's history appears. 36 pages get a second scan, and the sweep
+takes about 3 minutes (it took 2). A seeded state has its own allowlist key, `<page> [seeded]`,
+and a seed that raises a page error fails. `--empty-only` skips the pass.
+
+**It found nothing.** The row said "expect the allowlist to grow"; it did not. Every earlier
+instance (#202–#227) had already been fixed where it was found, and these seeds reach the same
+states. The decision on what a seed cannot reach: **it belongs to per-tool suites, not to the
+sweep.** That means a mode the tool always opens out of (003's Score view, 042's grid view), a
+dialog, or 046's toolbar toggle over a calibrated map. `harness.a11yScan()` after a suite's own
+prep is how #227 found 001's projector note. `seeds.mjs`'s header lists the known ones. Picking
+a roster in a `<select>` and pressing Load was considered as a generic prep and not built: the
+loaders differ per tool, and a wrong click opens dialogs.
+
+**What did not work, or was not verified.**
+- `Tools/share/test/smoke-share-rollout.mjs` crashes on huginn at 047
+  (`ERR_INSUFFICIENT_RESOURCES`, then "Target crashed"). It crashes **identically on an
+  untouched `HEAD`** in a detached worktree, so this change did not cause it. It is a resource
+  limit of this machine; the suite keeps one page per case open. CI is the authority.
+- The full local run (181 suites, 44.5 min) had four red suites, none of them from this batch.
+  `schedule/test/smoke.mjs` hit EADDRINUSE on 8137 and passes alone (42/42). Share-rollout is
+  the crash above. `class-screen/smoke-widgets` and `smoke-periods` time out because the
+  `.a11y-widget` intercepts a click. **Both fail the same way at `5fa226e`**, before this
+  batch, so they are not this batch's; not root-caused. Everything else passed.
+- Dark mode is not swept. A manual dark pass with `gvb-a11y-prefs` showed 005 and 029, both still
+  on a11y.css's invert filter, failing heavily. axe reads colours before the CSS `filter`, so
+  those are probably false positives, but not proven.
+- The batch was not claimed in the Claimed column before work began. This round was run from
+  the audit queue (`BACKLOG-AUDIT-2026-10-01.md`), with one worker in the repo.
+
+## Path 21 P4, 046: shaded relief under the World base map, and Path 21 is finished (2026-10-01, AI-03, `CACHE_VERSION` v213)
+
+Rank 1 was a 1-session row: a shaded-relief layer under 046's default world base map, from a
+public-domain DEM that is not committed. It shipped, and the row is deleted. It was the last
+Path 21 row, so **Path 21 is finished.** Work started under session `p21p4relief`, which died
+with its scene script and ledger entry uncommitted. AI-01 saved them as WIP commit `e9d7e13` on
+`claude/p21p4-046-relief-p21p4relief`, and AI-03 cherry-picked that onto `main` and finished it.
+Committed locally for the nightly merge, so there is no PR number here.
+
+**What shipped.**
+- `Tools/blender-art/scene_relief.py` and a `relief` ledger family (cap 400 KB).
+  `Tools/blank-map-generator/art/relief-world.webp` is 2048×990, **29,726 B**, luminance
+  0.5638–1.0.
+- The DEM is NOAA ETOPO2v2g, which is public domain. The entry's `dem` records its URL, SHA-256
+  and licence, and the README says how to fetch it.
+- `bmg-vector.js`:
+  - The `world` preset names its relief file. `hasRelief()` is new.
+  - `renderBaseMapCanvas()` multiplies the relief over the land fill, clipped to land, under the
+    borders. It refuses to draw relief when there are data fills.
+  - `baseMapId()` adds `+relief`, and `sameBaseMap()` strips it, so toggling relief keeps the labels.
+  - The title gains "shaded relief".
+- 046 gets a **"Shaded relief"** checkbox beside "Show borders". It is off by default and named
+  by its label. It is disabled, with the reason in its title, on presets without relief and while
+  the map is shaded by data.
+- `smoke-relief.mjs` (port **8459**, 29 assertions):
+  - The ledger's bounds, projection, aspect, width, bytes and under-text region match the page's
+    preset.
+  - The id rules, the toggle's name, default state and disabled states.
+  - The Himalaya darken and the sea does not.
+  - The darkest composite pixel stays above the 4.5:1 line for `--ink`.
+  - Shading by data drops the relief, and removing it restores the relief.
+  - No offsite request.
+- `check:art` needed no change. `use: "sheet"` and a whole-image `underText` were already rules.
+
+**What went wrong first, so the next person skips it.**
+- **The WIP's material rendered a blank sheet.** It emitted `--paper` at `floor` 0.6 on top of a
+  full `--paper` diffuse. Every pixel clipped to white: 3,674 bytes, luminance 1.0–1.0. The fix
+  splits the material: emission `floor`, diffuse `1 - floor`. With that split, exaggeration 20
+  was still invisible, and 120 reads as quiet hill shading.
+- **Tune at low resolution first.** A full 2048 px render takes about 2.5 minutes on huginn
+  (peak RSS 4.8 GB, `-t 4`). AI-03 tuned with a throwaway wrapper, deliberately not committed.
+  It imported `scene_relief`, wrapped `art_common.find_entry` to shrink the entry's width and
+  height (512 or 1024 px) and override `floor`/`exaggeration`/`exposure` from the environment,
+  and passed `--out` so the ledger was left alone.
+- **The first suite run caught a real bug.** "Remove shading" redrew the map while the relief box
+  was still disabled from the shading, so the relief did not come back. `useBuiltInBaseMap()` now
+  syncs the control before reading it.
+
+**Calls made (reversible).**
+- **One light file, not "a light/dark pair".** 046's viewer is a `.paper-sheet` and its raster has
+  fixed light colours, so dark mode shows the same map. Checked by eye in both themes in Chromium:
+  identical. This is the same call as 080 and 030.
+- **Multiply over the land fill, inside the raster**, rather than a separate `<img>` layer. Every
+  export path (print, PDF, PNG, worksheets, poster tiles) already draws that raster, so they all
+  get the relief for free. The time-slice series never draws relief, because it is always shaded.
+- **World only.** A continent crop would need its own render matching its bounds. The row says
+  "treat each other projection as its own entry", and none was asked for.
+- **Not persisted per project.** The checkbox is page state like "Show borders". The map a project
+  keeps does carry `+relief` in its id, so a reload shows the relief it was made with.
+
+**What was not verified.**
+- Printing on paper, and how the relief reads on a projector.
+- The land style's composite contrast (about 7.5:1) is arithmetic from the measured floor, not
+  sampled. The suite samples the outline style.
+- The offline zip was not built.
+- **The full `npm test` on huginn was not green, for reasons outside this change.** Four suites
+  crashed under memory pressure during the full run and passed alone: `hall-pass-log` `smoke-export`
+  and `smoke-hallway-sync`, and `class-roster-hub` `smoke-export` and `smoke-bulk-import`. Three
+  fail the same way on unmodified `main` (`0b7eeae`, checked in a detached worktree):
+  - `class-screen` `smoke-periods` and `smoke-widgets`: the `.a11y-widget` intercepts a click.
+  - `share` `smoke-share-rollout`: "Target crashed".
+
+  These were not root-caused here. CI is the authority on them.
+- Determinism holds on huginn only: three renders, byte-identical, `a7ec4da3…`. A render on the
+  Windows machine would likely differ by noise, as the test tile did on 2026-09-29.
 
 ## 019: each station QR carries its own station (2026-10-01, #320, `CACHE_VERSION` v212)
 

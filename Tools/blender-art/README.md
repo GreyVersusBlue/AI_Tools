@@ -31,6 +31,7 @@ blender -b --factory-startup -t 4 -P Tools/blender-art/scene_pieces.py -- --entr
 blender -b --factory-startup -t 4 -P Tools/blender-art/scene_prompts.py -- --entry Tools/picture-prompt-generator/art/market.webp
 blender -b --factory-startup -t 4 -P Tools/blender-art/scene_seals.py -- --entry Tools/certificate-award-maker/art/seal-gold.webp
 blender -b --factory-startup -t 4 -P Tools/blender-art/scene_board.py -- --entry Tools/review-game-board/art/cell.webp
+blender -b --factory-startup -t 4 -P Tools/blender-art/scene_relief.py -- --entry Tools/blank-map-generator/art/relief-world.webp
 node Tools/blender-art/build-sprite.mjs
 node Tools/blender-art/validate-art.mjs
 node Tools/blender-art/test/validate-art.test.mjs
@@ -65,6 +66,8 @@ rendered twice and compared.
 - `scene_prompts.py`: 071's twelve starter pictures, one entry per scene. See below.
 - `scene_seals.py`: 042's certificate seals and ribbon tails. See below.
 - `scene_board.py`: 030's board backdrop and 9-slice tiles. See below.
+- `scene_relief.py`: 046's shaded relief under the World base map, from a DEM that is not in
+  the repo. See below.
 - `renders.json`: the ledger. The spec half (path, script, subject, family, seed, samples,
   quality, width, height, cap, theme, use, twin, decorative, `underText.region/token/large`)
   is written by hand *before* a render. The record half is written by the script.
@@ -230,6 +233,40 @@ total.
   `:root` says so), the same situation as 080's paper board.
 - **A played clue keeps the flat `--board-used`**, with no art, so it reads as spent.
 - Rendered on **huginn** with `-t 4`, twice each: **all four byte-identical.**
+
+## 046's shaded relief (Path 21 P4, 2026-10-01)
+
+`Tools/blank-map-generator/art/relief-world.webp`, 2048×990, **29,726 B** against the row's 400 KB.
+It is the last Path 21 row; the path is finished.
+
+- **The DEM is not committed.** It is NOAA's ETOPO2v2g (2006), 2-arc-minute global relief,
+  grid-registered, `int16` little-endian. It is a work of the U.S. Government, so public domain.
+  The entry's `dem` records the URL, the zip's and the `.bin`'s SHA-256, and the licence. Download
+  the zip, unzip `ETOPO2v2g_i2_LSB.bin` into `$ART_DEM_DIR` (default `~/.cache/aplp-dem`), and the
+  script checks the hash before it reads a byte. It keeps the grid as `int16` (117 MB), because a
+  `float64` copy of it was OOM-killed on huginn. Peak RSS for the render is about 4.8 GB.
+- **One entry per base map, matching it exactly.** The entry's `bounds` (84 N to 90 S, 180 W to
+  180 E) and `projection` are 046's `world` preset; `smoke-relief.mjs` holds them together.
+  Another preset gets its own entry if it ever wants relief.
+- **Light only, `use: "sheet"`.** The row asked for "a light/dark pair", but 046's viewer is a
+  `.paper-sheet` and the map raster has fixed light colours in both themes, so a dark twin would
+  never be drawn. That is the same call as 080's and 030's.
+- **How 046 draws it.** `bmg-vector.js` multiplies it over the land fill, clipped to the land path,
+  under the borders, inside the one raster every export already uses. So print, PDF, PNG and
+  worksheets all get it, and the sea is untouched. Its cache id gains `+relief`, and
+  `sameBaseMap()` ignores that, so switching relief keeps the labels.
+- **The luminance cap.** The material emits `--paper` at `floor` (0.3) and is lit with a diffuse
+  share of `1 - floor`, so the two add up to `--paper`. A slope facing away from every light keeps
+  the floor. `exposure` 0.3 lifts flat ground to about `--paper`, so the multiply darkens only slopes.
+  The measured range over the whole image is **0.5638–1.0**: `--ink` (#1f2430) holds about 9:1, and
+  still about 7.5:1 after the multiply over the `land` style's #f6f1e4.
+- **`exaggeration` 120.** The WIP's 20, with a floor of 0.6 emitted *on top of* a full diffuse,
+  rendered solid white: a 3,674-byte file with luminance 1.0 everywhere. Use the low-resolution
+  probe described in `HISTORY.md` before a full render.
+- **Zoom ceiling.** 2048 px stretched over 046's 4000 px raster, so about 2x soft at full zoom.
+  Accepted, as the row says, not chased.
+- Rendered on **huginn** with `-t 4`, three times: **byte-identical** (SHA-256 `a7ec4da3…`). Each
+  render takes about 2.5 minutes.
 
 ## Determinism, measured 2026-09-25
 

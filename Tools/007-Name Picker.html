@@ -69,7 +69,7 @@
   src:url('name-picker/fonts/press-start-2p-latin-400-normal.woff2') format('woff2');
   unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
 
-:root{--bg:#1a1a2e;--surface:#16213e;--text:#eaeaea;--muted:rgba(234,234,234,0.65);--accent:#e94560;--accent2:#f5d76e;--name-bg:#0f3460;--name-text:#fff;--highlight:#e94560;--highlight-text:#fff;--winner:#f5d76e;--winner-text:#1a1a2e;--border:rgba(255,255,255,0.1);}
+:root{--bg:#1a1a2e;--surface:#16213e;--text:#eaeaea;--muted:rgba(234,234,234,0.65);--accent:#e94560;--accent-fill:#c9304a;--accent2:#f5d76e;--name-bg:#0f3460;--name-text:#fff;--highlight:#e94560;--highlight-text:#fff;--winner:#f5d76e;--winner-text:#1a1a2e;--border:rgba(255,255,255,0.1);}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--text);transition:background 0.4s,color 0.4s;}
 body.crazy-active{animation:bgPulse 1.5s ease-in-out infinite;}
@@ -105,7 +105,7 @@ input[type="range"]::-moz-range-thumb{width:18px;height:18px;background:var(--ac
 .empty-state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;}
 .empty-state h2{font-family:'Bungee',sans-serif;font-size:2.5em;color:var(--accent2);margin-bottom:20px;}
 .empty-state p{font-size:1.2em;opacity:0.7;margin-bottom:25px;}
-.empty-state button{background:var(--accent);font-size:1.1em;padding:12px 24px;}
+.empty-state button{background:var(--accent-fill);font-size:1.1em;padding:12px 24px;}
 .name-card{position:absolute;background:var(--name-bg);color:var(--name-text);padding:10px 18px;border-radius:10px;font-weight:600;border:3px solid transparent;transition:transform 0.12s,box-shadow 0.12s,opacity 0.4s;user-select:none;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,0.35);letter-spacing:0.3px;}
 body.crazy-active .name-card{animation:gentleWobble 3s ease-in-out infinite;}
 @keyframes gentleWobble{0%,100%{transform:rotate(-0.5deg) translateY(0);}50%{transform:rotate(0.8deg) translateY(-2px);}}
@@ -121,7 +121,7 @@ body.crazy-active .name-card.fading{animation:fadeOutCrazy 0.6s forwards;}
 .lightning-bolt{stroke:#fff;stroke-width:3;fill:none;filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 16px var(--accent2));animation:lightningFlash 0.3s forwards;}
 @keyframes lightningFlash{0%{opacity:1;}50%{opacity:0.7;}100%{opacity:0;}}
 .footer{background:var(--surface);padding:12px 20px;display:flex;gap:12px;justify-content:center;align-items:center;border-top:3px solid var(--accent);flex-shrink:0;flex-wrap:wrap;}
-.btn-primary{background:var(--accent);color:#fff;font-family:'Bungee',sans-serif;font-size:1.15em;padding:12px 28px;letter-spacing:1.5px;box-shadow:0 4px 0 rgba(0,0,0,0.3);}
+.btn-primary{background:var(--accent-fill);color:#fff;font-family:'Bungee',sans-serif;font-size:1.15em;padding:12px 28px;letter-spacing:1.5px;box-shadow:0 4px 0 rgba(0,0,0,0.3);}
 .btn-primary:hover{background:var(--accent2);color:var(--bg);}
 .count-display{font-size:0.9em;color:var(--muted);margin-left:10px;}
 .combo-display{font-family:'Bungee',sans-serif;font-size:1em;color:var(--accent2);margin-left:10px;text-shadow:2px 2px 0 var(--accent);opacity:0;transition:opacity 0.3s;}
@@ -757,7 +757,7 @@ function todayKey(){return dayKey(new Date());}
 const KONAMI=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
 
 const themes={
-  default:{'--bg':'#1a1a2e','--surface':'#16213e','--text':'#eaeaea','--accent':'#e94560','--accent2':'#f5d76e','--name-bg':'#0f3460','--name-text':'#fff','--highlight':'#e94560','--highlight-text':'#fff','--winner':'#f5d76e','--winner-text':'#1a1a2e'},
+  default:{'--bg':'#1a1a2e','--surface':'#16213e','--text':'#eaeaea','--accent':'#e94560','--accent-fill':'#c9304a','--accent2':'#f5d76e','--name-bg':'#0f3460','--name-text':'#fff','--highlight':'#e94560','--highlight-text':'#fff','--winner':'#f5d76e','--winner-text':'#1a1a2e'},
   classroom:{'--bg':'#f5f7fa','--surface':'#ffffff','--text':'#1d2939','--accent':'#2563eb','--accent2':'#f59e0b','--name-bg':'#2563eb','--name-text':'#fff','--highlight':'#dc2626','--highlight-text':'#fff','--winner':'#f59e0b','--winner-text':'#1d2939'},
   medieval:{'--bg':'#2a1810','--surface':'#3d2817','--text':'#f0e0c0','--accent':'#b8860b','--accent2':'#daa520','--name-bg':'#5d3a1a','--name-text':'#f5e6c8','--highlight':'#a0522d','--highlight-text':'#fff','--winner':'#daa520','--winner-text':'#2a1810'},
   'ancient-china':{'--bg':'#2c0d0d','--surface':'#4a1414','--text':'#ffd700','--accent':'#dc143c','--accent2':'#ffd700','--name-bg':'#7a1f1f','--name-text':'#fff8dc','--highlight':'#ff4500','--highlight-text':'#fff','--winner':'#ffd700','--winner-text':'#2c0d0d'},
@@ -773,6 +773,8 @@ const themes={
 function applyTheme(n){
   const t=themes[n]||themes.default;
   for(const[k,v]of Object.entries(t))document.documentElement.style.setProperty(k,v);
+  /* White button text needs 4.5:1 on its fill; default's #e94560 gives 3.83, so it names a darker fill. Other themes fill with their accent. */
+  document.documentElement.style.setProperty('--accent-fill',t['--accent-fill']||t['--accent']);
   /* Set body class for theme-specific readability overrides */
   document.body.className=document.body.className.split(' ').filter(c=>!c.startsWith('theme-')).join(' ').trim();
   document.body.classList.add('theme-'+n);

@@ -26,6 +26,7 @@
 // host page owns the picker, the cache write, and displayMap().
 
 const DATA_DIR = new URL('./data/', import.meta.url);
+const ART_DIR = new URL('./art/', import.meta.url);
 
 /** Natural Earth is public domain (see data/README.md); this is the attribution the record carries into every export. */
 export const NATURAL_EARTH_ATTRIBUTION = Object.freeze({
@@ -51,6 +52,7 @@ const DATASETS = {
  */
 export const BASE_MAP_PRESETS = Object.freeze([
   { key: 'world', label: 'World', dataset: 'world', bounds: { north: 84, south: -90, west: -180, east: 180 },
+    relief: 'relief-world.webp',
     note: 'Whole-world plate carrée — the projection the built-in label sets are written for.' },
   { key: 'africa', label: 'Africa', dataset: 'world', bounds: { north: 38, south: -36, west: -20, east: 53 } },
   { key: 'europe', label: 'Europe', dataset: 'world', bounds: { north: 72, south: 34, west: -25, east: 45 } },
@@ -114,10 +116,13 @@ async function loadGeoJson(file) {
  * — and, more importantly, re-opening a saved project finds its map already
  * there without the vector data being fetched again.
  */
-export function baseMapId(preset, style, borders, choroKey) {
+export function baseMapId(preset, style, borders, choroKey, relief = false) {
   const b = preset.bounds;
   const bounds = [b.north, b.south, b.west, b.east].join(',');
-  const base = `vector:${preset.key}:${bounds}:${style}${borders ? '+borders' : ''}`;
+  // `+relief` only where it can be drawn: never with data shading (see
+  // renderBaseMapCanvas), and never on a preset with no relief render.
+  const withRelief = relief && !choroKey && hasRelief(preset);
+  const base = `vector:${preset.key}:${bounds}:${style}${borders ? '+borders' : ''}${withRelief ? '+relief' : ''}`;
   // Data shading is a suffix, not a new id scheme, for two reasons: the
   // plain base maps already in bmg-map-cache.js keep their exact keys and
   // stay reusable, and stripBaseMapId() below can recover the unshaded
@@ -127,9 +132,9 @@ export function baseMapId(preset, style, borders, choroKey) {
   return choroKey ? `${base}:choro:${choroKey}` : base;
 }
 
-/** The id with any `:choro:<hash>` suffix removed — i.e. which base map this is, regardless of how it is shaded. */
+/** The id with any `:choro:<hash>` suffix and any `+relief` removed — i.e. which base map this is, regardless of how it is shaded. Relief is the same paper with different ink, exactly like data shading, so switching it keeps the teacher's labels. */
 export function stripBaseMapId(id) {
-  return String(id || '').replace(/:choro:[^:]*$/, '');
+  return String(id || '').replace(/:choro:[^:]*$/, '').replace(/\+relief$/, '');
 }
 
 /** True when two ids are the same base map (same preset, crop, style, borders) differing at most in their data shading. */
@@ -138,13 +143,36 @@ export function sameBaseMap(a, b) {
   return stripBaseMapId(a) === stripBaseMapId(b);
 }
 
-export function baseMapTitle(preset, style, borders, shaded) {
+export function baseMapTitle(preset, style, borders, shaded, relief = false) {
   const parts = [preset.label];
   if (preset.dataset === 'us') parts.push(borders ? 'state outlines' : 'national outline');
   else parts.push(borders ? 'country outlines' : 'coastlines only');
   if (style === 'land') parts.push('land fill');
+  if (relief && !shaded && hasRelief(preset)) parts.push('shaded relief');
   if (shaded) parts.push('shaded by data');
   return parts.join(' — ');
+}
+
+/** True when this preset has a shaded-relief render to draw under its land (today only the whole world: the render has to match the preset's exact extent). */
+export function hasRelief(preset) {
+  return !!(preset && preset.relief);
+}
+
+/**
+ * The relief render for a preset, decoded. It is a Blender render of a
+ * public-domain elevation model (Tools/blender-art/renders.json has its
+ * source, and the luminance range that keeps label ink at 4.5:1 over it),
+ * drawn to exactly the preset's bounds, so it is simply stretched to the
+ * raster. Its zoom ceiling is its own 2048 px width; that is accepted, not
+ * chased (BACKLOG.md, Path 21).
+ */
+function loadReliefImage(preset) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("couldn't read the built-in relief image"));
+    img.src = new URL(preset.relief, ART_DIR).href;
+  });
 }
 
 /**
@@ -316,7 +344,7 @@ function paintChoropleth(ctx, geojson, bounds, width, height, fills) {
  * that describes it — which is not derived or guessed, it *is* the bounds
  * the drawing used.
  */
-export async function renderBaseMapCanvas(preset, { style = 'outline', borders = true, fills = null, longSide = TARGET_LONG_SIDE } = {}) {
+export async function renderBaseMapCanvas(preset, { style = 'outline', borders = true, fills = null, relief = false, longSide = TARGET_LONG_SIDE } = {}) {
   const paint = STYLE_PAINT[style] || STYLE_PAINT.outline;
   const bounds = preset.bounds;
   // `longSide` exists for the time-slice series, which draws several maps as
@@ -327,6 +355,9 @@ export async function renderBaseMapCanvas(preset, { style = 'outline', borders =
   const files = DATASETS[preset.dataset];
   if (!files) throw new Error(`unknown base map dataset "${preset.dataset}"`);
   const shading = fills && Object.keys(fills).length ? fills : null;
+  // Relief is off under data shading: hill shading behind data colours
+  // reads as data. The page disables the toggle too; this is the backstop.
+  const reliefImg = relief && !shading && hasRelief(preset) ? await loadReliefImage(preset) : null;
 
   const whole = await loadGeoJson(files.whole);
   // Data shading is per-region, so it needs the divided file even when the
@@ -347,6 +378,18 @@ export async function renderBaseMapCanvas(preset, { style = 'outline', borders =
   traceFeatures(ctx, whole, bounds, width, height);
   ctx.fillStyle = paint.land;
   ctx.fill('evenodd');
+
+  // The relief multiplies over the land fill only (the path above is still
+  // current, so it is the clip). Multiply keeps either style's land colour
+  // and only darkens it, by at most what the render's luminance floor allows.
+  if (reliefImg) {
+    ctx.save();
+    ctx.clip('evenodd');
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(reliefImg, 0, 0, width, height);
+    ctx.restore();
+  }
 
   if (shading) paintChoropleth(ctx, divided, bounds, width, height, shading);
 
@@ -376,12 +419,12 @@ function canvasToBlob(canvas) {
  * `useUploadedFile()` builds, plus a `calibration` field, so displayMap()
  * and the IndexedDB cache need to know nothing new about vectors.
  */
-export async function buildBaseMapRecord(preset, { style = 'outline', borders = true, fills = null, choroKey = '' } = {}) {
-  const { canvas, width, height, calibration } = await renderBaseMapCanvas(preset, { style, borders, fills });
+export async function buildBaseMapRecord(preset, { style = 'outline', borders = true, fills = null, choroKey = '', relief = false } = {}) {
+  const { canvas, width, height, calibration } = await renderBaseMapCanvas(preset, { style, borders, fills, relief });
   const blob = await canvasToBlob(canvas);
   return {
-    id: baseMapId(preset, style, borders, choroKey),
-    title: baseMapTitle(preset, style, borders, !!choroKey),
+    id: baseMapId(preset, style, borders, choroKey, relief),
+    title: baseMapTitle(preset, style, borders, !!choroKey, relief),
     blob,
     mime: 'image/png',
     width,

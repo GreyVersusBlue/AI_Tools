@@ -38,9 +38,9 @@
   /* Path 5 P3. The info tint pair is 001's (the reference adopter); --desk is
      the table the printable sheet lies on, named the same way 015, 023 and 039
      name theirs because ink-paper.css has no token for it. */
-  :root { --info-bg: #eaf1f5; --info-line: #c9dbe3; --desk: #d9d7cd; }
+  :root { --info-bg: #eaf1f5; --info-line: #c9dbe3; --desk: #d9d7cd; --desk-muted: #53524b; }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
-    --info-bg: #1b2a35; --info-line: #33505f; --desk: #0e1014;
+    --info-bg: #1b2a35; --info-line: #33505f; --desk: #0e1014; --desk-muted: var(--muted);
   }
   * { box-sizing: border-box; }
   body {
@@ -92,7 +92,7 @@
   button.danger:hover { background: var(--err); color: var(--accent-ink); }
 
   .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
-  .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
+  .preview-note { font-size: .8rem; color: var(--desk-muted); margin-bottom: .8rem; }
   .print-note { font-size: .82rem; color: var(--accent-2); background: var(--info-bg); border: 1px solid var(--info-line); border-radius: 6px; padding: .6rem .8rem; margin-bottom: 1rem; }
 
   .sheet-view { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: 1rem; }
@@ -158,7 +158,7 @@
   .quiz-card .quiz-hint { display: block; color: var(--muted); font-size: .78rem; font-weight: 400; margin-top: .8rem; }
   .quiz-nav { display: flex; gap: .5rem; justify-content: center; margin-top: 1rem; }
   .quiz-nav button.secondary { width: auto; margin: 0; }
-  .quiz-empty { text-align: center; color: var(--muted); padding: 3rem; }
+  .quiz-empty { text-align: center; color: var(--desk-muted); padding: 3rem; }
 
   /* ---- more printables: word search / crossword / bingo / matching quiz ---- */
   .printable-title { margin: 0 0 .5rem; font-size: 1.15rem; }

@@ -25,7 +25,7 @@
 
   header.page-head{ padding: var(--space-8) 0 var(--space-6); text-align: center; }
   header.page-head h1{ font-size: 40px; }
-  header.page-head p{ margin: 0 auto; max-width: 40em; opacity: 0.65; font-size: 15px; line-height: 1.55; }
+  header.page-head p:not(.privacy-banner){ margin: 0 auto; max-width: 40em; opacity: 0.65; font-size: 15px; line-height: 1.55; }
   header.page-head .tag{
     display: inline-block; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--color-accent); border: 1px solid var(--color-accent); padding: 3px 10px; margin-bottom: var(--space-3);
@@ -42,7 +42,7 @@
   .field{ margin-bottom: var(--space-3); }
   .field:last-child{ margin-bottom: 0; }
   .field label{ display: block; font-weight: 600; font-size: 13.5px; margin-bottom: 5px; }
-  .field .optional{ font-weight: 400; opacity: 0.55; font-size: 12px; }
+  .field .optional{ font-weight: 400; opacity: 0.7; font-size: 12px; }
   .field input[type="text"], .field select, .field textarea{ width: 100%; }
   .field textarea{ resize: vertical; min-height: 4.2em; }
 
@@ -53,7 +53,7 @@
 
   .reset-row{ text-align: center; margin-top: var(--space-2); }
   .reset-row button{
-    background: none; border: none; color: var(--color-text); opacity: 0.55;
+    background: none; border: none; color: var(--color-text); opacity: 0.7;
     font-size: 12.5px; letter-spacing: 0.03em; cursor: pointer; padding: var(--space-2);
     text-decoration: underline;
   }
@@ -64,12 +64,12 @@
 
   .index-card{ padding: var(--space-6); background: var(--color-surface); }
   .index-card .card-label{
-    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.55;
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7;
     margin-bottom: var(--space-3); display: flex; justify-content: space-between; align-items: center;
   }
 
   #promptOutput{ font-size: 14.5px; line-height: 1.7; min-height: 8em; white-space: pre-wrap; word-wrap: break-word; }
-  #promptOutput .placeholder{ font-style: italic; opacity: 0.5; }
+  #promptOutput .placeholder{ font-style: italic; opacity: 0.7; }
   #promptOutput .fill{ background: var(--color-accent-100); color: var(--color-accent-800); padding: 0.05em 0.2em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
   /* A token nobody has filled in yet. Deliberately loud in the output: a
      prompt that still says {{topic}} when it reaches an AI is a wasted round
@@ -95,7 +95,7 @@
   .how-it-works strong{ opacity: 1; }
 
   .presets{ margin-bottom: var(--space-4); }
-  .presets .presets-label{ font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.55; margin-bottom: var(--space-2); }
+  .presets .presets-label{ font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.7; margin-bottom: var(--space-2); }
   .preset-row{ display: flex; flex-wrap: wrap; gap: var(--space-2); }
   .preset-btn-clear{ margin-left: 0.2rem; }
 
@@ -105,7 +105,7 @@
   .preset-chip .preset-btn{ border-radius: 4px 0 0 4px; }
   .preset-remove{
     background: none; border: 1px solid var(--color-divider); border-left: none; border-radius: 0 4px 4px 0;
-    opacity: .6; font-size: 12px; cursor: pointer; padding: 0 8px;
+    opacity: .7; font-size: 12px; cursor: pointer; padding: 0 8px;
   }
   .preset-remove:hover{ opacity: 1; }
   .custom-preset-row:empty{ display: none; }
@@ -128,13 +128,13 @@
   .history-remove{ background: none; border: none; opacity: .5; cursor: pointer; font-size: 14px; padding: 2px 4px; }
   .history-remove:hover{ opacity: 1; }
 
-  .section-hint{ font-size: 12.5px; font-style: italic; opacity: 0.6; margin: calc(var(--space-2) * -1) 0 var(--space-3); line-height: 1.45; }
+  .section-hint{ font-size: 12.5px; font-style: italic; opacity: 0.7; margin: calc(var(--space-2) * -1) 0 var(--space-3); line-height: 1.45; }
 
   #dynamicFields:empty{ display: none; }
   #dynamicFields .field{ padding-top: var(--space-3); margin-top: var(--space-3); border-top: 1px dashed var(--color-divider); }
 
   .strength-row{ margin-bottom: var(--space-3); }
-  .strength-label{ display: flex; justify-content: space-between; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.6; margin-bottom: var(--space-1); }
+  .strength-label{ display: flex; justify-content: space-between; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7; margin-bottom: var(--space-1); }
   .strength-bar{ height: 6px; background: var(--color-divider); overflow: hidden; }
   .strength-fill{ height: 100%; width: 0%; background: var(--color-accent); transition: width 0.25s ease; }
   .strength-hint{ font-size: 12px; opacity: 0.65; margin: var(--space-1) 0 0; line-height: 1.4; }
@@ -145,7 +145,7 @@
     border-radius: 4px; padding: var(--space-2) var(--space-3); text-align: left;
   }
 
-  .result-toggle{ background: none; border: none; padding: 2px 0; font-size: 11.5px; opacity: 0.6; cursor: pointer; text-decoration: underline; }
+  .result-toggle{ background: none; border: none; padding: 2px 0; font-size: 11.5px; opacity: 0.7; cursor: pointer; text-decoration: underline; }
   .result-toggle:hover{ opacity: 1; }
   .result-wrap{ display: none; margin-top: var(--space-2); }
   .result-wrap.open{ display: block; }
@@ -155,23 +155,23 @@
   .action-row{ display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
 
   .open-in{ margin-top: var(--space-4); }
-  .open-in .open-in-label{ font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.55; margin-bottom: var(--space-2); }
+  .open-in .open-in-label{ font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.7; margin-bottom: var(--space-2); }
   .open-in-row{ display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
   .autosave-note{ font-size: 11px; opacity: 0; text-align: center; margin-top: var(--space-2); transition: opacity 0.3s ease; }
-  .autosave-note.show{ opacity: 0.55; }
+  .autosave-note.show{ opacity: 0.7; }
 
   body.mode-simple .advanced-only{ display: none !important; }
   .mode-toggle-wrap{ margin-bottom: var(--space-4); }
   .mode-toggle{ display: inline-flex; border: 1px solid var(--color-divider); }
   .mode-btn{
     font-size: 13.5px; font-weight: 600; background: none; border: none;
-    opacity: 0.6; padding: var(--space-2) var(--space-4); cursor: pointer; transition: background 0.15s ease, opacity 0.15s ease;
+    opacity: 0.7; padding: var(--space-2) var(--space-4); cursor: pointer; transition: background 0.15s ease, opacity 0.15s ease;
   }
   .mode-btn + .mode-btn{ border-left: 1px solid var(--color-divider); }
   .mode-btn.active{ background: var(--color-accent); color: var(--color-bg); opacity: 1; }
   .mode-btn:not(.active):hover{ background: var(--color-surface); opacity: 1; }
-  .mode-note{ font-size: 12.5px; opacity: 0.55; margin: var(--space-2) 0 0; }
+  .mode-note{ font-size: 12.5px; opacity: 0.7; margin: var(--space-2) 0 0; }
 
   .history-search-wrap{ margin-bottom: var(--space-2); }
   .history-pin-btn{

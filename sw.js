@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v214';
+const CACHE_VERSION = 'v215';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -224,6 +224,7 @@ const PRECACHE_URLS = [
   "Tools/blank-map-generator/bmg-store.js",
   "Tools/blank-map-generator/bmg-vector.js",
   "Tools/blank-map-generator/bmg-viewer.js",
+  "Tools/blank-map-generator/art/relief-world.webp",
   "Tools/blank-map-generator/data/world-land-110m.json",
   "Tools/blank-map-generator/data/world-countries-110m.json",
   "Tools/blank-map-generator/data/us-nation-10m.json",
