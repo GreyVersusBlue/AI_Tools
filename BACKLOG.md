@@ -136,7 +136,7 @@ row is deleted and Path 4 P4 is finished.**
 | Fact | Value |
 |---|---|
 | `CACHE_VERSION` | `v218` on local `main` (origin is at v214) — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **308** in `PRECACHE_URLS`, **93** in `SHELL_URLS`. Bytes last summed on Devon's Windows checkout after #267 (11.21 MB / 2.52 MB), not re-measured. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
+| Precache entries | **309** in `PRECACHE_URLS`, **93** in `SHELL_URLS`. Bytes summed on huginn 2026-10-02 (v220): **12,583,190 B (12.58 MB) / 2,966,987 B (2.97 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
 | Suites | **183** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
@@ -185,7 +185,8 @@ session hitting one of these ships rather than stalls.
   is empty again, and empty is its healthy state. The history — a Wave A1 handoff claiming
   the script shipped in #167 and quoting its output as the Path 5 rollout backlog, the
   third of three tools documented and never committed — is in `HISTORY.md`. Two of those
-  three are still missing: `sync-social-tags.mjs` and the original `board-check` folder.
+  three are still missing, and stay deleted (AI-34, 2026-10-02): `sync-social-tags.mjs` and the original `board-check`
+  folder. No page claims a generator any more.
 - **The "17–45 hardcoded literals per tool" figure for Path 5 P3 was wrong**, was removed
   in #169 rather than replaced (it swept in `white-space`, `@media print` blocks and
   inline script), and now has a replacement that comes from a script:
