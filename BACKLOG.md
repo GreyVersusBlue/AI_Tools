@@ -271,7 +271,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
 | 1 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 (#257, v182):** 046 → 015, 056 → 028 (`sheet: false`) and 039 → 040 are entries; **003 → 037 is a documented exception** (student scores never ride a link); `share.js` gained `sendState(entry)` and `sheet: false`. **Increment 2 (#259, v183), the roster chain:** **002 → 022** is a sheet row and **022 → 005** a `sheet: false` entry from 022's "Seat these groups" button; **006/007 → 002 is not a link** (the roster already reaches 002 through `roster.js`). **Left: only 053 → 030, which is blocked on rank 34** (Path 12 P1, the question bank with 030 as the front door). Do not start this row until rank 34 has shipped; then it is one entry plus a row in `smoke-send-to.mjs` | site | ¼ | | [Path 6](#path-6--share-everywhere) |
-| 2 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 2 | Path 4 P5 (rest) — per-tool restore as a shared control any tool can host | 009 | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
@@ -406,7 +406,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 134 | Bulk operations across rosters | 006 | ½ | | [006 Class Roster Hub](#006--class-roster-hub) |
 | 135 | `prefers-reduced-motion` respect; equity across weeks and periods | 007 | ½ | | [007 Name Picker](#007--name-picker) |
 | 136 | Team / house points; longitudinal reports | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
-| 137 | Restore preview / diff; per-record conflict resolution | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
+| 137 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
 | 138 | Reuse the real timer; period-aware auto-advance | 010 | ½ | | [010 Command Center](#010--command-center) |
 | 139 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
 | 140 | More grid types; number-line variants | 012 | ½ | | [012 Graph Paper & Number Line Generator](#012--graph-paper--number-line-generator) |
@@ -1007,11 +1007,15 @@ actually landed, and what each phase got wrong on the way, is in `HISTORY.md`.
   counted is left.
   *080 snapshots were on this list and are not stored anywhere — a canvas and a
   download link only — so there is nothing to migrate (found 2026-09-29, #300's session).*
-- **P5 — 009 upgrades that fall out of the above.** Restore preview/diff ("3
-  rosters replaced, 2 added, 1 untouched") built on registry metadata; per-tool
-  restore as a shared control any tool can host; a storage-usage readout on
-  `index.html`; an optional passphrase-encrypted backup (WebCrypto, local) — the
-  files contain student names.
+- **P5 — 009 upgrades that fall out of the above. Three of four done.** The record-level
+  restore preview ("1 replaced, 1 added, 1 untouched", and what Replace would remove) had
+  already shipped before the row was written (`smoke-restore-diff.mjs`); the row's text was
+  stale. The optional passphrase lock (`backup-restore/br-crypto.js`: AES-GCM, PBKDF2-SHA-256
+  at 600,000 iterations, off by default, never on the year-end archive) and the landing
+  page's "N KB saved · backed up N days ago" readout shipped in v216 (`smoke-encrypted.mjs`,
+  port 8461). **Left: per-tool restore as a shared control any tool can host** — "restore
+  just this tool's data from a backup file", using `ToolRegistry` to pick the tool's keys and
+  009's record diff (which would have to move out of 009's inline script into `_shared/`).
 
 **Model.** Opus.
 
@@ -3589,11 +3593,8 @@ displayed to the class in a way that shames anyone.
 
 #### Quick Wins
 
-- **Restore preview / diff.** Show what changes: "3 rosters will be replaced,
-  2 new ones added, 1 left alone." Restoring is the scary operation and it
-  currently asks for trust. *(Not shipped this round — "Verify a backup"
-  below shows what a file contains before arming it, but not a per-record
-  diff of what restoring it would change.)*
+- **Done — restore preview / diff.** The preview counts records replaced, added,
+  untouched, and those Replace would remove, per mode (`smoke-restore-diff.mjs`).
 
 #### Major Features
 
@@ -3624,8 +3625,9 @@ before it does it — all with nothing ever leaving the machine.
 - Should this tool know the *list* of tools explicitly (so it can report
   "Rubric Builder: no data saved"), or stay purely heuristic over whatever
   keys it finds? Explicit is friendlier and is one more thing to maintain.
-- Is there appetite for an optional encrypted backup (passphrase, WebCrypto,
-  entirely local) given these files can contain student names?
+- *Decided (v216): yes, optional and off by default.* An encrypted backup exists
+  (Path 4 P5); the year-end archive is never locked, because a passphrase forgotten
+  over the summer would lose the year.
 
 #### Platform themes that matter here
 
