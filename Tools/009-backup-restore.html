@@ -32,6 +32,7 @@
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <script src="backup-restore/br-transfer.js"></script>
 <script src="backup-restore/br-pair.js"></script>
+<script src="backup-restore/br-crypto.js"></script>
 <style>
   /* Path 5 P3: the semantic tints, in 001's values (the reference adopter),
      replacing the near-misses this page carried. --warn is 023's fill colour and
@@ -127,6 +128,10 @@
   #backupBanner.loud { display: block; background: var(--err-bg); color: var(--err); border: 2px solid var(--err); font-weight: 700; }
   #backupBanner.ok { display: block; background: var(--info-bg); color: var(--accent-2); border: 1px solid var(--info-line); }
 
+  [hidden] { display: none !important; }
+  .lock-opt { margin: .2rem 0 .7rem; }
+  .lock-toggle { display: flex; align-items: center; gap: .45rem; font-size: .9rem; cursor: pointer; }
+  .lock-fields { margin-top: .4rem; }
   .preview { display: none; margin-top: .9rem; border-top: 1px dashed var(--line); padding-top: .9rem; }
   .preview.active { display: block; }
   .preview ul { list-style: none; margin: .3rem 0 .8rem; padding-left: 0; font-size: .85rem; }
@@ -218,6 +223,16 @@
     <label class="field" for="labelInput">Label this backup (optional)</label>
     <input type="text" id="labelInput" placeholder="e.g. end-of-Q2" maxlength="40" style="max-width:22rem;">
     <p class="hint" style="margin:.4rem 0 .6rem;">Saves as <code class="filename" id="filenamePreview"></code></p>
+    <div class="lock-opt" id="lockOpt">
+      <label class="lock-toggle"><input type="checkbox" id="lockToggle"> Protect this file with a passphrase</label>
+      <div class="lock-fields" id="lockFields" hidden>
+        <p class="hint">The file holds student names. With a passphrase, anyone who finds it on a shared drive or a flash drive sees only scrambled text. <b>If the passphrase is forgotten, the file cannot be opened by you or anyone else</b> &mdash; there is no reset.</p>
+        <label class="field" for="lockPass">Passphrase (at least 8 characters)</label>
+        <input type="password" id="lockPass" autocomplete="new-password" style="max-width:22rem;">
+        <label class="field" for="lockPass2" style="margin-top:.5rem;">Type it again</label>
+        <input type="password" id="lockPass2" autocomplete="new-password" style="max-width:22rem;">
+      </div>
+    </div>
     <div class="btn-row"><button id="downloadBtn" type="button">Download backup (.json)</button></div>
     <div id="dlMsg"></div>
   </div>
@@ -228,6 +243,13 @@
     <div class="btn-row">
       <input type="file" id="fileInput" accept="application/json,.json" aria-label="Backup file to restore">
     </div>
+
+    <form class="unlock" id="unlockBox" hidden>
+      <p class="hint" style="margin:.8rem 0 .4rem;"><b>This backup is protected with a passphrase.</b> Type it to see what the file contains. Nothing is written until you press Restore.</p>
+      <label class="field" for="unlockPass">Passphrase</label>
+      <input type="password" id="unlockPass" autocomplete="current-password" style="max-width:22rem;">
+      <div class="btn-row" style="margin-top:.5rem;"><button id="unlockBtn" type="submit">Open the file</button></div>
+    </form>
 
     <div class="preview" id="preview">
       <div class="verify" id="verifyBox"></div>
@@ -368,7 +390,12 @@
       if (isInternalKey(key)) return;
       var label = labelFor(key) || 'Other saved data';
       var kind = classifyKey(key);
-      var id = label + ' ' + kind;
+      /* U+FFFD, written out: this was a literal NUL byte in the source,
+         which the HTML parser turns into U+FFFD inside <script> anyway, and
+         which made grep call the whole page binary. It has to stay U+FFFD,
+         not \u0000: the id round-trips through a data-id attribute, where a
+         NUL would come back as U+FFFD and match nothing. */
+      var id = label + '\ufffd' + kind;
       var value = '';
       try { value = localStorage.getItem(key) || ''; } catch (e) {}
       var size = key.length + value.length;
@@ -883,22 +910,54 @@
   var dlMsgEl = document.getElementById('dlMsg');
   function showDlMsg(kind, text) { showBoxMsg(dlMsgEl, kind, text); }
 
+  /* ---------- the optional passphrase lock (br-crypto.js) ----------
+     Off by default: a forgotten passphrase is a lost backup, and a lost
+     backup is the failure this whole page exists to prevent. The year-end
+     archive below is never locked, for the same reason, a year later. */
+  var lockToggle = document.getElementById('lockToggle');
+  var lockFields = document.getElementById('lockFields');
+  var lockPass = document.getElementById('lockPass');
+  var lockPass2 = document.getElementById('lockPass2');
+  if (!window.BrCrypto || !window.BrCrypto.available()) document.getElementById('lockOpt').hidden = true;
+  lockToggle.addEventListener('change', function () {
+    lockFields.hidden = !lockToggle.checked;
+    if (lockToggle.checked) lockPass.focus();
+  });
+  /* Resolves to what to download: the envelope itself, or its locked form. */
+  function lockIfAsked(envelope, pass) {
+    if (pass === null) return Promise.resolve(envelope);
+    return window.BrCrypto.encrypt(JSON.stringify(envelope), pass, {
+      source: envelope.source, format: envelope.format, formatVersion: envelope.formatVersion,
+      exportedAt: envelope.exportedAt
+    });
+  }
+
   var downloadBtn = document.getElementById('downloadBtn');
   downloadBtn.addEventListener('click', function () {
     var groups = selectedGroups();
     if (!lastScanGroups.length) { showDlMsg('error', 'Nothing saved in this browser yet — there’s nothing to back up.'); return; }
     if (!groups.length) { showDlMsg('error', 'Check at least one row above before downloading a backup.'); return; }
+    var pass = null;
+    if (lockToggle.checked && !document.getElementById('lockOpt').hidden) {
+      pass = lockPass.value;
+      if (pass.length < 8) { showDlMsg('error', 'The passphrase needs at least 8 characters.'); lockPass.focus(); return; }
+      if (pass !== lockPass2.value) { showDlMsg('error', 'The two passphrases don’t match. Type them again.'); lockPass2.focus(); return; }
+    }
     var idbNames = selectedIdbNames();
     downloadBtn.disabled = true;
     showDlMsg('info', idbNames.length ? 'Reading cached data — this can take a moment…' : 'Building the file…');
     buildEnvelope(groups, idbNames).then(function (envelope) {
-      downloadJson(envelope, currentFilename());
+      return lockIfAsked(envelope, pass).then(function (file) { return { envelope: envelope, file: file }; });
+    }).then(function (built) {
+      var envelope = built.envelope;
+      downloadJson(built.file, currentFilename());
       try { localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString()); } catch (e) {}
       renderBackupBanner();
       var count = Object.keys(envelope.data).length;
       var idbCount = envelope.indexedDB ? Object.keys(envelope.indexedDB).length : 0;
       showDlMsg('good', 'Backup downloaded: ' + count + ' item' + (count === 1 ? '' : 's') +
-        (idbCount ? ' plus ' + idbCount + ' cached database' + (idbCount === 1 ? '' : 's') : '') + '.');
+        (idbCount ? ' plus ' + idbCount + ' cached database' + (idbCount === 1 ? '' : 's') : '') +
+        (pass === null ? '.' : ', locked with your passphrase. Write the passphrase down somewhere that isn’t the same drive.'));
     }).catch(function () {
       showDlMsg('error', 'Something went wrong building the file. Try again with the cached databases unchecked.');
     }).then(function () { downloadBtn.disabled = false; });
@@ -990,15 +1049,30 @@
    * is exactly one restore implementation no matter how the bytes got here.
    * Returns `{ ok: true, envelope }` or `{ error }`; never throws.
    */
+  var unlockBox = document.getElementById('unlockBox');
+  var unlockPass = document.getElementById('unlockPass');
+  var unlockBtn = document.getElementById('unlockBtn');
+  var lockedFile = null;        // { parsed, byteSize } while a locked file waits for its passphrase
+
   function loadEnvelopeText(text, byteSize) {
     clearMsg();
     pending = null;
     lastRestoreGroups = {};
+    lockedFile = null;
+    unlockBox.hidden = true;
     preview.classList.remove('active');
 
     var parsed;
     try { parsed = JSON.parse(text); }
     catch (e) { return { error: 'That file isn’t valid JSON — pick a backup downloaded from this page.' }; }
+
+    if (window.BrCrypto && window.BrCrypto.isEncrypted(parsed)) {
+      lockedFile = { parsed: parsed, byteSize: byteSize };
+      unlockBox.hidden = false;
+      unlockPass.value = '';
+      unlockPass.focus();
+      return { ok: true, locked: true };
+    }
 
     var read = readEnvelope(parsed);
     if (read.error) return { error: read.error };
@@ -1011,11 +1085,32 @@
     return { ok: true, envelope: env };
   }
 
+  unlockBox.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!lockedFile) return;
+    var file = lockedFile;
+    unlockBtn.disabled = true;
+    showMsg('info', 'Unlocking…');
+    window.BrCrypto.decrypt(file.parsed, unlockPass.value).then(function (text) {
+      unlockPass.value = '';
+      var result = loadEnvelopeText(text, file.byteSize);
+      if (result.error) showMsg('error', result.error);
+      else showMsg('good', 'Unlocked. Review what changes below, then Restore.');
+    }, function (err) {
+      showMsg('error', err && err.code === 'unsupported'
+        ? 'This file is locked in a way this page does not understand. It may come from a newer version of this page.'
+        : 'That passphrase does not open this file — or the file was damaged. Check the passphrase and try again.');
+      unlockPass.select();
+    }).then(function () { unlockBtn.disabled = false; });
+  });
+
   fileInput.addEventListener('change', function () {
     var file = fileInput.files && fileInput.files[0];
     clearMsg();
     pending = null;
     lastRestoreGroups = {};
+    lockedFile = null;
+    unlockBox.hidden = true;
     preview.classList.remove('active');
     if (!file) return;
 
