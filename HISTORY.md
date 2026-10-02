@@ -9,6 +9,22 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Dead-weight cleanup: four dead trees, unreferenced seating fonts, five missing `@font-face` files (2026-10-02, AI-11, `CACHE_VERSION` v216)
+
+Old ranks 81, 82 and 83, deleted; the table is renumbered to 176 rows.
+
+- **`git rm`: `index_backup.html`, `Tools/Old Designs/`, `Tools/New Designs/`, `Other Landing Page ideas/`** (~590 KB). The
+  live `v1`-`v4` landing chain stays. The og:image TODOs lived only in those copies, so they went with them. The
+  `PAGE_EXEMPT`/`EXEMPT` lists in the guards and `make-offline-copy.mjs` still name the dead paths; they are harmless
+  and were left alone.
+- **`Tools/seating-chart/fonts/`** (three woff2 files, licences, README) removed: nothing in 005 or the tree references
+  them (005 declares no `@font-face`), and none was precached.
+- **`ideas-backlog.html`: dropped the five `@font-face` declarations** rather than vendoring. The files were never
+  committed, the page already rendered in the `system-ui`/`ui-monospace` fallbacks in its font stacks, and this
+  session had no network to fetch real woff2 files. Reverse it by vendoring Space Grotesk, Public Sans and IBM Plex Mono
+  into `_shared/vendor/` and linking them. Its "Landing-Page Web Fonts Never Shipped" idea card went too.
+  The page is precached, so `CACHE_VERSION` went v215 to v216.
+
 ## `check:entities` follows array data to a text sink, and 055 has a suite (2026-10-02, AI-09, no `CACHE_VERSION` bump)
 
 Old rank 8, deleted; the table is renumbered to 179 rows. Nothing shipped to a page: the guard

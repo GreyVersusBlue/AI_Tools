@@ -6,7 +6,6 @@ Everything the tool needs that isn't the page itself. The page stays at
 
 ```
 seating.mjs         pure logic + the save slot. No DOM. Node runs it as-is.
-fonts/              the two vendored families, with licences. See fonts/README.md.
 test/smoke-seating.mjs   Node test of the logic and the save slot
 test/smoke-sub-packet.mjs the whole-day substitute packet
 test/smoke-zoom-pan.mjs  wheel zoom and drag-to-pan on the floor, in a browser
