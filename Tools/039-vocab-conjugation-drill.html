@@ -34,8 +34,8 @@
   /* Path 5 P3. --good and --warn-ink are 001's values (the reference adopter);
      --desk is the table the printable sheet lies on, named the same way 015 and
      023 name theirs because ink-paper.css has no token for it. */
-  :root { --good: #2f7d4f; --warn-ink: #8a5a13; --desk: #d9d7cd; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) { --good: #63c08e; --warn-ink: #eac077; --desk: #0e1014; }
+  :root { --good: #2f7d4f; --warn-ink: #8a5a13; --desk: #d9d7cd; --desk-muted: #53524b; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --good: #63c08e; --warn-ink: #eac077; --desk: #0e1014; --desk-muted: var(--muted); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -152,7 +152,7 @@
   .forms-grid .form-field input { margin-bottom: 0; }
 
   .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
-  .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
+  .preview-note { font-size: .8rem; color: var(--desk-muted); margin-bottom: .8rem; }
 
   /* The worksheet itself is a sheet of paper, so it carries `paper-sheet` in
      the markup and ink-paper.css restores the light tokens (and the dark ink)
@@ -177,7 +177,7 @@
   .conj-card td.form-cell { font-weight: 600; }
   .conj-card td.form-cell.blank-cell { border-bottom: 1px solid #444; min-width: 3rem; }
 
-  .empty-note { color: var(--muted); text-align: center; padding: 3rem; font-style: italic; }
+  .empty-note { color: var(--desk-muted); text-align: center; padding: 3rem; font-style: italic; }
 
   /* ---- conjugation quiz mode (interactive fill-in-the-blank) ---- */
   .btn-row { display: flex; gap: .6rem; }

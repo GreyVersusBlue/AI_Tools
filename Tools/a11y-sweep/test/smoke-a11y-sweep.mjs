@@ -51,6 +51,16 @@ const pages = ['index.html', ...fs.readdirSync(path.join(SITE, 'Tools')).filter(
 const selected = only ? pages.filter(p => p.includes(only)) : pages;
 if (!selected.length) { console.error(`smoke-a11y-sweep: --only ${only} matched no page`); process.exit(1); }
 
+// Jump every finite CSS animation to its end before scanning. index.html fades
+// its categories in on a stagger that outlasts settle(), so axe used to read
+// the last few mid-fade: the page's contrast count was 8, 24 or 35 depending
+// on timing, with the file untouched. Infinite animations are left running.
+const finishAnimations = page => page.evaluate(() => {
+  for (const a of document.getAnimations()) {
+    if (a.effect && a.effect.getComputedTiming().endTime !== Infinity) a.finish();
+  }
+});
+
 let passed = 0, failed = 0;
 const fails = [];
 const ok = (cond, label) => {
@@ -69,6 +79,7 @@ try {
     try {
       await page.goto(`${BASE}/${encodeURI(p)}`, { waitUntil: 'load', timeout: 30000 });
       await settle(page, 500);
+      await finishAnimations(page);
       const violations = await a11yScan(page, { impact: allImpacts ? 'minor' : 'serious' });
       const serious = violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
       const lesser = violations.filter(v => v.impact !== 'serious' && v.impact !== 'critical');

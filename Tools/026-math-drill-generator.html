@@ -38,8 +38,8 @@
      carries .paper-sheet (written where the markup is built), so its #999
      fill lines, #fbfbf8 answer box, the colour-by-answer fills from
      mdg-selfcheck.js and the white text on them stay light in both themes. */
-  :root { --desk: #d9d7cd; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) { --desk: #0e1014; }
+  :root { --desk: #d9d7cd; --desk-muted: #53524b; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --desk: #0e1014; --desk-muted: var(--muted); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -78,7 +78,7 @@
   .toggle-row button:not(.active) { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
 
   .preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
-  .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
+  .preview-note { font-size: .8rem; color: var(--desk-muted); margin-bottom: .8rem; }
 
   .sheet {
     background: #fff; width: 8.5in; min-height: 11in; margin: 0 auto; padding: 0.6in 0.55in;
