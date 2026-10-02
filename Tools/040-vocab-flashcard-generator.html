@@ -38,9 +38,9 @@
   /* Path 5 P3. The info tint pair is 001's (the reference adopter); --desk is
      the table the printable sheet lies on, named the same way 015, 023 and 039
      name theirs because ink-paper.css has no token for it. */
-  :root { --info-bg: #eaf1f5; --info-line: #c9dbe3; --desk: #d9d7cd; --desk-muted: #53524b; }
+  :root { --desk: #d9d7cd; --desk-muted: #53524b; }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
-    --info-bg: #1b2a35; --info-line: #33505f; --desk: #0e1014; --desk-muted: var(--muted);
+    --desk: #0e1014; --desk-muted: var(--muted);
   }
   * { box-sizing: border-box; }
   body {
@@ -71,10 +71,7 @@
   .check-toggle input { width: auto; margin: 0; }
   .import-bridge { border-top: 1px dashed var(--line); margin-top: .8rem; padding-top: .7rem; }
 
-  /* Share a word list by link / QR */
-  .share-note { font-size: .8rem; line-height: 1.5; margin: -.4rem 0 .9rem; padding: .55rem .7rem; border-radius: 6px;
-    background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); }
-  .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
+  .share-note { margin: -.4rem 0 .9rem; }
 
   .mode-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .9rem; }
   .mode-tab { flex: 1 1 30%; min-width: 6.2rem; text-align: center; padding: .5rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--muted); }

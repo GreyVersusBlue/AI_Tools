@@ -53,8 +53,6 @@
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --desk: #0e1014; --desk-ink: var(--muted);
-    --info-bg: #1b2a35; --info-line: #33505f;
-    --err-bg: #3a201c;
     --warn-bg: #332711; --warn-line: #5e4a20;
     --note-bg: #2b2718;
   }
@@ -76,12 +74,6 @@
 
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
-  /* The note under the Share button, which records what the shared sheet
-     (_shared/share.js, Path 6 P2) last did. Tokenised, not literal, so it
-     follows this page into dark with everything else. */
-  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
-    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
-  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   input[type="text"], input[type="number"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
     background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;

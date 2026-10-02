@@ -34,17 +34,9 @@
   /* Tool-local tint for a plot-stage box that has text in it. ink-paper.css
      owns the palette tokens; this pair is the one colour this page paints
      that the shared file has no name for. Both pairs clear WCAG AA. */
-  :root { --filled-bg: #f4f8f3; --filled-line: #8fae82;
-    --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) { --filled-bg: #1a2a1e; --filled-line: #4f7a52;
-    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+  :root { --filled-bg: #f4f8f3; --filled-line: #8fae82; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --filled-bg: #1a2a1e; --filled-line: #4f7a52; }
 
-  /* Share a diagram: the sheet itself is _shared/share.js (Path 6 P3). This is
-     only the note under the saved-diagram controls that records what the sheet
-     last did. The tint pairs above are 001's values, with dark counterparts. */
-  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
-    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
-  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   /* The hidden attribute is only display:none in the UA stylesheet; any class
      that sets display beats it. stage.js hides the exit button with `hidden`. */
   [hidden] { display: none !important; }

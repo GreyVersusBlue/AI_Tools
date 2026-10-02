@@ -34,9 +34,9 @@
   /* Path 5 P3. Both tint pairs are 001's values (the reference adopter): the
      word chip is the info tint, and a word that appears in both articles is
      the warn tint. */
-  :root { --info-bg: #eaf1f5; --warn-bg: #fdf0dc; --warn-ink: #8a5a13; }
+  :root { --warn-bg: #fdf0dc; --warn-ink: #8a5a13; }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
-    --info-bg: #1b2a35; --warn-bg: #332711; --warn-ink: #eac077;
+    --warn-bg: #332711; --warn-ink: #eac077;
   }
   * { box-sizing: border-box; }
   body {
@@ -99,11 +99,7 @@
   .both-badge { display: inline-block; background: var(--warn-bg); color: var(--warn-ink); border-radius: 999px; padding: .1rem .5rem; font-size: .72rem; font-weight: 700; white-space: nowrap; }
   .vocab-row.both input.term { color: var(--warn-ink); }
 
-  /* Share a guide: the sheet is _shared/share.js (Path 6 P2); this is the
-     note under the button that records what the sheet last did. */
-  .share-note { font-size: .8rem; line-height: 1.5; margin: .5rem 0 0; padding: .55rem .7rem; border-radius: 6px;
-    background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
-  .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
+  .share-note { margin: .5rem 0 0; }
 
   /* Comparison-guide print layout */
   .compare-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 1rem; }

@@ -38,14 +38,11 @@
      tools defining these stay identical until they move to ink-paper.css. */
   :root {
     --good: #2f7d4f;  --good-bg: #e4f5ea;
-    --info-bg: #eaf1f5; --info-line: #c9dbe3;
     --err-bg: #fbeeee;
     --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --good: #63c08e;  --good-bg: #173021;
-    --info-bg: #1b2a35; --info-line: #33505f;
-    --err-bg: #3a201c;
     --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
   }
   * { box-sizing: border-box; }
@@ -191,13 +188,6 @@
   .modal-close { border: none; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--muted); padding: 0; }
   .modal-close:hover { color: var(--err); }
   .modal-hint { font-size: .78rem; color: var(--muted); margin: .6rem 0 0; max-width: 280px; }
-
-  /* The note under the toolbar, which records what the shared sheet
-     (_shared/share.js, Path 6 P2) last did. Tokenised so it follows this page
-     into dark; it replaces this tool's alert()s. */
-  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
-    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
-  .share-note.error { background: var(--err-bg); border-color: var(--err); }
 
   .schedule-modal-body { display: flex; flex-direction: column; gap: .7rem; text-align: left; margin-bottom: .2rem; }
   .schedule-modal-body label { margin-bottom: .2rem; }

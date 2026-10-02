@@ -48,18 +48,6 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  /* The two tint pairs the share note sits on, in 001's values with dark
-     counterparts — ink-paper.css has no token for either. */
-  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) {
-    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
-
-  /* Share your prompts: the sheet itself is _shared/share.js (Path 6 P3).
-     This is only the note under the header that records what it did. */
-  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
-    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
-  .share-note.error { background: var(--err-bg); border-color: var(--err); }
-
   .header-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
   .fs-btn {
     font-size: .85rem; font-weight: 700; padding: .5rem .9rem; border-radius: 7px;

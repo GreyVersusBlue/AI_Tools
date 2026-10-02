@@ -36,21 +36,12 @@
      tool defining them stays identical until they move to ink-paper.css. */
   :root {
     --good-bg: #e4f5ea;  --good-line: #c7e2cb;
-    --err-bg: #fbecea;   --err-line: #e6c6c1;
     --warn-bg: #fdf0dc;  --warn-line: #eecda0;
-    --info-bg: #eaf1f5;  --info-line: #c9dbe3;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --good-bg: #173021;  --good-line: #2f5e42;
-    --err-bg: #3a201c;   --err-line: #6d3a33;
     --warn-bg: #332711;  --warn-line: #5e4a20;
-    --info-bg: #1b2a35;  --info-line: #33505f;
   }
-  /* Share a key: the sheet itself is _shared/share.js (Path 6 P3). This is
-     only the note under the toolbar that records what the sheet last did. */
-  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
-    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
-  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;

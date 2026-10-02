@@ -35,18 +35,9 @@
      previews themselves are .paper-sheet: they are a facsimile of the printed
      station card, so they stay white with dark ink in both themes. The
      rgba(0,0,0,.15) drop shadow stays as it is, as in 001 and 040. */
-  :root { --desk: #eeece3;
-    --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) { --desk: #0e1014;
-    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
+  :root { --desk: #eeece3; }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) { --desk: #0e1014; }
 
-  /* Share a circuit: the sheet itself is _shared/share.js (Path 6 P3). This is
-     only the note under the saved-circuit controls that records what the sheet
-     last did. The two tint pairs above are 001's values, with dark
-     counterparts. */
-  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
-    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
-  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;

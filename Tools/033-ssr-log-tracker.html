@@ -22,16 +22,15 @@
      The class summary, the reading slips and the wall cards are built into
      #printArea, which this page's own rule keeps display:none on screen, so
      their #999 rules and #555 subtitle are print values and stay as they are.
-     (This page still links a11y.js and a11y.css twice — once here and once at
-     the end of <head>. That duplication is its own backlog row; the flag is
-     read by both loads, so it is correct either way.)
+     a11y.js loads once, here, so the theme is set before first paint; a11y.css
+     loads once, after this page's <style>, so it still wins the ties it won
+     when both were linked twice.
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
-<link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
   /* Path 5 P3. The tint pairs are 001's, the reference adopter's. --rail is
@@ -42,14 +41,12 @@
     --rail: #eceae2;
     --thin: #b5762c;
     --good: #2f7d4f;
-    --info-bg: #eaf1f5; --info-line: #c9dbe3;
     --warn-bg: #fdf0dc; --warn-line: #eecda0;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --rail: #333a44;
     --thin: #d9a05a;
     --good: #63c08e;
-    --info-bg: #1b2a35; --info-line: #33505f;
     --warn-bg: #332711; --warn-line: #5e4a20;
   }
 
@@ -236,7 +233,6 @@
   }
 </style>
 <link rel="stylesheet" href="../_shared/a11y.css">
-<script src="../_shared/a11y.js"></script>
 </head>
 <body>
 <div class="wrap">

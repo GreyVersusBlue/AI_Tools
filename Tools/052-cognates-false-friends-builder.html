@@ -44,12 +44,6 @@
      literals that were sitting on the card. */
   :root {
     --ok: #2c6e3f;
-    --err-bg: #fbecea;  --err-line: #e6c6c1;
-    --info-bg: #eaf1f5; --info-line: #c9dbe3;
-  }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) {
-    --err-bg: #3a201c;  --err-line: #6d3a33;
-    --info-bg: #1b2a35; --info-line: #33505f;
   }
   * { box-sizing: border-box; }
   body {
@@ -107,13 +101,6 @@
   .print-section h2 { font-size: 1.1rem; border-bottom: 1.5px solid #333; padding-bottom: .2rem; }
   .cognate-text { color: var(--ok); }
   .false-friend-text { color: var(--err); }
-
-  /* Share a list: the sheet itself is _shared/share.js (Path 6 P3). This is
-     only the note under the toolbar that records what the sheet last did —
-     on the page's own tint tokens, which already have dark values above. */
-  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
-    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
-  .share-note.error { background: var(--err-bg); border-color: var(--err); }
 
 </style>
 </head>
