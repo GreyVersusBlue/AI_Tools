@@ -9,6 +9,43 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Shared-baseline tidies: one `a11y.*` per page, `.share-note` and the header rules in `base.css` (2026-10-02, AI-08, `CACHE_VERSION` v218)
+
+Old ranks 6, 7 and 81, deleted; the table is renumbered to 173 rows. Rank 5 (035's private theme) is Devon's call and
+was left alone, though "Standing decisions" carries a default for it. Rank 76 (the adoption sweep) is open; see below.
+
+- **014 and 033 linked `a11y.js` and `a11y.css` twice, and it was a visible bug, not just untidiness.** Both script
+  loads ran in `<head>`, so both queued `buildWidget` on DOMContentLoaded and each page drew **two "Aa" widgets**
+  (measured: `.a11y-widget` count 2 before, 1 after). Kept the early `a11y.js` (theme before first paint) and the late
+  `a11y.css` (it already won every tie, so dropping the early copy changes no cascade). `smoke-theme` now fails on any
+  page that loads a `_shared/` file twice; it went red on the old 014 with both lines.
+- **`.share-note` is one rule in `_shared/base.css`; its tint tokens `--info-bg/-line`, `--err-bg/-line` (001's values)
+  are in `ink-paper.css`** with `-light` names restored in the paper-sheet and print blocks like the rest of the palette.
+  The row said 23 pages; it had grown to **49**. 41 base.css pages lost their copy (eight on the `rgba()` literals,
+  which stayed light in dark: 015's note now goes dark); seven of them, 019, 028, 039, 040, 050, 054 and 064, keep a
+  margin-only override. (Commit c37907d's message says "45" and "six"; it counted the four pages that kept their
+  rule. 41 and seven are right.) About 40 pages dropped `:root` token declarations identical to ink-paper's; a page's own different light
+  value (003, 015, 020, 021, 023, 024, 043, 084) still wins. 016, 018, 029 and 038 keep their own `.share-note`: they
+  link neither shared file. **082–085's transient status line is now `.status-note`** — 082 and 083 have since adopted
+  `share.js` and write share results into that same line, so the class kept its own look. `smoke-theme` fails if a page
+  on both shared files re-paints `.share-note` (background/border).
+- **One side effect, on purpose:** inside `#printArea`/`.paper-sheet` in dark, the four tints are now the light ones,
+  where a page that declared them itself used to leak the dark values onto the sheet.
+- **`.app-header h1` (63 pages), `.app-header .sub` (34), `.back-link` and `:hover` (68), `.card h2` (37)** moved into
+  `base.css`; 270 lines went. Variants stay inline and win on source order. Verified by computed style: 68 pages × 2
+  themes × 7 selectors snapshotted before and after with Playwright, **0 differences of 952**.
+- **Trap: `grep` skips `Tools/009-backup-restore.html` as binary.** It has a literal NUL inside a JS string
+  (`label + '\0' + kind`, written as the raw byte), and the session's grep passes `-I`. A grep-loop count of "who skips
+  `base.css`" silently listed 009; `command grep -a` or `check:adoption` gets it right. Not changed.
+- **Rank 76, the adoption sweep, is not done** and is bigger than its row said. Recounted: 7 tools load no `a11y.js`
+  (002, 007, 016, 018, 038, 044, 086), 13 no `ink-paper.css`, 19 no `base.css`. 016, 018 and 038 are dark by default on
+  their own palettes, so `a11y.js` alone would invert them to light under its filter — they need native ink-paper
+  palettes, which is Path 5 work on 1,300–2,900-line pages.
+- **Not verified:** `smoke-share-rollout` crashed ("Page crashed" / `ERR_ABORTED`) on huginn **on both the old and the
+  new tree** with ~2 GB free; CI is the authority. No full `npm test` for the same reason. Ran: every guard, `lint`,
+  `test:theme` (53 + 901), `check:precache --base origin/main`, `check:adoption --check`, and a browser probe of 014,
+  033, 003, 015, 019 and 083 in both themes.
+
 ## Small docs and copy fixes: README URL, 028's upload hint, the Tier 1 count (2026-10-02, AI-12, `CACHE_VERSION` v217)
 
 - **README "Live site"** now names <https://aspermylessonplan.com> (the `CNAME`) instead of the placeholder. Its tools

@@ -451,7 +451,8 @@ files must be added there too.
   deciding which branding/image policy is correct; don't guess it into
   ~114 files.
 - `_shared/base.css` holds layout rules that were duplicated byte-identically
-  across tools (`.card`, `.app-header`, `.toolbar`); `_shared/print-area.css`
+  across tools (`.card`, `.app-header`, `.toolbar`, the header title/subtitle/back link, `.card h2`,
+  and since AI-08 `.share-note` on `ink-paper.css`'s info/err tints); `_shared/print-area.css`
   holds the `#printArea` screen/print pair. **base.css is safe for any tool;
   print-area.css is not** — it blanks the page on print and restores only
   `#printArea`, so linking it from a tool without that element, or one that
