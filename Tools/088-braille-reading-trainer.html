@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../manifest.json">
+<title>Braille Reading Trainer</title>
+<meta name="description" content="Learn to read braille by sight, Duolingo-style: short lessons from the alphabet through every Unified English Braille contraction, spaced review, a 60-second sprint, and a reading room that times you on longer passages.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='11' cy='8' r='3.2' fill='%231f3550'/%3E%3Ccircle cx='21' cy='8' r='3.2' fill='%231f3550'/%3E%3Ccircle cx='11' cy='16' r='3.2' fill='%231f3550'/%3E%3Ccircle cx='21' cy='16' r='3.2' fill='none' stroke='%231f3550' stroke-width='1.2'/%3E%3Ccircle cx='11' cy='24' r='3.2' fill='none' stroke='%231f3550' stroke-width='1.2'/%3E%3Ccircle cx='21' cy='24' r='3.2' fill='%232e6b8f'/%3E%3C/svg%3E">
+<!-- Native dark from _shared/ink-paper.css; this page paints only tokens. -->
+<script>window.A11Y_NATIVE_THEME = true;</script>
+<script src="../_shared/a11y.js"></script>
+<script src="braille-trainer/bt-core.js"></script>
+<link rel="stylesheet" href="../_shared/ink-paper.css">
+<link rel="stylesheet" href="../_shared/a11y.css">
+<style>
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Segoe UI", system-ui, sans-serif; line-height: 1.45;
+  }
+  button, select, input, textarea { font: inherit; color: inherit; }
+  button {
+    cursor: pointer; border: 1px solid var(--line-strong); background: var(--card);
+    border-radius: 8px; padding: .45rem .9rem;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent-2); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  :focus-visible { outline: 3px solid var(--accent-2); outline-offset: 2px; }
+  .muted { color: var(--muted); }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ── header ─────────────────────────────────────────────────────────── */
+  .app-header {
+    display: flex; align-items: center; gap: .5rem 1rem; flex-wrap: wrap;
+    padding: .6rem 1rem; border-bottom: 1px solid var(--line); background: var(--card);
+  }
+  .app-header h1 { font-size: 1.15rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .85rem; }
+  .back-link:hover { color: var(--accent-2); }
+  .stats { display: flex; gap: .4rem; flex-wrap: wrap; margin-left: auto; font-size: .85rem; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: .15rem .65rem; background: var(--card-2); }
+  .chip b { font-variant-numeric: tabular-nums; }
+  .settings { position: relative; }
+  .settings summary {
+    list-style: none; cursor: pointer; font-size: .85rem; font-weight: 600;
+    border: 1px solid var(--line-strong); border-radius: 8px; padding: .25rem .65rem;
+  }
+  .settings summary::-webkit-details-marker { display: none; }
+  .settings-pop {
+    position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; width: 17rem;
+    display: grid; gap: .6rem; padding: .8rem; background: var(--card);
+    border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  }
+  .settings-pop label { display: grid; gap: .2rem; font-size: .85rem; font-weight: 600; }
+
+  nav.tabs { display: flex; gap: .3rem; padding: .6rem 1rem 0; flex-wrap: wrap; max-width: 60rem; margin: 0 auto; }
+  nav.tabs button { border-radius: 8px 8px 0 0; border-bottom: none; }
+  nav.tabs button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  main { max-width: 60rem; margin: 0 auto; padding: 1rem; }
+  section > h2 { margin: .2rem 0 .6rem; font-size: 1.2rem; }
+
+  /* ── braille cells ──────────────────────────────────────────────────── */
+  .braille { --d: 10px; display: inline-flex; flex-wrap: wrap; align-items: flex-start; row-gap: calc(var(--d) * 2.2); }
+  .bword { display: inline-flex; margin-right: calc(var(--d) * 2.6); }
+  .bcell {
+    display: inline-grid; grid-template-columns: repeat(2, var(--d)); grid-template-rows: repeat(3, var(--d));
+    grid-auto-flow: column; gap: calc(var(--d) * .5); margin-right: calc(var(--d) * 1.15);
+  }
+  .bdot { width: var(--d); height: var(--d); border-radius: 50%; }
+  .bdot.on { background: var(--ink); }
+  .ghost .bdot:not(.on) { box-shadow: inset 0 0 0 1px var(--line-strong); }
+  .braille.huge { --d: 22px; }
+  .braille.big { --d: 15px; }
+  .braille.small { --d: 7px; }
+  .numbered .bdot { display: grid; place-items: center; font-size: calc(var(--d) * .55); font-weight: 700; color: var(--muted); }
+  .numbered .bdot.on { color: var(--paper); }
+
+  /* ── path ───────────────────────────────────────────────────────────── */
+  .continue-card {
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: space-between;
+    border: 1px solid var(--line-strong); border-radius: 12px; padding: .9rem 1rem; background: var(--card); margin-bottom: 1rem;
+  }
+  .continue-card p { margin: 0; }
+  .stage { margin: 1.4rem 0 .4rem; }
+  .stage h3 { margin: 0; font-size: 1.05rem; }
+  .stage p { margin: .1rem 0 .4rem; }
+  .unit {
+    border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+    padding: .75rem 1rem; margin: .5rem 0;
+  }
+  .unit-head { display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; }
+  .unit-head h4 { margin: 0; font-size: 1rem; }
+  .unit-head .state { font-size: .8rem; }
+  .unit p { margin: .3rem 0 .6rem; font-size: .92rem; }
+  .lessons { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+  .lesson-btn { border-radius: 999px; min-width: 2.6rem; padding: .35rem .7rem; font-size: .85rem; }
+  .lesson-btn.done { background: var(--card-2); border-color: var(--accent-2); }
+  .lesson-btn.next { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .test-out { font-size: .8rem; margin-left: auto; }
+
+  /* ── lesson ─────────────────────────────────────────────────────────── */
+  .lesson-top { display: flex; align-items: center; gap: .8rem; margin-bottom: 1rem; }
+  .bar { flex: 1; height: 12px; border-radius: 999px; background: var(--card-2); border: 1px solid var(--line); overflow: hidden; }
+  .bar > span { display: block; height: 100%; width: 0; background: var(--accent-2); transition: width .25s; }
+  .clock { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 3rem; text-align: right; }
+  .ex-card { border: 1px solid var(--line); border-radius: 14px; background: var(--card); padding: 1.2rem; min-height: 18rem; }
+  .ex-prompt { font-size: 1.05rem; font-weight: 600; margin: 0 0 1rem; }
+  .ex-stage { display: flex; justify-content: center; align-items: center; min-height: 6rem; margin-bottom: 1.2rem; text-align: center; }
+  .ex-stage .label { font-size: 2.2rem; font-weight: 700; }
+  .learn-box { display: grid; gap: .6rem; justify-items: center; text-align: center; }
+  .learn-box .label { font-size: 2rem; font-weight: 700; }
+  .learn-box p { margin: 0; max-width: 34rem; }
+  .options { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .6rem; }
+  .options.wide { grid-template-columns: 1fr; }
+  .opt { min-height: 3.6rem; display: flex; align-items: center; justify-content: center; gap: .6rem; font-size: 1.15rem; text-align: left; }
+  .opt .key { font-size: .75rem; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 .3rem; }
+  .opt[aria-pressed="true"] { border: 2px solid var(--accent-2); background: var(--card-2); }
+  .opt.right { border: 2px solid var(--accent-2); }
+  .opt.wrong { border: 2px solid var(--err); }
+  .dotpad { display: grid; grid-template-columns: repeat(2, 4.2rem); grid-template-rows: repeat(3, 4.2rem); grid-auto-flow: column; gap: .6rem; justify-content: center; }
+  .dotpad button { border-radius: 50%; font-weight: 700; font-size: .95rem; display: grid; place-items: center; line-height: 1.1; }
+  .dotpad button small { font-size: .65rem; font-weight: 400; color: var(--muted); }
+  .dotpad button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .dotpad button[aria-pressed="true"] small { color: var(--paper); }
+  .type-answer { display: flex; gap: .5rem; justify-content: center; }
+  .type-answer input { font-size: 1.2rem; padding: .45rem .7rem; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--card); min-width: 0; width: 18rem; }
+  .ex-foot { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; min-height: 3.2rem; }
+  .feedback { flex: 1; display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; font-weight: 600; }
+  .feedback.good { color: var(--accent-2); }
+  .feedback.bad { color: var(--err); }
+  .feedback .detail { color: var(--ink); font-weight: 400; }
+  .hint-keys { font-size: .8rem; margin-top: .8rem; text-align: center; }
+
+  .result { text-align: center; border: 1px solid var(--line); border-radius: 14px; background: var(--card); padding: 1.6rem 1rem; }
+  .result h2 { margin-top: 0; }
+  .result-stats { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin: 1rem 0; }
+  .result-stats div { border: 1px solid var(--line); border-radius: 10px; padding: .6rem 1rem; min-width: 7rem; background: var(--card-2); }
+  .result-stats b { display: block; font-size: 1.5rem; }
+  .result .actions { display: flex; gap: .6rem; justify-content: center; flex-wrap: wrap; }
+  .slow-list { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin: .5rem 0 1rem; }
+  .slow-list figure { margin: 0; display: grid; gap: .3rem; justify-items: center; }
+
+  /* ── practice, reading, signs ───────────────────────────────────────── */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; }
+  .card { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 1rem; display: grid; gap: .5rem; align-content: start; }
+  .card h3 { margin: 0; font-size: 1rem; }
+  .card p { margin: 0; font-size: .92rem; }
+  .passages { display: grid; gap: .5rem; margin: .8rem 0; }
+  .passage-row { display: flex; gap: .8rem; align-items: center; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: .6rem .9rem; }
+  .passage-row .t { font-weight: 600; }
+  .passage-row .meta { font-size: .85rem; margin-left: auto; }
+  .read-controls { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-bottom: .8rem; }
+  .read-controls label { font-size: .85rem; font-weight: 600; display: inline-flex; gap: .3rem; align-items: center; }
+  .reader-page { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 1.4rem; min-height: 12rem; }
+  .reader-page .braille { --d: inherit; }
+  .reader-page .para { display: flex; margin-bottom: calc(var(--d) * 3); }
+  .reader-page button.bw {
+    border: none; background: none; padding: 0; margin: 0 calc(var(--d) * 2.6) 0 0; border-radius: 4px;
+    display: inline-flex; flex-direction: column; align-items: flex-start;
+  }
+  .reader-page button.bw:hover { background: var(--card-2); }
+  .reader-page button.bw .peek { font-size: .8rem; color: var(--accent-2); font-weight: 600; margin-top: .2rem; }
+  .reader-page .bcell:last-child { margin-right: 0; }
+  .reader-cover { display: grid; place-items: center; min-height: 10rem; text-align: center; }
+  .print-text { white-space: pre-wrap; border-left: 3px solid var(--line-strong); padding-left: .8rem; margin-top: 1rem; }
+  .reader-result { margin: .8rem 0; font-weight: 600; }
+  .own-text textarea { width: 100%; min-height: 6rem; border: 1px solid var(--line-strong); border-radius: 8px; padding: .5rem; background: var(--card); }
+  .signs-tools { display: flex; gap: .8rem; flex-wrap: wrap; align-items: center; margin-bottom: .6rem; }
+  .sign-unit h3 { font-size: 1rem; margin: 1rem 0 .4rem; }
+  .sign-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: .5rem; }
+  .sign { border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: .6rem; display: grid; gap: .35rem; justify-items: center; text-align: center; }
+  .sign .lbl { font-weight: 600; font-size: .92rem; }
+  .sign .dots { font-size: .75rem; }
+  .meter { width: 100%; height: 6px; border-radius: 999px; background: var(--card-2); overflow: hidden; }
+  .meter > span { display: block; height: 100%; background: var(--accent-2); }
+  .sign.unlearned { opacity: .55; }
+  .translate-box { display: grid; gap: .5rem; margin-top: 1rem; }
+  .translate-box textarea { width: 100%; min-height: 4rem; border: 1px solid var(--line-strong); border-radius: 8px; padding: .5rem; background: var(--card); }
+  .translate-out { border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 1rem; min-height: 3rem; }
+  .notice { border: 1px dashed var(--line-strong); border-radius: 10px; padding: .8rem 1rem; background: var(--card); }
+
+  @media (max-width: 560px) {
+    .ex-card { padding: .9rem; }
+    .braille.huge { --d: 18px; }
+    .dotpad { grid-template-columns: repeat(2, 3.6rem); grid-template-rows: repeat(3, 3.6rem); }
+  }
+  @media (prefers-reduced-motion: reduce) { .bar > span { transition: none; } }
+</style>
+</head>
+<body>
+<header class="app-header">
+  <a class="back-link" href="../index.html">← All tools</a>
+  <h1>Braille Reading Trainer</h1>
+  <div class="stats" aria-label="Your progress">
+    <span class="chip" title="Days in a row you met your daily goal">Streak <b id="statStreak">0</b></span>
+    <span class="chip" title="XP earned today, out of your daily goal">Today <b id="statToday">0</b>/<b id="statGoal">20</b> XP</span>
+    <span class="chip">Signs <b id="statSigns">0</b>/<b id="statSignsTotal">0</b></span>
+  </div>
+  <details class="settings" id="settingsMenu">
+    <summary>Settings</summary>
+    <div class="settings-pop">
+      <label>Empty dot outlines
+        <select id="setGhost">
+          <option value="auto">Automatic (single words, and everything during the alphabet)</option>
+          <option value="on">Always show</option>
+          <option value="off">Never show (like real braille)</option>
+        </select>
+      </label>
+      <label>Reading size
+        <input type="range" id="setSize" min="1" max="5" step="1">
+      </label>
+      <label>Daily goal
+        <select id="setGoal">
+          <option value="10">10 XP (casual)</option>
+          <option value="20">20 XP (regular)</option>
+          <option value="30">30 XP (serious)</option>
+          <option value="50">50 XP (intense)</option>
+        </select>
+      </label>
+      <button type="button" id="resetBtn">Reset all progress…</button>
+    </div>
+  </details>
+</header>
+
+<nav class="tabs" aria-label="Sections">
+  <button type="button" data-view="path" aria-pressed="true">Lessons</button>
+  <button type="button" data-view="practice" aria-pressed="false">Practice</button>
+  <button type="button" data-view="read" aria-pressed="false">Reading room</button>
+  <button type="button" data-view="signs" aria-pressed="false">All signs</button>
+</nav>
+
+<main>
+  <section id="viewPath" aria-labelledby="pathH">
+    <h2 id="pathH">Lessons</h2>
+    <div class="continue-card">
+      <p id="continueText"></p>
+      <button type="button" class="primary" id="continueBtn">Start</button>
+    </div>
+    <div id="pathList"></div>
+  </section>
+
+  <section id="viewPractice" aria-labelledby="practiceH" hidden>
+    <h2 id="practiceH">Practice</h2>
+    <p class="muted">Short sessions every day beat long ones once a week. Review brings back the signs that are due; a sign moves up only when you answer it right <em>and</em> quickly, because sight reading is about instant recognition.</p>
+    <div class="cards">
+      <div class="card">
+        <h3>Review due signs</h3>
+        <p id="dueText"></p>
+        <button type="button" class="primary" id="reviewBtn">Start review</button>
+      </div>
+      <div class="card">
+        <h3>Drill your weakest signs</h3>
+        <p>Fifteen questions on the signs you miss most or read slowest. No words, just signs.</p>
+        <button type="button" id="weakBtn">Start drill</button>
+      </div>
+      <div class="card">
+        <h3>60-second sprint</h3>
+        <p>As many signs as you can name in a minute. Builds the speed that turns decoding into reading. <span id="sprintBest"></span></p>
+        <button type="button" id="sprintBtn">Start sprint</button>
+      </div>
+    </div>
+    <p class="muted" id="practiceLocked" hidden>Finish the first lesson to unlock practice.</p>
+  </section>
+
+  <section id="viewRead" aria-labelledby="readH" hidden>
+    <h2 id="readH">Reading room</h2>
+    <div id="readLocked" class="notice" hidden>The reading room opens once you finish the <b>Punctuation</b> unit, when you can read any uncontracted sentence. Until then, the reading exercises in each lesson are your reading practice.</div>
+    <div id="readOpen">
+      <p class="muted">Timed reading of whole passages. Read the braille, press <b>Finished</b>, and see your words per minute. Click any word you cannot make out to peek at it; peeks are counted, so the goal is fewer peeks and a higher rate.</p>
+      <div class="read-controls">
+        <label for="readMode">Braille</label>
+        <select id="readMode">
+          <option value="learned">Contracted as far as I have learned</option>
+          <option value="grade1">Uncontracted (letters only)</option>
+          <option value="grade2">Fully contracted (UEB grade 2)</option>
+        </select>
+      </div>
+      <div class="passages" id="passageList"></div>
+      <details class="own-text">
+        <summary>Read your own text</summary>
+        <p class="muted">Paste anything (an article, a chapter, a letter) and read it in braille. It stays on this computer and is not saved.</p>
+        <label for="ownText" class="muted">Text to read</label>
+        <textarea id="ownText"></textarea>
+        <button type="button" id="ownBtn">Read this in braille</button>
+      </details>
+    </div>
+  </section>
+
+  <section id="viewSigns" aria-labelledby="signsH" hidden>
+    <h2 id="signsH">All signs</h2>
+    <div class="signs-tools">
+      <label><input type="checkbox" id="signsLearned"> Only signs I have learned</label>
+    </div>
+    <p class="muted">The bar under each sign is how well you know it: it fills as you answer it right and fast on separate days.</p>
+    <div id="signsList"></div>
+    <div class="translate-box">
+      <h3>Translate</h3>
+      <label for="trIn" class="muted">Type text to see it in braille (fully contracted UEB)</label>
+      <textarea id="trIn"></textarea>
+      <div class="translate-out" id="trOut"></div>
+    </div>
+  </section>
+
+  <section id="viewLesson" aria-labelledby="lessonH" hidden>
+    <h2 id="lessonH" class="visually-hidden"></h2>
+    <div class="lesson-top">
+      <button type="button" id="quitBtn">✕ Quit</button>
+      <div class="bar" role="progressbar" aria-label="Session progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar"><span id="barFill"></span></div>
+      <span class="clock" id="clock" hidden></span>
+    </div>
+    <div class="ex-card">
+      <p class="ex-prompt" id="exPrompt"></p>
+      <div class="ex-stage" id="exStage"></div>
+      <div id="exAnswer"></div>
+      <div class="ex-foot">
+        <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+        <button type="button" class="primary" id="checkBtn">Check</button>
+      </div>
+      <p class="hint-keys muted" id="hintKeys"></p>
+    </div>
+  </section>
+
+  <section id="viewResult" aria-labelledby="resultH" hidden>
+    <div class="result">
+      <h2 id="resultH"></h2>
+      <p id="resultText"></p>
+      <div class="result-stats" id="resultStats"></div>
+      <div id="resultSlow"></div>
+      <div class="actions">
+        <button type="button" class="primary" id="resultNext">Continue</button>
+        <button type="button" id="resultBack">Back</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="viewReader" aria-labelledby="readerH" hidden>
+    <div class="read-controls">
+      <button type="button" id="readerBack">← Reading room</button>
+      <h2 id="readerH" style="margin:0;font-size:1.1rem"></h2>
+    </div>
+    <div class="read-controls">
+      <button type="button" class="primary" id="readerGo">Start reading</button>
+      <span class="clock" id="readerClock">0:00</span>
+      <span class="muted" id="readerPeeks"></span>
+      <button type="button" id="readerPrint" aria-pressed="false">Show print</button>
+    </div>
+    <div class="reader-result" id="readerResult" role="status" aria-live="polite"></div>
+    <div class="reader-page" id="readerPage"></div>
+    <div class="print-text" id="readerPrintText" hidden></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  const C = window.BrailleCore;
+  const KEY = 'braille-trainer:state';
+  const $ = (id) => document.getElementById(id);
+  const today = () => C.dayNumber(new Date());
+
+  let state = load();
+  function load() {
+    let raw = null;
+    try { raw = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { raw = null; }
+    return C.normalizeState(raw);
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage full or blocked: progress lives for this visit only */ }
+  }
+  window.addEventListener('storage', (e) => { if (e.key === KEY) { state = load(); renderAll(); } });
+
+  // ── drawing braille ───────────────────────────────────────────────────
+  function el(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function cellEl(mask, numbered) {
+    const c = el('span', 'bcell');
+    for (let i = 0; i < 6; i++) {
+      const d = el('span', 'bdot' + (mask & (1 << i) ? ' on' : ''));
+      if (numbered) d.textContent = String(i + 1);
+      c.appendChild(d);
+    }
+    return c;
+  }
+  function describe(ascii) {
+    return C.cells(ascii).map((m) => (m === 0 ? 'space' : (C.dotsOf(m).length > 1 ? 'dots ' : 'dot ') + C.dotsOf(m))).join(', ');
+  }
+  // ascii → a .braille block. opts: { size, ghost, numbered, label }
+  function brailleEl(ascii, opts) {
+    const o = opts || {};
+    const wrap = el('span', 'braille' + (o.size ? ' ' + o.size : '') + (ghostOn(o.ghost, ascii) ? ' ghost' : '') + (o.numbered ? ' numbered' : ''));
+    wrap.setAttribute('role', 'img');
+    wrap.setAttribute('aria-label', o.label || ('Braille: ' + describe(ascii)));
+    for (const word of String(ascii).split(' ')) {
+      const w = el('span', 'bword');
+      for (const m of C.cells(word)) if (m >= 0) w.appendChild(cellEl(m, o.numbered));
+      wrap.appendChild(w);
+    }
+    return wrap;
+  }
+  // A lone word has no line around it to show where its dots sit (is that
+  // dots 1-4 or 2-5?), so "automatic" keeps the outlines on single words and
+  // drops them from sentences and passages once the alphabet is learned.
+  function ghostOn(force, ascii) {
+    if (force != null) return force;
+    if (state.settings.ghost === 'on') return true;
+    if (state.settings.ghost === 'off') return false;
+    if (ascii != null && !/ /.test(ascii)) return true;
+    const next = C.nextLesson(state.done);
+    return !next || C.unitById(next.unit).stage === 'alphabet';
+  }
+  const READ_SIZES = [5, 7, 9, 11, 14];
+
+  // ── navigation ────────────────────────────────────────────────────────
+  const VIEWS = ['path', 'practice', 'read', 'signs', 'lesson', 'result', 'reader'];
+  let currentTab = 'path';
+  function show(view) {
+    for (const v of VIEWS) $('view' + v[0].toUpperCase() + v.slice(1)).hidden = v !== view;
+    if (['path', 'practice', 'read', 'signs'].includes(view)) {
+      currentTab = view;
+      document.querySelectorAll('nav.tabs button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+    }
+    document.querySelector('nav.tabs').hidden = ['lesson', 'result'].includes(view);
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('nav.tabs button').forEach((b) => b.addEventListener('click', () => { renderTab(b.dataset.view); show(b.dataset.view); }));
+  function renderTab(v) {
+    if (v === 'path') renderPath();
+    if (v === 'practice') renderPractice();
+    if (v === 'read') renderRead();
+    if (v === 'signs') renderSigns();
+  }
+  function renderAll() { renderStats(); renderSettings(); renderTab(currentTab); }
+
+  function knownNow() { return C.knownFrom(state.done); }
+  function renderStats() {
+    const t = today();
+    $('statStreak').textContent = C.currentStreak(state, t);
+    $('statToday').textContent = state.today.day === t ? state.today.xp : 0;
+    $('statGoal').textContent = state.goal;
+    $('statSigns').textContent = knownNow().size;
+    $('statSignsTotal').textContent = Object.keys(C.ITEMS).length;
+  }
+
+  // ── settings ──────────────────────────────────────────────────────────
+  function renderSettings() {
+    $('setGhost').value = state.settings.ghost;
+    $('setSize').value = state.settings.size;
+    $('setGoal').value = String(state.goal);
+  }
+  $('setGhost').addEventListener('change', (e) => { state.settings.ghost = e.target.value; save(); renderTab(currentTab); });
+  $('setSize').addEventListener('input', (e) => { state.settings.size = +e.target.value; save(); applyReadSize(); });
+  $('setGoal').addEventListener('change', (e) => { state.goal = +e.target.value; save(); renderStats(); });
+  $('resetBtn').addEventListener('click', () => {
+    if (!confirm('Erase every lesson, review record, streak and reading score on this computer?')) return;
+    state = C.normalizeState(null);
+    save();
+    $('settingsMenu').open = false;
+    renderAll();
+  });
+
+  // ── the lesson path ───────────────────────────────────────────────────
+  function lessonName(l) {
+    const u = C.unitById(l.unit);
+    if (l.kind === 'review') return u.title + ': unit review';
+    return u.title + ': ' + l.items.map((id) => C.ITEMS[id].label.replace(/^[^a-z0-9]+ /i, '')).join(', ');
+  }
+  function renderPath() {
+    const next = C.nextLesson(state.done);
+    if (next) {
+      $('continueText').textContent = (Object.keys(state.done).length ? 'Next up: ' : 'Start here: ') + lessonName(next);
+      $('continueBtn').textContent = Object.keys(state.done).length ? 'Continue' : 'Start';
+      $('continueBtn').hidden = false;
+      $('continueBtn').onclick = () => startLesson(next.id);
+    } else {
+      $('continueText').textContent = 'You have finished every lesson: that is all of Unified English Braille’s contractions. Keep them sharp in Practice and build speed in the Reading room.';
+      $('continueBtn').hidden = true;
+    }
+    const list = $('pathList');
+    list.textContent = '';
+    for (const st of C.STAGES) {
+      const head = el('div', 'stage');
+      head.appendChild(el('h3', null, st.title));
+      head.appendChild(el('p', 'muted', st.blurb));
+      list.appendChild(head);
+      for (const u of C.UNITS.filter((x) => x.stage === st.id)) {
+        const box = el('div', 'unit');
+        const h = el('div', 'unit-head');
+        h.appendChild(el('h4', null, u.title));
+        const doneCount = u.lessons.filter((l) => state.done[l.id]).length;
+        h.appendChild(el('span', 'state muted', doneCount === u.lessons.length ? 'Complete' : doneCount + ' of ' + u.lessons.length + ' lessons'));
+        box.appendChild(h);
+        box.appendChild(el('p', null, u.intro));
+        const row = el('div', 'lessons');
+        for (const l of u.lessons) {
+          const b = el('button', 'lesson-btn', l.kind === 'review' ? 'Review' : String(l.n));
+          b.type = 'button';
+          const open = C.unlocked(state.done, l.id);
+          if (state.done[l.id]) b.classList.add('done');
+          if (next && next.id === l.id) b.classList.add('next');
+          b.disabled = !open;
+          b.setAttribute('aria-label', lessonName(l) + (state.done[l.id] ? ' (done)' : open ? '' : ' (locked)'));
+          b.title = lessonName(l);
+          b.addEventListener('click', () => startLesson(l.id));
+          row.appendChild(b);
+        }
+        if (!C.unlocked(state.done, u.lessons[0].id)) {
+          const t = el('button', 'test-out', 'Test out');
+          t.type = 'button';
+          t.setAttribute('aria-label', 'Test out of ' + u.title + ' and everything before it');
+          t.title = 'Already know this? Pass a 12-question check to skip ahead to here.';
+          t.addEventListener('click', () => startTestOut(u.id));
+          row.appendChild(t);
+        }
+        box.appendChild(row);
+        list.appendChild(box);
+      }
+    }
+  }
+
+  // ── practice tab ──────────────────────────────────────────────────────
+  function renderPractice() {
+    const known = knownNow();
+    const due = C.dueItems(known, state.items, today()).length;
+    const enough = known.size >= 4;
+    $('practiceLocked').hidden = enough;
+    $('reviewBtn').disabled = !enough;
+    $('weakBtn').disabled = !enough;
+    $('sprintBtn').disabled = !enough;
+    $('dueText').textContent = !enough ? 'Nothing to review yet.' : due ? due + (due === 1 ? ' sign is' : ' signs are') + ' due today, plus a few words and sentences.' : 'Nothing is due today. A review now strengthens your weakest signs.';
+    $('sprintBest').textContent = state.sprint.best ? 'Your best: ' + state.sprint.best + '.' : '';
+  }
+  $('reviewBtn').addEventListener('click', () => startRun('practice', C.buildPractice({ known: knownNow(), items: state.items, today: today() }), { known: knownNow() }));
+  $('weakBtn').addEventListener('click', () => startRun('practice', C.buildPractice({ known: knownNow(), items: state.items, today: today(), focus: 'weak' }), { known: knownNow() }));
+  $('sprintBtn').addEventListener('click', () => startRun('sprint', C.sprintQueue(knownNow(), Math.random, 400), { known: knownNow() }));
+
+  // ── a run of exercises (lesson, practice, sprint, test-out) ───────────
+  let run = null;
+  function startLesson(lessonId) {
+    const l = C.lessonById(lessonId);
+    const ex = C.buildLesson(lessonId, { items: state.items });
+    startRun('lesson', ex, { lessonId, known: C.knownThrough(lessonId), title: lessonName(l) });
+  }
+  function startTestOut(unitId) {
+    const u = C.unitById(unitId);
+    const known = C.knownThrough(u.lessons[u.lessons.length - 1].id);
+    // The unit's own signs plus a sample of everything before it.
+    const ex = C.buildLesson(u.lessons[u.lessons.length - 1].id, { items: {} }).slice(0, 12);
+    startRun('test', ex, { unitId, known, title: 'Test out: ' + u.title });
+  }
+  function startRun(kind, queue, opts) {
+    if (!queue.length) return;
+    run = Object.assign({ kind, queue: queue.slice(), i: 0, right: 0, answered: 0, requeued: new Set(), slow: {}, missed: {}, started: Date.now(), xp: 0 }, opts);
+    $('lessonH').textContent = opts.title || (kind === 'sprint' ? 'Sprint' : 'Practice');
+    $('clock').hidden = kind !== 'sprint';
+    if (kind === 'sprint') {
+      run.deadline = Date.now() + 60000;
+      run.timer = setInterval(tickSprint, 250);
+      tickSprint();
+    }
+    show('lesson');
+    renderExercise();
+  }
+  function tickSprint() {
+    const left = Math.max(0, run.deadline - Date.now());
+    $('clock').textContent = '0:' + String(Math.ceil(left / 1000)).padStart(2, '0');
+    $('barFill').style.width = (100 - left / 600) + '%';
+    if (left <= 0 && run.phase !== 'done') finishRun();
+  }
+  function stopTimer() { if (run && run.timer) { clearInterval(run.timer); run.timer = null; } }
+  $('quitBtn').addEventListener('click', () => {
+    if (run && run.kind !== 'sprint' && run.answered > 2 && !confirm('Quit? This session’s progress on signs is kept, but the lesson will not count as done.')) return;
+    stopTimer();
+    run = null;
+    renderAll();
+    show(currentTab);
+  });
+
+  function setProgress() {
+    if (run.kind === 'sprint') return;
+    const pct = Math.round((run.i / run.queue.length) * 100);
+    $('barFill').style.width = pct + '%';
+    $('bar').setAttribute('aria-valuenow', String(pct));
+  }
+
+  const PROMPTS = {
+    pickMeaning: 'What does this say?',
+    pickCell: 'Which of these is',
+    dots: 'Fill in the dots for',
+    readWord: 'Read this word, then type it.',
+    readSentence: 'Read this sentence. Which is it?'
+  };
+  function kindWord(it) {
+    if (it.kind === 'letter') return 'the letter';
+    if (it.kind === 'digit') return 'the number';
+    if (['groupsign', 'lower', 'final'].includes(it.kind)) return 'the letter group';
+    if (['wordsign', 'swordsign', 'strong', 'initial', 'shortform', 'lowerword'].includes(it.kind)) return 'the word';
+    return 'the';
+  }
+
+  function renderExercise() {
+    const ex = run.queue[run.i];
+    setProgress();
+    run.phase = 'answer';
+    run.choice = null;
+    run.dots = 0;
+    run.shownAt = performance.now();
+    const stage = $('exStage');
+    const ans = $('exAnswer');
+    stage.textContent = '';
+    ans.textContent = '';
+    $('feedback').textContent = '';
+    $('feedback').className = 'feedback';
+    $('checkBtn').textContent = 'Check';
+    $('checkBtn').disabled = ex.type !== 'learn';
+    $('hintKeys').textContent = '';
+
+    if (ex.type === 'learn') {
+      const it = C.ITEMS[ex.item];
+      $('exPrompt').textContent = 'New sign';
+      const box = el('div', 'learn-box');
+      box.appendChild(brailleEl(it.cells, { size: 'huge', ghost: true, numbered: true }));
+      box.appendChild(el('div', 'label', it.label));
+      box.appendChild(el('p', 'muted', describe(it.cells).replace(/, /g, ', then ')));
+      const why = buildHint(it);
+      if (why) box.appendChild(el('p', null, why));
+      if (it.note) box.appendChild(el('p', 'muted', it.note));
+      stage.appendChild(box);
+      $('checkBtn').textContent = 'Got it';
+      $('checkBtn').disabled = false;
+      $('checkBtn').focus();
+      return;
+    }
+    if (ex.type === 'pickMeaning') {
+      const it = C.ITEMS[ex.item];
+      $('exPrompt').textContent = PROMPTS.pickMeaning + (['wordsign', 'swordsign', 'lowerword', 'shortform', 'initial'].includes(it.kind) ? ' (standing alone as a word)' : '');
+      stage.appendChild(brailleEl(ex.cells, { size: 'huge' }));
+      optionButtons(ex.options.map((o) => ({ text: o, value: o })), false);
+    } else if (ex.type === 'pickCell') {
+      const it = C.ITEMS[ex.item];
+      $('exPrompt').textContent = PROMPTS.pickCell + ' ' + kindWord(it) + '…';
+      stage.appendChild(el('div', 'label', it.label));
+      optionButtons(ex.options.map((o, k) => ({ braille: o, value: o, label: 'Option ' + (k + 1) + ': ' + describe(o) })), false);
+    } else if (ex.type === 'dots') {
+      const it = C.ITEMS[ex.item];
+      $('exPrompt').textContent = PROMPTS.dots + ' ' + kindWord(it) + '…';
+      stage.appendChild(el('div', 'label', it.label));
+      const pad = el('div', 'dotpad');
+      pad.setAttribute('role', 'group');
+      pad.setAttribute('aria-label', 'Braille cell: dots 1 to 3 down the left, 4 to 6 down the right');
+      const keys = ['F', 'D', 'S', 'J', 'K', 'L'];
+      for (let i = 0; i < 6; i++) {
+        const b = el('button');
+        b.type = 'button';
+        b.dataset.dot = String(i + 1);
+        b.setAttribute('aria-pressed', 'false');
+        b.setAttribute('aria-label', 'Dot ' + (i + 1));
+        b.appendChild(document.createTextNode(String(i + 1)));
+        b.appendChild(el('small', null, keys[i]));
+        b.addEventListener('click', () => toggleDot(i));
+        pad.appendChild(b);
+      }
+      ans.appendChild(pad);
+      $('checkBtn').disabled = false;
+      $('hintKeys').textContent = 'Keys: F D S for dots 1 2 3, J K L for dots 4 5 6 (like a Perkins brailler). Enter checks.';
+    } else if (ex.type === 'readWord') {
+      $('exPrompt').textContent = PROMPTS.readWord;
+      stage.appendChild(brailleEl(ex.ascii, { size: 'big' }));
+      const row = el('div', 'type-answer');
+      const inp = el('input');
+      inp.type = 'text';
+      inp.id = 'typeIn';
+      inp.autocomplete = 'off';
+      inp.autocapitalize = 'off';
+      inp.spellcheck = false;
+      inp.setAttribute('aria-label', 'Type the word');
+      inp.addEventListener('input', () => { $('checkBtn').disabled = !inp.value.trim(); });
+      row.appendChild(inp);
+      ans.appendChild(row);
+      inp.focus();
+      $('hintKeys').textContent = 'Enter checks.';
+      return;
+    } else if (ex.type === 'readSentence') {
+      $('exPrompt').textContent = PROMPTS.readSentence;
+      stage.appendChild(brailleEl(ex.ascii, { size: 'big' }));
+      optionButtons(ex.options.map((o) => ({ text: o, value: o })), true);
+    }
+    if (ex.type !== 'dots') $('hintKeys').textContent = 'Keys: 1–' + ex.options.length + ' to choose, Enter to check.';
+    const first = ans.querySelector('button');
+    if (first) first.focus();
+  }
+  function buildHint(it) {
+    if (it.kind !== 'letter') return '';
+    const L = it.label;
+    const base = { k: 'a', l: 'b', m: 'c', n: 'd', o: 'e', p: 'f', q: 'g', r: 'h', s: 'i', t: 'j', u: 'a', v: 'b', x: 'c', y: 'd', z: 'e' }[L];
+    if (!base) return '';
+    return L + ' is ' + base + ' with ' + ('klmnopqrst'.includes(L) ? 'dot 3' : 'dots 3 and 6') + ' added.';
+  }
+  function optionButtons(opts, wide) {
+    const grid = el('div', 'options' + (wide ? ' wide' : ''));
+    opts.forEach((o, k) => {
+      const b = el('button', 'opt');
+      b.type = 'button';
+      b.dataset.value = o.value;
+      b.setAttribute('aria-pressed', 'false');
+      b.appendChild(el('span', 'key', String(k + 1)));
+      if (o.braille) {
+        b.appendChild(brailleEl(o.braille, { label: o.label }));
+        b.setAttribute('aria-label', o.label);
+      } else {
+        b.appendChild(el('span', null, o.text));
+      }
+      b.addEventListener('click', () => choose(k));
+      grid.appendChild(b);
+    });
+    $('exAnswer').appendChild(grid);
+  }
+  function choose(k) {
+    if (run.phase !== 'answer') return;
+    const btns = $('exAnswer').querySelectorAll('.opt');
+    if (!btns[k]) return;
+    btns.forEach((b, j) => b.setAttribute('aria-pressed', String(j === k)));
+    if (document.activeElement && document.activeElement.classList.contains('opt')) btns[k].focus();
+    run.choice = btns[k].dataset.value;
+    $('checkBtn').disabled = false;
+    if (run.kind === 'sprint') check();
+  }
+  function toggleDot(i) {
+    if (run.phase !== 'answer') return;
+    run.dots ^= 1 << i;
+    const b = $('exAnswer').querySelector('[data-dot="' + (i + 1) + '"]');
+    if (b) b.setAttribute('aria-pressed', String(!!(run.dots & (1 << i))));
+  }
+
+  function check() {
+    const ex = run.queue[run.i];
+    if (run.phase === 'feedback') return next();
+    if (ex.type === 'learn') { run.i++; return advance(); }
+    let ok = false;
+    let given = '';
+    if (ex.type === 'dots') { ok = run.dots === C.cells(ex.answer)[0]; given = run.dots; }
+    else if (ex.type === 'readWord') { given = $('typeIn').value; if (!given.trim()) return; ok = C.readingMatches(given, ex.text, run.known); }
+    else { if (run.choice == null) return; given = run.choice; ok = given === ex.answer; }
+    const ms = performance.now() - run.shownAt;
+    const firstTime = !ex.retry;
+    run.answered++;
+    if (firstTime && ok) run.right++;
+    if (ex.item && run.kind !== 'test') {
+      state.items[ex.item] = C.grade(state.items[ex.item], ok, ms, today());
+      if (ok && ms > C.FLUENT_MS) run.slow[ex.item] = true;
+      if (!ok) run.missed[ex.item] = true;
+    }
+    if (!ok && ['lesson', 'practice'].includes(run.kind) && !run.requeued.has(run.i)) {
+      run.requeued.add(run.i);
+      run.queue.push(Object.assign({}, ex, { retry: true }));
+    }
+    save();
+    showFeedback(ex, ok);
+    if (run.kind === 'sprint') {
+      setTimeout(() => { if (run && run.phase === 'feedback') next(); }, ok ? 250 : 900);
+    }
+  }
+  function showFeedback(ex, ok) {
+    run.phase = 'feedback';
+    const fb = $('feedback');
+    fb.textContent = '';
+    fb.className = 'feedback ' + (ok ? 'good' : 'bad');
+    fb.appendChild(el('span', null, ok ? 'Correct.' : 'Not quite.'));
+    if (!ok) {
+      const d = el('span', 'detail');
+      if (ex.type === 'pickCell' || ex.type === 'dots') {
+        d.appendChild(document.createTextNode('It is '));
+        d.appendChild(brailleEl(ex.answer, { size: 'small', ghost: true }));
+        d.appendChild(document.createTextNode(' (' + describe(ex.answer) + ').'));
+      } else if (ex.type === 'readWord') {
+        d.textContent = 'It says “' + ex.text + '”.';
+      } else {
+        d.textContent = 'It says “' + ex.answer + '”.';
+      }
+      fb.appendChild(d);
+    }
+    $('exAnswer').querySelectorAll('.opt').forEach((b) => {
+      b.disabled = true;
+      if (b.dataset.value === (ex.answer || '')) b.classList.add('right');
+      else if (b.getAttribute('aria-pressed') === 'true') b.classList.add('wrong');
+    });
+    const inp = $('typeIn');
+    if (inp) inp.readOnly = true;
+    $('exAnswer').querySelectorAll('.dotpad button').forEach((b) => { b.disabled = true; });
+    $('checkBtn').textContent = 'Continue';
+    $('checkBtn').disabled = false;
+    if (run.kind !== 'sprint') $('checkBtn').focus();
+  }
+  function next() {
+    run.i++;
+    advance();
+  }
+  function advance() {
+    if (run.kind === 'sprint' && Date.now() >= run.deadline) return finishRun();
+    if (run.i >= run.queue.length) return finishRun();
+    renderExercise();
+  }
+  $('checkBtn').addEventListener('click', check);
+
+  document.addEventListener('keydown', (e) => {
+    if (!run || $('viewLesson').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+    const inInput = e.target && e.target.tagName === 'INPUT';
+    if (e.key === 'Enter') {
+      const t = e.target;
+      if (t && t.closest && t.closest('.lesson-top')) return;
+      e.preventDefault();
+      if (t && t.classList && t.classList.contains('opt') && run.phase === 'answer') {
+        const k = Array.prototype.indexOf.call($('exAnswer').querySelectorAll('.opt'), t);
+        if (k >= 0 && run.kind !== 'sprint') choose(k);
+        else if (k >= 0) return choose(k);
+      }
+      if (!$('checkBtn').disabled) check();
+      return;
+    }
+    if (inInput || run.phase !== 'answer') return;
+    const ex = run.queue[run.i];
+    if (ex.type === 'dots') {
+      const k = 'fdsjkl'.indexOf(e.key.toLowerCase());
+      const n = '123456'.indexOf(e.key);
+      if (k >= 0 || n >= 0) { e.preventDefault(); toggleDot(k >= 0 ? k : n); }
+    } else if (ex.options && /^[1-9]$/.test(e.key)) {
+      e.preventDefault();
+      choose(+e.key - 1);
+    }
+  });
+
+  function finishRun() {
+    stopTimer();
+    run.phase = 'done';
+    const r = run;
+    const acc = r.answered ? Math.round((r.right / Math.max(1, r.queue.filter((x) => x.type !== 'learn' && !x.retry).length)) * 100) : 0;
+    let xp = 0;
+    let title = 'Session complete';
+    let text = '';
+    let nextAction = null;
+    if (r.kind === 'lesson') {
+      const l = C.lessonById(r.lessonId);
+      const firstTime = !state.done[l.id];
+      state.done[l.id] = true;
+      xp = 10 + (l.kind === 'review' ? 5 : 0) + (acc === 100 ? 5 : 0);
+      title = l.kind === 'review' ? 'Unit complete!' : 'Lesson complete!';
+      text = firstTime ? lessonName(l) : 'Practised again: ' + lessonName(l);
+      const n = C.nextLesson(state.done);
+      if (n) nextAction = { label: 'Next lesson', go: () => startLesson(n.id) };
+      if (C.lessonById(r.lessonId).unit === C.READING_UNLOCK && C.readingOpen(state.done)) text += ' The reading room is now open.';
+    } else if (r.kind === 'practice') {
+      xp = 5 + Math.round(r.right / 2);
+      title = 'Practice complete';
+      nextAction = { label: 'Another round', go: () => $('reviewBtn').click() };
+    } else if (r.kind === 'sprint') {
+      xp = Math.max(1, Math.round(r.right / 3));
+      title = r.right + ' right in 60 seconds';
+      if (r.right > state.sprint.best) { text = state.sprint.best ? 'A new best (was ' + state.sprint.best + ').' : 'Your first sprint.'; state.sprint.best = r.right; }
+      else text = 'Your best is ' + state.sprint.best + '.';
+      nextAction = { label: 'Sprint again', go: () => $('sprintBtn').click() };
+    } else if (r.kind === 'test') {
+      const u = C.unitById(r.unitId);
+      const passed = acc >= 85;
+      title = passed ? 'Passed!' : 'Not this time';
+      if (passed) {
+        const last = u.lessons[u.lessons.length - 1].index;
+        const t = today();
+        for (const l of C.LESSONS) {
+          if (l.index > last) break;
+          state.done[l.id] = true;
+          for (const id of l.items) if (!state.items[id]) state.items[id] = { b: 2, due: t + 2, n: 0, ok: 0, ms: 0 };
+        }
+        xp = 15;
+        text = 'Everything up to and including ' + u.title + ' is marked done. Review will check those signs over the next few days.';
+      } else {
+        text = 'You need 85% to skip ahead (you got ' + acc + '%). Working through the lessons will get you there quickly.';
+      }
+    }
+    C.addXp(state, xp, today());
+    save();
+    $('resultH').textContent = title;
+    $('resultText').textContent = text;
+    const stats = $('resultStats');
+    stats.textContent = '';
+    const stat = (big, small) => { const d = el('div'); d.appendChild(el('b', null, big)); d.appendChild(el('span', 'muted', small)); stats.appendChild(d); };
+    stat('+' + xp, 'XP');
+    if (r.kind !== 'sprint') stat(acc + '%', 'right first time');
+    stat(fmtTime(Date.now() - r.started), 'time');
+    const slowBox = $('resultSlow');
+    slowBox.textContent = '';
+    const tricky = Object.keys(Object.assign({}, r.missed, r.slow)).slice(0, 8);
+    if (tricky.length && r.kind !== 'test') {
+      slowBox.appendChild(el('p', 'muted', 'Worth another look (missed or slow):'));
+      const list = el('div', 'slow-list');
+      for (const id of tricky) {
+        const f = el('figure');
+        f.appendChild(brailleEl(C.ITEMS[id].cells, { ghost: true }));
+        f.appendChild(el('figcaption', null, C.ITEMS[id].label));
+        list.appendChild(f);
+      }
+      slowBox.appendChild(list);
+    }
+    $('resultNext').hidden = !nextAction;
+    $('resultNext').textContent = nextAction ? nextAction.label : '';
+    $('resultNext').onclick = nextAction ? nextAction.go : null;
+    const backTo = r.kind === 'lesson' || r.kind === 'test' ? 'path' : 'practice';
+    $('resultBack').textContent = backTo === 'path' ? 'Back to lessons' : 'Back to practice';
+    $('resultBack').onclick = () => { renderAll(); renderTab(backTo); show(backTo); };
+    run = null;
+    renderStats();
+    show('result');
+    ($('resultNext').hidden ? $('resultBack') : $('resultNext')).focus();
+  }
+  function fmtTime(ms) {
+    const s = Math.round(ms / 1000);
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  // ── reading room ──────────────────────────────────────────────────────
+  function readingKnown(mode) {
+    if (mode === 'grade2') return null;
+    if (mode === 'grade1') return new Set(Object.keys(C.ITEMS).filter((id) => ['letter', 'digit', 'punct', 'indicator'].includes(C.ITEMS[id].kind)));
+    const k = knownNow();
+    // Letters and punctuation are all learned by the time the room opens.
+    for (const id in C.ITEMS) if (['letter', 'digit', 'punct', 'indicator'].includes(C.ITEMS[id].kind)) k.add(id);
+    return k;
+  }
+  function renderRead() {
+    const open = C.readingOpen(state.done);
+    $('readLocked').hidden = open;
+    $('readOpen').hidden = !open;
+    if (!open) return;
+    $('readMode').value = state.settings.mode;
+    const list = $('passageList');
+    list.textContent = '';
+    for (const p of C.PASSAGES) {
+      const row = el('div', 'passage-row');
+      row.appendChild(el('span', 't', p.title));
+      row.appendChild(el('span', 'muted', 'Level ' + p.level + ' · ' + C.wordCount(p.text) + ' words'));
+      const rec = state.reading[p.id];
+      row.appendChild(el('span', 'meta muted', rec ? 'Best ' + rec.best + ' wpm · read ' + rec.times + '×' : 'Not read yet'));
+      const b = el('button', null, rec ? 'Read again' : 'Read');
+      b.type = 'button';
+      b.setAttribute('aria-label', (rec ? 'Read again: ' : 'Read: ') + p.title);
+      b.addEventListener('click', () => openReader(p.title, p.text, p.id));
+      row.appendChild(b);
+      list.appendChild(row);
+    }
+  }
+  $('readMode').addEventListener('change', (e) => { state.settings.mode = e.target.value; save(); });
+  $('ownBtn').addEventListener('click', () => {
+    const t = $('ownText').value.trim();
+    if (t) openReader('Your text', t.slice(0, 20000), null);
+  });
+
+  let reader = null;
+  function applyReadSize() {
+    $('readerPage').style.setProperty('--d', READ_SIZES[state.settings.size - 1] + 'px');
+  }
+  function openReader(title, text, id) {
+    const known = readingKnown(state.settings.mode);
+    reader = { title, text, id, known, started: 0, peeks: 0, done: false };
+    $('readerH').textContent = title;
+    $('readerResult').textContent = '';
+    $('readerPeeks').textContent = '';
+    $('readerClock').textContent = '0:00';
+    $('readerGo').textContent = 'Start reading';
+    $('readerGo').disabled = false;
+    $('readerPrint').setAttribute('aria-pressed', 'false');
+    $('readerPrintText').hidden = true;
+    $('readerPrintText').textContent = text;
+    applyReadSize();
+    const page = $('readerPage');
+    page.textContent = '';
+    const cover = el('div', 'reader-cover');
+    cover.appendChild(el('p', null, C.wordCount(text) + ' words. Press Start reading when you are ready; the clock starts with it.'));
+    page.appendChild(cover);
+    show('reader');
+    $('readerGo').focus();
+  }
+  function drawPassage() {
+    const page = $('readerPage');
+    page.textContent = '';
+    const ghost = ghostOn();
+    const paras = reader.text.replace(/\r/g, '').split(/\n+/).filter((p) => p.trim());
+    let n = 0;
+    for (const para of paras) {
+      const div = el('div', 'para braille' + (ghost ? ' ghost' : ''));
+      for (const word of para.trim().split(/\s+/)) {
+        const ascii = C.translate(word, reader.known).ascii;
+        const b = el('button', 'bw');
+        b.type = 'button';
+        n++;
+        b.setAttribute('aria-label', 'Word ' + n + ': show its print');
+        const cellsRow = el('span', 'bword');
+        cellsRow.style.marginRight = '0';
+        for (const m of C.cells(ascii)) if (m >= 0) cellsRow.appendChild(cellEl(m, false));
+        b.appendChild(cellsRow);
+        b.addEventListener('click', () => {
+          if (b.querySelector('.peek')) return;
+          b.appendChild(el('span', 'peek', word));
+          b.setAttribute('aria-label', 'Word ' + n + ': ' + word);
+          if (!reader.done) { reader.peeks++; $('readerPeeks').textContent = reader.peeks + (reader.peeks === 1 ? ' peek' : ' peeks'); }
+        });
+        div.appendChild(b);
+      }
+      page.appendChild(div);
+    }
+  }
+  $('readerGo').addEventListener('click', () => {
+    if (!reader) return;
+    if (!reader.started) {
+      reader.started = Date.now();
+      drawPassage();
+      $('readerGo').textContent = 'Finished';
+      reader.tick = setInterval(() => { $('readerClock').textContent = fmtTime(Date.now() - reader.started); }, 500);
+      return;
+    }
+    if (reader.done) return;
+    reader.done = true;
+    clearInterval(reader.tick);
+    const ms = Date.now() - reader.started;
+    const rate = C.wpm(reader.text, ms);
+    $('readerClock').textContent = fmtTime(ms);
+    $('readerGo').disabled = true;
+    let msg = rate + ' words per minute' + (reader.peeks ? ', ' + reader.peeks + (reader.peeks === 1 ? ' peek.' : ' peeks.') : ', no peeks.');
+    if (reader.id) {
+      const rec = state.reading[reader.id] || { best: 0, last: 0, times: 0 };
+      if (rate > rec.best && rec.times) msg += ' A new best (was ' + rec.best + ').';
+      rec.best = Math.max(rec.best, rate);
+      rec.last = rate;
+      rec.times++;
+      state.reading[reader.id] = rec;
+    }
+    C.addXp(state, 5 + Math.min(20, Math.round(C.wordCount(reader.text) / 10)), today());
+    save();
+    renderStats();
+    $('readerResult').textContent = msg + ' Check yourself against the print below.';
+    $('readerPrintText').hidden = false;
+    $('readerPrint').setAttribute('aria-pressed', 'true');
+  });
+  $('readerPrint').addEventListener('click', () => {
+    if (!reader) return;
+    const on = $('readerPrint').getAttribute('aria-pressed') !== 'true';
+    if (on && reader.started && !reader.done) reader.peeks += 5;
+    $('readerPrint').setAttribute('aria-pressed', String(on));
+    $('readerPrintText').hidden = !on;
+    if (reader.started && !reader.done) $('readerPeeks').textContent = reader.peeks + ' peeks (the whole print counts as 5)';
+  });
+  $('readerBack').addEventListener('click', () => {
+    if (reader && reader.tick) clearInterval(reader.tick);
+    reader = null;
+    renderRead();
+    show('read');
+  });
+
+  // ── all signs ─────────────────────────────────────────────────────────
+  function renderSigns() {
+    const onlyLearned = $('signsLearned').checked;
+    const known = knownNow();
+    const list = $('signsList');
+    list.textContent = '';
+    for (const u of C.UNITS) {
+      const ids = u.items.filter((id) => !onlyLearned || known.has(id));
+      if (!ids.length) continue;
+      const sec = el('div', 'sign-unit');
+      sec.appendChild(el('h3', null, u.title));
+      const grid = el('div', 'sign-grid');
+      for (const id of ids) {
+        const it = C.ITEMS[id];
+        const card = el('div', 'sign' + (known.has(id) ? '' : ' unlearned'));
+        card.appendChild(brailleEl(it.cells, { ghost: true }));
+        card.appendChild(el('span', 'lbl', it.label));
+        card.appendChild(el('span', 'dots muted', C.cells(it.cells).map((m) => C.dotsOf(m)).join(' / ')));
+        const meter = el('span', 'meter');
+        meter.setAttribute('role', 'img');
+        const pct = Math.round(C.strength(state.items[id]) * 100);
+        meter.setAttribute('aria-label', known.has(id) ? 'Strength ' + pct + '%' : 'Not learned yet');
+        const fill = el('span');
+        fill.style.width = pct + '%';
+        meter.appendChild(fill);
+        card.appendChild(meter);
+        grid.appendChild(card);
+      }
+      sec.appendChild(grid);
+      list.appendChild(sec);
+    }
+  }
+  $('signsLearned').addEventListener('change', renderSigns);
+  $('trIn').addEventListener('input', () => {
+    const out = $('trOut');
+    out.textContent = '';
+    const text = $('trIn').value.slice(0, 2000);
+    if (!text.trim()) return;
+    for (const line of C.translate(text, null).ascii.split('\n')) {
+      const d = el('div');
+      d.appendChild(brailleEl(line, { label: 'Braille translation' }));
+      out.appendChild(d);
+    }
+  });
+
+  // Read-only test hook.
+  window.__brailleTrainer = { state: () => JSON.parse(JSON.stringify(state)), run: () => run && { kind: run.kind, i: run.i, ex: run.queue[run.i] } };
+
+  renderAll();
+  show('path');
+})();
+</script>
+<script src="../_shared/sw-register.js" defer></script>
+</body>
+</html>

@@ -9,6 +9,64 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 088 Braille Reading Trainer, a new tool at Devon's request (2026-10-02, `CACHE_VERSION` v214)
+
+Not a backlog row: Devon asked for it directly ("Duolingo, but braille… I'm not sure what
+category this would belong to… idk what the best training profile is"). Those two open
+questions were decided here, and both are cheap to reverse.
+
+**Category: World Language** (now 8 tools). Braille is a code for English rather than a
+language, but the tool is a self-paced reading-literacy course with vocabulary-style drill,
+which is what that section holds. Nothing else in the toolkit is a learner-facing course; this
+one is for the adult at the keyboard, so it is not "promoting anything student-facing". The
+registry marks its one key as not student data.
+
+**The training profile**, in order of how much it shapes the tool:
+- **Unified English Braille**, the US standard since 2016, not EBAE. 212 signs in 22 units
+  and 86 lessons (`bt-core.js`): the alphabet by decades (a–j, then +dot 3, then +dots 3-6,
+  then w), capitals, numbers, punctuation; then the contractions; then the two-cell
+  contractions and endings; then 58 shortforms. Signs that share a cell (`his` and the
+  opening quote, `ch` and `child`) are separate items, never offered as each other's
+  distractor.
+- **Recognition first, production second.** Each lesson: a card with numbered dots, then
+  "what does this say", then "fill in the dots" on a Perkins-style F D S / J K L pad, then
+  mixed questions, then words and a sentence built *only* from signs already learned. A miss
+  is re-asked at the end of the lesson.
+- **Mirror images are the first distractors** (d/f, e/i, h/j), then cells one dot away. That
+  is the confusion sighted readers actually have.
+- **Leitner boxes that need speed:** a right answer slower than 4 s does not move a sign up.
+  Sight reading is instant recognition, and a box system that rewards slow decoding would
+  report fluency that is not there. A miss drops two boxes.
+- **Reading room after punctuation**, with passages contracted *only as far as the reader has
+  learned*, so the same text gets denser as they progress, plus uncontracted and full
+  grade 2 modes, words per minute, and click-to-peek. Ten original passages; paste-your-own
+  for "large pieces of text".
+- Daily goal and streak, as Duolingo does; a 60-second sprint for speed; test-out for anyone
+  who already knows part of it.
+
+**The translator contracts conservatively, on purpose.** Fewest cells wins and a tie takes the
+longer sign (that is how "near" becomes n-ea-r). Where UEB needs knowledge a spelling cannot
+give, it spells the letters out instead: `be`/`con`/`dis` only for a whitelist of first-syllable
+stems; initial-letter contractions only as whole words, or with a plural s; no
+contraction through an apostrophe. Under-contracted braille is still correct to read, and
+over-contracted braille would teach a wrong sign. **Not verified against a certified
+transcriber or a reference translator (liblouis).** The 60-odd spellings in
+`core.test.mjs` are hand-checked. "coffee", "offer" and "office" were dropped from the word
+list because the of/ff choice in them is one this session was not sure of. A
+liblouis comparison is the obvious next step if anyone doubts a spelling.
+
+**Display:** cells are drawn with spans (dot pitch to cell pitch about 1:2.4, close to real
+braille), not Unicode braille characters, whose glyphs vary by font. Empty-dot outlines show
+during the alphabet and always on a lone word, because a single cell has no line to judge its
+height against (`cc` is `c` one row down). Settings can force them on or off.
+
+**What was not done:** no tool icon in the sprite (the row has none, like 087 had at first). No
+audio. No tactile or embosser output. The sprint and the path have no phone-specific layout
+beyond wrapping. Tests: `core.test.mjs` (275 assertions, pure Node) and
+`smoke-braille-trainer.mjs` (48, Playwright, including axe on the lesson, reader and path).
+
+---
+
 ## AI-34 (part): the two suites that failed only on Windows (2026-10-01, `CACHE_VERSION` v213)
 
 From the 2026-10-01 audit's AI-34. Only this part is done. Its other items (the missing guard

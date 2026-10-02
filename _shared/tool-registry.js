@@ -1450,6 +1450,16 @@
       ],
     },
     {
+      slug: 'braille-reading-trainer',
+      title: 'Braille Reading Trainer',
+      file: 'Tools/088-braille-reading-trainer.html',
+      category: 'world-language',
+      /* One person's own lesson progress, review boxes and reading speeds. */
+      keys: [
+        { k: 'braille-trainer:state' },
+      ],
+    },
+    {
       slug: 'pe-tournament-station-rotation',
       title: 'Tournament Bracket & Station Rotation',
       file: 'Tools/021-pe-tournament-stations.html',
