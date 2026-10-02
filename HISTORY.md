@@ -9,6 +9,86 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## The accessibility group: the contrast round, `--line-strong` at 3:1, a seeded axe sweep (2026-10-02, AI-07, `CACHE_VERSION` v215)
+
+Three rows worked as one batch: old rank 5 (the contrast round), rank 6 (light `--line-strong`)
+and rank 12 (the axe sweep only ever saw empty storage). All three are deleted, and the table
+is renumbered to 180 rows.
+
+**The contrast round. The audit said 21 allowances; the repo had 14** (14 pages, all
+`color-contrast`), and every one is fixed in the tool, not allowed. `allowlist.json` is now
+`"pages": {}`. Fixed by family:
+- **002, 016, 018, 038**, the four pages on the old private dark palette: `--text-dim` went from
+  `#7b82a8` (4.48 on `--surface`, 3.98 on `--surface2`) to `#8a91b6` (5.45 / 4.84). The checked
+  toggle label is `var(--bg)` on `--accent` (6.13), not white (3.07). 038's empty hint sits on
+  the white chart stage and gets its own `#5a6080`.
+- **012, 026, 028, 039, 040**, muted text on the grey `--desk` mat (3.76): a page token,
+  `--desk-muted`, which is `#53524b` in light (5.44) and `var(--muted)` in dark.
+- **005, 029**, text muted by `opacity` (0.5–0.65): raised to 0.7–0.8. 029's red privacy banner
+  had inherited `header.page-head p { opacity: .65 }` (2.88:1); the banner is excluded now.
+- **007**: white on `#e94560` is 3.83. The default theme names an `--accent-fill` of `#c9304a`
+  (5.24) for the two filled buttons; `applyTheme()` sets it to each theme's accent otherwise.
+  **Not checked: the other ten 007 themes.** The sweep only sees the default.
+- **035**, default palette only: `--accent-dk` is `#1d4ed8` (5.49 on `--accent-lt`), the
+  onboarding button fills with `--accent-dk`, the right panel's empty text is `--slate-500`, and
+  the footer version is `--navy-300`. **Not checked: green-gold.** White on its `--accent-dk`
+  is 3.88, better than the 3.67 it had and still short.
+- **index.html.** The "unstable count" (8/24/35 with the file untouched) was the entrance
+  choreography. Categories fade in on a stagger that outlasts the sweep's 500 ms settle, so axe
+  read whichever were mid-fade. **The sweep now finishes every finite CSS animation before it
+  scans** (`finishAnimations`), so it measures the state a teacher looks at. That exposed
+  one real failure the fade had hidden. The "Reviewed" stamp lands at opacity .8, which is 3.88:1
+  in `--pen`. It lands at .9 now (4.95).
+
+**`--line-strong`.** Light was `#c3c0b6`, 1.82:1 on card. It is now `#8c897f`: 3.50 on card,
+3.35 on paper, 3.07 on card-2. **Dark failed too and nobody had said so.** `#626c78` is 3.00 on
+card, which is what the ink-paper header quoted, but 2.64 on card-2. It is now `#6e7885`, 3.14 at
+worst. `smoke-theme.mjs` computes all six pairs from `ink-paper.css` and fails under 3:1, because
+axe never checks a border. 037's SVG chart strokes hard-coded `#c3c0b6` and follow the new
+value. **This is a visible restyle of every ink-paper page**, and the reason it had been
+deferred; control edges are darker everywhere. **The Blender art**, the hero, 071's pictures
+and the test tile, was rendered with the old light value. Re-rendering would come out a shade
+darker, and `check:art` does not notice, since it checks token names, not values.
+
+**The seeded sweep.** `smoke-a11y-sweep.mjs` scans every page empty, then scans again, labelled
+`[seeded]`, any page with saved state worth showing. It writes `Tools/a11y-sweep/seeds.mjs`
+before the page's first script runs:
+- the shared `np_rosters` on every page the registry says reads or writes it;
+- a per-tool fixture for the 13 tools whose violations had shipped from behind saved state
+  (001, 003, 009, 027, 030, 037, 042, 043, 046, 068, 073, 075, 077).
+
+The fixtures came from those tools' own suites where one already seeded the key, and from their
+`load()` code where none did. **Each was checked to render**, by comparing the empty and seeded
+page: 075's directory goes from 0 to 18 inputs, 077's grid 0 to 9, 073's 1 to 10 checkboxes,
+030's board 0 to 4 cells, and 001's history appears. 36 pages get a second scan, and the sweep
+takes about 3 minutes (it took 2). A seeded state has its own allowlist key, `<page> [seeded]`,
+and a seed that raises a page error fails. `--empty-only` skips the pass.
+
+**It found nothing.** The row said "expect the allowlist to grow"; it did not. Every earlier
+instance (#202–#227) had already been fixed where it was found, and these seeds reach the same
+states. The decision on what a seed cannot reach: **it belongs to per-tool suites, not to the
+sweep.** That means a mode the tool always opens out of (003's Score view, 042's grid view), a
+dialog, or 046's toolbar toggle over a calibrated map. `harness.a11yScan()` after a suite's own
+prep is how #227 found 001's projector note. `seeds.mjs`'s header lists the known ones. Picking
+a roster in a `<select>` and pressing Load was considered as a generic prep and not built: the
+loaders differ per tool, and a wrong click opens dialogs.
+
+**What did not work, or was not verified.**
+- `Tools/share/test/smoke-share-rollout.mjs` crashes on huginn at 047
+  (`ERR_INSUFFICIENT_RESOURCES`, then "Target crashed"). It crashes **identically on an
+  untouched `HEAD`** in a detached worktree, so this change did not cause it. It is a resource
+  limit of this machine; the suite keeps one page per case open. CI is the authority.
+- The full local run (181 suites, 44.5 min) had four red suites, none of them from this batch.
+  `schedule/test/smoke.mjs` hit EADDRINUSE on 8137 and passes alone (42/42). Share-rollout is
+  the crash above. `class-screen/smoke-widgets` and `smoke-periods` time out because the
+  `.a11y-widget` intercepts a click. **Both fail the same way at `5fa226e`**, before this
+  batch, so they are not this batch's; not root-caused. Everything else passed.
+- Dark mode is not swept. A manual dark pass with `gvb-a11y-prefs` showed 005 and 029, both still
+  on a11y.css's invert filter, failing heavily. axe reads colours before the CSS `filter`, so
+  those are probably false positives, but not proven.
+- The batch was not claimed in the Claimed column before work began. This round was run from
+  the audit queue (`BACKLOG-AUDIT-2026-10-01.md`), with one worker in the repo.
+
 ## Path 21 P4, 046: shaded relief under the World base map, and Path 21 is finished (2026-10-01, AI-03, `CACHE_VERSION` v213)
 
 Rank 1 was a 1-session row: a shaded-relief layer under 046's default world base map, from a
