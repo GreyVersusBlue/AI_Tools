@@ -1,3 +1,12 @@
+# Every text file is LF in the working tree on every machine (AI-34, 2026-10-01).
+# Git for Windows ships core.autocrlf=true in its system gitconfig, so without
+# this a Windows clone checks text out as CRLF while CI's Linux checkout is LF.
+# The index was already all LF; this only changes what Windows writes to disk.
+# Suites and guards read source files and search them for a newline followed by "}":
+# schedule-browser/smoke-dark-theme failed on Windows alone because of it, and
+# would have been the first of several. text=auto still leaves binaries alone.
+* text=auto eol=lf
+
 # Path 21 art: SVG is text and must hash the same on every checkout, so it is
 # kept LF in the working tree even with core.autocrlf=true. The validator also
 # strips CR before hashing SVG; this makes the file on disk match as well.
