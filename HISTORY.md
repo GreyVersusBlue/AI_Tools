@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## Landing three sessions' stranded work: AI-03, AI-07, AI-09 (2026-10-02, `CACHE_VERSION` v215)
+## Landing three sessions' stranded work: AI-03, AI-07, AI-09 (2026-10-02, #326, `CACHE_VERSION` v215)
 
 Three sessions (AI-03 on 2026-10-01, AI-07 and AI-09 on the morning of 2026-10-02) committed straight
 to huginn's local `main` and never pushed; meanwhile origin took #323 (v213), #324 (v214) and #325. AI-03

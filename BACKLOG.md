@@ -80,7 +80,7 @@ done).*
 **Why it is short.** It had grown to ~1,900 lines of handoffs by 2026-09-23; those moved
 verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12"). Search there for a PR number.
 
-**Last merged: this PR, which landed three sessions' work that had been committed only to huginn's local
+**Last merged: #326, which landed three sessions' work that had been committed only to huginn's local
 `main` (AI-03, AI-07, AI-09; `CACHE_VERSION` v215).** Old rank 1 (Path 21 P4, 046's shaded relief; Path 21 is
 finished), old ranks 5, 6 and 12 (the accessibility group) and old rank 8 (`check:entities` follows arrays).
 - The 14 `color-contrast` allowances are fixed in the tools and `allowlist.json` is **empty**. The sweep
