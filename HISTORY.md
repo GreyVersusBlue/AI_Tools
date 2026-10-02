@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## 088 Braille Reading Trainer, a new tool at Devon's request (2026-10-02, `CACHE_VERSION` v214)
+## 088 Braille Reading Trainer, a new tool at Devon's request (2026-10-02, #324, `CACHE_VERSION` v214)
 
 Not a backlog row: Devon asked for it directly ("Duolingo, but braille… I'm not sure what
 category this would belong to… idk what the best training profile is"). Those two open

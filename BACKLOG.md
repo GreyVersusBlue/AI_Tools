@@ -72,7 +72,7 @@ without claiming or editing them and takes the next unclaimed row that is not Pa
 
 ## Where things stand — start here
 
-*Current as of `main` after #321, 2026-10-01. **Keep this section under ~80 lines.** It is
+*Current as of `main` after #324, 2026-10-02. **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -81,7 +81,11 @@ done).*
 **Why it is short.** It had grown to ~1,900 lines of handoffs by 2026-09-23; those moved
 verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12"). Search there for a PR number.
 
-**Last merged: #321, Path 4 P4 increment 11, 035's floor-plan trace images. `CACHE_VERSION` v211. The
+**Last merged: #324, a new tool outside the ranked list: 088 Braille Reading Trainer (`CACHE_VERSION`
+v214), asked for directly by Devon.** World Language, now 8 tools; 212 UEB signs, 86 lessons, spaced review,
+a reading room. Its translator is hand-checked, not checked against liblouis (`HISTORY.md`). No ranks moved.
+
+**Before that, #321, Path 4 P4 increment 11, 035's floor-plan trace images. `CACHE_VERSION` v211. The
 row is deleted and Path 4 P4 is finished.**
 - Each floor's trace image is a Blob in `gvb-media` (`stviz-trace/`), and `traceImage.dataUrl` holds
   `idb:<id>`, through `Tools/schedule-visualizer/sv-trace-image.js`. It keeps a data-URL cache, like
@@ -126,7 +130,7 @@ row is deleted and Path 4 P4 is finished.**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v211` — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v214` — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **308** in `PRECACHE_URLS`, **93** in `SHELL_URLS`. Bytes last summed on Devon's Windows checkout after #267 (11.21 MB / 2.52 MB), not re-measured. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
 | Suites | **182** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
