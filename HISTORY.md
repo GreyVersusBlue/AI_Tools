@@ -9,6 +9,17 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Small docs and copy fixes: README URL, 028's upload hint, the Tier 1 count (2026-10-02, AI-12, `CACHE_VERSION` v217)
+
+- **README "Live site"** now names <https://aspermylessonplan.com> (the `CNAME`) instead of the placeholder. Its tools
+  table has 87 rows against 87 `Tools/*.html` pages, none missing.
+- **028's source-description hint** no longer says "there's no image upload"; it points at the link and upload fields below.
+- **`BACKLOG.md`'s Tier 1 intro** said ranks ran 1..189; the table has 176 rows, so it says 1..176. The "Found in #290"
+  bullet in the header went with the 028 fix.
+- **Not done: `regionGroupCaption()` (rank 84) stays.** The only copy is in `Tools/blank-map-generator/bmg-legend.js`,
+  and a sweep for `slice(0, -1).join` and "and N more" found no second list-to-sentence formatter anywhere. Moving it to
+  `_shared/` now would be a shared file with one consumer; the row waits for a second.
+
 ## Dead-weight cleanup: four dead trees, unreferenced seating fonts, five missing `@font-face` files (2026-10-02, AI-11, `CACHE_VERSION` v216)
 
 Old ranks 81, 82 and 83, deleted; the table is renumbered to 176 rows.

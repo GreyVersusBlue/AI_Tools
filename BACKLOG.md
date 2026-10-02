@@ -99,7 +99,6 @@ row is deleted and Path 4 P4 is finished.**
 **Before that, #317** (030's board art, v210), **#315** (042's seals, v209), **#313** (071's twelve starter pictures, v208: a pin on any 071 picture was lost on reload, fixed), **#311** (080's piece atlas, v207), **#308** (the landing hero, v206), **#306** (the PWA app mark, v205), **#304** (064's card photos, v204) and **#302** (030's clue images, v203).
 - `MediaDB.images({ ns, owner })` in `_shared/media-db.js` is the one copy of the shared image
   layer (#294). A future image-bearing tool uses it and writes no new copy.
-- **Found in #290, not fixed:** 028's source-description hint still says "there's no image upload".
 - **On Devon's Windows checkout two suites fail locally that CI passes:** `schedule-browser/
   smoke-dark-theme` (CRLF) and `music-sightreading-generator/smoke-glyph-fallback` (font
   metrics). Not root-caused.
@@ -225,7 +224,7 @@ session hitting one of these ships rather than stalls.
 
 ## Tier 1 — the ranked index
 
-Ranks are a single contiguous 1..189 order with no ties. **Area** is a tool number,
+Ranks are a single contiguous 1..176 order with no ties. **Area** is a tool number,
 `_shared/`, or `site`. **Size** is quarter / half / one / two-plus sessions. **Claimed** is the
 concurrency mechanism described above — leave it empty unless you are working the row.
 **Detail** links to the section in Tier 2 that carries the idea in full.
