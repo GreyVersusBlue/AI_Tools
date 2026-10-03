@@ -35,14 +35,12 @@
      step stronger than 001's --info-line, which is a note border rather than a
      chip's. --err-bg is 001's, for the danger hover. */
   :root {
-    --info-bg: #eaf1f5; --info-line: #9dc4f0; --info-ink: #1f5ea3;
+    --info-line: #9dc4f0; --info-ink: #1f5ea3;
     --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
-    --err-bg: #fbecea;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
-    --info-bg: #1b2a35; --info-line: #3f6b96; --info-ink: #a8cdf2;
+    --info-line: #3f6b96; --info-ink: #a8cdf2;
     --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
-    --err-bg: #3a201c;
   }
   * { box-sizing: border-box; }
   body {
@@ -53,10 +51,7 @@
   .wrap { max-width: 1100px; margin: 0 auto; }
   .app-header h1 { font-size: 1.6rem; margin: 0 0 .2rem; }
   .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; max-width: 46em; }
-  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
-  .back-link:hover { color: var(--accent-2); }
 
-  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .8rem; }
   select, input[type="text"], input[type="number"], textarea {
@@ -84,8 +79,8 @@
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
   .fields-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .7rem .9rem; }
 
-  .share-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
-  .share-note.error { color: var(--err); }
+  .status-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
+  .status-note.error { color: var(--err); }
 
   .roster-tools { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: .8rem; }
   .roster-tools > div { flex: 1 1 16rem; }
@@ -138,7 +133,7 @@
         <button type="button" class="danger" id="delListBtn">Delete</button>
       </div>
     </div>
-    <p class="share-note" id="shareNote"></p>
+    <p class="status-note" id="shareNote"></p>
   </div>
 
   <div class="card">
@@ -238,7 +233,7 @@ Marcus Lee
   }
   function setNote(text, isError) {
     els.shareNote.innerHTML = text;
-    els.shareNote.className = 'share-note' + (isError ? ' error' : '');
+    els.shareNote.className = 'status-note' + (isError ? ' error' : '');
     window.clearTimeout(setNote._t);
     setNote._t = window.setTimeout(function () { els.shareNote.textContent = ''; }, 4000);
   }

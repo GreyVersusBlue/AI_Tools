@@ -141,6 +141,38 @@ const rival = report.filter(p => p.a11y &&
 ok(rival.length === 0,
    'no page that loads a11y.js also writes data-theme itself: ' + JSON.stringify(rival.map(p => p.rel)));
 
+// One tag per shared file. 014 and 033 linked a11y.js and a11y.css twice
+// until AI-08, and both a11y.js loads queued buildWidget on DOMContentLoaded,
+// so each page drew two "Aa" widgets. Keep the early a11y.js (theme before
+// first paint) and the late a11y.css (it wins the ties).
+const twice = [];
+for (const rel of pages) {
+  const seen = new Map();
+  const html = stripHtmlComments(fs.readFileSync(path.join(SITE, rel), 'utf8'));
+  for (const tag of html.match(/<(?:script|link)\b[^>]*>/gi) || []) {
+    const m = /\b(?:src|href)\s*=\s*["']([^"']*_shared\/[^"']+)["']/i.exec(tag);
+    if (m) seen.set(m[1], (seen.get(m[1]) || 0) + 1);
+  }
+  for (const [u, n] of seen) if (n > 1) twice.push(`${rel}: ${u} ×${n}`);
+}
+ok(twice.length === 0, 'no page loads a shared file twice: ' + JSON.stringify(twice));
+
+// `.share-note` and its four tint tokens live in base.css and ink-paper.css
+// (AI-08). A page on both may override the note's margin, never re-paint it:
+// a pasted copy is how three generations of it drifted, one on rgba() literals
+// that stayed light in dark.
+const repainted = [];
+for (const rel of pages) {
+  const files = loadedFiles(fs.readFileSync(path.join(SITE, rel), 'utf8'));
+  if (!loads(files, 'base.css') || !loads(files, 'ink-paper.css')) continue;
+  const css = stripHtmlComments(fs.readFileSync(path.join(SITE, rel), 'utf8'));
+  for (const m of css.matchAll(/\.share-note[^{}]*\{([^}]*)\}/g)) {
+    if (/\b(?:background|border)\b/.test(m[1])) repainted.push(rel);
+  }
+}
+ok(repainted.length === 0,
+   'no base.css page re-paints .share-note: ' + JSON.stringify([...new Set(repainted)]));
+
 // The retired second theme system stays retired. theme-toggle.js wrote its own
 // `gvb-tools-theme` key and set data-theme itself; two writers of one attribute
 // is the bug Path 5 P1 removed.

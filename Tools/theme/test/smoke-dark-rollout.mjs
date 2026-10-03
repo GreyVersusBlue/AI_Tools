@@ -736,6 +736,15 @@ const PAGES = [
       await settle(page, 400);
       await page.waitForSelector('.bmg-label.quiz-hidden', { timeout: 5000 });
     } },
+  // increment 14 (AI-35) — the pages that loaded no a11y.js at all. 002, 016,
+  // 018 and 038 were dark-only on one shared slate palette and are now on
+  // ink-paper's tokens; 044 had ink-paper's light values copied inline. 016's
+  // QR and 038's chart are what gets scanned or printed, so they are paper.
+  { label: '002', url: '/Tools/002-group-team-generator.html' },
+  { label: '016', url: '/Tools/016-qr-code-generator.html', sheet: '#qr-stage' },
+  { label: '018', url: '/Tools/018-qr-scavenger-hunt-builder.html' },
+  { label: '038', url: '/Tools/038-data-chart-builder.html', sheet: '#chart-stage' },
+  { label: '044', url: '/Tools/044-Sub Plan Builder.html' },
 ];
 
 /** 030's manual editor: name every category block and fill every clue row it
@@ -850,7 +859,7 @@ async function open(browser, url, theme, prep) {
 const server = await serve(PORT);
 const browser = await launch();
 
-console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083) + increment 9 (012, 052, 057, 068, 071, 084) + increment 10 (041, 065, 053, 062, 049, 037) + increment 11 (033, 080, 008, 022, 013, 027) + increment 12 (003, 032, 043, 030, 064, 042) + increment 13 (046, twice — the last page on the filter)');
+console.log('Dark rollout — Path 5 P3: increment 1 (010, 015, 021, 023, 024, 072) + increment 2 (025, 048, 051, command-center/remote, escape-room-builder/lock + monitor) + increment 3 (006, 009, 019, 020, 039, 056) + increment 4 (017, 028, 040, 050, 054, 078) + increment 5 (047, 061, 063, 067, 075, 081) + increment 6 (055, 058, 059, 070, 074, 076) + increment 7 (014, 045, 060, 077, 082, 085) + increment 8 (066, 069, 073, 079, 026, 083) + increment 9 (012, 052, 057, 068, 071, 084) + increment 10 (041, 065, 053, 062, 049, 037) + increment 11 (033, 080, 008, 022, 013, 027) + increment 12 (003, 032, 043, 030, 064, 042) + increment 13 (046, twice — the last page on the filter) + increment 14 (002, 016, 018, 038, 044; 007 on its own palette)');
 
 for (const p of PAGES) {
   /* ── dark ── */
@@ -909,6 +918,37 @@ for (const p of PAGES) {
     eq(paint.bg, LIGHT_PAPER, `${p.label} light: light paper`);
     eq(paint.ink, LIGHT_INK, `${p.label} light: light ink`);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${p.label}-light.png`), fullPage: true });
+    await page.close();
+  }
+}
+
+/* ── 007: a11y.js without ink-paper (AI-35) ──────────────────────────────
+   007's look is its own THEME picker, ten dark looks and one light one, so it
+   is not in PAGES: its paper is whatever the picker says. What a11y.js may
+   and may not do to it is the claim here — no invert filter on the dark
+   looks in either site theme, and the site's dark switch re-skins only
+   Classroom Light. */
+{
+  const bg = page => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const filtered = page => page.evaluate(() => document.documentElement.classList.contains('a11y-filter-dark'));
+  for (const theme of ['light', 'dark']) {
+    const page = await open(browser, '/Tools/007-Name%20Picker.html', theme);
+    eq(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), theme, `007 ${theme}: a11y.js set data-theme`);
+    ok(!(await filtered(page)), `007 ${theme}: no invert filter`);
+    eq(await bg(page), 'rgb(26, 26, 46)', `007 ${theme}: the default look keeps its own dark paper`);
+    await page.selectOption('#theme', 'classroom');
+    // <body> eases its background between looks, so wait out the transition
+    // rather than read a colour halfway there.
+    const want = theme === 'dark' ? 'rgb(20, 23, 28)' : 'rgb(245, 247, 250)';
+    await page.waitForFunction(w => getComputedStyle(document.body).backgroundColor === w, want, { timeout: 5000 }).catch(() => {});
+    eq(await bg(page), want,
+       `007 ${theme}: Classroom Light is ${theme === 'dark' ? 'its dark twin' : 'light'}`);
+    if (theme === 'dark') {
+      const violations = await a11yScan(page);
+      ok(violations.length === 0,
+         '007 dark: axe finds nothing serious on Classroom Light\'s twin: ' + JSON.stringify(violations.map(v => v.id + '×' + v.count)));
+    }
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `007-classroom-${theme}.png`), fullPage: true });
     await page.close();
   }
 }

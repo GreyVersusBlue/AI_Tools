@@ -2,15 +2,16 @@
    Every rule below was verified byte-identical (leading indentation
    stripped) across the tools it was lifted from; rules that had any
    variant were deliberately left inline in the tools that own them.
-   This is a straight dedup, not a restyle: no declaration changed.
+   This is a straight dedup, not a restyle: no declaration changed —
+   except `.share-note` (AI-08), where eight tools' rgba() literal
+   generation was normalised onto the tokenised one.
 
    Load order matters. Link this AFTER _shared/ink-paper.css (it consumes
    --card / --line) and BEFORE the tool's own inline <style>, so a tool
    keeping a local variant of any selector here still wins on the cascade.
 
-   Safe for any tool: these are three plain layout rules with no print
-   behavior. The #printArea print pattern that shipped here in Round 4a now
-   lives in _shared/print-area.css — link that one too, but only if the tool
+   Safe for any tool: plain layout rules with no print behavior. The
+   #printArea print pattern that shipped here in Round 4a now lives in _shared/print-area.css — link that one too, but only if the tool
    actually uses the pattern (it blanks the page on print). */
 
 .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
@@ -18,3 +19,23 @@
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
 
 .toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1.2rem; }
+
+/* The header's title, subtitle and back link, and a card's heading. Lifted
+   in AI-08 from every base.css page that had them byte-identical (63, 34,
+   68, 37 pages); the few variants (083-085's 1.6rem title, their 46em
+   subtitle, 013/033's title margin, 059's card heading) stay inline and win
+   on source order. */
+.app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+.app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+.back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+.back-link:hover { color: var(--accent-2); }
+.card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+
+/* The note under a Share button, recording what the sheet (_shared/share.js)
+   last did. Pasted into ~45 tools in three generations until AI-08; the
+   tints are ink-paper.css's, so it follows a page into dark. A tool that
+   needs another margin overrides only that. 082-085's transient status
+   line (082 and 083 also put share results in it) is `.status-note`, its
+   own look, and is not this. */
+.share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem; border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
+.share-note.error { background: var(--err-bg); border-color: var(--err); }

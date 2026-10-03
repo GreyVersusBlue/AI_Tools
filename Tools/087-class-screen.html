@@ -21,6 +21,7 @@
 <script src="../_shared/countdown.js"></script>
 <script src="class-screen/cs-core.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
+<link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <style>
   [hidden] { display: none !important; }
@@ -34,12 +35,11 @@
 
   /* ── header ─────────────────────────────────────────────────────────── */
   .app-header {
-    display: flex; align-items: center; gap: .6rem 1rem; flex-wrap: wrap;
-    padding: .5rem 1rem; border-bottom: 1px solid var(--line); background: var(--card);
+    display: flex; align-items: center; justify-content: normal; gap: .6rem 1rem; flex-wrap: wrap;
+    padding: .5rem 1rem; margin-bottom: 0; border-bottom: 1px solid var(--line); background: var(--card);
   }
   .app-header h1 { font-size: 1.15rem; margin: 0; }
   .back-link { color: var(--muted); text-decoration: none; font-size: .85rem; }
-  .back-link:hover { color: var(--accent-2); }
   .screen-bar { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-left: auto; }
   .screen-bar label { font-size: .82rem; font-weight: 600; }
   .screen-bar .follow { display: inline-flex; align-items: center; gap: .25rem; }

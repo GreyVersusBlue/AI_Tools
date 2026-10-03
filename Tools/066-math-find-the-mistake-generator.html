@@ -34,17 +34,7 @@
      001's --good value under a local name). Everything inside #printArea is
      paper — it is display:none on screen — so its greys are left alone. */
   :root[data-theme="dark"]:not(.a11y-filter-dark) { --ok: #63c08e; }
-  /* The two tint pairs the share note sits on, in 001's values with dark
-     counterparts — ink-paper.css has no token for either. */
-  :root { --err-bg: #fbecea; --err-line: #e6c6c1; --info-bg: #eaf1f5; --info-line: #c9dbe3; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) {
-    --err-bg: #3a201c; --err-line: #6d3a33; --info-bg: #1b2a35; --info-line: #33505f; }
 
-  /* Share your own problems: the sheet itself is _shared/share.js (Path 6
-     P3). This is only the note under the header that records what it did. */
-  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .5rem .7rem;
-    border-radius: 6px; background: var(--info-bg); border: 1px solid var(--info-line); word-break: break-word; }
-  .share-note.error { background: var(--err-bg); border-color: var(--err); }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -52,12 +42,7 @@
     padding: 24px 20px 100px; line-height: 1.45;
   }
   .wrap { max-width: 1100px; margin: 0 auto; }
-  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
-  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
-  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
-  .back-link:hover { color: var(--accent-2); }
 
-  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], input[type="number"], textarea {

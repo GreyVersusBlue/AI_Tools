@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="../manifest.json">
 <title>Sub Plan Builder</title>
+<link rel="stylesheet" href="../_shared/ink-paper.css">
+<script>window.A11Y_NATIVE_THEME = true;</script>
+<script src="../_shared/a11y.js"></script>
+<link rel="stylesheet" href="../_shared/a11y.css">
 <script src="../_shared/vendor/jszip/jszip.min.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
@@ -12,17 +16,27 @@
 <script src="../_shared/share.js"></script>
 <script src="../_shared/media-db.js"></script>
 <style>
+  /* --ink, --paper, --card, --card-2, --line, --muted, --err and their dark
+     values come from _shared/ink-paper.css (AI-35); these are 044's own. */
   :root {
-    --ink: #1f2430;
-    --paper: #fafaf8;
-    --line: #dcdad2;
     --accent: #2e4c6d;
     --accent-dark: #1f3550;
     --ok: #2e6b3e;
-    --err: #a3372b;
-    --muted: #6b6a63;
     --warn-bg: #fff3d6;
     --warn-line: #e0c27a;
+  }
+  :root[data-theme="dark"]:not(.a11y-filter-dark) {
+    --accent: #7fb2e5;
+    --accent-dark: #a8cdf2;
+    --ok: #86cf98;
+    --warn-bg: #3a3019;
+    --warn-line: #7a6532;
+  }
+  @media print {
+    :root[data-theme="dark"]:not(.a11y-filter-dark) {
+      --accent: #2e4c6d; --accent-dark: #1f3550; --ok: #2e6b3e;
+      --warn-bg: #fff3d6; --warn-line: #e0c27a;
+    }
   }
   * { box-sizing: border-box; }
   body {
@@ -52,7 +66,7 @@
     color: var(--accent-dark);
   }
   .card {
-    background: #fff;
+    background: var(--card);
     border: 1px solid var(--line);
     border-radius: 8px;
     padding: 18px 20px;
@@ -106,7 +120,7 @@
     border-radius: 6px;
     font-family: inherit;
     font-size: 0.92rem;
-    background: #fff;
+    background: var(--card);
     color: var(--ink);
   }
   textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
@@ -135,16 +149,16 @@
     padding: 7px 12px;
     border-radius: 6px;
     border: 1px solid var(--line);
-    background: #fff;
+    background: var(--card);
     cursor: pointer;
     color: var(--ink);
   }
-  button:hover { background: #f2f0ea; }
+  button:hover { background: var(--card-2); }
   button.small { padding: 3px 8px; font-size: 0.78rem; }
   button.danger { color: var(--err); }
   button.primary {
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-ink);
     border-color: var(--accent-dark);
     font-weight: 600;
     font-size: 0.95rem;
@@ -181,7 +195,7 @@
   .history-row .actions { display: flex; gap: 6px; flex-shrink: 0; }
 
   .qc-overlay { position: fixed; inset: 0; background: rgba(20, 20, 20, 0.55); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
-  .qc-modal { background: #fff; border-radius: 8px; max-width: 620px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  .qc-modal { background: var(--card); border-radius: 8px; max-width: 620px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
   .qc-modal-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); }
   .qc-modal-head h3 { margin: 0; font-size: 1rem; color: var(--accent-dark); }
   .qc-modal-body { padding: 14px 18px; overflow-y: auto; }

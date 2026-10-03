@@ -51,6 +51,7 @@ const SITE_GLOBALS = {
   ToolRegistry: 'readonly',
   ThemeToggle: 'readonly',
   Countdown: 'readonly',
+  PrintKit: 'readonly',
   // _shared/vendor/
   jspdf: 'readonly',
   XLSX: 'readonly',

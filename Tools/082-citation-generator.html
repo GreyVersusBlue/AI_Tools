@@ -43,12 +43,8 @@
     padding: 24px 20px 100px; line-height: 1.45;
   }
   .wrap { max-width: 1100px; margin: 0 auto; }
-  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
   .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; max-width: 46em; }
-  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
-  .back-link:hover { color: var(--accent-2); }
 
-  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .8rem; }
   select, input[type="text"] {
@@ -89,8 +85,8 @@
   .entry .row-btns button { padding: .3rem .6rem; font-size: .78rem; }
   .entry .type-tag { display: inline-block; font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: .25rem; }
 
-  .share-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
-  .share-note.error { color: var(--err); }
+  .status-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
+  .status-note.error { color: var(--err); }
 
   .scope-note { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px; padding: .6rem .8rem; font-size: .82rem; color: var(--warn-ink); margin-bottom: 1rem; }
 
@@ -140,7 +136,7 @@
         <button type="button" class="danger" id="delListBtn">Delete list</button>
       </div>
     </div>
-    <p class="share-note" id="shareNote" aria-live="polite"></p>
+    <p class="status-note" id="shareNote" aria-live="polite"></p>
   </div>
 
   <div class="scope-note">Citations use reasonable, classroom-standard defaults for each style. Unusual sources (rare formats, multiple authors, missing information) may need a small manual tweak — have students spot-check against their style guide.</div>
@@ -650,7 +646,7 @@
 
   function setNote(text, isError) {
     els.shareNote.innerHTML = text;
-    els.shareNote.className = 'share-note' + (isError ? ' error' : '');
+    els.shareNote.className = 'status-note' + (isError ? ' error' : '');
     window.clearTimeout(setNote._t);
     setNote._t = window.setTimeout(function () { els.shareNote.textContent = ''; }, 4000);
   }
@@ -889,7 +885,7 @@
   function setShareNote(text, isError) {
     window.clearTimeout(setNote._t);
     els.shareNote.textContent = text || '';
-    els.shareNote.className = 'share-note' + (isError ? ' error' : '');
+    els.shareNote.className = 'status-note' + (isError ? ' error' : '');
   }
 
   /** Suffixes a name until it does not collide with a list already saved

@@ -83,6 +83,10 @@
   --accent-ink-light: #fff;
   --muted-light: #6b6a63;
   --err-light: #a3372b;
+  --info-bg-light: #eaf1f5;
+  --info-line-light: #c9dbe3;
+  --err-bg-light: #fbecea;
+  --err-line-light: #e6c6c1;
 
   --ink: var(--ink-light);
   --paper: var(--paper-light);
@@ -93,6 +97,14 @@
   --accent-2: var(--accent-2-light);
   --muted: var(--muted-light);
   --err: var(--err-light);
+
+  /* The two tint pairs a note or a warning sits on: `.share-note` in
+     base.css, and any tool's own info/error box. They were redeclared in
+     ~44 tools' own <style>, in 001's values, until AI-08 lifted them here. */
+  --info-bg: var(--info-bg-light);
+  --info-line: var(--info-line-light);
+  --err-bg: var(--err-bg-light);
+  --err-line: var(--err-line-light);
 
   /* Added by Path 5 P1. Adoption needs them: a hover/zebra surface a shade off
      the card, and the colour of text drawn *on* a saturated fill — an accent
@@ -118,6 +130,10 @@
   --accent-ink: #101720;
   --muted: #a9a69c;
   --err: #ef8f84;
+  --info-bg: #1b2a35;
+  --info-line: #33505f;
+  --err-bg: #3a201c;
+  --err-line: #6d3a33;
 }
 
 /* A sheet of paper is a sheet of paper in either theme. `#printArea` is the
@@ -142,6 +158,10 @@
   --accent-ink: var(--accent-ink-light);
   --muted: var(--muted-light);
   --err: var(--err-light);
+  --info-bg: var(--info-bg-light);
+  --info-line: var(--info-line-light);
+  --err-bg: var(--err-bg-light);
+  --err-line: var(--err-line-light);
   color: var(--ink);
   background: var(--card);
 }
@@ -173,5 +193,9 @@
     --accent-ink: var(--accent-ink-light);
     --muted: var(--muted-light);
     --err: var(--err-light);
+    --info-bg: var(--info-bg-light);
+    --info-line: var(--info-line-light);
+    --err-bg: var(--err-bg-light);
+    --err-line: var(--err-line-light);
   }
 }

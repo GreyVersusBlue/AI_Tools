@@ -4,7 +4,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 
 ## Live site
 
-`[add the hosted URL here once the domain/Pages setup is finished]` — or just open `index.html` from this repo.
+<https://aspermylessonplan.com> — or just open `index.html` from this repo.
 
 ## Tools
 

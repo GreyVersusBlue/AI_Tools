@@ -40,16 +40,12 @@
      purple "holds student data" tag, which nothing else on the site has. */
   :root {
     --good: #2f7d4f;    --good-bg: #e4f5ea;  --good-line: #c7e2cb;
-    --err-bg: #fbecea;  --err-line: #e6c6c1;
-    --info-bg: #eaf1f5; --info-line: #c9dbe3;
     --warn: #a3791f;
     --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
     --student-bg: #f3ecf6; --student-ink: #6a3d84; --student-line: #dbc9e4;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --good: #63c08e;    --good-bg: #173021;  --good-line: #2f5e42;
-    --err-bg: #3a201c;  --err-line: #6d3a33;
-    --info-bg: #1b2a35; --info-line: #33505f;
     --warn: #eac077;
     --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
     --student-bg: #2b2133; --student-ink: #d9bced; --student-line: #4c3a5c;
@@ -62,10 +58,7 @@
   }
   .wrap { max-width: 920px; margin: 0 auto; }
   .app-header { display: block; margin-bottom: 1.4rem; }
-  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
   .app-header p.tagline { color: var(--muted); font-size: .88rem; margin: 0; }
-  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
-  .back-link:hover { color: var(--accent-2); }
 
   .card-title { font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); margin-bottom: .5rem; }
   .card p.hint { color: var(--muted); font-size: .85rem; margin: 0 0 .8rem; }

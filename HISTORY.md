@@ -9,6 +9,200 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-sync: origin's #323 to #329 merged into huginn's local `main` (2026-10-03, AI-sync, `CACHE_VERSION` v222, not pushed)
+
+Local `main` was 16 commits ahead of origin and 7 behind, and the nightly merge's rebase had conflicted. This is a
+merge commit of origin `834ccd9` into local `main` (no rebase). `selector-presync-2026-10-03` tags local `main` as it
+was (`5fcf61b`). Nothing was pushed.
+
+- **The eight AI-03, AI-07 and AI-09 commits duplicate #326, and the two sides agree.** #326's tree (`7d18fad`) differs
+  from local `aa66fe1` only by what #323 to #325 added, plus `BACKLOG.md`, `HISTORY.md` and the `sw.js` version. Nothing
+  local was missing from #326 and nothing had to be chosen between them.
+- **Six page conflicts took the local side** (002, 016, 018, 038: AI-35's `ink-paper.css` tokens over the slate
+  palette; 028, 040: AI-08's removal of the per-page `--info-bg` pair). Origin's side of each was byte-identical to
+  local's own earlier state, so local is the later one.
+- **`CACHE_VERSION` is v222.** Origin used v213 (#323), v214 (#324), v215 (#326) and v216 (#328). Local sessions had
+  labelled their work v213 (AI-03), v215 (AI-07), v216 (AI-11), v217 (AI-12), v218 (AI-08), v219 (AI-35), v220 (AI-34)
+  and v221 (AI-13). **No label was rewritten**: origin's are published, AI-03's and AI-07's local labels are in origin's
+  `HISTORY.md` already, and this file already carried two v213s and two v215s. The map is: local v216 to v221 never
+  reached a deployed site, and AI-11, AI-12, AI-08, AI-35, AI-34 and AI-13 P1 all ship as **v222**. "v216" alone means
+  #328; AI-11's v216 is the local one.
+- **`BACKLOG.md`:** local's 171-row table (AI-11, AI-08, AI-35 and AI-13 had deleted eight rows) with origin's two
+  rewritten rows, rank 2 (Path 4 P5, the rest) and old 137, now **129** (per-record conflict resolution). Origin's
+  header facts were kept and its rank references moved to local numbering (34 to 30, 171–179 to 163–171, 89 to 81).
+  Three origin bullets were dropped as no longer true: 028's upload hint (AI-12 fixed it), the dead trees (AI-11
+  deleted them), and "8 commits ahead" for this checkout. Two stale Tier 2 references went with it (snap-to-grid is
+  rank 162; Path 22 P6 to P14 are 163–171). The header numbers were re-measured on the merged tree.
+- **A port collision the merge made:** 088's `smoke-braille-trainer.mjs` (origin) and `smoke-print-kit.mjs` (AI-13)
+  both bound 8460. The print kit's moved to **8462**; the next suite takes 8463.
+- **AI-08's "grep skips 009 as binary" trap is spent:** #328 replaced the NUL.
+- **Left for Devon:** #326's entry says a session should never commit to this shared `main`. The local sessions
+  since then did, under the Selector's queue. The two instructions disagree and neither was edited here. The header
+  is 95 lines against its ~80 cap, because it carries both sides' state until the push.
+
+## Path 7 P1: `_shared/print-kit.css` + `print-kit.js`, the shared print kit (2026-10-03, AI-13, `CACHE_VERSION` v221)
+
+Audit entry AI-13, old rank 7. P1 only; P2 to P5 are ranks 7 to 10 now. **No tool links the kit yet.** The definition of
+done allows a new `_shared/` module "at most one adopter", and adoption is P3's row, so this shipped with none.
+
+- **What it is.** `print-kit.css` is opt-in by class and has no `body`, element or `@page` rule, so linking it changes
+  nothing on a page that uses no `pk-` class (the opposite of `print-area.css`). Sheets: `.pk-page`, `.pk-keep`,
+  `.pk-half`, `.pk-quarter` in a `.pk-quarters` wrapper, `.pk-cut`. Card grids: `.pk-cards` + `.pk-card` with presets
+  2x2, 2x3, 3x3, 2x4, 2x5 (business cards) and 3x10 (address labels). `.pk-header` / `.pk-footer` / `.pk-blank-line`.
+  Ink-safe: `.pk-ink-safe`, six hatches, four border styles, `.pk-label[data-pk-label]`. `print-kit.js` publishes
+  `PrintKit`: `setPage`, `setHeader`, `renderSet`, and the pure `plan`, `chunk`, `inkClass`, `pageCss`.
+- **The clipping class is closed by construction.** Every sheet and card is sized with `min-height`; the pure suite
+  fails if `height`, `max-height` or `overflow: hidden/clip` ever appears in the file, and the browser suite overfills a
+  half sheet and a card and checks they grow. `check:print-clip` does not read the file until a live page links it.
+- **Decisions, all reversible.**
+  - *`setPage()` owns `@page`, the stylesheet does not.* A stylesheet cannot read the `@page` margin back, and half and
+    quarter sheets divide the printable area, so the rule and the `--pk-page-w/h`, `--pk-margin` properties are written
+    together. A page with its own `@page` must set the three properties itself.
+  - *The roster is handed in.* `renderSet` takes names or `Roster.getStudents()` records and reads no storage, so the
+    kit has no `store.js` or `roster.js` dependency and a page with no roster still prints blanks.
+  - *A header belongs to a sheet, not to a printed page.* There is no running header across the pages of one long
+    sheet. `@page` margin boxes would do it in new Chromium only, and `position: fixed` overlaps content.
+  - *Every value goes through `textContent`.* A name that looks like markup prints as text; the suite pins it.
+  - *The fixture is `Tools/print-kit/test/fixture.html`*, not a tool page. It is in a `test/` folder, so it is not a
+    live page to any guard, is not precached and is left out of the offline zip.
+- **What went wrong on the way.** The first browser run printed four half sheets as four pages. A first heading's
+  margin collapsed out of the `min-height` box and made each half taller than half a page. `.pk-half` is
+  `display: flow-root` in print because of it. A tool rule that sets `display` on the same element loses that, and has
+  to contain its own margins.
+- **Measured:** 311 precache entries, 12,603,498 B; install tier 95, 2,987,295 B (the two files are 20,308 B).
+  `Tools/print-kit/test/print-kit.test.mjs` 66 checks, `smoke-print-kit.mjs` 57 checks on port 8462 (8460 as written; AI-sync moved it, 088's suite had 8460 on origin), counting pages in
+  Chromium's PDF output (Chrome 154 on huginn).
+- **Not verified.** Nothing was printed on paper: not the half-sheet cut line, not the label presets on Avery stock,
+  not the hatches on the school copier. That is the parked device check. Firefox and Safari print were not run. The
+  full `npm test` was not run (huginn is short of RAM); the print-kit, service-worker and theme suites, the selector
+  test and every guard were.
+
+## Infra odds and ends: no page claims a social-tag generator, precache bytes re-measured (2026-10-02, AI-34, `CACHE_VERSION` v220)
+
+Audit entry AI-34. Its Windows half (CRLF in `smoke-dark-theme`, the 067 glyph probe) had already landed in #323.
+
+- **Decision, reversible: `sync-social-tags.mjs` is deleted from the docs, not built.** 39 tool pages and `index.html`
+  carried a head comment saying the block was "generated by Tools/board-check/sync-social-tags.mjs; edit the notice in
+  index.html, not this". No such script exists and the blocks are hand-edited, so the comment now says "hand-maintained,
+  no generator; Tools/board-check/check-social.mjs validates it". The `gvb:social:start` marker text `check-social.mjs`
+  matches on is unchanged. The "never committed" notes in `CLAUDE.md` and this file stay: they are true and they are
+  what `check:docs-commands` is about. The original `board-check` folder is likewise not rebuilt.
+- **Precache bytes, summed from `sw.js` against the working tree:** 309 entries, 12,583,190 B (12.58 MB); install tier
+  93 entries, 2,966,987 B (2.97 MB). The old figure (11.21 / 2.52 MB after #267) was from Devon's Windows checkout.
+  Measured by a throwaway script (not committed), summing `fs.statSync` over the two arrays.
+- **og:image TODOs in `v1-inbox` to `v4-riso` left as they are.** They name `assets/og/{inbox,plan,board,handout}.png`,
+  which need real 1200x630 screenshots. **Found: `assets/og/` does not exist at all**, so `index.html`'s
+  `og:image` (`assets/og/toolbook.png`) points at a file the repo does not contain, and there is no existing share image
+  to reuse. Not fabricated; a screenshot pass (or Blender-ledger art) has to make them.
+
+## Shared-baseline adoption sweep: `a11y.js`, `ink-paper.css` and `base.css` on the pages that skipped them (2026-10-02, AI-35, `CACHE_VERSION` v219)
+
+Old rank 76, deleted; the table is renumbered to 172 rows. Split from AI-08, which recounted it.
+
+- **The row's "light pages first" list was half wrong.** It named 002, 007, 044 and 086 as light. **002 and 007 are
+  dark by default** (002 on the same slate `:root` as 016/018/038, byte-identical across all four; 007 on its theme
+  picker's "Press Your Luck" look). Only 044 and 086 were light.
+- **002, 016, 018, 038: on `ink-paper.css`'s tokens, native dark.** Their private names stay as aliases
+  (`--bg: var(--paper)`, `--surface: var(--card)`, `--text: var(--ink)`, `--danger: var(--err)`…); `--success` and
+  `--warn` keep a value per theme (the old dark ones are dark's). **Decision, reversible: these pages now follow the
+  teacher's theme like the other 85, so a light-OS teacher sees them light for the first time.** The alternative, dark in
+  both themes, would have left the a11y widget's dark switch dead on four pages. White text on an accent or err fill is
+  `var(--accent-ink)`; 016's `#qr-stage`, 018's `.preview-card` and 038's `#chart-stage` (what is scanned or printed)
+  are `.paper-sheet`. The `.share-sheet-backdrop` token bridges 016/018/038 carried for `share.js` are deleted: the
+  page's tokens are the sheet's now.
+- **044's private `:root` was ink-paper's light values copied inline** (`--ink`, `--paper`, `--line`, `--muted`, `--err`);
+  it links `ink-paper.css`, keeps `--accent` (#2e4c6d, not ink-paper's), `--accent-dark`, `--ok` and the warn tints with
+  a dark value each, and its `#fff` chrome is `--card`/`--card-2`/`--accent-ink`.
+- **007 loads `a11y.js` with `A11Y_NATIVE_THEME` but no `ink-paper.css`.** Its palette is its own theme picker, ten
+  dark looks and one light; the invert filter would have turned the dark ones light. Decision: the site's dark switch
+  re-skins only Classroom Light, with a rule on `<body>` (it has to outrank the inline values `applyTheme()` writes on
+  `<html>`). `smoke-dark-rollout` drives it in both themes. It still hand-rolls fullscreen; `path5:next` now lists it.
+- **010, 032, 046, 087 link `base.css`**, and lost the rules `phase4:next` named (010: `.app-header h1`, `.back-link`,
+  `:hover`; the others `:hover`). Two leaks had to be closed by hand, because base.css's rules add properties a
+  variant did not set: 010's `.card` gained `margin-bottom: 0` (its cards sit in a grid gap), 087's `.app-header`
+  `justify-content: normal; margin-bottom: 0`. `phase4:next` is now "nothing left to migrate".
+- **What still skips a file, and why — every one deliberate, so the row is closed rather than left open:**
+  `a11y.js`: 035 (rank 5, Devon's call) and **086, whose header records a user-approved exception: it is handed to
+  students as one standalone file and must not link `_shared/`.** `ink-paper.css`: 004 and 007 (own palettes, native
+  dark), 005/011/029/031/036 (on `theme.css`, the older design system), 034 (emailed as a standalone copy), 035, 086.
+  `base.css`: those, plus 002/016/018/038/044, which have only per-tool variants of its selectors — linking it would
+  add nothing but leaks.
+- **Trap: `--danger: var(--err)` on `:root` resolves once, at the root.** A `.paper-sheet` restoring `--err` does not
+  re-resolve the alias inside it, so the aliased names are dark-valued inside a sheet. Nothing on these four pages
+  reads them there today (the sheets use literals); a future sheet should use the ink-paper names directly.
+- **Verified:** `smoke-dark-rollout` 966/0 (increment 14 adds 002, 016, 018, 038, 044 to `PAGES`, axe in dark on each,
+  and drives 007 in both themes; its first run read 007's body mid-way through a 0.4 s background transition, so it
+  waits for the colour now). `run-suites --changed --base HEAD`: 36 of 39 green. The three red are **not this change**:
+  `class-screen` `smoke-widgets`/`smoke-periods` (the `.a11y-widget` intercepts a click — fails identically with 087
+  restored to HEAD, and recorded twice above) and `smoke-share-rollout` ("Target crashed", as under AI-08). Guards all
+  green, `lint`, `test:theme`'s `smoke-theme` 53/0, `check:adoption --check`. Looked at screenshots of 002 light, 016 dark,
+  038 light, 044 dark and 007's Classroom Light in dark. **Not verified:** a full `npm test`; a real projector; printing.
+
+## Shared-baseline tidies: one `a11y.*` per page, `.share-note` and the header rules in `base.css` (2026-10-02, AI-08, `CACHE_VERSION` v218)
+
+Old ranks 6, 7 and 81, deleted; the table is renumbered to 173 rows. Rank 5 (035's private theme) is Devon's call and
+was left alone, though "Standing decisions" carries a default for it. Rank 76 (the adoption sweep) is open; see below.
+
+- **014 and 033 linked `a11y.js` and `a11y.css` twice, and it was a visible bug, not just untidiness.** Both script
+  loads ran in `<head>`, so both queued `buildWidget` on DOMContentLoaded and each page drew **two "Aa" widgets**
+  (measured: `.a11y-widget` count 2 before, 1 after). Kept the early `a11y.js` (theme before first paint) and the late
+  `a11y.css` (it already won every tie, so dropping the early copy changes no cascade). `smoke-theme` now fails on any
+  page that loads a `_shared/` file twice; it went red on the old 014 with both lines.
+- **`.share-note` is one rule in `_shared/base.css`; its tint tokens `--info-bg/-line`, `--err-bg/-line` (001's values)
+  are in `ink-paper.css`** with `-light` names restored in the paper-sheet and print blocks like the rest of the palette.
+  The row said 23 pages; it had grown to **49**. 41 base.css pages lost their copy (eight on the `rgba()` literals,
+  which stayed light in dark: 015's note now goes dark); seven of them, 019, 028, 039, 040, 050, 054 and 064, keep a
+  margin-only override. (Commit c37907d's message says "45" and "six"; it counted the four pages that kept their
+  rule. 41 and seven are right.) About 40 pages dropped `:root` token declarations identical to ink-paper's; a page's own different light
+  value (003, 015, 020, 021, 023, 024, 043, 084) still wins. 016, 018, 029 and 038 keep their own `.share-note`: they
+  link neither shared file. **082–085's transient status line is now `.status-note`** — 082 and 083 have since adopted
+  `share.js` and write share results into that same line, so the class kept its own look. `smoke-theme` fails if a page
+  on both shared files re-paints `.share-note` (background/border).
+- **One side effect, on purpose:** inside `#printArea`/`.paper-sheet` in dark, the four tints are now the light ones,
+  where a page that declared them itself used to leak the dark values onto the sheet.
+- **`.app-header h1` (63 pages), `.app-header .sub` (34), `.back-link` and `:hover` (68), `.card h2` (37)** moved into
+  `base.css`; 270 lines went. Variants stay inline and win on source order. Verified by computed style: 68 pages × 2
+  themes × 7 selectors snapshotted before and after with Playwright, **0 differences of 952**.
+- **Trap: `grep` skips `Tools/009-backup-restore.html` as binary.** It has a literal NUL inside a JS string
+  (`label + '\0' + kind`, written as the raw byte), and the session's grep passes `-I`. A grep-loop count of "who skips
+  `base.css`" silently listed 009; `command grep -a` or `check:adoption` gets it right. Not changed.
+  *(No longer applies after AI-sync's merge: #328 wrote the byte as `'\ufffd'`, and 009 holds no NUL now.)*
+- **Rank 76, the adoption sweep, is not done** and is bigger than its row said. Recounted: 7 tools load no `a11y.js`
+  (002, 007, 016, 018, 038, 044, 086), 13 no `ink-paper.css`, 19 no `base.css`. 016, 018 and 038 are dark by default on
+  their own palettes, so `a11y.js` alone would invert them to light under its filter — they need native ink-paper
+  palettes, which is Path 5 work on 1,300–2,900-line pages.
+- **Not verified:** `smoke-share-rollout` crashed ("Page crashed" / `ERR_ABORTED`) on huginn **on both the old and the
+  new tree** with ~2 GB free; CI is the authority. No full `npm test` for the same reason. Ran: every guard, `lint`,
+  `test:theme` (53 + 901), `check:precache --base origin/main`, `check:adoption --check`, and a browser probe of 014,
+  033, 003, 015, 019 and 083 in both themes.
+
+## Small docs and copy fixes: README URL, 028's upload hint, the Tier 1 count (2026-10-02, AI-12, `CACHE_VERSION` v217)
+
+- **README "Live site"** now names <https://aspermylessonplan.com> (the `CNAME`) instead of the placeholder. Its tools
+  table has 87 rows against 87 `Tools/*.html` pages, none missing.
+- **028's source-description hint** no longer says "there's no image upload"; it points at the link and upload fields below.
+- **`BACKLOG.md`'s Tier 1 intro** said ranks ran 1..189; the table has 176 rows, so it says 1..176. The "Found in #290"
+  bullet in the header went with the 028 fix.
+- **Not done: `regionGroupCaption()` (rank 84) stays.** The only copy is in `Tools/blank-map-generator/bmg-legend.js`,
+  and a sweep for `slice(0, -1).join` and "and N more" found no second list-to-sentence formatter anywhere. Moving it to
+  `_shared/` now would be a shared file with one consumer; the row waits for a second.
+
+## Dead-weight cleanup: four dead trees, unreferenced seating fonts, five missing `@font-face` files (2026-10-02, AI-11, `CACHE_VERSION` v216)
+
+Old ranks 81, 82 and 83, deleted; the table is renumbered to 176 rows.
+
+- **`git rm`: `index_backup.html`, `Tools/Old Designs/`, `Tools/New Designs/`, `Other Landing Page ideas/`** (~590 KB). The
+  live `v1`-`v4` landing chain stays. The og:image TODOs lived only in those copies, so they went with them. The
+  `PAGE_EXEMPT`/`EXEMPT` lists in the guards and `make-offline-copy.mjs` still name the dead paths; they are harmless
+  and were left alone.
+- **`Tools/seating-chart/fonts/`** (three woff2 files, licences, README) removed: nothing in 005 or the tree references
+  them (005 declares no `@font-face`), and none was precached.
+- **`ideas-backlog.html`: dropped the five `@font-face` declarations** rather than vendoring. The files were never
+  committed, the page already rendered in the `system-ui`/`ui-monospace` fallbacks in its font stacks, and this
+  session had no network to fetch real woff2 files. Reverse it by vendoring Space Grotesk, Public Sans and IBM Plex Mono
+  into `_shared/vendor/` and linking them. Its "Landing-Page Web Fonts Never Shipped" idea card went too.
+  The page is precached, so `CACHE_VERSION` went v215 to v216.
+
 ## Path 4 P5, part: 009's passphrase lock and the landing page's backup readout (2026-10-02, #328, `CACHE_VERSION` v216)
 
 **Read 009 before trusting the row, as the handoff said, and it was right to:** the row's
@@ -169,6 +363,7 @@ FAILs, all "got null". The fix is in two places:
 
 **Not verified:** that Linux CI's verdict is unchanged by the probe fix. It should be, since a
 missing glyph alone is still the box, and CI is the authority on that.
+
 ## `check:entities` follows array data to a text sink, and 055 has a suite (2026-10-02, AI-09, no `CACHE_VERSION` bump)
 
 Old rank 8, deleted; the table is renumbered to 179 rows. Nothing shipped to a page: the guard

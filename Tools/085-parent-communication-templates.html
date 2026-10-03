@@ -38,10 +38,7 @@
   .wrap { max-width: 1150px; margin: 0 auto; }
   .app-header h1 { font-size: 1.6rem; margin: 0 0 .2rem; }
   .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; max-width: 46em; }
-  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
-  .back-link:hover { color: var(--accent-2); }
 
-  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .8rem; }
   select, input[type="text"], textarea {
@@ -88,8 +85,8 @@
   .batchbar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .6rem; font-weight: 600; font-size: .85rem; }
   .batchbar input { width: auto; }
 
-  .share-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
-  .share-note.error { color: var(--err); }
+  .status-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
+  .status-note.error { color: var(--err); }
 
   #printArea .letter { font-family: Georgia, "Times New Roman", serif; color: #111; padding: .6in .7in; page-break-after: always; white-space: pre-wrap; }
   #printArea .letter .subj { font-weight: bold; font-size: 12.5pt; margin-bottom: 1em; }
@@ -145,7 +142,7 @@
 
         <h2 style="margin-top:1rem">Preview</h2>
         <div class="preview" id="previewBox"></div>
-        <p class="share-note" id="shareNote"></p>
+        <p class="status-note" id="shareNote"></p>
         <div class="btnrow" style="margin-top:.8rem">
           <button type="button" class="secondary" id="copyBtn">Copy</button>
           <button type="button" class="secondary" id="emailBtn">Compose email</button>
@@ -260,7 +257,7 @@
 
   function setNote(text, isError) {
     els.shareNote.innerHTML = text;
-    els.shareNote.className = 'share-note' + (isError ? ' error' : '');
+    els.shareNote.className = 'status-note' + (isError ? ' error' : '');
     window.clearTimeout(setNote._t);
     setNote._t = window.setTimeout(function () { els.shareNote.textContent = ''; }, 4000);
   }

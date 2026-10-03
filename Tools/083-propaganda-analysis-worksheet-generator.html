@@ -30,12 +30,6 @@
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
 <style>
-  /* Path 5 P3. The err and info tint pairs are 001's values (the reference
-     adopter). Everything under #printArea is paper — _shared/print-area.css
-     hides it on screen — so its #111 body, #999 rules and #333 checkbox
-     outlines are never on a dark surface and stay as they are. */
-  :root { --err-bg: #fbecea; --info-bg: #eaf1f5; }
-  :root[data-theme="dark"]:not(.a11y-filter-dark) { --err-bg: #3a201c; --info-bg: #1b2a35; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
@@ -45,10 +39,7 @@
   .wrap { max-width: 1100px; margin: 0 auto; }
   .app-header h1 { font-size: 1.6rem; margin: 0 0 .2rem; }
   .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; max-width: 46em; }
-  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
-  .back-link:hover { color: var(--accent-2); }
 
-  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   .card h3 { font-size: .92rem; margin: 0 0 .3rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .8rem; }
@@ -81,8 +72,8 @@
      transparent line drawing in dark ink on a dark mat is nothing at all. */
   .imgbox img { max-width: 8rem; max-height: 8rem; border: 1px solid var(--line); border-radius: 6px; object-fit: contain; background: #fff; }
 
-  .share-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
-  .share-note.error { color: var(--err); }
+  .status-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
+  .status-note.error { color: var(--err); }
 
   .step { border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; margin-bottom: .7rem; }
   .step .letter { display: inline-flex; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--accent); color: var(--accent-ink); align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; margin-right: .5rem; }
@@ -138,7 +129,7 @@
         <button type="button" class="danger" id="delListBtn">Delete</button>
       </div>
     </div>
-    <p class="share-note" id="shareNote" aria-live="polite"></p>
+    <p class="status-note" id="shareNote" aria-live="polite"></p>
   </div>
 
   <div class="card">
@@ -273,7 +264,7 @@
 
   function setNote(text, isError) {
     els.shareNote.innerHTML = text;
-    els.shareNote.className = 'share-note' + (isError ? ' error' : '');
+    els.shareNote.className = 'status-note' + (isError ? ' error' : '');
     window.clearTimeout(setNote._t);
     setNote._t = window.setTimeout(function () { els.shareNote.textContent = ''; }, 4000);
   }
@@ -464,7 +455,7 @@
   function setShareNote(text, isError) {
     window.clearTimeout(setNote._t);
     els.shareNote.textContent = text || '';
-    els.shareNote.className = 'share-note' + (isError ? ' error' : '');
+    els.shareNote.className = 'status-note' + (isError ? ' error' : '');
   }
 
   /** Suffixes a name until it does not collide with a worksheet already saved
