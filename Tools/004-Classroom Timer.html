@@ -60,6 +60,21 @@
     --color-warn: #d9a441;
     --color-danger: #e0665a;
   }
+  /* Paper is light whatever the screen is doing. This page has its own
+     palette, not ink-paper.css's, so its print reset is its own too. */
+  @media print {
+    [data-theme="dark"] {
+      --color-bg: #f5f4f0;
+      --color-surface: #ffffff;
+      --color-text: #1a1a1a;
+      --color-dim: #5b6b78;
+      --color-divider: #e1e5ea;
+      --color-accent: #2a6db0;
+      --color-success: #2f8f5b;
+      --color-warn: #a6740a;
+      --color-danger: #c43a2f;
+    }
+  }
   * { box-sizing: border-box; }
   html { background: var(--color-bg); }
   body {

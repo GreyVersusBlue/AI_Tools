@@ -349,6 +349,45 @@ const clickThemeSwitch = page => page.evaluate(() => {
   await page.context().close();
 }
 
+/* — A page's own dark tokens go back to light on paper too. ink-paper.css's
+     print reset covers ink-paper's tokens; a page that declares more of its
+     own under `[data-theme="dark"]` (009's and 010's semantic tints, 004's
+     whole palette) has to put those back itself, and until Path 7 P2 none
+     did: 004 printed its dark surfaces from a dark screen. Read off the
+     tokens, for the reason given above, and off every token the page's own
+     dark rules set, so one added later without a print line fails here. — */
+for (const [num, file] of [['004', 'Tools/004-Classroom Timer.html'], ['009', 'Tools/009-backup-restore.html'], ['010', 'Tools/010-command-center-dashboard.html']]) {
+  const read = async theme => {
+    const page = await prepPage(browser, base, { width: 1100, height: 800 });
+    await page.addInitScript(t => { try { localStorage.setItem('gvb-a11y-prefs', JSON.stringify({ theme: t, textScale: 100, dyslexic: false })); } catch (e) { /* storage off */ } }, theme);
+    await page.goto(`${base}/${encodeURI(file)}`, { waitUntil: 'load' });
+    await settle(page, 250);
+    const tokens = () => page.evaluate(() => {
+      const names = new Set();
+      const walk = rules => { for (const r of rules) {
+        if (r.cssRules && !r.selectorText) { walk(r.cssRules); continue; }
+        if (!r.selectorText || !/data-theme="dark"/.test(r.selectorText)) continue;
+        for (const n of r.style) if (n.startsWith('--')) names.add(n);
+      } };
+      // The page's inline sheets only: the shared files have their own suite above.
+      for (const sh of document.styleSheets) if (!sh.href) walk(sh.cssRules);
+      const cs = getComputedStyle(document.documentElement);
+      return Object.fromEntries([...names].sort().map(n => [n, cs.getPropertyValue(n).trim()]));
+    });
+    const screen = await tokens();
+    await page.emulateMedia({ media: 'print' });
+    const print = await tokens();
+    await page.context().close();
+    return { screen, print };
+  };
+  const light = await read('light'), dark = await read('dark');
+  const names = Object.keys(dark.screen);
+  ok(names.length > 0, `${num}: the page declares dark tokens of its own (${names.length})`);
+  ok(names.some(n => dark.screen[n] !== light.screen[n]), `${num}: and they differ from light on screen`);
+  const stuck = names.filter(n => dark.print[n] !== light.screen[n]);
+  eq(stuck.length, 0, `${num}: printing from dark puts every one of them back to its light value: ${JSON.stringify(stuck)}`);
+}
+
 /* — There is no third page here any more, and that is the point. This half of
      the suite used to drive an ink-paper tool that had NOT adopted — 003 until
      Path 5 P3's twelfth increment, then 046, the last one — to prove that
