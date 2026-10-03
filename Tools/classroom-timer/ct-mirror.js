@@ -26,61 +26,18 @@
 //     onMessage(), and can send({...}) back (the remote-control commands).
 
 /**
- * Draws `text` as a QR code onto `canvas`, sizing the canvas's actual pixel
- * buffer itself rather than trusting whatever width/height it already has.
+ * Draws `text` as a QR code onto `canvas`, through _shared/qr-draw.js's fit().
  *
- * An SDP-sized payload needs ~100+ modules even at the lowest error
- * correction level, and that module count isn't fixed — it varies a little
- * from one offer/answer to the next (random session IDs, a slightly
- * different candidate count), sometimes enough to cross into the next QR
- * version and jump the module count by 4. At that density, a *fixed* pixel
- * size that happens to divide evenly for one module count can land on an
- * unlucky few-pixels-per-module ratio for another and become unreadable —
- * this was caught during testing (the very code this function draws failed
- * to scan back on a canvas sized for an earlier, smaller test payload).
- * Sizing off the actual module count instead keeps a fixed minimum
- * resolution *per module* no matter how the SDP happens to come out.
- *
- * The canvas's CSS size (set by the caller / stylesheet) controls how big
- * it looks on screen; this only controls the backing pixel buffer, which is
- * what both a real camera and this codebase's own getImageData-based tests
- * actually read.
+ * This file used to carry its own renderer, sized at 8 px per module in the
+ * canvas's pixel buffer because an SDP-sized payload's module count moves
+ * from one offer to the next. That fixed the buffer and not what a camera
+ * sees: the stylesheet then showed the canvas at 260 px, about 2.9 px per
+ * module for the 81-module code. fit() sizes the canvas on screen instead,
+ * from the room its parent has, in whole px per module and never under 4;
+ * when there is not room it hides the canvas and says so beside it.
  */
 export function drawQR(canvas, text) {
-  var qr = window.qrcode(0, 'L'); // typeNumber 0 = smallest version that fits; L = lowest EC, most capacity
-  qr.addData(text);
-  qr.make();
-  var count = qr.getModuleCount();
-  var quiet = 4; // standard QR quiet zone
-  var total = count + quiet * 2;
-  var MIN_PX_PER_MODULE = 8; // generous margin — a real camera sees more noise than a clean canvas render
-  var size = total * MIN_PX_PER_MODULE;
-  canvas.width = size;
-  canvas.height = size;
-  var px = size / total;
-  var ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, size, size);
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = '#16222e';
-  for (var r = 0; r < count; r++) {
-    for (var c = 0; c < count; c++) {
-      if (qr.isDark(r, c)) {
-        // Round each module's edges independently (not floor+fixed-width) so
-        // adjacent modules tile exactly with no gap and no overlap. A fixed
-        // "+1px overshoot" (fine for the handful of large modules a printed
-        // QR needs) bleeds into neighboring modules once a payload this size
-        // pushes the module count past ~100 and each one is only a few
-        // pixels wide — enough to make jsQR unable to read the modules back
-        // at all, which is exactly the size these pairing codes are.
-        var x0 = Math.round((quiet + c) * px);
-        var x1 = Math.round((quiet + c + 1) * px);
-        var y0 = Math.round((quiet + r) * px);
-        var y1 = Math.round((quiet + r + 1) * px);
-        ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-      }
-    }
-  }
+  return window.QrDraw.fit(canvas, text);
 }
 
 /** Host side. Resolves once the offer is ready; `offerPayload` is what to draw as a QR. */

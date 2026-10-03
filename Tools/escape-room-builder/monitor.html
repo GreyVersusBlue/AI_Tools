@@ -15,6 +15,7 @@
 <script src="../../_shared/webrtc-pair.js"></script>
 <script src="../../_shared/qr-scan.js"></script>
 <script src="../../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../../_shared/qr-draw.js"></script>
 <script src="../../_shared/vendor/jsqr/jsqr.js"></script>
 <link rel="stylesheet" href="../../_shared/ink-paper.css">
 <link rel="stylesheet" href="../../_shared/a11y.css">
@@ -62,7 +63,7 @@
   .pairing-box.active { display: block; }
   .pairing-step { font-size: .86rem; color: var(--muted); margin: 0 0 .5rem; }
   .pairing-step strong { color: var(--ink); }
-  canvas.qr { display: block; margin: 0 auto .6rem; max-width: 220px; width: 100%; }
+  canvas.qr { display: block; margin: 0 auto .6rem; max-width: 100%; } /* sized by QrDraw.fit(), never by a max-width here */
   textarea.code-box {
     width: 100%; font-family: Consolas, monospace; font-size: .74rem; min-height: 3.4rem;
     border: 1px solid var(--line-strong); border-radius: 6px; padding: .5rem .6rem;
@@ -250,34 +251,12 @@
 })();
 </script>
 <script>
-// Draws `text` as a QR code onto `canvas`, sized off the actual module count
-// (same approach as Tools/classroom-timer/ct-mirror.js's drawQR, since an
-// SDP-sized payload's module count varies a little from one offer to the
-// next). Exposed as a global since this page has no module bundler.
+// Draws `text` as a QR code onto `canvas` at the largest whole px per module
+// the pairing box has room for; _shared/qr-draw.js's fit() hides the canvas
+// and says why when that is under the 4 px a camera reads. Exposed as a
+// global since this page has no module bundler.
 window.drawMonitorQR = function (canvas, text) {
-  var qr = window.qrcode(0, 'L');
-  qr.addData(text);
-  qr.make();
-  var count = qr.getModuleCount();
-  var quiet = 4;
-  var total = count + quiet * 2;
-  var px = 8;
-  var size = total * px;
-  canvas.width = size;
-  canvas.height = size;
-  var ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = '#16222e';
-  for (var r = 0; r < count; r++) {
-    for (var c = 0; c < count; c++) {
-      if (qr.isDark(r, c)) {
-        var x0 = Math.round((quiet + c) * px), x1 = Math.round((quiet + c + 1) * px);
-        var y0 = Math.round((quiet + r) * px), y1 = Math.round((quiet + r + 1) * px);
-        ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-      }
-    }
-  }
+  return window.QrDraw.fit(canvas, text);
 };
 </script>
 <script src="../../_shared/sw-register.js" defer></script>

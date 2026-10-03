@@ -130,14 +130,14 @@ const offer = await board.locator('#rdOffer').evaluate((c) => {
   const r = jsQR(d.data, d.width, d.height);
   return r ? r.data : null;
 });
-ok(offer && offer.startsWith('O'), 'the pairing QR decodes to an offer');
+ok(offer && /^[Oo]/.test(offer), 'the pairing QR decodes to an offer');
 eq(offer, await board.locator('#rdOfferText').inputValue(), 'and matches the copyable text');
 
 await phone.fill('#pastePayload', offer || '');
 await phone.click('#connectBtn');
 await phone.waitForFunction(() => document.getElementById('answerText').value.length > 0, null, { timeout: 8000 }).catch(() => {});
 const answer = await phone.inputValue('#answerText');
-ok(answer.startsWith('A'), 'the phone produced a reply');
+ok(/^[Aa]/.test(answer), 'the phone produced a reply');
 ok(await phone.locator('#answerCanvas').isVisible(), 'and shows it as a QR');
 
 await board.fill('#rdAnswer', answer);

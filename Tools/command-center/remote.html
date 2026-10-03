@@ -16,6 +16,7 @@
 <script src="../../_shared/webrtc-pair.js"></script>
 <script src="../../_shared/qr-scan.js"></script>
 <script src="../../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../../_shared/qr-draw.js"></script>
 <script src="../../_shared/vendor/jsqr/jsqr.js"></script>
 <link rel="stylesheet" href="../../_shared/ink-paper.css">
 <style>
@@ -45,7 +46,7 @@
   button.primary:hover:not(:disabled) { background: var(--accent-2); border-color: var(--accent-2); }
   button.pick { width: 100%; text-align: left; }
   textarea { width: 100%; font-family: ui-monospace, monospace; font-size: .76rem; margin-bottom: .5rem; }
-  canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto .8rem; border-radius: 6px; }
+  canvas { display: block; max-width: 100%; height: auto; margin: 0 auto .8rem; border-radius: 6px; } /* sized by QrDraw.fit(), never by a max-width here */
   /* The camera viewfinder is black in both themes on purpose — it is a lens,
      not chrome, and a pale frame around a dark video feed is worse in a dark room. */
   video { display: block; width: 100%; margin: 0 auto .8rem; border-radius: 6px; background: #000; }

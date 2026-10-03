@@ -9,6 +9,68 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Pairing codes at a size a phone can read: `QrDraw.fit()` and a compact code (2026-10-03, AI-10, `CACHE_VERSION` v223)
+
+Audit entry AI-10, old rank 6 (½). The row measured 006 and guessed at three more. Measured in a browser, it was all
+of them. **The real-phone scan is not done and is not a session's to claim: parked device check 4.**
+
+- **What was wrong, measured (`smoke-pairing-qr.mjs` run against the tree at `ce6802d`).** The code was 569 or 570
+  bytes, 81 modules, 89 with the quiet zone. On a 1280 px board and a 375 px phone alike: 001, 004 (and
+  `mirror.html`), 009, 010 (and `remote.html`) and 021 showed it at 260 px, **2.92 px per module**; 006 and 019's
+  `monitor.html` at 220 px, **2.47**; 019's `lock.html` reply at 180 px, **2.02**; 035 at 3.13 on the phone. 30 of 32
+  measurements were under the 4 px floor. 035 on a board was the only one over it (4.40, a fractional module).
+- **The row was wrong about 021.** It said no CSS rule constrained `#pairOfferCanvas`. `.pair-body canvas
+  { max-width: 260px }` did. The row had read the source and said so; this is why that was not enough.
+- **Why "8 px per module" never helped.** Seven of the nine renderers sized the canvas's *pixel buffer* at 8 px per
+  module, and their comments said that kept the code readable. A stylesheet then showed the buffer at 260 px. The
+  existing suites read the buffer with `getImageData`, so they passed on a code no camera could read.
+- **Fix 1, the size: `QrDraw.fit(canvas, text)` in `_shared/qr-draw.js`.** It measures the canvas's parent, draws
+  the largest whole px per module that fits (capped at 8 per module, 480 px, and about 70% of the window's height
+  when the code still clears the floor), and replaces the canvas's `max-width` with 100%. Under 4 px it hides the
+  canvas and puts a `role="status"` note after it saying how many px it needs and has. The nine private renderers
+  (006, 001, 021, `monitor.html`, `lock.html`, `sv-handoff.js`, `ct-mirror.js`, `br-pair.js`, `cc-remote.js`) are
+  one-line calls to it, and the ten pages that lacked `qr-draw.js` load it. Three steps drew the reply before
+  showing its wrapper (006, 035, `lock.html`), which measures 0; they show it first now.
+- **Fix 2, the payload: a compact code in `_shared/webrtc-pair.js`.** Size alone was not enough: 89 modules at
+  4 px is 356 px, and a 375 px phone has about 311. `encodeDescription()` now writes the SDP line for line through a
+  dictionary: one character for a line every browser writes the same way, a character and the value for the
+  candidate, ufrag, password, session id, and the fingerprint as base64. The Chromium offer goes from **569 to 189
+  bytes, 81 to 49 modules, 356 to 228 px** at the floor. Codes start `o`/`a`; the old `O`/`A` form still decodes.
+- **Decision: lossless, checked at run time, not a template.** The usual version of this trick rebuilds an SDP
+  from five fields and breaks on the browser nobody tested. Here the encoder decodes its own output and uses it only
+  if that is the exact SDP the browser wrote; otherwise it sends the full form as before. So the other device gets
+  the same description it always got, and an unfamiliar SDP costs bytes, not a connection. To reverse it, make
+  `encodeDescription` return `encodeFull(desc)`.
+- **A cost of that decision:** a device still on v222 cannot read a compact code from a device on v223 (it says
+  the code does not look like a pairing code) until it reloads. Both devices load the same site, so this lasts as
+  long as one stale service worker.
+- **What the suite found in my own work.** The first draft restored `display` to `''` after a refusal, which would
+  have dropped 035's inline `display:block`. And `getBoundingClientRect` read 035's code at 5.91 px per module
+  because the modal was still scaling open; the suite measures `offsetWidth`.
+- **Suites.** `Tools/share/test/smoke-pairing-qr.mjs` (port **8463**, 300 assertions): the eight pairings, offer and
+  reply, board and phone; on screen at 4 px or more in whole px, inside the parent, decoding with the vendored jsQR
+  to the text beside it; one real pairing over the compact code; `fit()`'s refusal and recovery. On the old tree it
+  fails 126 assertions. `pairing-code.test.mjs` (pure Node, 27): round-trips, the paste box, the 569-byte fixture
+  at 200 bytes and 53 modules or under. `npm run test:pairing-qr`, `npm run test:pairing-code`.
+- **Not verified.**
+  - **No phone has scanned one.** The 4 px floor is `qr-draw.test.mjs`'s blur-and-decode measurement, not a camera.
+  - **Only Chromium's SDP was seen.** The Firefox-shaped fixture in `pairing-code.test.mjs` is typed from memory of
+    Firefox's format, not captured, and says so. Firefox and Safari will round-trip (that is checked at run time)
+    but how small they get is unknown; if the fallback fires they are back to ~570 bytes, which fits a board and
+    is refused with the note on a phone.
+  - **huginn's Chromium offered one candidate.** A machine with more network interfaces writes one more `k` line
+    each, about 75 bytes. Two candidates should still fit a 375 px phone (about 276 px); three may not. The
+    suite does not fail on that: on the phone a refusal with its note passes, and a one-candidate fixture must fit.
+  - 087 and `class-screen/remote.html` already used `QrDraw.draw` with a `maxPx` and were not changed; they get
+    the smaller payload. They are not in the new suite's list.
+  - On a 375 px phone the *reply* is what the board's camera scans, off a phone screen. Untested by anything.
+- **Checks.** The eleven guards, lint and `check:precache -- --base origin/main`. All 190 suites one at a time on
+  huginn: 187 pass. `class-screen/test/smoke-remote.mjs` asserted the old `O`/`A` first letter and was updated.
+  **`class-screen/test/smoke-widgets.mjs` and `smoke-periods.mjs` both crash (exit 1, no FAIL line) on this tree
+  and identically on `ce6802d` without this change:** the click on 087's `#dock button[data-add="image"]` times out
+  because the `.a11y-widget` button sits over it. Not caused here and not fixed here. `main` is red on those two
+  until someone looks; a push-to-main CI run will say whether it is huginn's Chromium or the page.
+
 ## AI-sync: origin's #323 to #329 merged into huginn's local `main` (2026-10-03, AI-sync, `CACHE_VERSION` v222, not pushed)
 
 Local `main` was 16 commits ahead of origin and 7 behind, and the nightly merge's rebase had conflicted. This is a

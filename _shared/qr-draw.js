@@ -36,6 +36,12 @@
    MIN_PX_PER_MODULE against its own measurement, so raising the budget past
    what the decoder can read fails the build.
 
+   fit() is draw() for a code whose box is the page's to give (the WebRTC
+   pairing codes): it measures the room, draws at the largest whole px per
+   module that fits, and puts the refusal on the page. Tools/share/test/
+   smoke-pairing-qr.mjs measures every pairing code on the site against the
+   same floor, on a board and on a phone.
+
    Level L throughout, like every copy this replaces: a code shown on a
    screen is not going to be creased or smudged, and L is 25-30% more
    capacity than M at the same module count. */
@@ -147,6 +153,78 @@
     return p;
   }
 
+  /**
+   * Draws `text` at the largest whole px per module that the room allows,
+   * and says so on the page when the room is too small. For a code whose box
+   * is the page's to give: the WebRTC pairing codes (_shared/webrtc-pair.js).
+   *
+   * Every one of those used to be drawn at a fixed 6 or 8 px per module and
+   * then squeezed by a stylesheet `max-width` of 180 to 260 px, which put an
+   * 81-module code at 2 to 3 px per module on screen. So the size comes from
+   * here instead: the width of the canvas's parent, capped at opts.cap
+   * (480) and at opts.maxModulePx per module (8, so a short code is not a
+   * poster), and held to about 70% of the window's height when the code
+   * still clears the floor at that size. The canvas's own `max-width` is
+   * replaced with 100%, so a stylesheet cannot shrink it again.
+   *
+   * Under MIN_PX_PER_MODULE the canvas is hidden and a note saying why
+   * (opts.reason, or a default that points at the text box every pairing
+   * step has) is put after it; a later call that fits removes the note.
+   * opts.room overrides the measurement. Returns the plan.
+   */
+  function fit(canvas, text, opts) {
+    opts = opts || {};
+    var doc = canvas.ownerDocument || global.document;
+    var room = opts.room || roomFor(canvas);
+    var cap = opts.cap || 480;
+    var maxPx = Math.min(cap, room);
+    var p = plan(text, { maxPx: maxPx, level: opts.level });
+    if (p.ok) {
+      var tall = Math.floor((global.innerHeight || 0) * 0.7);
+      var px = Math.min(p.px, opts.maxModulePx || 8);
+      if (tall && px * p.total > tall) px = Math.max(MIN_PX_PER_MODULE, Math.floor(tall / p.total));
+      p = draw(canvas, text, { px: px, level: opts.level, fg: opts.fg, bg: opts.bg, dpr: opts.dpr });
+    }
+    var note = canvas.nextElementSibling;
+    if (!note || !note.hasAttribute || !note.hasAttribute('data-qr-fit-note')) note = null;
+    if (p.ok) {
+      if (canvas._qrFitHid) { canvas.style.display = canvas._qrFitHid.was; canvas._qrFitHid = null; }
+      canvas.style.maxWidth = '100%';
+      canvas.style.height = 'auto';
+      if (note) note.parentNode.removeChild(note);
+      return p;
+    }
+    p.reason = opts.reason || (p.modules ?
+      'This screen is too narrow to show the code at a size a camera can read (it needs ' +
+        (p.total * MIN_PX_PER_MODULE) + ' px across and has ' + maxPx + '). Use the text of the code instead.' :
+      'This code is too long for a QR code. Use the text of the code instead.');
+    if (!canvas._qrFitHid) canvas._qrFitHid = { was: canvas.style.display };
+    canvas.style.display = 'none';
+    if (!note && doc && canvas.parentNode) {
+      note = doc.createElement('p');
+      note.setAttribute('data-qr-fit-note', '');
+      note.setAttribute('role', 'status');
+      canvas.parentNode.insertBefore(note, canvas.nextSibling);
+    }
+    if (note) note.textContent = p.reason;
+    return p;
+  }
+
+  /* The CSS px a canvas may take: its parent's content box. A parent that is
+     not laid out yet (a dialog still hidden) measures 0, and the window's
+     width less a margin stands in for it. */
+  function roomFor(canvas) {
+    var parent = canvas.parentNode, w = 0;
+    if (parent && parent.clientWidth && global.getComputedStyle) {
+      var cs = global.getComputedStyle(parent);
+      w = parent.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    }
+    if (w > 0) return Math.floor(w);
+    var doc = canvas.ownerDocument || global.document;
+    var vw = (doc && doc.documentElement && doc.documentElement.clientWidth) || global.innerWidth || 0;
+    return Math.max(0, vw - 48);
+  }
+
   /** The module grid as an array of rows of booleans — what the suite decodes. */
   function modulesOf(text, level) {
     var qr = encode(text, level);
@@ -172,6 +250,7 @@
     encode: encode,
     plan: plan,
     draw: draw,
+    fit: fit,
     modulesOf: modulesOf
   };
 })(window);

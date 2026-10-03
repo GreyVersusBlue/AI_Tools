@@ -11,10 +11,8 @@
    actually frames that payload into wire-sized chunks; this file only gets
    the channel open and hands back a thin, role-agnostic handle to it.
 
-   drawQR() below is the same implementation as ct-mirror.js's — copied, not
-   imported, so this tool's transfer feature has no runtime dependency on
-   another tool's subfolder (see CLAUDE.md: a tool-specific support file that
-   is genuinely single-tool lives in that tool's own subfolder).
+   drawQR() below hands the drawing to _shared/qr-draw.js, which the page
+   loads before this file.
 
    Plain global script, matching this site's classic-script tools: the page
    that uses this, 009-backup-restore.html, is one big non-module IIFE, and
@@ -24,42 +22,10 @@
 (function (global) {
   'use strict';
 
-  /**
-   * Draws `text` as a QR code onto `canvas`, sizing the canvas's backing
-   * pixel buffer off the code's actual module count rather than a fixed
-   * size — see Tools/classroom-timer/ct-mirror.js's drawQR for the full
-   * reasoning (an SDP-sized payload needs 100+ modules, and that count
-   * varies enough between offers/answers to cross a QR version boundary and
-   * make a fixed pixel size unreadable on some of them).
-   */
+  /** Draws `text` as a QR code onto `canvas`, fitted to the transfer dialog by
+      _shared/qr-draw.js (whole px per module, never under 4 on screen). */
   function drawQR(canvas, text) {
-    var qr = global.qrcode(0, 'L'); // typeNumber 0 = smallest version that fits; L = lowest EC, most capacity
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount();
-    var quiet = 4; // standard QR quiet zone
-    var total = count + quiet * 2;
-    var MIN_PX_PER_MODULE = 8;
-    var size = total * MIN_PX_PER_MODULE;
-    canvas.width = size;
-    canvas.height = size;
-    var px = size / total;
-    var ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, size, size);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#16222e';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) {
-          var x0 = Math.round((quiet + c) * px);
-          var x1 = Math.round((quiet + c + 1) * px);
-          var y0 = Math.round((quiet + r) * px);
-          var y1 = Math.round((quiet + r + 1) * px);
-          ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-        }
-      }
-    }
+    return window.QrDraw.fit(canvas, text);
   }
 
   /** Wires a data channel's open/close/message events into an api's handler

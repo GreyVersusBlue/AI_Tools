@@ -43,6 +43,7 @@
   <script src="../_shared/webrtc-pair.js" defer></script>
   <script src="../_shared/qr-scan.js" defer></script>
   <script src="../_shared/vendor/qrcode/qrcode.js" defer></script>
+  <script src="../_shared/qr-draw.js" defer></script>
   <script src="../_shared/vendor/jsqr/jsqr.js" defer></script>
   <!-- Path 4 P4: each floor's trace image is a Blob in the shared media store;
        the blueprint key holds an idb: reference. See sv-trace-image.js. -->
@@ -8593,8 +8594,8 @@ function createHandoffAnswer() {
   }).then((join) => {
     _handoffJoin = join;
     document.getElementById('handoff-answer-text').value = join.answerPayload;
+    document.getElementById('handoff-join-answer-wrap').style.display = ''; // shown first: the code is fitted to the room this has
     window.SVHandoff.drawQR(document.getElementById('handoff-answer-qr'), join.answerPayload);
-    document.getElementById('handoff-join-answer-wrap').style.display = '';
     document.getElementById('handoff-join-status').textContent = 'Show this reply code back to the sending device, then wait for the project to arrive…';
     join.onOpen(() => {
       document.getElementById('handoff-join-status').textContent = 'Connected — waiting for the project…';

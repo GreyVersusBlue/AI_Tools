@@ -14,6 +14,7 @@
 <script src="../../_shared/a11y.js"></script>
 <script src="../../_shared/webrtc-pair.js"></script>
 <script src="../../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../../_shared/qr-draw.js"></script>
 <script src="er-match.js"></script>
 <link rel="stylesheet" href="../../_shared/ink-paper.css">
 <link rel="stylesheet" href="../../_shared/a11y.css">
@@ -136,7 +137,7 @@
     width: 100%; font-family: Consolas, monospace; font-size: .7rem; min-height: 3rem;
     border: 1px solid var(--line-strong); border-radius: 6px; padding: .5rem .6rem; margin-bottom: .5rem;
   }
-  .monitor-box canvas { display: block; margin: 0 auto .5rem; max-width: 180px; width: 100%; }
+  .monitor-box canvas { display: block; margin: 0 auto .5rem; max-width: 100%; } /* sized by QrDraw.fit(), never by a max-width here */
   .monitor-status { font-size: .78rem; color: var(--muted); }
   .monitor-status.connected { color: var(--good); }
 </style>
@@ -342,8 +343,8 @@
       }).then(function (result) {
         monitorPendingPc = result.pc;
         document.getElementById('monitorAnswerText').value = result.answerPayload;
+        document.getElementById('monitorReplyWrap').style.display = ''; // shown first: the code is fitted to the room this has
         drawLockQR(document.getElementById('monitorAnswerQr'), result.answerPayload);
-        document.getElementById('monitorReplyWrap').style.display = '';
         statusEl.textContent = 'Show this code to your teacher, then wait…';
       }).catch(function (e) {
         statusEl.textContent = e.message || 'That code didn’t look right — ask your teacher for a fresh one.';
@@ -351,29 +352,9 @@
     });
   }
 
-  // Same drawing approach as Tools/classroom-timer/ct-mirror.js's drawQR.
+  // Fitted to the monitor box by _shared/qr-draw.js: never under 4 px per module.
   function drawLockQR(canvas, text) {
-    var qr = window.qrcode(0, 'L');
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount();
-    var quiet = 4;
-    var total = count + quiet * 2;
-    var px = 6;
-    var size = total * px;
-    canvas.width = size; canvas.height = size;
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#16222e';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) {
-          var x0 = Math.round((quiet + c) * px), x1 = Math.round((quiet + c + 1) * px);
-          var y0 = Math.round((quiet + r) * px), y1 = Math.round((quiet + r + 1) * px);
-          ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-        }
-      }
-    }
+    return window.QrDraw.fit(canvas, text);
   }
 
   // ── Whole-room countdown (optional, baked into the link via `timerMinutes`) ─

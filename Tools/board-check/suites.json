@@ -186,6 +186,8 @@
     "Tools/roster/test/smoke-picker-rollout.mjs",
     "Tools/roster/test/smoke-rename-follow.mjs",
     "Tools/share/test/qr-draw.test.mjs",
+    "Tools/share/test/pairing-code.test.mjs",
+    "Tools/share/test/smoke-pairing-qr.mjs",
     "Tools/share/test/share.test.mjs",
     "Tools/share/test/handoffs.test.mjs",
     "Tools/share/test/smoke-share-rollout.mjs",

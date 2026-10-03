@@ -29,6 +29,7 @@
 <script src="../_shared/qr-scan.js"></script>
 <script src="../_shared/stage.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <style>
   /* Tool-local semantic tints. ink-paper.css owns the 11 palette tokens; the
@@ -217,7 +218,7 @@
   .sync-close:hover { background: transparent; color: var(--err); border-color: transparent; }
   .sync-body { padding: 1.1rem 1.2rem; font-size: .88rem; line-height: 1.5; }
   .sync-body p { margin: 0 0 .8rem; color: var(--muted); }
-  .sync-body canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto .8rem; border-radius: 6px; }
+  .sync-body canvas { display: block; max-width: 100%; height: auto; margin: 0 auto .8rem; border-radius: 6px; } /* sized by QrDraw.fit(), never by a max-width here */
   .sync-body video { display: block; width: 100%; max-width: 280px; margin: 0 auto .8rem; border-radius: 6px; background: #000; }
   .sync-body textarea { font-family: Consolas, monospace; font-size: .72rem; min-height: 3.6rem; }
   .sync-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .6rem; }
@@ -1623,40 +1624,11 @@
     channel.addEventListener('message', function (e) { onChannelMessage(e.data); });
   }
 
-  /* A small self-contained QR-drawing helper — the same approach as
-     Tools/classroom-timer/ct-mirror.js's drawQR (sizing the canvas's pixel
-     buffer off the actual module count so a payload this dense stays
-     scannable), reimplemented here rather than imported because ct-mirror.js
-     is that tool's own support module, not a _shared one. The vendored
-     qrcode.js encoder underneath it, which this does share, is loaded above. */
+  /* The pairing codes, fitted to the sync dialog by _shared/qr-draw.js: whole
+     px per module, never under the 4 px a camera reads, and a note on the
+     page when the dialog is too narrow for that. */
   function drawSyncQR(canvas, text) {
-    var qr = window.qrcode(0, 'L');
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount();
-    var quiet = 4;
-    var total = count + quiet * 2;
-    var MIN_PX_PER_MODULE = 8;
-    var size = total * MIN_PX_PER_MODULE;
-    canvas.width = size;
-    canvas.height = size;
-    var px = size / total;
-    var ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, size, size);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#16222e';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) {
-          var x0 = Math.round((quiet + c) * px);
-          var x1 = Math.round((quiet + c + 1) * px);
-          var y0 = Math.round((quiet + r) * px);
-          var y1 = Math.round((quiet + r + 1) * px);
-          ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-        }
-      }
-    }
+    return window.QrDraw.fit(canvas, text);
   }
 
   function openSyncModal() {

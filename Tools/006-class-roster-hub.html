@@ -185,7 +185,7 @@
   .modal-close:hover { color: var(--err); }
 
   /* Device-to-device transfer modal */
-  .handoff-qr { display: block; width: 220px; height: 220px; margin: 0 auto .6rem; image-rendering: pixelated; }
+  .handoff-qr { display: block; max-width: 100%; height: auto; margin: 0 auto .6rem; image-rendering: pixelated; } /* sized by QrDraw.fit(), never by a max-width here */
   /* A camera viewfinder is a lens, not a surface: it stays black in both themes. */
   .handoff-video { display: block; width: 100%; max-width: 280px; margin: 0 auto .6rem; border-radius: 6px; background: #000; }
   .handoff-status { font-size: .8rem; color: var(--muted); margin: .6rem 0 0; }
@@ -2310,7 +2310,7 @@
      against the space on screen and greys the row out with the reason.
 
      The offer/answer codes in "Move everything to another device" are NOT
-     share payloads and keep their own renderer, drawPairingQr() below. */
+     share payloads; drawPairingQr() below fits them to the dialog. */
   var SHARE_PARAM = 'roster';
 
   function shareableRoster() {
@@ -2330,32 +2330,14 @@
     onMessage: function (text, isError) { showMsg(text, !isError); }
   });
 
-  /* The pairing codes' own renderer. Not the share sheet's: these are SDP
-     payloads that webrtc-pair.js deliberately keeps compact for exactly this
-     reason, they are drawn at a fixed size into a fixed 220 px box, and they
-     are never a link. Kept here rather than merged into the share code it
-     used to be spelled identically to, so a change to one cannot silently
-     move the other. */
+  /* The pairing codes. Not the share sheet's: these are SDP payloads from
+     webrtc-pair.js and never a link. Until v223 this drew at a fixed 6 px
+     per module into a canvas the stylesheet held at 220 px, which put the
+     81-module offer at 2.47 px per module, under the 4 px a phone reads.
+     QrDraw.fit() takes the size from the room in the dialog instead and
+     says so on the page when there is not enough. */
   function drawPairingQr(canvas, text) {
-    var qr = window.qrcode(0, 'L'); // typeNumber 0 = smallest version that fits; L = lowest EC, most capacity
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount();
-    var quiet = 4;
-    var total = count + quiet * 2;
-    var px = 6;
-    var size = total * px;
-    canvas.width = size;
-    canvas.height = size;
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#1f2430';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
-      }
-    }
+    return window.QrDraw.fit(canvas, text);
   }
 
   document.addEventListener('keydown', function (e) {
@@ -2701,9 +2683,9 @@
       });
     }).then(function (result) {
       handoffPc = result.pc;
-      drawPairingQr(els.handoffAnswerCanvas, result.answerPayload);
       els.handoffAnswerText.value = result.answerPayload;
-      els.handoffAnswerWrap.style.display = '';
+      els.handoffAnswerWrap.style.display = ''; // shown first: the code is fitted to the room this has
+      drawPairingQr(els.handoffAnswerCanvas, result.answerPayload);
       els.handoffAnswerCopyBtn.onclick = function () {
         navigator.clipboard.writeText(result.answerPayload).then(function () {
           handoffSetStatus('handoffJoinStatus', 'Code copied.', 'good');
