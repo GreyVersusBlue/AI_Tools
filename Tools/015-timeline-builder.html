@@ -188,7 +188,10 @@
     position: absolute; bottom: 4px; right: 6px; font-size: 8px; color: #888;
     background: rgba(255,255,255,.85); padding: 1px 5px; border-radius: 2px;
   }
-  .tiledLegendPage { display: flex; align-items: center; justify-content: center; }
+  /* The key is text, not a window onto the poster: it is a page tall at
+     least (min-height, set in printTiledPages) and grows past that rather
+     than cutting a long category list off at both ends. */
+  .tiledLegendPage { display: flex; align-items: center; justify-content: center; overflow: visible; }
   .tiledLegendPage .tiledLegendInner { text-align: center; padding: 2rem; }
   .tiledLegendPage h2 { margin: 0 0 1rem; font-size: 1.3rem; }
   .tiledLegendPage .legend-row { justify-content: center; font-size: 1.1rem; gap: .6rem 1.6rem; }
@@ -200,7 +203,11 @@
   #mapPrintPanel select { margin-bottom: 0; }
   #mapPrintPanel button { width: auto; display: inline-block; margin: 0 .5rem .3rem 0; }
   #mapPrintPages { display: none; }
-  .mapPage { position: relative; background: #fff; overflow: hidden; }
+  /* No overflow: hidden and no fixed height here. The key and the legend are
+     as long as the timeline makes them; printMapTimeline() gives the strip
+     what room is left, and past its floor the page runs on to a second sheet
+     instead of losing its last lines. */
+  .mapPage { position: relative; background: #fff; }
   .mapPage h2 { margin: 0 0 .35rem; font-size: 1.15rem; text-align: center; }
   .mapPage .mapBox { position: relative; border: 1px solid var(--line-strong); background: #fff; overflow: hidden; }
   .mapPage .mapBox img { display: block; width: 100%; height: 100%; }
@@ -219,7 +226,11 @@
   .mapKey { font-size: .72rem; line-height: 1.5; text-align: center; color: var(--ink); margin: .3rem 0 0; }
   .mapKey .mapKeyItem { white-space: nowrap; margin: 0 .5rem; }
   .mapKey .mapKeyNum { font-weight: 700; color: var(--accent); }
-  .mapStrip { position: relative; overflow: hidden; border-top: 1px solid var(--line); margin-top: .3rem; }
+  /* contain: strict, on top of the clip, because the timeline inside is laid
+     out at full poster width and only then scaled: when the page ran on to a
+     second sheet Chromium counted that width and shrank the whole print to
+     fit it. The strip's width and height are always set inline. */
+  .mapStrip { position: relative; overflow: hidden; contain: strict; border-top: 1px solid var(--line); margin-top: .3rem; }
   .mapPage .legend-row { padding-top: .2rem; font-size: .72rem; }
   /* The numbered badge that ties a timeline marker back to its map pin. Only
      rendered when a pinNumbers map is handed to renderTimelineCanvas, so the
@@ -366,8 +377,15 @@
 
   @media print {
     body * { visibility: hidden; }
+    /* visibility keeps the box: the editor, hidden, was still three sheets
+       tall and every print ended in blank pages. All four print containers
+       are children of <body>, so the editor can go altogether. */
+    body > .wrap, body > .story-overlay { display: none !important; }
+    /* With the editor gone the containers need no position: absolute to get
+       to the top of the sheet: they are the only thing in the flow. */
+    body { margin: 0 !important; padding: 0 !important; }
     #printArea, #printArea * { visibility: visible; }
-    #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0.4in; }
+    #printArea { display: block !important; width: 100%; margin: 0; padding: 0.4in; }
     #printArea .print-view { box-shadow: none; max-width: none; }
 
     /* Higher specificity than the plain #printArea rule above, so a tiled
@@ -376,7 +394,7 @@
     body.tiled-printing #tiledPrintPages,
     body.tiled-printing #tiledPrintPages * { visibility: visible !important; }
     body.tiled-printing #tiledPrintPages {
-      display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0;
+      display: block !important; width: 100%; margin: 0; padding: 0;
     }
     .tiledPage { page-break-after: always; break-inside: avoid; }
     .tiledPage:last-child { page-break-after: auto; }
@@ -388,8 +406,14 @@
     body.map-printing #mapPrintPages,
     body.map-printing #mapPrintPages * { visibility: visible !important; }
     body.map-printing #mapPrintPages {
-      display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0;
+      display: block !important; width: 100%; margin: 0; padding: 0;
     }
+    .mapPage .mapBox, .mapPage .mapStrip, .mapPage .legend-row { break-inside: avoid; }
+    /* A browser prints no backgrounds unless asked, and much of a timeline is
+       nothing but a background: the category dots on the line and in the key,
+       the era bands, and the map's pin badges, whose white numbers were left
+       on white paper. The property inherits, so the containers carry it. */
+    #printArea, #tiledPrintPages, #mapPrintPages, #worksheetPages { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
     /* Timeline worksheet — a fourth print container, same shape again. */
     body.worksheet-printing #printArea { display: none !important; }
@@ -398,7 +422,7 @@
     body.worksheet-printing #worksheetPages,
     body.worksheet-printing #worksheetPages * { visibility: visible !important; }
     body.worksheet-printing #worksheetPages {
-      display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0;
+      display: block !important; width: 100%; margin: 0; padding: 0;
     }
   }
 </style>
@@ -1600,7 +1624,7 @@
         var legendPage = document.createElement('div');
         legendPage.className = 'tiledPage tiledLegendPage';
         legendPage.style.width = TILE_PAGE_W_PX + 'px';
-        legendPage.style.height = TILE_PAGE_H_PX + 'px';
+        legendPage.style.minHeight = TILE_PAGE_H_PX + 'px';
         legendPage.innerHTML = '<div class="tiledLegendInner"><h2>' + escapeHtml(state.title || state.name) +
           ' — category key</h2><div class="legend-row">' + legendHtml(state.events) + '</div></div>';
         container.appendChild(legendPage);
@@ -1689,6 +1713,9 @@
   var MAP_BOX_W_PX = MAP_PAGE_W_PX;
   var MAP_BOX_H_PX = 372;
   var MAP_STRIP_H_PX = 218;
+  // The strip gives up height to a long place key or legend, down to this.
+  // Below it the markers stop being readable, so the page grows instead.
+  var MAP_STRIP_MIN_PX = 130;
   // Two events within PIN_CLUSTER_PX of each other are the same place and
   // share one numbered badge; anything further apart keeps its own badge, and
   // badges are then nudged to at least PIN_SPREAD_PX apart so they stay
@@ -1757,7 +1784,7 @@
       var page = document.createElement('div');
       page.className = 'mapPage';
       page.style.width = MAP_PAGE_W_PX + 'px';
-      page.style.height = MAP_PAGE_H_PX + 'px';
+      page.style.minHeight = MAP_PAGE_H_PX + 'px';
 
       var heading = document.createElement('h2');
       heading.textContent = state.title || state.name;
@@ -1808,22 +1835,6 @@
       var strip = document.createElement('div');
       strip.className = 'mapStrip';
       strip.style.width = MAP_BOX_W_PX + 'px';
-      strip.style.height = MAP_STRIP_H_PX + 'px';
-      var poster = buildTimelinePoster({ pinNumbers: pinNumbers });
-      if (poster.width && poster.height) {
-        // Uniform scale, exactly like the tiled print: never stretched on one
-        // axis, and centred in whichever direction has room left over.
-        var scale = Math.min(MAP_BOX_W_PX / poster.width, MAP_STRIP_H_PX / poster.height);
-        var inner = poster.el.cloneNode(true);
-        inner.style.position = 'absolute';
-        inner.style.left = ((MAP_BOX_W_PX - poster.width * scale) / 2) + 'px';
-        inner.style.top = ((MAP_STRIP_H_PX - poster.height * scale) / 2) + 'px';
-        inner.style.transformOrigin = '0 0';
-        inner.style.transform = 'scale(' + scale + ')';
-        inner.style.width = poster.width + 'px';
-        inner.style.height = poster.height + 'px';
-        strip.appendChild(inner);
-      }
       page.appendChild(strip);
 
       var legend = legendHtml(state.events);
@@ -1832,6 +1843,37 @@
         legendRow.className = 'legend-row';
         legendRow.innerHTML = legend;
         page.appendChild(legendRow);
+      }
+
+      // The key wraps to as many lines as there are places, and the legend to
+      // as many as there are categories. Measure the page with an empty strip
+      // (off screen: #mapPrintPages is display:none until print) and give the
+      // strip what is left of the sheet, never more than its usual height.
+      strip.style.height = '0px';
+      page.style.cssText += '; position:absolute; left:-99999px; top:0;';
+      page.style.minHeight = '';
+      document.body.appendChild(page);
+      var usedPx = page.getBoundingClientRect().height;
+      document.body.removeChild(page);
+      page.style.position = ''; page.style.left = ''; page.style.top = '';
+      page.style.minHeight = MAP_PAGE_H_PX + 'px';
+      var stripH = Math.max(MAP_STRIP_MIN_PX, Math.min(MAP_STRIP_H_PX, Math.floor(MAP_PAGE_H_PX - usedPx)));
+      strip.style.height = stripH + 'px';
+
+      var poster = buildTimelinePoster({ pinNumbers: pinNumbers });
+      if (poster.width && poster.height) {
+        // Uniform scale, exactly like the tiled print: never stretched on one
+        // axis, and centred in whichever direction has room left over.
+        var scale = Math.min(MAP_BOX_W_PX / poster.width, stripH / poster.height);
+        var inner = poster.el.cloneNode(true);
+        inner.style.position = 'absolute';
+        inner.style.left = ((MAP_BOX_W_PX - poster.width * scale) / 2) + 'px';
+        inner.style.top = ((stripH - poster.height * scale) / 2) + 'px';
+        inner.style.transformOrigin = '0 0';
+        inner.style.transform = 'scale(' + scale + ')';
+        inner.style.width = poster.width + 'px';
+        inner.style.height = poster.height + 'px';
+        strip.appendChild(inner);
       }
 
       var container = els.mapPrintPages;
