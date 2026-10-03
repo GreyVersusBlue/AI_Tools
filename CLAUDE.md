@@ -469,7 +469,13 @@ files must be added there too.
   sweep of about 12 minutes on port 8464, not in CI) is the runtime half of `check:print-clip`:
   it opens every tool in print media, empty and seeded, before and after its print buttons, in
   light and dark, and reports clipped and fixed boxes, scroll boxes, controls on paper, blocks a
-  page break may split and dark ink on paper. Run `--only <tool>` after touching a tool's print
+  page break may split and dark ink on paper. It reaches a sheet through saved state
+  (`Tools/a11y-sweep/seeds.mjs`, which the a11y sweep's seeded pass reads too), through a tab whose
+  label says "print", which it opens itself, and through `Tools/board-check/print-audit-prep.mjs` for
+  what neither reaches (a student to pick, text that is never saved); a tool whose sheet needs data
+  gets a seed, and a prep entry only if the seed is not enough. Its closing lists are work too:
+  "Blank sheets" is a print button that left the paper empty (061 did, until v225), and "Print
+  buttons that never printed" is a sheet nothing reaches yet. Run `--only <tool>` after touching a tool's print
   CSS, and lower `print-audit-baseline.json` in the commit that fixes a page. A fixed height with
   `overflow: hidden` in a *screen* rule that also styles the printed sheet is the same bug as the
   one inside `@media print`, and only this finds it (077).

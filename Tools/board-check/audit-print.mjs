@@ -23,6 +23,13 @@
 // clicked (with `window.print` stubbed), because most tools build the sheet in
 // that click and an untouched page has nothing in #printArea to measure.
 //
+// Saved state does not reach every sheet. A print button that stays disabled
+// until something is generated, a second tab, a student who has to be picked
+// first: print-audit-prep.mjs lists, per page, the few clicks that get there,
+// and each one is measured as a further state of the seeded load. A tab whose
+// own label says "print" needs no entry: the audit opens it by itself and
+// looks for print buttons again.
+//
 // Findings, by kind:
 //   CLIP     an element that is visible in print, clips (`overflow` hidden or
 //            clip on the block axis) and holds more than it shows. The paper
@@ -49,8 +56,12 @@
 //
 // Two lists follow the findings and are not findings. "Not measured" names the
 // pages that have a print path and showed nothing at all in print in any state
-// reached: the sheet is built from data no seed supplies, so nothing was
-// audited. "No print path" names the pages with no print() call and no print
+// reached: the sheet is built from data no seed or prep supplies, so nothing
+// was audited. "Blank sheets" names the print buttons that called print() and
+// left the paper empty in every state they were clicked in, which is a bug in
+// the page (061 printed a blank sheet until 2026-10-03). "Print buttons that
+// never printed" names the ones that never called print() at all: a button
+// that opens a dialog, or a sheet no seed reaches yet. "No print path" names the pages with no print() call and no print
 // rule, where Ctrl+P prints the screen; only DARK is reported for those.
 //
 // It is a floor, like the static guard. It does not see a state behind a
@@ -71,6 +82,7 @@ import vm from 'node:vm';
 import { execSync } from 'node:child_process';
 import { serve, launch, prepPage, settle, SITE } from './harness.mjs';
 import { ROSTERS, PAGE_SEEDS } from '../a11y-sweep/seeds.mjs';
+import { PRINT_PREP } from './print-audit-prep.mjs';
 
 const PORT = 8464;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -224,16 +236,21 @@ const measure = () => {
       if (boxy.length >= 3) add('SPLIT', boxy[0], `${boxy.length} sibling ${name(boxy[0])} boxes with break-inside: auto`);
     }
   }
-  return { findings: out, ink, colours };
+  return { findings: out, ink, colours, printCalls: window.__printCalls || 0 };
 };
 
 const setTheme = (page, theme) => page.addInitScript(t => {
   try { localStorage.setItem('gvb-a11y-prefs', JSON.stringify({ theme: t, textScale: 100, dyslexic: false })); } catch (e) { /* storage off */ }
 }, theme);
 
-async function open(browser, p, seed, theme) {
+async function open(browser, p, seed, theme, prep) {
   const page = await prepPage(browser, BASE, SHEET);
-  await page.addInitScript(() => { window.__printCalls = 0; window.print = () => { window.__printCalls++; }; });
+  // The real print() blocks until the dialog closes, and several tools tidy
+  // up on the next line (067 and 069 drop `.active` from the sheet, 038 drops
+  // `body.printing`). A stub that returned would let that run, and the audit
+  // would measure the page after the paper. Throwing stops the handler where
+  // the dialog would have held it.
+  await page.addInitScript(() => { window.__printCalls = 0; window.print = () => { window.__printCalls++; throw new Error('audit-print: print() stub'); }; });
   await setTheme(page, theme);
   if (seed) {
     await page.addInitScript(entries => {
@@ -245,12 +262,13 @@ async function open(browser, p, seed, theme) {
   page.on('dialog', d => d.dismiss().catch(() => {}));
   await page.goto(`${BASE}/${encodeURI(p)}`, { waitUntil: 'load', timeout: 30000 });
   await settle(page, 400);
+  if (prep) { await prep.run(page); await settle(page, 300); }
   return page;
 }
 
 const printButtons = page => page.evaluate(() => [...document.querySelectorAll('button, [role="button"], a.btn')]
-  .map((b, i) => ({ i, text: (b.textContent || b.getAttribute('aria-label') || b.title || '').replace(/\s+/g, ' ').trim(), shown: !!b.getClientRects().length && !b.disabled }))
-  .filter(b => b.shown && /\bprint/i.test(b.text) && !b.text.toLowerCase().includes('blueprint')).slice(0, 4));
+  .map((b, i) => ({ i, text: (b.textContent || b.getAttribute('aria-label') || b.title || '').replace(/\s+/g, ' ').trim(), shown: !!b.getClientRects().length && !b.disabled, tab: b.matches('[role="tab"], .tab-btn') }))
+  .filter(b => b.shown && /\bprint/i.test(b.text) && !b.text.toLowerCase().includes('blueprint')).slice(0, 10));
 
 const clickNth = (page, i) => page.evaluate(n => {
   const b = [...document.querySelectorAll('button, [role="button"], a.btn')][n];
@@ -258,11 +276,11 @@ const clickNth = (page, i) => page.evaluate(n => {
 }, i);
 
 /** One state of one page: the light measurement, plus the dark diff. */
-async function auditState(browser, p, seed, clickIndex) {
+async function auditState(browser, p, seed, prep, clickIndex) {
   const result = { findings: [], ink: 0 };
   const sides = {};
   await Promise.all(['light', 'dark'].map(async theme => {
-    const page = await open(browser, p, seed, theme);
+    const page = await open(browser, p, seed, theme, prep);
     try {
       if (clickIndex !== null) { await clickNth(page, clickIndex); await settle(page, 300); }
       await page.emulateMedia({ media: 'print' });
@@ -274,6 +292,7 @@ async function auditState(browser, p, seed, clickIndex) {
   }));
   result.findings = sides.light.findings;
   result.ink = sides.light.ink;
+  result.printCalls = sides.light.printCalls;
   const seen = new Set();
   for (const [k, [color, bg, at]] of Object.entries(sides.light.colours)) {
     const d = sides.dark.colours[k];
@@ -294,7 +313,7 @@ async function auditState(browser, p, seed, clickIndex) {
 }
 
 const report = {};
-const unseen = [], noPath = [];
+const unseen = [], noPath = [], blank = [], idle = [];
 const server = await serve(PORT);
 let browser = await launch();
 let relaunches = 0;
@@ -308,26 +327,39 @@ try {
     // path: Ctrl+P prints the screen, and its buttons are not a finding.
     const printPath = /window\.print\(|[^.\w]print\(\)|@media[^{]*\bprint\b|print-area\.css|print-kit\.css/.test(html);
     const byKey = new Map();
+    const inkByButton = new Map();
     let inkAny = 0;
-    const seeds = [null];
+    const passes = [{ seed: null, prep: null, label: 'empty' }];
     const seed = seedFor(p);
-    if (seed) seeds.push(seed);
-    for (const s of seeds) {
+    if (seed) passes.push({ seed, prep: null, label: 'seeded' });
+    for (const prep of PRINT_PREP[p.slice(6, 9)] || []) passes.push({ seed, prep, label: `${seed ? 'seeded' : 'empty'}, ${prep.name}` });
+    for (const { seed: s, prep, label: passLabel } of passes) {
       let buttons = [];
       try {
-        const probe = await open(browser, p, s, 'light');
-        buttons = await printButtons(probe);
+        const probe = await open(browser, p, s, 'light', prep);
+        const found = await printButtons(probe);
         await probe.context().close();
+        // A tab whose label says "print" ("Printable sheet", "Print as table
+        // tents") is not a print button: it is where the print button lives.
+        // Each one becomes a further state of this load, opened first.
+        buttons = found.filter(b => !b.tab);
+        if (!prep) for (const t of found.filter(b => b.tab)) {
+          passes.push({ seed: s, prep: { name: `"${t.text.slice(0, 24)}" tab`, run: page => clickNth(page, t.i) }, label: `${passLabel}, "${t.text.slice(0, 24)}" tab` });
+        }
       } catch (e) {
         byKey.set('ERR', { kind: 'ERR', at: p, why: String(e.message || e).split('\n')[0], states: [] });
         continue;
       }
       for (const click of [null, ...buttons]) {
-        const label = (s ? 'seeded' : 'empty') + (click ? `, after "${click.text.slice(0, 24)}"` : '');
+        const label = passLabel + (click ? `, after "${click.text.slice(0, 24)}"` : '');
         states++;
         try {
-          const r = await auditState(browser, p, s, click ? click.i : null);
+          const r = await auditState(browser, p, s, prep, click ? click.i : null);
           inkAny += r.ink;
+          if (click) {
+            const b = inkByButton.get(click.text) || { ink: 0, calls: 0 };
+            inkByButton.set(click.text, { ink: Math.max(b.ink, r.ink), calls: b.calls + r.printCalls });
+          }
           for (const f of r.findings) {
             if (!printPath && f.kind !== 'DARK') continue;
             const k = `${f.kind}|${f.at}|${f.why.replace(/\d+px/g, 'Npx')}`;
@@ -351,6 +383,10 @@ try {
     const list = [...byKey.values()];
     report[p] = list;
     if (printPath && !inkAny) unseen.push(p);
+    for (const [text, b] of inkByButton) {
+      if (b.ink) continue;
+      (b.calls ? blank : idle).push(`${p.slice(6, 9)} "${text.slice(0, 32)}"`);
+    }
     if (!printPath) noPath.push(p);
     if (!flag('--json')) process.stderr.write('.');
   }
@@ -363,7 +399,7 @@ if (!flag('--json')) process.stderr.write('\n');
 const counts = p => Object.fromEntries(KINDS.concat('ERR').map(k => [k, report[p].filter(f => f.kind === k).length]).filter(([, n]) => n));
 
 if (flag('--json')) {
-  console.log(JSON.stringify({ report, unseen, noPath }, null, 2));
+  console.log(JSON.stringify({ report, unseen, blank, idle, noPath }, null, 2));
 } else {
   const limit = flag('--verbose') ? Infinity : 3;
   for (const p of selected) {
@@ -385,7 +421,10 @@ if (flag('--json')) {
   console.log(KINDS.map(k => `  ${k.padEnd(6)} ${String(totals[k][0]).padStart(2)} pages, ${totals[k][1]} findings`).join('\n'));
   const nums = l => l.map(p => p.slice(6, 9)).join(' ') || 'none';
   console.log(`\nNot measured: ${unseen.length} page${unseen.length === 1 ? '' : 's'} with a print path showed nothing in print in any state reached (${nums(unseen)}).`);
-  console.log('Their sheet is built from data no seed supplies; a per-tool suite has to reach it.');
+  console.log('Their sheet is built from data no seed or prep supplies (a11y-sweep/seeds.mjs, print-audit-prep.mjs).');
+  const listed = l => `${l.length}${l.length ? ' (' + l.join('; ') + ')' : ''}`;
+  console.log(`Blank sheets: ${listed(blank)}. These buttons called print() and left the paper empty in every state: a bug in the page.`);
+  console.log(`Print buttons that never printed: ${listed(idle)}. No print() call in any state: a button that opens something, or a sheet no seed reaches.`);
   console.log(`No print path: ${noPath.length} (${nums(noPath)}). Only DARK is reported for these.`);
 }
 
