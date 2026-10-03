@@ -9,6 +9,75 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P2, increment 4: 015's long timeline, 035's other four tabs, dark pages on paper, and blank pages after a sheet (2026-10-03, AI-13, `CACHE_VERSION` v227)
+
+Audit entry AI-13, rank 6 (2+). Fourth increment; the row stays, rewritten. P3 to P5 untouched.
+
+- **015's map + timeline page did cut a long timeline off.** `.mapPage` was a fixed 7.5 in box with
+  `overflow: hidden`, budgeted for a place key of two lines. Measured with 36 placed events and 14
+  categories: 911 px of content in 720, so the bottom of the strip and the whole category legend were off
+  the paper. Now the page is measured off screen with an empty strip and the strip takes what is left, from
+  its usual 218 px down to a floor of 130 (`MAP_STRIP_MIN_PX`); past the floor the page has `min-height`
+  and no clip, and runs on to a second sheet. Sixteen places still print on one page; thirty-six print on
+  two. The tiled print's category key page was the same kind of box (centred, clipped at both ends); it
+  grows too. It did not clip at 14 categories, and takes about 35 long ones before it would have.
+- **`.mapStrip` itself does not clip**: the poster is scaled to fit both ways, as a tile is. `.tiledPage`,
+  `.mapBox` and `.mapStrip` stay in the baseline as 3 FIXED, on purpose, like 042, 046 and 064.
+- **Three more bugs on 015, found only because the suite asks Chromium for the PDF.** (1) Every print
+  ended in blank pages: `body * { visibility: hidden }` keeps the editor's height, and the one-page map
+  came out as three. The editor is `display: none` in print now and the four print containers are in the
+  flow, not `position: absolute`. (2) A browser prints no backgrounds unless asked, and the map's pin
+  badges are white numbers on a filled circle: they printed white on white, and the category key printed
+  with no colour dots. The four containers carry `print-color-adjust: exact`. (3) A map page that ran on
+  to a second sheet was not split but **shrunk to about two thirds**, the whole print, because the
+  timeline inside the strip is laid out at poster width and then scaled. `overflow: hidden` did not stop
+  Chromium counting that width; `contain: strict` on the strip does. `page.pdf()` also fires the page's
+  own `afterprint`, which empties the sheet, so the suite measures before it asks for the PDF.
+  `smoke-map-print.mjs`: 53 to 71 assertions.
+- **035's Schedules, Visualize, What-if and Settings tabs.** They have no print button; Ctrl+P prints the
+  open tab. `print-audit-prep.mjs` opens each with the Northwind plan loaded, and the audit found 79
+  things: every button, slider and dropdown, sticky table headers, seven fixed-height panes and two scroll
+  boxes. In print the sidebar and the pane stack, nothing scrolls or clips, transitions are off, and the
+  controls go. **Judgement call:** a `<select>` and a pressed day or mode button stay, stripped to bare
+  text, because on these tabs the choice is the content (which group is drawn, which room a what-if mod
+  moved to). The unpressed buttons go. Visualize puts the map first at the sheet's width (the inline zoom
+  transform and wrapper size are overridden) and drops the sections that hold only controls (options,
+  playback, zoom, export). Findings 79 to 0. `smoke-print.mjs`: 45 to 70 assertions; one of them caught
+  the map still 800 px wide in a 720 px sheet after the first version of the rule.
+- **004, 009 and 010 printed dark from a dark screen.** `ink-paper.css`'s print reset puts ink-paper's
+  tokens back; a page's own tokens under `[data-theme="dark"]` (009's and 010's tints, 004's whole
+  palette) were never reset. Each page now has a print block with the same selector as its dark block,
+  after it. DARK 61 to 0. `smoke-theme.mjs` (53 to 62) reads every custom property a page's own dark
+  rules set and fails if print leaves one dark; I broke 010's reset on purpose and saw it fail on
+  `--info-bg`.
+- **The audit: one new kind and two refinements.** **TAIL** is a sheet's height or more of nothing after
+  the last visible box, the 015 bug above. A select or button with `appearance: none`, no border and no
+  fill is its value, not CHROME. A print block that only resets theme tokens does not give a page a
+  print path (004, 009 and 010 stay in "No print path").
+- **TAIL is on 23 pages, and none of them is fixed here.** 003 016 024 028 033 037 039 040 041 042 043
+  061 063 068 078 hide the editor with their own `visibility` rule; 054 056 058 060 065 079 082 085 get
+  it from `_shared/print-area.css` (8 of the 20 pages that link it; the other 12 are short enough not to
+  show it). Between about 1000 and 5300 px of blank paper each: one to five blank sheets after every
+  print. This is the oldest print bug on the site and the first thing left.
+- **Sweep, before and after** (88 pages, 390 states, 851 s): CLIP 1, FIXED 10 to 8, CHROME 0, SPLIT 0,
+  DARK 61 to 0, TAIL 23 (new). Blank sheets 0, never-printing buttons 4, not measured 0. Baseline
+  rewritten: 26 pages, 23 of them only for TAIL.
+- **Not verified.** Nothing was printed on paper; only Chromium's PDF was looked at (015's map, one and
+  two pages; 035's four tabs, rendered to PNG and read). **TAIL is read off the layout at the sheet's
+  width, not off a PDF**: it was checked against Chromium's page count on 015 only, before and after the
+  fix, and the 23 were not each confirmed. 035's four tabs were looked at with the small Northwind
+  fixture only; a real school's Schedules list and the hotspot table at 40 rows were not. 035's What-if
+  sidebar still sits beside its results in print (it reads fine at this size; not measured wider).
+  015's worksheet strip (`.wsStrip`) is built like the map strip and did not get `contain: strict`: its
+  page did not overflow in any state reached, so the shrink was not seen there, and not ruled out.
+  The full `npm test` was not run: all 13 guards were, with `check:precache -- --base origin/main` and
+  `check:adoption -- --check`, the suites `run-suites.mjs --only` picks for schedule-visualizer,
+  schedule-browser, schedule, timeline-builder, theme, classroom-timer, backup-restore, command-center,
+  service-worker and board-check (all green), and the a11y sweep for the five touched pages. Two mistakes on the way: the first prep entries clicked a tab with Playwright, which
+  waited 30 s for a button the audit's narrow viewport had scrolled away (they click in the page now),
+  and I stopped a running sweep with `pkill` and found a copy of it still alive afterwards with a
+  browser attached (it took `kill -9` on that pid; check `pgrep -af '[a]udit-print'` after stopping one).
+
 ## Path 7 P2, increment 3: 035's Blueprint tab on paper, 040's blank sheet, and the last unreached print buttons (2026-10-03, AI-13, `CACHE_VERSION` v226)
 
 Audit entry AI-13, rank 6 (2+). Third increment; the row stays, rewritten. P3 to P5 untouched.
