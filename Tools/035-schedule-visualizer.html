@@ -2797,6 +2797,40 @@
     }
       #app-header .back-link{color:inherit;opacity:.75;text-decoration:none;font-size:12px;white-space:nowrap;margin-right:10px;}
     #app-header .back-link:hover{opacity:1;}
+
+    /* ── Print: the visualizer on paper ──
+       The app is a 100vh column of scroll boxes, which prints as one screenful
+       of toolbars with the plan cut off at the fold. On paper the frame lets
+       go of its height, the header, tab bar, footer, dialogs and toasts stay behind,
+       and the Blueprint tab prints #bp-print-sheet: the active floor's plan,
+       drawn by renderBlueprintPrintSheet() on `beforeprint`, cropped to what
+       is drawn and turned to the page it fits. The Schedule Browser's own
+       print rules are in BR_CSS; toggleApp() hides this app with an inline
+       style, which is why nothing here forces #app-visualizer to show. */
+    #bp-print-sheet { display: none; }
+    @page bp-wide { size: landscape; margin: 0.5in; }
+    @page bp-tall { size: portrait; margin: 0.5in; }
+    @media print {
+      html, body { height: auto; }
+      #app-visualizer { display: block; height: auto; overflow: visible; }
+      #content-area { overflow: visible; }
+      /* Two ids, to outrank the per-panel `#panel-x { overflow: hidden }` rules. */
+      #content-area > .tab-panel { height: auto; overflow: visible; }
+      #app-header, #tab-bar, #app-footer, .modal-overlay, #bulk-editor-overlay,
+      #viz-hover-tooltip, #toast-container { display: none !important; }
+      #panel-blueprint.active { display: block; }
+      #panel-blueprint > :not(#bp-print-sheet) { display: none !important; }
+      #bp-print-sheet { display: block; page: bp-tall; color: #000; background: #fff; }
+      #bp-print-sheet.bp-print-wide { page: bp-wide; }
+      #bp-print-title { font-family: var(--font-display, serif); font-size: 20pt; line-height: 1.2; margin: 0; }
+      #bp-print-sub { font-size: 11pt; margin: 2pt 0 10pt; }
+      #bp-print-canvas { display: block; margin: 0 auto; max-width: 100%; height: auto;
+                         max-height: 8.6in; border: 1px solid #000; }
+      #bp-print-sheet.bp-print-wide #bp-print-canvas { max-height: 6.3in; }
+      #bp-print-empty { display: none; font-size: 12pt; }
+      #bp-print-sheet.bp-print-none #bp-print-canvas { display: none; }
+      #bp-print-sheet.bp-print-none #bp-print-empty { display: block; }
+    }
 </style>
 </head>
 <body>
@@ -2882,6 +2916,13 @@
 
     <!-- ══ BLUEPRINT TAB ══ -->
     <section id="panel-blueprint" class="tab-panel active" role="tabpanel">
+      <!-- Print only: the active floor's plan, filled in on `beforeprint`. -->
+      <div id="bp-print-sheet">
+        <h1 id="bp-print-title"></h1>
+        <p id="bp-print-sub"></p>
+        <canvas id="bp-print-canvas" role="img" aria-label="Floor plan"></canvas>
+        <p id="bp-print-empty">Nothing is drawn on this floor yet.</p>
+      </div>
       <!-- Round 31: Floor Manager Strip -->
       <div id="floor-manager-strip">
         <div id="floor-tab-list">
@@ -6828,6 +6869,72 @@ function exportBlueprintAsPDF() {
     console.warn('[STVIZ] Blueprint PDF export error:', err);
   }
 }
+
+/* ==============================================
+   BLUEPRINT ON PAPER (Ctrl+P on the Blueprint tab)
+   Fills #bp-print-sheet, which only print media shows. Same ctx-swap →
+   renderCanvas() → restore as renderBlueprintExportCanvas() above, drawn
+   straight into the sheet's own canvas (an <img> given its src on
+   `beforeprint` may not have decoded by the time the page is laid out), and
+   cropped to the cells that hold something plus one cell of margin, so a
+   small building on a large grid still fills the page.
+=============================================== */
+function renderBlueprintPrintSheet() {
+  const sheet = document.getElementById('bp-print-sheet');
+  const out   = document.getElementById('bp-print-canvas');
+  if (!sheet || !out) return;
+  const { gridCols, gridRows } = AppState.blueprint;
+  const floor = AppState.blueprint.floors[AppState.blueprint.activeFloorIdx] ||
+                AppState.blueprint.floors[0];
+  const floorLabel = (floor && floor.label) || 'Floor 1';
+  document.getElementById('bp-print-title').textContent = AppState.settings.schoolName || 'Building plan';
+  document.getElementById('bp-print-sub').textContent = floorLabel;
+  out.setAttribute('aria-label', 'Floor plan, ' + floorLabel);
+
+  let c0 = Infinity, r0 = Infinity, c1 = -1, r1 = -1;
+  for (let r = 0; r < gridRows; r++) {
+    for (let c = 0; c < gridCols; c++) {
+      if (!getTile(c, r)) continue;
+      if (c < c0) c0 = c; if (c > c1) c1 = c;
+      if (r < r0) r0 = r; if (r > r1) r1 = r;
+    }
+  }
+  const none = c1 < 0;
+  sheet.classList.toggle('bp-print-none', none);
+  if (none) { sheet.classList.remove('bp-print-wide'); return; }
+
+  c0 = Math.max(0, c0 - 1); r0 = Math.max(0, r0 - 1);
+  c1 = Math.min(gridCols, c1 + 2); r1 = Math.min(gridRows, r1 + 2);
+  const cellSize = getEffectiveCellSize();
+  const w = (c1 - c0) * cellSize, h = (r1 - r0) * cellSize;
+  // 2.5 matches the PNG export; the cap keeps a very large grid inside what a
+  // canvas can hold.
+  const scale = Math.min(2.5, 4096 / Math.max(w, h));
+  out.width  = Math.round(w * scale);
+  out.height = Math.round(h * scale);
+  sheet.classList.toggle('bp-print-wide', w > h);
+
+  const pctx = out.getContext('2d');
+  pctx.setTransform(scale, 0, 0, scale, -c0 * cellSize * scale, -r0 * cellSize * scale);
+  const savedCtx = ctx;
+  ctx = pctx;
+  try {
+    renderCanvas();
+  } finally {
+    ctx = savedCtx;
+  }
+}
+
+window.addEventListener('beforeprint', () => {
+  const viz = document.getElementById('app-visualizer');
+  if (viz && viz.style.display === 'none') return; // the Schedule Browser is showing
+  if (AppState.ui.activeTab !== 'blueprint') return;
+  try {
+    renderBlueprintPrintSheet();
+  } catch (err) {
+    console.warn('[STVIZ] Blueprint print sheet error:', err);
+  }
+});
 
 /* ==============================================
    EVACUATION DOOR CARDS

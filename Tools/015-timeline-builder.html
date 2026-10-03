@@ -378,7 +378,7 @@
     body.tiled-printing #tiledPrintPages {
       display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0;
     }
-    .tiledPage { page-break-after: always; }
+    .tiledPage { page-break-after: always; break-inside: avoid; }
     .tiledPage:last-child { page-break-after: auto; }
 
     /* Map + timeline print, same shape as the tiled rules above: a third

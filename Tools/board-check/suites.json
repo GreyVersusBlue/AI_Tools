@@ -104,6 +104,7 @@
     "Tools/escape-room-builder/test/smoke-images.mjs",
     "Tools/escape-room-builder/test/smoke-station-qr.mjs",
     "Tools/schedule-visualizer/test/smoke-trace-image.mjs",
+    "Tools/schedule-visualizer/test/smoke-print.mjs",
     "Tools/lab-safety-contract-tracker/test/smoke-contact-sheet.mjs",
     "Tools/ssr-log-tracker/test/smoke-genres.mjs",
     "Tools/grammar-mad-libs/test/smoke-storage.mjs",

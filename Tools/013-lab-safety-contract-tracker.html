@@ -239,7 +239,7 @@
   @media print {
     .slips-grid { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; page-break-after: always; min-height: 9.6in; }
     .slips-grid:last-child { page-break-after: auto; }
-    .slip { border: 1px dashed #999; padding: .5in .4in; box-sizing: border-box; display: flex; flex-direction: column; gap: .35rem; }
+    .slip { border: 1px dashed #999; padding: .5in .4in; box-sizing: border-box; display: flex; flex-direction: column; gap: .35rem; break-inside: avoid; }
     .slip-name { font-size: 1.15rem; font-weight: 700; margin: 0; }
     .slip-need { font-size: .88rem; margin: 0; }
     .slip-due { font-size: .88rem; font-weight: 700; color: #a3372b; margin: 0; }
