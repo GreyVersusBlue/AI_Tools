@@ -128,6 +128,7 @@
     "test:pairing-qr": "node Tools/share/test/smoke-pairing-qr.mjs",
     "test:share-rollout": "node Tools/share/test/smoke-share-rollout.mjs",
     "test:print-kit": "node Tools/print-kit/test/print-kit.test.mjs && node Tools/print-kit/test/smoke-print-kit.mjs",
+    "test:print-tail": "node Tools/print-kit/test/smoke-print-tail.mjs",
     "test:stage": "node Tools/stage/test/stage.test.mjs && node Tools/stage/test/smoke-stage-rollout.mjs",
     "test:media": "node Tools/media/test/media-db.test.mjs && node Tools/media/test/smoke-media-db.mjs",
     "test:seating-read": "node Tools/seating-read/test/seating-read.test.mjs",

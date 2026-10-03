@@ -250,6 +250,9 @@
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
+    /* What visibility hides still takes its height, and that height printed as
+       blank sheets after this one. Everything but the sheet leaves the flow. */
+    body > *:not(#printArea) { display: none !important; }
     #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0.35in; }
     #printArea .rubric-sheet { box-shadow: none; padding: 0; min-width: 0; overflow-x: visible; }
     /* Every format is a wide grid and prints landscape — except the peer

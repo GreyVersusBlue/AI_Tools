@@ -195,6 +195,7 @@
     "Tools/share/test/smoke-send-to.mjs",
     "Tools/print-kit/test/print-kit.test.mjs",
     "Tools/print-kit/test/smoke-print-kit.mjs",
+    "Tools/print-kit/test/smoke-print-tail.mjs",
     "Tools/stage/test/stage.test.mjs",
     "Tools/stage/test/smoke-stage-rollout.mjs",
     "Tools/number-talks-board/test/smoke-stage.mjs",

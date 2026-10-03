@@ -585,6 +585,9 @@
   @media print {
     body * { visibility: hidden; }
     #print-area, #print-area * { visibility: visible; }
+    /* What visibility hides still takes its height, and that height printed as
+       blank sheets after this one. Everything but the sheet leaves the flow. */
+    body > *:not(.print-only) { display: none !important; }
     #print-area {
       display: flex !important; position: absolute; inset: 0;
       align-items: center; justify-content: center; background: #fff;
