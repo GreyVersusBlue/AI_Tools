@@ -472,6 +472,14 @@ files must be added there too.
   made an earlier hand-derived figure about 3× too high), which pages load no
   `a11y.js` at all, and whether each still hand-rolls fullscreen instead of
   linking `_shared/stage.js`.
+- **A WebRTC pairing code is drawn with `QrDraw.fit(canvas, text)`** (`_shared/qr-draw.js`,
+  AI-10, v223), which takes the size from the room the canvas's parent has, draws whole px per
+  module and never under 4, and puts a note on the page when there is not room. Do not write
+  another renderer, do not give a pairing canvas a `max-width` in px, and show its wrapper
+  *before* drawing: a hidden parent measures 0. The text comes from `_shared/webrtc-pair.js`,
+  whose compact code (`o…`/`a…`) is lossless by its own check and falls back to the full SDP.
+  `npm run test:pairing-qr` measures every pairing on a board and a phone; a new one gets a
+  line in its `PAIRINGS`. No real phone has scanned one (`BACKLOG.md`, parked check 4).
 - The site-wide platform themes **P1–P15** are a section of `BACKLOG.md`, and
   the per-tool sections cite them by ID. Do not renumber one; the IDs are
   load-bearing. Add a new theme at the end.

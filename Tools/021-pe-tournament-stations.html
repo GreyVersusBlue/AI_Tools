@@ -37,6 +37,7 @@
 <script src="../_shared/webrtc-pair.js"></script>
 <script src="../_shared/qr-scan.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <style>
   /* Tool-local tints, the same pairs 001 carries. ink-paper.css owns the
@@ -249,7 +250,7 @@
   .pair-close:hover { color: var(--err); background: transparent; border-color: transparent; }
   .pair-body { padding: 1.1rem; font-size: .9rem; line-height: 1.5; }
   .pair-body p { margin: 0 0 .8rem; color: var(--muted); }
-  .pair-body canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto .8rem; border-radius: 6px; }
+  .pair-body canvas { display: block; max-width: 100%; height: auto; margin: 0 auto .8rem; border-radius: 6px; } /* sized by QrDraw.fit(), never by a max-width here */
   .pair-body video { display: block; width: 100%; max-width: 280px; margin: 0 auto .8rem; border-radius: 6px; background: #000; }
   .pair-body textarea { min-height: auto; }
   .pair-status { font-size: .82rem; color: var(--muted); margin-top: .5rem; }
@@ -1314,41 +1315,11 @@
      _shared/webrtc-pair.js for why there's no STUN/TURN (LAN-only, by
      design) and why the wire format is compact rather than base64(JSON). */
 
-  /** Draws `text` as a QR code onto `canvas`, sized off the actual module
-   *  count so a payload that lands on an awkward module count for a fixed
-   *  pixel size still renders with a readable, even pixels-per-module ratio.
-   *  Copied from Tools/classroom-timer/ct-mirror.js's drawQR — that file is a
-   *  per-tool ES module (not a _shared/ export), so this tool keeps its own
-   *  small copy on top of the shared vendored qrcode.js library rather than
-   *  importing a sibling tool's module. */
+  /** Draws `text` as a QR code onto `canvas`, fitted to the pairing dialog by
+   *  _shared/qr-draw.js: whole px per module, never under the 4 px a phone
+   *  reads, and a note on the page when the dialog is too narrow for that. */
   function drawQR(canvas, text) {
-    var qr = window.qrcode(0, 'L');
-    qr.addData(text);
-    qr.make();
-    var count = qr.getModuleCount();
-    var quiet = 4;
-    var total = count + quiet * 2;
-    var MIN_PX_PER_MODULE = 8;
-    var size = total * MIN_PX_PER_MODULE;
-    canvas.width = size;
-    canvas.height = size;
-    var px = size / total;
-    var ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, size, size);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#16222e';
-    for (var r = 0; r < count; r++) {
-      for (var c = 0; c < count; c++) {
-        if (qr.isDark(r, c)) {
-          var x0 = Math.round((quiet + c) * px);
-          var x1 = Math.round((quiet + c + 1) * px);
-          var y0 = Math.round((quiet + r) * px);
-          var y1 = Math.round((quiet + r + 1) * px);
-          ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-        }
-      }
-    }
+    return window.QrDraw.fit(canvas, text);
   }
 
   function pairSetStatus(text, kind) {

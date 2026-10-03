@@ -30,6 +30,7 @@
 <script src="../_shared/stage.js"></script>
 <script src="../_shared/countdown.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <style>
   /* The hidden attribute is only display:none in the UA stylesheet; any class
@@ -343,7 +344,7 @@
   .mirror-close:hover { color: var(--color-danger); border-color: transparent; }
   .mirror-body { padding: 1.1rem; font-size: 0.92rem; line-height: 1.5; }
   .mirror-body p { margin: 0 0 0.9rem; color: var(--color-dim); }
-  .mirror-body canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto 0.9rem; border-radius: 6px; }
+  .mirror-body canvas { display: block; max-width: 100%; height: auto; margin: 0 auto 0.9rem; border-radius: 6px; } /* sized by QrDraw.fit(), never by a max-width here */
   .mirror-body video { display: block; width: 100%; max-width: 280px; margin: 0 auto 0.9rem; border-radius: 6px; background: #000; }
   .mirror-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
   .mirror-actions button { flex: 1 1 auto; }

@@ -35,6 +35,7 @@
 <script src="../_shared/webrtc-pair.js"></script>
 <script src="../_shared/qr-scan.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <style>
   /* Tool-local semantic tints, the same pairs 001 carries. ink-paper.css owns
@@ -227,7 +228,7 @@
   .remote-status { font-size: .84rem; color: var(--muted); margin-top: .5rem; }
   .remote-status.bad { color: var(--err); }
   .remote-status.good { color: var(--accent-2); }
-  .remote-modal canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto .8rem; border-radius: 6px; }
+  .remote-modal canvas { display: block; max-width: 100%; height: auto; margin: 0 auto .8rem; border-radius: 6px; } /* sized by QrDraw.fit(), never by a max-width here */
   .remote-modal video { display: block; width: 100%; margin: 0 auto .8rem; border-radius: 6px; background: #000; }
   .remote-modal textarea { width: 100%; font-family: ui-monospace, monospace; font-size: .72rem; margin-bottom: .6rem; min-height: 3.6rem; }
   .remote-cmd-list { list-style: none; margin: .6rem 0 0; padding: 0; }

@@ -13,35 +13,10 @@
 
 const CHUNK_SIZE = 12000; // chars per data-channel message — comfortably under every browser's limit
 
-/** Draws `text` as a QR code onto `canvas`, sized off the actual module count. */
+/** Draws `text` as a QR code onto `canvas`, fitted to the room its panel has
+    (_shared/qr-draw.js: never under 4 px per module, and it says so if not). */
 export function drawQR(canvas, text) {
-  var qr = window.qrcode(0, 'L');
-  qr.addData(text);
-  qr.make();
-  var count = qr.getModuleCount();
-  var quiet = 4;
-  var total = count + quiet * 2;
-  var MIN_PX_PER_MODULE = 8;
-  var size = total * MIN_PX_PER_MODULE;
-  canvas.width = size;
-  canvas.height = size;
-  var px = size / total;
-  var ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, size, size);
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = '#16222e';
-  for (var r = 0; r < count; r++) {
-    for (var c = 0; c < count; c++) {
-      if (qr.isDark(r, c)) {
-        var x0 = Math.round((quiet + c) * px);
-        var x1 = Math.round((quiet + c + 1) * px);
-        var y0 = Math.round((quiet + r) * px);
-        var y1 = Math.round((quiet + r + 1) * px);
-        ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-      }
-    }
-  }
+  return window.QrDraw.fit(canvas, text);
 }
 
 function sendChunked(channel, payload) {

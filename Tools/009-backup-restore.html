@@ -29,6 +29,7 @@
 <script src="../_shared/webrtc-pair.js"></script>
 <script src="../_shared/qr-scan.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <script src="backup-restore/br-transfer.js"></script>
 <script src="backup-restore/br-pair.js"></script>
@@ -166,7 +167,7 @@
   .xfer-close:hover { color: var(--err); border-color: transparent; background: none; }
   .xfer-body { padding: 1.1rem; font-size: .9rem; line-height: 1.5; }
   .xfer-body p { margin: 0 0 .8rem; color: var(--muted); }
-  .xfer-body canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto .8rem; border-radius: 6px; }
+  .xfer-body canvas { display: block; max-width: 100%; height: auto; margin: 0 auto .8rem; border-radius: 6px; } /* sized by QrDraw.fit(), never by a max-width here */
   /* A camera viewfinder is a lens, not a surface: it stays black in both themes. */
   .xfer-body video { display: block; width: 100%; max-width: 280px; margin: 0 auto .8rem; border-radius: 6px; background: #000; }
   .xfer-status { font-size: .85rem; color: var(--muted); margin: .5rem 0 0; }
