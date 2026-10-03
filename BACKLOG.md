@@ -87,9 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v228), rank 6, Path 7 P2 increment 5:** the 15 tools that hid their editor with `visibility` in their own
+  print block no longer print blank sheets after the sheet (`npm run test:print-tail`, Chromium's PDF per button).
+  **Left in P2: the same blank sheets on the 8 pages that get the rule from `_shared/print-area.css`.**
 - **AI-13 (v227), rank 6, Path 7 P2 increment 4:** 015's map sheet runs on to a second page instead of cutting a
   long timeline off; 035's other four tabs print as documents; 004 009 010 print light from dark. New audit kind
-  TAIL. **Left in P2: TAIL on 23 pages (blank sheets after every print), 8 of them through `print-area.css`.**
+  TAIL.
 - **AI-13 (v226), rank 6, Path 7 P2 increment 3:** 035's Blueprint tab prints the active floor's plan on one page
   (`#bp-print-sheet`, suite `smoke-print.mjs`, port 8465) and none of the editor. 040 no longer prints a blank
   sheet; seeds or prep reach every print button on 013 014 015 024 033 040 084.
@@ -305,7 +308,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 6 | Path 7 P2 — print reliability audit. **Increment 1 (AI-13, v224):** `npm run path7:next` (`audit-print.mjs`) measures every tool in print in a browser; 077's clipped card, `theme.css`'s missing print reset and seven smaller fixes shipped. **Increment 2 (AI-13, v225):** every page is measured (seeds for 18 pages, `print-audit-prep.mjs`); 061's blank sheet, 023's clipped slips, 038's Ctrl+P, 051 and 074 fixed. **Increment 3 (AI-13, v226):** 035's Blueprint tab prints the floor plan on one page and no editor chrome (`smoke-print.mjs`); 040 refuses to print an empty list; every print button on 013 014 015 024 033 040 084 is reached. **Increment 4 (AI-13, v227):** 015's map page no longer cuts a long timeline off and prints no blank pages; 035's Schedules, Visualize, What-if and Settings tabs print as documents (79 findings to 0); 004 009 010 print light from a dark screen (DARK 61 to 0); the audit has a new kind, TAIL. **Left:** TAIL on 23 pages, one to five blank sheets after every print because `body * { visibility: hidden }` keeps the editor's height (003 016 024 028 033 037 039 040 041 042 043 061 063 068 078 in their own print block; 054 056 058 060 065 079 082 085 through `_shared/print-area.css`, where one change covers all 20 linkers and so needs the full `npm test`). After that P2 is closed: 015's three FIXED and 042 046 064 are fixed-size on purpose | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 6 | Path 7 P2 — print reliability audit. **Increment 1 (AI-13, v224):** `npm run path7:next` (`audit-print.mjs`) measures every tool in print in a browser; 077's clipped card, `theme.css`'s missing print reset and seven smaller fixes shipped. **Increment 2 (AI-13, v225):** every page is measured (seeds for 18 pages, `print-audit-prep.mjs`); 061's blank sheet, 023's clipped slips, 038's Ctrl+P, 051 and 074 fixed. **Increment 3 (AI-13, v226):** 035's Blueprint tab prints the floor plan on one page and no editor chrome (`smoke-print.mjs`); 040 refuses to print an empty list; every print button on 013 014 015 024 033 040 084 is reached. **Increment 4 (AI-13, v227):** 015's map page no longer cuts a long timeline off and prints no blank pages; 035's Schedules, Visualize, What-if and Settings tabs print as documents (79 findings to 0); 004 009 010 print light from a dark screen (DARK 61 to 0); the audit has a new kind, TAIL. **Increment 5 (AI-13, v228):** the 15 pages that carried `body * { visibility: hidden }` in their own print block (003 016 024 028 033 037 039 040 041 042 043 061 063 068 078) print the sheet and no blank pages after it (`Tools/print-kit/test/smoke-print-tail.mjs`, Chromium's PDF for every print button). **Left:** TAIL on 8 pages, 054 056 058 060 065 079 082 085, through `_shared/print-area.css`: the same blank sheets, where one rule covers all 20 pages that link it and so needs the full `npm test` behind it; add each fixed page to `smoke-print-tail.mjs`'s table. After that P2 is closed: 015's three FIXED and 042 046 064 are fixed-size on purpose | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 7 | Path 7 P3 — adoption: the class-set/blank tools, then the card-grid tools | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 7 P4 — `_shared/export.js`: `toPdf`, `toCsv/xlsx`, `toZip`, booklet/N-up imposition | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 9 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
@@ -1562,11 +1565,16 @@ localStorage with no file export.
   7.5 in and cut the rest off; the strip now yields height to the key and legend and the page runs on to a
   second sheet past that. 035's Schedules, Visualize, What-if and Settings tabs print as documents (the audit
   opens them now). 004, 009 and 010 put their own dark tokens back in print. The audit's new kind **TAIL**
-  counts blank paper after a sheet. **Next, and the last of P2: TAIL on 23 pages.** `body * { visibility:
-  hidden }` leaves the editor's height behind and every print ends in one to five blank sheets. Fifteen pages
-  do it in their own print block; eight get it from `_shared/print-area.css`, where the fix is one rule for
-  all 20 linkers (take the editor out with `display: none`, or collapse it; 015 did the first) and needs the
-  full `npm test` behind it. Check a fixed page with Chromium's `page.pdf()` page count, not only the audit:
+  counts blank paper after a sheet.
+  **Increment 5 shipped (AI-13, 2026-10-03, v228).** `body * { visibility: hidden }` leaves the editor's
+  height behind, and every print ended in one to six blank sheets. The fifteen pages that do it in their own
+  print block now also take everything but the sheet out of the flow (`body > *:not(#printArea) { display:
+  none !important }`; 016 keeps its three `.print-only` sheets, 037's sheet is nested and names its path).
+  `Tools/print-kit/test/smoke-print-tail.mjs` presses every print button on them and reads Chromium's PDF.
+  **Next, and the last of P2: the eight pages that get the rule from `_shared/print-area.css`** (054 056 058
+  060 065 079 082 085). The fix is one rule for all 20 linkers; `#printArea` is written as a child of `body`
+  on all 20 (read off the source, not checked in a browser), so the same selector should do. It needs the
+  full `npm test` behind it. Add each page to the suite's table: it checks the PDF, which matters because
   TAIL is an estimate off the layout. 042's certificate, 046's viewport, 064's trading card and 015's tile,
   map box and strip are fixed-size on purpose (`HISTORY.md`).
 - **P3 — Adoption.** Move the class-set/blank tools (042, 043, 023, 070, 076, 077)

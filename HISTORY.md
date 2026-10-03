@@ -9,6 +9,66 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P2, increment 5: no blank sheets after a print on the fifteen pages that hid their editor with `visibility` (2026-10-03, AI-13, `CACHE_VERSION` v228)
+
+Audit entry AI-13, rank 6 (2+). Fifth increment; the row stays, rewritten. P3 to P5 untouched.
+
+- **The bug, in Chromium's own PDF.** Fifteen tools print by `body * { visibility: hidden }` and an
+  absolutely positioned `#printArea` laid over the page. What `visibility` hides keeps its height, so the
+  paper ran on for as long as the editor was tall. Before the fix, pressing the print button and asking
+  Chromium for the PDF gave: 003 3 pages for a 1-page rubric; 016 2 for 1; 024 3 for 1; 028 7 for a 1-page
+  worksheet and 7 for a 2-page answer key; 033 2 for 1; 037 2 for 1; 041 3 for 1; 042 4 for 1 certificate;
+  043 4 for 1 on each of its four prints; 063 2 for 1; 068 2 for 1; 078 3 for 1. 039, 040 and 061 showed no
+  blank page in the state measured, only because their two-page sheet was taller than their editor; a
+  one-page print from them would have had one.
+- **The fix is one rule per page**, added under the two `visibility` lines, which stay:
+  `body > *:not(#printArea) { display: none !important; }`. On all but one page `#printArea` is a child of
+  `body`. 016 has three sheets (`#print-area`, `-bulk`, `-inventory`), all `.print-only`, so its rule is
+  `body > *:not(.print-only)`. 037's `#printArea` is the output panel itself, two levels down, so its rule
+  names the path: `body > *:not(.wrap), .wrap > *:not(.layout), .layout > *:not(#printArea)`. `!important`
+  is there because several of these pages show panels with an inline `display`. Nothing inside any sheet
+  was touched, 042's fixed-size certificate included: its print is one page, as its sheet always was.
+- **After:** every print above is exactly its sheet (1 page; 2 for 028's answer key, 039, 040 and 061), and
+  the number of pages with a mark on them is the same as before on every button, which is the check that
+  nothing that should print was hidden.
+- **New suite, `Tools/print-kit/test/smoke-print-tail.mjs`** (`npm run test:print-tail`, port 8466, 168
+  assertions, about a minute). For each of the 15 pages it opens the audit's seeded state, presses each
+  print button that prints (21 in all, including 016's single code and its bulk grid, and 040 with a word
+  list typed), and checks that print() was called, that in print media nothing outside the sheet has a box,
+  that the sheet shows, and that no page of Chromium's PDF is without a mark. Run against the old CSS it
+  fails 37 times, on every one of the 15 pages. The "no box outside the sheet" assertion is what catches
+  039, 040 and 061, where the PDF alone would pass.
+- **A call I made, to reverse cheaply.** The task asked for an assertion in each page's own suite. I wrote
+  one table-driven suite instead: the check needs a PDF parser and a print stub, thirteen suites would
+  each have carried a copy, and 061 and 078 have no suite at all. It names every page in full, so
+  `run-suites.mjs --changed` selects it for an edit to any of them and for no other page.
+- **How a blank page is told.** With `printBackground: false`, a page whose content stream has no text,
+  fill, stroke or image operator. With backgrounds on, Chromium paints the page colour on every sheet and
+  nothing is ever blank; the first version of the measurement reported 0 blank pages out of 7 for that
+  reason. A sheet made only of background fills would read as blank; none of these is.
+- **Audit (`audit-print --baseline`, full sweep):** 88 pages, 390 states, 779 s. TAIL 23 pages to 8,
+  and the 8 are exactly the `print-area.css` pages. The baseline went from 26 pages to 12; what is left
+  beside TAIL is 1 CLIP and 8 FIXED on 4 pages, the fixed-size sheets that are fixed on purpose. The first
+  sweep was killed at about page 45 by a ten-minute limit I had set on the command myself; the numbers here
+  are from the second, complete run.
+
+**Not verified.** Nothing was printed on paper; Chromium's PDF only, no Firefox or Safari. The suite does
+not press 016's inventory sheet, 024's wall poster, or 033's log slips and finished-books wall: none of
+them called print() in the seeded state, and they print through the same `#printArea` rule as the buttons
+that are covered. Ctrl+P with no sheet built still prints one empty page on the pages that fill
+`#printArea` only when a button is pressed (it was two to seven); that is the page having nothing to
+print, and I left it. The eight pages that hide their editor through `_shared/print-area.css` (054 056 058
+060 065 079 082 085) are untouched and still print blank sheets. Full `npm test` and the full a11y sweep
+were not run.
+
+**Checks run.** All 13 guards (the twelve `check:*` scripts and `lint`), including
+`check:precache -- --base origin/main` and `check:adoption -- --check`. `run-suites.mjs --only` for print-kit,
+rubric-builder, qr-code-generator, number-talks-board, primary-source-analysis-generator, ssr-log-tracker,
+grade-distribution-visualizer, vocab-conjugation-drill, vocab-flashcard-generator, formula-sheet-builder,
+certificate-award-maker, field-trip-permission-slip, grammar-mad-libs, parent-contact-log, service-worker,
+theme and board-check: 38 suites, all green. The a11y sweep with `--only` for each of the 15 pages. The new
+suite against the old CSS, to see it fail. One full `audit-print --baseline` sweep.
+
 ## Path 7 P2, increment 4: 015's long timeline, 035's other four tabs, dark pages on paper, and blank pages after a sheet (2026-10-03, AI-13, `CACHE_VERSION` v227)
 
 Audit entry AI-13, rank 6 (2+). Fourth increment; the row stays, rewritten. P3 to P5 untouched.

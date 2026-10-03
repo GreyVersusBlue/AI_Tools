@@ -471,7 +471,8 @@ files must be added there too.
   light and dark, and reports clipped and fixed boxes, scroll boxes, controls on paper, blocks a
   page break may split, dark ink on paper and (TAIL, since v227) blank pages after the sheet. TAIL
   is what `body * { visibility: hidden }` leaves: the hidden editor keeps its height. A new print
-  block takes the screen UI out with `display: none`, and a page with dark tokens of its own puts
+  block takes the screen UI out with `display: none` (`npm run test:print-tail` reads Chromium's PDF for
+  the fifteen pages fixed in v228; a page fixed later joins its table), and a page with dark tokens of its own puts
   them back in print itself (`npm run test:theme` checks 004, 009 and 010). It reaches a sheet through saved state
   (`Tools/a11y-sweep/seeds.mjs`, which the a11y sweep's seeded pass reads too), through a tab whose
   label says "print", which it opens itself, and through `Tools/board-check/print-audit-prep.mjs` for
