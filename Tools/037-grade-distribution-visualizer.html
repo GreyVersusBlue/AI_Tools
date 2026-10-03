@@ -168,6 +168,8 @@
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
+    /* The copy/download buttons under each chart sit inside the print area. */
+    #printArea .chart-dl-row { display: none; }
     #printArea {
       position: absolute; left: 0; top: 0; width: 100%; margin: 0;
       border: none; padding: 0.3in; box-shadow: none;

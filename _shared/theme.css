@@ -24,6 +24,14 @@
   --color-danger-bg: oklch(94% 0.03 25);
 }
 
+/* Printing is always on paper, whatever the screen is doing, so the dark
+   palette is a screen palette: under `@media screen` it never reaches a
+   printed page, and print gets the Industry stylesheet's light tokens with
+   nothing to undo. Until Path 7 P2 (2026-10-03) these rules were unscoped and
+   a teacher with dark on printed 036's report in near-white text (measured:
+   rgb(240, 242, 244), 1.1:1 on white). ink-paper.css does the same job with a
+   print reset block, because its light values live under other names. */
+@media screen {
 :root[data-theme="dark"]:not(.a11y-filter-dark) {
   color-scheme: dark;
   --color-bg: var(--color-neutral-900);
@@ -47,6 +55,7 @@
 :root[data-theme="dark"]:not(.a11y-filter-dark) .tag-accent { background: var(--color-accent-900); color: var(--color-accent-200); }
 :root[data-theme="dark"]:not(.a11y-filter-dark) .tag-accent-2 { background: var(--color-accent-2-900); color: var(--color-accent-2-200); }
 :root[data-theme="dark"]:not(.a11y-filter-dark) .tag-neutral { background: var(--color-neutral-800); color: var(--color-neutral-200); }
+}
 
 html { background: var(--color-bg); }
 body { transition: background 0.15s ease, color 0.15s ease; }

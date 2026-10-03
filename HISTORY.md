@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P2, increment 1: a print audit that opens the page, and the first nine fixes (2026-10-03, AI-13, `CACHE_VERSION` v224)
+
+Audit entry AI-13, rank 6 (2+). One increment; the row stays, rewritten. P3 to P5 untouched.
+
+- **The row's three named checks all came back clean statically, which is why this built a second tool.**
+  `check:print-clip` passed before anything was changed, all 20 pages linking `print-area.css` have a `#printArea`,
+  and 26 of the 62 pages with an `@media print` block (62 by a `git ls-files` count; the header's 63 was not
+  re-derived) set no `break-inside` at all, which says nothing about whether they need one. A stylesheet read
+  could not go further, so `Tools/board-check/audit-print.mjs` (`npm run path7:next`) opens every tool under
+  `emulateMedia({media: 'print'})`, empty and again with `a11y-sweep/seeds.mjs`'s saved state, as loaded and again
+  after each visible "print" button with `window.print` stubbed, in light and in dark: 275 states over 88 pages,
+  about 10 to 12 minutes. Kinds: CLIP, FIXED, SCROLL, CHROME, SPLIT, DARK; its header defines each.
+- **The fixed-height bug was in 077, where the static guard does not look.** `.accom-card { height: 2.6in;
+  overflow: hidden }` sat in a *screen* rule that also styles the printed card, so a student with a long note lost
+  the bottom of it on paper. Now `min-height` + `break-inside: avoid`; `smoke-filter.mjs` prints a 40-sentence
+  note and asserts it ends inside its card (4 new assertions, 33 pass). The audit's own first sweep missed this,
+  because the seed's short list fits: the FIXED kind (a clipping box holding text that does not grow when 200px
+  is put in it) was added after 077 was found by reading, and would have caught it.
+- **`_shared/theme.css` had no print reset.** Its five pages (005, 011, 029, 031, 036) printed dark tokens with
+  dark on: 036's grade report came out at rgb(240, 242, 244), 1.1:1 on white, 162 elements. The dark rules are
+  now inside `@media screen`, so print gets the light tokens with nothing to undo. `ink-paper.css` keeps its
+  print reset block. `test:theme` still passes with the gate inside the wrapper.
+- **The rest of the batch.** 002 and 018 printed their class/hunt toolbar (a select and three buttons) above the
+  sheet once a second class or hunt existed; 037 printed Copy/Download buttons under each chart inside
+  `#printArea`; 020's champion banner printed its dark tint (#332711) with dark on; 040's flash cards, 043's
+  slips and 079's poster panels now carry `break-inside: avoid`.
+- **Sweep, before and after:** 17 pages with a finding to 7; DARK 6 pages/64 to 3/61, CHROME 5/65 to 2/54,
+  SPLIT 4/5 to 1/2, FIXED 4/9 to 3/8. The "before" sweep is the first one run after the audit's rules settled,
+  and `theme.css` and 077 were already fixed by then, so it understates what was found: 036 alone was 162 DARK
+  findings before. 018 moved to "not measured" once its toolbar stopped being the only thing it printed. The 7 are in
+  `Tools/board-check/print-audit-baseline.json`, which `--check` compares against; it is not a CI gate.
+- **What is left, and what I decided not to fix.** 035 (45 CHROME, 5 FIXED, 2 SCROLL, 2 SPLIT) has a print
+  block that does not cover its Blueprint tab; it is the largest item and rank 5's file. 038 prints its whole
+  screen on Ctrl+P because its print rules hang off `body.printing`, which only its own buttons set. 042's
+  certificate and 046's map viewport are FIXED by design (one certificate per page; a map window) and 064's
+  `.trading-card` is a physical card size with its own fit logic: left alone, call recorded here. 004, 009 and
+  010 have no print path and print dark tints on Ctrl+P.
+- **Not measured: 18 pages** (006 008 017 018 023 025 044 048 049 051 053 060 061 064 067 069 074 082) showed
+  nothing in print in any state the audit reached, because their sheet needs data no seed supplies. That is the
+  next increment: seeds for those, in `a11y-sweep/seeds.mjs` (which also widens the a11y sweep).
+- **What went wrong.** `pkill -f audit-print.mjs` matches the shell running it and killed two sweeps of mine; use
+  `pkill -f '[a]udit-print'`. The browser also died mid-sweep twice with nothing in the page to blame (another
+  session on huginn tidying `chrome` processes is the likely cause, not confirmed), so the audit relaunches and
+  redoes the page. SPLIT says a break *may* land in a block; nothing here paginates. Nothing was printed on
+  paper. The full `npm test` was not run; the suites of every touched tool, `theme` and `service-worker` were.
+
 ## Pairing codes at a size a phone can read: `QrDraw.fit()` and a compact code (2026-10-03, AI-10, `CACHE_VERSION` v223)
 
 Audit entry AI-10, old rank 6 (½). The row measured 006 and guessed at three more. Measured in a browser, it was all

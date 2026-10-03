@@ -225,7 +225,7 @@
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
     #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
-    #printArea .slip { box-shadow: none; width: 100%; page-break-after: always; }
+    #printArea .slip { box-shadow: none; width: 100%; page-break-after: always; break-inside: avoid; }
     #printArea .slip:last-child { page-break-after: auto; }
     #printArea .slip-pair { display: flex; gap: .25in; }
     #printArea .slip-pair .slip { width: 50%; padding: .4in .3in; page-break-after: auto; font-size: .82rem; }
