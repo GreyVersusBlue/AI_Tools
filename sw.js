@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v221';
+const CACHE_VERSION = 'v222';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -204,6 +204,7 @@ const PRECACHE_URLS = [
   "Tools/047-art-critique-worksheet-generator.html",
   "Tools/048-art-portfolio-label-maker.html",
   "Tools/009-backup-restore.html",
+  "Tools/backup-restore/br-crypto.js",
   "Tools/backup-restore/br-pair.js",
   "Tools/backup-restore/br-transfer.js",
   "Tools/008-behavior-points-tracker.html",
@@ -261,6 +262,8 @@ const PRECACHE_URLS = [
   "Tools/classroom-timer/ct-store.js",
   "Tools/classroom-timer/mirror.html",
   "Tools/052-cognates-false-friends-builder.html",
+  "Tools/088-braille-reading-trainer.html",
+  "Tools/braille-trainer/bt-core.js",
   "Tools/010-command-center-dashboard.html",
   "Tools/command-center/cc-remote.js",
   "Tools/command-center/remote.html",

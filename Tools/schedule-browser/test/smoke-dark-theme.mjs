@@ -53,7 +53,10 @@ console.log('Schedule Browser — native dark palette (Path 5 P4)');
 
 /* ── 1. the two files carry the same theme, statically ─────────────────── */
 
-const read = rel => fs.readFileSync(path.join(SITE, rel), 'utf8');
+// CR stripped: every search below is for "\n}" or "<style>\n", and a CRLF
+// checkout (Git for Windows' default before .gitattributes pinned LF) made
+// all of them miss, so this failed on Windows alone (AI-34, 2026-10-01).
+const read = rel => fs.readFileSync(path.join(SITE, rel), 'utf8').replace(/\r\n/g, '\n');
 const PALETTE = '/* ── The palette, named twice (Path 5 P4) ─';
 const DARK = '/* ── Dark ─';
 

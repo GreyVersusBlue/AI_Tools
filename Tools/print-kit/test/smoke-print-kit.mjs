@@ -20,7 +20,7 @@
 
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
 
-const PORT = 8460;
+const PORT = 8462;
 const BASE = `http://127.0.0.1:${PORT}`;
 const IN = 96; // CSS px per inch
 

@@ -9,6 +9,37 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## AI-sync: origin's #323 to #329 merged into huginn's local `main` (2026-10-03, AI-sync, `CACHE_VERSION` v222, not pushed)
+
+Local `main` was 16 commits ahead of origin and 7 behind, and the nightly merge's rebase had conflicted. This is a
+merge commit of origin `834ccd9` into local `main` (no rebase). `selector-presync-2026-10-03` tags local `main` as it
+was (`5fcf61b`). Nothing was pushed.
+
+- **The eight AI-03, AI-07 and AI-09 commits duplicate #326, and the two sides agree.** #326's tree (`7d18fad`) differs
+  from local `aa66fe1` only by what #323 to #325 added, plus `BACKLOG.md`, `HISTORY.md` and the `sw.js` version. Nothing
+  local was missing from #326 and nothing had to be chosen between them.
+- **Six page conflicts took the local side** (002, 016, 018, 038: AI-35's `ink-paper.css` tokens over the slate
+  palette; 028, 040: AI-08's removal of the per-page `--info-bg` pair). Origin's side of each was byte-identical to
+  local's own earlier state, so local is the later one.
+- **`CACHE_VERSION` is v222.** Origin used v213 (#323), v214 (#324), v215 (#326) and v216 (#328). Local sessions had
+  labelled their work v213 (AI-03), v215 (AI-07), v216 (AI-11), v217 (AI-12), v218 (AI-08), v219 (AI-35), v220 (AI-34)
+  and v221 (AI-13). **No label was rewritten**: origin's are published, AI-03's and AI-07's local labels are in origin's
+  `HISTORY.md` already, and this file already carried two v213s and two v215s. The map is: local v216 to v221 never
+  reached a deployed site, and AI-11, AI-12, AI-08, AI-35, AI-34 and AI-13 P1 all ship as **v222**. "v216" alone means
+  #328; AI-11's v216 is the local one.
+- **`BACKLOG.md`:** local's 171-row table (AI-11, AI-08, AI-35 and AI-13 had deleted eight rows) with origin's two
+  rewritten rows, rank 2 (Path 4 P5, the rest) and old 137, now **129** (per-record conflict resolution). Origin's
+  header facts were kept and its rank references moved to local numbering (34 to 30, 171–179 to 163–171, 89 to 81).
+  Three origin bullets were dropped as no longer true: 028's upload hint (AI-12 fixed it), the dead trees (AI-11
+  deleted them), and "8 commits ahead" for this checkout. Two stale Tier 2 references went with it (snap-to-grid is
+  rank 162; Path 22 P6 to P14 are 163–171). The header numbers were re-measured on the merged tree.
+- **A port collision the merge made:** 088's `smoke-braille-trainer.mjs` (origin) and `smoke-print-kit.mjs` (AI-13)
+  both bound 8460. The print kit's moved to **8462**; the next suite takes 8463.
+- **AI-08's "grep skips 009 as binary" trap is spent:** #328 replaced the NUL.
+- **Left for Devon:** #326's entry says a session should never commit to this shared `main`. The local sessions
+  since then did, under the Selector's queue. The two instructions disagree and neither was edited here. The header
+  is 95 lines against its ~80 cap, because it carries both sides' state until the push.
+
 ## Path 7 P1: `_shared/print-kit.css` + `print-kit.js`, the shared print kit (2026-10-03, AI-13, `CACHE_VERSION` v221)
 
 Audit entry AI-13, old rank 7. P1 only; P2 to P5 are ranks 7 to 10 now. **No tool links the kit yet.** The definition of
@@ -39,7 +70,7 @@ done allows a new `_shared/` module "at most one adopter", and adoption is P3's 
   `display: flow-root` in print because of it. A tool rule that sets `display` on the same element loses that, and has
   to contain its own margins.
 - **Measured:** 311 precache entries, 12,603,498 B; install tier 95, 2,987,295 B (the two files are 20,308 B).
-  `Tools/print-kit/test/print-kit.test.mjs` 66 checks, `smoke-print-kit.mjs` 57 checks on port 8460, counting pages in
+  `Tools/print-kit/test/print-kit.test.mjs` 66 checks, `smoke-print-kit.mjs` 57 checks on port 8462 (8460 as written; AI-sync moved it, 088's suite had 8460 on origin), counting pages in
   Chromium's PDF output (Chrome 154 on huginn).
 - **Not verified.** Nothing was printed on paper: not the half-sheet cut line, not the label presets on Avery stock,
   not the hatches on the school copier. That is the parked device check. Firefox and Safari print were not run. The
@@ -135,6 +166,7 @@ was left alone, though "Standing decisions" carries a default for it. Rank 76 (t
 - **Trap: `grep` skips `Tools/009-backup-restore.html` as binary.** It has a literal NUL inside a JS string
   (`label + '\0' + kind`, written as the raw byte), and the session's grep passes `-I`. A grep-loop count of "who skips
   `base.css`" silently listed 009; `command grep -a` or `check:adoption` gets it right. Not changed.
+  *(No longer applies after AI-sync's merge: #328 wrote the byte as `'\ufffd'`, and 009 holds no NUL now.)*
 - **Rank 76, the adoption sweep, is not done** and is bigger than its row said. Recounted: 7 tools load no `a11y.js`
   (002, 007, 016, 018, 038, 044, 086), 13 no `ink-paper.css`, 19 no `base.css`. 016, 018 and 038 are dark by default on
   their own palettes, so `a11y.js` alone would invert them to light under its filter — they need native ink-paper
@@ -170,6 +202,167 @@ Old ranks 81, 82 and 83, deleted; the table is renumbered to 176 rows.
   session had no network to fetch real woff2 files. Reverse it by vendoring Space Grotesk, Public Sans and IBM Plex Mono
   into `_shared/vendor/` and linking them. Its "Landing-Page Web Fonts Never Shipped" idea card went too.
   The page is precached, so `CACHE_VERSION` went v215 to v216.
+
+## Path 4 P5, part: 009's passphrase lock and the landing page's backup readout (2026-10-02, #328, `CACHE_VERSION` v216)
+
+**Read 009 before trusting the row, as the handoff said, and it was right to:** the row's
+first item, the restore preview/diff, had already shipped (`fb177c8`, `smoke-restore-diff.mjs`,
+record-level counts per mode and what Replace removes). The row and 009's Tier 2 "Quick Wins"
+still listed it as open. Both are corrected; old rank 137 is cut down to what is really left of
+it (per-record "keep the newer", which needs timestamps no tool writes).
+
+**What shipped.**
+- `Tools/backup-restore/br-crypto.js`: an optional passphrase lock on a downloaded backup.
+  AES-GCM-256, key from PBKDF2-SHA-256 at 600,000 iterations, 16-byte salt and 12-byte IV,
+  all WebCrypto. The locked file is still JSON naming its format and `exportedAt`, so the
+  restore card recognises it and asks for the passphrase; then it goes through the same
+  preview and Restore as any backup. The label is **not** copied to the outside (teachers
+  write class names into it). A wrong passphrase and a damaged file are one error (GCM's tag).
+- `index.html`'s app bar: "N KB saved · backed up N days ago" (or "never backed up", in
+  `--err`), linking to 009, hidden when nothing is saved. It counts localStorage only:
+  `navigator.storage.estimate()` includes the site's own precache, ~11 MB, and would make an
+  empty profile look full. It skips `gvb-home-*`, `gvb-a11y-prefs` and the backup stamp, so
+  its figure can differ slightly from 009's banner, which skips registry-transient keys.
+- `smoke-encrypted.mjs` (port **8461**, `test:backup-encrypted`): the file holds no name, key
+  or roster name; a wrong passphrase writes nothing; the right one restores byte-identically;
+  a plain file never asks; the readout's three states; axe on the unlock form and the app bar.
+
+**Decisions, cheap to reverse.** The lock is **off by default**, and the year-end archive is
+**never** locked: a passphrase forgotten over the summer is a lost year, which is the failure
+this page exists to prevent. Minimum passphrase length 8, with a confirm field. Device-to-device
+transfer is not locked (it never touches disk).
+
+**Found on the way.** 009's group id was built with a literal NUL byte in the source, which is
+why `grep` called the page binary and printed nothing for every search of it. Writing it as
+`\u0000` broke download (every row came back unselected): the HTML parser had always turned
+that NUL into U+FFFD inside `<script>`, and the id round-trips through a `data-id` attribute,
+where `\u0000` also becomes U+FFFD and then matches nothing. It is `\ufffd` now, with a comment.
+
+**Not done / not verified.** Per-tool restore as a shared control (the row's remaining half).
+The lock under `file://` in the offline zip: Chrome treats `file://` as a secure context, so
+`crypto.subtle` should exist, and the option hides itself where it does not, but neither was
+run. The dark-theme contrast of the flagged readout was not scanned (light only).
+
+## Landing three sessions' stranded work: AI-03, AI-07, AI-09 (2026-10-02, #326, `CACHE_VERSION` v215)
+
+Three sessions (AI-03 on 2026-10-01, AI-07 and AI-09 on the morning of 2026-10-02) committed straight
+to huginn's local `main` and never pushed; meanwhile origin took #323 (v213), #324 (v214) and #325. AI-03
+had labelled its work v213, which #323 had also used. The eight commits existed only on that disk.
+This session pushed them as `backup/ai-03-relief` and `backup/ai-07-ai-09-local-main` first, then
+merged local `main` into a branch off origin in its own worktree (the shared checkout was not touched,
+in case one of those sessions was still alive), resolved `sw.js` to **v215** (free on origin; AI-07 had
+taken it locally), kept both sides' `HISTORY.md` entries, and merged the `BACKLOG.md` header by hand:
+AI-09's re-ranked table (179 rows), with origin's 088 facts (88 tools, 89 registry rows, adoption of 88).
+088 passes the now-empty a11y allowlist and the seeded sweep (`test:a11y`, 89 pages, run locally).
+
+**What went wrong, and the rule it breaks:** a session that cannot push should stop and say so, not keep
+committing to a shared `main`; and a later session that finds local `main` ahead of origin should not
+build on top of it. AI-07 and AI-09 did the second. Each entry below is theirs as written; the
+"on local `main`" wording in them is history now. Not verified here: the full `npm test` (CI's push run
+is the authority), and whether AI-07/AI-09's sessions are still running on huginn and will try to push.
+
+## 088 Braille Reading Trainer, a new tool at Devon's request (2026-10-02, #324, `CACHE_VERSION` v214)
+
+Not a backlog row: Devon asked for it directly ("Duolingo, but braille… I'm not sure what
+category this would belong to… idk what the best training profile is"). Those two open
+questions were decided here, and both are cheap to reverse.
+
+**Category: World Language** (now 8 tools). Braille is a code for English rather than a
+language, but the tool is a self-paced reading-literacy course with vocabulary-style drill,
+which is what that section holds. Nothing else in the toolkit is a learner-facing course; this
+one is for the adult at the keyboard, so it is not "promoting anything student-facing". The
+registry marks its one key as not student data.
+
+**The training profile**, in order of how much it shapes the tool:
+- **Unified English Braille**, the US standard since 2016, not EBAE. 212 signs in 22 units
+  and 86 lessons (`bt-core.js`): the alphabet by decades (a–j, then +dot 3, then +dots 3-6,
+  then w), capitals, numbers, punctuation; then the contractions; then the two-cell
+  contractions and endings; then 58 shortforms. Signs that share a cell (`his` and the
+  opening quote, `ch` and `child`) are separate items, never offered as each other's
+  distractor.
+- **Recognition first, production second.** Each lesson: a card with numbered dots, then
+  "what does this say", then "fill in the dots" on a Perkins-style F D S / J K L pad, then
+  mixed questions, then words and a sentence built *only* from signs already learned. A miss
+  is re-asked at the end of the lesson.
+- **Mirror images are the first distractors** (d/f, e/i, h/j), then cells one dot away. That
+  is the confusion sighted readers actually have.
+- **Leitner boxes that need speed:** a right answer slower than 4 s does not move a sign up.
+  Sight reading is instant recognition, and a box system that rewards slow decoding would
+  report fluency that is not there. A miss drops two boxes.
+- **Reading room after punctuation**, with passages contracted *only as far as the reader has
+  learned*, so the same text gets denser as they progress, plus uncontracted and full
+  grade 2 modes, words per minute, and click-to-peek. Ten original passages; paste-your-own
+  for "large pieces of text".
+- Daily goal and streak, as Duolingo does; a 60-second sprint for speed; test-out for anyone
+  who already knows part of it.
+
+**The translator contracts conservatively, on purpose.** Fewest cells wins and a tie takes the
+longer sign (that is how "near" becomes n-ea-r). Where UEB needs knowledge a spelling cannot
+give, it spells the letters out instead: `be`/`con`/`dis` only for a whitelist of first-syllable
+stems; initial-letter contractions only as whole words, or with a plural s; no
+contraction through an apostrophe. Under-contracted braille is still correct to read, and
+over-contracted braille would teach a wrong sign. **Not verified against a certified
+transcriber or a reference translator (liblouis).** The 60-odd spellings in
+`core.test.mjs` are hand-checked. "coffee", "offer" and "office" were dropped from the word
+list because the of/ff choice in them is one this session was not sure of. A
+liblouis comparison is the obvious next step if anyone doubts a spelling.
+
+**Display:** cells are drawn with spans (dot pitch to cell pitch about 1:2.4, close to real
+braille), not Unicode braille characters, whose glyphs vary by font. Empty-dot outlines show
+during the alphabet and always on a lone word, because a single cell has no line to judge its
+height against (`cc` is `c` one row down). Settings can force them on or off.
+
+**What was not done:** no tool icon in the sprite (the row has none, like 087 had at first). No
+audio. No tactile or embosser output. The sprint and the path have no phone-specific layout
+beyond wrapping. Tests: `core.test.mjs` (275 assertions, pure Node) and
+`smoke-braille-trainer.mjs` (48, Playwright, including axe on the lesson, reader and path).
+
+---
+
+## AI-34 (part): the two suites that failed only on Windows (2026-10-01, `CACHE_VERSION` v213)
+
+From the 2026-10-01 audit's AI-34. Only this part is done. Its other items (the missing guard
+scripts, the precache byte re-measure, the og:image TODOs) are still open.
+
+The header had carried "two suites fail locally that CI passes" since before #290, guessed as
+CRLF and font metrics and never root-caused. Both guesses were right about the trigger. One of
+them was hiding a real tool bug.
+
+**`schedule-browser/smoke-dark-theme`: CRLF.** Git for Windows ships `core.autocrlf=true` in its
+*system* gitconfig (`C:/Program Files/Git/etc/gitconfig`), and `.gitattributes` only pinned the
+Path 21 SVGs and `renders.json`. So 472 files were CRLF on Devon's checkout and LF in CI. The
+index was LF throughout; only the working tree differed. The suite slices 034's `<style>` at
+`'<style>
+'` and closes the palette at `'
+}'`, so on CRLF every slice came back empty: six
+FAILs, all "got null". The fix is in two places:
+- `.gitattributes` now opens with `* text=auto eol=lf`, so every text file is LF on disk on every
+  machine. There are no `.bat`/`.ps1` files in the tree that would want CRLF. An existing clone
+  has to re-check-out once to pick it up: `git rm -rq --cached .` then `git reset -q --hard`, on a
+  clean tree. That took this checkout from 472 CRLF files to 0.
+- The suite's `read()` strips CR, so it no longer depends on how the files reached the disk (the
+  offline zip, a copy, another git config).
+
+**`music-sightreading-generator/smoke-glyph-fallback`: font metrics, plus a real probe bug.**
+- *The failing assertion was a coincidence.* It checked that `'A'` measures differently from the
+  U+FFFF box. In Segoe UI at 100px, `'A'` is 64.516px and the box is 64.563px, inside the 0.5px
+  tolerance. It now checks `'i'` and `'W'`, which are far apart in any proportional font, so at
+  most one of them can match the box.
+- *The tool's probe was wrong on every Windows machine.* `glyphMissing()` put the character and
+  the U+FFFF control in two spans **on the same line**. Measured that way in Windows Chromium,
+  ♩, 𝅗𝅥, 𝄽 and 𝄞 all came out at exactly the box's 64.5625px. Measured alone they are 39.2, 39.2,
+  34.8 and 55.8px, and forcing "Font symbols" shows Segoe UI Symbol drawing all of them
+  correctly. So every Windows teacher got the drawn fallback plus a notice saying their computer
+  has no font for the notes. The drawn shapes are fine, so nothing was broken, but the notice was
+  false. The likely mechanism is Chrome shaping the whole line as one run and choosing fallback
+  for the run rather than per span; that is not verified. `probeWidth()` now measures each
+  character on its own line. A new assertion holds the tool's half-note verdict equal to a
+  standalone measurement, so the side-by-side version cannot come back unnoticed.
+- On Windows the suite now takes its "has the font" branch (18 assertions); CI's Linux runner
+  has no music font and still takes the "lacks" branch.
+
+**Not verified:** that Linux CI's verdict is unchanged by the probe fix. It should be, since a
+missing glyph alone is still the box, and CI is the authority on that.
 
 ## `check:entities` follows array data to a text sink, and 055 has a suite (2026-10-02, AI-09, no `CACHE_VERSION` bump)
 

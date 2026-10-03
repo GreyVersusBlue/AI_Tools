@@ -225,6 +225,10 @@
   .app-bar .dot{width:6px;height:6px;border-radius:50%;background:var(--good);display:inline-block;}
   .app-bar .offline-status{color:var(--faint);}
   .app-bar .offline-status::before{content:"·";margin-right:.6rem;}
+  .app-bar .backup-status{color:var(--faint);text-decoration:none;}
+  .app-bar .backup-status:hover,.app-bar .backup-status:focus-visible{color:var(--ink);text-decoration:underline;}
+  .app-bar .backup-status::before{content:"·";margin-right:.6rem;color:var(--faint);}
+  .app-bar .backup-status.stale{color:var(--err);}
   .wordmark{color:var(--ink);font-weight:500;letter-spacing:.055em;}
   .wordmark .tld{color:var(--faint);font-weight:400;}
 
@@ -763,7 +767,7 @@
 
   <div class="app-bar ink" style="--d:40ms">
     <span><span class="wordmark">ASPERMYLESSONPLAN<span class="tld">.COM</span></span> · Unofficial Toolbook · Term 2026–27 · Q1</span>
-    <span class="rhs"><span class="dot" aria-hidden="true"></span>87 records · local only · nothing syncs<span class="offline-status" id="offlineStatus" data-sw-offline-status role="status" aria-live="polite" hidden></span><button type="button" class="cmdk-hint" id="cmdkOpenBtn" aria-haspopup="dialog" aria-controls="cmdkOverlay" aria-label="Open quick jump search (Control or Command plus K)"><span aria-hidden="true">&#8984;K</span> Quick jump</button></span>
+    <span class="rhs"><span class="dot" aria-hidden="true"></span>88 records · local only · nothing syncs<span class="offline-status" id="offlineStatus" data-sw-offline-status role="status" aria-live="polite" hidden></span><a class="backup-status" id="backupStatus" href="Tools/009-backup-restore.html" hidden></a><button type="button" class="cmdk-hint" id="cmdkOpenBtn" aria-haspopup="dialog" aria-controls="cmdkOverlay" aria-label="Open quick jump search (Control or Command plus K)"><span aria-hidden="true">&#8984;K</span> Quick jump</button></span>
   </div>
 
   <div class="letterhead ink" style="--d:90ms" aria-hidden="true">
@@ -784,9 +788,9 @@
           <dl class="memo ink" style="--d:100ms">
             <dt>To</dt><dd>All staff</dd>
             <dt>From</dt><dd>D. Moore</dd>
-            <dt>Date</dt><dd id="memo-date">2026-09-29</dd>
+            <dt>Date</dt><dd id="memo-date">2026-10-02</dd>
             <dt>CC</dt><dd>Whoever asked for the link again</dd>
-            <dt>Attach</dt><dd>87 files <span class="note">(browser-only, nothing to install)</span></dd>
+            <dt>Attach</dt><dd>88 files <span class="note">(browser-only, nothing to install)</span></dd>
           </dl>
         </div>
       </div>
@@ -2160,7 +2164,7 @@
     <summary class="section-head ink" style="--d:660ms">
       <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <h2>World Language</h2>
-      <span class="cat-count">7 tools</span>
+      <span class="cat-count">8 tools</span>
     </summary>
 
     <a class="row ink" style="--d:1564ms" href="Tools/039-vocab-conjugation-drill.html"
@@ -2277,6 +2281,22 @@
       </span>
       <span class="tags"><span data-tag="vocab">vocab</span><span data-tag="reference">reference</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: embarazada is not what you think.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1400ms" href="Tools/088-braille-reading-trainer.html"
+       data-tool="braille-reading-trainer" data-tags="braille ueb unified english braille reading sight lessons contractions grade 2 spaced repetition practice self study accessibility visual impairment"
+       data-filter-tags="reading reference world-language">
+      <span class="per"><span class="lbl">Per</span><b>88</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Braille Reading Trainer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Braille Reading Trainer</span>
+        <span class="pitch">Learn to read braille by sight in short daily lessons: the alphabet, numbers and punctuation, then every Unified English Braille contraction, with spaced review, a 60-second sprint and timed reading of longer passages.</span>
+        <span class="comment" aria-hidden="true">Six dots, zero excuses.</span>
+      </span>
+      <span class="tags"><span data-tag="reading">reading</span><span data-tag="reference">reference</span></span>
+      <span class="grade" title="Comment: six dots, zero excuses.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
@@ -2450,9 +2470,13 @@
         <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       <h2>Progress report</h2>
-      <span class="tally">67 recent entries</span>
+      <span class="tally">68 recent entries</span>
     </summary>
     <ul class="log">
+      <li>
+        <time datetime="2026-10-02">Oct 2, 2026</time>
+        <span><b>New tool: Braille Reading Trainer.</b> Learn to read braille by sight, a few minutes a day: 86 short lessons from the alphabet to every Unified English Braille contraction, review that brings back the signs you are about to forget, a 60-second sprint, and a reading room that times you on passages contracted as far as you have learned. Works offline.</span>
+      </li>
       <li>
         <time datetime="2026-09-29">Sep 29, 2026</time>
         <span><b>A classroom up top.</b> The landing page has a small rendered classroom beside the heading, in a light and a dark version that follow the theme. It is decoration only, and it is cached for offline use like the rest of the page.</span>
@@ -2756,6 +2780,37 @@
 <script>
 (function () {
   'use strict';
+
+  /* ---------- storage readout (Path 4 P5) ----------
+     How much work this browser holds and when it was last backed up, linking
+     to 009. The landing page is the one every teacher sees; 009 is the one
+     they have to remember to open. Counted from localStorage only:
+     navigator.storage.estimate() includes this site's own offline copy
+     (~11 MB of pages), which would make an empty profile look full. Shown
+     only once something is saved. `br_last_backup_at` is 009's key. */
+  (function () {
+    var el = document.getElementById('backupStatus');
+    var bytes = 0, items = 0, last = null;
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k === 'br_last_backup_at' || k.indexOf('gvb-home-') === 0 || k === 'gvb-a11y-prefs') continue;
+        items++;
+        bytes += k.length + (localStorage.getItem(k) || '').length;
+      }
+      last = localStorage.getItem('br_last_backup_at');
+    } catch (e) { return; }
+    if (!items) return;
+    var size = bytes < 1024 ? bytes + ' B' : bytes < 1048576 ? Math.round(bytes / 1024) + ' KB'
+      : (bytes / 1048576).toFixed(1) + ' MB';
+    var days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : NaN;
+    var when = isNaN(days) ? 'never backed up' : days <= 0 ? 'backed up today'
+      : 'backed up ' + days + (days === 1 ? ' day' : ' days') + ' ago';
+    el.textContent = size + ' saved · ' + when;
+    el.title = 'Open Backup & Restore';
+    el.classList.toggle('stale', isNaN(days) || days >= 30);
+    el.hidden = false;
+  })();
 
   /* ---------- filter ---------- */
   var input = document.getElementById('filter');

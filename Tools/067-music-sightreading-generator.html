@@ -375,19 +375,27 @@
      unassigned codepoint that can only ever render as the missing-glyph box:
      equal widths mean the real glyph fell back to that box too. This measures
      the DOM, not a canvas, so it is testing exactly the font the page will
-     paint with rather than a separately-specified stack. */
+     paint with rather than a separately-specified stack.
+
+     Each character gets its own line. With the character and U+FFFF side by
+     side in one line, Chrome on Windows measured ♩, 𝅗𝅥, 𝄽 and 𝄞 at exactly the
+     box's width even though Segoe UI Symbol draws all four (39px alone vs.
+     the box's 64.6px at 100px), so every Windows machine was told it had no
+     music font. Measured apart, they come out right. */
+  function probeWidth(ch) {
+    var line = document.createElement('div');
+    line.setAttribute('aria-hidden', 'true');
+    line.style.cssText = 'position:absolute;left:-9999px;top:0;font-size:100px;line-height:1;white-space:nowrap;';
+    var s = document.createElement('span'); s.textContent = ch;
+    line.appendChild(s);
+    document.body.appendChild(line);
+    var w = s.getBoundingClientRect().width;
+    line.parentNode.removeChild(line);
+    return w;
+  }
   function glyphMissing(ch) {
-    var probe = document.createElement('div');
-    probe.setAttribute('aria-hidden', 'true');
-    probe.style.cssText = 'position:absolute;left:-9999px;top:0;font-size:100px;line-height:1;white-space:nowrap;';
-    var a = document.createElement('span'); a.textContent = ch;
-    var b = document.createElement('span'); b.textContent = '￿';
-    probe.appendChild(a); probe.appendChild(b);
-    document.body.appendChild(probe);
-    var wa = a.getBoundingClientRect().width;
-    var wb = b.getBoundingClientRect().width;
-    probe.parentNode.removeChild(probe);
-    return wa === 0 || Math.abs(wa - wb) < 0.5;
+    var wa = probeWidth(ch);
+    return wa === 0 || Math.abs(wa - probeWidth('￿')) < 0.5;
   }
 
   var missingGlyphs = [];   // names of the rhythm values whose glyph didn't render

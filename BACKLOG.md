@@ -71,7 +71,7 @@ row is open now; a future one follows the same rule.
 
 ## Where things stand — start here
 
-*Current as of `main` after #321, 2026-10-01. **Keep this section under ~80 lines.** It is
+*Current as of huginn's local `main` after AI-sync's merge of origin's #329, 2026-10-03. **Keep this section under ~80 lines.** It is
 the state of the repo and what to start — not a log. The story of each increment, what it
 found and what it did not verify, goes in `HISTORY.md` in the same commit; this header gets
 at most three lines about it. Rewrite it when your phase merges (step 6 of the definition of
@@ -80,47 +80,59 @@ done).*
 **Why it is short.** It had grown to ~1,900 lines of handoffs by 2026-09-23; those moved
 verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12"). Search there for a PR number.
 
-**Also landed on local `main` (AI-13, `CACHE_VERSION` v221): old rank 7, Path 7 P1, the print kit.**
-- `_shared/print-kit.css` + `print-kit.js` (`PrintKit`): sheets, half/quarter sheets, card presets, one/set/blank from a
-  template, header and "N of M" footer, the ink-safe set. **No tool links it yet**; adoption is rank 8 (P3). Suites on
-  port 8460 measure it in Chromium's PDF output. **Never printed on paper** (parked device check). A new suite takes **8461**.
+**Local `main` on huginn holds origin's #329 plus six sessions' unpushed work (AI-sync, 2026-10-03, `CACHE_VERSION` v222).**
+- AI-sync merged origin `834ccd9` (#323 to #329) into local `main` with a merge commit. AI-11, AI-12, AI-08, AI-35,
+  AI-34 and AI-13 P1 are local only; their `HISTORY.md` entries say v216 to v221, labels no deployed site ever
+  carried (origin used v216 for #328). They all reach the site as **v222**. `HISTORY.md`, "AI-sync", has the map.
+- **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
-**Also landed on local `main` (AI-08, `CACHE_VERSION` v218): old ranks 6, 7 and 81, the shared-baseline tidies.**
-- 014/033 load `a11y.*` once (they drew two "Aa" widgets). `.share-note` is one rule in `base.css` on four tint tokens
-  now in `ink-paper.css`; `.app-header h1`/`.sub`, `.back-link`, `.card h2` moved there too. `smoke-theme` guards both.
-- Rank 5 (035's theme) is Devon's call and untouched.
+**Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (labelled v221), old rank 7, Path 7 P1:** `_shared/print-kit.css` + `print-kit.js` (`PrintKit`). **No tool
+  links it yet**; adoption is rank 8 (P3). Suites on port 8462. **Never printed on paper** (parked device check).
+- **AI-34 (v220):** no page claims a social-tag generator; precache bytes re-measured.
+- **AI-35 (v219), old rank 76:** 002, 016, 018, 038 and 044 are native on `ink-paper.css` + `a11y.js`; 007 loads
+  `a11y.js`; 010/032/046/087 link `base.css`. Every page still skipping one is a recorded exception.
+- **AI-08 (v218), old ranks 6, 7 and 81:** 014/033 load `a11y.*` once; `.share-note` and the header/back-link/card
+  rules are in `base.css`, the tint tokens in `ink-paper.css`. Rank 5 (035's theme) is Devon's call and untouched.
+- **AI-12 (v217):** README URL, 028's upload hint. **AI-11 (v216):** four dead trees and unused seating fonts deleted.
 
-**Also landed on local `main` (AI-35, `CACHE_VERSION` v219): old rank 76, the shared-baseline adoption sweep.**
-- 002, 016, 018, 038 (dark-only slate) and 044 are native on `ink-paper.css` + `a11y.js`; 007 loads `a11y.js` and
-  dark re-skins only its Classroom Light look. 010/032/046/087 link `base.css`. Every page still skipping one of the
-  three is a recorded exception (HISTORY, "AI-35"); 086 is a standalone student file and stays that way.
+**Last merged on origin: #328, Path 4 P5 in part (`CACHE_VERSION` v216). Rank 2 stays, cut to its last half.**
+- 009 can lock a backup with a passphrase (`backup-restore/br-crypto.js`, AES-GCM, PBKDF2 600k;
+  off by default, never on the year-end archive). The landing app bar shows "N KB saved · backed up
+  N days ago", linking to 009. Suite `smoke-encrypted.mjs`, port 8461.
+- The row's restore preview/diff had **already shipped** (`smoke-restore-diff.mjs`); the row was stale.
+- 009 had a literal NUL byte in its source, so `grep` silently printed nothing for it. Use `grep -a` on
+  any page you suspect; 009's is fixed (`'\ufffd'`, and why it cannot be `'\u0000'` is in `HISTORY.md`).
 
-**Also landed on local `main` (AI-07, `CACHE_VERSION` v215): old ranks 5, 6 and 12.** The contrast allowlist is **empty**, `--line-strong` is 3:1 in both themes (`test:theme` asserts it), and the sweep scans 36 pages again seeded (`Tools/a11y-sweep/seeds.mjs`). Detail in `HISTORY.md`.
+**Before that, #326, which landed three sessions' work that had been committed only to huginn's local
+`main` (AI-03, AI-07, AI-09; `CACHE_VERSION` v215).** Old rank 1 (Path 21 P4, 046's shaded relief; Path 21 is
+finished), old ranks 5, 6 and 12 (the accessibility group) and old rank 8 (`check:entities` follows arrays).
+- The 14 `color-contrast` allowances are fixed in the tools and `allowlist.json` is **empty**. The sweep
+  finishes finite CSS animations before scanning, which is what made index's count 8/24/35.
+- Light `--line-strong` is `#8c897f` (3.07:1 on card-2), dark `#6e7885`; `test:theme` now asserts 3:1.
+- The sweep scans 36 pages a second time with saved state (`Tools/a11y-sweep/seeds.mjs`). It found nothing new.
 
-**Last merged: #321, Path 4 P4 increment 11, 035's floor-plan trace images. `CACHE_VERSION` v211. The
-row is deleted and Path 4 P4 is finished.**
-- Each floor's trace image is a Blob in `gvb-media` (`stviz-trace/`), and `traceImage.dataUrl` holds
-  `idb:<id>`, through `Tools/schedule-visualizer/sv-trace-image.js`. It keeps a data-URL cache, like
-  005 and 019. Snapshots hold references. Exports, the handoff and recovery points carry the bytes.
-- 044's PNG downscaler is `MediaDB.downscaleImage` now. **No downscaler Path 4 P4 counted is left.**
-  011's PDF presets and 046's locator thumbnail still scale images, but they were never on that list.
-- **The empty-storage sweep missed two shipped violations** in 035's trace dialog (unnamed sliders,
-  `--slate-400` hint). Both were fixed. The sweep has a seeded pass now (AI-07), which a dialog still escapes.
+**Before that, #324: a new tool outside the ranked list, 088 Braille Reading Trainer (v214)**, asked for
+directly by Devon. World Language, now 8 tools. Its translator is hand-checked, not checked against liblouis.
 
-**Before that, #317** (030's board art, v210), **#315** (042's seals, v209), **#313** (071's twelve starter pictures, v208: a pin on any 071 picture was lost on reload, fixed), **#311** (080's piece atlas, v207), **#308** (the landing hero, v206), **#306** (the PWA app mark, v205), **#304** (064's card photos, v204) and **#302** (030's clue images, v203).
+**Before that, #321** (035's trace images onto `media-db.js`, v211; Path 4 P4 is finished), **#317** (030's board art, v210), **#315** (042's seals, v209), **#313** (071's twelve starter pictures, v208: a pin on any 071 picture was lost on reload, fixed), **#311** (080's piece atlas, v207), **#308** (the landing hero, v206), **#306** (the PWA app mark, v205), **#304** (064's card photos, v204) and **#302** (030's clue images, v203).
 - `MediaDB.images({ ns, owner })` in `_shared/media-db.js` is the one copy of the shared image
   layer (#294). A future image-bearing tool uses it and writes no new copy.
-- **On Devon's Windows checkout two suites fail locally that CI passes:** `schedule-browser/
-  smoke-dark-theme` (CRLF) and `music-sightreading-generator/smoke-glyph-fallback` (font
-  metrics). Not root-caused.
+- **The two Windows-only suite failures are fixed (AI-34 part, v213):** `.gitattributes` pins LF
+  and 067's glyph probe no longer calls Windows' music font missing. An existing Windows clone
+  needs `git rm -rq --cached .` then `git reset -q --hard` once. `HISTORY.md` has it.
 - **Path 22 P1–P5 are done.** His later asks are ranks 163–171 (P6–P14), unranked by him.
 
 **Start here.** Path 21 is finished (046's relief was its last row, AI-03), so no row needs Blender.
-- Rank 1 (Path 6 P4) is blocked on rank 30, so take **rank 2**, Path 4 P5: 009 Backup & Restore's restore
-  preview and diff, per-tool restore, a storage readout and optional encrypted backup (1 session, the
-  whole batch). Since Path 4 P4 finished, a backup's `gvb-media` holds every tool's images, so the
-  readout has real numbers to show. **Read 009 before trusting the row.** A new suite takes port **8461**
-  (8459 is 046's `smoke-relief.mjs`, 8460 is the print kit's `smoke-print-kit.mjs`).
+- Rank 1 (Path 6 P4) is blocked on rank 30, so take **rank 2**, the rest of Path 4 P5: per-tool restore
+  as a shared control any tool can host (½). It needs 009's `recordDiff`/merge logic moved out of 009's
+  inline script into `_shared/`, and `ToolRegistry` to pick one tool's keys. Pair it with another ½ or two
+  ¼ rows. A new suite takes port **8463** (8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
+  `smoke-encrypted.mjs`, 8462 is the print kit's `smoke-print-kit.mjs`).
+- **huginn's shared checkout** (`/home/devon/projects/AI_Tools`): local `main` now contains origin's `main`
+  (AI-sync's merge) and is ahead of it by the local-only sessions above. It has not been pushed. The
+  `backup/ai-03-relief` and `backup/ai-07-ai-09-local-main` branches on origin are #326's copies of work
+  that is now on both sides.
 - A prompt that names a row wins over the rule above.
 - **End every session by writing the prompt for the next one** (Devon, 2026-09-29): after the
   step-6 merge, put it in your final message *and* in the handoff PR's body, so it is in
@@ -132,23 +144,23 @@ row is deleted and Path 4 P4 is finished.**
 - **A periodic human device check** (about 30 minutes with a phone, a laptop and a printer):
   the parked list under Cross-cutting ("Parked — needs a person").
 
-**Numbers (2026-10-01, after #321; re-measure, do not carry forward):**
+**Numbers (2026-10-03, huginn's local `main` after AI-sync's merge; re-measure, do not carry forward):**
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v221` on local `main` (origin is at v214) — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **311** in `PRECACHE_URLS`, **95** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v221): **12,603,498 B (12.60 MB) / 2,987,295 B (2.99 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **185** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| `CACHE_VERSION` | `v222` on local `main` (origin is at v216) — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **314** in `PRECACHE_URLS`, **95** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
+| Suites | **188** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
-| Accessibility allowlist | **0**. The sweep scans 88 pages empty and 36 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
-| Tool registry | 88 rows, **220 keys and 32 prefixes across 121 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 87) | `sw-register.js` 86 · `a11y.css` 85 · `a11y.js` 85 · `ink-paper.css` 77 · `base.css` 72 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `media-db.js` 14 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 36 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
+| Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 54 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `media-db.js` 14 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 63 carry a hand-written `@media print` block |
-| Tools | 87 (`001`–`087`); next free number **088** |
+| Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **171**, contiguous. Path 21 is finished; per-tool rows start at rank **81**; 163–171 are Path 22 P6–P14 |
-| Art | **129** ledger entries: 030's board backdrop and tiles (5,348 B), 042's ten seals and ribbons (84,170 B), 071's twelve pictures (157,454 B), 080's piece atlas (43,318 B), 87 tool icons, the sprite (58,032 B), 4 shortcut PNGs, the 4 app-mark PNGs (14,457 B), the 4 hero WebPs (64,832 B), the test tile's light/dark pair |
-| Dark mode / fullscreen | 91 of 91 themed pages native dark (`path5:next`; 8 live pages load no `a11y.js`: 035 is rank 5's decision, the rest are standalone on purpose); `stage.js` on 10 pages. Path 5 is finished |
+| Art | **130** ledger entries: 046's relief (29,726 B), 030's board backdrop and tiles (5,348 B), 042's ten seals and ribbons (84,170 B), 071's twelve pictures (157,454 B), 080's piece atlas (43,318 B), 87 tool icons, the sprite (58,032 B), 4 shortcut PNGs, the 4 app-mark PNGs (14,457 B), the 4 hero WebPs (64,832 B), the test tile's light/dark pair |
+| Dark mode / fullscreen | 92 of 92 themed pages native dark (`path5:next`; 8 live pages load no `a11y.js`: 035 is rank 5's decision, the rest are standalone on purpose); `stage.js` on 10 pages. Path 5 is finished |
 | CI | Pull requests run `--changed`; a push to `main` runs everything, ~32 min. A PR touching `_shared/`, `index.html`, `package.json` or `Tools/board-check/` is site-wide (#296's took 38 min) |
 | Lint | clean |
 
@@ -276,7 +288,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
 | 1 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 (#257, v182):** 046 → 015, 056 → 028 (`sheet: false`) and 039 → 040 are entries; **003 → 037 is a documented exception** (student scores never ride a link); `share.js` gained `sendState(entry)` and `sheet: false`. **Increment 2 (#259, v183), the roster chain:** **002 → 022** is a sheet row and **022 → 005** a `sheet: false` entry from 022's "Seat these groups" button; **006/007 → 002 is not a link** (the roster already reaches 002 through `roster.js`). **Left: only 053 → 030, which is blocked on rank 30** (Path 12 P1, the question bank with 030 as the front door). Do not start this row until rank 30 has shipped; then it is one entry plus a row in `smoke-send-to.mjs` | site | ¼ | | [Path 6](#path-6--share-everywhere) |
-| 2 | Path 4 P5 — 009 restore preview/diff, per-tool restore, storage readout, optional encrypted backup | 009 | 1 | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
+| 2 | Path 4 P5 (rest) — per-tool restore as a shared control any tool can host | 009 | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
@@ -403,7 +415,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 126 | Bulk operations across rosters | 006 | ½ | | [006 Class Roster Hub](#006--class-roster-hub) |
 | 127 | `prefers-reduced-motion` respect; equity across weeks and periods | 007 | ½ | | [007 Name Picker](#007--name-picker) |
 | 128 | Team / house points; longitudinal reports | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
-| 129 | Restore preview / diff; per-record conflict resolution | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
+| 129 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
 | 130 | Reuse the real timer; period-aware auto-advance | 010 | ½ | | [010 Command Center](#010--command-center) |
 | 131 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
 | 132 | More grid types; number-line variants | 012 | ½ | | [012 Graph Paper & Number Line Generator](#012--graph-paper--number-line-generator) |
@@ -1004,11 +1016,15 @@ actually landed, and what each phase got wrong on the way, is in `HISTORY.md`.
   counted is left.
   *080 snapshots were on this list and are not stored anywhere — a canvas and a
   download link only — so there is nothing to migrate (found 2026-09-29, #300's session).*
-- **P5 — 009 upgrades that fall out of the above.** Restore preview/diff ("3
-  rosters replaced, 2 added, 1 untouched") built on registry metadata; per-tool
-  restore as a shared control any tool can host; a storage-usage readout on
-  `index.html`; an optional passphrase-encrypted backup (WebCrypto, local) — the
-  files contain student names.
+- **P5 — 009 upgrades that fall out of the above. Three of four done.** The record-level
+  restore preview ("1 replaced, 1 added, 1 untouched", and what Replace would remove) had
+  already shipped before the row was written (`smoke-restore-diff.mjs`); the row's text was
+  stale. The optional passphrase lock (`backup-restore/br-crypto.js`: AES-GCM, PBKDF2-SHA-256
+  at 600,000 iterations, off by default, never on the year-end archive) and the landing
+  page's "N KB saved · backed up N days ago" readout shipped in v216 (`smoke-encrypted.mjs`,
+  port 8461). **Left: per-tool restore as a shared control any tool can host** — "restore
+  just this tool's data from a backup file", using `ToolRegistry` to pick the tool's keys and
+  009's record diff (which would have to move out of 009's inline script into `_shared/`).
 
 **Model.** Opus.
 
@@ -2315,7 +2331,7 @@ reviewed nor diffed.
     carrier:** a negative algebra tile needs a visible "−" or a pattern, not just red, and
     the fraction bars carry their label. The renders must pass the colour-blind simulation
     the Blender script can do on its own output (grey-convert and check that the families
-    stay distinct). **Cap: ≤ 250 KB** for both atlases. Existing rank 181 (snap-to-grid,
+    stay distinct). **Cap: ≤ 250 KB** for both atlases. Existing rank 162 (snap-to-grid,
     data-driven piece families) is the natural next step; do not fold it in.
   - **071 Picture-prompt starter set. SHIPPED in #313, v208**: twelve scenes (a café, a library, a party,
     a bedroom and a farm joined the six named below), on until the teacher has pictures of their own.
@@ -2423,7 +2439,7 @@ rather than folding one page into the other.
   Timer panel run on it; 004 shares its formatter only. P13 moves 004's phase engine onto it.
 
 **P6–P14 were proposed by session `t4ktn1` on 2026-09-26** from a brainstorm Devon asked for.
-He asked for them to be added at the end of the list, so they are ranks 181–189 and are not
+He asked for them to be added at the end of the list, so they are ranks 163–171 and are not
 ranked against anything else. Moving them up is a re-rank, which is his call.
 - **P6 — present mode and spotlight.** A lock toggle for the projector: no dragging, no close
   buttons, the dock and header hidden, so a tap on a smartboard cannot move a widget.
@@ -3533,11 +3549,8 @@ displayed to the class in a way that shames anyone.
 
 #### Quick Wins
 
-- **Restore preview / diff.** Show what changes: "3 rosters will be replaced,
-  2 new ones added, 1 left alone." Restoring is the scary operation and it
-  currently asks for trust. *(Not shipped this round — "Verify a backup"
-  below shows what a file contains before arming it, but not a per-record
-  diff of what restoring it would change.)*
+- **Done — restore preview / diff.** The preview counts records replaced, added,
+  untouched, and those Replace would remove, per mode (`smoke-restore-diff.mjs`).
 
 #### Major Features
 
@@ -3568,8 +3581,9 @@ before it does it — all with nothing ever leaving the machine.
 - Should this tool know the *list* of tools explicitly (so it can report
   "Rubric Builder: no data saved"), or stay purely heuristic over whatever
   keys it finds? Explicit is friendlier and is one more thing to maintain.
-- Is there appetite for an optional encrypted backup (passphrase, WebCrypto,
-  entirely local) given these files can contain student names?
+- *Decided (v216): yes, optional and off by default.* An encrypted backup exists
+  (Path 4 P5); the year-end archive is never locked, because a passphrase forgotten
+  over the summer would lose the year.
 
 #### Platform themes that matter here
 
