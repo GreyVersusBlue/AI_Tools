@@ -65,10 +65,11 @@ of them. **The real-phone scan is not done and is not a session's to claim: park
     the smaller payload. They are not in the new suite's list.
   - On a 375 px phone the *reply* is what the board's camera scans, off a phone screen. Untested by anything.
 - **Checks.** The eleven guards, lint and `check:precache -- --base origin/main`. All 190 suites one at a time on
-  huginn: 188 pass. `class-screen/test/smoke-remote.mjs` asserted the old `O`/`A` first letter and was updated.
-  **`class-screen/test/smoke-periods.mjs` crashes (exit 1, no FAIL line) on this tree and identically on `ce6802d`
-  without this change:** line 126's click on 087's `#dock button[data-add="image"]` times out because the
-  `.a11y-widget` button sits over it. Not caused here and not fixed here; it needs its own look.
+  huginn: 187 pass. `class-screen/test/smoke-remote.mjs` asserted the old `O`/`A` first letter and was updated.
+  **`class-screen/test/smoke-widgets.mjs` and `smoke-periods.mjs` both crash (exit 1, no FAIL line) on this tree
+  and identically on `ce6802d` without this change:** the click on 087's `#dock button[data-add="image"]` times out
+  because the `.a11y-widget` button sits over it. Not caused here and not fixed here. `main` is red on those two
+  until someone looks; a push-to-main CI run will say whether it is huginn's Chromium or the page.
 
 ## AI-sync: origin's #323 to #329 merged into huginn's local `main` (2026-10-03, AI-sync, `CACHE_VERSION` v222, not pushed)
 
