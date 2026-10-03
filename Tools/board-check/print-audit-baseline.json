@@ -1,0 +1,30 @@
+{
+  "note": "Findings per page and kind from `node Tools/board-check/audit-print.mjs --baseline`. A work list for Path 7 P2, not a CI gate: lower a number in the commit that fixes the page.",
+  "pages": {
+    "Tools/004-Classroom Timer.html": {
+      "DARK": 58
+    },
+    "Tools/009-backup-restore.html": {
+      "DARK": 2
+    },
+    "Tools/010-command-center-dashboard.html": {
+      "DARK": 1
+    },
+    "Tools/035-schedule-visualizer.html": {
+      "FIXED": 5,
+      "SCROLL": 2,
+      "CHROME": 45,
+      "SPLIT": 2
+    },
+    "Tools/042-certificate-award-maker.html": {
+      "FIXED": 2
+    },
+    "Tools/046-blank-map-generator.html": {
+      "FIXED": 1
+    },
+    "Tools/064-historical-trading-card-maker.html": {
+      "CLIP": 1,
+      "FIXED": 2
+    }
+  }
+}

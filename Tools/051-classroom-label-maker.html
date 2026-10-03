@@ -70,7 +70,7 @@
      and ink-paper.css treats it as paper in dark, so its greys stay as they are. */
   #printArea { display: none; }
   .label-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .2in; margin-bottom: .3in; }
-  .label-card { border: 1.5px dashed #333; border-radius: 6px; padding: .15in; display: flex; align-items: center; gap: .12in; height: 1.4in; }
+  .label-card { border: 1.5px dashed #333; border-radius: 6px; padding: .15in; display: flex; align-items: center; gap: .12in; min-height: 1.4in; break-inside: avoid; page-break-inside: avoid; }
   .label-card canvas { width: .9in; height: .9in; flex-shrink: 0; }
   .label-card .ltext .target { font-weight: 700; font-size: 1.1rem; }
   .label-card .ltext .english { font-size: .78rem; color: #555; }

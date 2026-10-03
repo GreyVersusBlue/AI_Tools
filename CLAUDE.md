@@ -465,6 +465,20 @@ files must be added there too.
   kit is opt-in by class and safe to link anywhere; a new printing tool uses it instead of
   writing another `@media print` block. It sizes with `min-height` and never clips. Its suites
   are `npm run test:print-kit`; nothing in it has been checked on paper.
+  `npm run path7:next` (`Tools/board-check/audit-print.mjs`, Path 7 P2, read-only, a browser
+  sweep of about 12 minutes on port 8464, not in CI) is the runtime half of `check:print-clip`:
+  it opens every tool in print media, empty and seeded, before and after its print buttons, in
+  light and dark, and reports clipped and fixed boxes, scroll boxes, controls on paper, blocks a
+  page break may split and dark ink on paper. It reaches a sheet through saved state
+  (`Tools/a11y-sweep/seeds.mjs`, which the a11y sweep's seeded pass reads too), through a tab whose
+  label says "print", which it opens itself, and through `Tools/board-check/print-audit-prep.mjs` for
+  what neither reaches (a student to pick, text that is never saved); a tool whose sheet needs data
+  gets a seed, and a prep entry only if the seed is not enough. Its closing lists are work too:
+  "Blank sheets" is a print button that left the paper empty (061 did, until v225), and "Print
+  buttons that never printed" is a sheet nothing reaches yet. Run `--only <tool>` after touching a tool's print
+  CSS, and lower `print-audit-baseline.json` in the commit that fixes a page. A fixed height with
+  `overflow: hidden` in a *screen* rule that also styles the printed sheet is the same bug as the
+  one inside `@media print`, and only this finds it (077).
   `npm run path5:next` (`Tools/board-check/list-dark-candidates.mjs`, also
   read-only) is the same kind of picker for Path 5: the pages still on
   a11y.css's invert filter, the colour literals each would have to tokenize

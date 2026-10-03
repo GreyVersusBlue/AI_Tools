@@ -215,6 +215,9 @@
   body.presenting .standings-table, body.presenting .schedule-table { font-size: 1.15rem; }
 
   @media print {
+    /* Paper is light whatever the screen is: the champion banner's tint was
+       printing its dark value (#332711) with dark on. */
+    :root[data-theme="dark"]:not(.a11y-filter-dark) { --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13; }
     /* #bracketCard also carries the shared .card styling class, but it must
        stay visible when printing — it's the element the whole print/QR/share
        feature set exists to put on paper. Only #setupCard (the input form)

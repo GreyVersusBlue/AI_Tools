@@ -332,10 +332,16 @@
     .print-only.active { display: block; }
     .print-only .slip-page {
       box-shadow: none; border: none; border-radius: 0; aspect-ratio: auto;
-      max-width: none; width: 100%; height: 10.2in; margin: 0; padding: 0;
+      max-width: none; width: 100%; min-height: 10.2in; margin: 0; padding: 0;
+      /* A sheet is a page tall unless a slip needs more. The screen preview
+         clips (it is a thumbnail); on paper a long prompt used to lose its
+         last lines to the same overflow:hidden, so here the sheet and its
+         slips grow instead, and the grid takes the height by flex because a
+         percentage of a min-height resolves to nothing. */
+      overflow: visible; display: flex; flex-direction: column;
     }
-    .print-only .slip-grid { gap: .22in; }
-    .print-only .slip { border: 1.5px dashed #888; padding: .28in .35in; }
+    .print-only .slip-grid { gap: .22in; flex: 1 0 auto; height: auto; }
+    .print-only .slip { border: 1.5px dashed #888; padding: .28in .35in; overflow: visible; break-inside: avoid; page-break-inside: avoid; }
     .print-only .slip-grid.pp2 .slip-prompt { font-size: 1.3rem; }
     .print-only .slip-grid.pp4 .slip-prompt { font-size: 1rem; }
     .print-only .slip-grid.pp2 .slip-meta-line { font-size: .82rem; }

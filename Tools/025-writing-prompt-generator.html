@@ -432,7 +432,7 @@
   </div>
 
   <div class="seq-nav" id="seqNavRow" style="display:none;">
-    <select id="seqSetSelect"><option value="">Create a prompt set below&hellip;</option></select>
+    <select id="seqSetSelect" aria-label="Prompt set to follow"><option value="">Create a prompt set below&hellip;</option></select>
     <button type="button" class="secondary" id="seqPrevBtn">&larr; Prev</button>
     <span class="seq-day" id="seqDayLabel"></span>
     <button type="button" class="secondary" id="seqNextBtn">Next &rarr;</button>
@@ -538,11 +538,11 @@
       <div class="set-add-manual">
         <textarea id="setItemText" placeholder="Type or paste a prompt&hellip;"></textarea>
         <div class="row2">
-          <select id="setItemBand">
+          <select id="setItemBand" aria-label="Grade band of the prompt to add">
             <option value="ms">Middle School</option>
             <option value="hs">High School</option>
           </select>
-          <select id="setItemGenre"></select>
+          <select id="setItemGenre" aria-label="Genre of the prompt to add"></select>
         </div>
         <button type="button" id="addManualToSetBtn">Add to set</button>
       </div>
@@ -1236,7 +1236,7 @@
             '<span class="tag">' + (it.band === 'ms' ? 'MS' : 'HS') + '</span>' +
             '<span class="tag">' + escapeHtml(genreLabel(it.genre)) + '</span>' +
           '</span>' +
-          '<span class="si-rubric"><select data-id="' + escapeHtml(it.id) + '" class="item-rubric-select">' + rubricSelectOptionsHtml(it.rubricName) + '</select></span>' +
+          '<span class="si-rubric"><select data-id="' + escapeHtml(it.id) + '" class="item-rubric-select" aria-label="Rubric for this prompt">' + rubricSelectOptionsHtml(it.rubricName) + '</select></span>' +
         '</span>' +
         '<span class="si-btns">' +
           '<button type="button" class="up-btn" data-id="' + escapeHtml(it.id) + '"' + (idx === 0 ? ' disabled' : '') + '>&uarr;</button>' +

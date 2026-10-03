@@ -217,6 +217,46 @@ const batchBoxes = await page.evaluate(() =>
   document.querySelectorAll('#handoutPreview .slip .slip-answer-box.grid').length);
 ok(batchBoxes >= 3, `every class-set slip gets the chosen response area (${batchBoxes} found)`);
 
+/* ── on paper, a long prompt grows its slip instead of losing lines ────── */
+// Path 7 P2: the slip and its sheet carried the preview's overflow:hidden into
+// print, with the sheet at a fixed 10.2in, so a prompt longer than a quarter
+// sheet was cut off at the dashed line. Measured in print media, single
+// handout, four to a page.
+await page.uncheck('#batchModeCheck');
+await page.selectOption('#perPageSelect', '4');
+await page.selectOption('#answerStyleSelect', 'lines');
+await page.evaluate(() => { window.print = () => {}; });
+const onPaper = async text => {
+  await page.emulateMedia({ media: 'screen' });
+  await usePrompt(text);
+  await page.click('#printBtn');
+  await page.emulateMedia({ media: 'print' });
+  await settle(page, 200);
+  return page.evaluate(() => {
+    const sheet = document.querySelector('#printArea .slip-page');
+    const slips = [...sheet.querySelectorAll('.slip')];
+    const inside = slips.every(slip => {
+      const box = slip.getBoundingClientRect();
+      return [...slip.children].every(kid => kid.getBoundingClientRect().bottom <= box.bottom + 1);
+    });
+    return {
+      sheet: sheet.getBoundingClientRect().height, slips: slips.length, inside,
+      cut: slips.filter(el => el.scrollHeight - el.clientHeight > 2 && getComputedStyle(el).overflowY !== 'visible').length,
+      rowSpread: Math.max(...slips.map(el => el.getBoundingClientRect().height)) - Math.min(...slips.map(el => el.getBoundingClientRect().height)),
+    };
+  });
+};
+const PAGE_PX = 10.2 * 96;
+const paperShort = await onPaper('Name one thing you learned today.');
+eq(paperShort.slips, 4, 'the printed sheet has four slips');
+ok(Math.abs(paperShort.sheet - PAGE_PX) < 2, `a short prompt still prints a sheet exactly one page tall (${Math.round(paperShort.sheet)}px)`);
+ok(paperShort.rowSpread < 2, 'and its four slips are the same height, for the paper cutter');
+const essay = await onPaper(new Array(41).join('Explain how the river shaped the valley, with evidence from the lab. '));
+ok(essay.sheet > PAGE_PX + 50, `a prompt too long for a quarter sheet makes the sheet taller (${Math.round(essay.sheet)}px), not shorter on text`);
+ok(essay.inside, 'every line of the long prompt, and its answer area, ends inside its slip');
+eq(essay.cut, 0, 'no printed slip clips what it holds');
+await page.emulateMedia({ media: 'screen' });
+
 /* ── no console noise, nothing left the site ───────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 3)));
 eq(page.__blocked.length, 0, 'nothing left the site: ' + JSON.stringify(page.__blocked.slice(0, 3)));

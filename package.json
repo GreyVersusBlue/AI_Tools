@@ -97,6 +97,7 @@
     "check:art": "node Tools/blender-art/validate-art.mjs",
     "phase4:next": "node Tools/board-check/list-base-css-candidates.mjs",
     "path5:next": "node Tools/board-check/list-dark-candidates.mjs",
+    "path7:next": "node Tools/board-check/audit-print.mjs",
     "offline:build": "node Tools/board-check/make-offline-copy.mjs",
     "offline:verify": "node Tools/board-check/verify-offline-copy.mjs",
     "test:current-events": "node Tools/current-events-discussion-guide-generator/test/readability.test.mjs && node Tools/current-events-discussion-guide-generator/test/smoke-comparison.mjs && node Tools/current-events-discussion-guide-generator/test/smoke-media-literacy.mjs && node Tools/current-events-discussion-guide-generator/test/smoke-citation.mjs",

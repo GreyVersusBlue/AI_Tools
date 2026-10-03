@@ -154,6 +154,31 @@ await settle(page, 400);
 same(await shownNames(), ROSTER, 'a save with no filter field reads as no filter');
 eq(await page.inputValue('#filterSelect'), '', 'and the picker starts on every student');
 
+/* ── 9b. a long card prints whole (Path 7 P2) ──────────────────────────── */
+/* The card was `height: 2.6in; overflow: hidden`, so a student with a long
+   note lost the bottom of it on paper, with a clean edge and no warning. */
+await page.evaluate(([k, roster]) => {
+  localStorage.setItem(k, JSON.stringify({
+    roster: roster, types: [{ id: 'x1', name: 'Extended time' }], assignments: {},
+    notes: { 'Ada Lovelace': Array(40).fill('Seat near the door; reader for all directions.').join(' ') },
+  }));
+}, [STORE_KEY, ROSTER]);
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page, 400);
+await page.click('#printBtn');
+await settle(page, 300);
+await page.emulateMedia({ media: 'print' });
+const card = await page.$eval('#printGrid .accom-card', el => {
+  const note = el.querySelector('.note').getBoundingClientRect();
+  const box = el.getBoundingClientRect();
+  return { cut: Math.round(note.bottom - box.bottom), overflow: getComputedStyle(el).overflowY, tall: box.height > 2.6 * 96 + 1, keep: getComputedStyle(el).breakInside };
+});
+ok(card.cut <= 0, `the long note ends inside its card on paper (${card.cut}px past the edge)`);
+eq(card.overflow, 'visible', 'the printed card does not clip');
+ok(card.tall, 'and it grew past 2.6in to hold the note');
+eq(card.keep, 'avoid', 'a card is not split across two pages');
+await page.emulateMedia({ media: null });
+
 /* ── 10. no console noise, nothing left the site ───────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 4)));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked.slice(0, 4)));

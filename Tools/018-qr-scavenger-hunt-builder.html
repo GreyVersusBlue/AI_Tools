@@ -181,7 +181,7 @@
   .print-only { display: none; }
   @media print {
     body { background: #fff; color: #000; padding: 0; display: block; }
-    header, .col-left, .col-right, #msg, #mode-tabs { display: none !important; }
+    header, #hunt-toolbar, .col-left, .col-right, #msg, #mode-tabs { display: none !important; }
     .print-only.active { display: block; }
 
     .print-station-grid { display: flex; flex-wrap: wrap; }
@@ -672,7 +672,7 @@
       body = '<div class="choice-editor"><div class="hint" style="margin:0 0 0.5rem;">Mark the radio next to the correct choice.</div>' +
         s.choices.map(function (c, ci) {
           return '<div class="choice-line">' +
-            '<input type="radio" class="f-choice-correct" name="correct-' + i + '" data-idx="' + i + '" data-ci="' + ci + '"' + (s.correctChoice === ci ? ' checked' : '') + '>' +
+            '<input type="radio" class="f-choice-correct" aria-label="Choice ' + String.fromCharCode(65 + ci) + ' is the correct answer for station ' + (i + 1) + '" name="correct-' + i + '" data-idx="' + i + '" data-ci="' + ci + '"' + (s.correctChoice === ci ? ' checked' : '') + '>' +
             '<input type="text" class="f-choice-text" data-idx="' + i + '" data-ci="' + ci + '" value="' + escapeAttr(c) + '" placeholder="Choice ' + String.fromCharCode(65 + ci) + '">' +
             (s.choices.length > 2 ? '<button type="button" class="btn-choice-remove" data-idx="' + i + '" data-ci="' + ci + '" title="Remove choice">&#10005;</button>' : '') +
             '</div>';
@@ -681,15 +681,15 @@
         '</div>';
     } else if (s.qType === 'numeric') {
       body = '<div class="numeric-editor">' +
-        '<div><label>Correct number</label><input type="number" step="any" class="f-numeric-answer" data-idx="' + i + '" value="' + escapeAttr(s.numericAnswer) + '"></div>' +
-        '<div><label>Tolerance (&plusmn;)</label><input type="number" step="any" min="0" class="f-tolerance" data-idx="' + i + '" value="' + escapeAttr(s.tolerance) + '"></div>' +
+        '<div><label>Correct number</label><input type="number" step="any" class="f-numeric-answer" aria-label="Correct number for station ' + (i + 1) + '" data-idx="' + i + '" value="' + escapeAttr(s.numericAnswer) + '"></div>' +
+        '<div><label>Tolerance (&plusmn;)</label><input type="number" step="any" min="0" class="f-tolerance" aria-label="Tolerance, plus or minus, for station ' + (i + 1) + '" data-idx="' + i + '" value="' + escapeAttr(s.tolerance) + '"></div>' +
         '</div>';
     }
     body += '<div style="' + (body ? 'margin-top:0.6rem;' : '') + '">' +
       '<label>Hint (optional — a team can request this during check-in, for a time penalty)</label>' +
       '<textarea class="f-hint" data-idx="' + i + '" style="min-height:50px;" placeholder="e.g. Look near the flagpole">' + escapeHtml(s.hint) + '</textarea>' +
       '<div class="control-row" style="margin-top:0.5rem;">' +
-        '<div><label>Time penalty if used (minutes)</label><input type="number" step="any" min="0" class="f-hint-penalty" data-idx="' + i + '" value="' + escapeAttr(s.hintPenalty) + '"></div>' +
+        '<div><label>Time penalty if used (minutes)</label><input type="number" step="any" min="0" class="f-hint-penalty" aria-label="Time penalty in minutes if the hint is used at station ' + (i + 1) + '" data-idx="' + i + '" value="' + escapeAttr(s.hintPenalty) + '"></div>' +
       '</div>' +
       '</div>';
     return '<tr class="detail-row"><td colspan="7"><div class="detail-inner">' + body + '</div></td></tr>';
