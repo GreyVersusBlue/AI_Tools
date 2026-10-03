@@ -146,7 +146,7 @@ every edit. The deduplication work that established them is summarised in
   scope), follows per-tool modules, and prints the row as pasteable Markdown;
   `--file roster.js` names the adopters, `--check` fails if the header
   disagrees. It runs in CI **without** `--check`, because the header is
-  legitimately stale between a merge and the step-6 rewrite — run `--check`
+  legitimately stale until the step-6 rewrite lands — run `--check`
   yourself when you write that header. Direct and indirect are reported
   separately (`1 (+1 via a module)`); the plain number is the direct count the
   header has always carried.
@@ -382,7 +382,8 @@ files must be added there too.
   a PR, merge to `main`."** It runs unattended; Devon is not reviewing these rounds
   (2026-09-05). **Size the batch by the Size column, never by a count**: up to 4
   quarter-session rows (they may share one PR), 2–3 half-session rows, one 1-session row,
-  or a single 2+ row on its own. A 2+ row will not finish in one session — do one
+  or a single 2+ row on its own (in single-operator wave mode the caps are 8, 5, 2 and
+  two increments; see `BACKLOG.md`). A 2+ row will not finish in one session — do one
   increment, ship it, and leave the row in place with its text rewritten to say what is
   done. Never mix a 2+ row into a batch with others. `BACKLOG.md`'s "How big a batch" has
   the table and the reasoning. So, also: **never stop to ask.** If a row needs a judgement call, take the
@@ -403,28 +404,33 @@ files must be added there too.
 - **Claim your row in `BACKLOG.md` before you write any code**, in the Claimed
   column, pushed by itself — that table is the concurrency mechanism two
   parallel sessions use to avoid collision, and it has already failed once when
-  it was skipped. See "How to work this list".
+  it was skipped. **End the claim commit's message with `[skip ci]`**: it changes one
+  Markdown cell, and without the tag it triggers a ~32-minute full-suite run on `main`.
+  **If you are the only session working this repo, use single-operator wave mode
+  instead** (`BACKLOG.md`, "Single-operator wave mode"): no claim, one branch, one PR for
+  the whole wave. See "How to work this list".
 - **The `BACKLOG.md` header is a current-state summary, capped at ~80 lines.** The story
   of an increment goes in `HISTORY.md`. The header grew to ~1,900 lines of handoffs before
   it was cut on 2026-09-23, and its numbers table carried each figure's history in the
   cell. Replace a number; don't append "before it…" to it.
-- **A phase is not done until you have rewritten `BACKLOG.md`'s header and
-  re-ranked,** after your PR is merged and the merge is confirmed — not before,
-  so it records what landed rather than what you hoped would. **This happens after
-  *each* merge, never saved for the end of a batch** — it is the rule most likely to be
-  dropped as batches grow, and the one with a recorded failure behind it: a session
+- **A phase is not done until `BACKLOG.md`'s header is rewritten and re-ranked, and that
+  ships in the same PR as the work** (Devon, 2026-10-01; it used to be a second PR after
+  the merge). Do it as the last commits before merge, never saved for the end of a
+  multi-phase batch: write it as each phase's commit lands. It is the rule most likely
+  to be dropped as batches grow, and the one with a recorded failure behind it: a session
   working two phases meant to write both handoffs at the end, its first PR merged with
   its row still in the table, and the next session spent an hour building what already
-  existed. Mark your item
+  existed. Folding it into the work PR removes that failure. Mark your item
   shipped with its `CACHE_VERSION`, refresh the numbers, say what the next
   session should start and anything you found or got wrong, delete the rows that
-  shipped and renumber so ranks stay a contiguous 1..N. Add the `HISTORY.md`
-  entry in the same commit, and merge that too.
+  shipped and renumber so ranks stay a contiguous 1..N. Put `#PENDING` where the PR
+  number goes and fill it in once the PR is open. **If CI fails and the fix changes what
+  shipped, correct the handoff before merging.** Add the `HISTORY.md` entry in the same PR.
 - **End every session by writing the next session's prompt** (Devon, 2026-09-29). After your
-  PR and its step-6 follow-up are both merged, write a self-contained prompt for the next
+  PR is merged, write a self-contained prompt for the next
   session: the row and why, what to read first, the traps you hit, the machine setup, and the
   instruction that it too ends with a PR, a merge and a prompt of its own. Put it in your final
-  message and in the step-6 PR's body. `BACKLOG.md`'s "Definition of done" step 7 has the rest.
+  message and in the work PR's body. `BACKLOG.md`'s "Definition of done" step 7 has the rest.
 - **Write down what did not work.** The most valuable line in any of these
   documents has consistently been the one recording a tool that was never
   committed, a number that was 3× too high, or a check that would have passed on
