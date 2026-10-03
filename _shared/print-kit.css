@@ -1,0 +1,203 @@
+/* print-kit.css — the shared print layouts (Path 7 P1).
+
+   Why this exists. 78 tools call window.print() and 63 of them carry a
+   hand-written `@media print` block that re-solves the same things: a sheet
+   per student, never splitting a card across pages, half and quarter sheets,
+   a class/date header, an "N of M" footer, and output that still reads on the
+   school's black-and-white copier. This file is the one copy of those rules,
+   and _shared/print-kit.js is the helper that fills them.
+
+   EVERYTHING HERE IS OPT-IN BY CLASS. Linking this file changes nothing on a
+   page that uses none of the `pk-` classes: there is no `body *` rule, no
+   `@page` rule and no element selector. That is the difference from
+   print-area.css, which blanks the page and is unsafe to link from a tool
+   without a #printArea. The two can be linked together.
+
+   A SHEET IS SIZED WITH min-height, NEVER height, AND NEVER CLIPPED. The bug
+   this kit retires is `height: 5.5in; overflow: hidden` inside a print block:
+   whatever the teacher typed past the box is cut off cleanly and silently
+   (047, 070 and 076 each fixed it by hand; `check:print-clip` guards it). A
+   `.pk-half` that overflows grows and pushes the next one to a new page.
+   The pure-logic suite fails if a height/overflow pair ever appears here.
+
+   PAGE GEOMETRY. `.pk-half` and `.pk-quarter` divide the printable area, which
+   is the paper minus the @page margin. A stylesheet cannot read the @page
+   margin back, so both live in custom properties that default to US Letter
+   portrait with half-inch margins; PrintKit.setPage() writes the @page rule
+   and the properties together so they cannot disagree. A page that sets its
+   own @page must set --pk-page-w, --pk-page-h and --pk-margin to match.
+
+   NOT VERIFIED ON PAPER. Every measurement here was checked against
+   Chromium's PDF output (Tools/print-kit/test/smoke-print-kit.mjs), not a
+   printer. The label presets in particular are "Avery-ish": the cell sizes
+   are the published ones, but real label stock needs a sheet through the
+   actual copier before a tool promises alignment. */
+
+:root {
+  --pk-page-w: 8.5in;
+  --pk-page-h: 11in;
+  --pk-margin: 0.5in;
+  --pk-gap: 0.125in;
+  /* The printable box. A hair is held back from the height so two halves, or
+     four quarters, never round up past one page. */
+  --pk-area-w: calc(var(--pk-page-w) - 2 * var(--pk-margin));
+  --pk-area-h: calc(var(--pk-page-h) - 2 * var(--pk-margin) - 0.04in);
+}
+
+/* ---- screen / print visibility ------------------------------------------ */
+
+.pk-print-only { display: none !important; }
+
+@media print {
+  .pk-print-only { display: revert !important; }
+  .pk-no-print { display: none !important; }
+}
+
+/* ---- sheets -------------------------------------------------------------- */
+
+@media print {
+  /* One printed page per element. The last one does not push out a blank. */
+  .pk-page { break-after: page; page-break-after: always; }
+  .pk-page:last-child { break-after: auto; page-break-after: auto; }
+
+  /* Never split this across pages: a card, a student's block, a table row. */
+  .pk-keep, .pk-half, .pk-quarter, .pk-card {
+    break-inside: avoid; page-break-inside: avoid;
+  }
+
+  /* Two to a page, stacked. Cut along the middle. flow-root keeps a first
+     heading's margin inside the sheet; collapsed out of it, that margin is
+     extra height and the second half lands on the next page. */
+  .pk-half {
+    display: flow-root;
+    box-sizing: border-box;
+    min-height: calc(var(--pk-area-h) / 2);
+  }
+
+  /* Four to a page, two across. Put them in a .pk-quarters wrapper. */
+  .pk-quarters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .pk-quarter {
+    box-sizing: border-box;
+    min-height: calc(var(--pk-area-h) / 2);
+  }
+
+  /* A dashed cut guide on the trailing edge of a half or quarter sheet. */
+  .pk-cut { border-bottom: 1px dashed currentColor; }
+  .pk-quarters > .pk-cut:nth-child(odd) { border-right: 1px dashed currentColor; }
+}
+
+/* ---- header and footer ---------------------------------------------------- */
+
+/* Filled by PrintKit.setHeader() / renderSet(). Laid out on screen as well, so
+   a tool that shows its sheet before printing sees the same thing. */
+.pk-header, .pk-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1em;
+  font-size: 0.85em;
+}
+.pk-header { border-bottom: 1px solid currentColor; padding-bottom: 0.2em; margin-bottom: 0.6em; }
+.pk-footer { border-top: 1px solid currentColor; padding-top: 0.2em; margin-top: 0.6em; }
+.pk-h-title { font-weight: 700; }
+.pk-header > :empty, .pk-footer > :empty { display: none; }
+
+/* A write-in rule where a blank copy has no name: "Name ________". */
+.pk-blank-line {
+  display: inline-block;
+  min-width: 2.5in;
+  border-bottom: 1px solid currentColor;
+}
+.pk-blank-line::before { content: "\00a0"; }
+
+/* ---- card grids ------------------------------------------------------------ */
+
+/* `.pk-cards` plus one preset. Cells are sized with min-height, so a card with
+   too much text grows its whole row rather than losing the text. Pages of
+   cards come from PrintKit.chunk(items, PrintKit.PRESETS[name].perPage), one
+   `.pk-cards.pk-page` per chunk. */
+.pk-cards {
+  display: grid;
+  grid-template-columns: repeat(var(--pk-cols, 2), 1fr);
+  gap: var(--pk-gap);
+}
+.pk-card { box-sizing: border-box; min-width: 0; overflow-wrap: anywhere; }
+
+.pk-cards-2x2  { --pk-cols: 2; --pk-rows: 2; }   /* 4 quarter-page cards        */
+.pk-cards-2x3  { --pk-cols: 2; --pk-rows: 3; }   /* 6 per page                  */
+.pk-cards-3x3  { --pk-cols: 3; --pk-rows: 3; }   /* 9 trading-card size         */
+.pk-cards-2x4  { --pk-cols: 2; --pk-rows: 4; }   /* 8 flashcards                */
+.pk-cards-2x5  { --pk-cols: 2; --pk-rows: 5; }   /* 10 business cards (2 x 3.5) */
+.pk-cards-3x10 { --pk-cols: 3; --pk-rows: 10; }  /* 30 address labels (1 x 2⅝)  */
+
+@media print {
+  .pk-cards > .pk-card {
+    min-height: calc((var(--pk-area-h) - (var(--pk-rows, 2) - 1) * var(--pk-gap)) / var(--pk-rows, 2));
+  }
+  /* Label stock is fixed by the die cut, not by the printable area. */
+  .pk-cards-2x5 { --pk-gap: 0in; grid-template-columns: repeat(2, 3.5in); justify-content: center; }
+  .pk-cards-2x5 > .pk-card { min-height: 2in; }
+  .pk-cards-3x10 { column-gap: 0.125in; row-gap: 0in; grid-template-columns: repeat(3, 2.625in); justify-content: center; }
+  .pk-cards-3x10 > .pk-card { min-height: 1in; }
+}
+
+/* ---- ink-safe: for anything a tool encodes in colour ------------------------ */
+
+/* The copier is black and white, and a browser drops backgrounds from print by
+   default. So a category that is a fill colour on screen needs a second
+   encoding that survives both: a hatch drawn in the text colour, a border
+   style, or a written label. These work on screen too, which is where a
+   teacher checks them. `PrintKit.inkClass(i)` hands them out in order.
+
+   Every pattern is drawn in currentColor, so it follows the theme on screen
+   and is black on paper. The only colour literals in this file are the black and
+   white `.pk-ink-safe` forces inside `@media print`. */
+
+.pk-hatch-1, .pk-hatch-2, .pk-hatch-3, .pk-hatch-4, .pk-hatch-5, .pk-hatch-6 {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.pk-hatch-1 { background-image: repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 7px); }
+.pk-hatch-2 { background-image: repeating-linear-gradient(-45deg, currentColor 0 1px, transparent 1px 7px); }
+.pk-hatch-3 { background-image: repeating-linear-gradient(0deg, currentColor 0 1px, transparent 1px 6px); }
+.pk-hatch-4 { background-image: repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 6px); }
+.pk-hatch-5 {
+  background-image:
+    repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(-45deg, currentColor 0 1px, transparent 1px 8px);
+}
+.pk-hatch-6 { background-image: radial-gradient(currentColor 1px, transparent 1.5px); background-size: 7px 7px; }
+
+.pk-ink-solid  { border: 2px solid currentColor; }
+.pk-ink-dashed { border: 2px dashed currentColor; }
+.pk-ink-dotted { border: 2px dotted currentColor; }
+.pk-ink-double { border: 4px double currentColor; }
+
+/* A written label from an attribute: <span class="pk-label" data-pk-label="Late">.
+   On screen the colour carries it and the label stays out of the way; on paper
+   it is always shown. `.pk-label-always` shows it on screen as well. */
+.pk-label[data-pk-label]::after {
+  content: " (" attr(data-pk-label) ")";
+  font-size: 0.85em;
+  display: none;
+}
+.pk-label-always[data-pk-label]::after { display: inline; }
+
+@media print {
+  .pk-label[data-pk-label]::after { display: inline; }
+
+  /* The whole-subtree switch: black text on white, no shadows, and no fills
+     except the kit's own hatches. Borders are kept and darkened, because a
+     light grey rule is the first thing a copier loses. */
+  .pk-ink-safe, .pk-ink-safe * {
+    color: #000 !important;
+    border-color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  .pk-ink-safe { background: #fff !important; }
+  .pk-ink-safe *:not([class*="pk-hatch-"]) { background: transparent !important; }
+}

@@ -459,6 +459,12 @@ files must be added there too.
   has its own `@media print` block, breaks printing. Both files' headers spell
   this out. `npm run phase4:next` (read-only) lists which tools still have
   duplicated rules and flags the ones that must not get print-area.css.
+  `_shared/print-kit.css` + `print-kit.js` (Path 7 P1, v221) are the shared print layouts and
+  the `PrintKit` helper: `pk-` classes for sheets, half and quarter sheets, card grids and
+  ink-safe output, and one/class-set/blank rendering from a template. Unlike print-area.css the
+  kit is opt-in by class and safe to link anywhere; a new printing tool uses it instead of
+  writing another `@media print` block. It sizes with `min-height` and never clips. Its suites
+  are `npm run test:print-kit`; nothing in it has been checked on paper.
   `npm run path5:next` (`Tools/board-check/list-dark-candidates.mjs`, also
   read-only) is the same kind of picker for Path 5: the pages still on
   a11y.css's invert filter, the colour literals each would have to tokenize

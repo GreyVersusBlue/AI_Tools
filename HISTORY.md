@@ -9,6 +9,43 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P1: `_shared/print-kit.css` + `print-kit.js`, the shared print kit (2026-10-03, AI-13, `CACHE_VERSION` v221)
+
+Audit entry AI-13, old rank 7. P1 only; P2 to P5 are ranks 7 to 10 now. **No tool links the kit yet.** The definition of
+done allows a new `_shared/` module "at most one adopter", and adoption is P3's row, so this shipped with none.
+
+- **What it is.** `print-kit.css` is opt-in by class and has no `body`, element or `@page` rule, so linking it changes
+  nothing on a page that uses no `pk-` class (the opposite of `print-area.css`). Sheets: `.pk-page`, `.pk-keep`,
+  `.pk-half`, `.pk-quarter` in a `.pk-quarters` wrapper, `.pk-cut`. Card grids: `.pk-cards` + `.pk-card` with presets
+  2x2, 2x3, 3x3, 2x4, 2x5 (business cards) and 3x10 (address labels). `.pk-header` / `.pk-footer` / `.pk-blank-line`.
+  Ink-safe: `.pk-ink-safe`, six hatches, four border styles, `.pk-label[data-pk-label]`. `print-kit.js` publishes
+  `PrintKit`: `setPage`, `setHeader`, `renderSet`, and the pure `plan`, `chunk`, `inkClass`, `pageCss`.
+- **The clipping class is closed by construction.** Every sheet and card is sized with `min-height`; the pure suite
+  fails if `height`, `max-height` or `overflow: hidden/clip` ever appears in the file, and the browser suite overfills a
+  half sheet and a card and checks they grow. `check:print-clip` does not read the file until a live page links it.
+- **Decisions, all reversible.**
+  - *`setPage()` owns `@page`, the stylesheet does not.* A stylesheet cannot read the `@page` margin back, and half and
+    quarter sheets divide the printable area, so the rule and the `--pk-page-w/h`, `--pk-margin` properties are written
+    together. A page with its own `@page` must set the three properties itself.
+  - *The roster is handed in.* `renderSet` takes names or `Roster.getStudents()` records and reads no storage, so the
+    kit has no `store.js` or `roster.js` dependency and a page with no roster still prints blanks.
+  - *A header belongs to a sheet, not to a printed page.* There is no running header across the pages of one long
+    sheet. `@page` margin boxes would do it in new Chromium only, and `position: fixed` overlaps content.
+  - *Every value goes through `textContent`.* A name that looks like markup prints as text; the suite pins it.
+  - *The fixture is `Tools/print-kit/test/fixture.html`*, not a tool page. It is in a `test/` folder, so it is not a
+    live page to any guard, is not precached and is left out of the offline zip.
+- **What went wrong on the way.** The first browser run printed four half sheets as four pages. A first heading's
+  margin collapsed out of the `min-height` box and made each half taller than half a page. `.pk-half` is
+  `display: flow-root` in print because of it. A tool rule that sets `display` on the same element loses that, and has
+  to contain its own margins.
+- **Measured:** 311 precache entries, 12,603,498 B; install tier 95, 2,987,295 B (the two files are 20,308 B).
+  `Tools/print-kit/test/print-kit.test.mjs` 66 checks, `smoke-print-kit.mjs` 57 checks on port 8460, counting pages in
+  Chromium's PDF output (Chrome 154 on huginn).
+- **Not verified.** Nothing was printed on paper: not the half-sheet cut line, not the label presets on Avery stock,
+  not the hatches on the school copier. That is the parked device check. Firefox and Safari print were not run. The
+  full `npm test` was not run (huginn is short of RAM); the print-kit, service-worker and theme suites, the selector
+  test and every guard were.
+
 ## Infra odds and ends: no page claims a social-tag generator, precache bytes re-measured (2026-10-02, AI-34, `CACHE_VERSION` v220)
 
 Audit entry AI-34. Its Windows half (CRLF in `smoke-dark-theme`, the 067 glyph probe) had already landed in #323.

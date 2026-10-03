@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Print kit — test fixture</title>
+<link rel="stylesheet" href="../../../_shared/ink-paper.css">
+<link rel="stylesheet" href="../../../_shared/print-kit.css">
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; }
+  .tint { background: #c33; color: #fff; }
+</style>
+</head>
+<body>
+<!-- Not a tool. smoke-print-kit.mjs drives this page; it exists so the kit can
+     be measured in a browser before any real tool adopts it. -->
+<p class="pk-no-print" id="screenOnly">Screen only.</p>
+<p class="pk-print-only" id="printOnly">Print only.</p>
+<main id="out"></main>
+
+<template id="sheetTpl">
+  <h1 data-pk="title"></h1>
+  <p>Name: <span data-pk="name"></span></p>
+  <p class="body">One paragraph of work.</p>
+  <p class="counter" data-pk="count"></p>
+</template>
+
+<script src="../../../_shared/print-kit.js"></script>
+</body>
+</html>
