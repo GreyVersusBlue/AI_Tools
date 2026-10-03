@@ -68,13 +68,16 @@
   table.drill-table td.blank { color: transparent; }
   table.drill-table td.answer { color: var(--accent-2); font-weight: 600; }
 
+  /* Before the print block, not after it: the two rules have the same
+     specificity, and with this one last the sheet stayed display:none on
+     paper and both print buttons printed a blank page. */
+  #printArea { display: none; }
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
     #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
     .sheet-page { page-break-after: always; }
   }
-  #printArea { display: none; }
   .sheet-title { font-size: 1.3rem; margin: 0 0 .1rem; }
   .sheet-sub { color: #555; font-size: .85rem; margin: 0 0 1rem; }
 </style>

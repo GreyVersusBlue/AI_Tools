@@ -87,8 +87,11 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v225), rank 6, Path 7 P2 increment 2:** the audit now reaches every sheet (not measured 18 → 0) through
+  18 new seeds, "print" tabs and `print-audit-prep.mjs`. Fixed: 061 printed blank, 023's clipped slips, 038, 051, 074.
+  **035's Blueprint tab is the next increment.**
 - **AI-13 (v224), rank 6, Path 7 P2 increment 1:** `npm run path7:next` audits every tool in print in a browser.
-  077's clipped card, `theme.css`'s print reset and seven smaller fixes shipped; **18 pages are not measured yet**.
+  077's clipped card, `theme.css`'s print reset and seven smaller fixes shipped.
 - **AI-10 (v223), old rank 6:** every WebRTC pairing code is drawn by `QrDraw.fit()` at 4 px per module or more,
   and `webrtc-pair.js` writes a lossless compact code (569 → ~190 bytes). Suite `smoke-pairing-qr.mjs`, port 8463.
   **Not scanned with a real phone, and only Chromium's SDP was seen** (parked device check 4).
@@ -158,10 +161,10 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Suites | **190** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
-| Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 36 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
+| Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
 | Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `media-db.js` 14 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
-| Printing | 78 tools call `window.print()`; 62 carry a hand-written `@media print` block. `path7:next`: 7 pages with a finding, 18 not measured, 10 with no print path |
+| Printing | 78 tools call `window.print()`; 62 carry a hand-written `@media print` block. `path7:next`: 7 pages with a finding, 0 not measured, 10 with no print path, 1 blank sheet (040), 11 print buttons no seed reaches |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **170**, contiguous. Path 21 is finished; per-tool rows start at rank **80**; 162–170 are Path 22 P6–P14 |
 | Art | **130** ledger entries: 046's relief (29,726 B), 030's board backdrop and tiles (5,348 B), 042's ten seals and ribbons (84,170 B), 071's twelve pictures (157,454 B), 080's piece atlas (43,318 B), 87 tool icons, the sprite (58,032 B), 4 shortcut PNGs, the 4 app-mark PNGs (14,457 B), the 4 hero WebPs (64,832 B), the test tile's light/dark pair |
@@ -297,7 +300,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 6 | Path 7 P2 — print reliability audit. **Increment 1 (AI-13, v224):** `npm run path7:next` (`audit-print.mjs`) measures every tool in print in a browser; 077's clipped card, `theme.css`'s missing print reset and seven smaller fixes shipped. **Left:** seeds for the 18 pages it could not see into (`a11y-sweep/seeds.mjs`), then 035's Blueprint tab and 038's Ctrl+P, the 7 pages in `print-audit-baseline.json` | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 6 | Path 7 P2 — print reliability audit. **Increment 1 (AI-13, v224):** `npm run path7:next` (`audit-print.mjs`) measures every tool in print in a browser; 077's clipped card, `theme.css`'s missing print reset and seven smaller fixes shipped. **Increment 2 (AI-13, v225):** every page is measured (seeds for 18 pages, `print-audit-prep.mjs`); 061's blank sheet, 023's clipped slips, 038's Ctrl+P, 051 and 074 fixed. **Left:** 035's Blueprint tab (a session of its own), 040's blank sheet with no words, seeds for the 11 print buttons the audit lists as never printing (013 014 015 024 033 084), the 7 pages in `print-audit-baseline.json` | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 7 | Path 7 P3 — adoption: the class-set/blank tools, then the card-grid tools | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 7 P4 — `_shared/export.js`: `toPdf`, `toCsv/xlsx`, `toZip`, booklet/N-up imposition | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 9 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
@@ -1541,9 +1544,12 @@ localStorage with no file export.
   audit became a browser sweep: `npm run path7:next` (`Tools/board-check/audit-print.mjs`, ~12 minutes,
   not in CI) reports CLIP, FIXED, SCROLL, CHROME, SPLIT and DARK per page, and `--check` compares a run
   with `print-audit-baseline.json`. Fixed: 077 (the fixed-height card), `_shared/theme.css` (dark tokens
-  on paper for 005/011/029/031/036), 002, 018, 020, 037, 040, 043, 079. **Next: write seeds for the 18
-  pages the audit lists as "Not measured"**, since nothing on them has been audited at all; then 035 and
-  038. 042's certificate, 046's viewport and 064's trading card are fixed-size on purpose (`HISTORY.md`).
+  on paper for 005/011/029/031/036), 002, 018, 020, 037, 040, 043, 079.
+  **Increment 2 shipped (AI-13, 2026-10-03, v225).** Seeds for the 18 unmeasured pages, automatic opening
+  of "print" tabs, `print-audit-prep.mjs` and a `print()` stub that throws: nothing is "Not measured" now.
+  Fixed: 061 (blank sheet), 023 (slips clipped a long prompt), 038 (Ctrl+P), 051, 074. **Next: 035's
+  Blueprint tab**, then 040's blank sheet and seeds for the eleven buttons the audit lists as never
+  printing. 042's certificate, 046's viewport and 064's trading card are fixed-size on purpose (`HISTORY.md`).
 - **P3 — Adoption.** Move the class-set/blank tools (042, 043, 023, 070, 076, 077)
   onto the shared set helper first; then the card-grid tools (016, 017, 018, 040,
   051, 064, 074).

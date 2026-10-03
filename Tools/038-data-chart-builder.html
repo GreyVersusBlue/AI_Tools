@@ -128,6 +128,18 @@
     body.printing > *:not(#print-area) { display: none !important; }
     body.printing #print-area { display: block; }
     body.printing #print-area svg { width: 100%; height: auto; }
+    /* Ctrl+P with no worksheet built used to print the whole screen, every
+       control included, because the rules above only apply once the
+       worksheet button has set body.printing. Without it, the paper gets
+       the chart and its statistics and nothing else. */
+    body:not(.printing) > header, body:not(.printing) .col-left,
+    body:not(.printing) .col-right .card-title, body:not(.printing) .col-right .control-group,
+    body:not(.printing) .col-right .btn-row, body:not(.printing) .col-right .hint { display: none !important; }
+    body:not(.printing) .layout { display: block; max-width: none; }
+    body:not(.printing) .col-right { position: static; min-width: 0; }
+    body:not(.printing) .col-right .card { border: none; box-shadow: none; background: none; padding: 0; }
+    body:not(.printing) #chart-stage svg { width: 100%; height: auto; }
+    .stat-cell { break-inside: avoid; page-break-inside: avoid; }
     @page { size: letter landscape; margin: 0.4in; }
   }
   .back-link { display: inline-block; color: var(--text-dim); text-decoration: none; font-size: .85rem; padding: .3rem .5rem .3rem 0; }

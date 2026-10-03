@@ -9,6 +9,58 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P2, increment 2: the audit reaches every sheet, and what it found there (2026-10-03, AI-13, `CACHE_VERSION` v225)
+
+Audit entry AI-13, rank 6 (2+). Second increment; the row stays, rewritten. P3 to P5 untouched.
+
+- **"Not measured" went from 18 pages to 0.** Seeds for all 18 are in `Tools/a11y-sweep/seeds.mjs` (006 008 017
+  018 023 025 044 048 049 051 053 060 061 064 067 069 074 082), each with one deliberately long value so a
+  clipping box has something to clip. Saved state was not enough on its own for most of them, so the audit grew
+  two more ways in: a tab whose label says "print" is opened automatically and searched for print buttons again
+  (023, 049, 053, 055, 062, 066, 081), and `Tools/board-check/print-audit-prep.mjs` holds the few clicks nothing
+  else reaches (008 a student picked, 018 the Live Run tab, 023 the triage tab and a class set, 025 a roster
+  sheet built, 038 a table pasted, 044 a lesson typed and the copy dialog open, 067 the second tab). The sweep is
+  now 356 states over 88 pages, about 12 minutes.
+- **The stub for `window.print` now throws.** 048, 067 and 069 add `.active` to the sheet, call `print()`, and
+  take it off on the next line; the real call blocks, the old stub returned, and the audit measured an empty
+  page. Throwing stops the handler where the dialog would have held it. This is why three of the 18 could not be
+  fixed by a seed at all.
+- **061 printed a blank page from both of its print buttons.** `#printArea { display: none }` sat *after* the
+  `@media print` block that sets it to `block`, same specificity, so the later rule won on paper. Moved above
+  the block. No suite covers 061; the audit's new "Blank sheets" list (a button that called `print()` and left
+  the paper empty in every state) is what would catch it again, and that is not in CI.
+- **023's slips had the fixed half-sheet bug the row was written for.** The printed sheet was `height: 10.2in`
+  and both the sheet and each slip kept the screen preview's `overflow: hidden`, so a prompt longer than a
+  quarter sheet lost its last lines at the dashed border. Print now uses `min-height` on a flex column with the
+  slips `overflow: visible` and `break-inside: avoid`. `smoke-response-area.mjs` prints a short prompt (sheet
+  still exactly 10.2in, four equal slips) and a 40-sentence one (sheet grows, everything ends inside its slip):
+  6 new assertions, 42 pass, 3 of them fail without the fix.
+- **074 and 051 had a fixed `height` on a label with no clip**, which the audit does not flag: 074's long label
+  squeezed its hazard symbol to 0px and ran text past the border (found by a helper measuring it, not by the
+  audit). Both are `min-height` now; 074's symbol is `flex-shrink: 0`; 051's labels carry `break-inside: avoid`.
+- **The seeds widened the a11y sweep, and it found two pages.** The seeded pass reads the same file, so 18 more
+  pages are scanned with data in them. 018's numeric-answer, tolerance, hint-penalty and correct-choice inputs
+  (8 nodes) and 025's four selects in the planned-sequence editor (6 nodes) had no accessible name; neither state
+  exists on an empty page. All now carry `aria-label`. The allowlist stays at 0.
+- **038's Ctrl+P prints the chart and its statistics**, not the whole screen: its print rules hung off
+  `body.printing`, which only the worksheet button sets. CHROME 9 to 0.
+- **Sweep, before and after:** not measured 18 to 0; pages with a finding 7 to 7 (038 left the list, 064 joined
+  it). 064's CLIP is the seed's deliberately overloaded card (seven stats, five facts) in a physical card size;
+  left alone under increment 1's call. The baseline is rewritten.
+- **What is left.** 035's Blueprint tab (45 CHROME, 5 FIXED, 2 SCROLL, 2 SPLIT), untouched: it is a 958 KB page
+  whose only print block covers `#app-browser`, and it wants a session of its own. 040's Print with no words
+  prints a blank page (the one "Blank sheets" entry). Eleven print buttons never called `print()` in any state,
+  on 013, 014, 015, 024, 033, 044 and 084: 044's opens a dialog and is fine, the rest are sheets no seed
+  reaches yet. 004, 009 and 010 still print dark tints on Ctrl+P.
+- **Not verified, and what went wrong.** Nothing was printed on paper. The full `npm test` was not run; the
+  suites for 018, 023, 025, 038, the service worker, the a11y sweep and `board-check` were. 064's seed covers only the
+  standard card size, 082's only MLA, and 053's and 025's sheets draw at random, so their long value is not on
+  every run's sheet. A first version of the tab change stopped clicking "print" tabs as buttons and four pages
+  that had been measured through them (055 062 066 081) dropped out; the full sweep caught it. I ran `git stash`
+  once to see the new 023 assertions fail without the fix and popped it straight back; the loop's rules say not
+  to, and `git diff` after is how I checked nothing moved. `run-suites.mjs --help` is not a flag: it starts the
+  whole suite.
+
 ## Path 7 P2, increment 1: a print audit that opens the page, and the first nine fixes (2026-10-03, AI-13, `CACHE_VERSION` v224)
 
 Audit entry AI-13, rank 6 (2+). One increment; the row stays, rewritten. P3 to P5 untouched.

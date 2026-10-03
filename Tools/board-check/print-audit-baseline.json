@@ -16,14 +16,15 @@
       "CHROME": 45,
       "SPLIT": 2
     },
-    "Tools/038-data-chart-builder.html": {
-      "CHROME": 9
-    },
     "Tools/042-certificate-award-maker.html": {
       "FIXED": 2
     },
     "Tools/046-blank-map-generator.html": {
       "FIXED": 1
+    },
+    "Tools/064-historical-trading-card-maker.html": {
+      "CLIP": 1,
+      "FIXED": 2
     }
   }
 }

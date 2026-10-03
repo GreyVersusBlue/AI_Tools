@@ -109,10 +109,13 @@
   .label-grid.size-medium { grid-template-columns: repeat(3, 1fr); }
   .label-grid.size-large { grid-template-columns: repeat(2, 1fr); }
   .label-card { border: 1.5px solid #333; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: .15in; text-align: center; page-break-inside: avoid; }
-  .label-grid.size-small .label-card { height: 1.5in; }
-  .label-grid.size-medium .label-card { height: 2in; }
-  .label-grid.size-large .label-card { height: 2.75in; }
-  .label-card svg { width: 44px; height: 44px; margin-bottom: .1in; }
+  /* min-height, not height: a long label used to keep the box at its fixed
+     size, squeeze the hazard symbol to nothing and run the text out past the
+     border. Now the row grows and the symbol keeps its size. */
+  .label-grid.size-small .label-card { min-height: 1.5in; }
+  .label-grid.size-medium .label-card { min-height: 2in; }
+  .label-grid.size-large .label-card { min-height: 2.75in; }
+  .label-card svg { width: 44px; height: 44px; margin-bottom: .1in; flex-shrink: 0; }
   .label-grid.size-large .label-card svg { width: 60px; height: 60px; }
   .label-card .ltext { font-weight: 700; font-size: .95rem; }
 
