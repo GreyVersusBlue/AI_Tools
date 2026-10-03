@@ -14,9 +14,21 @@
 // Keep an entry to the one or two actions a teacher would take, by id. A prep
 // that needs more than that is a per-tool suite's job.
 
+import { fixtureProject } from '../schedule/test/fixture-northwind.mjs';
+
 export const PRINT_PREP = {
   // 008 — the per-student summary prints nothing until a student is chosen.
   '008': [{ name: 'a student picked', run: page => page.selectOption('#summaryStudent', { index: 1 }) }],
+  // 014 — role cards are printed from a pairing that is held in memory.
+  '014': [{ name: 'the class paired up', run: page => page.click('#pairUpBtn') }],
+  // 015 — the tiled wall print and the map print each sit in a panel their
+  // toggle opens, and the layout preview is a view of its own. A new timeline
+  // has no events, and both prints refuse an empty one: Load example fills it.
+  '015': [
+    { name: 'example loaded, Wall print panel open', run: async page => { await page.click('#loadExampleBtn'); await page.click('#tiledPrintToggleBtn'); } },
+    { name: 'example loaded, Map print panel open', run: async page => { await page.click('#loadExampleBtn'); await page.click('#mapPrintToggleBtn'); } },
+    { name: 'example loaded, Print layout preview', run: async page => { await page.click('#loadExampleBtn'); await page.click('#viewPrintBtn'); } },
+  ],
   // 018 — team cards, route cards and answer sheets are on the Live Run tab.
   '018': [{ name: 'Live Run tab', run: page => page.click('#tab-run') }],
   // 023 — the reteach list is on the Paper Triage tab, and the open tab is not
@@ -42,11 +54,29 @@ export const PRINT_PREP = {
       await page.fill('#recordStudentInput', 'Ada Lovelace');
     },
   }],
+  // 035 — the Blueprint tab prints the active floor's plan, and an empty grid
+  // prints one sentence. The plan is the schedule suite's invented school,
+  // loaded the way the page's own Import does.
+  '035': [{
+    name: 'the Northwind plan loaded',
+    /* global applyFullProject -- 035's page global, read inside page.evaluate() */
+    run: page => page.evaluate(project => { applyFullProject(project); }, fixtureProject()),
+  }],
   // 038 — the data box is not saved; without a table there is no chart for
   // Ctrl+P and no worksheet for the print button.
   '038': [{
     name: 'a table pasted',
     run: page => page.fill('#data-input', 'Trial\tTemperature (C)\tReaction Time (s)\n1\t20\t45\n2\t30\t31\n3\t40\t22\n4\t50\t16'),
+  }],
+  // 040 — a new list is empty, and Print refuses an empty list (it used to
+  // print a blank sheet). Typing words saves them, but under a list name the
+  // page makes up, so they are typed here.
+  '040': [{
+    name: 'a word list typed',
+    run: async page => {
+      await page.fill('#wordInput', 'Photosynthesis: process plants use to make food from sunlight\nMitosis: a kind of cell division\nOsmosis: movement of water across a membrane\nEcosystem: a community of living things and their surroundings\nEnzyme: a protein that speeds up a reaction\nChlorophyll: the green pigment that captures light energy');
+      await page.dispatchEvent('#wordInput', 'input');
+    },
   }],
   // 044 — today's lesson is never saved, and the one print button lives in the
   // dialog that Quick text copy builds.

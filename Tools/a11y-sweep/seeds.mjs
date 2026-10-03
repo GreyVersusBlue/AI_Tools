@@ -108,6 +108,35 @@ export const PAGE_SEEDS = {
     sdb_directory_v1: j([{ id: 'p1', name: 'Ana Ruiz', room: '204', ext: '3104', subject: 'Science' }]),
   }),
 
+  // 013 — a section with a lab day, one contract signed and three missing, one with a note (013's saveCurrentState).
+  '013': () => ({
+    lsct_sections_v1: j({
+      'Period 3': {
+        roster: ['Aiden Smith', 'Bella Cruz', 'Carlos Diaz', 'Maximiliana Featherstonehaugh-Villanueva de la Cruz'],
+        contracts: {
+          'Aiden Smith': { docs: { d1: { signed: true, date: '2026-09-02' } }, note: '' },
+          'Bella Cruz': { docs: { d1: { signed: false, date: '' } }, note: 'Emailed home on Tuesday' },
+        },
+        dueDate: '2026-09-15',
+        documents: [{
+          id: 'd1', label: 'Lab Safety Contract', fee: '',
+          body: 'I have read and understand the laboratory safety rules for this class. I agree to follow all safety procedures and wear the required safety equipment.',
+        }],
+        rosterName: '', idNames: {},
+      },
+    }),
+    lsct_current_v1: 'Period 3',
+  }),
+
+  // 014 — a class with a roster and a scenario open. The pairing behind the
+  // role cards is held in memory, so print-audit-prep.mjs clicks "pair up" (014's rosterByClass).
+  '014': () => ({
+    'gvb-roleplay:fills': j({ 'Period 3': {} }),
+    'gvb-roleplay:currentClass': 'Period 3',
+    'gvb-roleplay:roster': j({ 'Period 3': ['Aiden Smith', 'Bella Cruz', 'Carlos Diaz', 'Dana Lee', 'Maximiliana Featherstonehaugh-Villanueva de la Cruz'] }),
+    'gvb-roleplay:current': 'f1',
+  }),
+
   // 017 — three stations with feedback slips on, notes and a walking order (017's loadSetByName).
   '017': () => ({
     'gallery-walk-qr-sets': j({
@@ -186,6 +215,19 @@ export const PAGE_SEEDS = {
         { id: 't8', name: 'Maximiliana Featherstonehaugh-Villanueva de la Cruz', status: 'reteach' }
       ]
     }),
+  }),
+
+  // 024 — three named strategies in the class library, one long (024's loadStrategyLibrary).
+  '024': () => ({
+    'gvb-number-talks:strategyLibrary': j([
+      { id: 'L1', name: "Ada's doubling", text: '16 × 25: I halved 16 and doubled 25 until it was 4 × 100.', context: '16 × 25', ts: Date.now() - DAY },
+      { id: 'L2', name: 'Friendly tens', text: '49 + 37: I gave one from 37 to 49, so it is 50 + 36 = 86.', context: '49 + 37', ts: Date.now() - 2 * DAY },
+      {
+        id: 'L3', name: "Maximiliana's break-apart-and-put-back-together strategy",
+        text: '18 × 12: I broke 12 into 10 and 2, did 18 × 10 = 180 and 18 × 2 = 36, then added them to get 216. Then I checked it the other way, breaking 18 into 20 take away 2, which is 240 − 24 = 216.',
+        context: '18 × 12', ts: Date.now() - 3 * DAY,
+      },
+    ]),
   }),
 
   // 025 — sequence mode on a saved set, so a fixed long prompt is on stage, and one student's record (writing-prompt-generator/wpg-store.js).
@@ -308,6 +350,36 @@ export const PAGE_SEEDS = {
         teams: [{ name: 'Team 1', score: 0 }, { name: 'Team 2', score: 0 }],
         dailyDoubleEnabled: false, lightningRoundEnabled: false, lightningRoundSeconds: 15,
       }),
+    };
+  },
+
+  // 033 — a section with a roster, a week of logs and two finished books (033's saveCurrentState; bookKey is the lowercased title).
+  '033': () => {
+    const day = n => new Date(Date.now() - n * DAY).toISOString().slice(0, 10);
+    return {
+      sslt_sections_v1: j({
+        'Period 3': {
+          roster: ['Aiden Smith', 'Bella Cruz', 'Carlos Diaz', 'Maximiliana Featherstonehaugh-Villanueva de la Cruz'],
+          logs: {
+            'Aiden Smith': [
+              { id: 'e1', date: day(3), book: 'Hatchet', pagesTo: 60, minutes: 20 },
+              { id: 'e2', date: day(1), book: 'Hatchet', pagesTo: 186, minutes: 25 },
+            ],
+            'Bella Cruz': [{ id: 'e3', date: day(2), book: 'The Giver', pagesTo: 45, minutes: 20 }],
+            'Maximiliana Featherstonehaugh-Villanueva de la Cruz': [
+              { id: 'e4', date: day(2), book: 'The Mysterious Benedict Society and the Perilous Journey', pagesTo: 440, minutes: 30 },
+            ],
+          },
+          finished: {
+            'Aiden Smith': ['hatchet'],
+            'Maximiliana Featherstonehaugh-Villanueva de la Cruz': ['the mysterious benedict society and the perilous journey'],
+          },
+          genres: { hatchet: 'Adventure' },
+          weeklyGoalPages: 100, weeklyGoalMinutes: 0,
+          rosterName: '', idNames: {},
+        },
+      }),
+      sslt_current_v1: 'Period 3',
     };
   },
 
@@ -982,4 +1054,25 @@ export const PAGE_SEEDS = {
     }),
     'citegen:current': 'Earth Science Research Project',
   }),
+
+  // 084 — a seminar with a question, a source and five students (084's blankDoc and applyRoster).
+  '084': () => {
+    const names = ['Aiden Smith', 'Bella Cruz', 'Carlos Diaz', 'Dana Lee', 'Maximiliana Featherstonehaugh-Villanueva de la Cruz'];
+    const roster = names.map((name, i) => ({ id: 's' + (i + 1), name }));
+    return {
+      'socsem:list': j(['Rivers Seminar']),
+      'socsem:current': 'Rivers Seminar',
+      'socsem:data:Rivers Seminar': j({
+        name: 'Rivers Seminar',
+        question: 'Who should decide how a river that crosses three states is shared in a drought year?',
+        sourceTitle: 'Water in the West (class reader, chapter 4)',
+        date: '2026-10-06',
+        roster,
+        order: roster.map(r => r.id),
+        fishbowl: false,
+        groups: {},
+        tallies: Object.fromEntries(roster.map(r => [r.id, { c: 0, b: 0, e: 0 }])),
+      }),
+    };
+  },
 };

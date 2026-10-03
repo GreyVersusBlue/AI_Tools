@@ -1310,6 +1310,11 @@
     if (PRINTABLE_MODES.indexOf(state.mode) !== -1) {
       var res = generatePrintable(state.mode, currentItems());
       if (!res.ok) { alert(printableFailureMessage(state.mode, res)); return; }
+    } else if (!currentItems().length) {
+      // Flashcards and word wall build no page from an empty list, and printing
+      // an empty #printArea is a blank sheet of paper.
+      alert('Add some words before printing. The list is empty.');
+      return;
     }
     buildPrintArea();
     window.print();

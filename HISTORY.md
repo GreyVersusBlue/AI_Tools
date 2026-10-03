@@ -9,6 +9,64 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P2, increment 3: 035's Blueprint tab on paper, 040's blank sheet, and the last unreached print buttons (2026-10-03, AI-13, `CACHE_VERSION` v226)
+
+Audit entry AI-13, rank 6 (2+). Third increment; the row stays, rewritten. P3 to P5 untouched.
+
+- **035's visualizer had no print rule of any kind.** Its only `@media print` blocks belong to the Schedule
+  Browser (`BR_CSS`). The visualizer is a `100vh` column of scroll boxes, so Ctrl+P on the Blueprint tab printed
+  one screenful: the navy header (white text, so blank on paper), the tab bar, both side panels' buttons, and
+  whatever part of the plan was scrolled into view. The audit had it at 45 CHROME, 5 FIXED, 2 SCROLL, 2 SPLIT.
+- **What it prints now.** `#bp-print-sheet`, a print-only block in the Blueprint panel: the school name, the
+  floor label and a canvas that `renderBlueprintPrintSheet()` draws on `beforeprint`. It is the same ctx-swap
+  into `renderCanvas()` that the PNG export uses, cropped to the cells that hold a tile plus one cell of margin
+  (a 16-column building on a 20-column grid gets the whole page width), at 2.5× capped so the longer side stays
+  under 4096 px. A plan wider than tall gets `@page bp-wide { size: landscape }` through a named page, otherwise
+  portrait. A floor with nothing drawn prints one sentence, not an empty canvas. The header, tab bar, footer,
+  dialogs, bulk-editor overlay, hover tooltip and toasts are `display: none` in print on every tab, and the
+  frame (`#app-visualizer`, `#content-area`, each `.tab-panel`) lets go of its height and its clip.
+- **A canvas, not an `<img>`.** An image given its `src` on `beforeprint` may not have decoded when the page is
+  laid out; a canvas drawn synchronously has. Decided, not measured: I did not try the `<img>` version.
+- **The suite, and the one check that is a real print.** `Tools/schedule-visualizer/test/smoke-print.mjs`
+  (port 8465, `npm run test:schedule-visualizer-print`, 45 assertions) loads the Northwind fixture and checks
+  under print media that no control is visible, nothing clips, the sheet names school and floor, the canvas is
+  17 of 20 columns wide, keeps its shape and fits a 960×720 page, the editor's own `ctx` is put back, another
+  tab loses the header too, the Schedule Browser's print is untouched and an empty floor prints its sentence.
+  It also calls Chromium's `page.pdf()`, which runs the real print path including `beforeprint` and the named
+  page, and asserts **one page, landscape**. That check found two things the viewport measurements passed: the
+  app footer stayed visible and, having a different page name from the sheet, forced a second portrait page;
+  and three panels have their own `#panel-x { overflow: hidden }` that outranked a `.tab-panel` rule.
+- **040's Print with an empty list fed a blank sheet.** Flashcards and word wall build no page from zero words
+  and printed anyway. The button now says the list is empty, as the four puzzle modes already did for a short
+  one. Four new assertions in `smoke-printables.mjs` (and four that one word still prints).
+- **Every print button a seed could reach is reached.** Seeds for 013, 014, 024, 033 and 084 in
+  `Tools/a11y-sweep/seeds.mjs` (36 seeded pages now, each with one very long name or title), and prep for 014
+  (pair up the class: the pairing is in memory), 015 (Load example, then each print panel), 035 (the Northwind
+  plan) and 040 (a typed list). "Print buttons that never printed" went from 11 to 4, and the four are not
+  sheets: 015's two panel toggles and its layout-preview view switch, and 044's copy dialog.
+- **What the new seeds found.** 013's reminder slips could split across a page (`break-inside: avoid` now).
+  015's tiled wall print and map print were measured for the first time: 5 FIXED (`.tiledPage`, the legend
+  page, `.mapPage`, `.mapBox`, `.mapStrip`). A poster tile is a crop of one page and is fixed on purpose, like
+  042, 046 and 064; **whether the legend page and the 218 px `.mapStrip` clip a long timeline was not
+  examined**, and it is the first thing left. The a11y sweep's seeded pass ran clean on all five new seeds.
+- **Sweep, before and after** (88 pages, 385 states, 696 s): pages with a finding 7 to 7 (035 left the list,
+  015 joined it), blank sheets 1 to 0, never-printing buttons 11 to 4, not measured 0. Baseline rewritten.
+- **Judgement calls, cheap to reverse.** The sheet prints the *active* floor only, as the PNG and PDF exports
+  do; a "print every floor" needs `renderCanvas()` to take a floor. `size: landscape` takes the orientation
+  choice out of Chrome's print dialog for this one sheet. `renderCanvas()` also draws the editor's selection
+  ring, search ring and heat-exclude zones, so a selected cell prints with its ring, exactly as the exports do.
+- **Not verified.** Nothing was printed on paper, and only Chromium's PDF was looked at (one page rendered to
+  PNG and read): Firefox and Safari ignore or differ on named pages, and there the sheet's `max-height` (8.6 in
+  portrait, 6.3 in landscape) is what keeps it to a page. 035's other four tabs lose the header and the clip
+  but still print their own buttons and inputs; the audit opens only the default tab, so they are not measured.
+  A trace image under the plan was not tried in print. The audit does not dispatch `beforeprint`, so its 035
+  states measure the sheet's frame, not the drawn canvas; the suite is what covers the drawing. The full
+  `npm test` was not run: the suites for schedule-visualizer, schedule-browser, schedule, vocab-flashcard-generator,
+  lab-safety-contract-tracker, timeline-builder, service-worker and board-check were, with all 13 guards and
+  the a11y sweep for the eight touched pages. Two mistakes on the way: the suite first reset media with
+  `emulateMedia({ media: 'screen' })`, which holds for `page.pdf()` too and printed the screen layout (it is
+  `media: null`), and a new assertion named 040's word-wall mode `wall` (it is `wordwall`).
+
 ## Path 7 P2, increment 2: the audit reaches every sheet, and what it found there (2026-10-03, AI-13, `CACHE_VERSION` v225)
 
 Audit entry AI-13, rank 6 (2+). Second increment; the row stays, rewritten. P3 to P5 untouched.

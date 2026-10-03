@@ -87,9 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v226), rank 6, Path 7 P2 increment 3:** 035's Blueprint tab prints the active floor's plan on one page
+  (`#bp-print-sheet`, suite `smoke-print.mjs`, port 8465) and none of the editor. 040 no longer prints a blank
+  sheet; seeds or prep reach every print button on 013 014 015 024 033 040 084. **Left in P2: 015's five fixed
+  boxes, 035's other four tabs, the DARK pages (004 009 010).**
 - **AI-13 (v225), rank 6, Path 7 P2 increment 2:** the audit now reaches every sheet (not measured 18 → 0) through
   18 new seeds, "print" tabs and `print-audit-prep.mjs`. Fixed: 061 printed blank, 023's clipped slips, 038, 051, 074.
-  **035's Blueprint tab is the next increment.**
 - **AI-13 (v224), rank 6, Path 7 P2 increment 1:** `npm run path7:next` audits every tool in print in a browser.
   077's clipped card, `theme.css`'s print reset and seven smaller fixes shipped.
 - **AI-10 (v223), old rank 6:** every WebRTC pairing code is drawn by `QrDraw.fit()` at 4 px per module or more,
@@ -158,13 +161,13 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 |---|---|
 | `CACHE_VERSION` | `v224` on local `main` (origin is at v222) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **314** in `PRECACHE_URLS`, **95** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **190** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| Suites | **191** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **451** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
 | Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 20 · `media-db.js` 14 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
-| Printing | 78 tools call `window.print()`; 62 carry a hand-written `@media print` block. `path7:next`: 7 pages with a finding, 0 not measured, 10 with no print path, 1 blank sheet (040), 11 print buttons no seed reaches |
+| Printing | 78 tools call `window.print()`; 62 carry a hand-written `@media print` block. `path7:next`: 7 pages with a finding, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **170**, contiguous. Path 21 is finished; per-tool rows start at rank **80**; 162–170 are Path 22 P6–P14 |
 | Art | **130** ledger entries: 046's relief (29,726 B), 030's board backdrop and tiles (5,348 B), 042's ten seals and ribbons (84,170 B), 071's twelve pictures (157,454 B), 080's piece atlas (43,318 B), 87 tool icons, the sprite (58,032 B), 4 shortcut PNGs, the 4 app-mark PNGs (14,457 B), the 4 hero WebPs (64,832 B), the test tile's light/dark pair |
@@ -300,7 +303,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 6 | Path 7 P2 — print reliability audit. **Increment 1 (AI-13, v224):** `npm run path7:next` (`audit-print.mjs`) measures every tool in print in a browser; 077's clipped card, `theme.css`'s missing print reset and seven smaller fixes shipped. **Increment 2 (AI-13, v225):** every page is measured (seeds for 18 pages, `print-audit-prep.mjs`); 061's blank sheet, 023's clipped slips, 038's Ctrl+P, 051 and 074 fixed. **Left:** 035's Blueprint tab (a session of its own), 040's blank sheet with no words, seeds for the 11 print buttons the audit lists as never printing (013 014 015 024 033 084), the 7 pages in `print-audit-baseline.json` | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 6 | Path 7 P2 — print reliability audit. **Increment 1 (AI-13, v224):** `npm run path7:next` (`audit-print.mjs`) measures every tool in print in a browser; 077's clipped card, `theme.css`'s missing print reset and seven smaller fixes shipped. **Increment 2 (AI-13, v225):** every page is measured (seeds for 18 pages, `print-audit-prep.mjs`); 061's blank sheet, 023's clipped slips, 038's Ctrl+P, 051 and 074 fixed. **Increment 3 (AI-13, v226):** 035's Blueprint tab prints the floor plan on one page and no editor chrome (`smoke-print.mjs`); 040 refuses to print an empty list; every print button on 013 014 015 024 033 040 084 is reached. **Left:** 015's tiled and map pages (5 FIXED, newly measured: decide whether `.mapStrip` and the legend page can clip a long timeline), 035's Schedules, Visualize, What-if and Settings tabs in print (header and clip gone, their own controls still print, not measured), the DARK tints on 004 009 010, and whether 042 046 064 stay as they are | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 7 | Path 7 P3 — adoption: the class-set/blank tools, then the card-grid tools | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 7 P4 — `_shared/export.js`: `toPdf`, `toCsv/xlsx`, `toZip`, booklet/N-up imposition | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 9 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
@@ -1547,9 +1550,14 @@ localStorage with no file export.
   on paper for 005/011/029/031/036), 002, 018, 020, 037, 040, 043, 079.
   **Increment 2 shipped (AI-13, 2026-10-03, v225).** Seeds for the 18 unmeasured pages, automatic opening
   of "print" tabs, `print-audit-prep.mjs` and a `print()` stub that throws: nothing is "Not measured" now.
-  Fixed: 061 (blank sheet), 023 (slips clipped a long prompt), 038 (Ctrl+P), 051, 074. **Next: 035's
-  Blueprint tab**, then 040's blank sheet and seeds for the eleven buttons the audit lists as never
-  printing. 042's certificate, 046's viewport and 064's trading card are fixed-size on purpose (`HISTORY.md`).
+  Fixed: 061 (blank sheet), 023 (slips clipped a long prompt), 038 (Ctrl+P), 051, 074.
+  **Increment 3 shipped (AI-13, 2026-10-03, v226).** 035's visualizer had no print rule at all; Ctrl+P on
+  the Blueprint tab now prints `#bp-print-sheet`, the active floor cropped to what is drawn, on a landscape
+  or portrait page to suit (`Tools/schedule-visualizer/test/smoke-print.mjs`). 040 refuses an empty list
+  instead of printing a blank sheet. Seeds for 013 014 024 033 084 and prep for 014 015 035 040: no print
+  button is left that a seed could reach and does not. **Next: 015's tiled and map pages** (5 FIXED, first
+  measured in this increment), 035's other four tabs, then the DARK tints on 004, 009 and 010.
+  042's certificate, 046's viewport and 064's trading card are fixed-size on purpose (`HISTORY.md`).
 - **P3 — Adoption.** Move the class-set/blank tools (042, 043, 023, 070, 076, 077)
   onto the shared set helper first; then the card-grid tools (016, 017, 018, 040,
   051, 064, 074).

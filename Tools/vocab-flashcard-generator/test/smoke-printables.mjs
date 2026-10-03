@@ -139,6 +139,34 @@ for (const mode of ['wordsearch', 'crossword', 'bingo', 'matching']) {
   ok(dialogMsg && /needs at least|Bingo cards need/.test(dialogMsg), `${mode}: Print button also refuses with the same explanation`);
 }
 
+/* ── an empty list prints nothing at all ─────────────────────────────────
+   Flashcards and word wall build no page from an empty list; until
+   2026-10-03 Print went ahead anyway and the printer fed a blank sheet. */
+await page.fill('#wordInput', '');
+await page.dispatchEvent('#wordInput', 'input');
+await settle(page, 250);
+for (const mode of ['flashcards', 'wordwall']) {
+  await selectMode(mode);
+  await page.evaluate(() => { window.__printCalls = 0; window.print = () => { window.__printCalls++; }; });
+  let dialogMsg = null;
+  page.once('dialog', (d) => { dialogMsg = d.message(); });
+  await page.click('#printBtn');
+  await settle(page, 200);
+  eq(await page.evaluate(() => window.__printCalls), 0, `${mode}: Print with no words does not print a blank sheet`);
+  ok(dialogMsg && /list is empty/.test(dialogMsg), `${mode}: and says the list is empty`);
+}
+await page.fill('#wordInput', 'Ox: a large animal');
+await page.dispatchEvent('#wordInput', 'input');
+await settle(page, 250);
+for (const mode of ['flashcards', 'wordwall']) {
+  await selectMode(mode);
+  await page.evaluate(() => { window.__printCalls = 0; window.print = () => { window.__printCalls++; }; });
+  await page.click('#printBtn');
+  await settle(page, 200);
+  eq(await page.evaluate(() => window.__printCalls), 1, `${mode}: one word still prints`);
+  ok(await page.evaluate(() => document.querySelectorAll('#printArea > .page').length) >= 1, `${mode}: with a page in the print area`);
+}
+
 /* ── no console noise, nothing left the site ─────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 5)));
 eq(page.__blocked.length, 0, 'nothing left the site: ' + JSON.stringify(page.__blocked.slice(0, 5)));

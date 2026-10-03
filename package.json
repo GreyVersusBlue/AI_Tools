@@ -47,6 +47,7 @@
     "test:escape-room-images": "node Tools/escape-room-builder/test/smoke-images.mjs",
     "test:escape-room-station-qr": "node Tools/escape-room-builder/test/smoke-station-qr.mjs",
     "test:schedule-visualizer-trace": "node Tools/schedule-visualizer/test/smoke-trace-image.mjs",
+    "test:schedule-visualizer-print": "node Tools/schedule-visualizer/test/smoke-print.mjs",
     "test:dbq-images": "node Tools/dbq-source-packet-builder/test/smoke-images.mjs",
     "test:lab-safety": "node Tools/lab-safety-contract-tracker/test/smoke-contact-sheet.mjs",
     "test:ssr": "node Tools/ssr-log-tracker/test/smoke-genres.mjs",
