@@ -9,6 +9,88 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P3, increment 4: 023 adopts the print kit, the first on quarter sheets, and the kit gains `.pk-paper` (2026-10-04, AI-13, `CACHE_VERSION` v233)
+
+Audit entry AI-13, rank 6 (2+). Fourth increment of P3: one tool, 023 (exit ticket generator), by the recipe. The
+row stays, rewritten. P4 and P5 untouched, and none of 042 or the card-grid tools.
+
+- **023's `@media print` block, its `@page` and its second print area (`#triagePrintArea`) are gone.** It links
+  `print-area.css`, `print-kit.css` and `print-kit.js`, calls `PrintKit.setPage()` with the 0.4 in margin its own
+  `@page` had, and both print buttons go through `PrintKit.renderSet()` into the one `#printArea`:
+  - *Print Handout*: `mode: 'blank'`, one kit sheet per slip of the page: two `sheet: 'half'`, or four
+    `sheet: 'quarter'` (**the kit's first real quarter sheets**). The function reads `sheet.n` to give each slip its
+    own prompt in "a different prompt on each" mode.
+  - *Print Class Set* (the same button with a roster): `mode: 'set'`, one half or quarter sheet per student, the
+    slip made out to `sheet.name`. With no names it prints the one line that says what a class set needs, as before.
+  - *Print Reteach List*: one `.pk-page` in `mode: 'one'`.
+  No kit header, footer or cut line anywhere: a slip carries its student's name and its own dashed edge, and the
+  reteach list has its own heading and date.
+- **The kit changed twice, both asked for by 023.**
+  - *`.pk-quarters { display: grid !important }`.* `renderSet` puts `.pk-quarters` on the container, the container
+    is `#printArea`, and `print-area.css` says `#printArea { display: block }` in print, by id. The class lost: four
+    quarter slips printed one to a row on two pages, and a class of 28 took 14 pages where the old block took 7.
+    No adopter had printed quarters, and the kit's own fixture has no `#printArea`. `smoke-print-kit.mjs` has the
+    case now (a container an id rule makes a block).
+  - *`.pk-paper`*: `background: #fff` and `color: #000`, forced, in print, on the element that carries the class and
+    nothing inside it. This is the question 043 left open. 043 wrote `#printArea { background: #fff }` and
+    `color: #000` on the kit's header and footer; 023 needs the same white paper and black ink, and cannot use
+    `.pk-ink-safe`, which would flatten its quarter-inch grid. Two adopters, so it moved. It is forced because
+    `ink-paper.css` re-declares `color` on `#printArea` in the dark theme at a specificity no page rule beats:
+    023's slips printed `#1f2430` from dark before (the old block's `body { color: #000 }` lost the same way) and
+    print `#000` now. **043 was switched** (four lines: the class on `#printArea`, three declarations deleted); its
+    suite passes unchanged but for the line that reads the `#printArea` tag, and gained one assertion.
+  - **What did not move:** the header and footer's type and inset, and `header: false` for an empty header. 023 uses
+    neither header nor footer, so it is not a second vote. They stay in 043's page.
+- **Decisions taken, each cheap to reverse.**
+  - *Ctrl+P prints the handout.* The old block showed a print area only after its button was pressed, so Ctrl+P
+    printed an empty page. `#printArea` now always holds the handout the Printable Handout tab previews; the
+    reteach list borrows it and `afterprint` puts the handout back.
+  - *The 0.22 in between slips is padding on the kit sheets' inner edges*, not `cut: true`. The old sheet had two
+    dashed slip borders 0.22 in apart and the hint under the button says "cut along the dashed lines"; a kit cut
+    line would be a third dashed line between them. A slip is 477 px tall (it was 479: the kit holds back 0.04 in).
+  - *The slip is still an escaped string* parsed in a `<template>` (`nodeFrom()`, as 043), because the same string
+    draws the live preview. Two `innerHTML` writes to print areas became one in `nodeFrom()`:
+    `inline-sinks-baseline.json` 18 to 17.
+  - *The row was not claimed by a pushed commit*; the merge queue's Active row is the lock, as in increment 3.
+- **Printed output, old against new, in Chromium's PDF.** The old page was served from `git show origin/main:`
+  through `page.route()`; it has an `@page` rule, so `preferCSSPageSize` measured both on the same 0.4 in margins.
+  Fourteen states, light and dark, the same in both themes and **the same before and after**: first visit 1; two to
+  a page 1; four to a page 1; four with a QR code and the grid 1; four with a different prompt on each 1; a prompt
+  too long for its sheet, two to a page 4, four to a page 4; a class set with no names 1; a class of three at two to
+  a page 2; of five at four to a page 2; of 28 at two 14, at four 7; of 28 with the long prompt, at four 28, at two
+  56. Reteach list for 8, 28 and 60 students: 1, 1, 2.
+- **New suite.** `Tools/exit-ticket-generator/test/smoke-print.mjs` (`npm run test:exit-ticket-print`, port 8471,
+  1,065 assertions): for every state and theme, what the kit built (sheet classes, names in roster order, prompts,
+  QR codes, grids, the print copy matching the preview slip for slip), that only the sheet has a box on paper and
+  nothing is clipped or spills out of a slip, white paper and black ink from dark, a slip filling its sheet, quarters
+  two across and 0.22 in apart both ways, the grid still drawn and printed exactly, and the PDF page count; then
+  Ctrl+P, a name and a prompt full of markup reaching the slip as text, and one button after another replacing the
+  last sheet. `smoke-response-area.mjs`'s long-prompt assertions (Path 7 P2) read `#printArea` where they read
+  `#printArea .slip-page`, and "one page tall" is 10.16 in where it was 10.2 in; the tolerance and every other
+  assertion are as they were. 023 has a row in `smoke-print-tail.mjs` (both buttons); it had none, its old block
+  hid the editor another way.
+- **What the kit still lacks, found here** (in the recipe): content does not fill a kit sheet by itself (a sheet has
+  a `min-height`, and a child's `height: 100%` resolves to nothing; 023 makes the sheet a column flexbox); there is
+  no gap between the sheets of a page (023 pads their inner edges by `:nth-child`); no cut line for quarters; and
+  `plan()` drops a roster line with no name and stops at 400, so the function looks its prompt up in the same
+  filtered list.
+- **What I got wrong on the way.** The first measurement of the new page looked right at two to a page and wrong at
+  four, and the cause was not in 023 at all (the `#printArea` id rule above). The measuring script's second column,
+  a `page.pdf()` with half-inch margins, read 1 page for every old state: `page.pdf()` fires the page's `afterprint`,
+  which un-showed the old print area, so only the first PDF of a page load counts on the old page. The first run of
+  the suite failed 9 of 1,065 for my own reasons: a comment containing `PrintKit.renderSet(`, and a long prompt
+  whose trailing space the page trims.
+- **Checks.** All 13 guards incl. `check:precache -- --base origin/main` and `check:adoption -- --check`; suites via
+  `run-suites.mjs --only` for exit-ticket-generator, print-kit (incl. `smoke-print-tail.mjs`),
+  sub-note-feedback-slip-generator, peer-feedback-checklist-generator, testing-accommodations-card-generator,
+  field-trip-permission-slip, roster, share, theme, service-worker and board-check; the a11y sweep `--only 023`;
+  `audit-print --only 023` (10 states, no finding of any kind).
+  **Not verified:** full `npm test` was not run although `_shared/print-kit.css` changed; the five pages that link
+  the kit are all covered above, and CI's push-to-`main` run is the check for the rest. `audit-print --only 023`
+  was run after the change only, the "before" being the committed baseline, which lists no finding for 023. Nothing
+  was printed on paper, only Chromium's PDF and a PNG in print media seen. More than 400 names in a class set, and a
+  quarter-sheet row split by a page break when one slip of a row is far longer than its neighbour, were not tried.
+
 ## Path 7 P3, increment 3: 043 adopts the print kit, the first with a roster, a header and a footer (2026-10-04, AI-13, `CACHE_VERSION` v232)
 
 Audit entry AI-13, rank 6 (2+). Third increment of P3: one tool, 043 (field trip permission slip), by the recipe.
