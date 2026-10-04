@@ -1279,6 +1279,11 @@ for (const t of [...TOOLS,
    identifying text. Nothing in any fixture contains it. */
 const KEPT = 'Kept Local Copy';
 
+/* How long section 6 waits for the downloaded file's text. It resolves the
+   moment the text arrives, so this is only how long a broken Download row
+   takes to say so. */
+const DOWNLOAD_TEXT_MS = 15000;
+
 const server = await serve(PORT);
 const browser = await launch();
 const pages = [];
@@ -1611,13 +1616,34 @@ for (const t of TOOLS) {
     ok(/(KB|modules|px)/.test(qr.reason),
       `${t.n}: an over-large payload greys the QR row out with a reason: ${JSON.stringify(qr.reason)}`);
   }
-  const file = await page.evaluate(() => {
-    let text = null;
+  /* Resolves when the blob's text has arrived, not after a fixed wait: 250 ms
+     was not always enough on a CI runner for 083, whose file carries a
+     picture, and the null it left behind failed two lines down as "Cannot
+     read properties of null". share.js calls createObjectURL inside the
+     click, so the real one is back before the click returns either way. */
+  const dl = await page.evaluate((limit) => {
     const realCreate = URL.createObjectURL;
-    URL.createObjectURL = (blob) => { blob.text().then(t => { text = t; }); return realCreate.call(URL, blob); };
-    document.querySelector('.share-sheet button[data-share="download"]').click();
-    return new Promise(r => setTimeout(() => { URL.createObjectURL = realCreate; r(text); }, 250));
-  });
+    let timer;
+    return new Promise((resolve) => {
+      timer = setTimeout(() => resolve({ error: 'its text had not arrived after ' + limit + ' ms' }), limit);
+      let made = false;
+      URL.createObjectURL = (blob) => {
+        made = true;
+        blob.text().then(text => resolve({ text }), e => resolve({ error: 'blob.text() rejected: ' + e }));
+        return realCreate.call(URL, blob);
+      };
+      try {
+        document.querySelector('.share-sheet button[data-share="download"]').click();
+      } catch (e) {
+        resolve({ error: 'the click threw: ' + e });
+      } finally {
+        URL.createObjectURL = realCreate;
+      }
+      if (!made) resolve({ error: 'the click made no blob' });
+    }).finally(() => clearTimeout(timer));
+  }, DOWNLOAD_TEXT_MS);
+  if (dl.error) throw new Error(`${t.n}: the Download row's file could not be read: ${dl.error}`);
+  const file = dl.text;
   const parsed = JSON.parse(file);
   eq(parsed.aplp.tool, t.slug, `${t.n}: the downloaded file says which tool it belongs to`);
   eq(parsed.aplp.param, t.param, `${t.n}: and which parameter it is a payload for`);
