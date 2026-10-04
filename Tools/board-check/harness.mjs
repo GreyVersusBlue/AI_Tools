@@ -250,10 +250,10 @@ export const settle = (page, ms = 200) => page.waitForTimeout(ms);
  * Eight suites used to patch createObjectURL themselves and read the text
  * after a fixed 200 to 400 ms; on a slow CI runner blob.text() had not
  * resolved and the null it left failed lines later as "Cannot read properties
- * of null" (smoke-share-rollout, PR #334). Some pages make the Blob inside the
- * click and some after reading IndexedDB, so the real createObjectURL is put
- * back when the Blob arrives, when the trigger throws and when the wait runs
- * out, whichever is first, never on a timer of its own.
+ * of null" (smoke-share-rollout, PR #334). Nothing here assumes the Blob is
+ * made inside the click: the real createObjectURL is put back when the Blob
+ * arrives, when the trigger throws and when the wait runs out, whichever is
+ * first, so a page that builds its file after an await is read too.
  */
 export async function downloadText(page, trigger, { timeout = 15000, what = 'the download' } = {}) {
   const label = typeof trigger === 'string' ? trigger : `${trigger.call}()`;

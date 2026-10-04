@@ -22,9 +22,11 @@ suites: patch `URL.createObjectURL`, click, read `blob.text()`'s result after a 
   download and says whether nothing matched the selector, the trigger threw, the page made no
   file, the text never came, or `blob.text()` rejected. The real `createObjectURL` is put back
   when the Blob arrives, when the trigger throws and when the wait runs out.
-- **Why it does not restore in a `finally` after the click, as f4b2e67 did.** `share.js` makes
-  its Blob inside the click, but `seating-chart`'s Save to file and the other media-store exports read IndexedDB
-  first, so their Blob comes after the click has returned. One helper has to wait for either.
+- **Why it does not restore in a `finally` after the click, as f4b2e67 did.** The helper does
+  not assume the Blob is made inside the click, so a page that reads IndexedDB before it builds
+  its file would still be read. None was found that does: a probe on `seating-chart`'s
+  `smoke-share.mjs` and `smoke-photos.mjs` and escape-room's `smoke-images.mjs` showed the Blob
+  made inside the click task in all three. The other five were not probed.
 - **Moved onto it (eight).** `smoke-share-rollout.mjs`; the six the entry below named
   (`bracket-tournament-generator`, `rubric-builder`, `class-roster-hub` and `seating-chart`'s
   `smoke-share.mjs`, `escape-room-builder`'s `smoke-images.mjs`, `schedule-visualizer`'s
