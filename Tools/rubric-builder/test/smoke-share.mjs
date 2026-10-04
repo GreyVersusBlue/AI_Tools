@@ -21,7 +21,7 @@
 //
 // Exits 1 on any failure. Every name here is invented.
 
-import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
+import { serve, launch, prepPage, settle, downloadText, a11yScan } from '../../board-check/harness.mjs';
 
 const PORT = 8233;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -140,13 +140,7 @@ if (!qr.disabled) {
 } else {
   ok(/(KB|modules)/.test(qr.reason), 'an over-large rubric greys the QR row out with a reason: ' + JSON.stringify(qr.reason));
 }
-const file = await page.evaluate(() => {
-  let text = null;
-  const realCreate = URL.createObjectURL;
-  URL.createObjectURL = (blob) => { blob.text().then(t => { text = t; }); return realCreate.call(URL, blob); };
-  document.querySelector('.share-sheet button[data-share="download"]').click();
-  return new Promise(r => setTimeout(() => { URL.createObjectURL = realCreate; r(text); }, 200));
-});
+const file = await downloadText(page, '.share-sheet button[data-share="download"]', { what: "the Download row's file" });
 const parsedFile = JSON.parse(file);
 eq(parsedFile.aplp.tool, 'rubric-builder', 'the downloaded file says which tool it belongs to');
 eq(parsedFile.aplp.param, 'rubric', 'and which parameter it is a payload for');

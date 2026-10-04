@@ -360,7 +360,9 @@ files must be added there too.
   with its light values untouched. Run it after touching anything under
   `_shared/` that has a colour in it, and after adopting a tool.
 - `Tools/board-check/harness.mjs` is the shared browser-test harness
-  (static server, Playwright launch, offsite-request blocking, `a11yScan`). It was
+  (static server, Playwright launch, offsite-request blocking, `a11yScan`, and
+  `downloadText`, which a suite calls to read a file the page downloads instead of patching
+  `URL.createObjectURL` itself). It was
   written from scratch in Round 1c — the original board-check folder was
   never committed to this repo (verified with `git log --all`). Its exports
   are shaped to match the existing suites' call sites; don't change its

@@ -30,7 +30,7 @@
 //
 // Exits 1 on any failure. Every name here is invented.
 
-import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
+import { serve, launch, prepPage, settle, downloadText, a11yScan } from '../../board-check/harness.mjs';
 
 const PORT = 8231;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -136,13 +136,7 @@ ok(/1 image is left out of the link and QR code/.test(note), 'the sheet says one
 ok(/downloaded file carries it/.test(note), 'and that the downloaded file still carries it');
 
 /* ── 3. the download is the full state, photo included ─────────────────── */
-const file = await page.evaluate(() => {
-  let text = null;
-  const realCreate = URL.createObjectURL;
-  URL.createObjectURL = (blob) => { blob.text().then(t => { text = t; }); return realCreate.call(URL, blob); };
-  document.querySelector('.share-sheet button[data-share="download"]').click();
-  return new Promise(r => setTimeout(() => { URL.createObjectURL = realCreate; r(text); }, 200));
-});
+const file = await downloadText(page, '.share-sheet button[data-share="download"]', { what: "the Download row's file" });
 ok(file && file.indexOf('data:image/png') !== -1, 'the downloaded file DOES carry the photo');
 const parsed = JSON.parse(file);
 eq(parsed.aplp.tool, 'seating-chart', 'the file says which tool it belongs to');
