@@ -9,6 +9,54 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P3, increment 1: 076 is the print kit's first adopter, and the recipe for the rest (2026-10-04, AI-13, `CACHE_VERSION` v230)
+
+Audit entry AI-13, rank 6 (2+). First increment of P3: one tool, on purpose, so the other adoptions are mechanical.
+The row stays, rewritten to name what is done and the order for the rest. P4 and P5 untouched.
+
+- **Why 076.** Of the six class-set/blank tools the row names (042, 043, 023, 070, 076, 077) it is the smallest:
+  313 lines, one print button, blank copies only, no roster, half sheets. 042's certificate is fixed-size on
+  purpose, 023 is 2,493 lines, 043 has four print buttons.
+- **What changed in the page.** Its `@media print` block and its `#printArea { display: none }` are deleted.
+  It links `_shared/print-area.css` (the sheet alone on the paper), `_shared/print-kit.css` and `print-kit.js`.
+  "Print slips" calls `PrintKit.renderSet(printArea, buildSlip, { mode: 'blank', count, sheet })`: `.pk-half`
+  sheets, or `.pk-page` past five prompts (the old `.one-up` switch, kept). `PrintKit.setPage()` writes
+  `@page` (US Letter, half-inch margins); the page had none. `#printArea` is `.pk-ink-safe`.
+- **The slip is built with `textContent`, not an `innerHTML` string.** `slipHtml()` and `escapeHtml()` are gone,
+  and 076's line in `inline-sinks-baseline.json` went 2 to 1 (451 to 450 site-wide).
+- **Printed output, old against new, in Chromium's PDF** (measured on the old page first, then held by the suite):
+  2 copies of 4 prompts 1 page; 5 copies 3 pages; 4 copies of 5 prompts 2 pages; 3 copies of 6 prompts 3 pages;
+  4 copies of 5 wordy prompts 4 pages (each half sheet grows and takes a page); 1 copy 1 page. The same in dark.
+  **What is different on the sheet:** half-inch page margins where there were Chromium's defaults; the cut line
+  is at the true half of the printable page and black;
+  the write-in rules and the meta line print black, not grey (`.pk-ink-safe`). Rendered to PNG and looked at,
+  before and after, for three states.
+- **New suite** `Tools/sub-note-feedback-slip-generator/test/smoke-print.mjs` (`npm run test:sub-note-print`,
+  port 8467, 342 assertions): seven states in light and dark (sheet class, cut lines, half-sheet height, nothing
+  clipped, black on white, nothing but the sheet on paper, PDF page count), typed text never becoming markup,
+  a first visit, and printing twice. 076 joined `smoke-print-tail.mjs`'s table (36 pages now), as every
+  `print-area.css` page does. Suites 192 to 193.
+- **What adopting cost:** about an hour, most of it the before/after measurement and the suite. The page edit
+  is +55/-39 lines. The margin trap in the recipe was worked out from the arithmetic and avoided, not seen in a run.
+- **The recipe and the three things the kit did not have** (no per-sheet hook, so the cut line is a loop after
+  `renderSet()`; header and footer unused because a blank slip has write-in rules, not values; the class field
+  not routed through `setHeader()`) are in `BACKLOG.md`, Path 7, P3. **The kit was not changed.** None of the
+  three blocked 076; the session prompt said to stop at a finding rather than bend the tool or the kit, and a
+  second adopter needing the same thing is the evidence to add it.
+- **Calls recorded.** `print-area.css` was linked rather than keeping one `body > *:not(#printArea)` rule in the
+  page: the kit's header says the two are meant to be linked together, and it leaves 076 with no print rule of
+  its own. `.pk-ink-safe` is a visible change (grey to black); it was taken because the sheet goes through a
+  black-and-white copier. `@page` now names US Letter, as 023, 042 and 043 already do.
+- **Checks:** all 13 guards incl. `check:precache -- --base origin/main` and `check:adoption -- --check`; 33
+  suites via `run-suites.mjs --only` for sub-note-feedback-slip-generator (1), print-kit (3, the tail suite with
+  076 in it), share (21), theme (3), service-worker (3) and board-check (2), all pass; the a11y sweep `--only 076`
+  (2 pass); `audit-print.mjs --only 076` before and after, both with no CLIP, FIXED, SCROLL, CHROME, SPLIT, TAIL or
+  DARK finding (so `print-audit-baseline.json` is unchanged).
+- **Not verified:** nothing was printed on paper, only Chromium's PDF was read; no other browser's print was
+  seen. The full `npm test` was not run. The kit's header, footer, `mode: 'set'` and card presets still have no
+  adopter. The suite was not run against the old page (no stash on this machine's rules); the old page's page
+  counts were measured by a scratch script that was deleted.
+
 ## Eight suites read a download through one `harness.mjs` helper, not after a fixed wait (2026-10-03, AI-34 follow-up 2, test only, no `CACHE_VERSION` change)
 
 The entry below fixed a race in `smoke-share-rollout.mjs` and listed the same line in six other

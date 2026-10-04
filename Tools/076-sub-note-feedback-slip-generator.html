@@ -18,16 +18,25 @@
 <!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
      opting in here keeps a11y.js from putting its CSS-filter invert on top.
      The printed slips are built into #printArea, which is paper.
-     Read ink-paper.css's header before copying this into another tool. -->
+     Read ink-paper.css's header before copying this into another tool.
+
+     Printing is the shared kit's (Path 7 P3, the first adopter):
+     _shared/print-area.css puts #printArea alone on the paper, and
+     _shared/print-kit.css + print-kit.js lay the slips out as half sheets
+     (`PrintKit.renderSet`, mode 'blank'). This page has no print block of
+     its own; what is left below is what a slip looks like. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   * { box-sizing: border-box; }
   body {
@@ -61,8 +70,11 @@
   .prompt-row { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; }
   .prompt-row input { margin-bottom: 0; }
 
-  #printArea { display: none; }
-  .slip { border: 1px dashed var(--line-strong); border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
+  /* A slip is only ever seen on paper: #printArea is hidden on screen by
+     print-area.css. Its size, its page breaks and the cut line between two
+     slips are print-kit.css's (.pk-half, .pk-page, .pk-cut), and .pk-ink-safe
+     prints the grey rules and the meta line in black for the copier. */
+  .slip { padding: 1rem 1.2rem; }
   .slip h2 { margin: 0 0 .1rem; font-size: 1.2rem; }
   .slip .meta-line { font-size: .82rem; color: var(--muted); margin-bottom: .7rem; }
   .slip .slip-prompt { font-size: .88rem; font-weight: 600; margin: .5rem 0 .1rem; }
@@ -75,18 +87,6 @@
     flex-shrink: 0; width: 1.05rem; height: 1.05rem; border: 2px solid #333; border-radius: 3px; background: #fff;
   }
   .slip .slip-urgency b { font-weight: 700; }
-
-  @media print {
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
-    .slip { border: none; min-height: 47vh; overflow: visible; page-break-inside: avoid; border-bottom: 1px dashed #999; }
-    /* Default: two half-sheets per page. If the prompt list is long enough that a
-       slip might not fit half a page, #printArea gets .one-up and each slip gets
-       its own page instead of silently clipping content. */
-    #printArea:not(.one-up) .slip:nth-child(2n) { page-break-after: always; border-bottom: none; }
-    #printArea.one-up .slip { page-break-after: always; border-bottom: none; }
-  }
 </style>
 </head>
 <body>
@@ -124,7 +124,7 @@
   </div>
 </div>
 
-<div id="printArea"></div>
+<div id="printArea" class="pk-ink-safe"></div>
 
 <script>
 (function () {
@@ -145,11 +145,6 @@
   var state = { copyCount: 2, prompts: [], classPeriod: '', urgencyBox: true };
 
   function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
-  function escapeHtml(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
   /** True when there was a saved slip here — which is what tells an arriving
@@ -200,31 +195,52 @@
   els.classPeriod.addEventListener('input', function () { state.classPeriod = els.classPeriod.value; save(); });
   els.urgencyToggle.addEventListener('change', function () { state.urgencyBox = els.urgencyToggle.checked; save(); });
 
-  function slipHtml(filledPrompts) {
-    var prompts = filledPrompts.map(function (p) {
-      return '<p class="slip-prompt">' + escapeHtml(p.text) + '</p><span class="slip-line"></span><span class="slip-line"></span>';
-    }).join('');
-    var classPeriodField = state.classPeriod.trim()
-      ? escapeHtml(state.classPeriod.trim())
-      : '__________________';
-    var urgency = state.urgencyBox
-      ? '<div class="slip-urgency"><span class="u-box"></span><span><b>Call me about this</b> &mdash; check this box if something today needs the teacher&rsquo;s attention first.</span></div>'
-      : '';
-    return '<div class="slip"><h2>Sub Note</h2>' +
-      '<div class="meta-line">Date: __________ &nbsp; Class/Period: ' + classPeriodField + ' &nbsp; Sub name: __________________</div>' +
-      urgency + prompts + '</div>';
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text) node.textContent = text;
+    return node;
   }
+
+  /** One slip, as PrintKit.renderSet()'s template: called once per copy. */
+  function buildSlip(filledPrompts) {
+    var slip = el('div', 'slip');
+    slip.appendChild(el('h2', '', 'Sub Note'));
+    slip.appendChild(el('div', 'meta-line', 'Date: __________ \u00a0 Class/Period: ' +
+      (state.classPeriod.trim() || '__________________') + ' \u00a0 Sub name: __________________'));
+    if (state.urgencyBox) {
+      var urgency = el('div', 'slip-urgency');
+      urgency.appendChild(el('span', 'u-box'));
+      var words = el('span');
+      words.appendChild(el('b', '', 'Call me about this'));
+      words.appendChild(document.createTextNode(' \u2014 check this box if something today needs the teacher\u2019s attention first.'));
+      urgency.appendChild(words);
+      slip.appendChild(urgency);
+    }
+    filledPrompts.forEach(function (p) {
+      slip.appendChild(el('p', 'slip-prompt', p.text));
+      slip.appendChild(el('span', 'slip-line'));
+      slip.appendChild(el('span', 'slip-line'));
+    });
+    return slip;
+  }
+
+  // US Letter with half-inch margins, which is what print-kit.css's half sheet divides.
+  PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
 
   els.printBtn.addEventListener('click', function () {
     var count = Math.max(1, Math.min(20, state.copyCount || 2));
     var filledPrompts = state.prompts.filter(function (p) { return p.text.trim(); });
     // Two half-sheets per page fits comfortably up to ~5 short prompts; beyond that,
-    // give each slip its own full page instead of letting content clip silently.
+    // each slip gets its own page. A half sheet that still runs long (five wordy
+    // prompts) grows and takes a page to itself: the kit never clips one.
     var oneUp = filledPrompts.length > 5;
-    var html = '';
-    for (var i = 0; i < count; i++) html += slipHtml(filledPrompts);
-    els.printArea.className = oneUp ? 'one-up' : '';
-    els.printArea.innerHTML = html;
+    PrintKit.renderSet(els.printArea, function () { return buildSlip(filledPrompts); },
+      { mode: 'blank', count: count, sheet: oneUp ? 'page' : 'half', header: false, footer: false });
+    // The cut line goes under the upper slip of each pair, not along the foot of the page.
+    if (!oneUp) {
+      for (var i = 0; i < els.printArea.children.length; i += 2) els.printArea.children[i].classList.add('pk-cut');
+    }
     window.print();
   });
 
