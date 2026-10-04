@@ -21,8 +21,9 @@
      Everything the parent signs is a sheet of paper — the slip, the pocket
      list, the reminder slip and the chaperone sheet all carry .paper-sheet, so
      their #000 ink, their dashed rules and the var(--muted)/var(--line-strong)
-     they inherit stay light in both themes. #printArea is display:none and its
-     @media print values are untouched.
+     they inherit stay light in both themes. #printArea is hidden on screen by
+     print-area.css and counts as a sheet of paper itself (ink-paper.css), so
+     the kit's header and footer print in light ink too.
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
@@ -32,9 +33,12 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <script src="../_shared/qr-scan.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   /* Path 5 P3. --desk is the mat the previewed slip sits on — 041's #d9d7cd —
      and --desk-ink the muted text drawn ON it, because var(--muted) there is
@@ -161,9 +165,8 @@
      width — which is why it is offered as a choice rather than the default:
      a long "what to bring" list reads better on a facing page than in a
      four-inch column. */
-  .slip-pair { display: flex; gap: .3in; align-items: flex-start; page-break-after: always; }
-  .slip-pair .slip { width: 50%; margin-bottom: 0; page-break-after: auto; }
-  .slip-pair:last-child { page-break-after: auto; }
+  .slip-pair { display: flex; gap: .3in; align-items: flex-start; }
+  .slip-pair .slip { width: 50%; margin-bottom: 0; }
   .slip-school { font-size: 1rem; margin-bottom: .2rem; }
   .slip-title { font-size: 1.4rem; font-weight: 700; letter-spacing: .02em; }
 
@@ -221,24 +224,29 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
-  @media print {
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    /* What visibility hides still takes its height, and that height printed as
-       blank sheets after this one. Everything but the sheet leaves the flow. */
-    body > *:not(#printArea) { display: none !important; }
-    #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
-    #printArea .slip { box-shadow: none; width: 100%; page-break-after: always; break-inside: avoid; }
-    #printArea .slip:last-child { page-break-after: auto; }
-    #printArea .slip-pair { display: flex; gap: .25in; }
-    #printArea .slip-pair .slip { width: 50%; padding: .4in .3in; page-break-after: auto; font-size: .82rem; }
-    #printArea .slip-pair .slip .slip-title { font-size: 1.05rem; }
-    #printArea .reminder-slip { border: none; page-break-after: always; }
-    #printArea .reminder-slip:last-child { page-break-after: auto; }
-    #printArea .missing-list-page { page-break-after: auto; }
-    #printArea .chaperone-print { page-break-after: auto; }
-    @page { size: letter portrait; margin: 0.4in; }
-  }
+  /* ---- on paper ----
+     The sheets print through _shared/print-kit.css + print-kit.js, and
+     print-area.css puts #printArea alone on the page; this page has no print
+     media block of its own. #printArea is never on screen, so what a sheet looks like on
+     paper is plain rules. A sheet has no vertical margin of its own: the kit's
+     pages and half sheets do the spacing, and a margin would push a footer or
+     a second half sheet onto the next page. */
+  /* The kit's header and footer sit on #printArea, not on a sheet. */
+  #printArea { background: #fff; }
+  #printArea .slip { box-shadow: none; width: 100%; margin: 0; }
+  /* The translated slip on a facing page starts its own sheet of paper. */
+  #printArea .slip + .slip { break-before: page; page-break-before: always; }
+  #printArea .slip-pair { gap: .25in; }
+  #printArea .slip-pair .slip { width: 50%; padding: .4in .3in; font-size: .82rem; break-before: auto; page-break-before: auto; }
+  #printArea .slip-pair .slip .slip-title { font-size: 1.05rem; }
+  #printArea .reminder-slip { border: none; margin: 0 auto; }
+  #printArea .missing-list-page { margin: 0 auto; }
+  /* The kit's header and footer, in the sheets' type and inset to line up with
+     the text of the sheet they sit against (.5in and .65in of padding). */
+  #printArea .pk-header, #printArea .pk-footer { font-family: Georgia, "Times New Roman", serif; color: #000; }
+  #printArea .pk-header { margin-left: .5in; margin-right: .5in; }
+  #printArea .pk-footer { margin-left: .65in; margin-right: .65in; }
+  #printArea .nothing-missing { padding: 1in; font-family: Georgia, "Times New Roman", serif; color: #000; }
 </style>
 </head>
 <body>
@@ -430,7 +438,7 @@
 
 </div>
 
-<div id="printArea" style="display:none;"></div>
+<div id="printArea"></div>
 
 <div class="cam-overlay" id="scanCamOverlay" hidden>
   <div class="cam-modal" role="dialog" aria-modal="true" aria-label="Scan a returned slip">
@@ -586,6 +594,9 @@
     if (start && end && end !== start) return start + ' &ndash; ' + end;
     return start || '';
   }
+
+  /** The same line as text, for the kit's header, which takes no markup. */
+  function tripDateText() { return tripDateLine().replace(' &ndash; ', ' – '); }
 
   /* ---------- add to calendar (.ics) ---------- */
   // Same pattern as 013-lab-safety-contract-tracker.html's due-date
@@ -1114,7 +1125,7 @@
     if (state.returnTime) timesLine.push(L.ret + ' ' + formatTime(state.returnTime));
 
     return (
-      '<div class="slip paper-sheet"' + (lang ? ' lang="' + state.secondLang + '" data-slip-lang="' + state.secondLang + '"' : ' data-slip-lang="en"') + '>' +
+      '<div class="slip paper-sheet pk-keep"' + (lang ? ' lang="' + state.secondLang + '" data-slip-lang="' + state.secondLang + '"' : ' data-slip-lang="en"') + '>' +
         '<div class="slip-header">' +
           (state.schoolTeacher ? '<div class="slip-school">' + escapeHtml(state.schoolTeacher) + '</div>' : '') +
           '<div class="slip-title">' + escapeHtml(L.title) + '</div>' +
@@ -1192,21 +1203,34 @@
     }
   }
 
+  /* ---------- printing, through _shared/print-kit.js ----------
+     Every button hands the kit's renderSet a function that returns one
+     sheet's content, and the kit wraps it in a page or a half sheet and owns
+     the page breaks. The content is the same escaped string the preview
+     shows, parsed in a <template>, so a preview and its print cannot drift. */
+  var printArea = document.getElementById('printArea');
+  PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.4in' });
+
+  function nodeFrom(html) {
+    var t = document.createElement('template');
+    t.innerHTML = html;
+    return t.content;
+  }
+
+  /* One slip per student is the kit's class set, and it carries the kit's
+     footer: the student's name and "3 of 28", so a stack can be counted and a
+     dropped slip found. One slip or a run of blanks has nothing to count. */
   function buildPrintArea() {
-    var html;
-    if (state.mode === 'single') {
-      html = slipSetHtml(state.studentName || 'Student Name');
-    } else if (state.mode === 'batch') {
-      var names = batchNamesList();
-      if (!names.length) names = [state.studentName || 'Student Name'];
-      html = names.map(function (n) { return slipSetHtml(n); }).join('');
-    } else { // blank
+    var slip = function (sheet) { return nodeFrom(slipSetHtml(sheet.blank ? null : sheet.name)); };
+    var names = batchNamesList();
+    if (state.mode === 'batch' && names.length) {
+      PrintKit.renderSet(printArea, slip, { mode: 'set', roster: names, sheet: 'page', header: false, footer: true });
+    } else if (state.mode === 'blank') {
       var count = Math.max(1, parseInt(state.blankCount, 10) || 1);
-      var slips = [];
-      for (var i = 0; i < count; i++) slips.push(slipSetHtml(null));
-      html = slips.join('');
+      PrintKit.renderSet(printArea, slip, { mode: 'blank', count: count, sheet: 'page', header: false, footer: false });
+    } else {
+      PrintKit.renderSet(printArea, slip, { mode: 'one', name: state.studentName || 'Student Name', sheet: 'page', header: false, footer: false });
     }
-    document.getElementById('printArea').innerHTML = html;
   }
 
   /* ---------- printable "missing" pocket list ---------- */
@@ -1233,7 +1257,8 @@
   }
 
   function buildMissingListPrintArea() {
-    document.getElementById('printArea').innerHTML = missingListHtml();
+    PrintKit.renderSet(printArea, function () { return nodeFrom(missingListHtml()); },
+      { mode: 'one', name: state.name, sheet: 'page', header: false, footer: false });
   }
 
   /* ---------- printable reminder slip, one per missing student ---------- */
@@ -1255,10 +1280,19 @@
     );
   }
 
+  /* Two reminders to a page, on the kit's half sheets with a cut line between
+     them. Each used to take a whole page for its five lines. */
   function buildReminderPrintArea() {
     var missing = missingStudents();
-    if (!missing.length) { document.getElementById('printArea').innerHTML = '<p style="padding:1in;font-family:Georgia,serif;">Nobody is missing anything for this trip right now.</p>'; return; }
-    document.getElementById('printArea').innerHTML = missing.map(function (n) { return reminderSlipHtml(n); }).join('');
+    if (!missing.length) {
+      var p = document.createElement('p');
+      p.className = 'nothing-missing';
+      p.textContent = 'Nobody is missing anything for this trip right now.';
+      printArea.replaceChildren(p);
+      return;
+    }
+    PrintKit.renderSet(printArea, function (sheet) { return nodeFrom(reminderSlipHtml(sheet.name)); },
+      { mode: 'set', roster: missing, sheet: 'half', cut: true });
   }
 
   /* ---------- chaperone groups ---------- */
@@ -1371,8 +1405,17 @@
     );
   }
 
+  /* The trip-day sheet is the one a chaperone carries, so it gets the kit's
+     header: where, whose class, and when. With none of the three filled in
+     there is no header; the kit would rule a line under nothing. */
+  function buildChaperonePrintArea() {
+    var head = PrintKit.setHeader({ title: state.destination, class: state.schoolTeacher, date: tripDateText() });
+    PrintKit.renderSet(printArea, function () { return nodeFrom(chaperonePrintHtml()); },
+      { mode: 'one', name: state.name, sheet: 'page', header: !!(head.title || head.class || head.date), footer: false });
+  }
+
   els.printChaperoneBtn.addEventListener('click', function () {
-    document.getElementById('printArea').innerHTML = chaperonePrintHtml();
+    buildChaperonePrintArea();
     window.print();
   });
 

@@ -87,14 +87,18 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v232), rank 6, Path 7 P3 increment 3: 043 prints through the kit** (four adopters now), the first with a
+  roster: `mode: 'set'` with the "N of M" footer on a class set of slips, the kit header on the chaperone sheet, and
+  reminder slips two to a page. The kit did not change. `npm run test:permission-slip-print` (port 8470).
+  **Next: 023, then 042. Not printed on paper.**
 - **AI-13 (v231), rank 6, Path 7 P3 increment 2: 070 and 077 print through the kit** (three adopters now). 070 is
   half sheets, like 076; 077 is the first on the card grids. The kit gained `renderSet`'s `cut: true` and a `4x3` card
-  preset. `npm run test:peer-feedback-print` (port 8468), `npm run test:accommodations-print` (8469). **Next: 043. Not printed on paper.**
+  preset. `npm run test:peer-feedback-print` (port 8468), `npm run test:accommodations-print` (8469). **Not printed on paper.**
 - **AI-13 (v230), rank 6, Path 7 P3 increment 1: 076 is the print kit's first adopter.** Its print block is gone:
   `print-area.css` + `PrintKit.renderSet` (blank mode, half sheets). Same page counts in Chromium's PDF as before
   (`npm run test:sub-note-print`, port 8467). **The recipe for the next adopters is in Path 7's P3. Not printed on paper.**
 - **AI-13 (v229), old rank 6, Path 7 P2 increment 6: P2 is finished and its row is gone.** `_shared/print-area.css`
-  takes everything but `#printArea` out of the flow in print, so its pages (20 then, 21 now) print no blank sheets after the sheet
+  takes everything but `#printArea` out of the flow in print, so its pages (20 then, 23 now) print no blank sheets after the sheet
   (`npm run test:print-tail`, 376 assertions). Audit TAIL is 0; what it still lists (015, 042, 046, 064) is
   fixed-size on purpose. **Next in Path 7 is rank 6, P3 (adoption). Nothing was printed on paper.**
 - **AI-13 (v228), old rank 6, Path 7 P2 increment 5:** the 15 tools that hid their editor with `visibility` in their own
@@ -180,8 +184,8 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **448** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 22 · `media-db.js` 14 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `print-kit.css` 3 · `print-kit.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
-| Printing | 78 tools call `window.print()`; 60 carry a hand-written `@media print` block. `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 23 · `media-db.js` 14 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `print-kit.css` 4 · `print-kit.js` 4 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Printing | 78 tools call `window.print()`; 59 carry a hand-written `@media print` block. `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **170**, contiguous. Path 21 is finished; per-tool rows start at rank **80**; 162–170 are Path 22 P6–P14 |
 | Art | **130** ledger entries: 046's relief (29,726 B), 030's board backdrop and tiles (5,348 B), 042's ten seals and ribbons (84,170 B), 071's twelve pictures (157,454 B), 080's piece atlas (43,318 B), 87 tool icons, the sprite (58,032 B), 4 shortcut PNGs, the 4 app-mark PNGs (14,457 B), the 4 hero WebPs (64,832 B), the test tile's light/dark pair |
@@ -317,7 +321,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 6 | Path 7 P3 — adoption: the class-set/blank tools, then the card-grid tools. **076 (v230), 070 and 077 (v231) done**; next 043, then 023 and 042, then the seven card-grid tools (077 is their example), by the recipe in the section | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 6 | Path 7 P3 — adoption: the class-set/blank tools, then the card-grid tools. **076 (v230), 070 and 077 (v231), 043 (v232) done**; next 023, then 042, then the seven card-grid tools (077 is their example), by the recipe in the section | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 7 | Path 7 P4 — `_shared/export.js`: `toPdf`, `toCsv/xlsx`, `toZip`, booklet/N-up imposition | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 9 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -1603,6 +1607,15 @@ localStorage with no file export.
   `.pk-cut` on the upper half sheet of each pair (076's loop, which 070 needed too; 076 now uses it), and a seventh
   card preset, `4x3`, for 077's four across. Suites: `Tools/peer-feedback-checklist-generator/test/smoke-print.mjs`
   and `Tools/testing-accommodations-card-generator/test/smoke-print.mjs`.
+  **Increment 3 shipped (AI-13, 2026-10-04, v232): 043, the first adopter with a roster.** Its `@media print` block
+  and its `@page` are deleted and all four print buttons go through `PrintKit.renderSet()`: "Print" is `mode: 'one'`,
+  `'set'` (one kit page per student, **with the kit's footer**, the name and "3 of 28") or `'blank'`; the missing list
+  and the chaperone sheet are one-page documents in `mode: 'one'`, the chaperone sheet **under the kit's header**
+  (destination, school line, trip date); the reminder slips are `mode: 'set'` over the students still missing, on half
+  sheets with `cut: true`, two to a page where each used to take a page. **The kit did not change.** PDF page counts
+  equal the old page's for every button in eleven states, light and dark, except the reminders, which are half as
+  many. Suite: `Tools/field-trip-permission-slip/test/smoke-print.mjs`. What `mode: 'set'`, the header and the footer
+  needed is in the recipe below (steps 4 to 6 and the list after it).
   **The recipe, which is what the next adopter follows:**
   1. *Before touching the page*, press its print buttons in a few states and write down Chromium's
      `page.pdf()` page counts. They go into the new suite as the numbers to hold. **Measure a page that has no
@@ -1614,7 +1627,8 @@ localStorage with no file export.
   2. Link `print-area.css` and `print-kit.css` before the inline `<style>`, and `print-kit.js` in the head.
      The kit has no rule that hides the editor (it is opt-in by class, so it cannot); `print-area.css` is that
      rule. `#printArea` must be a direct child of `<body>`. A page that already links `print-area.css` (077)
-     skips this half.
+     skips this half. **Take `style="display:none"` off the `#printArea` element** if it has one (043 did):
+     `print-area.css` hides it on screen, and its print rule cannot undo an inline style.
   3. Delete the page's `#printArea { display: none }` and its whole `@media print` block. Keep only what a
      sheet's *content* looks like, as plain rules: the sheet is never on screen, so they need no media query.
      **Take the vertical margin off the tool's sheet element.** 076's `.slip` had `margin-bottom: 1rem`; two
@@ -1626,8 +1640,22 @@ localStorage with no file export.
      and appends one `div.pk-cards.pk-page` plus the preset's class per `PrintKit.chunk(items, preset)` group,
      each card carrying `.pk-card` (077's print handler is the eight lines to copy). Drop the tool's own grid,
      card `min-height` and `break-inside` rules.
+     **A class set is `{ mode: 'set', roster: names }`** and the function reads `sheet.name` (043). **A tool whose
+     sheet is also its live preview** keeps its escaped string and returns it parsed: `t = createElement('template');
+     t.innerHTML = html; return t.content` (043's `nodeFrom()`); the preview and the print then cannot drift, and the
+     `textContent` rewrite is a separate job. **A single document** (a list, a roster page) is `mode: 'one'` with a
+     function that ignores its argument; pass `name` or the kit marks the sheet `pk-sheet-blank`. Every sheet is now
+     inside its own `<section>`, so a suite selector like `.slip:nth-of-type(2)` stops matching: count `.pk-sheet`.
   5. Call `PrintKit.setPage()` once, so `@page` and the size `.pk-half` divides agree. A tool that had its own
-     `@page` (043, 023 and 042 do, at 0.4 in and 0.35 in) passes that margin here instead.
+     `@page` (043 did; 023 and 042 do, at 0.4 in and 0.35 in) passes that margin here instead, and deletes the rule.
+     **The footer and the header** (043 is the example). `footer: true` on a class set prints the student's name and
+     "N of M"; ask for it only in `mode: 'set'`, since one sheet or a run of blanks has nothing to count. It costs
+     about 33 px under the tool's sheet (23 px and a 0.6 em margin): check the sheet plus the footer still fits the
+     page before turning it on, by PDF page count. `header: true` prints what `PrintKit.setHeader({ title, class,
+     date })` was last given, **as text**: a value the page keeps as markup (043's `&ndash;` date range) needs a text
+     form. The header is page-wide state, so every other `renderSet()` call on the page says `header: false`. Both
+     are drawn on `#printArea`, outside the tool's own sheet, so the page gives them its sheet's type, an inset to
+     match the sheet's padding, `color: #000`, and `#printArea { background: #fff }`.
   6. `class="pk-ink-safe"` on `#printArea` if the sheet has grey rules or muted text: they print black.
   7. Give the tool a suite (next free port **8470**), add it to `suites.json` and `package.json`, add the page
      to `smoke-print-tail.mjs`'s table if it newly links `print-area.css`, bump `CACHE_VERSION`, paste
@@ -1643,14 +1671,27 @@ localStorage with no file export.
   - *A card is a share of the page, never a fixed size* (except the two label presets). 077's cards went from a
     2.6 in minimum to a third of the printable page (3.24 in), three rows either way. A tool whose card must be an
     exact size (064's trading card) needs its own height on the card, or a preset of its own.
-  - *Header and footer were not used.* A slip has its own title and a "Date / Class / Sub name" line of write-in
-    rules; the kit's header prints values, not rules, and "3 of 5" on five identical blanks says nothing. 043
-    and 023 (a class set, one named sheet per student) are where they should fit; neither was tried.
+  - *Header and footer were not used* by 076, 070 or 077. A slip has its own title and a "Date / Class / Sub name"
+    line of write-in rules; the kit's header prints values, not rules, and "3 of 5" on five identical blanks says
+    nothing. **043 used both (v232)** and found four things, none of them moved into the kit yet (023 is the second
+    adopter that decides):
+    - *An empty header still rules a line.* With no title, class or date the three spans are hidden and the
+      `.pk-header` border prints alone. 043 passes `header: false` when all three are empty.
+    - *The header does not suit a sheet with a letterhead.* A permission slip opens with the school line and its
+      title; a kit header above that says it twice. It went on the chaperone sheet, which had no date on it at all.
+    - *A footer belongs to a kit sheet, not to a printed page.* With a second language on a facing page one student
+      is two pages in one sheet, and the footer prints once, under the translated slip. A sheet longer than a page
+      gets it on its last page only.
+    - *No class for the tool's own sheet to hook.* The function template never sees the `<section>`, so the footer
+      inset and colour are `#printArea .pk-footer` rules in the page (the "no general hook" gap again).
   - *The class field was not routed through `setHeader()`.* A `data-pk="class"` slot is emptied when the class
     is blank, and 076 prints a rule to write on there. The kit swaps in `.pk-blank-line` for a blank *name* only.
-  **Not done:** 043, 023, 042, and all seven card-grid tools (016, 017, 018, 040, 051, 064, 074). 043 is next:
-  four print buttons and a roster, so it is where `mode: 'set'`, the header and the "N of M" footer get their first
-  real use. 042's certificate is fixed-size on purpose and 023 is 2,493 lines; do them last.
+  **Not done:** 023, 042, and all seven card-grid tools (016, 017, 018, 040, 051, 064, 074). 023 is next (a class
+  set, 2,493 lines, a session of its own), then 042, whose certificate is fixed-size on purpose.
+  **Found on 043 and not fixed** (its own layout, the same before the adoption): the side-by-side bilingual pair is
+  1010 px tall with a one-line description and the printable page is 979 px, so every student prints on two sheets;
+  and a sheet printed from the dark theme is in `ink-paper.css`'s light ink (`#1f2430`), not the `#000` the page asks
+  for, because `.paper-sheet` re-declares `color`.
   **Not verified:** nothing was printed on paper.
 - **P4 — Export layer (Fable for the PDF pagination and imposition math).**
   `_shared/export.js`: `toPdf(printArea, {paper, orientation})` built on the
