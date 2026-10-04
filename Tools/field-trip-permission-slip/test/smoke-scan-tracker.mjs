@@ -114,7 +114,7 @@ eq(slipCount, 3, 'three students, three slips printed');
 
 const payloads = [];
 for (let i = 0; i < names.length; i++) {
-  const text = await decodeQrImg(`#printArea .slip:nth-of-type(${i + 1}) .slip-qr`);
+  const text = await decodeQrImg(`#printArea .pk-sheet:nth-of-type(${i + 1}) .slip-qr`);
   payloads.push(text);
   ok(!!text, `slip ${i + 1}'s QR decodes to something`);
   let parsed = null;
