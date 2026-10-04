@@ -7,7 +7,8 @@
 // every print ran on for as many blank sheets as the editor was tall: 028's
 // one-page worksheet came out of Chromium as seven pages, six of them empty.
 // Since v228 each of those print blocks also takes everything but the sheet
-// out of the flow with `display: none`.
+// out of the flow with `display: none`, and since v229 so does
+// _shared/print-area.css, for the twenty pages that print through it.
 //
 // For each page this opens it on the print audit's saved state
 // (a11y-sweep/seeds.mjs, print-audit-prep.mjs), presses its print buttons and
@@ -25,8 +26,9 @@
 // up on the line after print(), and the real one would have blocked there.
 //
 // 042's certificate is a fixed-size sheet on purpose and is unchanged; only
-// its tail went. The eight tools that hide their editor through
-// _shared/print-area.css are not covered here: that rule was not changed.
+// its tail went. Every page that links _shared/print-area.css is in the table
+// too: its rule needs #printArea to be a direct child of <body>, and "the
+// sheet still shows" is what fails on a page that nests it.
 //
 // Nothing here has been checked against a printer.
 //
@@ -82,6 +84,17 @@ const bulk016 = async page => {
   await page.click('#btn-bulk-generate');
   await page.waitForFunction(() => document.getElementById('print-area-bulk').children.length === 3);
 };
+// 085's batch button shows once batch mode is on, and prints once a saved roster is picked.
+const batch085 = async page => {
+  await page.check('#batchToggle');
+  await page.evaluate(() => {
+    const sel = document.getElementById('importSelect');
+    const opt = [...sel.options].find(o => o.value);
+    sel.value = opt.value;
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForFunction(() => /\d/.test(document.getElementById('batchStatus').textContent));
+};
 const prep040 = PRINT_PREP['040'][0].run;
 
 // `click` is the button, by its label or its id; `before` gets the page to
@@ -107,6 +120,27 @@ const PAGES = [
   { file: '063-grammar-mad-libs-generator.html', prints: [{ click: 'Print worksheet' }] },
   { file: '068-parent-contact-log.html', prints: [{ click: 'Print this list' }] },
   { file: '078-unit-conversion-chart-builder.html', prints: [{ click: 'Print chart' }] },
+  // The pages that take the rule from _shared/print-area.css (v229).
+  { file: '049-book-tasting-menu-generator.html', prints: [{ click: '#printBtn' }] },
+  { file: '050-civics-role-card-generator.html', prints: [{ click: '#printBtn' }] },
+  { file: '052-cognates-false-friends-builder.html', prints: [{ click: '#printBtn' }] },
+  { file: '054-current-events-discussion-guide-generator.html', prints: [{ click: '#printBtn' }, { click: '#printAllLevelsBtn' }] },
+  { file: '056-dbq-source-packet-builder.html', prints: [{ click: '#printBtn' }, { click: '#printAllLevelsBtn' }] },
+  { file: '057-dichotomous-key-builder.html', prints: [{ click: '#printBtn' }] },
+  { file: '058-duty-roster-builder.html', prints: [{ click: '#printBtn' }] },
+  { file: '059-experiment-design-planner.html', prints: [{ click: '#printBtn' }] },
+  { file: '060-fitness-skill-assessment-tracker.html', prints: [{ click: '#printBtn' }] },
+  { file: '065-lab-report-template-builder.html', prints: [{ click: '#printBtn' }, { click: '#previewPrintBtn' }] },
+  { file: '071-picture-prompt-generator.html', prints: [{ click: '#printBtn' }] },
+  { file: '072-plot-diagram-builder.html', prints: [{ click: '#printBtn' }] },
+  { file: '073-science-fair-project-tracker.html', prints: [{ click: '#printBtn' }] },
+  { file: '074-science-safety-label-maker.html', prints: [{ click: '#printBtn' }] },
+  { file: '077-testing-accommodations-card-generator.html', prints: [{ click: '#printBtn' }] },
+  { file: '079-verb-conjugation-poster-generator.html', prints: [{ click: '#printBtn' }] },
+  { file: '082-citation-generator.html', prints: [{ click: '#printBtn' }] },
+  { file: '083-propaganda-analysis-worksheet-generator.html', prints: [{ click: '#printWorksheetBtn' }, { click: '#printKeyBtn' }] },
+  { file: '084-socratic-seminar-prep-organizer.html', prints: [{ click: '#printRosterBtn' }, { click: '#printBlankBtn' }] },
+  { file: '085-parent-communication-templates.html', prints: [{ click: '#printOneBtn' }, { click: '#printBatchBtn', before: batch085 }] },
 ];
 
 const server = await serve(PORT);

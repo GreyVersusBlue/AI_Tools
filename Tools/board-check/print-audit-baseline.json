@@ -10,33 +10,9 @@
     "Tools/046-blank-map-generator.html": {
       "FIXED": 1
     },
-    "Tools/054-current-events-discussion-guide-generator.html": {
-      "TAIL": 1
-    },
-    "Tools/056-dbq-source-packet-builder.html": {
-      "TAIL": 1
-    },
-    "Tools/058-duty-roster-builder.html": {
-      "TAIL": 1
-    },
-    "Tools/060-fitness-skill-assessment-tracker.html": {
-      "TAIL": 1
-    },
     "Tools/064-historical-trading-card-maker.html": {
       "CLIP": 1,
       "FIXED": 2
-    },
-    "Tools/065-lab-report-template-builder.html": {
-      "TAIL": 1
-    },
-    "Tools/079-verb-conjugation-poster-generator.html": {
-      "TAIL": 1
-    },
-    "Tools/082-citation-generator.html": {
-      "TAIL": 1
-    },
-    "Tools/085-parent-communication-templates.html": {
-      "TAIL": 1
     }
   }
 }
