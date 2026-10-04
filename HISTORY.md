@@ -9,6 +9,86 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P3, increment 3: 043 adopts the print kit, the first with a roster, a header and a footer (2026-10-04, AI-13, `CACHE_VERSION` v232)
+
+Audit entry AI-13, rank 6 (2+). Third increment of P3: one tool, 043 (field trip permission slip), by the recipe.
+The row stays, rewritten. P4 and P5 untouched, and none of 023, 042 or the card-grid tools.
+
+- **043's `@media print` block and its `@page` are gone**, and so is the inline `display:none` on `#printArea`. It
+  links `print-area.css`, `print-kit.css` and `print-kit.js`, calls `PrintKit.setPage()` with the 0.4 in margin its
+  own `@page` had, and every one of its four print buttons goes through `PrintKit.renderSet()`:
+  - *Print*: `mode: 'one'` for a single slip, **`mode: 'set'` for a class (the kit's first real class set)**, one
+    `.pk-page` per student, and `mode: 'blank'` for blank copies. With a second language the student's two slips
+    are one kit sheet, either as the side-by-side pair or with a page break between them.
+  - *Print missing list*: one `.pk-page`, no header or footer (it is a 4.25 in pocket list).
+  - *Print reminder slips*: `mode: 'set'` over the students still missing, `sheet: 'half'`, `cut: true`.
+  - *Print chaperone groups*: one `.pk-page` under the kit's header.
+- **The footer is on the class set of slips**: the student's name and "3 of 28" under each slip, so a stack can be
+  counted and a dropped slip found. Not on a single slip or on blanks, which have nothing to count. It adds 33 px
+  under a 900 px slip on a 979 px page; the page counts below did not move.
+- **The header is on the chaperone sheet**: destination, the school / teacher line and the trip date, none of which
+  that sheet carried (it had the trip's name and nothing about when or where). It is not on the slip, which opens
+  with its own letterhead, or on the pocket list.
+- **The kit did not change.** No adopter's output can have moved; their suites were run anyway.
+- **Decisions taken, each cheap to reverse.**
+  - *Reminder slips are two to a page.* Each was a five-line slip on its own sheet (`page-break-after: always`).
+    On the kit's half sheets with a cut line, 28 reminders are 14 pages, not 28. To go back: `sheet: 'page'` and
+    drop `cut` in `buildReminderPrintArea()`.
+  - *The footer went on, the header did not, for the slip.* A slip that goes home says "Bella Cruz, 2 of 3" at its
+    foot now. To take it off: `footer: false` in `buildPrintArea()`.
+  - *The slip is still built as an escaped string*, parsed in a `<template>` (`nodeFrom()`), not rebuilt with
+    `textContent` as the recipe's step 4 asks. The same string draws the live preview, the two existing suites read
+    it, and 043 takes no link input, so it has no line in `inline-sinks-baseline.json` to lower. The four
+    `#printArea.innerHTML` writes are gone; the "nobody is missing anything" line is a `textContent` paragraph.
+  - *The row was not claimed by a pushed commit.* The selector runs one worker to a repo and forbids pushing `main`;
+    the Active row in the merge queue is the lock.
+- **Printed output, old against new, in Chromium's PDF.** The old page was served from `git show origin/main:`
+  through `page.route()`; it has an `@page` rule, so `preferCSSPageSize` measured both on the same 0.4 in margins.
+  Four buttons, eleven states, light and dark, in the order Print / missing list / reminders / chaperones:
+  first visit 1 1 1 1; a class of three 3 1 **1** 1 (reminders were 2); a class of twenty-eight 28 1 **14** 1 (28);
+  one named student 1 1 1 1; one student with no name and no roster 1 1 1 1; five blanks 5 1 **1** 1 (2); batch mode
+  with no names 1 1 1 1; three with Spanish on a facing page 6 1 **1** 1 (2); three side by side 6 1 **1** 1 (2);
+  three with a long description 6 1 **1** 1 (2); everything returned 3 1 1 1. **The reminder slips are the only
+  difference.** Looked at as PNG in print media: the set, the pair, the reminders, the chaperone sheet, the list.
+- **New suite.** `Tools/field-trip-permission-slip/test/smoke-print.mjs` (`npm run test:permission-slip-print`,
+  port 8470, 1,819 assertions): for every button in every state and theme, what the kit built (sheet classes,
+  footer names and counts in roster order, header fields, cut lines), that only the sheet has a box on paper and
+  nothing is clipped, that the header and footer print black on white from the dark theme, and the PDF page count;
+  then names and a destination full of markup reaching the footer and header as text, a date range with a real
+  dash, and one button after another replacing the last sheet. `smoke-scan-tracker.mjs` read
+  `#printArea .slip:nth-of-type(n)`; each slip is in its own kit section now, so it reads
+  `.pk-sheet:nth-of-type(n)` (one selector, no assertion changed).
+- **What `mode: 'set'`, the header and the footer lacked** (all four are in the recipe; none blocked the adoption,
+  and none went into the kit, because 043 is the first to need each):
+  - An empty header still rules a line: the three spans hide and the border prints alone. 043 passes
+    `header: false` when the destination, school line and date are all empty.
+  - The header takes text. 043 kept its date range as `'… &ndash; …'` for `innerHTML`; a `tripDateText()` beside
+    it hands the kit a real dash.
+  - The footer belongs to a kit sheet, not a printed page: a student with a facing-page translation gets it once,
+    under the second slip, and a slip that runs to two pages gets it on the last.
+  - Header and footer are drawn on `#printArea`, outside the tool's sheet. They took the body's sans type, sat at
+    the page edge while the slip's text is inset 0.65 in, and `#printArea` had no background of its own. Five
+    rules in the page fix that; there is no hook to put a class on the kit's `<section>`.
+  - `plan()` stops at 400 sheets. The old block had no limit on a pasted list. Not reached by anything real.
+- **Found and not fixed, both the same before the adoption.**
+  - *Side by side prints two sheets per student.* The pair is 1010 px tall with a one-line description and the
+    printable page is 979 px, so the last lines of both slips go over. The old page printed 6 pages for three
+    students too. It needs a smaller slip in that layout, which is a design change to 043, not an adoption.
+  - *From the dark theme a sheet prints in `#1f2430`, not `#000`.* `.paper-sheet` in `ink-paper.css` re-declares
+    `color: var(--ink)` at a higher specificity than `.slip { color: #000 }`. Dark grey on paper, readable; the
+    suite records it per theme rather than pretending it is black.
+- **What I got wrong on the way.** The first run of the new suite failed 7 of 1,829 for my own reasons: two
+  comments in the page contained the text the suite's "no print block" and "six renderSet calls" checks grep for,
+  and I had assumed the sheet ink was black in both themes. A look script wrote six PNGs into the repo root
+  (Playwright's `path` is relative to the working directory); they were moved out before anything was staged.
+- **Checks.** All 13 guards incl. `check:precache -- --base origin/main` and `check:adoption -- --check`; suites via
+  `run-suites.mjs --only` for field-trip-permission-slip, print-kit, sub-note-feedback-slip-generator,
+  peer-feedback-checklist-generator, testing-accommodations-card-generator, roster, share, theme, service-worker and
+  board-check; the a11y sweep `--only 043`; `audit-print --only 043`.
+  **Not verified:** full `npm test` was not run (no `_shared/` file changed); `audit-print --only 043` was run after
+  the change only, the "before" being the committed baseline, which lists no finding for 043; nothing was printed
+  on paper, only Chromium's PDF seen; the footer on a slip was not shown to a teacher or a parent.
+
 ## Path 7 P3, increment 2: 070 and 077 adopt the print kit, and the kit gains a cut line and a 4x3 preset (2026-10-04, AI-13, `CACHE_VERSION` v231)
 
 Audit entry AI-13, rank 6 (2+). Second increment of P3: the next two tools in the order increment 1 left, by its
