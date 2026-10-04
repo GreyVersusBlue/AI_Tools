@@ -124,6 +124,7 @@ const PAGES = [
   // The pages that take the rule from _shared/print-area.css (v229).
   { file: '049-book-tasting-menu-generator.html', prints: [{ click: '#printBtn' }] },
   { file: '050-civics-role-card-generator.html', prints: [{ click: '#printBtn' }] },
+  { file: '051-classroom-label-maker.html', prints: [{ click: '#printBtn' }] },   // since Path 7 P3: print-area.css + the print kit
   { file: '052-cognates-false-friends-builder.html', prints: [{ click: '#printBtn' }] },
   { file: '054-current-events-discussion-guide-generator.html', prints: [{ click: '#printBtn' }, { click: '#printAllLevelsBtn' }] },
   { file: '056-dbq-source-packet-builder.html', prints: [{ click: '#printBtn' }, { click: '#printAllLevelsBtn' }] },
