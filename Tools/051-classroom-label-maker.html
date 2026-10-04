@@ -17,16 +17,28 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='10' width='20' height='12' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M6 12l10 6 10-6' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
 <!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
      opting in here keeps a11y.js from putting its CSS-filter invert on top.
-     Read ink-paper.css's header before copying this into another tool. -->
+     Read ink-paper.css's header before copying this into another tool.
+
+     Printing is the shared kit's (Path 7 P3): _shared/print-area.css puts
+     #printArea alone on the paper, and _shared/print-kit.css + print-kit.js
+     lay the labels out (`PrintKit.renderCards`, three across). A label is a
+     size in inches, not a share of the page, so the grid is one of the tool's
+     own (`pk-cards-own`): the height below is this page's, and the grid runs
+     on over as many pages as it needs. The reference sheet follows it on a
+     page of its own. This page has no print rule of its own; what is left
+     below is what a label and the reference sheet look like. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   * { box-sizing: border-box; }
   body {
@@ -66,25 +78,21 @@
   .file-warning { display: none; background: var(--err-bg); border: 1px solid var(--err-line); color: var(--err); border-radius: 8px; padding: .8rem 1rem; margin-bottom: 1rem; font-size: .86rem; font-weight: 600; }
   .file-warning.show { display: block; }
 
-  /* Everything below is the printed sheet: #printArea is display:none on screen
-     and ink-paper.css treats it as paper in dark, so its greys stay as they are. */
-  #printArea { display: none; }
-  .label-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .2in; margin-bottom: .3in; }
-  .label-card { border: 1.5px dashed #333; border-radius: 6px; padding: .15in; display: flex; align-items: center; gap: .12in; min-height: 1.4in; break-inside: avoid; page-break-inside: avoid; }
+  /* Everything below is the printed sheet: #printArea is hidden on screen by
+     print-area.css and is white paper with black text in print from either
+     theme (.pk-paper), so the greys here stay as they are. The grid, its three
+     columns, keeping a label on one page and the break before the reference
+     sheet are print-kit.css's (.pk-cards, .pk-card, .pk-page). The gap is this
+     tool's 0.2 in, not the kit's eighth, so a label is as wide as it has
+     always been; min-height, so a long word makes its row taller. */
+  #printArea { --pk-gap: .2in; }
+  .label-card { border: 1.5px dashed #333; border-radius: 6px; padding: .15in; display: flex; align-items: center; gap: .12in; min-height: 1.4in; }
   .label-card canvas { width: .9in; height: .9in; flex-shrink: 0; }
   .label-card .ltext .target { font-weight: 700; font-size: 1.1rem; }
   .label-card .ltext .english { font-size: .78rem; color: #555; }
   .ref-sheet table { width: 100%; border-collapse: collapse; font-size: .95rem; }
   .ref-sheet th, .ref-sheet td { border: 1px solid #999; padding: .4rem .6rem; text-align: left; }
   .ref-sheet th { background: #eee; }
-  .section-label { font-size: .8rem; color: var(--muted); margin: .3in 0 .1in; text-transform: uppercase; letter-spacing: .05em; }
-
-  @media print {
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
-    .ref-sheet { page-break-before: always; }
-  }
 </style>
 </head>
 <body>
@@ -148,7 +156,7 @@
   </div>
 </div>
 
-<div id="printArea"></div>
+<div id="printArea" class="pk-paper"></div>
 
 <script>
 (function () {
@@ -335,6 +343,7 @@
         '<td><a class="test-link" target="_blank" rel="noopener" href="' + escapeHtml(speakUrl(w.target, lang)) + '">Test &#9658;</a></td></tr>';
     }).join('');
     els.wordTable.innerHTML = head + rows;
+    renderSheet();
   }
 
   function buildQR(text) {
@@ -343,21 +352,24 @@
     qr.make();
     return qr;
   }
+  /** Draws the code at a whole number of canvas pixels per module, on a
+      canvas at least `size` px square (CSS scales it to the label's 0.9 in).
+      It used to spread the modules over exactly `size` px and widen each dark
+      one by up to two pixels to hide the seams, which fattened the dark
+      modules by about a third: jsQR could not read 4 of 120 short words'
+      codes drawn that way, nor a long word's. It reads all of them now. */
   function drawQR(canvas, qr, size) {
     var count = qr.getModuleCount();
     var quietModules = 2;
     var totalModules = count + quietModules * 2;
-    var px = size / totalModules;
-    canvas.width = size; canvas.height = size;
+    var px = Math.ceil(size / totalModules);
+    canvas.width = canvas.height = px * totalModules;
     var c = canvas.getContext('2d');
-    c.fillStyle = '#fff'; c.fillRect(0, 0, size, size);
+    c.fillStyle = '#fff'; c.fillRect(0, 0, canvas.width, canvas.height);
     c.fillStyle = '#000';
     for (var r = 0; r < count; r++) {
       for (var col = 0; col < count; col++) {
-        if (qr.isDark(r, col)) {
-          var x = (quietModules + col) * px, y = (quietModules + r) * px;
-          c.fillRect(Math.floor(x), Math.floor(y), Math.ceil(px) + 1, Math.ceil(px) + 1);
-        }
+        if (qr.isDark(r, col)) c.fillRect((quietModules + col) * px, (quietModules + r) * px, px, px);
       }
     }
   }
@@ -369,23 +381,68 @@
     return base.href;
   }
 
-  els.printBtn.addEventListener('click', function () {
-    var words = state.words;
-    if (!words.length) { alert('Save a word list first.'); return; }
-    var lang = state.lang;
-    var labelsHtml = '<div class="label-grid" id="labelGrid">' + words.map(function (w, i) {
-      return '<div class="label-card"><canvas id="qr-' + i + '"></canvas><div class="ltext">' +
-        '<div class="target">' + escapeHtml(w.target) + '</div><div class="english">' + escapeHtml(w.english) + '</div></div></div>';
-    }).join('') + '</div>';
-    var refRows = words.map(function (w) { return '<tr><td>' + escapeHtml(w.target) + '</td><td>' + escapeHtml(w.english) + '</td></tr>'; }).join('');
-    els.printArea.innerHTML = labelsHtml +
-      '<div class="ref-sheet"><h2>Reference Sheet</h2><table><thead><tr><th>Target word</th><th>English</th></tr></thead><tbody>' + refRows + '</tbody></table></div>';
+  function node(tag, cls, text) {
+    var el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
 
-    words.forEach(function (w, i) {
-      var canvas = document.getElementById('qr-' + i);
-      var qr = buildQR(speakUrl(w.target, lang));
-      drawQR(canvas, qr, 200);
+  /** One printed label: the QR code that speaks the word, and the word and
+      its English as text. */
+  function buildLabel(w) {
+    var card = node('div', 'label-card');
+    var canvas = document.createElement('canvas');
+    drawQR(canvas, buildQR(speakUrl(w.target, state.lang)), 200);
+    card.appendChild(canvas);
+    var text = node('div', 'ltext');
+    text.appendChild(node('div', 'target', w.target));
+    text.appendChild(node('div', 'english', w.english));
+    card.appendChild(text);
+    return card;
+  }
+
+  /** The plain list of every word, which prints on a page of its own after
+      the labels. */
+  function buildRefSheet(words) {
+    var sheet = node('div', 'ref-sheet pk-page');
+    sheet.appendChild(node('h2', '', 'Reference Sheet'));
+    var table = document.createElement('table');
+    var head = table.createTHead().insertRow();
+    head.appendChild(node('th', '', 'Target word'));
+    head.appendChild(node('th', '', 'English'));
+    var body = table.createTBody();
+    words.forEach(function (w) {
+      var row = body.insertRow();
+      row.insertCell().textContent = w.target;
+      row.insertCell().textContent = w.english;
     });
+    sheet.appendChild(table);
+    return sheet;
+  }
+
+  // US Letter with half-inch margins: three labels across, six rows to a page.
+  PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
+
+  /** Builds the sheet: one grid of every label, then the reference sheet.
+      The grid is a .pk-page and not the last thing on the sheet, so the
+      reference sheet starts a new page. With no words there is no sheet.
+
+      renderTable() calls this on every change to the words or the language,
+      so the hidden sheet is always the current one and Ctrl+P prints it (it
+      used to print an empty page). It is NOT built on `beforeprint`, as the
+      other kit pages do: a canvas drawn inside that event reaches Chromium's
+      PDF as replayed drawing commands, not as the 200 px bitmap, and the QR
+      code comes out about 4% smaller than the one the button printed. */
+  function renderSheet() {
+    var words = state.words;
+    PrintKit.renderCards(els.printArea, words, { cols: 3 }, buildLabel);
+    if (words.length) els.printArea.appendChild(buildRefSheet(words));
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    if (!state.words.length) { alert('Save a word list first.'); return; }
+    renderSheet();
     window.print();
   });
 
