@@ -135,6 +135,7 @@ const PAGES = [
   { file: '072-plot-diagram-builder.html', prints: [{ click: '#printBtn' }] },
   { file: '073-science-fair-project-tracker.html', prints: [{ click: '#printBtn' }] },
   { file: '074-science-safety-label-maker.html', prints: [{ click: '#printBtn' }] },
+  { file: '076-sub-note-feedback-slip-generator.html', prints: [{ click: '#printBtn' }] },   // since Path 7 P3: print-area.css + the print kit
   { file: '077-testing-accommodations-card-generator.html', prints: [{ click: '#printBtn' }] },
   { file: '079-verb-conjugation-poster-generator.html', prints: [{ click: '#printBtn' }] },
   { file: '082-citation-generator.html', prints: [{ click: '#printBtn' }] },
