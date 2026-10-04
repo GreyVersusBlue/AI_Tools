@@ -87,6 +87,10 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v235), rank 6, Path 7 P3 increment 6: 074 prints through the kit** (seven adopters now) and the kit has
+  **`PrintKit.renderCards(container, items, preset, buildCard)`**: a preset name for cards that share the page (077
+  uses it now), or `{ cols }` for a grid of the tool's own height (`.pk-cards-own`, 074's labels). 074's PDF is the
+  old page's in 66 states. `npm run test:safety-label-print` (port 8473). **Next: 051, then 016 017 018 040 064.**
 - **AI-13 (v234), rank 6, Path 7 P3 increment 5: 042 prints through the kit** (six adopters now), the first whose
   sheet is a fixed size on purpose: `print-area.css`, `.pk-page`, `.pk-paper` and `setPage()` at 0.35 in, its own
   sheet height kept, no `renderSet`. The kit did not change. Chromium's PDF is the old page's, pixel for pixel.
@@ -164,7 +168,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 - Rank 1 (Path 6 P4) is blocked on rank 28, so take **rank 2**, the rest of Path 4 P5: per-tool restore
   as a shared control any tool can host (½). It needs 009's `recordDiff`/merge logic moved out of 009's
   inline script into `_shared/`, and `ToolRegistry` to pick one tool's keys. Pair it with another ½ or two
-  ¼ rows. A new suite takes port **8473** (8472 is 042's `smoke-print.mjs`, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
+  ¼ rows. A new suite takes port **8474** (8473 is 074's `smoke-print.mjs`, 8472 is 042's, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
   `smoke-encrypted.mjs`, 8462 is the print kit's `smoke-print-kit.mjs`, 8463 is `smoke-pairing-qr.mjs`).
 - **huginn's shared checkout** (`/home/devon/projects/AI_Tools`): local `main` now contains origin's `main`
   (AI-sync's merge) and is ahead of it by the local-only sessions above. It has not been pushed. The
@@ -185,14 +189,14 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v231` on local `main` (origin is at v230) — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v235` on local `main` (origin is at v233) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **314** in `PRECACHE_URLS`, **95** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **195** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| Suites | **199** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
-| Inline markup sinks | **448** across the 54 pages that take link input (`check:inline-sinks` baseline) |
+| Inline markup sinks | **446** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 25 · `media-db.js` 14 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `print-kit.css` 6 · `print-kit.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 25 · `media-db.js` 14 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `print-kit.css` 7 · `print-kit.js` 7 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 57 carry a hand-written `@media print` block. `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **170**, contiguous. Path 21 is finished; per-tool rows start at rank **80**; 162–170 are Path 22 P6–P14 |
@@ -329,7 +333,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 6 | Path 7 P3 — adoption: the class-set/blank tools, then the card-grid tools. **076 (v230), 070 and 077 (v231), 043 (v232), 023 (v233), 042 (v234) done: the six class-set/blank tools are finished**; left: the seven card-grid tools 016 017 018 040 051 064 074 (077 is their example; add `PrintKit.renderCards()` with the first), by the recipe in the section | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 6 | Path 7 P3 — adoption: the class-set/blank tools, then the card-grid tools. **076 (v230), 070 and 077 (v231), 043 (v232), 023 (v233), 042 (v234), 074 (v235) done: the six class-set/blank tools are finished and `PrintKit.renderCards()` exists**; left: six card-grid tools 016 017 018 040 051 064 (077 is the example of a card that shares the page, 074 of a card with a size of its own), by the recipe in the section | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 7 | Path 7 P4 — `_shared/export.js`: `toPdf`, `toCsv/xlsx`, `toZip`, booklet/N-up imposition | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 9 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -1645,6 +1649,19 @@ localStorage with no file export.
   Chromium's PDF was rasterised from the old page and the new in twelve states, light and dark, and is the same
   pixel for pixel; Ctrl+P prints the certificates where it printed an empty page. Suite:
   `Tools/certificate-award-maker/test/smoke-print.mjs`.
+  **Increment 6 shipped (AI-13, 2026-10-04, v235): 074, and `PrintKit.renderCards()`.** The kit's card loop, which
+  077 wrote for itself, is in the kit: `renderCards(container, items, preset, buildCard)` empties the container and
+  appends one `div.pk-cards.pk-page` per page, `buildCard(item, index)` returning each card's node, which gains
+  `.pk-card`. `preset` is a `PRESETS` name (cards that share the page; 077 uses it now, its suite unchanged and
+  green) or an object, `{ cols, perPage }`, for **a grid of the tool's own**: `--pk-cols` set inline, the class
+  `pk-cards-own`, and no height from the kit, so a one-class rule in the page sizes the card; with no `perPage` it is
+  one grid that runs on over the pages. `PrintKit.cardPlan()` is the pure half. 074's labels are that second kind:
+  4, 3 or 2 across (a share of the width) and 1.5, 2 or 2.75 in tall at the least (a size, not a share), so it keeps
+  its three `min-height` rules and its 0.2 in gap (`--pk-gap` on `#printArea`) and gives the kit its grid, its
+  columns and its `page-break-inside`. It had no print block and no `@page` to delete; it gains `setPage()` (Letter,
+  half an inch), `.pk-paper`, and Ctrl+P. Old against new in 66 states, light and dark: the same label count, width,
+  height, page count, and the same raster in dark; in light the white `.pk-paper` ground moves antialiased edges by
+  at most 2 grey levels of 255. Suite: `Tools/science-safety-label-maker/test/smoke-print.mjs`.
   **The recipe, which is what the next adopter follows:**
   1. *Before touching the page*, press its print buttons in a few states and write down Chromium's
      `page.pdf()` page counts. They go into the new suite as the numbers to hold. **Measure a page that has no
@@ -1672,10 +1689,21 @@ localStorage with no file export.
      the sheets of a page is padding on their inner edges** (`:nth-child(odd)` and `(even)` for halves, `4n+1` to
      `4n` for quarters), never a margin or a grid gap, either of which makes a page of them taller than the page.
      **A page with two things to print has one `#printArea`:** each button renders into it, and `afterprint` puts
-     the default sheet back, so Ctrl+P prints something (023's reteach list). **A card-grid tool does not call `renderSet`:** it empties `#printArea`
-     and appends one `div.pk-cards.pk-page` plus the preset's class per `PrintKit.chunk(items, preset)` group,
-     each card carrying `.pk-card` (077's print handler is the eight lines to copy). Drop the tool's own grid,
-     card `min-height` and `break-inside` rules.
+     the default sheet back, so Ctrl+P prints something (023's reteach list). **A card-grid tool does not call `renderSet`:** it calls
+     `PrintKit.renderCards(printArea, items, preset, buildCard)` (since v235), where `buildCard(item, index)` returns
+     one card's node built with `textContent`; the kit adds `.pk-card`. **Decide first which kind of card it is, from
+     the tool's own CSS.** *A share of the page* (077: "three rows to a page"): pass a preset name (`'3x3'`), and drop
+     the tool's grid, card `min-height` and `break-inside` rules. *A size of its own* (074's label, 2 in at the
+     least; 064's exact trading card): pass `{ cols: n }`, keep the tool's `min-height` or `height` on the card as
+     a plain rule, drop only the grid, the columns and `break-inside`, and set `--pk-gap` on `#printArea` if the tool's
+     gap is not the kit's 0.125 in, or the cards change width. `{ cols }` alone is one grid that breaks between rows
+     wherever the page ends, which is what a flowing grid did before and gives the old page counts exactly; add
+     `perPage` only if the tool means "N to a page". **Where a size or column class used to sit on the tool's grid
+     element** (`.label-grid.size-small`), put it on `#printArea` (`className = 'pk-paper size-' + size`, written on
+     every render) and key the card rules on it. **A card with a drawing** from a constant in the page (074's symbols)
+     builds it with `DOMParser` (`image/svg+xml`, with the `xmlns`) and `importNode`; only what is typed goes through
+     `textContent`. **Render in a function and call it on `beforeprint` as well as from the button**, so Ctrl+P prints
+     the sheet (it printed an empty page on 042 and 074).
      **A class set is `{ mode: 'set', roster: names }`** and the function reads `sheet.name` (043). **A tool whose
      sheet is also its live preview** keeps its escaped string and returns it parsed: `t = createElement('template');
      t.innerHTML = html; return t.content` (043's `nodeFrom()`); the preview and the print then cannot drift, and the
@@ -1703,7 +1731,7 @@ localStorage with no file export.
      with every fill, grey and drawn grid inside left as the tool set it. Use `class="pk-ink-safe"` instead if the
      sheet has grey rules or muted text that should print black and no fill worth keeping. A tool that sets
      `#printArea.className` when it renders (023 does, for its slip size) writes `pk-paper` back each time.
-  7. Give the tool a suite (next free port **8473**), add it to `suites.json` and `package.json`, add the page
+  7. Give the tool a suite (next free port **8474**), add it to `suites.json` and `package.json`, add the page
      to `smoke-print-tail.mjs`'s table if it newly links `print-area.css`, bump `CACHE_VERSION`, paste
      `check:adoption`'s row into the header, and take one off the header's hand-written print block count.
   **What the kit did not have, and an adopter did itself** (none of it blocked an adoption; a second adopter that
@@ -1712,11 +1740,14 @@ localStorage with no file export.
     wraps it in, so 076 added `.pk-cut` to every other sheet in a loop after `renderSet()`. **Moved into the kit in
     v231** as `cut: true`, when 070 needed the same loop. It is for half sheets only: on quarter sheets `.pk-cut`
     also draws a right-hand line, and no adopter has needed those yet. There is still no general hook.
-  - *No card renderer.* 077 builds its grids in a loop over `PrintKit.chunk()`. The next card-grid tool will write
-    the same loop; that is the moment for a `PrintKit.renderCards(container, items, preset, buildCard)`.
+  - *No card renderer.* 077 built its grids in a loop over `PrintKit.chunk()`. **Moved into the kit in v235** as
+    `PrintKit.renderCards()`, when 074 needed a grid too; 077 calls it now.
   - *A card is a share of the page, never a fixed size* (except the two label presets). 077's cards went from a
-    2.6 in minimum to a third of the printable page (3.24 in), three rows either way. A tool whose card must be an
-    exact size (064's trading card) needs its own height on the card, or a preset of its own.
+    2.6 in minimum to a third of the printable page (3.24 in), three rows either way. **Answered in v235** for a
+    tool whose card has a size of its own: `renderCards(..., { cols }, ...)` and `.pk-cards-own`, which takes the
+    kit's row height off the card. 074 uses it with a `min-height`; 064's exact `height` has not been tried on it.
+  - *An own grid has no "N of M" and no per-page hook.* A flowing grid is one element over several pages, so there
+    is nowhere to hang a page footer, and `.pk-page` on it only matters when `perPage` cuts it. No adopter has asked.
   - *Header and footer were not used* by 076, 070 or 077. A slip has its own title and a "Date / Class / Sub name"
     line of write-in rules; the kit's header prints values, not rules, and "3 of 5" on five identical blanks says
     nothing. **043 used both (v232)** and found four things. **023 (v233) decided one of them:** the white paper and
@@ -1735,8 +1766,9 @@ localStorage with no file export.
     is blank, and 076 prints a rule to write on there. The kit swaps in `.pk-blank-line` for a blank *name* only.
   - *A kit class on `#printArea` lost to `print-area.css`'s id rule.* Fixed in v233 for `.pk-quarters`. Any later
     kit rule that sets `display` or position on the container has the same fight; `smoke-print-kit.mjs` has the case.
-  **Not done:** all seven card-grid tools (016, 017, 018, 040, 051, 064, 074). Take them smallest first, with 077 as
-  the example, and write `PrintKit.renderCards()` with the first; 064's card is an exact size (see step 5).
+  **Not done:** six card-grid tools (016, 017, 018, 040, 051, 064). Take them smallest first (051 is next, 471
+  lines), with 077 or 074 as the example according to the kind of card; 064's card is an exact size (see step 5),
+  the first to put a `height` and clipping on a `.pk-cards-own` card.
   **How to prove an adoption changed nothing** (042, and worth repeating where `pdftoppm` is installed): print the old
   page and the new to PDF in the same states, `pdftoppm -r 48 -gray` each, and compare the pages' bytes. It caught
   the fraction of a pixel above, which page counts and the audit both passed.
