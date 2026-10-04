@@ -84,7 +84,9 @@
     min-height: calc(var(--pk-area-h) / 2);
   }
 
-  /* A dashed cut guide on the trailing edge of a half or quarter sheet. */
+  /* A dashed cut guide on the trailing edge of a half or quarter sheet.
+     PrintKit.renderSet(..., { cut: true }) puts it on the upper half sheet of
+     each pair; on every half it would also rule the foot of each page. */
   .pk-cut { border-bottom: 1px dashed currentColor; }
   .pk-quarters > .pk-cut:nth-child(odd) { border-right: 1px dashed currentColor; }
 }
@@ -130,6 +132,7 @@
 .pk-cards-2x3  { --pk-cols: 2; --pk-rows: 3; }   /* 6 per page                  */
 .pk-cards-3x3  { --pk-cols: 3; --pk-rows: 3; }   /* 9 trading-card size         */
 .pk-cards-2x4  { --pk-cols: 2; --pk-rows: 4; }   /* 8 flashcards                */
+.pk-cards-4x3  { --pk-cols: 4; --pk-rows: 3; }   /* 12 narrow reference cards   */
 .pk-cards-2x5  { --pk-cols: 2; --pk-rows: 5; }   /* 10 business cards (2 x 3.5) */
 .pk-cards-3x10 { --pk-cols: 3; --pk-rows: 10; }  /* 30 address labels (1 x 2⅝)  */
 

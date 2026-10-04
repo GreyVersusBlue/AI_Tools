@@ -466,8 +466,8 @@ files must be added there too.
   the `PrintKit` helper: `pk-` classes for sheets, half and quarter sheets, card grids and
   ink-safe output, and one/class-set/blank rendering from a template. Unlike print-area.css the
   kit is opt-in by class and safe to link anywhere; a new printing tool uses it instead of
-  writing another `@media print` block. It sizes with `min-height` and never clips. 076 is the first adopter
-  (v230, with `print-area.css` to hide the editor); `BACKLOG.md`'s Path 7 P3 has the recipe the next one follows. Its suites
+  writing another `@media print` block. It sizes with `min-height` and never clips. 076 and 070 (half sheets, `renderSet` with `cut: true`) and 077
+  (a card grid, `PrintKit.chunk`) print through it, each with `print-area.css` to hide the editor; `BACKLOG.md`'s Path 7 P3 has the recipe the next one follows. Its suites
   are `npm run test:print-kit`; nothing in it has been checked on paper.
   `npm run path7:next` (`Tools/board-check/audit-print.mjs`, Path 7 P2, read-only, a browser
   sweep of about 12 minutes on port 8464, not in CI) is the runtime half of `check:print-clip`:
@@ -476,7 +476,7 @@ files must be added there too.
   page break may split, dark ink on paper and (TAIL, since v227) blank pages after the sheet. TAIL
   is what `body * { visibility: hidden }` leaves: the hidden editor keeps its height. A new print
   block takes the screen UI out with `display: none` (`npm run test:print-tail` reads Chromium's PDF for
-  the fifteen pages fixed in v228 and those that print through `print-area.css`, fixed there in v229 (twenty then, 076 since); a page fixed later joins its table), and a page with dark tokens of its own puts
+  the fifteen pages fixed in v228 and those that print through `print-area.css`, fixed there in v229 (twenty then, 076 and 070 since); a page fixed later joins its table), and a page with dark tokens of its own puts
   them back in print itself (`npm run test:theme` checks 004, 009 and 010). It reaches a sheet through saved state
   (`Tools/a11y-sweep/seeds.mjs`, which the a11y sweep's seeded pass reads too), through a tab whose
   label says "print", which it opens itself, and through `Tools/board-check/print-audit-prep.mjs` for

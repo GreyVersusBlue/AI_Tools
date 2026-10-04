@@ -19,7 +19,14 @@
      opting in here keeps a11y.js from putting its CSS-filter invert on top.
      The printed cards are built into #printArea, which is paper: its #333
      card borders, #999 rules and #555 notes are never on a dark screen.
-     Read ink-paper.css's header before copying this into another tool. -->
+     Read ink-paper.css's header before copying this into another tool.
+
+     Printing is the shared kit's (Path 7 P3, the first card-grid adopter):
+     _shared/print-area.css puts #printArea alone on the paper, and
+     _shared/print-kit.css + print-kit.js lay the cards out, one `.pk-cards`
+     grid to a page (`PrintKit.chunk`, three rows of 2, 3 or 4 across). This
+     page has no print rule of its own; what is left below is what a card
+     looks like. `.pk-ink-safe` prints those greys black for the copier. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
@@ -28,10 +35,12 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   * { box-sizing: border-box; }
   body {
@@ -82,14 +91,11 @@
   .print-controls { display: flex; flex-wrap: wrap; gap: .6rem .9rem; align-items: end; margin-bottom: .8rem; font-size: .84rem; }
   .print-controls select { width: auto; font-family: inherit; font-size: .85rem; padding: .35rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; }
 
-  .card-grid { display: grid; gap: .5rem; }
-  .card-grid.cols-2 { grid-template-columns: 1fr 1fr; }
-  .card-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
-  .card-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
-  /* min-height, not height + overflow:hidden: a student with a long list of
-     accommodations got the bottom of it cut off on paper (Path 7 P2). The grid
-     stretches a row to its tallest card, so short cards still line up. */
-  .accom-card { border: 1.5px solid #333; border-radius: 8px; padding: .6rem .7rem; min-height: 2.6in; break-inside: avoid; }
+  /* A card is only ever seen on paper. The grid, the card's height (a third
+     of the printable page, as a min-height: a student with a long list of
+     accommodations makes the row taller, and nothing is cut off) and keeping
+     a card on one page are print-kit.css's (.pk-cards, .pk-card, .pk-page). */
+  .accom-card { border: 1.5px solid #333; border-radius: 8px; padding: .6rem .7rem; }
   .accom-card h3 { margin: 0 0 .3rem; font-size: 1.05rem; border-bottom: 1px solid #999; padding-bottom: .2rem; }
   .accom-card ul { margin: 0; padding-left: 1.1rem; font-size: .82rem; }
   .accom-card li { margin-bottom: .15rem; }
@@ -158,9 +164,7 @@
   </div>
 </div>
 
-<div id="printArea">
-  <div class="card-grid" id="printGrid"></div>
-</div>
+<div id="printArea" class="pk-ink-safe"></div>
 
 <script>
 (function () {
@@ -170,7 +174,7 @@
   var DEFAULT_TYPES = ['Extended time', 'Separate setting', 'Read-aloud', 'Breaks as needed', 'Use of calculator', 'Preferential seating'];
 
   var els = {};
-  ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'typesWrap', 'addTypeBtn', 'assignTable', 'printBtn', 'printGrid',
+  ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'typesWrap', 'addTypeBtn', 'assignTable', 'printBtn', 'printArea',
    'summaryLine', 'printWhoSelect', 'printColsSelect', 'filterSelect', 'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
@@ -403,21 +407,45 @@
     }
   });
 
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text) node.textContent = text;
+    return node;
+  }
+
+  /** One student's card: the name, the ticked accommodations, the note. */
+  function buildCard(name) {
+    var card = el('div', 'accom-card pk-card');
+    card.appendChild(el('h3', '', name));
+    var list = el('ul');
+    var checkedTypes = state.types.filter(function (t) { return state.assignments[assignKey(name, t.id)]; });
+    if (checkedTypes.length) checkedTypes.forEach(function (t) { list.appendChild(el('li', '', t.name)); });
+    else list.appendChild(el('li', '', 'No accommodations selected'));
+    card.appendChild(list);
+    if (state.notes[name]) card.appendChild(el('div', 'note', state.notes[name]));
+    return card;
+  }
+
+  // "Cards per row" to the kit's card preset (columns x rows on a page).
+  var CARD_PRESETS = { '2': '2x3', '3': '3x3', '4': '4x3' };
+
+  // US Letter with half-inch margins, which is what print-kit.css's card rows divide.
+  PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
+
   els.printBtn.addEventListener('click', function () {
     if (!state.roster.length) { alert('Save a roster first.'); return; }
     var who = els.printWhoSelect.value;
     var names = who ? [who] : visibleRoster();
     if (!names.length) { alert('Nothing to print — no students match the current Show filter.'); return; }
-    var cols = els.printColsSelect.value || '3';
-    els.printGrid.className = 'card-grid cols-' + cols;
-    els.printGrid.innerHTML = names.map(function (name) {
-      var checkedTypes = state.types.filter(function (t) { return state.assignments[assignKey(name, t.id)]; });
-      var items = checkedTypes.length
-        ? checkedTypes.map(function (t) { return '<li>' + escapeHtml(t.name) + '</li>'; }).join('')
-        : '<li>No accommodations selected</li>';
-      var note = state.notes[name] ? '<div class="note">' + escapeHtml(state.notes[name]) + '</div>' : '';
-      return '<div class="accom-card"><h3>' + escapeHtml(name) + '</h3><ul>' + items + '</ul>' + note + '</div>';
-    }).join('');
+    // Three rows to a page at every width: the kit's 2x3, 3x3 and 4x3 presets.
+    var preset = CARD_PRESETS[els.printColsSelect.value] || CARD_PRESETS['3'];
+    while (els.printArea.firstChild) els.printArea.removeChild(els.printArea.firstChild);
+    PrintKit.chunk(names, preset).forEach(function (group) {
+      var grid = el('div', 'pk-cards pk-page ' + PrintKit.PRESETS[preset].cls);
+      group.forEach(function (name) { grid.appendChild(buildCard(name)); });
+      els.printArea.appendChild(grid);
+    });
     window.print();
   });
 
