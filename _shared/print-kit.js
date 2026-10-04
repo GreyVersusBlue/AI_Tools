@@ -16,6 +16,7 @@
        The "print one / a class set / blanks" trio from a single template.
        `mode: 'one'` is one named sheet, `'set'` one per student, `'blank'` is
        `count` sheets with a write-in rule where the name would be.
+       `cut: true` draws the cut line between the two half sheets of a page.
 
      PrintKit.plan(), chunk(), inkClass(), pageCss(), PAPERS, PRESETS
        The pure parts of the above, which is what the Node suite tests.
@@ -211,7 +212,10 @@
       <section> carrying the sheet class for opts.sheet: 'page' (default),
       'half' or 'quarter'. opts.header / opts.footer (default true for a full
       page, false for the smaller sheets) add the kit's header and an
-      "N of M" footer. Returns the plan. */
+      "N of M" footer. opts.cut (half sheets only) puts `.pk-cut` on the upper
+      sheet of each pair, the 1st, 3rd, 5th: a line across the middle of the
+      page to cut along, and none along its foot. It goes by position, so a
+      half sheet that outgrows half a page keeps its line. Returns the plan. */
   function renderSet(container, template, opts) {
     opts = opts || {};
     var doc = container.ownerDocument;
@@ -220,6 +224,7 @@
     var chrome = kind === 'page';
     var wantHeader = opts.header === undefined ? chrome : !!opts.header;
     var wantFooter = opts.footer === undefined ? chrome : !!opts.footer;
+    var wantCut = !!opts.cut && kind === 'half';
 
     while (container.firstChild) container.removeChild(container.firstChild);
     container.classList.toggle('pk-quarters', kind === 'quarter');
@@ -228,6 +233,7 @@
       var section = doc.createElement('section');
       section.className = SHEETS[kind] + ' pk-sheet';
       if (sheet.blank) section.classList.add('pk-sheet-blank');
+      if (wantCut && sheet.n % 2 === 1) section.classList.add('pk-cut');
       if (wantHeader) {
         var head = doc.createElement('div');
         head.className = 'pk-header';

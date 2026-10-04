@@ -124,6 +124,17 @@ ok(grown.h > HALF + 100, `an overfull half sheet grows past half a page (${Math.
 ok(grown.scroll <= grown.client + 1 && grown.overflow === 'visible', 'and nothing in it is clipped');
 ok((await printed()).pages >= 3, 'so the run gains a page instead of losing the text');
 
+// The cut line (opts.cut): under the upper sheet of each pair, none along the foot of the page.
+const cutAt = () => page.evaluate(() => [...document.querySelectorAll('#out > section')].map((s, i) => s.classList.contains('pk-cut') ? i : -1).filter(i => i >= 0));
+await page.evaluate(() => PrintKit.renderSet(document.getElementById('out'), document.getElementById('sheetTpl'), { mode: 'blank', count: 5, sheet: 'half', cut: true }));
+eq(await cutAt(), [0, 2, 4], 'cut: true marks the 1st, 3rd and 5th half sheet');
+eq(await page.evaluate(() => document.querySelector('#out > section').className), 'pk-half pk-sheet pk-sheet-blank pk-cut', 'as a class beside the sheet classes');
+eq((await printed()).pages, 3, 'and the line costs no page: five half sheets are still three pages');
+await page.evaluate(() => PrintKit.renderSet(document.getElementById('out'), document.getElementById('sheetTpl'), { mode: 'blank', count: 4, sheet: 'half' }));
+eq(await cutAt(), [], 'no cut line unless it is asked for');
+await page.evaluate(() => PrintKit.renderSet(document.getElementById('out'), document.getElementById('sheetTpl'), { mode: 'blank', count: 3, sheet: 'page', cut: true }));
+eq(await cutAt(), [], 'and none on full pages, which are not cut');
+
 // ---- quarter sheets ------------------------------------------------------------------
 await page.evaluate(({ roster }) => PrintKit.renderSet(document.getElementById('out'), document.getElementById('sheetTpl'), { mode: 'set', roster, sheet: 'quarter' }), { roster: names(8) });
 const quarter = await page.evaluate(() => { const o = document.getElementById('out'), s = [...o.children].map(c => c.getBoundingClientRect());

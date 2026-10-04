@@ -84,7 +84,9 @@
     min-height: calc(var(--pk-area-h) / 2);
   }
 
-  /* A dashed cut guide on the trailing edge of a half or quarter sheet. */
+  /* A dashed cut guide on the trailing edge of a half or quarter sheet.
+     PrintKit.renderSet(..., { cut: true }) puts it on the upper half sheet of
+     each pair; on every half it would also rule the foot of each page. */
   .pk-cut { border-bottom: 1px dashed currentColor; }
   .pk-quarters > .pk-cut:nth-child(odd) { border-right: 1px dashed currentColor; }
 }

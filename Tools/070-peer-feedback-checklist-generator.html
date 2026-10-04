@@ -18,16 +18,26 @@
 <!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
      opting in here keeps a11y.js from putting its CSS-filter invert on top.
      The printed half-sheets are built into #printArea, which is paper.
-     Read ink-paper.css's header before copying this into another tool. -->
+     Read ink-paper.css's header before copying this into another tool.
+
+     Printing is the shared kit's (Path 7 P3, the second adopter, after 076):
+     _shared/print-area.css puts #printArea alone on the paper, and
+     _shared/print-kit.css + print-kit.js lay the checklists out as half
+     sheets (`PrintKit.renderSet`, mode 'blank', with its cut line). This page
+     has no print block of its own; what is left below is what a checklist
+     looks like. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   /* Path 5 P3. The warn tint pair is 001's (the reference adopter); it is the
      "this will not fit on half a sheet" chip, which is screen-only. */
@@ -83,11 +93,13 @@
     padding: .6rem .8rem; font-size: .82rem; margin-bottom: .8rem;
   }
 
-  #printArea { display: none; }
-  .half-sheet {
-    border: 1px dashed var(--line-strong); border-radius: 8px; padding: 1rem 1.2rem;
-    margin-bottom: 1rem;
-  }
+  /* A checklist is only ever seen on paper: #printArea is hidden on screen by
+     print-area.css. Its size, its page breaks and the cut line between two
+     checklists are print-kit.css's (.pk-half, .pk-cut), and .pk-ink-safe prints
+     the category headings, the names line and the comment rules in black for
+     the copier. No vertical margin here: two half sheets plus a margin each
+     are taller than the page, and every checklist would land on its own. */
+  .half-sheet { padding: 1rem 1.2rem; }
   .half-sheet h3 { margin: 0 0 .2rem; font-size: 1.15rem; }
   .half-sheet .names { font-size: .82rem; color: var(--muted); margin-bottom: .6rem; }
   .half-sheet .pf-cat { margin-bottom: .5rem; }
@@ -99,18 +111,13 @@
   .half-sheet .tri-legend { font-size: .74rem; color: var(--muted); margin: -.3rem 0 .5rem; }
   .half-sheet .comments-line { border-bottom: 1px solid var(--line-strong); display: block; height: 1.1rem; margin-top: .3rem; }
 
-  @media print {
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
-    .half-sheet { border: none; min-height: 47vh; page-break-inside: avoid; border-bottom: 1px dashed #999; }
-    .half-sheet:nth-child(2n) { page-break-after: always; border-bottom: none; }
-    .half-sheet.compact { font-size: .88em; }
-    .half-sheet.compact .pf-cat { margin-bottom: .32rem; }
-    .half-sheet.tight { font-size: .76em; }
-    .half-sheet.tight .pf-cat { margin-bottom: .2rem; }
-    .half-sheet.tight .comments-line { height: .8rem; }
-  }
+  /* A longer checklist is set smaller so it still fits half a page. One that
+     does not fit even then grows (the kit never clips) and takes a page. */
+  .half-sheet.compact { font-size: .88em; }
+  .half-sheet.compact .pf-cat { margin-bottom: .32rem; }
+  .half-sheet.tight { font-size: .76em; }
+  .half-sheet.tight .pf-cat { margin-bottom: .2rem; }
+  .half-sheet.tight .comments-line { height: .8rem; }
 </style>
 </head>
 <body>
@@ -167,7 +174,7 @@
   </div>
 </div>
 
-<div id="printArea"></div>
+<div id="printArea" class="pk-ink-safe"></div>
 
 <script>
 (function () {
@@ -217,11 +224,6 @@
   var state = { assignmentName: '', copyCount: 6, categories: [], ratingStyle: 'check' };
 
   function uid() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
-  function escapeHtml(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
   /** True when there was a saved checklist here — which is what tells an
@@ -370,32 +372,67 @@
   els.copyCount.addEventListener('input', function () { state.copyCount = parseInt(els.copyCount.value, 10) || 1; save(); });
   els.ratingStyle.addEventListener('change', function () { state.ratingStyle = els.ratingStyle.value === 'three' ? 'three' : 'check'; save(); });
 
-  function halfSheetHtml() {
-    var title = state.assignmentName.trim() ? escapeHtml(state.assignmentName.trim()) : 'Peer Feedback Checklist';
-    var three = state.ratingStyle === 'three';
-    var itemBoxes = three
-      ? '<span class="tri">Y<span class="box"></span>S<span class="box"></span>N<span class="box"></span></span>'
-      : '<span class="box"></span>';
-    var cats = state.categories.map(function (cat) {
-      var items = cat.items.map(function (item) {
-        return '<div class="pf-item">' + itemBoxes + escapeHtml(item.text) + '</div>';
-      }).join('');
-      return '<div class="pf-cat"><h4>' + escapeHtml(cat.name) + '</h4>' + items + '</div>';
-    }).join('');
-    var sizeClass = sizeClassFor(contentWeight());
-    return '<div class="half-sheet' + sizeClass + '"><h3>' + title + '</h3>' +
-      '<div class="names">Author: _____________________ &nbsp; Reviewer: _____________________</div>' +
-      (three ? '<div class="tri-legend">Mark one box per line: <b>Y</b> = yes &middot; <b>S</b> = somewhat &middot; <b>N</b> = not yet</div>' : '') +
-      cats + '<div class="pf-cat"><h4>Comments</h4><span class="comments-line"></span><span class="comments-line"></span></div>' +
-      '</div>';
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text) node.textContent = text;
+    return node;
   }
+
+  /** The box, or the three boxes, in front of one line. */
+  function itemBoxes(three) {
+    if (!three) return el('span', 'box');
+    var tri = el('span', 'tri');
+    ['Y', 'S', 'N'].forEach(function (letter) {
+      tri.appendChild(document.createTextNode(letter));
+      tri.appendChild(el('span', 'box'));
+    });
+    return tri;
+  }
+
+  /** One checklist, as PrintKit.renderSet()'s template: called once per copy. */
+  function buildSheet() {
+    var three = state.ratingStyle === 'three';
+    var sheet = el('div', 'half-sheet' + sizeClassFor(contentWeight()));
+    sheet.appendChild(el('h3', '', state.assignmentName.trim() || 'Peer Feedback Checklist'));
+    sheet.appendChild(el('div', 'names', 'Author: _____________________ \u00a0 Reviewer: _____________________'));
+    if (three) {
+      var legend = el('div', 'tri-legend');
+      legend.appendChild(document.createTextNode('Mark one box per line: '));
+      [['Y', ' = yes \u00b7 '], ['S', ' = somewhat \u00b7 '], ['N', ' = not yet']].forEach(function (pair) {
+        legend.appendChild(el('b', '', pair[0]));
+        legend.appendChild(document.createTextNode(pair[1]));
+      });
+      sheet.appendChild(legend);
+    }
+    state.categories.forEach(function (cat) {
+      var block = el('div', 'pf-cat');
+      block.appendChild(el('h4', '', cat.name));
+      cat.items.forEach(function (item) {
+        var line = el('div', 'pf-item');
+        line.appendChild(itemBoxes(three));
+        line.appendChild(document.createTextNode(item.text));
+        block.appendChild(line);
+      });
+      sheet.appendChild(block);
+    });
+    var comments = el('div', 'pf-cat');
+    comments.appendChild(el('h4', '', 'Comments'));
+    comments.appendChild(el('span', 'comments-line'));
+    comments.appendChild(el('span', 'comments-line'));
+    sheet.appendChild(comments);
+    return sheet;
+  }
+
+  // US Letter with half-inch margins, which is what print-kit.css's half sheet divides.
+  PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
 
   els.printBtn.addEventListener('click', function () {
     if (!state.categories.length) { alert('Load a template or add a category first.'); return; }
     var count = Math.max(1, Math.min(60, state.copyCount || 6));
-    var html = '';
-    for (var i = 0; i < count; i++) html += halfSheetHtml();
-    els.printArea.innerHTML = html;
+    // Two checklists to a page, the cut line under the upper one of each pair.
+    PrintKit.renderSet(els.printArea, buildSheet,
+      { mode: 'blank', count: count, sheet: 'half', cut: true, header: false, footer: false });
     window.print();
   });
 

@@ -236,11 +236,9 @@
     // prompts) grows and takes a page to itself: the kit never clips one.
     var oneUp = filledPrompts.length > 5;
     PrintKit.renderSet(els.printArea, function () { return buildSlip(filledPrompts); },
-      { mode: 'blank', count: count, sheet: oneUp ? 'page' : 'half', header: false, footer: false });
-    // The cut line goes under the upper slip of each pair, not along the foot of the page.
-    if (!oneUp) {
-      for (var i = 0; i < els.printArea.children.length; i += 2) els.printArea.children[i].classList.add('pk-cut');
-    }
+      // cut: the line goes under the upper slip of each pair, not along the foot of
+      // the page. The kit draws it for half sheets only, so a one-up slip has none.
+      { mode: 'blank', count: count, sheet: oneUp ? 'page' : 'half', cut: true, header: false, footer: false });
     window.print();
   });
 

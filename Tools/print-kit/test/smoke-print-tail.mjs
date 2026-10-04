@@ -131,6 +131,7 @@ const PAGES = [
   { file: '059-experiment-design-planner.html', prints: [{ click: '#printBtn' }] },
   { file: '060-fitness-skill-assessment-tracker.html', prints: [{ click: '#printBtn' }] },
   { file: '065-lab-report-template-builder.html', prints: [{ click: '#printBtn' }, { click: '#previewPrintBtn' }] },
+  { file: '070-peer-feedback-checklist-generator.html', prints: [{ click: '#printBtn' }] },   // since Path 7 P3: print-area.css + the print kit
   { file: '071-picture-prompt-generator.html', prints: [{ click: '#printBtn' }] },
   { file: '072-plot-diagram-builder.html', prints: [{ click: '#printBtn' }] },
   { file: '073-science-fair-project-tracker.html', prints: [{ click: '#printBtn' }] },
