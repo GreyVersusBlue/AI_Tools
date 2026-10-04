@@ -113,7 +113,7 @@ const PAGES = [
   { file: '033-ssr-log-tracker.html', prints: [{ click: 'Print class summary' }] },
   { file: '037-grade-distribution-visualizer.html', prints: [{ click: 'Print' }] },
   { file: '039-vocab-conjugation-drill.html', prints: [{ click: 'Print' }] },
-  { file: '040-vocab-flashcard-generator.html', prints: [{ click: 'Print alignment test page' }, { click: 'Print', before: prep040 }] },
+  { file: '040-vocab-flashcard-generator.html', prints: [{ click: 'Print alignment test page' }, { click: 'Print', before: prep040 }] },   // since Path 7 P3: print-area.css + the print kit
   { file: '041-formula-sheet-builder.html', prints: [{ click: 'Print' }] },
   { file: '042-certificate-award-maker.html', prints: [{ click: 'Print / Save as PDF' }] },   // since Path 7 P3: print-area.css + the print kit
   { file: '043-field-trip-permission-slip.html', prints: [{ click: 'Print' }, { click: 'Print missing list' }, { click: 'Print reminder slips' }, { click: 'Print chaperone groups' }] },   // since Path 7 P3: print-area.css + the print kit

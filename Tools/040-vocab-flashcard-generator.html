@@ -20,7 +20,15 @@
 <!-- Native dark comes from _shared/ink-paper.css's [data-theme="dark"] block;
      opting in here keeps a11y.js from putting its CSS-filter invert on top.
      The printable sheets stay white paper (`paper-sheet`); everything else
-     follows the tokens. Read ink-paper.css's header before copying this. -->
+     follows the tokens. Read ink-paper.css's header before copying this.
+     Printing is the shared kit's (Path 7 P3): _shared/print-area.css puts
+     #printArea alone on the paper, and _shared/print-kit.css + print-kit.js
+     lay the cards out (`PrintKit.renderCards`) and break the pages
+     (`.pk-page`). A card here has a size of this page's own (`pk-cards-own`):
+     an index-card preset is exact inches, a word-wall card is a share of a
+     9.5 in grid inside this page's 0.4 in inset, and a grid card is as tall
+     as its words. This page has no print rule of its own; the paper is
+     Letter with 0.2 in margins, from PrintKit.setPage() below. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="vocab-flashcard-generator/vfg-layout.js"></script>
@@ -31,9 +39,12 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   /* Path 5 P3. The info tint pair is 001's (the reference adopter); --desk is
      the table the printable sheet lies on, named the same way 015, 023 and 039
@@ -103,10 +114,22 @@
   }
   /* ---- cut lines & margin guide ---- */
   .page.guides { outline: 1px dashed #b7b5aa; outline-offset: -0.22in; }
-  .grid { display: grid; gap: 0.15in; }
+  /* The card grid is print-kit.css's (.pk-cards, built by PrintKit.renderCards
+     with { cols, perPage }), inside this page's own inset. The gap is this
+     page's, and so are the rows: every page is padded to a full grid, and its
+     rows are equal. The cards of an index-card preset are exact inches
+     (--vfg-card-w and -h, set on the grid); a word-wall page fills 9.5 in. */
+  .page { --pk-gap: 0.15in; }
+  .page > .pk-cards { grid-auto-rows: 1fr; }
+  .page > .pk-cards.exact-size {
+    grid-template-columns: repeat(var(--pk-cols), var(--vfg-card-w)); grid-auto-rows: var(--vfg-card-h);
+    justify-content: center;
+  }
+  .page > .pk-cards.wall-grid { min-height: 9.5in; }
+  .align-label { font-weight: 700; font-size: .8rem; margin-bottom: .15in; }
   .flash-card {
     border: 1px dashed #999; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; padding: 0.1in; overflow: hidden; break-inside: avoid;
+    text-align: center; padding: 0.1in; overflow: hidden;
   }
   .flash-card.guides, .wordwall-card.guides, .fold-card.guides { border: 1px solid #8b8a82; }
   .flash-card.blank { border-style: dotted; opacity: .3; }
@@ -190,17 +213,20 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
-  @media print {
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    /* What visibility hides still takes its height, and that height printed as
-       blank sheets after this one. Everything but the sheet leaves the flow. */
-    body > *:not(#printArea) { display: none !important; }
-    #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; }
-    #printArea .page { box-shadow: none; page-break-after: always; margin: 0; }
-    #printArea .page:last-child { page-break-after: auto; }
-    @page { size: letter portrait; margin: 0.2in; }
-  }
+  /* The printed sheet. #printArea is hidden on screen by print-area.css and is
+     white paper in print from either theme (.pk-paper); each .page in it is a
+     .pk-page, which is the page break. The ink is black from either theme too:
+     in dark, `paper-sheet` would put ink-paper.css's #1f2430 back on the page. */
+  #printArea .page { box-shadow: none; margin: 0; color: #000; }
+  /* A 3x5 index-card page is two 5 in rows and a gap, 10.15 in, and the paper
+     has 10.6 in. With the 0.4 in inset above and below, its lower edge ran on
+     to a second, blank sheet after every page (and a duplex printer put that
+     on the back of the fronts); the alignment test's label pushed the second
+     row there too. On paper such a page (`tight`, set in renderCardPages)
+     keeps half the inset, and the label sits in it instead of above the grid. */
+  #printArea .page.tight { padding-top: .2in; padding-bottom: .2in; position: relative; }
+  #printArea .page.tight.guides { outline-offset: -.12in; }
+  #printArea .page.tight > .align-label { position: absolute; top: 0; left: .4in; margin: 0; padding-right: .1in; background: #fff; }
 </style>
 </head>
 <body>
@@ -365,7 +391,7 @@
 
 </div>
 
-<div id="printArea" style="display:none;"></div>
+<div id="printArea" class="pk-paper"></div>
 
 <script>
 (function () {
@@ -377,7 +403,7 @@
    'flashOptions','wallOptions','quizOptions','wsOptions','cwOptions','bingoOptions','matchOptions',
    'flashCols','flashRows','cardSizePreset','flashLayout','wallPerPage','wallShowDef',
    'sortOrder','shuffleOrder','showGuides','bingoCount','bingoField',
-   'printBtn','alignTestBtn','alignTestHint','previewArea','previewNote','printNote','sheetView',
+   'printBtn','alignTestBtn','alignTestHint','previewArea','previewNote','printNote','sheetView','printArea',
    'shareBtn','shareNote'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -456,81 +482,91 @@
   // `paper-sheet` is what keeps a printable page white with dark ink in dark
   // mode (ink-paper.css restores the light tokens inside it). Every .page on
   // this tool comes through here, so this is the one place it has to be added.
-  function pageClass() { return guideClass('page paper-sheet'); }
+  // `pk-page` is the print kit's page break after each one but the last.
+  function pageClass() { return guideClass('page paper-sheet pk-page'); }
 
-  function flashCardHtml(item) {
-    if (!item) return '<div class="' + guideClass('flash-card blank') + '"></div>';
-    var pron = item.pronunciation ? '<div class="pron">' + escapeHtml(item.pronunciation) + '</div>' : '';
-    return '<div class="' + guideClass('flash-card') + '"><div class="term">' + escapeHtml(item.term) + '</div>' + pron + '</div>';
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = String(text);
+    return n;
   }
-  function defCardHtml(item) {
-    if (!item) return '<div class="' + guideClass('flash-card blank') + '"></div>';
+  function sized(n, rem) { n.style.fontSize = rem + 'rem'; return n; }
+
+  /* ---------- the cards ----------
+     One card is a node built with textContent. A mode's cards are described
+     once, by a *Spec() function ({ cards, cols, perPage, build }), and
+     renderCardPages() draws that through PrintKit.renderCards() for the live
+     preview and the printed sheet alike, so what you see is what prints. */
+  function frontCard(item) {
+    if (!item) return el('div', guideClass('flash-card blank'));
+    var card = el('div', guideClass('flash-card'));
+    card.appendChild(el('div', 'term', item.term));
+    if (item.pronunciation) card.appendChild(el('div', 'pron', item.pronunciation));
+    return card;
+  }
+  function defCard(item) {
+    if (!item) return el('div', guideClass('flash-card blank'));
     var perPage = state.flashCols * state.flashRows;
     var allowance = Math.max(15, Math.round(120 / Math.sqrt(perPage)));
-    var size = fitFontSizeRem(item.definition, 0.82, 0.48, allowance);
-    var posHtml = item.partOfSpeech ? '<div class="pos">' + escapeHtml(item.partOfSpeech) + '</div>' : '';
-    var exampleHtml = '';
-    if (item.example) {
-      var exampleSize = fitFontSizeRem(item.example, 0.62, 0.4, allowance);
-      exampleHtml = '<div class="example" style="font-size:' + exampleSize + 'rem;">' + escapeHtml(item.example) + '</div>';
-    }
-    return '<div class="' + guideClass('flash-card') + '">' + posHtml + '<div class="def" style="font-size:' + size + 'rem;">' + escapeHtml(item.definition) + '</div>' + exampleHtml + '</div>';
+    var card = el('div', guideClass('flash-card'));
+    if (item.partOfSpeech) card.appendChild(el('div', 'pos', item.partOfSpeech));
+    card.appendChild(sized(el('div', 'def', item.definition), fitFontSizeRem(item.definition, 0.82, 0.48, allowance)));
+    if (item.example) card.appendChild(sized(el('div', 'example', item.example), fitFontSizeRem(item.example, 0.62, 0.4, allowance)));
+    return card;
   }
 
-  function buildFlashPages(items) {
+  /** Front pages first, then the back (definition) pages, each back row
+      mirrored so it lines up when the front stack is flipped on the long edge.
+      Every page is padded to a full grid with blank cards. */
+  function flashSpec(items) {
     var cols = state.flashCols, rows = state.flashRows, perPage = cols * rows;
-    var preset = CARD_SIZE_PRESETS[state.cardSizePreset];
-    var gridStyle = preset
-      ? 'grid-template-columns:repeat(' + cols + ',' + preset.wIn + 'in);grid-template-rows:repeat(' + rows + ',' + preset.hIn + 'in);justify-content:center;align-content:center;'
-      : 'grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);';
-    var pages = VocabLayout.paginate(items, perPage);
     var fronts = [], backs = [];
-    pages.forEach(function (page) {
+    VocabLayout.paginate(items, perPage).forEach(function (page) {
       var padded = page.slice();
       while (padded.length < perPage) padded.push(null);
-      var mirrored = VocabLayout.mirrorPageRows(padded, cols);
-      fronts.push(
-        '<div class="' + pageClass() + '"><div class="grid" style="' + gridStyle + '">' + padded.map(flashCardHtml).join('') + '</div></div>'
-      );
-      backs.push(
-        '<div class="' + pageClass() + '"><div class="grid" style="' + gridStyle + '">' + mirrored.map(defCardHtml).join('') + '</div></div>'
-      );
+      padded.forEach(function (item) { fronts.push({ item: item }); });
+      VocabLayout.mirrorPageRows(padded, cols).forEach(function (item) { backs.push({ item: item, back: true }); });
     });
-    return { fronts: fronts, backs: backs, pageCount: pages.length };
+    return {
+      cards: fronts.concat(backs), cols: cols, perPage: perPage, exact: CARD_SIZE_PRESETS[state.cardSizePreset] || null,
+      build: function (c) { return c.back ? defCard(c.item) : frontCard(c.item); }
+    };
   }
 
   /** Foldable single-sided layout: term on top, definition rotated 180°
       underneath a fold line, so folding the card back along that line
       (a valley fold) puts the definition right-side up on the reverse —
       no duplex printing required. */
-  function foldCardHtml(item) {
-    if (!item) return '<div class="' + guideClass('fold-card blank') + '"></div>';
+  function foldCard(item) {
+    if (!item) return el('div', guideClass('fold-card blank'));
     var perPage = state.flashCols * state.flashRows;
     var allowance = Math.max(15, Math.round(120 / Math.sqrt(perPage)));
-    var pron = item.pronunciation ? '<div class="pron">' + escapeHtml(item.pronunciation) + '</div>' : '';
-    var pos = item.partOfSpeech ? '<div class="pos">' + escapeHtml(item.partOfSpeech) + '</div>' : '';
-    var defSize = fitFontSizeRem(item.definition, 0.78, 0.46, allowance);
-    var exampleHtml = item.example
-      ? '<div class="example" style="font-size:' + fitFontSizeRem(item.example, 0.6, 0.38, allowance) + 'rem;">' + escapeHtml(item.example) + '</div>'
-      : '';
-    return '<div class="' + guideClass('fold-card') + '">' +
-      '<div class="fold-half fold-term"><div class="term">' + escapeHtml(item.term) + '</div>' + pron + '</div>' +
-      '<div class="fold-line"></div>' +
-      '<div class="fold-half fold-def"><div class="fold-def-inner">' + pos +
-        '<div class="def" style="font-size:' + defSize + 'rem;">' + escapeHtml(item.definition) + '</div>' + exampleHtml +
-      '</div></div>' +
-    '</div>';
+    var card = el('div', guideClass('fold-card'));
+    var top = el('div', 'fold-half fold-term');
+    top.appendChild(el('div', 'term', item.term));
+    if (item.pronunciation) top.appendChild(el('div', 'pron', item.pronunciation));
+    var inner = el('div', 'fold-def-inner');
+    if (item.partOfSpeech) inner.appendChild(el('div', 'pos', item.partOfSpeech));
+    inner.appendChild(sized(el('div', 'def', item.definition), fitFontSizeRem(item.definition, 0.78, 0.46, allowance)));
+    if (item.example) inner.appendChild(sized(el('div', 'example', item.example), fitFontSizeRem(item.example, 0.6, 0.38, allowance)));
+    var bottom = el('div', 'fold-half fold-def');
+    bottom.appendChild(inner);
+    card.appendChild(top);
+    card.appendChild(el('div', 'fold-line'));
+    card.appendChild(bottom);
+    return card;
   }
 
-  function buildFoldPages(items) {
-    var cols = state.flashCols, rows = state.flashRows, perPage = cols * rows;
-    var pages = VocabLayout.paginate(items, perPage);
-    return pages.map(function (page) {
+  function foldSpec(items) {
+    var cols = state.flashCols, perPage = cols * state.flashRows;
+    var cards = [];
+    VocabLayout.paginate(items, perPage).forEach(function (page) {
       var padded = page.slice();
       while (padded.length < perPage) padded.push(null);
-      return '<div class="' + pageClass() + '"><div class="grid" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);">' +
-        padded.map(foldCardHtml).join('') + '</div></div>';
+      padded.forEach(function (item) { cards.push({ item: item }); });
     });
+    return { cards: cards, cols: cols, perPage: perPage, build: function (c) { return foldCard(c.item); } };
   }
 
   /** Alignment test page (P6): one numbered front page and one numbered
@@ -540,26 +576,23 @@
       before committing a whole class set. Reuses the same
       grid/mirror math as the real double-sided print, since a page that
       "tests alignment" but computes it differently would be worthless. */
-  function alignTestCardHtml(label) {
-    return '<div class="' + guideClass('flash-card') + '"><div class="term" style="font-size:1.6rem;">' + label + '</div></div>';
-  }
-
-  function buildAlignmentTestPages() {
-    var cols = state.flashCols, rows = state.flashRows, perPage = cols * rows;
-    var preset = CARD_SIZE_PRESETS[state.cardSizePreset];
-    var gridStyle = preset
-      ? 'grid-template-columns:repeat(' + cols + ',' + preset.wIn + 'in);grid-template-rows:repeat(' + rows + ',' + preset.hIn + 'in);justify-content:center;align-content:center;'
-      : 'grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);';
+  function alignSpec() {
+    var cols = state.flashCols, perPage = cols * state.flashRows;
     var labels = [];
     for (var i = 0; i < perPage; i++) labels.push(i + 1);
-    var mirrored = VocabLayout.mirrorPageRows(labels, cols);
-    var labelLine = '<div style="font-weight:700;font-size:.8rem;margin-bottom:.15in;">ALIGNMENT TEST';
-    return (
-      '<div class="' + pageClass() + '">' + labelLine + ' &mdash; FRONT (page 1 of 2)</div>' +
-        '<div class="grid" style="' + gridStyle + '">' + labels.map(alignTestCardHtml).join('') + '</div></div>' +
-      '<div class="' + pageClass() + '">' + labelLine + ' &mdash; BACK (page 2 of 2, flip along the long edge)</div>' +
-        '<div class="grid" style="' + gridStyle + '">' + mirrored.map(alignTestCardHtml).join('') + '</div></div>'
-    );
+    return {
+      cards: labels.concat(VocabLayout.mirrorPageRows(labels, cols)), cols: cols, perPage: perPage,
+      exact: CARD_SIZE_PRESETS[state.cardSizePreset] || null,
+      build: function (label) {
+        var card = el('div', guideClass('flash-card'));
+        card.appendChild(sized(el('div', 'term', label), 1.6));
+        return card;
+      },
+      label: function (pageIndex) {
+        return el('div', 'align-label', 'ALIGNMENT TEST — ' +
+          (pageIndex === 0 ? 'FRONT (page 1 of 2)' : 'BACK (page 2 of 2, flip along the long edge)'));
+      }
+    };
   }
 
   function syncAlignTestVisibility() {
@@ -568,41 +601,81 @@
     els.alignTestHint.style.display = show ? '' : 'none';
   }
 
-  function wallCardHtml(item) {
-    if (!item) return '<div class="' + guideClass('wordwall-card') + '"></div>';
-    var pronHtml = item.pronunciation ? '<div class="pron">' + escapeHtml(item.pronunciation) + '</div>' : '';
-    var defHtml = '', exampleHtml = '', posHtml = '';
+  function wallCard(item) {
+    var card = el('div', guideClass('wordwall-card'));
+    if (!item) return card;
+    card.appendChild(el('div', 'term', item.term));
+    if (item.pronunciation) card.appendChild(el('div', 'pron', item.pronunciation));
     if (state.wallShowDef && item.definition) {
       var allowance = state.wallPerPage === 1 ? 90 : (state.wallPerPage === 2 ? 60 : 32);
-      var size = fitFontSizeRem(item.definition, 1, 0.6, allowance);
-      posHtml = item.partOfSpeech ? '<div class="pos">' + escapeHtml(item.partOfSpeech) + '</div>' : '';
-      defHtml = '<div class="def" style="font-size:' + size + 'rem;">' + escapeHtml(item.definition) + '</div>';
-      if (item.example) {
-        var exampleSize = fitFontSizeRem(item.example, 0.75, 0.45, allowance);
-        exampleHtml = '<div class="example" style="font-size:' + exampleSize + 'rem;">' + escapeHtml(item.example) + '</div>';
-      }
+      if (item.partOfSpeech) card.appendChild(el('div', 'pos', item.partOfSpeech));
+      card.appendChild(sized(el('div', 'def', item.definition), fitFontSizeRem(item.definition, 1, 0.6, allowance)));
+      if (item.example) card.appendChild(sized(el('div', 'example', item.example), fitFontSizeRem(item.example, 0.75, 0.45, allowance)));
     }
-    return '<div class="' + guideClass('wordwall-card') + '"><div class="term">' + escapeHtml(item.term) + '</div>' + pronHtml + posHtml + defHtml + exampleHtml + '</div>';
+    return card;
   }
 
-  function buildWallPages(items) {
+  function wallSpec(items) {
     var perPage = state.wallPerPage;
-    var pages = VocabLayout.paginate(items, perPage);
-    var cols = perPage === 1 ? 1 : (perPage === 2 ? 1 : 2);
-    var rows = perPage === 1 ? 1 : (perPage === 2 ? 2 : 2);
-    return pages.map(function (page) {
+    var cards = [];
+    VocabLayout.paginate(items, perPage).forEach(function (page) {
       var padded = page.slice();
       while (padded.length < perPage) padded.push(null);
-      return '<div class="' + pageClass() + '"><div class="grid" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);min-height:9.5in;">' +
-        padded.map(wallCardHtml).join('') + '</div></div>';
+      padded.forEach(function (item) { cards.push({ item: item }); });
     });
+    return {
+      cards: cards, cols: perPage === 1 ? 1 : (perPage === 2 ? 1 : 2), perPage: perPage, wall: true,
+      build: function (c) { return wallCard(c.item); }
+    };
+  }
+
+  /** Which cards the current mode prints, or null for a mode that is not cards. */
+  function cardSpec(items) {
+    if (state.mode === 'flashcards') return state.flashLayout === 'fold' ? foldSpec(items) : flashSpec(items);
+    if (state.mode === 'wordwall') return wallSpec(items);
+    return null;
+  }
+
+  /** Draws a spec's pages into `container` (replacing what was there) and
+      returns how many there are. The kit makes one grid per page; each goes
+      inside this tool's own .page, which is the 0.4 in inset and the margin
+      guide, under the page's label if the spec has one. */
+  function renderCardPages(container, spec) {
+    PrintKit.renderCards(container, spec.cards, { cols: spec.cols, perPage: spec.perPage }, spec.build);
+    // Exact cards that leave no room for the whole inset on Letter at 0.2 in
+    // (10.6 in): the printed page trims it. Only the 3x5 preset is.
+    var rows = spec.perPage / spec.cols;
+    var tight = !!spec.exact && rows * spec.exact.hIn + (rows - 1) * 0.15 + 0.8 > 10.6;
+    Array.prototype.slice.call(container.children).forEach(function (grid, pageIndex) {
+      var page = el('div', pageClass() + (tight ? ' tight' : ''));
+      if (spec.exact) {
+        grid.classList.add('exact-size');
+        grid.style.setProperty('--vfg-card-w', spec.exact.wIn + 'in');
+        grid.style.setProperty('--vfg-card-h', spec.exact.hIn + 'in');
+      }
+      if (spec.wall) grid.classList.add('wall-grid');
+      container.replaceChild(page, grid);
+      if (spec.label) page.appendChild(spec.label(pageIndex));
+      page.appendChild(grid);
+    });
+    return container.children.length;
+  }
+
+  /** One page of a spec in the preview: `pick(pageCount)` says which. */
+  function previewCardPage(spec, pick) {
+    var all = document.createElement('div');
+    var count = renderCardPages(all, spec);
+    var page = all.children[pick(count)];
+    els.previewArea.textContent = '';
+    if (page) els.previewArea.appendChild(page);
+    return count;
   }
 
   /* ---------- more printables: word search, crossword, bingo, matching quiz ----------
      Each generator (VfgPrintables, vfg-printables.js) is pure logic with its own Node
      test suite; everything below is just turning its output into print-ready HTML,
      reusing the same .page/pageClass() wrapper the flashcard/word-wall pages use so
-     these get the same cut-line/margin-guide treatment and the same @media print rule. */
+     these get the same cut-line/margin-guide treatment and the same page break (.pk-page). */
 
   /** Plain-text explanation for a generator's `{ ok:false, reason, ... }` result —
       shared between the on-screen message and the Print-button guard so the two
@@ -795,6 +868,19 @@
     els.previewNote.textContent = items.length + ' word(s). Self-quiz mode is for on-screen use and isn’t part of the printed output.';
   }
 
+  /** The "Page 1, Page 2…" buttons over the preview. */
+  function pageButtons(count) {
+    for (var p = 0; p < count; p++) {
+      (function (idx) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'secondary';
+        b.textContent = 'Page ' + (idx + 1);
+        b.addEventListener('click', function () { currentPreviewIndex = idx; renderPreview(); });
+        els.sheetView.appendChild(b);
+      })(p);
+    }
+  }
+
   function renderPreview() {
     readFormIntoState();
     save();
@@ -813,36 +899,26 @@
     if (state.mode === 'quiz') {
       renderQuiz(items);
     } else if (state.mode === 'flashcards' && state.flashLayout === 'fold') {
-      var foldPages = buildFoldPages(items);
       els.printNote.style.display = '';
       els.printNote.textContent = 'Single-sided fold-over layout: the term prints above the fold, the definition ' +
         'prints upside-down below it. Fold each card back along the dashed line (valley fold) so the definition ' +
         'reads right-side up on the reverse — no duplex printer needed.';
-      currentPreviewIndex = Math.min(currentPreviewIndex, foldPages.length - 1);
-      foldPages.forEach(function (_, idx) {
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'secondary';
-        b.textContent = 'Page ' + (idx + 1);
-        b.addEventListener('click', function () { currentPreviewIndex = idx; renderPreview(); });
-        els.sheetView.appendChild(b);
+      var foldCount = previewCardPage(foldSpec(items), function (count) {
+        currentPreviewIndex = Math.min(currentPreviewIndex, count - 1);
+        return currentPreviewIndex;
       });
-      els.previewArea.innerHTML = foldPages[currentPreviewIndex] || '';
-      els.previewNote.textContent = items.length + ' words, ' + foldPages.length + ' page(s), single-sided (fold-over).';
+      pageButtons(foldCount);
+      els.previewNote.textContent = items.length + ' words, ' + foldCount + ' page(s), single-sided (fold-over).';
     } else if (state.mode === 'flashcards') {
-      var built = buildFlashPages(items);
       els.printNote.style.display = '';
       els.printNote.textContent = 'Printing produces all FRONT pages first, then all BACK (definition) pages, ' +
         'each row mirrored to line up if you flip the front stack over (long edge) and run it back through the printer.';
-      currentPreviewIndex = Math.min(currentPreviewIndex, built.pageCount - 1);
-      for (var p = 0; p < built.pageCount; p++) {
-        (function (idx) {
-          var b = document.createElement('button');
-          b.type = 'button'; b.className = 'secondary';
-          b.textContent = 'Page ' + (idx + 1);
-          b.addEventListener('click', function () { currentPreviewIndex = idx; renderPreview(); });
-          els.sheetView.appendChild(b);
-        })(p);
-      }
+      // The fronts come first and the backs after them, as many of each.
+      var perSide = previewCardPage(flashSpec(items), function (count) {
+        currentPreviewIndex = Math.min(currentPreviewIndex, count / 2 - 1);
+        return currentPreviewSide === 'front' ? currentPreviewIndex : count / 2 + currentPreviewIndex;
+      }) / 2;
+      pageButtons(perSide);
       var sideFront = document.createElement('button');
       sideFront.type = 'button'; sideFront.className = 'secondary';
       sideFront.textContent = currentPreviewSide === 'front' ? '[Front]' : 'Front';
@@ -853,22 +929,15 @@
       sideBack.addEventListener('click', function () { currentPreviewSide = 'back'; renderPreview(); });
       els.sheetView.appendChild(sideFront);
       els.sheetView.appendChild(sideBack);
-
-      els.previewArea.innerHTML = (currentPreviewSide === 'front' ? built.fronts[currentPreviewIndex] : built.backs[currentPreviewIndex]) || '';
-      els.previewNote.textContent = items.length + ' words, ' + built.pageCount + ' page(s) per side.';
+      els.previewNote.textContent = items.length + ' words, ' + perSide + ' page(s) per side.';
     } else if (state.mode === 'wordwall') {
       els.printNote.style.display = 'none';
-      var wallPages = buildWallPages(items);
-      currentPreviewIndex = Math.min(currentPreviewIndex, wallPages.length - 1);
-      wallPages.forEach(function (_, idx) {
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'secondary';
-        b.textContent = 'Page ' + (idx + 1);
-        b.addEventListener('click', function () { currentPreviewIndex = idx; renderPreview(); });
-        els.sheetView.appendChild(b);
+      var wallCount = previewCardPage(wallSpec(items), function (count) {
+        currentPreviewIndex = Math.min(currentPreviewIndex, count - 1);
+        return currentPreviewIndex;
       });
-      els.previewArea.innerHTML = wallPages[currentPreviewIndex] || '';
-      els.previewNote.textContent = items.length + ' words, ' + wallPages.length + ' page(s), single-sided.';
+      pageButtons(wallCount);
+      els.previewNote.textContent = items.length + ' words, ' + wallCount + ' page(s), single-sided.';
     } else if (state.mode === 'wordsearch') {
       els.printNote.style.display = 'none';
       var wsRes = generatePrintable('wordsearch', items);
@@ -954,15 +1023,15 @@
     }
   }
 
+  /** Builds the printed sheet of the current mode into #printArea. Flashcards
+      and word-wall cards go through the print kit; the four puzzle pages are
+      whole pages of their own, each a .pk-page. An empty list builds nothing. */
   function buildPrintArea() {
     var items = currentItems();
-    var html;
-    if (state.mode === 'flashcards' && state.flashLayout === 'fold') {
-      html = buildFoldPages(items).join('');
-    } else if (state.mode === 'flashcards') {
-      var built = buildFlashPages(items);
-      html = built.fronts.join('') + built.backs.join('');
-    } else if (state.mode === 'wordsearch') {
+    var spec = cardSpec(items);
+    if (spec) { renderCardPages(els.printArea, spec); return; }
+    var html = '';
+    if (state.mode === 'wordsearch') {
       var wsRes = generatePrintable('wordsearch', items);
       html = wsRes.ok ? (wordSearchPageHtml(wsRes, false) + wordSearchPageHtml(wsRes, true)) : '';
     } else if (state.mode === 'crossword') {
@@ -976,11 +1045,22 @@
     } else if (state.mode === 'matching') {
       var mqRes = generatePrintable('matching', items);
       html = mqRes.ok ? (matchingPageHtml(mqRes, false) + matchingPageHtml(mqRes, true)) : '';
-    } else {
-      html = buildWallPages(items).join('');
     }
-    document.getElementById('printArea').innerHTML = html;
+    els.printArea.innerHTML = html;
   }
+
+  /* Letter, portrait, 0.2 in: the margin this page has always printed with,
+     which the index-card presets need (two 4 in cards and the inset are 8.95 in
+     at the kit's half inch, wider than the paper allows). */
+  PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.2in' });
+
+  /* A button builds its sheet and prints it. Ctrl+P presses no button, so
+     `beforeprint` builds the current mode's sheet then (it used to print an
+     empty page); `sheetBuilt` keeps it from rebuilding, and reshuffling, a
+     sheet a button has just made, and from replacing the alignment test. */
+  var sheetBuilt = false;
+  window.addEventListener('beforeprint', function () { if (!sheetBuilt && state) buildPrintArea(); });
+  window.addEventListener('afterprint', function () { sheetBuilt = false; });
 
   /* ---------- lifecycle ---------- */
   function newList(name) {
@@ -1320,10 +1400,12 @@
       return;
     }
     buildPrintArea();
+    sheetBuilt = true;
     window.print();
   });
   els.alignTestBtn.addEventListener('click', function () {
-    document.getElementById('printArea').innerHTML = buildAlignmentTestPages();
+    renderCardPages(els.printArea, alignSpec());
+    sheetBuilt = true;
     window.print();
   });
 
