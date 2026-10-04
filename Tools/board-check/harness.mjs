@@ -17,6 +17,10 @@
 //                                      workers are blocked unless opts passes
 //                                      serviceWorkers: 'allow'.
 //   settle(page, ms)                   wait for timers/animation to coalesce
+//   downloadText(page, trigger, opts)  trigger a download in the page and
+//                                      resolve to the text of the file it
+//                                      would have saved, when that text has
+//                                      arrived; throws with a reason if not
 //   a11yScan(page, opts)               run axe-core in the page; resolves to
 //                                      the violations at or above opts.impact
 //                                      ('serious' by default), each with the
@@ -227,6 +231,70 @@ export async function prepPage(browser, base, { width, height, dsf = 1, mobile =
 
 /** Let timers, autosave debounces and animation frames coalesce. */
 export const settle = (page, ms = 200) => page.waitForTimeout(ms);
+
+/* ── downloads ─────────────────────────────────────────────────────────── */
+
+/**
+ * Trigger a download in the page and resolve to the text of the file it would
+ * have saved: the first Blob the page hands to URL.createObjectURL after the
+ * trigger.
+ *   trigger       a CSS selector to click, or { call: 'name' } to call
+ *                 window[name]() instead.
+ *   opts.timeout  how long to wait for the text, 15 s by default. The promise
+ *                 resolves the moment the text arrives, so this is only how
+ *                 long a broken download takes to say so.
+ *   opts.what     what to call the download in the failure message.
+ * Throws an Error naming the reason: the trigger matched nothing or threw, no
+ * Blob was made, the text never came, or blob.text() rejected.
+ *
+ * Eight suites used to patch createObjectURL themselves and read the text
+ * after a fixed 200 to 400 ms; on a slow CI runner blob.text() had not
+ * resolved and the null it left failed lines later as "Cannot read properties
+ * of null" (smoke-share-rollout, PR #334). Nothing here assumes the Blob is
+ * made inside the click: the real createObjectURL is put back when the Blob
+ * arrives, when the trigger throws and when the wait runs out, whichever is
+ * first, so a page that builds its file after an await is read too.
+ */
+export async function downloadText(page, trigger, { timeout = 15000, what = 'the download' } = {}) {
+  const label = typeof trigger === 'string' ? trigger : `${trigger.call}()`;
+  const got = await page.evaluate(({ trigger, timeout }) => new Promise((resolve) => {
+    const realCreate = URL.createObjectURL;
+    let made = false;
+    let done = false;
+    const finish = (result) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      if (URL.createObjectURL === patched) URL.createObjectURL = realCreate;
+      resolve(result);
+    };
+    const patched = (blob) => {
+      if (!made && blob instanceof Blob) {
+        made = true;
+        URL.createObjectURL = realCreate;
+        blob.text().then(text => finish({ text }), e => finish({ error: 'blob.text() rejected: ' + e }));
+      }
+      return realCreate.call(URL, blob);
+    };
+    const timer = setTimeout(() => finish({
+      error: (made ? 'its text had not arrived after ' : 'the page had made no file after ') + timeout + ' ms',
+    }), timeout);
+    URL.createObjectURL = patched;
+    try {
+      if (typeof trigger === 'string') {
+        const el = document.querySelector(trigger);
+        if (!el) { finish({ error: 'nothing matches ' + trigger }); return; }
+        el.click();
+      } else {
+        window[trigger.call]();
+      }
+    } catch (e) {
+      finish({ error: 'the trigger threw: ' + e });
+    }
+  }), { trigger, timeout });
+  if (got.error) throw new Error(`${what} (${label}) could not be read: ${got.error}`);
+  return got.text;
+}
 
 /* ── accessibility ─────────────────────────────────────────────────────── */
 

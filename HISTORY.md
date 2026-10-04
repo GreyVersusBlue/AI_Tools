@@ -9,6 +9,54 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Eight suites read a download through one `harness.mjs` helper, not after a fixed wait (2026-10-03, AI-34 follow-up 2, test only, no `CACHE_VERSION` change)
+
+The entry below fixed a race in `smoke-share-rollout.mjs` and listed the same line in six other
+suites: patch `URL.createObjectURL`, click, read `blob.text()`'s result after a fixed 200 to
+400 ms. This moves all of them, and the rollout suite, onto one helper.
+
+- **The helper.** `downloadText(page, trigger, { timeout, what })` in
+  `Tools/board-check/harness.mjs`. `trigger` is a selector to click or `{ call: 'name' }` for
+  `window[name]()`. It resolves to the text of the first Blob the page hands to
+  `URL.createObjectURL`, when that text arrives. After 15 s it throws a sentence that names the
+  download and says whether nothing matched the selector, the trigger threw, the page made no
+  file, the text never came, or `blob.text()` rejected. The real `createObjectURL` is put back
+  when the Blob arrives, when the trigger throws and when the wait runs out.
+- **Why it does not restore in a `finally` after the click, as f4b2e67 did.** The helper does
+  not assume the Blob is made inside the click, so a page that reads IndexedDB before it builds
+  its file would still be read. None was found that does: a probe on `seating-chart`'s
+  `smoke-share.mjs` and `smoke-photos.mjs` and escape-room's `smoke-images.mjs` showed the Blob
+  made inside the click task in all three. The other five were not probed.
+- **Moved onto it (eight).** `smoke-share-rollout.mjs`; the six the entry below named
+  (`bracket-tournament-generator`, `rubric-builder`, `class-roster-hub` and `seating-chart`'s
+  `smoke-share.mjs`, `escape-room-builder`'s `smoke-images.mjs`, `schedule-visualizer`'s
+  `smoke-trace-image.mjs`); and a seventh copy that list missed, `seating-chart`'s
+  `smoke-photos.mjs` (250 ms), found by grepping `Tools/*/test` for `createObjectURL`.
+- **Shown, not argued.** Scratch copies with `Blob.prototype.text` delayed by one second. The
+  old code fails in all six tried: `Cannot read properties of null (reading 'aplp')` in the four
+  `smoke-share.mjs` suites, `(reading 'state')` in `smoke-photos.mjs`, and three failed
+  assertions in escape-room's `smoke-images.mjs`. The new code passes all six (36, 34, 32, 36,
+  39 and 56 assertions). A copy whose text never arrives fails with `the Download row's file
+  (.share-sheet button[data-share="download"]) could not be read: its text had not arrived after
+  2000 ms`; a wrong selector fails with `nothing matches …`. `schedule-visualizer`'s suite was
+  not run under the delay; it passes undelayed. The copies were scratch and are not in the tree.
+- **Other `createObjectURL` patches in the test tree, left alone, and why.** Five suites
+  (`dbq-source-packet-builder` and `primary-source-analysis-generator`'s `smoke-images.mjs`,
+  `formula-sheet-builder`'s `smoke-diagrams.mjs`, `review-game-board`'s
+  `smoke-clue-image-store.mjs`, `timeline-builder`'s `smoke-photos.mjs`) share a `nextDownload`
+  that already resolves when the text arrives; its 3 s limit resolves `null` instead of naming a
+  reason, and it filters on `application/json`, which the helper does not do. Moving them is a
+  tidy-up, not a race. `fitness-skill-assessment-tracker`'s `smoke-sort.mjs` and
+  `timeline-builder`'s `smoke-share.mjs` capture the Blob and `await` its text. Neither has a
+  timer.
+- **Found and not fixed.** With the delay left on for the whole of `seating-chart`'s
+  `smoke-photos.mjs`, section 5 (Open file) fails: its `waitForFunction` asks for a saved state
+  that names Period 3 and holds no `data:image`, which is already true before the file is read,
+  so it does not wait for the import. With the delay taken off after the download the suite
+  passes 39 of 39. It has not failed in CI that anyone recorded.
+- **CI cost.** A `harness.mjs` edit selects every suite, so this PR's scoped job is the full
+  pass.
+
 ## The share rollout suite waits for the downloaded file, not for 250 ms (2026-10-03, AI-34 follow-up, test only, no `CACHE_VERSION` change)
 
 `Tools/share/test/smoke-share-rollout.mjs` turned wave PR #334's CI red once and went green on

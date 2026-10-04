@@ -24,7 +24,7 @@
 //
 // Exits 1 on any failure. Every name here is invented.
 
-import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
+import { serve, launch, prepPage, settle, downloadText, a11yScan } from '../../board-check/harness.mjs';
 
 const PORT = 8232;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -154,13 +154,7 @@ const describedBy = await big.evaluate(() =>
 ok(describedBy && describedBy.length > 0, 'the greyed row points at that reason for a screen reader');
 
 /* ── 4. the download is the whole bracket, in the shared envelope ───────── */
-const file = await big.evaluate(() => {
-  let text = null;
-  const realCreate = URL.createObjectURL;
-  URL.createObjectURL = (blob) => { blob.text().then(t => { text = t; }); return realCreate.call(URL, blob); };
-  document.querySelector('.share-sheet button[data-share="download"]').click();
-  return new Promise(r => setTimeout(() => { URL.createObjectURL = realCreate; r(text); }, 200));
-});
+const file = await downloadText(big, '.share-sheet button[data-share="download"]', { what: "the Download row's file" });
 const parsed = JSON.parse(file);
 eq(parsed.aplp.tool, 'bracket-tournament-generator', 'the file says which tool it belongs to');
 eq(parsed.aplp.param, 'bracket', 'and which parameter it is a payload for');

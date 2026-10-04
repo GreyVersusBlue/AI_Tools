@@ -31,7 +31,7 @@
 //
 // No console errors, ever. Exits 1 on any failure. Every name is invented.
 
-import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
+import { serve, launch, prepPage, settle, downloadText, a11yScan } from '../../board-check/harness.mjs';
 
 const PORT = 8239;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -194,13 +194,7 @@ await page.click('#shareBtn');
 await page.waitForSelector('.share-sheet', { timeout: 3000 });
 const note = await page.textContent('.share-sheet');
 ok(/3 images are left out of the link/.test(note), 'the sheet still counts the images it strips from the link: ' + JSON.stringify(note.slice(0, 400)));
-const exported = await page.evaluate(() => {
-  let text = null;
-  const realCreate = URL.createObjectURL;
-  URL.createObjectURL = (blob) => { blob.text().then(t => { text = t; }); return realCreate.call(URL, blob); };
-  document.querySelector('.share-sheet [data-share="download"]').click();
-  return new Promise(r => setTimeout(() => { URL.createObjectURL = realCreate; r(text); }, 300));
-});
+const exported = await downloadText(page, '.share-sheet [data-share="download"]', { what: "the Download row's file" });
 ok(exported && !exported.includes('idb:'), 'the downloaded file carries no idb: reference');
 const fileState = exported ? JSON.parse(exported).state : {};
 eq(fileState.stations && fileState.stations[0].image, RED, 'it carries the migrated image byte for byte');

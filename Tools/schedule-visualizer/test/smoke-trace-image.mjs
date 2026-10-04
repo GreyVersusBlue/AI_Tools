@@ -30,7 +30,7 @@
 // No console errors, ever. Exits 1 on any failure. Every name is invented.
 
 /* global serializeFullProject, saveSnapshot, restoreSnapshot -- page globals read inside page.evaluate() */
-import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
+import { serve, launch, prepPage, settle, downloadText, a11yScan } from '../../board-check/harness.mjs';
 
 const PORT = 8457;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -94,13 +94,8 @@ const canvasPixel = (p = page) => p.evaluate(() => {
   return Array.from(c.getContext('2d').getImageData(Math.round(10 * dpr), Math.round(10 * dpr), 1, 1).data);
 });
 /* Capture what a download link would have saved. */
-const captureDownload = (p, trigger) => p.evaluate(trigger => {
-  let text = null;
-  const real = URL.createObjectURL;
-  URL.createObjectURL = (blob) => { blob.text().then(t => { text = t; }); return real.call(URL, blob); };
-  if (trigger.startsWith('#')) document.querySelector(trigger).click(); else window[trigger]();
-  return new Promise(r => setTimeout(() => { URL.createObjectURL = real; r(text); }, 400));
-}, trigger);
+const captureDownload = (p, trigger) =>
+  downloadText(p, trigger.startsWith('#') ? trigger : { call: trigger }, { what: 'the exported file' });
 
 console.log('School Layout Visualizer — trace images in the media store');
 

@@ -22,7 +22,7 @@
 //
 // No console errors, ever. Exits 1 on any failure. Every name is invented.
 
-import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
+import { serve, launch, prepPage, settle, downloadText } from '../../board-check/harness.mjs';
 
 const PORT = 8238;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -121,13 +121,7 @@ eq((await records(page)).length, 2, 'the store now holds two records');
 ok(/^data:image\/jpeg/.test(await deskSrc(page, 'f1') || ''), 'the desk shows the downscaled JPEG');
 
 /* ── 4. Save to file is portable ───────────────────────────────────────── */
-const exported = await page.evaluate(() => {
-  let text = null;
-  const realCreate = URL.createObjectURL;
-  URL.createObjectURL = (blob) => { blob.text().then(t => { text = t; }); return realCreate.call(URL, blob); };
-  document.querySelector('#saveBar [data-gvb="export"]').click();
-  return new Promise(r => setTimeout(() => { URL.createObjectURL = realCreate; r(text); }, 250));
-});
+const exported = await downloadText(page, '#saveBar [data-gvb="export"]', { what: 'the Save to file download' });
 ok(exported && !exported.includes('idb:'), 'the saved file carries no idb: reference');
 const file = JSON.parse(exported);
 const fileState = file.state || file.data || file;
