@@ -183,6 +183,9 @@
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
+    /* What visibility hides still takes its height, and that height printed as
+       blank sheets after this one. Everything but the sheet leaves the flow. */
+    body > *:not(#printArea) { display: none !important; }
     #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; }
     #printArea .sheet { box-shadow: none; }
     .print-page-grid { display: grid; width: 8.5in; height: 11in; }

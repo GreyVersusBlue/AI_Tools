@@ -250,6 +250,9 @@
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
+    /* What visibility hides still takes its height, and that height printed as
+       blank sheets after this one. Everything but the sheet leaves the flow. */
+    body > *:not(#printArea) { display: none !important; }
     #printArea { display: block; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0.5in; }
     @page { size: letter portrait; margin: 0.4in; }
     #printArea .dot-stage-box { position: relative; height: 3in; max-width: 5in; margin: 0 auto 1.2rem; }

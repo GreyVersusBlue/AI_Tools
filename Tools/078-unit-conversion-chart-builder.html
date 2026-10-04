@@ -84,6 +84,9 @@
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
+    /* What visibility hides still takes its height, and that height printed as
+       blank sheets after this one. Everything but the sheet leaves the flow. */
+    body > *:not(#printArea) { display: none !important; }
     #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
     .print-title { font-size: 1.3rem; margin: 0 0 .8rem; text-align: center; }
     .sheet-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 2rem; }

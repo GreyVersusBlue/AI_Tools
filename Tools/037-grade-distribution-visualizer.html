@@ -168,6 +168,9 @@
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
+    /* What visibility hides still takes its height, and that height printed as
+       blank sheets after this one. Everything but the sheet leaves the flow. */
+    body > *:not(.wrap), .wrap > *:not(.layout), .layout > *:not(#printArea) { display: none !important; }
     /* The copy/download buttons under each chart sit inside the print area. */
     #printArea .chart-dl-row { display: none; }
     #printArea {

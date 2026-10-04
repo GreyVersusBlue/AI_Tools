@@ -10,7 +10,10 @@
      (a) has an element with id="printArea", and
      (b) has no #printArea print rules of its own.
    `body * { visibility: hidden }` blanks the whole page and only #printArea
-   comes back, so a tool without that element prints a blank sheet. A tool
+   comes back, so a tool without that element prints a blank sheet. Since v229
+   everything else in <body> is also taken out of the flow, which is why
+   #printArea must be a direct child of <body>: nested in a wrapper, it would
+   go with the wrapper and the sheet would be blank. A tool
    with its own @media print block should keep it inline and skip this file —
    see the Phase 4 notes in REFACTOR_PLAN.md for which tools are which.
 
@@ -26,4 +29,7 @@
   body * { visibility: hidden; }
   #printArea, #printArea * { visibility: visible; }
   #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+  /* What visibility hides still takes its height, and that height printed as
+     blank sheets after this one. Everything but the sheet leaves the flow. */
+  body > *:not(#printArea) { display: none !important; }
 }
