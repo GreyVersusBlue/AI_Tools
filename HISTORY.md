@@ -9,6 +9,84 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P3, increment 8: 040 adopts the print kit with one card function for preview and paper; the 3x5 index-card preset had always printed a blank sheet after every page (2026-10-04, AI-13, `CACHE_VERSION` v237)
+
+Audit entry AI-13, rank 6 (2+). Eighth increment of P3: the third of the card-grid tools after 074 and 051, 040
+(vocabulary flashcard and word-wall generator), by the recipe. The row stays, rewritten: four card-grid tools are
+left (064 018 017 016). P4 and P5 untouched. **No `_shared/` file changed; the kit did not change.**
+
+- **Both print buttons moved.** Print has seven faces (double-sided flashcards, fold-over flashcards, word-wall
+  cards, word search, crossword, bingo, matching quiz; self-quiz does not print) and "Print alignment test page" is
+  the second button. The three card faces and the alignment test go through `PrintKit.renderCards()`; the four
+  puzzle pages are whole pages, not cards, and each is a `.pk-page`. Nothing is left on the old path.
+- **Which kind of card: a size of its own, for every face, for three different reasons.** Read off 040's CSS and
+  its inline grid styles. *An index-card preset* was `repeat(2, 3in)` by `repeat(2, 5in)` (or 4 x 6 in): exact
+  inches. *A word-wall card* was `1fr` of a grid with `min-height: 9.5in`, one, two or four to a page, inside the
+  page's own 0.4 in padding: a share, but of the tool's height and not the kit's printable page, and the kit has no
+  1x1 or 1x2 preset; its `2x2` on a page with that inset is 11.36 in. *A grid or fold-over card* had `1fr` rows in a
+  grid with no height, so it is as tall as the tallest card's words. None is a kit preset without changing the
+  card, so all pass `{ cols, perPage }` (`pk-cards-own`). From the kit: the grid, the columns, the cut into pages,
+  `break-inside`, `.pk-page`, `setPage()`, `.pk-paper`. Kept in the page: `.page` (the 0.4 in inset and the dashed
+  margin guide) round each grid, the 0.15 in gap (`--pk-gap` on `.page`), `grid-auto-rows: 1fr`, the exact sizes
+  (`--vfg-card-w` and `-h` on the grid, class `exact-size`) and the 9.5 in (`wall-grid`).
+- **The page frame is a loop after `renderCards()`.** The kit appends one `div.pk-cards.pk-page` per page straight
+  into the container; 040 then puts each inside a `div.page.paper-sheet.pk-page` (and the alignment label before
+  it). I considered making the grid element the page itself (padding on the grid): it needs the 9.5 in turned into
+  10.3 in for border-box and the label made a grid item, and the wrapper reproduces the old DOM exactly, so the
+  wrapper won. It is the first use of `perPage` on an own grid, and the kit's missing per-page hook, done by hand.
+- **`@page` margin stays 0.2 in**, passed to `setPage()`. Half an inch, as 074 and 051 took, cannot hold two 4 in
+  cards and the inset, and the task said not to bend the tool to the kit.
+- **One function for the preview and the paper.** The preview used the same HTML strings as the print. Each face
+  is now a spec (`flashSpec`, `foldSpec`, `wallSpec`, `alignSpec`: cards, cols, perPage, a `build` that returns a
+  node made with `textContent`) and `renderCardPages()` draws a spec into any container; the preview draws into a
+  detached `div` and shows one page of it. Five string builders and three `innerHTML` sinks went (inline-sinks 14
+  to 10; the puzzle pages are the ten). The duplex order is unchanged: all fronts, then all backs, each back row
+  mirrored, a short page padded with blank cards.
+- **Ctrl+P.** `beforeprint` builds the current mode's sheet (it printed one empty page). A flag set by either
+  button and cleared on `afterprint` keeps `beforeprint` from replacing the alignment test with the cards, and from
+  reshuffling a shuffled list the button has just laid out. There is no canvas on this sheet, so 051's trap does
+  not apply.
+- **Measured first, old against new.** The old page was served from `git show origin/main:` through
+  `page.route()`, 778 px wide (8.5 in less two 0.2 in margins), with its own `@page` in `page.pdf({
+  preferCSSPageSize })`. 44 states (12 card states at 3 words, at 10 with one long, at 40; 4 puzzles at 9 and at 24
+  words), light and dark: page count, every card's left, top, width and height, every child of `.page`, the visible
+  children of `body`, and Chromium's PDF page count. All equal in 82 of 88, and the six that differ are the same
+  two things in both themes, both from `.pk-card`: with `min-width: 0` the two columns of a four-up word-wall page
+  are 343.4 px each where a long word had made them 518 and 168; with `overflow-wrap: anywhere` a 29-letter word
+  on a three-across flashcard wraps (row 46.7 to 72.2 px) where `overflow: hidden` had cut it off. Raster
+  (`pdftoppm -r 48 -gray`, backgrounds printed, text colour held equal, taken before the 3x5 fix): dark identical in 41 of 44, the three being those; light
+  differs only where the old page printed the page tint of `body` under a short page (grey 250 to 255) and by
+  at most 3 levels on antialiased edges.
+- **A fix that rode along, my call: the 3x5 index-card preset printed a blank sheet after every page.** The
+  comparison showed 2 pages and 4 PDF sheets on the old page, and 20 and 40 for forty words. Two 5 in rows, the
+  0.15 in gap and the 0.4 in inset above and below are 10.95 in; Letter at 0.2 in has 10.6 in. The cards fit and
+  the inset's lower edge did not, so every page ran on to a second sheet with nothing on it (`pdftotext` per
+  page), and a duplex printer would put that blank on the back of the fronts, which defeats the layout the preset
+  is for. The alignment test, with its label above the grid, lost its second row to the next sheet. Now a page of
+  exact cards that cannot keep the whole inset (`tight`; only 3x5 is) prints with 0.2 in above and below, its
+  guide at 0.12 in, and the alignment label inside that strip: one sheet per page, 2 for the alignment test. The
+  preview is unchanged; the cards move up 0.2 in on paper and stay centred across. **Reversible** by deleting three
+  rules and the class. It has presumably been like this since the preset was added (not traced in `git log`).
+- **Visible changes on paper:** text `#000` in both themes (was `#1f2430`; `paper-sheet` would have put it back in
+  dark, so the page says `color: #000` on the printed `.page`); white under a short page; the three things above.
+  Muted greys, the dashed borders and the puzzle fills are as they were.
+- **Suite:** `Tools/vocab-flashcard-generator/test/smoke-print.mjs` (`npm run test:vocab-print`, port 8475,
+  1,806 assertions): the three shared files and no print rule in the page; 12 card states by three lists, light
+  and dark (pages, grids, card sizes, order, mirroring, padding, preview equals the first printed page, ink, paper,
+  PDF count, one sheet to a page); the two long-word improvements; typed markup stays text; the four puzzles;
+  Ctrl+P, the alignment test surviving `beforeprint`, a change of mode; an empty list refused in both card modes
+  (P2's eight assertions on that are in `smoke-print-tail.mjs`'s prep and untouched). 040's row in
+  `smoke-print-tail.mjs` passes unchanged but for a comment.
+- **What I got wrong on the way.** My first static assertion forbade `break-inside` and `.grid` anywhere in the
+  page and matched the puzzle lists and `res.grid[r][c]`. I edited the page for the 3x5 fix while the background
+  suite run was on its first folder, and that run's last 040 state failed against the half-updated suite (PDF 2,
+  want 4); the folder was run again afterwards. The made-up words in my first comparison had spaces and digits, so
+  word search and crossword refused them and I compared two empty sheets until I looked at the page count of 0.
+- **Not verified.** Nothing was printed on paper; no index-card stock was tried, and the 0.2 in trim on the 3x5
+  page is checked only as "one PDF sheet per page" and by the card sizes. The full `npm test` was not run (no
+  `_shared/` file changed). `shuffle` on, `sortOrder`, and bingo's `definition` field were not in the comparison.
+  Firefox and Safari were not tried: the 10.6 in arithmetic is Chromium's.
+
 ## Path 7 P3, increment 7: 051 adopts the print kit at its own label size; a canvas must not be drawn on `beforeprint`; its QR codes decode now (2026-10-04, AI-13, `CACHE_VERSION` v236)
 
 Audit entry AI-13, rank 6 (2+). Seventh increment of P3: the second of the card-grid tools, 051 (classroom label
