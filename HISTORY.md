@@ -9,6 +9,87 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P3, increment 2: 070 and 077 adopt the print kit, and the kit gains a cut line and a 4x3 preset (2026-10-04, AI-13, `CACHE_VERSION` v231)
+
+Audit entry AI-13, rank 6 (2+). Second increment of P3: the next two tools in the order increment 1 left, by its
+recipe. The row stays, rewritten. P4 and P5 untouched.
+
+- **070 (peer feedback checklists) is 076 over again.** Its `@media print` block and `#printArea { display: none }`
+  are deleted; it links `print-area.css`, `print-kit.css` and `print-kit.js`; "Print checklists" calls
+  `PrintKit.renderSet(printArea, buildSheet, { mode: 'blank', count, sheet: 'half', cut: true })`. The checklist is
+  built with `textContent` (`halfSheetHtml()` and `escapeHtml()` are gone, inline sinks 2 to 1). The `.compact` and
+  `.tight` type sizes for a long checklist were inside the print block; they are plain rules now, since the sheet is
+  never on screen. The `.half-sheet` lost its `margin-bottom`, as the recipe says. `#printArea` is `.pk-ink-safe`.
+- **077 (testing accommodation cards) is not a class-set tool, whatever the row said.** It prints one small card per
+  student, 2, 3 or 4 across. That makes it **the first adopter of the kit's card grids**, and it does not call
+  `renderSet` at all: "Print cards" empties `#printArea` and appends one `.pk-cards.pk-page` grid per
+  `PrintKit.chunk(names, preset)` group, each card a `.pk-card`. It already linked `print-area.css` and had no print
+  block; what it gave up is its own grid (`.card-grid.cols-N`), the 2.6 in card `min-height` and `break-inside`.
+  The card is built with `textContent` (inline sinks 6 to 5). `#printGrid` is gone, so `smoke-filter.mjs` reads
+  `#printArea .accom-card` (three selectors; no assertion changed).
+- **The kit changed twice, each time because an adopter needed it.**
+  - `renderSet(..., { cut: true })` puts `.pk-cut` on the 1st, 3rd, 5th half sheet. Increment 1 recorded "no per-sheet
+    hook" and said a second adopter needing the same thing was the reason to move it; 070 was that adopter. 076's loop
+    is deleted and it passes `cut: true`; its suite's cut-line assertions did not change and pass. Half sheets only:
+    on quarter sheets `.pk-cut` also rules the right-hand edge, and nobody has needed those.
+  - A seventh card preset, `4x3` (`.pk-cards-4x3`, 12 to a page), for 077's four across. The kit had 2 and 3 across
+    at three rows and nothing at 4.
+- **Printed output, old against new, in Chromium's PDF.** Measured on the old pages first (the old page is served
+  from `git show origin/main:` through a `page.route()`, so the tree is not touched), then held by the suites.
+  - *070:* first visit 3 pages; 6 copies of 9 lines 3; 5 copies of 6 lines 3; 4 copies with three boxes 2; 4 copies
+    of 16 lines 4 (each sheet outgrows half a page); 4 copies of 9 wordy lines 4; 60 copies 30. Same as before, light
+    and dark. **Two differ.** One copy is 1 page, not 2: the old block hid the editor with `visibility` and its
+    height printed as a blank page. That is the TAIL bug v228 fixed on fifteen pages; 070 was missed because the
+    audit prints its default six copies, which are taller than the editor. And 4 copies of a 36-line checklist are 8
+    pages, not 4: each is 966 px, the old page had no `@page` rule so `page.pdf()` gave it all 1056 px of the paper,
+    and on half-inch margins there are 960. **The old page printed with half-inch margins is 8 pages too**, so this
+    is the margin and not the kit; a real print has margins.
+  - *077:* 3, 9 and 12 cards 1 page; 10 cards at 3 across 2; 28 at 3 across 4; 28 at 2 across 5; 28 at 4 across 3;
+    13 at 4 across 2; 7 at 2 across 2; one picked student 1; 9 with a 40-sentence note 2. **All twelve equal the old
+    page on half-inch margins.** With no margin at all the old page fitted a fourth row of 2.6 in cards on a sheet,
+    so its as-is counts were lower in six states (the suite records them as `noMargin`).
+  - **What is different on the sheets.** Both: half-inch page margins named by `@page`, where there were the
+    browser's defaults. 070: the cut line is at the true half of the printable page and black; category headings
+    were the accent blue and print black, the names line and comment rules were grey and print black. 077: a card
+    is a third of the printable page (3.24 in) instead of at least 2.6 in, three rows to a page either way; the
+    gap between cards is 0.125 in, not 0.5 rem; every grid starts a page; borders and notes print black.
+    Rendered to PNG and looked at, before and after: 070 in four states, 077 in four.
+- **New suites.** `Tools/peer-feedback-checklist-generator/test/smoke-print.mjs` (`npm run test:peer-feedback-print`,
+  port 8468, 683 assertions, ten states in light and dark) and
+  `Tools/testing-accommodations-card-generator/test/smoke-print.mjs` (`npm run test:accommodations-print`, port 8469,
+  581 assertions, twelve states in light and dark). Both check what is built, sizes on paper, nothing clipped, black
+  on white, nothing but the sheet on paper, the PDF page count, typed text never becoming markup, printing twice,
+  and the refusal when there is nothing to print. `smoke-print-kit.mjs` gained the cut line and `4x3` (57 to 64
+  assertions; `print-kit.test.mjs` 66 to 68 through its preset loop); 070 joined `smoke-print-tail.mjs`'s table (37 pages, 392 assertions). Suites 193 to 195.
+- **What this says about the rest of P3.** The class-set group is really three tools now (043, 023, 042), and none
+  of the three adopters so far has used `mode: 'set'`, the kit's header or its "N of M" footer: all three print
+  copies with nothing per-student in the kit's hands (077's names are its own cards). 043 is where those get tried.
+  The card-grid group has its example in 077; the next one will repeat 077's chunk loop, which is the cue for a
+  `PrintKit.renderCards()`. A kit card is a share of the page, so a tool with an exact card size needs more than a
+  preset.
+- **Calls recorded.** 077 was done in this increment although it was not the kind of tool the row said: the order
+  was given, the adoption was mechanical once the kind was clear, and leaving it would have left the recipe without a
+  card-grid example. 077's cards got taller rather than keeping 2.6 in, because the kit sizes a card as a share of
+  the page and a fixed minimum would have needed a rule against the kit in the page. 070 kept the default half-inch
+  margin instead of a narrower one that would have saved the 36-line case: it had no `@page` of its own, so the
+  recipe's default applies, and a margin under half an inch is past what some copiers print.
+- **What went wrong on the way.** The first comparison used `page.pdf()` as it comes, which prints a page with no
+  `@page` rule edge to edge; that made 070's long checklist and six of 077's states look like regressions. The
+  recipe's step 1 now says to measure with margins as well.
+- **Checks:** all 13 guards incl. `check:precache -- --base origin/main` and `check:adoption -- --check`; 46 suites
+  via `run-suites.mjs --only`, one tool at a time, after the last code change: testing-accommodations-card-generator
+  (2), print-kit (3), peer-feedback-checklist-generator (1), sub-note-feedback-slip-generator (1), roster (10), share
+  (21), theme (3), service-worker (3), board-check (2), all pass; the a11y sweep `--only` 070, 076 and 077 (8 pass);
+  `audit-print.mjs --only` 070, 076 and 077, no CLIP, FIXED, SCROLL, CHROME, SPLIT, TAIL or DARK finding (so
+  `print-audit-baseline.json` is unchanged). Memory was never short (9 GB available throughout).
+- **Not verified:** nothing was printed on paper, only Chromium's PDF was read; no other browser's print was seen.
+  **The full `npm test` was not run**, although `_shared/print-kit.js` and `print-kit.css` changed and CI treats any
+  `_shared/` change as site-wide: the kit is linked by three pages and its fixture, and every suite that opens one of
+  them is in the list above. The new suites were not run against the old pages (their static checks would fail
+  there by construction); the old pages' counts came from a scratch script that was deleted. `cut: true` on quarter
+  sheets, the kit's header and footer, and `mode: 'set'` have no adopter. 077 with a roster long enough to need a
+  name to wrap inside a 4-across card was looked at in one PDF, not asserted.
+
 ## Path 7 P3, increment 1: 076 is the print kit's first adopter, and the recipe for the rest (2026-10-04, AI-13, `CACHE_VERSION` v230)
 
 Audit entry AI-13, rank 6 (2+). First increment of P3: one tool, on purpose, so the other adoptions are mechanical.
