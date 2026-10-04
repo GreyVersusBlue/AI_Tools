@@ -9,6 +9,35 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## The share rollout suite waits for the downloaded file, not for 250 ms (2026-10-03, AI-34 follow-up, test only, no `CACHE_VERSION` change)
+
+`Tools/share/test/smoke-share-rollout.mjs` turned wave PR #334's CI red once and went green on
+the re-run of the same head. Section 6 patched `URL.createObjectURL`, clicked the sheet's
+Download row, and read the blob's text after a fixed 250 ms. On a slow runner `blob.text()` had
+not resolved, the suite got `null`, and the next line threw `Cannot read properties of null
+(reading 'aplp')` (on 083, whose file carries a picture). The product was never wrong.
+
+- **The fix.** The page promise resolves when `blob.text()` does. It gives up after 15 s
+  (`DOWNLOAD_TEXT_MS`) with a sentence that names the tool and says whether the click made no
+  blob, the text never came, or `blob.text()` rejected. `share.js` calls `createObjectURL`
+  inside the click, so the real function is put back in a `finally` before the click returns.
+- **Shown, not argued.** A copy of the suite with `Blob.prototype.text` delayed by one second:
+  the old code fails at the first tool with the CI error; the new code passes 1580 of 1580. A
+  copy where the text never arrives fails with `052: the Download row's file could not be read:
+  its text had not arrived after 2000 ms`. The copies were scratch and are not in the tree.
+- **Left alone in this file, on purpose.** Every other fixed wait follows work that `share.js`
+  does inside the click: `shareLink()`'s 60 ms (the stub clipboard captures the link during the
+  click; the wait lets the "Link copied" line land before the sheet closes), and the `settle()`
+  calls after opening the sheet, drawing the QR code and pressing Escape. The 500 to 900 ms
+  `settle()` calls after a `goto` wait for a page to consume its link; they are not this race
+  and were not measured here.
+- **Not fixed: the same line in six other suites.** `blob.text().then(t => { text = t; })` read
+  after a fixed timer is also in `bracket-tournament-generator`, `rubric-builder`,
+  `class-roster-hub` and `seating-chart`'s `smoke-share.mjs`, `escape-room-builder`'s
+  `smoke-images.mjs` and `schedule-visualizer`'s `smoke-trace-image.mjs`. None has failed in CI
+  that anyone recorded, and the task was this file. A `harness.mjs` helper that all seven call
+  is the right shape for it.
+
 ## Path 7 P2, increment 6: `print-area.css` prints no blank sheets either, and P2 is finished (2026-10-03, AI-13, `CACHE_VERSION` v229)
 
 Audit entry AI-13, old rank 6 (2+). Sixth and last increment: the row is deleted and ranks 7 to 170 became 6 to
