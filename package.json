@@ -133,6 +133,7 @@
     "test:peer-feedback-print": "node Tools/peer-feedback-checklist-generator/test/smoke-print.mjs",
     "test:accommodations-print": "node Tools/testing-accommodations-card-generator/test/smoke-print.mjs",
     "test:permission-slip-print": "node Tools/field-trip-permission-slip/test/smoke-print.mjs",
+    "test:exit-ticket-print": "node Tools/exit-ticket-generator/test/smoke-print.mjs",
     "test:stage": "node Tools/stage/test/stage.test.mjs && node Tools/stage/test/smoke-stage-rollout.mjs",
     "test:media": "node Tools/media/test/media-db.test.mjs && node Tools/media/test/smoke-media-db.mjs",
     "test:seating-read": "node Tools/seating-read/test/seating-read.test.mjs",

@@ -223,6 +223,52 @@ await page.emulateMedia({ media: 'screen' });
 const inkScreen = await inkState();
 eq([inkScreen.tintBg, inkScreen.label, inkScreen.hatch], ['rgb(204, 51, 51)', 'none', true], 'on screen the fill stays, the label hides and the hatch still draws');
 
+
+// ---- paper: a white sheet and black text, the fills inside left alone ---------------------------
+// The page is put in the colours a dark theme would give it; .pk-paper has to
+// beat a rule in the page, which is how ink-paper.css re-declares a sheet's ink.
+const paperState = () => page.evaluate(() => {
+  const out = document.getElementById('out');
+  if (!document.getElementById('paper')) {
+    out.replaceChildren();
+    const st = document.createElement('style');
+    st.textContent = 'body { background: rgb(20, 20, 30); } #out #paper { color: rgb(200, 210, 220); background: rgb(30, 30, 40); }';
+    document.head.appendChild(st);
+    const paper = document.createElement('div'); paper.id = 'paper'; paper.className = 'pk-paper';
+    const plain = document.createElement('p'); plain.id = 'plain'; plain.textContent = 'A line of text';
+    const tint = document.createElement('div'); tint.className = 'tint'; tint.id = 'ptint'; tint.textContent = 'Row';
+    paper.append(plain, tint); out.appendChild(paper);
+  }
+  const cs = id => getComputedStyle(document.getElementById(id));
+  return { bg: cs('paper').backgroundColor, ink: cs('paper').color, plain: cs('plain').color, tintBg: cs('ptint').backgroundColor, tintInk: cs('ptint').color };
+});
+const paperScreen = await paperState();
+eq([paperScreen.bg, paperScreen.ink], ['rgb(30, 30, 40)', 'rgb(200, 210, 220)'], 'on screen .pk-paper changes nothing');
+await page.emulateMedia({ media: 'print' });
+const paperPrint = await paperState();
+eq([paperPrint.bg, paperPrint.ink], ['rgb(255, 255, 255)', 'rgb(0, 0, 0)'], 'in print, .pk-paper is white with black text, over an id rule in the page');
+eq(paperPrint.plain, 'rgb(0, 0, 0)', 'text inside inherits the black');
+eq([paperPrint.tintBg, paperPrint.tintInk], ['rgb(204, 51, 51)', 'rgb(255, 255, 255)'], 'and a fill the tool set inside is left alone, unlike .pk-ink-safe');
+
+// ---- quarters on a container an id rule makes a block ---------------------------------------------
+// print-area.css says `#printArea { display: block }` in print, and an adopter's
+// container is #printArea. 023's quarter sheets came out one to a row until
+// .pk-quarters outranked that.
+const quarterGrid = await page.evaluate(() => {
+  const out = document.getElementById('out');
+  out.replaceChildren();
+  const st = document.createElement('style');
+  st.textContent = '@media print { #byId { display: block; } }';
+  document.head.appendChild(st);
+  const wrap = document.createElement('div'); wrap.id = 'byId';
+  out.appendChild(wrap);
+  PrintKit.renderSet(wrap, () => document.createElement('p'), { mode: 'blank', count: 4, sheet: 'quarter' });
+  const kids = [...wrap.children].map(x => x.getBoundingClientRect());
+  return { display: getComputedStyle(wrap).display, sameRow: Math.abs(kids[0].top - kids[1].top) < 1, across: kids[1].left > kids[0].left, rows: kids[2].top > kids[0].top };
+});
+eq(quarterGrid, { display: 'grid', sameRow: true, across: true, rows: true }, 'quarter sheets are two across in a container that an id rule makes a block in print');
+await page.emulateMedia({ media: 'screen' });
+
 eq(page.__errs, [], 'no page errors, failed requests or console errors');
 eq(page.__blocked, [], 'nothing left the site');
 

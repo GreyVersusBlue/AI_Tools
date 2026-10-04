@@ -31,9 +31,12 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="exit-ticket-generator/etg-sequence.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   /* Tool-local tints, the same pairs 001 carries. ink-paper.css owns the
      palette tokens; these are the surfaces this page paints that the shared
@@ -268,8 +271,8 @@
 
   .handout-preview-wrap { background: var(--desk); border-radius: 10px; padding: 1.4rem; overflow: auto; }
 
-  /* Shared slip layout — reused by the on-screen preview and the print-only
-     area. A slip page is a sheet of paper in either theme: the markup carries
+  /* Shared slip layout — reused by the on-screen preview and the printed
+     sheet. A slip page is a sheet of paper in either theme: the markup carries
      `paper-sheet`, which ink-paper.css uses to restore the light tokens
      inside it, so --card is white here even in dark. */
   .slip-page {
@@ -324,52 +327,55 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
-  /* ── Print handout ────────────────────────────────────────────────── */
-  .print-only { display: none; }
-  @media print {
-    body { background: #fff; color: #000; padding: 0; }
-    .wrap > *:not(.print-only) { display: none !important; }
-    .print-only.active { display: block; }
-    .print-only .slip-page {
-      box-shadow: none; border: none; border-radius: 0; aspect-ratio: auto;
-      max-width: none; width: 100%; min-height: 10.2in; margin: 0; padding: 0;
-      /* A sheet is a page tall unless a slip needs more. The screen preview
-         clips (it is a thumbnail); on paper a long prompt used to lose its
-         last lines to the same overflow:hidden, so here the sheet and its
-         slips grow instead, and the grid takes the height by flex because a
-         percentage of a min-height resolves to nothing. */
-      overflow: visible; display: flex; flex-direction: column;
-    }
-    .print-only .slip-grid { gap: .22in; flex: 1 0 auto; height: auto; }
-    .print-only .slip { border: 1.5px dashed #888; padding: .28in .35in; overflow: visible; break-inside: avoid; page-break-inside: avoid; }
-    .print-only .slip-grid.pp2 .slip-prompt { font-size: 1.3rem; }
-    .print-only .slip-grid.pp4 .slip-prompt { font-size: 1rem; }
-    .print-only .slip-grid.pp2 .slip-meta-line { font-size: .82rem; }
-    .print-only .slip-grid.pp4 .slip-meta-line { font-size: .68rem; }
-    .print-only .slip-meta-row { margin-bottom: .5rem; }
-    .print-only .slip-grid.pp2 .slip-qr { width: .8in; height: .8in; }
-    .print-only .slip-grid.pp4 .slip-qr { width: .55in; height: .55in; }
-    .print-only .slip-answer-line { border-bottom: 1px solid #555; min-height: .3in; }
-    .print-only .slip-answer-box.boxed { border: 1px solid #666; }
-    /* Darker on paper than on screen: a grid that reads nicely on a monitor
-       comes out as almost nothing through a school photocopier. */
-    .print-only .slip-answer-box.grid {
-      border: 1px solid #666;
-      background-image:
-        repeating-linear-gradient(to right, #808d98 0 1px, transparent 1px .25in),
-        repeating-linear-gradient(to bottom, #808d98 0 1px, transparent 1px .25in);
-    }
-    .print-only .triage-print-page { padding: .3in; font-family: Georgia, serif; }
-    .print-only .triage-print-page h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
-    .print-only .triage-print-page .triage-print-sub { font-size: .95rem; color: #333; margin: 0 0 1.1rem; }
-    .print-only .triage-results h3 { font-size: 1.1rem; margin: 1.1rem 0 .4rem; border-bottom: 1px solid #999; padding-bottom: .15rem; }
-    .print-only .triage-results h3:first-child { margin-top: 0; }
-    .print-only .triage-name-list { font-size: 1.05rem; }
-    .print-only .triage-group { font-size: 1.05rem; margin-bottom: .5rem; }
-    .print-only .slip-page.batch-page { page-break-after: always; break-after: page; }
-    .print-only .slip-page.batch-page:last-child { page-break-after: auto; break-after: auto; }
-    @page { size: letter portrait; margin: 0.4in; }
+  /* ── On paper ─────────────────────────────────────────────────────────
+     Printed through the shared kit (Path 7 P3). print-area.css puts #printArea
+     alone on the paper, PrintKit.setPage() writes the page (Letter, 0.4 in)
+     and PrintKit.renderSet() wraps each slip in a half or a quarter sheet;
+     this page has no print media block of its own. #printArea is never on
+     screen, so what a slip looks like on paper is plain rules. `pp2` / `pp4`
+     is on #printArea itself, since there is no .slip-grid there. */
+  /* A slip fills its kit sheet, and the response area takes its share of the
+     slip by flex, as it does in the preview's grid. */
+  #printArea .pk-sheet { display: flex; flex-direction: column; min-width: 0; }
+  /* The .22in between two slips, for the paper cutter, as padding on the
+     inner edges only: a margin would make two half sheets taller than a page. */
+  #printArea.pp2 .pk-sheet:nth-child(odd),
+  #printArea.pp4 .pk-sheet:nth-child(4n+1),
+  #printArea.pp4 .pk-sheet:nth-child(4n+2) { padding-bottom: .11in; }
+  #printArea.pp2 .pk-sheet:nth-child(even),
+  #printArea.pp4 .pk-sheet:nth-child(4n+3),
+  #printArea.pp4 .pk-sheet:nth-child(4n) { padding-top: .11in; }
+  #printArea.pp4 .pk-sheet:nth-child(odd) { padding-right: .11in; }
+  #printArea.pp4 .pk-sheet:nth-child(even) { padding-left: .11in; }
+  /* The preview clips (it is a thumbnail); on paper a long prompt used to lose
+     its last lines to the same overflow:hidden, so here the slip grows and
+     the kit's sheet grows with it. */
+  #printArea .slip { flex: 1 0 auto; border: 1.5px dashed #888; padding: .28in .35in; overflow: visible; }
+  #printArea.pp2 .slip-prompt { font-size: 1.3rem; }
+  #printArea.pp4 .slip-prompt { font-size: 1rem; }
+  #printArea.pp2 .slip-meta-line { font-size: .82rem; }
+  #printArea.pp4 .slip-meta-line { font-size: .68rem; }
+  #printArea .slip-meta-row { margin-bottom: .5rem; }
+  #printArea.pp2 .slip-qr { width: .8in; height: .8in; }
+  #printArea.pp4 .slip-qr { width: .55in; height: .55in; }
+  #printArea .slip-answer-line { border-bottom: 1px solid #555; min-height: .3in; }
+  #printArea .slip-answer-box.boxed { border: 1px solid #666; }
+  /* Darker on paper than on screen: a grid that reads nicely on a monitor
+     comes out as almost nothing through a school photocopier. */
+  #printArea .slip-answer-box.grid {
+    border: 1px solid #666;
+    background-image:
+      repeating-linear-gradient(to right, #808d98 0 1px, transparent 1px .25in),
+      repeating-linear-gradient(to bottom, #808d98 0 1px, transparent 1px .25in);
   }
+  #printArea .batch-empty { padding: .3in; }
+  #printArea .triage-print-page { padding: .3in; font-family: Georgia, serif; }
+  #printArea .triage-print-page h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
+  #printArea .triage-print-page .triage-print-sub { font-size: .95rem; color: #333; margin: 0 0 1.1rem; }
+  #printArea .triage-results h3 { font-size: 1.1rem; margin: 1.1rem 0 .4rem; border-bottom: 1px solid #999; padding-bottom: .15rem; }
+  #printArea .triage-results h3:first-child { margin-top: 0; }
+  #printArea .triage-name-list { font-size: 1.05rem; }
+  #printArea .triage-group { font-size: 1.05rem; margin-bottom: .5rem; }
 </style>
 </head>
 <body>
@@ -681,8 +687,7 @@
 
 </div>
 
-<div class="print-only" id="printArea"></div>
-<div class="print-only" id="triagePrintArea"></div>
+<div id="printArea" class="pk-paper"></div>
 
 <script>
 (function () {
@@ -712,7 +717,7 @@
    'addCatTallyBtn', 'catTallyGrid', 'catTallyTotal', 'saveCatTallyBtn', 'catTallyHistory',
    'triageRosterSelect', 'triageGroupSizeInput', 'triageNamesInput', 'buildTriageBtn',
    'triageGridCard', 'triageSummary', 'triageGrid', 'resetTriageBtn',
-   'triageResultsCard', 'triageResults', 'printTriageBtn', 'triagePrintArea',
+   'triageResultsCard', 'triageResults', 'printTriageBtn',
    'discussionInput', 'addDiscussionBtn', 'discussionManageList', 'clearDiscussionBtn',
    'discussionStage', 'discussionBoard', 'discussionEmpty', 'discussionFullscreenBtn',
    'batchModeCheck', 'batchRosterRow', 'batchRosterSelect', 'batchNamesInput',
@@ -1047,6 +1052,12 @@
     var out = '';
     for (var i = 0; i < n; i++) out += html;
     return out;
+  }
+  /** Markup this page built and escaped, parsed for PrintKit.renderSet(). */
+  function nodeFrom(html) {
+    var t = document.createElement('template');
+    t.innerHTML = html;
+    return t.content;
   }
   function chunkArray(arr, size) {
     var out = [];
@@ -1715,12 +1726,15 @@
     var dateStr = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     var c = computeTriageCounts();
     var summary = c.got + ' got it &middot; ' + c.almost + ' almost &middot; ' + c.reteach + ' reteach (' + triage.students.length + ' total)';
-    els.triagePrintArea.innerHTML =
+    var html =
       '<div class="triage-print-page">' +
         '<h1>Reteach List &amp; Small Groups</h1>' +
         '<p class="triage-print-sub">' + escapeHtml(dateStr) + ' &mdash; ' + summary + '</p>' +
         '<div class="triage-results">' + buildTriageResultsBodyHtml() + '</div>' +
       '</div>';
+    els.printArea.className = 'pk-paper';
+    PrintKit.renderSet(els.printArea, function () { return nodeFrom(html); },
+      { mode: 'one', name: 'Reteach list', sheet: 'page', header: false, footer: false });
   }
 
   els.triageGroupSizeInput.addEventListener('change', function () {
@@ -1743,8 +1757,6 @@
   });
   els.printTriageBtn.addEventListener('click', function () {
     renderTriagePrintArea();
-    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
-    els.triagePrintArea.classList.add('active');
     window.print();
   });
 
@@ -2106,26 +2118,37 @@
     );
   }
 
-  function buildHandoutHtml() {
+  var NO_PROMPTS_TEXT = 'No prompts available for this category yet — add one in My Prompts or pick a different category.';
+  var NO_PROMPT_TEXT = 'Type or pick a prompt in the Prompt & Display tab.';
+
+  /** The prompt on each slip of the one-page handout, in order. */
+  function handoutSlipTexts() {
+    var perPage = settings.perPage;
+    var texts = [];
+    var i;
+    if (settings.slipMode === 'different') {
+      if (differentSlipPrompts.length) return differentSlipPrompts.slice();
+      for (i = 0; i < perPage; i++) texts.push(NO_PROMPTS_TEXT);
+      return texts;
+    }
+    for (i = 0; i < perPage; i++) texts.push(currentPrompt.text || NO_PROMPT_TEXT);
+    return texts;
+  }
+
+  function slipPageHtml(slips, batch) {
     var perPage = settings.perPage;
     var cols = perPage === 4 ? 2 : 1;
-    var slips;
-    if (settings.slipMode === 'different') {
-      var texts = differentSlipPrompts;
-      slips = texts.length
-        ? texts.map(function (t) { return slipHtml(t); }).join('')
-        : repeatHtml(slipHtml('No prompts available for this category yet — add one in My Prompts or pick a different category.'), perPage);
-    } else {
-      var text = currentPrompt.text || 'Type or pick a prompt in the Prompt & Display tab.';
-      slips = repeatHtml(slipHtml(text), perPage);
-    }
     return (
-      '<div class="slip-page paper-sheet">' +
+      '<div class="slip-page ' + (batch ? 'batch-page ' : '') + 'paper-sheet">' +
         '<div class="slip-grid pp' + perPage + '" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(2,1fr);">' +
-          slips +
+          slips.join('') +
         '</div>' +
       '</div>'
     );
+  }
+
+  function buildHandoutHtml() {
+    return slipPageHtml(handoutSlipTexts().map(function (t) { return slipHtml(t); }), false);
   }
 
   function populateBatchRosterSelect() {
@@ -2137,31 +2160,55 @@
     });
   }
 
-  function buildBatchHandoutHtml() {
+  var BATCH_EMPTY_HTML = '<p class="hint">Load a saved roster or paste names above to generate a class set &mdash; one slip per student.</p>';
+
+  /** The class set: one { name, text } per student, or [] with no names. */
+  function batchSlips() {
     var names = parseRosterNames(els.batchNamesInput.value);
-    if (!names.length) {
-      return '<p class="hint">Load a saved roster or paste names above to generate a class set &mdash; one slip per student.</p>';
-    }
+    if (!names.length) return [];
     var texts;
     if (settings.slipMode === 'different') {
       if (batchSlipPrompts.length !== names.length) batchSlipPrompts = pickDistinctSlipPrompts(names.length);
       texts = batchSlipPrompts.length
         ? batchSlipPrompts
-        : names.map(function () { return 'No prompts available for this category yet — add one in My Prompts or pick a different category.'; });
+        : names.map(function () { return NO_PROMPTS_TEXT; });
     } else {
-      var t = currentPrompt.text || 'Type or pick a prompt in the Prompt & Display tab.';
+      var t = currentPrompt.text || NO_PROMPT_TEXT;
       texts = names.map(function () { return t; });
     }
-    var perPage = settings.perPage;
-    var cols = perPage === 4 ? 2 : 1;
-    var slips = names.map(function (name, i) { return slipHtml(texts[i], name); });
-    var pages = chunkArray(slips, perPage);
-    return pages.map(function (pageSlips) {
-      return '<div class="slip-page batch-page paper-sheet">' +
-        '<div class="slip-grid pp' + perPage + '" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(2,1fr);">' +
-          pageSlips.join('') +
-        '</div></div>';
-    }).join('');
+    return names.map(function (name, i) { return { name: name, text: texts[i] }; });
+  }
+
+  function buildBatchHandoutHtml(set) {
+    if (!set.length) return BATCH_EMPTY_HTML;
+    var slips = set.map(function (s) { return slipHtml(s.text, s.name); });
+    return chunkArray(slips, settings.perPage).map(function (pageSlips) { return slipPageHtml(pageSlips, true); }).join('');
+  }
+
+  /** The handout as the kit's sheets: a half sheet per slip at 2 per page, a
+      quarter at 4. The kit drops a student with no name, so the prompts are
+      looked up in the same filtered list. `set` is batchSlips()'s answer in
+      class-set mode. */
+  function renderPrintArea(set) {
+    var opts = { sheet: settings.perPage === 4 ? 'quarter' : 'half', header: false, footer: false };
+    els.printArea.className = 'pk-paper pp' + settings.perPage;
+    if (!settings.batchMode) {
+      var texts = handoutSlipTexts();
+      opts.mode = 'blank';
+      opts.count = texts.length;
+      PrintKit.renderSet(els.printArea, function (sheet) { return nodeFrom(slipHtml(texts[sheet.n - 1])); }, opts);
+      return;
+    }
+    var named = set.filter(function (s) { return s.name; });
+    if (!named.length) {
+      els.printArea.className = 'pk-paper';
+      PrintKit.renderSet(els.printArea, function () { return nodeFrom('<div class="batch-empty">' + BATCH_EMPTY_HTML + '</div>'); },
+        { mode: 'one', name: 'Class set', sheet: 'page', header: false, footer: false });
+      return;
+    }
+    opts.mode = 'set';
+    opts.roster = named.map(function (s) { return s.name; });
+    PrintKit.renderSet(els.printArea, function (sheet) { return nodeFrom(slipHtml(named[sheet.n - 1].text, sheet.name)); }, opts);
   }
 
   function updatePrintBtnLabel() {
@@ -2200,9 +2247,9 @@
   }
 
   function renderHandout() {
-    var html = settings.batchMode ? buildBatchHandoutHtml() : buildHandoutHtml();
-    els.handoutPreview.innerHTML = html;
-    els.printArea.innerHTML = html;
+    var set = settings.batchMode ? batchSlips() : null;
+    els.handoutPreview.innerHTML = set ? buildBatchHandoutHtml(set) : buildHandoutHtml();
+    renderPrintArea(set);
     renderAnswerSpaceNote();
   }
 
@@ -2280,13 +2327,14 @@
   });
 
   els.printBtn.addEventListener('click', function () {
-    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
-    els.printArea.classList.add('active');
+    renderHandout();
     window.print();
   });
-  window.addEventListener('afterprint', function () {
-    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
-  });
+  // The reteach list borrows #printArea; the handout goes back afterwards, so
+  // Ctrl+P prints what the Printable Handout tab previews.
+  window.addEventListener('afterprint', renderHandout);
+
+  PrintKit.setPage({ margin: '0.4in' });
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
   function switchTab(tab) {

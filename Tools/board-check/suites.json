@@ -200,6 +200,7 @@
     "Tools/peer-feedback-checklist-generator/test/smoke-print.mjs",
     "Tools/testing-accommodations-card-generator/test/smoke-print.mjs",
     "Tools/field-trip-permission-slip/test/smoke-print.mjs",
+    "Tools/exit-ticket-generator/test/smoke-print.mjs",
     "Tools/stage/test/stage.test.mjs",
     "Tools/stage/test/smoke-stage-rollout.mjs",
     "Tools/number-talks-board/test/smoke-stage.mjs",

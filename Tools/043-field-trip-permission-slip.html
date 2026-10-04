@@ -231,8 +231,8 @@
      paper is plain rules. A sheet has no vertical margin of its own: the kit's
      pages and half sheets do the spacing, and a margin would push a footer or
      a second half sheet onto the next page. */
-  /* The kit's header and footer sit on #printArea, not on a sheet. */
-  #printArea { background: #fff; }
+  /* The kit's header and footer sit on #printArea, not on a sheet; it is a
+     .pk-paper, which makes it white and their ink black. */
   #printArea .slip { box-shadow: none; width: 100%; margin: 0; }
   /* The translated slip on a facing page starts its own sheet of paper. */
   #printArea .slip + .slip { break-before: page; page-break-before: always; }
@@ -243,10 +243,10 @@
   #printArea .missing-list-page { margin: 0 auto; }
   /* The kit's header and footer, in the sheets' type and inset to line up with
      the text of the sheet they sit against (.5in and .65in of padding). */
-  #printArea .pk-header, #printArea .pk-footer { font-family: Georgia, "Times New Roman", serif; color: #000; }
+  #printArea .pk-header, #printArea .pk-footer { font-family: Georgia, "Times New Roman", serif; }
   #printArea .pk-header { margin-left: .5in; margin-right: .5in; }
   #printArea .pk-footer { margin-left: .65in; margin-right: .65in; }
-  #printArea .nothing-missing { padding: 1in; font-family: Georgia, "Times New Roman", serif; color: #000; }
+  #printArea .nothing-missing { padding: 1in; font-family: Georgia, "Times New Roman", serif; }
 </style>
 </head>
 <body>
@@ -438,7 +438,7 @@
 
 </div>
 
-<div id="printArea"></div>
+<div id="printArea" class="pk-paper"></div>
 
 <div class="cam-overlay" id="scanCamOverlay" hidden>
   <div class="cam-modal" role="dialog" aria-modal="true" aria-label="Scan a returned slip">
