@@ -233,7 +233,9 @@ const onPaper = async text => {
   await page.emulateMedia({ media: 'print' });
   await settle(page, 200);
   return page.evaluate(() => {
-    const sheet = document.querySelector('#printArea .slip-page');
+    // Since Path 7 P3 the sheet is #printArea itself: four of the print kit's
+    // quarter sheets, two across, where it was one .slip-page.
+    const sheet = document.getElementById('printArea');
     const slips = [...sheet.querySelectorAll('.slip')];
     const inside = slips.every(slip => {
       const box = slip.getBoundingClientRect();
@@ -246,7 +248,9 @@ const onPaper = async text => {
     };
   });
 };
-const PAGE_PX = 10.2 * 96;
+// The printable page less the 0.04 in the kit holds back so two rows never
+// round up past it (it was 10.2 in, the old block's min-height).
+const PAGE_PX = (10.2 - 0.04) * 96;
 const paperShort = await onPaper('Name one thing you learned today.');
 eq(paperShort.slips, 4, 'the printed sheet has four slips');
 ok(Math.abs(paperShort.sheet - PAGE_PX) < 2, `a short prompt still prints a sheet exactly one page tall (${Math.round(paperShort.sheet)}px)`);

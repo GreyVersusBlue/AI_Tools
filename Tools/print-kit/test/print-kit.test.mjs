@@ -101,8 +101,10 @@ const selectors = [...bare.matchAll(/(^|[}{])\s*([^{}@]+)\{/g)].map(m => m[2].tr
 const stray = selectors.flatMap(s => s.split(',')).map(s => s.trim()).filter(s => s && s !== ':root' && !/\.pk-/.test(s));
 eq(stray, [], 'every selector is scoped to a pk- class');
 const literals = [...bare.matchAll(/#[0-9a-fA-F]{3,8}\b|rgba?\(/g)].map(m => m[0]);
-eq(literals.sort(), ['#000', '#000', '#fff'], 'the only colour literals are the ink-safe black and white');
-const beforePrint = bare.slice(0, bare.lastIndexOf('#fff'));
+eq(literals.sort(), ['#000', '#000', '#000', '#fff', '#fff'], 'the only colour literals are the black and white of .pk-ink-safe and .pk-paper');
+ok(/\.pk-paper\s*\{\s*background:\s*#fff\s*!important;\s*color:\s*#000\s*!important;\s*\}/.test(bare), '.pk-paper forces a white sheet and black text, and nothing else');
+ok(!/\.pk-paper\s+\*|\.pk-paper\s*>/.test(bare), '.pk-paper reaches nothing inside the sheet (that is .pk-ink-safe)');
+const beforePrint = bare.slice(0, bare.indexOf('#000'));
 ok(/@media print\s*\{[^@]*$/.test(beforePrint), 'and they are inside @media print');
 
 console.log(`\n${passed} passed, ${failed} failed`);

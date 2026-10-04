@@ -107,6 +107,7 @@ const PAGES = [
     { click: 'Print this code', before: fill016, sheet: '#print-area' },
     { click: '#btn-bulk-print', before: bulk016, sheet: '#print-area-bulk' },
   ] },
+  { file: '023-exit-ticket-generator.html', prints: [{ click: '#printBtn' }, { click: '#printTriageBtn', before: PRINT_PREP['023'][0].run }] },   // since Path 7 P3: print-area.css + the print kit
   { file: '024-number-talks-board.html', prints: [{ click: 'Print session record' }] },
   { file: '028-primary-source-analysis-generator.html', prints: [{ click: 'Print student worksheet (blank)' }, { click: 'Print answer key (with notes)' }] },
   { file: '033-ssr-log-tracker.html', prints: [{ click: 'Print class summary' }] },

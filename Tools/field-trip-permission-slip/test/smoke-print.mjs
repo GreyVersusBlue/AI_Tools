@@ -173,7 +173,8 @@ ok(/src="\.\.\/_shared\/print-kit\.js"/.test(src), 'loads _shared/print-kit.js')
 ok(!/@media\s+print/.test(src), 'has no @media print block of its own');
 ok(!/@page/.test(src), 'writes no @page rule of its own (PrintKit.setPage does)');
 ok(src.indexOf('print-area.css') < src.indexOf('<style>'), 'print-area.css is linked before the inline <style>');
-ok(/<div id="printArea"><\/div>/.test(src), '#printArea carries no inline display, which print-area.css could not undo');
+ok(/<div id="printArea" class="pk-paper"><\/div>/.test(src), '#printArea carries no inline display, which print-area.css could not undo, and is the kit\'s .pk-paper');
+ok(!/#printArea\s*\{\s*background/.test(src) && !/#printArea[^{}]*\{[^{}]*color:\s*#000/.test(src), 'the white paper and the black header and footer come from .pk-paper, not from rules in the page');
 ok(/margin:\s*'0\.4in'/.test(src), 'hands its old 0.4 in page margin to PrintKit.setPage()');
 ok(!/getElementById\('printArea'\)\.innerHTML/.test(src), 'no print button writes #printArea.innerHTML itself');
 eq((src.match(/PrintKit\.renderSet\(/g) || []).length, 6, 'six renderSet() calls: three slip modes, the list, the reminders, the chaperone sheet');

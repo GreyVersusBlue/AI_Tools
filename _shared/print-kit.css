@@ -74,9 +74,12 @@
     min-height: calc(var(--pk-area-h) / 2);
   }
 
-  /* Four to a page, two across. Put them in a .pk-quarters wrapper. */
+  /* Four to a page, two across. Put them in a .pk-quarters wrapper. The
+     wrapper is usually #printArea, and print-area.css makes that a block by
+     id, which no class outranks: hence the !important (023 found this, the
+     first adopter to print quarters; they came out one to a row). */
   .pk-quarters {
-    display: grid;
+    display: grid !important;
     grid-template-columns: 1fr 1fr;
   }
   .pk-quarter {
@@ -157,7 +160,7 @@
 
    Every pattern is drawn in currentColor, so it follows the theme on screen
    and is black on paper. The only colour literals in this file are the black and
-   white `.pk-ink-safe` forces inside `@media print`. */
+   white that `.pk-ink-safe` and `.pk-paper` force inside `@media print`. */
 
 .pk-hatch-1, .pk-hatch-2, .pk-hatch-3, .pk-hatch-4, .pk-hatch-5, .pk-hatch-6 {
   -webkit-print-color-adjust: exact;
@@ -203,4 +206,13 @@
   }
   .pk-ink-safe { background: #fff !important; }
   .pk-ink-safe *:not([class*="pk-hatch-"]) { background: transparent !important; }
+
+  /* The sheet is paper: white, with black text, whatever theme the page is in.
+     For the container the sheets are built in (#printArea). Unlike
+     `.pk-ink-safe` it reaches nothing inside: a grey rule, a tint or a drawn
+     grid a tool means to print stays as the tool set it. It is forced because
+     ink-paper.css re-declares `color` on a sheet in the dark theme, and a rule
+     in the page loses to that. The kit's header and footer are drawn on the
+     container and take their ink from here. */
+  .pk-paper { background: #fff !important; color: #000 !important; }
 }
