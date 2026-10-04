@@ -24,7 +24,7 @@
      Printing is the shared kit's (Path 7 P3, the first card-grid adopter):
      _shared/print-area.css puts #printArea alone on the paper, and
      _shared/print-kit.css + print-kit.js lay the cards out, one `.pk-cards`
-     grid to a page (`PrintKit.chunk`, three rows of 2, 3 or 4 across). This
+     grid to a page (`PrintKit.renderCards`, three rows of 2, 3 or 4 across). This
      page has no print rule of its own; what is left below is what a card
      looks like. `.pk-ink-safe` prints those greys black for the copier. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
@@ -416,7 +416,7 @@
 
   /** One student's card: the name, the ticked accommodations, the note. */
   function buildCard(name) {
-    var card = el('div', 'accom-card pk-card');
+    var card = el('div', 'accom-card');
     card.appendChild(el('h3', '', name));
     var list = el('ul');
     var checkedTypes = state.types.filter(function (t) { return state.assignments[assignKey(name, t.id)]; });
@@ -440,12 +440,7 @@
     if (!names.length) { alert('Nothing to print — no students match the current Show filter.'); return; }
     // Three rows to a page at every width: the kit's 2x3, 3x3 and 4x3 presets.
     var preset = CARD_PRESETS[els.printColsSelect.value] || CARD_PRESETS['3'];
-    while (els.printArea.firstChild) els.printArea.removeChild(els.printArea.firstChild);
-    PrintKit.chunk(names, preset).forEach(function (group) {
-      var grid = el('div', 'pk-cards pk-page ' + PrintKit.PRESETS[preset].cls);
-      group.forEach(function (name) { grid.appendChild(buildCard(name)); });
-      els.printArea.appendChild(grid);
-    });
+    PrintKit.renderCards(els.printArea, names, preset, buildCard);
     window.print();
   });
 

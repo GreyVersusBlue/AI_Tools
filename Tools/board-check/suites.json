@@ -202,6 +202,7 @@
     "Tools/field-trip-permission-slip/test/smoke-print.mjs",
     "Tools/exit-ticket-generator/test/smoke-print.mjs",
     "Tools/certificate-award-maker/test/smoke-print.mjs",
+    "Tools/science-safety-label-maker/test/smoke-print.mjs",
     "Tools/stage/test/stage.test.mjs",
     "Tools/stage/test/smoke-stage-rollout.mjs",
     "Tools/number-talks-board/test/smoke-stage.mjs",

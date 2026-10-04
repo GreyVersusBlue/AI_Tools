@@ -122,8 +122,13 @@
 
 /* `.pk-cards` plus one preset. Cells are sized with min-height, so a card with
    too much text grows its whole row rather than losing the text. Pages of
-   cards come from PrintKit.chunk(items, PrintKit.PRESETS[name].perPage), one
-   `.pk-cards.pk-page` per chunk. */
+   cards come from PrintKit.renderCards(container, items, name, buildCard),
+   one `.pk-cards.pk-page` per page of the preset.
+
+   `.pk-cards-own` is the grid with no preset: renderCards() puts it on for
+   `{ cols: 3 }` and sets --pk-cols. Its cards take no height from the kit, so
+   a label or a trading card that is a size in inches keeps the tool's own
+   `min-height` (074) or `height`, whatever that rule's specificity. */
 .pk-cards {
   display: grid;
   grid-template-columns: repeat(var(--pk-cols, 2), 1fr);
@@ -140,7 +145,7 @@
 .pk-cards-3x10 { --pk-cols: 3; --pk-rows: 10; }  /* 30 address labels (1 x 2⅝)  */
 
 @media print {
-  .pk-cards > .pk-card {
+  .pk-cards:where(:not(.pk-cards-own)) > .pk-card {
     min-height: calc((var(--pk-area-h) - (var(--pk-rows, 2) - 1) * var(--pk-gap)) / var(--pk-rows, 2));
   }
   /* Label stock is fixed by the die cut, not by the printable area. */
