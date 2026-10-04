@@ -345,6 +345,121 @@ ok(tiled.pages >= 3, 'the tiled wall print still builds its pages: ' + tiled.pag
 ok(/tiled-printing/.test(tiled.bodyClass), 'and enters tiled-print mode');
 await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
 
+/* ── 5b. a long timeline is not cut off by the sheet ───────────────────── */
+
+// The map page used to be a fixed 7.5in box with overflow: hidden, budgeted
+// for a place key of two lines. A unit's worth of events wraps the key to
+// several, and the bottom of the strip and the whole category legend were cut
+// off the paper with no sign of it on screen (Path 7 P2). Measured in print
+// media, because #mapPrintPages is display:none everywhere else.
+const longTimeline = async (events, categories) => {
+  await page.evaluate(({ events, categories }) => {
+    const name = localStorage.getItem('gvb-timeline:current');
+    const d = JSON.parse(localStorage.getItem('gvb-timeline:data:' + name));
+    d.events = [];
+    for (let i = 0; i < events; i++) {
+      d.events.push({
+        id: 1000 + i, track: 0, yearStart: 1700 + i * 3, yearEnd: null, displayDate: null, description: '', photo: null,
+        title: 'Event number ' + i + ' with a fairly long title',
+        category: 'Category number ' + (i % categories) + ' of the long kind',
+        place: { name: 'Saint-Somewhere-upon-the-River number ' + i, lat: 25 + (i % 6) * 4, lon: -120 + i * 1.5 },
+      });
+    }
+    localStorage.setItem('gvb-timeline:data:' + name, JSON.stringify(d));
+  }, { events, categories });
+  await page.reload({ waitUntil: 'networkidle' });
+  await settle(page, 400);
+  await page.evaluate(() => { window.__printCalls = 0; window.print = () => { window.__printCalls++; }; });
+};
+const mapSheet = async () => {
+  await page.click('#mapPrintToggleBtn');
+  await page.click('#btnMapPrintGo');
+  await page.waitForFunction(() => window.__printCalls > 0, null, { timeout: 60000 });
+  await page.emulateMedia({ media: 'print' });
+  await settle(page, 200);
+  const m = await page.evaluate(() => {
+    const pg = document.querySelector('#mapPrintPages .mapPage');
+    const r = el => el.getBoundingClientRect();
+    const top = r(pg).top;
+    const kids = [...pg.children];
+    const strip = pg.querySelector('.mapStrip'), inner = strip.firstElementChild;
+    return {
+      pageH: Math.round(r(pg).height),
+      overflow: getComputedStyle(pg).overflowY,
+      lastBottom: Math.round(Math.max(...kids.map(k => r(k).bottom)) - top),
+      stripH: Math.round(r(strip).height),
+      // The poster is scaled into the strip; its drawn box must sit inside it.
+      innerInside: r(inner).top >= r(strip).top - 1 && r(inner).bottom <= r(strip).bottom + 1 &&
+        r(inner).left >= r(strip).left - 1 && r(inner).right <= r(strip).right + 1,
+      keyLines: Math.round(r(pg.querySelector('.mapKey')).height / parseFloat(getComputedStyle(pg.querySelector('.mapKey')).lineHeight)),
+      legend: !!pg.querySelector('.legend-row'),
+      colour: getComputedStyle(pg.querySelector('.mapPin')).printColorAdjust,
+      editor: getComputedStyle(document.querySelector('body > .wrap')).display,
+    };
+  });
+  // page.pdf() fires the page's own afterprint, which empties the sheet: measure first.
+  const pdf = (await page.pdf({ preferCSSPageSize: true })).toString('latin1');
+  m.pdfPages = (pdf.match(/\/Type\s*\/Page[^s]/g) || []).length;
+  await page.emulateMedia({ media: null }); // not 'screen': that would hold for page.pdf() too
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  return m;
+};
+
+// Sixteen places: the key takes four or five lines. The strip gives up the
+// difference and the page is still one sheet.
+await longTimeline(16, 6);
+const mid = await mapSheet();
+ok(mid.keyLines >= 3, 'sixteen places wrap the key past its two-line budget: ' + mid.keyLines + ' lines');
+ok(mid.legend && mid.lastBottom <= mid.pageH, 'the legend, the last thing on the page, is inside it: ' + JSON.stringify(mid));
+eq(mid.pageH, 720, 'the page is still one 7.5in sheet');
+ok(mid.stripH < 218 && mid.stripH >= 130, 'because the strip gave up height to the key: ' + mid.stripH + 'px');
+ok(mid.innerInside, 'and the timeline is scaled to the smaller strip, not cut by it');
+// It printed as three before: `visibility: hidden` kept the editor's height,
+// and two blank sheets followed the map.
+eq(mid.editor, 'none', 'the editor is out of the print layout, not just invisible');
+eq(mid.pdfPages, 1, 'Chromium prints it on one page, with no blank ones after it');
+// White numbers on a badge that is only a background: without this the
+// browser drops the badge and prints the number on white.
+eq(mid.colour, 'exact', 'pin badges keep their fill on paper');
+
+// Thirty-six places: more than one sheet can hold with a readable strip. The
+// page grows and runs on; nothing is clipped.
+await longTimeline(36, 14);
+const big = await mapSheet();
+ok(big.overflow === 'visible', 'the map page does not clip: overflow-y ' + big.overflow);
+ok(big.lastBottom <= big.pageH, 'thirty-six places: the legend is still inside the page box: ' + JSON.stringify(big));
+ok(big.pageH > 720, 'which has grown past one sheet rather than cutting the legend off: ' + big.pageH + 'px');
+eq(big.stripH, 130, 'with the strip at its floor, not squeezed to nothing');
+ok(big.innerInside, 'and the timeline still drawn whole inside the strip');
+// One page here means Chromium shrank the whole print to fit instead of
+// splitting it, which it did until the strip got `contain: strict`.
+eq(big.pdfPages, 2, 'Chromium runs it on to a second page');
+
+// The tiled print's category key is the same kind of box: a page tall, and it
+// centred its list with overflow: hidden, so a long list lost both ends.
+await longTimeline(60, 60);
+await page.click('#tiledPrintToggleBtn');
+await page.click('#btnTiledPrintGo');
+await page.waitForFunction(() => window.__printCalls > 0, null, { timeout: 60000 });
+await page.emulateMedia({ media: 'print' });
+await settle(page, 200);
+const key = await page.evaluate(() => {
+  const pg = document.querySelector('#tiledPrintPages .tiledLegendPage');
+  const inner = pg.querySelector('.tiledLegendInner');
+  const a = pg.getBoundingClientRect(), b = inner.getBoundingClientRect();
+  return {
+    pageH: Math.round(a.height), innerH: Math.round(b.height), items: inner.querySelectorAll('.legend-item').length,
+    inside: b.top >= a.top - 1 && b.bottom <= a.bottom + 1, overflow: getComputedStyle(pg).overflowY,
+    tileOverflow: getComputedStyle(document.querySelector('#tiledPrintPages .tiledPage:not(.tiledLegendPage)')).overflowY,
+  };
+});
+await page.emulateMedia({ media: null });
+await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+eq(key.items, 60, 'the tiled key lists all sixty categories');
+ok(key.innerH > 720, 'which is more than a page of them: ' + key.innerH + 'px');
+ok(key.inside && key.overflow === 'visible', 'and the key page grows to hold them instead of clipping: ' + JSON.stringify(key));
+eq(key.tileOverflow, 'hidden', 'while a poster tile still clips to its own slice, as it must');
+
 /* ── 6. no console noise anywhere in all of that ───────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 4)));
 

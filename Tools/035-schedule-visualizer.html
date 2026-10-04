@@ -2830,6 +2830,64 @@
       #bp-print-empty { display: none; font-size: 12pt; }
       #bp-print-sheet.bp-print-none #bp-print-canvas { display: none; }
       #bp-print-sheet.bp-print-none #bp-print-empty { display: block; }
+
+      /* The other four tabs have no print button and no sheet of their own:
+         Ctrl+P prints the open tab as a document. Each is a sidebar beside a
+         scrolling pane on screen; on paper the two stack, nothing scrolls or
+         clips, and the controls go. A <select> stays as its chosen value in
+         plain text, because on these tabs the choice is the content: which
+         group is drawn, which room a what-if mod was moved to. */
+      /* (#panel-whatif: the What-if tab's own <style> comes later in the file.) */
+      #schedules-layout, #viz-layout, #panel-whatif #wi-layout { display: block; height: auto; overflow: visible; }
+      /* A rule that changes with the medium must not ease into place: the
+         paper is taken at the start of a transition, not the end of it. */
+      #app-visualizer, #app-visualizer * { transition: none !important; }
+      #sch-list-panel, #sch-editor-panel, #viz-controls, #viz-main, #wi-controls,
+      #viz-travel-panel, #viz-travel-panel.open, #viz-travel-panel-inner {
+        display: block; width: auto; height: auto; max-height: none; overflow: visible;
+        border: 0; box-shadow: none;
+      }
+      #app-visualizer .tab-panel * { max-height: none !important; }
+      #viz-canvas-area, #viz-cong-scroll, #sch-group-list, #wi-results, #wi-results-inner { overflow: visible; height: auto; }
+      #viz-canvas-area { background: none; }
+      /* applyVizZoom() sizes the wrapper inline and scales the canvas with a
+         transform; the paper takes the map at the sheet's width, whatever the
+         screen was zoomed to. */
+      #viz-canvas-wrapper { display: block; padding: 0; min-width: 0; min-height: 0; width: auto !important; height: auto !important; }
+      #viz-canvas { transform: none !important; }
+      #viz-canvas, #wi-diff-canvas { max-width: 100%; height: auto !important; box-shadow: none; border: 1px solid #000; }
+      #viz-pulse-canvas, #viz-readonly-badge, #viz-loading, #viz-travel-toggle-wrap,
+      #sch-editor-idle, #viz-empty { display: none !important; }
+      #viz-travel-panel:not(.open) { display: none; }
+      #viz-travel-panel, #viz-travel-panel * { background: #fff !important; color: #000 !important; }
+      #app-visualizer .tab-panel button,
+      #app-visualizer .tab-panel input[type="range"],
+      #app-visualizer .tab-panel input[type="color"],
+      #app-visualizer .tab-panel input[type="file"] { display: none !important; }
+      #app-visualizer .tab-panel select {
+        -webkit-appearance: none; appearance: none; border: 0; background: none; padding: 0;
+        color: #000; font: inherit; font-weight: 600; max-width: 100%;
+      }
+      /* A pressed button in a two- or four-way choice is the same kind of
+         content as a select's value: "A Day", "Single Group". It prints as
+         its words; the unpressed ones go with the rest. */
+      #app-visualizer .tab-panel .viz-mode-btn.active,
+      #app-visualizer .tab-panel .viz-day-btn.active,
+      #app-visualizer .tab-panel .wi-day-btn.active,
+      #app-visualizer .tab-panel .bell-day-tab.active {
+        display: inline-block !important; -webkit-appearance: none; appearance: none;
+        border: 0; background: none; box-shadow: none; padding: 0; color: #000; font-weight: 600; text-align: left;
+      }
+      .viz-mode-btn.active .viz-mode-sub, .viz-info-icon, .viz-hint { display: none; }
+      /* Visualize: the map leads and the sidebar's readings follow it. The
+         sections that only hold controls (options, playback, zoom, export)
+         would print as a heading over a line of help text. */
+      #viz-layout { display: flex; flex-direction: column; }
+      #viz-main { order: -1; flex: none; }
+      #viz-playback-section, .viz-section:has(#viz-zoom-in), .viz-section:has(#viz-export-pdf),
+      .viz-section:has(> .viz-toggle-row), .wi-actions { display: none; }
+      #app-visualizer .tab-panel thead th { position: static; }
+      .group-card, .viz-section, .viz-stat, .wi-card, .palette-card, .subject-row { break-inside: avoid; }
     }
 </style>
 </head>

@@ -57,11 +57,24 @@ export const PRINT_PREP = {
   // 035 — the Blueprint tab prints the active floor's plan, and an empty grid
   // prints one sentence. The plan is the schedule suite's invented school,
   // loaded the way the page's own Import does.
-  '035': [{
-    name: 'the Northwind plan loaded',
-    /* global applyFullProject -- 035's page global, read inside page.evaluate() */
-    run: page => page.evaluate(project => { applyFullProject(project); }, fixtureProject()),
-  }],
+  //       The other four tabs have no print button: Ctrl+P prints the tab that
+  //       is open, so each is opened here with the same school loaded.
+  '035': [
+    {
+      name: 'the Northwind plan loaded',
+      /* global applyFullProject -- 035's page global, read inside page.evaluate() */
+      run: page => page.evaluate(project => { applyFullProject(project); }, fixtureProject()),
+    },
+    ...['schedules', 'visualize', 'whatif', 'settings'].map(tab => ({
+      name: `the Northwind plan loaded, ${tab} tab`,
+      // Clicked in the page: at the audit's sheet-width viewport the tab bar
+      // is scrolled, and Playwright waits for a button it cannot bring into view.
+      run: page => page.evaluate(([project, t]) => {
+        applyFullProject(project);
+        document.querySelector(`.tab-btn[data-tab="${t}"]`).click();
+      }, [fixtureProject(), tab]),
+    })),
+  ],
   // 038 — the data box is not saved; without a table there is no chart for
   // Ctrl+P and no worksheet for the print button.
   '038': [{

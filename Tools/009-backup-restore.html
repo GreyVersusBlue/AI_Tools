@@ -51,6 +51,17 @@
     --warn-bg: #332711; --warn-line: #5e4a20; --warn-ink: #eac077;
     --student-bg: #2b2133; --student-ink: #d9bced; --student-line: #4c3a5c;
   }
+  /* Paper is light whatever the screen is doing. ink-paper.css puts its own
+     tokens back in print; these are this page's, so the page puts them back.
+     Same selector as the dark block above, and after it, so it wins. */
+  @media print {
+    :root[data-theme="dark"]:not(.a11y-filter-dark) {
+      --good: #2f7d4f;    --good-bg: #e4f5ea;  --good-line: #c7e2cb;
+      --warn: #a3791f;
+      --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13;
+      --student-bg: #f3ecf6; --student-ink: #6a3d84; --student-line: #dbc9e4;
+    }
+  }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;

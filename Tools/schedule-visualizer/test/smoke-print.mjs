@@ -51,7 +51,7 @@ await page.context().addInitScript(() => {
   try { localStorage.setItem('stviz_onboarded', '1'); } catch (e) { /* storage blocked */ }
 });
 
-console.log('School Layout Visualizer — the Blueprint tab on paper');
+console.log('School Layout Visualizer — every tab on paper');
 
 await page.goto(URL_PAGE, { waitUntil: 'networkidle' });
 await settle(page, 400);
@@ -160,7 +160,63 @@ eq(await shown('#tab-bar'), false, 'and the tab bar');
 eq(await shown('#bp-print-sheet'), false, 'the plan sheet belongs to the Blueprint tab only');
 eq(await page.evaluate(() => getComputedStyle(document.getElementById('panel-schedules')).overflowY), 'visible', 'the Schedules panel is not a scroll box in print');
 await toScreen();
+
+/* ── 4b. the four tabs with no sheet of their own ───────────────────────── */
+// Ctrl+P on these prints the open tab. Each was a sidebar beside a pane of
+// fixed height, with every button, slider and dropdown on the paper and the
+// lower half of a long list cut off (79 findings in audit-print.mjs). What a
+// control looks like is the test: a select or a pressed day button may stay
+// as its bare words, because the choice is what the page is about.
+const paper = () => page.evaluate(() => {
+  const seen = el => {
+    if (!el.getClientRects().length) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility === 'visible';
+  };
+  const plain = el => {
+    const cs = getComputedStyle(el);
+    return cs.appearance === 'none' && parseFloat(cs.borderTopWidth) === 0 && /rgba\(0, 0, 0, 0\)|transparent/.test(cs.backgroundColor);
+  };
+  const panel = document.querySelector('.tab-panel.active');
+  const label = el => el.id || el.className || el.tagName;
+  return {
+    controls: [...panel.querySelectorAll('button, select, input[type="range"], input[type="color"], input[type="file"]')]
+      .filter(el => seen(el) && !plain(el)).map(label).slice(0, 6),
+    asText: [...panel.querySelectorAll('button, select')].filter(el => seen(el) && plain(el)).map(el => el.tagName === 'SELECT' ? (el.selectedOptions[0] || {}).textContent : el.textContent.trim()),
+    clipping: [...panel.querySelectorAll('*')].filter(el => seen(el) && /hidden|clip|auto|scroll/.test(getComputedStyle(el).overflowY) &&
+      el.scrollHeight > el.clientHeight + 2 && el.clientHeight > 2 && !/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)).map(label).slice(0, 6),
+    sticky: [...panel.querySelectorAll('th')].filter(el => seen(el) && getComputedStyle(el).position === 'sticky').length,
+    moving: [...panel.querySelectorAll('*')].filter(el => seen(el) && parseFloat(getComputedStyle(el).transitionDuration) > 0).length,
+  };
+});
+for (const tab of ['schedules', 'visualize', 'whatif', 'settings']) {
+  await page.evaluate(t => switchTab(t), tab);
+  await settle(page, 500);
+  await page.setViewportSize({ width: 720, height: 960 });
+  await toPrint();
+  const p = await paper();
+  eq(p.controls.length, 0, `${tab}: no control is on the paper: ${JSON.stringify(p.controls)}`);
+  eq(p.clipping.length, 0, `${tab}: nothing clips or scrolls: ${JSON.stringify(p.clipping)}`);
+  eq(p.sticky, 0, `${tab}: no table header is sticky in print`);
+  eq(p.moving, 0, `${tab}: nothing is left mid-transition for the printer`);
+  if (tab === 'visualize') {
+    ok(p.asText.some(t => /6-1/.test(t)) && p.asText.includes('A Day'), 'visualize: the group and day that are drawn print as words: ' + JSON.stringify(p.asText));
+    const order = await page.evaluate(() => {
+      const top = id => document.getElementById(id).getBoundingClientRect().top;
+      const c = document.getElementById('viz-canvas').getBoundingClientRect();
+      return { w: c.width, right: c.right, area: document.getElementById('viz-canvas-area').getBoundingClientRect().width, wrap: document.getElementById('viz-canvas-wrapper').getBoundingClientRect().width, mapFirst: top('viz-canvas') < top('viz-controls'), fits: c.right <= 721 && c.width > 100, zoom: document.getElementById('viz-zoom-in').getClientRects().length };
+    });
+    ok(order.mapFirst, 'visualize: the map leads the page and the readings follow');
+    ok(order.fits, 'visualize: the map is as wide as the sheet at most: ' + JSON.stringify(order));
+    eq(order.zoom, 0, 'visualize: the zoom, playback and export sections are gone');
+  }
+  if (tab === 'whatif') ok(p.asText.includes('A Day') && p.asText.some(t => /101|102|103|Library/.test(t)), 'whatif: the scenario day and each mod\'s room print as words: ' + JSON.stringify(p.asText));
+  await toScreen();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  eq(await shown('#tab-bar'), true, `${tab}: back on screen the tab bar returns`);
+}
 await page.evaluate(() => switchTab('blueprint'));
+await settle(page, 300);
 
 /* ── 5. the Schedule Browser's print is its own ─────────────────────────── */
 await page.evaluate(() => toggleApp());

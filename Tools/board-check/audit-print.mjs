@@ -44,12 +44,22 @@
 //            than its box, which prints the same way.
 //   CHROME   a screen control that reaches the paper: a visible <button>,
 //            <select>, range/file/colour input, or a `position: fixed|sticky`
-//            box (Chromium repeats a fixed box on every printed page).
+//            box (Chromium repeats a fixed box on every printed page). A
+//            select or button printed as bare text (`appearance: none`, no
+//            border, no fill) is not one: 035 prints "A Day" and the chosen
+//            group that way.
 //   SPLIT    three or more same-class siblings, each a bordered or filled box
 //            taller than two lines and shorter than a page, whose
 //            `break-inside` is `auto` and that no ancestor keeps whole: a card
 //            grid or a set of student blocks a page break may cut through.
 //            Table cells and buttons are not counted.
+//   TAIL     the document runs a sheet or more past the last thing visible in
+//            print: blank pages follow the sheet. This is what `body * {
+//            visibility: hidden }` does (print-area.css, and most hand-written
+//            print blocks): the screen UI is invisible and still as tall as
+//            it was. 015's one-page map printed as three until 2026-10-03.
+//            Read off the layout at the sheet's width, not off a PDF, so the
+//            count of pages is an estimate.
 //   DARK     with the dark theme on, an element whose printed fill differs
 //            from the light theme's (and is not white), or whose text is
 //            paler and under 4.5:1 on white. Print is always on paper (`ink-paper.css`, `a11y.css`).
@@ -90,7 +100,7 @@ const BASELINE_PATH = path.join(SITE, 'Tools', 'board-check', 'print-audit-basel
 const argv = process.argv.slice(2);
 const flag = f => argv.includes(f);
 const only = flag('--only') ? argv[argv.indexOf('--only') + 1] : null;
-const KINDS = ['CLIP', 'FIXED', 'SCROLL', 'CHROME', 'SPLIT', 'DARK'];
+const KINDS = ['CLIP', 'FIXED', 'SCROLL', 'CHROME', 'SPLIT', 'TAIL', 'DARK'];
 
 // Letter, portrait, at CSS px: the layout viewport print would give the page
 // with half-inch margins. Height matters only for `vh` units.
@@ -165,10 +175,11 @@ const measure = () => {
   };
   const all = [...document.body.querySelectorAll('*')].filter(el => !el.closest('.a11y-widget, script, style, template'));
   const shown = all.filter(vis);
-  let ink = 0;
+  let ink = 0, lastBottom = 0;
   for (const el of shown) {
     const cs = getComputedStyle(el);
     const tag = el.tagName;
+    lastBottom = Math.max(lastBottom, el.getBoundingClientRect().bottom + window.scrollY);
     if (tag === 'CANVAS' || tag === 'IMG' || tag === 'SVG' || tag === 'svg') ink++;
     for (const n of el.childNodes) if (n.nodeType === 3 && n.nodeValue.trim()) { ink++; break; }
     if (el.closest('svg') && tag !== 'svg') continue;
@@ -197,7 +208,13 @@ const measure = () => {
 
     // CHROME
     const type = (el.getAttribute('type') || '').toLowerCase();
-    if (tag === 'BUTTON' || tag === 'SELECT' || (tag === 'INPUT' && /^(range|file|color|button|submit)$/.test(type))) {
+    // A select or a pressed button that a print rule has stripped to its words
+    // (no native look, no border, no fill) is the value it holds, not a control.
+    const asText = (tag === 'BUTTON' || tag === 'SELECT') && cs.appearance === 'none' &&
+      parseFloat(cs.borderTopWidth) === 0 && parseFloat(cs.borderBottomWidth) === 0 && rgba(cs.backgroundColor)[3] < 8;
+    if (asText) {
+      // counted as text below, nothing to report
+    } else if (tag === 'BUTTON' || tag === 'SELECT' || (tag === 'INPUT' && /^(range|file|color|button|submit)$/.test(type))) {
       add('CHROME', el, `a ${tag.toLowerCase()}${type ? `[type=${type}]` : ''} is visible in print` + (el.textContent.trim() ? `: "${el.textContent.trim().replace(/\s+/g, ' ').slice(0, 30)}"` : ''));
     } else if (cs.position === 'fixed' || cs.position === 'sticky') {
       add('CHROME', el, `position: ${cs.position} in print`);
@@ -235,6 +252,11 @@ const measure = () => {
       });
       if (boxy.length >= 3) add('SPLIT', boxy[0], `${boxy.length} sibling ${name(boxy[0])} boxes with break-inside: auto`);
     }
+  }
+  // TAIL: a sheet's height or more of nothing after the last visible box.
+  const docH = document.documentElement.scrollHeight;
+  if (ink && docH - lastBottom >= window.innerHeight) {
+    out.push({ kind: 'TAIL', at: 'body', why: `${Math.round(docH - lastBottom)}px of blank paper follows the sheet: what print hides still takes its height` });
   }
   return { findings: out, ink, colours, printCalls: window.__printCalls || 0 };
 };
@@ -325,7 +347,10 @@ try {
     const html = fs.readFileSync(path.join(SITE, p), 'latin1');
     // A page with no print() call and no print rule of its own has no print
     // path: Ctrl+P prints the screen, and its buttons are not a finding.
-    const printPath = /window\.print\(|[^.\w]print\(\)|@media[^{]*\bprint\b|print-area\.css|print-kit\.css/.test(html);
+    // A print block that only puts a dark page's light tokens back (004, 009,
+    // 010) gives the page no sheet, so it is taken out before the test.
+    const tokenReset = /@media print\s*\{\s*(?:[^{}]*\[data-theme[^{}]*\{[^{}]*\}\s*)+\}/g;
+    const printPath = /window\.print\(|[^.\w]print\(\)|@media[^{]*\bprint\b|print-area\.css|print-kit\.css/.test(html.replace(tokenReset, ''));
     const byKey = new Map();
     const inkByButton = new Map();
     let inkAny = 0;

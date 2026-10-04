@@ -44,6 +44,11 @@
      both themes. */
   :root { --good: #2f7d4f; --info-bg: #eef3f7; }
   :root[data-theme="dark"]:not(.a11y-filter-dark) { --good: #63c08e; --info-bg: #1b2a35; }
+  /* Paper is light whatever the screen is doing: the line above also beat
+     ink-paper.css's print reset for --info-bg, so the light pair goes back here. */
+  @media print {
+    :root[data-theme="dark"]:not(.a11y-filter-dark) { --good: #2f7d4f; --info-bg: #eef3f7; }
+  }
   /* The hidden attribute is only display:none in the UA stylesheet; any class
      that sets display beats it. This makes `el.hidden = true` mean it. */
   [hidden] { display: none !important; }
