@@ -18,7 +18,12 @@
        `count` sheets with a write-in rule where the name would be.
        `cut: true` draws the cut line between the two half sheets of a page.
 
-     PrintKit.plan(), chunk(), inkClass(), pageCss(), PAPERS, PRESETS
+     PrintKit.renderCards(container, items, preset, buildCard)
+       A card grid from a list: one `.pk-cards.pk-page` per page of a preset
+       ('3x3'), each card a share of the page; or, for `{ cols: 3 }`, one grid
+       of cards whose height is the tool's own, running on over the pages.
+
+     PrintKit.plan(), chunk(), cardPlan(), inkClass(), pageCss(), PAPERS, PRESETS
        The pure parts of the above, which is what the Node suite tests.
 
    THE ROSTER IS HANDED IN, NOT FETCHED. `roster` is an array of names, or of
@@ -256,6 +261,53 @@
     return sheets;
   }
 
+  /** How a list of cards is laid out: { cols, cls, own, pages }. Pure.
+      `preset` is a PRESETS name: pages of that preset's perPage, each card a
+      share of the printable page (print-kit.css's rows). Or it is an object,
+      for a grid of the tool's own: { cols } across, the card's height left to
+      the tool's CSS (`pk-cards-own`), and { perPage } items to a page; with
+      no perPage the list is one grid that runs on over as many pages as it
+      needs, breaking between rows. A name the kit does not know is '2x2',
+      which is what print-kit.css draws for a grid with no preset class. */
+  function cardPlan(items, preset) {
+    items = Array.isArray(items) ? items : [];
+    if (preset && typeof preset === 'object') {
+      var cols = Math.floor(Number(preset.cols));
+      if (!(cols >= 1)) cols = 2;
+      var per = Math.floor(Number(preset.perPage));
+      return {
+        cols: cols, cls: 'pk-cards-own', own: true,
+        pages: per >= 1 ? chunk(items, per) : (items.length ? [items.slice()] : [])
+      };
+    }
+    var p = PRESETS[preset] || PRESETS['2x2'];
+    return { cols: p.cols, cls: p.cls, own: false, pages: chunk(items, p.perPage) };
+  }
+
+  /** Renders `items` as card grids into `container`, replacing what was
+      there: one `div.pk-cards.pk-page` per page of cardPlan(items, preset).
+      `buildCard(item, index)` returns the card's node, which gets `.pk-card`;
+      a falsy return is skipped. Returns the pages, as arrays of items. */
+  function renderCards(container, items, preset, buildCard) {
+    var doc = container.ownerDocument;
+    var layout = cardPlan(items, preset);
+    var index = 0;
+    while (container.firstChild) container.removeChild(container.firstChild);
+    layout.pages.forEach(function (group) {
+      var grid = doc.createElement('div');
+      grid.className = 'pk-cards pk-page ' + layout.cls;
+      if (layout.own) grid.style.setProperty('--pk-cols', String(layout.cols));
+      group.forEach(function (item) {
+        var card = buildCard(item, index++);
+        if (!card) return;
+        card.classList.add('pk-card');
+        grid.appendChild(card);
+      });
+      container.appendChild(grid);
+    });
+    return layout.pages;
+  }
+
   global.PrintKit = {
     PAPERS: PAPERS,
     PRESETS: PRESETS,
@@ -266,6 +318,8 @@
     plan: plan,
     chunk: chunk,
     inkClass: inkClass,
-    renderSet: renderSet
+    renderSet: renderSet,
+    cardPlan: cardPlan,
+    renderCards: renderCards
   };
 })(window);

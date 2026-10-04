@@ -146,19 +146,24 @@ await page.evaluate(() => PrintKit.renderSet(document.getElementById('out'), doc
 eq(await page.evaluate(() => document.getElementById('out').className), '', 'the quarter wrapper class comes off on the next full-page render');
 
 // ---- card grids ------------------------------------------------------------------------
-/** Builds one .pk-cards.pk-page per chunk and reports the first card's box. */
+/** PrintKit.renderCards() for n cards; reports the grids and the first card's box. */
 const cards = (preset, n) => page.evaluate(({ preset, n }) => {
   const out = document.getElementById('out');
-  out.replaceChildren();
   const items = Array.from({ length: n }, (_, i) => 'Card ' + (i + 1));
-  for (const group of PrintKit.chunk(items, preset)) {
-    const grid = document.createElement('div');
-    grid.className = 'pk-cards pk-page ' + PrintKit.PRESETS[preset].cls;
-    for (const label of group) { const c = document.createElement('div'); c.className = 'pk-card'; c.textContent = label; grid.appendChild(c); }
-    out.appendChild(grid);
-  }
-  const r = out.querySelector('.pk-card').getBoundingClientRect();
-  return { grids: out.children.length, w: r.width, h: r.height };
+  const seen = [];
+  const pages = PrintKit.renderCards(out, items, preset, (label, i) => {
+    seen.push(i);
+    const c = document.createElement('div'); c.className = 'mine'; c.textContent = label; return c;
+  });
+  const all = [...out.querySelectorAll('.pk-card')];
+  const r = all[0].getBoundingClientRect();
+  return { grids: out.children.length, w: r.width, h: r.height, pages: pages.map(p => p.length),
+           classes: [...new Set([...out.children].map(g => g.className))].join('|'),
+           cols: out.firstElementChild.style.getPropertyValue('--pk-cols'),
+           across: all.filter(x => Math.abs(x.getBoundingClientRect().top - r.top) < 1).length,
+           text: all.map(x => x.textContent).join('|') === items.join('|'),
+           kept: all.every(x => x.className === 'mine pk-card' && x.parentElement.parentElement === out),
+           index: seen.join(',') === items.map((_, i) => i).join(',') };
 }, { preset, n });
 
 let c = await cards('2x5', 10);
@@ -175,6 +180,29 @@ for (const [preset, per] of [['2x2', 4], ['2x3', 6], ['3x3', 9], ['2x4', 8], ['4
   c = await cards(preset, per * 2 + 1);
   eq([c.grids, (await printed()).pages], [3, 3], `${preset}: ${per * 2 + 1} cards are three pages`);
 }
+// renderCards(): what it builds for a preset, and for a grid of the tool's own.
+c = await cards('3x3', 20);
+eq([c.grids, c.pages, c.classes, c.cols], [3, [9, 9, 2], 'pk-cards pk-page pk-cards-3x3', ''], 'renderCards: a preset is one .pk-cards.pk-page per page, with the preset class');
+ok(c.text && c.kept && c.index, 'renderCards: every item is one card, in order, keeps its own class, gains .pk-card, and buildCard is handed its index');
+eq(c.across, 3, 'renderCards: 3x3 is three across');
+c = await cards('3x3', 9);
+await page.evaluate(() => PrintKit.renderCards(document.getElementById('out'), ['a', 'b'], '2x2', t => { const d = document.createElement('div'); d.textContent = t; return d; }));
+eq(await page.evaluate(() => [document.getElementById('out').children.length, document.querySelectorAll('#out .pk-card').length]), [1, 2], 'renderCards: a second call replaces what was there');
+eq(await page.evaluate(() => PrintKit.renderCards(document.getElementById('out'), [], '2x2', () => null).length + document.getElementById('out').children.length), 0, 'renderCards: no items leaves the container empty');
+eq(await page.evaluate(() => { PrintKit.renderCards(document.getElementById('out'), [1, 2, 3], '2x2', n => n === 2 ? null : document.createElement('div')); return document.querySelectorAll('#out .pk-card').length; }), 2, 'renderCards: a card buildCard declines is skipped');
+// A grid of the tool's own: the kit gives the card no height, the tool's rule does.
+await page.addStyleTag({ content: '.mine { min-height: 1.5in; }' });   // one class: loses to any kit rule that reaches it
+c = await cards({ cols: 4 }, 30);
+eq([c.grids, c.pages, c.classes, c.cols, c.across], [1, [30], 'pk-cards pk-page pk-cards-own', '4', 4], 'renderCards: { cols: 4 } is one grid, four across, marked pk-cards-own');
+near(c.h, 1.5 * IN, 'an own grid\'s card has the height the tool gave it, from a rule of one class');
+// 6 rows of 1.5 in and five 0.125 in gaps are 9.625 in: 24 to a 10 in page, so 8 rows are two pages.
+eq((await printed()).pages, 2, 'an own grid runs on to a second page between rows, with no page of its own per group');
+c = await cards({ cols: 4 }, 24);
+eq((await printed()).pages, 1, 'and 24 such cards are one page, with no blank page after');
+c = await cards({ cols: 2, perPage: 4 }, 9);
+eq([c.grids, c.pages, c.across, (await printed()).pages], [3, [4, 4, 1], 2, 3], 'renderCards: { cols, perPage } cuts an own grid into pages');
+c = await cards('3x3', 9);
+near(c.h, (9.96 * IN - 2 * 0.125 * IN) / 3, 'a preset card is still a third of the printable page, whatever the tool\'s own min-height');
 // A card with too much text grows its row; it is never cut off.
 await cards('3x3', 9);
 const tall = await page.evaluate(() => { const el = document.querySelector('.pk-card'); el.textContent = 'word '.repeat(600);

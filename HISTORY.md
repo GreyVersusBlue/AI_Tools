@@ -9,6 +9,91 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P3, increment 6: `PrintKit.renderCards()`, with 077 on it, and 074 adopts the kit at its own label size (2026-10-04, AI-13, `CACHE_VERSION` v235)
+
+Audit entry AI-13, rank 6 (2+). Sixth increment of P3: the first of the seven card-grid tools, 074 (science safety
+label maker), and the card renderer the recipe had been waiting for. The row stays, rewritten: six card-grid tools
+are left (016 017 018 040 051 064). P4 and P5 untouched.
+
+- **`PrintKit.renderCards(container, items, preset, buildCard)`** is 077's loop, in the kit. It empties the
+  container and appends one `div.pk-cards.pk-page` per page; `buildCard(item, index)` returns a card's node, which
+  gains `.pk-card`; a falsy return is skipped; it returns the pages. `preset` is one of two things, because the two
+  callers needed two things:
+  - *a `PRESETS` name* (`'3x3'`): pages of the preset's `perPage`, the preset's class, each card a share of the
+    printable page. This is 077, which now calls it in one line; `buildCard` no longer writes `pk-card` itself.
+    An unknown name is `2x2`, which is what `print-kit.css` draws for a grid with no preset class.
+  - *an object, `{ cols, perPage }`*, for a grid of the tool's own: `--pk-cols` set inline, the class `pk-cards-own`,
+    and no height from the kit. With no `perPage` the list is one grid that runs on over as many pages as it needs,
+    breaking between rows. This is 074.
+  `PrintKit.cardPlan(items, preset)` is the pure half (`{ cols, cls, own, pages }`), tested in Node.
+- **One CSS change:** the rule that makes a card a share of the page is now
+  `.pk-cards:where(:not(.pk-cards-own)) > .pk-card`. `:where()` adds no specificity, so the two label presets'
+  overrides and every existing adopter are untouched, and an own grid's card takes its height from the tool at any
+  specificity. Without it a `{ cols }` card got the kit's default, half the printable page (4.9 in): the new
+  assertions fail three ways on the old rule (472 px for 144; 4 pages for 2; 3 for 1), which I checked by putting
+  the old selector back.
+- **074: is a label a share of the page or an exact size? Neither, and that decided it.** Its own CSS said
+  `grid-template-columns: repeat(4 | 3 | 2, 1fr)` with a 0.2 in gap, and `min-height: 1.5in | 2in | 2.75in`. So a
+  label's *width* is a share (the size menu even says "4/row"), and its *height* is a size in inches that may grow
+  and never shrinks (the `min-height` was itself a fix for a clipped long label). The kit's presets would have made
+  the height a share too: 24, 12 and 6 to a page either way, but a medium label 2.4 in tall and a large one 3.24 in.
+  The task said not to bend the tool to the kit, so 074 keeps its three `min-height` rules, its gap (`--pk-gap: .2in`
+  on `#printArea`) and its symbol sizes, and takes from the kit the grid, the columns, `break-inside: avoid`,
+  `setPage()` (Letter, portrait, half an inch; it had no `@page`), and `.pk-paper`. It was already on
+  `print-area.css` and had no `@media print` block, like 077. The size class moved from the grid element to
+  `#printArea` (`pk-paper size-small`), since the kit builds the grid.
+- **One flowing grid, not a grid per page.** The old sheet was one grid that broke wherever the page ended. Cutting
+  it into pages of 24, 12 and 6 would give the same counts until a long label grows a row; then the last row of a
+  page spills onto a sheet of its own before a forced break. A flowing grid has no such case, and it is what makes
+  the output identical, so `{ cols }` has no `perPage` here. The cost: nowhere to hang a per-page footer. Reversible
+  by adding `perPage`.
+- **The label is built with `textContent`; the symbol with `DOMParser`.** The sheet was one `innerHTML` string with
+  an escaper; `buildLabel()` now makes the nodes. The symbol's SVG is a constant in the page (`SYMBOLS[].path` and
+  `.color`), parsed as `image/svg+xml` and imported; a label's symbol key only selects one, and an unknown key still
+  falls back to the equipment box. `check:inline-sinks` for 074 goes 3 to 2 (the picker and the queue remain). I am
+  recording that the parser is still a parser: it is not counted as a sink, and nothing typed reaches it.
+- **Printed output, old against new.** Old page from `git show origin/main:` through `page.route()`, printed with
+  `page.pdf({ format: 'Letter', margin: 0.5in })` and also with no margin; new page with `preferCSSPageSize`.
+  33 states in each theme (small, medium, large by 1, 3, 6, 7, 12, 13, 24, 25, 30 and 61 labels, and nine with one
+  long). In all 66: the same number of labels, the same label width and height in print media, the same tallest
+  label, and the same PDF page count (for example small 24 = 1 page, 25 = 2, 61 = 3; medium 12 = 1, 13 = 2, 61 = 6;
+  large 6 = 1, 7 = 2, 61 = 11). With no margin the old page fitted a fifth row of medium labels (13 = 1, 61 = 5);
+  no printer prints that. Rasters (`pdftoppm -r 48 -gray`), with the text colour held equal: dark 33 of 33
+  identical; light the same size and geometry but 65,572 pixels over 74 pages differ by at most 2 grey levels of
+  255, all on antialiased edges, because `.pk-paper` puts a white ground where the light page had none.
+- **Visible changes, both meant.** Label text prints `#000` where it printed ink-paper's `#1f2430` (`.pk-paper`).
+  Ctrl+P prints the labels; it printed an empty page (the sheet is built on `beforeprint` as well as by the button).
+  The border stays the tool's `#333` and the symbols keep their light-theme colours from the dark theme, as before.
+- **What I got wrong on the way.** A kit assertion on the own grid's card *width* failed (266 px for 171): the
+  fixture is measured at the browser's width, not the paper's, so I dropped it and 074's suite opens the page at
+  7.5 in wide instead, where a label in print media is its size on paper. In 074's suite I assumed a long label
+  only grows at four across; at 7.5 in it grows 3 px at three across too. And my first regex for "the kit sets no
+  height on an own grid's card" matched the `:where()` selector itself.
+- **Decisions taken, each cheap to reverse.** `{ cols }` rather than new `4x6` and `3x4` presets (a preset means a
+  share of the page, which is what 074 is not). An unknown preset name falls back rather than throwing, like
+  `pageCss()`. `chunk()` stays exported. The raster comparison is not in the suite (it needs `pdftoppm`). The row
+  was not claimed by a pushed commit; the merge queue's Active row is the lock, as in increments 3 to 5.
+- **New suite.** `Tools/science-safety-label-maker/test/smoke-print.mjs` (`npm run test:safety-label-print`, port
+  8473, 946 assertions): fifteen states in light and dark; the grid the button builds, every label `qty` times in
+  queue order with its symbol; label width, height, row gap and symbol size on paper; nothing clipped, squeezed or
+  outside the sheet; black text on white paper, light-theme symbol colours from dark; Chromium's PDF page count and
+  paper size; then markup typed as label text, an unknown symbol key, printing twice, a change of size, Ctrl+P
+  through `beforeprint` and through `page.pdf()` with no button pressed, a saved size the tool does not offer, and
+  an empty queue. `print-kit.test.mjs` 70 to 85 assertions, `smoke-print-kit.mjs` 69 to 81; 077's suite unchanged
+  (581). 074's row in `smoke-print-tail.mjs` is unchanged.
+- **Checks.** All 13 guards incl. `check:precache -- --base origin/main` and `check:adoption -- --check`; 58 suites
+  via `run-suites.mjs --only` for science-safety-label-maker, print-kit (incl. `smoke-print-tail.mjs`),
+  sub-note-feedback-slip-generator, peer-feedback-checklist-generator, testing-accommodations-card-generator,
+  field-trip-permission-slip, exit-ticket-generator, certificate-award-maker, roster, share, theme, service-worker
+  and board-check, all green; the a11y sweep `--only 074` (4 passed); `audit-print --only 074 --check` (4 states, no
+  finding of any kind, baseline matched).
+  **Not verified:** the full `npm test` was not run although `_shared/print-kit.js` and `.css` changed: all seven
+  pages that link the kit were covered by their own suites above, and CI's push-to-main run is the check for the
+  rest. Nothing was printed on paper and no label stock was tried; only Chromium's PDF and its raster were seen.
+  `renderCards()` with `perPage` on an own grid has no adopter (fixture only), and an exact `height` on a
+  `.pk-cards-own` card (064) has not been tried. Firefox and Safari were not opened; `:where()` needs Chromium 88,
+  Firefox 78 or Safari 14.
+
 ## Path 7 P3, increment 5: 042 adopts the print kit and keeps its own size; the six class-set/blank tools are done (2026-10-04, AI-13, `CACHE_VERSION` v234)
 
 Audit entry AI-13, rank 6 (2+). Fifth increment of P3: one tool, 042 (certificate and award maker), by the recipe.

@@ -55,6 +55,26 @@ eq(PK.chunk(Array.from({ length: 11 }, (_, i) => i), '2x5').map(p => p.length), 
 eq(PK.chunk([], '3x3'), [], 'chunk of nothing');
 eq(PK.chunk([1, 2], 0), [[1], [2]], 'a bad page size never loops forever');
 
+// ---- cardPlan: what renderCards() lays out --------------------------------------
+const nine = Array.from({ length: 9 }, (_, i) => i);
+const plain = o => JSON.parse(JSON.stringify(o));   // the plan comes out of the vm context
+eq(plain(PK.cardPlan(nine, '2x2')), { cols: 2, cls: 'pk-cards-2x2', own: false, pages: [[0, 1, 2, 3], [4, 5, 6, 7], [8]] }, 'a preset name: pages of its perPage, its class, not the tool\'s own');
+eq(PK.cardPlan(Array.from({ length: 28 }), '4x3').pages.map(p => p.length), [12, 12, 4], '28 cards on 4x3 are three pages');
+eq(plain(PK.cardPlan(nine, { cols: 4 })), { cols: 4, cls: 'pk-cards-own', own: true, pages: [nine] }, 'an object with no perPage: one grid of the tool\'s own that runs on');
+eq(PK.cardPlan(nine, { cols: 3, perPage: 6 }).pages.map(p => p.length), [6, 3], 'an object with perPage is cut into pages');
+eq(PK.cardPlan(nine, { cols: '3', perPage: '4' }).pages.map(p => p.length), [4, 4, 1], 'cols and perPage read from a select are strings');
+eq([PK.cardPlan(nine, { cols: 0 }).cols, PK.cardPlan(nine, {}).cols, PK.cardPlan(nine, { cols: 'x' }).cols], [2, 2, 2], 'a bad cols is two across');
+eq(PK.cardPlan(nine, { cols: 2, perPage: -1 }).pages.length, 1, 'a bad perPage is one grid, not a loop');
+eq(plain(PK.cardPlan([], { cols: 3 }).pages), [], 'no items is no grid, of the tool\'s own');
+eq(plain(PK.cardPlan([], '3x3').pages), [], 'or of a preset');
+eq(plain(PK.cardPlan(null, '3x3').pages), [], 'items that are not a list are no grid');
+eq([PK.cardPlan(nine, 'nonsense').cls, PK.cardPlan(nine).cls, PK.cardPlan(nine, null).cls], ['pk-cards-2x2', 'pk-cards-2x2', 'pk-cards-2x2'], 'an unknown preset is 2x2, which is what the stylesheet draws with no preset class');
+const mine = [1, 2, 3];
+ok(PK.cardPlan(mine, { cols: 2 }).pages[0] !== mine, 'the one page of an own grid is a copy, not the caller\'s list');
+eq(typeof PK.renderCards, 'function', 'renderCards is published');
+ok(/\.pk-cards:where\(:not\(\.pk-cards-own\)\) > \.pk-card\s*\{\s*min-height:/.test(css), 'the share-of-the-page card height leaves .pk-cards-own alone, at no extra specificity');
+ok(!/\.pk-cards-own(?!\))[^{,]*\{[^}]*height/.test(css), 'and the kit sets no height on an own grid\'s card');
+
 // ---- presets agree with the stylesheet ---------------------------------------
 for (const [name, p] of Object.entries(PK.PRESETS)) {
   eq(p.perPage, p.cols * p.rows, `preset ${name}: perPage is cols x rows`);
