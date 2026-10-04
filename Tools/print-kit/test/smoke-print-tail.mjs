@@ -26,7 +26,7 @@
 // up on the line after print(), and the real one would have blocked there.
 //
 // 042's certificate is a fixed-size sheet on purpose and is unchanged; only
-// its tail went. Every page that links _shared/print-area.css is in the table
+// its tail went (it prints through print-area.css and the kit since v234). Every page that links _shared/print-area.css is in the table
 // too: its rule needs #printArea to be a direct child of <body>, and "the
 // sheet still shows" is what fails on a page that nests it.
 //
@@ -115,7 +115,7 @@ const PAGES = [
   { file: '039-vocab-conjugation-drill.html', prints: [{ click: 'Print' }] },
   { file: '040-vocab-flashcard-generator.html', prints: [{ click: 'Print alignment test page' }, { click: 'Print', before: prep040 }] },
   { file: '041-formula-sheet-builder.html', prints: [{ click: 'Print' }] },
-  { file: '042-certificate-award-maker.html', prints: [{ click: 'Print / Save as PDF' }] },
+  { file: '042-certificate-award-maker.html', prints: [{ click: 'Print / Save as PDF' }] },   // since Path 7 P3: print-area.css + the print kit
   { file: '043-field-trip-permission-slip.html', prints: [{ click: 'Print' }, { click: 'Print missing list' }, { click: 'Print reminder slips' }, { click: 'Print chaperone groups' }] },   // since Path 7 P3: print-area.css + the print kit
   { file: '061-fraction-decimal-percent-drill-generator.html', prints: [{ click: 'Print worksheet' }] },
   { file: '063-grammar-mad-libs-generator.html', prints: [{ click: 'Print worksheet' }] },

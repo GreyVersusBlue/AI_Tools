@@ -23,13 +23,15 @@
      certificate's own color and background, so it already shows true print
      colours on a dark page. It must NOT be given .paper-sheet, whose (0,5,0)
      rule in ink-paper.css would outrank .theme-elegant (0,1,0) and repaint
-     every skin white. #printArea is display:none and its @media print values
-     are untouched.
+     every skin white. #printArea is hidden on screen (print-area.css) and is
+     the one .pk-paper here: white under the certificates in print, and it
+     reaches nothing inside them.
      Read ink-paper.css's header before copying this into another tool. -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="certificate-award-maker/cam-store.js"></script>
 <script src="certificate-award-maker/cam-borders.js"></script>
@@ -38,6 +40,8 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   /* Path 5 P3. --desk is the mat the previewed certificate sits on — 041's
      #d9d7cd — and --desk-ink the muted text drawn ON it, because var(--muted)
@@ -231,36 +235,39 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
-  /* One .print-page per printed sheet, holding one or two .cert-slot
-     wrappers (see buildPrintArea()/#perPageTabs). The @page size itself
-     (landscape vs portrait) is injected dynamically by #camPageSizeStyle
-     since it depends on the orientation setting, not fixed here. */
-  @media print {
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    /* What visibility hides still takes its height, and that height printed as
-       blank sheets after this one. Everything but the sheet leaves the flow. */
-    body > *:not(#printArea) { display: none !important; }
-    #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
-    .print-page {
-      width: 100vw; height: 100vh; display: flex; flex-direction: column;
-      page-break-after: always;
-    }
-    .print-page:last-child { page-break-after: auto; }
-    .print-page .cert-slot {
-      flex: 1 1 0; min-height: 0; position: relative; overflow: hidden;
-    }
-    /* A faint cut guide between the two halves when printing 2-per-page. */
-    .print-page.per-2 .cert-slot + .cert-slot { border-top: 1px dashed #999; }
-    /* certificateHtml() sets aspect-ratio inline (it has to — it varies with
-       orientation) so overriding it here for print needs !important: the
-       slot is stretched to fill exactly, same as this tool always did before
-       per-page/orientation existed. */
-    .cert {
-      box-shadow: none !important; margin: 0 !important;
-      width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important;
-      aspect-ratio: auto !important;
-    }
+  /* ---- the printed sheets ----
+     Printed through the shared kit (Path 7 P3). print-area.css puts #printArea
+     alone on the paper, PrintKit.setPage() writes the page (Letter, landscape
+     or portrait, 0.35 in) and each .print-page is a .pk-page: one printed
+     sheet, holding one or two .cert-slot wrappers (see buildPrintArea() and
+     #perPageTabs). These are plain rules, not print rules, because the sheet
+     is never on screen.
+
+     A CERTIFICATE IS A FIXED SIZE ON PURPOSE. It goes on pre-printed stock,
+     and stockInsetVars() works its safe area out from the printed size, so a
+     sheet is exactly the printable page and a slot exactly all or half of it:
+     `height`, not the kit's `min-height`, and what does not fit a slot is cut
+     rather than pushed onto a second sheet of stock. In print 100vw x 100vh
+     is the printable page, as it was in this tool's own print block; sized
+     from the kit's --pk-page-h instead, Chromium drew the sheet a fraction of
+     a pixel taller (measured 2026-10-04), so the viewport units stayed. */
+  .print-page {
+    width: 100vw; height: 100vh;
+    display: flex; flex-direction: column;
+  }
+  .print-page .cert-slot {
+    flex: 1 1 0; min-height: 0; position: relative; overflow: hidden;
+  }
+  /* A faint cut guide between the two halves when printing 2-per-page. */
+  .print-page.per-2 .cert-slot + .cert-slot { border-top: 1px dashed #999; }
+  /* certificateHtml() sets aspect-ratio inline (it has to — it varies with
+     orientation) so overriding it for the sheet needs !important: the slot is
+     stretched to fill exactly, same as this tool always did before
+     per-page/orientation existed. */
+  #printArea .cert {
+    box-shadow: none !important; margin: 0 !important;
+    width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important;
+    aspect-ratio: auto !important;
   }
 </style>
 </head>
@@ -430,8 +437,7 @@
 
 </div>
 
-<style id="camPageSizeStyle">@page { size: letter landscape; margin: 0.35in; }</style>
-<div id="printArea" style="display:none;"></div>
+<div id="printArea" class="pk-paper"></div>
 
 <script>
 (function () {
@@ -469,7 +475,7 @@
    'awardTitle','awardTitleCustom','reason','certDate','signature',
    'signatureFile','signaturePreview','signaturePreviewImg','signatureMissing','signatureRemove',
    'qrUrl','printBtn','showGuides','stockInset',
-   'orientTabs','perPageTabs','camPageSizeStyle',
+   'orientTabs','perPageTabs',
    'previewArea','previewNote','viewToggle'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -914,17 +920,20 @@
     }
   }
 
-  // Updates the injected @page rule to match the current orientation. Called
-  // on boot, whenever the orientation setting changes, and right before
-  // print as a belt-and-suspenders measure.
+  // Hands the page to the print kit: Letter in the current orientation with
+  // the 0.35in margin printedCertInches() counts on. PrintKit.setPage() writes
+  // the @page rule (and the --pk-page-* properties, which nothing here reads).
+  // Called on boot, whenever the orientation setting changes, and right
+  // before print as a belt-and-suspenders measure.
   function updatePageSizeStyle() {
-    var size = settings.orientation === 'portrait' ? 'letter portrait' : 'letter landscape';
-    els.camPageSizeStyle.textContent = '@page { size: ' + size + '; margin: 0.35in; }';
+    PrintKit.setPage({ paper: 'letter', orientation: settings.orientation === 'portrait' ? 'portrait' : 'landscape', margin: PAGE_MARGIN_IN });
   }
 
-  // Groups certificates into one <div class="print-page"> per printed
-  // sheet, each holding one or two .cert-slot wrappers, per the "per page"
-  // setting — see the .print-page / .cert-slot print CSS.
+  // Groups certificates into one <div class="print-page pk-page"> per
+  // printed sheet, each holding one or two .cert-slot wrappers, per the "per
+  // page" setting — see the .print-page / .cert-slot CSS. The kit's .pk-page
+  // is the page break after every sheet but the last. Not PrintKit.renderSet():
+  // a sheet here is a page of one or two certificates, not one student's.
   function buildPrintArea() {
     updatePageSizeStyle();
     var entries;
@@ -941,7 +950,7 @@
       var slots = group.map(function (e) {
         return '<div class="cert-slot">' + certificateHtml(e.name, e.title, e.reason) + '</div>';
       }).join('');
-      pages.push('<div class="print-page' + (perPage === 2 ? ' per-2' : '') + '">' + slots + '</div>');
+      pages.push('<div class="print-page pk-page' + (perPage === 2 ? ' per-2' : '') + '">' + slots + '</div>');
     }
     document.getElementById('printArea').innerHTML = pages.join('');
   }
@@ -1186,6 +1195,9 @@
     buildPrintArea();
     window.print();
   });
+  // Ctrl+P, or the browser's own Print: the sheet used to be built by the
+  // button only, and anything else printed an empty page.
+  window.addEventListener('beforeprint', buildPrintArea);
 
   /* ---------- boot ---------- */
   CertificateStore.migrateLegacyIfNeeded();
