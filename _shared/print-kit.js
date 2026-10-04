@@ -51,6 +51,7 @@
     '2x3':  { cols: 2, rows: 3,  perPage: 6,  cls: 'pk-cards-2x3',  note: 'six per page' },
     '3x3':  { cols: 3, rows: 3,  perPage: 9,  cls: 'pk-cards-3x3',  note: 'trading-card size' },
     '2x4':  { cols: 2, rows: 4,  perPage: 8,  cls: 'pk-cards-2x4',  note: 'flashcards' },
+    '4x3':  { cols: 4, rows: 3,  perPage: 12, cls: 'pk-cards-4x3',  note: 'narrow reference cards' },
     '2x5':  { cols: 2, rows: 5,  perPage: 10, cls: 'pk-cards-2x5',  note: 'business cards, 2 x 3.5 in' },
     '3x10': { cols: 3, rows: 10, perPage: 30, cls: 'pk-cards-3x10', note: 'address labels, 1 x 2.625 in' }
   };

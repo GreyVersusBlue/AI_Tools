@@ -89,7 +89,7 @@ await page.evaluate(() => { window.__printed = 0; window.print = () => { window.
 await page.click('#printBtn');
 await settle(page, 300);
 eq(await page.evaluate(() => window.__printed), 1, 'printing goes ahead');
-same(await page.$$eval('#printGrid .accom-card h3', els => els.map(h => h.textContent)),
+same(await page.$$eval('#printArea .accom-card h3', els => els.map(h => h.textContent)),
      ['Beckett Hale', 'Nadia Okonjo'],
      'and the proctor gets exactly the read-aloud stack, not the whole roster');
 
@@ -112,7 +112,7 @@ ok(await page.$eval('#assignTable tr[data-student-row="Marisol Ruiz"]', el => el
 ok(/2 of 5/.test(await page.textContent('#summaryLine')), 'the count drops immediately');
 await page.click('#printBtn');
 await settle(page, 300);
-same(await page.$$eval('#printGrid .accom-card h3', els => els.map(h => h.textContent)),
+same(await page.$$eval('#printArea .accom-card h3', els => els.map(h => h.textContent)),
      ['Ada Lovelace', 'Beckett Hale'],
      'and the printed stack drops them too, so the paper and the count agree');
 
@@ -168,7 +168,7 @@ await settle(page, 400);
 await page.click('#printBtn');
 await settle(page, 300);
 await page.emulateMedia({ media: 'print' });
-const card = await page.$eval('#printGrid .accom-card', el => {
+const card = await page.$eval('#printArea .accom-card', el => {
   const note = el.querySelector('.note').getBoundingClientRect();
   const box = el.getBoundingClientRect();
   return { cut: Math.round(note.bottom - box.bottom), overflow: getComputedStyle(el).overflowY, tall: box.height > 2.6 * 96 + 1, keep: getComputedStyle(el).breakInside };

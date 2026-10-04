@@ -169,7 +169,7 @@ eq([c.grids, (await printed()).pages], [2, 2], 'the eleventh starts a second pag
 c = await cards('3x10', 30);
 near(c.w, 2.625 * IN, 'a 3x10 label is 2.625 in wide'); near(c.h, 1 * IN, 'and 1 in tall');
 eq((await printed()).pages, 1, 'thirty address labels fill exactly one page');
-for (const [preset, per] of [['2x2', 4], ['2x3', 6], ['3x3', 9], ['2x4', 8]]) {
+for (const [preset, per] of [['2x2', 4], ['2x3', 6], ['3x3', 9], ['2x4', 8], ['4x3', 12]]) {
   c = await cards(preset, per);
   eq((await printed()).pages, 1, `${preset}: ${per} cards fit one page`);
   c = await cards(preset, per * 2 + 1);
