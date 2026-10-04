@@ -9,6 +9,94 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P3, increment 7: 051 adopts the print kit at its own label size; a canvas must not be drawn on `beforeprint`; its QR codes decode now (2026-10-04, AI-13, `CACHE_VERSION` v236)
+
+Audit entry AI-13, rank 6 (2+). Seventh increment of P3: the second of the card-grid tools, 051 (classroom label
+maker, target language), by the recipe. The row stays, rewritten: five card-grid tools are left (016 017 018 040
+064). P4 and P5 untouched. **No `_shared/` file changed; the kit did not change.**
+
+- **Which kind of card: a size of its own, like 074.** 051's own CSS said `grid-template-columns: repeat(3, 1fr)`
+  with a 0.2 in gap and `min-height: 1.4in` on the label. So the width is a share (three across) and the height is
+  a size in inches that may grow and never shrinks. A `3x3` preset would have made a label a third of the page
+  (3.24 in) and six rows three; the task said not to bend the tool to the kit. 051 passes `{ cols: 3 }` with no
+  `perPage` (one flowing grid, as it was), keeps its `min-height`, its gap (`--pk-gap: .2in` on `#printArea`), its
+  dashed `#333` border and its 0.9 in QR code, and takes from the kit the grid, the columns, `break-inside: avoid`,
+  `setPage()` (Letter, portrait, half an inch; it had no `@page`) and `.pk-paper`.
+- **Its `@media print` block is deleted.** It was `print-area.css`'s visibility pair written out by hand, without
+  the v229 `display: none` on everything else, plus `.ref-sheet { page-break-before: always }`. 051 was in neither
+  TAIL list of P2 (I did not look into why the audit passed it); it is in `smoke-print-tail.mjs`'s table now, as a
+  page that newly links `print-area.css`. An unused `.section-label` rule and the grid's `id="labelGrid"` and the
+  canvases' `id="qr-N"` went with the string builder; nothing else in the tree named them.
+- **A second thing on the sheet, with no rule in the tool.** The reference table comes after the labels on a page
+  of its own. `renderCards()` empties `#printArea`, so `renderSheet()` appends `div.ref-sheet.pk-page` after it.
+  The grid `renderCards()` builds is a `.pk-page`, and with the table after it it is no longer the last child, so
+  the kit's `break-after: page` applies to the grid and its `:last-child` exemption to the table. The grid's old
+  `margin-bottom: .3in` is gone: it sat at the end of a page and printed nothing.
+- **A canvas drawn on `beforeprint` prints differently, so 051 does not draw there.** I first followed the recipe
+  (render from the button and again on `beforeprint`). Page counts and label sizes matched the old page, but the
+  raster did not: every QR code differed. `pdfimages -list` showed three 200 x 200 images on the old page's first
+  sheet and none on the new one: Chromium had recorded the canvas's drawing commands inside the event and replayed
+  them as vector fills, and the symbol came out about 4% narrower (242 px for 251 across the first module row at
+  300 dpi). `window.print()` fires `beforeprint`, so the button's sheet would have been redrawn that way too.
+  I did not find out why the replay is smaller. Instead `renderSheet()` is called at the end of `renderTable()`,
+  which every change to the words or the language already ends in, so the hidden sheet is always current; there is
+  no `beforeprint` listener, Ctrl+P prints the sheet (it printed one empty page), and the PDF carries bitmaps from
+  either path (the suite asserts `/Subtype /Image`). Cost: the QR codes are built on every save and switch, not
+  only at print (120 words were not noticeably slow in the suite; not timed). This is the lesson for 016, 017 and
+  018, which also print canvases; it is in the recipe.
+- **A fix to the tool that rode along: 4 of 120 QR codes did not decode.** The suite reads the label's canvas back
+  with the site's own `jsqr.js`. On the first run 7 of its spot checks returned nothing, and the same canvases on
+  the old page did too: `drawQR()` spread the modules over exactly 200 px (5.4 px each for a short word) and drew
+  each dark one `ceil(px) + 1` wide to hide the seams, so dark modules were about a third too fat. Counted on the
+  old page from `git show origin/main:`: 116 of 120 short made-up words decoded, and the long word and the markup
+  string did not. `drawQR()` now uses a whole number of pixels per module on a canvas of at least 200 px
+  (`ceil(200 / modules)`; 225 px for a short word), with CSS scaling it to the same 0.9 in; 120 of 120 decode,
+  and the suite reads every label in every state. **This is my call and outside the adoption proper:** the task
+  was "unchanged or better", a pronunciation code that does not scan is the tool failing at its one job, and the
+  fix is fifteen lines. Reversible by restoring the old function. A phone camera is more forgiving than jsQR and
+  more hostile than a clean canvas; **no phone has scanned a printed label, before or after.** The 2-module quiet
+  zone (the standard asks for 4) is unchanged; the label's own white padding surrounds it.
+- **Printed output, old against new.** Old page from `git show origin/main:` through `page.route()`, printed with
+  `page.pdf({ format: 'Letter', margin: 0.5in })` and also with no margin; new page with `preferCSSPageSize`; both
+  opened 720 px wide. 1, 3, 4, 15 (one long), 18, 19, 21, 22, 39, 40, 61 and 120 words, in each theme. In all 24:
+  the same label count, label width (227.2 px, 2.37 in) and height (134.4 px; 230.7 for the long word's row), row
+  gap, QR size, reference rows and table width, and the same PDF page count (2, 2, 2, 2, 2, 3, 3, 3, 5, 5, 7, 12).
+  With no margin the old page fitted a seventh row (19 words = 2 pages, 120 = 11); no printer prints that. Rasters
+  (`pdftoppm -r 48 -gray`, 96 pages), **taken before the QR fix**, with the text colour held equal: dark 48 of 48
+  identical; light at most 2 grey levels of 255 on antialiased edges, the white `.pk-paper` ground, as on 074.
+  With the QR fix the code's pixels differ by design, and I did not rasterise again; the label sizes and page
+  counts were measured again after it and are the suite's numbers.
+- **Visible changes, all meant.** Label and table text prints `#000` where it printed ink-paper's `#1f2430`
+  (`.pk-paper`); the English line keeps its `#555`, the table its `#999` rules and `#eee` head. Half-inch `@page`
+  margins where the browser's default applied. Ctrl+P prints the sheet. QR modules are square and even.
+- **The sheet is built with `textContent`.** `buildLabel()` and `buildRefSheet()` make the nodes; the `innerHTML`
+  string and its use of the escaper are gone from the print path (`check:inline-sinks` 3 to 2; the list switch and
+  the word table remain).
+- **What I got wrong on the way.** The scratch measuring script wrote its JSON and 48 PDFs into the repo root (the
+  shell's working directory, not the script's); moved out before anything was staged. I wrote "jsQR read 3 of the
+  4" into a comment from the spot checks before counting; the count is 116 of 120, and the comment says that now.
+  My first bounding-box measurement of the QR included the label's border and said nothing.
+- **New suite.** `Tools/classroom-label-maker/test/smoke-print.mjs` (`npm run test:classroom-label-print`, port
+  8474, 993 assertions): twelve states in light and dark; the sheet already built on load; one own grid of every
+  word in order and the reference table after it; every QR code decoded to its `speak.html` link; label width,
+  height, row gap and QR size on paper; nothing clipped or outside the sheet; the break after the grid; black text
+  on white paper with the tool's greys kept; Chromium's PDF page count, paper size and image objects; then markup
+  typed as a word, saving a new list, a change of language, switching lists, printing twice, Ctrl+P through
+  `page.pdf()` with no button pressed, and an empty list.
+- **Checks.** All 13 guards incl. `check:precache -- --base origin/main` and `check:adoption -- --check`; 59 suites
+  via `run-suites.mjs --only`, one folder at a time, for classroom-label-maker, print-kit (incl.
+  `smoke-print-tail.mjs`, 416 assertions with 051's new row), sub-note-feedback-slip-generator,
+  peer-feedback-checklist-generator, testing-accommodations-card-generator, field-trip-permission-slip,
+  exit-ticket-generator, certificate-award-maker, science-safety-label-maker, roster, share, theme, service-worker
+  and board-check, all green; the a11y sweep `--only 051` (4 passed); `audit-print --only 051 --check` (4 states, no
+  finding of any kind, baseline matched).
+  **Not verified:** the full `npm test` was not run (no `_shared/` file changed; CI's push-to-main run is the check
+  for the rest). Nothing was printed on paper, no label stock was tried and no phone scanned a code; only
+  Chromium's PDF, its raster and jsQR on the canvas were seen. The raster comparison predates the QR fix. Why
+  Chromium's replay of a canvas drawn on `beforeprint` is smaller was not found. Firefox and Safari were not
+  opened, so whether they replay a canvas the same way is unknown. The row was not claimed by a pushed commit;
+  the merge queue's Active row is the lock, as in increments 3 to 6.
+
 ## Path 7 P3, increment 6: `PrintKit.renderCards()`, with 077 on it, and 074 adopts the kit at its own label size (2026-10-04, AI-13, `CACHE_VERSION` v235)
 
 Audit entry AI-13, rank 6 (2+). Sixth increment of P3: the first of the seven card-grid tools, 074 (science safety
