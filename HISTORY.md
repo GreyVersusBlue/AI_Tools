@@ -9,6 +9,79 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P3, increment 5: 042 adopts the print kit and keeps its own size; the six class-set/blank tools are done (2026-10-04, AI-13, `CACHE_VERSION` v234)
+
+Audit entry AI-13, rank 6 (2+). Fifth increment of P3: one tool, 042 (certificate and award maker), by the recipe.
+The row stays, rewritten: what is left of P3 is the seven card-grid tools. P4 and P5 untouched, and none of the
+card-grid tools or `PrintKit.renderCards()`.
+
+- **042's `@media print` block and its `@page` are gone.** The `@page` was a `<style id="camPageSizeStyle">` in the
+  body that the page rewrote on every change of orientation. It links `print-area.css`, `print-kit.css` and
+  `print-kit.js`, and takes four things from the kit:
+  - *the hidden editor*, from `print-area.css` (its own `visibility` and `display: none` rules are deleted);
+  - *the page*: `PrintKit.setPage({ paper: 'letter', orientation, margin: PAGE_MARGIN_IN })`, on boot, on every
+    change of orientation and before each print, as `updatePageSizeStyle()` always was. `PAGE_MARGIN_IN` (0.35) is
+    the constant the pre-printed stock inset is worked out from, so the page and that arithmetic now read one number;
+  - *the page breaks*: each `.print-page` is also a `.pk-page`;
+  - *white paper*: `class="pk-paper"` on `#printArea`. It reaches nothing inside a certificate, which keeps its
+    template's colours from either theme (asserted).
+- **It keeps its own size, and does not call `renderSet()`.** A certificate goes on pre-printed stock: a sheet is
+  exactly the printable page and a slot exactly all or half of it, with `height` and `overflow: hidden`, where a kit
+  sheet has a `min-height` and grows. A sheet is also a page of one or two certificates rather than one student's, so
+  `buildPrintArea()` still writes its pages itself, as 077 does for its card grids. The rules that were inside
+  `@media print` are plain rules now (the sheet is never on screen), and the `.cert` override is scoped to
+  `#printArea` so the preview keeps its own size. **The kit did not change.**
+- **Printed output, old against new.** The old page was served from `git show origin/main:` through `page.route()`;
+  it has an `@page` rule, so `preferCSSPageSize` measured both on the same 0.35 in margins. Twelve states, light and
+  dark: a first visit 1 page; one certificate, landscape 1, portrait 1, at two per page 1, with a 0.75 in stock inset,
+  guides and a QR code 1; a batch with no names 1; a batch of three 3, at two per page 2; of four at two per page,
+  portrait 2; of 28, 28, at two per page 14; of three with a reason too long for the certificate 3. **Page counts and
+  paper size are the same before and after, and so is every pixel:** each PDF was rasterised with `pdftoppm -r 48
+  -gray` and the pages' bytes compared, 24 of 24 identical. That is the first adoption checked this way; the earlier
+  five were compared by page count.
+- **The one visible change, and it is a fix:** Ctrl+P (or the browser's own Print) printed an empty page, because
+  the sheet was built in the button's handler only. `beforeprint` builds it now. Measured: blank before, the
+  certificates after, in both states tried.
+- **What I got wrong on the way.** I first sized the sheet from the kit's properties,
+  `height: calc(var(--pk-page-h) - 2 * var(--pk-margin))`, on the reasoning that it then cannot disagree with
+  `setPage()`. Page counts were right, the audit was unchanged, and the raster comparison failed in all 24 states: the
+  ink ended one raster row lower (at 48 dpi, so under 0.02 in). In Chromium's print layout `100vh` is not quite
+  7.8 in. `width: 100vw; height: 100vh` went back and the comparison passed. Not investigated further: which of the
+  two is the truer page height, and what Firefox or Safari do. The first run of the new suite failed 12 of 815 for my
+  own reason: the lower slot of two has a 1 px cut guide along its top, which my arithmetic put on the wrong edge.
+  And I added my Active row to the merge queue a minute before the selector's message to hold it until the landing
+  run had pushed; I took it out, nothing had been edited, and put it back once `land/2026-10-04-1500` existed.
+- **Decisions taken, each cheap to reverse.**
+  - *No `renderSet()`*, above. If a later adopter wants "a page of N things at an exact size" from the kit, that is a
+    new sheet kind, not a change to this page.
+  - *A lone certificate at two per page was left as it is.* One certificate, or the last of an odd batch, is alone on
+    its sheet and its slot (`flex: 1 1 0`) takes the whole page, while `printedCertInches()` halves the height for
+    the stock inset. So that certificate is full-page and its top and bottom safe area is twice what was asked for.
+    It was the same before; making it a half certificate changes what a teacher gets on paper, and the task was to
+    change nothing. It is written under Path 7 P3 as found and not fixed.
+  - *The audit baseline is unchanged:* `audit-print --only 042` reports the same two FIXED findings (the slot and the
+    certificate, clipping boxes that do not grow), which is what "fixed-size on purpose" means.
+  - *The row was not claimed by a pushed commit*; the merge queue's Active row is the lock, as in increments 3 and 4.
+- **New suite.** `Tools/certificate-award-maker/test/smoke-print.mjs` (`npm run test:certificate-print`, port 8472,
+  815 assertions): for every state and theme, the sheets the button builds and who each certificate is for, in order;
+  only the sheet has a box on paper; white paper; the kit's `@page` rule, the only one on the page, and its
+  properties; every sheet exactly the printable page, a slot all or half of it, a certificate filling its slot, the
+  cut guide between two halves only; the certificate's colours the same from light and dark; and Chromium's PDF page
+  count and paper size. Then Ctrl+P, the page following the orientation and per-page controls with one rule rewritten
+  in place, and a name full of markup reaching the certificate as text. The raster comparison is not in the suite: it
+  needs `pdftoppm`, which CI is not known to have. 042's row in `smoke-print-tail.mjs` is unchanged and passes.
+- **Checks.** All 13 guards incl. `check:precache -- --base origin/main` and `check:adoption -- --check`; suites via
+  `run-suites.mjs --only` for certificate-award-maker, print-kit (incl. `smoke-print-tail.mjs`),
+  exit-ticket-generator, field-trip-permission-slip, peer-feedback-checklist-generator,
+  sub-note-feedback-slip-generator, testing-accommodations-card-generator, roster, share, theme, service-worker and
+  board-check; the a11y sweep `--only 042`; `audit-print --only 042` (4 states, FIXED 2 as in the baseline, nothing
+  else).
+  **Not verified:** full `npm test` was not run (no `_shared/` file changed). Nothing was printed on paper, and no
+  sheet of real certificate stock was lined up against the inset; only Chromium's PDF and its raster were seen.
+  The PDFs were compared with backgrounds off, as a printer prints by default; with backgrounds on, `.pk-paper` makes
+  the empty half of an odd two-per-page sheet white where the dark theme's page colour showed before (reasoned, not
+  rasterised). More than a few hundred certificates in one batch was not tried.
+
 ## Path 7 P3, increment 4: 023 adopts the print kit, the first on quarter sheets, and the kit gains `.pk-paper` (2026-10-04, AI-13, `CACHE_VERSION` v233)
 
 Audit entry AI-13, rank 6 (2+). Fourth increment of P3: one tool, 023 (exit ticket generator), by the recipe. The

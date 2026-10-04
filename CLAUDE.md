@@ -467,7 +467,7 @@ files must be added there too.
   ink-safe output, and one/class-set/blank rendering from a template. Unlike print-area.css the
   kit is opt-in by class and safe to link anywhere; a new printing tool uses it instead of
   writing another `@media print` block. It sizes with `min-height` and never clips. 076 and 070 (half sheets, `renderSet` with `cut: true`), 077
-  (a card grid, `PrintKit.chunk`), 043 (a class set with the footer) and 023 (half and quarter sheets) print through it, each with `print-area.css` to hide the editor and, since v233, `class="pk-paper"` on `#printArea` for a white sheet and black text from either theme; `BACKLOG.md`'s Path 7 P3 has the recipe the next one follows. Its suites
+  (a card grid, `PrintKit.chunk`), 043 (a class set with the footer), 023 (half and quarter sheets) and 042 (a fixed-size certificate: `setPage()`, `.pk-page` and `.pk-paper` only) print through it, each with `print-area.css` to hide the editor and, since v233, `class="pk-paper"` on `#printArea` for a white sheet and black text from either theme; `BACKLOG.md`'s Path 7 P3 has the recipe the next one follows. Its suites
   are `npm run test:print-kit`; nothing in it has been checked on paper.
   `npm run path7:next` (`Tools/board-check/audit-print.mjs`, Path 7 P2, read-only, a browser
   sweep of about 12 minutes on port 8464, not in CI) is the runtime half of `check:print-clip`:
