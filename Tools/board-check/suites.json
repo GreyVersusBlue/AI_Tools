@@ -209,6 +209,8 @@
     "Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs",
     "Tools/gallery-walk-qr/test/smoke-print.mjs",
     "Tools/qr-code-generator/test/smoke-print.mjs",
+    "Tools/export/test/export.test.mjs",
+    "Tools/export/test/smoke-export.mjs",
     "Tools/stage/test/stage.test.mjs",
     "Tools/stage/test/smoke-stage-rollout.mjs",
     "Tools/number-talks-board/test/smoke-stage.mjs",

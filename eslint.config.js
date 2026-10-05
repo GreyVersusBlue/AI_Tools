@@ -52,6 +52,7 @@ const SITE_GLOBALS = {
   ThemeToggle: 'readonly',
   Countdown: 'readonly',
   PrintKit: 'readonly',
+  ExportKit: 'readonly',
   // _shared/vendor/
   jspdf: 'readonly',
   XLSX: 'readonly',
