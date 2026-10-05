@@ -123,6 +123,8 @@ eq(starter.map(n => n.label), ['', '1a.', '2a.', '2b.', '1b.'], 'the starter key
 eq(starter.map(n => n.depth), [0, 1, 2, 2, 1], '1a and 1b are one level in, 2a and 2b a level under 1a');
 ok(/Result: Invertebrate/.test(starter[4].text) && /Route: 1b$/.test(starter[4].text), 'a result says what it is and the route that reaches it: ' + JSON.stringify(starter[4].text));
 ok(/Result: Mammal/.test(starter[2].text) && /Route: 1a › 2a$/.test(starter[2].text), 'a deeper result writes its whole route: ' + JSON.stringify(starter[2].text));
+ok(starter.slice(1).every(n => /^\d[ab]\. \S/.test(n.text) && /Result: |Route: /.test(n.text) === n.cls.includes('result')), 'a flattened reader gets a space after the label and before each added phrase: ' + JSON.stringify(starter.map(n => n.text)));
+ok(/Mammal Route: 1a › 2a$/.test(starter[2].text) && /Result: Mammal Route/.test(starter[2].text), 'the result and its route are separate words when read flat');
 eq(await summary(), '4 couplets in 2 of 2 steps reach 3 results; the longest route is 2 couplets.', 'the summary states what the list does not: couplets reached, results, longest route');
 eq(await notes(), [], 'a sound key has no notes');
 eq(await page.evaluate(() => document.querySelector('#treeWrap .tn.start').textContent), 'Start', 'an untitled key names the root "Start"');
@@ -206,7 +208,7 @@ await load(small);
     return {
       rootLabel: root.getAttribute('aria-label'),
       lists: lists + 1, items,
-      roles: Array.from(root.querySelectorAll('ul,li')).every(e => e.getAttribute('role') === 'list' || e.getAttribute('role') === 'listitem'),
+      roles: [root, ...root.querySelectorAll('ul,li')].every(e => e.getAttribute('role') === 'list' || e.getAttribute('role') === 'listitem'),
       region: document.getElementById('treeWrap').getAttribute('aria-label'),
       tab: document.getElementById('treeWrap').tabIndex,
       summaryText: document.getElementById('treeSummary').textContent.length > 20,
