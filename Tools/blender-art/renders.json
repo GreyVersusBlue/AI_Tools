@@ -5,7 +5,8 @@
     "the scene script rewrites when it renders (blender, sha256, bytes, tokens, underText.lumMin/lumMax).",
     "Tools/blender-art/validate-art.mjs checks the record against the tree. Raise a cap only with a",
     "capWhy in the same commit. See Tools/blender-art/README.md.",
-    "A derived entry (one with \"sources\", such as the icon sprite) is assembled by a Node script from other entries: it has no seed and no blender of its own. See build-sprite.mjs."
+    "A derived entry (one with \"sources\", such as the icon sprite) is assembled by a Node script from other entries: it has no seed and no blender of its own. See build-sprite.mjs.",
+    "A generated entry (one with \"generator\": an image made by an AI image model) cannot be re-made from the repo, so it records what made it instead: generator, generated (YYYY-MM-DD), the full prompt and its references. It has no script, seed or blender. The scenes, sequences and backgrounds families are for these. See the README."
   ],
   "blender": "5.2",
   "budget": {
@@ -58,6 +59,18 @@
     "relief": {
       "entryCap": 409600,
       "total": 409600
+    },
+    "scenes": {
+      "entryCap": 81920,
+      "total": 491520
+    },
+    "sequences": {
+      "entryCap": 61440,
+      "total": 491520
+    },
+    "backgrounds": {
+      "entryCap": 122880,
+      "total": 491520
     }
   },
   "entries": [
