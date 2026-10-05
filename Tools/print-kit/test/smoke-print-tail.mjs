@@ -119,6 +119,7 @@ const PAGES = [
   { file: '043-field-trip-permission-slip.html', prints: [{ click: 'Print' }, { click: 'Print missing list' }, { click: 'Print reminder slips' }, { click: 'Print chaperone groups' }] },   // since Path 7 P3: print-area.css + the print kit
   { file: '061-fraction-decimal-percent-drill-generator.html', prints: [{ click: 'Print worksheet' }] },
   { file: '063-grammar-mad-libs-generator.html', prints: [{ click: 'Print worksheet' }] },
+  { file: '064-historical-trading-card-maker.html', prints: [{ click: 'Print cards' }] },   // since Path 7 P3: print-area.css + the print kit (it had no row: a deck of one page ran on to a third sheet)
   { file: '068-parent-contact-log.html', prints: [{ click: 'Print this list' }] },
   { file: '078-unit-conversion-chart-builder.html', prints: [{ click: 'Print chart' }] },
   // The pages that take the rule from _shared/print-area.css (v229).

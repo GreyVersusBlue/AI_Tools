@@ -28,9 +28,18 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<!-- Printing is the shared kit's (Path 7 P3): _shared/print-area.css puts
+     #printArea alone on the paper, and _shared/print-kit.css + print-kit.js
+     give the card grid, its pages and the page breaks (PrintKit.renderCards).
+     A trading card is an exact size in inches, so the grid is one of the
+     tool's own (.pk-cards-own) and the rules below still size the card. The
+     page is Letter with 0.3 in margins, from PrintKit.setPage() below. -->
+<script src="../_shared/print-kit.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   * { box-sizing: border-box; }
   body {
@@ -95,13 +104,15 @@
   .entry-row .ename { font-weight: 700; }
   .entry-row .estats { font-size: .78rem; color: var(--muted); }
 
-  #printArea { display: none; }
-  .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .2in; margin-bottom: .3in; }
-  .print-page { page-break-after: always; }
-  .print-page:last-child { page-break-after: auto; }
+  /* The printed sheet. print-area.css hides #printArea on screen and puts it
+     alone on the paper; each page of cards is a print-kit grid
+     (.pk-cards.pk-cards-own.pk-page from PrintKit.renderCards, which also
+     gives the columns, the breaks between pages and keeps a card whole). The tool
+     adds .card-grid to each and keeps the gap and the card's own size. */
+  .pk-cards.card-grid { gap: .2in; }
   .trading-card {
     border: 1.5px solid #333; border-radius: 8px; height: 3.4in; padding: .2in;
-    display: flex; flex-direction: column; page-break-inside: avoid;
+    display: flex; flex-direction: column;
     position: relative; overflow: hidden;
     /* themed papers/textures must survive the print dialog's default
        "no backgrounds" behavior, or every theme prints as plain white */
@@ -123,7 +134,7 @@
      margin was 0.4in, so widening the margin for the standard preset below
      doesn't quietly resize the layout teachers were already printing. */
   .size-fill .card-grid { max-width: 7.7in; margin-left: auto; margin-right: auto; }
-  .size-standard .card-grid { grid-template-columns: repeat(3, 2.5in); justify-content: center; gap: .15in; }
+  .size-standard .card-grid { grid-template-columns: repeat(var(--pk-cols), 2.5in); justify-content: center; gap: .15in; }
   .size-standard .trading-card { height: 3.5in; width: 2.5in; border-radius: 6px; padding: .15in; }
   .size-standard .pwin { height: 1.35in; }
   .size-standard .trading-card .cname { font-size: .95rem; }
@@ -136,7 +147,7 @@
      is 10.15in of the 10.4in available — which is why the fronts/backs
      section labels are dropped for this size in the print rules: there is a
      quarter inch left on the page and a banner does not fit in it. */
-  .size-reference .card-grid { grid-template-columns: repeat(2, 3.5in); justify-content: center; gap: .15in; }
+  .size-reference .card-grid { grid-template-columns: repeat(var(--pk-cols), 3.5in); justify-content: center; gap: .15in; }
   .size-reference .trading-card { height: 5in; width: 3.5in; border-radius: 9px; padding: .22in; }
   .size-reference .pwin { height: 2in; margin-bottom: .14in; }
   /* Type is scaled by ~1.35, a little under the card's own 1.4 — a straight
@@ -323,22 +334,13 @@
   .pe-actions { display: flex; gap: .5rem; }
   .pe-spacer { flex: 1; }
 
-  @media print {
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
-    .section-label { page-break-before: always; }
-    .section-label:first-child { page-break-before: auto; }
-    /* Two 5in rows leave a quarter inch on a letter page — not enough for a
-       banner. The fronts still print first and the backs after, which is the
-       part a teacher actually needs; the on-screen hint for this size says
-       so, since the page can't. */
-    .size-reference .section-label { display: none; }
-    /* 0.3in, not 0.4in: three 2.5in cards plus two 0.15in gutters is 7.8in of
-       grid, and a letter page only clears that with 0.3in side margins. Still
-       well inside the ~0.25in unprintable edge most office printers have. */
-    @page { size: letter portrait; margin: 0.3in; }
-  }
+  /* Two 5in rows leave a quarter inch on a letter page — not enough for a
+     banner. The fronts still print first and the backs after, which is the
+     part a teacher actually needs; the on-screen hint for this size says
+     so, since the page can't. (The sheet is never on screen, so this needs
+     no media query. The backs' banner starts a page because the last grid
+     of fronts, a .pk-page, ends one.) */
+  .size-reference .section-label { display: none; }
 </style>
 </head>
 <body>
@@ -522,7 +524,7 @@
   </div>
 </div>
 
-<div id="printArea"></div>
+<div id="printArea" class="pk-paper"></div>
 
 <script src="historical-trading-card-maker/htcm-store.js"></script>
 <script src="../_shared/media-db.js"></script>
@@ -606,7 +608,7 @@
   }
 
   function applyCardSize() {
-    els.printArea.className = 'size-' + cardSize;
+    els.printArea.className = 'pk-paper size-' + cardSize;
     els.previewStage.className = 'htcm-preview-stage size-' + cardSize;
     els.cardSize.value = cardSize;
     els.cardSizeHint.textContent = SIZE_HINTS[cardSize] || '';
@@ -1384,30 +1386,74 @@
   });
   els.flipBtn.addEventListener('click', function () { setFlip(!flipped); });
 
-  els.printBtn.addEventListener('click', function () {
-    if (!entries.length) { alert('Add at least one card first.'); return; }
+  /* 0.3in, not 0.4in: three 2.5in cards plus two 0.15in gutters is 7.8in of
+     grid, and a letter page only clears that with 0.3in side margins. Still
+     well inside the ~0.25in unprintable edge most office printers have. */
+  PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.3in' });
+
+  /** A renderer string (HtcmRender, HtcmFrames) as a node. The card markup is
+      shared with the preview, the review game and the PDF export, so the
+      sheet parses it rather than building a second card. */
+  function nodeFrom(html) {
+    var t = document.createElement('template');
+    t.innerHTML = html;
+    return t.content.firstElementChild;
+  }
+  function sectionLabel(text) {
+    var d = document.createElement('div');
+    d.className = 'section-label';
+    d.textContent = text;
+    return d;
+  }
+
+  /** Builds the sheet: every page of fronts, then every page of backs with
+      its rows mirrored. Each page is padded to a full grid with blank cards,
+      which is what keeps a back under its front. PrintKit.renderCards cuts
+      the list into one grid per page ({ cols, perPage }: a grid of the tool's
+      own, because a card is a size in inches and not a share of the page). */
+  function buildPrintArea() {
     var grid = printGrid();
     var pages = paginate(entries, grid.perPage);
-    var frontPages = pages.map(function (page) {
+    var cards = [];
+    pages.forEach(function (page) {
       var padded = page.slice();
       while (padded.length < grid.perPage) padded.push(null);
-      return '<div class="print-page"><div class="card-grid">' + padded.map(frontCardHtml).join('') + '</div></div>';
+      padded.forEach(function (e) { cards.push({ entry: e, back: false }); });
     });
-    var backPages = pages.map(function (page) {
+    pages.forEach(function (page) {
       var padded = page.slice();
       while (padded.length < grid.perPage) padded.push(null);
-      var mirrored = mirrorPageRows(padded, grid.cols);
-      return '<div class="print-page"><div class="card-grid">' + mirrored.map(backCardHtml).join('') + '</div></div>';
+      mirrorPageRows(padded, grid.cols).forEach(function (e) { cards.push({ entry: e, back: true }); });
     });
-    els.printArea.innerHTML =
-      // a second copy of the shared SVG defs (foil gradients, clip shapes)
-      // lives inside the print subtree: browsers have been unreliable about
-      // resolving url(#…) into parts of the page the print stylesheet hides
-      HtcmFrames.defsSvg() +
-      '<div class="section-label">Card fronts</div>' + frontPages.join('') +
-      '<div class="section-label">Card backs (row-mirrored to align when you flip the printed front stack and reprint)</div>' + backPages.join('');
+    PrintKit.renderCards(els.printArea, cards, { cols: grid.cols, perPage: grid.perPage }, function (c) {
+      return nodeFrom(c.back ? backCardHtml(c.entry) : frontCardHtml(c.entry));
+    });
+    var grids = Array.prototype.slice.call(els.printArea.children);
+    grids.forEach(function (g) { g.classList.add('card-grid'); });
+    if (!grids.length) return;
+    els.printArea.insertBefore(sectionLabel('Card fronts'), grids[0]);
+    els.printArea.insertBefore(
+      sectionLabel('Card backs (row-mirrored to align when you flip the printed front stack and reprint)'),
+      grids[pages.length]);
+    // a second copy of the shared SVG defs (foil gradients, clip shapes)
+    // lives inside the print subtree: browsers have been unreliable about
+    // resolving url(#…) into parts of the page the print stylesheet hides
+    els.printArea.insertBefore(nodeFrom(HtcmFrames.defsSvg()), els.printArea.firstChild);
+  }
+
+  /* The button builds the sheet and waits for its photos. Ctrl+P and the
+     browser's own Print menu never reach that handler, so `beforeprint`
+     builds the sheet then (it used to print an empty page); `sheetBuilt`
+     keeps it from rebuilding the sheet the button has just waited on. */
+  var sheetBuilt = false;
+  els.printBtn.addEventListener('click', function () {
+    if (!entries.length) { alert('Add at least one card first.'); return; }
+    buildPrintArea();
+    sheetBuilt = true;
     waitForImages(els.printArea).then(function () { window.print(); });
   });
+  window.addEventListener('beforeprint', function () { if (!sheetBuilt && entries.length) buildPrintArea(); });
+  window.addEventListener('afterprint', function () { sheetBuilt = false; });
 
   /** Resolves once every <img> under `root` has loaded or failed, so a gone
       photo can never hang the print. A stored photo is an object URL, which
