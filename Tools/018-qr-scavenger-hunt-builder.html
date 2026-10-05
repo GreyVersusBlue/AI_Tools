@@ -26,11 +26,14 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/print-kit.js"></script>
 
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   /* On _shared/ink-paper.css's tokens since AI-35, so the page follows the
      teacher's theme like the rest of the site; it used to be dark-only, on
@@ -43,9 +46,6 @@
     --mono: 'JetBrains Mono', 'Fira Mono', monospace;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) { --success: #4ade80; --warn: #fbbf24; }
-  @media print {
-    :root[data-theme="dark"]:not(.a11y-filter-dark) { --success: #2e6b3e; --warn: #8a5a00; }
-  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif;
@@ -177,59 +177,57 @@
 
   @media (max-width: 900px) { .col-right { position: static; } }
 
-  /* ── Print-only station cards / answer key ─────────────────────────── */
+  /* ── The printed sheets: station cards, answer key, clue cards, team cards,
+     route cards, answer sheets ──────────────────────────────────────────
+     Printing is the shared kit's (Path 7 P3): _shared/print-area.css puts
+     #printArea alone on the paper, and _shared/print-kit.css + print-kit.js
+     lay the cards out (`PrintKit.renderCards`). #printArea holds the six
+     sheets and shows the one a button asked for (.active); it is never on
+     screen, and it is white paper with black text from either theme
+     (.pk-paper), so the greys below stay as they are and need no media query.
+     A card here is a share of the page's width and as tall as what is on it,
+     so each grid is one of the tool's own ({ cols, perPage }, .pk-cards-own):
+     the kit gives the grid, the columns, the cut into pages and the rule that
+     keeps a card whole; the gap, the inset and the card are this page's. */
   .print-only { display: none; }
-  @media print {
-    body { background: #fff; color: #000; padding: 0; display: block; }
-    header, #hunt-toolbar, .col-left, .col-right, #msg, #mode-tabs { display: none !important; }
-    .print-only.active { display: block; }
+  .print-only.active { display: block; }
 
-    .print-station-grid { display: flex; flex-wrap: wrap; }
-    .print-station-grid .p-card {
-      box-sizing: border-box; border: 1.5px solid #999; border-radius: 10px; padding: 14px;
-      display: flex; flex-direction: column; align-items: center; text-align: center;
-      page-break-inside: avoid; margin: 4px;
-    }
-    .print-station-grid .p-card canvas { width: 100%; height: auto; max-width: 320px; }
-    .print-station-grid .p-card .p-num { font-size: 0.75rem; letter-spacing: 0.08em; color: #555; text-transform: uppercase; }
-    .print-station-grid .p-card .p-label { font-size: 1.25rem; font-weight: 700; margin: 4px 0 8px; }
-    .print-station-grid .p-card .p-extra { font-size: 0.82rem; color: #333; margin: -2px 0 8px; }
-    .print-station-grid .p-card .p-choices { text-align: left; line-height: 1.5; }
-    .print-station-grid .p-card .p-team-code { font-family: monospace; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.1em; margin-top: 6px; }
-    .print-station-grid .p-card .p-route { text-align: left; width: 100%; margin: 6px 0 0; padding-left: 1.3rem; font-size: 0.85rem; line-height: 1.5; }
-    .print-station-grid .p-card .p-route li.first { font-weight: 700; }
-    .print-station-grid .p-card .p-route-note { font-size: 0.76rem; color: #555; margin-top: 8px; }
-
-    /* No-device paper mode: clue cards (no QR) and per-team answer sheets */
-    .print-station-grid .p-card .p-clue-text { font-size: 0.98rem; color: #111; margin: 2px 0 8px; line-height: 1.45; }
-    .print-station-grid .p-card .p-code-word { font-family: monospace; font-weight: 700; font-size: 1.05rem; letter-spacing: 0.08em; border: 1.5px dashed #999; border-radius: 6px; padding: 6px 12px; margin-top: 8px; }
-    .print-station-grid .p-card .p-code-word span { text-transform: uppercase; }
-    table.p-answersheet { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 8px; text-align: left; }
-    table.p-answersheet th, table.p-answersheet td { border: 1px solid #999; padding: 5px 7px; vertical-align: top; }
-    table.p-answersheet th { background: #eee; }
-    table.p-answersheet td.p-as-blank { min-width: 80px; height: 30px; }
-    .p-as-hint { display: block; font-size: 0.68rem; color: #555; margin-top: 2px; }
-
-    .print-station-grid.pp-1 .p-card { width: calc(100% - 8px); }
-    .print-station-grid.pp-2 .p-card { width: calc(50% - 8px); }
-    .print-station-grid.pp-4 .p-card { width: calc(50% - 8px); }
-    .print-station-grid.pp-4 .p-card:nth-child(4n) { page-break-after: always; }
-    .print-station-grid.pp-6 .p-card { width: calc(33.33% - 8px); }
-    .print-station-grid.pp-6 .p-card:nth-child(6n) { page-break-after: always; }
-    .print-station-grid.pp-9 .p-card { width: calc(33.33% - 8px); }
-    .print-station-grid.pp-9 .p-card:nth-child(9n) { page-break-after: always; }
-    .print-station-grid.pp-1 .p-card { page-break-after: always; }
-    .print-station-grid.pp-2 .p-card:nth-child(2n) { page-break-after: always; }
-    .print-station-grid.pp-1 .p-card:last-child,
-    .print-station-grid.pp-2 .p-card:last-child { page-break-after: auto; }
-    .print-station-grid.pp-4 .p-card:last-child, .print-station-grid.pp-6 .p-card:last-child,
-    .print-station-grid.pp-9 .p-card:last-child { page-break-after: auto; }
-
-    .answer-key h2 { font-size: 1.1rem; margin-bottom: 12px; }
-    .answer-key table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    .answer-key th, .answer-key td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
-    .answer-key th { background: #eee; }
+  /* 8 px between cards and 4 px at the sides, as the cards' own 4 px margin
+     gave. None above or below a page of them: under that 4 px a card a hair
+     short of the page (an answer sheet of fourteen stations) did not fit, and
+     every page of sheets was followed by a blank one. */
+  .print-station-grid .pk-cards { --pk-gap: 8px; padding: 0 4px; }
+  .print-station-grid .p-card {
+    border: 1.5px solid #999; border-radius: 10px; padding: 14px;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
   }
+  .print-station-grid .p-card canvas { width: 100%; height: auto; max-width: 320px; }
+  .print-station-grid .p-card .p-num { font-size: 0.75rem; letter-spacing: 0.08em; color: #555; text-transform: uppercase; }
+  .print-station-grid .p-card .p-label { font-size: 1.25rem; font-weight: 700; margin: 4px 0 8px; }
+  .print-station-grid .p-card .p-extra { font-size: 0.82rem; color: #333; margin: -2px 0 8px; }
+  .print-station-grid .p-card .p-choices { text-align: left; line-height: 1.5; }
+  .print-station-grid .p-card .p-team-code { font-family: monospace; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.1em; margin-top: 6px; }
+  .print-station-grid .p-card .p-route { text-align: left; width: 100%; margin: 6px 0 0; padding-left: 1.3rem; font-size: 0.85rem; line-height: 1.5; }
+  .print-station-grid .p-card .p-route li.first { font-weight: 700; }
+  .print-station-grid .p-card .p-route-note { font-size: 0.76rem; color: #555; margin-top: 8px; }
+
+  /* No-device paper mode: clue cards (no QR) and per-team answer sheets */
+  .print-station-grid .p-card .p-clue-text { font-size: 0.98rem; color: #111; margin: 2px 0 8px; line-height: 1.45; }
+  .print-station-grid .p-card .p-code-word { font-family: monospace; font-weight: 700; font-size: 1.05rem; letter-spacing: 0.08em; border: 1.5px dashed #999; border-radius: 6px; padding: 6px 12px; margin-top: 8px; }
+  .print-station-grid .p-card .p-code-word span { text-transform: uppercase; }
+  /* The kit lets a long word wrap anywhere on a card, which also lets a table
+     squeeze its columns; the sheet's columns keep the widths their words ask for. */
+  table.p-answersheet { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 8px; text-align: left; overflow-wrap: break-word; }
+  table.p-answersheet th, table.p-answersheet td { border: 1px solid #999; padding: 5px 7px; vertical-align: top; }
+  table.p-answersheet th { background: #eee; }
+  table.p-answersheet td.p-as-blank { min-width: 80px; height: 30px; }
+  .p-as-hint { display: block; font-size: 0.68rem; color: #555; margin-top: 2px; }
+
+  .answer-key h2 { font-size: 1.1rem; margin-bottom: 12px; }
+  .answer-key table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .answer-key th, .answer-key td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
+  .answer-key th { background: #eee; }
+  .answer-key .p-key-hint { color: #666; }
   .back-link { display: inline-block; color: var(--text-dim); text-decoration: none; font-size: .85rem; padding: .3rem .5rem .3rem 0; }
   .back-link:hover { color: var(--accent); }
 
@@ -407,31 +405,30 @@
   </div>
 </div>
 
-<div class="print-only" id="print-station-area">
-  <div class="print-station-grid" id="print-station-grid"></div>
-</div>
-<div class="print-only answer-key" id="print-answer-area">
-  <h2 id="answer-key-title">Scavenger Hunt Answer Key</h2>
-  <table>
-    <thead><tr><th>#</th><th>Label</th><th>QR Content</th><th>Note</th><th>Answer / Type</th><th>Code word</th></tr></thead>
-    <tbody id="answer-key-body"></tbody>
-  </table>
-  <p style="font-size:0.78rem; color:#555; margin-top:10px;">Code words are also printed on the no-device Clue Cards — check each team's filled-in Answer Sheet against this key.</p>
-</div>
-<div class="print-only" id="print-teams-area">
-  <div class="print-station-grid" id="print-teams-grid"></div>
-</div>
-
-<div class="print-only" id="print-routes-area">
-  <div class="print-station-grid pp-2" id="print-routes-grid"></div>
-</div>
-
-<div class="print-only" id="print-clues-area">
-  <div class="print-station-grid" id="print-clues-grid"></div>
-</div>
-
-<div class="print-only" id="print-answersheets-area">
-  <div class="print-station-grid pp-2" id="print-answersheets-grid"></div>
+<div id="printArea" class="pk-paper">
+  <div class="print-only active" id="print-station-area">
+    <div class="print-station-grid" id="print-station-grid"></div>
+  </div>
+  <div class="print-only answer-key" id="print-answer-area">
+    <h2 id="answer-key-title">Scavenger Hunt Answer Key</h2>
+    <table>
+      <thead><tr><th>#</th><th>Label</th><th>QR Content</th><th>Note</th><th>Answer / Type</th><th>Code word</th></tr></thead>
+      <tbody id="answer-key-body"></tbody>
+    </table>
+    <p style="font-size:0.78rem; color:#555; margin-top:10px;">Code words are also printed on the no-device Clue Cards — check each team's filled-in Answer Sheet against this key.</p>
+  </div>
+  <div class="print-only" id="print-teams-area">
+    <div class="print-station-grid" id="print-teams-grid"></div>
+  </div>
+  <div class="print-only" id="print-routes-area">
+    <div class="print-station-grid" id="print-routes-grid"></div>
+  </div>
+  <div class="print-only" id="print-clues-area">
+    <div class="print-station-grid" id="print-clues-grid"></div>
+  </div>
+  <div class="print-only" id="print-answersheets-area">
+    <div class="print-station-grid" id="print-answersheets-grid"></div>
+  </div>
 </div>
 
 <script>
@@ -935,6 +932,7 @@
       els.printStationsBtn.disabled = true;
       els.printAnswersBtn.disabled = true;
       els.printCluesBtn.disabled = true;
+      buildPrintStations();
       return;
     }
 
@@ -962,35 +960,66 @@
     els.printStationsBtn.disabled = false;
     els.printAnswersBtn.disabled = false;
     els.printCluesBtn.disabled = false;
+    buildPrintStations();
+  }
+
+  /* ── The printed sheets ───────────────────────────────────────────────────
+     Six sheets, each built into its own area of #printArea; a print button
+     builds its sheet, shows it and prints. The card sheets are the shared
+     kit's grids (PrintKit.renderCards): a card is a share of the page's width
+     and as tall as its content, so every grid is one of the tool's own,
+     `{ cols, perPage }`, the "codes per printed page" choice cut into pages.
+     Every card is built with textContent.
+
+     The station cards are also what Ctrl+P prints, so that sheet is kept
+     current: render() rebuilds it whenever the stations or the layout change.
+     It is not drawn on `beforeprint` — a canvas drawn inside that event
+     reaches the printer as replayed drawing commands, not as its bitmap. */
+  PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
+
+  var CARD_GRIDS = {
+    '1': { cols: 1, perPage: 1 }, '2': { cols: 2, perPage: 2 }, '4': { cols: 2, perPage: 4 },
+    '6': { cols: 3, perPage: 6 }, '9': { cols: 3, perPage: 9 }
+  };
+  function cardGrid(perPage) { return CARD_GRIDS[perPage] || CARD_GRIDS['4']; }
+
+  function pEl(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = String(text);
+    return n;
   }
 
   function buildPrintStations() {
-    var valid = validStations();
     var ecLevel = els.ecLevel.value;
     var showNum = els.showNumber.checked;
-    els.printStationGrid.className = 'print-station-grid pp-' + els.cardsPerPage.value;
-    els.printStationGrid.innerHTML = '';
-    valid.forEach(function (s, n) {
-      var card = document.createElement('div');
-      card.className = 'p-card';
-      card.innerHTML = (showNum ? '<div class="p-num">Station ' + (n + 1) + '</div>' : '') +
-        '<div class="p-label">' + escapeHtml(s.label) + '</div>' + printStationExtra(s) + '<canvas></canvas>';
-      els.printStationGrid.appendChild(card);
+    PrintKit.renderCards(els.printStationGrid, validStations(), cardGrid(els.cardsPerPage.value), function (s, n) {
+      var card = pEl('div', 'p-card');
+      if (showNum) card.appendChild(pEl('div', 'p-num', 'Station ' + (n + 1)));
+      card.appendChild(pEl('div', 'p-label', s.label));
+      var extra = printStationExtra(s);
+      if (extra) card.appendChild(extra);
+      var canvas = card.appendChild(document.createElement('canvas'));
       try {
-        drawQR(card.querySelector('canvas'), buildQR(s.content, ecLevel), 600);
+        drawQR(canvas, buildQR(s.content, ecLevel), 600);
       } catch (e) { /* already reported in the live preview */ }
+      return card;
     });
   }
 
   function printStationExtra(s) {
     if (s.qType === 'choice') {
       var letters = 'ABCDEF';
-      var items = s.choices.map(function (c, ci) { return letters[ci] + '. ' + escapeHtml((c || '').trim() || '(blank)'); }).join('<br>');
-      return '<div class="p-extra p-choices">' + items + '</div>';
+      var box = pEl('div', 'p-extra p-choices');
+      s.choices.forEach(function (c, ci) {
+        if (ci) box.appendChild(document.createElement('br'));
+        box.appendChild(document.createTextNode(letters[ci] + '. ' + ((c || '').trim() || '(blank)')));
+      });
+      return box;
     }
-    if (s.qType === 'numeric') return '<div class="p-extra">Answer with a number.</div>';
-    if (s.qType === 'photo') return '<div class="p-extra">Take a photo to show your teacher!</div>';
-    return '';
+    if (s.qType === 'numeric') return pEl('div', 'p-extra', 'Answer with a number.');
+    if (s.qType === 'photo') return pEl('div', 'p-extra', 'Take a photo to show your teacher!');
+    return null;
   }
 
   // ── Paper (no-device) mode: Clue Cards ───────────────────────────────────
@@ -999,37 +1028,49 @@
   // code word, which is what a team without a device copies onto its paper
   // Answer Sheet as proof it found the station.
   function buildPrintClueCards() {
-    var valid = validStations();
     var showNum = els.showNumber.checked;
-    els.printCluesGrid.className = 'print-station-grid pp-' + els.cardsPerPage.value;
-    els.printCluesGrid.innerHTML = '';
-    valid.forEach(function (s, n) {
-      var card = document.createElement('div');
-      card.className = 'p-card';
-      card.innerHTML = (showNum ? '<div class="p-num">Station ' + (n + 1) + '</div>' : '') +
-        '<div class="p-label">' + escapeHtml(s.label) + '</div>' +
-        (s.content ? '<div class="p-clue-text">' + escapeHtml(s.content) + '</div>' : '') +
-        printStationExtra(s) +
-        '<div class="p-code-word">Code word: <span>' + escapeHtml(s.codeWord) + '</span></div>' +
-        '<div class="p-route-note">Write this word on your team&rsquo;s answer sheet to prove you found this station.</div>';
-      els.printCluesGrid.appendChild(card);
+    PrintKit.renderCards(els.printCluesGrid, validStations(), cardGrid(els.cardsPerPage.value), function (s, n) {
+      var card = pEl('div', 'p-card');
+      if (showNum) card.appendChild(pEl('div', 'p-num', 'Station ' + (n + 1)));
+      card.appendChild(pEl('div', 'p-label', s.label));
+      if (s.content) card.appendChild(pEl('div', 'p-clue-text', s.content));
+      var extra = printStationExtra(s);
+      if (extra) card.appendChild(extra);
+      var word = pEl('div', 'p-code-word', 'Code word: ');
+      word.appendChild(pEl('span', '', s.codeWord));
+      card.appendChild(word);
+      card.appendChild(pEl('div', 'p-route-note', 'Write this word on your team’s answer sheet to prove you found this station.'));
+      return card;
     });
   }
 
   function buildAnswerKey() {
-    var valid = validStations();
-    els.answerKeyBody.innerHTML = valid.map(function (s, n) {
-      var answerCell = escapeHtml(answerSummary(s));
-      if (s.hint) answerCell += '<br><span style="color:#666;">Hint (&minus;' + s.hintPenalty + ' min if used): ' + escapeHtml(s.hint) + '</span>';
-      return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(s.label) + '</td><td>' + escapeHtml(s.content) + '</td><td>' + escapeHtml(s.note || '—') + '</td><td>' + answerCell + '</td><td>' + escapeHtml(s.codeWord || '—') + '</td></tr>';
-    }).join('');
+    var body = els.answerKeyBody;
+    while (body.firstChild) body.removeChild(body.firstChild);
+    validStations().forEach(function (s, n) {
+      var tr = document.createElement('tr');
+      [n + 1, s.label, s.content, s.note || '—'].forEach(function (v) { tr.appendChild(pEl('td', '', v)); });
+      var answer = pEl('td', '', answerSummary(s));
+      if (s.hint) {
+        answer.appendChild(document.createElement('br'));
+        answer.appendChild(pEl('span', 'p-key-hint', 'Hint (−' + s.hintPenalty + ' min if used): ' + s.hint));
+      }
+      tr.appendChild(answer);
+      tr.appendChild(pEl('td', '', s.codeWord || '—'));
+      body.appendChild(tr);
+    });
   }
 
-  function printSection(area) {
+  function showSection(area) {
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     area.classList.add('active');
+  }
+  function printSection(area) {
+    showSection(area);
     window.print();
   }
+  // Once a sheet has printed, Ctrl+P is the station cards again.
+  window.addEventListener('afterprint', function () { showSection(els.printStationArea); });
 
   els.printStationsBtn.addEventListener('click', function () {
     if (!validStations().length) return;
@@ -1190,20 +1231,19 @@
   function buildPrintRoutes() {
     var teams = state.run.teams;
     var stations = validStations();
-    els.printRoutesGrid.innerHTML = '';
-    teams.forEach(function (t, i) {
-      var route = teamRoute(i, teams.length, stations);
-      var card = document.createElement('div');
-      card.className = 'p-card';
-      card.innerHTML = '<div class="p-num">Route card</div>' +
-        '<div class="p-label">' + escapeHtml(t.name || ('Team ' + (i + 1))) + '</div>' +
-        '<div class="p-extra p-team-code">Code: ' + escapeHtml(t.code) + '</div>' +
-        '<ol class="p-route">' + route.map(function (st, ri) {
-          return '<li' + (ri === 0 ? ' class="first"' : '') + '>' + escapeHtml(st.label) + '</li>';
-        }).join('') + '</ol>' +
-        '<div class="p-route-note">Start at the first station on this list and work down it. ' +
-          'Your list is in a different order from the other teams&rsquo;.</div>';
-      els.printRoutesGrid.appendChild(card);
+    PrintKit.renderCards(els.printRoutesGrid, teams, cardGrid('2'), function (t, i) {
+      var card = pEl('div', 'p-card');
+      card.appendChild(pEl('div', 'p-num', 'Route card'));
+      card.appendChild(pEl('div', 'p-label', t.name || ('Team ' + (i + 1))));
+      card.appendChild(pEl('div', 'p-extra p-team-code', 'Code: ' + t.code));
+      var list = pEl('ol', 'p-route');
+      teamRoute(i, teams.length, stations).forEach(function (st, ri) {
+        list.appendChild(pEl('li', ri === 0 ? 'first' : '', st.label));
+      });
+      card.appendChild(list);
+      card.appendChild(pEl('div', 'p-route-note', 'Start at the first station on this list and work down it. ' +
+        'Your list is in a different order from the other teams’.'));
+      return card;
     });
   }
 
@@ -1228,24 +1268,27 @@
   function buildPrintAnswerSheets() {
     var teams = state.run.teams;
     var stations = validStations();
-    els.printAnswersheetsGrid.innerHTML = '';
-    teams.forEach(function (t, i) {
-      var route = teamRoute(i, teams.length, stations);
-      var card = document.createElement('div');
-      card.className = 'p-card';
-      card.innerHTML = '<div class="p-num">Answer Sheet</div>' +
-        '<div class="p-label">' + escapeHtml(t.name || ('Team ' + (i + 1))) + '</div>' +
-        '<div class="p-extra p-team-code">Code: ' + escapeHtml(t.code) + '</div>' +
-        '<table class="p-answersheet"><thead><tr><th>#</th><th>Station</th><th>Code word found</th><th>Your answer</th></tr></thead><tbody>' +
-        route.map(function (st, ri) {
-          var extra = answerSheetExtra(st);
-          return '<tr><td>' + (ri + 1) + '</td><td>' + escapeHtml(st.label) +
-            (extra ? '<span class="p-as-hint">' + escapeHtml(extra) + '</span>' : '') +
-            '</td><td class="p-as-blank"></td><td class="p-as-blank"></td></tr>';
-        }).join('') +
-        '</tbody></table>' +
-        '<div class="p-route-note">Start at the first station on this list and work down it. Write the code word you find and your answer for each stop.</div>';
-      els.printAnswersheetsGrid.appendChild(card);
+    PrintKit.renderCards(els.printAnswersheetsGrid, teams, cardGrid('2'), function (t, i) {
+      var card = pEl('div', 'p-card');
+      card.appendChild(pEl('div', 'p-num', 'Answer Sheet'));
+      card.appendChild(pEl('div', 'p-label', t.name || ('Team ' + (i + 1))));
+      card.appendChild(pEl('div', 'p-extra p-team-code', 'Code: ' + t.code));
+      var table = pEl('table', 'p-answersheet');
+      var head = table.appendChild(document.createElement('thead')).appendChild(document.createElement('tr'));
+      ['#', 'Station', 'Code word found', 'Your answer'].forEach(function (h) { head.appendChild(pEl('th', '', h)); });
+      var body = table.appendChild(document.createElement('tbody'));
+      teamRoute(i, teams.length, stations).forEach(function (st, ri) {
+        var tr = body.appendChild(document.createElement('tr'));
+        tr.appendChild(pEl('td', '', ri + 1));
+        var station = tr.appendChild(pEl('td', '', st.label));
+        var extra = answerSheetExtra(st);
+        if (extra) station.appendChild(pEl('span', 'p-as-hint', extra));
+        tr.appendChild(pEl('td', 'p-as-blank'));
+        tr.appendChild(pEl('td', 'p-as-blank'));
+      });
+      card.appendChild(table);
+      card.appendChild(pEl('div', 'p-route-note', 'Start at the first station on this list and work down it. Write the code word you find and your answer for each stop.'));
+      return card;
     });
   }
 
@@ -1340,17 +1383,14 @@
   });
 
   function buildPrintTeams() {
-    els.printTeamsGrid.className = 'print-station-grid pp-4';
-    els.printTeamsGrid.innerHTML = '';
-    state.run.teams.forEach(function (t) {
-      var card = document.createElement('div');
-      card.className = 'p-card';
-      card.innerHTML = '<div class="p-num">Team check-in card</div>' +
-        '<div class="p-label">' + escapeHtml(t.name || 'Team') + '</div>' +
-        '<canvas></canvas>' +
-        '<div class="p-extra p-team-code">Code: ' + escapeHtml(t.code) + '</div>';
-      els.printTeamsGrid.appendChild(card);
-      try { drawQR(card.querySelector('canvas'), buildQR('HUNT-TEAM:' + t.code, 'M'), 600); } catch (e) { /* short fixed-format code always encodes fine */ }
+    PrintKit.renderCards(els.printTeamsGrid, state.run.teams, cardGrid('4'), function (t) {
+      var card = pEl('div', 'p-card');
+      card.appendChild(pEl('div', 'p-num', 'Team check-in card'));
+      card.appendChild(pEl('div', 'p-label', t.name || 'Team'));
+      var canvas = card.appendChild(document.createElement('canvas'));
+      card.appendChild(pEl('div', 'p-extra p-team-code', 'Code: ' + t.code));
+      try { drawQR(canvas, buildQR('HUNT-TEAM:' + t.code, 'M'), 600); } catch (e) { /* short fixed-format code always encodes fine */ }
+      return card;
     });
   }
 

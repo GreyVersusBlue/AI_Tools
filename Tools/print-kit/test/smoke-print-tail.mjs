@@ -107,6 +107,11 @@ const PAGES = [
     { click: 'Print this code', before: fill016, sheet: '#print-area' },
     { click: '#btn-bulk-print', before: bulk016, sheet: '#print-area-bulk' },
   ] },
+  { file: '018-qr-scavenger-hunt-builder.html', prints: [   // since Path 7 P3: print-area.css + the print kit (it had no row)
+    { click: '#print-stations-btn' }, { click: '#print-answers-btn' }, { click: '#print-clues-btn' },
+    { click: '#print-teams-btn', before: PRINT_PREP['018'][0].run }, { click: '#print-routes-btn', before: PRINT_PREP['018'][0].run },
+    { click: '#print-answersheets-btn', before: PRINT_PREP['018'][0].run },
+  ] },
   { file: '023-exit-ticket-generator.html', prints: [{ click: '#printBtn' }, { click: '#printTriageBtn', before: PRINT_PREP['023'][0].run }] },   // since Path 7 P3: print-area.css + the print kit
   { file: '024-number-talks-board.html', prints: [{ click: 'Print session record' }] },
   { file: '028-primary-source-analysis-generator.html', prints: [{ click: 'Print student worksheet (blank)' }, { click: 'Print answer key (with notes)' }] },
