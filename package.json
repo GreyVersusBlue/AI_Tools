@@ -37,6 +37,7 @@
     "test:staff-directory": "node Tools/staff-directory-builder/test/smoke-departments.mjs",
     "test:duty-roster": "node Tools/duty-roster-builder/test/smoke-rotation.mjs",
     "test:fitness": "node Tools/fitness-skill-assessment-tracker/test/smoke-sort.mjs",
+    "test:fitness-report-cards": "node Tools/fitness-skill-assessment-tracker/test/smoke-report-cards.mjs",
     "test:formula-sheet": "node Tools/formula-sheet-builder/test/smoke-allowed.mjs",
     "test:formula-sheet-diagrams": "node Tools/formula-sheet-builder/test/smoke-diagrams.mjs",
     "test:prompt-builder": "node Tools/prompt-builder/test/smoke-placeholders.mjs",

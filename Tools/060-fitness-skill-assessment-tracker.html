@@ -78,12 +78,25 @@
   table.grid-table th.sorted-on { color: var(--accent); background: var(--sorted-bg); }
   .sort-note { font-size: .78rem; color: var(--muted); margin: -.2rem 0 .6rem; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 
+  .card-pick { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: .5rem; }
+  .card-pick select { flex: 1 1 14rem; max-width: 24rem; margin: 0; }
+
   .print-title { font-size: 1.4rem; margin: 0 0 .1rem; }
   .print-sub { color: #555; font-size: .82rem; margin: 0 0 1rem; }
   table.print-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
   table.print-table th, table.print-table td { border: 1px solid #999; padding: .35rem .5rem; text-align: center; }
   table.print-table th { background: #eee; }
   table.print-table td:first-child, table.print-table th:first-child { text-align: left; font-weight: 700; }
+  /* One report card is one page. Pages follow each other with a break before
+     every card but the first, so the last card never leaves a blank sheet. A
+     card with many events runs on to a second page and repeats its heading
+     row; a row is never split across the two. */
+  .rc-page + .rc-page { break-before: page; page-break-before: always; }
+  .rc-page tr { break-inside: avoid; page-break-inside: avoid; }
+  .rc-student { font-size: 1.7rem; margin: .2rem 0 .3rem; }
+  .rc-note { font-size: .9rem; margin: .8rem 0 0; }
+  .rc-table td:not(:first-child) { text-align: left; }
+  .rc-table td.rc-none { color: #555; font-style: italic; }
 
 </style>
 </head>
@@ -129,6 +142,18 @@
       <table class="grid-table" id="resultsTable"></table>
     </div>
   </div>
+
+  <div class="card" id="reportCardsCard">
+    <h2>Report cards</h2>
+    <p class="hint">One page per student, to hand back or send home: every test event with that student&rsquo;s result beside the class average. Only the one student&rsquo;s name and scores are on their page.</p>
+    <div class="card-pick">
+      <label for="cardStudent" style="margin:0;">Student</label>
+      <select id="cardStudent"></select>
+      <button type="button" class="secondary" id="printCardBtn">Print this student&rsquo;s report card</button>
+      <button type="button" class="secondary" id="printAllCardsBtn">Print every report card</button>
+    </div>
+    <p class="hint" id="cardNote" role="status" aria-live="polite">Save a roster above first.</p>
+  </div>
 </div>
 
 <div id="printArea"></div>
@@ -139,7 +164,7 @@
   var STORE_KEY = 'fsat_tracker_v1';
 
   var els = {};
-  ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'eventsWrap', 'addEventBtn', 'resultsTable', 'printBtn', 'exportCsvBtn', 'sortNote'].forEach(function (id) {
+  ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'eventsWrap', 'addEventBtn', 'resultsTable', 'printBtn', 'exportCsvBtn', 'sortNote', 'cardStudent', 'printCardBtn', 'printAllCardsBtn', 'cardNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -252,9 +277,10 @@
     var raw = state.roster.map(function (name) { return state.results[resultKey(name, eventId)]; });
     if (type === 'count') {
       var values = raw.map(function (v) { return v && !isNaN(parseFloat(v)) ? parseFloat(v) : null; }).filter(function (v) { return v !== null; });
-      if (!values.length) return { avg: '—', min: '—', max: '—' };
+      if (!values.length) return { avg: '—', min: '—', max: '—', n: 0 };
       var sum = values.reduce(function (a, b) { return a + b; }, 0);
       return {
+        n: values.length,
         avg: (sum / values.length).toFixed(1),
         min: Math.min.apply(null, values),
         max: Math.max.apply(null, values)
@@ -262,9 +288,10 @@
     }
     if (type === 'time') {
       var secs = raw.map(function (v) { return parseTimeToSeconds(v); }).filter(function (v) { return v !== null; });
-      if (!secs.length) return { avg: '—', min: '—', max: '—' };
+      if (!secs.length) return { avg: '—', min: '—', max: '—', n: 0 };
       var sumSecs = secs.reduce(function (a, b) { return a + b; }, 0);
       return {
+        n: secs.length,
         avg: formatSecondsAsTime(sumSecs / secs.length),
         min: formatSecondsAsTime(Math.min.apply(null, secs)),
         max: formatSecondsAsTime(Math.max.apply(null, secs))
@@ -373,6 +400,7 @@
   function renderResultsTable() {
     if (!state.roster.length) {
       els.resultsTable.innerHTML = '<tr><td class="hint" style="text-align:left;">Save a roster above first.</td></tr>';
+      renderCardPicker();
       return;
     }
     function th(key, label) {
@@ -393,6 +421,7 @@
     }).join('');
     els.resultsTable.innerHTML = '<thead>' + head + '</thead><tbody>' + rows + '</tbody><tfoot>' + buildStatsRowHtml() + '</tfoot>';
     renderSortNote();
+    renderCardPicker();
   }
 
   function refreshStatsRow() {
@@ -459,6 +488,87 @@
       'Printed ' + new Date().toLocaleDateString() + '</p>' +
       '<table class="print-table"><thead>' + head + '</thead><tbody>' + rows + buildStatsRowHtml() + '</tbody></table>';
     window.print();
+  });
+
+  /* ── Report cards ───────────────────────────────────────────────────────
+     One page per student for handing back or sending home, built from what the
+     tool already holds: the roster, the events and the results. Nothing new is
+     saved, so a save from before this existed loads and prints as it always did.
+
+     Two rules shape the page:
+
+       - A card shows one student. The only name on it is theirs, and the only
+         numbers from anyone else are the class average, which is a count of
+         scores and never a list of them. There is no min, no max and no rank:
+         a class's fastest mile is somebody's name to the family reading it.
+       - An average of one score is that student's own score. Under two results
+         the cell says so rather than printing the child's number back at them
+         as if it were the class's.
+
+     A "date" here is the event: this tool has no date field, a test is named
+     for its attempt ("Mile Run — Fall"), and every event prints, in the order
+     the events are listed, whether the student has a result for it or not. */
+  function renderCardPicker() {
+    var keep = els.cardStudent.value;
+    var names = orderedRoster();
+    var has = names.length > 0;
+    els.cardStudent.innerHTML = has
+      ? names.map(function (n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + '</option>'; }).join('')
+      : '<option value="">No students yet</option>';
+    if (has && names.indexOf(keep) !== -1) els.cardStudent.value = keep;
+    els.cardStudent.disabled = !has;
+    els.printCardBtn.disabled = !has;
+    els.printAllCardsBtn.disabled = !has;
+    els.printAllCardsBtn.textContent = has && names.length > 1
+      ? 'Print every report card (' + names.length + ')' : 'Print every report card';
+    els.cardNote.textContent = has ? '' : 'Save a roster above first.';
+  }
+
+  function cardClassAverage(ev) {
+    var stats = computeStats(ev.id, ev.type);
+    if (!stats || !stats.n) return { text: 'No results yet', none: true };
+    if (stats.n < 2) return { text: 'Not enough results to compare yet', none: true };
+    return { text: stats.avg + ' (' + stats.n + ' students)', none: false };
+  }
+
+  function buildCardHtml(name) {
+    var scored = 0;
+    var rows = state.events.map(function (ev) {
+      var mine = String(state.results[resultKey(name, ev.id)] || '').trim();
+      if (mine) scored++;
+      var avg = cardClassAverage(ev);
+      return '<tr><td>' + escapeHtml(ev.name || '(unnamed event)') + '</td>' +
+        (mine ? '<td>' + escapeHtml(mine) + '</td>' : '<td class="rc-none">No result</td>') +
+        '<td' + (avg.none ? ' class="rc-none"' : '') + '>' + escapeHtml(avg.text) + '</td></tr>';
+    }).join('');
+    var body;
+    if (!state.events.length) {
+      body = '<p class="rc-note">There are no test events yet.</p>';
+    } else {
+      body = '<table class="print-table rc-table"><thead><tr><th scope="col">Event</th>' +
+        '<th scope="col">Result</th><th scope="col">Class average</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+        (scored ? '' : '<p class="rc-note">No results have been recorded for this student yet.</p>');
+    }
+    return '<section class="rc-page"><h1 class="print-title">Fitness &amp; Skill Assessment Report Card</h1>' +
+      '<h2 class="rc-student">' + escapeHtml(name) + '</h2>' +
+      '<p class="print-sub">Printed ' + new Date().toLocaleDateString() + '</p>' + body + '</section>';
+  }
+
+  function printCards(names) {
+    if (!names.length) return;
+    document.getElementById('printArea').innerHTML = names.map(buildCardHtml).join('');
+    els.cardNote.textContent = names.length === 1
+      ? 'Report card for ' + names[0] + ' sent to the print dialog.'
+      : names.length + ' report cards sent to the print dialog.';
+    window.print();
+  }
+
+  els.printCardBtn.addEventListener('click', function () {
+    var name = els.cardStudent.value;
+    if (name && state.roster.indexOf(name) !== -1) printCards([name]);
+  });
+  els.printAllCardsBtn.addEventListener('click', function () {
+    printCards(orderedRoster());
   });
 
   /* ---------- boot ---------- */

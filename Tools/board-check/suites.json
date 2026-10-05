@@ -88,6 +88,7 @@
     "Tools/staff-directory-builder/test/smoke-departments.mjs",
     "Tools/duty-roster-builder/test/smoke-rotation.mjs",
     "Tools/fitness-skill-assessment-tracker/test/smoke-sort.mjs",
+    "Tools/fitness-skill-assessment-tracker/test/smoke-report-cards.mjs",
     "Tools/formula-sheet-builder/test/smoke-allowed.mjs",
     "Tools/formula-sheet-builder/test/smoke-diagrams.mjs",
     "Tools/prompt-builder/test/smoke-placeholders.mjs",
