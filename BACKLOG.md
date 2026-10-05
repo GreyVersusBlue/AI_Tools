@@ -87,6 +87,11 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v249), rank 6, Path 7 P4 increment 5: 003, 008, 018, 033, 068 and 075 save their CSV through
+  `ExportKit.toCsv`.** Every file now has a byte order mark, CRLF, a quoted carriage return and an apostrophe before
+  a typed cell a spreadsheet would run as a formula; 075's Import takes the apostrophe off. Old file against new
+  for all six. `npm run test:csv-adopters` (port 8486). **Left in rank 6: 001 and 006 (CSV and workbook), then 030
+  and 036; `toXlsx` has no adopter. No file was opened in a spreadsheet program.**
 - **AI-13 (v248), rank 6, Path 7 P4 increment 4: 011 makes booklets and several pages to a sheet on `ExportKit`
   (Path 17 P4's controls, built), and 064's zip and PNG downloads are the file helpers' first adopter.** 011's
   default output is the old page's in 120 states, to the pixel. `npm run test:image-to-pdf-impose` (port 8483).
@@ -232,14 +237,14 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v244` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v249` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **315** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **208** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| Suites | **213** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 31 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `export.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 31 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 10 · `export.js` 9 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -376,7 +381,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 6 | Path 7 P4 — `_shared/export.js`. **Increments 1 to 4 shipped (AI-13, v243 to v248):** `ExportKit` has the imposition and pagination math, `toPdf(pages, opts)` for pages a tool can draw, and the file helpers `toCsv`, `toXlsx`, `toZip`, `download` and `filename`; 064 (Download PDF, print pagination, and since v248 its zip and PNG downloads), 040 (print pagination and backs) and 011 (booklet and pages per sheet, v248) are on it, and `_shared/duplex-print.js` is deleted. **Left:** `toCsv` and `toXlsx` have no adopter: twelve pages hand-roll a `text/csv` download with no formula guard, and they move one or two to a PR, old file against new. Nothing else in P4 is open. A slot is not clipped and turns 0 or 180 only. Ordinary work, no Fable needed | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 6 | Path 7 P4 — `_shared/export.js`. **Increments 1 to 5 shipped (AI-13, v243 to v249):** `ExportKit` has the imposition and pagination math, `toPdf(pages, opts)` for pages a tool can draw, and the file helpers `toCsv`, `toXlsx`, `toZip`, `download` and `filename`; 064 (Download PDF, print pagination, and since v248 its zip and PNG downloads), 040 (print pagination and backs) and 011 (booklet and pages per sheet, v248) are on it, and `_shared/duplex-print.js` is deleted. **Increment 5 (AI-13, v249):** 003, 008, 018, 033, 068 and 075 save their CSV through `toCsv` and `download` (`npm run test:csv-adopters`, port 8486). **Left:** two more CSV writers, 001 and 006, which also write a workbook with `XLSX.writeFile` (the first `toXlsx` adopters; 006 has an import to round-trip), then the workbook-only 030 and 036; 035's template and 060's results are AI-31's pages to move. `toXlsx` has no adopter. Nothing else in P4 is open. A slot is not clipped and turns 0 or 180 only. Ordinary work, no Fable needed | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 7 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -2421,10 +2426,45 @@ localStorage with no file export.
   `npm run test:image-to-pdf-impose` (port 8483) reads the file. 064's `exportZip` builds its list and calls
   `toZip`, and its PNG and zip downloads go through `download`: the same entries with the same bytes inside, the
   file about a fifth smaller (deflated; it was stored). `npm run test:trading-card-pdf` reads the zip now too.
-  **What is left of P4.** `toCsv` and `toXlsx` have no adopter. Twelve pages hand-roll a `text/csv` download
-  today and none of them guards a formula; they move one or two to a PR, each with its old file compared with
-  the new (a typed cell that starts `=`, `+`, `-` or `@` gains an apostrophe, which is the point and is the one
-  difference to expect). 011's layouts leave three things unbuilt, all in the layer already and none asked for: a
+  **Increment 5 shipped (AI-13, 2026-10-05, v249): six pages save their CSV through `toCsv`.** The survey
+  first, since "twelve pages" above was a grep for `text/csv` and two of its hits (017, 038) are a file
+  input's `accept`. **Ten pages write a CSV by hand, and four write a workbook:**
+
+  | Tool | What it saves | What was wrong with the file | Now |
+  |---|---|---|---|
+  | 003 Rubric Builder | every scored student: points per criterion, total, percent, comment | no byte order mark (Excel shows `Zoë` as `ZoÃ«`), no formula guard | `toCsv`, v249 |
+  | 008 Behavior Points | archived days: date, student, points, taps | no mark, no guard | `toCsv`, v249 |
+  | 018 QR Scavenger Hunt | stations: label, question, note, type, answer, hint, code word | no mark, no guard (a note typed `-5 is wrong` opened as `#NAME?`) | `toCsv`, v249 |
+  | 033 SSR Log | reading log: student, date, book, genre, pages, minutes | no mark, no guard, a bare carriage return left unquoted (the row breaks in two) | `toCsv`, v249 |
+  | 068 Parent Contact Log | contacts: date, student, method, reason, outcome, initials | no guard (an outcome typed `-left voicemail`), a bare carriage return unquoted; it had the mark | `toCsv`, v249 |
+  | 075 Staff Directory | name, room, extension, department; **it also imports this file** | no mark, no guard (an extension typed `+1 555 0100`), a bare carriage return unquoted | `toCsv`, v249; Import takes the apostrophe off again |
+  | 001 Hall Pass Log | a range report (title lines, totals, every pass), as CSV and as a two-sheet workbook | no guard in the CSV; it has the mark and quotes a carriage return. The workbook is `aoa_to_sheet`, which writes a string as a string, so nothing to fix there but the copy of the code | left |
+  | 006 Class Roster Hub | one roster or all of them, as CSV and as a workbook; **it imports both** | no guard in the CSV (it has the mark and quotes a carriage return); its import would have to take the apostrophe off, as 075's does | left |
+  | 030 Review Game Board | a blank template workbook | nothing wrong; a copy of `XLSX.writeFile` | left |
+  | 036 Final Grade Checker | `final_grades.xlsx` | not read closely; `aoa_to_sheet`, so strings stay strings | left |
+  | 035 Schedule Visualizer | `groups-template.csv`, three fixed lines | LF line ends, no mark, nothing typed in it | left: 035 is AI-31's |
+  | 060 Fitness Tracker | assessment results | no mark, no guard, a bare carriage return unquoted | left: an AI-31 worker had the page in this batch |
+
+  032 and 038 only read a workbook. The six that moved were taken worst file first and stopped at six; 001 and
+  006 are next and are the first `toXlsx` adopters (a CSV and a workbook from one table each).
+  **How a page adopts `toCsv`, as the six did.** Link `../_shared/export.js`; delete the page's own cell
+  quoting and its Blob and anchor; hand the rows as arrays to `ExportKit.toCsv(rows)` and the text to
+  `ExportKit.download(text, name, 'text/csv;charset=utf-8')`, keeping the tool's own file name. **A computed
+  number goes in as a number, not as its text:** the guard is for typed cells, and `"-3"` the string would come
+  out `'-3` (003's scores were strings from `fmtNum()`; they are numbers now, the same digits). A page that
+  imports its own file strips a leading apostrophe that stands before `=`, `+`, `-` or `@` (075's
+  `unguardCsv()`). Then a row in `Tools/export/test/_csv-adopters.mjs`: the seed, the button, the file name, the
+  numeric columns and the table the file must hold; `smoke-csv-adopters.mjs` does the rest (the mark, CRLF, strict
+  RFC 4180, the apostrophe on every typed formula and on no number, every cell as typed, the bytes against a
+  writer of its own, and the round trip for a page with an import), and its `PAGES` list gets the page so CI's
+  selector runs it when the page changes. Old against new for the six, each on its sample data and on cells
+  built to break a CSV: the new file is the old file's cells with the mark, a CRLF after the last row, the
+  apostrophes and the quoted carriage return, and nothing else differs. What differs on purpose and a teacher may
+  notice: a cell typed `-` (075's "no room") opens in a spreadsheet as `-` still, but the file holds `'-`, so a
+  program that is not a spreadsheet shows the apostrophe.
+  **What is left of P4.** 001 and 006 (CSV and workbook, one PR each; 006's import round trip is the care), then
+  030 and 036's `XLSX.writeFile` calls, which are tidying and fix nothing; 035 and 060 when their pages are free.
+  `toXlsx` has no adopter. 011's layouts leave three things unbuilt, all in the layer already and none asked for: a
   preset for a one-sided printer (`stack: 'fronts-first'`), signatures, right-to-left.
   **Known limits, none of them a row yet.** A slot is not clipped, so a draw function that runs off its page
   runs onto its neighbour. A slot turns 0 or 180 degrees, not 90, so N-up never turns a page to fit. A booklet has

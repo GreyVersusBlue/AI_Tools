@@ -9,6 +9,60 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P4, increment 5: six pages save their CSV through `ExportKit.toCsv` (003, 008, 018, 033, 068, 075), and the survey of every page that writes a CSV or a workbook (2026-10-05, AI-13, `CACHE_VERSION` v249)
+
+Audit entry AI-13, rank 6 (2+). Fifth increment of P4. **The row stays, rewritten: what is left is 001 and 006
+(a CSV and a workbook each), then 030 and 036.** P5 untouched.
+
+- **The survey.** "Twelve pages hand-roll a `text/csv` download" was a grep, and two of its twelve (017, 038) are
+  a file input's `accept`. Ten pages write a CSV by hand: 001, 003, 006, 008, 018, 033, 035, 060, 068, 075. Four
+  write a workbook with `XLSX.writeFile`: 001, 006, 030, 036 (032 and 038 only read one). The table, with what
+  each saves and what was wrong with its file, is in `BACKLOG.md`, Path 7 P4.
+- **What was wrong.** None of the ten guards a formula: a typed cell that starts `=`, `+`, `-` or `@` is run by
+  the spreadsheet, so 068's outcome "-left voicemail" and 018's note "-5 is wrong" open as `#NAME?`. Six had no
+  byte order mark (003, 008, 018, 033, 060, 075), so Excel reads `Zoë` as `ZoÃ«`. Four quote on `[",\n]` and
+  leave a bare carriage return unquoted (033, 060, 068, 075), which breaks the row in two.
+- **What shipped.** 003, 008, 018, 033, 068 and 075, worst file first and the brief's limit of six. Each links
+  `_shared/export.js`, loses its own cell quoting, Blob and anchor click, and calls `ExportKit.toCsv(rows)` and
+  `ExportKit.download(text, name, 'text/csv;charset=utf-8')` with the file name it always used. `_shared/export.js`
+  did not change. Two things the helper's guard asked of a page:
+  - **003 hands its scores over as numbers.** They were strings from `fmtNum()`, and the guard would have written
+    a negative score (a level worth -1) as `'-1`, text. `csvNum()` rounds the same way and returns the number; the
+    digits in the file are the same.
+  - **075 imports its own file, so Import takes the apostrophe off** (`unguardCsv()`: a leading `'` that stands
+    before `=`, `+`, `-` or `@`). An extension typed `+1 555 0100` comes back as typed. A name a person really
+    typed as `'-x` would lose its apostrophe on import; nobody has one.
+- **Old file against new** (the old page served from `git show main:` through `page.route()`, the clock pinned),
+  for each of the six on the a11y sweep's sample data and on cells built to break a CSV (a comma, a quote, a line
+  break, a bare carriage return, `=`, `+`, `-`, `@`, letters outside ASCII, an empty cell). The new file is,
+  byte for byte, the old file's cells written again with the named fixes and nothing else: the mark (068 had it),
+  a CRLF after the last row, the apostrophes (27 cells across the six hostile files, none in a sample file), and
+  the quoted carriage return (033, 068). The sample files differ from the old by the mark and the last CRLF only.
+  003's sample has no scores and saves no file, old or new. File names are unchanged; the type is
+  `text/csv;charset=utf-8` on all six (it was `text/csv` on three).
+- **The suite.** `Tools/export/test/smoke-csv-adopters.mjs` (`npm run test:csv-adopters`, port 8486, 129
+  assertions) with its table in `_csv-adopters.mjs`: for each page the bytes it saves are read (not
+  `harness.downloadText()`, whose `Blob.text()` drops the mark) and checked for the mark, the type and name,
+  strict RFC 4180 by a reader written in the suite, the apostrophe on every typed formula and on no number, each
+  negative number written as a number, every cell as typed, and the whole file against a writer of the suite's
+  own; 075's file goes back in through Import into an empty page and gives the directory it came from, and the
+  file saved after that is the same bytes.
+- **Broken on purpose, 5 breaks in one locked run:** in `_shared/export.js`, no byte order mark (6
+  assertions fail, one a page), no guard (18), LF line ends (47), a bare carriage return not quoted (4: 033 and
+  068, the two whose fixture has one); and in the pages, 003's scores as text again with 075's Import keeping
+  the apostrophe (8). All five caught; every file put back from a copy. The assertion added after the breaks
+  (the suite's page list equals the table's) was not broken.
+- **Decisions, mine, cheap to reverse.** (1) One shared suite, not assertions in each page's own suite: the six
+  checks are the same check, and four of the six pages have one suite about something else. Its `PAGES` list
+  names the six files so CI's selector (a page edit runs the suites whose source names it) picks it up. (2) The
+  guard is left on for every typed cell, including 075's room typed `-`: the file holds `'-`. `raw: true` per
+  column does not exist and was not added. (3) 068's and 018's file type lost a trailing `;`.
+- **Not done, not verified.** 001 and 006 were left: each writes a workbook from the same rows, and 006's import
+  reads both, so they are a PR each. 060 and 035 were not mine to touch in this batch. No file was opened in
+  Excel, Sheets or Numbers (huginn has none): that an apostrophe shows as text and not as an apostrophe is what
+  those programs document, not something seen here. Full `npm test` not run. The old 075 import of a *new* file
+  was not tried (the old page is gone once this lands).
+
 ## Path 7 P4, increment 4: 011 makes booklets and several pages to a sheet on `ExportKit` (Path 17 P4's controls), and 064's zip and PNG downloads are the file helpers' first adopter (2026-10-05, AI-13, `CACHE_VERSION` v248)
 
 Audit entry AI-13, rank 6 (2+). Fourth increment of P4. **The row stays, rewritten: what is left is CSV and XLSX
