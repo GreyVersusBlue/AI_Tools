@@ -46,6 +46,11 @@ const eq = (a, b, label) => ok(a === b, `${label} (got ${JSON.stringify(a)}, wan
 const server = await serve(PORT);
 const browser = await launch();
 const page = await prepPage(browser, BASE, { width: 1400, height: 1100 });
+// print() is stubbed. Since 017 prints through the shared kit, a sheet steps
+// down on `afterprint` (Ctrl+P is the QR codes again), and headless Chromium
+// fires that inside print() itself, before the checks below could see the
+// sheet go live.
+await page.addInitScript(() => { window.print = () => {}; });
 
 console.log('Gallery Walk QR Codes — batch scan-verify before printing');
 

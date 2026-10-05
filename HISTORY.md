@@ -9,6 +9,70 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P3, increment 11: 017 adopts the print kit, five print buttons, a default sheet with no `.active`; the kit's word-wrap broke the slips' write-in rules (2026-10-05, AI-13, `CACHE_VERSION` v241)
+
+Audit entry AI-13, rank 6 (2+). Eleventh increment of P3: the sixth of the card-grid tools after 074, 051, 040, 064
+and 018, 017 (gallery walk QR codes, 1,881 lines before, five print buttons, one `@media print` block, no `@page`),
+by the recipe. The row stays, rewritten: one card-grid tool is left (016). P4 and P5 untouched. **No `_shared/`
+file changed; the kit did not change.**
+
+- **Five buttons, all moved:** QR codes, reference sheet, feedback slips, feedback packets, route cards.
+  `print-area.css` cannot be half-adopted, so it was all or none.
+- **Which kind of card: a size of its own, on all three card sheets.** Read off 017's CSS, which was 018's shape:
+  a wrapping flexbox, `width: calc(50% - 8px)` (or 100%, 33.33%, 25%) and `margin: 4px` on a card, no height, and
+  `page-break-after: always` on every Nth card. A QR card, a slip and a route card are each a share of the page's
+  *width* and as tall as what is on them; a kit preset is a share of the height too. So `{ cols, perPage }`
+  (`pk-cards-own`): 1 and 1, 2 and 2, 2 and 4, 3 and 6, 4 and 8, with `--pk-gap: 8px; padding: 0 4px` on the grids
+  and nothing above or below (018's finding). **A packet is not a card:** it is one student's page of comments,
+  and each is a `div.packet-page.pk-page`. The reference sheet is a table, its rows built with `textContent`.
+- **The default sheet has no `.active`.** 018 wrote `.active` on its station area in the markup. 017's older suite
+  (`smoke-scan-verify.mjs`) asserts that dismissing the "did not scan back" warning leaves `#printQrArea` *not*
+  `.active`, so here `showSection()` also sets `sheet-asked` on `#printArea`, `afterprint` clears both, and
+  `#printArea:not(.sheet-asked) #printQrArea { display: block }` is what Ctrl+P prints. My call; `.active` keeps
+  meaning "a button asked for this sheet".
+- **The QR sheet is kept current from `render()`, without the test-scan.** `buildPrintCodes(verify)`: `render()`
+  calls it bare at both of its exits (so an emptied list empties the sheet), the button calls it with `true`,
+  which redraws every code at 600 px, reads each back with jsQR and asks before printing one that failed, as
+  before. Nothing is drawn on `beforeprint`.
+- **Old against new** (old page from `git show origin/main:` through `page.route()`, Letter half-inch in
+  `page.pdf()`, 720 px wide): 18 states, light and dark, five buttons: 1, 5, 6, 14 (one long) and 30 entries at
+  1, 2, 4, 6 and 8 codes to a page; stars, rubric and sticky slips at 2, 4 and 6; routes at 2, 4 and 6 for 1 to 30
+  walkers. 170 sheets (a walk of one station has no route cards). In all 170: the same cards, markup and text, card
+  left, width and height, canvas size, decoded QR text (332 codes), table and column widths, colours and PDF page
+  count. Unlike 018, dropping the 4 px above a grid changed no page count here.
+- **New suite:** `Tools/gallery-walk-qr/test/smoke-print.mjs` (`npm run test:gallery-walk-print`, port 8478, 3,970
+  assertions, about three minutes). 017 has a row in `smoke-print-tail.mjs` now, five buttons (it had none).
+
+**What I got wrong or did not do.**
+- **The first version made every slip three across 66 px taller and the sheet a page longer** (5 pages to 6 in
+  six states). `.pk-card`'s `overflow-wrap: anywhere` broke the rows of underscores a student writes on into two
+  lines. `.slip-line`, `.slip-wish` and `.slip-wish-blank` say `overflow-wrap: normal` now. The width comparison
+  did not show it; the height and page-count comparison did.
+- **`smoke-scan-verify.mjs` was edited: one `addInitScript` that stubs `print()`, no assertion touched.** Headless
+  Chromium fires `afterprint` inside `print()`, so "accepting lets the print view go live" read the sheet after it
+  had already stepped down. The alternative, leaving the last sheet `.active` after printing as the old page did,
+  would keep Ctrl+P on a stale sheet of slips; I chose the stub.
+- **Not fixed, the same before and after:** on a slip three across the 31-underscore rule is wider than the card
+  and runs over its right border. Seen in the markup and the wrap it caused, not measured in px.
+- **Worse than the old page in one case nobody should hit:** the old block set `body { background: #fff }` in
+  print; `print-area.css` and `.pk-paper` whiten the sheet, not the page under a short sheet. With the browser's
+  "background graphics" ticked, the paper below a short sheet takes the page colour (dark in the dark theme). All
+  twelve adopters share this; one rule in the kit would fix it, and the brief was not to change the kit.
+- **PDF counts for text-height sheets are asserted as a property, not a number:** a packet, the reference table,
+  or a grid within 24 px of the page's height must print the pages its measured height needs (a range of two where
+  it ends near a page's end). Card sheets whose grids fit hold the old page's number. CI has not run them yet.
+- Not compared against the old page: error correction other than Q, entry numbers off (asserted in the new suite
+  only), a code that fails to build, a `cardsPerPage` the page does not offer (it prints four to a page now, as
+  018's does). No raster comparison. The 016 notes in the recipe are read off its source, not run.
+- Nothing was printed on paper and no phone scanned a code.
+
+**Checks.** The twelve `check:*` guards and `lint`, `check:precache -- --base origin/main` (v239 to v241) and
+`check:adoption -- --check`; `audit-print --only 017 --check` (nothing of any kind, the committed baseline); the a11y
+sweep `--only 017` (4 passed); suites through `run-suites.mjs --only`, one folder at a time, for gallery-walk-qr
+(its two older suites 33 and 21, the second with `print()` stubbed), print-kit (`smoke-print-tail.mjs` 512 with
+017's five buttons), the eleven earlier adopters, roster, share, theme, service-worker and board-check: all 18
+folders exit 0, 34 minutes. The full `npm test` was not run (no `_shared/` file changed).
+
 ## Path 4 P5, the cheap piece: 009 says what `rgb-audio` and `stviz-recovery` hold (2026-10-05, AI-16, `CACHE_VERSION` v240)
 
 Audit entry AI-16. One small increment, asked for ahead of a landing run; rank 2 (per-tool restore as a shared

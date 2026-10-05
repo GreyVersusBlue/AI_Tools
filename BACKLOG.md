@@ -87,6 +87,10 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v241), rank 6, Path 7 P3 increment 11: 017 prints through the kit** (twelve adopters now), all five
+  buttons: three card sheets (`{ cols, perPage }`, as 018's), packets as kit pages and the reference table, five
+  areas inside one `#printArea`. The kit did not change. Card sizes, markup, QR codes and PDF page counts are the old
+  page's in 36 states. `npm run test:gallery-walk-print` (port 8478). **Next: 016, the last card-grid tool.**
 - **AI-16 (v240), the cheap piece of Path 4 P5:** 009 now says what `rgb-audio` and `stviz-recovery` hold; their
   registry rows had no `note`, so both showed as a bare name. Rank 2 (per-tool restore) is untouched. Open:
   should `rgb-audio` be ticked by default? See `HISTORY.md`.
@@ -94,7 +98,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   buttons: five card sheets (`{ cols, perPage }`, a card a share of the width and as tall as its content) and the
   answer key, six areas inside one `#printArea`. The kit did not change. Card sizes, markup, QR codes and PDF page
   counts are the old page's in 40 states, **except answer sheets a page tall or taller, which no longer print a blank
-  page after each page.** `npm run test:scavenger-hunt-print` (port 8477). **Next: 017, then 016.**
+  page after each page.** `npm run test:scavenger-hunt-print` (port 8477).
 - **AI-13 (v238), rank 6, Path 7 P3 increment 9: 064 prints through the kit** (ten adopters now): fronts and backs
   through one `renderCards()` call (`{ cols, perPage }`, an exact-size card with the tool's own `height` and clipping).
   The kit did not change. Card sizes, positions and markup are the old page's in 32 states; **a deck of one page of
@@ -209,15 +213,15 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v240` on local `main` (origin is at v239) — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v241` on local `main` (origin is at v239) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **314** in `PRECACHE_URLS`, **95** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **203** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| Suites | **204** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **435** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 29 · `media-db.js` 14 · `print-kit.css` 11 · `print-kit.js` 11 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
-| Printing | 78 tools call `window.print()`; 57 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-04, after 018 lost its two blocks; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 30 · `media-db.js` 14 · `print-kit.css` 12 · `print-kit.js` 12 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `duplex-print.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Printing | 78 tools call `window.print()`; 56 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 lost its block; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **170**, contiguous. Path 21 is finished; per-tool rows start at rank **80**; 162–170 are Path 22 P6–P14 |
 | Art | **130** ledger entries: 046's relief (29,726 B), 030's board backdrop and tiles (5,348 B), 042's ten seals and ribbons (84,170 B), 071's twelve pictures (157,454 B), 080's piece atlas (43,318 B), 87 tool icons, the sprite (58,032 B), 4 shortcut PNGs, the 4 app-mark PNGs (14,457 B), the 4 hero WebPs (64,832 B), the test tile's light/dark pair |
@@ -353,7 +357,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 6 | Path 7 P3 — adoption: the class-set/blank tools, then the card-grid tools. **076 (v230), 070 and 077 (v231), 043 (v232), 023 (v233), 042 (v234), 074 (v235), 051 (v236), 040 (v237), 064 (v238), 018 (v239) done: the six class-set/blank tools are finished and `PrintKit.renderCards()` exists**; left: two card-grid tools, 017 next, then 016, both with QR canvases (077 is the example of a card that shares the page, 074 and 051 of a card with a size of its own; 051 also of a sheet with a canvas on it and of a second thing after the grid; 040 of exact-size cards on an own grid, of `perPage` with the tool's own page frame round each grid, and of a preview drawn by the same call; 064 of a card whose markup comes from a renderer shared with other views, parsed and not rebuilt, and of things put between the grids; 018 of several print buttons as areas inside one `#printArea`, of a card that is a share of the width and as tall as its content, and of a sheet with canvases kept current for Ctrl+P), by the recipe in the section | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 6 | Path 7 P3 — adoption: the class-set/blank tools, then the card-grid tools. **076 (v230), 070 and 077 (v231), 043 (v232), 023 (v233), 042 (v234), 074 (v235), 051 (v236), 040 (v237), 064 (v238), 018 (v239), 017 (v241) done: the six class-set/blank tools are finished and `PrintKit.renderCards()` exists**; left: one card-grid tool, 016, with QR canvases, three print areas chosen by a class on `<body>` and an `@page` it rewrites for label stock (077 is the example of a card that shares the page, 074 and 051 of a card with a size of its own; 051 also of a sheet with a canvas on it and of a second thing after the grid; 040 of exact-size cards on an own grid, of `perPage` with the tool's own page frame round each grid, and of a preview drawn by the same call; 064 of a card whose markup comes from a renderer shared with other views, parsed and not rebuilt, and of things put between the grids; 018 of several print buttons as areas inside one `#printArea`, of a card that is a share of the width and as tall as its content, and of a sheet with canvases kept current for Ctrl+P; 017 of a default sheet that needs no `.active`, of a whole-page thing beside the card sheets, and of a build that verifies only when the button asks), by the recipe in the section | site | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 7 | Path 7 P4 — `_shared/export.js`: `toPdf`, `toCsv/xlsx`, `toZip`, booklet/N-up imposition | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 9 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -1747,6 +1751,22 @@ localStorage with no file export.
   4 px top margin pushed a sheet that just fitted (fourteen stations, 959 px on a 960 px page) on to a second,
   almost blank page, eleven pages for nine teams; the grids now have no inset above or below, and it is five. Every
   card sits 4 px higher on its page for it. Suite: `Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs`.
+  **Increment 11 shipped (AI-13, 2026-10-05, v241): 017, five print buttons, and the second with a QR sheet kept
+  current.** All five moved: QR codes, reference sheet, feedback slips, feedback packets, route cards. Its `@media
+  print` block is deleted (it had no `@page`); `setPage()` is Letter at half an inch. **The three card sheets are the
+  second kind, a grid of the tool's own** (`{ cols, perPage }`, `pk-cards-own`), for 018's reason: the old rules were
+  a wrapping flexbox that gave a card a share of the page's *width* (1, 2, 3 or 4 across) and no height, and cut the
+  list with `page-break-after` on every Nth card (1, 2, 4, 6 or 8 to a page). A packet is a page of comments, not a
+  card: each is a `.pk-page`. The reference sheet is a table. **Five areas inside one `#printArea`**, with their old
+  ids; a button builds its sheet, shows it (`.active`) and prints, and `afterprint` takes `.active` off again. **No
+  area is `.active` at rest:** `#printArea:not(.sheet-asked) #printQrArea` shows the QR codes for Ctrl+P, so the
+  tool's older suite, which asserts that a dismissed warning leaves `#printQrArea` not `.active`, still means what
+  it says. The QR sheet is kept current from `render()`, without the test-scan; the button rebuilds it with the
+  test-scan and asks before printing a code that did not read back, as it did. Everything is built with `textContent`.
+  **The kit did not change, and no `_shared/` file did.** Old against new in 36 states, light and dark, five buttons
+  each (170 sheets; a walk of one station has no route cards): the same cards, markup, text, left, width, height,
+  canvas size, decoded QR text, table columns, colours and PDF page count in all 170. Ctrl+P prints the QR codes
+  where it printed an empty page. Suite: `Tools/gallery-walk-qr/test/smoke-print.mjs`.
   **The recipe, which is what the next adopter follows:**
   1. *Before touching the page*, press its print buttons in a few states and write down Chromium's
      `page.pdf()` page counts. They go into the new suite as the numbers to hold. **Measure a page that has no
@@ -1849,6 +1869,25 @@ localStorage with no file export.
      `.pk-card`'s `anywhere` lets an auto-layout table squeeze its columns. **Do not hold a PDF page count for a
      card whose height is its text and lands within a few px of the page:** another machine's fonts put it on
      the other side; assert the property (a card that fits is one page) for that case, as 018's suite does.
+     **A row of underscores to write on** (017's slips: `★ ______`) gets `overflow-wrap: normal`: `.pk-card`'s
+     `anywhere` breaks the rule in two on a narrow card, and every 017 slip three across came out 66 px taller and
+     the sheet a page longer. Compare card *heights* against the old page, not only widths; that is what showed it.
+     **A default sheet with no `.active`** (017): if an older suite of the tool reads `.active` on the default area
+     to mean "the button went through", do not write `.active` into the markup as 018 did. `showSection(area)` puts
+     a class on `#printArea` (`sheet-asked`) with the area's `.active`, `afterprint` calls `showSection(null)`, and
+     one plain rule, `#printArea:not(.sheet-asked) #<default area> { display: block }`, is Ctrl+P's sheet.
+     **That older suite must stub `print()`:** headless Chromium fires `afterprint` inside `print()` itself, so a
+     real call has already stepped the sheet down when the next line reads it (017's scan-verify suite got a
+     one-line `addInitScript`; no assertion changed). **A thing that is a page, not a card** (017's packets) is a
+     `div.pk-page` appended in a loop, no `renderCards()`. **A build with a costly check** (017 test-scans every
+     600 px code with jsQR) takes a flag: the render function keeps the sheet current without it, the button
+     rebuilds with it. **The hidden sheet has no `innerText` line breaks:** a suite that reads a card's words
+     walks its text nodes, or reads them in print media. **For 016, the last** (read off its source, nothing run): its three sheets
+     are `.print-only` children of `<body>`, `#print-area`, `#print-area-bulk` and `#print-area-inventory`, chosen
+     by a class on `<body>` (`print-bulk`, `print-inventory`) that `afterprint` removes, and it rewrites an `@page`
+     for label stock (`setPrintPageMargin`). They go inside one `#printArea` as areas, the body classes become
+     `.active`, the `@page` becomes `setPage()` calls, and `smoke-print-tail.mjs`'s two `sheet:` selectors for 016
+     go with them.
      **A class set is `{ mode: 'set', roster: names }`** and the function reads `sheet.name` (043). **A tool whose
      sheet is also its live preview** keeps its escaped string and returns it parsed: `t = createElement('template');
      t.innerHTML = html; return t.content` (043's `nodeFrom()`); the preview and the print then cannot drift, and the
