@@ -9,6 +9,35 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P2 designed, not built: pacing that recomputes (2026-10-05, AI-18, no `CACHE_VERSION`, no code)
+
+Audit entry AI-18, rank 13 (2+). A design pass: only `BACKLOG.md` changed (the P2 bullet under "Path 9", and a
+note on rank 13). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** A new optional `cal.plan` (courses, each with lessons or typed units, pins, lost
+  dates, a baseline), one pure module `scv-plan.js` beside `scv-pacing.js`, a placer that never changes a count,
+  "behind" as a ledger that must sum, a migration keyed on what it finds, and dates stamped into the blob at
+  every save so that a change is told and a reader outside 032 needs no placer.
+- **What reading the code turned up, each worth knowing before the build.** The lesson sequence already
+  recomputes round a closure; what never flowed is `cal.units`. `units` and `abCycle` are not in `isValid()` or
+  `migrate()`. 010 and 045 read the day's typed note, never the placement. A blob with `__v: 3` fails the shipped
+  `isValid()`, the shipped `get()` then returns the seed, and the next save writes it over the calendar, which
+  is why the design adds a field and leaves `__v` at 2. The A/B cycle slides on a lost day (all 99 later letters
+  flip after one January closure in the seed). One bump on an alternating A/B list puts 143 of 144 later lessons
+  on the other letter's day.
+- **Measured, with two pure-Node probes that were not kept:** the seed's 184 school days (13 half, 92 A and 92
+  B, marking periods of 45, 46, 47, 46); fixed unit to pinned unit gives the same school days for all 40,528
+  start/end pairs that hold one; the example dates the design's tests name.
+- **Not verified.** No line of the design has run. The equivalence of the new placer with `placeLessons()` is
+  a test the design names, not a result. The "older page ignores `plan` and writes it back" claim is read off
+  the page's code (it saves `cal` whole), not seen in a browser. The page's `buildAbMap()` walks in local time
+  and the design's `abLetters()` in UTC; that they agree is a named test, not a finding.
+- **Ten questions are Devon's** and are listed, unanswered, at the end of the P2 bullet: half days, testing
+  days, whether A/B slides after a snow day, what "behind" is measured against, buffers, freezing the past, one
+  list or two for A/B, the dated units already saved, what carries into a new year, and the words.
+
+---
+
 ## Path 7 P4, increment 3: 040 is `ExportKit`'s second adopter, `_shared/duplex-print.js` is deleted, and 016's print suite no longer depends on the machine's fonts (2026-10-05, AI-13, `CACHE_VERSION` v245)
 
 Audit entry AI-13, rank 6 (2+). Third increment of P4. **The row stays, rewritten.** P5 untouched, 011 not started.
