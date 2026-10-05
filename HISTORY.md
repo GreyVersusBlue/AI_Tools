@@ -9,6 +9,100 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P4, increment 4: 011 makes booklets and several pages to a sheet on `ExportKit` (Path 17 P4's controls), and 064's zip and PNG downloads are the file helpers' first adopter (2026-10-05, AI-13, `CACHE_VERSION` v246)
+
+Audit entry AI-13, rank 6 (2+). Fourth increment of P4. **The row stays, rewritten: what is left is CSV and XLSX
+for the tools that hold a table.** Rank 51 (Path 17 P4) stays too, cut to the paper check. P5 untouched.
+
+- **What shipped in 011.** A card, "4 · Booklet & Pages per Sheet (optional)" (the queue, portfolios and Generate
+  are cards 5, 6 and 7 now): the layout (off, booklet, several pages on each sheet), pages to a side (2, 4, 6, 9),
+  two-sided printing (one side, or two-sided with the edge the printer flips on; a booklet cannot be one-sided),
+  cut marks for pages per sheet, and creep for a booklet (0.29 pt a sheet, 20 lb bond). A note under the controls
+  says, before anything is made, how many pages land on how many sheets, how many booklet pages will be blank,
+  and what to choose in the print dialog. The message after Generate says the same from the real plan. Portfolio
+  mode lays each student's PDF out the same way; the target-size ladder works on the imposed file.
+- **How it is built, which is the recipe for the next tool that draws with jsPDF.** `buildAtQuality()` used to
+  create the document, add pages and draw on them inline in three places. It now has one `startPage(w, h)` and one
+  `draw(step)`. With no layout, `startPage` makes or adds the page and `draw` runs the step at once on the
+  millimetre document: the same jsPDF calls in the same order as before. With a layout, every page is one size,
+  each page's steps are recorded, the header and "Page N of M" are added to the page's own steps (so they travel
+  with it, and N counts the reader's pages, never the sheets), and `ExportKit.toPdf(pages, opts)` runs each
+  page's steps in its slot. `toPdf` works in points, so a step multiplies its lengths by `K` (72/25.4, or 1).
+  011 holds no page order of its own; the suite checks that.
+- **The default output is the old page's.** Old page (from `git show main:` through `page.route()`) against new,
+  layout off, in 120 states: 1, 2, 3, 4, 5, 8, 9 and 17 pictures, three orientations, five page sizes, with six
+  variants spread across them (contact sheets of 4 and 6, a title page, a header, captions, a rotation, page
+  numbers off, three qualities, and every sixth state loading a settings blob saved by the old page). The same
+  message, file name and file length; the same page boxes, inflated content streams and image streams; and the
+  same pixels on 600 of 600 pages (`pdftoppm -r 96 -gray`). The clock was pinned so the title page's date and the
+  file's own date agree. That comparison is a scratch script and is not in the suite; the suite keeps a cheaper
+  guard (a state saved before the layout existed generates without going near `toPdf`, a page a picture).
+- **Decisions, mine, each cheap to reverse.**
+  - *The layout is not saved; its details are.* The brief said to save the state the way 011 saves its other
+    options. 011 saves page size, orientation, quality, density and page numbers, and says in two comments why it
+    does not save the target size or the portfolio toggle: an option that changes what the download is must not
+    be found still on next week. A forgotten "Booklet" would hand every later PDF back in folding order. So
+    `image-to-pdf-settings` gains `impose: { nup, sides, marks, creep }` (a printer and a habit) and never the
+    layout. To reverse: add `kind` to that object and read it back in `loadSettingsPrefs`.
+  - *With a layout on, every page is one size.* "Match image size" prints on Letter and "Auto" orientation is
+    upright, as the contact sheet already does, and the note says so. A booklet page is half the chosen paper,
+    upright, whatever Orientation says.
+  - *The sheet for pages per sheet is turned whichever way shows the pages larger* (two upright Letter pages go on
+    a sideways sheet, four on an upright one), a quarter inch in and an eighth apart. On Legal, six upright pages
+    are larger on an upright sheet (2 x 3), which is why it is worked out and not a table.
+  - *A booklet page keeps its pictures a quarter inch inside its edges.* 011 draws a picture the full width of
+    its page. On a booklet that is the trim on one side and the fold on the other, where no printer prints and
+    where creep would push one page's picture onto its neighbour (a slot is not clipped).
+  - *The flip edge defaults to long*, which is what most drivers default to, and the note tells the teacher to
+    choose the same in the dialog.
+  - *Creep is offered, off by default.* It is the layer's linear model; nobody has measured it on a real booklet.
+- **What the layer gained, both asked for by 011.** `toPdf(…, { compress: true })` (011's files have always been
+  deflated; without it a booklet was larger than the plain PDF, and the target size works on the file's size).
+  The option is not named to jsPDF unless it is set, so 064's file does not change. And `flip` on a two-sided
+  N-up: `nUp(n, { duplex, turnBack })` sets each back side half a turn round as a whole, and `pdfPlan` turns the
+  backs exactly when `flipAxis(sheet orientation, flip)` is horizontal, so a sideways two-up sheet from a
+  printer that flips on the long edge still reads like a book. Before this only `booklet()` knew the edge.
+  `export.test.mjs` 285 to 300, among them a paper model over 4 papers, both orientations, both edges, 6 grids and
+  0 to 25 pages: every back upright for the reader, in reading order, behind a front cell.
+- **064's zip and PNG downloads (step 2 of the brief).** `exportZip()` collects `{ name, data }` and calls
+  `ExportKit.toZip(files, { filename })`; the module's `download()` is `ExportKit.download()`. Old module against
+  new for six decks (1, 2, 5, 13, 4 with one name repeated, 7): the same entries in the same order with the same
+  bytes inside and the same two PNG downloads; the zip is 20 to 24% smaller, because `toZip` deflates and the old
+  call stored. One change in behaviour: if the zip fails to build the button comes back (it stayed "Rendering…").
+- **The new suite.** `Tools/image-to-pdf/test/smoke-impose.mjs` (`npm run test:image-to-pdf-impose`, port 8483,
+  2,726 assertions, about 80 seconds). It reads the file with a reader written in it (inflates the page streams,
+  follows the matrices) and holds it to statements made in the suite, not to `ExportKit`'s answers: every page
+  carries "Page N of M", so the reader knows which page is in which slot and which way up; a booklet is folded
+  (outermost sheet first, the back as the reader sees it for the edge) and read front to back, for 1, 2, 3, 4,
+  5, 8, 9 and 17 pages, both edges, four papers, with and without creep; pages per sheet are read side by side
+  for 2, 4, 6 and 9 to a side, the same counts, one-sided and both edges, both page orientations, four papers;
+  through the paper every back slot is on a front slot; every picture and line of text is inside its own slot
+  and a quarter inch inside the sheet; cut marks are counted and placed; and with `pdftoppm` the raster is
+  sampled in every slot (each page's picture is its own grey with a black corner). Without `pdftoppm` it says so
+  and the structure stands alone. `smoke-pdf-export.mjs` (064) went 110 to 164: it reads the zip with the export
+  suites' own zip reader and matches every entry to the PNG the page renders.
+- **Broken on purpose.** The 011 work was broken 31 ways (27 in the page, 4 in `export.js`), one at a time,
+  and the suite run on each: 29 were caught at first. The two that were not: removing the booklet's inset above a
+  picture (the fixtures are wide, so none reached the top of its page) and dropping `compress` (only the Node
+  suite saw it). Both have an assertion now, a tall picture with no header or page number and the page streams'
+  filter, and all 31 fail the suite. My first assertion for the second was itself wrong and failed on the
+  unbroken page; it reads each page's own stream head now. 064's zip and PNG change was broken 7 ways, all
+  caught.
+- **What I got wrong on the way.** The suite's first run failed 212 times and the page was right: I had worked
+  a slot's top out as if the page were as tall as the sheet (true of a booklet on Letter, false of everything
+  else). `ExportKit.matrix()` draws a page at the top left of the sheet and carries it, so the sheet's height is
+  in the matrix's last term. And the title on a half-letter page wraps to two lines, so a test that looks for the
+  whole title as one string finds nothing.
+- **Not built, and not asked for:** a preset for a one-sided printer (every front, then every back; `ExportKit`
+  has `stack: 'fronts-first'`, but which way the stack goes back in the tray is a guess per printer),
+  signatures, right-to-left. 011 has no print path of its own (no print button, no print CSS): the PDF is its
+  output, so "the print path through `ExportKit`" in the brief had nothing to move.
+- **Not verified.** Nothing was printed, no booklet folded, no sheet through a duplex unit: the fold and the turn
+  are models, in this suite and in `export.test.mjs`. The comparison and the suite ran in huginn's Chromium only.
+  No layout depends on text width (the title's wrap changes which lines exist, not where a slot is), but CI's
+  font has not run it. A two-sided pages-per-sheet file can end in an empty page (the layer always emits the last
+  sheet's back). Real photos were not used: the fixtures are 60 x 40 px greys. Full `npm test` was not run.
+
 ## Path 7 P4, increment 3: 040 is `ExportKit`'s second adopter, `_shared/duplex-print.js` is deleted, and 016's print suite no longer depends on the machine's fonts (2026-10-05, AI-13, `CACHE_VERSION` v245)
 
 Audit entry AI-13, rank 6 (2+). Third increment of P4. **The row stays, rewritten.** P5 untouched, 011 not started.
