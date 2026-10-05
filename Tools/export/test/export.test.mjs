@@ -566,6 +566,17 @@ function FakePdf(o) {
   delete ctx.window.jspdf;
 }
 
+// ---- geometry: no float noise (found by 064, the first adopter) -------------
+{
+  // Six 2.5 x 3.5 in cards on letter, 0.15 in apart, centred: 064's sheet.
+  const lay = EK.layout({ sheet: { w: 612, h: 792 }, cols: 3, rows: 2, margin: { top: 138.6, bottom: 138.6, left: 25.2, right: 25.2 }, gutter: 10.8, page: { w: 180, h: 252 } });
+  eq(lay.slots.map(s => [s.x, s.y, s.w, s.h, s.scale]), [[25.2, 138.6, 180, 252, 1], [216, 138.6, 180, 252, 1], [406.8, 138.6, 180, 252, 1], [25.2, 401.4, 180, 252, 1], [216, 401.4, 180, 252, 1], [406.8, 401.4, 180, 252, 1]],
+     'a grid whose margins are tenths of an inch has its cards at exactly 25.2, 216 and 406.8 pt, at a scale of exactly 1');
+  const plan = EK.pdfPlan(6, { impose: { kind: 'nup', cols: 3, rows: 2 }, margin: { top: 138.6, bottom: 138.6, left: 25.2, right: 25.2 }, gutter: 10.8, pageSize: { w: 180, h: 252 } });
+  eq(plan.sides[0].slots.map(s => s.matrix), [[1, 0, 0, 1, 25.2, -138.6], [1, 0, 0, 1, 216, -138.6], [1, 0, 0, 1, 406.8, -138.6], [1, 0, 0, 1, 25.2, -401.4], [1, 0, 0, 1, 216, -401.4], [1, 0, 0, 1, 406.8, -401.4]],
+     'and its matrices are those numbers, not 0.9999999999999999 and 215.99999999999997');
+}
+
 // ---- the file helpers: CSV --------------------------------------------------
 console.log('ExportKit — CSV, XLSX, ZIP and file names');
 

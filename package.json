@@ -130,6 +130,7 @@
     "test:print-kit": "node Tools/print-kit/test/print-kit.test.mjs && node Tools/print-kit/test/smoke-print-kit.mjs",
     "test:print-tail": "node Tools/print-kit/test/smoke-print-tail.mjs",
     "test:export": "node Tools/export/test/export.test.mjs && node Tools/export/test/smoke-export.mjs",
+    "test:trading-card-pdf": "node Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs",
     "test:sub-note-print": "node Tools/sub-note-feedback-slip-generator/test/smoke-print.mjs",
     "test:peer-feedback-print": "node Tools/peer-feedback-checklist-generator/test/smoke-print.mjs",
     "test:accommodations-print": "node Tools/testing-accommodations-card-generator/test/smoke-print.mjs",

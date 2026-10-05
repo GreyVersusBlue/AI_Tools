@@ -299,6 +299,12 @@
     return { top: v, right: v, bottom: v, left: v };
   }
 
+  /* A billionth of a point. Margins and gutters that are tenths of an inch
+     leave a cell 179.99999999999997 pt wide and a card at 215.99999999999997,
+     and a rasteriser at 96 to the inch puts that card a pixel left of the one
+     at 216. Nothing a printer can show, and not worth a file that differs. */
+  function tidy(v) { return Math.round(v * 1e9) / 1e9; }
+
   /** One side's geometry. `sheet` and `page` are { w, h } in points; `margin`
       is one length or { top, right, bottom, left }; `gutter` one length or
       { x, y }. `fit` is 'contain' (the default: scale the page to the cell,
@@ -313,23 +319,23 @@
     var m = box4(opts.margin);
     var g = opts.gutter && typeof opts.gutter === 'object' ? { x: Math.max(0, toPt(opts.gutter.x)), y: Math.max(0, toPt(opts.gutter.y)) }
       : { x: Math.max(0, toPt(opts.gutter)), y: Math.max(0, toPt(opts.gutter)) };
-    var cw = Math.max(0, (sheet.w - m.left - m.right - g.x * (cols - 1)) / cols);
-    var ch = Math.max(0, (sheet.h - m.top - m.bottom - g.y * (rows - 1)) / rows);
+    var cw = tidy(Math.max(0, (sheet.w - m.left - m.right - g.x * (cols - 1)) / cols));
+    var ch = tidy(Math.max(0, (sheet.h - m.top - m.bottom - g.y * (rows - 1)) / rows));
     var page = opts.page && opts.page.w > 0 && opts.page.h > 0 ? opts.page : { w: cw, h: ch };
     var fit = String(opts.fit || 'contain').toLowerCase();
     var spine = String(opts.align || '').toLowerCase() === 'spine' && cols === 2;
     var cells = [], slots = [];
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
-        var x = m.left + c * (cw + g.x), y = m.top + r * (ch + g.y);
+        var x = tidy(m.left + c * (cw + g.x)), y = tidy(m.top + r * (ch + g.y));
         cells.push({ x: x, y: y, w: cw, h: ch });
-        var sx = page.w > 0 ? cw / page.w : 1, sy = page.h > 0 ? ch / page.h : 1;
+        var sx = page.w > 0 ? tidy(cw / page.w) : 1, sy = page.h > 0 ? tidy(ch / page.h) : 1;
         if (fit === 'none') { sx = 1; sy = 1; }
         else if (fit !== 'fill') { sx = sy = Math.min(sx, sy); }
         var w = page.w * sx, h = page.h * sy;
         var px = x + (cw - w) / 2;
         if (spine) px = c === 0 ? x + cw - w : x;
-        slots.push({ x: px, y: y + (ch - h) / 2, w: w, h: h, scale: sx, scaleY: sy });
+        slots.push({ x: tidy(px), y: tidy(y + (ch - h) / 2), w: tidy(w), h: tidy(h), scale: sx, scaleY: sy });
       }
     }
     return { sheet: { w: sheet.w, h: sheet.h }, cols: cols, rows: rows, cells: cells, slots: slots };

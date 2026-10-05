@@ -534,7 +534,7 @@
 <script src="historical-trading-card-maker/htcm-photo.js"></script>
 <script src="historical-trading-card-maker/htcm-render.js"></script>
 <script src="historical-trading-card-maker/htcm-game.js"></script>
-<script src="../_shared/duplex-print.js"></script>
+<script src="../_shared/export.js"></script>
 <script src="historical-trading-card-maker/htcm-export.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
@@ -1305,7 +1305,9 @@
      paginate() and mirrorPageRows() started life in the Vocabulary Flashcard
      Generator, were hand-copied here, and moved to _shared/duplex-print.js
      when the PDF exporter became their third consumer — the extraction
-     trigger recorded in this tool's improvement prompt. */
+     trigger recorded in this tool's improvement prompt. They are ExportKit's
+     now (_shared/export.js, the same two functions to the letter), which
+     the PDF export also takes its sheet from. */
   // Grid per card size. 3 × 2 for the two ~3.4in-tall presets, which clear a
   // letter page alongside the section label; 2 × 2 for the 5in reference
   // card, where two rows are all the page holds. The column count is what
@@ -1320,8 +1322,8 @@
     var g = PRINT_GRIDS[cardSize] || PRINT_GRIDS.standard;
     return { cols: g.cols, perPage: g.cols * g.rows };
   }
-  var paginate = DuplexPrint.paginate;
-  var mirrorPageRows = DuplexPrint.mirrorPageRows;
+  var paginate = ExportKit.paginate;
+  var mirrorPageRows = ExportKit.mirrorPageRows;
 
   function renderOpts() { return { theme: doc.settings.theme }; }
   function frontCardHtml(e) { return HtcmRender.frontHtml(e, renderOpts()); }
