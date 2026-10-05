@@ -206,6 +206,7 @@
     "Tools/classroom-label-maker/test/smoke-print.mjs",
     "Tools/vocab-flashcard-generator/test/smoke-print.mjs",
     "Tools/historical-trading-card-maker/test/smoke-print.mjs",
+    "Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs",
     "Tools/stage/test/stage.test.mjs",
     "Tools/stage/test/smoke-stage-rollout.mjs",
     "Tools/number-talks-board/test/smoke-stage.mjs",

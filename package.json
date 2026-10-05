@@ -139,6 +139,7 @@
     "test:classroom-label-print": "node Tools/classroom-label-maker/test/smoke-print.mjs",
     "test:vocab-print": "node Tools/vocab-flashcard-generator/test/smoke-print.mjs",
     "test:trading-card-print": "node Tools/historical-trading-card-maker/test/smoke-print.mjs",
+    "test:scavenger-hunt-print": "node Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs",
     "test:stage": "node Tools/stage/test/stage.test.mjs && node Tools/stage/test/smoke-stage-rollout.mjs",
     "test:media": "node Tools/media/test/media-db.test.mjs && node Tools/media/test/smoke-media-db.mjs",
     "test:seating-read": "node Tools/seating-read/test/seating-read.test.mjs",
