@@ -7,10 +7,13 @@
 <link rel="stylesheet" href="../../../_shared/ink-paper.css">
 </head>
 <body>
-<!-- Not a tool. smoke-export.mjs drives this page; it exists so toPdf() can be
-     run on the vendored jsPDF in a browser before any real tool adopts it. -->
+<!-- Not a tool. smoke-export.mjs drives this page; it exists so toPdf(), toXlsx(),
+     toZip() and download() can be run on the vendored libraries in a browser
+     before any real tool adopts them. -->
 <p>Export kit test fixture.</p>
 <script src="../../../_shared/vendor/jspdf/jspdf.umd.min.js"></script>
+<script src="../../../_shared/vendor/xlsx/xlsx.full.min.js"></script>
+<script src="../../../_shared/vendor/jszip/jszip.min.js"></script>
 <script src="../../../_shared/export.js"></script>
 </body>
 </html>

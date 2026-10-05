@@ -12,6 +12,11 @@
 // run for every page count from 0 to 97, which covers each count mod 4 two
 // dozen times over. The randomised parts take a seeded generator, as
 // name-picker's pure suite does. The browser half is smoke-export.mjs.
+//
+// The file helpers are here too. toCsv() is read back by an RFC 4180 reader
+// written in this file; toXlsx() and toZip() run on the vendored SheetJS and
+// JSZip and are read back by _zip-read.mjs, which is neither, and by `unzip`
+// and Python's zipfile when the machine has them (the run says which it used).
 // Exits 1 on any failure.
 
 import fs from 'node:fs';
@@ -559,6 +564,317 @@ function FakePdf(o) {
   ctx.window.jspdf = { jsPDF: FakePdf };
   eq(EK.toPdf([draw('g')]).doc.log[0][0], 'new', 'jsPDF is found on window.jspdf when it is not handed in');
   delete ctx.window.jspdf;
+}
+
+// ---- the file helpers: CSV --------------------------------------------------
+console.log('ExportKit — CSV, XLSX, ZIP and file names');
+
+/** An RFC 4180 reader, written here and nowhere near toCsv(): records of
+    fields, a quoted field ending at a quote that is not doubled. */
+function readCsv(text, delim = ',') {
+  const rows = []; let row = [], field = '', i = 0, quoted = false, any = false;
+  while (i < text.length) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"' && text[i + 1] === '"') { field += '"'; i += 2; }
+      else if (ch === '"') { quoted = false; i++; }
+      else { field += ch; i++; }
+    } else if (ch === '"' && field === '') { quoted = true; any = true; i++; }
+    else if (ch === delim) { row.push(field); field = ''; any = true; i++; }
+    else if (ch === '\r' && text[i + 1] === '\n') { row.push(field); rows.push(row); row = []; field = ''; any = false; i += 2; }
+    else { field += ch; any = true; i++; }
+  }
+  if (any || field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+const BOM = '\uFEFF';
+{
+  const plain = EK.toCsv([['a', 'b'], ['c', 'd']]);
+  eq(plain, BOM + 'a,b\r\nc,d\r\n', 'two rows: a BOM, commas, CRLF after every record');
+  eq([plain.charCodeAt(0), [...Buffer.from(plain, 'utf8').subarray(0, 3)]], [0xFEFF, [0xEF, 0xBB, 0xBF]], 'the file starts with the UTF-8 byte order mark');
+  eq(EK.toCsv([['a']], { bom: false }), 'a\r\n', 'bom: false leaves it off');
+  eq(EK.toCsv([], {}), BOM, 'no rows is a BOM and nothing else');
+  eq(EK.toCsv(null, { bom: false }), '', 'no rows at all is an empty file');
+  ok(!/[^\r]\n/.test(plain) && !/\r[^\n]/.test(plain), 'no bare LF and no bare CR between records');
+
+  const q = (v, o) => EK.toCsv([[v]], Object.assign({ bom: false }, o)).slice(0, -2);
+  eq(q('Okafor, Ines'), '"Okafor, Ines"', 'a comma is quoted');
+  eq(q('say "hi"'), '"say ""hi"""', 'a quote is doubled inside quotes');
+  eq(q('line one\nline two'), '"line one\nline two"', 'a newline is quoted and kept');
+  eq(q('a\r\nb'), '"a\r\nb"', 'a CRLF inside a cell is quoted and kept');
+  eq(q('plain text'), 'plain text', 'a cell with none of them is not quoted');
+  eq(q(' padded '), ' padded ', 'spaces are kept as typed');
+  eq(q(''), '', 'an empty string is an empty cell');
+  eq(q(null) + q(undefined) + q(NaN) + q(Infinity), '', 'null, undefined, NaN and Infinity are empty cells');
+  eq([q(0), q(-5), q(3.25), q(true), q(false)], ['0', '-5', '3.25', 'true', 'false'], 'numbers and booleans are written plainly, a negative number with no apostrophe');
+  eq(q(new Date(2026, 9, 5)), '2026-10-05', 'a date at midnight is its day');
+  eq(q(new Date(2026, 0, 9, 14, 5, 7)), '2026-01-09 14:05:07', 'a date with a time of day carries it');
+  eq(q(new Date(NaN)), '', 'a date that is not one is empty');
+
+  // The formula guard.
+  eq(q('=1+1'), "'=1+1", 'a typed = gets an apostrophe');
+  eq(q('+1 555 0100'), "'+1 555 0100", 'a typed + gets an apostrophe');
+  eq(q('-5'), "'-5", 'a typed - gets an apostrophe');
+  eq(q('@handle'), "'@handle", 'a typed @ gets an apostrophe');
+  eq(q('\tcmd'), "'\tcmd", 'a leading tab gets an apostrophe');
+  eq(q('\rcmd'), '"\'\rcmd"', 'a leading return gets an apostrophe, and the cell is quoted for the return');
+  eq(q('=HYPERLINK("http://x","y"),1'), '"\'=HYPERLINK(""http://x"",""y""),1"', 'the apostrophe goes inside the quotes');
+  eq(q('a=b'), 'a=b', 'a = that is not first is left alone');
+  eq(q(' =1'), ' =1', 'only the very first character counts');
+  eq(q('=1+1', { raw: true }), '=1+1', 'raw: true writes it as typed');
+  eq(q('-5', { raw: true }), '-5', 'raw: true, a typed minus');
+
+  // Delimiters.
+  eq(EK.toCsv([['a;b', 'c,d']], { delimiter: ';', bom: false }), '"a;b";c,d\r\n', 'with ; the semicolon is what gets quoted, not the comma');
+  eq(EK.toCsv([['a\tb', 'c']], { delimiter: '\t', bom: false }), '"a\tb"\tc\r\n', 'a tab delimiter');
+  eq(EK.toCsv([['a', 'b']], { delimiter: '', bom: false }), 'a,b\r\n', 'an empty delimiter is a comma');
+
+  // Columns and object rows.
+  const people = [{ name: 'Ines Okafor', room: 12 }, { room: 7, name: 'Tavi Brandt', note: 'new' }];
+  eq(EK.toCsv(people, { bom: false }), 'name,room,note\r\nInes Okafor,12,\r\nTavi Brandt,7,new\r\n', 'object rows: every key, in the order first seen, missing ones empty');
+  eq(EK.toCsv(people, { bom: false, columns: ['room', 'name'] }), 'room,name\r\n12,Ines Okafor\r\n7,Tavi Brandt\r\n', 'columns picks and orders');
+  eq(EK.toCsv(people, { bom: false, columns: [{ key: 'name', label: 'Student' }, { key: 'room', label: 'Room, floor 1' }] }),
+     'Student,"Room, floor 1"\r\nInes Okafor,12\r\nTavi Brandt,7\r\n', 'a column can carry a label, quoted like any cell');
+  eq(EK.toCsv([['x', 'y'], ['z']], { bom: false, columns: ['A', 'B', 'C'] }), 'A,B,C\r\nx,y,\r\nz,,\r\n', 'array rows under columns are positional and padded');
+  eq(EK.toCsv([{ a: 1 }], { bom: false, columns: ['=cmd'] }), "'=cmd\r\n\r\n", 'a header is guarded like any typed cell');
+  eq(EK.toCsv([{ constructor: 'x', toString: 'y' }], { bom: false }), 'constructor,toString\r\nx,y\r\n', 'keys that are also Object.prototype names are data');
+  eq(EK.toCsv([{ a: 1 }, { b: 2 }], { bom: false, columns: ['hasOwnProperty'] }), 'hasOwnProperty\r\n\r\n\r\n', 'an inherited property is not a cell');
+  eq(EK.toCsv(['solo', 7], { bom: false }), 'solo\r\n7\r\n', 'a row that is one value is one cell');
+
+  // Round trip: 600 random tables through the reader above.
+  const ALPHA = ['a', 'B', ' ', ',', ';', '"', '\n', '\r\n', '\t', '=', '+', '-', '@', "'", 'é', '字', '😀', '0', '.'];
+  const random = rng(20261005);
+  const cellOf = () => { let s = ''; for (let n = Math.floor(random() * 6); n > 0; n--) s += ALPHA[Math.floor(random() * ALPHA.length)]; return s; };
+  const tableOf = () => { const w = 1 + Math.floor(random() * 5), t = []; for (let r = 1 + Math.floor(random() * 6); r > 0; r--) t.push(Array.from({ length: w }, cellOf)); return t; };
+  sweep('600 random tables come back cell for cell with raw: true, for , ; and tab', check => {
+    for (let n = 0; n < 600; n++) {
+      const t = tableOf(), d = [',', ';', '\t'][n % 3];
+      // A lone \r in a cell is kept by quoting; the reader takes \r\n outside quotes only.
+      const back = readCsv(EK.toCsv(t, { raw: true, bom: false, delimiter: d }), d);
+      check(JSON.stringify(back) === JSON.stringify(t), { t, d, back });
+    }
+  });
+  sweep('600 more, guarded: every cell is as typed, or as typed behind one apostrophe exactly when it starts = + - @ tab or return', check => {
+    for (let n = 0; n < 600; n++) {
+      const t = tableOf();
+      const back = readCsv(EK.toCsv(t, { bom: false }));
+      check(back.length === t.length, { t, back });
+      t.forEach((row, r) => row.forEach((cell, c) => {
+        const want = /^[=+\-@\t\r]/.test(cell) ? "'" + cell : cell;
+        check(back[r] && back[r][c] === want, { cell, got: back[r] && back[r][c] });
+      }));
+    }
+  });
+  sweep('in those tables no guarded file has a field a spreadsheet would run', check => {
+    for (let n = 0; n < 300; n++) for (const row of readCsv(EK.toCsv(tableOf(), { bom: false }))) for (const f of row) check(!/^[=+\-@\t\r]/.test(f), f);
+  });
+}
+
+// ---- file names -------------------------------------------------------------
+eq(EK.filename('Period 3 roster', 'csv'), 'Period 3 roster.csv', 'a plain title keeps its spaces');
+eq(EK.filename('A/B: "what?" <now>|*', 'xlsx'), 'A B what now.xlsx', 'the nine characters Windows refuses are gone');
+eq(EK.filename('  ..hidden..  ', 'zip'), 'hidden.zip', 'no dot or space at either end');
+eq(EK.filename('', 'pdf'), 'export.pdf', 'an empty title is "export"');
+eq(EK.filename(null), 'export', 'no title and no extension');
+eq(EK.filename('///', '.csv'), 'export.csv', 'a title of nothing but separators is "export", and a dot on the extension is not doubled');
+eq(EK.filename('tab\there\nnow', 'txt'), 'tab here now.txt', 'control characters are spaces');
+eq(EK.filename('x'.repeat(200), 'csv').length, 84, 'a long title is cut to 80 characters');
+eq(EK.filename('Año 字 😀', 'csv'), 'Año 字 😀.csv', 'letters of any alphabet stay');
+eq(EK.filename('notes', '../sh'), 'notes.sh', 'an extension is letters and digits only');
+
+// ---- XLSX and ZIP: on the vendored libraries, read back by other hands -------
+{
+  const { readZip, crc32 } = await import('./_zip-read.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const os = await import('node:os');
+  eq(crc32(Buffer.from('123456789')), 0xCBF43926, 'the reader\'s own CRC-32 gets the check value for "123456789"');
+
+  // One context with both libraries and a second copy of export.js: the
+  // vendored files are browser builds and want `window` to be the global.
+  const g = { Blob, setTimeout, clearTimeout, Promise };
+  g.window = g; g.self = g;
+  vm.createContext(g);
+  for (const f of ['_shared/vendor/xlsx/xlsx.full.min.js', '_shared/vendor/jszip/jszip.min.js', '_shared/export.js']) vm.runInContext(fs.readFileSync(path.join(site, f), 'utf8'), g);
+  const K = g.ExportKit;
+  const bytesOf = async blob => Buffer.from(await blob.arrayBuffer());
+  const unxml = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (m, d) => String.fromCodePoint(+d)).replace(/&#x([0-9a-f]+);/gi, (m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/_x([0-9A-Fa-f]{4})_/g, (m, h) => String.fromCharCode(parseInt(h, 16))).replace(/&amp;/g, '&');
+  /** A workbook read from its own XML: { names, sheets: [{ A1: { t, v, s } }], xml }. */
+  function readXlsx(bytes) {
+    const files = Object.fromEntries(readZip(bytes).map(e => [e.name, e]));
+    const text = n => files[n] ? files[n].data.toString('utf8') : '';
+    const strings = [...text('xl/sharedStrings.xml').matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m => [...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>|<t[^>]*\/>/g)].map(t => unxml(t[1] || '')).join(''));
+    const names = [...text('xl/workbook.xml').matchAll(/<sheet [^>]*name="([^"]*)"/g)].map(m => unxml(m[1]));
+    const sheets = names.map((_, i) => {
+      const xml = text(`xl/worksheets/sheet${i + 1}.xml`), cells = {};
+      for (const m of xml.matchAll(/<c r="([A-Z]+\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+        const t = (/ t="([^"]*)"/.exec(m[2]) || [])[1] || 'n', s = (/ s="([^"]*)"/.exec(m[2]) || [])[1];
+        const v = (/<v>([\s\S]*?)<\/v>/.exec(m[3] || '') || [])[1];
+        cells[m[1]] = { t, v: t === 's' ? strings[+v] : t === 'n' ? Number(v) : unxml(v || ''), s: s === undefined ? 0 : +s };
+      }
+      return cells;
+    });
+    const styles = text('xl/styles.xml');
+    const fmts = Object.fromEntries([...styles.matchAll(/<numFmt numFmtId="(\d+)" formatCode="([^"]*)"/g)].map(m => [m[1], unxml(m[2])]));
+    const xfs = [...((/<cellXfs[^>]*>([\s\S]*?)<\/cellXfs>/.exec(styles) || [])[1] || '').matchAll(/<xf numFmtId="(\d+)"/g)].map(m => fmts[m[1]] || m[1]);
+    return { files, names, sheets, xfs, allXml: Object.values(files).filter(e => /\.xml$/.test(e.name)).map(e => e.data.toString('utf8')).join('\n') };
+  }
+
+  // XLSX.
+  const day = new Date(2026, 9, 5), moment = new Date(2026, 9, 5, 14, 30, 0);
+  const rows = [
+    ['Name', 'Score', 'When', 'Flag'],
+    ['=SUM(B2:B9)', 3.5, day, true],
+    ['-x <&> "q" \'a\'', -5, moment, false],
+    ['Zoë 字 😀', 0, new Date(NaN), null],
+    ['00123', NaN, '', undefined],
+    ['line one\nline two', 1e21, '@cmd', '+1'],
+  ];
+  const blob = K.toXlsx(rows);
+  eq([blob instanceof Blob, blob.type], [true, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], 'toXlsx returns a Blob of the xlsx type');
+  eq(K.MIME.xlsx, blob.type, 'which is ExportKit.MIME.xlsx');
+  const xbytes = await bytesOf(blob);
+  eq([...xbytes.subarray(0, 4)], [0x50, 0x4B, 3, 4], 'the file is a zip');
+  const xentries = readZip(xbytes);
+  ok(xentries.every(e => e.crcOk), 'every part\'s CRC-32 is right, worked out by the reader');
+  for (const part of ['[Content_Types].xml', '_rels/.rels', 'xl/workbook.xml', 'xl/_rels/workbook.xml.rels', 'xl/worksheets/sheet1.xml', 'xl/sharedStrings.xml', 'xl/styles.xml'])
+    ok(xentries.some(e => e.name === part), `the package has ${part}`);
+  const book = readXlsx(xbytes), S = book.sheets[0];
+  eq(book.names, ['Sheet1'], 'bare rows are one sheet, Sheet1');
+  eq([S.A1, S.B1, S.C1, S.D1].map(c => [c.t, c.v]), [['s', 'Name'], ['s', 'Score'], ['s', 'When'], ['s', 'Flag']], 'the first row is four shared strings');
+  eq([S.A2.t, S.A2.v], ['s', '=SUM(B2:B9)'], 'a typed formula is a string cell with its text whole, no apostrophe');
+  eq([S.A3.t, S.A3.v], ['s', '-x <&> "q" \'a\''], 'markup characters come back as typed');
+  eq([S.A4.t, S.A4.v], ['s', 'Zoë 字 😀'], 'so do an umlaut, a CJK character and an emoji');
+  eq([S.A5.t, S.A5.v], ['s', '00123'], 'typed digits stay text and keep their zeros');
+  eq([S.A6.t, S.A6.v], ['s', 'line one\nline two'], 'a line break inside a cell is kept');
+  eq([S.C6.v, S.D6.v, S.C6.t, S.D6.t], ['@cmd', '+1', 's', 's'], '@ and + cells are strings too');
+  eq([S.B2, S.B3, S.B4, S.B6].map(c => [c.t, c.v]), [['n', 3.5], ['n', -5], ['n', 0], ['n', 1e21]], 'numbers are number cells');
+  eq([S.D2.t, S.D2.v, S.D3.t, S.D3.v], ['b', '1', 'b', '0'], 'booleans are boolean cells');
+  eq([S.C2.t, S.C2.v, book.xfs[S.C2.s]], ['n', 46300, 'yyyy-mm-dd'], '5 October 2026 is serial 46300, shown as a date');
+  near(S.C3.v, 46300 + 14.5 / 24, 'half past two that afternoon is that serial and 14.5 hours', 1e-9);
+  eq(book.xfs[S.C3.s], 'yyyy-mm-dd hh:mm:ss', 'shown with its time');
+  eq([S.C4, S.D4, S.B5, S.C5, S.D5], [undefined, undefined, undefined, undefined, undefined], 'a bad date, null, NaN, an empty string and undefined write no cell');
+  ok(!/<f[ >\/]/.test(book.allXml), 'there is no formula element anywhere in the package');
+  ok(/<dimension ref="A1:D6"\/>/.test(book.files['xl/worksheets/sheet1.xml'].data.toString('utf8')), 'the sheet\'s dimension is A1:D6');
+
+  // The same file through SheetJS's own reader, as a second opinion.
+  const again = g.XLSX.read(new (vm.runInContext('Uint8Array', g))(xbytes), { type: 'array', cellDates: false });
+  const first = again.Sheets[again.SheetNames[0]];
+  eq([first.A2.t, first.A2.v, first.A2.f], ['s', '=SUM(B2:B9)', undefined], 'SheetJS reads the typed formula back as a string with no formula');
+  eq([first.B3.v, first.C2.v, first.C2.z || first.C2.w, first.D2.v], [-5, 46300, first.C2.z ? 'yyyy-mm-dd' : '2026-10-05', true], 'and the number, the date and the boolean as written');
+
+  // Named sheets, columns and Excel's rules for a name.
+  const multi = K.toXlsx([
+    { name: 'Period 1: [A/B]*?\\', rows: [{ n: 'Ines Okafor', s: 9 }, { n: 'Tavi Brandt', s: 7 }], columns: [{ key: 'n', label: 'Student' }, { key: 's', label: 'Score' }] },
+    { name: 'period 1 ab', rows: [['x']] },
+    { name: '', rows: [] },
+    { name: 'A very long sheet name that runs well past the limit', rows: [[1]] },
+    { name: 'A very long sheet name that runs well past the limit', rows: [[2]] },
+    { name: "'quoted'", rows: [[3]] },
+  ]);
+  const mb = readXlsx(await bytesOf(multi));
+  eq(mb.names, ['Period 1 AB', 'period 1 ab (2)', 'Sheet3', 'A very long sheet name that run', 'A very long sheet name that (2)', 'quoted'],
+     'names lose [ ] : * ? / \\ and edge apostrophes, are cut to 31, are never empty, and a repeat (case-blind) gets (2)');
+  ok(mb.names.every(n => n.length <= 31), 'no name is over 31 characters');
+  eq([mb.sheets[0].A1.v, mb.sheets[0].B1.v, mb.sheets[0].A3.v, mb.sheets[0].B3.v], ['Student', 'Score', 'Tavi Brandt', 7], 'columns give the header row and the order');
+  eq(Object.keys(mb.sheets[2]), [], 'a sheet with no rows is an empty sheet, not an error');
+  eq(readXlsx(await bytesOf(K.toXlsx({ name: 'Only', rows: [['a']] }))).names, ['Only'], 'one sheet object is one sheet');
+  eq(readXlsx(await bytesOf(K.toXlsx([]))).names, ['Sheet1'], 'no rows at all is one empty sheet');
+  eq(readXlsx(await bytesOf(K.toXlsx([{ rows: 'not rows' }, { b: 2 }]))).sheets[0].A1.v, 'rows', 'a list of objects without row lists is rows, not sheets');
+  let threw = '';
+  try { EK.toXlsx([['a']]); } catch (e) { threw = String(e.message); }
+  ok(/SheetJS is not loaded/.test(threw) && threw.includes('_shared/vendor/xlsx/xlsx.full.min.js'), 'with no SheetJS on the page toXlsx throws, naming the vendored file');
+  ctx.window.Blob = Blob;
+  eq(readXlsx(await bytesOf(EK.toXlsx([['handed in']], { XLSX: g.XLSX }))).sheets[0].A1.v, 'handed in', 'the library can be handed in as opts.XLSX');
+
+  // ZIP. Typed arrays are made inside the context: JSZip tells an array by
+  // its own realm's constructor. A Blob and a canvas need a browser, and
+  // smoke-export.mjs has them.
+  const u8 = vm.runInContext('new Uint8Array([0, 1, 2, 253, 254, 255])', g);
+  const big = 'The quick brown fox. '.repeat(400);
+  const files = [
+    { name: 'notes.txt', data: 'héllo, 字 😀\n' },
+    { name: 'sets/period 1/roster.csv', data: K.toCsv([['a', 'b']]) },
+    { name: 'sets\\period 1\\roster.csv', data: 'second' },
+    { name: 'SETS-period 1-roster.csv', data: 'third' },
+    { name: 'bytes.bin', data: u8 },
+    { name: 'buffer.bin', data: u8.buffer },
+    { name: 'Añо 字 😀.txt', data: big },
+    { name: '', data: '' },
+    { name: '../../etc/passwd', data: 'x' },
+    { name: 'noext', data: 'a' },
+    { name: 'noext', data: 'b' },
+    { data: null },
+  ];
+  const want = [
+    ['notes.txt', Buffer.from('héllo, 字 😀\n')],
+    ['sets-period 1-roster.csv', Buffer.from(BOM + 'a,b\r\n')],
+    ['sets-period 1-roster (2).csv', Buffer.from('second')],
+    ['SETS-period 1-roster (3).csv', Buffer.from('third')],
+    ['bytes.bin', Buffer.from([0, 1, 2, 253, 254, 255])],
+    ['buffer.bin', Buffer.from([0, 1, 2, 253, 254, 255])],
+    ['Añо 字 😀.txt', Buffer.from(big)],
+    ['file8', Buffer.alloc(0)],
+    ['etc-passwd', Buffer.from('x')],
+    ['noext', Buffer.from('a')],
+    ['noext (2)', Buffer.from('b')],
+    ['file12', Buffer.alloc(0)],
+  ];
+  const promise = K.toZip(files);
+  ok(promise && typeof promise.then === 'function', 'toZip returns a promise');
+  const zblob = await promise;
+  eq([zblob instanceof Blob, zblob.type, K.MIME.zip], [true, 'application/zip', 'application/zip'], 'of a Blob of type application/zip');
+  const zbytes = await bytesOf(zblob);
+  const entries = readZip(zbytes);
+  eq(entries.map(e => e.name), want.map(w => w[0]), 'names: separators are hyphens, nothing climbs out with .., a repeat (case-blind) gets (2) before its extension, a missing name is fileN');
+  ok(entries.every(e => !/[\\/]/.test(e.name)), 'no entry name has a path separator');
+  ok(entries.every(e => e.name === e.localName), 'each local header carries the name its directory entry does');
+  ok(entries.every((e, i) => e.data.equals(want[i][1])), 'every entry\'s bytes are the bytes handed in');
+  ok(entries.every(e => e.crcOk), 'every stored CRC-32 is the CRC-32 of those bytes, worked out by the reader');
+  eq(entries.filter(e => /[^\x00-\x7f]/.test(e.name)).map(e => e.utf8), [true], 'the name outside ASCII is flagged UTF-8 (general purpose bit 11)');
+  ok(entries[6].method === 8 && zbytes.length < big.length, 'a long text is deflated: the whole zip is smaller than that one file');
+  eq(readZip(await bytesOf(await K.toZip([]))).length, 0, 'no files is an empty zip, and still a zip');
+  eq(readZip(await bytesOf(await K.toZip(null))).length, 0, 'so is nothing at all');
+  threw = '';
+  try { EK.toZip([{ name: 'a', data: 'b' }]); } catch (e) { threw = String(e.message); }
+  ok(/JSZip is not loaded/.test(threw) && threw.includes('_shared/vendor/jszip/jszip.min.js'), 'with no JSZip on the page toZip throws, naming the vendored file');
+  eq(readZip(await bytesOf(await EK.toZip([{ name: 'in.txt', data: 'handed in' }], { JSZip: g.JSZip }))).map(e => [e.name, e.data.toString()]), [['in.txt', 'handed in']], 'the library can be handed in as opts.JSZip');
+  threw = '';
+  ctx.window.URL = URL; // everything a page has but the document
+  try { EK.download('x', 'x.txt'); } catch (e) { threw = String(e.message); }
+  ok(/not a page that can save a file/.test(threw), 'download() outside a page says so instead of failing on document');
+
+  // Outside readers, when the machine has them. The checks above do not
+  // depend on these.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'export-kit-zip-'));
+  const zfile = path.join(dir, 'kit.zip'), xfile = path.join(dir, 'kit.xlsx');
+  fs.writeFileSync(zfile, zbytes); fs.writeFileSync(xfile, xbytes);
+  const used = [];
+  if (spawnSync('unzip', ['-v']).status === 0) {
+    used.push('unzip');
+    const t = spawnSync('unzip', ['-t', zfile], { encoding: 'utf8' });
+    ok(t.status === 0 && /No errors detected/.test(t.stdout), 'unzip -t finds no errors in the zip');
+    eq(spawnSync('unzip', ['-p', zfile, 'notes.txt']).stdout.equals(want[0][1]), true, 'unzip -p hands back notes.txt byte for byte');
+    eq(spawnSync('unzip', ['-p', zfile, 'sets-period 1-roster (2).csv'], { encoding: 'utf8' }).stdout, 'second', 'and the renamed repeat');
+    ok(spawnSync('unzip', ['-t', xfile], { encoding: 'utf8' }).status === 0, 'unzip -t finds no errors in the workbook');
+  }
+  const py = spawnSync('python3', ['-c', 'import zipfile, json, sys, xml.dom.minidom\n' +
+    'z = zipfile.ZipFile(sys.argv[1]); x = zipfile.ZipFile(sys.argv[2])\n' +
+    '[xml.dom.minidom.parseString(x.read(n)) for n in x.namelist() if n.endswith(".xml") or n.endswith(".rels")]\n' +
+    'print(json.dumps({"bad": z.testzip(), "xbad": x.testzip(), "names": z.namelist(), "sizes": [i.file_size for i in z.infolist()], "crcs": [i.CRC for i in z.infolist()], "text": z.read("notes.txt").decode("utf-8")}))',
+    zfile, xfile], { encoding: 'utf8' });
+  if (py.status === 0) {
+    used.push('python3 zipfile');
+    const got = JSON.parse(py.stdout);
+    eq([got.bad, got.xbad], [null, null], 'Python\'s zipfile checks every CRC in the zip and in the workbook, and every XML part of the workbook parses');
+    eq(got.names, want.map(w => w[0]), 'Python reads the same names, the UTF-8 one included');
+    eq(got.sizes, want.map(w => w[1].length), 'and the same sizes');
+    eq(got.crcs, want.map(w => crc32(w[1])), 'and the CRC-32 this suite works out for each file');
+    eq(got.text, 'héllo, 字 😀\n', 'and the same text');
+  } else if (spawnSync('python3', ['--version']).status === 0) {
+    ok(false, 'python3 is here and could not read the files: ' + String(py.stderr).slice(-300));
+  }
+  fs.rmSync(dir, { recursive: true, force: true });
+  console.log('  NOTE outside readers used: ' + (used.join(', ') || 'none on this machine') + '; the reader written in _zip-read.mjs ran either way. No spreadsheet program was available to open the workbook.');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

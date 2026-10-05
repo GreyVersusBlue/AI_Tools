@@ -1,6 +1,7 @@
-/* export.js — the shared export layer (Path 7 P4). First increment: the
-   imposition and pagination math, and toPdf() for pages a tool can already
-   draw. BACKLOG.md's Path 7 P4 bullet has the whole surface and what is left.
+/* export.js — the shared export layer (Path 7 P4): the imposition and
+   pagination math, toPdf() for pages a tool can already draw, and the file
+   helpers (CSV, XLSX, ZIP, download). BACKLOG.md's Path 7 P4 bullet has the
+   whole surface and what is left.
 
    What is here:
 
@@ -45,6 +46,34 @@
        <img>, a data URL, or a function (doc, { w, h, page }) that draws
        with jsPDF in points with the origin at the page's top left.
        Returns { doc, plan }; `filename` also saves the file.
+
+     ExportKit.toCsv(rows, { columns, delimiter, bom, raw })
+       A CSV file as a string: RFC 4180 quoting, CRLF after every record, a
+       UTF-8 byte order mark first (Excel reads UTF-8 only with one). Rows
+       are arrays or objects; `columns` names the order and the header row.
+       A typed cell that a spreadsheet would run as a formula gets a leading
+       apostrophe; see FORMULAS below.
+
+     ExportKit.toXlsx(sheets, { filename })
+       A workbook on the vendored SheetJS, as a Blob. `sheets` is rows, or
+       [{ name, rows, columns }]. A string is always a string cell.
+
+     ExportKit.toZip(files, { filename })
+       A zip on the vendored JSZip, as a promise of a Blob. `files` is
+       [{ name, data }]; data is a string, Blob, ArrayBuffer, typed array or
+       canvas (saved as a PNG).
+
+     ExportKit.download(data, filename, mime), ExportKit.filename(title, ext)
+       The one anchor click every helper here saves through, and a file name
+       that is safe on every desktop.
+
+   FORMULAS. A roster is typed by one person and opened in a spreadsheet by
+   another, and a cell that starts with =, +, -, @, a tab or a return is run,
+   not shown. toCsv() puts an apostrophe in front of every STRING that starts
+   that way (`raw: true` turns that off). A number is not a string: -5 the
+   number is written -5, "-5" the typed text is written '-5. toXlsx() needs
+   no apostrophe, because it writes every string as a string cell and never
+   writes a formula at all.
 
    WHAT toPdf() DOES NOT DO YET. It does not take a DOM element: the vendored
    jsPDF's html() needs html2canvas, which is not vendored, and that is a
@@ -540,6 +569,229 @@
     return { doc: doc, plan: plan };
   }
 
+  // ---- files -----------------------------------------------------------------
+
+  var MIME = {
+    csv: 'text/csv;charset=utf-8',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    zip: 'application/zip'
+  };
+
+  function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function isDate(v) { return Object.prototype.toString.call(v) === '[object Date]'; }
+  function isRecord(v) { return !!v && typeof v === 'object' && !Array.isArray(v) && !isDate(v); }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  /** A date as text, in local time: 2026-10-05, with 14:30:00 after it when
+      it has a time of day. A date that is not one is ''. */
+  function dateText(d) {
+    if (isNaN(d.getTime())) return '';
+    var day = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+    if (!d.getHours() && !d.getMinutes() && !d.getSeconds()) return day;
+    return day + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+  }
+
+  /** Rows and `columns` as one grid of raw values, header row first when
+      there is one. A column is a key, or { key, label }. With no `columns`,
+      object rows take every key any of them has, in the order first seen,
+      and array rows have no header. An array row is positional. */
+  function grid(rows, columns) {
+    rows = rows || [];
+    var cols = null, i, k;
+    if (columns && columns.length) {
+      cols = [];
+      for (i = 0; i < columns.length; i++) {
+        var c = columns[i];
+        cols.push(isRecord(c) ? { key: c.key, label: String(c.label === undefined ? c.key : c.label) } : { key: c, label: String(c) });
+      }
+    } else {
+      var seen = {}, keys = [];
+      for (i = 0; i < rows.length; i++) {
+        if (!isRecord(rows[i])) continue;
+        for (k in rows[i]) if (own(rows[i], k) && !own(seen, k)) { seen[k] = true; keys.push({ key: k, label: k }); }
+      }
+      if (keys.length) cols = keys;
+    }
+    var out = [];
+    if (cols) out.push(cols.map(function (c) { return c.label; }));
+    for (i = 0; i < rows.length; i++) {
+      var r = rows[i], line = [];
+      if (Array.isArray(r)) {
+        line = r.slice();
+        while (cols && line.length < cols.length) line.push('');
+      } else if (isRecord(r)) {
+        for (k = 0; cols && k < cols.length; k++) line.push(own(r, cols[k].key) ? r[cols[k].key] : '');
+      } else {
+        line = [r];
+      }
+      out.push(line);
+    }
+    return out;
+  }
+
+  /** CSV text. opts:
+        columns     the order and the header row; see grid()
+        delimiter   ',' by default; ';' and '\t' are the other two in use
+        bom         false leaves the byte order mark off
+        raw         true writes a string that starts like a formula as it is
+      Nothing, null and NaN are empty cells; a Date is dateText(). */
+  function toCsv(rows, opts) {
+    opts = opts || {};
+    var delim = opts.delimiter === undefined || opts.delimiter === null || opts.delimiter === '' ? ',' : String(opts.delimiter);
+    var table = grid(rows, opts.columns), out = '';
+    function cell(v) {
+      var s;
+      if (v === null || v === undefined) s = '';
+      else if (typeof v === 'number') s = isFinite(v) ? String(v) : '';
+      else if (isDate(v)) s = dateText(v);
+      else {
+        s = String(v);
+        if (typeof v === 'string' && !opts.raw && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      }
+      return s.indexOf(delim) >= 0 || /["\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }
+    for (var i = 0; i < table.length; i++) out += table[i].map(cell).join(delim) + '\r\n';
+    return (opts.bom === false ? '' : '\uFEFF') + out;
+  }
+
+  /** A name a file can have on Windows, macOS, ChromeOS and Linux alike: no
+      \ / : * ? " < > | or control characters, no dot or space at either end,
+      at most 80 characters, and never empty ('export'). `ext` is added with
+      its dot. */
+  function filename(title, ext) {
+    var s = String(title === null || title === undefined ? '' : title)
+      .replace(/[\\/:*?"<>|\u0000-\u001f\u007f]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/^[. ]+|[. ]+$/g, '');
+    if (s.length > 80) s = s.slice(0, 80).replace(/[. ]+$/, '');
+    if (!s) s = 'export';
+    var e = String(ext === null || ext === undefined ? '' : ext).replace(/[^A-Za-z0-9]+/g, '');
+    return e ? s + '.' + e : s;
+  }
+
+  /** Hands `data` to the browser as a file named `name`: a string, a Blob,
+      an ArrayBuffer or a typed array. `mime` is the type of what is not a
+      Blob already, and re-types a Blob that has another. Returns the Blob
+      that was saved. */
+  function download(data, name, mime) {
+    var doc = global.document;
+    if (!doc || !global.Blob || !global.URL || !global.URL.createObjectURL) throw new Error('ExportKit.download: this is not a page that can save a file');
+    var isBlob = data instanceof global.Blob;
+    var blob = isBlob && (!mime || data.type === mime) ? data
+      : new global.Blob([data === null || data === undefined ? '' : data], { type: mime || (isBlob && data.type) || 'application/octet-stream' });
+    var url = global.URL.createObjectURL(blob);
+    var a = doc.createElement('a');
+    a.href = url;
+    a.download = String(name === null || name === undefined || name === '' ? 'download' : name);
+    a.style.display = 'none';
+    doc.body.appendChild(a);
+    a.click();
+    a.remove();
+    global.setTimeout(function () { global.URL.revokeObjectURL(url); }, 1000);
+    return blob;
+  }
+
+  /** Excel's rules for a sheet name: none of [ ] : * ? / \, no apostrophe at
+      either end, 31 characters, not empty, and no two alike (case-blind). */
+  function sheetName(name, index, taken) {
+    var s = String(name === null || name === undefined ? '' : name).replace(/[\[\]:*?\/\\]/g, '').replace(/\s+/g, ' ').replace(/^[' ]+|[' ]+$/g, '');
+    if (!s) s = 'Sheet' + (index + 1);
+    s = s.slice(0, 31).replace(/[' ]+$/, '');
+    var base = s, n = 2;
+    while (own(taken, s.toLowerCase())) {
+      var tail = ' (' + n++ + ')';
+      s = base.slice(0, 31 - tail.length).replace(/[' ]+$/, '') + tail;
+    }
+    taken[s.toLowerCase()] = true;
+    return s;
+  }
+
+  /** A workbook as a Blob. `sheets` is one sheet's rows, or
+      [{ name, rows, columns }]; rows and columns are toCsv()'s. A string is
+      a string cell whatever it starts with, a finite number a number, a
+      boolean a boolean, and a Date a date cell showing dateText()'s form in
+      local time. No cell is ever a formula. opts: `filename` saves the file
+      too; `XLSX` is the library, when the page has it somewhere other than
+      window.XLSX. Throws if SheetJS is not on the page. */
+  function toXlsx(sheets, opts) {
+    opts = opts || {};
+    var X = opts.XLSX || global.XLSX;
+    if (!X || !X.utils || !X.write) throw new Error('ExportKit.toXlsx: SheetJS is not loaded (_shared/vendor/xlsx/xlsx.full.min.js)');
+    var list;
+    if (isRecord(sheets)) list = [sheets];
+    else {
+      list = sheets || [];
+      var named = list.length > 0;
+      for (var q = 0; q < list.length; q++) if (!isRecord(list[q]) || !Array.isArray(list[q].rows)) named = false;
+      if (!named) list = [{ rows: list }];
+    }
+    var wb = X.utils.book_new(), taken = {};
+    for (var i = 0; i < list.length; i++) {
+      var table = grid(list[i].rows, list[i].columns), ws = {}, width = 0;
+      for (var r = 0; r < table.length; r++) {
+        width = Math.max(width, table[r].length);
+        for (var c = 0; c < table[r].length; c++) {
+          var v = table[r][c], cell = null;
+          if (v === null || v === undefined || v === '') continue;
+          if (typeof v === 'number') cell = isFinite(v) ? { t: 'n', v: v } : null;
+          else if (typeof v === 'boolean') cell = { t: 'b', v: v };
+          else if (isDate(v)) {
+            if (!isNaN(v.getTime())) {
+              var time = v.getHours() || v.getMinutes() || v.getSeconds();
+              // The serial of the local wall-clock time; 25569 is 1970-01-01.
+              var serial = Date.UTC(v.getFullYear(), v.getMonth(), v.getDate(), v.getHours(), v.getMinutes(), v.getSeconds()) / 86400000 + 25569;
+              cell = { t: 'n', v: serial, z: time ? 'yyyy-mm-dd hh:mm:ss' : 'yyyy-mm-dd' };
+            }
+          } else cell = { t: 's', v: String(v) };
+          if (cell) ws[X.utils.encode_cell({ r: r, c: c })] = cell;
+        }
+      }
+      ws['!ref'] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(0, table.length - 1), c: Math.max(0, width - 1) } });
+      X.utils.book_append_sheet(wb, ws, sheetName(list[i].name, i, taken));
+    }
+    var bytes = X.write(wb, { bookType: 'xlsx', type: 'array', compression: true, bookSST: true });
+    var blob = new global.Blob([bytes], { type: MIME.xlsx });
+    if (opts.filename) download(blob, String(opts.filename));
+    return blob;
+  }
+
+  /** A name inside a zip: one flat list, so a path separator becomes a
+      hyphen, and a name already used (case-blind) gets " (2)" before its
+      extension. */
+  function entryName(name, index, taken) {
+    var s = String(name === null || name === undefined ? '' : name)
+      .replace(/[\\/]+/g, '-').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/^[-. ]+|[. ]+$/g, '');
+    if (!s) s = 'file' + (index + 1);
+    var dot = s.lastIndexOf('.');
+    var stem = dot > 0 ? s.slice(0, dot) : s, ext = dot > 0 ? s.slice(dot) : '';
+    for (var n = 2; own(taken, s.toLowerCase()); n++) s = stem + ' (' + n + ')' + ext;
+    taken[s.toLowerCase()] = true;
+    return s;
+  }
+
+  /** A zip as a promise of a Blob. `files` is [{ name, data }]: a string
+      (stored as UTF-8), a Blob, an ArrayBuffer, a typed array, or a canvas
+      (stored as a PNG). opts: `filename` saves the file too; `JSZip` is the
+      library, when the page has it somewhere other than window.JSZip.
+      Throws if JSZip is not on the page. */
+  function toZip(files, opts) {
+    opts = opts || {};
+    var Z = opts.JSZip || global.JSZip;
+    if (!Z) throw new Error('ExportKit.toZip: JSZip is not loaded (_shared/vendor/jszip/jszip.min.js)');
+    var zip = new Z(), taken = {};
+    files = files || [];
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i] || {}, data = f.data, name = entryName(f.name, i, taken);
+      if (data && typeof data.toDataURL === 'function') zip.file(name, data.toDataURL('image/png').split(',')[1], { base64: true });
+      else if (typeof data === 'string') zip.file(name, data);
+      else zip.file(name, data === null || data === undefined ? '' : data, { binary: true });
+    }
+    return zip.generateAsync({ type: 'blob', mimeType: MIME.zip, compression: 'DEFLATE' }).then(function (blob) {
+      if (opts.filename) download(blob, String(opts.filename));
+      return blob;
+    });
+  }
+
   global.ExportKit = {
     PAPERS: PAPERS,
     toPt: toPt,
@@ -559,6 +811,12 @@
     matrix: matrix,
     paginateBlocks: paginateBlocks,
     pdfPlan: pdfPlan,
-    toPdf: toPdf
+    toPdf: toPdf,
+    MIME: MIME,
+    toCsv: toCsv,
+    toXlsx: toXlsx,
+    toZip: toZip,
+    download: download,
+    filename: filename
   };
 })(window);

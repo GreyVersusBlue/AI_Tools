@@ -17,13 +17,18 @@
 // Nothing here has been checked on a physical printer, and no booklet has
 // been folded.
 //
+// The second half is download(): the anchor it clicks is caught in the page
+// and the file read from its blob URL (name, type, bytes), with one real click
+// read through harness.downloadText(); and toXlsx() and toZip() with the
+// inputs only a browser has, a Blob and a canvas.
 // Exits 1 on any failure.
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
+import { serve, launch, prepPage, settle, downloadText } from '../../board-check/harness.mjs';
+import { readZip } from './_zip-read.mjs';
 
 const PORT = 8480;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -195,6 +200,116 @@ if (hasPoppler) {
 eq(await page.evaluate(() => { const saved = window.jspdf; window.jspdf = undefined; try { ExportKit.toPdf([]); return 'no error'; } catch (e) { return /jsPDF is not loaded/.test(e.message); } finally { window.jspdf = saved; } }),
    true, 'without jsPDF, toPdf() throws an error that names the missing file');
 eq(errors, [], 'no page errors');
+
+// ---- download(), and the helpers that save through it -----------------------
+console.log('Export kit — download(), toXlsx() and toZip() in the page');
+
+eq(await page.evaluate(() => [typeof XLSX, typeof JSZip]), ['object', 'function'], 'the fixture loads SheetJS and JSZip');
+
+/** Runs `body` (the source of a function taking ExportKit, which may return a
+    promise) with the anchor click caught: the file is read from its blob URL
+    and never reaches the disk. Resolves to what was clicked. */
+const capture = (body) => page.evaluate(async (body) => {
+  const real = HTMLAnchorElement.prototype.click;
+  const clicks = [];
+  HTMLAnchorElement.prototype.click = function () {
+    clicks.push({ name: this.getAttribute('download'), href: this.href, inBody: this.parentNode === document.body, shown: getComputedStyle(this).display,
+      read: fetch(this.href).then(r => r.blob()).then(async b => ({ type: b.type, bytes: [...new Uint8Array(await b.arrayBuffer())] })) });
+  };
+  let result, threw = null;
+  try { result = await (0, eval)('(' + body + ')')(ExportKit); } catch (e) { threw = String(e && e.message || e); }
+  HTMLAnchorElement.prototype.click = real;
+  const out = [];
+  for (const c of clicks) out.push(Object.assign({ name: c.name, scheme: c.href.split(':')[0], inBody: c.inBody, shown: c.shown }, await c.read));
+  return {
+    clicks: out, threw, anchorsLeft: document.querySelectorAll('a[download]').length,
+    returned: result instanceof Blob ? { type: result.type, size: result.size } : result === undefined ? null : result,
+  };
+}, String(body));
+const text = bytes => Buffer.from(bytes).toString('utf8');
+
+{
+  const r = await capture(K => K.download('héllo, 字\r\n', 'notes.txt', 'text/plain'));
+  eq(r.clicks.length, 1, 'download(): one anchor is clicked');
+  const c = r.clicks[0];
+  eq([c.name, c.scheme, c.type], ['notes.txt', 'blob', 'text/plain'], 'download(): the anchor carries the file name and a blob URL of the type asked for');
+  eq(text(c.bytes), 'héllo, 字\r\n', 'download(): the blob is the text, as UTF-8');
+  eq([c.inBody, c.shown, r.anchorsLeft], [true, 'none', 0], 'download(): the anchor is in the page for the click, never visible, and gone afterwards');
+  eq(r.returned, { type: 'text/plain', size: c.bytes.length }, 'download(): it returns the Blob it saved');
+}
+{
+  const r = await capture(K => K.download(new Uint8Array([1, 2, 3, 250]).buffer, 'raw.bin'));
+  eq([r.clicks[0].name, r.clicks[0].type, r.clicks[0].bytes], ['raw.bin', 'application/octet-stream', [1, 2, 3, 250]], 'download(): an ArrayBuffer with no type is octet-stream, byte for byte');
+  const t = await capture(K => K.download(new Uint8Array([9, 8]), 'typed.bin', 'application/x-test'));
+  eq([t.clicks[0].type, t.clicks[0].bytes], ['application/x-test', [9, 8]], 'download(): a typed array too');
+  const b = await capture(K => K.download(new Blob(['kept'], { type: 'text/markdown' }), 'kept.md'));
+  eq([b.clicks[0].type, text(b.clicks[0].bytes)], ['text/markdown', 'kept'], 'download(): a Blob keeps its own type');
+  const re = await capture(K => K.download(new Blob(['a,b'], { type: 'text/plain' }), 're.csv', 'text/csv'));
+  eq([re.clicks[0].type, text(re.clicks[0].bytes)], ['text/csv', 'a,b'], 'download(): a mime re-types a Blob that has another');
+  const n = await capture(K => K.download('x', ''));
+  eq(n.clicks[0].name, 'download', 'download(): no name is "download", not an empty attribute');
+}
+{
+  // The harness's own reader, on a real click: what a tool's suite will call.
+  await page.evaluate(() => { window.saveNotes = () => { ExportKit.download(ExportKit.toCsv([['Ines Okafor', '=1+1']]), ExportKit.filename('Period 3: roster', 'csv'), ExportKit.MIME.csv); }; });
+  const [dl, csv] = await Promise.all([
+    page.waitForEvent('download'),
+    downloadText(page, { call: 'saveNotes' }, { what: 'the roster CSV' }),
+  ]);
+  eq(dl.suggestedFilename(), 'Period 3 roster.csv', 'a real click: the browser is offered the file under filename()\'s safe name');
+  await dl.cancel().catch(() => {});
+  eq(csv.replace(/^\uFEFF/, ''), "Ines Okafor,'=1+1\r\n", 'a real click: harness.downloadText() reads the CSV, guarded');
+  const viaCapture = await capture(K => K.download(K.toCsv([['a']]), 'a.csv', K.MIME.csv));
+  // A blob URL answers with the bare type; the Blob itself keeps the charset.
+  eq([viaCapture.returned.type, viaCapture.clicks[0].type, viaCapture.clicks[0].bytes.slice(0, 3)], ['text/csv;charset=utf-8', 'text/csv', [0xEF, 0xBB, 0xBF]], 'a CSV saved through download() is a text/csv Blob that says utf-8 and starts with the three BOM bytes');
+}
+{
+  const r = await capture(K => K.toXlsx([{ name: 'Scores', rows: [{ n: 'Ines Okafor', s: 9 }, { n: '=cmd', s: -1 }] }], { filename: 'scores.xlsx' }));
+  eq(r.clicks.length, 1, 'toXlsx({ filename }): one file is saved');
+  const c = r.clicks[0];
+  eq([c.name, c.type], ['scores.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], 'toXlsx: under its name and the xlsx type');
+  eq(r.returned, { type: c.type, size: c.bytes.length }, 'toXlsx: and returns that Blob');
+  const parts = readZip(Buffer.from(c.bytes));
+  ok(parts.every(e => e.crcOk) && parts.some(e => e.name === 'xl/worksheets/sheet1.xml'), 'toXlsx: the saved bytes are a sound zip with a sheet in it');
+  const shared = parts.find(e => e.name === 'xl/sharedStrings.xml').data.toString('utf8');
+  ok(shared.includes('<t>=cmd</t>') && !parts.some(e => /<f[ >/]/.test(e.data.toString('utf8'))), 'toXlsx: the typed formula is a shared string, and the package has no formula');
+  eq((await capture(K => { K.toXlsx([['a']]); })).clicks.length, 0, 'toXlsx with no filename saves nothing');
+  const gone = await capture(K => { const X = window.XLSX; window.XLSX = undefined; try { K.toXlsx([['a']]); } finally { window.XLSX = X; } });
+  ok(/SheetJS is not loaded/.test(gone.threw || '') && gone.threw.includes('_shared/vendor/xlsx/xlsx.full.min.js'), 'toXlsx with no SheetJS on the page throws, naming the vendored file');
+}
+{
+  const r = await capture(async K => {
+    const c = document.createElement('canvas');
+    c.width = 3; c.height = 2;
+    const x = c.getContext('2d');
+    x.fillStyle = '#c00'; x.fillRect(0, 0, 3, 2);
+    await K.toZip([
+      { name: 'cards/front.png', data: c },
+      { name: 'note.txt', data: new Blob(['from a blob, é']) },
+      { name: 'note.txt', data: 'from a string' },
+      { name: 'raw.bin', data: new Uint8Array([7, 7, 7]).buffer },
+    ], { filename: 'set.zip' });
+  });
+  eq(r.threw, null, 'toZip({ filename }) with a canvas, a Blob, a string and an ArrayBuffer resolves');
+  const c = r.clicks[0] || { bytes: [] };
+  eq([r.clicks.length, c.name, c.type], [1, 'set.zip', 'application/zip'], 'toZip: one file is saved, under its name, as application/zip');
+  const parts = c.bytes.length ? readZip(Buffer.from(c.bytes)) : [];
+  eq(parts.map(e => e.name), ['cards-front.png', 'note.txt', 'note (2).txt', 'raw.bin'], 'toZip: the names, flat, the repeat numbered');
+  ok(parts.length === 4 && parts.every(e => e.crcOk), 'toZip: every CRC-32 is right by the suite\'s own reader');
+  if (parts.length === 4) {
+    eq([...parts[0].data.subarray(0, 8)], [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], 'toZip: a canvas is stored as a PNG');
+    eq([parts[0].data.readUInt32BE(16), parts[0].data.readUInt32BE(20)], [3, 2], 'toZip: of the canvas\'s own 3 x 2 pixels');
+    eq([parts[1].data.toString('utf8'), parts[2].data.toString('utf8'), [...parts[3].data]], ['from a blob, é', 'from a string', [7, 7, 7]], 'toZip: a Blob, a string and an ArrayBuffer come back byte for byte');
+  }
+  const back = await page.evaluate(async () => {
+    const blob = await ExportKit.toZip([{ name: 'a.txt', data: 'one' }]);
+    const z = await JSZip.loadAsync(blob);
+    return [blob instanceof Blob, blob.type, Object.keys(z.files), await z.file('a.txt').async('string')];
+  });
+  eq(back, [true, 'application/zip', ['a.txt'], 'one'], 'toZip with no filename resolves to a Blob JSZip reads back, and saves nothing');
+  const gone = await capture(K => { const Z = window.JSZip; window.JSZip = undefined; try { K.toZip([]); } finally { window.JSZip = Z; } });
+  ok(/JSZip is not loaded/.test(gone.threw || '') && gone.threw.includes('_shared/vendor/jszip/jszip.min.js'), 'toZip with no JSZip on the page throws, naming the vendored file');
+}
 
 if (!hasPoppler) console.log('  NOTE pdftoppm is not installed: the PDFs were checked by structure only, not rasterised.');
 
