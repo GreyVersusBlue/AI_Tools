@@ -23,6 +23,21 @@
 //   - the file's name, and the button coming back when the export is done
 //   - the page loads export.js and no longer loads duplex-print.js
 //
+// Since Path 7 P4 increment 4 the same module's zip and PNG downloads go
+// through ExportKit's file helpers too (toZip and download, their first
+// adopter), and this suite reads those files as well:
+//
+//   - "All PNGs (zip)": the file's name, one front and one back PNG per card
+//     in deck order under the names the old export gave them, every entry the
+//     very PNG the page renders for that card (read by the zip reader the
+//     export suites wrote, which checks each CRC itself), through one call to
+//     ExportKit.toZip()
+//   - "Download PNG": two files, the showing card's front and back
+//
+// Before the move the old zip was compared with the new for six decks: the
+// same entries in the same order with the same bytes inside; the new file is
+// deflated where the old one was stored. That comparison is not rerun here.
+//
 // Nothing here has been printed, and no sheet has been through a duplex unit.
 // Made-up cards only. Exits 1 on any failure.
 
@@ -32,6 +47,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { serve, launch, prepPage, settle, SITE } from '../../board-check/harness.mjs';
+import { readZip } from '../../export/test/_zip-read.mjs';
 
 const PORT = 8481;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -108,6 +124,8 @@ console.log('064 — Download PDF through ExportKit');
   ok(/\.toPdf\(/.test(code) && /\.mirrorPage\(/.test(code) && /\.paginate\(/.test(code), 'exportPdf() calls ExportKit\'s toPdf, mirrorPage and paginate');
   ok(!/DuplexPrint|new jsPDF|\.addImage\(|\.addPage\(/.test(code), 'and does not build the document, place an image or name DuplexPrint itself');
   ok(!/DuplexPrint\./.test(html.replace(/\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->/g, '')), 'the page\'s own script does not call DuplexPrint either');
+  ok(/\.toZip\(/.test(code) && /ExportKit\.download\(/.test(code), 'exportZip() and the PNG download call ExportKit\'s toZip and download');
+  ok(!/new\s+(global\.)?JSZip|generateAsync|createObjectURL|createElement\('a'\)/.test(code), 'and the module builds no zip and clicks no anchor of its own');
 }
 
 const server = await serve(PORT);
@@ -180,8 +198,57 @@ for (const st of STATES) {
   }
   eq(astray, null, `${label}: seen through the paper, every back is behind its own front`);
 
+  // ---- All PNGs (zip), through ExportKit.toZip() ----
+  await page.evaluate(() => { window.__zips = 0; const real = ExportKit.toZip; ExportKit.toZip = function () { window.__zips++; return real.apply(this, arguments); }; });
+  const zipLabel = await page.evaluate(() => document.getElementById('zipBtn').textContent);
+  const [zdl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#zipBtn')]);
+  eq(zdl.suggestedFilename(), want.replace(/\.pdf$/, '-cards.zip'), `${label}: the zip is named for the set`);
+  const zbytes = fs.readFileSync(await zdl.path());
+  await zdl.delete().catch(() => {});
+  await page.waitForFunction(() => !document.getElementById('zipBtn').disabled);
+  eq(await page.evaluate(() => [document.getElementById('zipBtn').textContent, window.__zips]), [zipLabel, 1], `${label}: the zip button is back with its label, after one call to ExportKit.toZip()`);
+  const pngs = await page.evaluate(({ cards, theme }) => new Promise(resolve => {
+    const out = [];
+    (function next(i) {
+      if (i >= cards.length * 2) { resolve(out); return; }
+      HtcmExport.renderCardCanvas(cards[i >> 1], i % 2 ? 'back' : 'front', { theme }, canvas => { out.push(canvas.toDataURL('image/png').split(',')[1]); next(i + 1); });
+    })(0);
+  }), { cards: doc.cards, theme: st.theme });
+  const entries = readZip(zbytes);
+  const slugOf = t => String(t || 'card').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'card';
+  eq(entries.map(e => e.name), doc.cards.flatMap((c, i) => ['front', 'back'].map(side => `${String(i + 1).padStart(2, '0')}-${slugOf(c.name)}-${side}.png`)), `${label}: a front and a back for every card, in deck order, under the names the export always gave`);
+  ok(entries.every(e => e.crcOk && e.name === e.localName), `${label}: every entry's CRC is right and its two headers agree`);
+  ok(entries.every(e => e.data.subarray(0, 8).toString('latin1') === '\x89PNG\r\n\x1a\n'), `${label}: every entry is a PNG`);
+  eq(entries.map(e => sha(e.data)), pngs.map(b64 => sha(Buffer.from(b64, 'base64'))), `${label}: each entry is, byte for byte, the PNG the page renders for that card and side`);
+
   eq(page.__errs.length, 0, `${label}: no page or console errors: ${JSON.stringify(page.__errs)}`);
   eq(page.__blocked.length, 0, `${label}: nothing tried to leave the site`);
+  await page.context().close();
+}
+
+// ---- Download PNG: the showing card's front and back, through ExportKit.download() ----
+{
+  const doc = deck(3, 'classic', 'Invented Set');
+  const page = await prepPage(browser, BASE, { width: 1200, height: 900 });
+  await page.addInitScript(value => {
+    localStorage.setItem('htcm:list', JSON.stringify(['Invented deck']));
+    localStorage.setItem('htcm:data:Invented deck', value);
+    localStorage.setItem('htcm:current', 'Invented deck');
+  }, JSON.stringify(doc));
+  await page.goto(`${BASE}/Tools/${FILE}`, { waitUntil: 'load' });
+  await settle(page, 300);
+  await page.evaluate(() => { window.__saved = []; const real = ExportKit.download; ExportKit.download = function (data, name) { window.__saved.push(name); return real.apply(this, arguments); }; });
+  const got = [];
+  page.on('download', d => got.push(d));
+  await page.click('#pngBtn');
+  await page.waitForFunction(() => window.__saved.length === 2 && !document.getElementById('pngBtn').disabled, null, { timeout: 60000 });
+  for (let i = 0; i < 50 && got.length < 2; i++) await settle(page, 100);
+  const names = await page.evaluate(() => window.__saved);
+  ok(names.length === 2 && /-front\.png$/.test(names[0]) && /-back\.png$/.test(names[1]) && names[0].replace('-front', '') === names[1].replace('-back', ''), `Download PNG: two calls to ExportKit.download(), a front and a back of one card (got ${JSON.stringify(names)})`);
+  eq(got.map(d => d.suggestedFilename()), names, 'Download PNG: and the browser is handed those two files');
+  const files = await Promise.all(got.map(async d => fs.readFileSync(await d.path())));
+  ok(files.length === 2 && files.every(b => b.subarray(0, 8).toString('latin1') === '\x89PNG\r\n\x1a\n') && sha(files[0]) !== sha(files[1]), 'Download PNG: both are PNGs, and not the same picture');
+  eq(page.__errs.length, 0, `Download PNG: no page or console errors: ${JSON.stringify(page.__errs)}`);
   await page.context().close();
 }
 

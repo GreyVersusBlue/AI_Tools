@@ -339,13 +339,11 @@
 
   /* ---------- downloads ---------- */
 
+  /* The anchor click and the zip are ExportKit's (_shared/export.js): its
+     download() and toZip(). What stays here is what is 064's: drawing the
+     cards and naming the files. */
   function download(blob, filename) {
-    var a = document.createElement('a');
-    var url = URL.createObjectURL(blob);
-    a.href = url; a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+    global.ExportKit.download(blob, filename);
   }
 
   /** Downloads name-front.png and name-back.png for one card. */
@@ -410,25 +408,24 @@
 
   /** Every card's front and back PNG in one zip. */
   function exportZip(entries, opts, done) {
-    if (!global.JSZip) { alert('The zip library did not load — try reloading the page.'); if (done) done(); return; }
-    var zip = new global.JSZip();
+    var EK = global.ExportKit;
+    if (!EK || !global.JSZip) { alert('The zip library did not load — try reloading the page.'); if (done) done(); return; }
+    var files = [];
+    function finish() { if (done) done(); }
     (function next(i) {
       if (i >= entries.length) {
-        zip.generateAsync({ type: 'blob' }).then(function (blob) {
-          var name = (entries[0] && entries[0].meta && entries[0].meta.setName) || 'trading-cards';
-          download(blob, slug(name) + '-cards.zip');
-          if (done) done();
-        });
+        var name = (entries[0] && entries[0].meta && entries[0].meta.setName) || 'trading-cards';
+        EK.toZip(files, { filename: slug(name) + '-cards.zip' }).then(finish, finish);
         return;
       }
       var e = entries[i];
       var base = ('00' + (i + 1)).slice(-2) + '-' + slug(e.name);
       renderCardCanvas(e, 'front', opts, function (front) {
         front.toBlob(function (fb) {
-          zip.file(base + '-front.png', fb);
+          files.push({ name: base + '-front.png', data: fb });
           renderCardCanvas(e, 'back', opts, function (back) {
             back.toBlob(function (bb) {
-              zip.file(base + '-back.png', bb);
+              files.push({ name: base + '-back.png', data: bb });
               next(i + 1);
             }, 'image/png');
           });
