@@ -88,7 +88,7 @@ async function measureCards() {
     probe.style.top = '0';
     probe.style.width = (8.5 - margin * 2) * inch + 'px';
     document.body.appendChild(probe);
-    const grid = probe.querySelector('.print-page .card-grid');
+    const grid = probe.querySelector('.pk-cards.card-grid');
     const cards = Array.from(grid.querySelectorAll('.trading-card'));
     const gridBox = grid.getBoundingClientRect();
     const rows = new Set(cards.map(c => Math.round(c.getBoundingClientRect().top)));
@@ -136,7 +136,7 @@ ok(fill.width < std.width && fill.height < std.height,
 await page.reload({ waitUntil: 'networkidle' });
 await settle(page);
 eq(await page.inputValue('#cardSize'), 'fill', 'the size choice survives a reload');
-eq(await page.evaluate(() => document.getElementById('printArea').className), 'size-fill', 'and is applied to the print area');
+eq(await page.evaluate(() => document.getElementById('printArea').className), 'pk-paper size-fill', 'and is applied to the print area');
 await page.selectOption('#cardSize', 'standard');
 await settle(page);
 
@@ -145,7 +145,7 @@ await page.evaluate(() => { window.print = function () {}; });
 await page.click('#printBtn');
 await settle(page);
 const [fronts, backs] = await page.evaluate(() => {
-  const pages = Array.from(document.querySelectorAll('#printArea .print-page'));
+  const pages = Array.from(document.querySelectorAll('#printArea .pk-cards'));
   const names = el => Array.from(el.querySelectorAll('.trading-card')).map(c => {
     const n = c.querySelector('.cname');
     return n ? n.textContent : '';
@@ -304,14 +304,14 @@ ok(await page.evaluate(() => {
   if (!label) return false;
   // display:none only applies under print media, so check the rule applies to
   // this size rather than the computed screen style.
-  return document.getElementById('printArea').className === 'size-reference';
+  return document.getElementById('printArea').className === 'pk-paper size-reference';
 }), 'the print area carries the reference size, which is what hides the fronts/backs banners in print');
 
 // Duplex mirroring has to follow the column count, not a constant: at two
 // columns a row reverses as a pair, and a stale 3 would leave the backs
 // misaligned with the fronts on every sheet.
 const [deckOrder, refFronts, refBacks] = await page.evaluate(() => {
-  const pages = Array.from(document.querySelectorAll('#printArea .print-page'));
+  const pages = Array.from(document.querySelectorAll('#printArea .pk-cards'));
   const names = el => Array.from(el.querySelectorAll('.trading-card')).map(c => {
     const n = c.querySelector('.cname');
     return n ? n.textContent : '';
@@ -387,7 +387,7 @@ await settle(page);
 await page.reload({ waitUntil: 'networkidle' });
 await settle(page);
 eq(await page.inputValue('#cardSize'), 'reference', 'the reference size survives a reload');
-eq(await page.evaluate(() => document.getElementById('printArea').className), 'size-reference', 'and is applied to the print area');
+eq(await page.evaluate(() => document.getElementById('printArea').className), 'pk-paper size-reference', 'and is applied to the print area');
 await page.selectOption('#cardSize', 'standard');
 await settle(page);
 
