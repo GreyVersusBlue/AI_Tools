@@ -87,6 +87,9 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-16 (v240), the cheap piece of Path 4 P5:** 009 now says what `rgb-audio` and `stviz-recovery` hold; their
+  registry rows had no `note`, so both showed as a bare name. Rank 2 (per-tool restore) is untouched. Open:
+  should `rgb-audio` be ticked by default? See `HISTORY.md`.
 - **AI-13 (v239), rank 6, Path 7 P3 increment 10: 018 prints through the kit** (eleven adopters now), all six
   buttons: five card sheets (`{ cols, perPage }`, a card a share of the width and as tall as its content) and the
   answer key, six areas inside one `#printArea`. The kit did not change. Card sizes, markup, QR codes and PDF page
@@ -206,7 +209,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v238` on local `main` (origin is at v237) — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v240` on local `main` (origin is at v239) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **314** in `PRECACHE_URLS`, **95** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
 | Suites | **203** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
@@ -3346,11 +3349,12 @@ rediscovered.
   citations. The tree diagram now names `_shared/vendor/jspdf/`, which is where 035 actually
   loads it from. Nothing guards a path in a tree diagram — see the note about the 318 bare
   backticked paths above.
-- `Tools/009-backup-restore.html`'s `IDB_NOTES` knows only `bmg-maps`; `rgb-audio`
-  (Review Game Board clue audio) and `stviz-recovery` (Schedule Visualizer crash
-  recovery) are unlabeled in backups, and `indexedDB.databases()` is unavailable in
-  Firefox, so Firefox backups silently omit all IndexedDB content. Path 4 P2 and P3 fix
-  the general case; the labels are cheap now.
+- ~~`Tools/009-backup-restore.html`'s `IDB_NOTES` knows only `bmg-maps`; `rgb-audio` and
+  `stviz-recovery` are unlabeled in backups, and Firefox backups silently omit all IndexedDB
+  content.~~ **Fixed in two steps.** Path 4 P2 (#174) replaced `IDB_NOTES` with the registry's
+  `idb` rows and made 009 open the declared databases, which is what covers Firefox. It gave
+  the two rows no `note`, though, so 009 still showed them as a bare name; AI-16 (2026-10-05,
+  v240) wrote the notes, and `registry-shape.test.mjs` now fails on a database without one.
 - **Fixed since the survey, recorded so they are not re-reported:** the `v1`–`v4`
   landing chain, `scg-photo.js`, `ideas-backlog.html` and both maskable icons are now
   precached; the `_ds` Google Fonts `@import` is vendored to `_shared/vendor/barlow/`;

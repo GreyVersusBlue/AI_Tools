@@ -174,6 +174,12 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
     '6: ...and every row answers the question, rather than leaving it undefined');
   ok(REG.databases().find(d => d.name === 'gvb-media').note.length > 20,
     '6: the shared media store says what it holds, so a backup can name it');
+  /* 009 prints `note` under the database's name, and with none the teacher is
+     shown `rgb-audio` and a checkbox. Two of the four were like that. */
+  eq(REG.databases().filter(d => !(d.note.length > 20)).map(d => d.name), [],
+    '6: every database says what it holds, not only the shared media store');
+  ok(/re-download/.test(REG.databases().find(d => d.name === 'rgb-audio').note),
+    '6: the clue recordings say that leaving them out loses them');
 }
 
 /* ── 7. href() is what 010 replaced five hardcoded filenames with ────── */

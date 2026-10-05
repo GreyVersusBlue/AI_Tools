@@ -63,6 +63,13 @@
                                    ticks it for the teacher instead of leaving
                                    it to be noticed. Caches (bmg-maps) stay
                                    unticked: they re-download.
+                                   `note` is the line 009 prints under the
+                                   database's name. It is optional to this
+                                   file's readers and required by
+                                   registry-shape.test.mjs: a database with
+                                   none shows as a bare internal name
+                                   (rgb-audio and stviz-recovery did, until
+                                   v240).
      reads / readPrefixes          another tool's keys this tool only reads.
                                    TWENTY-FIVE rows read np_rosters (28 tool
                                    pages mention the key at all, counting its
@@ -362,7 +369,7 @@
         { p: 'STVIZ_SNAPSHOT_' },
       ],
       idb: [
-        { name: 'stviz-recovery' },
+        { name: 'stviz-recovery', note: 'Automatic recovery points for the Schedule Visualizer, its last three. Safe to leave out: the layout itself is saved in ordinary storage and is already in the backup.' },
       ],
     },
     {
@@ -573,7 +580,7 @@
         { p: 'gvb-review-board:data:' },
       ],
       idb: [
-        { name: 'rgb-audio' },
+        { name: 'rgb-audio', note: 'Clue recordings for the Review Game Board. Nothing re-downloads these, so tick this to keep them: without it a restored board comes back with no audio.' },
       ],
       reads: [
         'np_rosters',
