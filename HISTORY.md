@@ -9,6 +9,96 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P3, increment 10: 018 adopts the print kit, six print buttons as six areas of one sheet; an answer sheet that just fitted the page had printed a blank page after it (2026-10-04, AI-13, `CACHE_VERSION` v239)
+
+Audit entry AI-13, rank 6 (2+). Tenth increment of P3: the fifth of the card-grid tools after 074, 051, 040 and
+064, 018 (QR scavenger hunt builder, 1,967 lines, six print buttons), by the recipe. The row stays, rewritten: two
+card-grid tools are left (017, 016). P4 and P5 untouched. **No `_shared/` file changed; the kit did not change.**
+
+- **Six buttons, all moved.** Station cards, answer key and clue cards on the Build tab; team cards, route cards
+  and answer sheets on Live Run. The session's brief allowed moving one and leaving five on the old block. That
+  cannot be done on this page: `print-area.css` takes everything but `#printArea` off the paper, so a sheet left
+  outside it prints blank. And once the five grids are `renderCards()` calls they are the same dozen lines each.
+- **Which kind of card: a size of its own, on every sheet.** Read off 018's CSS. The old rules were a wrapping
+  flexbox with `width: calc(50% - 8px)` (or 100% or 33.33%) and `margin: 4px` on a card, no height of any kind,
+  and `page-break-after: always` on every Nth card. So a card is a share of the page's *width* and as tall as what
+  is on it (a QR code up to 320 px, a route of N stations, a table of N rows), and "codes per printed page" is
+  where the list is cut. A kit preset is a share of the printable *height* as well (`3x3` is nine cards of a third
+  of the page each), which would stretch a short card and is not what this tool prints. All five grids pass
+  `{ cols, perPage }` (`pk-cards-own`): 1 across and 1 to a page, 2 and 2, 2 and 4, 3 and 6, 3 and 9 for station
+  and clue cards by the setting; 2 and 4 for team cards; 2 and 2 for route cards and answer sheets, as before. From
+  the kit: the grid, the columns, the cut into pages, the page breaks, `break-inside`, `setPage()` (Letter, half an
+  inch; the page had no `@page`), `.pk-paper`, and `print-area.css` for the editor. Kept in the page: the card and
+  everything on it, as plain rules, and its spacing: the cards' 4 px margin is `--pk-gap: 8px` and `padding: 0 4px`
+  on the grid, which gives a card the old width to the pixel (352 px of 720 at two across, 232 at three).
+- **Six areas inside one `#printArea`. My call, and not what the recipe said.** The recipe (023) has every button
+  render into `#printArea` and `afterprint` put the default sheet back. Here the six `.print-only` areas, which
+  were children of `<body>`, moved inside one `#printArea` with their ids and their grid containers, and
+  `.print-only { display: none }` / `.print-only.active { display: block }` are plain rules. Two reasons. Putting
+  the default sheet back would mean drawing the station QR canvases inside `afterprint`; switching a class draws
+  nothing. And `smoke-paper-mode.mjs` and `smoke-staggered-starts.mjs` read the sheets through `#print-clues-grid
+  .p-card`, `#print-routes-grid .p-card` and `#print-answersheets-grid .p-card table`: with the containers kept,
+  neither suite was edited and both pass. To reverse: one container and five more `renderCards()` targets.
+- **The canvases.** Station cards and team cards carry a 600 px QR canvas. Nothing is drawn on `beforeprint`. A
+  button builds its sheet in the click, as it always did. The station sheet is also rebuilt at the end of
+  `render()` (debounced 150 ms after any edit, and on load), so Ctrl+P prints the current station cards with their
+  codes as bitmaps; it printed an empty page. `afterprint` makes the station cards the shown sheet again, where the
+  old page went on showing whichever sheet had printed last. `drawQR()` was not touched: it widens dark modules
+  the way 051's did, but at 600 px a module is 12 px or more and all 482 codes in the comparison decode, to the same text as on the old page.
+- **Built with `textContent`.** The five card builders and the answer key's rows were `innerHTML` strings through
+  `escapeHtml()`; they are nodes now (`pEl(tag, cls, text)`), and `check:inline-sinks` for 018 is 13 to 7. The
+  cards' `innerHTML` read back is identical to the old page's, entity for entity, in every state.
+- **The leftover print rule is gone too.** P2 had given 018 `@media print { :root[data-theme="dark"]… { --success;
+  --warn } }` so the dark theme's green and amber did not reach paper. Both colours are only on the editor's
+  station buttons, which `print-area.css` now removes from the paper, so the rule had nothing left to do;
+  `audit-print --only 018 --check` reports no DARK.
+- **What changed on paper.** Old against new (the old page from `git show origin/main:` through `page.route()`,
+  Letter with half-inch margins in `page.pdf()` since it had no `@page`, the viewport 720 px wide) in 20 states,
+  light and dark, six buttons each: 1, 2, 4, 5, 6, 9, 14 (one long) and 30 stations, 1 to 12 teams, at 1, 2, 4, 6
+  and 9 to a page. In all 240: the same cards, the same markup and text, the same card left, width and height, the
+  same canvas size, the same decoded QR text, the same table and column widths, the same colours. The PDF page
+  count is the same in 228. **The other 12 are the answer sheets of the 14-station and 30-station states, and are
+  fewer:** 11 pages to 5 for nine teams and 18 to 12 for twelve. A fourteen-row sheet came to 959 px on a 960 px
+  page; under the card's 4 px top margin it did not fit, was cut 3 px from its foot, and every page of sheets was
+  followed by a page with a sliver of border on it. With the same 4 px as grid padding the kit's page break made
+  that two blank pages (15), so the grids have no padding above or below, the sheet fits, and a sheet two pages
+  tall no longer drags a third. **The cost is that every card on every sheet sits 4 px (0.04 in) higher on its
+  page.** My call. The old page also left an empty `#build-view` or `#run-view` box on the paper; nothing but the
+  sheet has a box now.
+- **`overflow-wrap` on the answer-sheet table.** `.pk-card` sets `overflow-wrap: anywhere`, which lets an
+  auto-layout table shrink its columns to a letter. `table.p-answersheet` says `break-word`, which wraps a long
+  word only when it must and leaves the columns the widths they were (checked: identical in all 40 states).
+- **New suite:** `Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs` (`npm run test:scavenger-hunt-print`, port
+  8477, 5,524 assertions, about three minutes): the 20 states in light and dark, each of the six buttons: the
+  right sheet and only it on paper, the kit grids with the right columns and cut, the old card width and side
+  inset, the tool's gap, rows of one height, QR size and every code read back with jsQR, the break after every
+  grid but the last, Chromium's PDF page count and paper size; then markup typed into every field, the hidden
+  sheet following the editor, Ctrl+P, and an empty hunt. 018 has a row in `smoke-print-tail.mjs` now, six buttons
+  (it had none).
+
+**What I got wrong or did not do.**
+- My first expectation for the QR size at three across was 201 px (the card less its padding and a 1.5 px border
+  each side); Chromium draws that border 1 px wide and the code is 202, on the old page too. The suite says 202.
+- The first version kept the 4 px inset all round and made the knife-edge answer sheets *worse* than the old page
+  (15 pages for 11) before it made them better; only the 14-station state showed it, and that state was luck.
+- **The suite does not hold a page count for an answer sheet within 24 px of the page's height.** Card heights are
+  text, so another machine's fonts can put that card either side of the page; for that case it asserts "a card that
+  fits prints one page per pair" instead. On huginn the case is live and the count is 5. Every other count is held
+  as a number measured here, as the earlier adopters' are; CI is the check that they travel.
+- A `cardsPerPage` value the page does not offer (only a hand-edited share link could carry one) used to print
+  unsized cards; it prints four to a page now. Not tested.
+- Not compared: error correction other than Q, station numbers off (asserted in the new suite, not against the old
+  page), stagger off, a station whose QR fails to build, a raster of the PDFs. No `pdftoppm` comparison was made
+  beyond looking at one state's pages.
+- Nothing was printed on paper and no phone scanned a code.
+
+**Checks.** The eleven `check:*` guards, `lint`, `check:precache -- --base origin/main` and `check:adoption --
+--check`; `audit-print --only 018 --check` (nothing of any kind, the committed baseline); the a11y sweep `--only 018`
+(4 passed); suites through `run-suites.mjs --only`, one folder at a time, for qr-scavenger-hunt-builder (its two
+older suites untouched, 29 and 26), print-kit (`smoke-print-tail.mjs` 472 with 018's six buttons), the ten earlier
+adopters, roster, share, theme, service-worker and board-check: all 17 folders exit 0, 32 minutes. The full
+`npm test` was not run (no `_shared/` file changed).
+
 ## Path 7 P3, increment 9: 064 adopts the print kit with an exact-size card and a shared renderer; a deck of one page of cards had printed three sheets (2026-10-04, AI-13, `CACHE_VERSION` v238)
 
 Audit entry AI-13, rank 6 (2+). Ninth increment of P3: the fourth of the card-grid tools after 074, 051 and 040, 064
