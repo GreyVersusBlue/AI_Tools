@@ -9,6 +9,39 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P1 designed, not built: the publisher drift guard (2026-10-05, AI-20, no `CACHE_VERSION`, no code)
+
+Audit entry AI-20, rank 21 (1). A design pass: only `BACKLOG.md` changed (the P1 bullet under "Path 11", and a
+note on rank 21). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** Two guards and a contract. `check-publisher.mjs`, browser-free, reads 035's
+  publisher off its syntax tree, assembles the script it would publish, and fails by code on a free name
+  (the Round 7 `escHtml` bug), a live-only leak, a handler or id with nothing behind it, a preamble that fell
+  behind the page, a sloppy-mode construct, or a change in one of the 21 pieces 034 still shares with the
+  publisher (a ledger, in the shape of the inline-sinks baseline). `smoke-publish-baseline.mjs` publishes
+  Northwind under a pinned clock and diffs it by section against a committed baseline with the fonts hashed
+  out, holds the static guard to the browser's bytes, and runs every published piece once. The contract,
+  `published-contract.mjs`, names every file published so far format 0 and the next format 1 (`format`,
+  `tool`, additive), with a validator that prints shapes and never values.
+- **What reading the code turned up.** The bullet's baseline was never committed. 35 pieces are published,
+  not 26. `brRenderMap()` references `brRenderMapLegacy`, which no published file has, behind a `typeof`
+  that is never true there. The page is sloppy-mode and the published script is strict. `publishedOn` is the
+  UTC date and the footnote beside it is local. `JSON.stringify(data)` goes into a `<script>` unescaped, so a
+  name holding `</script>` ends it. 034's banner has said "may be stale" since 2026-09-13. The publisher
+  keeps one group per room per mod and one room per teacher, dropping the rest silently.
+- **Measured, with one pure-Node probe that was not kept:** 28 listed functions, all resolving once; 21 of 35
+  pieces the same text in 034, 12 forked, 2 absent; 42 functions only 034 has; the published script reaches
+  outside the language for `document` alone, plus the dead name; in 034's data (counts only, no names read
+  out) 21 one-way `co` entries, 30 of 162 section-to-teacher links without a slot, 6 room-day-mod slots
+  holding two groups, and every hard rule of the contract holding.
+- **Not verified.** No line of the design has run. That `assemble()` matches the browser byte for byte is the
+  suite's first assertion, not a result. The stale banner and the `</script>` hole are read off the code.
+- **Seven questions are Devon's** and are listed, unanswered, at the end of the P1 bullet: whether 034 stays a
+  fork; 034's own stale schedule and whether the public copy should hold the real building's at all; which
+  social branding; what a reader does with newer data; the double-booked room; pre-R60 files; the 60 days.
+
+---
+
 ## Path 7 P4, increment 4: 011 makes booklets and several pages to a sheet on `ExportKit` (Path 17 P4's controls), and 064's zip and PNG downloads are the file helpers' first adopter (2026-10-05, AI-13, `CACHE_VERSION` v248)
 
 Audit entry AI-13, rank 6 (2+). Fourth increment of P4. **The row stays, rewritten: what is left is CSV and XLSX

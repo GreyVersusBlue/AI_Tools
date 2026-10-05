@@ -391,7 +391,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 21 | Path 11 P1 — publisher drift guard before any extraction | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 21 | Path 11 P1 — publisher drift guard before any extraction. **Designed 2026-10-05 (AI-20), not built: the P1 bullet has the whole design and seven questions for Devon** | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 22 | Path 11 P2 — extract the pure engines; target the HTML under ~300 KB | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 23 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
@@ -2856,6 +2856,235 @@ a real pathfinder that the published browser never exposes.
   newer social branding. Only after this is green does extraction start. *Fable
   because the coupling is by string name and by closure, and the failure is a
   silently wrong published file that teachers rely on.*
+  **P1 is designed, not built (AI-20, 2026-10-05, a design pass: no code, no suite, no browser).** What follows is
+  the whole of it. It was written from the code as it stands at v248 and from one static probe, a scratch
+  script that was not kept (what it measured is marked *measured*; everything else is read off the code).
+  **What the bullet above gets wrong, first.** There is no baseline: `test/publish.mjs` writes
+  `Tools/schedule/test/baseline.html` when run with no argument, and that file has never been committed (it is
+  not ignored either, so a bare run leaves an untracked file). The list is 28 functions now, not 26, and the
+  published script is 35 named pieces, because seven more go in through a second list of `.toString()` calls
+  inside `brBuildPublishedHTML()` (`brDColor`, `brDeptInk`, `brTDept`, `brDShort`, `brOrderOf`, `escHtml`,
+  `escJsAttr`). "Every function in the list still exists" cannot fail in a way that matters: a missing one is a
+  `ReferenceError` the moment the page loads. And "the published head block matches the newer social branding"
+  names a block the publisher does not write and, by `Tools/schedule/README.md`, must not; the block is 034's,
+  it is the *older* branding, and which is right is undecided (question 3).
+  - *What can drift. Three pairs, and they are not the same problem.*
+    **(a) 035 live against what 035 publishes.** The published script is assembled from strings: a hand-typed
+    preamble (`let brMode = 'teacher'…`), two JSON constants, seven `.toString()` constants, the 28 functions,
+    five boot calls and the empty-data notice. So it drifts from the page it was cut from whenever (1) a published function reaches for
+    a name that is not in the file (Round 7: `escHtml` and `escJsAttr`, a `ReferenceError` when a teacher was
+    opened); (2) a string-built handler (`onclick="brJumpTeacher(…)"`) or the markup template names a function
+    that is not published; (3) a published function looks up an element id the published markup does not have;
+    (4) a preamble `let` falls behind the live declaration; (5) something live-only leaks in (`AppState`,
+    storage, a URL); (6) a function is declared twice, or stops being a top-level `function` declaration, so
+    `.toString()` yields something that defines nothing at top level (an arrow, a method shorthand); (7) the
+    live page is sloppy-mode and the published script begins `'use strict'` (*measured:* none of 035's three
+    inline scripts is strict), so a construct can work live and throw published. *Measured today:* all 28
+    resolve to one top-level declaration each; every handler name (nine) and every looked-up id (eight) resolves; the only
+    names the script reaches for beyond the language's own are `document` and `brRenderMapLegacy`, and the
+    second is a real hole behind a dead door (`brRenderMap()` calls it only when `typeof BR_WINGS !==
+    'undefined'`, which is never true in a published file); the only URL is the SVG namespace.
+    **(b) The publisher against its own last output.** Nothing records what a publish produced, so a refactor
+    that changes it is seen by nobody. This is the one P2 is about to make likely.
+    **(c) 035's publisher against the committed `034-schedule-browser.html`.** 034 was published by v60 on
+    2026-07-15 and then edited here; the README calls it a second implementation and says not to resync it.
+    *Measured:* of the 35 published pieces, 21 are the same text in 034, 12 differ (`brCheckStaleness`,
+    `brBuildOpts`, `brRenderMenu`, `brOnKey`, `brSetMode`, `brChoose`, `brDayRows`, `brRenderTeacher`,
+    `brRenderGroup`, `brGeoFloorSVG`, `brMiniMapHTML`, `brGroupMapHTML`) and 2 are absent (034 has its own
+    `brEscHtml` and `brJsAttr`); 034 has 42 functions 035 has never had, six tabs to three, and two
+    localStorage keys (`br_home_teacher`, `br_personal_notes_v1`) where a published file has none. Two suites
+    already hold the parts that must agree (`smoke-mode-tabs.mjs` the tab markup, `smoke-dark-theme.mjs` the
+    theme CSS, byte for byte). Nothing holds the 21 functions that agree today: a fix to one of them in one
+    file is the R61–R63 drift again, and it would be silent.
+    **There is no fourth pair.** Nothing but 034 and the file's own script reads `PUBLISHED_DATA` (searched
+    the tree); a published file's reader and data are always the same age, because they are one file. The data
+    and its reader come apart in exactly two places, both later: when 034's data is refreshed by hand under
+    034's own reader, and in P6, where one browser file takes many data files. The contract below is for those.
+  - *The contract for the data, written down once.* `Tools/schedule/test/published-contract.mjs`, pure Node,
+    no DOM, test-side only in P1 (a published file cannot import, and no reader needs a runtime check until P6).
+    `FORMAT = 1`. `formatOf(data)` returns the integer in `data.format`, or `0` when there is none: **format 0
+    is every file published up to v61, 034's included.** `validate(data, { fixture })` returns `{ ok, format,
+    errors: [{ path, message }], warnings: [...] }`; `upgrade(data)` returns a copy at `FORMAT` (0 to 1 adds
+    the two fields below and changes nothing else) and throws on a format above `FORMAT`; `readEmbedded(html)`
+    takes the one `const PUBLISHED_DATA = …;` line out of a published file and parses it;
+    `shapeOf(data)` is a summary of types and counts with no values in it, **and it is the only thing a failure
+    prints**: 034's data is a real staff list and CI's log is public. The shape, formats 0 and 1 alike:
+    `school` string; `publishedOn` `YYYY-MM-DD`; `dept` `{ code: { c: '#rrggbb', name } }`; `order` `{ code:
+    integer }`; `teachers` `{ name: { dept, room, plan, sec: [group], A: [modCount], B: [modCount], co: [name]
+    } }`, a slot being a group's name or the word `Planning`; `sections` `{ group: [teacher] }`; `room2teacher`
+    `{ room: teacher }`; `groupRooms` `{ group: { A: [modCount of room or null], B: the same } }`; `modCount`
+    integer of 1 or more; `modLabel` string; `bell` null or `{ A: [modCount strings], B: the same }`;
+    `geometry` `{ floors: [{ id, label, cols, rows, hall: [[c, r]], stair: [[c, r]], rooms: [{ rn, dept,
+    teacher, cells: [[c, r]] }] }] }`. Format 1 adds `format: 1` and `tool` (the `TOOL_VERSION` string).
+    `groupRooms`, `bell` and `geometry` may be missing in format 0 (the reader already allows it: `||
+    {}`, "No building map available"). *Errors:* a wrong type, a slot array that is not `modCount` long, a
+    slot naming no group, a `sec` entry or a `sections` teacher that does not exist, `room2teacher[t.room]`
+    not the teacher, a cell outside `cols` by `rows`, a room number on two rooms. *Warnings, never errors:* a
+    department code with no entry (the reader falls back to grey on purpose); a `co` list that is not
+    mirrored; a section that lists a teacher whose own day never shows that group. **The last two cannot be
+    errors because 034's committed data has them** (*measured, counts only:* 21 one-way `co` entries; 30 of
+    162 section-to-teacher links with no matching slot; 6 room-day-mod slots holding more than one group;
+    every hard rule above holds). The cause is in `brDeriveScheduleData()`: a room holds one group per mod, the
+    last one written, and a teacher has one room, the last one found. That is the publisher dropping a group
+    from a teacher's printed day without a word. P1 measures it and does not change it (question 5).
+    **The rule for a later format:** adding a field does not raise `FORMAT`; a change that would make an older
+    reader show something wrong does, and `upgrade()` gains the step in the same commit. A reader at N reads
+    everything at or below N through `upgrade()`. What a reader does with data *above* its own format is
+    question 4, and nothing in P1 builds it.
+  - *The guard that needs no browser.* `Tools/board-check/check-publisher.mjs`, an npm script named
+    `check:publisher`, in CI beside the other guards (a new step in `ci.yml`). It reads the two HTML files as
+    text and parses 035's classic inline scripts with ESLint's own `Linter` (ESLint and `globals` are direct
+    devDependencies; `espree` is not, so it is not imported by name). Exports, for its test and for the browser
+    suite: `readPublisher(html)` returns `{ fns: [{ name, text, line }], consts: [{ name, from, kind, text }],
+    json: [{ name, from }], preamble: [string], boot: [string], markup, css, dataKeys, problems }`;
+    `assemble(pub, data)` returns the `<script>` text the page would publish for that data; `freeNames(script)`
+    returns `[{ name, line }]`; `forkState(pub, html034)` returns `[{ name, state: 'same' | 'forked' |
+    'absent' }]`; `check({ root })` returns `{ failures: [{ code, message }], notes }`. Flags: `--list` (the 35
+    pieces and where each is declared), `--json`, `--explain <name>` (the first line where 034's copy parts
+    from 035's), `--ledger` (rewrites the ledger's `same` list only, after you have read what moved).
+    **How it reads the publisher.** It walks the syntax tree of `brPublishFnList()` (the returned array must
+    be a plain list of identifiers) and of the `consts` and `js` arrays in `brBuildPublishedHTML()`, whose
+    elements must each be one of five forms: a string literal; `'const X = ' + Y.toString() + ';'`; `'const X
+    = ' + JSON.stringify(Y) + ';'`; `'const X = ' + Y + ';'`; the functions' `map(f => f.toString()).join()`.
+    **Anything else fails as "publisher not understood", with the line.** Not knowing what is published has to
+    fail, never pass. The module script at the top of 035 is skipped: its bindings are not page globals.
+    A function's published text is its source from `function` to its closing brace; an arrow constant's is
+    its initializer. That is what `.toString()` returns, and the browser suite holds the guard to it (below).
+    **What it fails on, by code.** **LIST**: a listed name with no top-level `function` declaration in a
+    classic script, or with two. **CONST**: X and Y differ (the piece would publish under another name), or Y
+    is not a top-level arrow constant or function. **FREE**: a name the assembled script uses and does not
+    define. The allowed outside names are a list in the guard, `PUBLISHED_GLOBALS`, seeded with what is used
+    today, which is `document` alone; ESLint's whole browser set would wave through a bare `name`, `status` or
+    `event`. `brRenderMapLegacy` goes in `KNOWN_FREE` with its reason, and the guard fails if a `KNOWN_FREE`
+    name stops being free, so the entry cannot outlive the hole. `typeof X` is not a use. **STRICT**: the
+    assembled script does not parse as strict code. **LIVE**: `AppState`, `localStorage`, `sessionStorage`,
+    `indexedDB`, `fetch`, `XMLHttpRequest`, `WebSocket`, `import(`, `getSubjects`, `toggleApp`, `showToast`,
+    `brLoadFromVisualizer`, or any URL but the SVG namespace, anywhere in the assembled script, the markup or
+    `BR_CSS`. **HANDLER**: an `on…="name(` in the markup template or inside a published function's text that
+    is not a published function (`window.print()` is allowed). **ID**: a literal `getElementById('x')` in a
+    published function with no `id="x"` in the markup template or in a published function's own strings.
+    **STATE**: a preamble `let` whose name or initial value differs from the live top-level declaration (`brMode`,
+    `brCurrent`, `brActiveIdx`, `brOpts`, `brGrpDay`, `brMapFloorIdx`). **HEAD**: the page template gains a
+    `<link`, a `<script src`, a manifest or a `gvb:social` marker. **DATA**: 034's embedded `PUBLISHED_DATA` is
+    not one parseable line, or has a contract error at its own format; and the keys the publisher writes
+    (`dataKeys`) are not the contract's. **FORK**, the 034 pair, a ledger in the shape of
+    `inline-sinks-baseline.json`: `Tools/schedule/test/publisher-ledger.json` holds `same` (21 names), `forked`
+    (12, each with a sentence saying what 034's copy does that 035's does not) and `absent` (2, each with what
+    034 uses in its place). It fails when a `same` piece differs (the fix landed in one file: port it, or move
+    the name to `forked` and say why), when a `forked` piece has become the same (lower the list in the same
+    commit), and when a published name is in none of the three. Text is compared exactly, after CRLF is
+    stripped. The 42 functions only 034 has are not in the ledger; they have no second copy to drift from.
+    **Edge cases.** A function moved into a block, an IIFE or a module is not a page global and fails LIST with
+    that said. A comment or JSDoc above a function is not part of its published text and may change freely. A
+    backtick in a `BR_CSS` comment ends the template literal (the README's trap): the script no longer parses
+    and the guard says "035's script does not parse" with the parser's line, before anything else. A name used
+    only as a property (`x.fetch`) is not a LIVE hit; the check is on identifiers and string contents, with
+    comments skipped. CSS classes a function emits against the selectors in `BR_CSS` are **not** checked: a
+    class with no rule is common and harmless, and a guard that guesses is worse than none.
+  - *The guard that needs a browser, which is the bullet's "regenerate and diff".*
+    `Tools/schedule/test/smoke-publish-baseline.mjs`, a suite and a `test:schedule-publish` shortcut, on the
+    next free port. `publishFromFixture()` gains one option, `{ now }`, which calls `page.clock.setFixedTime`
+    before the page loads; the suite pins **2026-01-15 17:00 UTC**, noon on the east coast and the same date in
+    every US zone and in UTC. With the clock pinned the output has no other moving part (Playwright's default
+    locale is en-US, so the footnote reads "January 15, 2026"; `JSON.stringify` keeps insertion order;
+    `.toString()` is the source text in every Chromium). It cuts the published file into named sections (page
+    template, fonts, `BR_CSS`, overrides, markup, preamble, data, each constant, each function, boot) and
+    compares them with the committed `Tools/schedule/test/baseline-northwind.html`, **which is the published
+    file with the 103 KB font block replaced by one line giving its SHA-256 and length**, so the baseline is
+    about 75 KB of text a person can diff in a PR. A mismatch names the section and prints the first differing
+    line of each side. `--update` rewrites the baseline; the diff of that file in the PR is the review. The
+    folder is `test/`, so the file is never precached and `make-offline-copy.mjs` leaves it out.
+    The other assertions: **the static guard's `assemble(readPublisher(html), data)` equals the real published
+    `<script>` byte for byte**, which is what entitles `check:publisher` to speak for the page with no browser;
+    the published data validates at `FORMAT` with no error and no warning and matches the fixture's `EXPECTED`;
+    the file opened from `file://` runs **every one of the 35 pieces at least once** while the suite picks a
+    teacher, a group, a mate, a room on the map, a floor tab, an A/B day, types in the search box and walks the
+    tabs by keyboard (Chromium's JS coverage names what never ran; a piece nothing can reach is reported and
+    fails); a published file whose data is replaced by `fixture-published-format0.json` (Northwind as v61
+    wrote it, captured from the unmodified tool) still shows the same teacher's day, so **a newer reader reads
+    an older file's data**; a fixture whose school is named `</script><b>` publishes a file with one script
+    block and that name in its masthead as text; and a publish at 23:30 local says the local date in both
+    places it says a date.
+  - *What an artefact from an older 035 is, and what happens to it.* **Nothing happens to it, by design.** A
+    file a teacher was emailed carries its own reader, data, styles and fonts; no page of this site opens it,
+    nothing imports it, and no storage key belongs to it, so there is nothing to migrate and no version of 035
+    can break it. Its one way of ageing is the banner after `BR_STALE_DAYS` (60). It is format 0, and P1 gives
+    that a name, a validator and a test that the current reader still reads it. 034 is the one old artefact
+    the repo holds: format 0, v60, and by its own date and rule its banner has been showing on the live site
+    since 2026-09-13 (82 days on 2026-10-05; read off the code, not seen in a browser). P1 does not refresh it
+    (question 2).
+  - *What each tool changes, in two increments, so the first proves the guard on the tool as it is.*
+    **Increment 1, no page changes, no `CACHE_VERSION`:** the guard, the contract, the ledger, the baseline
+    taken from 035 untouched, the format-0 fixture, the suite and the pure test; `package.json`, `suites.json`,
+    `ci.yml` and the README's "regression baseline" section rewritten. `Tools/board-check/` and `.github/`
+    change, so CI runs site-wide once. **Increment 2, 035 only, a `CACHE_VERSION` bump and `TOOL_VERSION` v62,
+    the baseline regenerated in the same commit** (the first intended change of it, which is the workflow
+    working): `data` gains `format: 1` and `tool`; `publishedOn` becomes the **local** date (it is
+    `toISOString()` today, the UTC date, while the footnote beside it is local and the reader parses the field
+    as local midnight, so a file published after 8 pm eastern is dated tomorrow); and `JSON.stringify(data)`
+    has every `<` written as `<` (today a room, teacher or school name holding `</script>` ends the
+    published script; the name can arrive in an imported project file or over a hand-off, and the file is then
+    emailed to staff; read off line 20743, not run). **034 does not change in P1**, not even its data, and no
+    storage key, registry row or precache line changes anywhere. `brRenderMapLegacy` stays where it is, listed.
+  - *The tests that would prove it.* `Tools/board-check/test/check-publisher.test.mjs` (pure Node, a
+    `test:check-publisher` shortcut), on the real tree and on edited copies of 035's text: the tree passes;
+    the extraction is 28 functions, 7 `.toString()` constants, 2 JSON constants, `BR_STALE_DAYS`, 6 state names, 5 boot calls; and **each
+    break on purpose fails with its own code and no other**: `escHtml` taken out of `consts` (FREE, naming
+    it, the Round 7 bug); a listed function renamed at its declaration (LIST); a listed function turned into
+    `const f = () =>` (LIST); a second declaration of one (LIST); `'const brDColor = ' + brDeptInk.toString()`
+    (CONST); `AppState.settings` read inside `brRenderTeacher` (FREE and LIVE); a `localStorage` read (LIVE); an
+    `onclick="brNope()"` in a template (HANDLER); `br-view` renamed in the markup (ID); `brGrpDay = 'B'` in the
+    preamble only (STATE); an undeclared assignment and a duplicate parameter (STRICT); a `<link>` in the head
+    (HEAD); a spread in the function list and a ternary in `consts` ("not understood"); a backtick in a CSS
+    comment (does not parse); one character changed in `brOverviewHTML` in 035 only, then in 034 only (FORK,
+    both ways); a `forked` function made identical (FORK asks for the ledger to be lowered); a new name added
+    to the list and to no ledger group (FORK); `brRenderMapLegacy` published after all (`KNOWN_FREE` expired).
+    The contract, on built data with made-up names (Ms. Okafor in 204, group 7-3): each error above one at a
+    time; each warning; format 0 with and without its three optional keys; `upgrade()` idempotent, never
+    changing a field it was given, throwing on format 2; `shapeOf()` output containing no string from its
+    input. The browser suite's cases are the paragraph above; its breaks on purpose are made by rewriting 035
+    on the way in with `page.route()`: a property dropped from the teacher record, a function reordered in the
+    list, one CSS declaration changed, the footnote reworded, each failing the named section and only it.
+  - *Left to P2, on purpose.* Following `import`s: the reader takes 035's inline classic scripts and nothing
+    else, so the first function P2 moves into a module fails LIST, and that failure is the prompt to teach
+    `readPublisher()` a `sources` list (the page, then each module it loads, the way `check-adoption.mjs`
+    follows them). What P2 should know before it starts: `.toString()` of an `export function` is the same
+    text without `export`, so a moved function publishes unchanged; a method shorthand or a bundled or
+    minified function does not; a helper a moved function imports becomes a free name and FREE says so;
+    modules are strict, which closes pair (a)'s seventh gap by itself. Publishing from Node with no browser
+    (so that the baseline is a pure suite) waits for `brDeriveScheduleData`, `brBuildGeometrySnapshot` and the
+    publisher to be extracted, which is the last step of P2's order. Folding `schedule/` and
+    `schedule-visualizer/` into one folder moves every path named here; P1 uses `schedule/test/` because the
+    fixture and `publish.mjs` are there.
+  - *Left out altogether.* Making 034 a pure publish again, or teaching 035 any of 034's 42 functions
+    (question 1). Refreshing 034's data. A runtime format check in any reader, and swappable data (P6). The
+    theme region and tab markup, which have their suites. The publisher's CSS-to-markup agreement. The 400-odd
+    functions of 035 that are not published. Fixing the double-booked room and the teacher with two rooms
+    (P5's constraint checks; P1 only counts them). Any social block. Nothing here was run: no line of the
+    guard exists, the 75 KB is an estimate (28 KB of `BR_CSS`, 24 KB of script, the data, the markup), and
+    the claim that `assemble()` can match the browser byte for byte is the suite's first assertion, not a
+    result. The probe compared whole declarations for functions and initializers for arrow constants.
+  - *Questions that are Devon's. None is answered here, and the build waits on none of them except where said.*
+    1. **Is 034 a fork for good?** Today it is a second implementation with a ledger round it. The other
+       course is to teach 035's publisher 034's features (three more tabs, notes, links, the PNG, the door
+       sign) so that 034 is again exactly what Publish makes. P6 needs to know which before it starts.
+    2. **034's own schedule is from 2026-07-15 and has been telling visitors it may be stale since
+       2026-09-13.** Refresh it (from which project file; none is in the repo), quiet the banner on the site
+       copy, or leave it? And should the public site's copy carry the real building's schedule at all, or
+       the invented Northwind one?
+    3. **Which social branding is right for 034's head block:** the older greyversusblue block with the
+       guild-board image that it has, or the newer AsPerMyLessonPlan block with none? P1's bullet assumed the
+       newer; `CLAUDE.md` says the policy is undecided. Until it is, the guard checks only that a file made
+       by Publish carries no block.
+    4. **When a reader meets data from a newer format than it knows** (034 after a hand refresh, P6's
+       swappable data): show it with a warning, or refuse and say "ask for a new copy"?
+    5. **Two groups in one room in one mod, and one teacher named in two rooms:** the published file shows
+       one and drops the other, silently. Should Publish refuse, warn and go on, or show both? 034's
+       committed data has 6 such room slots.
+    6. **Do files published before R60 still circulate** (no map, no bell times, no group rooms)? The
+       contract reads them as format 0 with those keys missing; if none exist, that allowance can go.
+    7. **Is 60 days the right age for the stale banner** for a schedule that holds a semester? It is one
+       constant, and it is in every file already sent.
 - **P2 — Extract the pure engines to `Tools/schedule-visualizer/`** in this order:
   schedule model, pathfinding (`astar`, `computeTravelTimes`), multi-floor graph,
   evacuation routes, congestion, playback renderer, publisher. Each extraction is
