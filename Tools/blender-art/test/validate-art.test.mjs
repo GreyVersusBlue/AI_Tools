@@ -297,5 +297,56 @@ breaks('the light hero shown without its dark twin', 'IMG', c => c.put('index.ht
 breaks('a tile shown without its dark twin', 'IMG', c => c.put('index.html', '<img src="assets/art/test/tile-256-light.webp" alt="">'));
 breaks('a density that is not a positive integer', 'LEDGER', c => { c.entry('classroom-1x-light.webp').density = 1.5; });
 
+/* generated entries: made by an image model, not a scene script. The real
+   ledger has none yet, so each case adds one, borrowing 071's market picture
+   for its bytes. */
+ok(['scenes', 'sequences', 'backgrounds'].every(f => baseLedger.families[f]), 'the ledger declares the scenes, sequences and backgrounds families');
+const GEN = 'Tools/some-tool/art/scene.webp';
+const genBytes = fs.readFileSync(path.join(SITE, ...baseLedger.entries.find(e => e.path.endsWith('/market.webp')).path.split('/')));
+function generated(c, o = {}, bytes = genBytes) {
+  const p = o.path || GEN;
+  c.put(p, bytes);
+  const e = {
+    path: p, family: 'scenes', generator: 'example-image-model 1.0', generated: '2026-10-03',
+    prompt: 'A small isometric market stall with two shoppers, flat light, no text.', references: [],
+    width: 960, height: 720, cap: 81920, theme: 'light', use: 'content', decorative: false, ...hashFile(bytes, p), ...o,
+  };
+  c.ledger.entries.push(e);
+  return e;
+}
+ok(fixture(c => generated(c)).length === 0, 'a generated entry with its full record passes');
+ok(fixture(c => generated(c, { references: ['assets/art/hero/classroom-1x-light.webp'] })).length === 0, 'a generated entry may list its references');
+ok(fixture(c => generated(c, { tokens: ['--not-a-token'], extraColors: [{ hex: '#c0ffee' }] })).length === 0,
+  'TOKEN skips a generated entry: no scene parsed the palette');
+breaks('a generated entry with a seed', 'LEDGER', c => generated(c, { seed: 1 }));
+breaks('a generated entry with a Blender version (LEDGER, not PIN)', 'LEDGER', c => generated(c, { blender: '4.5.3' }));
+breaks('a generated entry with a scene script', 'LEDGER', c => generated(c, { script: 'Tools/blender-art/scene_prompts.py' }));
+breaks('a generated entry with no prompt', 'LEDGER', c => { delete generated(c).prompt; });
+breaks('a generated entry with an empty prompt', 'LEDGER', c => generated(c, { prompt: '  ' }));
+breaks('a generated entry with no date', 'LEDGER', c => { delete generated(c).generated; });
+breaks('a generated entry with a date that is not YYYY-MM-DD', 'LEDGER', c => generated(c, { generated: '10/3/2026' }));
+breaks('a generated entry with no references', 'LEDGER', c => { delete generated(c).references; });
+breaks('a generated entry whose references are not a list', 'LEDGER', c => generated(c, { references: 'a photo' }));
+breaks('a generated entry in an unknown family', 'LEDGER', c => generated(c, { family: 'paintings' }));
+breaks('a generated output deleted', 'MISSING', c => { generated(c); fs.rmSync(path.join(c.root, ...GEN.split('/'))); });
+breaks('a generated output whose hash is not the ledger\'s', 'HASH', c => generated(c, { sha256: '0'.repeat(64) }));
+breaks('a generated output over its cap', 'CAP', c => generated(c, { cap: 1000 }));
+breaks('the scenes family over its total', 'CAP', c => { generated(c); c.ledger.families.scenes.total = 1000; });
+breaks('a generated output whose size is not the ledger\'s', 'SIZE', c => generated(c, { width: 961 }));
+breaks('a generated image the ledger does not list', 'ORPHAN', c => c.put('assets/art/backgrounds/stray.png', genBytes));
+breaks('a meaningful generated <img> with empty alt', 'ALT', c => {
+  generated(c);
+  c.put('Tools/001-x.html', '<img src="some-tool/art/scene.webp" alt="">');
+});
+ok(fixture(c => { generated(c); c.put('Tools/001-x.html', '<img src="some-tool/art/scene.webp" alt="A market stall">'); }).length === 0,
+  'a meaningful generated <img> with alt text passes');
+breaks('an on-screen generated raster with no dark twin', 'TWIN', c => generated(c, { use: 'screen' }));
+// Image models often hand back JPEG, so SIZE reads its start-of-frame.
+const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 1, 1, 0, 0, 1, 0, 1, 0, 0,
+  0xff, 0xc0, 0x00, 0x11, 0x08, 0x01, 0x2c, 0x02, 0x80, 0x03, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1, 0xff, 0xd9]);
+ok(JSON.stringify(dimensions(jpeg, 'a.jpg')) === '{"width":640,"height":300}', 'JPEG dimensions from its SOF0, past an APP0 segment');
+ok(fixture(c => generated(c, { path: 'assets/art/backgrounds/paper.jpg', family: 'backgrounds', width: 640, height: 300 }, jpeg)).length === 0,
+  'a generated JPEG passes SIZE');
+
 console.log(`validate-art.test: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

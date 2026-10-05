@@ -20,6 +20,7 @@
 //             (SVG is hashed with CR stripped, so a CRLF checkout still passes).
 //   SIZE      an output whose pixel dimensions are not the ledger's.
 //   PIN       an entry made by a Blender outside the pinned LTS line.
+//             A generated entry (below) has no Blender, so PIN skips it.
 //   TWIN      an on-screen raster without a dark (or light) twin that points back.
 //             use "sheet" is art drawn only on a surface the page keeps the
 //             same in both themes (080's .paper-sheet board, 030's navy
@@ -28,7 +29,8 @@
 //   SVG       an icon carrying a literal colour, a fill, a style attribute or
 //             an embedded raster; icons are stroke="currentColor" and nothing else.
 //   TOKEN     a material token that ink-paper.css does not define, or a
-//             non-token colour with no "why".
+//             non-token colour with no "why". Skipped for a generated entry:
+//             no scene parsed the palette, so it has no materials to name.
 //   CONTRAST  an under-text entry with no luminance recorded, or one whose
 //             recorded range does not hold 4.5:1 (3:1 when the entry says the
 //             text is large) against its text token in its own theme.
@@ -83,6 +85,15 @@
 //             would get the other theme's picture. A "density" that is not a
 //             positive integer is LEDGER.
 //
+// A generated entry (one with "generator": an image made by an AI image model,
+// not by a scene script) is the third kind, after rendered and derived. It
+// cannot be re-made from the repo, so the ledger keeps what made it instead:
+// "generator" (the model and version), "generated" (YYYY-MM-DD), the full
+// "prompt" and its "references" (a list of the files or URLs given to the
+// model, possibly empty). It has no script, seed or blender (LEDGER if it
+// does); MISSING, CAP, HASH, SIZE, ORPHAN and ALT hold it like any other
+// entry, and so do TWIN, CONTRAST and IMG when it declares what they read.
+//
 // It does not duplicate check:precache, which already fails a referenced file
 // missing from PRECACHE_URLS. Its pure-Node test is test/validate-art.test.mjs,
 // which builds a small fixture tree and breaks each rule in turn.
@@ -101,9 +112,14 @@ const REQUIRED = ['path', 'script', 'family', 'seed', 'width', 'height', 'cap', 
 // A derived entry is assembled, not rendered: no seed and no blender.
 const REQUIRED_DERIVED = ['path', 'script', 'family', 'sources', 'width', 'height', 'cap', 'theme', 'use',
   'decorative', 'sha256', 'bytes'];
+// A generated entry is made by an image model: no script, seed or blender, but
+// a record of the model, the date, the prompt and what it was shown.
+const REQUIRED_GENERATED = ['path', 'family', 'generator', 'generated', 'prompt', 'references', 'width', 'height',
+  'cap', 'theme', 'use', 'decorative', 'sha256', 'bytes'];
 const USES = ['screen', 'print', 'content', 'manifest', 'sheet'];
 const isDerived = e => e.sources !== undefined;
-const RASTER = /\.(webp|png)$/i;
+const isGenerated = e => e.generator !== undefined;
+const RASTER = /\.(webp|png|jpe?g)$/i;
 
 /* ── palette, mirrored from art_common.py's parser ───────────────────────── */
 
@@ -191,6 +207,17 @@ export function dimensions(buf, rel) {
       return { width: (b & 0x3fff) + 1, height: ((b >>> 14) & 0x3fff) + 1 };
     }
     if (chunk === 'VP8X') return { width: buf.readUIntLE(24, 3) + 1, height: buf.readUIntLE(27, 3) + 1 };
+  }
+  if (/\.jpe?g$/i.test(rel) && buf.length >= 4 && buf[0] === 0xff && buf[1] === 0xd8) {
+    // Walk the markers to the first start-of-frame (C0–CF, less C4 DHT, C8 JPG, CC DAC).
+    for (let off = 2; off + 9 <= buf.length && buf[off] === 0xff;) {
+      const m = buf[off + 1];
+      if (m === 0xff) { off++; continue; }
+      if (m >= 0xc0 && m <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(m)) {
+        return { width: buf.readUInt16BE(off + 7), height: buf.readUInt16BE(off + 5) };
+      }
+      off += 2 + buf.readUInt16BE(off + 2);
+    }
   }
   return null;
 }
@@ -328,8 +355,19 @@ export function validate(root = SITE) {
   const byPath = new Map();
   for (const e of entries) {
     const where = e.path || '(entry with no path)';
-    const missing = (isDerived(e) ? REQUIRED_DERIVED : REQUIRED).filter(k => e[k] === undefined || e[k] === null || e[k] === '');
+    const required = isGenerated(e) ? REQUIRED_GENERATED : isDerived(e) ? REQUIRED_DERIVED : REQUIRED;
+    const missing = required.filter(k => e[k] === undefined || e[k] === null || (typeof e[k] === 'string' && !e[k].trim()));
     if (missing.length) add('LEDGER', where, 'missing ' + missing.join(', '));
+    if (isGenerated(e)) {
+      for (const k of ['script', 'seed', 'blender', 'sources']) {
+        if (e[k] !== undefined) add('LEDGER', where, `a generated entry was made by ${e.generator}, so it has no ${k}`);
+      }
+      if (e.generated && !/^\d{4}-\d{2}-\d{2}$/.test(String(e.generated))) add('LEDGER', where, `"generated" must be a date, YYYY-MM-DD, not "${e.generated}"`);
+      if (e.prompt !== undefined && typeof e.prompt !== 'string') add('LEDGER', where, '"prompt" must be the full prompt, as a string');
+      if (e.references !== undefined && e.references !== null && !Array.isArray(e.references)) {
+        add('LEDGER', where, '"references" must be a list of what the model was given ([] for nothing)');
+      }
+    }
     if (isDerived(e)) {
       for (const k of ['seed', 'blender']) if (e[k] !== undefined) add('LEDGER', where, `a derived entry has no ${k} of its own; its sources carry it`);
       if (!/\.mjs$/.test(String(e.script))) add('LEDGER', where, `a derived entry is assembled by a Node script, not ${e.script}`);
@@ -350,7 +388,7 @@ export function validate(root = SITE) {
       if (!(e.stroke > 0)) add('SAFE', where, 'an app mark needs its stroke, in units of the 48-unit icon');
       if (!Array.isArray(e.inks) || !e.inks.length) add('SAFE', where, 'an app mark needs its inks, the tokens its lines are drawn in');
     }
-    if (e.blender && pinned && !String(e.blender).startsWith(pinned + '.')) {
+    if (e.blender && pinned && !isGenerated(e) && !String(e.blender).startsWith(pinned + '.')) {
       add('PIN', where, `made by Blender ${e.blender}; renders.json pins the ${pinned} LTS line`);
     }
   }
@@ -405,7 +443,7 @@ export function validate(root = SITE) {
         else if (twin.theme !== want || twin.twin !== e.path) add('TWIN', where, `twin ${e.twin} is not a ${want} entry pointing back`);
       }
     }
-    if (palette) {
+    if (palette && !isGenerated(e)) {
       for (const t of e.tokens || []) if (!(t in palette.light)) add('TOKEN', where, `"${t}" is not a token in ink-paper.css`);
       for (const c of e.extraColors || []) if (!c || !c.why) add('TOKEN', where, `non-token colour ${c && c.hex} has no "why"`);
     }

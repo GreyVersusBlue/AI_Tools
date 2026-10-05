@@ -6,6 +6,12 @@ it, like `Tools/board-check/`. The art it makes lives in `assets/art/` (site-lev
 `Tools/<tool-folder>/art/` (per-tool). `BACKLOG.md`'s Path 21 section is the spec; this
 file is how to run it.
 
+Almost every file in the ledger can be re-made from this folder: a scene script and a seed
+render it, or a Node script assembles it from rendered files. **The exception is a
+generated entry**, an image made by an AI image model. Nothing in the repo can re-make one,
+so its ledger entry records what made it instead (see "Generated images" below). Treat its
+committed file as the original, not as an output.
+
 ## The pin
 
 | | |
@@ -70,7 +76,8 @@ rendered twice and compared.
   the repo. See below.
 - `renders.json`: the ledger. The spec half (path, script, subject, family, seed, samples,
   quality, width, height, cap, theme, use, twin, decorative, `underText.region/token/large`)
-  is written by hand *before* a render. The record half is written by the script.
+  is written by hand *before* a render. The record half is written by the script. A
+  generated entry is written entirely by hand; see "Generated images".
 - `validate-art.mjs`: the read-only guard. Its header lists every rule.
 - `test/validate-art.test.mjs`: pure Node, no Blender. It breaks each rule in a fixture tree.
 
@@ -267,6 +274,40 @@ It is the last Path 21 row; the path is finished.
   Accepted, as the row says, not chased.
 - Rendered on **huginn** with `-t 4`, three times: **byte-identical** (SHA-256 `a7ec4da3…`). Each
   render takes about 2.5 minutes.
+
+## Generated images (added 2026-10-03)
+
+The ledger has three kinds of entry. A **rendered** entry has a `script`, a `seed` and the
+`blender` that made it. A **derived** entry has `sources` and is assembled by a Node script.
+A **generated** entry has `generator` and is an image from an AI image model. It has no
+`script`, `seed` or `blender`, and `check:art` fails one that carries any of them. In their
+place it records:
+
+| Field | What goes in it |
+|---|---|
+| `generator` | The model and its version, as specific as the service tells you. |
+| `generated` | The date it was made, `YYYY-MM-DD`. |
+| `prompt` | The **full** prompt, word for word, including any negative prompt or settings the tool exposes. Not a summary. |
+| `references` | A list of every image or file the model was shown (repo paths or URLs); `[]` if none. |
+
+plus the fields every entry has: `path`, `family`, `width`, `height`, `cap`, `theme`, `use`,
+`decorative`, `sha256` and `bytes`. Nothing writes the record for you: hash the file
+(`hashFile` in `validate-art.mjs` gives the same numbers `check:art` checks) and fill it in by
+hand.
+
+What `check:art` holds a generated entry to: **MISSING, CAP, HASH, SIZE, ORPHAN and ALT**,
+the same as any entry, plus **TWIN**, **CONTRAST** and **IMG** whenever the entry declares
+what those read. An on-screen (`use: "screen"`) generated raster therefore still needs a dark
+twin. It skips **PIN** (there is no Blender) and **TOKEN** (no scene parsed ink-paper.css, so
+there are no materials to name). SIZE reads PNG, WebP and, for these, JPEG.
+
+The three families for them, all at a 480 KB total, are `scenes` (80 KB each), `sequences`
+(60 KB each, for a run of frames) and `backgrounds` (120 KB each). The path's 2 MB budget is
+the real limit: the ledger already holds about 510 KB, so the three families cannot all fill
+up.
+
+A regenerated image is a new image. The same prompt will not give the same bytes back, so a
+HASH failure on a generated entry means the file was replaced, never that it drifted.
 
 ## Determinism, measured 2026-09-25
 
