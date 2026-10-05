@@ -380,7 +380,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 11 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 12 | Path 9 P1 — bell schedules per day type in 032 + `_shared/school-day.js` | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
-| 13 | Path 9 P2 — pacing that recomputes around lost days | 032 | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
+| 13 | Path 9 P2 — pacing that recomputes around lost days (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P2 bullet; it still waits on its place in the order) | 032 | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 14 | Path 9 P3 — consumers: 004, 010, 001, 036/037, 044/045, 032 itself | site | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 15 | Path 9 P4 — `.ics` import/export and a one-page year wall calendar print | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 16 | Path 10 P1 — Packet Builder `087` with the section-provider registry | 087 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
@@ -2506,6 +2506,257 @@ fixed unit dates; the valuable half (a unit defined by instructional days that
   automatically around holidays/half days/testing windows; "you are N days behind"
   against the plan; rebinding when a day is lost. *Fable for the placement
   algorithm and its interaction with the existing bump/adjustment model.*
+  **Designed, not built (AI-18, 2026-10-05). Everything from here to P3 is the design; no code exists for it.**
+  Read from the tree at v245: 032's page, `scv-pacing.js`, `scv-store.js`, `scv-seed.js`, both suites, and the
+  two readers (010, 045). Figures marked *measured* came from two pure-Node probes over the shipped 2026-27 seed
+  and the shipped modules; they were not kept. Questions that are Devon's are listed at the end and not answered.
+  - *What is there today, as read.* Two pacing layers that do not know about each other. (1) `cal.pacing =
+    { startDate, lessons, adjustments }`: one lesson sequence, one lesson a school day, placed by `placeLessons()`
+    on every render. **It already recomputes** round a no-school tag; a bump is `{ id, beforeLessonId, reason,
+    createdOn }`, one empty slot before a lesson, which travels with the lesson. (2) `cal.units = [{ id, name,
+    start, end, color }]`: date ranges the teacher types, with a count worked out by `unitInstructionalStats()`.
+    Units may overlap, sit in any order, and are not tied to the lesson codes' `U<n>`. `units` and `abCycle` are
+    optional fields: `isValid()` and `migrate()` in `scv-store.js` do not mention either, and both arrived with
+    no `__v` change. One "school day" predicate (`isTeachableDay`: a weekday with no `noSchool` type) serves the
+    lessons, the unit count and the A/B cycle. Half days and testing days count as full days; the seed tags no
+    testing day. 010 and 045 read `days[date].types`, `.lesson` and `.note` with a plain `JSON.parse`; **neither
+    reads the placement**, so no tool but 032 knows today's paced lesson. Only `scv-store.js` writes the key.
+  - *Measured.* The seed has 184 school days, 13 of them half days; with A on the first day, 92 A and 92 B; the
+    three `mpend` tags cut it into 45, 46, 47 and 46 days. Turning a fixed unit into "first school day on or
+    after its start, plus its counted days" gives back the same set of school days for every one of the 40,528
+    start/end pairs in the seed year that hold a school day (227 pairs hold none); the start date moves in
+    14,329 of them and the end in 14,103, only off a weekend or closure. A 20-day unit from 2027-01-04 ends
+    2027-02-02, and 2027-02-03 once 2027-01-12 is a snow day. **032's A/B cycle slides: after that snow day the
+    letter of all 99 later school days flips.** One bump on a 184-lesson list that alternates A and B puts 143 of
+    the 144 later lessons on the other letter's day (the last overflows); a second bump puts them back. A blob
+    with `__v: 3` fails the shipped `isValid()`, so the shipped `get()` returns the seed, and the page's next
+    `save()` writes the seed over the teacher's calendar; a `__v: 2` blob with an extra `plan` field passes.
+  - *The storage decision, mine, and to be settled before the build, not after: no `__v` bump.* The new model
+    lives in one new optional field, `cal.plan`, with a version of its own; `__v` stays 2 and `isValid()` is not
+    touched. The reason is the measured line above: a page from an older cache (a second device on its first
+    visit after the update, or a 009 restore into one) that meets `__v: 3` shows the seed and overwrites on the
+    first click. An older page that meets `plan` ignores it and writes it back, since it saves `cal` whole. P1's
+    `bell` should be added the same way; if P1 bumps `__v` anyway, nothing here depends on it.
+  - *The model.* `cal.plan = { v: 1, active: courseId|null, algo: 1, courses: [Course] }`.
+    `Course = { id, name, color, meets: 'all'|'A'|'B', start: ISO|null, pace: { [dayTypeId]: 'count'|'skip' },
+    lost: [{ id, date, reason }], units: [Unit], lessons: [Lesson], adjustments: [Adjustment], baseline }`.
+    `Lesson` and `Adjustment` are today's shapes, ids kept, plus one written field, `on: ISO|null`, the date last
+    saved. `Unit = { id, name, color, code: string|null, days: int, pin: ISO|null, flex: int, start, end, placed,
+    short }`: `days` is what the teacher asks for, `pin` a start date that holds, `flex` how many of the days are
+    buffer (increment 2), and the last four are written at every save (below). A day type gains one optional
+    field, `pace: 'count'|'skip'`; absent means `count`, which is today's rule for every type that is not
+    `noSchool`. A course's own `pace` map overrides the type's. `start: null` is `meta.start`. No new
+    localStorage key: the active course is in the blob, so `check:registry` has nothing to add.
+  - *A course is in one of two modes, by whether it has lessons.* With lessons, the list is the plan: units are
+    the runs of equal `U<n>` in list order (a code that comes back after another unit is a second run, a second
+    unit), each matched to a `Unit` by `code` and run number so its name, colour and pin survive a re-import, and
+    `days` is read-only (lessons plus bumps in the run). With no lessons, the teacher types `days`. One placer
+    serves both, working on *slots*: a lesson, an anonymous unit day, or a gap (a bump).
+  - *What counts as a class day for a course.* `dayValue(cal, course, date)` returns `{ meets: bool, why, half,
+    letter }`. A date is a class day when all of these hold, tested in this order, and `why` names the first that
+    fails: inside `[course.start, meta.end]` (`outside`); a weekday (`weekend`); no day type with `noSchool`
+    (`closed:<typeId>`); no day type whose pace for this course is `skip` (`skip:<typeId>`); the A/B letter is
+    the course's, when `meets` is A or B (`rotation`); not in `course.lost` (`lost:<id>`). On a day with several
+    types a closing or skipping type wins over a counting one. `half` is today's test (`id === 'halfday'` or the
+    label), carried through to the ½ mark; a half day is a whole class day or a skipped one, never half a
+    count. **The A/B cycle keeps today's predicate**: a skipped testing day is still a school day and the letter
+    still advances, so the one predicate becomes two (`isTeachableDay` for the cycle, `dayValue` for pacing).
+    `meets: 'A'` with the cycle off is a problem the placer reports (`no-rotation`) and treats as `all`.
+  - *The module: `Tools/school-calendar/scv-plan.js`, new, pure, an ES module beside `scv-pacing.js`* (which is
+    not changed: `placeLessons()` and its assertions stay as the reference). Nothing in `_shared/`. No
+    function reads the clock; `todayISO` is always an argument. Dates walk in UTC like `scv-pacing.js`.
+    - `emptyPlan()`, `newCourse(name, opts)`, `newUnit(name, days)`.
+    - `readPlan(cal)` returns `{ plan, state: 'ok'|'none'|'broken'|'newer' }`. `broken` (not the shape above):
+      the page shows a banner, treats the plan as empty and moves the bad value to `cal.planBroken`, so nothing
+      is thrown away and a backup still carries it. `newer` (`plan.v > 1`): the calendar works, the plan is shown
+      read-only and written back untouched.
+    - `absorbLegacy(cal)` returns `{ cal, report }`, the migration (below). Idempotent.
+    - `abLetters(cal)` returns `{ ISO: 'A'|'B' }`: the page's `buildAbMap()` moved here in UTC, same letters.
+    - `dayValue(cal, course, date, letters)`, and `classDays(cal, course)` returning `{ days: [{ date, half,
+      letter }], excluded: [{ date, why }] }` for every weekday in range.
+    - `syncUnits(course)`: in lesson mode, rebuilds `units` from the runs, keeping matched records.
+    - `placeCourse(cal, course)` returns `{ courseId, days, excluded, byDate: { ISO: { kind:
+      'lesson'|'day'|'gap', unitId, lesson, n, of, half, reason } }, dateByLessonId, vacated, units: [{ id, start,
+      end, days, placed, short, open, half, pinIgnored }], overflow, orphanedAdjustmentIds, problems: [{ code,
+      unitId, detail }] }`. `byDate`, `dateByLessonId`, `vacated`, `overflow` and `orphanedAdjustmentIds` have
+      `placeLessons()`'s shapes, so the month grid, week strip, drawer and `buildIcs()` read the active course
+      with no change of their own. Problem codes: `no-rotation`, `pin-before-previous`, `pin-after-year`,
+      `short`, `empty-unit`, `no-class-days`.
+    - `placePlan(cal)` returns one placement per course, keyed by id.
+    - `stamp(cal, placements)` writes `lesson.on` and each unit's `start`, `end`, `placed`, `short` into the blob.
+    - `stored(course)` reads those back as a placement-shaped view, and `diffPlacement(before, after,
+      todayISO)` returns `{ moved: [{ kind: 'lesson'|'unit', id, label, from, to, by }], newlyShort, nowFits,
+      past: count of moved lessons whose old date is before today, summary }`; `describeDiff(diff)` is the
+      sentence.
+    - `setBaseline(cal, course, todayISO)`, `slip(cal, course, placement, todayISO)` (below).
+    - `splitByLetter(course)` returns two courses, and `convertDatedUnits(cal, unitIds)` returns `{ course,
+      refused: [{ a, b, why }] }` (below). Both are pure and are previewed with `diffPlacement` before the page
+      applies them.
+    - `carryForward(plan)`: the plan for a new year (below).
+  - *The placer.* Take the course's class days in order, index `i = 0`, and its units in order. For each unit:
+    if it has a `pin`, find `j`, the first class day on or after the pin. `j > i`: the days between are *open*
+    (class days with nothing planned, counted on the unit as `open`), and `i = j`. `j < i`: earlier work has run
+    past the pin; the pinned unit wins, every slot placed on day `j` or later is taken back off and counted
+    `short` on its own unit, and `i = j`. No `j`: the whole unit is short (`pin-after-year`). Then the unit's
+    slots take class days one each until the days run out; what is left is `short`. Year end is the last pin.
+    A gap is a slot: it takes its day and shows as today's "bumped" note. Edge cases, each with its answer:
+    a pin on a day that is not a class day starts the unit on the next one, and says so in the unit row; a pin
+    on or before the start of the unit before it is not honoured (`pin-before-previous`, `pinIgnored: true`),
+    so a later unit can shorten the one before it but never remove it or reorder the list; two units pinned to
+    one date: the second is `pin-before-previous`; `days: 0` places nothing (`empty-unit`); a short unit keeps
+    its first days and loses its last, and in lesson mode the lost ones are `overflow`, which so means "does not
+    fit before the next pin or the year's end" and is today's meaning when there is no pin; a course whose range
+    holds no class day reports `no-class-days` and places nothing. **The placer never changes a count, a pin or
+    the order.** It reports what does not fit; the teacher decides what to cut.
+  - *What a bump means once units flow: there are two, and today's UI has one button for both.* "Ran long" is
+    about the lesson: it needs another day wherever it lands. That is today's adjustment, kept as it is,
+    anchored to the lesson. "Assembly" is about the date: this class did not happen that day, whatever was
+    planned. That is new: `course.lost`, a date with a reason, which is not a class day for that course only.
+    They differ when an earlier day changes later. A closure added before a lesson-anchored gap moves the gap
+    with its lesson (today's "no double-shift" case, kept). A closure added *on* a lost date changes nothing,
+    since the date was already not a class day, and removing the lost entry afterwards changes nothing either.
+    A lost date that is not a class day anyway is inert and listed as such. The drawer offers both by name
+    ("This class didn't meet…" and "This lesson needs another day…"); in a course with no lessons the second is
+    "add a day to this unit" (`days + 1`). Bumps saved before the build stay lesson-anchored: their `createdOn`
+    is not proof of which kind was meant. *Rebinding* is `rebindAdjustments()` as today, by raw code, per course;
+    lost dates need none, and a unit's name, colour and pin are rebound to its run by `syncUnits()`.
+  - *Pinned and floating.* A floating unit starts on the class day after the one before it ends, so a lost day
+    moves it. A pinned unit starts at its pin. Units pinned back to back behave as fixed windows did, with the
+    loss said aloud: a snow day inside the first leaves it `short: 1` and the second does not move.
+  - *Buffers (increment 2, designed here because it needs the baseline).* A unit's `flex` (in lesson mode, its
+    lessons whose number starts `BUF`, the convention the page already documents) can take a loss so the unit's
+    end holds. `taken = min(flex, class days lost inside the unit's baseline span + gaps added in the unit since
+    the baseline)`; that many flex slots, last first, are not placed and are listed as "used as a buffer for
+    <date>". Off by default per course (`absorb: false`), and never on for a course made by the migration.
+  - *"N days behind".* Measured against a **baseline**, the plan as it stood: `course.baseline = { setOn, start,
+    mask, seq, adjIds, units: [{ id, days, pin }] }`. `mask` is one character a calendar day from `start` to
+    `meta.end`, `1` for a class day; `seq` is the lesson order as `unit-num-letter` keys (lesson ids are
+    positions and change on re-import). About 2 KB a course. From it the baseline's own placement is rebuilt
+    exactly. Let X be what the baseline put on the last baseline class day on or before today (a lesson by key,
+    first match, or day *k* of a unit). `behind` is the number of the course's class days after today up to and
+    including the day X sits on now; 0 when X is on or before today; negative, *ahead*, when what is on today
+    now was planned later. It counts the course's class days, not school days: an A course is behind in A days.
+    Before the course starts it is 0; if X no longer exists it falls back to counting placed slots and says
+    "about". `slip()` returns `{ behind, about, asOf, item, plannedOn, nowOn, causes, unit: { id, endWas, endNow
+    }, short }`. `causes` is the ledger, worked out by comparing, not kept by hand: class days lost (each with
+    its `why` and the day's label), class days gained, gaps added, days or lessons added or removed before X,
+    less open days used up before a pin and buffers taken. **`behind` equals the sum of `causes`, always**; that
+    identity is the test that the ledger is honest. The sentence: "World History: 3 class days behind the plan
+    of Sep 8. U3-06 was planned for today and is now Jan 22. Lost: Jan 12 and 13 (Snow Day). Added: one day for
+    U3-02 (ran long)." When the baseline is set: when a course is made or first distributed; again at every
+    save while today is before the course's first class day (still planning); by a "Make this the plan" button
+    at any time; and at migration, from the placement as it then stands. A migrated course so starts at 0 with
+    its old bumps inside the baseline, and its row says so. Re-importing a lesson list keeps the baseline.
+  - *The migration: `absorbLegacy()`, run by the page after every load and every JSON import.* It is keyed on
+    what it finds, not on a version, so a v1 backup, a v2 backup and a blob an older page wrote into are one
+    case. (1) No `cal.plan`: add an empty one. (2) `cal.pacing` has lessons or bumps: they become a course
+    (`meets: 'all'`, no pins, no skips, no lost dates, `start` the old `startDate`), units from the codes, and
+    `cal.pacing` becomes `emptyPacing()`. Every lesson lands on the date it had: the placer with those settings
+    is `placeLessons()`, and a test holds it to that. (3) **`cal.units` is not touched.** The dated units stay
+    where they are, drawn and counted by today's code, in today's card, which is shown only while the list is
+    not empty and gains one button, "Turn into a course…". Nothing a teacher typed is rewritten. (4) If an older
+    page later writes lessons into `cal.pacing` again, step 2 runs again and makes a second course; the report
+    says so. The page saves after absorbing only if `diffPlacement` is empty, and shows one line ("Your lesson
+    sequence is now the course 'Course 1'. No date changed."). "Turn into a course" (`convertDatedUnits`) sorts
+    the chosen units by start, refuses with the pairs named if two overlap or one holds no school day, and
+    otherwise makes each a unit pinned at its start with its counted days, which by the measurement above is
+    the same days; the preview shows every unit's dates before and after, and "let these flow" (clear the pins
+    after the first) is a second, separate, previewed step, the first time a date can move.
+  - *Recomputing when the calendar changes under a plan.* Every change in 032 goes through one `commit(label,
+    fn)`: keep a copy of `cal`, apply, place, `diffPlacement(stored, fresh)`, `stamp`, save. If anything moved, a
+    bar says what ("Marking Jan 12 as Snow Day moved 31 lessons one class day later; Unit 3 now ends Feb 3, was
+    Feb 2; 1 lesson no longer fits before Jun 11.") with **Undo**, which writes the copy back, one step deep.
+    Lessons whose old date is past are counted apart, since those are the surprising ones. This covers a day
+    tag, a day type's `noSchool` or pace, the year's dates, the A/B anchor, the `.ics` and `.xlsx` imports and
+    a plan edit alike. **On load**, if the dates in the blob are not what the placer gives (an older page wrote
+    it, a file was edited by hand, or a later version changed the placer, which `plan.algo` names), the bar
+    shows the same list and nothing is saved until the teacher takes it ("Keep these dates") or exports first.
+    The dates written by `stamp()` are also what a reader outside 032 gets without running any placer.
+  - *More than one course.* Courses are independent: own lessons, units, lost dates, baseline and `slip()`. P2's
+    page shows one active course on the grid, week strip and `.ics` (so a one-course calendar is as today), every
+    course's unit bands, and one "behind" line a course. "Split into A and B" turns one alternating list into
+    two courses (`meets: 'A'` and `'B'`, each with its letter's lessons and their bumps); with no bumps the
+    preview shows no date changing, and after it a bump moves one track only. Side by side is P3.
+  - *New year.* `carryForward()` keeps courses, names, colours, `meets`, unit names, `days`, `flex` and lessons,
+    and drops pins, lost dates, bumps, baselines and stamped dates; the confirm says how many of each.
+  - *What each file changes at build.* `032` page: a Courses card in place of Lesson Pacing (course tabs; name,
+    meets, start; the lesson box and both imports per course; a unit table of name, colour, days, pin, start to
+    end, short and open; the behind line), the two drawer actions, "Count for pacing" on each day type that is
+    not `noSchool`, the notice bar, `commit()`, the Units card only when `cal.units` has entries, and the unit
+    print table per course with Short. `scv-seed.js`: `plan: emptyPlan()` on the seed and blank. `scv-store.js`:
+    nothing. `scv-pacing.js`: nothing. `sw.js`: `scv-plan.js` in `PRECACHE_URLS` and `SHELL_URLS` (032's files
+    are in both) and a `CACHE_VERSION` bump. `Tools/a11y-sweep/seeds.mjs`: a 032 seed with a course, so the
+    sweep sees the new card. **010, 045 and 009: nothing**; they read fields this leaves alone.
+  - *What P2 needs from P1, which is not built: nothing to ship.* It uses what 032 has: the school-day
+    predicate, `abCycle`, the page's local "today" passed in. What P1 changes for it later: (a) richer meeting
+    patterns (weekday lists, longer cycles, a rotation that does not slide) come in through `meets`, which is
+    why the placer asks one function whether a course meets on a date; (b) `gradingPeriodOf()` lets a unit say
+    "ends 2 days after the marking period"; P2 has only the `mpend` tags and derives nothing from them; (c) a
+    half day's real length from a bell schedule is what a fractional count would need; (d) `_shared/school-day.js`
+    is where 010 and 045 should get "today's lesson, N behind" in P3, reading the stamped dates; whether the
+    pure functions then move to `_shared/` for classic scripts is P3's call.
+  - *Tests that would prove it.* `Tools/school-calendar/test/plan.test.mjs`, pure Node, added to
+    `test:school-calendar` and `suites.json`: **day values** (each `why`, the order, several types on a day,
+    the course override, cycle off with `meets: 'A'`); **letters** (`abLetters` against a copy of `buildAbMap`
+    kept in the suite, anchor before, inside and after the year, all 184 days); **equivalence** (the cases of
+    `smoke-pacing.mjs` sections 6 to 10 through `placeCourse`, then 500 seeded random lists, bumps and closures:
+    same `byDate`, `vacated`, `overflow`, orphans as `placeLessons`); **flow** on the seed (units of 10, 8 and 12
+    days are Aug 31 to Sep 14, Sep 15 to 24, Sep 25 to Oct 12; an A course's 10-day unit is Aug 31 to Sep 25);
+    **the snow-day fixture** this path's Verification asks for (a 20-day unit from 2027-01-04 ends 02-02, then
+    02-03; every later floating unit moves one class day; a pinned one does not and the unit before it is short
+    1); **pins** (unit 3 pinned at Oct 1 leaves 4 open days; pinned at Sep 21 leaves unit 2 short 4; a pin on a
+    Saturday; before the previous start; after the year; two on one date); **lost dates** (one date; then a
+    closure on it, no second shift; then the entry removed, no shift; a lost weekend, inert); **A and B** (92
+    and 92; the snow day flips all 99 later letters and the A course follows; `splitByLetter` with no bumps
+    moves nothing; one bump on the joined list mismatches 143 lessons and on a split course none); **slip** (no
+    change 0; a closure before today 1 with its cause; one after today 0 today and the unit end a day later; a
+    gap; a day given back; open days before a pin absorb it; a lesson inserted before X; X removed says about;
+    500 seeded edit sequences with `behind` equal to the sum of causes); **diff**; **absorb** (v1; v2 with
+    lessons; with units only, `cal.units` deep-equal before and after; with both; twice gives the same blob; an
+    older page's second write makes a second course; a broken plan kept in `planBroken`; `v: 2` read-only; the
+    shipped `isValid()`, copied into the suite, still passes the result); **convert** (every start/end pair in
+    the seed year gives the same days; overlap refused; a window with no school day refused); the whole file
+    again under `TZ=Pacific/Kiritimati`. `smoke-plan.mjs`, Chromium, the next free port: a v2 blob with lessons,
+    bumps and dated units loads with every lesson in the cell it was in and `cal.units` unchanged in storage;
+    010's and 045's calendar panels have the same HTML from the blob before and after; the snow-day shortcut
+    shows the bar and Undo restores the stored bytes; a blob with stale stamped dates shows the bar and storage
+    is not written until it is accepted; both drawer actions; a pin made in the table; the convert preview; the
+    behind line with the clock pinned (`page.clock.setFixedTime`, every date in the fixture from that instant);
+    `.ics` text the same for the migrated one-course blob as from v245. Then `smoke-pacing.mjs` and
+    `smoke-week.mjs` unchanged and green, `test:a11y --only 032` with no allowance, `path7:next --only 032`.
+  - *Left out on purpose.* A half day as half a count (two half days weeks apart are not one lesson; revisit
+    with P1's bell lengths). A unit that ends on a date in a flowing course (two pinned units say the same). Due
+    dates. Freezing the past. Getting *ahead* by doubling lessons into a day. Per-date overrides for one course
+    other than a lost date. Suggesting what to cut. Reordering by drag (up and down buttons). More than one step
+    of undo. Marking-period warnings, the side-by-side view, any consumer, per-course `.ics` (P1, P3, P4).
+  - *Increments.* (1) `scv-plan.js` with the placer, `absorbLegacy`, `stamp`, `diffPlacement`, the notice bar and
+    `commit()`, the Courses card for one or more courses in lesson mode, lost dates: nothing looks different for
+    a calendar with no pacing, and a migrated one keeps every date. (2) Typed units with pins, the dated-unit
+    conversion, the pace setting. (3) The baseline and "behind". (4) Buffers, the A/B split, the new-year carry.
+  - **Questions for Devon. None is answered here; each says what the design assumes until he does.**
+    1. *Half days.* Does a half day count as a class day for pacing? Assumed: yes, as today, with the ½ mark,
+       and a teacher can set the day type to skip. Is skip the better default for a new calendar?
+    2. *Testing days.* Count or skip by default, and is a testing window the whole school's or different by
+       course? Assumed: count, as today; the type can be set to skip, and a course can override it.
+    3. *A/B after a snow day.* 032's cycle slides, so the lost day's letter goes to the next school day and every
+       later day flips (99 of 99 after one January day). Is that what East Middle does, or do the printed
+       letters hold and that letter's classes simply lose the day? It decides which course is behind. Assumed:
+       today's sliding, unchanged.
+    4. *Behind what.* Is "the plan as it stood when the course started, until I press Make this the plan" the
+       right thing to measure against, counted in that course's class days? Or should it be measured against
+       the county sheet's own dates, where one was imported?
+    5. *Buffers.* When a day is lost, should a buffer day in that unit be used up automatically so the unit
+       still ends on time, or should everything always move later and the teacher decide? Assumed: move later;
+       buffers are a per-course switch, off.
+    6. *The past.* Entering a closure for a date weeks ago re-dates every lesson since, taught ones included.
+       Assumed: recompute, say how many past lessons moved, offer Undo. Should the past be frozen instead?
+    7. *One list or two for A/B.* The county sheet is one alternating list. Assumed: it stays one course on
+       import and on migration, and "Split into A and B" is offered. Should an import split it at once?
+    8. *Dated units already saved.* Assumed: they stay as they are for good, with the offer to turn them into a
+       course. Should the page press teachers to convert, or is the old card welcome to stay?
+    9. *New year.* Assumed: unit lengths and lessons carry, pins and lost dates do not. Should pins carry,
+       shifted, the way lesson notes can be?
+    10. *The word.* "Course" for one prep's plan, "class day" for a day it meets. His words, if different.
 - **P3 — Consumers.** 004 Timer: "rest of this period" one click, half-day aware;
   010: current/next period, auto-advancing board; 001: period on every trip and in
   the long-range report; 036/037: grading window from the calendar; 044/045: "is
