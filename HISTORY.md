@@ -9,6 +9,101 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P3, increment 12: 016 adopts the print kit, three sheets, label stock; the Avery sheets had been printing a third of an inch low; P3 is finished (2026-10-05, AI-13, `CACHE_VERSION` v242)
+
+Audit entry AI-13, old rank 6 (2+). Twelfth and last increment of P3: 016 (QR code generator, 2,948 lines before,
+two `@media print` blocks and an `@page` it rewrote for label stock), by the recipe. **All thirteen adopters print
+through the kit, the row is deleted, and ranks 7 to 169 are 6 to 168.** P4 and P5 untouched.
+
+- **What the notes had wrong about 016, read off its source by the session before and not run:** it has three
+  print buttons and three `window.print()` calls, not five; and its printed codes are `<img>`s holding a canvas's
+  PNG, not canvases, so the "canvas drawn on `beforeprint` prints as replayed commands" trap never reached it.
+  The single code and the grid are kept current by the tool's own render all the same.
+- **Three areas inside one `#printArea`, with their old ids** (`#print-area`, `#print-area-bulk`,
+  `#print-area-inventory`). Which one prints is the tab that is showing: the body's `mode-bulk` / `mode-scan`
+  classes, which the page already had. The buttons' body classes (`print-bulk`, `print-inventory`) still go on
+  before `print()` and come off on `afterprint`, and win over the mode. My call, against the recipe's "the body
+  classes become `.active`": 016's older suite (`smoke-checkout.mjs`) asserts those classes, and it passes
+  unedited, as does `smoke-roster.mjs`.
+- **Which kind each sheet is.** *One code:* not a card, a picture centred on a page; the area is `100vh` (042's
+  finding: viewport units, not `--pk-page-h`). *The plain grid:* a grid of the tool's own, `{ cols }` and no
+  `perPage`. The old CSS was `repeat(cols, 1fr)` with a 14 px gap and no height, one grid running on over the
+  pages; a code is a share of the width and as tall as its picture and label. *Label stock:* a grid of the tool's
+  own with `{ cols, perPage: cols * rows }`. A label is exact inches (`width` and `height` inline, as before) at
+  an exact pitch, and the tool means "30 to a sheet", which it says on screen. The label's size and gutters are
+  custom properties on the area that a two-class rule reads. *The inventory:* a table, now built with
+  `textContent` (inline-sinks 9 to 8).
+- **The kit changed once, and it is the smallest thing that would do:** `PrintKit.setPage({ margin })` takes two
+  lengths, top and bottom then the sides, because Avery 5160 is half an inch down and 3/16 in from the side and
+  5163 a quarter. `--pk-margin` stays the top and bottom, which is what the half and quarter sheets divide;
+  `--pk-margin-x` is set only when the sides differ, and `--pk-area-w` reads it. Three or four lengths, or a
+  second value that is not a length, fall back to the default as any bad margin does. `print-kit.test.mjs` 85 to
+  90, `smoke-print-kit.mjs` 81 to 87. The twelve earlier adopters pass one length and their suites are untouched.
+- **`syncPrintPage()`** replaces `setPrintPageMargin()` and the `<style id="print-page-style">`: it reads the same
+  two things the CSS does (the mode, a button's class) and calls `setPage()` with the stock's margins while a
+  stock grid is the sheet that prints, and half an inch otherwise. It runs when the tab changes, when a grid is
+  generated, on each button and on `afterprint`. So Ctrl+P on the Bulk tab prints labels on the labels' page.
+- **Old against new** (old page from `git show origin/main:` through `page.route()`; `page.pdf()` on Letter at
+  half an inch where the old sheet had no `@page`, on the old `@page` for stock; print media at the printable
+  width, 720, 780 or 768 px): 58 states, light and dark. One code at four sizes and with a caption; the plain
+  grid 2, 3 and 4 across with 1, 3, 13 and 40 codes, cut lines on some; Avery 5160 with 1, 3, 30, 31 and 65
+  labels and 5163 with 1, 3, 10, 11 and 25; the inventory with 1, 6 and 70 items. **In the 38 states that are not
+  label stock everything is the same:** every box's left, top, width and height, the pictures, the text, the
+  decoded QR text, the PDF page count and the raster (`pdftoppm -r 96 -gray`, every page byte for byte). All 710
+  printed codes decode to their line's text on both pages.
+- **Label stock is not the same, and that is the fix.** On the old page `<body>` kept its `padding: 2rem 1rem
+  4rem` in print, and the grid was its flex child. So the first sheet's labels started 32 px, a third of an inch,
+  below the die cut, its last row did not fit and ran on to the next sheet (27 labels on a sheet of 30, 8 on a
+  sheet of 10), and the second sheet started in the right place. 30 labels on Avery 5160 printed two pages. This
+  is not from P2's `display: none` rule: the padding was there before it. Now the sheet starts at the first
+  label's corner. Measured: the first label's top is 0 from the printable page; every label is its exact size at
+  its exact pitch; the raster of a sheet of three is the old raster moved up 32 px and otherwise identical; the
+  first ink on 5160 is at 117, 62 px on the 816 x 1056 px page on sheets one and two alike; 30 labels are one page,
+  31 two, 65 three. The left edge was right before, by the luck of `align-items: center` on an overflowing child.
+  My call that this is "better" and not a change of position to hold: the page's own comment and its hint on
+  screen both say the labels are aligned to the vendor's template.
+- **Kept on purpose:** the plain grid and the inventory still start `2rem` down on the first page and are as wide
+  as their content, centred (`width: fit-content; max-width: 100%; margin: 0 auto`), which is what being a centred
+  flex child of `<body>` made them. That is why their rasters are identical. Dropping the `2rem` is harmless and
+  would make page one start where page two does; left for whoever wants it, since it moves every held number.
+  `<body>`'s `4rem` at the bottom is gone with the editor; it changed no page count in the 38 states.
+- **Ctrl+P** printed the single-code area whatever tab was showing, with whatever picture the button last set, or
+  none. It prints the code on screen (the picture's `src` is set by `render()`, and removed when there is no
+  code, so no broken image), the generated grid on the Bulk tab, and the inventory on the Scan tab, rebuilt on
+  `beforeprint` so its "Printed" time is the print's. That sheet is text, so `beforeprint` is safe for it.
+- **The audit lost its only view of 016 and got it back.** `audit-print` used to see 016's empty single-code area
+  (an `<img>` with alt text and no picture) and count the page as measured. With no picture there is now nothing
+  on the paper until something is typed, and the audit said "Not measured: 1". `print-audit-prep.mjs` has two
+  entries for 016 (a link typed, a bulk grid generated): six states, no finding, not measured 0.
+- **Also removed:** the `@media print` block that put `--success` and `--warn` back to their light values (AI-35).
+  Nothing on any of the three sheets uses either token; the audit's DARK is 0 and `test:theme` passes.
+
+**Suite.** `Tools/qr-code-generator/test/smoke-print.mjs` (`npm run test:qr-code-print`, port 8479, 1,235
+assertions): the static shape of the page; each button's sheet, alone on the paper, light and dark; the single
+code's box; the plain grid's left, top, widths, picture sizes and gaps against the old page's numbers; every label
+on both stocks against its size and pitch; the stock table against the vendor's arithmetic (8.5 and 11 in); every
+code decoded; PDF page counts, exact for one code and for label stock, a property of the measured rows for the
+plain grid and the inventory, whose heights are text; typed markup as text; Ctrl+P tab by tab; the page rule
+following the sheet. `smoke-print-tail.mjs` has 016's inventory button now (it had the other two): 520.
+
+**Checks.** All 13 guards incl. `check:precache -- --base origin/main` and `check:adoption -- --check`; suites via
+`run-suites.mjs --only`, one folder at a time: qr-code-generator (its two older suites and the new one), print-kit (incl. `smoke-print-tail.mjs`, 520), the twelve earlier adopters (076 070 077 043 023 042 074 051 040 064 018 017), roster, share, theme, service-worker, board-check, all 19 folders exit 0 (35 minutes); a11y sweep `--only 016` clean;
+`audit-print --only 016 --check` no finding of any kind, matches the baseline.
+
+**Not verified.** Nothing was printed on paper and no sheet of Avery labels went through a printer: the positions
+are Chromium's PDF, rasterised. No phone scanned a printed code. Full `npm test` was not run although
+`_shared/print-kit.js` and `.css` changed: every page that links the kit was covered by the folders above, and
+CI's run is the check for the rest. Not compared against the old page: an overlay or logo on the code, colours
+other than black on white, error correction other than the default, a line that fails to build, more than 70
+items. The suite was not run against the old page as a whole; the label-stock numbers it asserts are the ones
+the old page failed in the measuring run.
+
+**Traps.** `getBoundingClientRect()` after a button below the fold has the scroll in it: add `scrollY` or the first
+box is 32 px off in some states and not others. A typed link re-renders on a debounce, so a suite waits for the
+picture's `src` to change, not for it to equal the canvas. `audit-print --check` passing does not mean the page
+was measured: read the "Not measured" line. The Tier 1 table was 169 rows, not the 170 the header said (a stray
+`| 1 |` row elsewhere matches the same grep); it is 168 now. The next free suite port is 8480.
+
 ## Path 7 P3, increment 11: 017 adopts the print kit, five print buttons, a default sheet with no `.active`; the kit's word-wrap broke the slips' write-in rules (2026-10-05, AI-13, `CACHE_VERSION` v241)
 
 Audit entry AI-13, rank 6 (2+). Eleventh increment of P3: the sixth of the card-grid tools after 074, 051, 040, 064
