@@ -9,6 +9,87 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P4, increment 2: `ExportKit`'s file helpers (`toCsv`, `toXlsx`, `toZip`, `download`, `filename`), and 064's Download PDF is the layer's first adopter (2026-10-05, AI-13, `CACHE_VERSION` v244)
+
+Audit entry AI-13, rank 6 (2+). Second increment of P4. **The row stays, rewritten.** P5 untouched.
+
+- **What shipped, part one.** The five helpers the P4 bullet designed, built to that design and written into it as
+  built. Nothing was vendored: `toXlsx` runs on the SheetJS already in `_shared/vendor/xlsx/`, `toZip` on the JSZip
+  in `_shared/vendor/jszip/`, and each throws an error naming that file when its library is not on the page.
+- **What the repo had before, which is why they exist.** Twelve tool pages build a `text/csv` download by hand, with
+  seven private `csvCell`/`csvEscape`/`toCsv` functions between them; 38 pages call `URL.createObjectURL`;
+  `share.js` and `htcm-export.js` each have a private `download()`. None of the CSV writers guards a formula. No
+  tool was moved to the new helpers in this increment.
+- **Decisions, mine, each cheap to reverse.** (1) *The formula guard reads the type, not the text.* The design says
+  a cell that starts with `=`, `+`, `-`, `@`, a tab or a return gets a leading apostrophe. A JS number is not a
+  typed cell: `-5` the number is written `-5`, `"-5"` the string `'-5`. Guarding numbers would turn every negative
+  score into text. (2) *`toXlsx` writes dates and numbers as themselves.* The design says "every typed value
+  written as a string cell, never a formula"; I read "typed" as a string. A string is a shared-string cell whatever
+  it starts with, a number a number cell, a boolean a boolean, a Date a serial with a date format, worked out from
+  the local wall clock so SheetJS's own time-zone handling is not in it. (3) *Shared strings (`bookSST`).*
+  SheetJS's default writes `t="str"`, the type of a formula's cached string; Excel reads it as text, but `t="s"`
+  is what a spreadsheet writes itself. (4) *"Names lose their path separators" is a hyphen, not nothing:*
+  `sets/period 1/roster.csv` becomes `sets-period 1-roster.csv`. (5) `toXlsx` returns a Blob (the design did not
+  say); `toZip` deflates. (6) `download()` returns the Blob it saved, which is what lets a suite read it.
+- **How it was tested.** CSV is read back by an RFC 4180 reader written in the suite: the cases by hand, then 600
+  random tables for three delimiters with `raw: true` (cell for cell), 600 guarded, and a sweep that no guarded
+  file holds a field a spreadsheet would run. ZIP and XLSX are read by `Tools/export/test/_zip-read.mjs`, a
+  reader that walks the central directory and the local headers, inflates with `node:zlib` and works out every
+  CRC-32 itself (its CRC is checked against the standard value for "123456789"); then by `unzip -t`/`-p` and by
+  Python's `zipfile` where the machine has them, and the run prints which it used. The workbook's sheet XML,
+  shared strings and number formats are read from the package, and the same file through SheetJS's reader as a
+  second opinion. `download()` is tested in Chromium with the anchor's click caught and the file read from its
+  blob URL (name, type, bytes), plus one real click read through `harness.downloadText()` and Playwright's
+  download event for the name. `export.test.mjs` 168 to 285, `smoke-export.mjs` 76 to 106.
+- **Broken on purpose: 54 ways, 53 caught.** The one that passed is not a gap: taking `mimeType` out of
+  `generateAsync` changes nothing, because `application/zip` is JSZip's default. Two more passed on the first run
+  and were test gaps, both closed: the default BOM (my mutation text did not match, see below) and `download()`
+  outside a page (the Node context had no `URL`, so the guard was never the line that threw).
+- **What I got wrong.** A literal U+FEFF went into `export.js` and both suites where `'\uFEFF'` was meant: an
+  invisible character in source that happened to work. Found only because a mutation could not find its text;
+  all three are escapes now. A fetched blob URL reports its type without parameters (`text/csv`, not
+  `text/csv;charset=utf-8`), so the suite reads the charset off the returned Blob. JSZip tells a typed array by its
+  own realm's constructor, so the Node suite makes its arrays inside the vm context; and JSZip needs `FileReader`
+  for a Blob, so Blob and canvas inputs are browser assertions only. A helper module under `test/` is an ORPHAN to
+  `check:tests` unless its name starts with `_`.
+- **What shipped, part two: 064.** `htcm-export.js`'s `exportPdf` no longer builds a jsPDF document or places an
+  image: it asks `ExportKit.paginate` for the pages, `mirrorPage` (portrait, long edge) for the cell behind each
+  front, and `toPdf` for the sheet (N-up 3 x 2 on letter, margins and gutter in points, each card a JPEG data URL at
+  the old 0.92, an empty cell a draw function that draws nothing). The page's print button takes `paginate` and
+  `mirrorPageRows` from `ExportKit`, and the page loads `export.js` in place of `duplex-print.js`.
+  `smoke-photo.mjs` had two lines renamed from `DuplexPrint` to `ExportKit`, no assertion loosened. PNG and ZIP
+  export are untouched and still use 064's own `download()`.
+- **Old against new.** The old export was saved first, for eight decks (1, 2, 5, 6, 7 and 13 cards, three themes,
+  some cards with a theme of their own), from files identical to `origin/main`. Read with a PDF reader that
+  follows the `q`/`cm`/`Do` operators: the same page counts, every page 612 x 792, the same JPEG bytes in the same
+  order on every page, every box within 1.2e-13 pt. Rasterised (`pdftoppm -r 96 -gray`): **6 of 24 pages
+  identical at first**, the whole middle column differing. The middle card's left edge is 216 pt, exactly 288 px,
+  and `layout()` had it at 215.99999999999997 with a scale of 0.9999999999999999, so the rasteriser started the
+  picture a pixel early. `layout()` now rounds its cells, slots and scales to a billionth of a point (two Node
+  assertions), and the rasters are identical on 24 of 24 pages. That is a change to increment 1's math, asked for
+  by its first adopter; all of increment 1's assertions pass on it.
+- **The new suite.** `Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs` (`npm run
+  test:trading-card-pdf`, port 8481, 110 assertions) presses the button for eight decks and reads the download: it
+  matches every image in the file, by SHA-1, to the JPEG the page renders for one card's front or back, so it knows
+  which card is in which cell, and checks the grid, the card size and that each back is behind its own front when
+  the sheet is turned. It needs no outside program. **Broken on purpose 13 ways** (backs not mirrored, the wrong
+  edge, backs first, the gap, the card width, the margin, five to a page, the file name, `done` never called, the
+  JPEG quality, every back the first card, `tidy` removed, `backIndex`'s axes swapped): all caught.
+- **Found and left.** `_shared/duplex-print.js` now has no page loading it (`check:adoption` prints it under
+  "Referenced by no tool page"): 040 never loaded it, it has its own copy in `vfg-layout.js`. The brief for this
+  increment said not to delete it, so it is still in the tree and both precache tiers; the row says it can go
+  without waiting for 040. The old export added each card to the document as it was drawn; the new one holds
+  every card's data URL until the last is drawn, so a very large deck holds more memory at once (not measured;
+  13 cards, 26 pictures, took 0.8 s against 0.6 s).
+- **Not verified.** No CSV or workbook was opened in Excel, Google Sheets, Numbers or LibreOffice: huginn has
+  none, so the apostrophe guard and the string cells are checked as bytes and XML, not as what a spreadsheet
+  shows. Nothing was printed and no sheet of cards went through a duplex unit. A deck with photos was not in the
+  old-against-new comparison (every card had `image: null`). `download()` was run in Chromium only; Safari's
+  handling of a blob URL on an anchor was not tried. Whether CI has `unzip` or Python is not known; the suite's own
+  reader runs either way. Full `npm test` was not run: the guards, and `run-suites.mjs --only`, one folder at a
+  time, for export, historical-trading-card-maker, service-worker and board-check. CI on the wave PR is the check
+  for the rest, and it runs site-wide because `_shared/`, `suites.json` and `package.json` changed.
+
 ## Path 7 P4, increment 1: `_shared/export.js`, the imposition and pagination math and `toPdf` for drawn pages; no adopter (2026-10-05, AI-13, `CACHE_VERSION` v243)
 
 Audit entry AI-13, rank 6 (2+). First increment of P4, and the part the backlog marked for Fable. **The row stays,
