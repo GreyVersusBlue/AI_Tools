@@ -9,6 +9,53 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P4, increment 1: `_shared/export.js`, the imposition and pagination math and `toPdf` for drawn pages; no adopter (2026-10-05, AI-13, `CACHE_VERSION` v243)
+
+Audit entry AI-13, rank 6 (2+). First increment of P4, and the part the backlog marked for Fable. **The row stays,
+rewritten; nothing adopts the file yet.** P5 untouched.
+
+- **What shipped.** `_shared/export.js` publishes `ExportKit` (a classic script, like `print-kit.js`): `booklet()`
+  (saddle stitch, signatures, a duplex unit that turns on either edge, right-bound books), `nUp()`, `sheetCount()`,
+  `sides()`, `flipAxis()`, `backIndex()`, `mirrorPage()`, `paginate()` and `mirrorPageRows()`, `layout()`, `creep()`,
+  `cutMarks()`, `matrix()`, `paginateBlocks()`, `pdfPlan()` and `toPdf()`. It is in `PRECACHE_URLS` and `SHELL_URLS`
+  and is an ESLint global. `BACKLOG.md`'s P4 bullet has the surface, including the file helpers that are not built.
+- **The one idea the duplex answers hang on.** `flip` is the edge of the paper, and what matters is the axis the
+  sheet turns about as the reader sees it: vertical for portrait long-edge and landscape short-edge, horizontal for
+  the other two. `duplex-print.js` only ever knew the first case. A booklet sheet is landscape, so it folds right
+  on the short edge; told `flip: 'long'`, `booklet()` swaps the halves of each back and turns them 180 degrees.
+- **How it was tested, since no paper is involved.** The Node suite does not restate the formulas. It folds: sheets
+  nested, leaves read off outer to inner and back, and the result must be 1, 2, 3 with every page upright, for
+  every count from 0 to 97, seven signature sizes, both edges, both bindings. A card's back is checked by turning
+  its cell over about the axis and comparing rectangles, for every grid to 5 x 6. Flow pagination is 4,000 random
+  documents against invariants (nothing lost, nothing overlapping, nothing off a page unflagged, the plain case
+  equal to a first-fit reference). The browser suite builds eleven PDFs on the real jsPDF from grey canvases with
+  a black corner, reads the `cm` operators out of the file, rasterises with `pdftoppm` and samples every slot: the
+  grey says which page, the corner which way up. 167 and 76 assertions. **The module was then broken fifteen ways
+  on purpose** (halves swapped, rotation dropped, axes swapped, a matrix term dropped, the gap ignored, creep's
+  sign, the signature offset, and so on): every one failed a suite.
+- **What I got wrong, and what the suites found.** Three of my hand-worked expectations were wrong and the code
+  right: a letter page in a half-letter cell is 65%, not 50%; 80 + 30 does not fit on a page of 100; and one
+  `flipAxis` line asserted the opposite of the sentence beside it. The property test found two real bugs: a
+  splittable block of no height was placed below the foot of a full page, and a heading with `keepWithNext` was
+  left at the foot of a page when what followed could be cut, because the heading rule and the slice rule used
+  different smallest slices. Both fixed in the module; the assertions were not loosened. The browser suite's own
+  first reading of the file skipped empty content streams and misnumbered the sides after a blank one.
+- **Decision, mine, cheap to reverse: `toPdf` takes drawn pages, not a DOM element.** The backlog wrote
+  `toPdf(printArea, …)`. jsPDF's `html()` needs html2canvas, which is not vendored, and makes a picture of the
+  page. The print dialog already saves a kit sheet as a real PDF. `BACKLOG.md`'s P4 bullet has the reasoning and
+  the three steps that reverse it.
+- **Not done on purpose:** no adoption (064, 040, then deleting `duplex-print.js`), no `toCsv` / `toXlsx` /
+  `toZip` / `download`. `duplex-print.js` and `vfg-layout.js` are untouched; the Node suite loads all three and
+  holds `paginate` and `mirrorPageRows` to the same answers over 2,000 random decks, so the copies cannot drift
+  before they are deleted.
+- **Not verified.** Nothing was printed. No booklet was folded and no duplex unit turned a sheet: the fold and the
+  turn are models written from how paper behaves, and a model can share a mistake with the code. `pdftoppm` is on
+  huginn; whether CI's runner has it was not checked, and without it the browser suite checks structure only and
+  says so. `toPdf` was run on the vendored jsPDF 2.5.2 in Chromium only. An `<img>` source was not exercised in the
+  browser (canvas, data URL and draw function were). Creep was checked as arithmetic, not against a trimmed book.
+  Full `npm test` was not run: the guards, and `run-suites.mjs --only` for export, service-worker, board-check,
+  historical-trading-card-maker and vocab-flashcard-generator.
+
 ## Path 7 P3, increment 12: 016 adopts the print kit, three sheets, label stock; the Avery sheets had been printing a third of an inch low; P3 is finished (2026-10-05, AI-13, `CACHE_VERSION` v242)
 
 Audit entry AI-13, old rank 6 (2+). Twelfth and last increment of P3: 016 (QR code generator, 2,948 lines before,

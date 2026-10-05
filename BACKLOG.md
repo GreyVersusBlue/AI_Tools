@@ -87,6 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v243), rank 6, Path 7 P4 increment 1: `_shared/export.js` (`ExportKit`) exists, with no adopter.** The
+  imposition and pagination math, pure: booklets (signatures, either duplex edge, right-bound, creep), N-up, where a
+  card's back goes for either edge, sheet geometry, cut marks, flow pagination. `toPdf(pages, opts)` runs it on the
+  vendored jsPDF for pages a tool can draw (canvas, image, draw function), **not for a DOM element**. `npm run
+  test:export` (port 8480). **Left in rank 6: `toCsv`/`toXlsx`/`toZip`/`download`, then adoption; the design is in
+  Path 7's P4. No booklet has been printed or folded.**
 - **AI-13 (v242), old rank 6, Path 7 P3 increment 12: 016 prints through the kit, and P3 is finished and its row is
   gone** (thirteen adopters). Three sheets as three areas of one `#printArea`: one code, the bulk grid (`{ cols }` on
   plain paper, `{ cols, perPage }` on label stock) and the inventory. The kit changed once: `setPage()` takes two
@@ -199,7 +205,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 - Rank 1 (Path 6 P4) is blocked on rank 27, so take **rank 2**, the rest of Path 4 P5: per-tool restore
   as a shared control any tool can host (½). It needs 009's `recordDiff`/merge logic moved out of 009's
   inline script into `_shared/`, and `ToolRegistry` to pick one tool's keys. Pair it with another ½ or two
-  ¼ rows. A new suite takes port **8480** (8479 is 016's `smoke-print.mjs`, 8478 is 017's, 8477 is 018's, 8476 is 064's, 8475 is 040's, 8474 is 051's, 8473 is 074's, 8472 is 042's, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
+  ¼ rows. A new suite takes port **8481** (8480 is the export kit's `smoke-export.mjs`, 8479 is 016's `smoke-print.mjs`, 8478 is 017's, 8477 is 018's, 8476 is 064's, 8475 is 040's, 8474 is 051's, 8473 is 074's, 8472 is 042's, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
   `smoke-encrypted.mjs`, 8462 is the print kit's `smoke-print-kit.mjs`, 8463 is `smoke-pairing-qr.mjs`).
 - **huginn's shared checkout** (`/home/devon/projects/AI_Tools`): local `main` now contains origin's `main`
   (AI-sync's merge) and is ahead of it by the local-only sessions above. It has not been pushed. The
@@ -220,9 +226,9 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v242` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **314** in `PRECACHE_URLS`, **95** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **205** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| `CACHE_VERSION` | `v243` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **315** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
+| Suites | **207** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
@@ -364,7 +370,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 6 | Path 7 P4 — `_shared/export.js`: `toPdf`, `toCsv/xlsx`, `toZip`, booklet/N-up imposition | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 6 | Path 7 P4 — `_shared/export.js`. **Increment 1 shipped (AI-13, v243):** `ExportKit`'s imposition and pagination math (booklet, N-up, duplex on either edge, creep, cut marks, flow pagination) and `toPdf(pages, opts)` for pages a tool can draw, with no adopter. **Left:** `toCsv`, `toXlsx`, `toZip` and `download` to the design in the P4 bullet; then adoption, 064's PDF export and 040's copy of the duplex math first, and `duplex-print.js` retired; a slot is not clipped and turns 0 or 180 only. Ordinary work, no Fable needed | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 7 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -2016,6 +2022,56 @@ localStorage with no file export.
   via SheetJS for every tool holding tabular data; `toZip(files)` for multi-sheet
   generators. Booklet/N-up/duplex imposition lives here too (extends
   `duplex-print.js`, which still has a second copy in `vfg-layout.js`).
+  **Increment 1 shipped (AI-13, 2026-10-05, v243): the math and `toPdf`, with no adopter.** `_shared/export.js`
+  publishes `ExportKit`; its header is the reference. Suites: `Tools/export/test/export.test.mjs` (pure Node) and
+  `smoke-export.mjs` (port 8480, the vendored jsPDF in Chromium), together `npm run test:export`.
+  **The surface for all of P4. The first two groups exist; the third is the design the next session builds to.**
+  - *Imposition and pagination, pure, shipped.* `booklet(n, { sheetsPerSignature, flip, rtl })`, `nUp(n, { cols,
+    rows, order, rtl, duplex })`, `sheetCount()`, `sides(sheets, { stack, reverseBacks })` (front-back-front for a
+    duplex unit, or every front and then every back for a stack fed by hand), `flipAxis(orientation, flip)`,
+    `backIndex()`, `mirrorPage(items, { cols, rows, orientation, flip })` (a card's back behind its front, for
+    either edge), `paginate()` and `mirrorPageRows()` (`duplex-print.js`'s two, to the letter), `layout({ sheet,
+    cols, rows, margin, gutter, page, fit, align })`, `creep()`, `cutMarks()`, `matrix()`, and
+    `paginateBlocks(blocks, pageHeight, { gap, firstPageHeight, minSlice })` for a PDF no CSS lays out: whole
+    blocks, `split`, `keepWithNext`, `breakBefore`, and `overflow` on a block taller than its page, which is placed
+    and never clipped. Points throughout; `toPt()` reads `in`, `mm`, `cm`, `pt`, `px`.
+  - *`toPdf(pages, { paper, orientation, margin, gutter, pageSize, impose, stack, cutMarks, filename, title })`,
+    shipped,* and `pdfPlan(n, opts)`, the same job as data. A page is a canvas, a loaded `<img>`, a data URL, or a
+    function `(doc, { w, h, page })` that draws with jsPDF in points. `impose` is `{ kind: 'booklet', … }` or
+    `{ kind: 'nup', … }`. Synchronous; returns `{ doc, plan }`.
+  - *Not built: the file helpers.* `toCsv(rows, { columns, delimiter, bom })` returns a string: rows are arrays or
+    objects, `columns` names the order and the header row, RFC 4180 quoting, CRLF, a UTF-8 BOM by default (Excel
+    reads UTF-8 only with one), and **a cell that starts with `=`, `+`, `-`, `@`, a tab or a return gets a leading
+    `'`** unless `raw: true`: a student's name typed into a roster is opened in a spreadsheet by someone else.
+    `toXlsx(sheets, { filename })` on the vendored SheetJS: `sheets` is rows, or `[{ name, rows, columns }]`; names
+    cut to Excel's 31 characters with `[]:*?/\` removed; every typed value written as a string cell, never a
+    formula. `toZip(files, { filename })` on the vendored JSZip, a promise of a Blob: `files` is `[{ name, data }]`,
+    data a string, Blob, ArrayBuffer or canvas; names lose their path separators and a repeat gets ` (2)`.
+    `download(data, filename, mime)`, the one anchor-click every helper saves through (`harness.downloadText()`
+    reads it in a suite), and `filename(title, ext)` for a safe name. Each helper throws an error naming the
+    missing vendor file when its library is not on the page, as `toPdf()` does.
+  **`toPdf` does not take a DOM element, and that is this session's call, cheap to reverse.** The sentence above
+  says `toPdf(printArea, …)`. The vendored jsPDF's `html()` needs html2canvas, which is not vendored (about 200 KB
+  more in the precache), and what it makes is a picture of the page: text nobody can select, at screen resolution.
+  The print dialog's "Save as PDF" already turns a kit sheet into a real PDF, and that is what P1 to P3 built. So
+  `toPdf` is for the tools that can draw their pages (the canvas tools 011, 046 and 064; tables through AutoTable
+  with `paginateBlocks` deciding the breaks), and a DOM sheet goes to the dialog. To reverse it: vendor
+  html2canvas with the README and precache bookkeeping, rasterise each `.pk-page` to a canvas, and hand the
+  canvases to `toPdf` as it is; nothing in the surface changes.
+  **Adoption, in this order, and not started.** (1) 064: `htcm-export.js`'s `exportPdf` lays its cards out by
+  hand and takes its backs from `DuplexPrint`; move it to `ExportKit.mirrorPage` and `toPdf`, with its suite's PDF
+  the same before and after. (2) 040: delete `paginate` and `mirrorPageRows` from `vfg-layout.js` and point its
+  callers at `ExportKit`; `printables-logic.test.mjs` covers them. (3) Then `_shared/duplex-print.js` has no
+  consumer: delete it, with its `sw.js` lines, its `eslint.config.js` global and the three-way agreement check in
+  `export.test.mjs`. (4) 011 gets booklet and N-up from the layer (Path 17 P4 is that row). (5) CSV and XLSX for
+  the tools that hold a table and export nothing.
+  **Known limits, none of them a row yet.** A slot is not clipped, so a draw function that runs off its page
+  runs onto its neighbour. A slot turns 0 or 180 degrees, not 90, so N-up never turns a page to fit. A booklet has
+  no cut marks of its own (it is folded, not cut). Creep is the linear model. Two-sided N-up always emits the
+  back of the last sheet, blank or not.
+  **Not verified:** nothing was printed, no booklet was folded and no duplex unit turned a sheet; the fold and the
+  turn are models in the Node suite. The raster check needs `pdftoppm`, which huginn has; where it is missing the
+  browser suite says so and checks the file's structure only.
 - **P5 — A real print preview.** A shared "Preview" mode that renders the print
   DOM into an in-page paged view (CSS `@page` size emulation) so a teacher sees
   page breaks before the dialog, instead of after.
@@ -2434,7 +2490,9 @@ N-up with cut marks) are something teachers need that no free local tool does we
   layer where feasible.
 - **P4 — Imposition (Fable).** Booklet (saddle-stitch page order), N-up with cut
   marks, two-sided presets, in the shared export layer of Path 7 so every printing
-  tool can use them.
+  tool can use them. **The math shipped in Path 7 P4's first increment (AI-13, v243):
+  `ExportKit.booklet()`, `nUp()`, `cutMarks()` and `toPdf(pages, { impose })` in
+  `_shared/export.js`. What is left of this phase is 011's own controls and its suite.**
 - **P5 — OCR (decision first).** Searchable PDFs need a vendored Tesseract build
   (tens of MB). Decide whether an on-demand, non-precached download is acceptable
   under the offline promise before any code.
