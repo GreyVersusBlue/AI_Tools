@@ -1,6 +1,8 @@
-/* Vocabulary Flashcard & Word Wall Generator — layout math.
-   Pure functions, no DOM, so pagination/mirroring can be unit-tested
-   before any UI touches them. */
+/* Vocabulary Flashcard & Word Wall Generator — the word list and the card
+   size. Pure functions, no DOM, so they can be unit-tested before any UI
+   touches them. The cut into pages and the mirrored backs, paginate() and
+   mirrorPageRows(), were written here first; the page takes them from
+   ExportKit (_shared/export.js) now, and this file has no copy. */
 (function (global) {
   'use strict';
 
@@ -95,30 +97,6 @@
     return copy;
   }
 
-  function paginate(items, perPage) {
-    var pages = [];
-    for (var i = 0; i < items.length; i += perPage) pages.push(items.slice(i, i + perPage));
-    return pages;
-  }
-
-  /**
-   * Reverse item order within each row of a page so that printing this
-   * page on the back of `page` (flipping along the LONG edge of the
-   * paper, the common duplex default) lines each back card up under its
-   * matching front card. Incomplete final rows are padded with `null`
-   * (blank cards) before mirroring so the padding also ends up on the
-   * correct side.
-   */
-  function mirrorPageRows(pageItems, cols) {
-    var mirrored = [];
-    for (var i = 0; i < pageItems.length; i += cols) {
-      var row = pageItems.slice(i, i + cols);
-      while (row.length < cols) row.push(null);
-      mirrored = mirrored.concat(row.slice().reverse());
-    }
-    return mirrored;
-  }
-
   /**
    * Return a shuffled COPY of items (Fisher-Yates), leaving the input
    * array untouched so the caller's saved order is never mutated.
@@ -150,9 +128,7 @@
   global.VocabLayout = {
     parseWordList: parseWordList,
     sortItems: sortItems,
-    paginate: paginate,
     shuffleItems: shuffleItems,
-    mirrorPageRows: mirrorPageRows,
     pageSize: pageSize,
     computeCardSizeIn: computeCardSizeIn
   };

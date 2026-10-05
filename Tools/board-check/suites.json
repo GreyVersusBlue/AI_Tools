@@ -205,6 +205,7 @@
     "Tools/science-safety-label-maker/test/smoke-print.mjs",
     "Tools/classroom-label-maker/test/smoke-print.mjs",
     "Tools/vocab-flashcard-generator/test/smoke-print.mjs",
+    "Tools/vocab-flashcard-generator/test/smoke-imposition.mjs",
     "Tools/historical-trading-card-maker/test/smoke-print.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs",
     "Tools/gallery-walk-qr/test/smoke-print.mjs",

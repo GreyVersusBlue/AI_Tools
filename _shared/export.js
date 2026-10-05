@@ -17,8 +17,9 @@
      mirrorPageRows(), paginate()
        Where the back of a card lands so that it prints behind its front, for
        a duplex printer that turns the paper on either edge. paginate() and
-       mirrorPageRows() are duplex-print.js's two functions, kept to the
-       letter; the Node suite holds the two files to the same answers.
+       mirrorPageRows() are the two functions 040 wrote and 064 copied, which
+       lived in _shared/duplex-print.js until both tools moved here (v245);
+       the Node suite keeps a copy of them and holds these to its answers.
 
      ExportKit.layout({ sheet, cols, rows, margin, gutter, page, fit, align })
        The geometry of one side: equal cells, and the source page fitted into
@@ -158,7 +159,7 @@
     return axis === 'horizontal' ? (rows - 1 - r) * cols + c : r * cols + (cols - 1 - c);
   }
 
-  /** Splits items into pages of perPage. (duplex-print.js's paginate.) */
+  /** Splits items into pages of perPage. (The old duplex-print.js's paginate.) */
   function paginate(items, perPage) {
     perPage = atLeast1(perPage);
     var pages = [];
@@ -166,7 +167,7 @@
     return pages;
   }
 
-  /** duplex-print.js's mirrorPageRows, to the letter: each row reversed, a
+  /** The old duplex-print.js's mirrorPageRows, to the letter: each row reversed, a
       short last row padded with null first. Right for a portrait sheet turned
       on its long edge, and for a stack turned over by hand the same way. */
   function mirrorPageRows(pageItems, cols) {

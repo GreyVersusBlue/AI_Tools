@@ -476,7 +476,9 @@ files must be added there too.
   Since v244 it also has the file helpers: `toCsv` (which puts an apostrophe before a typed cell a spreadsheet would
   run as a formula), `toXlsx` and `toZip` on the vendored SheetJS and JSZip, `download` and `filename`. A tool that
   saves a table or a zip calls these and does not write another `csvCell()` or anchor click. 064's Download PDF is
-  the first adopter (`npm run test:trading-card-pdf`); nothing calls the file helpers yet (`BACKLOG.md`, Path 7 P4).
+  the first adopter (`npm run test:trading-card-pdf`) and 040's double-sided cards the second (`npm run
+  test:vocab-imposition`, v245, when `_shared/duplex-print.js` was deleted); nothing calls the file helpers yet
+  (`BACKLOG.md`, Path 7 P4).
   Its suites are `npm run test:export`; no booklet has been printed or folded, and no file opened in a spreadsheet.
   `npm run path7:next` (`Tools/board-check/audit-print.mjs`, Path 7 P2, read-only, a browser
   sweep of about 12 minutes on port 8464, not in CI) is the runtime half of `check:print-clip`:

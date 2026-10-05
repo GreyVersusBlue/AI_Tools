@@ -46,7 +46,6 @@ const SITE_GLOBALS = {
   MediaDB: 'readonly',
   SeatingRead: 'readonly',
   WebRTCPair: 'readonly',
-  DuplexPrint: 'readonly',
   StudentDetails: 'readonly',
   ToolRegistry: 'readonly',
   ThemeToggle: 'readonly',

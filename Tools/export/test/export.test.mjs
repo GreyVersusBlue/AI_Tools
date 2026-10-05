@@ -29,8 +29,26 @@ const site = path.join(here, '..', '..', '..');
 const load = (file, ctx) => { vm.createContext(ctx); vm.runInContext(fs.readFileSync(path.join(site, file), 'utf8'), ctx); return ctx; };
 const ctx = load('_shared/export.js', { window: {} });
 const EK = ctx.window.ExportKit;
-const DP = load('_shared/duplex-print.js', { window: {} }).window.DuplexPrint;
-const VL = load('Tools/vocab-flashcard-generator/vfg-layout.js', { window: {} }).window.VocabLayout;
+// paginate() and mirrorPageRows() as _shared/duplex-print.js and 040's
+// vfg-layout.js had them, word for word. Both copies were deleted in v245,
+// when 040 followed 064 on to ExportKit; this one stays, so ExportKit's two
+// are still held to the answers every printed deck has been cut by.
+const DP = {
+  paginate(items, perPage) {
+    var pages = [];
+    for (var i = 0; i < items.length; i += perPage) pages.push(items.slice(i, i + perPage));
+    return pages;
+  },
+  mirrorPageRows(pageItems, cols) {
+    var mirrored = [];
+    for (var i = 0; i < pageItems.length; i += cols) {
+      var row = pageItems.slice(i, i + cols);
+      while (row.length < cols) row.push(null);
+      mirrored = mirrored.concat(row.slice().reverse());
+    }
+    return mirrored;
+  },
+};
 
 let passed = 0, failed = 0;
 const ok = (cond, label) => { if (cond) passed++; else { failed++; console.log('  FAIL ' + label); } };
@@ -252,16 +270,16 @@ sweep('backIndex() is its own inverse, and stays on the page', check => {
     }
   }
 });
-sweep('paginate() and mirrorPageRows() give duplex-print.js\'s answers, and vfg-layout.js\'s — 2,000 random decks', check => {
+sweep('paginate() and mirrorPageRows() give the answers duplex-print.js and vfg-layout.js gave — 2,000 random decks', check => {
   const r = rng(20261005);
   for (let t = 0; t < 2000; t++) {
     const items = Array.from({ length: Math.floor(r() * 40) }, (_, i) => i);
     const cols = 1 + Math.floor(r() * 5), per = cols * (1 + Math.floor(r() * 5));
-    const a = EK.paginate(items, per), b = DP.paginate(items, per), c = VL.paginate(items, per);
-    check(JSON.stringify(a) === JSON.stringify(b) && JSON.stringify(a) === JSON.stringify(c), { why: 'paginate', n: items.length, per });
+    const a = EK.paginate(items, per), b = DP.paginate(items, per);
+    check(JSON.stringify(a) === JSON.stringify(b), { why: 'paginate', n: items.length, per });
     for (const page of a) {
       const m = JSON.stringify(EK.mirrorPageRows(page, cols));
-      check(m === JSON.stringify(DP.mirrorPageRows(page, cols)) && m === JSON.stringify(VL.mirrorPageRows(page, cols)), { why: 'mirrorPageRows', page, cols });
+      check(m === JSON.stringify(DP.mirrorPageRows(page, cols)), { why: 'mirrorPageRows', page, cols });
       if (page.length === per) check(m === JSON.stringify(EK.mirrorPage(page, { cols, rows: per / cols })), { why: 'mirrorPage on a full portrait page is mirrorPageRows', page, cols });
     }
   }
