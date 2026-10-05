@@ -87,12 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
-- **AI-13 (v244), rank 6, Path 7 P4 increments 1 and 2: `_shared/export.js` (`ExportKit`) is whole, and 064 is its
-  first adopter.** The imposition and pagination math, `toPdf(pages, opts)` for drawn pages (**not a DOM element**),
-  and since v244 `toCsv` (formula guard), `toXlsx`, `toZip`, `download`, `filename`. 064's Download PDF and its print
-  pagination run on it; the PDF is the same file as before, to the pixel. `npm run test:export` (port 8480), `npm run
-  test:trading-card-pdf` (8481). **Left in rank 6: 040's copy in `vfg-layout.js`, deleting `duplex-print.js` (no page
-  loads it now), 011, CSV/XLSX for tools; Path 7's P4 has it. Nothing printed, no file opened in Excel.**
+- **AI-13 (v245), rank 6, Path 7 P4 increments 1 to 3: `_shared/export.js` (`ExportKit`) is whole, 064 and 040 are
+  on it, and `_shared/duplex-print.js` is deleted.** The imposition and pagination math, `toPdf(pages, opts)` for
+  drawn pages (**not a DOM element**), `toCsv` (formula guard), `toXlsx`, `toZip`, `download`, `filename`. 064's
+  Download PDF and both tools' print pagination run on it, to the pixel. `npm run test:export` (port 8480),
+  `test:trading-card-pdf` (8481), `test:vocab-imposition` (8482). **Left in rank 6: 011's booklet and N-up, then
+  CSV/XLSX/ZIP for tools; Path 7's P4 has it. Nothing printed, no file opened in Excel.**
 - **AI-13 (v242), old rank 6, Path 7 P3 increment 12: 016 prints through the kit, and P3 is finished and its row is
   gone** (thirteen adopters). Three sheets as three areas of one `#printArea`: one code, the bulk grid (`{ cols }` on
   plain paper, `{ cols, perPage }` on label stock) and the inventory. The kit changed once: `setPage()` takes two
@@ -233,7 +233,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 31 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `export.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 31 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `export.js` 2 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -370,7 +370,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 6 | Path 7 P4 — `_shared/export.js`. **Increments 1 and 2 shipped (AI-13, v243, v244):** `ExportKit` has the imposition and pagination math, `toPdf(pages, opts)` for pages a tool can draw, and the file helpers `toCsv`, `toXlsx`, `toZip`, `download` and `filename`; 064's Download PDF and print pagination are its first adopter. **Left, in this order:** (1) 040: delete `paginate` and `mirrorPageRows` from `vfg-layout.js` and call `ExportKit`; (2) delete `_shared/duplex-print.js`, which no page loads since v244 (its two `sw.js` lines, its ESLint global, the three-way check in `export.test.mjs`; it does not wait for 040); (3) 011's booklet and N-up (Path 17 P4); (4) the helpers have no adopter: 064's `exportZip` and `download`, then CSV and XLSX for the tools that hold a table. A slot is not clipped and turns 0 or 180 only. Ordinary work, no Fable needed | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 6 | Path 7 P4 — `_shared/export.js`. **Increments 1 to 3 shipped (AI-13, v243 to v245):** `ExportKit` has the imposition and pagination math, `toPdf(pages, opts)` for pages a tool can draw, and the file helpers `toCsv`, `toXlsx`, `toZip`, `download` and `filename`; 064 (Download PDF and print pagination) and 040 (print pagination and backs) are on it, and `_shared/duplex-print.js` is deleted. **Left, in this order:** (1) 011's booklet and N-up (Path 17 P4, a session of its own: controls, a suite, nothing started); (2) the file helpers have no adopter: 064's `exportZip` and `download`, then CSV and XLSX for the tools that hold a table. A slot is not clipped and turns 0 or 180 only. Ordinary work, no Fable needed | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 7 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -2020,8 +2020,8 @@ localStorage with no file export.
   `_shared/export.js`: `toPdf(printArea, {paper, orientation})` built on the
   vendored jsPDF for tools that want a file rather than a dialog; `toCsv/xlsx(rows)`
   via SheetJS for every tool holding tabular data; `toZip(files)` for multi-sheet
-  generators. Booklet/N-up/duplex imposition lives here too (extends
-  `duplex-print.js`, which still has a second copy in `vfg-layout.js`).
+  generators. Booklet/N-up/duplex imposition lives here too (it took over
+  `duplex-print.js` and the second copy in `vfg-layout.js`; both are gone since v245).
   **Increment 1 shipped (AI-13, 2026-10-05, v243): the math and `toPdf`, with no adopter.** `_shared/export.js`
   publishes `ExportKit`; its header is the reference. Suites: `Tools/export/test/export.test.mjs` (pure Node) and
   `smoke-export.mjs` (port 8480, the vendored jsPDF in Chromium), together `npm run test:export`.
@@ -2030,7 +2030,7 @@ localStorage with no file export.
     rows, order, rtl, duplex })`, `sheetCount()`, `sides(sheets, { stack, reverseBacks })` (front-back-front for a
     duplex unit, or every front and then every back for a stack fed by hand), `flipAxis(orientation, flip)`,
     `backIndex()`, `mirrorPage(items, { cols, rows, orientation, flip })` (a card's back behind its front, for
-    either edge), `paginate()` and `mirrorPageRows()` (`duplex-print.js`'s two, to the letter), `layout({ sheet,
+    either edge), `paginate()` and `mirrorPageRows()` (the old `duplex-print.js`'s two, to the letter), `layout({ sheet,
     cols, rows, margin, gutter, page, fit, align })`, `creep()`, `cutMarks()`, `matrix()`, and
     `paginateBlocks(blocks, pageHeight, { gap, firstPageHeight, minSlice })` for a PDF no CSS lays out: whole
     blocks, `split`, `keepWithNext`, `breakBefore`, and `overflow` on a block taller than its page, which is placed
@@ -2063,19 +2063,25 @@ localStorage with no file export.
   with `paginateBlocks` deciding the breaks), and a DOM sheet goes to the dialog. To reverse it: vendor
   html2canvas with the README and precache bookkeeping, rasterise each `.pk-page` to a canvas, and hand the
   canvases to `toPdf` as it is; nothing in the surface changes.
-  **Adoption. 064 is done (increment 2, v244); the rest in this order.** 064's `exportPdf` in `htcm-export.js`
+  **Adoption. 064 is done (increment 2, v244) and 040 (increment 3, v245); what is left follows them.** 064's `exportPdf` in `htcm-export.js`
   takes its pages from `ExportKit.paginate`, its backs from `mirrorPage` and its sheet from `toPdf` (3 x 2 on
   letter, the cards as JPEG data URLs, a no-op draw function for an empty cell), and the page's print button takes
   `paginate` and `mirrorPageRows` from `ExportKit` too; `npm run test:trading-card-pdf` (port 8481) reads the file.
   The old and new PDFs were compared for eight decks: same pages, same image bytes in the same order, same pixels.
-  (1) 040: delete `paginate` and `mirrorPageRows` from `vfg-layout.js` and point its callers at `ExportKit`;
-  `printables-logic.test.mjs` covers them. (2) `_shared/duplex-print.js` has had no page loading it since v244
-  (`check:adoption` says so), so it can go at any time, with its two `sw.js` lines, its `eslint.config.js` global
-  and the three-way agreement check in `export.test.mjs`; it was left in place only because increment 2's brief
-  said to. (3) 011 gets booklet and N-up from the layer (Path 17 P4 is that row). (4) The file helpers: 064's own
-  `exportZip` and `download` are the nearest (`toZip` flattens names and 064's are flat already), then CSV and XLSX
-  for the tools that hold a table and export nothing; twelve pages hand-roll a `text/csv` download today and none
-  of them guards a formula.
+  **Increment 3 shipped (AI-13, 2026-10-05, v245): 040 is the second adopter, and `_shared/duplex-print.js` is
+  deleted.** 040 has no PDF export, so what moved is its print pagination: `ExportKit.paginate` cuts the
+  flashcards, fold-over cards and word-wall cards into pages, and one `backsOf()` calls `ExportKit.mirrorPage` with
+  `{ orientation: 'portrait', flip: 'long' }` for the cards and for the alignment test; `vfg-layout.js` has neither
+  function now. 040 offers one turn edge (long), so there was one to compare: old against new in 160 states, same
+  page count, paper, card boxes and text, and the same pixels. `npm run test:vocab-imposition` (port 8482) checks
+  on the paper that every definition is behind its own word. With no page loading it, `duplex-print.js` went, with
+  its two `sw.js` lines and its ESLint global; `export.test.mjs` keeps a copy of the two functions and still holds
+  `ExportKit`'s to their answers. (An earlier note here said `printables-logic.test.mjs` covered 040's two
+  functions. It never called them; only `export.test.mjs` did.)
+  **What is left of P4.** (1) 011 gets booklet and N-up from the layer (Path 17 P4 is that row; nothing of it is
+  started). (2) The file helpers have no adopter: 064's own `exportZip` and `download` are the nearest (`toZip`
+  flattens names and 064's are flat already), then CSV and XLSX for the tools that hold a table and export
+  nothing; twelve pages hand-roll a `text/csv` download today and none of them guards a formula.
   **Known limits, none of them a row yet.** A slot is not clipped, so a draw function that runs off its page
   runs onto its neighbour. A slot turns 0 or 180 degrees, not 90, so N-up never turns a page to fit. A booklet has
   no cut marks of its own (it is folded, not cut). Creep is the linear model. Two-sided N-up always emits the

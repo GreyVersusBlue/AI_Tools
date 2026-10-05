@@ -9,6 +9,81 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P4, increment 3: 040 is `ExportKit`'s second adopter, `_shared/duplex-print.js` is deleted, and 016's print suite no longer depends on the machine's fonts (2026-10-05, AI-13, `CACHE_VERSION` v245)
+
+Audit entry AI-13, rank 6 (2+). Third increment of P4. **The row stays, rewritten.** P5 untouched, 011 not started.
+
+- **First, a red CI run, and it was the test.** AI_Tools#350 (P3 increment 12 and P4 increment 1) failed 18
+  assertions in `Tools/qr-code-generator/test/smoke-print.mjs`, all "plain grid, 2 across" with 3, 13 and 40
+  codes: first code 26 px in where 37 was wanted, 327 px wide for 316, picture 311 for 300. Green on huginn. The
+  plain grid is `width: fit-content`, so a code is as wide as the wider of its 300 px picture and its label set on
+  one line. The suite's second label is 49 characters. In huginn's Noto Sans it is narrower than the picture; in
+  CI's font it is wider, so every column grows to its share of the page (327) and the grid starts at 26. One
+  code passed in CI because its only label is "Station 1"; three and four across passed because they are at the
+  page's share already. Reproduced here by giving the page `DejaVu Sans`: the same three numbers. The page is
+  right (the old page did the same), so the suite changed: it measures the widest label as the machine sets it
+  and asserts the rule in every plain-grid state (picture or label, whichever is wider, up to the page's share;
+  centred; the sheet's 16 px kept each side), and keeps the old page's numbers where no font can matter: one
+  code, three and four across, and four new states whose labels are narrower than the picture or wider than
+  the page in any font. 1,235 assertions to 1,617, green in both fonts.
+- **What I got wrong in increment 12, which this is.** I compared the new page with the old one on one machine
+  and wrote the numbers down as the page's. A number that comes out of text width is the machine's. Any
+  old-against-new figure a suite keeps should come from a state where the fonts cannot change the layout, or be
+  written as the rule it follows.
+- **What shipped: 040 on `ExportKit`.** 040 has no PDF export; what it had of its own was the print
+  pagination, `paginate()` and `mirrorPageRows()` in `vfg-layout.js`, the originals that 064 copied and
+  `duplex-print.js` then shared. The page loads `_shared/export.js`; `ExportKit.paginate` cuts the flashcards,
+  the fold-over cards and the word-wall cards into pages, and one `backsOf()` calls `ExportKit.mirrorPage(page,
+  { cols, rows, orientation: 'portrait', flip: 'long' })` for the cards and for the alignment test.
+  `vfg-layout.js` has neither function and exports five names, not seven.
+- **Decision, mine, cheap to reverse: `mirrorPage`, not `mirrorPageRows`.** `mirrorPageRows` would have been a
+  one-word change and gives the same cells for an upright sheet turned on its long edge. `mirrorPage` is told
+  the orientation and the edge, so the page says which turn it prints for in one place (`DUPLEX`), and a
+  short-edge setting, if 040 ever gets one, is that object and nothing else. 040 always pads a page to a full
+  grid before it mirrors, which is what `mirrorPage` needs for either edge.
+- **One turn edge, not two.** The brief asked for both turn edges. 040 offers one: its only two-sided layout
+  says "flip along the long edge" and there is no setting. So the comparison is one edge by every layout.
+- **Old against new.** The old page and the old `vfg-layout.js`, from `git show` through `page.route()`,
+  against the new, in 160 states: seven grids from 1 x 1 to 4 x 6, both index-card presets, two fold-over grids,
+  four word-wall states, five alignment tests; lists of 1, 3, 10 with a long word, 17 and 40; light and dark. Same `.page`
+  count, same PDF page count (1,174 pages in all), Letter in every file, every card's left, top, width, height,
+  class and text (4,644 cards), and the same pixels on 1,174 of 1,174 pages (`pdftoppm -r 96 -gray`, md5 of
+  each page). Nothing moved, so there is nothing better or worse to report. 040's three older suites pass
+  unedited.
+- **New suite.** `Tools/vocab-flashcard-generator/test/smoke-imposition.mjs` (`npm run test:vocab-imposition`,
+  port 8482, 764 assertions). It counts the calls the page makes to `ExportKit` and reads their arguments, and
+  then checks the turn on the paper without the function under test: a definition must be in its word's row
+  and as far from the right edge of the page as the word is from the left. It needs no outside program.
+- **`_shared/duplex-print.js` is deleted.** No page loaded it after v244. What named it, and what happened to
+  each: `sw.js` (both tiers, removed), `eslint.config.js` (the `DuplexPrint` global, removed),
+  `Tools/export/test/export.test.mjs` (it loaded this file and `vfg-layout.js` to hold `ExportKit`'s two
+  functions to their answers over 2,000 random decks; it now carries the two functions itself, word for word,
+  and the sweep is unchanged), three comments in `_shared/export.js` and one in 064's page (reworded). Left as
+  they are: the 064 suite's assertions that the page does not load it and that `DuplexPrint` is undefined,
+  which still hold; `HISTORY.md` and the older `BACKLOG.md` handoffs, which are history. No guard list, suite
+  list or doc command named it.
+- **A claim in the backlog that was not true.** The P4 bullet said `printables-logic.test.mjs` covered 040's
+  `paginate` and `mirrorPageRows`. It never called either. The only test that called them was the three-way
+  sweep in `export.test.mjs`. The bullet says so now.
+- **Broken on purpose.** The adoption 16 ways, one at a time, the new suite run against each: the turn set to the
+  short edge, the sheet called landscape, the backs not mirrored, `export.js` not loaded, the alignment test cut
+  with the wrong rows, the alignment test with a mirror of its own, pages of `cols` cards, a correct private
+  mirror with `ExportKit` not asked, a private `paginate` everywhere, `mirrorPage` called without the turn,
+  `VocabLayout` exporting `paginate` again, the service worker naming the deleted file, the ESLint global back,
+  `ExportKit.flipAxis` answering the wrong axis, the deleted file put back, a page loading it again. All 16
+  fail the suite (1 to 397 assertions each). The two that print the right sheet from private code are caught only
+  by the call counts, which is what those are for. The 016 fix was broken three ways: the sheet's side inset
+  removed (100 failures) and the grid not centred (30) are caught; dropping `max-width: 100%` from the grid is
+  not, because `fit-content` already stops at the room there is, so that declaration does nothing.
+- **Not done.** 011's booklet and N-up (Path 17 P4): the first two parts left under the 45 minutes the brief
+  set for starting it, and it is a session of its own (controls, a suite). The CSV/XLSX sweep and P5 were out of
+  scope.
+- **Not verified.** Nothing was printed and no duplex printer turned a sheet. Full `npm test` was not run (over
+  45 minutes on huginn); CI on the wave PR is the check for the rest, and it runs site-wide because `_shared/`,
+  `sw.js`, `suites.json` and `package.json` changed. The 016 fix was checked against CI's numbers by changing
+  the font here, not by running CI's browser; CI has not run it yet. Whether CI has `pdftoppm` is still not
+  known, and nothing committed leans on it.
+
 ## Path 7 P4, increment 2: `ExportKit`'s file helpers (`toCsv`, `toXlsx`, `toZip`, `download`, `filename`), and 064's Download PDF is the layer's first adopter (2026-10-05, AI-13, `CACHE_VERSION` v244)
 
 Audit entry AI-13, rank 6 (2+). Second increment of P4. **The row stays, rewritten.** P5 untouched.
