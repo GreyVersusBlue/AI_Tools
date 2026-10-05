@@ -9,6 +9,34 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P5, the cheap piece: 009 says what `rgb-audio` and `stviz-recovery` hold (2026-10-05, AI-16, `CACHE_VERSION` v240)
+
+Audit entry AI-16. One small increment, asked for ahead of a landing run; rank 2 (per-tool restore as a shared
+control) is not started.
+
+- **What was wrong.** `BACKLOG.md`'s survey bullet said 009's `IDB_NOTES` knew only `bmg-maps`. Path 4 P2 (#174)
+  replaced that map with the registry's `idb` rows, and this file has said since then that `rgb-audio` and
+  `stviz-recovery` "are labelled for the first time". They were declared, not labelled: both rows were
+  `{ name: '…' }` with no `note`, `ToolRegistry.databases()` turned that into `''`, and 009 printed the bare
+  database name beside a checkbox. The test checked `gvb-media`'s note only.
+- **What changed.** Two `note` strings in `_shared/tool-registry.js`, in the voice of the two that were there.
+  `rgb-audio`'s says nothing re-downloads the recordings and that a board restored without them has no audio;
+  `stviz-recovery`'s says it is safe to leave out. `Tools/tool-registry/test/registry-shape.test.mjs` now fails
+  on any declared database whose note is missing or under 20 characters. 009 itself did not change.
+- **Firefox.** Nothing to do: since #174 009 opens the registry's declared databases and uses
+  `indexedDB.databases()` only to add to that list. Checked in Chromium with `databases` deleted from
+  `IDBFactory.prototype`: both databases were found, with their notes and record counts, and the two that did not
+  exist (`bmg-maps`, `gvb-media`) were not listed. **Not checked in Firefox itself**; no Firefox on huginn was tried.
+- **Left as it was, and it may be wrong: `rgb-audio` is not ticked by default.** The registry's own rule is that
+  `backupByDefault` marks what "cannot be got back any other way", and a teacher's clue recordings fit it as well
+  as `gvb-media`'s photos do. Changing which data a backup takes by default was outside this increment, and the
+  test pins `['gvb-media']`. The note tells the teacher to tick it. Someone should decide it.
+- **Not done.** The claim row was not pushed (this was a bullet, not a ranked row, and huginn's GitHub token was
+  invalid that night). The browser check was a scratch script, not a suite: nothing in CI opens 009 and reads the
+  IndexedDB table's notes.
+
+---
+
 ## Path 7 P3, increment 10: 018 adopts the print kit, six print buttons as six areas of one sheet; an answer sheet that just fitted the page had printed a blank page after it (2026-10-04, AI-13, `CACHE_VERSION` v239)
 
 Audit entry AI-13, rank 6 (2+). Tenth increment of P3: the fifth of the card-grid tools after 074, 051, 040 and
