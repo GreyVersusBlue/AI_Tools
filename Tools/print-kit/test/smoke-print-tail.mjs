@@ -107,6 +107,9 @@ const PAGES = [
     { click: 'Print this code', before: fill016, sheet: '#print-area' },
     { click: '#btn-bulk-print', before: bulk016, sheet: '#print-area-bulk' },
   ] },
+  { file: '017-gallery-walk-qr.html', prints: [   // since Path 7 P3: print-area.css + the print kit (it had no row)
+    { click: '#printCodesBtn' }, { click: '#printRefBtn' }, { click: '#printSlipsBtn' }, { click: '#printPacketsBtn' }, { click: '#printRouteCardsBtn' },
+  ] },
   { file: '018-qr-scavenger-hunt-builder.html', prints: [   // since Path 7 P3: print-area.css + the print kit (it had no row)
     { click: '#print-stations-btn' }, { click: '#print-answers-btn' }, { click: '#print-clues-btn' },
     { click: '#print-teams-btn', before: PRINT_PREP['018'][0].run }, { click: '#print-routes-btn', before: PRINT_PREP['018'][0].run },

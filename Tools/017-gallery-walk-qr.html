@@ -27,9 +27,12 @@
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
+<script src="../_shared/print-kit.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
 <style>
   /* Path 5 P3. The warn and err tint pairs are 001's values (the reference
      adopter); --desk is the well the card previews sit in, named the same way
@@ -240,99 +243,82 @@
     @keyframes pjPulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
   }
 
-  /* ── Print-only QR grid / reference sheet ──────────────────────────── */
+  /* ── The printed sheets: QR codes, reference sheet, feedback slips,
+     feedback packets, route cards ───────────────────────────────────────
+     Printing is the shared kit's (Path 7 P3): _shared/print-area.css puts
+     #printArea alone on the paper, and _shared/print-kit.css + print-kit.js
+     lay the cards out (`PrintKit.renderCards`). #printArea holds the five
+     sheets and shows the one a button asked for (.active), or the QR codes
+     when none has; it is never on screen, and it is white paper with black
+     text from either theme (.pk-paper), so the greys below stay as they are
+     and need no media query.
+     A QR card, a slip and a route card are each a share of the page's width
+     and as tall as what is on them, so each grid is one of the tool's own
+     ({ cols, perPage }, .pk-cards-own): the kit gives the grid, the columns,
+     the cut into pages and the rule that keeps a card whole; the gap, the
+     inset and the card are this page's. A packet is a page, not a card. */
   .print-only { display: none; }
-  @media print {
-    .projector { display: none !important; }
-    body { background: #fff; color: #000; padding: 0; }
-    .wrap > *:not(.print-only) { display: none !important; }
-    .print-only.active { display: block; }
+  .print-only.active { display: block; }
+  /* Ctrl+P, with no button pressed: the QR codes are the sheet. */
+  #printArea:not(.sheet-asked) #printQrArea { display: block; }
 
-    .print-qr-grid { display: flex; flex-wrap: wrap; }
-    .print-qr-grid .p-card {
-      box-sizing: border-box; border: 1.5px solid #999; border-radius: 10px; padding: 14px;
-      display: flex; flex-direction: column; align-items: center; text-align: center;
-      page-break-inside: avoid; margin: 4px;
-    }
-    .print-qr-grid .p-card canvas { width: 100%; height: auto; max-width: 320px; }
-    .print-qr-grid .p-card .p-num { font-size: .75rem; letter-spacing: .08em; color: #555; text-transform: uppercase; }
-    .print-qr-grid .p-card .p-name { font-size: 1.2rem; font-weight: 700; margin: 4px 0 8px; }
-    .print-qr-grid .p-card .p-instructions {
-      align-self: stretch; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere;
-      font-size: .72rem; line-height: 1.35; color: #222; margin: 0 0 8px;
-      /* No max-height + overflow:hidden here: that pair silently cut off the
-         end of a long instruction on paper (check-print-clip). A long card
-         grows; page-break-inside: avoid on .p-card keeps it whole. */
-    }
+  /* 8 px between cards and 4 px at the sides, as the cards' own 4 px margin
+     gave. None above or below a page of them: under it a card a hair short
+     of the page is followed by a blank one (018 found this). */
+  .print-qr-grid .pk-cards, .print-slip-grid .pk-cards, .print-route-grid .pk-cards { --pk-gap: 8px; padding: 0 4px; }
 
-    .print-qr-grid.pp-1 .p-card { width: calc(100% - 8px); }
-    .print-qr-grid.pp-2 .p-card { width: calc(50% - 8px); }
-    .print-qr-grid.pp-4 .p-card { width: calc(50% - 8px); }
-    .print-qr-grid.pp-4 .p-card:nth-child(4n) { page-break-after: always; }
-    .print-qr-grid.pp-6 .p-card { width: calc(33.33% - 8px); }
-    .print-qr-grid.pp-6 .p-card:nth-child(6n) { page-break-after: always; }
-    .print-qr-grid.pp-8 .p-card { width: calc(25% - 8px); }
-    .print-qr-grid.pp-8 .p-card:nth-child(8n) { page-break-after: always; }
-    .print-qr-grid.pp-1 .p-card { page-break-after: always; }
-    .print-qr-grid.pp-2 .p-card:nth-child(2n) { page-break-after: always; }
-    .print-qr-grid.pp-1 .p-card:last-child,
-    .print-qr-grid.pp-2 .p-card:last-child { page-break-after: auto; }
-    .print-qr-grid.pp-4 .p-card:last-child, .print-qr-grid.pp-6 .p-card:last-child,
-    .print-qr-grid.pp-8 .p-card:last-child { page-break-after: auto; }
-
-    .ref-sheet h2 { font-size: 1.1rem; margin-bottom: 12px; }
-    .ref-sheet table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-    .ref-sheet th, .ref-sheet td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
-    .ref-sheet th { background: #eee; }
-
-    .print-slip-grid { display: flex; flex-wrap: wrap; }
-    .print-slip-grid .s-card {
-      box-sizing: border-box; border: 1.5px dashed #999; border-radius: 8px; padding: 12px;
-      display: flex; flex-direction: column; page-break-inside: avoid; margin: 4px;
-    }
-    .print-slip-grid.pp-2 .s-card { width: calc(50% - 8px); }
-    .print-slip-grid.pp-2 .s-card:nth-child(2n) { page-break-after: always; }
-    .print-slip-grid.pp-4 .s-card { width: calc(50% - 8px); }
-    .print-slip-grid.pp-4 .s-card:nth-child(4n) { page-break-after: always; }
-    .print-slip-grid.pp-6 .s-card { width: calc(33.33% - 8px); }
-    .print-slip-grid.pp-6 .s-card:nth-child(6n) { page-break-after: always; }
-    .print-slip-grid .s-card:last-child { page-break-after: auto !important; }
-
-    .s-card .slip-station { font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: #555; margin-bottom: 6px; }
-    .s-card .slip-station strong { color: #000; text-transform: none; letter-spacing: normal; font-size: 1rem; }
-    .s-card .slip-prompt, .s-card .slip-sticky-prompt { font-size: .82rem; font-style: italic; margin-bottom: 8px; }
-    .s-card .slip-line, .s-card .slip-wish, .s-card .slip-wish-blank { font-size: .95rem; margin: 10px 0; letter-spacing: .02em; }
-    .s-card .slip-rubric { width: 100%; border-collapse: collapse; font-size: .76rem; margin-bottom: 8px; }
-    .s-card .slip-rubric th, .s-card .slip-rubric td { border: 1px solid #999; padding: 4px 6px; text-align: center; }
-    .s-card .slip-rubric th:first-child, .s-card .slip-rubric td:first-child { text-align: left; }
-    .s-card .slip-sticky-box { border: 1px solid #999; border-radius: 4px; flex: 1; min-height: 110px; }
-    .s-card .slip-footer { font-size: .74rem; color: #555; margin-top: auto; padding-top: 8px; }
-
-    .print-packets .packet-page { page-break-after: always; padding: 0 4px 20px; }
-    .print-packets .packet-page:last-child { page-break-after: auto; }
-    .print-packets .packet-page h2 { font-size: 1.15rem; margin-bottom: 4px; }
-    .print-packets .packet-page .packet-sub { font-size: .82rem; color: #555; margin-bottom: 14px; }
-    .print-packets .packet-page ul { padding-left: 1.1rem; }
-    .print-packets .packet-page li { font-size: .95rem; margin-bottom: 10px; line-height: 1.4; }
-
-    .print-route-grid { display: flex; flex-wrap: wrap; }
-    .print-route-grid .r-card {
-      box-sizing: border-box; border: 1.5px solid #999; border-radius: 8px; padding: 14px;
-      display: flex; flex-direction: column; page-break-inside: avoid; margin: 4px;
-    }
-    .print-route-grid.pp-2 .r-card { width: calc(50% - 8px); }
-    .print-route-grid.pp-2 .r-card:nth-child(2n) { page-break-after: always; }
-    .print-route-grid.pp-4 .r-card { width: calc(50% - 8px); }
-    .print-route-grid.pp-4 .r-card:nth-child(4n) { page-break-after: always; }
-    .print-route-grid.pp-6 .r-card { width: calc(33.33% - 8px); }
-    .print-route-grid.pp-6 .r-card:nth-child(6n) { page-break-after: always; }
-    .print-route-grid .r-card:last-child { page-break-after: auto !important; }
-
-    .r-card .route-header { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: #555; margin-bottom: 6px; }
-    .r-card .route-name { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; overflow-wrap: anywhere; }
-    .r-card .route-start { font-size: .98rem; margin-bottom: 6px; }
-    .r-card .route-steps { font-size: .85rem; color: #222; overflow-wrap: anywhere; line-height: 1.35; }
+  .print-qr-grid .p-card {
+    border: 1.5px solid #999; border-radius: 10px; padding: 14px;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
   }
+  .print-qr-grid .p-card canvas { width: 100%; height: auto; max-width: 320px; }
+  .print-qr-grid .p-card .p-num { font-size: .75rem; letter-spacing: .08em; color: #555; text-transform: uppercase; }
+  .print-qr-grid .p-card .p-name { font-size: 1.2rem; font-weight: 700; margin: 4px 0 8px; }
+  .print-qr-grid .p-card .p-instructions {
+    align-self: stretch; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere;
+    font-size: .72rem; line-height: 1.35; color: #222; margin: 0 0 8px;
+    /* No max-height + overflow:hidden here: that pair silently cut off the
+       end of a long instruction on paper (check-print-clip). A long card
+       grows, and the kit keeps it whole. */
+  }
+
+  .ref-sheet h2 { font-size: 1.1rem; margin-bottom: 12px; }
+  .ref-sheet table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  .ref-sheet th, .ref-sheet td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
+  .ref-sheet th { background: #eee; }
+
+  .print-slip-grid .s-card {
+    border: 1.5px dashed #999; border-radius: 8px; padding: 12px;
+    display: flex; flex-direction: column;
+  }
+  .s-card .slip-station { font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: #555; margin-bottom: 6px; }
+  .s-card .slip-station strong { color: #000; text-transform: none; letter-spacing: normal; font-size: 1rem; }
+  .s-card .slip-prompt, .s-card .slip-sticky-prompt { font-size: .82rem; font-style: italic; margin-bottom: 8px; }
+  /* A write-in rule is one line: the kit's `overflow-wrap: anywhere` would
+     break it in two on a narrow slip and make every slip taller. */
+  .s-card .slip-line, .s-card .slip-wish, .s-card .slip-wish-blank { font-size: .95rem; margin: 10px 0; letter-spacing: .02em; overflow-wrap: normal; }
+  /* The kit lets a long word wrap anywhere on a card, which also lets a table
+     squeeze its columns; the rubric's keep the widths their words ask for. */
+  .s-card .slip-rubric { width: 100%; border-collapse: collapse; font-size: .76rem; margin-bottom: 8px; overflow-wrap: break-word; }
+  .s-card .slip-rubric th, .s-card .slip-rubric td { border: 1px solid #999; padding: 4px 6px; text-align: center; }
+  .s-card .slip-rubric th:first-child, .s-card .slip-rubric td:first-child { text-align: left; }
+  .s-card .slip-sticky-box { border: 1px solid #999; border-radius: 4px; flex: 1; min-height: 110px; }
+  .s-card .slip-footer { font-size: .74rem; color: #555; margin-top: auto; padding-top: 8px; }
+
+  .print-packets .packet-page { padding: 0 4px 20px; }
+  .print-packets .packet-page h2 { font-size: 1.15rem; margin-bottom: 4px; }
+  .print-packets .packet-page .packet-sub { font-size: .82rem; color: #555; margin-bottom: 14px; }
+  .print-packets .packet-page ul { padding-left: 1.1rem; }
+  .print-packets .packet-page li { font-size: .95rem; margin-bottom: 10px; line-height: 1.4; }
+
+  .print-route-grid .r-card {
+    border: 1.5px solid #999; border-radius: 8px; padding: 14px;
+    display: flex; flex-direction: column;
+  }
+  .r-card .route-header { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: #555; margin-bottom: 6px; }
+  .r-card .route-name { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; overflow-wrap: anywhere; }
+  .r-card .route-start { font-size: .98rem; margin-bottom: 6px; }
+  .r-card .route-steps { font-size: .85rem; color: #222; overflow-wrap: anywhere; line-height: 1.35; }
 </style>
 </head>
 <body>
@@ -567,28 +553,30 @@
 
 </div>
 
-<div class="print-only" id="printQrArea">
-  <div class="print-qr-grid" id="printQrGrid"></div>
-</div>
-<div class="print-only ref-sheet" id="printRefArea">
-  <h2 id="refSheetTitle">Gallery Walk Reference Sheet</h2>
-  <table>
-    <thead><tr><th>#</th><th>Name / title</th><th>Link or text</th><th id="printRefReactHead" style="display:none;">Reactions</th></tr></thead>
-    <tbody id="printRefBody"></tbody>
-  </table>
-</div>
-<div class="print-only" id="printSlipsArea">
-  <div class="print-slip-grid" id="printSlipGrid"></div>
-</div>
-<div class="print-only print-packets" id="printPacketsArea">
-  <div id="printPacketsBody"></div>
-</div>
-<div class="print-only" id="printRouteCardsArea">
-  <div class="print-route-grid" id="printRouteCardsGrid"></div>
+<div id="printArea" class="pk-paper">
+  <div class="print-only" id="printQrArea">
+    <div class="print-qr-grid" id="printQrGrid"></div>
+  </div>
+  <div class="print-only ref-sheet" id="printRefArea">
+    <h2 id="refSheetTitle">Gallery Walk Reference Sheet</h2>
+    <table>
+      <thead><tr><th>#</th><th>Name / title</th><th>Link or text</th><th id="printRefReactHead" hidden>Reactions</th></tr></thead>
+      <tbody id="printRefBody"></tbody>
+    </table>
+  </div>
+  <div class="print-only" id="printSlipsArea">
+    <div class="print-slip-grid" id="printSlipGrid"></div>
+  </div>
+  <div class="print-only print-packets" id="printPacketsArea">
+    <div id="printPacketsBody"></div>
+  </div>
+  <div class="print-only" id="printRouteCardsArea">
+    <div class="print-route-grid" id="printRouteCardsGrid"></div>
+  </div>
 </div>
 
 <!-- The rotation clock, on the board. Outside .wrap so it can own the whole
-     viewport, and outside every print-only block so it never prints. -->
+     viewport, and outside #printArea so it never prints. -->
 <div class="projector" id="projectorView" hidden aria-hidden="true">
   <div class="pj-head">
     <div class="pj-round" id="pjRound">Rotation 1 of 1</div>
@@ -1069,6 +1057,7 @@
       els.printRefBtn.disabled = true;
       els.copyLinksBtn.disabled = true;
       els.previewNote.textContent = 'Live preview.';
+      buildPrintCodes();
       return;
     }
 
@@ -1114,6 +1103,7 @@
     els.printCodesBtn.disabled = false;
     els.printRefBtn.disabled = false;
     els.copyLinksBtn.disabled = false;
+    buildPrintCodes();
   }
 
   // Summary banner above the print buttons — mirrors updateDupWarning so a
@@ -1185,38 +1175,45 @@
 
   var RUBRIC_CRITERIA = ['Followed the prompt', 'Effort / craftsmanship', 'Creativity', 'Overall impression'];
 
-  function buildSlipCardHTML(name) {
+  function buildSlipCard(name) {
     var style = state.feedbackStyle || 'stars';
     var prompt = (state.feedbackPrompt || '').trim() || slipDefaultPrompt(style);
-    var header = '<div class="slip-station">Feedback for<br><strong>' + escapeHtml(name) + '</strong></div>';
-    var body;
+    var card = pEl('div', 's-card');
+    var header = card.appendChild(pEl('div', 'slip-station', 'Feedback for'));
+    header.appendChild(document.createElement('br'));
+    header.appendChild(pEl('strong', '', name));
     if (style === 'rubric') {
-      body = '<div class="slip-prompt">' + escapeHtml(prompt) + '</div>' +
-        '<table class="slip-rubric"><thead><tr><th>&nbsp;</th><th>1</th><th>2</th><th>3</th><th>4</th></tr></thead><tbody>' +
-        RUBRIC_CRITERIA.map(function (c) { return '<tr><td>' + escapeHtml(c) + '</td><td>&#9675;</td><td>&#9675;</td><td>&#9675;</td><td>&#9675;</td></tr>'; }).join('') +
-        '</tbody></table>' +
-        '<div class="slip-line">Comment: _______________________________</div>';
+      card.appendChild(pEl('div', 'slip-prompt', prompt));
+      var table = card.appendChild(pEl('table', 'slip-rubric'));
+      var headRow = table.appendChild(document.createElement('thead')).appendChild(document.createElement('tr'));
+      ['\u00a0', '1', '2', '3', '4'].forEach(function (h) { headRow.appendChild(pEl('th', '', h)); });
+      var body = table.appendChild(document.createElement('tbody'));
+      RUBRIC_CRITERIA.forEach(function (c) {
+        var tr = body.appendChild(document.createElement('tr'));
+        [c, '○', '○', '○', '○'].forEach(function (v) { tr.appendChild(pEl('td', '', v)); });
+      });
+      card.appendChild(pEl('div', 'slip-line', 'Comment: _______________________________'));
     } else if (style === 'sticky') {
-      body = '<div class="slip-sticky-prompt">' + escapeHtml(prompt) + '</div><div class="slip-sticky-box"></div>';
+      card.appendChild(pEl('div', 'slip-sticky-prompt', prompt));
+      card.appendChild(pEl('div', 'slip-sticky-box'));
     } else {
-      body = '<div class="slip-prompt">' + escapeHtml(prompt) + '</div>' +
-        '<div class="slip-line">&#9733; _______________________________</div>' +
-        '<div class="slip-line">&#9733; _______________________________</div>' +
-        '<div class="slip-wish">Wish: __________________________</div>' +
-        '<div class="slip-wish-blank">_______________________________</div>';
+      card.appendChild(pEl('div', 'slip-prompt', prompt));
+      card.appendChild(pEl('div', 'slip-line', '★ _______________________________'));
+      card.appendChild(pEl('div', 'slip-line', '★ _______________________________'));
+      card.appendChild(pEl('div', 'slip-wish', 'Wish: __________________________'));
+      card.appendChild(pEl('div', 'slip-wish-blank', '_______________________________'));
     }
-    return '<div class="s-card">' + header + body + '<div class="slip-footer">From (optional): _____________________</div></div>';
+    card.appendChild(pEl('div', 'slip-footer', 'From (optional): _____________________'));
+    return card;
   }
 
   function buildPrintSlips() {
-    var stations = nonEmptyEntries();
     var copies = Math.max(1, parseInt(state.feedbackCopies, 10) || 6);
-    els.printSlipGrid.className = 'print-slip-grid pp-' + (state.feedbackPerPage || '4');
-    var html = '';
-    stations.forEach(function (s) {
-      for (var c = 0; c < copies; c++) html += buildSlipCardHTML(s.name);
+    var slips = [];
+    nonEmptyEntries().forEach(function (s) {
+      for (var c = 0; c < copies; c++) slips.push(s.name);
     });
-    els.printSlipGrid.innerHTML = html;
+    PrintKit.renderCards(els.printSlipGrid, slips, cardGrid(state.feedbackPerPage), buildSlipCard);
   }
 
   function renderRefPreview(valid) {
@@ -1285,14 +1282,18 @@
     els.printPacketsBtn.disabled = !nonEmptyEntries().some(function (s) { return (state.entries[s.idx].feedbackNotes || '').trim(); });
   });
 
+  // One packet to a page (.pk-page), however many comments it carries.
   function buildPrintPackets() {
     var stations = nonEmptyEntries().filter(function (s) { return (state.entries[s.idx].feedbackNotes || '').trim(); });
-    els.printPacketsBody.innerHTML = stations.map(function (s) {
+    emptyNode(els.printPacketsBody);
+    stations.forEach(function (s) {
       var lines = (state.entries[s.idx].feedbackNotes || '').split(/\r?\n/).filter(function (l) { return l.trim().length; });
-      return '<div class="packet-page"><h2>' + escapeHtml(s.name) + '</h2>' +
-        '<div class="packet-sub">Feedback from your classmates during the gallery walk</div>' +
-        '<ul>' + lines.map(function (l) { return '<li>' + escapeHtml(l.trim()) + '</li>'; }).join('') + '</ul></div>';
-    }).join('');
+      var packet = els.printPacketsBody.appendChild(pEl('div', 'packet-page pk-page'));
+      packet.appendChild(pEl('h2', '', s.name));
+      packet.appendChild(pEl('div', 'packet-sub', 'Feedback from your classmates during the gallery walk'));
+      var list = packet.appendChild(document.createElement('ul'));
+      lines.forEach(function (l) { list.appendChild(pEl('li', '', l.trim())); });
+    });
   }
 
   els.printPacketsBtn.addEventListener('click', function () {
@@ -1386,18 +1387,17 @@
   function buildPrintRouteCards() {
     var order = computeWalkOrder();
     if (!order) return;
-    els.printRouteCardsGrid.className = 'print-route-grid pp-' + (state.routeCardsPerPage || '4');
-    els.printRouteCardsGrid.innerHTML = order.map(function (g) {
-      var stepsHtml = g.order.length > 1
-        ? '<div class="route-steps">Then: ' + g.order.slice(1).join(' &rarr; ') + '</div>'
-        : '<div class="route-steps">Stay at this station for the whole walk.</div>';
-      return '<div class="r-card">' +
-        '<div class="route-header">Gallery Walk Route</div>' +
-        '<div class="route-name">' + escapeHtml(g.name) + '</div>' +
-        '<div class="route-start">Start at <strong>Station ' + g.start + '</strong></div>' +
-        stepsHtml +
-        '</div>';
-    }).join('');
+    PrintKit.renderCards(els.printRouteCardsGrid, order, cardGrid(state.routeCardsPerPage), function (g) {
+      var card = pEl('div', 'r-card');
+      card.appendChild(pEl('div', 'route-header', 'Gallery Walk Route'));
+      card.appendChild(pEl('div', 'route-name', g.name));
+      var start = card.appendChild(pEl('div', 'route-start', 'Start at '));
+      start.appendChild(pEl('strong', '', 'Station ' + g.start));
+      card.appendChild(pEl('div', 'route-steps', g.order.length > 1
+        ? 'Then: ' + g.order.slice(1).join(' → ')
+        : 'Stay at this station for the whole walk.'));
+      return card;
+    });
   }
 
   els.printRouteCardsBtn.addEventListener('click', function () {
@@ -1406,31 +1406,57 @@
     printSection(els.printRouteCardsArea);
   });
 
+  /* ── The printed sheets ───────────────────────────────────────────────────
+     Five sheets, each built into its own area of #printArea; a print button
+     builds its sheet, shows it and prints. The card sheets are the shared
+     kit's grids (PrintKit.renderCards): a card is a share of the page's width
+     and as tall as its content, so every grid is one of the tool's own,
+     `{ cols, perPage }`, the "per printed page" choice cut into pages. Every
+     card, packet and table row is built with textContent.
+
+     The QR codes are also what Ctrl+P prints, so that sheet is kept current:
+     render() rebuilds it whenever the entries or the layout change. It is not
+     drawn on `beforeprint` — a canvas drawn inside that event reaches the
+     printer as replayed drawing commands, not as its bitmap. */
+  PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
+
+  var CARD_GRIDS = {
+    '1': { cols: 1, perPage: 1 }, '2': { cols: 2, perPage: 2 }, '4': { cols: 2, perPage: 4 },
+    '6': { cols: 3, perPage: 6 }, '8': { cols: 4, perPage: 8 }
+  };
+  function cardGrid(perPage) { return CARD_GRIDS[perPage] || CARD_GRIDS['4']; }
+
+  function pEl(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = String(text);
+    return n;
+  }
+  function emptyNode(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
   // Returns the names of any station whose code — the actual pixels about to
   // go to paper, drawn at print resolution, not the smaller preview canvas —
   // failed the same local test-scan the live preview already flagged. A
-  // build failure counts too: no code at all definitely won't scan.
-  function buildPrintCodes() {
-    var valid = validEntries();
+  // build failure counts too: no code at all definitely won't scan. render()
+  // passes no `verify`: it only keeps the sheet current, and the preview has
+  // already said which codes are in doubt.
+  function buildPrintCodes(verify) {
     var ecLevel = els.ecLevel.value;
     var showNum = els.showNumber.checked;
-    els.printQrGrid.className = 'print-qr-grid pp-' + els.cardsPerPage.value;
-    els.printQrGrid.innerHTML = '';
     var unverified = [];
-    valid.forEach(function (e, n) {
-      var card = document.createElement('div');
-      card.className = 'p-card';
-      var instructions = contentIsLink(e.content) ? '' : '<div class="p-instructions">' + escapeHtml(e.content) + '</div>';
-      card.innerHTML = (showNum ? '<div class="p-num">Entry ' + (n + 1) + '</div>' : '') +
-        '<div class="p-name">' + escapeHtml(e.name) + '</div>' + instructions + '<canvas></canvas>';
-      els.printQrGrid.appendChild(card);
+    PrintKit.renderCards(els.printQrGrid, validEntries(), cardGrid(els.cardsPerPage.value), function (e, n) {
+      var card = pEl('div', 'p-card');
+      if (showNum) card.appendChild(pEl('div', 'p-num', 'Entry ' + (n + 1)));
+      card.appendChild(pEl('div', 'p-name', e.name));
+      if (!contentIsLink(e.content)) card.appendChild(pEl('div', 'p-instructions', e.content));
+      var canvas = card.appendChild(document.createElement('canvas'));
       try {
-        var canvas = card.querySelector('canvas');
         drawQR(canvas, buildQR(e.content, ecLevel), 600);
-        if (verifyQRCanvas(canvas, e.content) === false) unverified.push(e.name);
+        if (verify && verifyQRCanvas(canvas, e.content) === false) unverified.push(e.name);
       } catch (err) {
         unverified.push(e.name); // already reported in the live preview
       }
+      return card;
     });
     return unverified;
   }
@@ -1438,22 +1464,31 @@
   function buildPrintRef() {
     var valid = validEntries();
     els.refSheetTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Reference Sheet';
-    document.getElementById('printRefReactHead').style.display = state.reactionsEnabled ? '' : 'none';
-    els.printRefBody.innerHTML = valid.map(function (e, n) {
-      var reactCell = state.reactionsEnabled ? '<td>' + (state.entries[e.idx].reactionCount || 0) + '</td>' : '';
-      return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(e.name) + '</td><td>' + escapeHtml(e.content) + '</td>' + reactCell + '</tr>';
-    }).join('');
+    document.getElementById('printRefReactHead').hidden = !state.reactionsEnabled;
+    emptyNode(els.printRefBody);
+    valid.forEach(function (e, n) {
+      var tr = els.printRefBody.appendChild(document.createElement('tr'));
+      [n + 1, e.name, e.content].forEach(function (v) { tr.appendChild(pEl('td', '', v)); });
+      if (state.reactionsEnabled) tr.appendChild(pEl('td', '', state.entries[e.idx].reactionCount || 0));
+    });
   }
 
-  function printSection(area) {
+  // No sheet .active means the QR codes print (the style sheet says so), which
+  // is what Ctrl+P gets before any button is pressed and after any has printed.
+  function showSection(area) {
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
-    area.classList.add('active');
+    if (area) area.classList.add('active');
+    document.getElementById('printArea').classList.toggle('sheet-asked', !!area);
+  }
+  function printSection(area) {
+    showSection(area);
     window.print();
   }
+  window.addEventListener('afterprint', function () { showSection(null); });
 
   els.printCodesBtn.addEventListener('click', function () {
     if (!validEntries().length) return;
-    var unverified = buildPrintCodes();
+    var unverified = buildPrintCodes(true);
     if (unverified.length) {
       var list = unverified.length <= 6
         ? unverified.join(', ')
