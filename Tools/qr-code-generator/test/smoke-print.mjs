@@ -89,13 +89,26 @@ const entry = i => i === 1
   : { label: 'Station ' + (i + 1), content: 'https://example.com/s/' + (i + 1) };
 const entriesOf = n => Array.from({ length: n }, (_, i) => entry(i));
 const linesOf = n => entriesOf(n).map(e => e.label + ', ' + e.content).join('\n');
+// The plain grid is as wide as its codes want to be, and a code wants to be as
+// wide as the wider of its picture and its label on one line. How wide a line
+// of text is belongs to the machine's fonts, so the plain grid is also run
+// with labels that cannot matter in any font: `short`, none wider than the
+// 300 px picture, and `wide`, one far wider than the page (no comma in it:
+// a line is split into label and link at its first).
+const WIDE = 'A label that is a good deal wider than the whole page when it is set on one line in any font at all and so makes the grid as wide as the page lets it be';
+const plainEntries = s => entriesOf(s.n).map((e, i) => i !== 1 ? e : s.labels === 'short' ? { ...e, label: 'Station 2' } : s.labels === 'wide' ? { ...e, label: WIDE } : e);
+const plainLines = s => plainEntries(s).map(e => e.label + ', ' + e.content).join('\n');
 const inventoryOf = n => Object.fromEntries(Array.from({ length: n }, (_, i) => ['asset-' + (i + 1), {
   label: 'Microscope ' + (i + 1), status: i % 3 ? 'in' : 'out', assignedTo: i % 3 ? '' : 'Table ' + (i + 1),
   checkedOutAt: i % 3 ? null : 1790000000000, checkedInAt: i % 3 ? 1790000000000 : null, history: [],
 }]));
 
 // `old` is [left, top, width] of the first code on the old page, in px from
-// the corner of the printable page; `img` the side of its picture.
+// the corner of the printable page; `img` the side of its picture. On the
+// plain grid `old` is null where it is the fonts' to decide (two across with
+// the long label: 37 and 316 on huginn, where the label is narrower than its
+// picture, 26 and 327 in CI, where it is wider), and there `plainWant()` says
+// what must hold on either.
 const SINGLE = [
   { name: 'a short link at the default size', text: 'https://example.com/a', rect: [160, 280, 400, 400] },
   { name: 'with a caption under it', text: 'https://example.com/a', caption: 'Room 12 sign-in', rect: [160, 262, 400, 436] },
@@ -103,8 +116,10 @@ const SINGLE = [
   { name: 'two letters at the smallest size', text: 'hi', size: 'min', rect: [260, 380, 200, 200] },
 ];
 const PLAIN = [
-  { cols: 2, n: 1, old: [37, 42, 316], img: 300 }, { cols: 2, n: 3, old: [37, 42, 316], img: 300 },
-  { cols: 2, n: 13, old: [37, 42, 316], img: 300 }, { cols: 2, n: 40, old: [37, 42, 316], img: 300 },
+  { cols: 2, n: 1, old: [37, 42, 316], img: 300 }, { cols: 2, n: 3, old: null },
+  { cols: 2, n: 13, old: null }, { cols: 2, n: 40, old: null },
+  { cols: 2, n: 3, labels: 'short', old: [37, 42, 316], img: 300 }, { cols: 2, n: 13, labels: 'short', old: [37, 42, 316], img: 300 },
+  { cols: 2, n: 3, labels: 'wide', old: [26, 42, 327], img: 311 }, { cols: 2, n: 13, labels: 'wide', cut: true, old: [26, 42, 327], img: 309 },
   { cols: 3, n: 1, cut: true, old: [26, 42, 213.33], img: 195.33 }, { cols: 3, n: 3, old: [26, 42, 213.33], img: 197.33 },
   { cols: 3, n: 13, cut: true, old: [26, 42, 213.33], img: 195.33 }, { cols: 3, n: 40, cut: true, old: [26, 42, 213.33], img: 195.33 },
   { cols: 4, n: 1, old: [26, 42, 156.5], img: 140.5 }, { cols: 4, n: 3, old: [26, 42, 156.5], img: 140.5 },
@@ -118,6 +133,19 @@ const LABELS = [
   { sheet: 'avery5163', n: 11, oldPages: 2 }, { sheet: 'avery5163', n: 25, oldPages: 3 },
 ];
 const INVENTORY = [1, 6, 70];
+
+/** The plain grid's rule, from the page's CSS: a code is its picture (300 px
+    as drawn) or its widest label on one line, whichever is wider, and its
+    8 px of padding each side (and a 1 px cut line); the grid is that many
+    codes and 14 px between them, inside 10 px each side, centred, and never
+    wider than the page less the sheet's 16 px each side. Returns the first
+    code's [left, width] and its picture's side for a label `labelMax` px wide. */
+function plainWant(cols, cut, labelMax) {
+  const edge = 8 + (cut ? 1 : 0);
+  const room = (PAGE_W - 2 * 16 - 2 * 10 - (cols - 1) * 14) / cols;
+  const w = Math.min(room, Math.max(300, labelMax) + 2 * edge);
+  return { left: (PAGE_W - (cols * w + (cols - 1) * 14 + 2 * 10)) / 2 + 10, w, img: w - 2 * edge };
+}
 
 /** Opens 016 as wide as the printable page, so a thing measured in print
     media is the size it is on paper. */
@@ -173,6 +201,14 @@ const onPaper = (page, sel) => page.evaluate(sel => {
       allCards: [...g.children].every(c => c.classList.contains('pk-card') && c.classList.contains('bulk-item')),
     })),
     labels: [...sheet.querySelectorAll('.bulk-item-label')].filter(l => l.getBoundingClientRect().height > 0).map(l => l.textContent),
+    // The widest label set on one line, in the label's own type: what the
+    // machine's fonts make of it. Measured out of the flow, then taken away.
+    labelMax: Math.max(0, ...[...sheet.querySelectorAll('.bulk-item-label')].filter(l => l.getBoundingClientRect().height > 0).map(l => {
+      const span = document.createElement('span');
+      span.style.cssText = 'position:absolute;left:0;top:0;white-space:nowrap;visibility:hidden;font:' + getComputedStyle(l).font;
+      span.textContent = l.textContent; l.parentNode.parentNode.parentNode.appendChild(span);
+      const w = span.getBoundingClientRect().width; span.remove(); return w;
+    })),
     labelInk: (l => l ? getComputedStyle(l).color : null)(sheet.querySelector('.bulk-item-label')),
     cut: (c => c ? getComputedStyle(c).borderTopStyle : null)(sheet.querySelector('.bulk-item')),
     decoded: imgs.map(i => {
@@ -253,10 +289,10 @@ for (const theme of ['light', 'dark']) {
 
   // ---- the plain-paper grid -----------------------------------------------------
   for (const s of PLAIN) {
-    const what = `${theme}, plain grid, ${s.cols} across, ${s.n} code${s.n === 1 ? '' : 's'}${s.cut ? ', cut lines' : ''}`;
+    const what = `${theme}, plain grid, ${s.cols} across, ${s.n} code${s.n === 1 ? '' : 's'}${s.cut ? ', cut lines' : ''}${s.labels ? `, ${s.labels} labels` : ''}`;
     const page = await open(browser, { theme });
     try {
-      await makeGrid(page, { cols: s.cols, cut: s.cut, text: linesOf(s.n) });
+      await makeGrid(page, { cols: s.cols, cut: s.cut, text: plainLines(s) });
       eq(await page.locator('#print-area-bulk .bulk-item').count(), s.n, `${what}: the sheet is built when the grid is, so Ctrl+P has something to print`);
       eq(await press(page, 'btn-bulk-print'), true, `${what}: the button is on`);
       eq(await page.evaluate(() => window.__printCalls), 1, `${what}: it called print() once`);
@@ -270,21 +306,32 @@ for (const theme of ['light', 'dark']) {
       eq(m.grids[0].cls, 'pk-cards pk-page pk-cards-own', `${what}: a kit grid of the tool's own`);
       eq(m.grids[0].cols, String(s.cols), `${what}: ${s.cols} across`);
       ok(m.grids[0].n === s.n && m.grids[0].allCards, `${what}: every code is a kit card`);
-      near(m.boxes[0][0], s.old[0], `${what}: the first code is as far in from the left as it was`);
-      near(m.boxes[0][1], s.old[1], `${what}: and as far down`);
-      ok(m.boxes.every(b => Math.abs(b[2] - s.old[2]) <= 0.6), `${what}: every code is the width it was (${s.old[2]} px; first is ${m.boxes[0][2]})`);
-      ok(m.imgBoxes.every(b => Math.abs(b[2] - s.img) <= 0.6 && Math.abs(b[3] - s.img) <= 0.6), `${what}: every picture is the size it was (${s.img} px square; first is ${m.imgBoxes[0][2]})`);
+      // What the page's CSS gives for the labels as this machine's fonts set
+      // them; and, wherever the fonts cannot matter, the old page's numbers.
+      const want = plainWant(s.cols, s.cut, m.labelMax);
+      ok(m.labelMax > 0, `${what}: the widest label was measured (${Math.round(m.labelMax)} px on one line)`);
+      near(m.boxes[0][0], want.left, `${what}: the grid is centred, as wide as its codes and no wider than the page`);
+      ok(m.boxes.every(b => Math.abs(b[2] - want.w) <= 0.6), `${what}: every code is its picture or its widest label, whichever is wider, up to its share of the page (${Math.round(want.w * 100) / 100} px; first is ${m.boxes[0][2]})`);
+      ok(m.imgBoxes.every(b => Math.abs(b[2] - want.img) <= 0.6 && Math.abs(b[3] - want.img) <= 0.6), `${what}: every picture fills its code (${Math.round(want.img * 100) / 100} px square; first is ${m.imgBoxes[0][2]})`);
+      near(m.grids[0].box[0] + m.grids[0].box[2] / 2, PAGE_W / 2, `${what}: the grid's middle is the page's`);
+      ok(m.grids[0].box[2] <= PAGE_W - 2 * 16 + 0.6, `${what}: and it keeps the sheet's 16 px each side (${m.grids[0].box[2]} px wide)`);
+      near(m.boxes[0][1], 42, `${what}: the first code is as far down as it was`);
+      if (s.old) {
+        near(m.boxes[0][0], s.old[0], `${what}: the first code is as far in from the left as it was`);
+        ok(m.boxes.every(b => Math.abs(b[2] - s.old[2]) <= 0.6), `${what}: every code is the width it was (${s.old[2]} px; first is ${m.boxes[0][2]})`);
+        ok(m.imgBoxes.every(b => Math.abs(b[2] - s.img) <= 0.6 && Math.abs(b[3] - s.img) <= 0.6), `${what}: every picture is the size it was (${s.img} px square; first is ${m.imgBoxes[0][2]})`);
+      }
       if (s.n > 1) near(m.boxes[1][0] - m.boxes[0][0] - m.boxes[0][2], 14, `${what}: 14 px between codes, as there was`);
       if (s.n > s.cols) near(m.boxes[s.cols][1] - m.boxes[0][1] - m.boxes[0][3], 14, `${what}: and 14 px between rows`);
       eq(m.cut, s.cut ? 'dashed' : 'none', `${what}: cut lines ${s.cut ? 'on' : 'off'}`);
       eq(m.labelInk, 'rgb(26, 29, 39)', `${what}: a label is the ink it was`);
-      eq(JSON.stringify(m.labels), JSON.stringify(entriesOf(s.n).map(e => e.label)), `${what}: every label is on the sheet, in order`);
-      eq(JSON.stringify(m.decoded), JSON.stringify(entriesOf(s.n).map(e => e.content)), `${what}: every code decodes to its line's link`);
+      eq(JSON.stringify(m.labels), JSON.stringify(plainEntries(s).map(e => e.label)), `${what}: every label is on the sheet, in order`);
+      eq(JSON.stringify(m.decoded), JSON.stringify(plainEntries(s).map(e => e.content)), `${what}: every code decodes to its line's link`);
       eq(m.pageRule, '@page { size: letter portrait; margin: 0.5in; }', `${what}: the page is Letter at half an inch`);
       // The rows as measured, each as tall as its tallest code.
       const rows = [];
       for (let i = 0; i < m.boxes.length; i += s.cols) rows.push(Math.max(...m.boxes.slice(i, i + s.cols).map(b => b[3])));
-      const [lo, hi] = pagesFor(rows, 14, s.old[1]);
+      const [lo, hi] = pagesFor(rows, 14, 42);
       await page.emulateMedia({ media: null });
       const buf = await page.pdf(PDF);
       const got = pdfPageCount(buf);
