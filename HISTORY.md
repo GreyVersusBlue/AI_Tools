@@ -9,6 +9,46 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 057 Dichotomous Key Builder: a tree view of the key, printable on one page (2026-10-05, AI-31-057, `CACHE_VERSION` v246)
+
+Audit entry AI-31, BACKLOG rank 96 (½). Only 057's page, its suite folder and bookkeeping changed.
+
+- **What shipped.** A "Tree view" card (a native `<details>`, open) draws the key left to right from
+  `state.steps`, the same data the numbered list and the specimen walk read; there is no second model. From step 1
+  every couplet is a box; a couplet leading to an undrawn step has that step's two couplets beside it. A step
+  reached twice, and a loop back up, become dashed pointers ("Continues at step 2, drawn under 1a", "Loops back to
+  step 1") so nothing is drawn twice and a loop cannot run forever. A dead end is a marked box. A step nothing leads
+  to is not drawn and is named under the tree. A result reached from two couplets is two boxes, each naming the
+  other ("Also reached at 2a"). The numbered list is unchanged and still the default.
+- **Print.** "Print tree overview (one page)" prints the tree alone; a checkbox (off by default, so the old
+  output is unchanged) adds it as its own page after the worksheet and before the answer key. It is shrunk with CSS
+  `zoom` to fit one sheet: the page measures the tree once at print size (showing `#printArea` off-screen for that
+  moment), floor 0.4, below which 10 pt text stops being legible and the tree runs onto a second page instead.
+  The printed copy uses fixed paper colours like the specimen table.
+- **Non-redundant and not silent for a screen reader.** The tree is real nested lists (each with its role stated,
+  since `list-style: none` drops list semantics in Safari), so the level is announced by the list rather than drawn;
+  a visible summary line says what the numbered list never does (couplets reached, results, longest route); every
+  result carries the route that reaches it; the sideways-scrolling box has a tab stop and a label. It is not hidden
+  from assistive technology and holds no picture. The cost is that a reader hears the couplet text twice if they
+  read both; the disclosure can be closed.
+- **Decisions, mine, cheap to reverse.** HTML nested lists, not SVG: SVG would have been a picture a reader must be
+  told about, and needs text measuring. Tree off by default in the print, since the row said "alongside" and the old
+  output should not change. The unreachable-step note prints (one line) because the numbered key prints that step.
+- **Checks.** New suite `Tools/dichotomous-key-builder/test/smoke-tree-view.mjs` (`test:dichotomous-key-tree`,
+  port 8484): small, deep, wide and lopsided keys, one with an unreachable step and a result reached twice, one
+  with a shared step, loop and dead ends; PDF page counts (Chromium, one sheet each, 3 and 2 for the full job); axe in
+  light and dark; a key saved before the view loads byte-identical. The trace suite still passes. `test:a11y --only 057`,
+  `audit-print --check --only 057` and every `check:*` guard, `lint`, `check:precache -- --base origin/main` pass.
+- **Breaks on purpose: 19, every one now failing the suite.** 16 were caught first time. Three survived and
+  each cost an assertion: the root list's own `role` (the check skipped the root), the space between a couplet's
+  label and its text (a flattening reader would read "2a.Has fur"), and "drawing the tree never writes to storage"
+  (my first mutation wrote a different key, so it proved nothing; the second rewrites the saved key with an extra
+  field and fails the byte-for-byte check). All three were re-run and fail. Suite 84 assertions.
+- **What did not work first.** My first run failed 20 assertions: 11 were my expectations (tree order is branch by
+  branch, not 1a 1b 2a 2b) and 8 PDF page counts were a leftover `emulateMedia('screen')` from my own screenshot
+  step, which makes `page.pdf()` print the screen. Reset media to `null`, not `'screen'`.
+- **Not verified.** Nothing has been printed on paper or read with a real screen reader; the full `npm test` was not run.
+
 ## Path 7 P4, increment 3: 040 is `ExportKit`'s second adopter, `_shared/duplex-print.js` is deleted, and 016's print suite no longer depends on the machine's fonts (2026-10-05, AI-13, `CACHE_VERSION` v245)
 
 Audit entry AI-13, rank 6 (2+). Third increment of P4. **The row stays, rewritten.** P5 untouched, 011 not started.

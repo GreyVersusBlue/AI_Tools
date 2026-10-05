@@ -460,7 +460,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 93 | Practice worksheet variants — matching, fill-in-the-blank and "trap or true cognate" with answer keys | 052 | ½ | | [052 Cognates & False Friends Reference List Builder](#052--cognates--false-friends-reference-list-builder) |
 | 94 | Export into Review Game Board — emit the question set in the board’s category/points format | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
-| 96 | Visual branching tree view, printable as a one-page overview alongside the numbered key | 057 | ½ | | [057 Dichotomous Key Builder](#057--dichotomous-key-builder) |
 | 97 | Multi-week rotating schedule — derive week N+1 by shifting each person one duty; print a month | 058 | ½ | | [058 Duty Roster Builder](#058--duty-roster-builder) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 99 | Per-student report cards — one page per student across all events and dates, with the class average | 060 | ½ | | [060 Fitness & Skill Assessment Tracker](#060--fitness--skill-assessment-tracker) |
@@ -7426,9 +7425,8 @@ appropriately-leveled versions without duplicated authoring work.
 - **Multiple named saved keys** (e.g. "Animal Kingdom," "Leaf
   Classification"), matching the multi-save convention used by most
   builder tools in this round — right now one key per browser.
-- **A visual branching-tree view** as an alternative to the numbered-
-  couplet list, for a teacher who wants to see (or show students) the
-  key's shape at a glance rather than reading through numbered text.
+- ~~A visual branching-tree view~~ **Shipped 2026-10-05 (v246):** a "Tree view" card drawn from the same
+  `state.steps`, and an opt-in one-page print after the worksheet. See `HISTORY.md`.
 - **Import a key from a pasted outline** (a simple indented-text or
   tab-separated format), for a teacher porting an existing paper key into
   this tool instead of rebuilding it couplet by couplet.
@@ -7449,10 +7447,8 @@ immediately classroom-usable, not just a reference document.
 
 #### Open Questions
 
-- Is a visual tree view worth the layout complexity (computing branch
-  positions, connecting lines) given the numbered-couplet format is both
-  the traditional standard for real dichotomous keys and already fully
-  functional here?
+- ~~Is a visual tree view worth the layout complexity?~~ Answered by ranking it and building it: nested
+  lists with CSS connectors, no computed positions.
 - Should validation warnings block printing (hard stop until fixed) or
   just flag issues non-blockingly (a warning banner, but printing still
   works)? A hard stop is safer against handing students a broken key; a
@@ -7466,7 +7462,7 @@ immediately classroom-usable, not just a reference document.
   pattern, though the underlying data structures differ enough that
   sharing code isn't obvious.
 - **P6 (print quality)** — the print-without-specimens option and a
-  visual tree-view print layout are both pure print-format additions.
+  visual tree-view print layout are both pure print-format additions (the tree print shipped, v246).
 - **P15 (first run)** — the seeded 2-step working example (already
   shipped) is the main first-run aid; validation warnings would extend
   that help through the whole authoring process, not just the starting
