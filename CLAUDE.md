@@ -478,7 +478,7 @@ files must be added there too.
   saves a table or a zip calls these and does not write another `csvCell()` or anchor click. 064's Download PDF is
   the first adopter (`npm run test:trading-card-pdf`) and 040's double-sided cards the second (`npm run
   test:vocab-imposition`, v245, when `_shared/duplex-print.js` was deleted) and 011's booklet and pages-per-sheet
-  layouts the third (`npm run test:image-to-pdf-impose`, v246: a tool records each page as drawing steps and hands
+  layouts the third (`npm run test:image-to-pdf-impose`, v248: a tool records each page as drawing steps and hands
   the pages to `toPdf` with `impose`; `compress: true` and, for a two-sided N-up, `flip` came with it); nothing calls
   the file helpers yet (`BACKLOG.md`, Path 7 P4).
   Its suites are `npm run test:export`; no booklet has been printed or folded, and no file opened in a spreadsheet.

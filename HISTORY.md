@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## Path 7 P4, increment 4: 011 makes booklets and several pages to a sheet on `ExportKit` (Path 17 P4's controls), and 064's zip and PNG downloads are the file helpers' first adopter (2026-10-05, AI-13, `CACHE_VERSION` v246)
+## Path 7 P4, increment 4: 011 makes booklets and several pages to a sheet on `ExportKit` (Path 17 P4's controls), and 064's zip and PNG downloads are the file helpers' first adopter (2026-10-05, AI-13, `CACHE_VERSION` v248)
 
 Audit entry AI-13, rank 6 (2+). Fourth increment of P4. **The row stays, rewritten: what is left is CSV and XLSX
 for the tools that hold a table.** Rank 51 (Path 17 P4) stays too, cut to the paper check. P5 untouched.
@@ -102,6 +102,146 @@ for the tools that hold a table.** Rank 51 (Path 17 P4) stays too, cut to the pa
   No layout depends on text width (the title's wrap changes which lines exist, not where a slot is), but CI's
   font has not run it. A two-sided pages-per-sheet file can end in an empty page (the layer always emits the last
   sheet's back). Real photos were not used: the fixtures are 60 x 40 px greys. Full `npm test` was not run.
+## 058 Duty Roster Builder: a multi-week rotation and a month on one print (2026-10-05, AI-31-058, `CACHE_VERSION` v247)
+
+Audit entry AI-31, BACKLOG rank 97 (½). Per-tool row; the rank-97 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** Week 1 is the grid the tool always had (`assignments`). Weeks 2 to N (1 to 6, default 4, the "Weeks in
+  the rotation" select) are not stored: each is the week before it, edits included, with every person moved down one duty
+  (rows in the order shown, the last duty wraps to the first, day by day, empty cells move too), plus the cells the teacher
+  edited by hand in that week (`weekOverrides`, `{ '2': { '<dutyId>|<day>': name } }`).
+- **Decision, mine, cheap to reverse: what an edit does.** A hand edit in week N is pinned: it stays as set when
+  an earlier week changes, and the weeks after N derive from it, so it travels on by the rotation. An edit in week 1 reaches
+  every later week except the cells pinned there. An edit that lands on what the rotation gives is not an edit (the pin is
+  released); "Reset this week to the rotation" releases the week's pins. Clear grid clears week 1 and all pins; auto-fill
+  fills week 1 only and leaves pins. The page says it in a line under the week picker, and a pinned cell reads "edited by
+  hand" in words and in its select's accessible name.
+- **Not touched, as instructed:** auto-fill's order (by day, then duty) and the open question about it.
+- **Saved state.** Same key `drb_roster_v1`; a roster saved earlier has no `weeks` or `weekOverrides` and loads as week 1
+  with four derived weeks after it, nothing rewritten. Share links carry both fields; an arrival drops a pin for a duty or
+  person that did not travel or a week outside 2 to 6, and one made before this change arrives as week 1.
+- **Print.** "Print this week" (the one shown) and "Print the month" build one headed table per week into `#printGrid`
+  (now a `div`; the page's inline-sink count stays 4 because the two new selects are filled with DOM calls, not
+  `innerHTML`). Each week is `break-inside: avoid`; the month sets its table text at .85rem. `audit-print --check --only 058`
+  pass (no finding on the sheet, in light or dark), and `test:a11y -- --only 058` is 4 passed, 0 failed. Not checked on paper.
+- **Suite.** `test:duty-roster` (`Tools/duty-roster-builder/test/smoke-rotation.mjs`, port 8485), 63 assertions.
+  Broken on purpose 39 times (42 runs: three mutants first survived, the staff count reading week 1, the month class and
+  the week-number filter on arrival, so three assertions were added and those three re-run and now fail). Not every
+  assertion was broken one by one: the print sheet's `display`, the weeks following one another down the page, "two weeks
+  printed" and the offsite check were not given a mutant of their own.
+- **What went wrong.** Two mutation loops started at once (one backgrounded by the tool's timeout, one by me) and fought over
+  the page file; the first was killed and the page restored from git before anything was committed from it. Mutants must
+  be run one process at a time.
+## 057 Dichotomous Key Builder: a tree view of the key, printable on one page (2026-10-05, AI-31-057, `CACHE_VERSION` v246)
+
+Audit entry AI-31, BACKLOG rank 96 (½). Only 057's page, its suite folder and bookkeeping changed.
+
+- **What shipped.** A "Tree view" card (a native `<details>`, open) draws the key left to right from
+  `state.steps`, the same data the numbered list and the specimen walk read; there is no second model. From step 1
+  every couplet is a box; a couplet leading to an undrawn step has that step's two couplets beside it. A step
+  reached twice, and a loop back up, become dashed pointers ("Continues at step 2, drawn under 1a", "Loops back to
+  step 1") so nothing is drawn twice and a loop cannot run forever. A dead end is a marked box. A step nothing leads
+  to is not drawn and is named under the tree. A result reached from two couplets is two boxes, each naming the
+  other ("Also reached at 2a"). The numbered list is unchanged and still the default.
+- **Print.** "Print tree overview (one page)" prints the tree alone; a checkbox (off by default, so the old
+  output is unchanged) adds it as its own page after the worksheet and before the answer key. It is shrunk with CSS
+  `zoom` to fit one sheet: the page measures the tree once at print size (showing `#printArea` off-screen for that
+  moment), floor 0.4, below which 10 pt text stops being legible and the tree runs onto a second page instead.
+  The printed copy uses fixed paper colours like the specimen table.
+- **Non-redundant and not silent for a screen reader.** The tree is real nested lists (each with its role stated,
+  since `list-style: none` drops list semantics in Safari), so the level is announced by the list rather than drawn;
+  a visible summary line says what the numbered list never does (couplets reached, results, longest route); every
+  result carries the route that reaches it; the sideways-scrolling box has a tab stop and a label. It is not hidden
+  from assistive technology and holds no picture. The cost is that a reader hears the couplet text twice if they
+  read both; the disclosure can be closed.
+- **Decisions, mine, cheap to reverse.** HTML nested lists, not SVG: SVG would have been a picture a reader must be
+  told about, and needs text measuring. Tree off by default in the print, since the row said "alongside" and the old
+  output should not change. The unreachable-step note prints (one line) because the numbered key prints that step.
+- **Checks.** New suite `Tools/dichotomous-key-builder/test/smoke-tree-view.mjs` (`test:dichotomous-key-tree`,
+  port 8484): small, deep, wide and lopsided keys, one with an unreachable step and a result reached twice, one
+  with a shared step, loop and dead ends; PDF page counts (Chromium, one sheet each, 3 and 2 for the full job); axe in
+  light and dark; a key saved before the view loads byte-identical. The trace suite still passes. `test:a11y --only 057`,
+  `audit-print --check --only 057` and every `check:*` guard, `lint`, `check:precache -- --base origin/main` pass.
+- **Breaks on purpose: 19, every one now failing the suite.** 16 were caught first time. Three survived and
+  each cost an assertion: the root list's own `role` (the check skipped the root), the space between a couplet's
+  label and its text (a flattening reader would read "2a.Has fur"), and "drawing the tree never writes to storage"
+  (my first mutation wrote a different key, so it proved nothing; the second rewrites the saved key with an extra
+  field and fails the byte-for-byte check). All three were re-run and fail. Suite 84 assertions.
+- **What did not work first.** My first run failed 20 assertions: 11 were my expectations (tree order is branch by
+  branch, not 1a 1b 2a 2b) and 8 PDF page counts were a leftover `emulateMedia('screen')` from my own screenshot
+  step, which makes `page.pdf()` print the screen. Reset media to `null`, not `'screen'`.
+- **Not verified.** Nothing has been printed on paper or read with a real screen reader; the full `npm test` was not run.
+
+## Path 3 P6, the year rollover: designed, not built (2026-10-05, AI-15, a design pass, no `CACHE_VERSION` change)
+
+Audit entry AI-15, rank 4 (1). A design pass under sprint mode: no code, no suite, nothing run in a browser.
+**The row stays**, with a line saying it is designed. The design is `BACKLOG.md`, Path 3, the P6 bullet. Only
+`BACKLOG.md` and this file changed.
+
+- **How it was read.** 009's and 006's rollovers, `roster.js`, `media-db.js` and the registry by hand; then four
+  read-only passes, each citing lines: the seven mixed keys at their write sites; every unmarked key of a tool
+  that reads a roster (and of 004, 029, 044, 045); IndexedDB, the media namespaces, Cache Storage and
+  sessionStorage; and all 54 student-marked entries for setup held inside them. Two Node probes outside the repo
+  loaded the registry to count it: 89 rows, 226 keys, 54 prefixes; 44 keys and 10 prefixes student-marked, over 27
+  tools. The claim checked by hand afterwards was the first one below.
+- **What 009's rollover does today, which nobody had written down.** (1) Its archive holds no IndexedDB
+  (`buildEnvelope(lastScanGroups, [])`), so Seating Chart's student photos are not in the file, and 005's boot
+  sweep deletes them once `seating-chart-v1` is gone. (2) It never reads the file it downloaded. (3) It deletes
+  whole keys and says "your templates and settings are untouched", while 21 student-marked keys or families hold
+  setup: room layouts, hall-pass destinations, behaviour tags, contract wording, lab roles, milestones,
+  accommodation types, a field trip's text. It also deletes every class name and 006's only copy of past years.
+  (4) 006 has a second rollover that keeps class names, files the year inside the browser and touches no other
+  tool. The 2026-09-23 audit asked whether a key held student data; it did not ask what else the key held.
+- **The mixed keys are more than seven.** The seven stand as described. Four more findings, five keys: `htcm:data:*` (064's cards made by
+  "Batch-add from roster"), `drb_roster_v1` and `sdb_directory_v1` (staff lists a class roster can fill), and
+  `gvb-exit-ticket:discussion` with `:categoryTally` (student work with no names; the 2026-09-23 reading called
+  `discussion` not student data, and that is now a question for Devon, not a correction). 038's datasets cannot be
+  separated by any rule: the design scans free text for this year's roster names and asks.
+- **Decisions the design takes, cheap to reverse because nothing is built.** Clear is per field for a key with
+  setup in it (a reducer per key, pure, idempotent), not a delete. The preview and the clear are one value, so
+  they cannot differ. Nothing is cleared until a file on disk has been read back and matches. A journal key
+  (`br_rollover_v1`, hashes only) makes an interrupted clear finishable or reversible. The module is
+  `Tools/backup-restore/br-rollover.js`, not a `_shared/` file, because only 009 runs it.
+- **Left to Devon, ten questions, listed in the bullet and not answered:** whether the browser keeps past rosters
+  at all; the default for free text; items still checked out in 016; anonymous student work; a rollover for some
+  classes only; an archive reader; staff lists filled from a roster; whether the file must be picked back where
+  there is no save picker; 030's scores and 064's cards; one name for the feature.
+- **Found on the way and not ranked:** 044's share link and JSON export carry `medicalAlerts`; 050's link carries
+  `roles[].students`; 030's export carries team names.
+- **Not verified.** Everything is from reading. No tool was loaded on a reduced key; `showSaveFilePicker`, the
+  service worker's client list and a real archive's size were not tried or measured. The unmarked keys of tools
+  that read no roster were not re-read. A design pass does not make the build eligible ahead of the questions.
+
+---
+
+## Path 9 P2 designed, not built: pacing that recomputes (2026-10-05, AI-18, no `CACHE_VERSION`, no code)
+
+Audit entry AI-18, rank 13 (2+). A design pass: only `BACKLOG.md` changed (the P2 bullet under "Path 9", and a
+note on rank 13). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** A new optional `cal.plan` (courses, each with lessons or typed units, pins, lost
+  dates, a baseline), one pure module `scv-plan.js` beside `scv-pacing.js`, a placer that never changes a count,
+  "behind" as a ledger that must sum, a migration keyed on what it finds, and dates stamped into the blob at
+  every save so that a change is told and a reader outside 032 needs no placer.
+- **What reading the code turned up, each worth knowing before the build.** The lesson sequence already
+  recomputes round a closure; what never flowed is `cal.units`. `units` and `abCycle` are not in `isValid()` or
+  `migrate()`. 010 and 045 read the day's typed note, never the placement. A blob with `__v: 3` fails the shipped
+  `isValid()`, the shipped `get()` then returns the seed, and the next save writes it over the calendar, which
+  is why the design adds a field and leaves `__v` at 2. The A/B cycle slides on a lost day (all 99 later letters
+  flip after one January closure in the seed). One bump on an alternating A/B list puts 143 of 144 later lessons
+  on the other letter's day.
+- **Measured, with two pure-Node probes that were not kept:** the seed's 184 school days (13 half, 92 A and 92
+  B, marking periods of 45, 46, 47, 46); fixed unit to pinned unit gives the same school days for all 40,528
+  start/end pairs that hold one; the example dates the design's tests name.
+- **Not verified.** No line of the design has run. The equivalence of the new placer with `placeLessons()` is
+  a test the design names, not a result. The "older page ignores `plan` and writes it back" claim is read off
+  the page's code (it saves `cal` whole), not seen in a browser. The page's `buildAbMap()` walks in local time
+  and the design's `abLetters()` in UTC; that they agree is a named test, not a finding.
+- **Ten questions are Devon's** and are listed, unanswered, at the end of the P2 bullet: half days, testing
+  days, whether A/B slides after a snow day, what "behind" is measured against, buffers, freezing the past, one
+  list or two for A/B, the dated units already saved, what carries into a new year, and the words.
+
+---
 
 ## Path 7 P4, increment 3: 040 is `ExportKit`'s second adopter, `_shared/duplex-print.js` is deleted, and 016's print suite no longer depends on the machine's fonts (2026-10-05, AI-13, `CACHE_VERSION` v245)
 
