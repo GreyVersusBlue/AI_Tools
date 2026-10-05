@@ -9,6 +9,85 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P3, increment 9: 064 adopts the print kit with an exact-size card and a shared renderer; a deck of one page of cards had printed three sheets (2026-10-04, AI-13, `CACHE_VERSION` v238)
+
+Audit entry AI-13, rank 6 (2+). Ninth increment of P3: the fourth of the card-grid tools after 074, 051 and 040, 064
+(historical figure / country trading card maker, 1,763 lines, one print button), by the recipe. The row stays,
+rewritten: three card-grid tools are left (018 017 016). P4 and P5 untouched. **No `_shared/` file changed; the kit
+did not change.**
+
+- **One button, moved completely.** "Print cards" was the only `window.print()` in the page. PNG, PDF and zip
+  export are `htcm-export.js` and draw on a canvas; they are not print paths and were not touched.
+- **Which kind of card: a size of its own, at all three sizes.** Read off 064's CSS. *Standard* was
+  `repeat(3, 2.5in)` with `height: 3.5in; width: 2.5in` on the card, and *reference* `repeat(2, 3.5in)` with
+  `5in x 3.5in`: exact inches, for a sleeve, a nine-pocket page or a poster. *Fill* was `repeat(3, 1fr)` inside
+  `max-width: 7.7in` with `height: 3.4in`: a share of the width, but of a band the tool pins, and an exact height.
+  None is a share of the kit's printable page (its `3x3` preset is nine cards of a third of the page each), so all
+  pass `{ cols, perPage }` (`pk-cards-own`), 3 across and 6 to a page or 2 and 4. From the kit: the grid, the
+  columns, the cut into pages, the page breaks, `break-inside`, `setPage()`, `.pk-paper`, and `print-area.css` for
+  the editor. Kept in the page: the card's `height`, `width`, `overflow: hidden` and padding, the 0.2 or 0.15 in
+  gap, the 7.7 in band, the two inch column widths (now `repeat(var(--pk-cols), 2.5in)`), and the banners.
+- **The exact card needed nothing new.** The recipe expected 040's `exact-size` rule (`grid-auto-rows` and two
+  size variables set on the grid). 064's card already carries its own `width` and `height` on `.trading-card`, so
+  the rows are the card's height with no rule, and `.pk-cards-own` gives it no `min-height` to fight. This was the
+  untried case the notes kept naming ("an exact `height` and clipping on a `.pk-cards-own` card"), and it works
+  as the kit's header says it would.
+- **Fronts and backs are one `renderCards()` call.** The old handler built two lists of page strings. Now one list
+  holds every page of fronts, padded to a full grid with `null`, then every page of backs through
+  `DuplexPrint.mirrorPageRows`; `perPage` cuts it back into the same pages. The two banners and the copy of the SVG
+  defs go in with `insertBefore` afterwards. The backs' banner used to carry `page-break-before`; it no longer
+  needs it, because the last grid of fronts is a `.pk-page` that is not the last child.
+- **The card is still a string, parsed, not rebuilt with `textContent`. My call.** `HtcmRender.frontHtml()` and
+  `backHtml()` draw the card for the live preview, the review game and the canvas export as well, with themes,
+  frames, foils and photo shapes. A second, DOM-building card for print would be the drift 040 removed. `buildCard`
+  returns the string parsed in a `<template>` (043's `nodeFrom()`). `els.printArea.innerHTML = ...` is gone and one
+  `template.innerHTML` took its place, so the inline-sinks line stays at 22. The renderer escapes what is typed;
+  the new suite types markup into a name and a fact and reads the name back as text.
+- **`@page` margin stays 0.3 in**, passed to `setPage()`: three 2.5 in cards and two 0.15 in gutters are 7.8 in.
+- **Ctrl+P prints the sheet** (`beforeprint`, with the flag 040 uses so it does not rebuild what the button has
+  just built and waited on). It printed an empty page. An empty deck still prints an empty page from Ctrl+P; the
+  button still refuses with its alert.
+- **What changed on paper: a short deck lost a blank sheet.** Old against new (the old page from
+  `git show origin/main:` through `page.route()`, its own 0.3 in `@page`, the viewport 758 px wide) in 16 states,
+  light and dark: sizes standard, fill and reference with 1, 6, 7 and 13 cards, three long-card states on three
+  themes, and nine cards on the science theme. In all 32 the card count, every card's left, top, width and height,
+  every grid's left, width and height, the banners' display, height and colour, the order of the names and the
+  cards' markup (less ` pk-card`) are identical. The PDF page count is identical in 18. In the other 14, every
+  state where the deck is one page of cards, **the old page printed 3 sheets and the new prints 2**. The old block
+  hid the editor with `visibility` and never took it out of the flow (P2's increment 5 fixed fifteen such pages;
+  064 was not among them because the audit's seed is eleven cards, a sheet taller than the editor, so TAIL read 0).
+  `print-area.css` has had the fix since v229.
+  Checked afterwards with `pdftotext` on the old page's PDF for one standard card: text on sheets 1 and 2, none on
+  sheet 3; and the old page's Ctrl+P was three sheets with no text on any.
+- **Existing suites.** `smoke-card-size.mjs` read the sheet through `.print-page .card-grid`, `#printArea .print-page`
+  and `className === 'size-...'`; those five selectors and strings now say `.pk-cards.card-grid`, `#printArea
+  .pk-cards` and `pk-paper size-...`. No assertion's meaning or tolerance changed, and it passes (68). Its probe
+  clones `#printArea` under another id, which is why 064's gap and columns are keyed on classes and not on
+  `#printArea { --pk-gap }` as the recipe suggests.
+- **New suite:** `Tools/historical-trading-card-maker/test/smoke-print.mjs` (`npm run test:trading-card-print`,
+  port 8476, 1,084 assertions): the 16 states in light and dark with the structure, the order of fronts and
+  mirrored backs, the old page's card sizes and positions, the fit of banner and cards on the page, the break after
+  every grid but the last, and Chromium's PDF page count; Ctrl+P; an empty deck; markup typed as a name.
+  064 has a row in `smoke-print-tail.mjs` now (it had none).
+
+**Checks.** The eleven `check:*` guards, `lint`, `check:precache -- --base origin/main` and `check:adoption --
+--check`; `audit-print --only 064 --check` (CLIP 1 and FIXED 2, the committed baseline: the card is fixed-size and
+clipped on purpose); the a11y sweep `--only 064` (4 passed); the suites named in the commit message.
+
+**Not verified, and what I got wrong.**
+- Nothing was printed on paper; no sleeve, pocket page or duplex printer was tried. The backs lying under the fronts
+  is the order of the cards in the DOM and the old page's geometry, not a sheet turned over.
+- No state in the comparison had a photo. Photos are covered only by the existing `smoke-photo.mjs` and
+  `smoke-photo-store.mjs`, which press the button and read `#printArea`. **Ctrl+P does not wait for photos** (the
+  button does); whether a stored photo can miss that print was not tested.
+- No raster comparison (`pdftoppm`) this time: the markup and every box are identical, and the hour went to the
+  suite. Dark text colour under `.pk-paper` was therefore not compared pixel for pixel; a card sets its own colours.
+- The first run of the new suite had two wrong assertions of mine, not page bugs: a static check that matched the
+  words "page breaks and break-inside" in a comment I had just written, and "no `<b>` on the sheet", when the
+  renderer puts every stat label in one.
+- The header's "55 hand-written `@media print` blocks" could not be reproduced; `grep -lE` over the tool pages
+  gives 58 after this change. The cell now says 58 and how it was counted.
+
 ## Path 7 P3, increment 8: 040 adopts the print kit with one card function for preview and paper; the 3x5 index-card preset had always printed a blank sheet after every page (2026-10-04, AI-13, `CACHE_VERSION` v237)
 
 Audit entry AI-13, rank 6 (2+). Eighth increment of P3: the third of the card-grid tools after 074 and 051, 040
