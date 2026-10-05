@@ -49,6 +49,77 @@ Audit entry AI-31, BACKLOG rank 96 (½). Only 057's page, its suite folder and b
   step, which makes `page.pdf()` print the screen. Reset media to `null`, not `'screen'`.
 - **Not verified.** Nothing has been printed on paper or read with a real screen reader; the full `npm test` was not run.
 
+## Path 3 P6, the year rollover: designed, not built (2026-10-05, AI-15, a design pass, no `CACHE_VERSION` change)
+
+Audit entry AI-15, rank 4 (1). A design pass under sprint mode: no code, no suite, nothing run in a browser.
+**The row stays**, with a line saying it is designed. The design is `BACKLOG.md`, Path 3, the P6 bullet. Only
+`BACKLOG.md` and this file changed.
+
+- **How it was read.** 009's and 006's rollovers, `roster.js`, `media-db.js` and the registry by hand; then four
+  read-only passes, each citing lines: the seven mixed keys at their write sites; every unmarked key of a tool
+  that reads a roster (and of 004, 029, 044, 045); IndexedDB, the media namespaces, Cache Storage and
+  sessionStorage; and all 54 student-marked entries for setup held inside them. Two Node probes outside the repo
+  loaded the registry to count it: 89 rows, 226 keys, 54 prefixes; 44 keys and 10 prefixes student-marked, over 27
+  tools. The claim checked by hand afterwards was the first one below.
+- **What 009's rollover does today, which nobody had written down.** (1) Its archive holds no IndexedDB
+  (`buildEnvelope(lastScanGroups, [])`), so Seating Chart's student photos are not in the file, and 005's boot
+  sweep deletes them once `seating-chart-v1` is gone. (2) It never reads the file it downloaded. (3) It deletes
+  whole keys and says "your templates and settings are untouched", while 21 student-marked keys or families hold
+  setup: room layouts, hall-pass destinations, behaviour tags, contract wording, lab roles, milestones,
+  accommodation types, a field trip's text. It also deletes every class name and 006's only copy of past years.
+  (4) 006 has a second rollover that keeps class names, files the year inside the browser and touches no other
+  tool. The 2026-09-23 audit asked whether a key held student data; it did not ask what else the key held.
+- **The mixed keys are more than seven.** The seven stand as described. Four more findings, five keys: `htcm:data:*` (064's cards made by
+  "Batch-add from roster"), `drb_roster_v1` and `sdb_directory_v1` (staff lists a class roster can fill), and
+  `gvb-exit-ticket:discussion` with `:categoryTally` (student work with no names; the 2026-09-23 reading called
+  `discussion` not student data, and that is now a question for Devon, not a correction). 038's datasets cannot be
+  separated by any rule: the design scans free text for this year's roster names and asks.
+- **Decisions the design takes, cheap to reverse because nothing is built.** Clear is per field for a key with
+  setup in it (a reducer per key, pure, idempotent), not a delete. The preview and the clear are one value, so
+  they cannot differ. Nothing is cleared until a file on disk has been read back and matches. A journal key
+  (`br_rollover_v1`, hashes only) makes an interrupted clear finishable or reversible. The module is
+  `Tools/backup-restore/br-rollover.js`, not a `_shared/` file, because only 009 runs it.
+- **Left to Devon, ten questions, listed in the bullet and not answered:** whether the browser keeps past rosters
+  at all; the default for free text; items still checked out in 016; anonymous student work; a rollover for some
+  classes only; an archive reader; staff lists filled from a roster; whether the file must be picked back where
+  there is no save picker; 030's scores and 064's cards; one name for the feature.
+- **Found on the way and not ranked:** 044's share link and JSON export carry `medicalAlerts`; 050's link carries
+  `roles[].students`; 030's export carries team names.
+- **Not verified.** Everything is from reading. No tool was loaded on a reduced key; `showSaveFilePicker`, the
+  service worker's client list and a real archive's size were not tried or measured. The unmarked keys of tools
+  that read no roster were not re-read. A design pass does not make the build eligible ahead of the questions.
+
+---
+
+## Path 9 P2 designed, not built: pacing that recomputes (2026-10-05, AI-18, no `CACHE_VERSION`, no code)
+
+Audit entry AI-18, rank 13 (2+). A design pass: only `BACKLOG.md` changed (the P2 bullet under "Path 9", and a
+note on rank 13). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** A new optional `cal.plan` (courses, each with lessons or typed units, pins, lost
+  dates, a baseline), one pure module `scv-plan.js` beside `scv-pacing.js`, a placer that never changes a count,
+  "behind" as a ledger that must sum, a migration keyed on what it finds, and dates stamped into the blob at
+  every save so that a change is told and a reader outside 032 needs no placer.
+- **What reading the code turned up, each worth knowing before the build.** The lesson sequence already
+  recomputes round a closure; what never flowed is `cal.units`. `units` and `abCycle` are not in `isValid()` or
+  `migrate()`. 010 and 045 read the day's typed note, never the placement. A blob with `__v: 3` fails the shipped
+  `isValid()`, the shipped `get()` then returns the seed, and the next save writes it over the calendar, which
+  is why the design adds a field and leaves `__v` at 2. The A/B cycle slides on a lost day (all 99 later letters
+  flip after one January closure in the seed). One bump on an alternating A/B list puts 143 of 144 later lessons
+  on the other letter's day.
+- **Measured, with two pure-Node probes that were not kept:** the seed's 184 school days (13 half, 92 A and 92
+  B, marking periods of 45, 46, 47, 46); fixed unit to pinned unit gives the same school days for all 40,528
+  start/end pairs that hold one; the example dates the design's tests name.
+- **Not verified.** No line of the design has run. The equivalence of the new placer with `placeLessons()` is
+  a test the design names, not a result. The "older page ignores `plan` and writes it back" claim is read off
+  the page's code (it saves `cal` whole), not seen in a browser. The page's `buildAbMap()` walks in local time
+  and the design's `abLetters()` in UTC; that they agree is a named test, not a finding.
+- **Ten questions are Devon's** and are listed, unanswered, at the end of the P2 bullet: half days, testing
+  days, whether A/B slides after a snow day, what "behind" is measured against, buffers, freezing the past, one
+  list or two for A/B, the dated units already saved, what carries into a new year, and the words.
+
+---
+
 ## Path 7 P4, increment 3: 040 is `ExportKit`'s second adopter, `_shared/duplex-print.js` is deleted, and 016's print suite no longer depends on the machine's fonts (2026-10-05, AI-13, `CACHE_VERSION` v245)
 
 Audit entry AI-13, rank 6 (2+). Third increment of P4. **The row stays, rewritten.** P5 untouched, 011 not started.
