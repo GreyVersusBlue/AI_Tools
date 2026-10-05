@@ -213,6 +213,7 @@
     "Tools/export/test/export.test.mjs",
     "Tools/export/test/smoke-export.mjs",
     "Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs",
+    "Tools/image-to-pdf/test/smoke-impose.mjs",
     "Tools/stage/test/stage.test.mjs",
     "Tools/stage/test/smoke-stage-rollout.mjs",
     "Tools/number-talks-board/test/smoke-stage.mjs",

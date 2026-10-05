@@ -210,6 +210,28 @@ sweep('N-up places every page once, in reading order, on the fewest sides — 0.
     }
   }
 });
+// A back side set for a sheet that comes over top to bottom (011, the first to ask).
+{
+  const t = EK.nUp(8, { cols: 2, rows: 1, duplex: true, turnBack: true });
+  eq(t.sheets.map(s => [s.front.map(x => [x.page, x.rotate]), s.back.map(x => [x.page, x.rotate])]),
+     [[[[1, 0], [2, 0]], [[4, 180], [3, 180]]], [[[5, 0], [6, 0]], [[8, 180], [7, 180]]]],
+     'turnBack: each back is upside down with its pages changed over, the fronts untouched');
+  eq(EK.nUp(5, { cols: 2, rows: 2, duplex: true, turnBack: true }).sheets[0].back.map(x => [x.page, x.rotate]), [[null, 180], [null, 180], [null, 180], [5, 180]],
+     'turnBack on a grid: the first page of the back is in the last cell');
+  eq(nu(5, { cols: 2, rows: 1, turnBack: true }), [[1, 2], [3, 4], [5, null]], 'turnBack does nothing to a one-sided job');
+  ok(EK.nUp(5, { cols: 2, rows: 1, turnBack: true }).sheets.every(s => s.front.every(x => x.rotate === 0)), 'and turns nothing on it');
+}
+sweep('a turned back, turned back again by hand, is the plain back — 0..40 pages, 6 grids', check => {
+  for (const [cols, rows] of [[2, 1], [1, 2], [2, 2], [3, 2], [2, 3], [3, 3]]) for (let n = 0; n <= 40; n++) {
+    const plain = EK.nUp(n, { cols, rows, duplex: true }), turned = EK.nUp(n, { cols, rows, duplex: true, turnBack: true });
+    check(turned.sheets.length === plain.sheets.length && turned.blanks === plain.blanks, { n, cols, rows, why: 'count' });
+    turned.sheets.forEach((s, i) => {
+      check(JSON.stringify(s.front) === JSON.stringify(plain.sheets[i].front), { n, cols, rows, why: 'front changed' });
+      check(s.back.every(x => x.rotate === 180), { n, cols, rows, why: 'back not turned' });
+      check(JSON.stringify(pagesOf(s.back).reverse()) === JSON.stringify(pagesOf(plain.sheets[i].back)), { n, cols, rows, why: 'back order', got: pagesOf(s.back) });
+    });
+  }
+});
 eq([0, 1, 4, 5, 8, 9].map(n => EK.sheetCount(n, { kind: 'booklet' })), [0, 1, 1, 2, 2, 3], 'a booklet takes a sheet for every four pages');
 eq([0, 1, 2, 3].map(n => EK.sheetCount(n, { duplex: true })), [0, 1, 1, 2], 'plain two-sided takes a sheet for every two');
 eq(EK.sheetCount(7, {}), 7, 'plain one-sided takes a sheet a page');
@@ -514,6 +536,14 @@ sweep('flow pagination loses nothing, overlaps nothing, never runs off a page un
   near(four.sides[0].slots[0].scale, 270 / 612, 'pages are scaled to their cells', 1e-9);
   const dup = EK.pdfPlan(5, { impose: { kind: 'nup', cols: 2, rows: 1, duplex: true }, orientation: 'landscape' });
   eq(dup.sides.map(s => [s.sheet, s.face, s.slots.map(x => x.page)]), [[0, 'front', [1, 2]], [0, 'back', [3, 4]], [1, 'front', [5, null]], [1, 'back', [null, null]]], 'two-sided two up');
+  // `flip` on a two-sided N-up: the backs are turned exactly when the edge brings the sheet over top to bottom.
+  const turns = (orientation, flip) => EK.pdfPlan(4, { impose: { kind: 'nup', cols: 2, rows: 1, duplex: true, flip }, orientation }).sides[1].slots.map(x => [x.page, x.rotate]);
+  eq(turns('landscape', 'long'), [[4, 180], [3, 180]], 'landscape turned on its long edge: the back is set upside down');
+  eq(turns('landscape', 'short'), [[3, 0], [4, 0]], 'landscape turned on its short edge: the back reads on as it is');
+  eq(turns('portrait', 'long'), [[3, 0], [4, 0]], 'portrait turned on its long edge: the back reads on as it is');
+  eq(turns('portrait', 'short'), [[4, 180], [3, 180]], 'portrait turned on its short edge: the back is set upside down');
+  eq(turns('landscape', undefined), [[3, 0], [4, 0]], 'no flip named: nothing is turned');
+  eq(EK.pdfPlan(4, { impose: { kind: 'nup', cols: 2, rows: 1, flip: 'long' }, orientation: 'landscape' }).sides.map(s => s.slots.map(x => x.rotate)), [[0, 0], [0, 0]], 'a flip edge on a one-sided job turns nothing');
   const one = EK.pdfPlan(3, {});
   eq([one.kind, one.sides.length, one.sides[0].slots[0].matrix, one.page], ['single', 3, [1, 0, 0, 1, 0, 0], { w: 612, h: 792 }], 'no imposition is a page a sheet at actual size');
   eq(EK.pdfPlan(3, { paper: 'a4', pageSize: { w: 612, h: 792 } }).sides[0].slots[0].scale < 1, true, 'a letter page on A4 is scaled down to fit');
@@ -538,10 +568,43 @@ sweep('every plan draws each page exactly once, inside the sheet — 0..40 pages
   }
 });
 
+/* The paper model for a two-sided N-up. The reader turns the sheet like a
+   book's page (about its vertical axis). A duplex unit that turns it about
+   the horizontal axis instead leaves the back half a turn off for that
+   reader. So: seen by the reader, a back slot at (x, y) turned r degrees is
+   at the point mirrored left to right when the axis is vertical, and mirrored
+   top to bottom, a further half turn on, when it is horizontal; and the half
+   turn carries the slot to the opposite corner of the reader's view. Every
+   back page must come out upright, in reading order, behind a front cell. */
+sweep('two-sided N-up on paper: every back reads upright and in order, behind the fronts, for either edge — 4 papers, both orientations, 6 grids, 0..25 pages', check => {
+  for (const paper of ['letter', 'a4', 'legal', 'tabloid']) for (const orientation of ['portrait', 'landscape']) for (const flip of ['long', 'short'])
+    for (const [cols, rows] of [[2, 1], [1, 2], [2, 2], [3, 2], [2, 3], [3, 3]]) for (let n = 0; n <= 25; n++) {
+      const p = EK.pdfPlan(n, { paper, orientation, margin: 18, gutter: 9, impose: { kind: 'nup', cols, rows, duplex: true, flip } });
+      const at = { paper, orientation, flip, cols, rows, n };
+      const horizontal = EK.flipAxis(orientation, flip) === 'horizontal';
+      const read = [];
+      for (let i = 0; i < p.sides.length; i += 2) {
+        const front = p.sides[i], back = p.sides[i + 1];
+        check(front.face === 'front' && back && back.face === 'back', { ...at, why: 'sides out of order' });
+        read.push(...front.slots.map(x => x.page));
+        check(front.slots.every(x => x.rotate === 0), { ...at, why: 'a front is turned' });
+        // What the reader sees of the back: the sheet turned like a page, and half a turn more when the unit turned it the other way.
+        const seen = back.slots.map(x => ({ page: x.page, x: horizontal ? back.w - x.x - x.w : x.x, y: horizontal ? back.h - x.y - x.h : x.y, w: x.w, h: x.h, up: (x.rotate + (horizontal ? 180 : 0)) % 360 === 0 }));
+        check(seen.every(x => x.up), { ...at, why: 'a back page is upside down for the reader' });
+        seen.sort((a, b) => a.y - b.y || a.x - b.x);
+        read.push(...seen.map(x => x.page));
+        // Through the paper (mirrored left to right), each back cell is on a front cell.
+        for (const x of seen) check(front.slots.some(f => Math.abs(f.x - (back.w - x.x - x.w)) < 1e-6 && Math.abs(f.y - x.y) < 1e-6 && Math.abs(f.w - x.w) < 1e-6 && Math.abs(f.h - x.h) < 1e-6), { ...at, why: 'a back cell is not behind a front cell', x });
+      }
+      check(JSON.stringify(read) === JSON.stringify(read.map((_, i) => (i < n ? i + 1 : null))), { ...at, why: 'reading order', read });
+    }
+});
+
 // ---- toPdf against a jsPDF that only takes notes -------------------------------------
 function FakePdf(o) {
   const log = [['new', o.unit, o.format, o.orientation]];
   this.log = log;
+  this.made = o;
   this.Matrix = function (...m) { this.m = m; };
   this.addPage = (f, orient) => log.push(['addPage', f, orient]);
   this.saveGraphicsState = () => log.push(['q']);
@@ -568,6 +631,9 @@ function FakePdf(o) {
   eq(out.doc.log[out.doc.log.length - 1], ['save', 'book.pdf'], 'a filename saves the file, last');
   eq(out.doc.log[1], ['props', { title: 'Book' }], 'a title is set');
   eq(out.plan.sides.length, 2, 'the plan comes back with the document');
+  eq('compress' in out.doc.made, false, 'with no `compress` the document is made as before, the option not named');
+  eq(EK.toPdf([draw('z')], { jsPDF: FakePdf, compress: true }).doc.made.compress, true, '`compress: true` reaches jsPDF');
+  eq('compress' in EK.toPdf([draw('z')], { jsPDF: FakePdf, compress: false }).doc.made, false, '`compress: false` is the same as leaving it out');
 
   const imgs = EK.toPdf(['data:image/png;base64,AAA', 'data:image/jpeg;base64,BBB', { image: 'canvas-stand-in', type: 'JPEG' }, { draw: draw('obj') }, 'data:image/png;base64,CCC'],
     { jsPDF: FakePdf, impose: { kind: 'nup', cols: 2, rows: 2 }, pageSize: { w: 100, h: 100 }, cutMarks: true, margin: 36 });

@@ -10,8 +10,10 @@
        back: [left, right] }, a slot is { page, rotate }, pages count from 1
        and a blank is `page: null`.
 
-     ExportKit.nUp(pageCount, { cols, rows, order, rtl, duplex })
+     ExportKit.nUp(pageCount, { cols, rows, order, rtl, duplex, turnBack })
        Reading-order N-up: which page goes in which cell of which side.
+       `turnBack` sets each back side upside down, for a sheet the duplex
+       unit turns top to bottom; pdfPlan() works it out from `flip`.
 
      ExportKit.flipAxis(orientation, flip), backIndex(), mirrorPage(),
      mirrorPageRows(), paginate()
@@ -236,14 +238,22 @@
       `order: 'column'` fills down each column first; `rtl` starts at the
       right. With `duplex` pages run front, back, front; the back is read
       after the sheet is turned, so it is not mirrored (mirrorPage() is for
-      card backs, which must sit behind their own fronts). */
+      card backs, which must sit behind their own fronts). `turnBack` turns
+      every back side 180 degrees as a whole (each page upside down, in the
+      cell diametrically opposite), for a sheet that comes over top to bottom
+      and is still to be read by turning it like a book's page. */
   function nUp(pageCount, opts) {
     opts = opts || {};
     var n = count(pageCount);
     var cols = atLeast1(opts.cols), rows = atLeast1(opts.rows);
     var per = cols * rows;
     var column = String(opts.order || '').toLowerCase() === 'column';
-    var rtl = !!opts.rtl, duplex = !!opts.duplex;
+    var rtl = !!opts.rtl, duplex = !!opts.duplex, turnBack = duplex && !!opts.turnBack;
+    function turned(s) {
+      s.reverse();
+      for (var k = 0; k < s.length; k++) s[k].rotate = 180;
+      return s;
+    }
     function side(start) {
       var s = [];
       for (var cell = 0; cell < per; cell++) {
@@ -256,7 +266,7 @@
     var sides = Math.ceil(n / per), sheets = [];
     for (var i = 0; i < sides; i += duplex ? 2 : 1) {
       var sheet = { sheet: sheets.length, front: side(i * per) };
-      if (duplex) sheet.back = side((i + 1) * per);
+      if (duplex) sheet.back = turnBack ? turned(side((i + 1) * per)) : side((i + 1) * per);
       sheets.push(sheet);
     }
     return {
@@ -486,7 +496,10 @@
                              booklet, the cell for N-up.
         impose               nothing for 1-up, or
                              { kind: 'booklet', sheetsPerSignature, flip, rtl, creep }
-                             { kind: 'nup', cols, rows, order, rtl, duplex }
+                             { kind: 'nup', cols, rows, order, rtl, duplex, flip }
+                             With `duplex` and a `flip` edge, the backs are
+                             turned when that edge brings the sheet over top
+                             to bottom, so it always reads like a book.
         stack, reverseBacks  the order of the sides; see sides()
         cutMarks             true, or { length, offset }
       A booklet's sheet is always landscape, whatever `orientation` says.
@@ -501,7 +514,13 @@
     var src = opts.pageSize ? { w: toPt(opts.pageSize.w), h: toPt(opts.pageSize.h) } : null;
     var imposed, cols = 1, rows = 1;
     if (kind === 'booklet') { imposed = booklet(pageCount, imp); cols = 2; }
-    else if (kind === 'nup') { imposed = nUp(pageCount, imp); cols = imposed.cols; rows = imposed.rows; }
+    else if (kind === 'nup') {
+      imposed = nUp(pageCount, {
+        cols: imp.cols, rows: imp.rows, order: imp.order, rtl: imp.rtl, duplex: imp.duplex,
+        turnBack: imp.flip === undefined ? imp.turnBack : flipAxis(sheet.orientation, imp.flip) === 'horizontal'
+      });
+      cols = imposed.cols; rows = imposed.rows;
+    }
     else imposed = nUp(pageCount, { cols: 1, rows: 1, duplex: false });
     var base = layout({
       sheet: sheet, cols: cols, rows: rows, margin: opts.margin, page: src,
@@ -542,7 +561,8 @@
   }
 
   /** Draws `pages` into a PDF as pdfPlan() lays them out. opts are pdfPlan's,
-      plus `filename` (saves the file when given), `title`, and `jsPDF` (the
+      plus `filename` (saves the file when given), `title`, `compress` (true
+      deflates the page streams, as jsPDF's own option does), and `jsPDF` (the
       constructor, when the page has it somewhere other than window.jspdf).
       Synchronous: an <img> must have loaded before it is handed in.
       Returns { doc, plan }. Throws if jsPDF is not on the page. */
@@ -553,7 +573,9 @@
     if (!JsPDF) throw new Error('ExportKit.toPdf: jsPDF is not loaded (_shared/vendor/jspdf/jspdf.umd.min.js)');
     var plan = pdfPlan(pages.length, opts);
     var sheet = plan.sheet;
-    var doc = new JsPDF({ unit: 'pt', format: [sheet.w, sheet.h], orientation: sheet.w > sheet.h ? 'landscape' : 'portrait' });
+    var make = { unit: 'pt', format: [sheet.w, sheet.h], orientation: sheet.w > sheet.h ? 'landscape' : 'portrait' };
+    if (opts.compress) make.compress = true;
+    var doc = new JsPDF(make);
     if (opts.title && doc.setProperties) doc.setProperties({ title: String(opts.title) });
     for (var i = 0; i < plan.sides.length; i++) {
       var side = plan.sides[i];
