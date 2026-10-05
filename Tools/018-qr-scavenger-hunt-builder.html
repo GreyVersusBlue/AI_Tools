@@ -27,6 +27,7 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/print-kit.js"></script>
+<script src="../_shared/export.js"></script>
 
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <script>window.A11Y_NATIVE_THEME = true;</script>
@@ -1099,28 +1100,17 @@
   });
 
   // ── CSV export (raw typed values, for the teacher's own records) ────────
-  function csvField(v) {
-    var s = String(v == null ? '' : v);
-    if (/[",\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
-    return s;
-  }
-
+  /* The file is ExportKit.toCsv()'s (_shared/export.js, Path 7 P4): RFC 4180
+     quoting, CRLF after every row, a byte order mark so Excel reads the
+     accents, and an apostrophe before a typed cell a spreadsheet would run as
+     a formula (one that starts = + - or @). */
   els.exportCsvBtn.addEventListener('click', function () {
     state.stations.forEach(ensureStationDefaults);
     ensureStationCodeWords();
     var rows = [['Label', 'Content', 'Note', 'Type', 'Answer Details', 'Hint', 'Hint Penalty (min)', 'Code Word']].concat(state.stations.map(function (s) {
       return [s.label, s.content, s.note, Q_TYPE_LABELS[s.qType] || 'Open-ended', answerSummary(s), s.hint, s.hintPenalty, s.codeWord];
     }));
-    var csv = rows.map(function (row) { return row.map(csvField).join(','); }).join('\r\n');
-    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'scavenger-hunt-stations.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    ExportKit.download(ExportKit.toCsv(rows), 'scavenger-hunt-stations.csv', 'text/csv;charset=utf-8');
   });
 
   function showMsg(text) { els.msg.textContent = text; els.msg.className = 'error'; }

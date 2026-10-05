@@ -30,6 +30,7 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/export.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <style>
@@ -1579,13 +1580,10 @@
   });
 
   /* ---------- CSV export ---------- */
-  // Standard CSV escaping: wrap a field in quotes (doubling any internal
-  // quotes) whenever it contains a comma, quote, or newline.
-  function csvField(v) {
-    var s = String(v == null ? '' : v);
-    if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
-    return s;
-  }
+  /* The file is ExportKit.toCsv()'s (_shared/export.js, Path 7 P4): RFC 4180
+     quoting, CRLF after every row, a byte order mark so Excel reads the
+     accents, and an apostrophe before a typed cell a spreadsheet would run as
+     a formula (one that starts = + - or @). */
 
   function slugify(name) {
     return String(name || '').trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'class';
@@ -1607,18 +1605,7 @@
         ]);
       });
     });
-    var csv = [header].concat(rows).map(function (r) {
-      return r.map(csvField).join(',');
-    }).join('\r\n');
-    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = slugify(state.name) + '-reading-log-' + todayStr() + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+    ExportKit.download(ExportKit.toCsv([header].concat(rows)), slugify(state.name) + '-reading-log-' + todayStr() + '.csv', 'text/csv;charset=utf-8');
   }
 
   els.exportCsvBtn.addEventListener('click', exportCsv);
