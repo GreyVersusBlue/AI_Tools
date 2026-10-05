@@ -9,6 +9,42 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 13 P1 designed, not built: the grouping engine's API (2026-10-05, AI-21, no `CACHE_VERSION`, no code)
+
+Audit entry AI-21, rank 31 (1). A design pass: only `BACKLOG.md` changed (the P1 bullet under "Path 13", and a
+note on rank 31). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** One pure classic script, `_shared/grouping.js` (`Grouping`): `plan()` for the
+  arithmetic, `formGroups()` for the deal and the repair search, `rotateRoles()` and `coverRoles()`, and a memory
+  (`history.*`) keyed on indexes into one list of member keys, an id where the sidecar has one and the name where
+  it does not. It writes nothing; each adopter keeps its blob, gains one field, `groupHistory`, and goes on
+  writing its old fields from it. The engine is held to making today's groups for the same random numbers, and
+  every improvement is an option an adopter turns on in a commit of its own.
+- **What reading the code turned up, each worth knowing before the build.** The split exists six times, not
+  four (021's split button and 087's `cs-core.js` are the other two), and all six share one shuffle and deal to
+  the letter, which is what makes a parity suite possible. 002's "floaters" and "leftover group" rules turn
+  "groups of 4" for 30 students into eight groups of 3 with six floaters, or a ninth group of 6. 002's no-repeat
+  search undoes "Balanced" and "Homogeneous" from the second shuffle on (the gap between group averages goes
+  from 0.38 to about 1.7). Keep-together chains are left broken in 4.5% of shuffles for two chains of three. The
+  role picker repeats a student's last role in 1% to 6% of hand-outs where a better assignment never would. 022's
+  and 027's load functions rebuild the saved object field by field, so an older cached page drops a field it
+  does not know; that is why the old fields stay written. Path 13's "Why" still says 002 keeps two generations
+  of pair history; it has kept the year since 2026-08-13.
+- **What the measurements were.** One pure-Node probe, not kept: 002's and 022's functions and the role picker
+  copied out with a seeded generator, 200 to 2,000 invented classes a case. The figures are in the design.
+- **Decided here, cheap to reverse.** `_shared/grouping.js`, not `Tools/_engines/`. No shared memory key. 022's
+  keep-apart repair becomes 002's (no worse on the same 14,000 classes: 0.65% against 0.75% at the one shape
+  where either failed). The memory is recorded by a
+  call of its own, not inside `formGroups()`.
+- **Left to Devon, listed in the design and not answered:** skill on the shared record; one memory or one per
+  tool; whether 022 and 027 start remembering pairs; whether a reshuffled-away grouping counts; what "groups of
+  4" means for 30 students; whether every tool should round the same way; balance against no repeats;
+  keep-together as a promise or a preference; how long a departed student's history is kept; other things to
+  balance on.
+- **Not verified.** No engine exists and nothing ran in a browser. The parity claim rests on reading and on the
+  probe's ports; the build must copy the legacy functions from the files, not from the design. The older-cache
+  case was read, not reproduced.
+
 ## Path 7 P4, increment 4: 011 makes booklets and several pages to a sheet on `ExportKit` (Path 17 P4's controls), and 064's zip and PNG downloads are the file helpers' first adopter (2026-10-05, AI-13, `CACHE_VERSION` v248)
 
 Audit entry AI-13, rank 6 (2+). Fourth increment of P4. **The row stays, rewritten: what is left is CSV and XLSX
