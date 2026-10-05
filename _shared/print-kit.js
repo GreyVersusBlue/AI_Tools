@@ -6,7 +6,9 @@
      PrintKit.setPage({ paper, orientation, margin })
        Writes one `@page` rule and the --pk-page-w / --pk-page-h / --pk-margin
        properties print-kit.css sizes its half and quarter sheets from, in one
-       call, so the two cannot disagree.
+       call, so the two cannot disagree. `margin` is one length, or two (since
+       v242, for label stock): top and bottom, then the sides, which go into
+       --pk-margin and --pk-margin-x.
 
      PrintKit.setHeader({ class, date, title })
        Remembers the three fields and fills every `.pk-header` on the page.
@@ -71,13 +73,15 @@
 
   function text(v) { return v === null || v === undefined ? '' : String(v).trim(); }
 
-  /* A margin is a CSS length the caller typed. Anything that is not a plain
-     number-and-unit falls back to the default rather than reaching a style
-     sheet. */
+  /* A margin is a CSS length the caller typed, or two of them: top and bottom,
+     then the sides, which is what label stock needs (016's Avery sheets are
+     half an inch down and 3/16 in). Anything that is not one or two plain
+     number-and-unit lengths falls back to the default rather than reaching a
+     style sheet. */
   function cleanMargin(m) {
     if (typeof m === 'number' && isFinite(m) && m >= 0) return m + 'in';
-    var s = text(m).toLowerCase();
-    return /^\d*\.?\d+(in|mm|cm|pt|px)$/.test(s) ? s : '0.5in';
+    var s = text(m).toLowerCase().replace(/\s+/g, ' ');
+    return /^\d*\.?\d+(in|mm|cm|pt|px)( \d*\.?\d+(in|mm|cm|pt|px))?$/.test(s) ? s : '0.5in';
   }
 
   /** The resolved page: { paper, orientation, w, h, margin, css }. Pure. */
@@ -112,7 +116,10 @@
     var root = doc.documentElement.style;
     root.setProperty('--pk-page-w', page.w);
     root.setProperty('--pk-page-h', page.h);
-    root.setProperty('--pk-margin', page.margin);
+    var sides = page.margin.split(' ');
+    root.setProperty('--pk-margin', sides[0]);
+    if (sides[1]) root.setProperty('--pk-margin-x', sides[1]);
+    else root.removeProperty('--pk-margin-x');
     return page;
   }
 

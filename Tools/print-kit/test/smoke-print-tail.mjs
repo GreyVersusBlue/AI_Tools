@@ -82,7 +82,16 @@ const bulk016 = async page => {
   await page.click('label[for="mode-bulk"]');
   await page.fill('#bulk-text', 'Station 1, https://example.com/1\nStation 2, https://example.com/2\nStation 3, https://example.com/3');
   await page.click('#btn-bulk-generate');
-  await page.waitForFunction(() => document.getElementById('print-area-bulk').children.length === 3);
+  await page.waitForFunction(() => document.querySelectorAll('#print-area-bulk .bulk-item').length === 3);
+};
+// 016's inventory sheet lists what the Scan tab tracks; made-up equipment.
+const inv016 = async page => {
+  await page.evaluate(() => localStorage.setItem('qr-code-generator-inventory', JSON.stringify({
+    'asset-1': { label: 'Microscope 1', status: 'out', assignedTo: 'Table 1', checkedOutAt: 1790000000000, checkedInAt: null, history: [] },
+    'asset-2': { label: 'Microscope 2', status: 'in', assignedTo: '', checkedOutAt: null, checkedInAt: 1790000000000, history: [] },
+  })));
+  await page.reload({ waitUntil: 'load' });
+  await page.click('label[for="mode-scan"]');
 };
 // 085's batch button shows once batch mode is on, and prints once a saved roster is picked.
 const batch085 = async page => {
@@ -103,9 +112,10 @@ const prep040 = PRINT_PREP['040'][0].run;
 const AREA = '#printArea';
 const PAGES = [
   { file: '003-rubric-builder.html', prints: [{ click: 'Print' }] },
-  { file: '016-qr-code-generator.html', prints: [
+  { file: '016-qr-code-generator.html', prints: [   // since Path 7 P3: print-area.css + the print kit; three areas inside #printArea (the inventory sheet had no row)
     { click: 'Print this code', before: fill016, sheet: '#print-area' },
     { click: '#btn-bulk-print', before: bulk016, sheet: '#print-area-bulk' },
+    { click: '#btn-print-inventory', before: inv016, sheet: '#print-area-inventory' },
   ] },
   { file: '017-gallery-walk-qr.html', prints: [   // since Path 7 P3: print-area.css + the print kit (it had no row)
     { click: '#printCodesBtn' }, { click: '#printRefBtn' }, { click: '#printSlipsBtn' }, { click: '#printPacketsBtn' }, { click: '#printRouteCardsBtn' },

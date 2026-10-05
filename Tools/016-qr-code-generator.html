@@ -35,6 +35,9 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<link rel="stylesheet" href="../_shared/print-kit.css">
+<script src="../_shared/print-kit.js"></script>
 <style>
   /* On _shared/ink-paper.css's tokens since AI-35, so the page follows the
      teacher's theme like the rest of the site; it used to be dark-only, on
@@ -47,9 +50,6 @@
     --mono: 'JetBrains Mono', 'Fira Mono', monospace;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) { --success: #4ade80; --warn: #fbbf24; }
-  @media print {
-    :root[data-theme="dark"]:not(.a11y-filter-dark) { --success: #2e6b3e; --warn: #8a5a00; }
-  }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -503,8 +503,8 @@
   }
   #checkout-msg.error { display: block; background: rgba(248, 113, 113, 0.12); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); }
 
-  /* Printed inventory sheet — same swap-in-a-body-class technique as the bulk
-     grid's print path above, just a third, independent print-only area. */
+  /* Printed inventory sheet: the third area of #printArea (see the printed
+     sheets, below). */
   .inv-print-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
   .inv-print-table th, .inv-print-table td {
     border: 1px solid #999; padding: 6px 10px; text-align: left; font-size: 0.85rem;
@@ -577,46 +577,51 @@
   .bulk-item-unverified { background: rgba(251, 191, 36, 0.15); }
   .bulk-item-unverified .bulk-item-label { color: var(--warn); }
 
-  /* Cut lines for a plain-paper custom grid — toggled via #bulk-cutlines,
-     only visible once the print-only container is shown by @media print. */
+  /* Cut lines for a plain-paper custom grid, toggled via #bulk-cutlines. */
   #print-area-bulk.cut-lines .bulk-item { border: 1px dashed #94a3b8; }
 
-  .print-only { display: none; }
-  @media print {
-    body * { visibility: hidden; }
-    #print-area, #print-area * { visibility: visible; }
-    /* What visibility hides still takes its height, and that height printed as
-       blank sheets after this one. Everything but the sheet leaves the flow. */
-    body > *:not(.print-only) { display: none !important; }
-    #print-area {
-      display: flex !important; position: absolute; inset: 0;
-      align-items: center; justify-content: center; background: #fff;
-    }
-    #print-img { max-width: 80%; max-height: 80%; }
+  /* The printed sheets. Three areas inside #printArea, which
+     _shared/print-area.css puts alone on the paper: the single code, the bulk
+     grid and the inventory sheet. The mode decides which one prints, so
+     Ctrl+P prints what the tab is showing; a print button's body class
+     (print-bulk, print-inventory) says the same thing and wins. None of this
+     is on screen, so none of it needs a media query. */
+  #printArea > .print-only { display: none; }
+  body:not(.mode-bulk):not(.mode-scan):not(.print-bulk):not(.print-inventory) #print-area { display: flex; }
+  body.mode-bulk:not(.print-inventory) #print-area-bulk,
+  body.print-bulk:not(.print-inventory) #print-area-bulk { display: block; }
+  body.mode-scan:not(.print-bulk) #print-area-inventory,
+  body.print-inventory #print-area-inventory { display: block; }
 
-    /* Bulk grid print — swapped in via the .print-bulk body class set right
-       before window.print(), and removed again on the `afterprint` event. */
-    body.print-bulk #print-area { display: none !important; }
-    body.print-bulk #print-area-bulk, body.print-bulk #print-area-bulk * { visibility: visible; }
-    body.print-bulk #print-area-bulk {
-      display: grid !important; position: static; inset: auto;
-      gap: 14px; padding: 10px; background: #fff;
-    }
-    .bulk-item { break-inside: avoid; page-break-inside: avoid; }
+  /* One code, centred on its page. */
+  #print-area { height: 100vh; align-items: center; justify-content: center; }
+  #print-img { max-width: 80%; max-height: 80%; }
+  #print-img:not([src]) { display: none; }
 
-    /* Equipment inventory sheet print — swapped in via the .print-inventory
-       body class right before window.print(), same technique as the bulk
-       grid above, and independent of it (only one is ever active at once). */
-    body.print-inventory #print-area { display: none !important; }
-    body.print-inventory #print-area-bulk { display: none !important; }
-    body.print-inventory #print-area-inventory, body.print-inventory #print-area-inventory * { visibility: visible; }
-    body.print-inventory #print-area-inventory {
-      display: block !important; position: static; inset: auto;
-      background: #fff; color: #111; padding: 10px;
-    }
-    body.print-inventory #print-area-inventory h1 { font-size: 1.3rem; margin: 0 0 0.3rem; }
-    body.print-inventory #print-area-inventory p { font-size: 0.85rem; color: #444; margin: 0; }
+  /* The plain-paper grid: PrintKit.renderCards() with { cols }, one grid of
+     the tool's own that runs on over the pages. A code is a share of the
+     width and as tall as its picture and label; the grid is no wider than its
+     codes at their drawn size, and centred. The insets are the ones the sheet
+     has always printed with. */
+  #print-area-bulk { padding: 2rem 1rem 0; }
+  #print-area-bulk > .pk-cards { --pk-gap: 14px; width: fit-content; max-width: 100%; margin: 0 auto; padding: 10px 10px 0; }
+
+  /* Label stock: every label an exact size at an exact place, a sheet of
+     labels to a grid ({ cols, perPage }). The sizes come from SHEET_PRESETS
+     through applyPrintAreaLayout(); the page margins are setPage()'s, so the
+     sheet itself starts at the first label's corner, with nothing above it. */
+  #print-area-bulk.stock { padding: 0; }
+  #print-area-bulk.stock > .pk-cards {
+    grid-template-columns: repeat(var(--pk-cols), var(--label-w));
+    grid-auto-rows: var(--label-h);
+    column-gap: var(--label-gap-x); row-gap: var(--label-gap-y);
+    width: auto; max-width: none; margin: 0; padding: 0;
   }
+
+  /* The inventory sheet, as wide as its table and centred. */
+  #print-area-inventory { width: fit-content; max-width: calc(100% - 2rem); margin: 2rem auto 0; padding: 10px; color: #111; }
+  #print-area-inventory h1 { font-size: 1.3rem; margin: 0 0 0.3rem; }
+  #print-area-inventory p { font-size: 0.85rem; color: #444; margin: 0; }
   .back-link { display: inline-block; color: var(--text-dim); text-decoration: none; font-size: .85rem; padding: .3rem .5rem .3rem 0; }
   .back-link:hover { color: var(--accent); }
 </style>
@@ -937,13 +942,13 @@
   </div>
 </div>
 
-<div class="print-only" id="print-area">
-  <img id="print-img" alt="QR code">
+<div id="printArea" class="pk-paper">
+  <div class="print-only" id="print-area">
+    <img id="print-img" alt="QR code">
+  </div>
+  <div class="print-only" id="print-area-bulk"></div>
+  <div class="print-only" id="print-area-inventory"></div>
 </div>
-
-<div class="print-only" id="print-area-bulk"></div>
-<div class="print-only" id="print-area-inventory"></div>
-<style id="print-page-style"></style>
 
 <script>
 (function () {
@@ -1005,7 +1010,6 @@
     bulkGrid: document.getElementById('bulk-grid'),
     btnBulkPrint: document.getElementById('btn-bulk-print'),
     printAreaBulk: document.getElementById('print-area-bulk'),
-    printPageStyle: document.getElementById('print-page-style'),
     btnScanCamera: document.getElementById('btn-scan-camera'),
     scanDropZone: document.getElementById('scan-drop-zone'),
     scanFileInput: document.getElementById('scan-file-input'),
@@ -1390,6 +1394,7 @@
       var mode = document.querySelector('input[name="app-mode"]:checked').value;
       document.body.classList.toggle('mode-bulk', mode === 'bulk');
       document.body.classList.toggle('mode-scan', mode === 'scan');
+      syncPrintPage();
       // A roster may have been saved in another tab since this page loaded.
       if (mode === 'bulk') populateRosterSelect();
     });
@@ -1567,6 +1572,7 @@
       els.btnCameraScan.disabled = true;
       els.btnSaveRecent.disabled = true;
       lastQR = null;
+      els.printImg.removeAttribute('src');
       clearMsg();
       return;
     }
@@ -1589,6 +1595,8 @@
       var qr = buildQR(text, ecLevel);
       var meta = drawQR(els.canvas, qr, size, opts);
       lastQR = { qr: qr, opts: opts, meta: meta, size: size, text: text };
+      // The printed sheet is kept current, so Ctrl+P prints this code.
+      els.printImg.src = els.canvas.toDataURL('image/png');
       els.btnPng.disabled = false;
       els.btnSvg.disabled = false;
       els.btnPrint.disabled = false;
@@ -1600,6 +1608,7 @@
       verifyScan(els.canvas, text);
     } catch (err) {
       lastQR = null;
+      els.printImg.removeAttribute('src');
       els.btnPng.disabled = true;
       els.btnSvg.disabled = true;
       els.btnPrint.disabled = true;
@@ -1648,7 +1657,7 @@
 
   els.btnPrint.addEventListener('click', function () {
     if (!lastQR) return;
-    setPrintPageMargin(null); // defensive reset in case a bulk print's @page override is still active
+    syncPrintPage();
     els.printImg.src = els.canvas.toDataURL('image/png');
     window.print();
   });
@@ -1753,11 +1762,17 @@
     return (inches / 12).toFixed(1) + ' ft';
   }
 
-  function setPrintPageMargin(preset) {
-    els.printPageStyle.textContent = preset
-      ? ('@page { size: letter; margin: ' + preset.marginTop + 'in ' + preset.marginSide + 'in; }')
-      : '';
+  // The page is the kit's: Letter at half an inch, or the label stock's own
+  // margins while the bulk grid is the sheet that prints and it was laid out
+  // for a stock. Which sheet prints is the CSS's rule (see "The printed
+  // sheets"); this reads the same two things, the mode and a button's class.
+  function syncPrintPage() {
+    var b = document.body.classList;
+    var bulk = !b.contains('print-inventory') && (b.contains('print-bulk') || b.contains('mode-bulk'));
+    var preset = bulk ? lastBulkPreset : null;
+    window.PrintKit.setPage({ margin: preset ? preset.marginTop + 'in ' + preset.marginSide + 'in' : '0.5in' });
   }
+  syncPrintPage();
 
   function syncBulkSheetUI() {
     var preset = SHEET_PRESETS[els.bulkSheet.value];
@@ -1951,24 +1966,33 @@
     }
   }
 
-  function applyPrintAreaLayout(preset, cols) {
+  // The bulk area's own layout: a stock's label size and gutters, which its
+  // grids read (#print-area-bulk.stock > .pk-cards), or the plain grid.
+  function applyPrintAreaLayout(preset) {
+    var st = els.printAreaBulk.style;
+    els.printAreaBulk.classList.toggle('stock', !!preset);
+    els.printAreaBulk.classList.toggle('cut-lines', !preset && !!els.bulkCutlines.checked);
     if (!preset) {
-      els.printAreaBulk.style.display = '';
-      els.printAreaBulk.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
-      els.printAreaBulk.style.gridAutoRows = '';
-      els.printAreaBulk.style.columnGap = '';
-      els.printAreaBulk.style.rowGap = '';
-      els.printAreaBulk.style.padding = '';
-      els.printAreaBulk.classList.toggle('cut-lines', !!els.bulkCutlines.checked);
+      ['--label-w', '--label-h', '--label-gap-x', '--label-gap-y'].forEach(function (p) { st.removeProperty(p); });
       return;
     }
-    els.printAreaBulk.classList.remove('cut-lines');
-    els.printAreaBulk.style.display = 'grid';
-    els.printAreaBulk.style.gridTemplateColumns = 'repeat(' + preset.cols + ', ' + preset.labelW + 'in)';
-    els.printAreaBulk.style.gridAutoRows = preset.labelH + 'in';
-    els.printAreaBulk.style.columnGap = (preset.pitchX - preset.labelW) + 'in';
-    els.printAreaBulk.style.rowGap = (preset.pitchY - preset.labelH) + 'in';
-    els.printAreaBulk.style.padding = '0';
+    st.setProperty('--label-w', preset.labelW + 'in');
+    st.setProperty('--label-h', preset.labelH + 'in');
+    st.setProperty('--label-gap-x', (preset.pitchX - preset.labelW) + 'in');
+    st.setProperty('--label-gap-y', (preset.pitchY - preset.labelH) + 'in');
+  }
+
+  // The printed grid, through the print kit. Both kinds are a grid of the
+  // tool's own. On plain paper a code is a share of the width and as tall as
+  // its picture and label, so it is one grid that runs on over the pages
+  // ({ cols }). On label stock a label is exact inches and a sheet holds
+  // cols x rows of them, so it is a grid to a sheet ({ cols, perPage }).
+  function renderBulkSheet(items, preset, cols) {
+    window.PrintKit.renderCards(els.printAreaBulk, items,
+      preset ? { cols: preset.cols, perPage: preset.cols * preset.rows } : { cols: cols },
+      function (item) {
+        return preset ? buildPrintLabelItem(item.label, item.dataURL, preset) : bulkItemEl(item.label, item.dataURL, false);
+      });
   }
 
   function finishBulk(total, errors, unverified, preset) {
@@ -2007,7 +2031,8 @@
     lastBulkPreset = preset || null;
     var cols = preset ? preset.cols : (parseInt(els.bulkCols.value, 10) || 3);
     els.bulkGrid.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
-    applyPrintAreaLayout(preset, cols);
+    applyPrintAreaLayout(preset);
+    syncPrintPage();
 
     var overlayType = getOverlayType();
     var opts = {
@@ -2029,12 +2054,12 @@
     var i = 0;
     var errors = 0;
     var unverified = 0;
+    var printItems = [];
 
     function step() {
       if (myRun !== bulkRunToken) return; // a newer run superseded this one
       var end = Math.min(i + BULK_CHUNK, entries.length);
       var screenFrag = document.createDocumentFragment();
-      var printFrag = document.createDocumentFragment();
       for (; i < end; i++) {
         var entry = entries[i];
         try {
@@ -2044,18 +2069,18 @@
           if (!verified) unverified++;
           var dataURL = bulkScratch.toDataURL('image/png');
           screenFrag.appendChild(bulkItemEl(entry.label, dataURL, false, null, verified));
-          printFrag.appendChild(preset ? buildPrintLabelItem(entry.label, dataURL, preset) : bulkItemEl(entry.label, dataURL, false));
+          printItems.push({ label: entry.label, dataURL: dataURL });
         } catch (err) {
           errors++;
           screenFrag.appendChild(bulkItemEl(entry.label, null, true, err.message));
         }
       }
       els.bulkGrid.appendChild(screenFrag);
-      els.printAreaBulk.appendChild(printFrag);
       showBulkMsg('Generating ' + i + ' / ' + entries.length + '…');
       if (i < entries.length) {
         setTimeout(step, 0);
       } else {
+        renderBulkSheet(printItems, preset, cols);
         finishBulk(entries.length, errors, unverified, preset);
       }
     }
@@ -2066,14 +2091,14 @@
 
   els.btnBulkPrint.addEventListener('click', function () {
     if (!els.printAreaBulk.children.length) return;
-    setPrintPageMargin(lastBulkPreset);
     document.body.classList.add('print-bulk');
+    syncPrintPage();
     window.print();
   });
 
   window.addEventListener('afterprint', function () {
     document.body.classList.remove('print-bulk');
-    setPrintPageMargin(null);
+    syncPrintPage();
   });
 
   // ── Recently generated codes ─────────────────────────────────────────────
@@ -2762,6 +2787,7 @@
       if (ra.status !== rb.status) return ra.status === 'out' ? -1 : 1;
       return ra.label.localeCompare(rb.label);
     });
+    buildInventoryPrintSheet();
     if (!codes.length) {
       els.inventorySummary.textContent = 'No equipment tracked yet — scan a code above and click “Start tracking this item.”';
       els.inventoryList.innerHTML = '';
@@ -2807,37 +2833,54 @@
     renderCheckoutPanel();
   });
 
+  // Built from text, and kept current: renderInventoryList() calls it, the
+  // button calls it, and so does `beforeprint`, for the time in its heading.
   function buildInventoryPrintSheet() {
     var map = loadInventory();
-    var codes = invRenderList.length ? invRenderList : Object.keys(map);
-    var rows = codes.map(function (code) {
+    var codes = (invRenderList.length ? invRenderList : Object.keys(map)).filter(function (code) { return !!map[code]; });
+    var area = els.printAreaInventory;
+    function add(parent, tag, text) {
+      var el = document.createElement(tag);
+      if (text !== undefined) el.textContent = text;
+      parent.appendChild(el);
+      return el;
+    }
+    area.textContent = '';
+    add(area, 'h1', 'Equipment Inventory');
+    add(area, 'p', 'Printed ' + new Date().toLocaleString() + ' — ' + codes.length + ' item' + (codes.length === 1 ? '' : 's'));
+    var table = add(area, 'table');
+    table.className = 'inv-print-table';
+    var head = add(add(table, 'thead'), 'tr');
+    ['Item', 'Status', 'Checked out to', 'Since'].forEach(function (h) { add(head, 'th', h); });
+    var body = add(table, 'tbody');
+    codes.forEach(function (code) {
       var rec = map[code];
-      if (!rec) return '';
-      var since = rec.status === 'out' ? formatTs(rec.checkedOutAt) : formatTs(rec.checkedInAt);
-      return '<tr>' +
-        '<td>' + escapeHtml(rec.label) + '</td>' +
-        '<td>' + (rec.status === 'out' ? 'Checked out' : 'Available') + '</td>' +
-        '<td>' + escapeHtml(rec.status === 'out' ? (rec.assignedTo || '') : '') + '</td>' +
-        '<td>' + escapeHtml(since || '') + '</td>' +
-        '</tr>';
-    }).join('');
-    els.printAreaInventory.innerHTML =
-      '<h1>Equipment Inventory</h1>' +
-      '<p>Printed ' + escapeHtml(new Date().toLocaleString()) + ' — ' + codes.length +
-      ' item' + (codes.length === 1 ? '' : 's') + '</p>' +
-      '<table class="inv-print-table"><thead><tr><th>Item</th><th>Status</th><th>Checked out to</th><th>Since</th></tr></thead>' +
-      '<tbody>' + rows + '</tbody></table>';
+      var out = rec.status === 'out';
+      var tr = add(body, 'tr');
+      add(tr, 'td', rec.label);
+      add(tr, 'td', out ? 'Checked out' : 'Available');
+      add(tr, 'td', out ? (rec.assignedTo || '') : '');
+      add(tr, 'td', (out ? formatTs(rec.checkedOutAt) : formatTs(rec.checkedInAt)) || '');
+    });
   }
 
   els.btnPrintInventory.addEventListener('click', function () {
     if (!Object.keys(loadInventory()).length) return;
     buildInventoryPrintSheet();
     document.body.classList.add('print-inventory');
+    syncPrintPage();
     window.print();
+  });
+
+  // Ctrl+P on the Scan tab prints the inventory as it stands now. It is text,
+  // with no canvas or picture on it, so it can be built here.
+  window.addEventListener('beforeprint', function () {
+    if (document.body.classList.contains('mode-scan')) buildInventoryPrintSheet();
   });
 
   window.addEventListener('afterprint', function () {
     document.body.classList.remove('print-inventory');
+    syncPrintPage();
   });
 
   // ── Scan mode: camera input (reuses the QRScan helper the same way the

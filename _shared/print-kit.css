@@ -26,6 +26,8 @@
    portrait with half-inch margins; PrintKit.setPage() writes the @page rule
    and the properties together so they cannot disagree. A page that sets its
    own @page must set --pk-page-w, --pk-page-h and --pk-margin to match.
+   --pk-margin is the top and bottom margin. --pk-margin-x is set only when the
+   sides differ (setPage() with two lengths, 016's label stock).
 
    NOT VERIFIED ON PAPER. Every measurement here was checked against
    Chromium's PDF output (Tools/print-kit/test/smoke-print-kit.mjs), not a
@@ -40,7 +42,7 @@
   --pk-gap: 0.125in;
   /* The printable box. A hair is held back from the height so two halves, or
      four quarters, never round up past one page. */
-  --pk-area-w: calc(var(--pk-page-w) - 2 * var(--pk-margin));
+  --pk-area-w: calc(var(--pk-page-w) - 2 * var(--pk-margin-x, var(--pk-margin)));
   --pk-area-h: calc(var(--pk-page-h) - 2 * var(--pk-margin) - 0.04in);
 }
 

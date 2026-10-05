@@ -221,7 +221,22 @@ eq(a4.vars, ['297mm', '210mm', '10mm'], 'and the matching custom properties');
 near(a4.h, ((210 - 20) / 25.4 - 0.04) / 2 * IN, 'so a half sheet is half of the new printable height');
 pdf = await printed();
 eq([pdf.w, pdf.h, pdf.pages], [842, 595, 2], 'the PDF is A4 landscape, and four halves are still two pages');
+// Two lengths (016's label stock): the page's sides differ from its top, the
+// half sheets still divide the height, and the printable width follows the sides.
+const two = await page.evaluate(() => { PrintKit.setPage({ margin: '0.5in 0.1875in' });
+  const cs = getComputedStyle(document.documentElement);
+  const probe = document.createElement('div'); probe.style.width = 'var(--pk-area-w)'; document.body.appendChild(probe);
+  const out = { css: document.getElementById('pk-page-style').textContent, y: cs.getPropertyValue('--pk-margin').trim(), x: cs.getPropertyValue('--pk-margin-x').trim(),
+                w: probe.getBoundingClientRect().width, h: document.querySelector('#out > section').getBoundingClientRect().height };
+  probe.remove(); return out; });
+eq(two.css, '@page { size: letter portrait; margin: 0.5in 0.1875in; }', 'setPage with two lengths writes both into the @page rule');
+eq([two.y, two.x], ['0.5in', '0.1875in'], '--pk-margin is the top and bottom, --pk-margin-x the sides');
+near(two.w, (8.5 - 2 * 0.1875) * IN, 'the printable width is the paper less the two sides');
+near(two.h, (10 - 0.04) / 2 * IN, 'and a half sheet is still half of the printable height');
+pdf = await printed();
+eq([pdf.w, pdf.h, pdf.pages], [612, 792, 2], 'the PDF is Letter, and four halves are still two pages');
 await page.evaluate(() => PrintKit.setPage({}));
+eq(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--pk-margin-x').trim()), '', 'one length again takes --pk-margin-x off');
 eq(await page.evaluate(() => document.querySelectorAll('#pk-page-style').length), 1, 'a second setPage reuses the one style element');
 eq((await printed()).h, 792, 'and Letter is back');
 
