@@ -86,6 +86,7 @@
     "Tools/gallery-walk-qr/test/smoke-scan-verify.mjs",
     "Tools/testing-accommodations-card-generator/test/smoke-filter.mjs",
     "Tools/staff-directory-builder/test/smoke-departments.mjs",
+    "Tools/duty-roster-builder/test/smoke-rotation.mjs",
     "Tools/fitness-skill-assessment-tracker/test/smoke-sort.mjs",
     "Tools/formula-sheet-builder/test/smoke-allowed.mjs",
     "Tools/formula-sheet-builder/test/smoke-diagrams.mjs",

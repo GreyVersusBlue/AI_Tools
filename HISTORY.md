@@ -9,6 +9,37 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 058 Duty Roster Builder: a multi-week rotation and a month on one print (2026-10-05, AI-31-058, `CACHE_VERSION` v246)
+
+Audit entry AI-31, BACKLOG rank 97 (½). Per-tool row; the rank-97 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** Week 1 is the grid the tool always had (`assignments`). Weeks 2 to N (1 to 6, default 4, the "Weeks in
+  the rotation" select) are not stored: each is the week before it, edits included, with every person moved down one duty
+  (rows in the order shown, the last duty wraps to the first, day by day, empty cells move too), plus the cells the teacher
+  edited by hand in that week (`weekOverrides`, `{ '2': { '<dutyId>|<day>': name } }`).
+- **Decision, mine, cheap to reverse: what an edit does.** A hand edit in week N is pinned: it stays as set when
+  an earlier week changes, and the weeks after N derive from it, so it travels on by the rotation. An edit in week 1 reaches
+  every later week except the cells pinned there. An edit that lands on what the rotation gives is not an edit (the pin is
+  released); "Reset this week to the rotation" releases the week's pins. Clear grid clears week 1 and all pins; auto-fill
+  fills week 1 only and leaves pins. The page says it in a line under the week picker, and a pinned cell reads "edited by
+  hand" in words and in its select's accessible name.
+- **Not touched, as instructed:** auto-fill's order (by day, then duty) and the open question about it.
+- **Saved state.** Same key `drb_roster_v1`; a roster saved earlier has no `weeks` or `weekOverrides` and loads as week 1
+  with four derived weeks after it, nothing rewritten. Share links carry both fields; an arrival drops a pin for a duty or
+  person that did not travel or a week outside 2 to 6, and one made before this change arrives as week 1.
+- **Print.** "Print this week" (the one shown) and "Print the month" build one headed table per week into `#printGrid`
+  (now a `div`; the page's inline-sink count stays 4 because the two new selects are filled with DOM calls, not
+  `innerHTML`). Each week is `break-inside: avoid`; the month sets its table text at .85rem. `audit-print --check --only 058`
+  pass (no finding on the sheet, in light or dark), and `test:a11y -- --only 058` is 4 passed, 0 failed. Not checked on paper.
+- **Suite.** `test:duty-roster` (`Tools/duty-roster-builder/test/smoke-rotation.mjs`, port 8485), 63 assertions.
+  Broken on purpose 39 times (42 runs: three mutants first survived, the staff count reading week 1, the month class and
+  the week-number filter on arrival, so three assertions were added and those three re-run and now fail). Not every
+  assertion was broken one by one: the print sheet's `display`, the weeks following one another down the page, "two weeks
+  printed" and the offsite check were not given a mutant of their own.
+- **What went wrong.** Two mutation loops started at once (one backgrounded by the tool's timeout, one by me) and fought over
+  the page file; the first was killed and the page restored from git before anything was committed from it. Mutants must
+  be run one process at a time.
+
 ## Path 7 P4, increment 3: 040 is `ExportKit`'s second adopter, `_shared/duplex-print.js` is deleted, and 016's print suite no longer depends on the machine's fonts (2026-10-05, AI-13, `CACHE_VERSION` v245)
 
 Audit entry AI-13, rank 6 (2+). Third increment of P4. **The row stays, rewritten.** P5 untouched, 011 not started.

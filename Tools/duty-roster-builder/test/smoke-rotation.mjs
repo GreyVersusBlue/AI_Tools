@@ -128,6 +128,10 @@ eq(Object.keys((await saved()).weekOverrides).length, 0, 'and nothing is left sa
 /* ── 7. counts follow the week shown ───────────────────────────────────── */
 const counts = () => page.$$eval('#staffListWrap .staff-count', els => els.map(e => e.textContent));
 eq((await counts())[0], '2 duties in week 2', 'the staff list counts the week shown');
+await setCell('dH', 'Tuesday', 'Bram Sorrel');
+eq((await counts())[1], '3 duties in week 2', 'a hand edit in week 2 changes week 2\'s count');
+await showWeek(1);
+eq((await counts())[1], '2 duties in week 1', 'and not week 1\'s');
 
 /* ── 8. printing ───────────────────────────────────────────────────────── */
 await page.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed++; }; });
@@ -142,7 +146,9 @@ eq(monday[1], ['Cleo Marsh', 'Cleo Marsh', 'Bram Sorrel'], 'week 2 prints its ha
 eq(monday[2], ['Bram Sorrel', 'Cleo Marsh', 'Cleo Marsh'], 'week 3 prints what it shows');
 eq(monday[3], ['Cleo Marsh', 'Bram Sorrel', 'Cleo Marsh'], 'week 4 follows week 3');
 ok((await page.textContent('#printSub')).includes('Weeks 1 to 4'), 'the sheet says which weeks it holds');
+eq(await page.$eval('#printArea', el => el.classList.contains('is-month')), true, 'a month sheet is marked as one');
 await page.click('#printBtn');
+eq(await page.$eval('#printArea', el => el.classList.contains('is-month')), false, 'and a single week is not');
 eq(await page.$$eval('#printGrid .print-week h2', els => els.map(e => e.textContent)), ['Week 2'], 'Print this week prints only the week shown');
 
 /* The month on paper: print media, US Letter at 96 dpi, margins of half an inch. */
@@ -191,13 +197,13 @@ eq(await column('Monday'), ['', '', ''], 'and empties every week');
 
 /* ── 11. a link carries weeks and edits, and an old link still loads ───── */
 const mk = (payload) => page.evaluate(([p, base]) => base + '?duties=' + encodeURIComponent(window.StateLink.encodeState(p)), [payload, URL_PAGE]);
-const withEdits = Object.assign({}, LEGACY, { weeks: 3, weekOverrides: { 2: { 'dC|Monday': 'Cleo Marsh', 'gone|Monday': 'Ada Quill', 'dB|Monday': 'Nobody Here' } } });
+const withEdits = Object.assign({}, LEGACY, { weeks: 3, weekOverrides: { 1: { 'dC|Monday': 'Ada Quill' }, 9: { 'dC|Monday': 'Ada Quill' }, 2: { 'dC|Monday': 'Cleo Marsh', 'gone|Monday': 'Ada Quill', 'dB|Monday': 'Nobody Here' } } });
 await boot(null);
 await page.goto(await mk(withEdits), { waitUntil: 'networkidle' });
 await settle(page);
 let got = await saved();
 eq(got.weeks, 3, 'a link carries the number of weeks');
-eq(got.weekOverrides, { 2: { 'dC|Monday': 'Cleo Marsh' } }, 'and a hand edit, dropping one for a duty or a person that did not travel');
+eq(got.weekOverrides, { 2: { 'dC|Monday': 'Cleo Marsh' } }, 'and a hand edit, dropping one for a duty or a person that did not travel and any for a week outside 2 to 6');
 await showWeek(2);
 eq(await cell('dC', 'Monday'), 'Cleo Marsh', 'which shows as an edit in the receiving week');
 await boot(null);

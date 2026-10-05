@@ -461,7 +461,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 94 | Export into Review Game Board — emit the question set in the board’s category/points format | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 96 | Visual branching tree view, printable as a one-page overview alongside the numbered key | 057 | ½ | | [057 Dichotomous Key Builder](#057--dichotomous-key-builder) |
-| 97 | Multi-week rotating schedule — derive week N+1 by shifting each person one duty; print a month | 058 | ½ | | [058 Duty Roster Builder](#058--duty-roster-builder) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 99 | Per-student report cards — one page per student across all events and dates, with the class average | 060 | ½ | | [060 Fitness & Skill Assessment Tracker](#060--fitness--skill-assessment-tracker) |
 | 100 | Improper, mixed and negative values — extend operand generation past 0–1 | 061 | ½ | | [061 Fraction–Decimal–Percent Conversion Drill Generator](#061--fractiondecimalpercent-conversion-drill-generator) |
@@ -7476,6 +7475,15 @@ immediately classroom-usable, not just a reference document.
 
 *`Tools/058-duty-roster-builder.html`.*
 
+**Shipped (v246, AI-31-058).** Multi-week rotation: week 1 is the grid the tool always had; weeks
+2 to N (1 to 6, default 4) are derived from the week before by moving everyone down one duty (the last
+duty wraps to the first, day by day, rows in the order shown) and stay derived until the teacher edits a
+cell in that week. A hand edit is pinned (marked "edited by hand" in words and to a screen reader), carries
+into the weeks after it by the rotation, and is kept when week 1 changes; "Reset this week to the rotation"
+and putting back the derived value release it. Print this week and Print the month (one headed table per
+week, never split across a page). Saved in the same `drb_roster_v1` key (`weeks`, `weekOverrides`); an old
+roster is week 1; share links carry both. Suite `test:duty-roster`. Not checked on paper.
+
 #### Quick Wins
 
 - **Per-staff assignment counts** shown somewhere (e.g. next to the staff
@@ -7486,18 +7494,11 @@ immediately classroom-usable, not just a reference document.
 - **"Skip a person this week" flag** per staff member (e.g. someone's out,
   or on a different duty schedule) so auto-fill respects it instead of
   needing every assignment fixed by hand afterward.
-- **Multiple weeks/rotations saved**, not just one grid — a real duty
-  schedule usually rotates who's on hallway vs. cafeteria week to week, and
-  right now there's only one current week's grid.
 - **CSV export** for handing the schedule to an administrator who wants it
   outside a browser.
 
 #### Major Features
 
-- **True week-to-week rotation**, not just round-robin-fills-one-week: a
-  multi-week rotation where week 2's grid is auto-derived from week 1's
-  (shift everyone over one duty), matching the backlog's "rotating" framing
-  more literally than a single auto-filled grid does.
 - **Duty-location constraints** ("this duty needs 2 people," "this person
   can't do bus loop") — the current model is one person per cell, which
   doesn't match every real duty roster (some locations need multiple staff
@@ -7505,8 +7506,6 @@ immediately classroom-usable, not just a reference document.
 - **Multiple named saved rosters** (e.g. "Fall semester" vs "Spring
   semester," or separate rosters per grade-level team), matching the
   multi-save convention used elsewhere in this toolkit.
-- **Print layout for a full month at once**, if multi-week rotation ships,
-  instead of one week per print.
 
 #### Moonshot / North Star
 

@@ -35,6 +35,7 @@
     "test:gallery-walk": "node Tools/gallery-walk-qr/test/smoke-projector.mjs && node Tools/gallery-walk-qr/test/smoke-scan-verify.mjs",
     "test:accommodations": "node Tools/testing-accommodations-card-generator/test/smoke-filter.mjs",
     "test:staff-directory": "node Tools/staff-directory-builder/test/smoke-departments.mjs",
+    "test:duty-roster": "node Tools/duty-roster-builder/test/smoke-rotation.mjs",
     "test:fitness": "node Tools/fitness-skill-assessment-tracker/test/smoke-sort.mjs",
     "test:formula-sheet": "node Tools/formula-sheet-builder/test/smoke-allowed.mjs",
     "test:formula-sheet-diagrams": "node Tools/formula-sheet-builder/test/smoke-diagrams.mjs",
