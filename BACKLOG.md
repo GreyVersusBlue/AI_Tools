@@ -87,6 +87,9 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-15 (no version, a design pass), rank 4, Path 3 P6: the year rollover is designed, not built.** The design is
+  Path 3's P6 bullet: the inventory by kind, `br-rollover.js`'s surface, the order of operations, the tests, and
+  ten questions for Devon. **009's rollover today loses student photos and deletes room layouts and other setup.**
 - **AI-13 (v245), rank 6, Path 7 P4 increments 1 to 3: `_shared/export.js` (`ExportKit`) is whole, 064 and 040 are
   on it, and `_shared/duplex-print.js` is deleted.** The imposition and pagination math, `toPdf(pages, opts)` for
   drawn pages (**not a DOM element**), `toCsv` (formula guard), `toXlsx`, `toZip`, `download`, `filename`. 064's
@@ -368,7 +371,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 1 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 (#257, v182):** 046 → 015, 056 → 028 (`sheet: false`) and 039 → 040 are entries; **003 → 037 is a documented exception** (student scores never ride a link); `share.js` gained `sendState(entry)` and `sheet: false`. **Increment 2 (#259, v183), the roster chain:** **002 → 022** is a sheet row and **022 → 005** a `sheet: false` entry from 022's "Seat these groups" button; **006/007 → 002 is not a link** (the roster already reaches 002 through `roster.js`). **Left: only 053 → 030, which is blocked on rank 27** (Path 12 P1, the question bank with 030 as the front door). Do not start this row until rank 27 has shipped; then it is one entry plus a row in `smoke-send-to.mjs` | site | ¼ | | [Path 6](#path-6--share-everywhere) |
 | 2 | Path 4 P5 (rest) — per-tool restore as a shared control any tool can host | 009 | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23 | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 6 | Path 7 P4 — `_shared/export.js`. **Increments 1 to 3 shipped (AI-13, v243 to v245):** `ExportKit` has the imposition and pagination math, `toPdf(pages, opts)` for pages a tool can draw, and the file helpers `toCsv`, `toXlsx`, `toZip`, `download` and `filename`; 064 (Download PDF and print pagination) and 040 (print pagination and backs) are on it, and `_shared/duplex-print.js` is deleted. **Left, in this order:** (1) 011's booklet and N-up (Path 17 P4, a session of its own: controls, a suite, nothing started); (2) the file helpers have no adopter: 064's `exportZip` and `download`, then CSV and XLSX for the tools that hold a table. A slot is not clipped and turns 0 or 180 only. Ordinary work, no Fable needed | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 7 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
@@ -1009,8 +1012,334 @@ them data.
   small flag set the platform themes list (absent today, do-not-cold-call,
   accommodation note) with Name Picker's Data tab as the wipe-it model.
 - **P6 — Year rollover.** "Start next year": archive this year's rosters and every
-  id-keyed history to a Backup & Restore file, clear student data, keep setup. Owned
-  jointly with 009.
+  per-student history to a Backup & Restore file, clear student data, keep setup. Owned
+  jointly with 009. **Designed 2026-10-05 (AI-15, a design pass: no code, nothing run in a browser), not built.**
+  The design is the rest of this bullet. It was written from reading 009, 006, `_shared/roster.js`,
+  `_shared/media-db.js`, `_shared/tool-registry.js` and the code that writes each key named below; two
+  read-only probes (kept outside the repo) loaded the registry in Node to count it.
+
+  **What exists today, and what is wrong with it.** There are two rollovers, and they disagree.
+  - *009, "Back up, then clear student data".* It builds one envelope of every localStorage key, downloads it,
+    asks twice with `confirm()`, and removes every key `ToolRegistry.classifyKey()` calls `student`. Four faults,
+    all read off the code:
+    1. **The archive holds no IndexedDB.** The call is `buildEnvelope(lastScanGroups, [])`; the second argument is
+       the database list. Seating Chart's student photos (`gvb-media`, namespace `seating/`) are not in the file,
+       and once `seating-chart-v1` is gone 005's boot sweep deletes every photo older than ten minutes. **A
+       teacher who runs today's rollover and opens 005 has the photos in neither place.**
+    2. **Nothing is verified.** The second `confirm()` says "check it is in your Downloads folder". The page never
+       reads the file back, so a blocked download, a full disk or a cancelled save dialog clears the year.
+    3. **It deletes setup it promises to keep.** The dialog says "Your rubrics, templates, calendars and settings
+       are kept" and the result line says "Your templates and settings are untouched". Of the 54 student-marked
+       entries, 21 keys or families hold teacher setup beside the names (the table below): the room layout and
+       saved arrangements in `seating-chart-v1`, hall-pass destinations and limits, behaviour tags and point
+       values, lab contract wording and fees, lab roles and stations, novel-study roles and schedules, fitness
+       events, science-fair milestones, accommodation types, PE stations, a field trip's whole text. It deletes
+       `np_rosters` whole, so every class name goes, and `crh_archive_v1`, which is 006's only copy of past years.
+    4. **It leaves names behind.** The mixed keys (below) are not marked, so they are kept as they are;
+       `aplp-share`'s parked roster file is not looked at; an open tab of any tool writes last year back on its
+       next save.
+  - *006, "Start a new school year".* It files every roster under a year label inside `crh_archive_v1` (in the
+    browser, not in a file), keeps the class names with empty lists, keeps period and course, and clears
+    `crh_archived_students`. It touches no other tool, so points, hall passes and reading logs stay, keyed by
+    name, and next year's student with the same name inherits them.
+
+  P6 replaces both with one flow. It is run from 009; 006's button opens it.
+
+  **The inventory, and how it was found.** The registry has 89 rows, 226 keys and 54 prefixes (probe, 2026-10-05).
+  44 keys and 10 prefixes over 27 tools are `student: true` (5 of them legacy). Every one of those 54 was read at
+  its write site for setup held inside it. The seven mixed keys of the 2026-09-23 audit were each re-read. Then
+  every unmarked key of a tool that reads a roster (the registry's `reads`, plus a grep for `mountRosterPicker`,
+  `Roster.getRoster`, `Roster.listRosters` and `np_rosters`), and of 004, 029, 044 and 045, was read for a field a
+  roster fills or a student wrote. The other unmarked keys rest on the 2026-09-23 reading and were not re-read.
+  Kinds, with what "clear" does to each:
+
+  | Kind | Keys | Clear |
+  |---|---|---|
+  | **A. Student, nothing else** | `np_current`, `np_history`, `np_stats`, `np_hof`, `np_lucky`, `np_absent`; `crh_archived_students`; `pcl_entries_v1`, `pcl_idnames_v1`, `pcl_roster_v1`; `gvb-rubric-builder:scores:*`; `gvb-exit-ticket:tally`, `:triage`; `gvb-number-talks:strategyLibrary`; `gvb-writing-prompts:record`; `gtg-settings` (a blob 002 migrates and removes); the five legacy entries (`gtg:*`, `gvb-grade-distribution:*`, `gvb-bracket:*`, `gvb-exit-ticket:tally*`, `apl_portfolio_v1`) | delete the key |
+  | **B. Student, with setup inside** | `seating-chart-v1`, `hall-pass-log-sections`, `behavior-points-tracker-sections`, `gtg:data:*`, `lsct_sections_v1`, `lgrr_rosters`, `novel-study-circles`, `sslt_sections_v1`, `fsat_tracker_v1`, `sfpt_tracker_v1`, `tacg_cards_v1`, `pe-tournament-stations`, `gallery-walk-qr-sets`, `gvb-field-trip:data:*`, `socsem:data:*`; milder: `gvb-bracket:data:*`, `gvb-grade-distribution:data:*`, `pct:lastValues`, `apl_portfolios_v1` | reduce: the student fields go to the tool's own empty value, the rest stays. A reduced family's `:list` and `:current` (and `lgrr_current`, `lsct_current_v1`, `sslt_current_v1`, `novel-study-circles-current`) are kept: the section or document they name is still there |
+  | **C. Roster shells** | `np_rosters`, `crh_students_v1`, `gvb-roleplay:roster`, `crh_archive_v1` | `np_rosters`: every name kept, every list `[]`. `crh_students_v1`: `meta.period` and `meta.subject` kept, `meta.term` set to the new year, `students` and `orphans` `[]`. `gvb-roleplay:roster`: class names kept, lists `[]`. `crh_archive_v1`: question 1 |
+  | **D. Mixed: a student field inside teacher content** (unmarked) | the seven, and four found by this reading; table below | reduce, by field |
+  | **E. Free text that may name a student** (unmarked, not separable) | `data-chart-builder-datasets` (one of the seven); `subPlanBuilder.history.v1`; `promptBuilderDraft_v2`, `promptBuilderCustomPresets_v1`, `promptBuilderHistory_v1`; `gvb-sub-binder:today-lesson`; `qr-code-generator-recent`; `htcm:game` (typed team names); `pct:custom`; `np_prompts`; `gvb-number-talks:myBank` notes | scanned for this year's roster names and shown; nothing is cleared without the teacher choosing it (question 2) |
+  | **F. A roster's name only** (unmarked) | `cls-screen:state` (`widgets[].data.roster`), `gvb-command-center:settings` (`rosterName`, `periods[].roster`), `gvb-roleplay:currentClass` and the keys filed under its class names | kept: class names survive in C, so the reference still resolves |
+  | **G. Teacher setup** | everything else | kept, untouched |
+
+  The mixed keys (kind D). None goes through `Store`; all are raw JSON. Field and empty value are the tool's own,
+  from its default or blank-document code:
+
+  | Key | Tool | Student field | Clear writes | Trap |
+  |---|---|---|---|---|
+  | `subPlanBuilder.standingDetails.v1` | 044 | `medicalAlerts` (free text; the placeholder names a student's EpiPen) | `''` | 045 reads it too. Deleting the whole key brings back hard-coded defaults, so never delete it |
+  | `gvb-certificate-maker:data:*`, and the legacy `gvb-certificate-maker:last` | 042 | `studentName`, `batchNames` (one string, a name and its reason per line) | `''` for both | must be `''`, not removed: `batchNames.split` throws on `undefined`. `reason`, `qrUrl` are kind E |
+  | `crcg:data:*`, and the legacy `crcg_roles_v1` | 050 | `roles[].students` | `[]`, what the tool's own "Clear names" writes | the legacy key is re-migrated when `crcg:list` is empty, so it gets the same rule |
+  | `gvb-review-board:data:*` | 030 | `teams[].name` when it is `Team N: <names>` (a roster split), `teams[].score`, `clues[].used` | name back to `Team N`, score `0`, `used` `false` (question 9) | `teams` must stay an array: `renderBoard` calls `forEach` on it. A typed team name is kind E |
+  | `qr-code-generator-inventory` | 016 | `assignedTo`, `history[]` (`who`, `ts`), `checkedOutAt`, `checkedInAt` | `''`, `[]`, `null`, `null`; `label`, `status`, `createdAt` kept | an item still `out` (question 3). `label` must stay: the list sort reads it unguarded |
+  | `data-chart-builder-datasets` | 038 | the whole pasted text, per dataset | kind E: per dataset, on the teacher's choice | a stored `null` crashes the page at boot, so a cleared map is `{}` |
+  | `qr-scavenger-hunt-sets` | 018 | `sets[*].run` (teams, check-in times, marks, hints, timer) | `run` removed; `ensureRun()` rebuilds it | `stations[].codeWord` is the hunt and stays |
+  | `htcm:data:*` **(new)** | 064 | `cards[].name`, when "Batch-add from roster" made the cards | kind E per card: a card named for a figure and one named for a student are the same shape (question 9) | |
+  | `drb_roster_v1`, `sdb_directory_v1` **(new)** | 058, 075 | `staff[]`, `assignments`, `staffSkip`; `[].name`: staff lists whose picker can load a class roster | question 7 | |
+  | `gvb-exit-ticket:discussion`, `gvb-exit-ticket:categoryTally` **(new)** | 023 | what students wrote, with no names; the same tally `:tally` is, by topic | question 4. The 2026-09-23 audit read `discussion` as not student data because it has no names | |
+
+  Not localStorage:
+  - **`gvb-media`** (one database, twelve namespaces in use). Only **`seating/`** is student data: 160 px face
+    photos, under random ids, referenced from `seating-chart-v1`'s `students[].photo`; a record carries no name.
+    `cam`, `dbq`, `escape-room`, `fsb`, `htcm`, `ppg`, `psa`, `rgb`, `tlb`, `stviz-trace` are teacher content by the
+    registry's comments and the page call sites (their modules were not each read in full). `class-screen` is
+    whatever the teacher put on the board; kept. Clear is `MediaDB.store({ ns: 'seating' }).clear()`, the call 005's
+    own "Erase saved data" makes. **Never `MediaDB.clear()`: the un-namespaced handle empties every tool's images.**
+  - **`rgb-audio`** (030's clue recordings) and **`stviz-recovery`** (035's last three recovery points; 035 models
+    no students, a group is a name and a headcount) are teacher content: archived, not cleared. **`bmg-maps`** is a
+    cache: not archived, not cleared.
+  - **Cache Storage `aplp-share`**, entry `share/roster`: a roster file shared to 006 and not yet collected. No
+    expiry. The rollover deletes the entry.
+  - **sessionStorage**: 016's `qr-code-generator-scanned` and 010's `gvb-command-center:excluded:<date>:<roster>`
+    hold names and die with the tab. The rollover cannot reach another tab's; this is why it asks for the other
+    tabs to be closed. (The registry's header still describes an `:excluded:` localStorage entry. Nothing writes
+    one and no row declares it; correct the comment when the registry is opened.)
+
+  **The module.** `Tools/backup-restore/br-rollover.js`, a classic script publishing `BrRollover`, loaded by 009
+  only. It is pure apart from `run()`: it takes a snapshot and returns values, so the Node suite drives all of it.
+  No new `_shared/` file. Two things move out of 009's inline script so the module and the suites can call them:
+  `Tools/backup-restore/br-envelope.js` (`BrEnvelope`: `build`, `read`, `exportDatabase`, `importDatabase`, the
+  blob codec; the functions as they are, moved, not changed), which is also the first half of what per-tool
+  restore (rank 2) needs.
+  - `BrRollover.RULES`: a frozen list of `{ match, prefix, tool, kind, reduce, describe }`. `match` is a registry
+    key or prefix, `kind` is `'delete' | 'reduce' | 'ask' | 'keep'`, `reduce(value, ctx)` takes the parsed value
+    and returns `{ value, removed, kept }` where `value` is the new parsed value (or `null` to delete the key),
+    `removed` is `[{ what, count, sample }]` ("names", 28, the first few) and `kept` is `[{ what, count }]` ("desks",
+    24). `ctx` is `{ names, nextTerm }`. A reducer does not touch storage, never throws on a shape it does not
+    know (it returns `{ unreadable: true }`), and is idempotent: `reduce(reduce(x)) = reduce(x)`.
+  - `BrRollover.snapshot(io)` → promise of `{ local: { key: string }, media: [{ ns, id, size }], databases:
+    [{ name, stores: [{ name, count }] }], share: boolean, takenAt }`. `io` is `{ localStorage, indexedDB, caches,
+    MediaDB }`, handed in so a suite can pass fakes.
+  - `BrRollover.scanNames(text, names)` → `[{ name, count }]`: whole-word, case-blind matches of roster names
+    (through `Roster.normKey`, full names only, never a bare first name) in a raw string. For kind E. It is 006's
+    `scanDependencies` idea, made a function.
+  - `BrRollover.plan(snapshot, { names, nextTerm, choices })` → `{ id, items, media, share, totals, problems }`.
+    An item is `{ key, tool, label, kind, action, before, beforeHash, after, removed, kept, hits }`: `action` is
+    `'delete' | 'write' | 'keep' | 'choose'`, `after` is the exact string that will be written (or `null`),
+    `hits` is `scanNames`' answer for a kind E key, and `choices[key]` (`'keep' | 'clear'`, or per dataset or
+    card for 038 and 064) turns a `'choose'` into a `'keep'` or a `'write'`. `media` is `[{ ns, action, count,
+    bytes }]`. `problems` lists a student key with no rule, a key no rule could parse, and a rule whose key the
+    registry does not declare. **The preview and the clear are this one value: `run()` writes `item.after` and
+    nothing else, so what the teacher read is what happens.**
+  - `BrRollover.manifest(snapshot)` → `{ local: { key: [length, hash] }, databases: { name: { store: count } },
+    media: { ns: [count, bytes] } }`, and `BrRollover.hash(text)` → promise of hex SHA-256 (`crypto.subtle`; where
+    there is none, a 53-bit string hash and the receipt says which).
+  - `BrRollover.stamp(plan, { label, manifest })` → the `rollover` object put on the envelope: `{ id, label,
+    nextTerm, plannedAt, manifest }`. **The envelope's `formatVersion` stays 2**; `rollover` is an added field an
+    older reader ignores. A year archive is never locked (decided in v216).
+  - `BrRollover.verify(fileText, { id, hash, manifest })` → `{ ok, reasons }`. In order: the text's hash is the
+    hash of what was built; it parses; `BrEnvelope.read` accepts it with no bad flag; it is not a locked file;
+    `rollover.id` is this run's; every key in the manifest is in `data` with the same length and hash; every
+    declared database but the cache is in `indexedDB` with the manifest's record counts; every blob decodes to its
+    recorded `size`.
+  - `BrRollover.run(plan, io, { onStep })` → promise of `{ done, failed, receipt }`. The steps, below.
+  - `BrRollover.resume(io)` → `null`, or `{ id, label, state, archiveName, archiveHash, doneSteps, totalSteps }`
+    from the journal.
+  - **Storage it owns:** one key, `br_rollover_v1` (009's row in the registry, not student, never cleared, in every
+    backup): `{ v: 1, runs: [{ id, label, nextTerm, state: 'archived' | 'clearing' | 'done', archiveName,
+    archiveHash, startedAt, finishedAt, steps, done, cleared: { key: hash } }] }`, the last three runs. **It holds
+    no name and no value**, only hashes of what was removed. No migration: nothing has written it.
+  - **Registry changes** (`_shared/tool-registry.js`, the platform worker's file when this is built): `rollover:
+    'reduce' | 'ask'` on an entry whose rule is not the default (a student entry with no mark is `'delete'`; an
+    unmarked entry with none is `'keep'`); `student: true` stays what it is. `idb[].namespaces: [{ ns, student }]`
+    on `gvb-media`'s row, so the photo namespace is declared and not written into the module. `ToolRegistry.
+    rolloverRule(key)` and `ToolRegistry.mediaNamespaces()`. `classifyKey()` does not change, so 009's scan table
+    and filters read as before. The registry-shape suite fails on a student entry marked `'reduce'` with no rule in
+    `RULES`, a rule with no entry, and a `gvb-media` namespace found in the tree that the row does not declare.
+
+  **The order of operations.** Nothing is cleared until step 5. Each step is on the page as a numbered step, with
+  the next one disabled until this one is done; there is no `confirm()`.
+  1. *Close the other tabs.* An open tool holds last year in memory and writes it back on its next save. 009 asks
+     the service worker for its window clients (a `CLIENTS` message, new in `sw.js`) and names the tools still
+     open; the step is done when there are none. With no worker (the offline copy on `file://`), the page says it
+     cannot see other tabs and asks; step 7 is the net.
+  2. *Review.* `snapshot()` then `plan()`. The teacher sees the preview (below), makes the kind E choices, types
+     the label of the year being closed (006's guess, from `meta.term`) and the new year's.
+  3. *Save the archive.* One envelope of **every** localStorage key that is not transient and **every declared
+     database but the cache** (`gvb-media`, `rgb-audio`, `stviz-recovery`), stamped. It is serialised once to a
+     string; the string is hashed; `verify()` is run on the string itself; and storage is read again and compared
+     with the manifest, so a write that landed while the archive was being built stops the run here. Then the
+     download: `showSaveFilePicker` where the browser has it, so the page holds a handle; the anchor click
+     elsewhere. The journal gets a run in state `'archived'`. `br_last_backup_at` is set here.
+  4. *Check the archive.* The page reads the saved file back and runs `verify()` on its bytes. With a handle it
+     does this itself (`handle.getFile()`). Without one the teacher picks the file they just saved (question 8).
+     A file that fails names why ("this is an older archive", "the file is 0 bytes", "the file was changed") and
+     the flow goes back to step 3. **Step 5 cannot start until a file on disk has passed.**
+  5. *Clear.* `run()` first reads every planned key again and compares it with `beforeHash`; any difference stops
+     with nothing changed ("something saved since you reviewed this; review again"). It sets the run to
+     `'clearing'`, then, each step recorded in `done` before the next begins and every write read back:
+     (a) the reductions, kinds B, D and the chosen E (each writes a value no longer than the one it replaces, so a
+     full disk cannot fail it); (b) the deletions, kind A; (c) the two roster keys, `np_rosters` and then
+     `crh_students_v1`, written the way 006's rollover writes them (`Roster.replaceAll`), last among the keys so no
+     tool is ever looking at an empty class with last year's records still under it; (d) `seating/` in `gvb-media`;
+     (e) the `aplp-share` entry; (f) the dangling indexes (below). Then `'done'`, with `cleared`.
+  6. *Receipt.* What was removed and kept, by tool, in counts; the archive's name and the first twelve characters
+     of its hash; "to see last year again" in two sentences. It can be printed. It has no names on it.
+  7. *Afterwards.* When 009 or the landing page's backup readout next loads and the last run is `'done'`, each
+     cleared key is hashed; one that is back with last year's hash was written by a tab that stayed open, and 009
+     says which tool and offers to clear it again. One that is back with a different value is this year's work and
+     is left alone.
+
+  **A failure half way.** The page closes, the browser crashes or a write fails during step 5: the journal says
+  `'clearing'`, and 009 opens on a banner, "The year rollover was interrupted. Your archive `<name>` was checked
+  before it began." Two buttons. *Finish clearing* takes a new snapshot and plans again: every reducer is
+  idempotent and a deleted key is simply absent, so finishing from any step gives the storage an uninterrupted
+  run gives (the suite proves this for every step). *Put last year back* asks for the archive, checks its hash
+  against the journal's, and restores it whole, Replace, with `gvb-media`. A run left at `'archived'` (the teacher
+  stopped before step 5) changed nothing and shows as a note, not a banner. A reducer that cannot read its key
+  (hand-edited or corrupt JSON) leaves the key as it is, and the receipt and the page say so by name: an
+  unreadable key is in the archive, and deleting what the page cannot read is not the page's call.
+
+  **What the teacher sees before confirming.** One table, a row per tool that has anything, three columns.
+  *Removed*: counts by kind ("3 classes, 84 students: points, notes and goals"), and a "show" that opens the real
+  values from `plan.items[].removed` (every name, the medical alerts text in full, each dataset's first lines).
+  *Kept*: what setup was found, counted ("8 behaviours, 2 layouts of 24 desks", "the contract's wording and fee").
+  *Your choice*: the kind E items, each with the names found in it and Keep or Clear, unset until chosen. Above
+  the table: the totals, the photos by count and size, and a line for anything in `problems`. Below it: what is
+  not touched at all (settings, question banks, calendars, and every image but the photos). The same table, with
+  the choices fixed, is what step 5's button sits under.
+
+  **What each tool changes.**
+  - *009.* The "End of the school year" card becomes the seven steps. The inline rollover and its two `confirm()`s
+    go. `buildEnvelope`, `readEnvelope` and the database functions are called from `br-envelope.js`. On restore, a
+    file with a `rollover` stamp is announced as a year archive ("the 2026–27 year archive, taken 2027-06-18"),
+    its `gvb-media` box is ticked (database boxes are off by default at restore today, which would bring a seating
+    chart back with no faces), and Replace over a browser that has this year's student data says so above the
+    existing "would be lost" list. `br_rollover_v1` is hidden from the scan table like `br_last_backup_at`.
+  - *006.* "Start a new school year…" opens 009 at the rollover card. Its two `prompt()`s and the block that
+    empties the rosters go; `Roster.replaceAll` is called by `run()`. Per-roster Archive and Restore stay.
+    `crh_archive_v1.years` is question 1.
+  - *043 and 084* (and any tool whose `:data:*` is reduced, not deleted, has no change). Both keep `:list` and
+    `:current` unmarked while `:data:*` is student data, so today's rollover leaves switcher entries that select
+    nothing. Under this design `:data:*` is reduced and kept, so the entries stay live. Step 5(f) is for the other
+    case, an index naming a document that is gone: `gvb-field-trip:list`, `socsem:list`, `gtg:list`,
+    `gvb-certificate-maker:list` and `novel-study-units`' `projectNames` are rewritten to the documents that
+    exist. No tool page changes for this.
+  - *005.* Nothing in the page. Its reducer keeps `sections[].name`, `desks`, `layouts[].desks` and the view
+    settings, and empties `students`, `apart`, `together`, `assign`, `history` and each layout's `assign`.
+  - *`sw.js`.* The `CLIENTS` message; the two new files in `PRECACHE_URLS` (not the shell); a `CACHE_VERSION` bump.
+  - *No other tool page changes.* Every reducer writes a shape the tool already loads: each empty value above is
+    the one the tool's own blank-document or "clear" code writes, and the browser suite opens every tool after a
+    rollover to hold that.
+
+  **Restore next August.** The archive is an ordinary backup with a stamp, so everything 009 does with a backup
+  works. Three cases, and what each does:
+  - *"I cleared by mistake" (days later).* Restore the whole file, Replace, images ticked. The suite holds this to
+    the byte: seed, roll over, restore, and every key and every database record equals what was there before.
+  - *"What did last year's log say?" (a parent asks in September).* Restoring over this year replaces this year's
+    student data, and Combine merges by section name, so last year's Period 3 lands on this year's Period 3. The
+    safe route that exists today is a second browser profile or a private window: open the site, restore the
+    archive there, read, close. The receipt says this. A reader inside 009 is question 6.
+  - *"Bring one thing back" (a seating layout, a set of certificates).* Setup is kept by the rollover, so the
+    usual reason is gone. The rest is per-tool restore, rank 2, unchanged by this design.
+
+  **P4's name-keyed history and `Roster.trackRenames`.** Eight tools key history on the name and keep an
+  `idNames` map (`{ id: name }`) beside it: seven inside their student key (001, 002, 008, 013, 022, 027, 033) and
+  068 in `pcl_idnames_v1`. What the rollover has to get right, and does:
+  - Every reducer for those keys empties `idNames` with the names, and keeps `rosterName`, so a section stays
+    tied to its class. Next year's names arrive with ids the sidecar mints fresh; an empty map makes each a first
+    sighting, which `trackRenames` rule 2 says is not a rename. Nothing moves.
+  - `crh_students_v1`'s `orphans` are emptied too. `reconcile()` matches a new name against orphans by name and
+    by sorted tokens; an orphan left behind would hand next year's student of the same name last year's id,
+    preferred name and pronunciation. 006's own rollover already writes `orphans: []`; the reducer must.
+  - History goes before the rosters (step 5's order), because history is keyed by name: a name that is still on
+    the roster while its records are being removed is harmless, and the reverse is the state 006's button leaves
+    today, where a new student named like an old one inherits the old one's points.
+  - *Restoring one tool's history into the new year* (the same students again): the records come back under
+    their names and attach by name, which is the lighter form P4 chose doing its job. Their `idNames` name ids the
+    new sidecar does not have, so `trackRenames` sees first sightings and the dead ids stay in the map, harmless.
+    **A student whose name was re-spelled over the summer is not followed**: the old id is gone unless
+    `crh_students_v1` is restored with the history. That is a limit, stated on the restore preview for a year
+    archive, not something this design fixes.
+  - A whole-archive restore brings the sidecar and every `idNames` back together, as one consistent state.
+
+  **Path 3 P5 (photos and flags) is not built. What P6 needs from it, and what works without it.** Everything
+  above works today: the only student images are `seating/`. From P5, when it is built: (1) flags live in
+  `crh_students_v1`'s `students[]` records or in a key of their own marked `student: true`, never in a roster's
+  `meta`, which the rollover keeps; (2) shared photos go in a namespace that holds student photos and nothing
+  else, declared `student: true` in the registry's `namespaces`, so clearing stays one call per namespace; if P5
+  moves `seating/` there, the registry row changes and the module does not; (3) each flag kind has a `describe`
+  line, because an accommodation note is the most sensitive thing on the site and the preview must name it.
+
+  **Tests that would prove it.**
+  - `Tools/backup-restore/test/rollover.test.mjs` (pure Node; its shortcut would be `test:rollover`). *Rules:* every student
+    entry in the registry has a rule and every rule an entry. *Each reducer*, on a fixture written from the tool's
+    own default document with made-up names (Avery Stone, Blake Rivers, Casey Lund): no fixture name is left in
+    the output; every setup field is deep-equal to the input's; the output is the documented empty shape (042's
+    `batchNames === ''`, 030's `teams` an array, 016's `label` kept, 038's `{}`); idempotent; an unknown shape, an
+    array where an object is expected, `null`, and text that is not JSON each give `unreadable` and no throw.
+    *`scanNames`:* a full name, a name in other case, a name across a line break; no hit on a first name alone or
+    on a name inside a longer word. *`plan`:* totals, `problems` for an undeclared student key, a choice applied.
+    *`verify`:* passes on the built text; fails, with its own reason, on a truncated file, an edited value, a
+    removed key, another run's archive, a locked file, a missing database, a blob one byte short. *`run` on fake
+    storage:* the final state; a write that fails at step k, for every k, leaves the journal at k, and resuming
+    gives the same final state as no failure; a key changed after the plan stops the run with nothing written.
+    *Journal:* no fixture name appears anywhere in `br_rollover_v1`.
+  - `Tools/backup-restore/test/smoke-rollover.mjs` (browser, the next free port). A profile seeded with every
+    rule's fixture, three `seating/` photos, one `rgb/` image, one audio clip and a parked `aplp-share` entry.
+    The steps cannot be skipped (step 5's button is disabled until a file passes). The downloaded text
+    (`downloadText`) verifies; a wrong file and a truncated file are refused with their reasons. After the run:
+    **no fixture name in any localStorage value, any `gvb-media` record or the share cache, outside a kind E item
+    the test chose to keep**; `seating/` is empty and `rgb/` and the clip are there; class names and periods
+    survive. A reload half way shows the banner and Finish gives the same storage. Restore of the archive,
+    Replace with images: every key and every record equal to the seed, to the byte. A second tab open on 008 is
+    named in step 1. A key written back with its old value is reported on the next load; one written with a new
+    value is not.
+  - `Tools/backup-restore/test/smoke-rollover-tools.mjs` (browser). After a rollover, every tool with a reduced
+    key is opened: no page error, no fixture name in the page's text, and one setup marker each still on the page
+    (005's desk count, 001's custom destination, 008's custom tag, 013's contract wording, 043's destination, and
+    so on down the kind B and D tables). 043's and 084's switchers have no entry that selects nothing.
+  - `registry-shape.test.mjs` gains the three registry assertions. `smoke-roster-writes.mjs` section 6 becomes
+    "006's button opens 009's rollover"; its "every roster name survives" assertion moves to `smoke-rollover.mjs`.
+  - Each new suite needs its `suites.json` line and `test:` shortcut (`check:tests`).
+
+  **Deliberately left out.** A rollover that keeps some classes and clears others (question 5). A reader for an
+  archive (question 6). Locking the year archive (decided in v216: a passphrase forgotten over the summer loses
+  the year). Re-keying history to ids. Any undo but restoring the archive. 032's own "Start New Year From This
+  Template", which stays its own button; a calendar is not student data. Rolling a second device: each browser is
+  rolled over by itself, and the receipt says so. Marking the kind E keys in the registry: they stay unmarked, and
+  the scan is what finds a name in them.
+
+  **Found on the way, not part of P6.** 044's share link and its Export JSON both carry the whole of
+  `standingDetails`, `medicalAlerts` included (`buildSharePayload()` puts `settings` in the link as `standing`).
+  050's link and file carry `roles[].students`; 030's JSON export carries team names. Path 6's rule is that what
+  travels is what was authored to be published; a medical alert is not. Not ranked here, because re-ranking is not
+  a design pass's call. `gvb-certificate-maker:last` is a legacy key the registry does not mark `legacy`.
+
+  **Questions that are Devon's. Not answered here; each is a default the build must not pick for him.**
+  1. After a rollover, does this browser keep any copy of last year's names? 006 files past years in
+     `crh_archive_v1`, in the browser, and tells the teacher they are there. "Clear student data" and that archive
+     cannot both hold. Either the file is the only copy, or past rosters stay in 006.
+  2. Free text that cannot be separated (038's datasets, 044's plan history, 029's drafts and history, 045's
+     note): when this year's names are found in one, is the default Keep or Clear? And when none is found, is it
+     shown at all?
+  3. 016: a calculator still checked out in June. Does the rollover keep who has it until it is checked in, or
+     clear the borrower with the rest?
+  4. Is last year's student work with no names on it student data? 023's `discussion` (what students wrote) and
+     `categoryTally`, and the strategy texts in 024's library, which is marked and so goes today. This decides two
+     registry marks.
+  5. Does a teacher who keeps the same students (looping, a two-year course) need to roll over some classes and
+     not others? It makes every rule roster-aware, about twice the work.
+  6. Looking at last year in September: is a private window and a restore enough, or should 009 open an archive to
+     read without restoring it?
+  7. 058 and 075 are staff lists, but both can be filled from a class roster (a student duty rota). Are they
+     student data when they were?
+  8. In a browser with no save picker (Firefox, Safari), must the teacher pick the saved file back before the
+     clear is allowed, or may they tick "I have checked the file"? The first is safe and one more step; the second
+     is today's promise with a checkbox.
+  9. 030 and 064: does the rollover reset a review board's scores and played clues, and what happens to a trading
+     card named for a student?
+  10. One name for it. 009 says "End of the school year", 006 says "Start a new school year". Which, and does the
+      button stay in both places?
+
+  **Not verified.** Nothing was run in a browser. Every "safe empty value" is from reading the tool's load path,
+  not from loading it. `showSaveFilePicker`, `clients.matchAll()` from a page's message, and reading a handle
+  back were not tried. The size of a real archive with images was not measured (a `psa` or `dbq` image is stored
+  at up to full size, and a blob is base64 in the file, a third larger). 017's, 020's and 060's inner shapes were
+  read in part; the `:list` and `:current` writers of 042, 050 and 030 were inferred from their store modules.
+  Whether `settings.seatingByPeriod` in 010 holds a section id or a name was not settled. The unmarked keys of
+  tools that read no roster were not re-read.
 
 **Verification.** `npm run test:name-picker` and `test:roster-hub` green each
 phase; a Playwright test that renames a student in 006 and sees Behavior Points and
