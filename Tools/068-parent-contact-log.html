@@ -142,6 +142,7 @@
   .empty-state { color: var(--muted); font-size: .9rem; padding: 1.5rem 0; text-align: center; }
 
   #printArea { display: none; }
+  #printArea [hidden] { display: none !important; }
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
@@ -154,6 +155,17 @@
     .print-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
     .print-table th, .print-table td { border: 1px solid #999; padding: .4rem .5rem; text-align: left; }
     .print-table th { background: #eee; }
+    /* The conference packet. The name sits in the table's own header, which
+       Chromium repeats at the top of every sheet the table runs onto, so a
+       page pulled out of a stack still says whose it is. A row and the notes
+       block are not split across sheets. */
+    .print-table thead { display: table-header-group; }
+    .print-table tr { break-inside: avoid; }
+    .print-table .packet-name { font-size: 1rem; background: #fff; border: 0; border-bottom: 2px solid #000; padding-left: 0; text-transform: none; }
+    .print-summary { font-size: .92rem; margin: 0 0 .8rem; }
+    .print-notes { break-inside: avoid; margin-top: 1.2rem; }
+    .print-notes h2 { font-size: 1.05rem; margin: 0 0 .2rem; }
+    .print-notes .note-line { min-height: 2.2rem; border-bottom: 1px solid #777; }
   }
 </style>
 </head>
@@ -271,7 +283,9 @@
 <div id="printArea">
   <h1 class="print-title" id="printTitle"></h1>
   <p class="print-sub" id="printSub"></p>
+  <p class="print-summary" id="printSummary" hidden></p>
   <table class="print-table" id="printTable"></table>
+  <div class="print-notes" id="printNotes" hidden></div>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -293,7 +307,7 @@
   ['rosterInput','saveRosterBtn','loadNamePickerBtn','namePickerHint','rosterList','rosterEmptyMsg','rosterSort',
    'entryStudent','entryDate','entryMethod','entryReason','entryInitials','entryOutcome','logEntryBtn','editingHint',
    'filterStudent','filterMethod','filterReason','filterFrom','filterTo','clearDateRangeBtn','exportCsvBtn','printAllBtn','entryRows','entriesEmptyMsg','tallyBox',
-   'printArea','printTitle','printSub','printTable','toast'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'printArea','printTitle','printSub','printSummary','printTable','printNotes','toast'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var roster = [];
   var entries = [];
@@ -432,7 +446,9 @@
       var c = countFor(name);
       li.innerHTML = '<span>' + escapeHtml(name) + '</span>' +
         '<span class="count' + (c === 0 ? ' zero' : '') + '">' + c + ' contact' + (c === 1 ? '' : 's') +
-        ' &middot; <a href="#" data-print-student="' + escapeHtml(name) + '" class="print-link">print</a></span>';
+        ' &middot; <a href="#" data-print-student="' + escapeHtml(name) + '" class="print-link">print</a>' +
+        ' &middot; <a href="#" data-packet-student="' + escapeHtml(name) + '" class="print-link" aria-label="Conference packet for ' +
+        escapeHtml(name) + '">packet</a></span>';
       els.rosterList.appendChild(li);
     });
   }
@@ -703,6 +719,8 @@
   function doPrint(title, sub, rows) {
     els.printTitle.textContent = title;
     els.printSub.textContent = sub;
+    els.printSummary.hidden = true; els.printSummary.textContent = '';
+    els.printNotes.hidden = true; els.printNotes.innerHTML = '';
     var head = '<thead><tr><th>Date</th><th>Student</th><th>Method</th><th>Reason</th><th>Outcome</th><th>By</th></tr></thead>';
     var body = '<tbody>' + rows.map(function (e) {
       return '<tr><td>' + fmtDate(e.date) + '</td><td>' + escapeHtml(e.student) + '</td><td>' +
@@ -717,7 +735,48 @@
     doPrint('Parent/Guardian Contact Log', 'Printed ' + fmtDate(todayISO()), filteredEntries());
   });
 
+  /* ---------- conference packet -----------------------------------------
+     One student's whole history, oldest first, then a ruled page for what is
+     said at the conference. Nothing here is stored: it is read off `entries`
+     for exactly one name (an exact match, so "Ann Lee" never pulls in
+     "Ann Leeds"), and no other student's name is written anywhere in it. */
+  var NOTE_LINES = 14;
+
+  function packetSummary(rows) {
+    if (!rows.length) return 'No contacts logged yet.';
+    var byMethod = {};
+    rows.forEach(function (e) { byMethod[e.method] = (byMethod[e.method] || 0) + 1; });
+    var methods = Object.keys(byMethod).sort(function (a, b) { return byMethod[b] - byMethod[a] || a.localeCompare(b); })
+      .map(function (m) { return m + ' ' + byMethod[m]; }).join(', ');
+    return rows.length + ' contact' + (rows.length === 1 ? '' : 's') + ' · first ' + fmtDate(rows[0].date) +
+      ' · last ' + fmtDate(rows[rows.length - 1].date) + ' · by method: ' + methods;
+  }
+
+  function doPacket(name) {
+    var rows = entries.filter(function (e) { return e.student === name; })
+      .sort(function (a, b) { return (a.date + a.id).localeCompare(b.date + b.id); });
+    els.printTitle.textContent = name + ' — Conference packet';
+    els.printSub.textContent = 'Parent/Guardian Contact Log · printed ' + fmtDate(todayISO());
+    els.printSummary.hidden = false;
+    els.printSummary.textContent = packetSummary(rows);
+    var head = '<thead><tr><th class="packet-name" colspan="5">' + escapeHtml(name) + ' — Conference packet</th></tr>' +
+      '<tr><th>Date</th><th>Method</th><th>Reason</th><th>Outcome</th><th>By</th></tr></thead>';
+    var body = '<tbody>' + rows.map(function (e) {
+      return '<tr><td>' + fmtDate(e.date) + '</td><td>' + escapeHtml(e.method) + '</td><td>' +
+        escapeHtml(reasonOf(e) || '—') + '</td><td>' + escapeHtml(e.outcome) + '</td><td>' +
+        escapeHtml(e.initials || '') + '</td></tr>';
+    }).join('') + '</tbody>';
+    els.printTable.innerHTML = head + body;
+    var lines = '';
+    for (var i = 0; i < NOTE_LINES; i++) lines += '<div class="note-line"></div>';
+    els.printNotes.innerHTML = '<h2>Conference notes — ' + escapeHtml(name) + '</h2>' + lines;
+    els.printNotes.hidden = false;
+    window.print();
+  }
+
   els.rosterList.addEventListener('click', function (ev) {
+    var packetName = ev.target.getAttribute('data-packet-student');
+    if (packetName) { ev.preventDefault(); doPacket(packetName); return; }
     var name = ev.target.getAttribute('data-print-student');
     if (!name) return;
     ev.preventDefault();
