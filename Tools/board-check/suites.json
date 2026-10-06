@@ -126,6 +126,7 @@
     "Tools/picture-prompt-generator/test/smoke-prompt-sets.mjs",
     "Tools/picture-prompt-generator/test/smoke-picture-store.mjs",
     "Tools/picture-prompt-generator/test/smoke-starter-pictures.mjs",
+    "Tools/picture-prompt-generator/test/smoke-image-sets.mjs",
     "Tools/verb-conjugation-poster-generator/test/smoke-panel-colors.mjs",
     "Tools/historical-trading-card-maker/test/smoke-card-size.mjs",
     "Tools/historical-trading-card-maker/test/smoke-photo.mjs",

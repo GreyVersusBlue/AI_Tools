@@ -62,7 +62,11 @@ const stageTask = () => page.evaluate(() => {
   const el = document.querySelector('#stageCard .task-text');
   return el ? el.textContent : '';
 });
-const storedImages = () => page.evaluate(() => JSON.parse(localStorage.getItem('ppg_images_v1') || '[]'));
+/* The active picture set's pictures: the key is { v: 2, activeId, sets } once the page has written it. */
+const storedImages = () => page.evaluate(() => {
+  const v = JSON.parse(localStorage.getItem('ppg_images_v1') || '[]');
+  return Array.isArray(v) ? v : (v.sets.find(s => s.id === v.activeId) || v.sets[0]).images;
+});
 
 const png = makeSolidPng(80, 60, [30, 90, 160]);
 const upload = () => page.setInputFiles('#imageInput', { name: 'scene.png', mimeType: 'image/png', buffer: png });
@@ -188,7 +192,7 @@ eq(migratedSets.sets[0].prompts.map(p => p.text).join(' | '),
    'Describe the trench in three sentences. | What does this poster want you to believe?',
    'both hand-written prompts survived the migration');
 ok(migratedSets.sets.some(s => s.id === 'es'), 'the starter languages are added alongside them');
-eq(await migrate.evaluate(() => JSON.parse(localStorage.getItem('ppg_images_v1'))[0].pinnedPrompts['my-prompts']),
+eq(await migrate.evaluate(() => (v => (Array.isArray(v) ? v : v.sets[0].images)[0])(JSON.parse(localStorage.getItem('ppg_images_v1'))).pinnedPrompts['my-prompts']),
    'p2', 'the old single pin was rehomed onto the migrated set');
 eq(await migrate.evaluate(() => localStorage.getItem('ppg_prompts_v1')), null, 'the old key is retired once it has been read');
 

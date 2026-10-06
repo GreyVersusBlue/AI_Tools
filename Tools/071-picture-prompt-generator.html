@@ -95,6 +95,11 @@
     padding: .45rem .55rem; min-width: 16rem; max-width: 100%;
   }
 
+  .img-set-usage { margin: .5rem 0 .6rem; }
+  .img-set-usage.near { background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-ink);
+    border-radius: 6px; padding: .4rem .6rem; }
+  .save-msg { min-height: 1.1em; margin: .3rem 0 .6rem; font-size: .8rem; color: var(--muted); }
+
   .stage-card {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
     padding: 2rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1rem;
@@ -132,6 +137,21 @@
   <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
+    <div class="setbar">
+      <span class="field">
+        <label for="imageSetSelect">Picture set</label>
+        <select id="imageSetSelect"></select>
+      </span>
+      <button type="button" class="secondary small" id="newImageSetBtn">+ New</button>
+      <button type="button" class="secondary small" id="dupImageSetBtn">Duplicate</button>
+      <button type="button" class="secondary small" id="renameImageSetBtn">Rename</button>
+      <button type="button" class="danger small" id="deleteImageSetBtn">Delete</button>
+    </div>
+    <p class="hint" style="margin:0;">Each picture set keeps its own pictures, and the prompts you pinned to them, so two vocabulary
+      libraries can sit side by side. Prompts are a separate choice, below. A duplicate shares its pictures with the original,
+      so it costs no extra room.</p>
+    <p class="hint img-set-usage" id="imageSetUsage" aria-live="polite"></p>
+    <p class="save-msg" id="imageSetMsg" role="status" aria-live="polite"></p>
     <label for="imageInput">Upload images (you can select several at once)</label>
     <input type="file" id="imageInput" accept="image/*" multiple>
     <div class="thumb-grid" id="thumbGrid"></div>
@@ -278,12 +298,15 @@
   ];
 
   var els = {};
-  ['imageInput', 'thumbGrid', 'promptsWrap', 'addPromptBtn', 'promptSetSelect', 'newSetBtn', 'restoreSetBtn', 'deleteSetBtn', 'newImageBtn', 'resetUsedBtn', 'printCount', 'printBtn', 'usedHint', 'stageCard', 'printArea',
+  ['imageSetSelect', 'newImageSetBtn', 'dupImageSetBtn', 'renameImageSetBtn', 'deleteImageSetBtn', 'imageSetUsage', 'imageSetMsg',
+   'imageInput', 'thumbGrid', 'promptsWrap', 'addPromptBtn', 'promptSetSelect', 'newSetBtn', 'restoreSetBtn', 'deleteSetBtn', 'newImageBtn', 'resetUsedBtn', 'printCount', 'printBtn', 'usedHint', 'stageCard', 'printArea',
    'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
-  var images = [];
+  var images = [];               // the active picture set's list (the same array the set holds)
+  var imageSets = [];            // [{ id, name, images: [{ id, src, pinnedPrompts }] }]
+  var activeImageSetId = '';
   var sets = [];
   var activeSetId = '';
   var usedIndexes = [];
@@ -333,7 +356,10 @@
   }
 
   function load() {
-    images = readImages();
+    var doc = readImageDoc();
+    imageSets = doc.sets;
+    activeImageSetId = doc.activeId;
+    images = activeImageSet().images;
 
     var stored = null;
     try { stored = JSON.parse(localStorage.getItem(SETS_KEY) || 'null'); } catch (e) { stored = null; }
@@ -349,7 +375,7 @@
     /* Pins used to be a single `pinnedPromptId` per image, from the era when
        there was only one prompt list. They now hang off the set they belong
        to, so a Spanish pin and an English pin on the same photo coexist. */
-    images.forEach(function (img) {
+    allImages().forEach(function (img) {
       if (!img.pinnedPrompts || typeof img.pinnedPrompts !== 'object') img.pinnedPrompts = {};
       if (img.pinnedPromptId) {
         var home = migratedInto || activeSetId;
@@ -363,14 +389,85 @@
       try { localStorage.removeItem(PROMPTS_KEY); } catch (e) { /* storage blocked */ }
     }
   }
-  /** The saved list, read fresh. An entry that is not an object is dropped. */
-  function readImages() {
-    var list;
-    try { list = JSON.parse(localStorage.getItem(IMAGES_KEY) || '[]'); } catch (e) { list = []; }
+  /* ---------- picture sets ----------
+     The toolkit's multi-save shape (063, 041, 048): a list, a current pick and
+     a name per entry, with New, Duplicate, Rename and Delete beside a chooser.
+     It lives in the key this tool has always used, `ppg_images_v1`, as
+     { v: 2, activeId, sets: [{ id, name, images }] }; no new key, so Backup &
+     Restore and the registry see nothing new. Until v2 that key was the list
+     itself, [{ id, src, pinnedPrompts }]: read as one, it becomes the first
+     set, "My pictures", entry for entry. Nothing is re-encoded and nothing is
+     written until the teacher changes something, so a list that is never
+     touched stays as it was.
+
+     The pictures are in the media store, by content hash, and a set holds only
+     their `idb:` references; a picture in two sets is one stored record. */
+  var IMAGES_VERSION = 2;
+  var FIRST_IMAGE_SET = 'My pictures';
+  var imageSetNoteTimer = null;
+
+  function cleanImages(list) {
     return Array.isArray(list) ? list.filter(function (img) { return img && typeof img === 'object'; }) : [];
   }
+  function freshImageSet() { return { id: 'my-pictures', name: FIRST_IMAGE_SET, images: [] }; }
+  /** The saved value, in either shape, as { activeId, sets } with at least one set. */
+  function normalizeImageDoc(raw) {
+    var list = [];
+    var activeId = '';
+    if (Array.isArray(raw)) {
+      list = [{ id: 'my-pictures', name: FIRST_IMAGE_SET, images: cleanImages(raw) }];
+    } else if (raw && typeof raw === 'object' && Array.isArray(raw.sets)) {
+      var seen = {};
+      raw.sets.forEach(function (s) {
+        if (!s || typeof s !== 'object' || typeof s.id !== 'string' || !s.id || seen[s.id]) return;
+        seen[s.id] = true;
+        list.push({ id: s.id, name: (typeof s.name === 'string' && s.name.trim()) ? s.name : FIRST_IMAGE_SET, images: cleanImages(s.images) });
+      });
+      activeId = typeof raw.activeId === 'string' ? raw.activeId : '';
+    }
+    if (!list.length) list = [freshImageSet()];
+    if (!list.some(function (s) { return s.id === activeId; })) activeId = list[0].id;
+    return { activeId: activeId, sets: list };
+  }
+  /** The saved picture sets, read fresh. */
+  function readImageDoc() {
+    var raw = null;
+    try { raw = JSON.parse(localStorage.getItem(IMAGES_KEY) || 'null'); } catch (e) { raw = null; }
+    return normalizeImageDoc(raw);
+  }
+  function writeImageDoc(activeId, list) {
+    localStorage.setItem(IMAGES_KEY, JSON.stringify({ v: IMAGES_VERSION, activeId: activeId, sets: list }));
+  }
+  /** Whether the write went through; a full or blocked store is said, not swallowed. */
   function saveImages() {
-    try { localStorage.setItem(IMAGES_KEY, JSON.stringify(images)); } catch (e) { /* storage full/blocked */ }
+    try { writeImageDoc(activeImageSetId, imageSets); return true; }
+    catch (e) {
+      sayImageSet('This browser could not save that change: its storage is full or blocked. Delete a picture set, or pictures you no longer use, and try again.');
+      return false;
+    }
+  }
+  function activeImageSet() {
+    return imageSets.filter(function (s) { return s.id === activeImageSetId; })[0] || imageSets[0];
+  }
+  function allImages() {
+    return imageSets.reduce(function (all, s) { return all.concat(s.images); }, []);
+  }
+  function setActiveImageSet(id) {
+    activeImageSetId = id;
+    images = activeImageSet().images;
+  }
+  /** Every reference some set holds, in memory and as saved (another tab may have added a set). */
+  function refsInUse(exceptSetId) {
+    var refs = {};
+    function take(list) {
+      list.forEach(function (s) {
+        if (s.id === exceptSetId) return;
+        PicturePromptImage.valuesIn(s.images).forEach(function (v) { if (PicturePromptImage.isRef(v)) refs[v] = true; });
+      });
+    }
+    take(imageSets);
+    take(readImageDoc().sets);
+    return Object.keys(refs);
   }
   function saveSets() {
     try { localStorage.setItem(SETS_KEY, JSON.stringify({ v: 1, activeId: activeSetId, sets: sets })); } catch (e) { /* storage full/blocked */ }
@@ -456,11 +553,11 @@
   els.thumbGrid.addEventListener('click', function (ev) {
     var id = ev.target.getAttribute('data-del');
     if (!id) return;
-    images = images.filter(function (i) { return i.id !== id; });
+    activeImageSet().images = images = images.filter(function (i) { return i.id !== id; });
     /* Indexes shift when one goes, so the projected card is cleared rather
        than left pointing at whichever picture now has its old index. */
     usedIndexes = []; currentImageIdx = -1; currentPromptIdx = -1;
-    saveImages(); renderThumbs(); renderStageEmpty(); syncStarter();
+    saveImages(); renderThumbs(); renderStageEmpty(); syncStarter(); renderImageSetPicker(); updateImageUsage();
   });
 
   /* Each picked picture is downscaled (past 1400 px) and stored by
@@ -471,16 +568,160 @@
     var files = Array.prototype.slice.call(els.imageInput.files || []);
     if (!files.length) return;
     var problems = [];
+    var target = activeImageSet();
     Promise.all(files.map(function (file) {
       return PicturePromptImage.fromFile(file)['catch'](function (e) { problems.push(e.message); return null; });
     })).then(function (values) {
-      values.forEach(function (v) { if (v) images.push({ id: uid(), src: v, pinnedPrompts: {} }); });
-      saveImages(); renderThumbs(); els.imageInput.value = '';
-      syncStarter();
-      if (currentImageIdx === -1) renderStageEmpty();
+      values.forEach(function (v) { if (v) target.images.push({ id: uid(), src: v, pinnedPrompts: {} }); });
+      saveImages(); els.imageInput.value = '';
+      renderImageSetPicker(); updateImageUsage();
+      if (target.id === activeImageSetId) {
+        renderThumbs();
+        syncStarter();
+        if (currentImageIdx === -1) renderStageEmpty();
+      }
       if (problems.length) setShareNote(problems.join(' '), true);
     });
   });
+
+  /* ---------- the picture set bar ---------- */
+  function sayImageSet(text) {
+    els.imageSetMsg.textContent = text || '';
+  }
+  function renderImageSetPicker() {
+    els.imageSetSelect.innerHTML = imageSets.map(function (s) {
+      var n = s.images.length;
+      return '<option value="' + escapeAttr(s.id) + '"' + (s.id === activeImageSetId ? ' selected' : '') + '>' +
+        escapeHtml(s.name) + ' (' + n + ' picture' + (n === 1 ? '' : 's') + ')</option>';
+    }).join('');
+  }
+  /** Show whichever set is active now: its thumbnails, an empty stage. */
+  function showActiveImageSet() {
+    images = activeImageSet().images;
+    /* Indexes are into this set's pictures, so the projected card goes. */
+    usedIndexes = []; currentImageIdx = -1; currentPromptIdx = -1;
+    renderImageSetPicker(); renderThumbs(); renderStageEmpty(); syncStarter(); updateImageUsage();
+  }
+  function newImageSetId() { return 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  els.imageSetSelect.addEventListener('change', function () {
+    var id = els.imageSetSelect.value;
+    if (!imageSets.some(function (s) { return s.id === id; })) return;
+    setActiveImageSet(id);
+    var saved = saveImages();
+    showActiveImageSet();
+    if (saved) sayImageSet('Opened “' + activeImageSet().name + '”.');
+  });
+
+  els.newImageSetBtn.addEventListener('click', function () {
+    var name = window.prompt('Name for the new picture set:', 'New picture set');
+    if (name === null) return;
+    var set = { id: newImageSetId(), name: name.trim() || 'New picture set', images: [] };
+    imageSets.push(set);
+    setActiveImageSet(set.id);
+    var saved = saveImages();
+    showActiveImageSet();
+    if (saved) sayImageSet('Started “' + set.name + '”, empty.');
+  });
+
+  els.dupImageSetBtn.addEventListener('click', function () {
+    var cur = activeImageSet();
+    var name = window.prompt('Name for the duplicate:', cur.name + ' (copy)');
+    if (name === null) return;
+    /* The copy holds the same references, so the stored pictures are shared,
+       not copied; each entry gets an id of its own. */
+    var copy = JSON.parse(JSON.stringify({ id: newImageSetId(), name: name.trim() || (cur.name + ' (copy)'), images: cur.images }));
+    copy.images.forEach(function (img) { img.id = uid(); });
+    imageSets.push(copy);
+    setActiveImageSet(copy.id);
+    var saved = saveImages();
+    showActiveImageSet();
+    if (saved) sayImageSet('Duplicated as “' + copy.name + '”. The pictures are shared with “' + cur.name + '”, so no extra room is used.');
+  });
+
+  els.renameImageSetBtn.addEventListener('click', function () {
+    var cur = activeImageSet();
+    var name = window.prompt('Rename this picture set:', cur.name);
+    if (name === null) return;
+    cur.name = name.trim() || cur.name;
+    var saved = saveImages();
+    renderImageSetPicker();
+    if (saved) sayImageSet('Renamed to “' + cur.name + '”.');
+  });
+
+  els.deleteImageSetBtn.addEventListener('click', function () {
+    var cur = activeImageSet();
+    var n = cur.images.length;
+    if (!window.confirm('Delete “' + cur.name + '”, with its ' + n + ' picture' + (n === 1 ? '' : 's') +
+      ' and their pinned prompts? A picture another set also uses stays. This cannot be undone.')) return;
+    var idx = imageSets.indexOf(cur);
+    var mine = PicturePromptImage.valuesIn(cur.images).filter(PicturePromptImage.isRef);
+    imageSets.splice(idx, 1);
+    if (!imageSets.length) imageSets.push(freshImageSet());
+    setActiveImageSet(imageSets[Math.max(0, idx - 1)].id);
+    var saved = saveImages();
+    /* Free the pictures no other set holds. Not before the list that stopped
+       naming them is saved: a failed save keeps the set, and its pictures. */
+    var inUse = refsInUse(null);
+    if (saved) PicturePromptImage.discard(mine.filter(function (r) { return inUse.indexOf(r) === -1; }))
+      .then(function () { updateImageUsage(); window.__pictureDiscarded = (window.__pictureDiscarded || 0) + 1; });
+    showActiveImageSet();
+    if (saved) sayImageSet('Deleted “' + cur.name + '”.' + (n ? ' Pictures no other set uses were freed.' : ''));
+  });
+
+  /* What the sets cost, and when to worry. Each picture is one record in the
+     media store (sized by its own bytes), shared by every set that names it; a
+     picture still inline (no IndexedDB) counts as its text. The browser's own
+     answer to "how much room is left" comes from navigator.storage.estimate(),
+     and at 80% the line turns into a warning. Nothing here blocks an upload. */
+  var QUOTA_WARN = 0.8;
+  var usageToken = 0;
+  function fmtBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return Math.round(b / 1024) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+  function updateImageUsage() {
+    var token = ++usageToken;
+    var sizes = null, estimate = null;
+    var recs = (window.MediaDB && MediaDB.isAvailable && MediaDB.isAvailable())
+      ? MediaDB.store({ ns: PicturePromptImage.NS }).list()['catch'](function () { return []; })
+      : Promise.resolve([]);
+    var est = (navigator.storage && navigator.storage.estimate)
+      ? navigator.storage.estimate().then(function (e) { return e; }, function () { return null; })
+      : Promise.resolve(null);
+    Promise.all([recs, est]).then(function (got) {
+      if (token !== usageToken) return;
+      sizes = {};
+      (got[0] || []).forEach(function (r) { sizes['idb:' + r.id] = Number(r.size) || 0; });
+      estimate = got[1];
+      function costOf(list) {
+        var seen = {}, bytes = 0;
+        PicturePromptImage.valuesIn(list).forEach(function (v) {
+          if (seen[v]) return;
+          seen[v] = true;
+          bytes += PicturePromptImage.isRef(v) ? (sizes[v] || 0) : v.length;
+        });
+        return bytes;
+      }
+      var cur = activeImageSet();
+      var every = allImages();
+      var distinct = {};
+      PicturePromptImage.valuesIn(every).forEach(function (v) { distinct[v] = true; });
+      var text = '“' + cur.name + '”: ' + plural(cur.images.length, 'picture') + ', ' + fmtBytes(costOf(cur.images)) + '.';
+      if (imageSets.length > 1) text += ' All ' + imageSets.length + ' sets together: ' + plural(Object.keys(distinct).length, 'distinct picture') + ', ' + fmtBytes(costOf(every)) + '.';
+      var near = false;
+      if (estimate && estimate.quota > 0 && estimate.usage / estimate.quota >= QUOTA_WARN) {
+        near = true;
+        text += ' This browser has used ' + fmtBytes(estimate.usage) + ' of the ' + fmtBytes(estimate.quota) +
+          ' it allows this site, so it is nearly full. Delete a picture set or pictures you no longer use before adding more.';
+      }
+      els.imageSetUsage.textContent = text;
+      els.imageSetUsage.classList.toggle('near', near);
+      window.__pictureUsageSettled = (window.__pictureUsageSettled || 0) + 1;
+    });
+  }
 
   function renderSetPicker() {
     els.promptSetSelect.innerHTML = sets.map(function (s) {
@@ -562,7 +803,7 @@
     if (!s || sets.length < 2) return;
     if (!window.confirm('Delete the prompt set "' + s.name + '"? Its prompts go with it.')) return;
     sets = sets.filter(function (x) { return x.id !== s.id; });
-    pool().concat(STARTER_PICTURES).forEach(function (img) { if (img.pinnedPrompts) delete img.pinnedPrompts[s.id]; });
+    allImages().concat(STARTER_PICTURES).forEach(function (img) { if (img.pinnedPrompts) delete img.pinnedPrompts[s.id]; });
     activeSetId = sets[0].id;
     saveSets(); saveImages(); saveStarter(); renderSetPicker(); renderPrompts();
     if (currentImageIdx !== -1) { currentPromptIdx = -1; renderStage(); }
@@ -764,10 +1005,12 @@
   /** Swap each moved data: URL for its reference in the list in memory and
       in a FRESH read of the key, and write back only if it changed. */
   function applyStoredImages(map) {
-    PicturePromptImage.apply(images, map);
-    var fresh = readImages();
-    if (PicturePromptImage.apply(fresh, map)) {
-      try { localStorage.setItem(IMAGES_KEY, JSON.stringify(fresh)); } catch (e) { /* storage full/blocked */ }
+    PicturePromptImage.apply(allImages(), map);
+    var fresh = readImageDoc();
+    var changed = false;
+    fresh.sets.forEach(function (s) { if (PicturePromptImage.apply(s.images, map)) changed = true; });
+    if (changed) {
+      try { writeImageDoc(fresh.activeId, fresh.sets); } catch (e) { /* storage full/blocked */ }
     }
   }
 
@@ -782,18 +1025,18 @@
   }
 
   function settleImages() {
-    return PicturePromptImage.store(PicturePromptImage.valuesIn(images))
+    return PicturePromptImage.store(PicturePromptImage.valuesIn(allImages()))
       .then(function (map) {
         if (Object.keys(map).length) applyStoredImages(map);
-        return PicturePromptImage.hydrate(PicturePromptImage.valuesIn(images));
+        return PicturePromptImage.hydrate(PicturePromptImage.valuesIn(allImages()));
       })
       .then(function () {
         imagesSettled = true;
         renderThumbs();
         if (currentImageIdx !== -1) renderStage(); else renderStageEmpty();
         sayMissingImages();
-        var keep = PicturePromptImage.valuesIn(images).concat(PicturePromptImage.valuesIn(readImages()));
-        return PicturePromptImage.gc(keep.filter(PicturePromptImage.isRef));
+        updateImageUsage();
+        return PicturePromptImage.gc(refsInUse(null));
       })['catch'](function () { /* reads never block the page */ })
       .then(function () { imagesSettled = true; window.__pictureImagesSettled = true; });
   }
@@ -805,9 +1048,11 @@
   importSharedSet();
   try { els.printCount.value = localStorage.getItem(PRINT_COUNT_KEY) || ''; } catch (e) { /* ignore */ }
   renderThumbs();
+  renderImageSetPicker();
   renderSetPicker();
   renderPrompts();
   renderStageEmpty();
+  updateImageUsage();
   settleImages();
 })();
 </script>
