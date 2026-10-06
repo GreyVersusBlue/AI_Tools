@@ -352,6 +352,7 @@
       <p class="sub">Batch-build trading cards for a research project &mdash; photo/flag and stats on the front, facts on the back.</p>
     </div>
     <div>
+      <button type="button" class="secondary" id="previewBtn">Preview pages</button>
       <button class="secondary" id="printBtn">Print cards</button>
       <button class="secondary" id="pdfBtn">Download PDF</button>
       <button class="secondary" id="zipBtn">All PNGs (zip)</button>
@@ -547,7 +548,7 @@
   'use strict';
   var els = {};
   ['newName', 'newImage', 'newStats', 'newFacts', 'addEntryBtn', 'cancelEditBtn', 'formTitle', 'editImageHint',
-   'statWarn', 'entriesWrap', 'entryCount', 'printBtn', 'printArea', 'cardSize', 'cardSizeHint', 'saveWarn',
+   'statWarn', 'entriesWrap', 'entryCount', 'printBtn', 'previewBtn', 'printArea', 'cardSize', 'cardSizeHint', 'saveWarn',
    'previewStage', 'previewFlipper', 'previewFront', 'previewBack', 'flipBtn', 'themeSwatches', 'newRarity',
    'adjustBtn', 'newStars', 'setNameInput', 'numberBtn', 'pngBtn', 'pdfBtn', 'zipBtn',
    'deckSelect', 'newDeckBtn', 'renameDeckBtn', 'deleteDeckBtn',
@@ -1449,11 +1450,23 @@
      builds the sheet then (it used to print an empty page); `sheetBuilt`
      keeps it from rebuilding the sheet the button has just waited on. */
   var sheetBuilt = false;
-  els.printBtn.addEventListener('click', function () {
+  function printSheet() {
     if (!entries.length) { alert('Add at least one card first.'); return; }
     buildPrintArea();
     sheetBuilt = true;
     waitForImages(els.printArea).then(function () { window.print(); });
+  }
+  els.printBtn.addEventListener('click', printSheet);
+
+  // The same sheet, cut into the pages it will print on (PrintKit.preview,
+  // Path 7 P5). It opens no print dialog; its own Print button does.
+  // It waits for the photos as Print does, so a page is not drawn without one.
+  els.previewBtn.addEventListener('click', function () {
+    if (!entries.length) { alert('Add at least one card first.'); return; }
+    buildPrintArea();
+    waitForImages(els.printArea).then(function () {
+      PrintKit.preview({ trigger: els.previewBtn, onPrint: printSheet });
+    });
   });
   window.addEventListener('beforeprint', function () { if (!sheetBuilt && entries.length) buildPrintArea(); });
   window.addEventListener('afterprint', function () { sheetBuilt = false; });

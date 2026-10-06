@@ -99,6 +99,7 @@
     </div>
     <div class="btnrow">
       <button type="button" class="secondary" id="shareBtn">&#128279; Share slip&hellip;</button>
+      <button type="button" class="secondary" id="previewBtn">Preview pages</button>
       <button class="secondary" id="printBtn">Print slips</button>
     </div>
   </div>
@@ -139,7 +140,7 @@
   ];
 
   var els = {};
-  ['copyCount', 'classPeriod', 'promptsWrap', 'addPromptBtn', 'printBtn', 'printArea', 'urgencyToggle',
+  ['copyCount', 'classPeriod', 'promptsWrap', 'addPromptBtn', 'printBtn', 'previewBtn', 'printArea', 'urgencyToggle',
    'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { copyCount: 2, prompts: [], classPeriod: '', urgencyBox: true };
@@ -228,7 +229,7 @@
   // US Letter with half-inch margins, which is what print-kit.css's half sheet divides.
   PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
 
-  els.printBtn.addEventListener('click', function () {
+  function renderSheet() {
     var count = Math.max(1, Math.min(20, state.copyCount || 2));
     var filledPrompts = state.prompts.filter(function (p) { return p.text.trim(); });
     // Two half-sheets per page fits comfortably up to ~5 short prompts; beyond that,
@@ -239,7 +240,18 @@
       // cut: the line goes under the upper slip of each pair, not along the foot of
       // the page. The kit draws it for half sheets only, so a one-up slip has none.
       { mode: 'blank', count: count, sheet: oneUp ? 'page' : 'half', cut: true, header: false, footer: false });
+  }
+  function printSheet() {
+    renderSheet();
     window.print();
+  }
+  els.printBtn.addEventListener('click', printSheet);
+
+  // The same sheet, cut into the pages it will print on (PrintKit.preview,
+  // Path 7 P5). It opens no print dialog; its own Print button does.
+  els.previewBtn.addEventListener('click', function () {
+    renderSheet();
+    PrintKit.preview({ trigger: els.previewBtn, onPrint: printSheet });
   });
 
   /* ---------- share a slip: _shared/share.js (Path 6 P3) ----------

@@ -204,6 +204,7 @@
     "Tools/print-kit/test/print-kit.test.mjs",
     "Tools/print-kit/test/smoke-print-kit.mjs",
     "Tools/print-kit/test/smoke-print-tail.mjs",
+    "Tools/print-kit/test/smoke-preview-adopters.mjs",
     "Tools/sub-note-feedback-slip-generator/test/smoke-print.mjs",
     "Tools/peer-feedback-checklist-generator/test/smoke-print.mjs",
     "Tools/peer-feedback-checklist-generator/test/smoke-roster-sheets.mjs",

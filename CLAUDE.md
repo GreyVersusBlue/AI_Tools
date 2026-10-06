@@ -474,8 +474,11 @@ files must be added there too.
   `print()`. It finds the breaks by copying the sheet into an iframe whose body is a multi-column box the size
   of the printable page, with the page's own print rules applied there (`flipMedia`), so the page itself is
   never changed. Do not write a second preview and do not measure breaks by height (that was tried and
-  miscounts). 074 is the one adopter (`npm run test:safety-label-preview`); the next adopter adds a button,
-  renders its sheet, calls `preview()`, and holds the preview's count to Chromium's PDF in a suite of its own.
+  miscounts). 074 was the first adopter (`npm run test:safety-label-preview`, which pins the dialog itself); since v259 076, 077,
+  051, 042, 064 and 043 have it too. The next adopter adds a "Preview pages" button in front of its print button,
+  renders its sheet, calls `preview()`, and gets an entry in `Tools/print-kit/test/smoke-preview-adopters.mjs`'s `TOOLS`
+  (`npm run test:preview-adopters`), which holds the preview's count to Chromium's PDF in every state. A page with
+  several print buttons gets a Preview button in front of each (043; `BACKLOG.md`, Path 7 P5, "Point 4").
   `_shared/export.js` (Path 7 P4, v243) is `ExportKit`, the export layer: booklet, N-up and duplex imposition for
   either edge the paper turns on, sheet geometry, flow pagination, and `toPdf(pages, opts)` on the vendored jsPDF
   for pages a tool draws (a canvas, an image, a draw function; not a DOM element). A tool that needs a card's back
