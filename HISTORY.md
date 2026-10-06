@@ -9,6 +9,53 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 17 P2 designed, not built: scanner mode for 011 (2026-10-06, AI-25, no `CACHE_VERSION`, no code)
+
+Audit entry AI-25, rank 49 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P2 bullet under
+"Path 17", a Status line for the path, and a note on rank 49). **The row stays.** Nothing was built, no suite or
+browser ran; the docs guards (`check:docs-commands`, `check:adoption`) were the only checks.
+
+- **What the design is.** A tool module, `Tools/image-to-pdf/scan.js` (`window.Scan`, pure functions over
+  `ImageData` and typed arrays) and `scan-worker.js`, the site's first Worker, for the batch. `detect()` finds the
+  sheet's four corners on a 480-px grey (Sobel, non-maximum suppression, a percentile threshold, a Hough transform,
+  two clusters of lines, support times area to pick the pair, a validated convex quad, a fallback to the inset
+  frame at confidence 0), `refine()` fits the four lines again on a 1024-px grey, `homography()`, `rectify()`
+  (inverse bilinear warp in typed arrays, since Canvas 2D has no perspective), `flatten()` (today's
+  `enhanceCanvas()` moved, same arithmetic), `threshold()` (Sauvola on integral images with a despeckle), `clean()`
+  in the fixed order warp, flatten, threshold, and `process()` as the Worker's one message. A `<dialog>` with four
+  handle buttons (pointer and arrow keys, a loupe), a live preview, three modes, Reset and Apply; Scan all with a
+  review strip flagging confidence under 0.6. A queue entry gains `scan: { quad, auto, mode, confidence, history,
+  processed }`, the finished page a Blob and never a live canvas; `processRaster()` decodes the Blob in place of the
+  File and returns a `bw` page as PNG. Nothing new on disk; the mode saved in `image-to-pdf-settings`, never the
+  on/off. Suites: `scan.test.mjs` on synthetic warped sheets with known corners (fourteen named fixtures, corners
+  within 1.5% coarse and 0.5% refined, rectified against the truth, threshold rates, a `--bench`) and
+  `smoke-scan.mjs` on port 8492.
+- **What P4 being built changes for P2.** Nothing to design for the imposition: a scanned page is a `dataURL` to
+  the same `draw(step)` and lands in its booklet or N-up slot like a photo. P2 keeps one borrowed case from
+  `smoke-impose.mjs` as the guard.
+- **What P2 needs from P1, not built.** Per-entry geometry as the same `quad` (P1's crop a rectangle-held quad,
+  its straighten the quad's rotation, so no second cropper exists), the thumbnail grid for the button and badge,
+  the real-photo fixture, and the `compact`/`min` validation that bounds a `bw` page's legibility at 850 px.
+- **What was measured.** A pure-Node probe of the arithmetic (not kept; its figures are in the design) on
+  huginn's Ryzen 5 PRO 2400GE, one thread, a synthetic 4032 x 3024 frame: downscale 65 to 90 ms, Sobel 11 to 15,
+  the warp to 1700 x 2200 190 to 400, Sauvola on it 210 to 320; about 0.8 to 1.3 s a page here, 25 to 40 s for 30
+  pages, a phone guessed at three to five times that. Memory about 120 MB a page in flight, and 30 live canvases
+  would be 450 MB, which is the rule that a finished page is a Blob.
+- **Decided here, cheap to reverse.** Tool module not `_shared/`; Hough not contours; a Worker for the batch;
+  flatten before threshold, both after the warp; Sauvola; `bw` as PNG; hand-set corners never overwritten; scans not
+  saved between visits; 0.6 as the flag line; the output size from the longer opposite sides, capped by the
+  quality preset.
+- **Left to Devon, listed in the design and not answered:** whether a scanned queue survives a reload; the
+  phone's capture path (`capture` attribute or `getUserMedia`); the default mode and detect-on-drop; an on-demand
+  OpenCV.js fallback on Tesseract's terms if the detector is not good enough; who takes and whether to commit the
+  blank-sheet photo; `_shared/` from the start for 056, 028 and 019; `bw` as PNG against the size ladder; the
+  "original" cap; whether P1 is built first at all.
+- **Not verified.** No detector exists and nothing ran in a browser; the thresholds are starting values and the
+  test bounds are targets. One machine, synthetic data, one thread. No real photograph was opened. `<dialog>` on
+  iOS, a handle under a thumb and a Worker in the precache are untried on this site.
+
+---
+
 ## Path 7 P4 increment 7: 035's groups template on `ExportKit`, and P4 is finished (2026-10-06, AI-13, `CACHE_VERSION` v255)
 
 Audit entry AI-13, BACKLOG rank 6 (¼). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). Path 7 has

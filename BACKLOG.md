@@ -425,7 +425,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 46 | Path 16 P4 — 036 modelling: term count, scenario modelling, grading window, roster join | 036 | 2+ | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 47 | Path 16 P5 — 038 for science: regression, log axes, annotation layer, handoffs to 065 and 073 | 038 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 48 | Path 17 P1 — thumbnail-grid reordering, crop/straighten, real-photo validation of the retry presets | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 49 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
+| 49 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold. **Designed, not built (AI-25, 2026-10-06): the design is under the P2 bullet; P1 is not built and the design says what P2 needs from it** | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 50 | Path 17 P3 — PDF in: vendor `pdf.js`, merge/insert/extract/rotate existing PDFs | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 51 | Path 17 P4 — imposition. **Built (AI-13, v248, under Path 7 P4): 011 has booklet, 2/4/6/9 pages to a side with cut marks, either flip edge, creep.** Left: print and fold a 16-page booklet once and record it; then, only if asked for, a preset for a one-sided printer (fronts, then backs) and signatures for a thick booklet, both already in `ExportKit` | 011 | ¼ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 52 | Path 17 P5 — OCR, decision first: a vendored Tesseract build against the offline promise | 011 | ½ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
@@ -4329,6 +4329,8 @@ perspective correction, thresholding — all canvas math, no library. PDF in / P
 a complete local document-assembly story. Print-shop presets (booklet imposition,
 N-up with cut marks) are something teachers need that no free local tool does well.
 
+**Status.** P4's controls are built (AI-13, v248, under Path 7 P4); the paper check is what is left of it. P2 is designed, not built (AI-25, 2026-10-06): the design is in its bullet. P1, P3 and P5 not started.
+
 **Phases.**
 
 - **P1 — Reorder and crop.** Thumbnail-grid reordering (the list is unusable at 40
@@ -4339,6 +4341,218 @@ N-up with cut marks) are something teachers need that no free local tool does we
   on a downscaled canvas), draggable corner handles, perspective warp, adaptive
   threshold / grayscale / color modes, per-page and batch. *Fable for the CV math
   and its failure handling on low-contrast phone photos.*
+  **Designed, not built (AI-25, 2026-10-06; a design pass, no code, no `CACHE_VERSION`). The row stays.** What
+  follows is the whole of P2 as it would be built, written against 011 as it is on `main` at v255 (the enhance pass,
+  the portfolios, the target-size ladder and, since AI-13's v248, booklets and pages per sheet on `ExportKit`, which
+  is this path's P4). Nothing here ran in a browser; the only thing measured is the arithmetic, in Node, below.
+  **What it is.** A "Scan" step on a queued photo: find the four corners of the sheet in the photo, let the teacher
+  move them, pull the sheet flat and upright at a page's size, clean it (even out the light, take out the shadow,
+  then colour, grey or black-and-white for a copier), and hand that page to the pipeline in place of the photo. Per
+  page from a dialog, or for the whole queue with a review of the ones it was not sure of. Crop, deskew and
+  perspective are one operation here, the warp from the quadrilateral to the rectangle, so there is no separate
+  crop box or straighten slider (and P1 should not build ones that P2 then throws away; see P1 below).
+  **Where it lives.** `Tools/image-to-pdf/scan.js`, a plain global script publishing `window.Scan`, pure functions
+  over typed arrays with no DOM of their own (a caller hands in `ImageData` and gets `ImageData` back), so
+  `scan.test.mjs` can load it with `vm.runInContext` exactly as `export.test.mjs` loads `export.js`; and
+  `Tools/image-to-pdf/scan-worker.js`, a Worker (the first on the site) that imports `scan.js` with
+  `importScripts` and runs the batch so a 30-page stack does not freeze the page. Both go in `PRECACHE_URLS`, not
+  `SHELL_URLS`. A tool module, not `_shared/`: one adopter (the one-adopter rule), though 056, 028 and 019 take
+  photographs of documents too and would want the same dialog; moving it is a rename when one of them asks (a
+  question for Devon, below). No library. Everything is about 700 lines of typed-array arithmetic: a box
+  downscale, Sobel, a Hough transform, an 8 x 8 solve, bilinear sampling, an integral image. Considered and not
+  wanted: OpenCV.js (about 8 MB of wasm, Apache-2.0, the whole reason this path says "no library"), jscanify (MIT,
+  but it is a wrapper on OpenCV.js), `perspective-transform` (MIT, 40 lines, the homography only, which is written
+  here anyway). If the detector below is judged not good enough on real photos after it is built, an on-demand
+  OpenCV.js download in the pattern Devon allowed for Tesseract is the fallback, and that is his call, not assumed.
+  **The surface.** Points are `[x, y]` in source pixels of the photo as the browser shows it (EXIF applied, which is
+  what `drawImage` of a File gives; the quad is never in raw-sensor coordinates). A quad is `[TL, TR, BR, BL]`.
+  - `Scan.toGray(imageData) → Uint8Array` (Rec. 601 weights, integer).
+  - `Scan.downscale(imageData, longEdge) → { gray, w, h, scale }`: a box filter by an integer factor (not
+    `drawImage`, so Node and the page produce the same bytes), long edge about `longEdge` (480 for detection).
+  - `Scan.detect(imageData, { longEdge = 480, inset = 0.04 }) → { quad, confidence, method, lines }`: the four
+    corners in source px, `confidence` 0 to 1, `method` `'edges'` or `'fallback'`, and `lines` (the four `{ theta,
+    rho, support }` it chose) for the tests and the review strip. Never throws on a picture: a frame with no sheet in
+    it gives the frame inset 4% at confidence 0 and `method: 'fallback'`, so the handles still appear and the
+    teacher drags them.
+  - `Scan.refine(imageData, quad, { longEdge = 1024, band = 12 }) → quad`: the four lines fitted again on a larger
+    grey, each within `band` px of the coarse line, least squares on the per-row (per-column) gradient maximum, and
+    the corners taken from the refined intersections. Sub-pixel; the coarse step alone is only good to the
+    downscale factor (8 px on a 4032 photo).
+  - `Scan.homography(srcQuad, dstQuad) → Float64Array(9)` (Gaussian elimination with pivoting on the 8 x 8 system;
+    throws `'Those corners do not make a page'` when three are collinear or the quad is not convex) and
+    `Scan.apply(H, [x, y]) → [x, y]`.
+  - `Scan.outputSize(quad, { maxDim }) → { w, h }`: the rectified page's size in px, the longer of the two
+    opposite sides each way (the near side of a keystoned sheet is the one that was not foreshortened), then the
+    long edge capped at `maxDim` (the quality preset's: 1600 standard, 2400 high, 4000 for "original", 1100 and
+    850 for the ladder's lower tiers).
+  - `Scan.rectify(imageData, quad, { w, h }) → ImageData`: inverse mapping, destination to source through the
+    homography, bilinear, white outside the source. Typed arrays, not Canvas 2D, which has no perspective, and
+    not WebGL, which a `getImageData`-based pipeline would then have to read back from anyway.
+  - `Scan.flatten(imageData, preset) → ImageData`: today's `enhanceCanvas()` moved here unchanged in its arithmetic
+    (the 1/24 illumination map, the local maximum, one grey target for the three channels, the percentile white
+    point, `ENHANCE_PRESETS`), on `ImageData` instead of a canvas. The page's dropdown keeps calling it through a
+    four-line canvas wrapper, and `smoke-enhance.mjs` is the guard that the move changed no pixel. This is the
+    shadow removal: a soft shadow is the illumination map's business, and the map is estimated on the rectified
+    page, so the desk never pulls it.
+  - `Scan.threshold(imageData, { window, k = 0.2, R = 128, despeckle = true }) → ImageData`: Sauvola's adaptive
+    threshold from an integral image of sums (`Uint32Array`, which 255 x 4 Mpx fits) and of squares
+    (`Float64Array`; the squares do not fit 32 bits), `window` defaulting to the long edge / 110 rounded to odd (15
+    px at 1700), then a despeckle pass that whitens a black pixel with no black 8-neighbour and keeps every
+    2-px stroke. Output is three equal channels of 0 or 255, so the embed step can choose PNG.
+  - `Scan.clean(imageData, mode) → ImageData`, `mode` `'color'` (flatten, the `worksheet` preset), `'gray'`
+    (flatten, then grey into three channels) or `'bw'` (flatten, then threshold). The order is fixed: warp,
+    flatten, threshold. Flatten before threshold because Sauvola's window is small and a slow gradient across the
+    sheet moves its mean; warp before both so the window and the map are in page pixels and the desk is gone.
+  - `Scan.process(imageData, { quad, mode, maxDim }) → { imageData, w, h }`: the three in order, the Worker's one
+    message. The Worker takes `{ id, buffer, w, h, quad, mode, maxDim }` with the buffer transferred and answers
+    `{ id, buffer, w, h }` or `{ id, error }`, one job at a time, so a cancelled batch is one message not sent.
+  **The detector, and what it does when it is wrong.** On the 480-px grey: a 3 x 3 box blur, Sobel magnitude and
+  direction, non-maximum suppression along the gradient, a threshold at the 90th percentile of the magnitude
+  histogram (not a fixed level: a sheet on a light desk has weak edges everywhere, and a percentile adapts). Then a
+  Hough transform at 1 degree by 1 px (180 x about 1,200 bins, a few hundred kilobytes) over the surviving edge
+  pixels, each voting with its magnitude. Peaks are split into two clusters, within 35 degrees of vertical and
+  within 35 degrees of horizontal; in each cluster the two strongest peaks at least 25% of the frame apart are
+  the sides, and a peak is only a candidate when its `support` (edge pixels within 1 px of the line) spans at
+  least 40% of the frame, which is what keeps a line of handwriting or a ruled line from being taken for an edge
+  (they are short and they are many). When a cluster has three or more candidates the pair is chosen by edge
+  support times enclosed area, so the sheet wins over the text block inside it and over a desk seam outside it
+  only when the seam is weaker; a patterned placemat is a known hard case. Four intersections, ordered by angle
+  around their centroid with TL the one nearest the frame's top left, then validated: convex, area between 15% and
+  98% of the frame, every interior angle between 55 and 125 degrees, and the rectified aspect ratio between 0.45
+  and 2.2 (A4 to a wide landscape sheet; a strip of tape is not a page). `confidence` is the mean of the four
+  sides' normalised support, times 0.5 if any side was taken from the frame edge. Edge cases, each with its
+  behaviour: a sheet larger than the frame (a cluster finds one line, the other side is the frame edge, confidence
+  halves, the review strip flags it); a dark sheet on a light desk (edges are edges, nothing assumes white); a
+  hand or a pen across one edge (the Hough line survives a gap, which is why Hough and not a contour trace, whose
+  outline would follow the hand); a sheet turned 90 degrees (the quad is found the same way and the page comes out
+  landscape, and the existing rotate button turns it); two sheets side by side (one quad, the stronger pair, the
+  other sheet is cropped away, and this is listed as out of scope below); the phone's own shadow across the sheet
+  (a soft edge, usually under the 90th percentile; when it is not, it is the failure the handles exist for). A
+  threshold or a weight in this paragraph is a starting value for the fixtures below to tune, not a result.
+  **The dialog.** A `<dialog>` (087 has the site's one precedent) opened from a Scan button on the queue row (or on
+  P1's tile), full screen under 600 px wide. The photo at most 1000 px on its long edge, a polygon drawn over it,
+  and four handles that are `<button>`s (44 x 44 px targets, `aria-label` "Top left corner", moved with pointer
+  events and with the arrow keys, 1 px a press, 10 with Shift, the polygon redrawn on every move), a loupe while a
+  handle is held (a 3x crop of the 60 px round the corner, so a thumb does not hide the edge it is placing), a
+  Mode select (Color, Grey, Black and white), Detect again, Reset (back to what Detect found), Apply, and a live
+  "after" at 360 px wide debounced 150 ms through `Scan.process` on the main thread (a 360 x 466 warp and clean is
+  a few milliseconds). Hand-set corners are never overwritten by a later "Scan all". **Scan all** runs `detect` on
+  every photo in the queue not yet scanned, in the Worker, with the page's progress bar and a Cancel, then shows a
+  review strip of thumbnails with the found quad drawn on each and a "Check the corners" badge on any under
+  confidence 0.6, each thumbnail opening the dialog. The enhance dropdown stays for the photos that are not scanned
+  (a whiteboard has no corners to find); a scanned page ignores it, because its own mode was chosen with the
+  corners in view.
+  **What is stored, and undo.** Nothing new on disk by default. A queue entry gains `scan: { quad, auto, mode,
+  confidence, history, processed }`: `quad` the corners in use, `auto` the corners Detect found (Reset's target),
+  `history` the last 20 quads before a drag (per-page undo, Ctrl+Z inside the dialog), `processed` a JPEG or PNG
+  Blob of the finished page with its `w` and `h`, or null when stale. The File is the original and is never
+  changed; the processed page is derived and recomputable, so undo is "drop `processed`, restore a quad". The
+  queue itself is not saved between visits today (the page's own comment), so neither is a scan; whether it should
+  be is Devon's question below, and if it is, the place is `MediaDB.images({ ns: 'image-to-pdf' })` for the
+  processed Blobs with the quads in the saved queue, a note on the registry's `gvb-media` row, and `student: true`
+  on the new key, since a scan of a worksheet is a student's work. `image-to-pdf-settings` gains `scan: { mode }`,
+  the habit, and never whether scanning is on, by the rule 011 already holds for the layout and the portfolio
+  toggle: an option that changes what comes out is not found still on next week.
+  **What changes in the page.** `processRaster(file, ext, qualityMode)` takes the entry: with `scan.processed` it
+  decodes that Blob instead of the File, skips `enhanceCanvas` (already applied) and keeps the preset's `maxDim`
+  and JPEG quality; a `'bw'` page is returned as `format: 'PNG'` (two-level pixels as JPEG ring, and the PNG is
+  smaller), which means the target-size ladder can only lower `maxDim` on it, not quality. `rotateForEmbed`,
+  captions, contact sheets, the title page, portfolios and the imposition all take the same `dataURL` as before and
+  do not change; a scanned page goes through `toPdf` into its booklet slot like any other, which is what P4 being
+  built already changes for P2: there is no imposition left to design, only the guard that a scanned page lands in
+  its slot. "Match image size" with a scan uses the rectified page's aspect ratio through `clampPageDimsMm`, as it
+  does for a photo. The queue row gets the Scan button beside Rotate and a "Scanned" badge; the Clear button drops
+  the Blobs. The Worker's file is a new `sw.js` line, and `CACHE_VERSION` bumps.
+  **Budgets, measured and guessed.** A pure-Node probe (not kept) of the arithmetic on huginn's Ryzen 5 PRO 2400GE,
+  one thread, V8 (Chromium's engine), synthetic 4032 x 3024 RGBA (12.2 Mpx, 47 MB): box downscale to 504 px 65 to 90
+  ms, Sobel on it 11 to 15 ms, grey of the full frame 68 ms, the warp to 1700 x 2200 (Letter at 200 dpi) 190 to 400
+  ms, Sauvola with a 31-px window on that 210 to 320 ms; to 1275 x 1650 (150 dpi) the warp is 140 to 150 ms and the
+  threshold 90 to 120 ms. The first run of each is the slow end (JIT warm-up). Not measured: the browser's decode
+  of a 12 Mpx JPEG and `getImageData` (typically 100 to 300 ms), the flatten pass (today's, on a 1600-px page) and
+  the JPEG encode (tens of ms). So about 0.8 to 1.3 s a page on huginn and 25 to 40 s for 30 pages in the Worker;
+  a phone or the classroom laptop is a guess at three to five times that, 1.5 to 3 minutes for 30, which is why the
+  batch has a progress bar and a Cancel and never runs on the main thread. Memory, per page in flight: the source
+  RGBA 47 MB, its grey 12 MB, the output 15 MB, the integral images 15 + 30 MB, about 120 MB, and the rule that
+  keeps a 30-page stack from crashing a phone is that **a finished page is a Blob, never a canvas or an `ImageData`
+  kept alive**: 30 canvases of 1700 x 2200 are 450 MB, and iOS Safari refuses new canvases well before that. One
+  source decoded at a time, `ImageBitmap.close()` after `drawImage`, the Worker's buffers transferred both ways. How
+  to measure: `scan.test.mjs --bench` prints each step's ms on the synthetic 12 Mpx frame (the probe, kept);
+  `smoke-scan.mjs` reads `window.__imgToPdfScanTiming` (per-page ms and the peak `performance.memory` where
+  Chromium offers it) after a six-page Scan all and fails over 3 s a page on CI's machine; a real phone once,
+  recorded in Verification below as a parked check, is the only measurement of the guess.
+  **Tests, without a camera.** `Tools/image-to-pdf/test/make-scan-fixtures.mjs` extends `make-fixtures.mjs` with
+  `warpedPage({ w, h, quad, paper, desk, gradient, noise, shadow, seed })`: a synthetic sheet (ruled lines every 40
+  px, "text" as rows of dark rectangles, a thick frame line) forward-mapped through the homography onto a desk of
+  the given luminance, with a left-to-right lighting gradient, Gaussian noise of the given sigma from the xorshift
+  generator already there, and an optional soft shadow band, written as PNG with its true corners returned. Named
+  fixtures: `centred`, `offCentre`, `rot15`, `rot40`, `rot90`, `keystone` (the far side 60% of the near), `nearFull`
+  (96% of the frame), `small` (25%), `oneEdgeOut`, `darkOnLight` (paper 70, desk 200), `lowContrast` (paper 235,
+  desk 205), `noisy` (sigma 12), `shadowBand`, `noPage` (desk and noise only), each at 1600 x 1200 for speed and the
+  `centred` and `keystone` ones also at 4032 x 3024. `scan.test.mjs` (pure Node; it and the browser suite share one
+  `test:image-to-pdf-scan` shortcut): (1) `detect` on every fixture but `noPage` and `oneEdgeOut` puts each corner within 1.5%
+  of the long edge of the truth, and `refine` within 0.5% (20 px on 4032, a millimetre on the printed page), with
+  `method: 'edges'` and confidence over 0.6 for all but `lowContrast` and `shadowBand`, which may be under; (2)
+  `noPage` is `fallback` at confidence 0 with the inset frame, and `oneEdgeOut` puts that side on the frame edge
+  with confidence under 0.6; (3) `homography` round-trips 200 random convex quads through the unit square to 1e-9
+  and throws on three collinear points; (4) `rectify` of each fixture with the true quad against the un-warped
+  sheet: mean absolute difference under 12 levels and every ruled line within 2 px of where it belongs; with the
+  detected quad, under 18; (5) `threshold` on the rectified gradient sheet: 99.5% of paper pixels white and 95% of
+  stroke pixels black in the dim and the bright corner alike, the despeckle whitening single noise pixels and
+  keeping a 2-px rule; `gray` three equal channels; `flatten` the same bytes as a recorded table from today's
+  `enhanceCanvas` on `smoke-enhance.mjs`'s board; (6) corners in any order come out TL, TR, BR, BL; (7) `--bench`.
+  `smoke-scan.mjs` (browser, port 8492, the next free): the fixtures loaded through the file input; Scan opens the
+  dialog with four handles within 1.5% of the truth on the displayed scale; a 40-px pointer drag of one handle
+  moves the polygon and changes the live preview's pixels; the arrow keys move the focused handle 1 px and 10 with
+  Shift; Apply puts the badge on the row and a `history` entry behind Reset; Generate's PDF read as `smoke-impose`
+  reads it (`pdftoppm` where huginn has it, structure alone where not): the page's image is the rectified sheet
+  (a sampled ruled line is level to 2 px) and a `bw` page's stream is `FlateDecode` not `DCTDecode`; Scan all on
+  six fixtures shows progress, flags `lowContrast` and finishes with `noPage` on fallback; Cancel after the second
+  page leaves two done; a scanned page in a 4-up two-sided layout lands in its slot, the one case borrowed from
+  `smoke-impose`; portfolio mode puts the scanned page in its student's file; `a11yScan` of the open dialog is
+  clean; a 375-px pass finds the dialog full screen and every handle 44 px; no console errors, nothing leaves the
+  site. `smoke-enhance.mjs` keeps passing untouched. New suites go in `suites.json` with `test:image-to-pdf-scan`
+  (`check:tests`), the Worker in `PRECACHE_URLS` (`check:precache`), and the dialog's markup is static so
+  `check:inline-sinks` is not reached. **Not provable without a camera:** that the thresholds hold on a real
+  phone's noise, lens blur and colour; the fixture P1 asks for (a real photo of a blank sheet) is the first manual
+  check and belongs under `Tools/image-to-pdf/test/fixtures/`, which the offline zip drops.
+  **What P2 needs from P1, which is not built.** (1) Per-entry geometry stored as this `quad`, with P1's crop a
+  quad whose corners are held to a rectangle and P1's straighten the quad's rotation, so P2 only lets the corners
+  go free and no second cropper exists; if P1 is built first with a crop box and a slider, P2 deletes them. If P2
+  is built first, P1's crop/straighten is done (drag the corners) and P1's row shrinks to the thumbnail grid and
+  the real-photo validation. (2) The thumbnail grid is where the Scan button, the Scanned badge and the review
+  strip's thumbnails naturally live; without it they go on the list rows and work. (3) P1's real-photo fixture
+  (Devon's phone photo of a blank worksheet he makes, nothing of a student's, committed under `test/fixtures/`)
+  is the one photograph P2's suite can open. (4) P1's validation of the `compact` and `min` presets on a real
+  photo decides whether a scanned `bw` page at `maxDim` 850 is still legible, which bounds the target-size ladder.
+  **Deliberately left out.** Inferring the sheet's physical size (nothing in the frame says how big it is; the
+  paper setting decides, aspect kept and letterboxed as today); two sheets in one photo; a curved page (a book's
+  gutter needs a cylinder model, not a homography); live camera capture with a corner overlay (a file input with
+  `capture="environment"` opens the phone's camera for one shot without a permission prompt, and that is proposed,
+  but it is Devon's question); auto-rotation by the text's direction (needs a text detector or P5); colour
+  correction past the flatten's white balance; HEIC (the page's own rejection message covers it); undo across
+  pages; OCR (P5).
+  **Decided here, cheap to reverse.** A tool module, not `_shared/`. Hough lines, not a contour trace. A Worker
+  for the batch and the main thread for the live preview. Flatten before threshold, both after the warp.
+  Sauvola, not Otsu (one global level fails on any shaded sheet) and not a local mean minus a constant (Sauvola's
+  deviation term leaves blank paper blank). `bw` as PNG. Hand-set corners never overwritten. Scans not saved
+  between visits. The mode saved, the on/off not. Confidence 0.6 as the flag line. Output size from the longer
+  opposite sides, capped by the quality preset.
+  **Left to Devon, listed and not answered.** (1) Should a scanned queue survive a reload (P1's queue persistence
+  plus `MediaDB`, a registry note, and a `student: true` key)? (2) Phone capture: the file input's `capture`
+  attribute, or an in-page `getUserMedia` view with a live corner overlay (the real scanner-app feel, more code, a
+  camera permission)? (3) The default mode for a scanned page, black-and-white as a copier or grey; and whether a
+  dropped photo that looks like a sheet is detected at once with a badge, or only when Scan is pressed. (4) If the
+  hand-written detector is not good enough on real photos, is an on-demand OpenCV.js download acceptable on the
+  terms he gave Tesseract? (5) Who photographs the blank-sheet fixture, and may a megabyte of JPEG be committed
+  under `test/`? (6) Does the module start in `_shared/` because 056, 028 and 019 would take the same dialog, against
+  the one-adopter rule? (7) `bw` pages as PNG, with the size ladder then only shrinking them: acceptable for the
+  "under 5 MB for Schoology" case? (8) The output resolution cap for "original" quality (4000 px proposed; a 12 Mpx
+  photo can give more). (9) Whether P1 should be built first at all, or P2 take its crop and straighten.
+  **Not verified.** No detector exists; the thresholds in it are starting values and the error bounds in the tests
+  are targets, not results. The probe measured arithmetic on synthetic data, one thread, one machine; the phone
+  figure is a guess, marked as one. No real photograph was opened; the fixtures do not yet exist. Nothing about
+  `<dialog>` on iOS Safari, pointer events on a handle under a thumb, or the Worker in the service worker's
+  precache has been tried on this site.
 - **P3 — PDF in.** Accept PDFs as input (render pages via a vendored `pdf.js` —
   a new `_shared/vendor/` entry with the README, SHA and precache bookkeeping;
   weigh its size against the precache in Path 1), so merge/insert/extract/rotate
