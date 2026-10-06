@@ -485,7 +485,7 @@ files must be added there too.
   leaves it alone, and, if it imports its own file, takes the apostrophe off as 075's `unguardCsv()` does). Since v252
   060 does too, and 001, 006, 030 and 036 save their files through `toCsv` and `toXlsx` (`npm run test:sheet-adopters`;
   a workbook adopter gets an entry in `Tools/export/test/_sheet-adopters.mjs`, keeps its own lazy load of SheetJS and
-  passes `{ name, rows, widths }`); only 035's fixed template still writes its own (`BACKLOG.md`, Path 7 P4).
+  passes `{ name, rows, widths }`). Since v255 035's groups template does too, the last: no page writes its own CSV.
   Its suites are `npm run test:export`; no booklet has been printed or folded, and no file opened in a spreadsheet.
   `npm run path7:next` (`Tools/board-check/audit-print.mjs`, Path 7 P2, read-only, a browser
   sweep of about 12 minutes on port 8464, not in CI) is the runtime half of `check:print-clip`:

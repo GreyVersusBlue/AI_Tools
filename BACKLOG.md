@@ -87,12 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
-- **AI-13 (v252), rank 6, Path 7 P4 increments 5 and 6: every page that saves a CSV or a workbook does it through
-  `ExportKit`, but for 035's fixed template.** v249: 003, 008, 018, 033, 068 and 075's CSV. v252: 001 and 006 (CSV
-  and workbook), 030 and 036 (workbook, the first four `toXlsx` adopters; `toXlsx` takes `widths` for 036) and 060's
-  CSV. 006's import takes the guard's apostrophe off. Old file against new for all. `npm run test:csv-adopters`
-  (port 8486), `npm run test:sheet-adopters` (port 8489). **Left in rank 6: 035's three-line template, when AI-31
-  is out of the page. No file was opened in a spreadsheet program.**
+- **AI-13 (v255), Path 7 P4 is finished and rank 6 is deleted (a gap; ranks not renumbered): every page that
+  saves a CSV or a workbook does it through `ExportKit`.** v249: 003, 008, 018, 033, 068 and 075's CSV. v252: 001
+  and 006 (CSV and workbook), 030 and 036 (workbook) and 060's CSV. v255: 035's `groups-template.csv`, the last.
+  `npm run test:csv-adopters` (port 8486), `npm run test:sheet-adopters` (port 8489). Also v255: 063's old bank
+  key is `legacy` in the registry, so `check:registry` prints no STALE. **Left of Path 7: P5 only (rank 7). No
+  file was opened in a spreadsheet program.**
 - **AI-13 (v248), rank 6, Path 7 P4 increment 4: 011 makes booklets and several pages to a sheet on `ExportKit`
   (Path 17 P4's controls, built), and 064's zip and PNG downloads are the file helpers' first adopter.** 011's
   default output is the old page's in 120 states, to the pixel. `npm run test:image-to-pdf-impose` (port 8483).
@@ -238,14 +238,14 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v254` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v255` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **315** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
 | Suites | **218** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 31 · `export.js` 14 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -382,8 +382,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 6 | Path 7 P4 — `_shared/export.js`. **Finished but for one file (AI-13, increments 1 to 6, v243 to v252).** `ExportKit` has the imposition and pagination math, `toPdf(pages, opts)` for pages a tool can draw, and the file helpers `toCsv`, `toXlsx`, `toZip`, `download` and `filename`; 064, 040 and 011 are on the PDF and imposition half, and every page that saves a CSV or a workbook is on the file helpers: 003, 008, 018, 033, 060, 068 and 075 (CSV), 001 and 006 (CSV and workbook), 030 and 036 (workbook) (`npm run test:csv-adopters`, port 8486; `npm run test:sheet-adopters`, port 8489). **Left, and all that is left:** 035's `groups-template.csv` (three fixed lines, LF line ends, no byte order mark, nothing typed in it) moves to `toCsv` and `download` when no AI-31 worker is in 035, with a row in `_csv-adopters.mjs`; then delete this row. No file has been opened in a spreadsheet program | 035 | ¼ | | [Path 7](#path-7--print-and-export-kit) |
-| 7 | Path 7 P5 — a print preview in the page: a shared Preview control that lays the sheet in `#printArea` out as pages at the size `PrintKit.setPage()` set, so a teacher sees the page breaks and the page count before the print dialog; the thirteen print-kit pages are its adopters. Not designed and not started; the Tier 2 section says what a design has to settle | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
+| 7 | Path 7 P5 — a print preview in the page, and all that is left of Path 7 (P1 to P4 are finished; P4's row, rank 6, was deleted at v255). One shared Preview control in `_shared/print-kit.js` and `.css` that lays the sheet in `#printArea` out as pages at the size `PrintKit.setPage()` set, so a teacher sees the page breaks and the page count before the print dialog; done when the preview's page count equals Chromium's `page.pdf()` count on each of the thirteen print-kit pages, its adopters. Not designed and not started; the Tier 2 section lists the four things a design has to settle first (where the breaks come from, applying `@media print` rules on screen, QR canvases, where the control goes) | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -2440,7 +2439,7 @@ localStorage with no file export.
   | 006 Class Roster Hub | one roster or all of them, as CSV and as a workbook; **it imports both** | no guard in the CSV (it has the mark and quotes a carriage return); its import would have to take the apostrophe off, as 075's does | `toCsv` and `toXlsx`, v252; a file import takes the apostrophe off again |
   | 030 Review Game Board | a blank template workbook | nothing wrong; a copy of `XLSX.writeFile` | `toXlsx`, v252 |
   | 036 Final Grade Checker | `final_grades.xlsx` | not read closely; `aoa_to_sheet`, so strings stay strings | `toXlsx` with `widths`, v252 |
-  | 035 Schedule Visualizer | `groups-template.csv`, three fixed lines | LF line ends, no mark, nothing typed in it | left: 035 is AI-31's |
+  | 035 Schedule Visualizer | `groups-template.csv`, three fixed lines | LF line ends, no mark, nothing typed in it | `toCsv`, v255; the page's own import reads it as it read the old one |
   | 060 Fitness Tracker | assessment results | no mark, no guard, a bare carriage return unquoted | `toCsv`, v252; a result typed as a plain number goes in as a number |
 
   032 and 038 only read a workbook. The six that moved were taken worst file first and stopped at six; 001 and
@@ -2477,9 +2476,13 @@ localStorage with no file export.
   teacher re-importing an export has to tick "first row is a header" and pick the Name column; the suite does
   both. A cell with a line break in it does not survive 006's CSV import (`Roster.parseDelimited` splits on
   lines first).
-  **What is left of P4.** 035's `groups-template.csv`, three fixed lines with nothing typed in them, when the page
-  is free. Nothing else. 011's layouts leave three things unbuilt, all in the layer already and none asked for: a
-  preset for a one-sided printer (`stack: 'fronts-first'`), signatures, right-to-left.
+  **Increment 7 shipped (AI-13, 2026-10-06, v255), and P4 is finished.** 035's `groups-template.csv` is
+  `ExportKit.toCsv` and `download`: the old file with a byte order mark, CRLF for LF and a CRLF after the last
+  row, and nothing else (it has no typed cell, so the guard has nothing to do; its row in `_csv-adopters.mjs` is
+  marked `fixed`). The page's import reads the new file as it read the old one, and the file it publishes for 034
+  is the same bytes. Rank 6 is deleted. `HISTORY.md` has the entry.
+  **What is left of P4.** Nothing. 011's layouts leave three things unbuilt, all in the layer already and none
+  asked for: a preset for a one-sided printer (`stack: 'fronts-first'`), signatures, right-to-left.
   **Known limits, none of them a row yet.** A slot is not clipped, so a draw function that runs off its page
   runs onto its neighbour. A slot turns 0 or 180 degrees, not 90, so N-up never turns a page to fit. A booklet has
   no cut marks of its own (it is folded, not cut). Creep is the linear model. Two-sided N-up always emits the

@@ -9,6 +9,36 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P4 increment 7: 035's groups template on `ExportKit`, and P4 is finished (2026-10-06, AI-13, `CACHE_VERSION` v255)
+
+Audit entry AI-13, BACKLOG rank 6 (¼). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). Path 7 has
+one row left, P5 (rank 7, the print preview), not designed and not started.
+
+- **What shipped.** 035's "Download CSV template" (`groups-template.csv`) is `ExportKit.toCsv(rows)` handed to `ExportKit.download()`; the
+  page links `../_shared/export.js` (with `defer`, as every script in its head is). It was the last page writing a CSV by hand. Nothing else
+  in 035 changed: `parseCSV()` and `handleCsvImport()` are as they were.
+- **Old file against new.** The old page (from `git show HEAD:` through `page.route()`) against the new one for five settings (the default
+  eight mods, five hours, twelve periods, four blocks, one mod): the new file is the old file's bytes with a byte order mark in front, CRLF
+  where there was LF and a CRLF after the last row, and nothing else, in 5 of 5. Its type is `text/csv;charset=utf-8` (was `text/csv`). No
+  cell is typed and none starts `=` `+` `-` or `@` (a colour starts `#`), so the guard adds no apostrophe and the import needs no unguard.
+- **The round trip.** Each file imported into each page, four ways per setting (old into old, new into new, old into new, new into old):
+  the same two groups every time (Homeroom A, grade 9, 24 students, room 101 first; Homeroom B, grade 10, no headcount, 205 then 110). The
+  mark does no harm twice over: `FileReader.readAsText` drops it, and the header is `trim()`med, which drops it too.
+- **034's published file did not move.** `brBuildPublishedHTML()` for the Northwind fixture (`Tools/schedule/test/fixture-northwind.mjs`,
+  11 rooms, 4 groups), clock pinned, old page against new: 163,269 bytes both, the same string. The comparison was a scratch script and is
+  not in the tree; `Tools/schedule/test/` is the standing check on the publisher.
+- **Tests.** 035 has a row in `Tools/export/test/_csv-adopters.mjs` and `npm run test:csv-adopters` goes 150 to 172 assertions (no new
+  suite, no new port). The row is marked `fixed` (a file the tool writes whole: the suite asserts there is nothing to guard, where for the
+  others it asserts the fixture has something), seeds five "hours" so the header is seen to follow the setting, and has a `roundTrip` with
+  its own `seed` and `want` (the import reads a grade and a headcount as numbers). The suite's script-tag check takes `defer` now. Run on
+  the old page, 10 of 035's 23 assertions fail.
+- **063's STALE warning, same commit series.** `check:registry` warned that `gmlg_custom_banks_v1` is declared and written by nothing
+  (the 063 entry below). The registry already has the marking for that: `legacy: true`, "a key or prefix nothing writes any more", which
+  the guard skips in its STALE pass. The key is marked so and the warning is gone. `ToolRegistry.lookupKey()` does not read the flag, so
+  009 still names the key, backs it up and restores it as before. Nothing new was added to `_shared/`.
+- **Not verified.** No file was opened in a spreadsheet program (huginn has none). Full `npm test` was not run. Only Chromium imported the
+  file, so "the mark is dropped on import" is Chromium's `readAsText` plus the `trim()` read off the source.
+
 ## 065 Lab Report Template Builder: pre-lab and post-lab packets from one template (2026-10-05, AI-31-065, `CACHE_VERSION` v254; main took v252 and v253 first)
 
 Audit entry AI-31, BACKLOG rank 102 (½). Per-tool row; the row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).

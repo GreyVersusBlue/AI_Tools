@@ -1,5 +1,5 @@
 // smoke-csv-adopters.mjs — the pages that save a CSV through ExportKit.toCsv()
-// (Path 7 P4): 003, 008, 018, 033, 060, 068 and 075.
+// (Path 7 P4): 003, 008, 018, 033, 035, 060, 068 and 075.
 //
 //   node Tools/export/test/smoke-csv-adopters.mjs      (npm run test:csv-adopters)
 //
@@ -12,9 +12,11 @@
 // This opens each page with cells built to break a CSV, presses its export
 // button, and reads the bytes the page saves: the mark, the line ends, the
 // quoting, the apostrophe before a typed formula and nowhere else (a negative
-// score is still a number), and the table itself, cell for cell. 075 is the
-// one with an Import button, so its own file goes back in and has to give the
-// directory it came from.
+// score is still a number), and the table itself, cell for cell. 075 has an
+// Import button, so its own file goes back in and has to give the directory
+// it came from. 035 saves a template it writes whole (v255): nothing typed,
+// so nothing to guard, and its own import has to read it as the two example
+// groups.
 //
 // The table and the fixtures are in _csv-adopters.mjs. Exits 1 on any failure.
 // Every name here is invented.
@@ -41,6 +43,7 @@ const PAGES = [
   'Tools/008-behavior-points-tracker.html',
   'Tools/018-qr-scavenger-hunt-builder.html',
   'Tools/033-ssr-log-tracker.html',
+  'Tools/035-schedule-visualizer.html',
   'Tools/060-fitness-skill-assessment-tracker.html',
   'Tools/068-parent-contact-log.html',
   'Tools/075-staff-directory-builder.html',
@@ -71,7 +74,7 @@ for (const a of ADOPTERS) {
 
   /* the page itself: the shared file, and no quoting of its own left */
   const src = fs.readFileSync(path.join(SITE, a.file), 'utf8');
-  ok(/<script src="\.\.\/_shared\/export\.js"><\/script>/.test(src), `${T} the page loads _shared/export.js`);
+  ok(/<script src="\.\.\/_shared\/export\.js"(?: defer)?><\/script>/.test(src), `${T} the page loads _shared/export.js`);
   ok(src.includes('ExportKit.toCsv('), `${T} the page calls ExportKit.toCsv()`);
   ok(!/\.replace\(\/"\/g,\s*'""'\)/.test(src), `${T} the page doubles no quotes itself`);
 
@@ -101,7 +104,8 @@ for (const a of ADOPTERS) {
   eq(bare, [], `${T} no cell a spreadsheet would run as a formula`);
   eq(wrong, [], `${T} no apostrophe on a number`);
   eq(guarded, wantGuarded, `${T} cells that got the apostrophe`);
-  ok(wantGuarded > 0, `${T} the fixture has typed formulas to guard`);
+  if (a.fixed) eq(wantGuarded, 0, `${T} a file the tool writes whole has nothing to guard`);
+  else ok(wantGuarded > 0, `${T} the fixture has typed formulas to guard`);
   const negatives = want.slice(1).flatMap(r => r.filter((c, ci) => a.numeric(ci) && /^-\d/.test(c)));
   for (const n of negatives) ok(rows.some(r => r.includes(n)), `${T} the negative number ${n} is written as a number`);
 
@@ -118,13 +122,13 @@ for (const a of ADOPTERS) {
   /* its own file goes back in through Import */
   if (a.roundTrip) {
     const rt = a.roundTrip;
-    const fresh = await open(a, {});
+    const fresh = await open(a, rt.seed || {});
     eq(await fresh.page.evaluate(k => localStorage.getItem(k), rt.key), null, `${T} round trip starts with nothing saved`);
     await fresh.page.setInputFiles(rt.input, { name: file.name, mimeType: 'text/csv', buffer: file.bytes });
     await fresh.page.waitForFunction(k => localStorage.getItem(k), rt.key, { timeout: 5000 }).catch(() => {});
     await settle(fresh.page, 200);
     const back = await fresh.page.evaluate(k => JSON.parse(localStorage.getItem(k) || '[]'), rt.key);
-    eq(sorted(back.map(p => rt.fields.map(f => p[f]))), sorted(want.slice(1)), `${T} its own file imports to the directory it came from`);
+    eq(sorted(back.map(p => rt.fields.map(f => p[f]))), sorted(rt.want || want.slice(1)), `${T} its own file imports to what it came from`);
     const again = await capture(fresh.page, a.button);
     ok(Buffer.compare(again.bytes, file.bytes) === 0, `${T} exported again after the import, the same bytes`);
     eq(fresh.errors, [], `${T} no page error on import`);

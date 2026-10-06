@@ -108,7 +108,13 @@ export async function capture(page, selector, timeout = 15000) {
    name      what the file is called
    numeric   the columns the tool fills with numbers (0-based): a minus sign
              there is a negative number, not a typed cell
-   table     the file's rows, header first, as the teacher typed them */
+   table     the file's rows, header first, as the teacher typed them
+   fixed     true for a file the tool writes whole, with no typed cell in it
+             and so nothing for the guard to do
+   roundTrip the tool's own Import: its file input, the key it saves to and
+             the fields to read back; `seed` is what the importing page opens
+             with (nothing, unless the file depends on a setting) and `want`
+             the saved rows when they are not the table's own strings */
 export const ADOPTERS = [
   {
     tool: '003', file: 'Tools/003-rubric-builder.html', button: '#exportScoresCsvBtn', name: /^lab-report-scores\.csv$/,
@@ -220,6 +226,29 @@ export const ADOPTERS = [
       [H.eq, '2026-09-29', 'Hatchet, "the" sequel', '', '45', '20', '45'],
       [H.uni, '2026-09-29', '@Home\rAlone', '', '44', '30', '44'],
       [H.uni, '2026-09-30', '+One', '', '12', '15', '12'],
+    ],
+  },
+  {
+    /* The groups template: a header that follows the school's period count
+       and naming (five "hours" here, not the default eight "mods"), and two
+       example rows the tool writes itself. Nothing in it is typed. Its own
+       import reads a grade and a headcount as numbers and every column after
+       the four named ones as a room. */
+    tool: '035', file: 'Tools/035-schedule-visualizer.html', button: '#btn-download-csv-template', name: /^groups-template\.csv$/,
+    numeric: () => false, fixed: true,
+    seed: { stviz_settings: j({ modCount: 5, modLabel: 'hour' }) },
+    roundTrip: {
+      input: '#sch-import-csv-file', key: 'stviz_schedules', fields: ['name', 'grade', 'color', 'size', 'modsA'],
+      seed: { stviz_settings: j({ modCount: 5, modLabel: 'hour' }) },
+      want: [
+        ['Homeroom A', 9, '#3b82f6', 24, ['101', '', '', '', '']],
+        ['Homeroom B', 10, '#ef4444', null, ['205', '110', '', '', '']],
+      ],
+    },
+    table: [
+      ['Name', 'Grade', 'Color', 'Students', '1st Hour', '2nd Hour', '3rd Hour', '4th Hour', '5th Hour'],
+      ['Homeroom A', '9', '#3b82f6', '24', '101', '', '', '', ''],
+      ['Homeroom B', '10', '#ef4444', '', '205', '110', '', '', ''],
     ],
   },
   {
