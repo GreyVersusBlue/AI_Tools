@@ -110,6 +110,7 @@
     "Tools/lab-safety-contract-tracker/test/smoke-contact-sheet.mjs",
     "Tools/ssr-log-tracker/test/smoke-genres.mjs",
     "Tools/grammar-mad-libs/test/smoke-storage.mjs",
+    "Tools/grammar-mad-libs/test/smoke-saves.mjs",
     "Tools/parent-contact-log/test/smoke-reasons.mjs",
     "Tools/rubric-builder/test/smoke-peer-form.mjs",
     "Tools/rubric-builder/test/smoke-share.mjs",

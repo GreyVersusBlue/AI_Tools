@@ -237,9 +237,9 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v251` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v252` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **315** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **213** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| Suites | **214** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
@@ -472,7 +472,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 94 | Export into Review Game Board — emit the question set in the board’s category/points format | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
-| 101 | Multiple saved custom stories — named multi-save for templates plus their word banks | 063 | ½ | | [063 Grammar Mad Libs Generator](#063--grammar-mad-libs-generator) |
 | 102 | Pre-lab and post-lab packet split from one saved template | 065 | ½ | | [065 Lab Report Template Builder](#065--lab-report-template-builder) |
 | 103 | Bulk import a custom bank — paste problem/work/fix/explain rows for a whole unit | 066 | ½ | | [066 Math "Find the Mistake" Warm-Up Generator](#066--math-find-the-mistake-warm-up-generator) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
@@ -8947,9 +8946,8 @@ theme.
 
 #### Major Features
 
-- **Multiple named saved custom stories**, matching the multi-save
-  convention used elsewhere in this toolkit, once custom stories persist
-  at all.
+- ~~**Multiple named saved custom stories**~~ — shipped (v252, 2026-10-05): see
+  `HISTORY.md`. Each save holds its text and its own word bank.
 - **A guided "pick one word of each type" flow** for actually playing Mad
   Libs as a class activity (not just generating a worksheet) — ask for a
   noun, then an adjective, etc., one at a time, building suspense the way
@@ -8975,10 +8973,11 @@ real vocabulary-reinforcement value.
   separate lightweight tool given how different its interaction model
   (one word at a time, suspense-driven) is from the current
   generate-then-print flow?
-- Should custom word-bank additions be per-story (saved with that specific
-  custom story) or global (shared across every template), given a teacher
-  might want "space vocabulary" words available for several different
-  stories at once?
+- ~~Should custom word-bank additions be per-story or global?~~ Decided
+  per-story (v252): the row asked for a text and its bank saved together.
+  The cost is that "space vocabulary" words used by several stories are
+  typed once per story; **Duplicate** carries them over. A shared bank is
+  the cross-tool vocabulary-list item (P7) below, not a second storage mode here.
 
 #### Platform themes that matter here
 

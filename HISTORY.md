@@ -9,6 +9,37 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 063 Grammar Mad Libs Generator: named saved stories, each with its own word bank (2026-10-05, AI-31-063, `CACHE_VERSION` v252)
+
+Audit entry AI-31, BACKLOG rank 101 (½). Per-tool row; the rank-101 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** A "Saved story" card above the template picker: a chooser, **+ New**, **Duplicate**, **Rename** and **Delete** (behind a
+  confirm that names the story and its bank), with a polite status line ("Opened…", "Deleted…"). The controls and wording follow 048
+  (chooser, + New, Duplicate, Rename, Delete, `prompt()` for names, `confirm()` for delete) and the storage shape follows 041 (a list, a
+  current pick, a name per save). A save is `{id, name, text, banks}`: the story and its word bank travel together. Typing in the story box or
+  the bank editor autosaves into the open save, as the one story always did; with no save yet, the first edit starts "My story".
+- **No new key.** The document lives in `gmlg_custom_story_v1`, in Store's envelope at **version 2**: `{list, currentId}`. `_shared/tool-registry.js`
+  therefore needed no change (it is `_shared/`, which a per-tool row may not touch), and Backup & Restore sees the same key. Version 0
+  (`{v: 1, text}`) and version 1 (the bare string) both migrate to one save called "My story", with the old bank map (`gmlg_custom_banks_v1`)
+  as its bank, so what a teacher had is the first save with nothing lost. A bank map and no story also becomes a save. A read rewrites nothing.
+  After the list exists the old bank key is never read again, and **nothing writes it any more**: `check:registry` now prints a STALE warning for it
+  (exit 0). It was left declared on purpose: it is what a backup made before this change restores. Dropping it from the registry is a `_shared/` edit, so it is left for the platform worker.
+- **Calls taken, so they can be reversed.** (1) **Word banks are per-story**, not global; the Open Question is closed that way (the row asked for a
+  text and its bank saved together). Cost: vocabulary shared by several stories is typed once per story, and Duplicate carries it. (2) **Delete may remove the last save**
+  (048 refuses at one; this row asked for a usable empty tool): the empty state is stored as an empty list, so it is remembered across a reload and
+  the legacy keys do not resurrect it. (3) **Opening a save previews it if it has a `{blank}`**, otherwise the chosen template stays. Boot still
+  previews the first template, as before. (4) Names are not unique (048 does not force it); saves are told apart by id. (5) A pending debounced edit is flushed
+  before any switch so it cannot land on the wrong save.
+- **There was no export or state link to keep working**: 063 has no share or JSON export, so "an export made before still opens" is vacuous. The JSON export row is separate.
+- **Tests.** New `Tools/grammar-mad-libs/test/smoke-saves.mjs` (`npm run test:mad-libs-saves`, port 8490, 134 assertions): the empty tool; every legacy shape;
+  junk in the new shape; New, switch, Duplicate (a deep copy), Rename (markup stays text), Delete (cancel, middle, first, last; reload); the fast-switch race for text and
+  bank; keyboard order. `smoke-storage.mjs` sections 2 and 3 were rewritten for the new on-disk shape (1 and 4 unchanged). **35 distinct breaks on purpose** in the page: 34 failed the suite
+  on a named assertion; 1 is equivalent (the migrate step skipping `normalizeDoc`, which `loadDoc` runs again). Four survived at first
+  (deleting the neighbour, an input event with no save, the editor not refreshing on a switch, a bank edit rewriting the old key) and each got an assertion and was re-broken. The first
+  full pass of 53 was stopped after 18 for time; the other 17 were a chosen subset, one per kind of mistake, so about 18 of the 53 written breaks were never run.
+- **Checked.** `test:a11y -- --only 063` (plus axe by hand with two saves in light and dark: only the page's existing moderate landmark notes), `audit-print --check --only 063`,
+  every `check:*`, `lint`, `check:precache -- --base origin/main`, `check:adoption -- --check`. **Not run:** full `npm test`; nothing printed on paper; no screen reader.
+
 ## 060 Fitness & Skill Assessment Tracker: a report card per student (2026-10-05, AI-31-060, `CACHE_VERSION` v251; the commit messages say v249, which `main` took first)
 
 Audit entry AI-31, BACKLOG rank 99 (½). Per-tool row; the rank-99 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
