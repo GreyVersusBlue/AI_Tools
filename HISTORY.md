@@ -9,6 +9,28 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 073 Science Fair Project Tracker: named saved trackers, one per cohort (2026-10-06, AI-31-073, `CACHE_VERSION` v262)
+
+Audit entry AI-31, BACKLOG rank 110 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). Rank 109 (tool 072, share a
+diagram by link) was also deleted: it shipped in #239 (Path 6 P3, v173) and the row was stale, as the Selector's note in the audit said. 072's own section was not touched.
+
+- **What shipped.** A **Saved tracker** card: a chooser, + New, Duplicate, Rename and Delete behind a confirm that names what goes with the tracker, with the
+  same labels and wording as 063's saved stories. Each tracker holds a whole cohort: students, milestones with due dates, ticks and status notes. Print puts
+  the tracker's name on the report ("Period 3 · Printed ..."). Share still sends the milestone list and due dates only, from the open tracker, and an arriving
+  link replaces the open tracker's milestones after a confirm that names it (an empty device opens the link without asking and saves it as the first tracker).
+- **Storage.** The key `sfpt_tracker_v1` is the same; it now holds Store's envelope at version 2, `{list: [{id, name, roster, milestones, done, notes}], currentId}`.
+  The old bare object (version 0) becomes one tracker called "My tracker" with nothing lost; it is not rewritten until the first edit. An untouched page writes
+  nothing (the tracker on screen is a draft that joins the list on its first edit). Delete of the last tracker leaves the empty tool, as 063 does.
+  The registry row, 009's backup and the `student: true` mark are unchanged, because the key is. The tracker names are set with `textContent`, so the inline-sink
+  baseline for 073 stays at 4.
+- **Not applicable.** 073 does not use `Roster.trackRenames`, so there is no per-student history that follows a rename to carry across trackers.
+- **Checks.** New suite `Tools/science-fair-project-tracker/test/smoke-saves.mjs` (`test:science-fair-saves`, port 8500, 128 assertions). 17 breaks on purpose, each
+  run once: 14 failed on a named assertion first time, 1 was dead code (a `draft = null` in Delete that could never matter) and was deleted, 1 survived (which
+  neighbour Delete opens) and got section 5b. Not every assertion has a break of its own (most of section 7, the share arrival, was broken only through
+  the message text). `test:a11y --only 073`, `audit-print --check --only 073`, `smoke-share-rollout` and every `check:*`, `lint` pass; see the audit note.
+- **Not run.** Full `npm test`; nothing printed on paper or read with a real screen reader.
+- **Left on 073.** Student self-check-in, ICS export. No tracker-to-tracker move of a student; no merge of two trackers.
+
 ## 069 PE Warm-Up Circuit Card Generator: "Run the circuit", a projector timer with a rotation signal (2026-10-06, AI-31-069, `CACHE_VERSION` v261)
 
 Audit entry AI-31, BACKLOG rank 106 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).

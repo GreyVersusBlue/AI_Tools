@@ -483,8 +483,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 108 | Multiple named saved image sets, so two vocabulary libraries coexist without re-uploading | 071 | ½ | | [071 Picture-Prompt Speaking/Writing Task Generator](#071--picture-prompt-speakingwriting-task-generator) |
-| 109 | Share a diagram by link, so the same novel’s diagram moves between class periods | 072 | ½ | | [072 Story Elements / Plot Diagram Builder](#072--story-elements--plot-diagram-builder) |
-| 110 | Multiple named saved trackers — one per class period’s science-fair cohort | 073 | ½ | | [073 Science Fair Project Tracker](#073--science-fair-project-tracker) |
 | 111 | Two symbols per label — across the edit form, duplicate logic and the printed card | 074 | ½ | | [074 Science Safety Symbol & Equipment Label Maker](#074--science-safety-symbol--equipment-label-maker) |
 | 112 | Wallet-card layout with QR — a lanyard insert with a phone or email link per entry | 075 | ½ | | [075 Staff Directory / Quick-Reference Builder](#075--staff-directory--quick-reference-builder) |
 | 113 | Room-assignment view — define rooms and proctors, auto-route by accommodation, print proctor lists | 077 | ½ | | [077 Testing Accommodations Reference Card Generator](#077--testing-accommodations-reference-card-generator) |
@@ -11354,9 +11352,7 @@ worth of novel studies stays organized instead of overwriting itself.
 
 #### Major Features
 
-- **Multiple named saved trackers** (e.g. separate science-fair cohorts
-  per class period), matching the multi-save convention used by most
-  builder/tracker tools in this round — right now one tracker per browser.
+- *(Shipped: multiple named saved trackers, v262 — see `HISTORY.md`.)*
 - **Student self-check-in via a share link** (this toolkit's P3 pattern):
   students mark their own milestones complete from their own device,
   instead of a teacher manually checking every box for every student.
@@ -11378,10 +11374,9 @@ turns a teacher-maintained spreadsheet into a shared, live status board.
   their own milestone done, but a teacher must confirm before it counts),
   or is trusting student self-report sufficient for a formative tracking
   tool like this?
-- Next round could pick up any of the Major Features above — multiple
-  named trackers and per-milestone notes are the two that don't require
-  new toolkit-wide infrastructure (P3 share-link plumbing, ICS export) and
-  so are probably the next-cheapest wins.
+- Next round could pick up any of the Major Features above. Multiple named
+  trackers and per-milestone notes are both shipped; the other two need
+  new toolkit-wide infrastructure (P3 share-link plumbing, ICS export).
 
 #### Platform themes that matter here
 
