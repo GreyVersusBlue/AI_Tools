@@ -169,6 +169,10 @@
      the flow rather than hidden, so no blank page follows the last card. */
   @page cards { size: auto; margin: .375in; }
   @media print {
+    /* Out of the flow for every other print (Print directory, Ctrl+P): hidden
+       by `body *` above it would still take its height, and that is blank paper
+       after the directory (audit-print's TAIL). */
+    body:not(.print-cards) #cardsPanel { display: none; }
     body.print-cards { padding: 0; background: #fff; }
     body.print-cards #printArea { display: none; }
     body.print-cards .wrap > :not(#cardsPanel) { display: none; }

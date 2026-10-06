@@ -9,6 +9,70 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 075 Staff Directory: wallet and lanyard cards with a QR per person (2026-10-06, AI-31-075, `CACHE_VERSION` v267)
+
+Audit entry AI-31, BACKLOG rank 112 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** A **Wallet cards & lanyard cards** panel under the directory: one card per person in the order Print directory uses (the search and the sort
+  apply; "Group by department" orders the cards by department). **Print cards** prints them; **Show the cards here, at their printed size** draws the same sheet
+  on the screen at 96 px to the inch. A card has name, role (the Subject / Dept field), room, extension, and a QR that opens a link, with "Scan to call ext. 4214"
+  or "Scan to email" under it, and a dashed edge to cut along that neighbours share.
+- **Sizes, and why.** Both are the **CR80 card, 3.375 × 2.125 in**, the ID-card size that lanyard holders, badge reels and wallet pouches are made for: the
+  **wallet** card on its side (2 across, 4 down, **8 to a page**) and the **lanyard** card upright (3 across, 3 down, **9 to a page**), so one laminating pouch
+  fits either. A business card (3.5 × 2 in) is not a badge size and a 4 × 3 in badge insert needs a bigger holder; both are left (BACKLOG). The page's margin is
+  0.375 in on a named `@page cards { size: auto }`, so Print directory keeps the browser's default page and its old output is untouched.
+- **The code, sized to scan.** Drawn by `QrDraw.draw(canvas, uri, { maxPx })` from `_shared/qr-draw.js` as it is (no edit to `_shared/`): the biggest whole
+  number of pixels per module that fits the room the card gives it, never under qr-draw's measured **4 px floor**, with its 4-module quiet zone. The wallet card
+  gives the code **1.55 in (148 px)**, enough for a version 3 code (an address of up to 48 characters) at 4 px; the lanyard card gives **1.85 in (177 px)**, a
+  version 4 code (up to 73). A link too long for the size gets **no code and a sentence in the editor** ("No QR: 74 characters is too long to scan on a wallet
+  card"), never a code drawn too small. Black on white, from either theme (`.paper-sheet`).
+- **Which link.** Two new optional fields on a person: `email`, and `qr` (`tel`, `mail` or `none`). The **sheet's rule** (Card QR opens: email, or the extension if
+  none; the extension, or the email; email only; extension only; no QR codes; default the first) and each person's own **Card QR** select (Follow the sheet, Call
+  the extension, Email, No QR) decide it, in `wallet-card.js`'s `resolve()`. The text encoded is exactly `tel:<digits>` or `mailto:<address>` and nothing else.
+  A person with nothing to link has no QR and the **editor says so beside their row** (one sentence per row: "QR opens mailto:…", "No QR: no extension or email
+  listed", "No QR: the extension is not a single number"); the card itself says nothing. The extension is dialled as typed, so it works from a phone on the
+  school's system; the page does not pretend an extension is a cell number.
+- **Refused rather than guessed.** `telUri()` takes one number only: a leading "x" or "ext." goes, spaces, dots, dashes and brackets go, a leading + stays, and
+  "4214 / 4215", "4214, 4215" or letters are **not one number, so no QR** (gluing two numbers together would send a call to the wrong phone). `mailUri()` refuses an
+  address with a character that means something inside a mailto: URI (`? & # % =`), a space, a second @, brackets or quotes, because in a staff directory those are
+  typos; an apostrophe and a + tag are legal and kept. Case is kept as typed.
+- **Old data.** A saved directory loads byte for byte (the page never rewrites it on load) and an old person is still the five fields `id, name, room, ext, subject`
+  after being edited: `email` and `qr` are written only when there is something in them, and removed again when the box is cleared or put back to "Follow the
+  sheet". Export JSON, Import JSON and a share link carry both (an unusable `qr` or a non-text `email` in a file is dropped). The **CSV is untouched** (four
+  columns, `ExportKit.toCsv`), so the email does not travel in it: the row said the CSV is not this row's to change. The card settings live in the existing
+  `sdb_prefs_v1` under `card`, **only once they differ from the defaults**, so a device that never touches them keeps exactly `{ "groupByDept": … }` (an existing
+  suite pins that); no new key, so the registry and 009's backup are unchanged. The editor table gained an **Email** column and a **Card QR** column; the
+  Add form an Email box; the bulk-paste box an optional fifth column.
+- **Old against new.** `golden-old-print.json` is Print directory as the page was at main d34651b: the sheet HTML, the PDF text (`pdftotext -layout`) and the page
+  count (2), flat and grouped, for a 12-person sample; the suite captures it again from the page as it is (`_old-print.mjs`) and compares byte for byte. The old
+  print is two PDF pages for twelve people because the hidden editor still takes its height (the TAIL problem `audit-print` knows); left as it was on purpose,
+  since the row said nothing about it changes.
+- **Print path.** The cards print through a `print-cards` class on the body that the Print cards button sets and `afterprint` takes off, which takes everything but
+  the sheet out of the flow (`display: none`, so no blank page follows the last card). 075 has its own `@media print` block, which `print-area.css` would break, so
+  the kit was not used; the cards are pages built with `StaffCards.pages()`, one `.wc-page` per page with `break-after`, not a flowing grid. No print preview (075
+  was not a preview adopter; the on-screen sheet at printed size stands in).
+- **Tests.** `smoke-wallet-card-core.mjs` (`test:wallet-card-core`, pure Node, **110 assertions**) and `smoke-wallet-cards.mjs` (`test:wallet-cards`, port 8501, **171
+  assertions**). The browser suite reads the codes back: for every card it **decodes the canvas with the vendored jsQR and compares the text with the expected
+  `tel:` or `mailto:` URI**, finds the first dark pixel to get px per module (a whole number, 4 or more) and the quiet zone (4 modules on all four sides), checks
+  the canvas is inside the room the card gives it, that a card is 324 × 204 px (or 204 × 324) and no name runs out of it, that cut lines are shared, the PDF
+  (`pdftotext` per page: 1, 8, 9 and 17 wallet cards are 1, 1, 2 and 3 pages; 1, 9 and 10 lanyard cards 1, 1 and 2, all Letter, none of the editor on the paper),
+  markup in a name, subject or address runs nothing, dark mode keeps the card white, and old-print equality.
+- **Deliberate breaks.** Pure-Node suite: 31 mutations of `wallet-card.js` (each regex, limit, mode, note, size and page-size constant), all failing it, one of them a
+  hang caught by a timeout; two survived first (a `?` alone in an address, address case) and got assertions. Browser suite: 19 mutations of the page, each one suite
+  run, all failing it (the cut line solid, a canvas too big, 3 px per module, the editor left on the paper, afterprint, the print class not set, preferences always
+  written, an empty `email` stored, JSON import dropping the new fields, the editor sentence not refreshed, the order ignoring the sort, a name through innerHTML,
+  a changed heading in Print directory's own sheet, the page margin, empty-directory print, the printArea left on the card pages...). Two survived: the `-1px` margin on a
+  card was dead code (the grid track already does it) and was deleted; and **one more, the print-area rule, first survived because the test never filled
+  #printArea**: the test now presses Print directory before Print cards, and that break fails it. Not every assertion has its own break (the dark-mode, the
+  per-size page counts beyond the first and the label/aria ones were not broken individually); a `break-after` removal on `.wc-page` also survived and is equivalent at
+  these sizes (a page of cards is 8.5 in of a 10.25 in page, so the next one cannot fit and breaks anyway).
+- **Found by the guard, fixed.** `audit-print --check --only 075` first said TAIL 0 → 1: the new panel, hidden by `body * { visibility: hidden }`, still took its height in
+  the old print. `body:not(.print-cards) #cardsPanel { display: none }` in print fixes it, and the old-print golden still matches.
+- **Not verified.** Nothing printed on paper or cut; no phone scanned a printed card (jsQR decodes the canvas, and a camera on a laminated card is another matter); a
+  `tel:` of an extension only dials on the school's phone system; the QR was never scanned from a lanyard distance (the 4 px floor is qr-draw's measured one);
+  no screen reader was run on the new columns (axe, seeded, is clean); the full `npm test` was not run. Left, in BACKLOG: photo on the card, a vCard QR, business-card
+  and 4 × 3 in sizes, the email in the CSV, a QR on the wall table, department grouping on the cards.
+
 ## 074 Science Safety Label Maker: two symbols on one label (2026-10-06, AI-31-074, `CACHE_VERSION` v266)
 
 Audit entry AI-31, BACKLOG rank 111 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
