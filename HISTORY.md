@@ -9,6 +9,55 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 20 P3 designed, not built: the live vector viewer for 046 (2026-10-06, AI-28, no `CACHE_VERSION`, no code)
+
+Audit entry AI-28, rank 65 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P3 bullet under
+"Path 20", and a note on rank 65). **The row stays.** Nothing was built, no suite or browser ran; the two docs
+guards that read Markdown were run.
+
+- **What the design is.** One new module beside `bmg-vector.js`, `Tools/blank-map-generator/bmg-live.js`:
+  `parseBaseMapId()` (the inverse of `baseMapId()`), `loadSource()` (the two files unwrapped, projected once into
+  stage pixels and kept as four cached `Path2D`s: land fill with the polar closure, land stroke without, borders,
+  and one path per shaded feature), `drawBaseMap(ctx, source, view, w, h, { dpr, strokePx })` (mat, ocean, land,
+  relief multiplied into the land clip, fills, then a stroke whose width is divided by the scale so it is a
+  constant screen hairline), `drawExtent()` and `createLiveBase()` (a viewport-sized canvas under `#stage`,
+  redrawn on the next animation frame after a view change). **The stage unit does not change** — one unit is one
+  pixel of the 4000 px plate carrée raster, whether or not a raster exists — so every saved label, marker,
+  region, line, view and calibration opens where it was, the hit test and the lat/long maths are untouched, and
+  there is no `__v` bump. **Print parity is one function with two callers:** `drawMapContent()`'s first line calls
+  `drawBaseMap` in place of `drawImage(mapImg, …)`, so PNG, print, PDF, worksheet and the tiled poster get vectors
+  through that one line. `renderBaseMapCanvas()` becomes a wrapper over the same function at the identity view
+  and must stay pixel-identical for 015's map panel and the series sheet. A `vector:` project is drawn live,
+  cache record or none, so a shared project opens with its map on the other machine and the "isn't cached"
+  state stops happening for built-in maps. Keyboard pan and zoom, a focusable named viewport and a live region
+  announcing zoom and extent come with it; nothing fetches. Canvas, not SVG, because every export already needs
+  a canvas and SVG would be a second renderer of the same data.
+- **What the measurements were.** One pure-Node probe over the four vendored files, not kept. `world-countries`
+  is 177 features, 285 rings, 10,583 vertices; `us-states` 56 features, 304 rings, 14,446 vertices (Alaska's ring
+  2,023). Cropped to a preset by ring bounding box the divided layer is 696 to 13,848 vertices. Visvalingam at half a
+  screen pixel keeps 86% of the world's vertices at fit and 96% at 4×, so simplification is not in the design.
+  Unwrapping, projecting and writing every vertex of `us-states` to a path string is 5.1 ms in Node. The raster a
+  teacher's browser holds today is 7 to 16 megapixels a preset, 27 to 60 MiB decoded, twice (image and locator).
+- **What reading the code turned up.** A `vector:` project whose IndexedDB record is gone (the cache cleared, or a
+  `?map=` link opened on another machine) shows "This project's map isn't cached in this browser anymore" and the
+  share note says a built-in map "is picked again there", although the id holds everything needed to redraw it.
+  No key pans or zooms and `#viewport` has no `tabindex`, role or name. The raster's 3 px stroke scales with zoom
+  (0.75 px at a fitted world, 36 px at 12×), which is the smear P3 removes. The overlay SVGs' strokes (region 2.5,
+  line 3.5 stage px) also scale and have no `vector-effect`, which is why `maxScale` is not raised in P3.
+- **Decided here, cheap to reverse.** Canvas over SVG. A constant 1 px screen stroke on screen and on paper. Live
+  draw for every `vector:` id and no new cache records written; the old records left alone. The module beside
+  `bmg-vector.js`, not inside it; nothing moved to `_shared/` (P1's job, and P3 does not wait for P1). The zoom
+  readout's 100% unchanged. `role="group"` with `aria-roledescription="map"`.
+- **Left to Devon, listed in the design and not answered:** whether a printed border should stay a hairline at every
+  zoom or thicken as the raster's did; whether label and marker text should grow with zoom; what to do with the
+  2048 px relief past about 2×; whether "Clear cached maps" should offer to drop only the now-unneeded `vector:`
+  records; whether a keyboard-pannable projected map is ever student-driven (which would make it student-facing);
+  and the P5 network question, which P3 leaves exactly where it was.
+- **Not verified.** No module exists and nothing ran in a browser; the frame cost is Node's projection time, not
+  Chromium's rasteriser, and no Chromebook was measured. The wrapped `renderBaseMapCanvas`'s pixel-identity is a
+  claim the build's parity suite proves. The share-arrival finding was read off `init()` and the share note, not
+  reproduced.
+
 ## Path 7 P5 increment 1: the print kit has a print preview, and 074 is its one adopter (2026-10-06, AI-13, `CACHE_VERSION` v258)
 
 Audit entry AI-13, BACKLOG rank 7 (1). The row stays, rewritten to what is left: the other twelve print-kit pages, and where the control

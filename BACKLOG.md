@@ -445,7 +445,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 62 | Path 19 P5 — audio: TTS on study mode, teacher-recorded pronunciations into the media store | 051 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 63 | Path 20 P1 — `_shared/geo-project.js` + `traceFeature`, hit-test and the curriculum gazetteer | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 64 | Path 20 P2 — dropped GeoJSON/TopoJSON as a base map | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
-| 65 | Path 20 P3 — live vector viewer, keeping the raster path for poster export | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
+| 65 | Path 20 P3 — live vector viewer, keeping the raster path for poster export (**designed 2026-10-06, not built**: the design, its measurements and six questions for Devon are under the P3 bullet; P1 and P2 are not built and the design does not wait for them) | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 66 | Path 20 P4 — time slices for annotations; two-way selective handoff with 015 | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 67 | Path 20 P5 — quiz memory across sessions; decide the Wikimedia network question | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 68 | Track B1 — brand engine in `a11y.js`: school accent and logo, pre-paint, with an opt-out flag | `_shared/` | 1 | | [Track B](#track-b--custom-theme--branding-pass) |
@@ -5080,6 +5080,262 @@ runtime, the one content fetch that leaves the browser.
   viewer (SVG or canvas re-render on zoom) so zoom is sharp, keeping the raster
   path for poster export and the print pipeline. *Fable for keeping hit-testing,
   labels and the tiled poster print consistent between the two render paths.*
+  **Designed, not built (AI-28, 2026-10-06, a design pass: no code, nothing run in a browser). Everything from
+  here to P4 is the design.** Read from the tree at v258: 046's page whole (the stage markup, `displayMap()`,
+  `drawMapContent()`, `renderMapCanvas()`, `printMap()`, `savePdf()`, `printTiledPages()`, the worksheet and
+  series renderers, the share mount and `init()`), every `bmg-*.js` module, `data/README.md`, the relief entry in
+  `Tools/blender-art/renders.json`, the 046 registry row and a11y seed, the six `test:blank-map` suites, and the
+  two readers of `bmg-vector.js` outside 046 (`Tools/timeline-builder/tlb-places.js`, which calls
+  `renderBaseMapCanvas` and downscales; `Tools/geography-bee-quiz-generator/gbq-map.js`, which reads the data and
+  draws its own). Figures marked *measured* came from one pure-Node probe over the four vendored files (counting,
+  bounding-box crop tests against the nine presets, a Visvalingam pass, and the time to unwrap, project and
+  write every vertex as a path string); it was not kept. P1 and P2 are not built; this design does not wait for
+  either, and says what each may take from it. Nothing here fetches from the network. Questions that are Devon's
+  are listed at the end and not answered.
+  - *What is there today, as read.* The base map on screen is one `<img id="mapImg">` inside `#stage`, which the
+    viewer (`bmg-viewer.js`) moves with a CSS `translate()`/`scale()`; `minScale` 0.05, `maxScale` 12; the wheel
+    zooms by 1.12, the buttons by 1.25, and `fit()` leaves a 4% margin. The image is the PNG that
+    `renderBaseMapCanvas()` drew once at a 4000 px long side and that `bmg-map-cache.js` keeps in IndexedDB
+    (`bmg-maps`/`images`, keyed by the `vector:<preset>:<n,s,w,e>:<style>[+borders][+relief][:choro:<hash>]` id).
+    **Every coordinate the project stores is a pixel of that 4000 px raster:** label and marker `x`/`y`, region
+    rings (rounded to whole pixels by `compactRings`), line points, `project.view`, and the measure tool; the
+    calibration is the preset's bounds and `toLatLon`/`fromLatLon` take the raster size. The grid (`#gridLayer`
+    divs), regions (`#regionSvg`), lines and measure (`#lineSvg`, `#measureSvg`) sit inside the stage and scale
+    with it; labels (`.bmg-label`), markers, chips, legend, compass, scale bar and locator sit outside it in
+    viewport space and are moved on every `onChange` by `stageToScreen()`. Nothing is drawn on a canvas on screen.
+    **Every export redraws the layers from project data onto a canvas** in `drawMapContent(ctx, cssW, cssH, opts)`,
+    which starts with `ctx.drawImage(mapImg, -x/scale, -y/scale, cssW/scale, cssH/scale, 0, 0, cssW, cssH)` and
+    then draws grid, regions, lines, markers and labels through the same `viewer.stageToScreen()`; `renderMapCanvas`
+    adds legend, compass, locator, scale bar and credit. Its callers: Download PNG (at `devicePixelRatio`, capped
+    at 2), Print Map and Ctrl+P (`buildExportCanvas(PRINT_DPI = 200)`, the canvas becomes an `<img>` in
+    `#printExportStage` and `window.print()` runs with `body.printing-map-export`), Save PDF (the same canvas as a
+    JPEG in jsPDF), the worksheet (which temporarily `setView()`s the viewer to fit the map in its box), and the
+    tiled poster (`setView()` to a virtual window of `cols × 1200` by `rows × 1550` at the current scale, one
+    `drawMapContent` on that canvas, then slices). Only the time-slice series sheet re-renders vectors, through
+    `renderBaseMapCanvas(…, { longSide })`. The locator inset shows the same raster blob at 150 px. The zoom
+    readout is `scale × 100 %`, so "100%" is the raster at 1:1 and a fitted world map reads about 25%.
+    **The screen and the paper agree today because both read the same raster through the same `stageToScreen`
+    arithmetic**, with the page's colours as literals (`#eef0ec` mat, `#fff` label boxes, `#1f3550` ink), and
+    the page's head comment says so. Keyboard: Esc, Enter, Ctrl+P, undo/redo, and arrows nudging the *selected*
+    label or marker; **no key pans or zooms**, `#viewport` has no `tabindex`, role or name, and nothing announces
+    the view. The hit test (`bmg-hittest.js`) projects the divided file once into raster pixels and tests clicks
+    converted by `screenToStage()`. 015 and 062 import `bmg-vector.js` only for `renderBaseMapCanvas` and
+    `BASE_MAP_PRESETS`; 062 draws its own thumbnails from the data.
+  - *Measured.* The four files are 86, 191, 154 and 255 KB and parse in 3 to 5 ms. `world-land`: 125 rings, 5,127
+    vertices; `world-countries`: 177 features, 285 rings, 10,583 vertices, largest ring 554; `us-nation`: 250
+    rings, 8,826 vertices; `us-states`: 56 features, 304 rings, 14,446 vertices, largest ring 2,023 (Alaska). Three
+    world rings cross ±180 and one (Antarctica) encircles; no US ring does. Cropped to a preset by ring bounding
+    box, the divided layer is 696 vertices (Oceania) to 13,848 (all 50 states), the whole layer 973 to 8,228.
+    Visvalingam at half a screen pixel keeps 86% of the world's vertices at fit on a 1,000 px stage and 96% at 4×;
+    the 50-state crop keeps 42% at fit (the Aleutians) and 94% at 4×; every other crop keeps over 95% at fit.
+    **Simplification buys nothing the eye would notice above fit and is not in the design.** Unwrapping,
+    projecting and writing every vertex of `us-states` to a path string is 5.1 ms in Node (3.6 ms for the world);
+    the path string is 194 KB. The raster the page holds today is 7.1 to 15.8 megapixels a preset, 27 to 60 MiB
+    decoded, twice (the image and the locator share a blob but not a bitmap), plus the 4000 px canvas while it is
+    being drawn. The poster path's largest canvas is 4,800 × 6,200 (4 × 4 tiles), 30 megapixels, under Chromium's
+    canvas area limit.
+  - *What P3 is for, in one sentence.* Past 100% on the readout the raster is upsampled: at 12× a border is a 12 px
+    smear, and the same smear is on every poster tile and on a print of a zoomed view. With the data this small
+    the map can be drawn from the vectors at whatever the view is, in the time one frame allows, with a hairline
+    that stays a hairline.
+  - *The rule the design is held to.* **The stage unit does not change: one unit is one pixel of the 4000 px
+    plate carrée raster that `pixelSizeFor(preset.bounds)` describes**, whether or not a raster exists. Every
+    saved label, marker, region, line, view and calibration therefore opens where it was, `bmg-hittest.js` is
+    untouched, `toLatLon`/`fromLatLon` are untouched, and a project saved before P3 is a valid project after it with
+    no `__v` bump and no migration. The second rule: **what the teacher sees is what the paper gets**, held by one
+    draw function with two callers, not by two renderers kept alike by hand.
+  - *Canvas, not SVG, and why.* An SVG base map would make the browser do the zoom transform and keep text crisp;
+    neither is needed (labels are DOM already) and both exports would still need a canvas, so SVG would be a
+    second renderer of the same data, which is the drift this design exists to prevent. The relief is a multiply
+    composite clipped to land, which canvas does in three lines and SVG does with filters. The choropleth and the
+    hit test already live in raster pixels. So: **one function, `drawBaseMap(ctx, source, view, w, h, opts)`,
+    draws the base map for a view; the screen calls it on a viewport-sized canvas and every export calls it in
+    place of today's `drawImage(mapImg, …)`.** The raster path stays for maps that are pictures (Wikimedia,
+    uploads): a project whose id is not `vector:` behaves exactly as today, the two paths coexist in the page and
+    the id's prefix chooses.
+  - *The module's whole surface: `Tools/blank-map-generator/bmg-live.js` (the viewer's renderer), ES module, DOM-free
+    but for the canvas it is handed.*
+    - `parseBaseMapId(id)` → `{ preset, bounds, style, borders, relief, choroKey } | null`: the inverse of
+      `baseMapId()`, from the id string alone (today only `presetFromBaseMapId` exists, which drops everything but
+      the preset). `null` for a Commons or upload id. Round-trips every id `baseMapId()` can produce, including a
+      preset whose bounds a future P2 writes into the id.
+    - `loadSource(spec, { fills })` → `Promise<source>`: loads the whole and divided files (through `bmg-vector.js`'s
+      in-memory `geoCache`), unwraps and shifts every ring once with `drawableRings`, projects it once into stage
+      pixels with `projectPoint(bounds, width, height, …)`, and builds **four cached `Path2D`s in stage units**:
+      `landFill` (the whole layer, closed through the pole), `landStroke` (the whole layer, open at the pole),
+      `borderStroke` (the divided layer) and, per shaded feature, its own `evenodd` path (so a country's holes
+      cancel only against its own rings, as `paintChoropleth` does today). Returns `{ spec, width, height, paths,
+      fills, relief: HTMLImageElement | null, calibration }`. The relief image is loaded here when the spec asks and
+      no fills are set, exactly `renderBaseMapCanvas`'s rule. `source.width/height` are `pixelSizeFor(bounds)`.
+    - `drawBaseMap(ctx, source, view, cssW, cssH, { dpr = 1, strokePx })`: paints the mat and ocean, then
+      `ctx.setTransform(dpr·scale, 0, 0, dpr·scale, dpr·x, dpr·y)` and fills `landFill`, multiplies the relief
+      clipped to it, fills each shaded path, then strokes borders or coastline with `ctx.lineWidth = strokePx /
+      scale`, so the line is `strokePx` *screen* pixels at any zoom. The default `strokePx` is what the raster
+      shows at fit today, 1 px (the raster's stroke is `max(1, round(4000/1600)) = 3` raster px, which a fitted
+      world shows at 0.75 px and 12× shows at 36 px). The function never reads the DOM and never allocates: a frame
+      is four path operations on cached paths plus one `drawImage`. Returns nothing. Colours are
+      `bmg-vector.js`'s `STYLE_PAINT` (exported), the same literals the raster used.
+    - `drawExtent(source, view, cssW, cssH)` → `{ west, east, south, north }`: the lat/long rectangle the view
+      shows, for the live region and the suite.
+    - `createLiveBase(viewport, viewer, { getSource })`: the screen half. Puts a `<canvas id="baseCanvas">` as the
+      first child of `#viewport` (position absolute, inset 0, under `#stage`; `aria-hidden="true"`), sizes it to
+      the viewport at `devicePixelRatio` on `ResizeObserver`, and redraws **on the next animation frame after any
+      view change, coalescing** (a wheel burst of 20 events is one draw). `show(source)`, `hide()`, `redraw()`,
+      `toCanvas()` (the current frame, for the suite and the locator). The viewer's `onChange` gains one call.
+  - *What `bmg-vector.js` changes (P1 may move it; P3 does not wait).* `renderBaseMapCanvas()` becomes a wrapper:
+    `loadSource` then `drawBaseMap` at the identity view onto a `width × height` canvas with `strokePx` set to
+    today's raster stroke (`max(1, round(longSide/1600))`), so **its output is pixel-identical to today's** for
+    015's map panel, 046's series sheet and the cache records — the suite holds it to that. `STYLE_PAINT` is
+    exported. `buildBaseMapRecord()` is kept for the series and for 015 and is no longer called by the picker.
+    Nothing moves to `_shared/` in P3; if P1 lands first, `bmg-live.js` imports `projectPoint`/`drawableRings`
+    from `_shared/geo-project.js` instead, and nothing else in this design changes.
+  - *What the page changes.*
+    - `useBuiltInBaseMap()`: builds the spec and `fills` as today, computes the same id, and instead of
+      `buildBaseMapRecord`/`putCachedMap`/`displayMap(record)` calls `displayLive(id, spec, fills)`: `loadSource`,
+      `liveBase.show(source)`, `mapImg` hidden, `currentSize` = `source.width/height`, `project.mapId = id`, the
+      calibration from the source, then the same `isSameMap`/`keepAnnotations` branch, layer `setSize`s,
+      `renderGrid()` and `fit()`/`setView()` as `displayMap()` runs now (the shared tail is one function both call).
+      **No IndexedDB write for a `vector:` id any more.** Records already in `bmg-maps` are left alone: the "Recently
+      used" card still lists them, and clicking one whose id parses goes through `displayLive`, ignoring the blob.
+    - `loadActiveProjectIntoUI()`: a `vector:` `project.mapId` is drawn live, cached record or none, **so the
+      "This project's map isn't cached in this browser anymore" state no longer happens for a built-in map, and a
+      shared project (`?map=`) opens on the receiving machine with its map drawn.** Today it arrives map-less and the
+      share note says a built-in map "is picked again there"; the note's sentence changes to say that a built-in map
+      travels and a Wikimedia or uploaded one does not. The fills for a shaded map are recomputed from
+      `project.choropleth.text` through `buildActiveChoropleth` on load, as the shading panel does on Apply, and
+      `legendRows` are kept as stored (they are the key to the same fills).
+    - `drawMapContent()`: the first line becomes `if (liveSource) drawBaseMap(ctx, liveSource, viewer.getView(),
+      cssW, cssH, { strokePx: 1 }) else ctx.drawImage(mapImg, …)`. Every caller (PNG, print, PDF, worksheet, poster)
+      gets vectors through that one line and nothing else in them changes. The export canvas is drawn at `dpr`, so
+      a 200 dpi print of a 12× view has a crisp border; the poster's `cols × 1200` canvas is drawn once at its own
+      size, as today.
+    - The locator inset: `locator.setImage()` takes `liveBase.toCanvas()` drawn at a fit view onto a 150 px canvas
+      (one `drawBaseMap` call), instead of the raster blob URL.
+    - `updateZoomReadout`: unchanged numerically (100% is still the 4000 px unit at 1:1), so saved views and the
+      suites' expectations hold; a `title` on the readout says what 100% means.
+    - Keyboard and screen reader (none of this exists today): `#viewport` gets `tabindex="0"`, `role="group"`,
+      `aria-roledescription="map"` and an `aria-label` from the map title; with focus on the viewport and no label
+      or marker selected, arrows pan by a tenth of the viewport (half with Shift), `+`/`=`/`-` zoom by 1.25 about
+      the centre, `0` fits, `Home` fits, and the existing nudge keys keep precedence when a label is selected.
+      A visually hidden `#viewerStatus` (`aria-live="polite"`) says, 500 ms after the last change, "Zoom 240%,
+      showing 25°W to 45°E and 34°N to 72°N" from `drawExtent`; for a raster map without calibration it says the
+      zoom only. Pinch and wheel are untouched.
+    - Dark theme: `#baseCanvas` is inside `.paper-sheet`, so it keeps its light literals as `mapImg` does; the
+      page's head comment gains one sentence. Nothing prints in dark ink.
+    - Reduced motion: no animation is added, so nothing to honour.
+  - *The algorithm and its edge cases.*
+    - Antimeridian: `drawableRings` emits Fiji and Chukotka twice, shifted 360°, into the cached paths, so both
+      halves are in the path at the right edge and the hit test and the picture agree as they do now. Antarctica's
+      polar closure is in `landFill` and not in `landStroke`.
+    - Holes: `landFill` is the whole layer with `evenodd`, so lakes in it stay holes; a shaded feature is its own
+      path. The border stroke is one path over the divided layer, so a shared border is stroked twice at the same
+      place, as the raster does.
+    - Off-screen work: the paths are whole; the canvas clips. At 12× on a 1,000 px viewport the visible rectangle
+      is 83 stage px wide and the stroke of 14,446 vertices still costs one path op; measured in Node at 5 ms for
+      the projection, which the cache does once, and the per-frame op is the browser's own rasteriser. A frame
+      budget of 8 ms on a 2019 Chromebook is the target; the suite measures Chromium on the build machine and
+      records, not asserts, the time (the number a teacher's machine gives is not known).
+    - Stroke under zoom: constant screen width (decided here; Devon's question 1 below is whether it should scale
+      on paper). The raster's stroke scaled, which is why 12× looked fat and fit looked thin.
+    - `maxScale` stays 12 and `minScale` 0.05: raising the ceiling is now free, but the overlays' SVG stroke
+      widths (region 2.5, line 3.5 stage px) and the grid's 1 px are stage-scaled and would thin to nothing or
+      thicken to bars; they are P3's known limit, not its work, and a `vector-effect: non-scaling-stroke` on those
+      SVGs is the one-line follow-up listed under "left out".
+    - Relief: drawn by `drawImage` of the 2048 px WebP into the land clip at the view's scale; its ceiling shows past
+      about 2× on the world preset (2048 px over 4000 stage units), which the Path 21 entry accepted. The multiply
+      composite is bounded by the clip, so sea stays the ocean colour, as `smoke-relief` checks.
+    - A `fills` entry naming a feature not on this crop is ignored (the path is empty); `choroKey` in the id is
+      computed exactly as today, so a shaded map's id is byte-identical before and after P3.
+    - Resize: `applyViewportSize()` already refits on resize; the canvas resizes with it and redraws once.
+    - A `vector:` id with a preset key the page no longer has (`findPreset` returns null): the empty state with
+      today's "isn't cached" sentence, and the raster record, if there is one, is used instead — the only case
+      the raster path serves a `vector:` id.
+    - Memory: one parsed file pair (under 1 MB of objects), four `Path2D`s, a viewport canvas (a 1,000 × 750
+      viewport at `dpr` 2 is 12 MiB) and the 150 px locator canvas, in place of two decoded rasters of 27 to 60 MiB
+      each. The 4000 px canvas exists only while an export or the series sheet draws it, as it does today for the
+      poster.
+  - *What P2 (dropped GeoJSON) may take from this, and what the viewer must tolerate from it.* `loadSource` takes a
+    `spec` with `bounds` and either a dataset name or a `{ whole, divided }` pair of parsed FeatureCollections, so a
+    dropped file is a source like any other once P2 has calibrated it. The viewer tolerates: a `Feature` or bare
+    geometry as well as a collection; `Polygon` and `MultiPolygon` drawn, `LineString`/`MultiLineString` stroked
+    as borders, `Point`s ignored (P2 may turn them into markers); a third coordinate dropped; an unclosed ring
+    closed; a ring under four positions dropped; longitudes outside ±180 unwrapped as now; and a file over a
+    **vertex budget of 250,000** (about 17 times `us-states`) refused by P2 with a message, not simplified by the
+    viewer. A missing `name` means no hit test and no shading for that feature, nothing else. None of this is
+    built in P3; the viewer's input shape is written so P2 does not need to change it.
+  - *What P4 and P5 get, and what stays theirs.* A per-slice annotation store (P4) changes nothing here: the base
+    map is drawn once per view whatever slice is shown, and a small-multiple sheet calls `drawBaseMap` once per
+    panel at that panel's size instead of rendering a 4000 px raster per panel and downscaling. Quiz memory (P5) does
+    not touch the renderer. The Wikimedia search, fetch, cache and "Recently used" card are untouched by P3 and the
+    network question stays P5's.
+  - *The tests that would prove it.* All in `Tools/blank-map-generator/test/`, each a `test:<name>` and a
+    `suites.json` line; the five existing `test:blank-map` suites and `test:timeline` and `test:geo-bee` must stay
+    green unchanged.
+    - `live-base.test.mjs` (pure Node, no port): `parseBaseMapId` round-trips every id `baseMapId` makes over the
+      nine presets × two styles × borders × relief × a `choroKey`, and returns `null` for `upload:` and Commons
+      ids; `drawExtent` at a fit view on each preset returns the preset's bounds and at 4× about the centre
+      returns a quarter of each span; `loadSource` against the vendored files (with a `Path2D` stub recording
+      calls) produces one `landFill` with the polar closure and one `landStroke` without, and the twice-emitted
+      Fiji and Chukotka rings.
+    - `smoke-live-parity.mjs` (port 8252): the heart. For each of the nine presets, outline and land, borders on
+      and off, relief on for the world: **(a) raster parity** — `renderBaseMapCanvas()` before and after P3 at
+      4000 px, pixel-identical (the suite keeps a copy of today's `renderBaseMapCanvas` body, as `export.test.mjs`
+      kept `duplex-print.js`'s functions); **(b) screen-to-paper parity** — at a fit view, a 3× view and a 12×
+      view each about a chosen stage point, the bytes of `liveBase.toCanvas()` equal the bytes of a canvas drawn by
+      `drawMapContent` at `dpr` 1 with every overlay empty, and at `PRINT_DPI` the export's pixel at each of six
+      probe points (ocean, land, a border, a shaded state, Fiji's far half, Antarctica's cap) has the colour the
+      screen pixel at the mapped position has; **(c) sharpness** — at 12× the border's cross-section is under 3 px
+      wide in the print canvas where the raster's was over 20; **(d) the id** of a shaded map is the string the
+      old path produced.
+    - `smoke-live-viewer.mjs` (port 8253): a saved project from the seed with a label, a marker, a region and a
+      line at stage coordinates opens on the live base at the same `stageToScreen` positions as under the raster
+      (the suite computes them from `project.view`); a share link of a shaded world project opens in a fresh
+      context with the map drawn and the legend's rows, with no IndexedDB record present and no request off-site;
+      a `vector:` project whose `bmg-maps` record was deleted opens drawn; the "isn't cached" sentence still
+      appears for a Commons id with no record; click-to-shade on the live map shades Texas as `smoke-hittest` does;
+      20 wheel events in one task produce one draw (a counter on `drawBaseMap`); no console errors; `a11yScan`
+      serious/critical clean with the viewport focused.
+    - `smoke-live-keys.mjs` (port 8254): Tab reaches the viewport; arrows pan by a tenth, Shift-arrows by half;
+      `+`/`-`/`0` zoom and fit; with a label selected the arrows nudge it and do not pan; the live region's text
+      after a pan and after a zoom matches `drawExtent` and says the zoom; the relief toggle and the readout are
+      unchanged.
+    - `smoke-live-print.mjs` (port 8255): Print Map at a 6× view through Chromium's PDF (`pdftoppm` where huginn
+      has it, structure only where not): the page has one image the size `getPhysicalPageInches` gave, and the
+      PDF's raster at the six probe points matches the screen's within JPEG tolerance; the 2 × 2 poster's tiles
+      from `printTiledPages` at that view join (the overlap strips are pixel-equal) and the border is crisp on
+      each; the worksheet's map panel through the live path equals the panel through the old path at its box
+      size within the raster's own downscale (the panel was already a resample).
+    - A row in `Tools/a11y-sweep/seeds.mjs` for a `vector:` project with annotations, so the a11y sweep's seeded
+      pass and `path7:next` reach the live map, and a `print-audit-prep.mjs` entry if the seed is not enough.
+    - Timing is logged by the parity suite (`performance.now()` around `drawBaseMap` at the three views, median of
+      30) and asserted only as a floor of 40 ms on the build machine.
+  - *Known limits and what is deliberately left out.* No simplification (measured as not worth having).
+    `maxScale` is not raised and the overlay SVG strokes are not made non-scaling. Labels are not re-tidied on
+    zoom, and `tidyOverlaps` still measures at the current zoom. No screen-reader list of the labels (the labels
+    are DOM already; a list is an a11y row of its own). No Wikimedia map gets a vector path. The raster records
+    already on teachers' disks are not deleted. `renderBaseMapCanvas`'s 4000 px default for 015 and the series
+    stays. No WebGL, no OffscreenCanvas, no worker: the counts do not need them. The locator is a canvas, not an
+    `<img>`, which `drawPngLocator` must read with `drawImage` of the canvas rather than `#locatorImg`.
+  - *Decided here, cheap to reverse.* Canvas over SVG. Constant screen stroke, 1 px on screen and in the export
+    (one option in `drawBaseMap` flips it to scaled). Live draw for any `vector:` id, cache record or none, and no
+    new records written. The viewer's own module `bmg-live.js` beside `bmg-vector.js`, not inside it. The readout's
+    100% unchanged. `role="group"` with `aria-roledescription` rather than `role="application"`, so a screen
+    reader keeps its own keys.
+  - *Left to Devon, listed and not answered.* (1) On paper, should a border be a constant hairline at every zoom
+    (what the screen will show) or thicken with zoom as the raster's did, which some teachers may read as "the
+    map I printed before"? (2) Should label and marker text grow with zoom now that the map under it is sharp at
+    12×, or stay fixed-size as today? (3) Past about 2× on the world preset the relief is visibly soft under crisp
+    borders: hide it above a zoom, keep it as accepted in Path 21, or render a larger relief on the Windows
+    machine? (4) Should the "Clear cached maps" button say that built-in maps no longer need the cache, and offer
+    to drop only the `vector:` records (a teacher's own uploads untouched)? (5) Keyboard panning makes the map
+    focusable for the first time: is a projected map ever driven by a student at the keyboard, which would make the
+    viewer student-facing and its promotion Devon's call? (6) The P5 network question stands exactly as before:
+    nothing in P3 fetches, and the Wikimedia path is neither improved nor removed by it.
+  - *Not verified.* No module exists and nothing ran in a browser; the frame cost is Node's projection time, not
+    Chromium's rasteriser, and no Chromebook was measured. The pixel-identity of the wrapped `renderBaseMapCanvas`
+    is a claim about drawing the same paths with the same state in the same order; the build proves it with (a).
+    The share-arrival finding (a `vector:` project arrives map-less) was read off `init()` and the share note, not
+    reproduced. The page's `?map=` payload was not measured.
 - **P4 — Time slices for annotations.** Per-slice labels/lines/regions with a
   scrubber; small-multiple print; a two-way, selective handoff with 015 (send
   selected labels *and* markers; come back from a timeline into a map project).
