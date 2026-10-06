@@ -173,6 +173,13 @@ await page.click('#previewBtn');
 ok(await page.isEnabled('#previewPrintBtn'), 'the preview can always print');
 await page.click('#closePreviewBtn');
 
+/* the other way round: everything in the post-lab packet, then one back */
+for (const k of SEC) await page.selectOption('#split_' + k, 'post');
+eq(await page.isDisabled('#printPreBtn'), true, 'a pre-lab packet with nothing in it cannot be printed either');
+eq(await page.isDisabled('#printPostBtn'), false, 'and the post-lab one can');
+await page.selectOption('#split_procedure', 'pre');
+eq(await page.textContent('#splitSummary'), 'Pre-lab packet: 1 section. Post-lab packet: 6 sections.', 'one section is "1 section", not "1 sections"');
+
 /* ── 8. junk in a saved split ────────────────────────────────────────────── */
 await seed(page, { ...LEGACY, split: { data: 'maybe', objective: 'post', materials: 5, nonsense: 'pre' } });
 await reopen();

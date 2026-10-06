@@ -9,6 +9,42 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 065 Lab Report Template Builder: pre-lab and post-lab packets from one template (2026-10-05, AI-31-065, `CACHE_VERSION` v252)
+
+Audit entry AI-31, BACKLOG rank 102 (½). Per-tool row; the row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** A "Pre-lab and post-lab packets" card: one select per section (Objective, Hypothesis, Materials, Procedure, Data table,
+  Observations, Conclusion) says which packet it prints in, a live count ("Pre-lab packet: 4 sections. Post-lab packet: 3 sections."), and
+  buttons **Print pre-lab**, **Print post-lab** and **Print both packets**. The header's button is now **Print whole report** (same `#printBtn`),
+  and the preview has a Show select (whole report, pre-lab, post-lab, both) that the preview's Print follows. Each packet has its own title, a
+  tag ("Pre-lab packet") and its own Name/Date/Period line, so the second can be handed out on its own; "both" puts the second on a new page
+  (`break-before: page`, with the on-screen dashed divider dropped on paper). Section headings keep with what follows them and a data row is
+  not split (print rules, all print output).
+- **Defaults and storage.** Objective, hypothesis, materials and procedure are pre-lab; data, observations and conclusion are post-lab. The
+  tool has no safety section, so none is invented. The choice is one new optional field, `split`, on the saved template, written whole only when
+  a teacher changes a select. A template saved before (no `split`) is read through the defaults and **not rewritten by being opened**; a junk
+  value in `split` falls back per section. A starter ("Load template") or New template starts at the defaults. A share link carries `split`
+  (known values only); a link from before gets none made up.
+- **The whole report did not change.** `golden-whole-report.html` is the whole-report markup recorded from the page before this change, for a
+  made-up template; the suite compares the new page to it byte for byte, before and after the split is changed.
+- **Calls taken, so they can be reversed.** (1) A packet with no sections cannot be printed (button disabled; its preview says so); "both"
+  prints only the packets that have something. (2) No running header repeated on every page of a packet: a packet that runs to a second page
+  has the title on its first. A fixed header would collide with content in `#printArea`'s flow and `audit-print` has no way to check it; the
+  rows say "headers" and this takes it as a header per packet. (3) The "Scientific Method / Experiment Design Planner" question stays open: this
+  is a split of this tool's own template, not a planning-worksheet mode; rank 98 (059's hand-off) is untouched.
+- **Tests.** New `Tools/lab-report-template-builder/test/smoke-packet-split.mjs` (`npm run test:lab-report-packets`, port 8491, 64 assertions):
+  defaults, an old save unchanged byte for byte, the golden whole report, each packet's sections, tag, name line and title, moving sections,
+  save and reload, what each print button prints (`window.print` stubbed), computed page-break rules in print media, Chromium's PDF page count (1, 1,
+  2), empty packets in both directions, junk in `split`, share links with and without `split`, a new template, the keyboard, labels, axe, no
+  console errors. **37 breaks on purpose** in the page: 34 failed a named assertion first time; 1 (a select's label broken) made the suite
+  throw rather than fail an assertion; 2 survived (the "1 sections" plural, and the pre-lab button never disabled, since the suite only
+  emptied the post-lab packet) and each got an assertion and was broken again. Not every assertion has its own break (the Name-line pattern, the two
+  `isDisabled` positive checks and the axe scan have none).
+- **Bookkeeping.** `inline-sinks-baseline.json` 065: 6 to 5 (the three print handlers now share one `innerHTML` assignment, as the ratchet asks).
+- **Checked.** `test:a11y -- --only 065`, `audit-print --check --only 065`, `smoke-typed-columns`, `smoke-print-tail`, every `check:*`, `lint`,
+  `check:precache -- --base origin/main`, `check:adoption -- --check`. Not run: full `npm test`; nothing printed on paper or read with a real
+  screen reader; a PDF page count is Chromium's, not a printer's.
+
 ## 060 Fitness & Skill Assessment Tracker: a report card per student (2026-10-05, AI-31-060, `CACHE_VERSION` v251; the commit messages say v249, which `main` took first)
 
 Audit entry AI-31, BACKLOG rank 99 (½). Per-tool row; the rank-99 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
