@@ -467,7 +467,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 94 | Export into Review Game Board — emit the question set in the board’s category/points format | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
-| 99 | Per-student report cards — one page per student across all events and dates, with the class average | 060 | ½ | | [060 Fitness & Skill Assessment Tracker](#060--fitness--skill-assessment-tracker) |
 | 100 | Improper, mixed and negative values — extend operand generation past 0–1 | 061 | ½ | | [061 Fraction–Decimal–Percent Conversion Drill Generator](#061--fractiondecimalpercent-conversion-drill-generator) |
 | 101 | Multiple saved custom stories — named multi-save for templates plus their word banks | 063 | ½ | | [063 Grammar Mad Libs Generator](#063--grammar-mad-libs-generator) |
 | 102 | Pre-lab and post-lab packet split from one saved template | 065 | ½ | | [065 Lab Report Template Builder](#065--lab-report-template-builder) |
@@ -8237,9 +8236,9 @@ scientific-method workflow.
 - **Retest workflow**: duplicate an existing event as "<name> — Retest"
   in one click, pre-filling nothing but keeping the same type, instead of
   manually adding and renaming a new event every time.
-- **Individual student report cards**: a print view that's one page per
-  student across all events and dates, instead of only the single
-  whole-class grid view, for handing back to students/parents.
+- ~~**Individual student report cards**~~ — shipped (v250, 2026-10-05): see
+  `HISTORY.md`. A "Report cards" card prints one page per student (one chosen,
+  or everyone); there is still no min, max, rank or trend on it.
 
 #### Moonshot / North Star
 
@@ -8256,10 +8255,10 @@ reporting requirements instead of just a spreadsheet substitute.
   typos) with parsing/validation on blur, or as two separate minute/second
   number inputs — trading a little more visual complexity for guaranteed-
   parseable data from the start?
-- Is per-student report cards a feature that belongs in this tool, or
-  would it fit better as a shared "printable report card" pattern reused
-  across several data-collecting tools (this one, Science Fair Project
-  Tracker, Duty Roster Builder) rather than reimplemented per tool?
+- Report cards were built in this tool, on `#printArea` and the page's own
+  table styles (decided 2026-10-05, no shared pattern exists to reuse). If a
+  second data-collecting tool wants one, lift `buildCardHtml()` into
+  `print-kit` then; nothing here is stored, so moving it costs nothing.
 
 #### Platform themes that matter here
 
