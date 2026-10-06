@@ -230,6 +230,11 @@ eq((await records(page)).length, 5, 'a reload with every record past its grace p
 same(await options(page), ['My pictures (3 pictures)', 'School vocabulary (2 pictures)'], 'a reload keeps both sets');
 eq(await selected(page), 'School vocabulary (2 pictures)', 'and the one that was open');
 eq(await thumbCount(page), 2, 'with its pictures drawn');
+await page.selectOption('#imageSetSelect', firstId);
+await settle(page, 200);
+eq(await page.$$eval('#thumbGrid img', i => i.length), 3, 'after a reload the set that was not open draws from the store when opened (every set\'s pictures are read at boot)');
+await page.selectOption('#imageSetSelect', d2.sets[1].id);
+await settle(page, 150);
 
 /* ── 3. duplicate shares the pictures ─────────────────────────────────── */
 const recsBeforeDup = await records(page);
