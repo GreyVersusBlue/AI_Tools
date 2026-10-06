@@ -209,6 +209,7 @@
     "Tools/exit-ticket-generator/test/smoke-print.mjs",
     "Tools/certificate-award-maker/test/smoke-print.mjs",
     "Tools/science-safety-label-maker/test/smoke-print.mjs",
+    "Tools/science-safety-label-maker/test/smoke-preview.mjs",
     "Tools/classroom-label-maker/test/smoke-print.mjs",
     "Tools/vocab-flashcard-generator/test/smoke-print.mjs",
     "Tools/vocab-flashcard-generator/test/smoke-imposition.mjs",

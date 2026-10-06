@@ -148,6 +148,7 @@
         <option value="large">Large (2/row)</option>
       </select>
       <button type="button" class="secondary" id="shareBtn">&#128279; Share labels&hellip;</button>
+      <button type="button" class="secondary" id="previewBtn">Preview pages</button>
       <button class="secondary" id="printBtn">Print labels</button>
     </div>
   </div>
@@ -191,7 +192,7 @@
   ];
 
   var els = {};
-  ['symbolPicker', 'labelText', 'labelQty', 'addLabelBtn', 'queueWrap', 'queueCount', 'printBtn', 'printArea', 'sizeSelect', 'editingNote', 'addGrid', 'cancelEditLink',
+  ['symbolPicker', 'labelText', 'labelQty', 'addLabelBtn', 'queueWrap', 'queueCount', 'printBtn', 'previewBtn', 'printArea', 'sizeSelect', 'editingNote', 'addGrid', 'cancelEditLink',
    'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
@@ -364,10 +365,19 @@
   // Ctrl+P prints the sheet too; it used to print an empty page.
   window.addEventListener('beforeprint', renderSheet);
 
-  els.printBtn.addEventListener('click', function () {
+  function printSheet() {
     if (!queue.length) { alert('Add at least one label first.'); return; }
     renderSheet();
     window.print();
+  }
+  els.printBtn.addEventListener('click', printSheet);
+
+  // The same sheet, cut into the pages it will print on (PrintKit.preview,
+  // Path 7 P5). It opens no print dialog; its own Print button does.
+  els.previewBtn.addEventListener('click', function () {
+    if (!queue.length) { alert('Add at least one label first.'); return; }
+    renderSheet();
+    PrintKit.preview({ trigger: els.previewBtn, onPrint: printSheet });
   });
 
   /* ---------- share a label sheet: _shared/share.js (Path 6 P3) ----------
