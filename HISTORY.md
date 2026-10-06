@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## Path 7 P5 increment 3: the print preview on the last six pages, 043's Ctrl+P, and Path 7 is finished (2026-10-06, AI-13, `CACHE_VERSION` v262)
+## Path 7 P5 increment 3: the print preview on the last six pages, 043's Ctrl+P, and Path 7 is finished (2026-10-06, AI-13, `CACHE_VERSION` v263; the commit messages say v262, which `main` took first)
 
 Audit entry AI-13, BACKLOG rank 7, deleted (a gap, as rank 6 is; three other sessions were writing `BACKLOG.md`, so nothing was
 renumbered). Path 7's five phases are all shipped. None of it has been printed: the list of what paper still has to show is in
@@ -69,6 +69,71 @@ renumbered). Path 7's five phases are all shipped. None of it has been printed: 
 - **Not done as asked.** The six new pages run a chosen part of their `smoke-print.mjs` states in the preview suite, not every
   state. "Printed PDF unchanged old against new" was not a raster comparison: each page's own `smoke-print.mjs`, which pins the
   sheet and Chromium's page counts, passes unedited (043's with additions).
+
+---
+
+## 073 Science Fair Project Tracker: named saved trackers, one per cohort (2026-10-06, AI-31-073, `CACHE_VERSION` v262)
+
+Audit entry AI-31, BACKLOG rank 110 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). Rank 109 (tool 072, share a
+diagram by link) was also deleted: it shipped in #239 (Path 6 P3, v173) and the row was stale, as the Selector's note in the audit said. 072's own section was not touched.
+
+- **What shipped.** A **Saved tracker** card: a chooser, + New, Duplicate, Rename and Delete behind a confirm that names what goes with the tracker, with the
+  same labels and wording as 063's saved stories. Each tracker holds a whole cohort: students, milestones with due dates, ticks and status notes. Print puts
+  the tracker's name on the report ("Period 3 · Printed ..."). Share still sends the milestone list and due dates only, from the open tracker, and an arriving
+  link replaces the open tracker's milestones after a confirm that names it (an empty device opens the link without asking and saves it as the first tracker).
+- **Storage.** The key `sfpt_tracker_v1` is the same; it now holds Store's envelope at version 2, `{list: [{id, name, roster, milestones, done, notes}], currentId}`.
+  The old bare object (version 0) becomes one tracker called "My tracker" with nothing lost; it is not rewritten until the first edit. An untouched page writes
+  nothing (the tracker on screen is a draft that joins the list on its first edit). Delete of the last tracker leaves the empty tool, as 063 does.
+  The registry row, 009's backup and the `student: true` mark are unchanged, because the key is. The tracker names are set with `textContent`, so the inline-sink
+  baseline for 073 stays at 4.
+- **Not applicable.** 073 does not use `Roster.trackRenames`, so there is no per-student history that follows a rename to carry across trackers.
+- **Checks.** New suite `Tools/science-fair-project-tracker/test/smoke-saves.mjs` (`test:science-fair-saves`, port 8500, 128 assertions). 17 breaks on purpose, each
+  run once: 14 failed on a named assertion first time, 1 was dead code (a `draft = null` in Delete that could never matter) and was deleted, 1 survived (which
+  neighbour Delete opens) and got section 5b. Not every assertion has a break of its own (most of section 7, the share arrival, was broken only through
+  the message text). `test:a11y --only 073`, `audit-print --check --only 073`, `smoke-share-rollout` and every `check:*`, `lint` pass; see the audit note.
+- **Not run.** Full `npm test`; nothing printed on paper or read with a real screen reader.
+- **Left on 073.** Student self-check-in, ICS export. No tracker-to-tracker move of a student; no merge of two trackers.
+
+## Path 11 P5 designed, not built: master-schedule checks for 035 (2026-10-06, AI-20, no `CACHE_VERSION`, no code)
+
+Audit entry AI-20, rank 25 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P5 bullet under
+"Path 11", and a note on rank 25). **The row stays.** Nothing was built, no suite or browser ran. It sits on the P1
+and P2 designs and changes neither; the last undesigned Fable phase on the sprint's list.
+
+- **What the design is.** `Tools/schedule-visualizer/sv-check.js`, a pure module in P2's shape: `checkSchedule()`
+  returns findings with a code, a severity (error, warn, note), ids and numbers, and a stable fingerprint; fourteen
+  kinds (two groups in a room, a teacher in two rooms at once, over capacity, no planning, too many in a row, a
+  teacher who moves between mods against the passing time, a group whose walk is longer than the bell gap, an
+  unknown room, a blank slot, and five notes); `sentence()` writes one English line per kind for the banner, the
+  lab, the paper and the suite; today's `computeScheduleConflicts` and `whatIfMetrics` pass 5 become one call. A
+  second module, `sv-suggest.js`, finds a fix for one finding over an enumerable set (reorder the group's day; the
+  same teacher's other room or a teacherless room; another teacher's room only behind a switch that is off), checks
+  every candidate in under a millisecond, routes the top five, and hands the chosen one to the what-if lab as an
+  override, where Apply is the only commit. Two printed sheets through PrintKit (the findings with a teacher-by-mod
+  grid; the top-ten congestion cells with the scenario's delta), and "compare with a project file" as a way of
+  loading the lab by group name on one building. Storage: `tile.capacity` (additive, version 5 stays),
+  `settings.checks`, and one new key `stviz_checks` for accepted findings; findings themselves are never stored.
+  Four increments, 035 only, 034 untouched, no `_shared/` change.
+- **What reading the code turned up.** 035 has no teachers and no students: a teacher is a string on a tile, a
+  group is a cohort with a size, and a teacher's day has to be derived the way the publisher derives its `Planning`
+  slots. There is no capacity field anywhere. Room double-booking is checked in three copies (the banner, the lab,
+  and the publisher's silent last-writer walk). A room in this model is also a teacher and a subject, so a suggestion
+  that moves a group to another teacher's room changes who teaches whom, and the data cannot say whether that is
+  allowed; that is why the honest moves are a reorder and the same teacher's rooms, and the rest is Devon's.
+- **Measured, with two pure-Node probes that were not kept.** Northwind (invented): no double-booking, every teacher
+  has a planning block on both days (the README says one has it on only one day; not so in the committed fixture),
+  two teachers idle all A day and two all B day, the Library teacherless. An invented 90-room, 72-teacher, 60-group,
+  8-mod building with slots filled at random: one full check of every non-travel kind is 0.92 ms (mean of 1,000,
+  Node 22, huginn), so the checks run on every bulk-editor keystroke with no debounce.
+- **Decided here, cheap to reverse.** Severity in three levels with notes folded and uncounted. The engine returns
+  codes and the page the sentence (Path 13's rule), with the one formatter exported because four surfaces print it.
+  No randomness and no seed: the candidate set is enumerable. Suggestions land as what-if overrides, never on the
+  live schedule. A new key for acks rather than a field on settings. Teacher names matched exactly.
+- **Shared with Path 13 P1 and Path 14 P3:** the vocabulary (codes out, `dropped`, severity compared left to
+  right, `stoppedBy`) and the feasibility-then-blame pattern. **Not shared:** the engine, identity, students,
+  randomness, memory. A `_shared/findings.js` is noted, not proposed.
+- **Not verified.** Nothing ran in a browser and no module exists. The two travel checks were not timed. No
+  counsellor read a sentence. P1's `EXPECTED` was not opened. Nine questions for Devon are at the end of the bullet.
 
 ---
 

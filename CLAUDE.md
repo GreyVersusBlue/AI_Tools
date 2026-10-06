@@ -475,7 +475,7 @@ files must be added there too.
   of the printable page, with the page's own print rules applied there (`flipMedia`), so the page itself is
   never changed. Do not write a second preview and do not measure breaks by height (that was tried and
   miscounts). 074 was the first adopter (`npm run test:safety-label-preview`, which pins the dialog itself); since v259 076, 077,
-  051, 042, 064 and 043 have it too, and since v262 070, 023, 040, 018, 017 and 016: every page that prints through the kit.
+  051, 042, 064 and 043 have it too, and since v263 070, 023, 040, 018, 017 and 016: every page that prints through the kit.
   The next adopter adds a "Preview pages" button in front of its print button,
   renders its sheet, calls `preview()`, and gets an entry in `Tools/print-kit/test/smoke-preview-adopters.mjs`'s `TOOLS`
   (`npm run test:preview-adopters`), which holds the preview's count to Chromium's PDF in every state. A page with

@@ -87,7 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
-- **AI-13 (v262), Path 7 P5 is finished, Path 7 with it, and rank 7 is deleted (a gap; ranks not renumbered):
+- **AI-13 (v263), Path 7 P5 is finished, Path 7 with it, and rank 7 is deleted (a gap; ranks not renumbered):
   all thirteen print-kit pages have the print preview.** 070, 023, 040, 018, 017 and 016 got it; on the three
   that keep several sheets in one `#printArea` the Preview button presses its Print button with `previewFor` set,
   and `PrintKit.preview()`'s new `onClose` puts the at-rest sheet back. 043's Ctrl+P prints the slips now (it
@@ -96,16 +96,16 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **AI-13 (v259), rank 7, Path 7 P5 increment 2: seven pages have the print preview now** (074, and 076, 077,
   051, 042, 064 and 043), and the several-buttons question is settled: a Preview button in front of each Print
   button (043 is the example; Path 7 P5, "Point 4"). The kit did not change. `npm run test:preview-adopters`
-  (port 8495). Superseded by v262 above.
+  (port 8495). Superseded by v263 above.
 - **AI-13 (v258), rank 7, Path 7 P5 increment 1: the kit has a print preview, `PrintKit.preview()`, and 074
   is its one adopter** ("Preview pages": the sheet cut into the pages it will print on, in a dialog, no print
   dialog). The breaks are the browser's own, in an iframe; the count equals Chromium's PDF. `npm run
-  test:safety-label-preview` (port 8492). Finished at v262, above.
+  test:safety-label-preview` (port 8492). Finished at v263, above.
 - **AI-13 (v255), Path 7 P4 is finished and rank 6 is deleted (a gap; ranks not renumbered): every page that
   saves a CSV or a workbook does it through `ExportKit`.** v249: 003, 008, 018, 033, 068 and 075's CSV. v252: 001
   and 006 (CSV and workbook), 030 and 036 (workbook) and 060's CSV. v255: 035's `groups-template.csv`, the last.
   `npm run test:csv-adopters` (port 8486), `npm run test:sheet-adopters` (port 8489). Also v255: 063's old bank
-  key is `legacy` in the registry, so `check:registry` prints no STALE. **P5, the last of Path 7, finished at v262. No
+  key is `legacy` in the registry, so `check:registry` prints no STALE. **P5, the last of Path 7, finished at v263. No
   file was opened in a spreadsheet program.**
 - **AI-13 (v248), rank 6, Path 7 P4 increment 4: 011 makes booklets and several pages to a sheet on `ExportKit`
   (Path 17 P4's controls, built), and 064's zip and PNG downloads are the file helpers' first adopter.** 011's
@@ -414,7 +414,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 22 | Path 11 P2 — extract the pure engines; target the HTML under ~300 KB. **Designed 2026-10-05 (AI-20), not built: the P2 bullet has the whole design, a measured ladder of eleven increments (the page is 968 KB; the engines alone leave it at about 620 KB, the full ladder at about 270 KB), and five questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 23 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 27 | Path 12 P1 — `_shared/question-bank.js` with 030 as the front door | `_shared/` | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 28 | Path 12 P2 — read-side adopters: 053, 062, 040, 018, 019, 020 | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
@@ -488,8 +488,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 108 | Multiple named saved image sets, so two vocabulary libraries coexist without re-uploading | 071 | ½ | | [071 Picture-Prompt Speaking/Writing Task Generator](#071--picture-prompt-speakingwriting-task-generator) |
-| 109 | Share a diagram by link, so the same novel’s diagram moves between class periods | 072 | ½ | | [072 Story Elements / Plot Diagram Builder](#072--story-elements--plot-diagram-builder) |
-| 110 | Multiple named saved trackers — one per class period’s science-fair cohort | 073 | ½ | | [073 Science Fair Project Tracker](#073--science-fair-project-tracker) |
 | 111 | Two symbols per label — across the edit form, duplicate logic and the printed card | 074 | ½ | | [074 Science Safety Symbol & Equipment Label Maker](#074--science-safety-symbol--equipment-label-maker) |
 | 112 | Wallet-card layout with QR — a lanyard insert with a phone or email link per entry | 075 | ½ | | [075 Staff Directory / Quick-Reference Builder](#075--staff-directory--quick-reference-builder) |
 | 113 | Room-assignment view — define rooms and proctors, auto-route by accommodation, print proctor lists | 077 | ½ | | [077 Testing Accommodations Reference Card Generator](#077--testing-accommodations-reference-card-generator) |
@@ -2606,7 +2604,7 @@ localStorage with no file export.
   Ctrl+P prints what it printed before. (e) is written from the source and **not tried**: 043, where the rule
   was applied, renders each sheet into `#printArea` whole and has no areas. 043's wiring is one helper,
   `wirePreview(previewBtn, build, printBtn)`, four calls.
-  **Increment 3 (AI-13, 2026-10-06, v262): the last six adopters, and P5 is finished.** 070 (two buttons now:
+  **Increment 3 (AI-13, 2026-10-06, v263): the last six adopters, and P5 is finished.** 070 (two buttons now:
   blanks, and AI-31's one per student), 023 (handout or class set, and the reteach list) and 040 (Print and the
   alignment test) each split "build" from "print" as 043 did. 040's preview Print prints the sheet that was
   looked at without building it again, because a word search, a crossword and a bingo set are drawn at random.
@@ -2652,7 +2650,7 @@ localStorage with no file export.
 tool's test folder; one physical print run on the school's black-and-white copier
 recorded here (the notes say real paper has never been validated for Avery stock,
 6-per-page cards, or the calibration page).
-**Path 7 is finished in code (P1 to P5, v221 to v262) and none of it has been on paper.** What every phase
+**Path 7 is finished in code (P1 to P5, v221 to v263) and none of it has been on paper.** What every phase
 left to the one physical print run, which is a person's job and is not ranked: (1) any sheet at all on the
 school copier, for the half-inch margins the kit assumes and the black ink `.pk-paper` and `.pk-ink-safe`
 promise; (2) label stock: 016's Avery 5160 and 5163 at the die cut, 074's and 051's labels; (3) cut lines on
@@ -3656,6 +3654,343 @@ a real pathfinder that the published browser never exposes.
 - **P5 — Master-schedule assistance.** Constraint checks (a teacher with three
   rooms in three consecutive periods, a room double-booked), congestion as a printed
   argument (top-ten pinch points with what-if deltas), multi-year comparison.
+  **P5 is designed, not built (AI-20, 2026-10-06, a design pass: no code, no suite, no browser).** It sits on the
+  P1 and P2 designs above and changes neither: every function it names from them is taken at the surface P2 wrote.
+  Read from the code at v61 (`TOOL_VERSION`; site `CACHE_VERSION` v261): the schedules tab (`computeScheduleConflicts`,
+  `renderConflictBanner`, `getConflictGroupIds`, the group cards, the bulk editor), the what-if lab (`wiComputeMetrics`,
+  `wiComputeDiff`, `wiRenderConflicts`, the override store), the room properties panel, `rebuildRoomRegistry`,
+  `brDeriveScheduleData`, the project file, the registry row, the Northwind fixture and its README; and the two
+  designs written the day before for the site's other constraint problems, Path 13 P1 (grouping) and Path 14 P3
+  (seating). Figures marked *measured* came from two pure-Node probes over the fixture and over an invented building,
+  kept in a scratch folder and not committed. Every name in an example is made up. Questions that are Devon's are at
+  the end and are not answered.
+  **What the bullet above gets wrong, first.** 035 has no teachers. A teacher is a string on a classroom tile
+  (`tile.teacher`, optional), a room has at most one, and a group's day is a list of room numbers by mod; so "a
+  teacher with three rooms in three consecutive periods" can only mean one name written on three tiles, and a
+  teacher's day has to be *derived*: they teach in a mod when any of their rooms holds a group in it, and the rest is
+  planning (which is exactly how the publisher builds the `Planning` slots). There are no students either: a group
+  is a cohort with a `size`, the registry row marks nothing `student: true`, and P5 adds nothing that would (a
+  "student in two sections" cannot be stated in this model and is out). And the tool already has one check, room
+  double-booking, in **three** copies that must agree: `computeScheduleConflicts` (the banner), pass 5 of
+  `wiComputeMetrics` (the lab), and the by-hand walk in `brDeriveScheduleData` that drops the second group without a
+  word (P1 question 5). P2 names the first two as `scheduleConflicts` and `whatIfMetrics`; P5 makes both call one
+  function and gives the publisher's silence a number.
+  - *What is there today, as read.* **The model.** `settings`: `modCount`, `modLabel` style, `bellSchedule { A, B }`
+    (`[{ start, end } | null]` per mod, B null meaning "as A"), `defaultGroupSize`, `subjects`, the walk and stair
+    seconds. A classroom tile: `roomNumber`, `teacher`, `dept`, `wing`, `excludeFromConflict` ("multiple groups can
+    share this room"), `groupId` for a multi-cell room, `classroomDoorEdges`. **No capacity anywhere** (searched:
+    the word does not occur in the page). A group: `{ id, name, grade, color, size, modsA, modsB, mods }`, `size`
+    optional; `modsB` empty means "as A" for paths and "no B day" for the publisher (P2's two `dayMods` rules). The
+    registry (`roomRegistryOf`) is one record per room with its teacher, dept, floor and anchor cell. **The one
+    check**: `mod-room` keyed over a day's slots, blank and excluded rooms skipped, two or more groups is a
+    conflict, sorted by mod; shown as an amber banner above the group list ("Room conflicts detected", a count, a
+    collapsed table of mod, room, groups) and as an amber left border and icon on each group card in it; the lab
+    shows the same list as New, Resolved and "N pre-existing double-bookings unaffected", plus one line for routing
+    issues (`Mod not assigned`, `Room not found in blueprint`, unreachable, no path: counted, not named). **The lab**
+    is the suggestion surface that already exists: overrides `{ [groupId]: { [modIdx]: room } }` in `stviz_whatif`,
+    sandboxed until "Apply Scenario to Schedule", with before/after travel per group, a congestion delta map, and
+    the conflict diff. *Measured, on Northwind (the invented fixture: 11 rooms, 10 teachers with one room each, 4
+    groups of 24 to 27, 4 blocks, two floors, a bell for A only):* no double-booking on either day; every teacher has
+    at least one planning block on both days (the README's "a teacher with a planning block on only one of the two
+    days" is not so in the committed fixture); two teachers teach nothing all A day and two others nothing all B day;
+    the longest run is 2; the Library has no teacher and no dept; no group has a blank slot. So the fixture is
+    clean under every check below but `teacher-idle` and `room-no-dept`, and the suite needs built cases for the rest.
+  - *The rule the design is held to.* **The engine returns codes, ids and numbers; the page writes the sentence**
+    (Path 13 P1's rule, kept by Path 14 P3, kept here). A check never changes the schedule, a suggestion never
+    touches the live schedule (it becomes a what-if override, and the lab's existing Apply is the only way it
+    lands), and no finding is stored: the schedule is the record and findings are derived from it on every change.
+    `computeScheduleConflicts(day)` keeps its name, shape and the banner's rows (the suites read them), and is the
+    `room-double` findings re-shaped; `whatIfMetrics().conflicts` likewise. Nothing is random: every search below
+    is over a set the design can enumerate, so there is no seed and no "try another".
+  - *The surface: `Tools/schedule-visualizer/sv-check.js`,* a pure ES module in P2's shape (`window.SVCheck`, a
+    `BRIDGE` wrapper per page name), importing `dayMods`, `roomRegistryOf`, `groupWeight`, `modLabels` and
+    `bellDay` from `sv-model.js` and nothing from the page.
+    - `checkSchedule(groups, { registry, settings, days })` → `{ findings: [finding], summary: { error, warn, note },
+      teachers: { [name]: { rooms: [rn], days: { A: [slot], B: [slot] } } }, rooms: { [rn]: { used: { A: [mods], B:
+      [mods] } } }, dropped: [{ path, reason }] }`. `days` defaults to `['A', 'B']` when any group has a non-empty
+      `modsB`, else `['A']`. A **finding** is `{ id, kind, severity, day, mod, mods, room, rooms, teacher, groups:
+      [{ id, name }], n, limit, sec, window, where: [{ groupId, day, modIdx }], ack: false }`, every field but
+      `id`, `kind`, `severity` and `where` present only when the kind has it. `id` is the fingerprint: the kind, the
+      day, the mod, and the room, teacher or group *names* involved, sorted and joined (never a group `id`: the
+      project import mints new ids). `where` is the cells of the bulk editor the finding is about, which is how the
+      page points at it. `dropped` names a group with no `name`, a `size` that is not a number, a slot that is not
+      a string, a `capacity` below 1: each is read as blank and listed, never thrown.
+    - `teacherDays(groups, registry, settings)` → the `teachers` map above, exported on its own because the
+      publisher's `Planning` slots are this same derivation; `sv-browser.js`'s `deriveScheduleData` calls it in
+      P5's second increment and its `EXPECTED` on Northwind does not move (the suite holds it).
+    - `conflictsOf(findings, day)` → today's `[{ mod, modLabel, room, groupNames }]`, the `room-double` findings
+      in the banner's shape; `scheduleConflicts` becomes this, and `whatIfMetrics` pass 5 as well.
+    - `fingerprint(finding)`; `applyAcks(findings, acks)` marks `ack: true` where `acks[id]` exists; `summary()`
+      counts only un-acked findings.
+    - `sentence(finding, { labels, modStyle })` → the English line for each kind, **exported from the module so the
+      banner, the lab, the printed report and the suite print one text**; it is the one place the design bends the
+      "page writes the sentence" rule, because four surfaces write it, and it is still not the engine (it is a
+      formatter over the finding, with the forms listed below).
+    `Tools/schedule-visualizer/sv-suggest.js` (increment 3): `suggestFor(finding, { groups, registry, settings,
+    graph, pairs, pathCache, max, kinds })` → `{ candidates: [candidate], tried, stoppedBy }`, below.
+  - *The checks, each with its code, severity and sentence.* Severity: **error** means the schedule cannot run as
+    written (two groups in one room, one teacher in two rooms at once); **warn** means it runs and somebody pays;
+    **note** is a fact the counsellor may want. A room with `excludeFromConflict` is never a `room-double` and
+    still has every other check (that is what the flag has always meant). A blank slot is never counted as a
+    room. The `ack` state hides a finding from the counts and the banner, not from the table or the report (it
+    is listed under "Accepted" with its note).
+
+    | Code | Severity | When | The sentence the page writes (labels from `modLabels`, day named only when two days exist) |
+    |---|---|---|---|
+    | `room-double` | error | two or more groups name one room in one mod | "Room 204 has two groups in Block 2 on A days: 7-1 and 7-3. One of them needs another room or another block." |
+    | `teacher-double` | error | a teacher's rooms hold groups in two of them in one mod | "Ms. Okafor is in 204 with 7-1 and in 118 with 7-4 in Block 3 on B days. She can only be in one." |
+    | `over-capacity` | warn | the heads in a room in a mod (sizes, default for a blank, summed over sharers) exceed its `capacity` | "Room 118 holds 31 in Block 1 (7-4, 27 and 6-2's overflow) and seats 28." / "7-2 (30) is in 204, which seats 28, in Block 5." |
+    | `teacher-no-planning` | warn | a teacher teaches in every mod of a day | "Mr. Lindqvist has no planning block on A days." |
+    | `teacher-run` | warn | more than `maxRun` consecutive teaching mods | "Ms. Okafor teaches five blocks in a row on B days, Blocks 1 to 5." |
+    | `teacher-moves` | warn | a teacher's room changes between consecutive mods, and either the passing window is unknown or the walk (`resolveRoomPath`, `walkSec` per hallway cell plus `stairSec` per teleport, no congestion) exceeds it less `passingMarginSec` | "Mr. Lindqvist moves from 116 to 204 between Blocks 2 and 3 on A days: a 3-minute walk in a 4-minute passing time." (or ", and no bell times are set") |
+    | `passing-too-short` | warn | a group's segment `travelSec + delaySec` (from `whatIfMetrics`) exceeds the bell gap between the two mods | "7-1 has 5 minutes 10 seconds of walking between Blocks 3 and 4 on A days (Library to 201, with the crowd) in a 4-minute passing time." |
+    | `room-unknown` | warn | a slot names a room not in the registry | "7-3 is in 'Rm 207' in Block 6, and the blueprint has no room 'Rm 207'." |
+    | `group-gap` | note | a slot is blank | "7-2 has nothing in Block 4 on B days." |
+    | `teacher-rooms` | note | one teacher name on two or more tiles | "Ms. Okafor is written on two rooms, 204 and 118." (the fact behind `teacher-double` and `teacher-moves`, and P1 question 5's second half) |
+    | `teacher-idle` | note | a teacher's rooms hold no group all day | "Ms. Dunmore's room 104 has no group on A days." |
+    | `room-idle` | note | a room holds no group all day (teacherless rooms included) | "The Library has no group on B days." |
+    | `room-no-dept` | note | a room with a teacher and no `dept` | "Room 110 (Mr. Hartwell) has no department, so the published browser colours it as ELA." (P2's doubtful rule, reported, not changed) |
+    | `room-no-teacher` | note | a room with groups and no teacher | "The Library has groups in Blocks 1 and 4 and no teacher named." |
+
+    `passing-too-short` and the walk half of `teacher-moves` need the graph and are the only checks that are not
+    O(slots): `checkSchedule` takes an optional `{ travel }` from `whatIfMetrics(groups, day, null, …)` and emits
+    them only when it is given (the banner passes it; the bulk editor's keystroke path does not and shows the
+    others at once). Both are silent with no bell times, except that `teacher-moves` still notes the move. The
+    limits are settings: `settings.checks = { maxRun: 4, passingMarginSec: 0, off: [] }`, filled by
+    `normalizeSettings`, with `off` a list of kinds the counsellor has switched off for this school (a
+    `teacher-no-planning` warning is noise in a building whose teachers plan before first bell; question 3). The
+    defaults are assumptions (question 2).
+  - *The algorithm, with its edge cases.* One pass builds `byRoom` from the registry (a room number on two
+    registry records is `dropped` with both floors named; the first wins, which is P2's `roomToKey` rule) and
+    `teacherRooms` (`tile.teacher` trimmed, compared **case-sensitively** as the publisher does: "Ms. Okafor" and
+    "Ms Okafor" are two teachers, and the design does not guess otherwise; `teacher-rooms` is where the counsellor
+    sees the typo). Then per day: for each group, `dayMods(group, day)` padded to `modCount` (a slot past
+    `modCount` is `dropped`), each slot into `occ[mod|room]` with the group and its `groupWeight`; `room-unknown`
+    and `group-gap` fall out of this walk. Then per `occ` key: `room-double` when two or more and not excluded;
+    `over-capacity` when the room has a `capacity` and the weights sum above it (an excluded room with two groups
+    gets this and not the other, which is the shared-arts-room case the flag was made for). Then per teacher: the
+    slots `[[rn]]` of their rooms that are occupied in each mod; two or more is `teacher-double`; none all day
+    `teacher-idle`; all occupied `teacher-no-planning`; a run above `maxRun` is one `teacher-run` finding per
+    run (not one per mod), with its first and last mod; a change of single room between mods `i − 1` and `i` is
+    `teacher-moves`, with the walk when a graph was given. Then per room: `room-idle`, `room-no-teacher`,
+    `room-no-dept`. Sorting: severity, then day, then mod, then room, then teacher: stable and total, so the banner
+    does not shuffle under the mouse. A group with `modsB` empty on day B is read by P2's path rule (as A): the
+    checks describe the days a group actually travels, and the publisher's "no B day" rule is the publisher's.
+    `modCount` lowered after groups were typed: slots past it are dropped and listed, never checked. A `size` of
+    `0` is a blank (today's `groupWeight`). A `capacity` is an integer 1 to 999 or absent.
+  - *Measured, on an invented building (90 rooms on two floors, 72 teachers, six of them on two rooms, 60 groups,
+    8 mods, both days, slots filled at random so almost everything conflicts).* One `checkSchedule` of every kind
+    but the two travel ones: **0.92 ms** (mean of 1,000, Node 22, huginn), 960 slot reads, 599 findings. So the
+    checks run on every bulk-editor keystroke with no debounce, and the design asks for none. The two travel
+    checks cost what the lab's baseline costs today (`whatIfMetrics` is `groups × (modCount − 1)` calls of
+    `resolveRoomPath`, 420 for this building), **not measured**: the page has no timing of A* (P2 says so) and
+    this design adds none; it reuses the number the lab already computes on the same data and caches nothing new
+    for it.
+  - *Check, or suggest, and how a suggestion is found and bounded.* Both, in that order, as separate increments,
+    and the second stays small because the model knows less than a counsellor does. **A room in this model is
+    also a teacher and a subject**: moving 7-1 from 204 to 118 in Block 3 does not just change a room, it makes
+    Mr. Lindqvist teach 7-1 that block, and nothing in the data says whether he teaches their subject. So the
+    moves the engine may propose are the ones that change no teacher's class list, plus one that does and says so:
+    - **M1, reorder the group's day:** swap two of the group's slots (`modsX[i] ↔ modsX[j]`). Same rooms, same
+      teachers, same subjects, a different order. Up to `modCount × (modCount − 1) / 2` candidates (28 at 8
+      mods), each involving the group's finding slot.
+    - **M2, the same teacher's other room, or a room with no teacher:** `modsX[i] := rn` where `rn` is another
+      room of the teacher of the current room, or a room with no `teacher` (Library, gym, cafeteria) free in that
+      mod. At most the registry's size.
+    - **M3, another teacher's room, free that mod, same `dept`:** off by default (`kinds: ['M1', 'M2']`); when on,
+      every candidate from it carries `changesTeacher: { from, to }` and its sentence says "…and Mr. Lindqvist
+      would teach 7-1 that block" (question 5).
+    - **Not a move:** anything touching two groups at once (a swap of two groups' rooms is M3 twice), moving a
+      teacher between rooms (that is the blueprint, not the schedule), adding a room, changing a `size`.
+    A candidate is `{ move: 'M1' | 'M2' | 'M3', groupId, day, changes: [{ modIdx, from, to }], before: summary,
+    after: summary, fixes: [findingId], breaks: [findingId], travelDeltaSec, delayDeltaSec, changesTeacher }`.
+    Found in two stages so the graph is touched little: **stage 1** applies each candidate to a copy of the group's
+    day and re-runs `checkSchedule` without `travel` (under a millisecond each, above); a candidate that does not
+    remove the finding it was asked about is discarded, the rest are ordered by `[after.error, after.warn,
+    after.note, changes.length]` with M1 before M2 before M3 among equals; **stage 2** takes the first `max`
+    (default 5) and runs `whatIfMetrics` on each with the candidate as an override, through a `pathCache`
+    (`Map` from `from|to` room pair to `resolveRoomPath`'s answer: a path depends on the two rooms and the graph
+    only, and across five candidates on one building almost every pair repeats; the cache is the caller's and
+    is cleared with `SVGraph.invalidate()`), then re-orders the five by `[errors, warns, notes, travel + delay
+    delta]`, adding `passing-too-short` to the counts now that it is known. `tried` is the stage-1 count and
+    `stoppedBy` is `'all'`, `'max'` or `'time'` (a 500 ms emergency stop around stage 2 only; stage 1 cannot
+    take long). The result never says "best": the sentence is "Three changes would clear this. The smallest:
+    swap 7-1's Blocks 2 and 3 (same rooms, same teachers): no other finding changes, and 7-1 walks 40 seconds
+    less." **Nothing is applied by the engine.** The page's "Try in What-If" writes the candidate's `changes`
+    as overrides through the lab's own `wiSetOverride` and switches to the lab, where before/after is already
+    drawn and "Apply Scenario to Schedule" is the one commit. Why no solver over the whole schedule: a schedule
+    is rooms × mods × groups with the content constraint unstated, and a search that fills it is the
+    master-schedule *builder* of 035's section, which Devon's open question there ("who is the intended user")
+    has not settled; P5 points at one cell and offers the smallest honest move.
+  - *How results show without burying the map.* **The Schedules tab's banner becomes the checks banner** in the
+    same place and the same collapsed shape: a line "3 problems, 4 warnings" (notes are not in the line), the chevron
+    opens the table, now with four columns (what, where, the sentence, an action), and a "Show" on a row
+    highlights its `where` cells in the bulk editor and, when the editor is closed, scrolls the group card into view
+    and flashes its mod chip; the amber card border and icon widen to any error or warn on the group, red for an
+    error. A row's second action is "Fix…" (increment 3), which lists up to five candidates with their sentences
+    and a "Try in What-If" each. A note-level finding is shown in the table under a "Notes" fold, counted nowhere
+    else. A finding's third action is "Accept" with a one-line note ("the Library is meant to hold two groups"),
+    which writes the ack and moves the row to the "Accepted" fold. **The bulk editor** cell with a finding gets
+    the same amber or red left border and a `title` with the sentence (the cells are `<input>`s today; the check
+    runs on `input` with no debounce, the measurement above being why). **The room panel** (Blueprint tab) gains a
+    `Capacity (seats, optional)` field under Department, and under it a two-line "This room" list of the room's
+    findings for the active day. **The lab's "Constraint Checks" panel** shows the full diff by kind: New,
+    Resolved, Unchanged counts per severity with the sentences under New and Resolved, in place of today's
+    double-bookings-only list and the routing-issues count (`passing-too-short` is where the routing count goes).
+    **The map is not touched**: no overlay, no badge on a room tile; the Visualize tab does not change. **The
+    publish dialog** says "This schedule has 3 problems the published browser will hide: a room with two groups
+    shows one of them, a teacher on two rooms shows one room" with Review (opens the banner) and Publish anyway,
+    which is the hook for P1 question 5 and chooses nothing (assumed: warn and go on).
+  - *The printed report, through the kit (Path 7).* "Print checks" beside the banner renders one `#printArea`
+    sheet (`class="pk-paper"`, `print-area.css`, PrintKit's one-area form, with a Preview button in front of it
+    as Path 7 P5 asks): a header with the school, the tool's version and the date; the summary line; a table per
+    severity (what, where, the sentence) with Accepted last; and then **the teacher day grid**, teachers down and
+    mods across, a cell per slot showing the room and group or "—" for planning, with the finding cells tinted,
+    one grid per day, which is the page a counsellor actually takes to the meeting. `min-height`, nothing fixed,
+    nothing clipped; `check:print-clip`, `check:hidden-flex`, `test:print-tail` as for every sheet since v229;
+    `audit-print --only 035` and its baseline. **The congestion report** is the bullet's "congestion as a
+    printed argument", a second sheet from the lab: for the day and transition filter shown, the ten cells with
+    the highest baseline load from `whatIfMetrics().congPerT` (or `congAll`), each named by its corridor label
+    when `corridorLabelCells` gives one, else "Floor 2, by room 204" (the nearest room anchor by Manhattan
+    distance on that floor), with its load in students (or groups when `weighted` is false, as the lab already
+    distinguishes), the groups contributing (`contributors` from `congestionData`), and the scenario's delta
+    from `wiComputeDiff().deltas` when there are overrides; then the worst three transitions by total load; then
+    the scenario's changes as chips. Both reports read the engines' output and compute nothing of their own.
+  - *Multi-year and multi-scenario comparison, bounded to what the lab can hold.* A second project file is not a
+    set of overrides: its groups have new ids and may have other names. The design is **compare by group name
+    on one blueprint**: "Compare with a project file…" in the lab reads a full-project file (`applyFullProject`'s
+    validation, nothing applied), requires its blueprint's room set to equal this one's (else "The two files
+    describe different buildings: N rooms differ. Comparison needs one building.", with the room numbers), turns
+    its groups into overrides by name for every slot that differs, lists groups only in one file under "Added"
+    and "Removed" (an added group's slots cannot be overrides and are shown as a list; a removed group is
+    shown and its travel is in "before" only), and then the lab is the comparison: the override chips are the
+    diff, the cards the totals, the checks panel the findings diff, the congestion report the argument. It is a
+    way of loading the lab, not a fourth engine; `whatIfDiff` gains nothing. What it cannot do is compare two
+    buildings or two bell schedules, and the design says so on the page (question 7).
+  - *Storage and migrations.* **Two additions, no new key, no version change.** (1) `tile.capacity`, optional
+    integer, on a classroom tile in `stviz_blueprint` (version 5 stays: the field is additive and absent means
+    "unknown"; `serializeBlueprint` writes it when present, `validateBlueprint` accepts an integer 1 to 999 or
+    absence, `blueprintFromData` carries it, `roomRegistryOf` exposes it as `capacity`); the project file carries
+    it inside its blueprint and `schemaVersion` stays 31; **the published data does not carry it** (nothing in
+    034 reads a capacity; adding it later is a field, and by P1's rule a field does not raise `FORMAT`). (2)
+    `settings.checks` as above in `stviz_settings`, filled by `normalizeSettings`, with the project file's
+    `settings` copy. **Acks** are the one thing that is neither a setting nor a group: `{ [fingerprint]: { note,
+    on: 'YYYY-MM-DD' } }`. They go in a new key, **`stviz_checks`** (`{ v: 1, acks }`), a registry row entry
+    beside `stviz_whatif` (`check:registry` fails otherwise; the `stviz_` legacy prefix already sweeps it into a
+    backup), and in the project file as `checks: { v: 1, acks }` so an accepted finding travels with the schedule;
+    an ack whose fingerprint matches nothing is kept for 30 days from `on` and then dropped on save, so a
+    schedule that changed under it does not keep a stale acceptance for ever (the one piece of time in the
+    design; question 4). A finding is never stored. The recovery ring (`sv-recovery.js`) snapshots the three
+    keys it snapshots today and gains `stviz_checks`.
+  - *What each tool changes.* **035 only**, in four increments, each a PR with `CACHE_VERSION` bumped and the
+    new files in `PRECACHE_URLS` (never `SHELL_URLS`): **(1)** `sv-check.js`, the `capacity` field and panel,
+    `settings.checks`, `stviz_checks`, the banner, the cards, the bulk editor cells, the lab's panel, the publish
+    dialog's line; `computeScheduleConflicts` and `whatIfMetrics` pass 5 become `conflictsOf(checkSchedule(…))`
+    and their suites do not change. **(2)** `teacherDays` into `deriveScheduleData`, P1's baseline regenerated and
+    **unchanged**, which is the proof the derivation is the same. **(3)** `sv-suggest.js`, the Fix… list, "Try in
+    What-If", the `pathCache`. **(4)** the two printed sheets and the comparison loader. **034 does not change.**
+    No `_shared/` file changes: PrintKit and ExportKit are used as they are. `check-publisher.mjs`'s `sources`
+    (P2 increment 2) sees `sv-check.js` through `sv-browser.js`'s import in increment 2 here, and FREE is what
+    fails if `teacherDays` is reached and not published: the publisher must publish `teacherDays`'s *result*, as
+    it does today, not the function.
+  - *What P5 shares with Path 13 P1 and Path 14 P3, and what it must not.* **Shared, the vocabulary:** codes and
+    ids out, sentences written by the tool; `dropped` for malformed input, never a throw; a severity order
+    compared left to right with the hard things first; a search that names `stoppedBy`; a result that never
+    says "best". **Shared, one pattern:** Path 14 P3's `feasibility()` and `blame()` name the impossibility
+    before the search and the reason after it; `checkSchedule` is both of those for a schedule, and `suggestFor`'s
+    `breaks` is `blame` for a move. **Not shared, the engine:** grouping assigns people to unordered sets,
+    seating assigns them to a geometry, and this assigns cohorts to time × room with a teacher implied by the
+    room; none of the three can call another's solver and the design imports neither `grouping.js` nor
+    `seating-solve.mjs`. **Not shared, on purpose: identity, students, randomness and memory.** 035 has no roster
+    and no student, so there is no id space to reconcile (Path 3) and nothing for the rollover to clear; the
+    candidate set is enumerable, so there is no seed (P1's and P3's mulberry32 is not copied here) and no golden
+    draws; and there is no history, because a schedule is not a sequence of events. **One thing the three could
+    share later and P5 does not build:** a `_shared/findings.js` with the finding shape, the severity order and
+    the ack store, since all three now carry `{ id, kind, severity, where }` lists; it is noted, not proposed,
+    because two of the three are unbuilt.
+  - *The tests that would prove it.* **`Tools/schedule-visualizer/test/check.test.mjs`** (pure Node, a
+    `test:schedule-check` shortcut and a `suites.json` line), on built schedules with made-up names (Ms. Okafor in
+    204 and 118, Mr. Lindqvist in 116, groups 7-1 to 7-4, 8 mods, a bell with 4-minute passing): one case per
+    kind, each seen absent and present by one slot's change; `room-double` on an excluded room is absent and
+    `over-capacity` on it present when the sizes sum past `capacity`; a blank `size` weighs `defaultGroupSize`
+    and a `0` is blank; `teacher-run` once per run with the right first and last mod at `maxRun` 4 and 2; a
+    teacher on one room never gets `teacher-moves`; `teacher-moves` with no bell is a note-worded warn and with
+    a bell is silent when the walk fits (`travel` handed in); a trimmed and a case-different teacher name are two
+    teachers (named in the test as the rule, so changing it is a decision); `room-unknown` and `group-gap` from
+    one walk; `modsB` empty reads as A and `days` is `['A']`; a slot past `modCount`, a nameless group, a string
+    `size`, a `capacity` of 0 each in `dropped` and nothing thrown; `conflictsOf` equals today's
+    `computeScheduleConflicts` output on 300 random schedules (the function copied into `_legacy.mjs` as the
+    export suite keeps `duplex-print.js`'s); `teacherDays` equals the `A`/`B` slots of P1's `EXPECTED` on
+    Northwind; `fingerprint` is stable across a group id change and changes when a name does; `applyAcks` and the
+    30-day drop; the sort is total (two findings never tie); the sentence for every kind against the text in the
+    table above, and `check:entities` on every one; **the probe's building** (rebuilt in the test from the same
+    seed) under 5 ms per call, printed, not asserted. **`suggest.test.mjs`**: M1 on a `room-double` finds the
+    swap that clears it and nothing else; M2 finds the Library and the teacher's second room and ranks the
+    reorder first among equals; M3 is absent until `kinds` names it and then carries `changesTeacher`; a finding
+    nothing can fix returns `candidates: []` and `tried` above 0; `max` holds and `stoppedBy` says so; the
+    `pathCache` is hit on the second candidate (a counting stub for `resolveRoomPath`); a candidate that fixes
+    one finding and breaks another lists both. **`smoke-checks.mjs`** (browser, the next free port when built;
+    8498 is the header's figure at v261): import Northwind, see no error line and the Notes fold with `teacher-idle`
+    and `room-no-dept`; put 7-3 into 204 in Block 2 through the bulk editor and see the banner's line, the red
+    card, the cell's title; Show scrolls and flashes; Fix… lists candidates and "Try in What-If" lands as one
+    override chip in the lab with the checks panel saying Resolved; Accept with a note hides it from the line and
+    shows it in the fold, through a reload and through export and import of the project; set a capacity of 20 on
+    204 and see `over-capacity`; the publish dialog's line with one error and none with zero; the two printed
+    sheets through the kit (`PrintKit.preview` count equals Chromium's PDF, a row in `smoke-preview-adopters.mjs`'s
+    `TOOLS`), Accepted last on the paper, the teacher grid's tinted cells; the comparison loader on Northwind
+    against a copy with one slot changed (one chip) and against a copy with a room renamed (refused, with the
+    number). **Breaks on purpose**, each seen failing once: a kind's sentence changed by a word; `conflictsOf`
+    reordering; a finding sorted by insertion; a stored finding (grep the key for `kind`); `capacity` dropped by
+    `serializeBlueprint`; `teacherDays` differing from the publisher's slots; the registry row without
+    `stviz_checks` (`check:registry`); a `<` in a sentence reaching `innerHTML` (`check:inline-sinks`, 035 has no
+    baseline line because it takes no link input, so the banner must be built with `textContent`).
+  - *The build's bookkeeping.* `sv-check.js`, `sv-suggest.js` and the suites in `PRECACHE_URLS` with a
+    `CACHE_VERSION` bump each increment; `stviz_checks` in the registry row; `SVCheck` and `SVSuggest` are page
+    namespaces, not `_shared/` globals, so `eslint.config.js` does not change; `check:entities` on the sentences;
+    `test:a11y` on the new controls (035 is on the allowlist for unlabeled inputs today and the new field and
+    buttons come in labelled); `check:print-clip` and `test:print-tail` on the two sheets; `audit-print --only
+    035` and its baseline lowered if the sheets fix anything there.
+  - *Deliberately left out.* A solver that fills a schedule (035's "auto-placing sections against constraints":
+    the content constraint is unstated and the user is undecided). Any student-level check (no students). A
+    subject or course on a group (the one field that would make M3 honest; a row of its own, question 6). Teacher
+    preferences, certifications, part-time days, duty periods, lunch (none is in the model; `off` and acks are
+    how a counsellor quiets what the model cannot know). Room features (lab, sink, projector). Comparing two
+    buildings or two bells. Changing the heat-exclude or `ELA` rules (P2 question 3; P5 reports the second as
+    `room-no-dept` and touches neither). Publishing findings into 034 or the published file. Any change to the
+    Visualize tab or the map. A worker. `_shared/findings.js`.
+  - *Not verified.* Nothing ran in a browser and no module exists. The 0.92 ms is one machine on a random
+    schedule and is not the two travel checks, which were not timed. The sentences were not read by a counsellor;
+    "problems" and "warnings" are this session's words. Whether the lab's `wiSetOverride` path accepts a
+    programmatic override for a group not selected in its dropdown was read off the code, not tried. The
+    corridor-label naming of a congestion cell assumes `corridorLabelCells` is saved per floor, which was not
+    checked. P1's `EXPECTED` was not opened; the claim that `teacherDays` reproduces the publisher's slots is
+    read from `brDeriveScheduleData`'s loop, which the design copies rule for rule.
+  - **Questions for Devon. None is answered here; each says what the design assumes until he does.**
+    1. *Who reads this.* The checks and the report are written for a counsellor or an administrator building the
+       master schedule, which 035's own open question ("Devon, or an administrator?") never settled. If the
+       answer is Devon alone, increments 3 and 4 (suggestions, the reports and the comparison) are a quarter of
+       the value for three quarters of the work. Assumed: the counsellor is in scope, all four increments.
+    2. *The limits.* Is four consecutive teaching mods the right default for `teacher-run`, and is "no planning"
+       a warning in this building (some schools plan before first bell)? Assumed: `maxRun` 4, `passingMarginSec`
+       0, every kind on.
+    3. *Which checks are noise here.* `teacher-idle`, `room-idle` and `room-no-dept` are notes that a real
+       building may produce by the dozen (a resource room, a teacher on leave). Should notes exist at all, or
+       only the two severities? Assumed: notes exist, folded, uncounted.
+    4. *Acks.* Should an accepted finding be remembered at all (it is the one stored thing), and if so for how
+       long once the schedule no longer produces it? Assumed: remembered in `stviz_checks`, dropped 30 days after
+       it stops matching.
+    5. *The honest move.* May the tool ever propose a room whose teacher would then teach a group they do not
+       teach today (M3)? Assumed: no; M3 exists behind a switch that is off.
+    6. *A subject on a group.* The one field that would let a suggestion say "another science room" is a
+       subject or course on each group's slot. Is that wanted, and is it a `dept` code or free text? Assumed:
+       not in P5; a row of its own.
+    7. *Comparison.* Is "this year against next year's proposal" a comparison of two schedules on one building
+       (what P5 builds), or of two buildings (a new wing), which it cannot do? Assumed: one building.
+    8. *The publish hook.* When Publish finds an error (P1 question 5): refuse, warn and go on, or publish both
+       groups? Assumed: warn and go on, with the count.
+    9. *Names.* A teacher is a string on a tile, matched exactly; "Ms. Okafor" and "Ms Okafor" are two people
+       and P5 reports the pair as two `teacher-rooms` notes rather than merging them. Right, or should the check
+       fold case and punctuation? Assumed: exact, reported.
 - **P6 — Published browser.** Runtime-swappable `PUBLISHED_DATA` (one browser file,
   many buildings), expose the pathfinder as "how do I get from here to there", and
   sub coverage marked and returned by link (Path 6).
@@ -11401,9 +11736,7 @@ worth of novel studies stays organized instead of overwriting itself.
 
 #### Major Features
 
-- **Multiple named saved trackers** (e.g. separate science-fair cohorts
-  per class period), matching the multi-save convention used by most
-  builder/tracker tools in this round — right now one tracker per browser.
+- *(Shipped: multiple named saved trackers, v262 — see `HISTORY.md`.)*
 - **Student self-check-in via a share link** (this toolkit's P3 pattern):
   students mark their own milestones complete from their own device,
   instead of a teacher manually checking every box for every student.
@@ -11425,10 +11758,9 @@ turns a teacher-maintained spreadsheet into a shared, live status board.
   their own milestone done, but a teacher must confirm before it counts),
   or is trusting student self-report sufficient for a formative tracking
   tool like this?
-- Next round could pick up any of the Major Features above — multiple
-  named trackers and per-milestone notes are the two that don't require
-  new toolkit-wide infrastructure (P3 share-link plumbing, ICS export) and
-  so are probably the next-cheapest wins.
+- Next round could pick up any of the Major Features above. Multiple named
+  trackers and per-milestone notes are both shipped; the other two need
+  new toolkit-wide infrastructure (P3 share-link plumbing, ICS export).
 
 #### Platform themes that matter here
 
