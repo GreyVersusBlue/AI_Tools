@@ -68,7 +68,9 @@ await addBankEntry({ question: 'Longest river in the world?', answer: 'The Nile'
 
 const stored = await page.evaluate(() => window.ReviewBankStore.listEntries());
 eq(stored.length, 3, 'three entries persisted to the bank store');
-const bankKeyOnly = await page.evaluate(() => Object.keys(localStorage).some(k => k === 'gvb-review-board-bank:entries'));
+// Since v265 the bank is the site's shared one (_shared/question-bank.js):
+// this assertion named the tool's private key, and names the shared one now.
+const bankKeyOnly = await page.evaluate(() => Object.keys(localStorage).some(k => k === 'gvb-question-bank'));
 ok(bankKeyOnly, 'the bank lives under its own localStorage key, separate from gvb-review-board:*');
 
 let rows = await page.$$('#bankList .bank-entry');

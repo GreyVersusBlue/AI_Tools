@@ -12,6 +12,9 @@
   // it into the "other tools" share of the readout below would blame some
   // other page on the site for space this tool is using itself.
   var BANK_PREFIX = 'gvb-review-board-bank:';
+  // Since v265 the bank is the site's shared one (_shared/question-bank.js),
+  // which this tool is the editor of; the old key above is kept, not removed.
+  var SHARED_BANK_KEY = 'gvb-question-bank';
 
   /* NOTE: localStorage.getItem returns `null` for a missing key, and
      JSON.parse(null) parses that as the *string* "null" -> the value
@@ -97,7 +100,7 @@
       if (key === null) continue;
       var size = bytesOf(key) + bytesOf(localStorage.getItem(key));
       total += size;
-      if (key.indexOf(DATA_PREFIX) === 0 || key === LIST_KEY || key === CURRENT_KEY || key.indexOf(BANK_PREFIX) === 0) boards += size;
+      if (key.indexOf(DATA_PREFIX) === 0 || key === LIST_KEY || key === CURRENT_KEY || key.indexOf(BANK_PREFIX) === 0 || key === SHARED_BANK_KEY) boards += size;
     }
     return { total: total, boards: boards };
   }
