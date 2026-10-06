@@ -33,6 +33,8 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/print-kit.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/roster.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -75,6 +77,9 @@
   button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   button.full { width: 100%; }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  label.check { display: flex; align-items: flex-start; gap: .5rem; font-weight: 400; font-size: .86rem; margin-bottom: .5rem; }
+  label.check input { margin-top: .2rem; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
 
   .category { border: 1px solid var(--line); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .8rem; }
@@ -161,6 +166,16 @@
         </select>
         <p class="hint">Yes / Somewhat / No records <em>degree</em>, not just presence &mdash; a reviewer can say &ldquo;kind of&rdquo; instead of leaving a box ambiguously empty.</p>
       </div>
+
+      <div class="card">
+        <h2>Print for a class</h2>
+        <label for="rosterSelect">Class roster</label>
+        <select id="rosterSelect"></select>
+        <label class="check" for="withReviewer"><input type="checkbox" id="withReviewer"> Fill in the reviewer too: each student reviews the next name on the list, and the last reviews the first</label>
+        <p class="hint" id="rosterNote" aria-live="polite"></p>
+        <button class="secondary full" id="printClassBtn" disabled>Print one per student</button>
+        <p class="hint">Two to a page. Cut the pile along the line and put the lower stack under the upper one, and the sheets are in roster order. Names are read from the saved roster when you print and are not kept here.</p>
+      </div>
     </div>
 
     <div>
@@ -219,7 +234,7 @@
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'assignmentName', 'copyCount', 'categoriesWrap',
    'addCategoryBtn', 'printBtn', 'printArea', 'sizeWarning', 'ratingStyle',
-   'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'shareBtn', 'shareNote', 'rosterSelect', 'withReviewer', 'rosterNote', 'printClassBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { assignmentName: '', copyCount: 6, categories: [], ratingStyle: 'check' };
 
@@ -390,12 +405,16 @@
     return tri;
   }
 
-  /** One checklist, as PrintKit.renderSet()'s template: called once per copy. */
-  function buildSheet() {
+  /** One checklist, as PrintKit.renderSet()'s template: called once per copy.
+      `who` is { author, reviewer } for a named sheet; a blank one has neither,
+      and a name that is empty stays a write-in line. */
+  function buildSheet(who) {
+    who = who || {};
     var three = state.ratingStyle === 'three';
     var sheet = el('div', 'half-sheet' + sizeClassFor(contentWeight()));
     sheet.appendChild(el('h3', '', state.assignmentName.trim() || 'Peer Feedback Checklist'));
-    sheet.appendChild(el('div', 'names', 'Author: _____________________ \u00a0 Reviewer: _____________________'));
+    var line = '_____________________';
+    sheet.appendChild(el('div', 'names', 'Author: ' + (who.author || line) + ' \u00a0 Reviewer: ' + (who.reviewer || line)));
     if (three) {
       var legend = el('div', 'tri-legend');
       legend.appendChild(document.createTextNode('Mark one box per line: '));
@@ -431,10 +450,67 @@
     if (!state.categories.length) { alert('Load a template or add a category first.'); return; }
     var count = Math.max(1, Math.min(60, state.copyCount || 6));
     // Two checklists to a page, the cut line under the upper one of each pair.
-    PrintKit.renderSet(els.printArea, buildSheet,
+    PrintKit.renderSet(els.printArea, function () { return buildSheet(); },
       { mode: 'blank', count: count, sheet: 'half', cut: true, header: false, footer: false });
     window.print();
   });
+
+  /* ---------- one per student, from a saved roster ----------
+     Roster.listRosters / getRoster are read-only, and read at print time: a
+     name is never copied into this tool's own key. Two to a page, and the
+     order is for the guillotine: page p carries student p above and student
+     k + p below (k is the number of pages), so cutting the pile and setting the
+     lower stack under the upper one puts the sheets back in roster order. With
+     an odd class the last page has one sheet. */
+  function cutStackOrder(list) {
+    var k = Math.ceil(list.length / 2), out = [];
+    for (var p = 0; p < k; p++) {
+      out.push(list[p]);
+      if (k + p < list.length) out.push(list[k + p]);
+    }
+    return out;
+  }
+
+  /** The author on every sheet and, when asked, the next name round as the reviewer. */
+  function pairings(names, withReviewer) {
+    return names.map(function (name, i) {
+      return { author: name, reviewer: withReviewer && names.length > 1 ? names[(i + 1) % names.length] : '' };
+    });
+  }
+
+  var picker = Roster.mountRosterPicker(els.rosterSelect, {
+    placeholder: 'Choose a class…',
+    emptyLabel: 'No saved rosters yet',
+    onChange: function () { syncRosterUi(); }
+  });
+
+  function chosenNames() {
+    return picker.getSelected() ? picker.getNames().filter(Boolean).slice(0, 400) : [];
+  }
+
+  function syncRosterUi() {
+    var any = Roster.listRosters().length > 0;
+    var names = chosenNames();
+    els.printClassBtn.disabled = !names.length;
+    els.rosterNote.textContent = !any
+      ? 'No class roster is saved on this device yet. Save one in Class Roster Hub and it will be offered here. “Print checklists” still prints blank ones.'
+      : !picker.getSelected() ? 'Choose a class to print a checklist with each student’s name on it.'
+      : !names.length ? 'That roster has no names in it.'
+      : names.length + (names.length === 1 ? ' student' : ' students') + ' — ' + Math.ceil(names.length / 2) +
+        (Math.ceil(names.length / 2) === 1 ? ' page.' : ' pages.');
+  }
+  Roster.onChange(syncRosterUi); // the picker refreshes its own list on the same event, before this runs
+
+  els.printClassBtn.addEventListener('click', function () {
+    if (!state.categories.length) { alert('Load a template or add a category first.'); return; }
+    var names = chosenNames();
+    if (!names.length) { syncRosterUi(); return; }
+    var sheets = cutStackOrder(pairings(names, els.withReviewer.checked));
+    PrintKit.renderSet(els.printArea, function (sheet) { return buildSheet(sheets[sheet.n - 1]); },
+      { mode: 'set', roster: sheets.map(function (s) { return s.author; }), sheet: 'half', cut: true, header: false, footer: false });
+    window.print();
+  });
+  els.withReviewer.addEventListener('change', syncRosterUi);
 
   /* ---------- share a checklist: _shared/share.js (Path 6 P3) ----------
      One button opens the shared sheet — copy link, QR code (greyed out with
@@ -522,6 +598,7 @@
   els.ratingStyle.value = state.ratingStyle;
   if (!state.categories.length) fromTemplate('narrative');
   renderCategories();
+  syncRosterUi();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

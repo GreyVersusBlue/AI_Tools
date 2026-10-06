@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## 069 PE Warm-Up Circuit Card Generator: "Run the circuit", a projector timer with a rotation signal (2026-10-06, AI-31-069, `CACHE_VERSION` v259)
+## 069 PE Warm-Up Circuit Card Generator: "Run the circuit", a projector timer with a rotation signal (2026-10-06, AI-31-069, `CACHE_VERSION` v261)
 
 Audit entry AI-31, BACKLOG rank 106 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
 
@@ -55,6 +55,152 @@ Audit entry AI-31, BACKLOG rank 106 (½). The row is deleted and the other ranks
   the roster rotation chart and exercise photos are still open. The pre-existing preview and print code writes a station's icon with `innerHTML` unescaped, so markup
   in a share link's icon field would be inserted as HTML (not tried; whether it would run was not checked). That is outside this row and was not touched; it is one of the page's
   four baselined sinks.
+## 070: one named half sheet per student, from a saved roster (2026-10-06, AI-31-070, `CACHE_VERSION` v260)
+
+Audit entry AI-31, BACKLOG rank 107 (deleted; ranks not renumbered during the sprint). A "Print for a class" card on
+`Tools/070-peer-feedback-checklist-generator.html`: pick a saved roster, press "Print one per student".
+
+- **What it does.** (The commit says v259; AI-13 took v259 on `main` before this merged, so the merge moved it to v260.) `Roster.mountRosterPicker` lists the classes; the button reads the chosen one with `Roster.getRoster` at the moment
+  of printing and prints one half sheet per student with `Author: <name>`. No edit to `_shared/`, and the tool's own key
+  (`pfc_checklist_v1`) is byte for byte what it was, with no new key: the chosen class is not remembered between visits (no
+  `persistKey`), on purpose, so nothing new is stored.
+- **Order is for the guillotine.** Page p carries student p above and student k + p below, k being the number of pages. Cut the pile
+  along the line, put the lower stack under the upper one, and the sheets are in roster order. An odd class leaves the last page
+  with one sheet; a class of 1 is one page; 40 is 20.
+- **The reviewer** is optional (a tick box): each author is reviewed by the next name on the list, the last by the first. A class of
+  one has nobody to review and keeps the write-in rule. Other pairings are still written by hand on the blank sheet, which stays
+  the default and prints as before. This settles the section's open question: blank stays the default, the roster print is the extra.
+- **No roster saved**: the picker says "No saved rosters yet", the note says so and that blanks still print, and the class button is off.
+- **Names are text.** They reach the sheet through `textContent` (the kit's rule); the page has no new markup sink.
+- **Suite.** `smoke-roster-sheets.mjs` (`npm run test:peer-feedback-roster`, port 8497, 134 assertions): classes of 1, 2, 3, 7, 8 and 40,
+  the order, the reviewer, Chromium's PDF page count (1, 7 and 40), names read at print time, nothing stored, markup and duplicate names,
+  an old save, and the paper. **30 breaks on purpose**, each failing the suite: 26 first time; 3 had an anchor that did not match and
+  were rewritten (a page-count line, a no-roster note, a skipped label); 1 survived (the default title was never asserted when the
+  assignment title is empty) and got an assertion. Two of them crash the suite with a TypeError instead of naming the assertion (they
+  fail it either way).
+- **Not done / not verified.** Nothing printed on paper or read with a real screen reader; the full `npm test` was not run. The browser
+  runs waited long on the shared suites lock (about 30 minutes for one run), so the breaks ran one run per lock, as the sprint rules say.
+
+## Path 7 P5 increment 2: the print preview on six more pages, and the rule for a page with several print buttons (2026-10-06, AI-13, `CACHE_VERSION` v260)
+
+Audit entry AI-13, BACKLOG rank 7 (now ½). The row stays, rewritten: six pages left (070 023 040 018 017 016). `_shared/` did not
+change; `PrintKit.preview()` is as increment 1 left it.
+
+- **What shipped.** A "Preview pages" button in front of the print button on 076 (sub note slips), 077 (accommodation cards), 051
+  (classroom labels), 042 (certificates) and 064 (trading cards), the five of the twelve with one print button that were free (070 was
+  AI-31's this batch). And four Preview buttons on 043 (field trip slips), one in front of each of its four Print buttons. Seven of the
+  thirteen print-kit pages have the preview.
+- **What an adopter changed.** Its print handler became two functions, one that builds the sheet and one that prints it, and the Preview
+  button calls the first and then `PrintKit.preview({ trigger, onPrint })`. Where Print refuses (077 with no roster or nobody in the
+  filter, 051 with no words, 064 with no cards) Preview refuses in the same words. 064 waits for its photos before it opens, as its
+  Print does. Nothing inside any `#printArea` changed.
+- **Point 4, decided: a Preview button in front of each Print button, not one preview with a "which sheet" choice.** The four pages'
+  print buttons are apart (043's in three cards, 017's in four, 018's in two, 016's on three tabs), each under the controls that shape
+  its sheet and with its own disabled rule and refusal. The full rule, (a) to (e), is in `BACKLOG.md`, Path 7 P5. Reversible: the
+  buttons are markup and one helper on 043 (`wirePreview`). Part (e), for pages that keep several areas in one `#printArea`, is written
+  from the source of 018, 017 and 016 and was not tried.
+- **Checks.** New suite `Tools/print-kit/test/smoke-preview-adopters.mjs` (`npm run test:preview-adopters`, port 8495, 3,094
+  assertions): for every state each tool's `smoke-print.mjs` prints, light and dark, the preview's count is Chromium's PDF count (200
+  state-and-button runs), every slip, card, label or certificate is in it and none past the count, a canvas shows the live one's
+  pixels, the paper is the one `setPage()` wrote, closing leaves the page as it was; then its Print, axe, a 375 px phone and the
+  refusals. Old page (`git show main:` through `page.route()`) against new, a scratch script: the built sheet's markup, PDF page count,
+  `pdftotext` and raster (`pdftoppm -r 48 -gray`) identical in 200 of 200.
+- **What I got wrong.** My suite first looked for a repeated `<thead>` in the preview; the kit repeats header *rows* inside `<tbody>`
+  (eight false failures on 051). It also demanded at least one kit sheet in every preview, and 043's reminder slips with nobody owing
+  one is a single line of text (eight more). Both were the suite's, not the pages'. The old-against-new script ran 400 page loads
+  inside one hold of the suites lock, 10.5 minutes, and two other workers queued behind it: split such a run by tool.
+- **Not done as asked.** One table-driven suite, not a suite in each tool's folder: one port was handed out, and the assertions are the
+  same for every adopter. The selector does not follow the table, so the six pages are named in the suite's header.
+- **Not verified.** Only Chromium; only huginn's font (Noto Sans), not CI's; only each tool's own paper; no 064 deck with photos; no
+  screen reader (roles, names, focus and axe are what was checked); nothing printed on paper. Full `npm test` not run.
+
+## Path 20 P3 designed, not built: the live vector viewer for 046 (2026-10-06, AI-28, no `CACHE_VERSION`, no code)
+
+Audit entry AI-28, rank 65 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P3 bullet under
+"Path 20", and a note on rank 65). **The row stays.** Nothing was built, no suite or browser ran; the two docs
+guards that read Markdown were run.
+
+- **What the design is.** One new module beside `bmg-vector.js`, `Tools/blank-map-generator/bmg-live.js`:
+  `parseBaseMapId()` (the inverse of `baseMapId()`), `loadSource()` (the two files unwrapped, projected once into
+  stage pixels and kept as four cached `Path2D`s: land fill with the polar closure, land stroke without, borders,
+  and one path per shaded feature), `drawBaseMap(ctx, source, view, w, h, { dpr, strokePx })` (mat, ocean, land,
+  relief multiplied into the land clip, fills, then a stroke whose width is divided by the scale so it is a
+  constant screen hairline), `drawExtent()` and `createLiveBase()` (a viewport-sized canvas under `#stage`,
+  redrawn on the next animation frame after a view change). **The stage unit does not change** — one unit is one
+  pixel of the 4000 px plate carrée raster, whether or not a raster exists — so every saved label, marker,
+  region, line, view and calibration opens where it was, the hit test and the lat/long maths are untouched, and
+  there is no `__v` bump. **Print parity is one function with two callers:** `drawMapContent()`'s first line calls
+  `drawBaseMap` in place of `drawImage(mapImg, …)`, so PNG, print, PDF, worksheet and the tiled poster get vectors
+  through that one line. `renderBaseMapCanvas()` becomes a wrapper over the same function at the identity view
+  and must stay pixel-identical for 015's map panel and the series sheet. A `vector:` project is drawn live,
+  cache record or none, so a shared project opens with its map on the other machine and the "isn't cached"
+  state stops happening for built-in maps. Keyboard pan and zoom, a focusable named viewport and a live region
+  announcing zoom and extent come with it; nothing fetches. Canvas, not SVG, because every export already needs
+  a canvas and SVG would be a second renderer of the same data.
+- **What the measurements were.** One pure-Node probe over the four vendored files, not kept. `world-countries`
+  is 177 features, 285 rings, 10,583 vertices; `us-states` 56 features, 304 rings, 14,446 vertices (Alaska's ring
+  2,023). Cropped to a preset by ring bounding box the divided layer is 696 to 13,848 vertices. Visvalingam at half a
+  screen pixel keeps 86% of the world's vertices at fit and 96% at 4×, so simplification is not in the design.
+  Unwrapping, projecting and writing every vertex of `us-states` to a path string is 5.1 ms in Node. The raster a
+  teacher's browser holds today is 7 to 16 megapixels a preset, 27 to 60 MiB decoded, twice (image and locator).
+- **What reading the code turned up.** A `vector:` project whose IndexedDB record is gone (the cache cleared, or a
+  `?map=` link opened on another machine) shows "This project's map isn't cached in this browser anymore" and the
+  share note says a built-in map "is picked again there", although the id holds everything needed to redraw it.
+  No key pans or zooms and `#viewport` has no `tabindex`, role or name. The raster's 3 px stroke scales with zoom
+  (0.75 px at a fitted world, 36 px at 12×), which is the smear P3 removes. The overlay SVGs' strokes (region 2.5,
+  line 3.5 stage px) also scale and have no `vector-effect`, which is why `maxScale` is not raised in P3.
+- **Decided here, cheap to reverse.** Canvas over SVG. A constant 1 px screen stroke on screen and on paper. Live
+  draw for every `vector:` id and no new cache records written; the old records left alone. The module beside
+  `bmg-vector.js`, not inside it; nothing moved to `_shared/` (P1's job, and P3 does not wait for P1). The zoom
+  readout's 100% unchanged. `role="group"` with `aria-roledescription="map"`.
+- **Left to Devon, listed in the design and not answered:** whether a printed border should stay a hairline at every
+  zoom or thicken as the raster's did; whether label and marker text should grow with zoom; what to do with the
+  2048 px relief past about 2×; whether "Clear cached maps" should offer to drop only the now-unneeded `vector:`
+  records; whether a keyboard-pannable projected map is ever student-driven (which would make it student-facing);
+  and the P5 network question, which P3 leaves exactly where it was.
+- **Not verified.** No module exists and nothing ran in a browser; the frame cost is Node's projection time, not
+  Chromium's rasteriser, and no Chromebook was measured. The wrapped `renderBaseMapCanvas`'s pixel-identity is a
+  claim the build's parity suite proves. The share-arrival finding was read off `init()` and the share note, not
+  reproduced.
+
+## Path 19 P3 designed, not built: the conjugation engine (2026-10-06, AI-27, no `CACHE_VERSION`, no code)
+
+Audit entry AI-27, rank 60 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P3 bullet under
+"Path 19", a Status line for the path, and a note on rank 60). **The row stays.** Nothing was built, no suite or
+browser ran; the docs guards (`check:docs-commands`, `check:adoption`) were the only checks.
+
+- **What the design is.** A plain classic script, `_shared/conjugate.js` (`Conjugate`), pure functions over data,
+  with a language as a pack (`conjugate-es.js`, `conjugate-fr.js`) registered into it. `classify()`, `lookup()`
+  (with prefix derivation and an exception list), `conjugate()` returning six slots and a note per cell saying
+  which rule made it, `table()`, `match()` with 039's three verdict names, `merge()` and `validate()` for a
+  teacher's record. The verb record and the pack share one shape: class, one stem-change token, per-tense stems,
+  sparse per-cell forms, participle, gerund, auxiliary, reflexive, defective. Orthographic changes are derived
+  from the junction, never declared. A tense is one of six data shapes (endings, infinitive stem, derived from
+  another tense, subjunctive, compound, imperative), so which tenses a pack declares is a curriculum decision and
+  not code. The teacher's overlay lives on P1's word record, and on 039's own conjugation entry until P2 lands.
+  039 gets a language and tense select and a Fill from pattern button; 079's eight hand-typed templates become
+  data computed at load. Fifteen named Node cases and a browser suite, with correctness held by the repo's own
+  forms (079's), a second derivation for every pack verb, and a printed check sheet for a teacher.
+- **What reading the code turned up.** No page conjugates a verb today: 039 has the teacher type six boxes and
+  079 ships 108 forms typed by hand. 039's quiz strips every combining mark, so `año` and `ano`, and `garçon` and
+  `garcon`, are "close" rather than wrong; `ß` and `œ` never decomposed and were never affected. 039 and 079 use the
+  same six-person order, which is why the engine's slots are fixed. Rank 85 ("Conjugation pattern engine", 039,
+  ½) is the same subject as rank 60 and was left alone: re-ranking is not a session's call.
+- **What the measurements were.** One pure-Node probe, not kept. A 40-line regular-ending table against 079's
+  templates read off the page: 108 of 108 forms equal. 039's `stripDiacritics` on ñ, ç, ß, œ, ü. One verb encoded
+  three ways: 546 bytes with every form spelled out for six tenses, 288 as stems and sparse overrides, 38 as a
+  regular record; so about 35 KB for the engine and two packs. The figures are in the design.
+- **Decided here, cheap to reverse.** One engine and a pack a language; record shape equals pack shape; derived
+  orthography; six fixed slots and a `personSlots` map in 039; ñ and ç are letters, ü is an accent; the masculine
+  singular for agreement; `entry.verb` in 039 until P2; 079's templates computed; prefixes derived with exceptions.
+- **Left to Devon, listed in the design and not answered:** which languages first (the code today has presets
+  for Spanish, French, German and Latin, templates for Spanish and French); which tenses the courses reach;
+  vosotros by default; agreement on paper; who proofreads the corpus; the 1990 French rectifications and
+  s'asseoir; paie or paye; a correction per list or site-wide; keeping 039's free-text tense label; the
+  student-facing line for the quiz; filling an unknown infinitive as regular or asking; ü.
+- **Not verified.** No module exists and nothing ran in a browser. Every form and every inventory named in the
+  design came from the session's knowledge of the two languages and was checked against nothing, which is what
+  the check sheet and the two-rules case are for. The sizes are one encoding, not a built pack.
 
 ## Path 7 P5 increment 1: the print kit has a print preview, and 074 is its one adopter (2026-10-06, AI-13, `CACHE_VERSION` v258)
 

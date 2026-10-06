@@ -87,6 +87,10 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v259), rank 7, Path 7 P5 increment 2: seven pages have the print preview now** (074, and 076, 077,
+  051, 042, 064 and 043), and the several-buttons question is settled: a Preview button in front of each Print
+  button (043 is the example; Path 7 P5, "Point 4"). The kit did not change. `npm run test:preview-adopters`
+  (port 8495). **Rank 7 stays: six pages left (070 023 040 018 017 016). The next free suite port is 8498.**
 - **AI-13 (v258), rank 7, Path 7 P5 increment 1: the kit has a print preview, `PrintKit.preview()`, and 074
   is its one adopter** ("Preview pages": the sheet cut into the pages it will print on, in a dialog, no print
   dialog). The breaks are the browser's own, in an iframe; the count equals Chromium's PDF. `npm run
@@ -242,14 +246,14 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v258` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v259` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **315** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
 | Suites | **221** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 11 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 38 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 11 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -387,7 +391,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 7 | Path 7 P5 (rest) — the print preview on the other twelve print-kit pages, and all that is left of Path 7. `PrintKit.preview()` shipped at v258 with 074 as its one adopter (a modal dialog, one page at a time at the size `setPage()` wrote, the breaks found by the browser's own fragmentation in an iframe; the count equals Chromium's PDF on 074, 043, 051 and 042 in both fonts). Left: a Preview button, three lines and a count-equals-PDF suite on 043 023 042 076 070 077 051 040 064 018 017 016, and first the one open design point, where the control goes on a page with several print buttons (018, 017, 043, 016). Done when the preview's page count equals `page.pdf()`'s on all thirteen | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
+| 7 | Path 7 P5 (rest) — the print preview on the last six print-kit pages, and all that is left of Path 7. `PrintKit.preview()` (v258) is on seven pages at v259: 074, the single-button pages 076 077 051 042 064, and 043, the first page with several print buttons (a Preview button in front of each Print button; the rule is in Path 7 P5, "Point 4"). Left: 070, 023 (two buttons), 040 (Print and the alignment test), then 018, 017 and 016, which keep several areas inside one `#printArea` and have to show the asked-for area before `preview()` and put the at-rest one back when it closes (not tried). Each is a button, the wiring and an entry in `Tools/print-kit/test/smoke-preview-adopters.mjs`. Done when the preview's page count equals `page.pdf()`'s on all thirteen | `_shared/` | ½ | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -440,12 +444,12 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 57 | Path 18 P5 — decide the product: two entry points on one engine, or one tool with a mode switch | 018 | ¼ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 58 | Path 19 P1 — `_shared/word-list.js`, owned by a Word Lists hub inside 040 | `_shared/` | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 59 | Path 19 P2 — adopters: 040, 039, 014, 027, 051, 052; delete `vfg-conjdrill-link.js` | site | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
-| 60 | Path 19 P3 — conjugation pattern engine for Spanish and French, with irregular overrides | 039 | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
+| 60 | Path 19 P3 — conjugation pattern engine for Spanish and French, with irregular overrides. **Designed, not built (AI-27, 2026-10-06): the design is in the P3 bullet**; the engine can be built before P1 and P2, its storage on the word record cannot | 039 | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 61 | Path 19 P4 — printables: Frayer page, spaced repetition, fill-in-the-blank, word wall as a system | 040 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 62 | Path 19 P5 — audio: TTS on study mode, teacher-recorded pronunciations into the media store | 051 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 63 | Path 20 P1 — `_shared/geo-project.js` + `traceFeature`, hit-test and the curriculum gazetteer | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 64 | Path 20 P2 — dropped GeoJSON/TopoJSON as a base map | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
-| 65 | Path 20 P3 — live vector viewer, keeping the raster path for poster export | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
+| 65 | Path 20 P3 — live vector viewer, keeping the raster path for poster export (**designed 2026-10-06, not built**: the design, its measurements and six questions for Devon are under the P3 bullet; P1 and P2 are not built and the design does not wait for them) | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 66 | Path 20 P4 — time slices for annotations; two-way selective handoff with 015 | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 67 | Path 20 P5 — quiz memory across sessions; decide the Wikimedia network question | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 68 | Track B1 — brand engine in `a11y.js`: school accent and logo, pre-paint, with an opt-out flag | `_shared/` | 1 | | [Track B](#track-b--custom-theme--branding-pass) |
@@ -478,7 +482,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
-| 107 | Roster-driven pre-named half-sheets — read `np_rosters` and print one per student | 070 | ½ | | [070 Peer Feedback / Editing Checklist Generator](#070--peer-feedback--editing-checklist-generator) |
 | 108 | Multiple named saved image sets, so two vocabulary libraries coexist without re-uploading | 071 | ½ | | [071 Picture-Prompt Speaking/Writing Task Generator](#071--picture-prompt-speakingwriting-task-generator) |
 | 109 | Share a diagram by link, so the same novel’s diagram moves between class periods | 072 | ½ | | [072 Story Elements / Plot Diagram Builder](#072--story-elements--plot-diagram-builder) |
 | 110 | Multiple named saved trackers — one per class period’s science-fair cohort | 073 | ½ | | [073 Science Fair Project Tracker](#073--science-fair-project-tracker) |
@@ -2570,17 +2573,42 @@ localStorage with no file export.
   they do across pages is not known. Nothing was printed on paper.
   **Left out, on purpose:** thumbnails of every page at once, zoom, a live preview beside the editor,
   choosing the paper in the preview.
-  **What is left of P5.** (1) The other twelve adopters (043 023 042 076 070 077 051 040 064 018 017 016),
-  each a button, the three lines and a suite that holds the preview's count to Chromium's PDF over the states
-  its `smoke-print.mjs` already prints. 051, 043, 042 are measured above and need nothing new from the kit as
-  far as that went; 076, 070, 077, 023, 040, 064, 018, 017 and 016 were not run at all. (2) Point 4, where the
-  control goes on a page with several print buttons (018 six, 017 five, 043 four, 016 three). Not built and not
-  tried; the reading is that each of those pages needs its "build this sheet" step apart from its `print()` call
-  (018, 017 and 016 keep several areas inside one `#printArea` and show one), and then either one Preview
-  button beside each Print button or one Preview with a "which sheet" choice in the dialog. The preview takes
-  the whole `#printArea`, not one area inside it, because the rules that show an area are written from
-  `#printArea` down. (3) Found on 074 and not fixed, the same before: at 375 px its queue row is 26 px wider
-  than the phone.
+  **Increment 2 (AI-13, 2026-10-06, v259): six more adopters, seven of thirteen.** 076, 077, 051, 042 and 064
+  (one print button each) got 074's button, "Preview pages", in front of the print button, and 043 got four.
+  The kit did not change: nothing an adopter did showed a defect in `preview()`. The count equals Chromium's
+  PDF in every state each tool's `smoke-print.mjs` prints, light and dark (200 state-and-button runs), held by
+  `Tools/print-kit/test/smoke-preview-adopters.mjs` (`npm run test:preview-adopters`, port 8495), one table for
+  all six and not a suite in each tool's folder, as `_csv-adopters.mjs` is for the CSV pages. What an adopter
+  does: split "build the sheet" from "print it" (`renderSheet()` or the tool's `buildPrintArea()`; it returns
+  false, having said why, when there is nothing to print), and call `PrintKit.preview({ trigger, onPrint })`
+  after the build. 064 waits for its photos first, as its Print does. 051's and 042's QR canvases need nothing:
+  the kit redraws each from the live one, and the suite compares the pixels.
+  **Point 4, settled: one Preview button in front of each Print button, not one preview with a "which sheet"
+  choice.** Read off the four pages: their print buttons are not together. 043's are in three cards, 017's in
+  four, 018's in two, 016's on three tabs; each sits under the controls that shape its sheet, has its own
+  `disabled` rule and its own refusal, and a chooser in the dialog would have to know all of that and rebuild
+  the sheet from inside the kit. So: (a) every Print button gets a Preview button immediately before it in the
+  markup, `class="secondary"`, with the Print button's id and label and "preview" for "print" (`printMissingListBtn`
+  "Print missing list" has `previewMissingListBtn` "Preview missing list"); a button that says only "Print" gets
+  "Preview pages", as on the one-button pages; (b) a Print button that prints one of several layouts by a
+  choice made elsewhere (043's one / class set / blank, 040's seven faces) has one Preview, which reads the same
+  choice; (c) Preview is `disabled` whenever its Print is, and refuses in the same words; (d) it builds its
+  sheet exactly as its Print button does, then calls `preview()` with itself as `trigger` and an `onPrint` that
+  presses its Print button, so what is printed is what was looked at; (e) on a page that keeps several areas
+  inside one `#printArea` (018, 017, 016) the build step also shows the asked-for area (`.active`,
+  `.sheet-asked`, the body class) before `preview()`, because the preview copies the whole `#printArea` with
+  its classes, and puts the at-rest state back when the preview closes, as that page's `afterprint` does, so
+  Ctrl+P prints what it printed before. (e) is written from the source and **not tried**: 043, where the rule
+  was applied, renders each sheet into `#printArea` whole and has no areas. 043's wiring is one helper,
+  `wirePreview(previewBtn, build, printBtn)`, four calls.
+  **What is left of P5.** (1) Six adopters: 070 (one button; AI-31 had the page during increment 2), 023 (Print
+  Handout / Class Set and the reteach list), 040 (Print and the alignment test), and 018 (six buttons), 017
+  (five) and 016 (three) by rule (e). None of the six has been previewed at all. Each gets an entry in
+  `smoke-preview-adopters.mjs`'s `TOOLS` (`buttons` and a `pages` list for several). (2) Found and not fixed,
+  the same before: 074's queue row is 26 px wider than a 375 px phone; on 043 Ctrl+P prints whichever sheet
+  was built last (after a preview that is the previewed sheet, after a visit with no button pressed an empty
+  page), since it has no `beforeprint`. (3) Not checked in increment 2: other papers than each tool's own
+  (074's suite does that for the kit), a 064 deck with photos, DejaVu Sans (CI's font).
 
 **Model.** Opus, except P4's imposition math.
 
@@ -5025,6 +5053,10 @@ dropped) with no write-back; 014's scenario vocabulary and 027's vocabulary log 
 unbridged; 051 and 052 hold word lists in their own shapes. Regular Spanish/French
 conjugation is entirely mechanical and 039 makes teachers type every form.
 
+**Status.** Nothing built. P3 is designed, not built (AI-27, 2026-10-06): the design is in its bullet,
+with twelve questions for Devon at its end. P1, P2, P4 and P5 not started; P3's engine depends on
+neither P1 nor P2, its storage does.
+
 **Phases.**
 
 - **P1 — `_shared/word-list.js`.** Versioned store of named lists of
@@ -5039,6 +5071,252 @@ conjugation is entirely mechanical and 039 makes teachers type every form.
   the full regular table for Spanish and French (present, preterite/passé composé,
   imperfect, future, conditional, subjunctive present), with irregular overrides
   stored on the word record; 079's posters and 039's drills both consume it.
+  **Designed, not built (AI-27, 2026-10-06). Nothing below exists; the row (rank 60, 2+) stays.** The
+  design follows P4's form above. It was written from 039's page (its `conjugations[]` entries, the
+  `answerMatch` quiz check, its person presets and accent sets), 079's page (eight hand-typed templates,
+  108 forms), `vfg-conjdrill-link.js`, `_shared/handoffs.js`'s 039 → 040 entry, the registry rows and the
+  two tools' suites. **Where a verb is conjugated today:** nowhere. 039 makes the teacher type every form
+  into six boxes; 079 ships eight templates typed by hand (hablar, comer, vivir in four Spanish tenses,
+  ser and estar; parler, finir, vendre in two French tenses, avoir and être); no other page has a verb
+  form in it. A pure-Node probe (not kept) ran a 40-line regular-ending table against 079's 108 forms:
+  **108 of 108 equal**, so the regular classes are already pinned by data in the repo.
+  **What it is.** `_shared/conjugate.js`, a plain classic script publishing `window.Conjugate`: pure
+  functions over data, no DOM, no storage, no `fetch` (the offline copy runs from `file://`, where a
+  sibling JSON is blocked, which is why `tool-registry.js` inlines its data too). The engine is
+  language-neutral; **each language is a pack**, `_shared/conjugate-es.js` and `_shared/conjugate-fr.js`,
+  a data object handed to `Conjugate.register(pack)`. A page loads the engine and the packs it wants. A
+  third language is one new file and three bookkeeping lines (`PRECACHE_URLS`, the `Conjugate` global in
+  `eslint.config.js`'s `SITE_GLOBALS` once, a `suites.json` case). Not in `SHELL_URLS`: neither 039 nor 079
+  is a front-of-room tool.
+  **The surface.**
+  - `Conjugate.languages()` → `[{ id: 'es', name, persons: [6 labels], tenses: [{ id, name, mood }],
+    classes: [{ id, name, example }] }]`, read off the registered packs; a tool builds its selects from it.
+  - `Conjugate.classify(lang, infinitive)` → `{ class, stem, reflexive, base }` or `null` when the ending is
+    not a class the pack declares (a noun typed in the verb box). `levantarse` → `{ class: 'ar', stem:
+    'levant', reflexive: true, base: 'levantar' }`; `se lever` → `{ class: 'er', reflexive: true, base:
+    'lever' }`; French `-ir` is `finir`'s `-iss-` class unless the record says `ir2` (dormir, partir,
+    sortir, servir, sentir: a shortened singular stem) or `ir-er` (ouvrir, offrir, couvrir, souffrir,
+    conjugated like `-er`).
+  - `Conjugate.lookup(lang, infinitive)` → the pack's record for the verb, or the record of the longest
+    known base it ends in with the prefix glued on and a note `as: 'tener'` (mantener, suponer,
+    convenir; comprendre, revenir, défaire), or `null`. The pack lists the exceptions to prefix
+    derivation (bendecir: participle `bendecido`; a tú command gains an accent when the base was a
+    monosyllable: `ten` but `mantén`, `pon` but `supón`).
+  - `Conjugate.conjugate(lang, verb, tenseId, opts)` → `{ forms: [6], notes: [{ slot, kind, from }],
+    complete }`. `verb` is an infinitive string or a verb record (below); a string goes through `lookup`
+    then `classify`. `notes[].kind` is one of `regular`, `stem`, `spelling`, `irregular`, `defective`,
+    `derived`, `teacher`, `agreement`, `assumed` (an infinitive in no pack, conjugated as regular), so 039
+    can mark a cell and 079 colour one. `opts.pronouns: true` prefixes the subject (and the reflexive
+    pronoun) with French elision (`j'habite`, `je me lave`, `je m'appelle`, `tu t'appelles`); the pack
+    lists its aspirate-h verbs (haïr) so `je hais` is not elided. `opts.slots` picks a subset.
+  - `Conjugate.table(lang, verb, tenseIds)` → `{ tenses: [{ id, forms, notes }], participle, gerund }`.
+  - `Conjugate.match(typed, expected, opts)` → `{ verdict: 'correct' | 'close' | 'wrong', reason }`, the
+    answer check, with 039's three verdict names so its quiz adopts it as a drop-in. `reason` on `close`
+    is `accent`, `pronoun` (the reflexive or subject pronoun typed or left off) or `elision`
+    (`je habite` for `j'habite`).
+  - `Conjugate.merge(record, teacherRecord)` → one record, the teacher's value winning per field and
+    `forms` merging per cell, each merged cell noted `teacher`. `Conjugate.validate(record)` → a list of
+    problems in words (a seventh form, an unknown tense id, a stem change on a vowel the class cannot
+    change, a `stems` entry for a tense the pack does not declare).
+  - `Conjugate.register(pack)`; `Conjugate.normalize(s)` (the comparison key `match` uses, exported so a
+    suite can pin it).
+  **The verb record, and the pack is the same shape.** `{ infinitive, class, stemChange, stems, forms,
+  participle, gerund, auxiliary, reflexive, defective, gloss }`. `class` is found by `classify` unless
+  given. `stemChange` is one token: Spanish `e>ie`, `o>ue`, `e>i`, `u>ue` (jugar); French `e>è`
+  (acheter, lever, mener), `é>è` (préférer, espérer, répéter), `l>ll` (appeler), `t>tt` (jeter), `y>i`
+  (payer, employer, envoyer). `stems` replaces the regular stem for a whole tense (`{ future: 'tendr',
+  conditional: 'tendr', preterite: 'tuv' }`); a Spanish `stems.preterite` takes the strong endings
+  (`-e -iste -o -imos -isteis -ieron`, `-eron` after `j`: dijeron, condujeron). `forms` is sparse, per
+  tense, per slot, and is the last word (`{ present: { 0: 'tengo' } }`). `participle` and `gerund` are
+  strings when irregular (abierto, dicho, escrito, hecho, muerto, puesto, roto, visto, vuelto; French
+  été, eu, fait, pris, mis, dit, vu, bu, lu, écrit, venu, voulu, pu, su, dû). `auxiliary: 'être'` for the
+  French verbs that take it (aller, venir, arriver, partir, entrer, sortir, monter, descendre, rester,
+  tomber, naître, mourir, retourner, passer, devenir, revenir, rentrer); every reflexive takes it without
+  being told. `defective` names the slots or tenses the verb has (llover and nevar slot 2 only; falloir
+  `il` only; soler no future or conditional). Orthographic changes are **derived, never declared**: a
+  rule reads the stem's last letters and the ending's first vowel (`c>qu`, `g>gu`, `z>c` before e;
+  `g>j`, `gu>g`, `c>z` before a or o; `i>y` between vowels, leyó, construyó, with the `-uir` verbs taking
+  `y` before every vowel but i; French `c>ç` and `g>ge` before a or o, `y>i` before a mute e, `-ayer`
+  optional). A pack field `spelling: false` switches one off for one verb if a case ever needs it.
+  **The algorithm: one cell, in order.** (1) `forms[tense][slot]` → that, noted `teacher` or
+  `irregular`; (2) `defective` excludes the cell → empty, noted `defective`; (3) a compound tense →
+  the auxiliary's cell in its own tense plus the participle, noted `agreement` on an être verb (the
+  engine emits the masculine singular; what is printed is Devon's question 4); (4) `stems[tense]` →
+  that stem with the tense's endings (strong endings for a Spanish preterite stem); (5) a derived
+  tense builds from another: Spanish imperfect subjunctive from slot 5 of the preterite minus `-ron`
+  plus `-ra -ras -ra -´ramos -rais -ran` (tuvieron → tuviera, fueron → fuera, the accent landing on
+  the vowel before `-ramos`); present subjunctive from the `yo` stem when the present's slot 0 is
+  irregular (tengo → tenga, conozco → conozca, digo → diga) and from the regular stem otherwise, with
+  the stem change in the boot and the `e>i`/`o>u` change in slots 3 and 4 (pidamos, durmamos); the
+  French subjonctif from the `ils` stem for slots 0 1 2 5 and the `nous` stem for 3 4 (boive /
+  buvions), the imparfait from the `nous` present stem (finiss-, buv-, with `avoir` and `être` as
+  overrides), the futur and conditionnel from the infinitive minus a final `e` (vendr-, prendr-) with
+  `stems.future` for aller (ir-), faire (fer-), être (ser-), avoir (aur-), venir (viendr-), voir (verr-),
+  envoyer (enverr-), pouvoir (pourr-), vouloir (voudr-), devoir (devr-), savoir (saur-), falloir
+  (faudr-), the conditionnel always the futur's stem; Spanish commands: `usted`, `ustedes`, `nosotros`
+  and every negative are the subjunctive, `tú` affirmative is the present's slot 2 with the pack's eight
+  overrides (di, haz, ve, pon, sal, sé, ten, ven), `vosotros` the infinitive with `-r` → `-d`; French
+  impératif from the present's slots 1 3 4 with the `-er` (and `aller`) `tu` form losing its `s`;
+  (6) `stemChange` in the boot (slots 0 1 2 5 of the present indicative and present subjunctive; `e>i`
+  verbs also in the preterite's slots 2 and 5, the gerund and the subjunctive's 3 4; `o>ue` verbs
+  dormir and morir take `u` there); (7) the regular stem and the tense's ending for the class; (8)
+  the orthographic rule at the junction; (9) the Spanish accent rule for a vowel stem: `-er`/`-ir`
+  verbs whose stem ends in a vowel take `í` in the imperfect, the preterite's slots 0 1 3 4 and the
+  participle (leía, leí, leíste, leído, oído, creído) and `y` in the preterite's slots 2 5. Every form
+  is returned lowercase and NFC; a Spanish or French verb form is never capitalised, and a tool that
+  starts a sentence with one does so itself. Steps 1 and 2 happen before anything else so a teacher's
+  override of a derived form sticks.
+  **Tenses, as data.** Each pack's `tenses` list declares a tense as `{ id, name, mood, endings: { ar,
+  er, ir } }` (present, preterite, imperfect; présent, imparfait), `{ stemFrom: 'infinitive', endings }`
+  (future, conditional; futur, conditionnel), `{ derivedFrom: 'preterite', slot: 5, strip: 'ron',
+  endings }` (imperfect subjunctive), `{ subjunctive: true, endings }` (the yo-stem rule above),
+  `{ compound: { auxiliary: 'haber', tense: 'present' } }` (present perfect; passé composé with
+  `auxiliary: 'avoir'` and the record's `être`), `{ imperative: true, from: … }` (commands). The engine
+  knows these six shapes and nothing about any one tense; **which tenses a pack declares is the
+  curriculum decision** (Devon's question 2). The first packs declare the bullet's six for Spanish
+  (present, preterite, imperfect, future, conditional, present subjunctive) and six for French (présent,
+  passé composé, imparfait, futur simple, conditionnel présent, subjonctif présent), and the derivable
+  ones above cost one data entry each. **Persons are six fixed slots** in the order 039 and 079 both
+  already use (yo tú él nosotros vosotros ellos; je tu il nous vous ils); a tool that hides vosotros
+  hides slot 4 and the engine does not know. 039 keeps its editable labels and gains `personSlots`
+  (default `[0,1,2,3,4,5]`) so a set whose rows were cut to five maps `[0,1,2,3,5]` and a fill lands in
+  the right rows; a preset button resets both.
+  **Accents and capitals in answers.** `normalize` trims, lowercases, collapses spaces, turns the
+  typographic apostrophe into `'`, and NFC-composes. `match`: equal → `correct`; equal after removing
+  combining marks **from vowels only** → `close`, reason `accent`; equal after removing the subject or
+  reflexive pronoun from either side → `close`, `pronoun`; equal after undoing elision → `close`,
+  `elision`; otherwise `wrong`. **ñ and ç are letters, not accents, and are `wrong`**, which 039's
+  `stripDiacritics` gets wrong today: measured in the probe, its NFD strip makes `año` and `ano` one
+  answer, `ñ` → `n`, `ç` → `c`, while `ß` and `œ` do not decompose and were never affected. `ü` stays
+  `close` (question 12). A blank answer is `wrong`, as 039 has it.
+  **Teacher additions and corrections, and where they live.** Two layers. The packs are built in,
+  read-only, precached. A teacher's verb, or a correction to a built-in one, is a verb record in the
+  same shape, merged over `lookup`'s with `Conjugate.merge`, so a correction is one cell and a new
+  regular verb is `{ infinitive }`. **The record lives on the word** (P1's `word-list.js` record gains a
+  `verb` sub-record, the list a `lang`), which is what the bullet's "stored on the word record" means:
+  it travels with the list's share link and export, and 009 backs it up through the registry's existing
+  row, with no new key. **Until P1 and P2 exist, 039 stores the same record on its own conjugation
+  entry** (`entry.verb` inside `gvb-vocab-conj:data:<name>`, a key that already holds arbitrary state,
+  so no registry row and no `Store` version moves); P2's 039 adoption moves `entry.verb` on to the word
+  and deletes the field. Nothing site-wide: a correction applies to the list it is on (question 8).
+  **What P3 needs from P1 and P2, neither built.** From P1: the record shape allows a namespaced
+  sub-record a tool owns (`verb`), a `lang` on the list, `partOfSpeech: 'verb'` as a value, and an
+  update of one word's fields in place. From P2: 039 reading the full record (it reads two fields
+  today) so `verb` reaches it. The engine and its Node suite depend on neither and can be built first;
+  039's fill button can ship on `entry.verb` first; 079 needs nothing from either.
+  **What each adopting tool changes.** **039:** each conjugation entry gets a language and tense select
+  built from `languages()` beside its free-text tense label (the label stays editable, so "any language"
+  still works: question 9) and a **Fill from pattern** button that calls `conjugate` and writes the six
+  boxes through `personSlots`; a cell with a note other than `regular` gets a mark and a title saying
+  which rule, and the entry's `irregular` checkbox is set when any cell is (the teacher can still clear
+  it); editing a filled cell writes `entry.verb.forms[tense][slot]` and marks the cell `teacher`; the
+  quiz's `answerMatch` becomes `Conjugate.match` and its "close" message names the reason; the accent
+  helper, print, share and the 040 bridge are untouched. The share payload carries `entry.verb` as it
+  carries every field. **079:** `TEMPLATES` become `{ lang, tense, verbs: ['hablar', 'comer', 'vivir'] }`
+  and the panels are computed at load, so rank 116's irregular call-outs and its "conditional,
+  German, Italian templates" quick win become a line of data each; an "Add a verb" box conjugates on
+  the fly into a new panel; the poster still saves its forms as text, so a saved poster needs no
+  engine to print. **040, 014, 027, 051, 052:** nothing in P3; a conjugation face on a 040 card is P4's.
+  **The built-in inventory the first packs hold.** Spanish, by kind: irregular records (`forms` or
+  `stems`) ser, estar, ir, haber, tener, hacer, poder, poner, decir, venir, querer, saber, dar, ver,
+  salir, traer, caer, oír, conocer and the `-cer`/`-cir` `-zco` group, conducir and the `-ducir` group,
+  andar, caber, valer, reír, sonreír, oler, enviar, continuar (the accented `í`/`ú`), and the eight
+  irregular tú commands; stem-changers (one field) pensar, cerrar, empezar, comenzar, entender,
+  perder, volver, poder, contar, encontrar, recordar, almorzar, costar, mostrar, jugar, pedir, servir,
+  repetir, vestir, seguir, dormir, morir, sentir, preferir, mentir; spelling-changers (no field,
+  derived) buscar, sacar, tocar, llegar, pagar, cruzar, escoger, recoger, dirigir, leer, creer,
+  construir, huir, incluir; defective llover, nevar, soler; participles as listed. French: être, avoir,
+  aller, faire, dire, venir, tenir, prendre, mettre, pouvoir, vouloir, devoir, savoir, voir, croire,
+  boire, lire, écrire, connaître, paraître, recevoir, courir, mourir, rire, suivre, vivre, naître,
+  conduire, plaire, pleuvoir, falloir, valoir; the `ir2` class partir, sortir, dormir, servir, sentir;
+  the `ir-er` class ouvrir, offrir, couvrir, souffrir; stem-changers acheter, lever, mener, préférer,
+  espérer, répéter, appeler, jeter, payer, essayer, employer, envoyer; spelling-changers commencer,
+  manger; the être list; s'asseoir left out (two accepted paradigms, question 6). About 60 records a
+  pack, the rest of the language regular.
+  **Size, measured.** The probe encoded one verb: every form spelled out for six tenses by six persons
+  is 546 bytes; tener as `stems` and sparse `forms` is 288; a regular record is 38. So a pack of 60
+  records is about 10 KB sparse (33 KB if every form were spelled out, which is the encoding to
+  avoid), plus tense tables and the participle list, about 12 KB for Spanish and 10 KB for French; the
+  engine about 12 to 15 KB. **About 35 KB in three precache lines**, against `export.js`'s 41 KB. Small
+  enough; nothing is lazy-loaded.
+  **The tests.** `Tools/conjugate/test/conjugate.test.mjs` (pure Node, the engine and packs loaded in a
+  `vm` context the way `export.test.mjs` loads `export.js`), with a `test:conjugate` script and a `suites.json` line;
+  and `smoke-conjugate.mjs` (the next free port when built; 8495 at the time of writing). Cases, named:
+  (1) *079 parity*: the 108 forms 079 hardcodes today, read off the page, equal the engine's, and
+  after 079 adopts, its templates are the engine's. (2) *Regular paradigms*: hablar, comer, vivir,
+  parler, finir, vendre in every declared tense. (3) *Stem changes*: pensar (pienso … pensamos …
+  piensan), volver, pedir (pidió, pidieron, pidiendo, pidamos), dormir (durmió, durmiendo, durmamos),
+  jugar (juego, jugué), sentir (sintió); acheter (achète, achetons, achèterai), préférer (préfère,
+  préférons, préférerai), appeler (appelle, appelons, appellerai), payer (both), envoyer (enverrai).
+  (4) *Spelling*: buscar (busqué, busque), llegar (llegué), empezar (empecé, empiece, both rules in
+  one verb), escoger (escojo), seguir (sigo, siga), conocer (conozco), leer (leyó, leía, leído),
+  construir (construyo, construyó), commencer (commençons), manger (mangeons, mangeais). (5)
+  *Irregulars*: the full table in every first-pack tense for ser, estar, ir, haber, tener, hacer, poder,
+  poner, decir, venir, querer, saber, dar, ver; être, avoir, aller, faire, pouvoir, vouloir, devoir,
+  savoir, venir, prendre, mettre, voir, dire; with the pins ir and ser share a preterite (fui), dar and
+  ver take no accent (di, dio, vi, vio), haber's present (he, has, ha, hemos, habéis, han), aller's
+  future (irai), faire's (ferai), être's subjunctive (sois, soyons), avoir's (aie, ayons). (6) *Derived
+  tenses*: tuvieron → tuviera, fueron → fuera, habláramos; commands ten, mantén, di, haz, ve, pon,
+  sal, sé, ven, hablad, no tengas, no habléis; parle, va, finis, allons; he abierto, hemos dicho; je
+  suis allé, nous sommes partis is **not** emitted (masculine singular only), je me suis levé. (7)
+  *Defective*: llover has slot 2 and five empty cells with notes, falloir il faut, il fallait, il
+  faudra. (8) *Prefixes*: mantener, suponer, convenir as their bases with the accent on mantén and
+  supón; comprendre, revenir, défaire; bendecir's participle. (9) *Reflexives and elision*: levantarse
+  (me levanto … se levantan), se laver (je me lave, nous nous lavons), s'appeler (je m'appelle, tu
+  t'appelles), habiter (j'habite), aimer (j'aime), haïr (je hais, no elision). (10) *classify*: hablar,
+  levantarse, se lever, finir, dormir (ir2 by record, an unknown French `-ir` noted `assumed` as
+  finir's class), table → null. (11) *match*, a table of pairs: hablo/hablo correct, Hablo/hablo
+  correct, `hablo ` correct, hable/hablé close accent, ano/año **wrong**, garcon/garçon **wrong**,
+  pinguino/pingüino close, j’habite/j'habite correct, je habite/j'habite close elision,
+  levanto/me levanto close pronoun, blank wrong. (12) *Teacher overlay*: `merge` puts the teacher's
+  cell first and notes it; `validate` names a seventh form, an unknown tense, an impossible stem
+  change. (13) *Pack integrity*: every record classifies, every `forms` and `stems` key is a declared
+  tense and a slot 0 to 5, no two records share an infinitive, every irregular has a participle where a
+  compound tense is declared, each pack under 24 KB. (14) *Purity*: same input same output, and the
+  module writes nothing on `window` but `Conjugate`. (15) *Two rules agree*: for every pack verb, the
+  present subjunctive from the yo stem equals the one from `forms` where a record spells it out; the
+  conditional's stem equals the future's; the French imparfait stem equals the present `nous` stem;
+  the subjonctif's `ils` stem equals the present's — a form two rules disagree on fails the suite and
+  is a review item, not a guess. The browser suite drives 039: fill tener present, six cells, slot 0
+  marked, the quiz takes `tengo`, calls `ano` wrong and `tenia` close; the entry survives reload and a
+  share link carries `verb`; 079 loads a template and its panels equal `conjugate`'s; 039's
+  `smoke-share.mjs` and 079's `smoke-panel-colors.mjs` keep passing. **How correctness is established
+  without copying a table:** the regular paradigms and 079's forms are in the repo; each irregular's
+  expected forms are typed into the suite from the rules by the session, then held by case 15 against
+  a second derivation; and a small script in `Tools/conjugate/` (`print-corpus.mjs`) writes a check sheet, one page a
+  verb, for a teacher to read (who signs it off is question 5). The facts of how tener conjugates are
+  nobody's property; a published table's selection and layout are, and none is copied.
+  **Deliberately left out.** Tenses beyond the two six-packs and the derivable ones above (passé
+  simple, pluperfect, future perfect, past subjunctive compounds); voseo; participle agreement with a
+  preceding object; negative and interrogative frames; the accent on a command or gerund with a
+  pronoun attached (dámelo, levantándose); German, Italian, Latin and Portuguese packs (the pack shape
+  is for Romance stem-and-ending verbs; German's separable prefixes and Latin's principal parts need a
+  record kind the engine does not have, and that is said here so nobody tries to fit them in `stems`);
+  guessing a language from an infinitive (the teacher picks); the English gloss (typed, as today);
+  audio (P5); a conjugation face on a 040 card (P4); a site-wide "my corrections" store.
+  **Decided here, cheap to reverse.** A classic script in `_shared/`, one engine and a pack a
+  language, not one file; record shape equals pack shape; orthographic rules derived, not declared;
+  six fixed slots and `personSlots` in 039; ñ and ç are letters; the masculine singular for agreement;
+  the overlay on the word record, with `entry.verb` in 039 until P2; 079's templates computed from the
+  engine; prefixed verbs derived with an exception list; `match` keeps 039's three verdict names.
+  **Devon's questions, listed and not answered.** (1) **Which languages first.** The bullet says
+  Spanish and French; the code today has person presets and accent sets for Spanish, French, German and
+  Latin (039), twenty `speechSynthesis` languages (039), templates for Spanish and French only (079),
+  and 079's quick win asks for German and Italian. (2) **Which tenses** East Middle's courses reach: the
+  six in the bullet, or also commands, the imperfect subjunctive and the present perfect, each one data
+  entry. (3) **vosotros** shown by default (both tools show it today) or hidden. (4) **Agreement in the
+  passé composé** on paper: `allé`, `allé(e)(s)`, or all four. (5) **Who proofreads the corpus** from
+  the check sheet and signs it off. (6) **1990 French rectifications** (`-eler`/`-eter` verbs other than
+  appeler and jeter) and **s'asseoir**: pre-1990 only, or both accepted. (7) **payer**: `paie` or `paye`
+  printed. (8) A teacher's correction **per list or site-wide**. (9) Whether 039 **keeps the free-text
+  tense label** beside the select. (10) **The student-facing line**: 039's quiz is on the teacher's
+  screen today; a link that opens a self-check on a student's device stays out unless Devon says. (11)
+  An infinitive in no pack: **fill as regular and note it, or ask first**. (12) `ü` counted as an
+  accent (`close`) or a letter (`wrong`).
+  **Not verified.** No module exists and nothing ran in a browser. The inventories and every form named
+  above were written from the session's knowledge of the two languages and checked against nothing;
+  that is what question 5 and case 15 are for. The size figures come from one representative encoding,
+  not a built pack. 039's `stripDiacritics` finding was reproduced in Node, not on the page.
 - **P4 — Printables.** Frayer model page; spaced-repetition scheduling for printed
   drills (which list, which day); fill-in-the-blank sentence mode; a word wall as a
   system (cards by unit, printable index, retire a unit).
@@ -5079,6 +5357,262 @@ runtime, the one content fetch that leaves the browser.
   viewer (SVG or canvas re-render on zoom) so zoom is sharp, keeping the raster
   path for poster export and the print pipeline. *Fable for keeping hit-testing,
   labels and the tiled poster print consistent between the two render paths.*
+  **Designed, not built (AI-28, 2026-10-06, a design pass: no code, nothing run in a browser). Everything from
+  here to P4 is the design.** Read from the tree at v258: 046's page whole (the stage markup, `displayMap()`,
+  `drawMapContent()`, `renderMapCanvas()`, `printMap()`, `savePdf()`, `printTiledPages()`, the worksheet and
+  series renderers, the share mount and `init()`), every `bmg-*.js` module, `data/README.md`, the relief entry in
+  `Tools/blender-art/renders.json`, the 046 registry row and a11y seed, the six `test:blank-map` suites, and the
+  two readers of `bmg-vector.js` outside 046 (`Tools/timeline-builder/tlb-places.js`, which calls
+  `renderBaseMapCanvas` and downscales; `Tools/geography-bee-quiz-generator/gbq-map.js`, which reads the data and
+  draws its own). Figures marked *measured* came from one pure-Node probe over the four vendored files (counting,
+  bounding-box crop tests against the nine presets, a Visvalingam pass, and the time to unwrap, project and
+  write every vertex as a path string); it was not kept. P1 and P2 are not built; this design does not wait for
+  either, and says what each may take from it. Nothing here fetches from the network. Questions that are Devon's
+  are listed at the end and not answered.
+  - *What is there today, as read.* The base map on screen is one `<img id="mapImg">` inside `#stage`, which the
+    viewer (`bmg-viewer.js`) moves with a CSS `translate()`/`scale()`; `minScale` 0.05, `maxScale` 12; the wheel
+    zooms by 1.12, the buttons by 1.25, and `fit()` leaves a 4% margin. The image is the PNG that
+    `renderBaseMapCanvas()` drew once at a 4000 px long side and that `bmg-map-cache.js` keeps in IndexedDB
+    (`bmg-maps`/`images`, keyed by the `vector:<preset>:<n,s,w,e>:<style>[+borders][+relief][:choro:<hash>]` id).
+    **Every coordinate the project stores is a pixel of that 4000 px raster:** label and marker `x`/`y`, region
+    rings (rounded to whole pixels by `compactRings`), line points, `project.view`, and the measure tool; the
+    calibration is the preset's bounds and `toLatLon`/`fromLatLon` take the raster size. The grid (`#gridLayer`
+    divs), regions (`#regionSvg`), lines and measure (`#lineSvg`, `#measureSvg`) sit inside the stage and scale
+    with it; labels (`.bmg-label`), markers, chips, legend, compass, scale bar and locator sit outside it in
+    viewport space and are moved on every `onChange` by `stageToScreen()`. Nothing is drawn on a canvas on screen.
+    **Every export redraws the layers from project data onto a canvas** in `drawMapContent(ctx, cssW, cssH, opts)`,
+    which starts with `ctx.drawImage(mapImg, -x/scale, -y/scale, cssW/scale, cssH/scale, 0, 0, cssW, cssH)` and
+    then draws grid, regions, lines, markers and labels through the same `viewer.stageToScreen()`; `renderMapCanvas`
+    adds legend, compass, locator, scale bar and credit. Its callers: Download PNG (at `devicePixelRatio`, capped
+    at 2), Print Map and Ctrl+P (`buildExportCanvas(PRINT_DPI = 200)`, the canvas becomes an `<img>` in
+    `#printExportStage` and `window.print()` runs with `body.printing-map-export`), Save PDF (the same canvas as a
+    JPEG in jsPDF), the worksheet (which temporarily `setView()`s the viewer to fit the map in its box), and the
+    tiled poster (`setView()` to a virtual window of `cols × 1200` by `rows × 1550` at the current scale, one
+    `drawMapContent` on that canvas, then slices). Only the time-slice series sheet re-renders vectors, through
+    `renderBaseMapCanvas(…, { longSide })`. The locator inset shows the same raster blob at 150 px. The zoom
+    readout is `scale × 100 %`, so "100%" is the raster at 1:1 and a fitted world map reads about 25%.
+    **The screen and the paper agree today because both read the same raster through the same `stageToScreen`
+    arithmetic**, with the page's colours as literals (`#eef0ec` mat, `#fff` label boxes, `#1f3550` ink), and
+    the page's head comment says so. Keyboard: Esc, Enter, Ctrl+P, undo/redo, and arrows nudging the *selected*
+    label or marker; **no key pans or zooms**, `#viewport` has no `tabindex`, role or name, and nothing announces
+    the view. The hit test (`bmg-hittest.js`) projects the divided file once into raster pixels and tests clicks
+    converted by `screenToStage()`. 015 and 062 import `bmg-vector.js` only for `renderBaseMapCanvas` and
+    `BASE_MAP_PRESETS`; 062 draws its own thumbnails from the data.
+  - *Measured.* The four files are 86, 191, 154 and 255 KB and parse in 3 to 5 ms. `world-land`: 125 rings, 5,127
+    vertices; `world-countries`: 177 features, 285 rings, 10,583 vertices, largest ring 554; `us-nation`: 250
+    rings, 8,826 vertices; `us-states`: 56 features, 304 rings, 14,446 vertices, largest ring 2,023 (Alaska). Three
+    world rings cross ±180 and one (Antarctica) encircles; no US ring does. Cropped to a preset by ring bounding
+    box, the divided layer is 696 vertices (Oceania) to 13,848 (all 50 states), the whole layer 973 to 8,228.
+    Visvalingam at half a screen pixel keeps 86% of the world's vertices at fit on a 1,000 px stage and 96% at 4×;
+    the 50-state crop keeps 42% at fit (the Aleutians) and 94% at 4×; every other crop keeps over 95% at fit.
+    **Simplification buys nothing the eye would notice above fit and is not in the design.** Unwrapping,
+    projecting and writing every vertex of `us-states` to a path string is 5.1 ms in Node (3.6 ms for the world);
+    the path string is 194 KB. The raster the page holds today is 7.1 to 15.8 megapixels a preset, 27 to 60 MiB
+    decoded, twice (the image and the locator share a blob but not a bitmap), plus the 4000 px canvas while it is
+    being drawn. The poster path's largest canvas is 4,800 × 6,200 (4 × 4 tiles), 30 megapixels, under Chromium's
+    canvas area limit.
+  - *What P3 is for, in one sentence.* Past 100% on the readout the raster is upsampled: at 12× a border is a 12 px
+    smear, and the same smear is on every poster tile and on a print of a zoomed view. With the data this small
+    the map can be drawn from the vectors at whatever the view is, in the time one frame allows, with a hairline
+    that stays a hairline.
+  - *The rule the design is held to.* **The stage unit does not change: one unit is one pixel of the 4000 px
+    plate carrée raster that `pixelSizeFor(preset.bounds)` describes**, whether or not a raster exists. Every
+    saved label, marker, region, line, view and calibration therefore opens where it was, `bmg-hittest.js` is
+    untouched, `toLatLon`/`fromLatLon` are untouched, and a project saved before P3 is a valid project after it with
+    no `__v` bump and no migration. The second rule: **what the teacher sees is what the paper gets**, held by one
+    draw function with two callers, not by two renderers kept alike by hand.
+  - *Canvas, not SVG, and why.* An SVG base map would make the browser do the zoom transform and keep text crisp;
+    neither is needed (labels are DOM already) and both exports would still need a canvas, so SVG would be a
+    second renderer of the same data, which is the drift this design exists to prevent. The relief is a multiply
+    composite clipped to land, which canvas does in three lines and SVG does with filters. The choropleth and the
+    hit test already live in raster pixels. So: **one function, `drawBaseMap(ctx, source, view, w, h, opts)`,
+    draws the base map for a view; the screen calls it on a viewport-sized canvas and every export calls it in
+    place of today's `drawImage(mapImg, …)`.** The raster path stays for maps that are pictures (Wikimedia,
+    uploads): a project whose id is not `vector:` behaves exactly as today, the two paths coexist in the page and
+    the id's prefix chooses.
+  - *The module's whole surface: `Tools/blank-map-generator/bmg-live.js` (the viewer's renderer), ES module, DOM-free
+    but for the canvas it is handed.*
+    - `parseBaseMapId(id)` → `{ preset, bounds, style, borders, relief, choroKey } | null`: the inverse of
+      `baseMapId()`, from the id string alone (today only `presetFromBaseMapId` exists, which drops everything but
+      the preset). `null` for a Commons or upload id. Round-trips every id `baseMapId()` can produce, including a
+      preset whose bounds a future P2 writes into the id.
+    - `loadSource(spec, { fills })` → `Promise<source>`: loads the whole and divided files (through `bmg-vector.js`'s
+      in-memory `geoCache`), unwraps and shifts every ring once with `drawableRings`, projects it once into stage
+      pixels with `projectPoint(bounds, width, height, …)`, and builds **four cached `Path2D`s in stage units**:
+      `landFill` (the whole layer, closed through the pole), `landStroke` (the whole layer, open at the pole),
+      `borderStroke` (the divided layer) and, per shaded feature, its own `evenodd` path (so a country's holes
+      cancel only against its own rings, as `paintChoropleth` does today). Returns `{ spec, width, height, paths,
+      fills, relief: HTMLImageElement | null, calibration }`. The relief image is loaded here when the spec asks and
+      no fills are set, exactly `renderBaseMapCanvas`'s rule. `source.width/height` are `pixelSizeFor(bounds)`.
+    - `drawBaseMap(ctx, source, view, cssW, cssH, { dpr = 1, strokePx })`: paints the mat and ocean, then
+      `ctx.setTransform(dpr·scale, 0, 0, dpr·scale, dpr·x, dpr·y)` and fills `landFill`, multiplies the relief
+      clipped to it, fills each shaded path, then strokes borders or coastline with `ctx.lineWidth = strokePx /
+      scale`, so the line is `strokePx` *screen* pixels at any zoom. The default `strokePx` is what the raster
+      shows at fit today, 1 px (the raster's stroke is `max(1, round(4000/1600)) = 3` raster px, which a fitted
+      world shows at 0.75 px and 12× shows at 36 px). The function never reads the DOM and never allocates: a frame
+      is four path operations on cached paths plus one `drawImage`. Returns nothing. Colours are
+      `bmg-vector.js`'s `STYLE_PAINT` (exported), the same literals the raster used.
+    - `drawExtent(source, view, cssW, cssH)` → `{ west, east, south, north }`: the lat/long rectangle the view
+      shows, for the live region and the suite.
+    - `createLiveBase(viewport, viewer, { getSource })`: the screen half. Puts a `<canvas id="baseCanvas">` as the
+      first child of `#viewport` (position absolute, inset 0, under `#stage`; `aria-hidden="true"`), sizes it to
+      the viewport at `devicePixelRatio` on `ResizeObserver`, and redraws **on the next animation frame after any
+      view change, coalescing** (a wheel burst of 20 events is one draw). `show(source)`, `hide()`, `redraw()`,
+      `toCanvas()` (the current frame, for the suite and the locator). The viewer's `onChange` gains one call.
+  - *What `bmg-vector.js` changes (P1 may move it; P3 does not wait).* `renderBaseMapCanvas()` becomes a wrapper:
+    `loadSource` then `drawBaseMap` at the identity view onto a `width × height` canvas with `strokePx` set to
+    today's raster stroke (`max(1, round(longSide/1600))`), so **its output is pixel-identical to today's** for
+    015's map panel, 046's series sheet and the cache records — the suite holds it to that. `STYLE_PAINT` is
+    exported. `buildBaseMapRecord()` is kept for the series and for 015 and is no longer called by the picker.
+    Nothing moves to `_shared/` in P3; if P1 lands first, `bmg-live.js` imports `projectPoint`/`drawableRings`
+    from `_shared/geo-project.js` instead, and nothing else in this design changes.
+  - *What the page changes.*
+    - `useBuiltInBaseMap()`: builds the spec and `fills` as today, computes the same id, and instead of
+      `buildBaseMapRecord`/`putCachedMap`/`displayMap(record)` calls `displayLive(id, spec, fills)`: `loadSource`,
+      `liveBase.show(source)`, `mapImg` hidden, `currentSize` = `source.width/height`, `project.mapId = id`, the
+      calibration from the source, then the same `isSameMap`/`keepAnnotations` branch, layer `setSize`s,
+      `renderGrid()` and `fit()`/`setView()` as `displayMap()` runs now (the shared tail is one function both call).
+      **No IndexedDB write for a `vector:` id any more.** Records already in `bmg-maps` are left alone: the "Recently
+      used" card still lists them, and clicking one whose id parses goes through `displayLive`, ignoring the blob.
+    - `loadActiveProjectIntoUI()`: a `vector:` `project.mapId` is drawn live, cached record or none, **so the
+      "This project's map isn't cached in this browser anymore" state no longer happens for a built-in map, and a
+      shared project (`?map=`) opens on the receiving machine with its map drawn.** Today it arrives map-less and the
+      share note says a built-in map "is picked again there"; the note's sentence changes to say that a built-in map
+      travels and a Wikimedia or uploaded one does not. The fills for a shaded map are recomputed from
+      `project.choropleth.text` through `buildActiveChoropleth` on load, as the shading panel does on Apply, and
+      `legendRows` are kept as stored (they are the key to the same fills).
+    - `drawMapContent()`: the first line becomes `if (liveSource) drawBaseMap(ctx, liveSource, viewer.getView(),
+      cssW, cssH, { strokePx: 1 }) else ctx.drawImage(mapImg, …)`. Every caller (PNG, print, PDF, worksheet, poster)
+      gets vectors through that one line and nothing else in them changes. The export canvas is drawn at `dpr`, so
+      a 200 dpi print of a 12× view has a crisp border; the poster's `cols × 1200` canvas is drawn once at its own
+      size, as today.
+    - The locator inset: `locator.setImage()` takes `liveBase.toCanvas()` drawn at a fit view onto a 150 px canvas
+      (one `drawBaseMap` call), instead of the raster blob URL.
+    - `updateZoomReadout`: unchanged numerically (100% is still the 4000 px unit at 1:1), so saved views and the
+      suites' expectations hold; a `title` on the readout says what 100% means.
+    - Keyboard and screen reader (none of this exists today): `#viewport` gets `tabindex="0"`, `role="group"`,
+      `aria-roledescription="map"` and an `aria-label` from the map title; with focus on the viewport and no label
+      or marker selected, arrows pan by a tenth of the viewport (half with Shift), `+`/`=`/`-` zoom by 1.25 about
+      the centre, `0` fits, `Home` fits, and the existing nudge keys keep precedence when a label is selected.
+      A visually hidden `#viewerStatus` (`aria-live="polite"`) says, 500 ms after the last change, "Zoom 240%,
+      showing 25°W to 45°E and 34°N to 72°N" from `drawExtent`; for a raster map without calibration it says the
+      zoom only. Pinch and wheel are untouched.
+    - Dark theme: `#baseCanvas` is inside `.paper-sheet`, so it keeps its light literals as `mapImg` does; the
+      page's head comment gains one sentence. Nothing prints in dark ink.
+    - Reduced motion: no animation is added, so nothing to honour.
+  - *The algorithm and its edge cases.*
+    - Antimeridian: `drawableRings` emits Fiji and Chukotka twice, shifted 360°, into the cached paths, so both
+      halves are in the path at the right edge and the hit test and the picture agree as they do now. Antarctica's
+      polar closure is in `landFill` and not in `landStroke`.
+    - Holes: `landFill` is the whole layer with `evenodd`, so lakes in it stay holes; a shaded feature is its own
+      path. The border stroke is one path over the divided layer, so a shared border is stroked twice at the same
+      place, as the raster does.
+    - Off-screen work: the paths are whole; the canvas clips. At 12× on a 1,000 px viewport the visible rectangle
+      is 83 stage px wide and the stroke of 14,446 vertices still costs one path op; measured in Node at 5 ms for
+      the projection, which the cache does once, and the per-frame op is the browser's own rasteriser. A frame
+      budget of 8 ms on a 2019 Chromebook is the target; the suite measures Chromium on the build machine and
+      records, not asserts, the time (the number a teacher's machine gives is not known).
+    - Stroke under zoom: constant screen width (decided here; Devon's question 1 below is whether it should scale
+      on paper). The raster's stroke scaled, which is why 12× looked fat and fit looked thin.
+    - `maxScale` stays 12 and `minScale` 0.05: raising the ceiling is now free, but the overlays' SVG stroke
+      widths (region 2.5, line 3.5 stage px) and the grid's 1 px are stage-scaled and would thin to nothing or
+      thicken to bars; they are P3's known limit, not its work, and a `vector-effect: non-scaling-stroke` on those
+      SVGs is the one-line follow-up listed under "left out".
+    - Relief: drawn by `drawImage` of the 2048 px WebP into the land clip at the view's scale; its ceiling shows past
+      about 2× on the world preset (2048 px over 4000 stage units), which the Path 21 entry accepted. The multiply
+      composite is bounded by the clip, so sea stays the ocean colour, as `smoke-relief` checks.
+    - A `fills` entry naming a feature not on this crop is ignored (the path is empty); `choroKey` in the id is
+      computed exactly as today, so a shaded map's id is byte-identical before and after P3.
+    - Resize: `applyViewportSize()` already refits on resize; the canvas resizes with it and redraws once.
+    - A `vector:` id with a preset key the page no longer has (`findPreset` returns null): the empty state with
+      today's "isn't cached" sentence, and the raster record, if there is one, is used instead — the only case
+      the raster path serves a `vector:` id.
+    - Memory: one parsed file pair (under 1 MB of objects), four `Path2D`s, a viewport canvas (a 1,000 × 750
+      viewport at `dpr` 2 is 12 MiB) and the 150 px locator canvas, in place of two decoded rasters of 27 to 60 MiB
+      each. The 4000 px canvas exists only while an export or the series sheet draws it, as it does today for the
+      poster.
+  - *What P2 (dropped GeoJSON) may take from this, and what the viewer must tolerate from it.* `loadSource` takes a
+    `spec` with `bounds` and either a dataset name or a `{ whole, divided }` pair of parsed FeatureCollections, so a
+    dropped file is a source like any other once P2 has calibrated it. The viewer tolerates: a `Feature` or bare
+    geometry as well as a collection; `Polygon` and `MultiPolygon` drawn, `LineString`/`MultiLineString` stroked
+    as borders, `Point`s ignored (P2 may turn them into markers); a third coordinate dropped; an unclosed ring
+    closed; a ring under four positions dropped; longitudes outside ±180 unwrapped as now; and a file over a
+    **vertex budget of 250,000** (about 17 times `us-states`) refused by P2 with a message, not simplified by the
+    viewer. A missing `name` means no hit test and no shading for that feature, nothing else. None of this is
+    built in P3; the viewer's input shape is written so P2 does not need to change it.
+  - *What P4 and P5 get, and what stays theirs.* A per-slice annotation store (P4) changes nothing here: the base
+    map is drawn once per view whatever slice is shown, and a small-multiple sheet calls `drawBaseMap` once per
+    panel at that panel's size instead of rendering a 4000 px raster per panel and downscaling. Quiz memory (P5) does
+    not touch the renderer. The Wikimedia search, fetch, cache and "Recently used" card are untouched by P3 and the
+    network question stays P5's.
+  - *The tests that would prove it.* All in `Tools/blank-map-generator/test/`, each a `test:<name>` and a
+    `suites.json` line; the five existing `test:blank-map` suites and `test:timeline` and `test:geo-bee` must stay
+    green unchanged.
+    - `live-base.test.mjs` (pure Node, no port): `parseBaseMapId` round-trips every id `baseMapId` makes over the
+      nine presets × two styles × borders × relief × a `choroKey`, and returns `null` for `upload:` and Commons
+      ids; `drawExtent` at a fit view on each preset returns the preset's bounds and at 4× about the centre
+      returns a quarter of each span; `loadSource` against the vendored files (with a `Path2D` stub recording
+      calls) produces one `landFill` with the polar closure and one `landStroke` without, and the twice-emitted
+      Fiji and Chukotka rings.
+    - `smoke-live-parity.mjs` (port 8252): the heart. For each of the nine presets, outline and land, borders on
+      and off, relief on for the world: **(a) raster parity** — `renderBaseMapCanvas()` before and after P3 at
+      4000 px, pixel-identical (the suite keeps a copy of today's `renderBaseMapCanvas` body, as `export.test.mjs`
+      kept `duplex-print.js`'s functions); **(b) screen-to-paper parity** — at a fit view, a 3× view and a 12×
+      view each about a chosen stage point, the bytes of `liveBase.toCanvas()` equal the bytes of a canvas drawn by
+      `drawMapContent` at `dpr` 1 with every overlay empty, and at `PRINT_DPI` the export's pixel at each of six
+      probe points (ocean, land, a border, a shaded state, Fiji's far half, Antarctica's cap) has the colour the
+      screen pixel at the mapped position has; **(c) sharpness** — at 12× the border's cross-section is under 3 px
+      wide in the print canvas where the raster's was over 20; **(d) the id** of a shaded map is the string the
+      old path produced.
+    - `smoke-live-viewer.mjs` (port 8253): a saved project from the seed with a label, a marker, a region and a
+      line at stage coordinates opens on the live base at the same `stageToScreen` positions as under the raster
+      (the suite computes them from `project.view`); a share link of a shaded world project opens in a fresh
+      context with the map drawn and the legend's rows, with no IndexedDB record present and no request off-site;
+      a `vector:` project whose `bmg-maps` record was deleted opens drawn; the "isn't cached" sentence still
+      appears for a Commons id with no record; click-to-shade on the live map shades Texas as `smoke-hittest` does;
+      20 wheel events in one task produce one draw (a counter on `drawBaseMap`); no console errors; `a11yScan`
+      serious/critical clean with the viewport focused.
+    - `smoke-live-keys.mjs` (port 8254): Tab reaches the viewport; arrows pan by a tenth, Shift-arrows by half;
+      `+`/`-`/`0` zoom and fit; with a label selected the arrows nudge it and do not pan; the live region's text
+      after a pan and after a zoom matches `drawExtent` and says the zoom; the relief toggle and the readout are
+      unchanged.
+    - `smoke-live-print.mjs` (port 8255): Print Map at a 6× view through Chromium's PDF (`pdftoppm` where huginn
+      has it, structure only where not): the page has one image the size `getPhysicalPageInches` gave, and the
+      PDF's raster at the six probe points matches the screen's within JPEG tolerance; the 2 × 2 poster's tiles
+      from `printTiledPages` at that view join (the overlap strips are pixel-equal) and the border is crisp on
+      each; the worksheet's map panel through the live path equals the panel through the old path at its box
+      size within the raster's own downscale (the panel was already a resample).
+    - A row in `Tools/a11y-sweep/seeds.mjs` for a `vector:` project with annotations, so the a11y sweep's seeded
+      pass and `path7:next` reach the live map, and a `print-audit-prep.mjs` entry if the seed is not enough.
+    - Timing is logged by the parity suite (`performance.now()` around `drawBaseMap` at the three views, median of
+      30) and asserted only as a floor of 40 ms on the build machine.
+  - *Known limits and what is deliberately left out.* No simplification (measured as not worth having).
+    `maxScale` is not raised and the overlay SVG strokes are not made non-scaling. Labels are not re-tidied on
+    zoom, and `tidyOverlaps` still measures at the current zoom. No screen-reader list of the labels (the labels
+    are DOM already; a list is an a11y row of its own). No Wikimedia map gets a vector path. The raster records
+    already on teachers' disks are not deleted. `renderBaseMapCanvas`'s 4000 px default for 015 and the series
+    stays. No WebGL, no OffscreenCanvas, no worker: the counts do not need them. The locator is a canvas, not an
+    `<img>`, which `drawPngLocator` must read with `drawImage` of the canvas rather than `#locatorImg`.
+  - *Decided here, cheap to reverse.* Canvas over SVG. Constant screen stroke, 1 px on screen and in the export
+    (one option in `drawBaseMap` flips it to scaled). Live draw for any `vector:` id, cache record or none, and no
+    new records written. The viewer's own module `bmg-live.js` beside `bmg-vector.js`, not inside it. The readout's
+    100% unchanged. `role="group"` with `aria-roledescription` rather than `role="application"`, so a screen
+    reader keeps its own keys.
+  - *Left to Devon, listed and not answered.* (1) On paper, should a border be a constant hairline at every zoom
+    (what the screen will show) or thicken with zoom as the raster's did, which some teachers may read as "the
+    map I printed before"? (2) Should label and marker text grow with zoom now that the map under it is sharp at
+    12×, or stay fixed-size as today? (3) Past about 2× on the world preset the relief is visibly soft under crisp
+    borders: hide it above a zoom, keep it as accepted in Path 21, or render a larger relief on the Windows
+    machine? (4) Should the "Clear cached maps" button say that built-in maps no longer need the cache, and offer
+    to drop only the `vector:` records (a teacher's own uploads untouched)? (5) Keyboard panning makes the map
+    focusable for the first time: is a projected map ever driven by a student at the keyboard, which would make the
+    viewer student-facing and its promotion Devon's call? (6) The P5 network question stands exactly as before:
+    nothing in P3 fetches, and the Wikimedia path is neither improved nor removed by it.
+  - *Not verified.* No module exists and nothing ran in a browser; the frame cost is Node's projection time, not
+    Chromium's rasteriser, and no Chromebook was measured. The pixel-identity of the wrapped `renderBaseMapCanvas`
+    is a claim about drawing the same paths with the same state in the same order; the build proves it with (a).
+    The share-arrival finding (a `vector:` project arrives map-less) was read off `init()` and the share note, not
+    reproduced. The page's `?map=` payload was not measured.
 - **P4 — Time slices for annotations.** Per-slice labels/lines/regions with a
   scrubber; small-multiple print; a two-way, selective handoff with 015 (send
   selected labels *and* markers; come back from a timeline into a map project).
@@ -10579,7 +11113,7 @@ change?").
 
 #### Major Features
 
-- **Done (v259) — "Run the circuit"**, a projector view: the station card large,
+- **Done (v261) — "Run the circuit"**, a projector view: the station card large,
   a countdown for work and rest, which station each group goes to next, Space / →
   / R / M / F from the keyboard, a full-screen colour change at each rotation
   (one fade, none under reduced motion, nothing flashes) and an optional Web Audio
@@ -10665,10 +11199,11 @@ long" without a teacher needing to track it by hand.
   checklists can't both be kept ready at once.
 - **JSON export/import** for sharing a built checklist between teachers or
   across the same PLC/grade-level team.
-- **Roster-driven half-sheets**: pull a class roster (Name Picker/Class
-  Roster Hub's shared storage) and pre-fill the Author name on each
-  half-sheet instead of leaving it blank for hand-writing — saves a step for
-  every single student, every single time.
+- **Done (v260) — Roster-driven half-sheets**: a "Print for a class" card reads a saved
+  roster (`Roster.getRoster`, at print time, nothing stored) and prints one half sheet per
+  student with the author's name on it, in cut-stack order, with an optional reviewer (the
+  next name on the list). Blank copies print as before. Not done: choosing the reviewer by
+  hand (pairs), and keeping the chosen roster between visits.
 - **Digital fill-in mode** via a share link (this toolkit's P3 pattern) —
   peer feedback collected on a device instead of paper, useful for a 1:1
   classroom.
@@ -10689,10 +11224,9 @@ on screen is exactly what comes out of the printer.
   fits" (dynamically shrink font/spacing) or should the tool warn/refuse
   past some category+item count instead? The former is more robust; the
   latter is simpler to implement correctly.
-- Is roster-driven pre-fill worth the complexity of pairing students (who's
-  the author vs. the reviewer for each half-sheet), or is a blank
-  hand-written name line — which supports any pairing arrangement a teacher
-  chooses live — actually the more flexible default to keep?
+- *(Decided 2026-10-06, v260.)* Blank stays the default: "Print checklists" is unchanged.
+  The roster print names the author, and fills the reviewer only if asked, as the next name
+  round the list. Any other pairing is still written by hand on the blank sheet.
 
 #### Platform themes that matter here
 

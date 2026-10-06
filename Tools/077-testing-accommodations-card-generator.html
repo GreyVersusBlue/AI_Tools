@@ -113,6 +113,7 @@
     </div>
     <div class="btnrow">
       <button type="button" class="secondary" id="shareBtn">&#128279; Share accommodation list&hellip;</button>
+      <button type="button" class="secondary" id="previewBtn">Preview pages</button>
       <button class="secondary" id="printBtn">Print cards</button>
     </div>
   </div>
@@ -174,7 +175,7 @@
   var DEFAULT_TYPES = ['Extended time', 'Separate setting', 'Read-aloud', 'Breaks as needed', 'Use of calculator', 'Preferential seating'];
 
   var els = {};
-  ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'typesWrap', 'addTypeBtn', 'assignTable', 'printBtn', 'printArea',
+  ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'typesWrap', 'addTypeBtn', 'assignTable', 'printBtn', 'previewBtn', 'printArea',
    'summaryLine', 'printWhoSelect', 'printColsSelect', 'filterSelect', 'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
@@ -433,15 +434,26 @@
   // US Letter with half-inch margins, which is what print-kit.css's card rows divide.
   PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
 
-  els.printBtn.addEventListener('click', function () {
-    if (!state.roster.length) { alert('Save a roster first.'); return; }
+  /** Builds the sheet. False, with the reason said, when there is nobody to print. */
+  function renderSheet() {
+    if (!state.roster.length) { alert('Save a roster first.'); return false; }
     var who = els.printWhoSelect.value;
     var names = who ? [who] : visibleRoster();
-    if (!names.length) { alert('Nothing to print — no students match the current Show filter.'); return; }
+    if (!names.length) { alert('Nothing to print — no students match the current Show filter.'); return false; }
     // Three rows to a page at every width: the kit's 2x3, 3x3 and 4x3 presets.
     var preset = CARD_PRESETS[els.printColsSelect.value] || CARD_PRESETS['3'];
     PrintKit.renderCards(els.printArea, names, preset, buildCard);
-    window.print();
+    return true;
+  }
+  function printSheet() {
+    if (renderSheet()) window.print();
+  }
+  els.printBtn.addEventListener('click', printSheet);
+
+  // The same sheet, cut into the pages it will print on (PrintKit.preview,
+  // Path 7 P5). It opens no print dialog; its own Print button does.
+  els.previewBtn.addEventListener('click', function () {
+    if (renderSheet()) PrintKit.preview({ trigger: els.previewBtn, onPrint: printSheet });
   });
 
   /* ---------- share the accommodation list: _shared/share.js (Path 6 P3) ----------
