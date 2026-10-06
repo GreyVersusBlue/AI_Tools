@@ -429,7 +429,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 50 | Path 17 P3 — PDF in: vendor `pdf.js`, merge/insert/extract/rotate existing PDFs | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 51 | Path 17 P4 — imposition. **Built (AI-13, v248, under Path 7 P4): 011 has booklet, 2/4/6/9 pages to a side with cut marks, either flip edge, creep.** Left: print and fold a 16-page booklet once and record it; then, only if asked for, a preset for a one-sided printer (fronts, then backs) and signatures for a thick booklet, both already in `ExportKit` | 011 | ¼ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 52 | Path 17 P5 — OCR, decision first: a vendored Tesseract build against the offline promise | 011 | ½ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 53 | Path 18 P1 — one station/room/hunt schema both 018 and 019 can read, with stable station ids | `_shared/` | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
+| 53 | Path 18 P1 — one station/room/hunt schema both 018 and 019 can read, with stable station ids (**designed 2026-10-06, not built**: the design and seven questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 54 | Path 18 P2 — both tools on the schema, plus the payload budget and a printed short-code fallback | 018 | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 55 | Path 18 P3 — feature parity between 018 and 019; questions from the bank | 019 | 2+ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 56 | Path 18 P4 — the debrief print: per-team path, time per station, misses, reflection page | 019 | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
@@ -4382,6 +4382,336 @@ images; the picture prints on the card), so a code's size no longer grows with t
   tool's current shape and explicit, stable station ids that survive reordering so
   a reprint doesn't invalidate codes already taped to the wall. *Fable for merging
   two divergent models without losing either tool's behavior.*
+  **Designed, not built (AI-26, 2026-10-06, a design pass: no code, nothing run in a browser). Everything from
+  here to P2 is the design.** Read from the tree at v255: 018's and 019's pages whole, `escape-room-builder/lock.html`,
+  `monitor.html`, `er-match.js` and `er-image.js`, `_shared/share.js`, `state-link.js`, `store.js` and `qr-draw.js`,
+  the registry rows, the 018 seed in `Tools/a11y-sweep/seeds.mjs`, `HISTORY.md`'s #282 and #320, and the six suites
+  behind `test:escape-room`, `test:escape-room-images`, `test:escape-room-station-qr`, `test:scavenger-hunt` and
+  `test:scavenger-hunt-print`. Figures marked *measured* came from one pure-Node probe (019's `stationPayloadFor` and
+  the base64 step copied out, invented stations); it was not kept. Questions that are Devon's are listed at the end
+  and not answered. No real student appears anywhere in this; the fixture names are invented.
+  - *What is there today, as read.* **018** keeps a library of hunts under `qr-scavenger-hunt-sets` as a bare
+    `{ current, sets }` keyed by name (no `Store` envelope; the older single blob `qr-scavenger-hunt-settings` is
+    carried over once as "My Hunt" and deleted). A hunt is `{ name, stations, cardsPerPage ('1' '2' '4' '6' '9'),
+    ecLevel, showNumber, run }`; a station is `{ label, content, note, qType ('text' 'choice' 'numeric' 'photo'),
+    choices (2 to 6), correctChoice, numericAnswer (a string), tolerance (a string), hint, hintPenalty (a string,
+    minutes), codeWord }`. **Its printed station code is the content itself** — a URL (given `https://` when it looks
+    like one) or the clue text — not a link to any page; the team card's code is `HUNT-TEAM:<4 chars>`; the paper mode
+    puts a word from a list of 30 on the clue card. Nothing is checked on a student device: the teacher checks a team
+    in by code, picks the letter or types the number for a choice or numeric station, and marks a text or photo
+    station reached. `run` is `{ teams [{ name, code, marks, attempts, hintsUsed, penaltyMs }], timerRunning,
+    timerStartedAt, timerElapsedMs, raceStartAt, checkinStation, stagger }`, **every map keyed by the station's index
+    in `validStations()`**, the list with the blank rows filtered out. A team's route is derived from its position
+    (`round(i × stations / teams)`), never stored. The share link (`?hunt=`) carries the authored fields and not the
+    run; an arrival is filed under a free name. **019** keeps rooms under `escape-room-builder:rooms` through `Store`
+    (envelope v1; a bare pre-Store blob reads as v0 through `migrateStore`). A room is `{ name, roomId (10 chars,
+    random), stations, cardsPerPage ('1' '2' '4' '6' '8'), ecLevel, showNumber, randomizeStart, countdownEnabled,
+    countdownMinutes, storyIntro, packetCardsPerPage }`; a station is `{ clue, answers (one comma-separated string),
+    hint, next (null, a 0-based index into the raw list, or 'end'), image ('' | 'idb:<id>' | a data URL), type
+    ('text' 'digits' 'cipher'), hintCost (points), awardLetter, cipherPlain, cipherShift, maxAttempts, numericTolerance
+    (null or a number) }`. What a student plays is a second shape, built by `buildRoomPayload` from the valid stations
+    only, with every index remapped: `{ id, title, stations [{ clue, answers (an array), hint, next (index or null),
+    image?, type?, cipherShift?, hintCost?, awardLetter?, maxAttempts?, numericTolerance? }], timerMinutes? }`,
+    base64(encodeURIComponent(JSON)) in `lock.html?r=…`; a printed station code adds `&s=<index>` (and `&start=1` when
+    the room randomises its entry) and, since #320, carries that station's own entry minus its image plus a stub per
+    other station (`hintCost`, `awardLetter: '?'`). The player link in the box carries the whole room, images included.
+    `lock.html` keeps progress in `escape-room-progress:<roomId>` as `{ current (index or 'done'), misses, solved,
+    hintsUsed, letters, lockUntil, startedAt }`, every map keyed by index, and tells `monitor.html` `{ station, total,
+    done, score }` over WebRTC. Answers are checked on the student's device by `er-match.js`, which the builder's test
+    run shares: digit and cipher answers compare exactly after case and whitespace; text answers lose accents,
+    apostrophes and punctuation and may match a number within `numericTolerance`. The share link (`?room=`) carries the
+    authored room; the arrival gets a **new** `roomId` (so a phone that played the sender's room does not resume the
+    receiver's copy) and drops any `idb:` reference. **Neither tool has a station id.** 018's codes have no
+    page to open and no identity at all; 019's `next` and `s=` are positions, so moving a station up changes which
+    station every printed code below it means.
+  - *Found while reading, each worth knowing before the build.* (1) **"End here (finish room)" is not honoured by the
+    player.** `buildRoomPayload` turns `next: 'end'` into `null`, the same value as "auto", and `lock.html` and the
+    test run both read `null` as "the next in order". The answer key and the packet key print "Finish" for it. Only a
+    station that is already last ends the room. (2) **018's marks shift when the stations do.** They are keyed by the
+    index in the filtered list, so removing a station, moving one, or blanking one's content during a live run moves
+    every team's check-ins onto other stations; a mark past the end stays in the object and still counts on the
+    leaderboard's "n / total". (3) `cipherShift` missing and `cipherShift` 0 are different stations: `clampShift`
+    turns `undefined` into 3 and 0 into 13, so a migration that normalises either loses the difference. (4) A
+    cipher station keeps the hidden `answers` string the teacher typed before switching type, and shows it again on
+    switching back; `cipherPlain` is likewise kept on a text station. (5) `normalizeTextAnswer` deletes a point or
+    comma between two digits, so "3.14" and "314" are one answer and "1,000" is "1000"; it is in the matcher's own
+    comment as intended for the second case and is simply what the first case does. (6) The two pages' "codes per
+    page" values differ: 018 offers 9 and 019 offers 8, and 018's grid table falls back to 4 for a value it has no
+    row for. (7) 019 `normalizeRoom` maps an unknown `type` to `'text'` on arrival, but a saved room keeps it, and
+    `er-match` checks an unknown type **exactly** (it is `!== 'text'`), so the two paths disagree on a type neither
+    knows. (8) `tool-registry.js` declares `escape-room-progress:` under `keys`, while `lock.html` writes it as a
+    prefix (`+ roomId`); `check:registry` passes today, so the resolver is content, but the row reads as a key.
+    (9) The 019 Tier 2 section still lists "Station numbering that survives reordering" as a quick win; it is this
+    phase. (10) `Store.get` hands a newer envelope's data back as it is (only an older one is migrated), so a page from
+    an older cache reads a key a newer page wrote; what it does with unfamiliar field names is the page's own business,
+    and both pages keep a loaded object whole and save it back whole, so unknown fields survive a round trip through
+    an older page. Only the two share-arrival normalisers rebuild field by field.
+  - *Measured.* A printed 019 code is a link into `lock.html`; the probe built the same payload the page does and
+    counted the characters of the whole link. The station-qr suite's four-station room: 364 characters for station 1
+    today; 404 with `v: 2` and a fixed-width string of four-character station ids on the room; 432 with an id inside
+    every stub. Thirty stations of ordinary length: 416 today, 596 with the ids string, 868 with an id per stub. At
+    error correction Q the vendored encoder puts 416 bytes in version 19 (93 modules, 5.9 px a module on the 600 px
+    printed canvas) and 596 bytes in version 23 (109 modules, 5.1 px); 1,663 bytes is the ceiling. The ids string
+    costs about six characters a station on the code; the per-stub form costs fifteen. A hunt's code is unaffected: it
+    is the content, 32 characters for a short URL, and carries no id at all.
+  - *The rule the design is held to.* After P1 and P2 every hunt and every room a teacher has saved does, in its own
+    page, what it does today: the same cards, keys, links and codes, byte for byte where a code is involved; the same
+    marks on the same stations; the same answers accepted and refused. The one named exception is (1) above: a
+    station set to "End here" ends the room in the new player, as the key already says it does. Everything else that
+    is better than today is an option an adopter turns on in P3, in a commit of its own.
+  - *The shape: the canonical record, and where every field of each tool lands.* `Stations.read(obj)` returns this
+    from either tool's saved object, share payload or file, and `Stations.write(set)` returns the owning tool's own
+    shape again. **The canonical record lives in memory. On disk, each tool's blob keeps its own shape and field
+    names and gains ids** (the reasons are under "decided here"; the whole-blob survival in (10) is what makes this
+    safe on an older cache).
+
+        set = {
+          v: 2, kind: 'hunt' | 'room',
+          id,                 // 019's roomId, kept as it is; a hunt gets one at first read. New on a share
+                              // arrival (019's rule, now both tools'); never changed by an edit or a reprint.
+          title, intro,       // the name; 019's storyIntro ('' on a hunt)
+          stations: [station],            // authored order; play order is this with the blank rows left out
+          entry: 'first' | 'any',         // 019's randomizeStart (a hunt: 'first')
+          countdown: { enabled, minutes },// 019's two fields, both kept (a hunt: { enabled: false, minutes: 20 })
+          print: { cardsPerPage, ecLevel, showNumber, packetCardsPerPage },  // strings, exactly as saved
+          run: null | { teams: [{ name, code, marks: { [stationId]: { at, correct, attempts } },
+                                   attempts: { [stationId]: n }, hintsUsed: { [stationId]: { at, penaltyMin } },
+                                   penaltyMs }],
+                        timer: { running, startedAt, elapsedMs, raceStartAt },
+                        checkinStation: stationId | null, stagger }   // 018's live run; never in a share link
+        }
+        station = {
+          id,                 // 4 characters of [a-z0-9], unique in its set, drawn once, never reassigned
+          label,              // 018's ('' on a room)
+          prompt,             // 018's content or 019's clue, verbatim, untrimmed
+          encode: 'prompt' | 'player',    // what this station's printed code holds: the prompt as text or URL
+                                          // (018, normalised at print time as today) or the player link (019)
+          note, codeWord,     // 018's ('' on a room until a page assigns a word)
+          image,              // 019's '' | 'idb:<id>' | data URL ('' on a hunt)
+          letter,             // 019's awardLetter, raw
+          answer: { type, accepted: [string], choices: [string], correct: n, tolerance: null | n,
+                    cipher: { plain, shift: null | n }, maxAttempts: n },
+          hint: { text, minutes: n, points: n },
+          next: null | 'end' | stationId
+        }
+
+    `answer.type` is one of 018's four under new names — `'none'` (018 "Open-ended": reached, nothing checked),
+    `'photo'`, `'choice'`, `'number'` (018 "Numeric": `accepted[0]` is the typed target, still a string, `tolerance`
+    the parsed number) — or 019's three under their own: `'text'` (`accepted` is `splitAnswers(answers)`, `tolerance`
+    is `numericTolerance`), `'digits'`, `'cipher'` (`accepted` is still the split hidden `answers`; `cipher.plain` is
+    `cipherPlain` and `cipher.shift` is `cipherShift` with `undefined` kept as `null` and 0 as 0, per (3) and (4)).
+    An unknown 019 type is kept verbatim and `check()` treats it as `er-match` does. `hint.minutes` is 018's
+    `hintPenalty` parsed (`'0'` and `''` are 0), `hint.points` is 019's `hintCost`; a station carries both numbers and
+    one of them is 0, until P3 decides otherwise. `next` is 019's with the raw-list index turned into the id of the
+    station at that index at read time; an index past the end becomes `null`, which is what the payload made of it.
+    018's `choices`, `correctChoice`, `numericAnswer` and `tolerance` keep their defaults from `ensureStationDefaults`.
+    Nothing is trimmed, uppercased or clamped at read time; `validStations()` does that at play time in each page as
+    today, and `Stations.playable(set)` is that function, once, for both.
+  - *Ids.* A station id is four characters of `[a-z0-9]` (1.68 million), drawn against the set's ids in use, so a
+    collision with a station that was deleted is possible and accepted (one in 1.68 million a draw; the deleted
+    station's codes already gate forever). It is assigned the first time a page reads the station and saved then, the
+    way `ensureStationCodeWords()` saves a new word before any edit, so a reload prints the same id. It is **never**
+    rewritten: not by a move, a type change, a rename of the set, a share arrival (the set's id changes there, the
+    stations' do not) or a reprint. It is what `run.*` and the new player's progress key on. The set's `id` is
+    019's `roomId` unchanged, and a hunt gets the same ten-character kind.
+  - *The module: `_shared/stations.js`, new, a classic script publishing `window.Stations`* (not a per-tool
+    `lib/`: three pages in two folders load it, and `lock.html` on a phone is one of them). Pure, no storage, no
+    DOM, no dependency; `er-match.js` is folded into it in P2 (the two normalisers and `checkAnswer`, to the letter,
+    with its suite moved) and until then `check()` calls `window.EscapeRoomMatch` when present. The surface:
+    - `read(obj) → set | null` — a saved hunt or room (either tool's object out of its `sets` map), a `?hunt=` or
+      `?room=` payload, or a `.json` file's `state`; `detect(obj) → 'hunt' | 'room' | null` decides by shape (`qType`
+      or `content` on a station, or `cardsPerPage` '9' → hunt; `clue` or `roomId` → room; a record carrying `kind`
+      says so itself) and `null` is "not a set". Ids missing on the object are drawn here; `read()` reports them on
+      `set._drew` so the caller knows a save is due.
+    - `write(set, kind?) → object` — the owning tool's own shape (default `set.kind`): 018's hunt with its field
+      names plus `id` on the hunt and on each station, `run` keyed by id; 019's room with `roomId` and `id` on each
+      station. Canonical fields the target page has no name for (a room's `letter` on a hunt, a hunt's `codeWord` on
+      a room) are written under their canonical names, so a cross-kind round trip loses nothing.
+    - `ensureIds(obj) → boolean` — the one thing P1's build puts into both pages: draw the missing ids on the loaded
+      blob in place and say whether anything changed, so the page saves. (P2 moves the pages onto `read`/`write`.)
+    - `newId(used) → string`, `newSetId() → string`.
+    - `playable(set) → [station]` — the valid stations in play order with `_index`, the two pages' `validStations()`
+      in one place (018: content non-empty after normalising; 019: clue and at least one accepted answer).
+    - `playPayload(set, { station: n | null }) → object` — the `r=` object: today's `buildRoomPayload` then
+      `stationPayloadFor`, to the letter, **plus** `v: 2`, `ids` (the playable stations' ids as one fixed-width string
+      in play order) and `next: 'end'` kept where today's drops it to `null`. For a hunt it is the same shape with
+      `prompt` as `clue` and `accepted` as `answers`, which is what P3's player page for a hunt opens.
+    - `playUrl(set, n | null, { start, base }) → string` — `lock.html?r=…&s=<n>[&start=1]`, as today.
+    - `playRead(obj) → room | null` — the player's reader: a v1 payload (a whole room from before #320, or a #320
+      station code) or a v2 one, with `ids` as an array or `null`, so `lock.html` has one entry point for every code
+      ever printed.
+    - `codeText(station) → string` — what a printed code holds: `normalizeContent(prompt)` for `encode: 'prompt'`,
+      else `playUrl`; `teamCodeText(team) → 'HUNT-TEAM:' + code`.
+    - `check(station, given) → { correct, nearMiss, reached }` — `er-match`'s verdict for `'text'`, `'digits'`,
+      `'cipher'` and an unknown type; `given === correct` for `'choice'` (an index); 018's `parseFloat` rule for
+      `'number'` (`|given − accepted[0]| ≤ tolerance`, `NaN` never correct); `{ reached: true }` for `'none'` and
+      `'photo'`, which have nothing to check.
+    - `nextOf(set, station) → stationId | 'end' | null` and `reachable(set) → [stationId]` — the chain walk the test
+      run and the packet warning do, by id (P3's `branches` plug in here).
+    - `remapRun(run, idsByIndex) → run` — 018's index-keyed run to an id-keyed one; `upgradeProgress(progress, ids) →
+      progress` — `lock.html`'s index-keyed progress to id-keyed when the code carries `ids`, unchanged otherwise.
+    - `budget(set, { ecLevel }) → [{ id, bytes, version, modules }]` — one row per playable station, through
+      `qr-draw.js`'s encoder when it is on the page; P2's payload budget reads this. Name reserved, body in P2.
+    - Constants: `KINDS`, `ANSWER_TYPES`, `ID_LENGTH` (4), `CODE_WORDS` (018's 30, moved).
+  - *Storage keys and migrations, case by case, with the fixture that proves each.* **No key is renamed, added or
+    deleted, and no envelope version changes in P1.** The registry rows stay as they are. The fixtures are JSON under
+    `Tools/stations/test/fixtures/`, each the exact string the key holds today.
+    - **H1 `hunt-v1-legacy-settings`** — the single `qr-scavenger-hunt-settings` blob. Untouched: 018's
+      `migrateLegacySettings()` runs first as today and `read()` sees a hunt. **H2 `hunt-v1-rock-cycle`** — the
+      `seeds.mjs` hunt, three types, three teams: every station maps as the table above says; `run` keyed by id;
+      `cardsPerPage '4'` kept as a string. **H3 `hunt-v1-live-run-shifted`** — a run whose marks were keyed before a
+      station was removed: index `i` is the `i`th *valid* station at read time (the same list the page used to write
+      it); a mark whose index is past the valid count is dropped and the drop counted on `set._dropped`, which is the
+      one deliberate change to run state (finding (2): it inflated "n / total"). **H4 `hunt-v1-sparse`** — a blank
+      starter row between two real stations: the blank gets an id too, is not playable, and the marks map by the valid
+      list. **H5 `hunt-v1-old-station`** — a station saved before hints and code words existed (no `hint`,
+      `hintPenalty`, `codeWord`): defaults as `ensureStationDefaults` gives them. **H6** `checkinStation` out of range
+      → `null` (the page falls back to the first, as today).
+    - **R1 `room-v0-bare`** — a pre-`Store` `{ current, sets }`: 019's `migrateStore` runs as today, then `read()`.
+      **R2 `room-v1-crypt`** — the station-qr suite's room: `roomId` kept as `id`; `next: 3` on station 2 becomes the
+      id of the raw list's fourth station; `hintCost` → `hint.points`; `awardLetter` → `letter`. **R3
+      `room-v1-dangling-next`** — `next` past the end → `null`. **R4 `room-v1-end-here`** — `next: 'end'` kept; after
+      P2 the player ends there (the exception). **R5 `room-v1-cipher-hidden`** — a cipher station with a typed
+      `answers` string and a text station with a leftover `cipherPlain`: both kept, both come back on `write`. **R6
+      `room-v1-shift-zero`** — `cipherShift` 0, `undefined` and 7 on three stations: `null`, 0 and 7, and `clampShift`
+      at play time gives 13, 3 and 7 as today. **R7 `room-v1-tolerance-on-digits`** — `numericTolerance` 0.5 on a
+      digits station: kept on the record, left out of the payload, as today. **R8 `room-v1-images`** — an `idb:`
+      reference, a data URL and `''`: all three verbatim (`er-image.js` moves the data URL at boot as today).
+      **R9 `room-v1-unknown-type`** — `type: 'maze'`: verbatim, `check()` exact. **R10 `room-v1-no-roomid`** — a room
+      saved before `roomId`: a new id, as `loadSetByName` gives one today.
+    - **S1 `share-hunt-v1`, S2 `share-room-v1`** — today's `?hunt=` and `?room=` payloads (no ids): `read()` then the
+      page's own normaliser; the set's id is new on arrival for both kinds. **S3 `file-room-v1`** — a `.json` in the
+      `{ aplp, state }` envelope: `share.js` unwraps, then S2. **S4** — a payload that carries ids (sent from a P2
+      page): the station ids are kept and the set id is new.
+    - **C1 `code-room-v1-whole`** — a whole-room code from before #320 (the station-qr suite's "Old Crypt"), **C2
+      `code-room-v1-station`** — a #320 stub code: `playRead()` returns them with `ids: null`; the player keys by
+      index for both, as today. **C3 `code-room-v2`** — `v: 2` with `ids`: keyed by id.
+    - **G1 `progress-v1`** — `escape-room-progress:<id>` with a numeric `current` and index-keyed maps, opened by a v2
+      code: `upgradeProgress` turns the index at each key into the id at that position of `ids`, `'done'` stays
+      `'done'`, `startedAt` stays; opened by a v1 code, nothing changes. **G2** — a progress already keyed by id
+      opened by a v1 code (a code printed before P2, taped up next to new ones): a v1 code has no `ids`, so the
+      player cannot tell which index the id in `current` is; it gates with the generic sentence ("your next clue is
+      at another station") and does not advance. That is the one case mixed prints cannot resolve, and the HISTORY
+      entry for P2 says so.
+    - The phone's key is never migrated by the builder: it is on another device. `monitor.html` reads no storage.
+  - *What stays stable in a printed code and a share link, exactly.* A 018 station code is the content string;
+    `normalizeContent` and `buildQR` are unchanged, so the bytes are the bytes. A 018 team code is `HUNT-TEAM:<code>`.
+    A 019 code's URL is `escape-room-builder/lock.html` with `r=` (base64 of `encodeURIComponent` of JSON, the
+    `btoa(unescape(…))` step), `s=` an index into the payload's `stations` in play order, `start=1` when present;
+    the payload keeps `id`, `title`, `timerMinutes`, and on the played station `clue`, `answers` **as an array**,
+    `hint`, `next` **as an index** (or `'end'`), `type`, `cipherShift`, `hintCost`, `awardLetter`, `maxAttempts`,
+    `numericTolerance`, `imageOnCard`, and on a stub `hintCost` and `awardLetter: '?'`; it adds `v: 2` and `ids`, and
+    nothing else, so a phone holding a `lock.html` cached before P2 plays a P2 code exactly as it plays a #320 code
+    (it reads none of the new fields and `typeof 'end' !== 'number'` is today's fall-through). A code printed before
+    P2 opens in the P2 player through `playRead()` with `ids: null`, which is the index mode it has now, picture and
+    all for a pre-#320 whole-room code. The `?hunt=` and `?room=` payloads stay each tool's own shape plus ids: a
+    page cached before P2 files them as it files today's (it never reads `id`), and a P2 page reads ids off them.
+    The player link in 019's box is `playUrl(set, null)` and still carries the whole room and its images.
+  - *Answer checking and what a student's device holds.* Today a 019 code or link carries, in base64 with no secret,
+    every accepted answer, hint, hint cost, letter, attempt cap, tolerance and shift of the station it opens, and a
+    student with a QR reader and a base64 decoder can read the key off the wall; the page's own footer says the
+    key travels inside the link. The design changes none of that: checking stays on the device, by the same matcher,
+    on the same fields, and the only new bytes a student's phone sees are `v` and a string of opaque four-character
+    ids. Nothing leaves the phone but the WebRTC message to `monitor.html`, which gains the current station's `id`
+    beside its index. A 018 station puts nothing on a student device at all (`encode: 'prompt'`), and the record
+    keeps it that way until P3 and Devon say otherwise. **Where the student-facing line falls, for Devon:**
+    `lock.html` and `monitor.html` exist and are played by students by design (the 019 Tier 2 note); P1 adds no
+    screen, field, or behaviour to either. Three later steps would move the line and are listed in the questions: a
+    hunt station printed as a player link, a typed short code into `lock.html` (P2's bullet), and any new thing a
+    student sees in P3's parity.
+  - *What each adopting tool changes.* **In P1's build, only this:** both pages call `Stations.ensureIds()` on
+    the loaded blob and save when it drew one, so ids exist on disk from P1 on; nothing else in either page, the
+    player or the monitor changes, and `CACHE_VERSION` bumps for the new `_shared/` file and the two pages. **P2's
+    work, written here so P1 can be checked against it:** 018 keeps `state` as the canonical record, with `save()`
+    through `write()`, `validStations()` through `playable()`, the check-in's three rules through `check()`, `marks`
+    and the rest keyed by id (`remapRun` at load, once, saved), `checkinStation` an id, the CSV's columns unchanged,
+    the share `getState` through `write()` minus `run`; 019 the same with `buildRoomPayload` and `stationPayloadFor`
+    deleted for `playPayload`, `validStations` for `playable`, `unreachableStations` for `reachable`, `next` an id in
+    the `<select>` (the option values are ids, the labels stay "Jump to Station n"); `lock.html` loads
+    `../../_shared/stations.js`, decodes through `playRead`, keys progress by id when the code has `ids` and by index
+    when it has not, upgrades a numeric progress once, honours `'end'`, and keeps the whole-room and stub cases of
+    the station-qr suite green; `monitor.html` passes `id` through. The two share-arrival normalisers become
+    `read()` plus the page's own name-uniquing. `er-match.js` folds in, and `test:escape-room`'s matcher cases move
+    with it. The registry rows do not change (no key moves); `sw.js` gains the module and the suite folder's
+    fixtures are not precached (a `test/` path is dropped from the offline copy anyway).
+  - *What P2 to P4 need from the record, reserved by name and not built.* **P2:** `budget()` for the payload budget;
+    `codeWord` on a room's stations for the printed short code (the list of 30 is already in the record's
+    constants) — whether the typed code is the word or the id is P2's call and Devon's question 6. **P3:** on a
+    station, `branches: { byAnswer: { [accepted]: stationId } }` beside `next` (a `nextOf(set, station, given)`
+    overload); on a set, `flow: 'chain' | 'free'` with `required: [stationId]` for "a required set in any order"
+    (018 is `'free'` today, 019 `'chain'`; `read()` sets it from `kind` and nothing reads it yet); `image` and
+    `encode: 'player'` on a hunt station; `run` on a room; `bankId` on a station for Path 12. **P4:** on the phone's
+    progress, `solved[id] = { at }` and a `path: [{ id, at }]`, and on a run, `marks[id].at` (there) and
+    `hintsUsed[id].at` (there) — so a per-team path with times is already in a hunt's record and a room's player
+    needs two timestamps added in P3 or P4. None of these names is written by P1.
+  - *What P5 keeps open.* `kind` is on every record and is how `write()` picks a shape, so two entry points over one
+    engine is the record as it stands; one tool with a mode switch is a page that reads both kinds and shows `kind`
+    as the switch, and needs no new field. Neither needs a key to move: a merged tool would read both keys and
+    write back to the one each set came from, by `kind`.
+  - *The tests, by name and case.* **`Tools/stations/test/stations.test.mjs`** (pure Node, the `test:stations`
+    shortcut, in `suites.json`; the module is loaded with `vm` the way a classic script is, as the export suite
+    loads its own): for every fixture, `read()` returns the fields the case above says and `write(read(f))` is `f`
+    plus ids and nothing else (deep-equal after the ids are removed; the on-disk promise); `read(write(read(f)))` is
+    `read(f)`; `read(write(read(room), 'hunt'))` and back equals `read(room)` with the same ids (the Verification
+    line, in Node); ids are four `[a-z0-9]`, unique, kept across a second `read`, drawn only where missing, and a
+    hand-made duplicate is redrawn for the later station; `playPayload` equals today's `stationPayloadFor` output
+    plus `v`, `ids` and `'end'` for all four stations of R2 and for a 30-station set — today's two functions copied
+    into the suite from the page, as the export suite keeps the old `duplex-print.js` pair; `playUrl` round-trips
+    through `StateLink.decodeState` with `s` and `start` where expected; `playRead` on C1, C2 and C3; `check()`
+    parity on a table of forty (station, given) pairs against `er-match`'s `checkAnswer` (loaded from its file,
+    not retyped) and against 018's choice and number rules copied line for line, including `NaN`, `''`, `'5.0'`
+    against `5`, `3.14` against `314`, curly quotes and an unknown type; `remapRun` on H3 and H4 with the dropped
+    mark counted; `upgradeProgress` on G1 and its no-op on a v1 code; `nextOf` and `reachable` on R2 (station 3
+    unreachable) and R4. **`Tools/stations/test/smoke-ids.mjs`** (browser, port of its own, P1): open 018 and 019
+    seeded with H2 and R2, read the keys back: every station has an id, a reload keeps it, moving a station keeps
+    it, deleting and re-adding draws a new one, the share links carry them, and the share arrival of each keeps
+    the station ids and changes the set id; no console errors; axe clean. **P2's, named now:**
+    `smoke-cross-open.mjs` (a room built in 019, shared into 018, shared back, every field and id intact; a hunt
+    the other way), `smoke-legacy-codes.mjs` (the pre-P2 `lock.html` taken from `git show v255:…` and served
+    beside the new one: a P2 code on the old player, a #320 code and a whole-room code on the new one, mixed prints
+    per G2 above), and `smoke-station-qr.mjs` gaining `'end'` and an id-keyed progress. **Must stay green, and
+    why:** `test:escape-room` (the matcher and the test run read the same record), `test:escape-room-images`
+    (`image` verbatim, `idb:` never in a link), `test:escape-room-station-qr` (the bytes of a code), the two
+    `test:scavenger-hunt` suites (routes derived, code words stable) and `test:scavenger-hunt-print` (every sheet
+    reads the same fields). `check:registry` must still resolve both keys to their rows; `check:precache` sees the
+    new file.
+  - *Deliberately left out.* Any change to a page's screen, sheet or sentence; any new key, renamed key, or
+    `Store` version bump (018 does not adopt `Store` here; P2 may); hashing or hiding the answers in a code; a
+    hunt's codes becoming player links; per-answer branching, a free-order required set, teams on a room, a room's
+    timer on a hunt (all P3); the debrief's timestamps (P4); the bank id (Path 12); merging or renaming the tools
+    (P5); the code-word list growing past 30; `er-match.js` moving (P2); touching `monitor.html` beyond the id.
+  - *Decided here, cheap to reverse.* **Canonical in memory, each tool's shape on disk.** The other way — one v2
+    shape under both keys with a `Store` bump — is the same `read()` with a different `write()`; it was not taken
+    because a page from an older cache reads a v2 envelope's data as it is (finding (10)) and would then meet field
+    names it has no code for, where today's names plus an `id` cost it nothing. To reverse: make `write()` emit the
+    canonical record, bump both envelopes, keep `read()`. **`ids` as one fixed-width string on the played payload,
+    not an id per stub** (measured: six characters a station against fifteen). **`'end'` honoured** (finding (1)):
+    the key prints "Finish", the test run says "the chain ends here", and the teacher chose it; the change is in
+    the P2 player, named in its HISTORY entry. **A hunt's set id is new on share arrival**, 019's rule, for the same
+    reason it has there. **An orphan mark is dropped** at `remapRun` (finding (2)). **`cipher.shift` keeps `null`
+    against 0.** **`_shared/stations.js`**, not `Tools/_engines/`, the call AI-21 made for `grouping.js`.
+  - *Questions that are Devon's, listed and not answered.* (1) **The student-facing line.** `lock.html` is played
+    on student devices today. Three things in this path would deepen that: a hunt station printed as a player
+    link (`encode: 'player'`, P3), a short code typed into `lock.html` (P2's bullet), and anything new a student
+    sees in P3. The 019 Tier 2 note says new work should favour the paper packet and a typed code on one shared
+    classroom device; the record supports either. Which of the three, if any, may a session build? (2) **The key
+    in the clear.** Every accepted answer rides inside a code and a link, readable by anyone who decodes the QR,
+    and the page says so. Keep that, or hash the answers in P2 (the matcher would compare hashes of its normalised
+    forms, and a near miss could no longer be reported)? (3) **One tool or two** is P5's and not decided here; the
+    record carries `kind` so either reading works. (4) **Two text types or one.** 018's "Open-ended" checks nothing
+    and 019's "Text answer" checks a list. Stay two (`'none'`, `'text'`) or become one type with an optional key?
+    (5) **Minutes or points.** A hint costs minutes on a hunt and points in a room; a station holds both numbers.
+    When a room gains teams and a leaderboard (P3), which does its leaderboard dock? (6) **One code or two per
+    station.** The paper code word (MAPLE) proves a team stood at a station; P2's typed short code opens a station
+    on a device. The same word, or the id, or two codes on the card? (7) **Resume or restart.** A phone keys its
+    progress on the set's id, so a room edited and reprinted next week resumes where that phone left off; a
+    print number in the code would start it over. Which is wanted?
+  - *Not verified.* No module exists and nothing ran in a browser; `lock.html` and `monitor.html` were read, not
+    opened. The payload sizes are from a probe that reimplements `stationPayloadFor` and the base64 step, not from
+    the page, and the module counts are the encoder's byte-mode table, not a drawn code. The parity claims rest on
+    reading; the build copies today's functions from the files into the suite, not from this text. Finding (1) is
+    read off `buildRoomPayload` and `renderClue`, not reproduced in a player. The older-cache cases were read, not
+    reproduced, and `smoke-legacy-codes.mjs` is the first thing that would.
 - **P2 — Both tools on the schema**, plus the payload budget from Path 6 (Share
   sheet) on each station's own code (one station per code since #320) and a printed
   short-code fallback typed into `lock.html`.

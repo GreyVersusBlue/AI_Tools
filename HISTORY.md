@@ -9,6 +9,49 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 18 P1 designed, not built: the shared station schema for 018 and 019 (2026-10-06, AI-26, no `CACHE_VERSION`, no code)
+
+Audit entry AI-26, rank 53 (1). A design pass: only `BACKLOG.md` changed (the P1 bullet under "Path 18", and a
+note on rank 53). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** One pure classic script, `_shared/stations.js` (`Stations`): `read()` turns either tool's
+  saved hunt or room, share payload or file into one canonical record (`set`, `station`, `answer`, `hint`, `run`,
+  every field of both tools named and placed), `write()` turns it back into the owning tool's own shape, and
+  `playPayload()`/`playRead()` are 019's `r=` format with `v: 2`, a fixed-width string of station ids and `'end'`
+  kept, so a phone with a `lock.html` cached before the build plays a new code and the new player plays every code
+  printed since the tool existed. **The canonical record lives in memory; on disk each tool keeps its shape and
+  field names and gains ids**, four characters a station, drawn once and never rewritten. No key is added, renamed
+  or deleted and no `Store` version moves. The build of P1 itself is the module, its Node suite, a browser suite for
+  the ids, and one call in each page that draws the missing ids; everything else is written down as P2's work.
+- **What reading the code turned up, each worth knowing before the build.** 019's "End here (finish room)" is not
+  honoured by the player: the payload turns `'end'` into `null`, which `lock.html` and the test run read as "next
+  in order", while the key prints "Finish". 018's live-run marks are keyed by a station's index in the filtered list,
+  so removing or moving a station mid-run moves every team's check-ins, and a mark past the end still counts on
+  the leaderboard. `cipherShift` missing and `cipherShift` 0 are different stations (3 and 13 after `clampShift`).
+  A cipher station keeps the `answers` string typed before the type switch, and a text station a leftover
+  `cipherPlain`. `normalizeTextAnswer` makes "3.14" and "314" one answer. 018 offers 9 codes a page and 019 offers
+  8, and 018 falls back to 4 for a value it lacks. An unknown station type is mapped to text on a share arrival
+  but kept in a saved room, where the matcher checks it exactly. The registry declares `escape-room-progress:`
+  under `keys` while `lock.html` writes it as a prefix. `Store.get` hands a newer envelope back as it is.
+- **What the measurements were.** One pure-Node probe, not kept: 019's `stationPayloadFor` and the base64 step
+  copied out, invented stations. A four-station code is 364 characters today, 404 with the ids string, 432 with an id
+  in every stub; thirty stations 416, 596 and 868. The figures and the QR versions they need are in the design.
+- **Decided here, cheap to reverse.** Canonical in memory and each tool's shape on disk (the other way is the
+  same `read()` with a different `write()` and two envelope bumps). The ids as one string on the played payload,
+  not an id per stub. `'end'` honoured by the P2 player. A hunt's set id is new on a share arrival, 019's rule. An
+  orphan mark is dropped when a run is re-keyed. `cipher.shift` keeps `null` against 0. `_shared/stations.js`, as
+  AI-21 placed `grouping.js`.
+- **Left to Devon, listed in the design and not answered:** where the student-facing line falls for a hunt
+  station printed as a player link, a short code typed into `lock.html`, and P3's parity; whether the accepted
+  answers stay readable inside a code or are hashed; one tool or two (P5, untouched); whether 018's unchecked
+  "Open-ended" and 019's checked "Text answer" stay two types; minutes or points when a room gains a leaderboard;
+  whether the paper code word and the typed short code are one code; whether a phone resumes or restarts a room
+  that was edited and reprinted.
+- **Not verified.** No module exists and nothing ran in a browser; `lock.html` and `monitor.html` were read, not
+  opened. The payload sizes come from a reimplementation, not the page. The parity claims rest on reading; the
+  build copies today's functions from the files into the suite, not from the design. The "End here" finding was
+  read off two functions, not reproduced in a player.
+
 ## Path 7 P4 increment 7: 035's groups template on `ExportKit`, and P4 is finished (2026-10-06, AI-13, `CACHE_VERSION` v255)
 
 Audit entry AI-13, BACKLOG rank 6 (¼). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). Path 7 has
