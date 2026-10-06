@@ -9,6 +9,54 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 061 Fraction–Decimal–Percent Drill: improper fractions, mixed numbers and negative values (2026-10-05, AI-31-061, `CACHE_VERSION` v249)
+
+Audit entry AI-31, BACKLOG rank 100 (½). Per-tool row; the rank-100 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** Two controls, both off by default: **Values** (between 0 and 1 as before; above 1 as improper fractions, as mixed
+  numbers, or both kinds) and **Include negative values**. Above 1 means a whole part of 1 to 4 and a proper remainder over the row's
+  denominator, so values run from just over 1 to just under 5 and are never whole numbers; a negative sign goes on all three
+  cells ("-1 1/2", "-1.5", "-150%"). The fraction column's heading reads "Fraction / mixed number" when mixed numbers can appear.
+- **Decisions, mine, each cheap to reverse.** (1) A non-default range makes *only* values above 1, not a mix with 0-to-1 rows: a
+  teacher who wants both prints two sheets; the control stays one select. (2) With negatives on, each row is negative by a coin
+  flip, and the last row is made negative if none was, and the last row of a "both kinds" sheet is made the missing kind: a
+  four-row sheet always shows what its settings promise (the forced row takes no draw). (3) The minus sign is ASCII "-", so a cell
+  parses back with the same regex as any other number. (4) Whole part capped at 4 (percent at most 499.9%); the cap is `MAX_WHOLE`.
+- **The arithmetic is integer.** The old code rounded `num / den` through floats. Every decimal and percent now comes from one
+  integer, the value in thousandths rounded half up (`floor((2000n + d) / 2d)`); the decimal is that over 1000 and the percent is
+  it over 10, so the two cannot disagree (2.333 and 233.3%). Rounding half up on the magnitude means a tie rounds away from
+  zero: -1 1/16 is -1.063 and -106.3%. Repeating decimals are still shown rounded to three places with no bar; that is the
+  repeating-notation row's job, not this one's.
+- **The old sheets are unchanged, proved.** `golden-old-sheets.json` holds 180 sheets read off the page at ab678d3 (3
+  difficulties x 4 given forms x 3 row counts x 5 seeds, every row's three cells and which one is given, and the exact settings
+  string the page saves); the suite loads each from a locked seed and compares all of it. The settings string and a share link carry
+  `range` and `negatives` only when they are on, so a sheet that uses neither saves and shares byte for byte as before. A saved
+  or shared value that is not one of the four ranges, or a `negatives` that is not exactly `true`, is the default.
+  The old and new float rounding were also compared outside the suite over every proper fraction with a denominator from 2 to
+  100 (4,950 pairs, which holds every denominator the three difficulties use): no difference (a scratch script, not committed).
+- **Suite.** `test:fraction-decimal-percent` (`Tools/fraction-decimal-percent-drill-generator/test/smoke-value-range.mjs`, port
+  8488), 53 assertions. An oracle written in the suite parses each cell back into whole numbers (BigInt) and checks lowest terms, the
+  mixed-number shape, the range, the sign on all three cells, the rounding and the percent over 192 sheets and 5,760 rows; known rows
+  (a repeating decimal, a percent over 100 and below 0, a tie, a negative mixed number) are pinned to literals too, so a wrong oracle
+  cannot agree with a wrong page. Also: the promises on a four-row sheet over 150 seeds, the key against the worksheet and the print
+  tables, persistence and share links, nonsense in a saved state or link, and Chromium's PDF page counts.
+- **Broken on purpose 36 times**, every one failing the suite (rounding by truncation, a tie rounding down, the percent a power of ten
+  out, the sign missing from each of the three cells, a whole part of 0 or a cap of 5, a wrong mixed whole part, unreduced fractions
+  both ways, the forced negative and forced kind removed, 90% negatives, "both" always mixed, the default written to storage for each
+  field, a bad saved or shared range and a bad `negatives` accepted, the link dropping or bloating the options, an extra draw in the
+  old path, the heading, the printed key swapped for the blank sheet, paper cell padding made larger and smaller, a lost label,
+  a renamed label, a console error, a missing select option, Generate ignoring negatives, boot ignoring the saved range). Without a
+  mutant of their own: the key's given and blank cells against the worksheet, "thirty worksheet rows", the known-rows-drawn count, the
+  same seed giving the same sheet twice, and the no-offsite check. One mutant's anchor missed on the first pass (0 matches) and was
+  re-run with a corrected anchor, so it did not count until it failed.
+- **Paper.** A 12-row sheet with every option on is two pages of PDF (worksheet and key). At 30 rows the sheet is four pages, and was
+  before these options (the table is taller than a page); the options do not make it longer, and the layout was not changed because
+  that would change today's printed sheet. `audit-print --check --only 061` and `test:a11y -- --only 061`: see the Pending merge row.
+  Not checked on paper or with a real screen reader. A mixed number is plain text ("2 1/2"), not stacked.
+- **What went wrong.** `pkill -f` and `pgrep -f` with a pattern also match the shell that is running them (and the background
+  watcher that was waiting for the mutation run, whose own command line contained the pattern, so it never saw the run end): one
+  `pkill` ended the session's shell. Match on something that the command line of the watcher does not contain, or use a pid.
+
 ## Path 7 P4, increment 4: 011 makes booklets and several pages to a sheet on `ExportKit` (Path 17 P4's controls), and 064's zip and PNG downloads are the file helpers' first adopter (2026-10-05, AI-13, `CACHE_VERSION` v248)
 
 Audit entry AI-13, rank 6 (2+). Fourth increment of P4. **The row stays, rewritten: what is left is CSV and XLSX

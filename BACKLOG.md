@@ -468,7 +468,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 99 | Per-student report cards — one page per student across all events and dates, with the class average | 060 | ½ | | [060 Fitness & Skill Assessment Tracker](#060--fitness--skill-assessment-tracker) |
-| 100 | Improper, mixed and negative values — extend operand generation past 0–1 | 061 | ½ | | [061 Fraction–Decimal–Percent Conversion Drill Generator](#061--fractiondecimalpercent-conversion-drill-generator) |
 | 101 | Multiple saved custom stories — named multi-save for templates plus their word banks | 063 | ½ | | [063 Grammar Mad Libs Generator](#063--grammar-mad-libs-generator) |
 | 102 | Pre-lab and post-lab packet split from one saved template | 065 | ½ | | [065 Lab Report Template Builder](#065--lab-report-template-builder) |
 | 103 | Bulk import a custom bank — paste problem/work/fix/explain rows for a whole unit | 066 | ½ | | [066 Math "Find the Mistake" Warm-Up Generator](#066--math-find-the-mistake-warm-up-generator) |
@@ -8296,10 +8295,6 @@ reporting requirements instead of just a spreadsheet substitute.
 
 #### Major Features
 
-- **Negative number support** — all current values are positive fractions
-  between 0 and 1; extending to values above 1 (improper
-  fractions/mixed numbers) and negative values would substantially widen
-  what this drill can practice.
 - **Word-problem wrapping**: this backlog’s broader pattern (word
   problems as a wrapper around numeric drills) applies here too — "a
   recipe calls for 3/4 cup of sugar; what percent of a full cup is that?"
