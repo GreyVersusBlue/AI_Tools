@@ -228,6 +228,7 @@
     "Tools/gallery-walk-qr/test/smoke-print.mjs",
     "Tools/qr-code-generator/test/smoke-print.mjs",
     "Tools/question-bank/test/question-bank.test.mjs",
+    "Tools/question-bank/test/smoke-seed-sets.mjs",
     "Tools/export/test/export.test.mjs",
     "Tools/export/test/smoke-export.mjs",
     "Tools/export/test/smoke-csv-adopters.mjs",

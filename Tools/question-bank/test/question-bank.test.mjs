@@ -1,7 +1,9 @@
 // question-bank.test.mjs — pure-logic tests for _shared/question-bank.js
 // (Path 12 P1): the schema, validation, ids, the migration from 030's old
 // bank key, 030's view of the bank held to the store it replaced, and the
-// file formats read back through the real ExportKit and the vendored SheetJS.
+// file formats read back through the real ExportKit and the vendored SheetJS;
+// and (Path 12 P2) the read-only seed sets, with 053's and 062's built-in
+// lists held to what their pages built before the data moved to a file.
 //
 //   node Tools/question-bank/test/question-bank.test.mjs   (or: npm run test:question-bank)
 //
@@ -18,6 +20,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import crypto from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
@@ -29,6 +32,8 @@ const QB_SRC = src('_shared/question-bank.js');
 const EXPORT_SRC = src('_shared/export.js');
 const OLD_SRC = fs.readFileSync(path.join(here, '_rgb-bank-store-v264.js'), 'utf8');
 const NEW_SRC = src('Tools/review-game-board/rgb-bank-store.js');
+const CTCG_SRC = src('Tools/cultural-trivia-card-generator/ctcg-bank.js');
+const GBQ_SRC = src('Tools/geography-bee-quiz-generator/gbq-bank.js');
 
 let passed = 0, failed = 0;
 const ok = (cond, label) => { if (cond) { passed++; return true; } failed++; console.log('  FAIL ' + label); return false; };
@@ -471,6 +476,157 @@ const TRICKY = bankOf([
   const typed = g.XLSX.utils.aoa_to_sheet([['Question', 'Answer', 'Points'], ['Lucky number?', 7, 100], ['Year?', 1776, 200], ['Half?', 0.5, 300]]);
   const tq = g.QuestionBank.fromRows(g.XLSX.utils.sheet_to_json(typed, { header: 1, raw: false, defval: '' })).questions;
   eq(tq.map(q => q.answer), ['7', '1776', '0.5'], 'a number typed into an answer cell arrives as its text');
+}
+
+// ---- seed sets (Path 12 P2) ------------------------------------------------------
+console.log('QuestionBank — seed sets: read-only, in memory, copied on request');
+const sha = t => crypto.createHash('sha256').update(t).digest('hex');
+const seedPage = (storage, scripts = [QB_SRC, CTCG_SRC, GBQ_SRC, NEW_SRC]) => page(storage, scripts);
+{
+  const q = page(fakeStorage(), [QB_SRC]).QuestionBank;
+  eq(q.sets(), [], 'with no data file loaded there are no sets');
+  eq([q.seedId('053', 'b3'), q.seedId('a:b', 'x'), q.isSeedId('seed:053:b3'), q.isSeedId(' seed:x:y'), q.isSeedId('q-abc'), q.isSeedId(''), q.isSeedId(null), q.isSeedId(7)],
+    ['seed:053:b3', 'seed:a-b:x', true, true, false, false, false, false], 'a seed id is seed:<set>:<the tool\'s id>, and only that is one');
+  eq([q.seedSetOf('seed:053:b3'), q.seedSetOf('seed:062:bi1:2'), q.seedSetOf('seed:nocolon'), q.seedSetOf('q-1')], ['053', '062', '', ''], 'the set is read back off the id');
+  eq(q.registerSet(null), { ok: false, id: '', count: 0, dropped: 0 }, 'a set with no id is refused');
+  eq(q.registerSet({ id: 't', title: 'Test set', source: '999 Made-up Tool', questions: [
+    { id: 'a', prompt: ' One? ', answer: '1', unit: 'U' }, { id: 'a', prompt: 'Twin?', answer: '2' }, { prompt: 'No id?', answer: '3' },
+    { id: 'c', prompt: '', answer: '4' }, { id: 'd', prompt: 'No answer?' }, 'junk', null, { id: 'e', question: 'Old name?', answer: '5', extra: { deep: [1] } },
+  ] }), { ok: true, id: 't', count: 2, dropped: 6 }, 'a question with no id, a repeated id, no prompt or no answer is left out and counted');
+  eq(q.sets(), [{ id: 't', title: 'Test set', source: '999 Made-up Tool', note: '', count: 2 }], 'sets() names the set and its size');
+  eq(q.setQuestions('t').map(x => [x.id, x.prompt, x.answer, x.unit, x.points, x.createdAt]), [['seed:t:a', 'One?', '1', 'U', 0, ''], ['seed:t:e', 'Old name?', '5', '', 0, '']], 'its questions are full questions with seed ids, in order');
+  eq(q.setQuestions('nope'), [], 'no such set is an empty list');
+  // read-only: nothing a caller does to what it was handed reaches the set
+  const before = JSON.stringify(q.setQuestions('t'));
+  const handed = q.setQuestions('t'); handed[0].prompt = 'CHANGED'; handed[1].extra.deep.push(2); handed.push({ id: 'x' }); handed[0].tags.push('t');
+  const one = q.findSeed('seed:t:e'); one.answer = 'CHANGED'; one.extra.deep.length = 0;
+  eq(JSON.stringify(q.setQuestions('t')), before, 'changing a question it handed out, or the list, changes nothing in the set');
+  eq([q.findSeed('seed:t:a').prompt, q.findSeed('seed:t:zz'), q.findSeed('seed:other:a'), q.findSeed('a'), q.findSeed(null)], ['One?', null, null, null, null], 'findSeed gives a seed by its id and null for anything else');
+  // registering again replaces in place and changes nothing when the data is the same
+  q.registerSet({ id: 'u', questions: [{ id: 'z', prompt: 'Zed?', answer: 'z' }] });
+  q.registerSet({ id: 't', title: 'Test set', source: '999 Made-up Tool', questions: q.setQuestions('t') });
+  eq([q.sets().map(x => x.id), JSON.stringify(q.setQuestions('t'))], [['t', 'u'], before], 'a set registered again, even from its own output, stands where it stood with the same ids');
+  // detach
+  eq(q.detach({ id: 'seed:t:a', prompt: 'One?', answer: '1', createdAt: 'x', updatedAt: 'y', unit: 'U' }), { prompt: 'One?', answer: '1', unit: 'U', copiedFrom: 'seed:t:a' }, 'detach() takes the seed id and dates off and records where it came from');
+  eq(q.detach({ id: 'q-1', prompt: 'p', answer: 'a' }), { id: 'q-1', prompt: 'p', answer: 'a' }, 'and leaves a question of the teacher\'s as it is');
+  // the pure list functions never keep a seed id
+  const up = q.upsert([], q.findSeed('seed:t:a'), { now: 'T', nowMs: 5, random: () => 0.5 });
+  eq([q.isSeedId(up.question.id), up.question.copiedFrom, up.question.createdAt, up.question.prompt], [false, 'seed:t:a', 'T', 'One?'], 'upsert() of a seed stores a new question with its own id and date');
+  const m1 = q.merge([], q.setQuestions('t'), { now: 'T' });
+  eq([m1.added, m1.questions.some(x => q.isSeedId(x.id)), m1.questions.map(x => x.copiedFrom)], [2, false, ['seed:t:a', 'seed:t:e']], 'merge() of a whole set adds copies, none under a seed id');
+  const m2 = q.merge(m1.questions, q.setQuestions('t'), { now: 'T2' });
+  eq([m2.added, m2.updated, m2.skipped, JSON.stringify(m2.questions) === JSON.stringify(m1.questions)], [0, 0, 2, true], 'merged a second time, every one is skipped and the bank is the same');
+  // a list that somehow holds a seed id is still not written over by one arriving
+  const odd = [{ ...q.findSeed('seed:t:a'), prompt: 'Hand-made', answer: 'row' }];
+  const m3 = q.merge(odd, [q.findSeed('seed:t:a')], { now: 'T' });
+  eq([m3.updated, m3.added, m3.questions[0].prompt, m3.questions.length], [0, 1, 'Hand-made', 2], 'a seed arriving never replaces a stored question, whatever its id');
+}
+{
+  // the stored half: nothing is written until a copy, and a copy is the teacher's
+  const storage = fakeStorage();
+  const w = seedPage(storage), q = w.QuestionBank, view = w.ReviewBankStore;
+  eq(q.sets().map(x => [x.id, x.title, x.count]), [['053', 'Cultural Trivia', 30], ['062', 'Geography Bee', 90]], '053 and 062 register their sets when their data files load after the module');
+  eq(view.sources().map(x => [x.id, x.count, x.readOnly]), [['', 0, false], ['053', 30, true], ['062', 90, true]], '030\'s view lists the teacher\'s bank first, then the sets, read-only');
+  view.listEntries('053'); view.filterEntries({ unit: 'Capitals' }, '062'); view.distinctValues('unit', '062'); view.findEntry('seed:053:b0'); q.setQuestions('062'); q.findSeed('seed:062:bi5');
+  eq([storage.writes, Object.keys(storage.dump())], [[], []], 'listing, filtering and finding in a set writes nothing: no key exists');
+  eq(view.distinctValues('unit', '062'), ['Capitals', 'Landmarks', 'Map Skills'], 'a set\'s units are its categories');
+  eq(view.distinctValues('unit', '053'), ['Francophone World', 'Global Culture', 'Hispanic World'], 'and 053\'s are its three');
+  eq([view.filterEntries({ unit: 'Capitals' }, '062').length, view.filterEntries({ query: 'machu' }, '053').map(e => e.answer), view.filterEntries({ query: 'machu' }).length], [30, ['The Inca'], 0], 'a set filters as the bank does, and the bank\'s own list does not see it');
+  eq(view.findEntry('seed:053:b3'), { id: 'seed:053:b3', question: 'What ancient civilization built Machu Picchu?', answer: 'The Inca', points: 0, unit: 'Hispanic World', standard: '', difficulty: '', createdAt: '' }, 'the page reads a seed in the eight fields it reads any entry in');
+  // the old surface, with no source, is what it was
+  eq([view.listEntries(), view.filterEntries({}), view.distinctValues('unit')], [[], [], []], 'with no source the view is the teacher\'s bank, as before');
+
+  const res = view.copyToBank(['seed:053:b3', 'seed:062:bi12', 'seed:062:nope']);
+  eq([res.ok, res.added, res.skipped, res.missing], [true, 2, 0, ['seed:062:nope']], 'copying two seeds adds two and names an id that is no seed');
+  eq(storage.writes, [KEY], 'and that is one write, to the bank\'s own key');
+  const mine = q.list();
+  eq(mine.map(x => [x.prompt, x.answer, x.unit, x.tags, x.copiedFrom, x.category, x.area]), [
+    ['What ancient civilization built Machu Picchu?', 'The Inca', 'Hispanic World', [], 'seed:053:b3', 'hispanic', undefined],
+    ['In which country would you find Machu Picchu?', 'Peru', 'Landmarks', ['South America'], 'seed:062:bi12', 'landmarks', 'south-america'],
+  ], 'the copies carry every mapped field and where they came from');
+  ok(mine.every(x => /^q-/.test(x.id) && !q.isSeedId(x.id) && x.createdAt), 'each copy has an id and a date of its own');
+  ok(!JSON.parse(storage.getItem(KEY)).data.questions.some(x => q.isSeedId(x.id)), 'no seed id is in storage');
+  const again = view.copyToBank(['seed:053:b3', 'seed:062:bi12']);
+  eq([again.added, again.skipped, storage.writes.length, q.list().length], [0, 2, 1, 2], 'copied a second time, both are skipped and nothing is written');
+  // a copy is the teacher's: editing and deleting it leaves the seed alone
+  q.saveQuestion({ id: mine[0].id, prompt: 'Who built Machu Picchu?' });
+  eq([q.list()[0].prompt, q.findSeed('seed:053:b3').prompt], ['Who built Machu Picchu?', 'What ancient civilization built Machu Picchu?'], 'editing the copy does not edit the seed');
+  const third = view.copyToBank(['seed:053:b3']);
+  eq([third.added, q.list().length, q.list()[0].prompt], [1, 3, 'Who built Machu Picchu?'], 'copying it again after an edit adds the seed\'s wording and leaves the edited copy');
+  q.deleteQuestion('seed:053:b3'); view.deleteEntry('seed:062:bi12');
+  eq([q.sets().map(x => x.count), q.list().length], [[30, 90], 3], 'deleting by a seed id deletes nothing, in the set or the bank');
+  const sv = view.saveEntry({ id: 'seed:053:b0', question: 'Rewritten?', answer: 'No' });
+  eq([q.isSeedId(sv.id), q.findSeed('seed:053:b0').prompt, q.list().length], [false, 'What is the traditional Mexican celebration honoring deceased loved ones called?', 4], 'saving over a seed id makes a new question of the teacher\'s; the seed is as it was');
+  // the bank file carries copies as ordinary questions, and a file that names a seed id cannot plant one
+  const file = q.toJSON(q.list(), { exported: 'x' });
+  const other = fakeStorage(), w2 = seedPage(other).QuestionBank;
+  const imp = w2.importQuestions(w2.parse(file).questions);
+  eq([imp.added, w2.list().map(x => x.copiedFrom)], [4, q.list().map(x => x.copiedFrom)], 'a bank file takes the copies to another browser with their `copiedFrom`');
+  const planted = w2.importQuestions([{ id: 'seed:053:b9', prompt: 'Planted?', answer: 'x' }]);
+  eq([planted.added, w2.list().some(x => w2.isSeedId(x.id)), w2.findSeed('seed:053:b9').answer], [1, false, "The euro"], 'a file naming a seed id adds a question of its own and the seed is untouched');
+  // a page from before sets (no data files): the stored copies read as ordinary questions
+  const plainPage = page(storage, [QB_SRC, NEW_SRC]);
+  eq([plainPage.QuestionBank.sets(), plainPage.ReviewBankStore.listEntries().length, plainPage.ReviewBankStore.sources().length], [[], 4, 1], 'on a page with no data files there are no sets and the bank reads whole');
+}
+{
+  // the two mappings, field by field, and the tools' own lists held to what they were
+  const w = seedPage(fakeStorage()), q = w.QuestionBank, C = w.CulturalTriviaBank, G = w.GeographyBeeBank;
+  // Pinned from the pages as they were at v266 (the inline lists, run as written): JSON.stringify of the list.
+  eq([JSON.stringify(C.items()).length, sha(JSON.stringify(C.items()))], [4337, '626a72191d91bcfd3b911e784bc89d2606341f30d48b749beab0fc57bff70a0b'], '053\'s built-in list is byte for byte the list its page built before v267');
+  eq([JSON.stringify(G.items()).length, sha(JSON.stringify(G.items()))], [18623, '211aff0dd5cf32beb84b1519281b410b71c10b5493c93abb19ae30da410eab10'], '062\'s built-in list is byte for byte the list its page built before v267');
+  eq(sha(JSON.stringify(C.CAT_LABELS)), 'e847d900598c17938da48fa136e126a2044c9368cbf636e1e8a63b41d958b6e9', '053\'s category labels are what they were');
+  eq(sha(JSON.stringify([G.CAT_LABELS, G.AREA_LABELS, G.AREA_ORDER, G.mapQuestionText('us'), G.mapQuestionText('world')])), 'b4bcda70236dcdae120f8183b3404848c8a3158c3d39c46da145d5315b134ab1', '062\'s labels, region order and map prompts are what they were');
+  const ci = C.items(); ci[0].q = 'CHANGED'; ci.pop();
+  const gi = G.items(); gi[100].map.region = 'CHANGED'; gi[0].a = 'CHANGED';
+  eq([C.items()[0].q !== 'CHANGED', C.items().length, G.items()[100].map.region, G.items()[0].a], [true, 30, 'Ohio', 'Paris'], 'items() is a new list each call: a page changing its own does not change the data');
+
+  // 053: every field of the old shape lands somewhere, or is named as having no home
+  const cq = q.setQuestions('053'), cItems = C.items();
+  eq(cq.length, 30, '053 publishes all thirty');
+  let landed = true;
+  cItems.forEach((it, i) => {
+    const s = cq[i];
+    if (s.id !== 'seed:053:' + it.id || s.prompt !== it.q || s.answer !== it.a || s.unit !== C.CAT_LABELS[it.category] || s.category !== it.category) landed = false;
+    if (s.standard !== '' || s.difficulty !== '' || s.points !== 0 || s.createdAt !== '' || s.tags.length || 'choices' in s || 'media' in s || 'custom' in s || 'q' in s || 'a' in s) landed = false;
+  });
+  ok(landed, '053: id, q, a and category land in id, prompt, answer, unit and `category`; `custom` has no home; the rest is blank');
+  eq(Object.keys(cItems[0]).sort(), ['a', 'category', 'custom', 'id', 'q'], 'and those five are every field 053\'s shape has');
+  eq(cItems.map(it => it.id), Array.from({ length: 30 }, (_, i) => 'b' + i), '053\'s ids are b0 to b29, as a hidden list holds them');
+
+  // 062
+  const gq = q.setQuestions('062'), gItems = G.items();
+  eq([gItems.length, gItems.filter(it => it.map).length, gq.length], [120, 30, 90], '062 has 120 built-ins; the 30 map questions are not published and the other 90 are');
+  eq(gItems.map(it => it.id), Array.from({ length: 120 }, (_, i) => 'bi' + i), '062\'s ids are bi0 to bi119, as a switched-off list holds them');
+  eq([...new Set(gItems.flatMap(it => Object.keys(it)))].sort(), ['a', 'area', 'category', 'custom', 'id', 'map', 'q'], 'and these seven are every field 062\'s shape has');
+  landed = true;
+  gItems.filter(it => !it.map).forEach((it, i) => {
+    const s = gq[i], tag = it.area === 'global' ? [] : [G.AREA_LABELS[it.area]];
+    if (s.id !== 'seed:062:' + it.id || s.prompt !== it.q || s.answer !== it.a || s.unit !== G.CAT_LABELS[it.category] || s.category !== it.category || s.area !== it.area) landed = false;
+    if (JSON.stringify(s.tags) !== JSON.stringify(tag) || !tag.every(Boolean)) landed = false;
+    if (s.standard !== '' || s.difficulty !== '' || s.points !== 0 || s.createdAt !== '' || 'choices' in s || 'media' in s || 'custom' in s || 'map' in s) landed = false;
+  });
+  ok(landed, '062: id, q, a, category and area land in id, prompt, answer, unit, `category`, tags and `area`; `custom` has no home; the rest is blank');
+  ok(!gq.some(s => /highlighted on the map/.test(s.prompt)), 'no published question asks about a map that is not there');
+  const mq = G.toQuestion(gItems[119]);
+  eq([mq.id, mq.map, mq.unit, mq.tags, mq.area], ['bi119', { dataset: 'world', region: 'Russia', context: 'world' }, 'Map Questions', ['Europe'], 'europe'], 'toQuestion() maps a map question too, with its `map` kept, for a reader that can draw one');
+  const viaBank = q.normalize(mq);
+  eq(viaBank.map, { dataset: 'world', region: 'Russia', context: 'world' }, 'and the bank carries `map` as a field it does not know');
+
+  // stable ids: the data read again, in either order, on another page
+  const w2 = seedPage(fakeStorage(), [QB_SRC, GBQ_SRC, CTCG_SRC, GBQ_SRC, CTCG_SRC]).QuestionBank;
+  eq([w2.sets().map(x => [x.id, x.count]), JSON.stringify(w2.setQuestions('053')) === JSON.stringify(cq), JSON.stringify(w2.setQuestions('062')) === JSON.stringify(gq)], [[['062', 90], ['053', 30]], true, true], 'the data files loaded again, twice and in another order, give the same sets with the same ids');
+  const all = cq.concat(gq);
+  eq(new Set(all.map(x => x.id)).size, 120, 'every seed id is its own');
+  ok(all.every(x => q.validate(x).length === 0), 'and every seed is a question the bank would take');
+  // each data file alone, with no module: the tool still has its list
+  const alone = page(fakeStorage(), [CTCG_SRC, GBQ_SRC], { noStore: true });
+  eq([alone.QuestionBank, alone.CulturalTriviaBank.items().length, alone.GeographyBeeBank.items().length], [undefined, 30, 120], 'a data file on a page without the module (053, 062) registers nothing and still hands its tool the list');
+  // the workbook and CSV rows of a copied seed
+  const rows = q.toRows(q.merge([], [cq[0], gq[12]], { now: 'T', nowMs: 1, random: () => 0.25 }).questions);
+  eq([rows[1].slice(0, 8), rows[2].slice(0, 8)], [
+    ['What is the traditional Mexican celebration honoring deceased loved ones called?', 'Día de los Muertos', 0, 'Hispanic World', '', '', '', ''],
+    ['In which country would you find Machu Picchu?', 'Peru', 0, 'Landmarks', '', '', 'South America', ''],
+  ], 'a copied seed saves to the spreadsheet as any question does');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

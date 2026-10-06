@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v266';
+const CACHE_VERSION = 'v267';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -269,6 +269,7 @@ const PRECACHE_URLS = [
   "Tools/command-center/cc-remote.js",
   "Tools/command-center/remote.html",
   "Tools/053-cultural-trivia-card-generator.html",
+  "Tools/cultural-trivia-card-generator/ctcg-bank.js",
   "Tools/054-current-events-discussion-guide-generator.html",
   "Tools/current-events-discussion-guide-generator/cedg-readability.js",
   "Tools/055-daily-editing-warmup-generator.html",
@@ -297,6 +298,7 @@ const PRECACHE_URLS = [
   "Tools/formula-sheet-builder/fsb-templates.js",
   "Tools/017-gallery-walk-qr.html",
   "Tools/062-geography-bee-quiz-generator.html",
+  "Tools/geography-bee-quiz-generator/gbq-bank.js",
   "Tools/geography-bee-quiz-generator/gbq-map.js",
   "Tools/037-grade-distribution-visualizer.html",
   "Tools/063-grammar-mad-libs-generator.html",

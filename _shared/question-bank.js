@@ -58,6 +58,28 @@
    takes that guard's apostrophe off again. Every cell read is text: '007' and
    '1/2' are answers, not numbers.
 
+   SEED SETS (Path 12 P2)
+   A seed set is a tool's built-in questions in this file's shape, for any
+   page to read: registerSet({ id, title, source, note, questions }), called
+   by the tool's own data file (053's ctcg-bank.js, 062's gbq-bank.js) when it
+   loads after this one. A set lives in memory only. NOTHING of it is stored,
+   under any key, until a teacher copies a question out of it.
+     - Its questions' ids are 'seed:<set id>:<the tool's own id>', which is as
+       stable as the tool's id: reading the data again gives the same ids.
+     - It is read-only. sets(), setQuestions() and findSeed() hand out copies,
+       so nothing a caller does to one reaches the set; and nothing here
+       stores a seed id: upsert() and merge() take a question that arrives
+       with one as a NEW question of the teacher's (detach(): a fresh id,
+       the seed's id kept in `copiedFrom`). So no save, import or bank file
+       can write over a seed or pass for one.
+     - copyFromSet(ids) is that copy, stored. The same question copied twice
+       is skipped the second time (its prompt and answer are in the bank); a
+       copy the teacher has since changed is theirs and is left alone, and
+       copying again then adds the seed's wording beside it.
+     - A stored bank made before sets existed needs no migration, and a page
+       from before them reads `copiedFrom` as a field it does not know, and
+       keeps it.
+
    Plain global script, not an ES module, for store.js's reason. */
 (function (global) {
   'use strict';
@@ -67,6 +89,7 @@
   var VERSION = 1;
   var FORMAT = 'aplp-question-bank';
   var DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
+  var SEED_PREFIX = 'seed:';
   var KNOWN = ['id', 'prompt', 'answer', 'choices', 'media', 'unit', 'standard', 'difficulty', 'tags', 'points', 'createdAt', 'updatedAt'];
   // A field name that would change an object's prototype if assigned.
   // (Made this way because '__proto__' in an object literal is not a key.)
@@ -197,6 +220,7 @@
       the fields `q` does not name kept; or at the end, with a new id when it
       has none. Returns { questions, question }; `list` is not changed. */
   function upsert(list, q, opts) {
+    if (isRecord(q) && isSeedId(q.id)) q = detach(q);
     var out = list.slice(), at = isRecord(q) && text(q.id) ? indexOfId(out, text(q.id)) : -1, next;
     if (at !== -1) {
       var merged = {}, k;
@@ -261,6 +285,7 @@
     (Array.isArray(incoming) ? incoming : []).forEach(function (raw, i) {
       var errors = validate(raw);
       if (errors.length) { res.invalid.push({ row: i + 1, errors: errors }); return; }
+      if (isSeedId(raw.id)) raw = detach(raw);                 // a seed is never stored as itself
       var q = normalize(raw), at = q.id ? indexOfId(out, q.id) : -1;
       if (at !== -1) {
         // Only what the file names: a format that cannot carry a field, or a
@@ -287,6 +312,89 @@
       res.added++;
     });
     return res;
+  }
+
+  /* ---- seed sets (read-only, in memory) -------------------------------- */
+
+  var seedSets = [];                                           // registration order
+
+  function isSeedId(id) { return typeof id === 'string' && id.trim().indexOf(SEED_PREFIX) === 0; }
+
+  /** 'seed:<set>:<the tool's own id>'. Colons in the set id are made dashes,
+      so the set can always be read back off the id. */
+  function seedId(setId, localId) {
+    return SEED_PREFIX + text(setId).replace(/:/g, '-') + ':' + text(localId);
+  }
+
+  /** The set id a seed id names, or ''. */
+  function seedSetOf(id) {
+    if (!isSeedId(id)) return '';
+    var rest = id.trim().slice(SEED_PREFIX.length), at = rest.indexOf(':');
+    return at === -1 ? '' : rest.slice(0, at);
+  }
+
+  /** `q` as a question of the teacher's own: no id (the bank gives it one),
+      no dates, and the seed it came from in `copiedFrom`. A question that is
+      not a seed comes back as a plain copy. */
+  function detach(q) {
+    var out = {}, k;
+    for (k in q) if (own(q, k) && !UNSAFE[k]) out[k] = q[k];
+    if (!isSeedId(out.id)) return out;
+    out.copiedFrom = text(out.id);
+    delete out.id;
+    delete out.createdAt;
+    delete out.updatedAt;
+    return out;
+  }
+
+  /** Publishes a tool's built-in questions as a read-only set. `def` is
+      { id, title, source, note, questions }: `source` is the tool's number
+      and name for a page to show, and each question carries the tool's own
+      id in `id` (it becomes seedId(set, id)). A question with no id, a
+      repeated id, no prompt or no answer is left out and counted. Registering
+      an id again replaces that set where it stands, so a data file loaded
+      twice changes nothing. Returns { ok, id, count, dropped }. */
+  function registerSet(def) {
+    def = isRecord(def) ? def : {};
+    var id = text(def.id).replace(/:/g, '-');
+    if (!id) return { ok: false, id: '', count: 0, dropped: 0 };
+    var questions = [], seen = {}, dropped = 0;
+    (Array.isArray(def.questions) ? def.questions : []).forEach(function (raw) {
+      var q = normalize(raw), mine = seedId(id, '');
+      var local = q.id.indexOf(mine) === 0 ? q.id.slice(mine.length) : q.id;   // registered from its own output
+      if (!local || own(seen, '$' + local) || !q.prompt || !q.answer) { dropped++; return; }
+      seen['$' + local] = true;
+      q.id = seedId(id, local);
+      questions.push(JSON.stringify(q));                       // text, so nothing can reach in
+    });
+    var set = { id: id, title: text(def.title) || id, source: text(def.source), note: text(def.note), questions: questions };
+    var at = -1;
+    for (var i = 0; i < seedSets.length; i++) if (seedSets[i].id === id) at = i;
+    if (at === -1) seedSets.push(set); else seedSets[at] = set;
+    return { ok: true, id: id, count: questions.length, dropped: dropped };
+  }
+
+  /** Every registered set, in the order they were registered:
+      [{ id, title, source, note, count }]. */
+  function sets() {
+    return seedSets.map(function (s) {
+      return { id: s.id, title: s.title, source: s.source, note: s.note, count: s.questions.length };
+    });
+  }
+
+  /** A set's questions, in the tool's order, as copies; [] for no such set. */
+  function setQuestions(setId) {
+    for (var i = 0; i < seedSets.length; i++) {
+      if (seedSets[i].id === setId) return seedSets[i].questions.map(function (t) { return JSON.parse(t); });
+    }
+    return [];
+  }
+
+  /** The seed question with this id, as a copy, or null. */
+  function findSeed(id) {
+    var list = setQuestions(seedSetOf(id));
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
   }
 
   /* ---- files ----------------------------------------------------------- */
@@ -536,6 +644,20 @@
     return res;
   }
 
+  /** Copies seed questions into the teacher's stored bank, by seed id.
+      Returns importQuestions()'s counts and `missing`, the ids that name no
+      seed. Each copy is a new question with an id of its own. */
+  function copyFromSet(ids, opts) {
+    var found = [], missing = [];
+    (Array.isArray(ids) ? ids : [ids]).forEach(function (id) {
+      var q = findSeed(id);
+      if (q) found.push(q); else missing.push(id);
+    });
+    var res = importQuestions(found, opts);
+    res.missing = missing;
+    return res;
+  }
+
   /** Calls `fn(questions)` when the bank changes, in this tab or another.
       Returns the unsubscribe function. */
   function onChange(fn) {
@@ -561,6 +683,16 @@
     distinct: distinct,
     merge: merge,
     adopt: adopt,
+    SEED_PREFIX: SEED_PREFIX,
+    isSeedId: isSeedId,
+    seedId: seedId,
+    seedSetOf: seedSetOf,
+    detach: detach,
+    registerSet: registerSet,
+    sets: sets,
+    setQuestions: setQuestions,
+    findSeed: findSeed,
+    copyFromSet: copyFromSet,
     toJSON: toJSON,
     toRows: toRows,
     fromRows: fromRows,

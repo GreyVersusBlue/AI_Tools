@@ -33,6 +33,9 @@
 <script src="../_shared/export.js"></script>
 <script src="review-game-board/rgb-store.js"></script>
 <script src="../_shared/question-bank.js"></script>
+<!-- Read-only seed sets for the bank (Path 12 P2): two tools' built-in questions, as data. -->
+<script src="cultural-trivia-card-generator/ctcg-bank.js"></script>
+<script src="geography-bee-quiz-generator/gbq-bank.js"></script>
 <script src="review-game-board/rgb-bank-store.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="review-game-board/rgb-image.js"></script>
@@ -157,6 +160,10 @@
   .bank-empty { padding: 1.2rem; color: var(--muted); text-align: center; font-size: .9rem; }
   .bank-pull-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .9rem; }
   .bank-pull-row input[type="text"] { width: 14rem; }
+  .bank-source-row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-bottom: .5rem; }
+  .bank-source-row label { margin: 0; }
+  .bank-copy-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .6rem; }
+  .bank-copy-row[hidden] { display: none; }
 
   .category-block { border: 1px solid var(--line-strong); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .9rem; background: var(--card-2); }
   .category-block .cat-name { font-weight: 700; margin-bottom: .5rem; }
@@ -463,6 +470,11 @@
         into a board <b>copies</b> it in; editing or deleting it here afterward doesn't change a board that
         already pulled it.
       </p>
+      <div class="bank-source-row">
+        <label for="bankSource">Questions from</label>
+        <select id="bankSource"></select>
+      </div>
+      <p class="hint" id="bankSourceNote" hidden></p>
       <div class="bank-filter-row">
         <div class="field">
           <label for="bankFilterUnit">Unit</label>
@@ -494,6 +506,10 @@
         <datalist id="bankCategoryOptions"></datalist>
         <button type="button" id="bankPullBtn">Pull selected into board</button>
         <span class="import-status" id="bankPullStatus"></span>
+      </div>
+      <div class="bank-copy-row" id="bankCopyRow" hidden>
+        <button type="button" class="secondary" id="bankCopyBtn">Copy selected to my bank</button>
+        <span class="import-status" id="bankCopyStatus" role="status"></span>
       </div>
     </div>
 
@@ -580,6 +596,7 @@
    'bankQuestion','bankAnswer','bankPoints','bankUnit','bankStandard','bankDifficulty','bankAddBtn','bankAddStatus',
    'bankFilterUnit','bankFilterStandard','bankFilterDifficulty','bankFilterQuery','bankClearFiltersBtn','bankList',
    'bankPullCategory','bankCategoryOptions','bankPullBtn','bankPullStatus',
+   'bankSource','bankSourceNote','bankCopyRow','bankCopyBtn','bankCopyStatus',
    'bankExportBtn','bankExportSheetBtn','bankImportFile','bankFileStatus'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -2134,9 +2151,42 @@
      with the file it read. ---------------------------------------------- */
   var bankSelected = {}; // entry id -> true, while checked in the list below
 
+  /* ---------- seed sets (Path 12 P2) ----------
+     "Questions from" chooses what the list below shows: the teacher's own
+     bank, or a SEED SET, another tool's built-in questions published
+     read-only through QuestionBank.registerSet() (053's trivia and 062's
+     geography so far). A set is filtered and pulled into a board exactly as
+     the bank is, so a board can be played from one with nothing copied. It
+     has no Delete: its rows carry "Copy to my bank", which stores that one
+     question in the teacher's bank as their own. Until then nothing of a set
+     is in this browser's storage. */
+  function bankSource() { return els.bankSource.value; }
+
+  function populateBankSourceOptions() {
+    var current = els.bankSource.value, list = ReviewBankStore.sources();
+    els.bankSource.textContent = '';
+    list.forEach(function (src) {
+      var opt = document.createElement('option');
+      opt.value = src.id;
+      opt.textContent = src.readOnly
+        ? src.title + ' (built in, ' + countOf(src.count, 'question') + ', read-only)'
+        : src.title + ' (' + countOf(src.count, 'question') + ')';
+      els.bankSource.appendChild(opt);
+    });
+    els.bankSource.value = list.some(function (src) { return src.id === current; }) ? current : '';
+    var chosen = list.filter(function (src) { return src.id === els.bankSource.value; })[0];
+    var seed = !!chosen && chosen.readOnly;
+    els.bankSourceNote.hidden = !seed;
+    els.bankSourceNote.textContent = seed
+      ? 'These come with ' + chosen.source + ' and cannot be changed or deleted here. ' + chosen.note +
+        ' Pull them into a board as they are, or copy the ones you want into your own bank.'
+      : '';
+    els.bankCopyRow.hidden = !seed;
+  }
+
   function populateBankFilterOptions() {
-    var units = ReviewBankStore.distinctValues('unit');
-    var standards = ReviewBankStore.distinctValues('standard');
+    var units = ReviewBankStore.distinctValues('unit', bankSource());
+    var standards = ReviewBankStore.distinctValues('standard', bankSource());
     var uVal = els.bankFilterUnit.value, sVal = els.bankFilterStandard.value;
     els.bankFilterUnit.innerHTML = '<option value="">All units</option>' +
       units.map(function (u) { return '<option value="' + escapeHtml(u) + '">' + escapeHtml(u) + '</option>'; }).join('');
@@ -2164,15 +2214,17 @@
   }
 
   function renderBankList() {
+    populateBankSourceOptions();
     populateBankFilterOptions();
     populateBankCategoryOptions();
-    var entries = ReviewBankStore.filterEntries(currentBankFilters());
+    var source = bankSource(), isSeed = !!source;
+    var entries = ReviewBankStore.filterEntries(currentBankFilters(), source);
     els.bankList.innerHTML = '';
     if (!entries.length) {
       var empty = document.createElement('div');
       empty.className = 'bank-empty';
-      empty.textContent = ReviewBankStore.listEntries().length
-        ? 'No bank questions match these filters.'
+      empty.textContent = ReviewBankStore.listEntries(source).length
+        ? (isSeed ? 'No questions in this set match these filters.' : 'No bank questions match these filters.')
         : 'The bank is empty — add a question above to get started.';
       els.bankList.appendChild(empty);
       return;
@@ -2192,26 +2244,71 @@
       if (entry.unit) tags.push('<span class="bank-tag">' + escapeHtml(entry.unit) + '</span>');
       if (entry.standard) tags.push('<span class="bank-tag">' + escapeHtml(entry.standard) + '</span>');
       if (entry.difficulty) tags.push('<span class="bank-tag">' + escapeHtml(entry.difficulty) + '</span>');
-      tags.push('<span class="bank-tag">' + entry.points + ' pts</span>');
+      // A seed has no points of its own; "0 pts" on every row would be noise.
+      if (!isSeed || entry.points) tags.push('<span class="bank-tag">' + entry.points + ' pts</span>');
       body.innerHTML =
         '<p class="bank-q">' + escapeHtml(entry.question) + '</p>' +
         '<p class="bank-a">' + escapeHtml(entry.answer) + '</p>' +
         '<div class="bank-tags">' + tags.join('') + '</div>';
       var del = document.createElement('button');
-      del.type = 'button'; del.className = 'danger small';
-      del.textContent = 'Delete';
-      del.addEventListener('click', function () {
-        if (!confirm('Delete this bank question? This can’t be undone.')) return;
-        ReviewBankStore.deleteEntry(entry.id);
-        delete bankSelected[entry.id];
-        renderBankList();
-      });
+      del.type = 'button';
+      if (isSeed) {
+        del.className = 'secondary small';
+        del.textContent = 'Copy to my bank';
+        del.setAttribute('aria-label', 'Copy to my bank: ' + entry.question);
+        del.addEventListener('click', function () { copySeedsToBank([entry.id]); });
+      } else {
+        del.className = 'danger small';
+        del.textContent = 'Delete';
+        del.addEventListener('click', function () {
+          if (!confirm('Delete this bank question? This can’t be undone.')) return;
+          ReviewBankStore.deleteEntry(entry.id);
+          delete bankSelected[entry.id];
+          renderBankList();
+        });
+      }
       row.appendChild(checkbox);
       row.appendChild(body);
       row.appendChild(del);
       els.bankList.appendChild(row);
     });
   }
+
+  /** Copies seed questions into the teacher's own bank and says what
+      happened. The list stays on the set, so several can be copied in a row. */
+  function copySeedsToBank(ids) {
+    var res = ReviewBankStore.copyToBank(ids), kind = 'ok', message;
+    if (res.newer) { kind = 'error'; message = 'Your bank was saved by a newer version of this page. Reload the page, then copy again.'; }
+    else if (!res.ok) { kind = 'error'; message = 'Your bank could not be saved, so nothing was copied.'; }
+    else {
+      var parts = [];
+      if (res.added) parts.push('Copied ' + countOf(res.added, 'question') + ' into your bank');
+      if (res.skipped + res.same) parts.push((res.added ? '' : 'Nothing copied: ') + countOf(res.skipped + res.same, 'question') + ' already in your bank');
+      message = (parts.join('; ') || 'Nothing was copied') + '.';
+      if (res.added) message += ' Choose "My question bank" above to see ' + (res.added === 1 ? 'it' : 'them') + '.';
+    }
+    bankSelected = {};
+    renderBankList();
+    els.bankCopyStatus.className = 'import-status ' + kind;
+    els.bankCopyStatus.textContent = message;
+  }
+
+  els.bankCopyBtn.addEventListener('click', function () {
+    var ids = Object.keys(bankSelected);
+    if (!ids.length) {
+      els.bankCopyStatus.className = 'import-status error';
+      els.bankCopyStatus.textContent = 'Select at least one question first.';
+      return;
+    }
+    copySeedsToBank(ids);
+  });
+
+  els.bankSource.addEventListener('change', function () {
+    bankSelected = {};                       // a selection never crosses from one source to another
+    els.bankCopyStatus.textContent = '';
+    els.bankPullStatus.textContent = '';
+    renderBankList();
+  });
 
   els.bankAddBtn.addEventListener('click', function () {
     var question = els.bankQuestion.value.trim();
@@ -2277,8 +2374,9 @@
       els.bankPullStatus.textContent = 'Name the category to pull these into.';
       return;
     }
-    var all = ReviewBankStore.listEntries();
-    var entries = ids.map(function (id) { return all.filter(function (e) { return e.id === id; })[0]; }).filter(Boolean);
+    // From whichever source is showing: a seed set's question is pulled as
+    // it is, with nothing copied into the bank on the way.
+    var entries = ids.map(ReviewBankStore.findEntry).filter(Boolean);
 
     ensureBoardEditorOpen();
     Array.prototype.slice.call(document.querySelectorAll('.tab-btn')).forEach(function (b) { b.classList.remove('active'); });
@@ -2301,8 +2399,13 @@
     // A COPY, not a live reference: these become plain clue rows with no
     // trace of the bank entry they came from, so later editing or deleting
     // that bank entry can't change a board that already pulled it.
-    entries.forEach(function (entry) {
-      clueList.appendChild(newClueRow(entry.points, entry.question, entry.answer));
+    // A seed has no points of its own, and a column of 0s is not a board:
+    // its clues are given 100, 200, ... on from the rows already there. A
+    // question from the teacher's bank keeps the points it was given.
+    var rowsBefore = clueList.querySelectorAll('.clue-row').length;
+    entries.forEach(function (entry, i) {
+      var pts = QuestionBank.isSeedId(entry.id) && !entry.points ? (rowsBefore + i + 1) * 100 : entry.points;
+      clueList.appendChild(newClueRow(pts, entry.question, entry.answer));
     });
 
     bankSelected = {};
