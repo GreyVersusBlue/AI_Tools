@@ -280,6 +280,7 @@ session hitting one of these ships rather than stalls.
 
 ### Live blockers and corrections carried forward
 
+- **RED on local `main` at 5792d5e, found by AI-13's pre-flight (2026-10-06 02:36 ET), not fixed.** Full `npm test`: 218 suites, 216 pass, 2 crash, both in `Tools/class-screen/test/`: `smoke-widgets.mjs` (line 89, `add()` clicking `#dock button[data-add="image"]`) and `smoke-periods.mjs` (line 126). Playwright's click times out because `<div class="a11y-widget">` intercepts pointer events over the dock. `smoke-widgets.mjs` fails the same way run alone; `smoke-periods.mjs` alone was cut off by my 110 s limit, so that rerun shows nothing. Cause not found: not checked against `origin/main`, and which of the 57 unlanded commits moved the widget or the dock is not known. Do not loosen the click (`force: true` would hide a button a teacher cannot press either); find what overlaps and fix the page. The wave PR will be red on these two until then.
 - **`npm run path5:next` exists now — this blocker is spent.**
   `Tools/board-check/list-dark-candidates.mjs` was built on 2026-09-05, and
   `check:docs-commands`'s `KNOWN_MISSING` entry for `path5:next` was deleted in the same
