@@ -9,6 +9,53 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 069 PE Warm-Up Circuit Card Generator: "Run the circuit", a projector timer with a rotation signal (2026-10-06, AI-31-069, `CACHE_VERSION` v259)
+
+Audit entry AI-31, BACKLOG rank 106 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** A **Run the circuit** card on the editor (work seconds, rest or move seconds, groups, a one-line total) and a button that opens
+  `_shared/stage.js`'s stage on the circuit the tool already holds: real fullscreen where the browser gives it, a fixed overlay where it does not, F or Esc
+  to leave. The view is a labelled modal dialog (the page behind is `inert`; focus goes to Start and comes back to the button). It shows the circuit name, the
+  round, the phase (Work, Rotate, Circuit complete), a countdown as large as the screen allows, the station card large (number, icon, name, reps or time,
+  cue), and what comes next. With one group the whole class does each station in turn and the card fills the screen. With more groups there is one card
+  per group, group A at station 1 and the rest spread evenly down the circuit, each group one station further on every round, so no two share a
+  station and every group meets every station in n rounds; the "Next" line says where each group goes. Space starts, pauses and resumes; right arrow or N
+  skips to the next phase; R resets; M turns the beep on and off; Start again after the end begins a fresh run.
+- **The signal is visual first.** Work is a dark green field, the move is a bright amber one with black type and the word ROTATE, and the next round's work is a
+  dark blue one, so a circuit with no rest still changes the whole screen at every rotation (and says ROTATE for the first four seconds of the round). Each
+  change is a single 0.6 s fade; nothing animates, nothing repeats, and under `prefers-reduced-motion` the change is instant. Work cannot be shorter than 5 s,
+  so the field changes at most once per five seconds. Phase changes are announced once in a polite live region; the clock itself is a `role="timer"` with
+  `aria-live="off"`, so a screen reader is not read the seconds.
+- **The beep is optional and off.** It is a button (`aria-pressed`, "Beep: off"), not saved, and no audio context is even made until it is turned on. On, it plays
+  one test beep, then two short beeps at a rotation, one long higher one at the start of work, three rising ones at the end. The tones are data in
+  `circuit-run.js` (`beeps(kind)`: when, pitch, length) and Web Audio schedules them on the audio clock at the moment of the signal. A signal the tab notices
+  more than 1.5 s late (a frozen tab) is not sounded: a beep for a rotation that is long past is worse than none.
+- **Time is read from a clock, never counted.** `Tools/pe-warmup-circuit-generator/circuit-run.js` (a plain script, `CircuitRun`, imported by a pure-Node suite)
+  keeps the position as time banked at the last pause plus `performance.now()` since the last start; the 100 ms timer only decides how often the screen looks.
+  A frozen tab that wakes 95 s later shows the right second of the right round. A paused run holds no timer, nor does a finished or closed one (an assertion
+  counts the page's live intervals). A run that ends by itself remembers how late the clock noticed (`overrunMs`), which is how a late end stays silent.
+- **Storage.** `run: { workSecs, restSecs, groups }` on the saved circuit, clamped to 5-600, 0-300 and 1-26, **written only once a teacher edits a field**: a circuit
+  saved before this loads and saves back byte for byte (the suite compares the stored string). It rides share links, clamped and defaulted on arrival. No new key
+  (`check:registry` unchanged). Everything the view shows goes through `textContent`; a station's icon, which the default circuit stores as an HTML entity,
+  is decoded by `DOMParser` (which runs nothing) and set as text, so the inline-sink baseline for 069 stays at 4.
+- **Tests.** `smoke-circuit-core.mjs` (`test:circuit-core`, pure Node, 134 assertions): settings, timeline (every boundary, swept in quarter seconds), rotation
+  (eight shapes of stations by groups), skip, format, the beep schedule, and the clock with a hand-moved `now()`. `smoke-circuit-run.mjs` (`test:circuit-run`,
+  port 8496, 108 assertions) drives the page with `page.clock` and a recorder in place of Web Audio: settings and storage, the dialog, the clock and signal,
+  groups, the colours, the sound as scheduled tones and when, leaving, print, axe in both phases, markup in station text. **Breaks on purpose: 44 in the pure-Node
+  suite, all caught (5 more were equivalent mutations and the code was simplified instead; 2 first survived and got assertions), and 25 on the page, all caught
+  (3 first survived: the timer not stopped on leaving, the "last station" line, a timer left running when the run ends; each got an assertion and was re-run).**
+- **What the suite taught.** `page.waitForFunction` polls on the page's own rAF and timers, which `page.clock` replaces, so it waits forever and held the
+  suites lock for 22 minutes; the suite polls from Node on the real clock now, and every run is `timeout 170` inside the lock. axe likewise needs the clock
+  running. Space on a focused button is both a hotkey and a click; Stage's hotkey `preventDefault()`s the keydown and the suite checks one toggle, not two.
+  A run that was reset or just opened has already seen its first phase, so the first Start made no go beep until `runStart` cleared `lastKey`.
+- **Not verified.** The beep has not been heard on a speaker or a gym PA; the suite asserts only that tones are scheduled and when. Nothing was projected, run on
+  a real gym display, or read with a real screen reader. Fullscreen was granted in headless Chromium; the fallback overlay was not exercised there (the
+  suite follows whichever it got). The dark-blue and amber fields were chosen by contrast (axe passes), not by looking at them across a gym. Full `npm test` was not run.
+- **Left on 069.** One pair of times for every station (a "10 reps" station runs the same clock); no per-station time. No phone remote like 021's. Difficulty tiers,
+  the roster rotation chart and exercise photos are still open. The pre-existing preview and print code writes a station's icon with `innerHTML` unescaped, so markup
+  in a share link's icon field would be inserted as HTML (not tried; whether it would run was not checked). That is outside this row and was not touched; it is one of the page's
+  four baselined sinks.
+
 ## Path 7 P5 increment 1: the print kit has a print preview, and 074 is its one adopter (2026-10-06, AI-13, `CACHE_VERSION` v258)
 
 Audit entry AI-13, BACKLOG rank 7 (1). The row stays, rewritten to what is left: the other twelve print-kit pages, and where the control

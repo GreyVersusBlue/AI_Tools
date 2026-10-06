@@ -11,6 +11,8 @@
     "test:schedule": "node Tools/schedule/test/smoke.mjs",
     "test:schedule-visualizer": "node Tools/schedule-visualizer/test/smoke-recovery.mjs && node Tools/schedule-visualizer/test/smoke-evacuation.mjs",
     "test:pe-stations": "node Tools/pe-tournament-stations/test/smoke-pe-stations.mjs && node Tools/pe-tournament-stations/test/smoke-pe-remote.mjs",
+    "test:circuit-core": "node Tools/pe-warmup-circuit-generator/test/smoke-circuit-core.mjs",
+    "test:circuit-run": "node Tools/pe-warmup-circuit-generator/test/smoke-circuit-run.mjs",
     "test:certificate": "node Tools/certificate-award-maker/test/smoke-stock-inset.mjs",
     "test:certificate-images": "node Tools/certificate-award-maker/test/smoke-images.mjs",
     "test:certificate-seals": "node Tools/certificate-award-maker/test/smoke-seals.mjs",
