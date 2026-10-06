@@ -479,7 +479,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 106 | Live circuit rotation timer — a projector mode that counts down each station and signals the rotation | 069 | ½ | | [069 PE Warm-Up Circuit Card Generator](#069--pe-warm-up-circuit-card-generator) |
-| 107 | Roster-driven pre-named half-sheets — read `np_rosters` and print one per student | 070 | ½ | | [070 Peer Feedback / Editing Checklist Generator](#070--peer-feedback--editing-checklist-generator) |
 | 108 | Multiple named saved image sets, so two vocabulary libraries coexist without re-uploading | 071 | ½ | | [071 Picture-Prompt Speaking/Writing Task Generator](#071--picture-prompt-speakingwriting-task-generator) |
 | 109 | Share a diagram by link, so the same novel’s diagram moves between class periods | 072 | ½ | | [072 Story Elements / Plot Diagram Builder](#072--story-elements--plot-diagram-builder) |
 | 110 | Multiple named saved trackers — one per class period’s science-fair cohort | 073 | ½ | | [073 Science Fair Project Tracker](#073--science-fair-project-tracker) |
@@ -10662,10 +10661,11 @@ long" without a teacher needing to track it by hand.
   checklists can't both be kept ready at once.
 - **JSON export/import** for sharing a built checklist between teachers or
   across the same PLC/grade-level team.
-- **Roster-driven half-sheets**: pull a class roster (Name Picker/Class
-  Roster Hub's shared storage) and pre-fill the Author name on each
-  half-sheet instead of leaving it blank for hand-writing — saves a step for
-  every single student, every single time.
+- **Done (v259) — Roster-driven half-sheets**: a "Print for a class" card reads a saved
+  roster (`Roster.getRoster`, at print time, nothing stored) and prints one half sheet per
+  student with the author's name on it, in cut-stack order, with an optional reviewer (the
+  next name on the list). Blank copies print as before. Not done: choosing the reviewer by
+  hand (pairs), and keeping the chosen roster between visits.
 - **Digital fill-in mode** via a share link (this toolkit's P3 pattern) —
   peer feedback collected on a device instead of paper, useful for a 1:1
   classroom.
@@ -10686,10 +10686,9 @@ on screen is exactly what comes out of the printer.
   fits" (dynamically shrink font/spacing) or should the tool warn/refuse
   past some category+item count instead? The former is more robust; the
   latter is simpler to implement correctly.
-- Is roster-driven pre-fill worth the complexity of pairing students (who's
-  the author vs. the reviewer for each half-sheet), or is a blank
-  hand-written name line — which supports any pairing arrangement a teacher
-  chooses live — actually the more flexible default to keep?
+- *(Decided 2026-10-06, v259.)* Blank stays the default: "Print checklists" is unchanged.
+  The roster print names the author, and fills the reviewer only if asked, as the next name
+  round the list. Any other pairing is still written by hand on the blank sheet.
 
 #### Platform themes that matter here
 

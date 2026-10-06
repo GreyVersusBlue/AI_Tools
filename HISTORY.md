@@ -9,6 +9,32 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 070: one named half sheet per student, from a saved roster (2026-10-06, AI-31-070, `CACHE_VERSION` v259)
+
+Audit entry AI-31, BACKLOG rank 107 (deleted; ranks not renumbered during the sprint). A "Print for a class" card on
+`Tools/070-peer-feedback-checklist-generator.html`: pick a saved roster, press "Print one per student".
+
+- **What it does.** `Roster.mountRosterPicker` lists the classes; the button reads the chosen one with `Roster.getRoster` at the moment
+  of printing and prints one half sheet per student with `Author: <name>`. No edit to `_shared/`, and the tool's own key
+  (`pfc_checklist_v1`) is byte for byte what it was, with no new key: the chosen class is not remembered between visits (no
+  `persistKey`), on purpose, so nothing new is stored.
+- **Order is for the guillotine.** Page p carries student p above and student k + p below, k being the number of pages. Cut the pile
+  along the line, put the lower stack under the upper one, and the sheets are in roster order. An odd class leaves the last page
+  with one sheet; a class of 1 is one page; 40 is 20.
+- **The reviewer** is optional (a tick box): each author is reviewed by the next name on the list, the last by the first. A class of
+  one has nobody to review and keeps the write-in rule. Other pairings are still written by hand on the blank sheet, which stays
+  the default and prints as before. This settles the section's open question: blank stays the default, the roster print is the extra.
+- **No roster saved**: the picker says "No saved rosters yet", the note says so and that blanks still print, and the class button is off.
+- **Names are text.** They reach the sheet through `textContent` (the kit's rule); the page has no new markup sink.
+- **Suite.** `smoke-roster-sheets.mjs` (`npm run test:peer-feedback-roster`, port 8497, 134 assertions): classes of 1, 2, 3, 7, 8 and 40,
+  the order, the reviewer, Chromium's PDF page count (1, 7 and 40), names read at print time, nothing stored, markup and duplicate names,
+  an old save, and the paper. **30 breaks on purpose**, each failing the suite: 26 first time; 3 had an anchor that did not match and
+  were rewritten (a page-count line, a no-roster note, a skipped label); 1 survived (the default title was never asserted when the
+  assignment title is empty) and got an assertion. Two of them crash the suite with a TypeError instead of naming the assertion (they
+  fail it either way).
+- **Not done / not verified.** Nothing printed on paper or read with a real screen reader; the full `npm test` was not run. The browser
+  runs waited long on the shared suites lock (about 30 minutes for one run), so the breaks ran one run per lock, as the sprint rules say.
+
 ## Path 7 P5 increment 1: the print kit has a print preview, and 074 is its one adopter (2026-10-06, AI-13, `CACHE_VERSION` v258)
 
 Audit entry AI-13, BACKLOG rank 7 (1). The row stays, rewritten to what is left: the other twelve print-kit pages, and where the control
