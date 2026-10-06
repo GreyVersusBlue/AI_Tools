@@ -22,6 +22,7 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/export.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -1890,8 +1891,10 @@
      sheets — the same per-student totals, plus every individual trip behind
      them — because the totals are what starts a conversation and the trips are
      what the conversation is about. SheetJS is lazy-loaded from the shared
-     vendored build only when Excel is actually asked for; CSV is written by
-     hand so the common case needs no library at all. */
+     vendored build only when Excel is actually asked for; the CSV needs no
+     library. Both files are written by ExportKit (_shared/export.js), which
+     puts an apostrophe before a typed cell a spreadsheet would run as a
+     formula and never writes a formula into the workbook. */
   var XLSX_LIB = '../_shared/vendor/xlsx/xlsx.full.min.js';
   var xlsxLoadPromise = null;
   function loadXlsx() {
@@ -1904,19 +1907,6 @@
       document.head.appendChild(el);
     });
     return xlsxLoadPromise;
-  }
-
-  function csvCell(v) {
-    var s = (v == null) ? '' : String(v);
-    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }
-
-  function downloadBlob(blob, filename) {
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 0);
   }
 
   function exportFilename(ext) {
@@ -1939,25 +1929,23 @@
   function exportRangeCsv() {
     // One file, both tables, separated by a blank line — a CSV can't carry two
     // sheets and splitting it into two downloads is worse than one scroll.
-    var lines = [];
-    lines.push('Hall pass log,' + csvCell((state && state.name) || ''));
-    lines.push('Range,' + csvCell(lastRangeReport.fromLabel + ' to ' + lastRangeReport.toLabel));
-    lines.push('');
-    summaryAoa().forEach(function (row) { lines.push(row.map(csvCell).join(',')); });
-    lines.push('');
-    detailAoa().forEach(function (row) { lines.push(row.map(csvCell).join(',')); });
-    // The BOM is what makes Excel open UTF-8 names correctly on Windows.
-    downloadBlob(new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), exportFilename('csv'));
+    var rows = [
+      ['Hall pass log', (state && state.name) || ''],
+      ['Range', lastRangeReport.fromLabel + ' to ' + lastRangeReport.toLabel],
+      []
+    ].concat(summaryAoa(), [[]], detailAoa());
+    // toCsv writes the BOM that makes Excel open UTF-8 names correctly on Windows.
+    ExportKit.download(ExportKit.toCsv(rows), exportFilename('csv'), 'text/csv;charset=utf-8');
     showMsg('Exported ' + lastRangeReport.rows.length + ' student' + (lastRangeReport.rows.length !== 1 ? 's' : '') + ' as CSV.', 'info');
   }
 
   function exportRangeXlsx() {
     showMsg('Building the spreadsheet…', 'info');
     loadXlsx().then(function () {
-      var wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryAoa()), 'Totals');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detailAoa()), 'Every pass');
-      XLSX.writeFile(wb, exportFilename('xlsx'));
+      ExportKit.toXlsx([
+        { name: 'Totals', rows: summaryAoa() },
+        { name: 'Every pass', rows: detailAoa() }
+      ], { filename: exportFilename('xlsx') });
       showMsg('Exported ' + lastRangeReport.rows.length + ' student' + (lastRangeReport.rows.length !== 1 ? 's' : '') +
         ' and ' + (lastRangeReport.detail || []).length + ' pass' + ((lastRangeReport.detail || []).length !== 1 ? 'es' : '') + ' to Excel.', 'info');
     }).catch(function () {

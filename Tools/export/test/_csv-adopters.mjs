@@ -223,6 +223,37 @@ export const ADOPTERS = [
     ],
   },
   {
+    /* A result typed as a plain number goes in as a number (sit and reach is
+       often negative); anything else typed in a result box is a typed cell. */
+    tool: '060', file: 'Tools/060-fitness-skill-assessment-tracker.html', button: '#exportCsvBtn', name: /^fitness-assessment-results\.csv$/,
+    numeric: c => c === 1 || c === 2,
+    seed: {
+      fsat_tracker_v1: j({
+        roster: [H.comma, H.eq, H.uni, H.quote, H.at],
+        events: [
+          { id: 'e1', name: 'Sit and reach, cm', type: 'count' },
+          { id: 'e2', name: '=Mile run', type: 'time' },
+          { id: 'e3', name: 'Notes', type: 'count' },
+        ],
+        results: {
+          [H.comma + '|e1']: '-3', [H.comma + '|e2']: '7:10', [H.comma + '|e3']: '-absent Tuesday',
+          [H.eq + '|e1']: '12.5', [H.eq + '|e2']: '8:02', [H.eq + '|e3']: '=late',
+          [H.uni + '|e1']: '0', [H.uni + '|e3']: 'cr\ralone',
+          [H.quote + '|e1']: '-0.5', [H.quote + '|e2']: '9:40', [H.quote + '|e3']: '+2 on the retest, "best yet"',
+          [H.at + '|e1']: 'NaN', [H.at + '|e2']: '10:15', [H.at + '|e3']: '@nurse',
+        },
+      }),
+    },
+    table: [
+      ['Student', 'Sit and reach, cm', '=Mile run', 'Notes'],
+      [H.comma, '-3', '7:10', '-absent Tuesday'],
+      [H.eq, '12.5', '8:02', '=late'],
+      [H.uni, '0', '', H.cr],
+      [H.quote, '-0.5', '9:40', '+2 on the retest, "best yet"'],
+      [H.at, 'NaN', '10:15', '@nurse'],   // typed, and kept: not a number to hand over
+    ],
+  },
+  {
     tool: '068', file: 'Tools/068-parent-contact-log.html', button: '#exportCsvBtn', name: /^parent-contact-log_\d{4}-\d\d-\d\d\.csv$/,
     numeric: () => false,
     seed: {
