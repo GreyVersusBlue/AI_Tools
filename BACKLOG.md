@@ -87,6 +87,10 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v256), rank 7, Path 7 P5 increment 1: the kit has a print preview, `PrintKit.preview()`, and 074
+  is its one adopter** ("Preview pages": the sheet cut into the pages it will print on, in a dialog, no print
+  dialog). The breaks are the browser's own, in an iframe; the count equals Chromium's PDF. `npm run
+  test:safety-label-preview` (port 8492). **Rank 7 stays: twelve adopters and the several-buttons question.**
 - **AI-13 (v255), Path 7 P4 is finished and rank 6 is deleted (a gap; ranks not renumbered): every page that
   saves a CSV or a workbook does it through `ExportKit`.** v249: 003, 008, 018, 033, 068 and 075's CSV. v252: 001
   and 006 (CSV and workbook), 030 and 036 (workbook) and 060's CSV. v255: 035's `groups-template.csv`, the last.
@@ -238,9 +242,9 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v255` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v256` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **315** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **218** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| Suites | **219** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
@@ -383,7 +387,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 7 | Path 7 P5 — a print preview in the page, and all that is left of Path 7 (P1 to P4 are finished; P4's row, rank 6, was deleted at v255). One shared Preview control in `_shared/print-kit.js` and `.css` that lays the sheet in `#printArea` out as pages at the size `PrintKit.setPage()` set, so a teacher sees the page breaks and the page count before the print dialog; done when the preview's page count equals Chromium's `page.pdf()` count on each of the thirteen print-kit pages, its adopters. Not designed and not started; the Tier 2 section lists the four things a design has to settle first (where the breaks come from, applying `@media print` rules on screen, QR canvases, where the control goes) | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
+| 7 | Path 7 P5 (rest) — the print preview on the other twelve print-kit pages, and all that is left of Path 7. `PrintKit.preview()` shipped at v256 with 074 as its one adopter (a modal dialog, one page at a time at the size `setPage()` wrote, the breaks found by the browser's own fragmentation in an iframe; the count equals Chromium's PDF on 074, 043, 051 and 042 in both fonts). Left: a Preview button, three lines and a count-equals-PDF suite on 043 023 042 076 070 077 051 040 064 018 017 016, and first the one open design point, where the control goes on a page with several print buttons (018, 017, 043, 016). Done when the preview's page count equals `page.pdf()`'s on all thirteen | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -2497,19 +2501,89 @@ localStorage with no file export.
 - **P5 — A real print preview.** A shared "Preview" mode that renders the print
   DOM into an in-page paged view (CSS `@page` size emulation) so a teacher sees
   page breaks before the dialog, instead of after.
-  **Not designed, not started (AI-13, 2026-10-05). What it is, and what a design has to settle first.** One
-  control, in `_shared/print-kit.js` and `.css` since that is where the page size already lives
-  (`PrintKit.setPage()` writes paper, orientation and margin), that shows the sheet in `#printArea` cut into pages
-  at that size, with a page count, without opening the print dialog. Its adopters are the thirteen pages that
-  print through the kit; a page with a print block of its own gets it when it adopts the kit. Open, in the order
-  they block: (1) where the breaks come from. The browser does not report them, so the preview either measures
-  (`.pk-page` and `.pk-sheet` are whole pages already; a flowing grid such as 074's or 016's has to be cut by
-  height, honouring `break-inside: avoid`) or renders print media in an iframe; the measure of success is that the
-  preview's page count equals Chromium's `page.pdf()` count, which every adopter's `smoke-print.mjs` already
-  reads. (2) The print rules are in `@media print`, so a preview on screen has to apply them: a class the kit's
-  print rules are also written for, or the iframe. (3) QR canvases (051, 018, 017) do not survive `cloneNode`;
-  preview the live sheet, not a copy. (4) Where the control goes on a page with several print buttons (018, 017,
-  016, 043). None of this was tried; it is a reading of the kit, not a result.
+  **Designed and first built (AI-13, 2026-10-06, v256): `PrintKit.preview()`, with 074 as its one adopter.**
+  The four open points of 2026-10-05 are settled below, the first two by experiment.
+  **The experiment (points 1 and 2).** Two ways of finding the breaks were built in a scratch folder and run
+  beside Chromium's `page.pdf({ preferCSSPageSize: true })` for the same state, on four adopters: 074 (one
+  flowing grid), 043 (whole pages and half sheets, four buttons), 051 (a flowing grid of labels with QR
+  canvases, then a reference table) and 042 (a `100vw x 100vh` sheet, one or two to a page). Every state but
+  042's was run on five papers (the tool's own, A4, Legal, A5, Letter landscape, through `PrintKit.setPage()`),
+  and the whole run twice, in huginn's Noto Sans and with fontconfig holding only DejaVu Sans, CI's font. Both
+  ways apply the print rules the same way (an iframe, below), so what differs is only who finds the breaks:
+  *measure*, a walk over the laid-out boxes that cuts by height (forced breaks, `break-inside: avoid`,
+  replaced elements and grid rows kept whole); or *columns*, the browser's own fragmentation, by making the
+  frame's `<body>` a multi-column box whose column is the printable page. "Breaks" below means the same number
+  of text characters on every page as `pdftotext` reads off the PDF's.
+
+  | Tool | States | PDF pages | Columns: count | Columns: breaks | Measure: count | Measure: breaks |
+  |---|---|---|---|---|---|---|
+  | 074, Noto | 120 | 349 | 120 of 120 | 120 of 120 | 120 | 118 |
+  | 043, Noto | 60 | 160 | 60 of 60 | 60 of 60 | 60 | 55 |
+  | 051, Noto | 25 | 127 | 25 of 25 | 21 of 25 | 22 | 12 |
+  | 042, Noto | 12 | 36 | 12 of 12 | 12 of 12 | 6 | 6 |
+  | 074, DejaVu | 120 | 351 | 120 of 120 | 120 of 120 | 120 | 118 |
+  | 043, DejaVu | 60 | 169 | 60 of 60 | 60 of 60 | 60 | 54 |
+  | 051, DejaVu | 25 | 135 | 25 of 25 | 21 of 25 | 22 | 13 |
+  | 042, DejaVu | 12 | 36 | 12 of 12 | 12 of 12 | 6 | 6 |
+
+  The Columns figures are `PrintKit.preview()` as shipped; the Measure figures are the scratch prototype's,
+  which is not in the tree. **Columns is the choice.** Its count is the PDF's in every state measured.
+  Measure miscounts where the engine does something a measurement cannot see: it drops a margin or a grid gap
+  that meets a break (so a row the PDF keeps on a page is pushed off it), and it has to guess at what is
+  unbreakable (042's two half-page slots, 051's sliced label). What the first pass of Columns got wrong, and
+  what fixed it, both in the kit now: 042 at two to a page was 3 pages for the PDF's 2 (4 of 12 states wrong)
+  while the frame was `748.8px` tall and its `100vh` rounded up past the column, so the frame is a whole number
+  of px, rounded down; and 051's table lost 17 characters a page, the `<thead>` print repeats on every page and
+  columns do not, so the frame repeats it by hand. Its breaks are the PDF's in 426 of 434 runs; the eight are 051 on A5, four states in each font, where a label is taller than the page: both slice it, at a different line of its text.
+  **The surface.** `PrintKit.preview({ area, trigger, onPrint, title })` returns a promise of `{ dialog, frame,
+  pages, page, go(n), close() }`. It opens a modal `<dialog class="pk-preview pk-no-print">`: a heading
+  ("Print preview", `opts.title`), a `role="status"` line that reads "Page 2 of 5", Previous page, Next page
+  (`aria-disabled` at the ends, so the focus is never dropped), Print… when `opts.onPrint` is a function
+  (it closes the preview and calls it) and Close; under them one page of paper at the size `setPage()` last
+  wrote, scaled down to fit and never up. Left and Right arrows, Page Up and Down, Home and End turn pages;
+  Escape closes; the focus goes back to `opts.trigger` (default: what had it). It never calls `print()`.
+  `area` defaults to `#printArea`, and the sheet must already be built: **the adopter adds a button and three
+  lines**, `render the sheet; PrintKit.preview({ trigger: button, onPrint: the tool's print })`. The pure parts,
+  which the Node suite tests: `pageBox(opts)` (paper, margins and printable box in px), `flipMedia(text)`,
+  `pageOf(left, pitch)`, `countPages(lefts, pitch)`, `fitScale(w, h, roomW, roomH)`. CSS: `.pk-preview`,
+  `-bar`, `-title`, `-status`, `-nav`, `-stage`, `-fit`, `-sheet`, `-frame`, on `ink-paper.css`'s tokens with
+  system colours behind them; the paper's size and its white are set by the script, so `print-kit.css` still
+  holds no fixed height and no colour literal of its own.
+  **The algorithm.** (a) An `<iframe srcdoc>` (standards mode, a `<base>` for relative URLs), a whole number of
+  px inside the paper's margins. (b) Every style sheet of the page goes into it in order: a `<link>` is linked
+  again, a `<style>` copied; then every media query in the frame's copy is rewritten by `flipMedia` (`print`
+  reads `all`, a `screen` query never matches, `not screen` matches, a query with no media type is left to the
+  frame's own width). That is point 2: nothing is rewritten in the page, and no kit rule had to be written a
+  second time for the screen. (c) `<html>`'s attributes (theme, `--pk-*`) and `<body>`'s class are copied, and
+  the sheet is `importNode`d, which is point 3: **a copy, not the live sheet**, with each `<canvas>` redrawn
+  from the live one by `drawImage`; previewing the live sheet would have meant flipping the page's own media
+  rules under the teacher. (d) The frame's own last rule makes `<body>` the multi-column box (no margin, the
+  printable width and height, a 400 px gap) and the sheet `position: static`. (e) After the sheets, images and
+  fonts have loaded: a computed `break-after` or `break-before` that forces a page becomes `column`,
+  `break-inside: avoid-page` becomes `avoid`, a `<thead>` is cloned (`aria-hidden`) before the first row of each
+  later column its table reaches. (f) The count is the column of the right-most box's left edge, plus one; the
+  page shown is a `translateX` on `<body>`.
+  **Edge cases, each a difference from paper that is known and left.** A fill is shown that the print dialog
+  drops unless "background graphics" is ticked. A box taller than a page is sliced in both, but not at the same
+  line of text (051's long label on A5: same count, the text divided differently). The page previewed is the
+  last one `setPage()` wrote, or Letter: a page that writes its own `@page` is not read. A rule put in by
+  `insertRule()` and an adopted style sheet are not copied (no page on the site has one). The paper, scale and
+  margins a teacher picks in the print dialog itself are unknowable. A page still on a11y.css's invert filter
+  was not looked at. **Only Chromium was measured**; whether Firefox and Safari break a grid across columns as
+  they do across pages is not known. Nothing was printed on paper.
+  **Left out, on purpose:** thumbnails of every page at once, zoom, a live preview beside the editor,
+  choosing the paper in the preview.
+  **What is left of P5.** (1) The other twelve adopters (043 023 042 076 070 077 051 040 064 018 017 016),
+  each a button, the three lines and a suite that holds the preview's count to Chromium's PDF over the states
+  its `smoke-print.mjs` already prints. 051, 043, 042 are measured above and need nothing new from the kit as
+  far as that went; 076, 070, 077, 023, 040, 064, 018, 017 and 016 were not run at all. (2) Point 4, where the
+  control goes on a page with several print buttons (018 six, 017 five, 043 four, 016 three). Not built and not
+  tried; the reading is that each of those pages needs its "build this sheet" step apart from its `print()` call
+  (018, 017 and 016 keep several areas inside one `#printArea` and show one), and then either one Preview
+  button beside each Print button or one Preview with a "which sheet" choice in the dialog. The preview takes
+  the whole `#printArea`, not one area inside it, because the rules that show an area are written from
+  `#printArea` down. (3) Found on 074 and not fixed, the same before: at 375 px its queue row is 26 px wider
+  than the phone.
 
 **Model.** Opus, except P4's imposition math.
 

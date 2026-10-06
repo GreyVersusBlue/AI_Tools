@@ -9,6 +9,57 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P5 increment 1: the print kit has a print preview, and 074 is its one adopter (2026-10-06, AI-13, `CACHE_VERSION` v256)
+
+Audit entry AI-13, BACKLOG rank 7 (1). The row stays, rewritten to what is left: the other twelve print-kit pages, and where the control
+goes on a page with several print buttons. P5 was "not designed, not started"; this session tried the two candidate designs, wrote the
+choice into `BACKLOG.md` (Path 7, P5) with the numbers, and built it.
+
+- **What shipped.** `PrintKit.preview({ area, trigger, onPrint, title })` in `_shared/print-kit.js`, its dialog's styles in
+  `_shared/print-kit.css`, and a "Preview pages" button on 074 (science safety labels) beside "Print labels". The preview is a modal
+  dialog: one page of paper at the size `PrintKit.setPage()` wrote, "Page 2 of 5", Previous, Next, Print… and Close, arrow keys, Page Up
+  and Down, Home, End and Escape. It never calls `print()`; its Print button closes it and runs the tool's own.
+- **Where the breaks come from: the browser's own fragmentation, not a measurement.** A copy of the sheet goes into an iframe whose
+  `<body>` is a multi-column box, each column the printable page. The frame links the page's style sheets again and rewrites the media
+  queries in its own copy (`print` reads `all`, `screen` never matches), so the print rules apply there and nothing in the page changes.
+  A forced page break becomes a column break, `<canvas>`es are redrawn from the live ones, and a `<thead>` is repeated by hand at the top
+  of each later page (print does that; columns do not).
+- **The experiment that chose it.** Two prototypes beside Chromium's PDF on 074, 043, 051 and 042, on five papers, in Noto Sans and in
+  DejaVu Sans (CI's font, by a DejaVu-only `FONTCONFIG_FILE`). The shipped code's page count equals the PDF's in 434 of 434
+  state-and-font runs (1363 PDF pages). The other candidate, a walk that cuts the laid-out boxes by height honouring
+  `break-inside: avoid`, counted right in 208 of 217 (Noto; it was wrong on 051 and on 042's two-to-a-page) and put the breaks right in
+  191: it cannot see that the engine drops a grid gap or a margin where it breaks. The table is in `BACKLOG.md`.
+- **What the first pass of the chosen design got wrong.** (1) 042 at two certificates to a page: 3 pages for the PDF's 2, in 4 of 12
+  states. The frame was 748.8 px tall, its `100vh` rounded up to 749 and a full-height sheet no longer fitted its column. The frame is now
+  a whole number of px, rounded down. (2) 051's reference table: the same count, but 17 characters fewer on every page after a table's
+  first, the repeated header. (3) A preview closed before its frame loaded never resolved its promise, and `close()` left the dialog in
+  the page until the `close` event; 074's suite found both.
+- **074's printed output is unchanged.** Old page (`git show origin/main:`, with the old `print-kit.js` and `.css`, through
+  `page.route()`) against new, 42 states (three sizes, seven queues, light and dark), `page.pdf({ preferCSSPageSize, printBackground })`
+  with the clock pinned: 42 of 42 PDFs identical once the two date fields are blanked (Chromium stamps the second it was made; 7 were identical with nothing blanked), and 42 of
+  42 identical again when a preview had been opened, turned a page and closed before printing.
+- **Tests.** `Tools/print-kit/test/print-kit.test.mjs` 90 to 131 (the pure parts: `pageBox`, `flipMedia`, `pageOf`, `countPages`,
+  `fitScale`, and that the kit never calls `print()`). New suite `Tools/science-safety-label-maker/test/smoke-preview.mjs` (`npm run
+  test:safety-label-preview`, port 8492, 721 assertions): the count against Chromium's PDF in the fifteen states `smoke-print.mjs`
+  prints, light and dark, and on A4, Legal, A5 and Letter landscape; which labels are on which page; the dialog's name, status, keys,
+  focus and axe; that the page is as it was after closing; a phone. Green in Noto Sans and in DejaVu Sans.
+- **Calls made here, each cheap to reverse.** (a) 074 is the adopter: one print button, a flowing grid (where a preview tells a teacher
+  the most), and the suite's states already had PDF counts. (b) One page at a time, not a strip of thumbnails: the frame has to be one
+  page wide and tall for `100vw`/`100vh` sheets (042) to come out right, so one page is what it shows. (c) The sheet is copied, which
+  BACKLOG's point 3 argued against; a canvas is redrawn with `drawImage`, and previewing the live sheet would have meant rewriting the
+  page's own media rules. (d) The paper's size and white are inline styles from the script, because `print-kit.css`'s suite allows it
+  no fixed height and no colour literal, and those rules are about printed sheets. (e) `Tab` past the dialog's last button reaches the
+  browser's own controls, as any modal dialog does; the suite asserts it never reaches the page behind.
+- **Not verified.** Nothing was printed on paper. Only Chromium ran any of it: whether Firefox or Safari fragment a grid across columns
+  as across pages is unknown. 076, 070, 077, 023, 040, 064, 018, 017 and 016 were not previewed at all. No screen reader was run; the
+  dialog was checked by its roles, names and axe. The full `npm test` was not run (over 45 minutes on huginn); the suites for
+  science-safety-label-maker, print-kit, theme, service-worker and board-check were, one folder per lock.
+- **Found, not fixed.** 074's queue row is 26 px wider than a 375 px phone (the same on the old page). `BACKLOG.md`'s "Start here" still
+  names port 8481 for a new suite; the next free port is 8495 by the Selector's count.
+- **Traps.** Playwright will not click an `aria-disabled` button without `force`. A fractional iframe height rounds `100vh` either way.
+  An iframe with no `srcdoc` doctype is in quirks mode. `dialog.close()` fires `close` later, not at once. The shared suites lock was
+  held 27 minutes by another worker's break run; queue long runs as one script whose steps each take the lock.
+
 ## Path 7 P4 increment 7: 035's groups template on `ExportKit`, and P4 is finished (2026-10-06, AI-13, `CACHE_VERSION` v255)
 
 Audit entry AI-13, BACKLOG rank 6 (¼). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). Path 7 has
