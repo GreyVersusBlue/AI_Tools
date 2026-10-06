@@ -87,6 +87,15 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-14 (v265), old rank 27, Path 12 P1 is finished and its row is deleted (a gap; ranks not renumbered):
+  `_shared/question-bank.js` (`QuestionBank`) is the site's one question bank, and 030 is its one adopter.**
+  The bank is the key `gvb-question-bank` (a Store envelope, version 1); 030's old key
+  `gvb-review-board-bank:entries` is read on every load and never written or removed, so an older page and a
+  backup from before v265 both still work. 030's bank tab reads and writes through the module and has a
+  "Share the bank" card (a JSON bank file, a workbook, an import that only ever adds). `npm run
+  test:question-bank` (pure Node) and `smoke-bank-file.mjs` (port 8498, in `test:review-board`). **Rank 1 (053 →
+  030) is no longer blocked. Left of Path 12: P2 to P4 (ranks 28 to 30). Nothing was opened in Excel or Sheets.
+  The next free suite port is 8502.**
 - **AI-13 (v263), Path 7 P5 is finished, Path 7 with it, and rank 7 is deleted (a gap; ranks not renumbered):
   all thirteen print-kit pages have the print preview.** 070, 023, 040, 018, 017 and 016 got it; on the three
   that keep several sheets in one `#printArea` the Preview button presses its Print button with `previewFor` set,
@@ -228,7 +237,8 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 - **Path 22 P1–P5 are done.** His later asks are ranks 160–168 (P6–P14), unranked by him.
 
 **Start here.** Path 21 is finished (046's relief was its last row, AI-03), so no row needs Blender.
-- Rank 1 (Path 6 P4) is blocked on rank 27, so take **rank 2**, the rest of Path 4 P5: per-tool restore
+- Rank 1 (Path 6 P4) was blocked on old rank 27 (Path 12 P1), which shipped at v265 (AI-14): it is a ¼ row
+  now, one registry entry and a `smoke-send-to.mjs` row. Then **rank 2**, the rest of Path 4 P5: per-tool restore
   as a shared control any tool can host (½). It needs 009's `recordDiff`/merge logic moved out of 009's
   inline script into `_shared/`, and `ToolRegistry` to pick one tool's keys. Pair it with another ½ or two
   ¼ rows. A new suite takes port **8481** (8480 is the export kit's `smoke-export.mjs`, 8479 is 016's `smoke-print.mjs`, 8478 is 017's, 8477 is 018's, 8476 is 064's, 8475 is 040's, 8474 is 051's, 8473 is 074's, 8472 is 042's, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
@@ -252,13 +262,13 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v264` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **315** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **221** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| `CACHE_VERSION` | `v265` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **316** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
+| Suites | **229** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
-| Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
+| Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
 | Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 38 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 11 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
@@ -392,7 +402,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 (#257, v182):** 046 → 015, 056 → 028 (`sheet: false`) and 039 → 040 are entries; **003 → 037 is a documented exception** (student scores never ride a link); `share.js` gained `sendState(entry)` and `sheet: false`. **Increment 2 (#259, v183), the roster chain:** **002 → 022** is a sheet row and **022 → 005** a `sheet: false` entry from 022's "Seat these groups" button; **006/007 → 002 is not a link** (the roster already reaches 002 through `roster.js`). **Left: only 053 → 030, which is blocked on rank 27** (Path 12 P1, the question bank with 030 as the front door). Do not start this row until rank 27 has shipped; then it is one entry plus a row in `smoke-send-to.mjs` | site | ¼ | | [Path 6](#path-6--share-everywhere) |
+| 1 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 (#257, v182):** 046 → 015, 056 → 028 (`sheet: false`) and 039 → 040 are entries; **003 → 037 is a documented exception** (student scores never ride a link); `share.js` gained `sendState(entry)` and `sheet: false`. **Increment 2 (#259, v183), the roster chain:** **002 → 022** is a sheet row and **022 → 005** a `sheet: false` entry from 022's "Seat these groups" button; **006/007 → 002 is not a link** (the roster already reaches 002 through `roster.js`). **Left: only 053 → 030. It was blocked on Path 12 P1 (the question bank with 030 as the front door), which shipped at v265 (AI-14), so it can start:** one entry plus a row in `smoke-send-to.mjs`. What arrives goes into the bank through `QuestionBank.importQuestions()` (Path 12's P1 bullet has the surface) | site | ¼ | | [Path 6](#path-6--share-everywhere) |
 | 2 | Path 4 P5 (rest) — per-tool restore as a shared control any tool can host | 009 | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
@@ -416,7 +426,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 27 | Path 12 P1 — `_shared/question-bank.js` with 030 as the front door | `_shared/` | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 28 | Path 12 P2 — read-side adopters: 053, 062, 040, 018, 019, 020 | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 29 | Path 12 P3 — play modes in 030: every-team-answers, quiz-bowl, wheel, final wager, printed quiz | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
@@ -520,7 +529,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 142 | Fraction multiply/divide, exponents and one-step equations | 026 | ½ | | [026 Math Fact Drill Sheet Generator](#026--math-fact-drill-sheet-generator) |
 | 143 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 144 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
-| 145 | Projector styling; the site-wide question bank | 030 | ½ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
+| 145 | Projector styling (the site-wide question bank shipped as Path 12 P1, v265; its other formats are Path 12 P2 and P3) | 030 | ½ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
 | 146 | Week-at-a-glance print; year-grid A/B badges | 032 | ½ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
 | 147 | "Where is this student right now?"; the published pathfinder | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
 | 148 | Split the file; accessibility routing | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
@@ -1875,7 +1884,7 @@ download-as-file as the third option.
   002 already shares; 022 files it as a new lab class through `?labgroups=` and hands out roles);
   022 → 005 is `sheet: false`, from 022's "Seat these groups" button (a new section, one pod per
   group); **006/007 → 002 is not a link**, because 002 already reads the saved roster through
-  `roster.js` on the same device. Left: trivia → review board (053 → 030), after Path 12 P1.
+  `roster.js` on the same device. Left: trivia → review board (053 → 030), which waited on Path 12 P1 (shipped, v265).
 
 **Model.** Opus.
 
@@ -4017,6 +4026,60 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   standard, difficulty, tags}`), keep 030's editor and importer as its UI, register
   the keys (Path 4), and give it export/import so a bank can be a department
   resource.
+  **Shipped (AI-14, 2026-10-06, v265). The rest of this bullet is the design as built; the module's header says
+  the same and is the reference.**
+  - *What was there.* 030's bank was one key, `gvb-review-board-bank:entries`: a bare list of `{ id, question,
+    answer, points, unit, standard, difficulty, createdAt }`, written by `rgb-bank-store.js`. It has had that one
+    shape since the commit that made it (`7219207`); the store had no `migrate` and no version. The bank had no
+    import and no export: 030's XLSX importer and template build a *board*, and still do, unchanged.
+  - *The surface* (`window.QuestionBank`; a classic script, as `store.js` is, and it needs `store.js` for
+    storage only). Pure: `normalize(q)`, `validate(q)` (a list of sentences: "no question", "no answer"),
+    `makeId()`, `upsert(list, q)`, `remove(list, id)`, `filter(list, { unit, standard, difficulty, tag, query })`,
+    `distinct(list, field)`, `merge(list, incoming)`, `fromLegacy(entry)`, `toLegacy(q)`, `adopt(bank, oldList)`,
+    and the files: `toJSON(list, meta)`, `parse(text)` (the JSON file, a bare JSON list, or CSV), `toRows(list)`
+    and `fromRows(rows)` (a header row and a row a question, for `ExportKit.toCsv`/`toXlsx` and SheetJS),
+    `parseCsv(text)`. Stored: `list()`, `load()`, `read()`, `saveQuestion(q)`, `deleteQuestion(id)`,
+    `importQuestions(incoming)`, `onChange(fn)`. Nothing throws on data.
+  - *A question.* `{ id, prompt, answer, choices?, media?, unit, standard, difficulty, tags, points, createdAt,
+    updatedAt? }`. `points` and `createdAt` are 030's and were kept, because every existing entry has them.
+    `difficulty` is `''`, `Easy`, `Medium` or `Hard` (030's three). `tags` is a list with no blanks or repeats.
+    `media` is carried as given and never read: P4 gives it a meaning. **A field the module does not know is
+    kept** through a read, a save and the JSON file, so a later phase can add one without a version.
+  - *What is stored.* Key `gvb-question-bank`, a Store envelope `{ v: 1, data: { schema: 1, questions: [...],
+    legacy: { 'gvb-review-board-bank:entries': [ids] } } }`. The key carries no version (`store.js`'s rule 5).
+    A stored `schema` above 1 is read, and every write into it is refused with `{ ok: false, newer: true }`.
+  - *The migration.* The old key is **read on every load and never written or removed**. Each old entry whose
+    id is not in `legacy` is added after what the bank holds, in the old order, `question` as `prompt`, its id
+    kept, and the id recorded. So the first load moves the old bank whole. **An older 030 page** (a tab left
+    open, a worker not yet updated) keeps reading and writing the old key and is not broken: what it adds
+    arrives in the shared bank on the next load; what it deletes stays in the shared bank; what is done on the
+    new page it does not see. **A 009 backup from before v265** holds only the old key: restored with "replace"
+    the new key is gone and the next load migrates the backup whole; restored with "merge", entries not seen
+    before are added and one deleted since stays deleted. The same key with a new shape was rejected: an old
+    page reads anything that is not a list as an empty bank, and its next Add would have written a one-entry
+    list over the whole bank.
+  - *Ids.* Made once, `q-<time in base 36>-<random>`, never changed; an old entry keeps its `bank-…` id. A file
+    carries ids. On import, a question whose id the bank has replaces it where it stands, changing only the
+    fields the file names (a spreadsheet has no `media`, so it stays); one with no id, or an unseen id, is
+    added, unless its prompt and answer already match a question in the bank (case and spacing aside), when it
+    is skipped. The same file imported twice changes nothing. An import never deletes.
+  - *Files.* The bank file is JSON, `{ format: 'aplp-question-bank', version: 1, questions }`, everything. The
+    workbook and CSV are nine columns (Question, Answer, Points, Unit, Standard, Difficulty, Tags, Choices, ID)
+    written by `ExportKit`, used as it is: every cell but Points is a string cell, no cell is a formula, and in
+    CSV `toCsv`'s apostrophe guards a formula and `fromRows` takes it off. A header may be in any order and
+    case, with other columns beside it; every cell is read as text (`raw: false`), so `007` stays `007`.
+  - *030.* `rgb-bank-store.js` is the page's view of the shared bank with the surface it had
+    (`ReviewBankStore`), so the editor, the filters and "pull into board" are the code they were. New on the
+    bank tab: a "Share the bank" card (Save bank file, Save as spreadsheet, an import picker and a status line).
+    The bank list's checkboxes had no accessible name; they have one now.
+  - *Left to P2 to P4, and not done here.* P2: no other tool reads the bank; 030's editor shows no choices or
+    tags and cannot edit a question in place (delete and add again); there is one bank, with no named sets, and
+    no preview before an import. P3: nothing. P4: `media` has no meaning and no picture travels in the file
+    beyond the reference a question already holds. Rank 1 (053 → 030) is unblocked and not built.
+  - *Not verified.* No file was opened in Excel, Sheets or Numbers; a CSV saved from one was not imported (the
+    suites read the files with SheetJS and a reader of their own). No real bank from a teacher's browser was
+    migrated: the old banks in the suites were written by the old store's own code. A browser with storage
+    full or blocked was not tried on the import.
 - **P2 — Read-side adopters.** 053 and 062 publish their built-in banks into the
   shared shape (read-only seed sets); 040 flashcards ↔ bank (term/definition is a
   question); 018 and 019 pull station questions from the bank; 020 gets an
@@ -4030,7 +4093,8 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
 **Model.** Opus.
 
 **Verification.** `test:review-board` green; a bank round-trips 030 → export → 018
-→ 019 with ids preserved.
+→ 019 with ids preserved. (P1's half, at v265: `test:question-bank` and `smoke-bank-file.mjs` round-trip a bank
+030 → file → 030 with ids preserved. 018 and 019 are P2.)
 
 ---
 
@@ -8924,6 +8988,8 @@ work, and don't promote one without Devon saying so.
 - Should the question bank become its own tool (or a shared store) that this
   board, the escape room, the scavenger hunt, and the flashcard generator all
   read? That's the architectural version of the moonshot above.
+  **Decided and built (AI-14, v265): a shared store, `_shared/question-bank.js`, with this page as its
+  editor and no new tool.** The other tools reading it is Path 12 P2.
 
 #### Platform themes that matter here
 
@@ -11816,7 +11882,7 @@ tools.
   fully local, but less authoritative)?
 - ~~Still open from the Quick Wins list: **reordering the queue**~~ —
   **done, 2026-08-12** (see Status). ~~**Combining two symbols on one label**~~ —
-  **done, 2026-10-06 (v265, AI-31-074).** A label may carry an optional second
+  **done, 2026-10-06 (v266, AI-31-074).** A label may carry an optional second
   symbol, `symbol2`, beside the first: an optional field rather than an array, so a
   saved sheet from before reads as it was. See `HISTORY.md`. Three or more symbols on
   one label were not built and nobody has asked.

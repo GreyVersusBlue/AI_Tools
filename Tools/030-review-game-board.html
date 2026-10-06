@@ -32,6 +32,7 @@
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/export.js"></script>
 <script src="review-game-board/rgb-store.js"></script>
+<script src="../_shared/question-bank.js"></script>
 <script src="review-game-board/rgb-bank-store.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="review-game-board/rgb-image.js"></script>
@@ -495,6 +496,23 @@
         <span class="import-status" id="bankPullStatus"></span>
       </div>
     </div>
+
+    <div class="card">
+      <h2>Share the bank</h2>
+      <p class="hint">
+        Save the whole bank as a file for a colleague or another computer, and bring one in. The bank file
+        keeps everything; the spreadsheet is for reading and editing in Excel or Sheets. Importing
+        <b>adds to</b> this bank and never deletes from it: a question already here is updated or skipped,
+        so the same file can be imported twice.
+      </p>
+      <div class="import-row">
+        <button type="button" class="secondary" id="bankExportBtn">Save bank file</button>
+        <button type="button" class="secondary" id="bankExportSheetBtn">Save as spreadsheet</button>
+        <label for="bankImportFile" style="margin:0;">Import a bank file or spreadsheet:</label>
+        <input type="file" id="bankImportFile" accept=".json,.csv,.xlsx,.xls,application/json,text/csv">
+      </div>
+      <p class="import-status" id="bankFileStatus" role="status"></p>
+    </div>
   </div>
 
   <footer class="note">
@@ -561,7 +579,8 @@
    'boardsSection','bankSection',
    'bankQuestion','bankAnswer','bankPoints','bankUnit','bankStandard','bankDifficulty','bankAddBtn','bankAddStatus',
    'bankFilterUnit','bankFilterStandard','bankFilterDifficulty','bankFilterQuery','bankClearFiltersBtn','bankList',
-   'bankPullCategory','bankCategoryOptions','bankPullBtn','bankPullStatus'
+   'bankPullCategory','bankCategoryOptions','bankPullBtn','bankPullStatus',
+   'bankExportBtn','bankExportSheetBtn','bankImportFile','bankFileStatus'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, categories:[{name, clues:[{points,question,answer,used}]}], teams:[{name,score}] }
@@ -2164,6 +2183,7 @@
       var checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = !!bankSelected[entry.id];
+      checkbox.setAttribute('aria-label', 'Select: ' + entry.question);
       checkbox.addEventListener('change', function () {
         if (checkbox.checked) bankSelected[entry.id] = true; else delete bankSelected[entry.id];
       });
@@ -2291,6 +2311,76 @@
       ' into "' + category + '". Remember to click Save board.';
     showTopSection('boards');
     renderBankList();
+  });
+
+  /* ---------- the bank as a file (Path 12 P1) ----------
+     The bank is the site's shared one (_shared/question-bank.js); these three
+     controls save all of it and merge a file into it. The JSON file is
+     everything; the workbook is the columns a spreadsheet can show, written
+     by ExportKit, so text stays text and no cell is a formula. An import
+     never deletes: QuestionBank.importQuestions() says what it did. */
+  function bankFileStatus(kind, message) {
+    els.bankFileStatus.className = 'import-status' + (kind ? ' ' + kind : '');
+    els.bankFileStatus.textContent = message;
+  }
+  function countOf(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+  els.bankExportBtn.addEventListener('click', function () {
+    var all = QuestionBank.list();
+    if (!all.length) { bankFileStatus('error', 'The bank is empty, so there is nothing to save yet.'); return; }
+    ExportKit.download(QuestionBank.toJSON(all, { title: 'Question bank' }), 'question-bank.json', 'application/json');
+    bankFileStatus('ok', 'Saved ' + countOf(all.length, 'question') + ' as question-bank.json.');
+  });
+
+  els.bankExportSheetBtn.addEventListener('click', function () {
+    var all = QuestionBank.list();
+    if (!all.length) { bankFileStatus('error', 'The bank is empty, so there is nothing to save yet.'); return; }
+    loadXlsx().then(function () {
+      ExportKit.toXlsx({ name: 'Questions', rows: QuestionBank.toRows(all), widths: [48, 32, 8, 14, 14, 11, 20, 30, 24] }, { filename: 'question-bank.xlsx' });
+      bankFileStatus('ok', 'Saved ' + countOf(all.length, 'question') + ' as question-bank.xlsx. Pictures and sounds are only in the bank file.');
+    }).catch(function (err) { bankFileStatus('error', err.message); });
+  });
+
+  function importBankQuestions(parsed) {
+    if (parsed.error) { bankFileStatus('error', parsed.error); return; }
+    var res = QuestionBank.importQuestions(parsed.questions);
+    if (res.newer) { bankFileStatus('error', 'This bank was saved by a newer version of this page. Reload the page, then import again.'); return; }
+    var parts = [countOf(res.added, 'question') + ' added'];
+    if (res.updated) parts.push(res.updated + ' updated');
+    if (res.same + res.skipped) parts.push((res.same + res.skipped) + ' already in the bank');
+    var message = parts.join(', ') + '.';
+    if (res.invalid.length) {
+      var where = res.invalid.slice(0, 8).map(function (bad) { return 'row ' + parsed.rows[bad.row - 1] + ' (' + bad.errors.join(', ') + ')'; });
+      message += ' Left out: ' + where.join('; ') + (res.invalid.length > 8 ? '; and ' + (res.invalid.length - 8) + ' more' : '') + '.';
+    }
+    if (!res.ok) message = 'The bank could not be saved, so nothing was imported.';
+    bankFileStatus(!res.ok ? 'error' : (res.added || res.updated || !res.invalid.length ? 'ok' : 'error'), message);
+    renderBankList();
+  }
+
+  els.bankImportFile.addEventListener('change', function () {
+    var file = els.bankImportFile.files[0];
+    if (!file) return;
+    els.bankImportFile.value = '';
+    bankFileStatus('', 'Reading ' + file.name + '…');
+    var reader = new FileReader();
+    reader.onerror = function () { bankFileStatus('error', 'That file could not be read.'); };
+    if (/\.xlsx?$/i.test(file.name)) {
+      loadXlsx().then(function () {
+        reader.onload = function () {
+          try {
+            var wb = XLSX.read(new Uint8Array(reader.result), { type: 'array' });
+            // raw: false reads each cell as the text the spreadsheet shows.
+            var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+            importBankQuestions(QuestionBank.fromRows(rows));
+          } catch (err) { bankFileStatus('error', 'That spreadsheet could not be read.'); }
+        };
+        reader.readAsArrayBuffer(file);
+      }).catch(function (err) { bankFileStatus('error', err.message); });
+    } else {
+      reader.onload = function () { importBankQuestions(QuestionBank.parse(String(reader.result))); };
+      reader.readAsText(file);
+    }
   });
 
   /* ---------- clue images: IndexedDB behind every saved board (Path 4 P4) ----------

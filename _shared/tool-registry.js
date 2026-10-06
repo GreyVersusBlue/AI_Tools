@@ -142,6 +142,10 @@
       writes: [
         'np_rosters',
         'crh_students_v1',
+        /* _shared/question-bank.js writes the site's question bank. It is
+           OWNED by Review Game Board's row, the page a teacher edits it on,
+           which is where a backup labels it. */
+        'gvb-question-bank',
       ],
     },
     {
@@ -569,8 +573,14 @@
          content (maps, cartoons, primary sources), not student data. Pictures
          no saved board points at are deleted when the tool next loads. Clue
          audio is separate, in `rgb-audio` below; the bank holds no pictures. */
+      /* The question bank is the site's shared one since v265 (Path 12 P1):
+         `gvb-question-bank`, written by _shared/question-bank.js and edited
+         here. Teacher content, not student data. The bank's old key is read
+         by that module on every load and never written or removed, so a
+         backup made before v265 still restores. */
       keys: [
-        { k: 'gvb-review-board-bank:entries' },
+        { k: 'gvb-question-bank' },
+        { k: 'gvb-review-board-bank:entries', legacy: true },
         { k: 'gvb-review-board:__probe' },
         { k: 'gvb-review-board:current' },
         { k: 'gvb-review-board:list' },
