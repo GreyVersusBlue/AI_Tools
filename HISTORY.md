@@ -9,6 +9,49 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P5 designed, not built: master-schedule checks for 035 (2026-10-06, AI-20, no `CACHE_VERSION`, no code)
+
+Audit entry AI-20, rank 25 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P5 bullet under
+"Path 11", and a note on rank 25). **The row stays.** Nothing was built, no suite or browser ran. It sits on the P1
+and P2 designs and changes neither; the last undesigned Fable phase on the sprint's list.
+
+- **What the design is.** `Tools/schedule-visualizer/sv-check.js`, a pure module in P2's shape: `checkSchedule()`
+  returns findings with a code, a severity (error, warn, note), ids and numbers, and a stable fingerprint; fourteen
+  kinds (two groups in a room, a teacher in two rooms at once, over capacity, no planning, too many in a row, a
+  teacher who moves between mods against the passing time, a group whose walk is longer than the bell gap, an
+  unknown room, a blank slot, and five notes); `sentence()` writes one English line per kind for the banner, the
+  lab, the paper and the suite; today's `computeScheduleConflicts` and `whatIfMetrics` pass 5 become one call. A
+  second module, `sv-suggest.js`, finds a fix for one finding over an enumerable set (reorder the group's day; the
+  same teacher's other room or a teacherless room; another teacher's room only behind a switch that is off), checks
+  every candidate in under a millisecond, routes the top five, and hands the chosen one to the what-if lab as an
+  override, where Apply is the only commit. Two printed sheets through PrintKit (the findings with a teacher-by-mod
+  grid; the top-ten congestion cells with the scenario's delta), and "compare with a project file" as a way of
+  loading the lab by group name on one building. Storage: `tile.capacity` (additive, version 5 stays),
+  `settings.checks`, and one new key `stviz_checks` for accepted findings; findings themselves are never stored.
+  Four increments, 035 only, 034 untouched, no `_shared/` change.
+- **What reading the code turned up.** 035 has no teachers and no students: a teacher is a string on a tile, a
+  group is a cohort with a size, and a teacher's day has to be derived the way the publisher derives its `Planning`
+  slots. There is no capacity field anywhere. Room double-booking is checked in three copies (the banner, the lab,
+  and the publisher's silent last-writer walk). A room in this model is also a teacher and a subject, so a suggestion
+  that moves a group to another teacher's room changes who teaches whom, and the data cannot say whether that is
+  allowed; that is why the honest moves are a reorder and the same teacher's rooms, and the rest is Devon's.
+- **Measured, with two pure-Node probes that were not kept.** Northwind (invented): no double-booking, every teacher
+  has a planning block on both days (the README says one has it on only one day; not so in the committed fixture),
+  two teachers idle all A day and two all B day, the Library teacherless. An invented 90-room, 72-teacher, 60-group,
+  8-mod building with slots filled at random: one full check of every non-travel kind is 0.92 ms (mean of 1,000,
+  Node 22, huginn), so the checks run on every bulk-editor keystroke with no debounce.
+- **Decided here, cheap to reverse.** Severity in three levels with notes folded and uncounted. The engine returns
+  codes and the page the sentence (Path 13's rule), with the one formatter exported because four surfaces print it.
+  No randomness and no seed: the candidate set is enumerable. Suggestions land as what-if overrides, never on the
+  live schedule. A new key for acks rather than a field on settings. Teacher names matched exactly.
+- **Shared with Path 13 P1 and Path 14 P3:** the vocabulary (codes out, `dropped`, severity compared left to
+  right, `stoppedBy`) and the feasibility-then-blame pattern. **Not shared:** the engine, identity, students,
+  randomness, memory. A `_shared/findings.js` is noted, not proposed.
+- **Not verified.** Nothing ran in a browser and no module exists. The two travel checks were not timed. No
+  counsellor read a sentence. P1's `EXPECTED` was not opened. Nine questions for Devon are at the end of the bullet.
+
+---
+
 ## 069 PE Warm-Up Circuit Card Generator: "Run the circuit", a projector timer with a rotation signal (2026-10-06, AI-31-069, `CACHE_VERSION` v261)
 
 Audit entry AI-31, BACKLOG rank 106 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
