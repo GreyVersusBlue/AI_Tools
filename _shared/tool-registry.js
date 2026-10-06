@@ -1012,7 +1012,7 @@
       file: 'Tools/063-grammar-mad-libs-generator.html',
       category: 'ela',
       keys: [
-        { k: 'gmlg_custom_banks_v1' },
+        { k: 'gmlg_custom_banks_v1', legacy: true },   // read once and folded into the saved stories (v252); nothing writes it now
         { k: 'gmlg_custom_story_v1' },
       ],
     },

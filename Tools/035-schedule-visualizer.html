@@ -48,6 +48,8 @@
   <!-- Path 4 P4: each floor's trace image is a Blob in the shared media store;
        the blueprint key holds an idb: reference. See sv-trace-image.js. -->
   <script src="../_shared/media-db.js" defer></script>
+  <!-- Path 7 P4: ExportKit writes the groups template CSV. -->
+  <script src="../_shared/export.js" defer></script>
   <script src="schedule-visualizer/sv-trace-image.js" defer></script>
   <script type="module">
     import { drawQR, startHost, startJoin } from './schedule-visualizer/sv-handoff.js';
@@ -12411,19 +12413,17 @@ function handleCsvImport(csvText) {
   }
 }
 
+/* The file is ExportKit.toCsv()'s (_shared/export.js, Path 7 P4): CRLF after
+   every row, the last one too, and a byte order mark. handleCsvImport() reads
+   it back as it read the old one. */
 function downloadCsvTemplate() {
   const labels = getAllModLabels();
-  const header = ['Name', 'Grade', 'Color', 'Students', ...labels].join(',');
-  const exampleA = ['Homeroom A', '9', '#3b82f6', '24', ...labels.map((_, i) => i === 0 ? '101' : '')].join(',');
-  const exampleB = ['Homeroom B', '10', '#ef4444', '', ...labels.map((_, i) => i === 0 ? '205' : i === 1 ? '110' : '')].join(',');
-  const csv = [header, exampleA, exampleB].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = 'groups-template.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const rows = [
+    ['Name', 'Grade', 'Color', 'Students', ...labels],
+    ['Homeroom A', '9', '#3b82f6', '24', ...labels.map((_, i) => i === 0 ? '101' : '')],
+    ['Homeroom B', '10', '#ef4444', '', ...labels.map((_, i) => i === 0 ? '205' : i === 1 ? '110' : '')],
+  ];
+  ExportKit.download(ExportKit.toCsv(rows), 'groups-template.csv', 'text/csv;charset=utf-8');
 }
 
 /* ==============================================================

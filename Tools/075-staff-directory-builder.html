@@ -26,6 +26,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/export.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -459,16 +460,19 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  function csvField(v) {
-    v = String(v == null ? '' : v);
-    if (/[",\n]/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
-    return v;
-  }
+  /* The file is ExportKit.toCsv()'s (_shared/export.js, Path 7 P4): RFC 4180
+     quoting, CRLF after every row, a byte order mark so Excel reads the
+     accents, and an apostrophe before a typed cell a spreadsheet would run as
+     a formula (one that starts = + - or @). */
   function toCsv(list) {
     var rows = [['Name', 'Room', 'Extension', 'Subject / Dept']];
     list.forEach(function (p) { rows.push([p.name, p.room, p.ext, p.subject]); });
-    return rows.map(function (r) { return r.map(csvField).join(','); }).join('\r\n');
+    return ExportKit.toCsv(rows);
   }
+  /* The other half of that apostrophe: Import takes it off again, so an
+     extension typed "+1 555 0100" comes back from this tool's own file as it
+     was typed. */
+  function unguardCsv(v) { return /^'[=+\-@]/.test(v) ? v.slice(1) : v; }
   function parseCsvLine(line) {
     var fields = []; var cur = ''; var inQuotes = false;
     for (var i = 0; i < line.length; i++) {
@@ -487,7 +491,7 @@
 
   els.exportCsvBtn.addEventListener('click', function () {
     if (!people.length) { alert('Nothing to export yet.'); return; }
-    downloadBlob(toCsv(visibleRows()), 'staff-directory.csv', 'text/csv');
+    downloadBlob(toCsv(visibleRows()), 'staff-directory.csv', 'text/csv;charset=utf-8');
   });
   els.exportJsonBtn.addEventListener('click', function () {
     if (!people.length) { alert('Nothing to export yet.'); return; }
@@ -519,7 +523,7 @@
           var lines = text.split(/\r\n|\n/).map(function (l) { return l.trim(); }).filter(Boolean);
           if (lines.length && /^name\s*,/i.test(lines[0])) lines.shift();
           lines.forEach(function (line) {
-            var parts = parseCsvLine(line).map(function (p) { return p.trim(); });
+            var parts = parseCsvLine(line).map(function (p) { return unguardCsv(p.trim()); });
             var result = addPerson(parts[0], parts[1], parts[2], parts[3], { skipDuplicates: true });
             if (result === 'added') added++; else if (result === 'duplicate') skipped++;
           });

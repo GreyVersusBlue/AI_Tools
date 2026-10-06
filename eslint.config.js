@@ -46,12 +46,12 @@ const SITE_GLOBALS = {
   MediaDB: 'readonly',
   SeatingRead: 'readonly',
   WebRTCPair: 'readonly',
-  DuplexPrint: 'readonly',
   StudentDetails: 'readonly',
   ToolRegistry: 'readonly',
   ThemeToggle: 'readonly',
   Countdown: 'readonly',
   PrintKit: 'readonly',
+  ExportKit: 'readonly',
   // _shared/vendor/
   jspdf: 'readonly',
   XLSX: 'readonly',

@@ -29,6 +29,20 @@ export const PRINT_PREP = {
     { name: 'example loaded, Map print panel open', run: async page => { await page.click('#loadExampleBtn'); await page.click('#mapPrintToggleBtn'); } },
     { name: 'example loaded, Print layout preview', run: async page => { await page.click('#loadExampleBtn'); await page.click('#viewPrintBtn'); } },
   ],
+  // 016 — nothing is saved that a sheet is made from: the single code is what
+  // is typed, and the bulk grid is generated from pasted lines.
+  '016': [
+    { name: 'a link typed', run: async page => { await page.fill('#qr-text', 'https://example.com/station-1'); await page.waitForFunction(() => !document.getElementById('btn-print').disabled); } },
+    {
+      name: 'a bulk grid generated',
+      run: async page => {
+        await page.click('label[for="mode-bulk"]');
+        await page.fill('#bulk-text', Array.from({ length: 14 }, (_, i) => `Station ${i + 1}, https://example.com/s/${i + 1}`).join('\n'));
+        await page.click('#btn-bulk-generate');
+        await page.waitForFunction(() => !document.getElementById('btn-bulk-print').disabled);
+      },
+    },
+  ],
   // 018 — team cards, route cards and answer sheets are on the Live Run tab.
   '018': [{ name: 'Live Run tab', run: page => page.click('#tab-run') }],
   // 023 — the reteach list is on the Paper Triage tab, and the open tab is not

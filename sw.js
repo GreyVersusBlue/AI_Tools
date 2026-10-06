@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v241';
+const CACHE_VERSION = 'v255';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -139,7 +139,6 @@ const SHELL_URLS = [
   "_shared/a11y.css",
   "_shared/a11y.js",
   "_shared/base.css",
-  "_shared/duplex-print.js",
   "_shared/gvb-save.js",
   "_shared/handoffs.js",
   "_shared/ink-paper.css",
@@ -147,6 +146,7 @@ const SHELL_URLS = [
   "_shared/print-area.css",
   "_shared/print-kit.css",
   "_shared/print-kit.js",
+  "_shared/export.js",
   "_shared/countdown.js",
   "_shared/qr-draw.js",
   "_shared/qr-scan.js",
@@ -444,7 +444,6 @@ const PRECACHE_URLS = [
   "_shared/a11y.css",
   "_shared/a11y.js",
   "_shared/base.css",
-  "_shared/duplex-print.js",
   "_shared/gvb-save.js",
   "_shared/handoffs.js",
   "_shared/ink-paper.css",
@@ -452,6 +451,7 @@ const PRECACHE_URLS = [
   "_shared/print-area.css",
   "_shared/print-kit.css",
   "_shared/print-kit.js",
+  "_shared/export.js",
   "_shared/countdown.js",
   "_shared/qr-draw.js",
   "_shared/qr-scan.js",

@@ -40,6 +40,7 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/print-kit.js"></script>
+<script src="../_shared/export.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -516,17 +517,28 @@
     return card;
   }
 
+  /* The cut into pages and the place of each back are ExportKit's
+     (_shared/export.js). This tool wrote paginate() and mirrorPageRows()
+     first, in vfg-layout.js; they were copied to 064, then shared, and its
+     own copy is gone now. The sheet is Letter, upright, and the stack is
+     turned on its long edge: DUPLEX says so once, for the cards and for the
+     alignment test, which is only worth printing if it is cut the same way. */
+  var DUPLEX = { orientation: 'portrait', flip: 'long' };
+  function backsOf(page, cols, rows) {
+    return ExportKit.mirrorPage(page, { cols: cols, rows: rows, orientation: DUPLEX.orientation, flip: DUPLEX.flip });
+  }
+
   /** Front pages first, then the back (definition) pages, each back row
       mirrored so it lines up when the front stack is flipped on the long edge.
       Every page is padded to a full grid with blank cards. */
   function flashSpec(items) {
     var cols = state.flashCols, rows = state.flashRows, perPage = cols * rows;
     var fronts = [], backs = [];
-    VocabLayout.paginate(items, perPage).forEach(function (page) {
+    ExportKit.paginate(items, perPage).forEach(function (page) {
       var padded = page.slice();
       while (padded.length < perPage) padded.push(null);
       padded.forEach(function (item) { fronts.push({ item: item }); });
-      VocabLayout.mirrorPageRows(padded, cols).forEach(function (item) { backs.push({ item: item, back: true }); });
+      backsOf(padded, cols, rows).forEach(function (item) { backs.push({ item: item, back: true }); });
     });
     return {
       cards: fronts.concat(backs), cols: cols, perPage: perPage, exact: CARD_SIZE_PRESETS[state.cardSizePreset] || null,
@@ -561,7 +573,7 @@
   function foldSpec(items) {
     var cols = state.flashCols, perPage = cols * state.flashRows;
     var cards = [];
-    VocabLayout.paginate(items, perPage).forEach(function (page) {
+    ExportKit.paginate(items, perPage).forEach(function (page) {
       var padded = page.slice();
       while (padded.length < perPage) padded.push(null);
       padded.forEach(function (item) { cards.push({ item: item }); });
@@ -581,7 +593,7 @@
     var labels = [];
     for (var i = 0; i < perPage; i++) labels.push(i + 1);
     return {
-      cards: labels.concat(VocabLayout.mirrorPageRows(labels, cols)), cols: cols, perPage: perPage,
+      cards: labels.concat(backsOf(labels, cols, state.flashRows)), cols: cols, perPage: perPage,
       exact: CARD_SIZE_PRESETS[state.cardSizePreset] || null,
       build: function (label) {
         var card = el('div', guideClass('flash-card'));
@@ -618,7 +630,7 @@
   function wallSpec(items) {
     var perPage = state.wallPerPage;
     var cards = [];
-    VocabLayout.paginate(items, perPage).forEach(function (page) {
+    ExportKit.paginate(items, perPage).forEach(function (page) {
       var padded = page.slice();
       while (padded.length < perPage) padded.push(null);
       padded.forEach(function (item) { cards.push({ item: item }); });

@@ -150,9 +150,9 @@ near(sample.paper[2], 208, 14, 'and its warmth (b≈208) — not white, not the 
 /* ── 6. the export libraries are wired: jsPDF and JSZip from _shared/vendor ─ */
 ok(await page.evaluate(() => !!(window.jspdf && window.jspdf.jsPDF)), 'the vendored jsPDF is loaded');
 ok(await page.evaluate(() => !!window.JSZip), 'the vendored JSZip is loaded');
-ok(await page.evaluate(() => !!(window.DuplexPrint && DuplexPrint.paginate && DuplexPrint.mirrorPageRows)),
-   'the extracted _shared/duplex-print.js is loaded');
-eq(await page.evaluate(() => DuplexPrint.mirrorPageRows(['a', 'b', 'c', 'd'], 3).join(',')), 'c,b,a,,,d',
+ok(await page.evaluate(() => !!(window.ExportKit && ExportKit.paginate && ExportKit.mirrorPageRows)),
+   'the shared _shared/export.js is loaded');
+eq(await page.evaluate(() => ExportKit.mirrorPageRows(['a', 'b', 'c', 'd'], 3).join(',')), 'c,b,a,,,d',
    'row-mirroring still pads and reverses each row');
 
 /* ── 7. no console noise anywhere in the run ─────────────────────────────── */

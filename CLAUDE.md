@@ -467,8 +467,26 @@ files must be added there too.
   ink-safe output, and one/class-set/blank rendering from a template. Unlike print-area.css the
   kit is opt-in by class and safe to link anywhere; a new printing tool uses it instead of
   writing another `@media print` block. It sizes with `min-height` and never clips. 076 and 070 (half sheets, `renderSet` with `cut: true`), 077
-  (a card grid: `PrintKit.renderCards` with a preset), 043 (a class set with the footer), 023 (half and quarter sheets), 042 (a fixed-size certificate: `setPage()`, `.pk-page` and `.pk-paper` only), 074 (labels with a height of their own: `PrintKit.renderCards(..., { cols }, ...)`, which 077 also calls, with a preset name), 051 (the same, with a reference sheet after the grid and a QR canvas on each label, so its sheet is kept current and not drawn on `beforeprint`) and 040 (exact-size cards on a grid of its own, `{ cols, perPage }`, with the tool's page frame put round each grid after `renderCards()`, and the preview drawn by the same call) and 064 (an exact-size trading card that keeps its own `height` and clipping; fronts and mirrored backs in one `renderCards()` call, each card the shared renderer's string parsed in a `<template>`) and 018 (six print buttons as six areas inside one `#printArea`, the shown one `.active`; cards a share of the width and as tall as their content; the station sheet, which has QR canvases, kept current for Ctrl+P) and 017 (five print buttons the same way, with no area `.active` at rest: `#printArea:not(.sheet-asked)` shows the QR codes for Ctrl+P; packets as `.pk-page`s) print through it, each with `print-area.css` to hide the editor and, since v233, `class="pk-paper"` on `#printArea` for a white sheet and black text from either theme; `BACKLOG.md`'s Path 7 P3 has the recipe the next one follows. Its suites
+  (a card grid: `PrintKit.renderCards` with a preset), 043 (a class set with the footer), 023 (half and quarter sheets), 042 (a fixed-size certificate: `setPage()`, `.pk-page` and `.pk-paper` only), 074 (labels with a height of their own: `PrintKit.renderCards(..., { cols }, ...)`, which 077 also calls, with a preset name), 051 (the same, with a reference sheet after the grid and a QR canvas on each label, so its sheet is kept current and not drawn on `beforeprint`) and 040 (exact-size cards on a grid of its own, `{ cols, perPage }`, with the tool's page frame put round each grid after `renderCards()`, and the preview drawn by the same call) and 064 (an exact-size trading card that keeps its own `height` and clipping; fronts and mirrored backs in one `renderCards()` call, each card the shared renderer's string parsed in a `<template>`) and 018 (six print buttons as six areas inside one `#printArea`, the shown one `.active`; cards a share of the width and as tall as their content; the station sheet, which has QR canvases, kept current for Ctrl+P) and 017 (five print buttons the same way, with no area `.active` at rest: `#printArea:not(.sheet-asked)` shows the QR codes for Ctrl+P; packets as `.pk-page`s) and 016 (three sheets as areas chosen by the tab that is showing; label stock as `{ cols, perPage }` with exact labels and `setPage({ margin: 'top side' })`, two lengths, since v242) print through it, each with `print-area.css` to hide the editor and, since v233, `class="pk-paper"` on `#printArea` for a white sheet and black text from either theme; `BACKLOG.md`'s Path 7 P3 has the recipe the next one follows. Its suites
   are `npm run test:print-kit`; nothing in it has been checked on paper.
+  `_shared/export.js` (Path 7 P4, v243) is `ExportKit`, the export layer: booklet, N-up and duplex imposition for
+  either edge the paper turns on, sheet geometry, flow pagination, and `toPdf(pages, opts)` on the vendored jsPDF
+  for pages a tool draws (a canvas, an image, a draw function; not a DOM element). A tool that needs a card's back
+  behind its front, a booklet's page order or a PDF's page breaks calls it and does not write the arithmetic again.
+  Since v244 it also has the file helpers: `toCsv` (which puts an apostrophe before a typed cell a spreadsheet would
+  run as a formula), `toXlsx` and `toZip` on the vendored SheetJS and JSZip, `download` and `filename`. A tool that
+  saves a table or a zip calls these and does not write another `csvCell()` or anchor click. 064's Download PDF is
+  the first adopter (`npm run test:trading-card-pdf`) and 040's double-sided cards the second (`npm run
+  test:vocab-imposition`, v245, when `_shared/duplex-print.js` was deleted) and 011's booklet and pages-per-sheet
+  layouts the third (`npm run test:image-to-pdf-impose`, v248: a tool records each page as drawing steps and hands
+  the pages to `toPdf` with `impose`; `compress: true` and, for a two-sided N-up, `flip` came with it). Since v249
+  003, 008, 018, 033, 068 and 075 save their CSV through `toCsv` and `download` (`npm run test:csv-adopters`; a new
+  one gets a row in `Tools/export/test/_csv-adopters.mjs`, hands a computed number over as a number so the guard
+  leaves it alone, and, if it imports its own file, takes the apostrophe off as 075's `unguardCsv()` does). Since v252
+  060 does too, and 001, 006, 030 and 036 save their files through `toCsv` and `toXlsx` (`npm run test:sheet-adopters`;
+  a workbook adopter gets an entry in `Tools/export/test/_sheet-adopters.mjs`, keeps its own lazy load of SheetJS and
+  passes `{ name, rows, widths }`). Since v255 035's groups template does too, the last: no page writes its own CSV.
+  Its suites are `npm run test:export`; no booklet has been printed or folded, and no file opened in a spreadsheet.
   `npm run path7:next` (`Tools/board-check/audit-print.mjs`, Path 7 P2, read-only, a browser
   sweep of about 12 minutes on port 8464, not in CI) is the runtime half of `check:print-clip`:
   it opens every tool in print media, empty and seeded, before and after its print buttons, in
@@ -476,7 +494,7 @@ files must be added there too.
   page break may split, dark ink on paper and (TAIL, since v227) blank pages after the sheet. TAIL
   is what `body * { visibility: hidden }` leaves: the hidden editor keeps its height. A new print
   block takes the screen UI out with `display: none` (`npm run test:print-tail` reads Chromium's PDF for
-  the fifteen pages fixed in v228 and those that print through `print-area.css`, fixed there in v229 (twenty then, 076, 070, 051, 064, 018 and 017 since); a page fixed later joins its table), and a page with dark tokens of its own puts
+  the fifteen pages fixed in v228 and those that print through `print-area.css`, fixed there in v229 (twenty then, 076, 070, 051, 064, 018, 017 and 016 since); a page fixed later joins its table), and a page with dark tokens of its own puts
   them back in print itself (`npm run test:theme` checks 004, 009 and 010). It reaches a sheet through saved state
   (`Tools/a11y-sweep/seeds.mjs`, which the a11y sweep's seeded pass reads too), through a tab whose
   label says "print", which it opens itself, and through `Tools/board-check/print-audit-prep.mjs` for

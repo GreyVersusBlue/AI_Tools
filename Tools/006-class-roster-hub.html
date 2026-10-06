@@ -30,6 +30,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/export.js"></script>
 <!-- Device-to-device transfer ("Move Everything to Another Device"): manual-
      signaling WebRTC pairing, no server — see _shared/webrtc-pair.js's header
      for why. The QR decoder is shared site-wide; the qrcode.js encoder above
@@ -1306,6 +1307,11 @@
     });
   }
 
+  /** ExportKit.toCsv() puts an apostrophe before a cell that starts = + - or
+      @ so a spreadsheet shows it and does not run it; a file read back here
+      loses it again. */
+  function unguardCsv(v) { return /^'[=+\-@]/.test(v) ? v.slice(1) : v; }
+
   /** One file becomes one table, or — for a workbook — one per sheet, because
       a sheet per class is the other shape a timetable export comes in. */
   function tablesFromFile(file) {
@@ -1328,6 +1334,7 @@
     }
     return readTextFile(file).then(function (text) {
       var t = parseTable(text);
+      t.rows = t.rows.map(function (r) { return r.map(unguardCsv); });
       return t.rows.length ? [{
         label: '"' + file.name + '"',
         name: file.name.replace(/\.[^.]+$/, ''),
@@ -1461,35 +1468,15 @@
     return currentName ? [currentName] : [];
   }
 
-  function csvCell(v) {
-    var s = (v == null) ? '' : String(v);
-    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }
-
-  function downloadBlob(blob, filename) {
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 0);
-  }
-
   function slug(s) {
     return String(s || 'rosters').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'rosters';
   }
 
-  /** Excel sheet names cap at 31 chars and reject : \ / ? * [ ] — and two
-      sheets can't share a name, so collisions after truncation get a suffix. */
-  function sheetName(base, used) {
-    var clean = String(base).replace(/[:\\\/?*\[\]]/g, ' ').trim().slice(0, 31) || 'Roster';
-    var name = clean, n = 2;
-    while (used[name.toLowerCase()]) {
-      var suffix = ' (' + n + ')';
-      name = clean.slice(0, 31 - suffix.length) + suffix;
-      n++;
-    }
-    used[name.toLowerCase()] = true;
-    return name;
+  /** Excel sheet names reject : \ / ? * [ ] — a space stands in for each
+      here, so "Period 3/4" is not read back as "Period 34". The 31-character
+      cap and the suffix for two sheets alike are ExportKit.toXlsx()'s. */
+  function sheetName(base) {
+    return String(base).replace(/[:\\\/?*\[\]]/g, ' ').trim() || 'Roster';
   }
 
   function exportCsv() {
@@ -1497,17 +1484,18 @@
     var names = exportRosterNames();
     if (!names.length) { showMsg('There is no roster to export yet.'); return; }
     var all = names.length > 1 || els.exportScope.value === 'all';
-    var lines = [(all ? ['Roster'] : []).concat(EXPORT_HEADERS).map(csvCell).join(',')];
+    var rows = [(all ? ['Roster'] : []).concat(EXPORT_HEADERS)];
     var total = 0;
     names.forEach(function (rosterName) {
       exportRowsFor(rosterName).forEach(function (row) {
-        lines.push((all ? [rosterName] : []).concat(row).map(csvCell).join(','));
+        rows.push((all ? [rosterName] : []).concat(row));
         total++;
       });
     });
-    // Excel on Windows needs the BOM to read UTF-8 names (accents, apostrophes).
-    downloadBlob(new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }),
-      slug(all ? 'all-rosters' : names[0]) + '.csv');
+    // toCsv writes the BOM Excel on Windows needs to read UTF-8 names, and an
+    // apostrophe before a typed cell a spreadsheet would run as a formula;
+    // tablesFromFile() takes that apostrophe off when the file comes back.
+    ExportKit.download(ExportKit.toCsv(rows), slug(all ? 'all-rosters' : names[0]) + '.csv', 'text/csv;charset=utf-8');
     showMsg('Exported ' + total + ' student' + (total !== 1 ? 's' : '') +
       ' from ' + names.length + ' roster' + (names.length !== 1 ? 's' : '') + ' as CSV.', true);
   }
@@ -1518,17 +1506,13 @@
     if (!names.length) { showMsg('There is no roster to export yet.'); return; }
     showMsg('Building the spreadsheet…', true);
     loadXlsx().then(function () {
-      var wb = XLSX.utils.book_new();
-      var used = {};
       var total = 0;
-      names.forEach(function (rosterName) {
+      var sheets = names.map(function (rosterName) {
         var rows = exportRowsFor(rosterName);
         total += rows.length;
-        XLSX.utils.book_append_sheet(wb,
-          XLSX.utils.aoa_to_sheet([EXPORT_HEADERS].concat(rows)),
-          sheetName(rosterName, used));
+        return { name: sheetName(rosterName), rows: [EXPORT_HEADERS].concat(rows) };
       });
-      XLSX.writeFile(wb, slug(names.length > 1 ? 'all-rosters' : names[0]) + '.xlsx');
+      ExportKit.toXlsx(sheets, { filename: slug(names.length > 1 ? 'all-rosters' : names[0]) + '.xlsx' });
       showMsg('Exported ' + total + ' student' + (total !== 1 ? 's' : '') +
         ' across ' + names.length + ' sheet' + (names.length !== 1 ? 's' : '') + '.', true);
     }).catch(function () {

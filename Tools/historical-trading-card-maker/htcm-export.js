@@ -339,13 +339,11 @@
 
   /* ---------- downloads ---------- */
 
+  /* The anchor click and the zip are ExportKit's (_shared/export.js): its
+     download() and toZip(). What stays here is what is 064's: drawing the
+     cards and naming the files. */
   function download(blob, filename) {
-    var a = document.createElement('a');
-    var url = URL.createObjectURL(blob);
-    a.href = url; a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+    global.ExportKit.download(blob, filename);
   }
 
   /** Downloads name-front.png and name-back.png for one card. */
@@ -364,72 +362,70 @@
   }
 
   /** The whole deck as a letter-portrait PDF: front pages, then row-mirrored
-      back pages — the same duplex contract as the print button. */
+      back pages — the same duplex contract as the print button. The cut into
+      pages, where a back goes and the grid on the sheet are ExportKit's
+      (_shared/export.js); this draws the cards and names the file. */
   function exportPdf(entries, opts, done) {
-    var jsPDF = global.jspdf && global.jspdf.jsPDF;
-    if (!jsPDF) { alert('The PDF library did not load — try reloading the page.'); if (done) done(); return; }
-    var cols = 3, per = 6, cardW = 2.5, cardH = 3.5, gap = 0.15;
-    var mx = (8.5 - (cols * cardW + (cols - 1) * gap)) / 2;
-    var my = (11 - (2 * cardH + gap)) / 2;
-    var doc = new jsPDF({ unit: 'in', format: 'letter' });
-    var pages = global.DuplexPrint.paginate(entries, per);
+    var EK = global.ExportKit;
+    if (!EK || !(global.jspdf && global.jspdf.jsPDF)) { alert('The PDF library did not load — try reloading the page.'); if (done) done(); return; }
+    var cols = 3, rows = 2, cardW = 2.5 * 72, cardH = 3.5 * 72, gap = 0.15 * 72;
+    var mx = (8.5 * 72 - (cols * cardW + (cols - 1) * gap)) / 2;
+    var my = (11 * 72 - (rows * cardH + (rows - 1) * gap)) / 2;
+    var pages = EK.paginate(entries, cols * rows);
+    // One job a cell: every page of fronts, then every page of backs with
+    // each card behind its own front. A null is a cell with no card.
     var jobs = [];
     pages.forEach(function (page) {
-      var padded = page.slice();
-      while (padded.length < per) padded.push(null);
-      jobs.push({ items: padded, side: 'front' });
+      for (var i = 0; i < cols * rows; i++) jobs.push({ entry: page[i] || null, side: 'front' });
     });
     pages.forEach(function (page) {
-      var padded = page.slice();
-      while (padded.length < per) padded.push(null);
-      jobs.push({ items: global.DuplexPrint.mirrorPageRows(padded, cols), side: 'back' });
+      EK.mirrorPage(page, { cols: cols, rows: rows, orientation: 'portrait', flip: 'long' })
+        .forEach(function (e) { jobs.push({ entry: e, side: 'back' }); });
     });
-    var first = true;
-    (function nextPage(j) {
-      if (j >= jobs.length) {
+    var drawn = [];
+    function blank() {}
+    (function next(i) {
+      if (i >= jobs.length) {
         var name = (entries[0] && entries[0].meta && entries[0].meta.setName) || 'trading-cards';
-        doc.save(slug(name) + '.pdf');
+        EK.toPdf(drawn, {
+          paper: 'letter',
+          impose: { kind: 'nup', cols: cols, rows: rows },
+          margin: { top: my, bottom: my, left: mx, right: mx },
+          gutter: gap,
+          pageSize: { w: cardW, h: cardH },
+          filename: slug(name) + '.pdf'
+        });
         if (done) done();
         return;
       }
-      if (!first) doc.addPage();
-      first = false;
-      var job = jobs[j];
-      (function nextCard(i) {
-        if (i >= job.items.length) { nextPage(j + 1); return; }
-        var e = job.items[i];
-        if (!e) { nextCard(i + 1); return; }
-        renderCardCanvas(e, job.side, opts, function (canvas) {
-          var col = i % cols, row = Math.floor(i / cols);
-          doc.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG',
-            mx + col * (cardW + gap), my + row * (cardH + gap), cardW, cardH);
-          nextCard(i + 1);
-        });
-      })(0);
+      if (!jobs[i].entry) { drawn.push(blank); next(i + 1); return; }
+      renderCardCanvas(jobs[i].entry, jobs[i].side, opts, function (canvas) {
+        drawn.push(canvas.toDataURL('image/jpeg', 0.92));
+        next(i + 1);
+      });
     })(0);
   }
 
   /** Every card's front and back PNG in one zip. */
   function exportZip(entries, opts, done) {
-    if (!global.JSZip) { alert('The zip library did not load — try reloading the page.'); if (done) done(); return; }
-    var zip = new global.JSZip();
+    var EK = global.ExportKit;
+    if (!EK || !global.JSZip) { alert('The zip library did not load — try reloading the page.'); if (done) done(); return; }
+    var files = [];
+    function finish() { if (done) done(); }
     (function next(i) {
       if (i >= entries.length) {
-        zip.generateAsync({ type: 'blob' }).then(function (blob) {
-          var name = (entries[0] && entries[0].meta && entries[0].meta.setName) || 'trading-cards';
-          download(blob, slug(name) + '-cards.zip');
-          if (done) done();
-        });
+        var name = (entries[0] && entries[0].meta && entries[0].meta.setName) || 'trading-cards';
+        EK.toZip(files, { filename: slug(name) + '-cards.zip' }).then(finish, finish);
         return;
       }
       var e = entries[i];
       var base = ('00' + (i + 1)).slice(-2) + '-' + slug(e.name);
       renderCardCanvas(e, 'front', opts, function (front) {
         front.toBlob(function (fb) {
-          zip.file(base + '-front.png', fb);
+          files.push({ name: base + '-front.png', data: fb });
           renderCardCanvas(e, 'back', opts, function (back) {
             back.toBlob(function (bb) {
-              zip.file(base + '-back.png', bb);
+              files.push({ name: base + '-back.png', data: bb });
               next(i + 1);
             }, 'image/png');
           });

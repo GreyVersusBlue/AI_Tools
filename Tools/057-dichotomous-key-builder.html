@@ -104,6 +104,57 @@
   table.spec-table th { background: #eee; }
   .sheet-page { page-break-after: always; }
 
+  /* ---- the tree view: a second picture of the same couplets ----
+     Nested lists laid out left to right, so the structure is the markup (a
+     screen reader announces the level) and the lines are only decoration.
+     Screen colours are tokens; the copy in #printArea is paper and says so
+     below. */
+  .tree-summary { font-size: .86rem; margin: 0 0 .5rem; }
+  .tree-scroll { overflow-x: auto; padding: .3rem 0 .6rem; }
+  .tv, .tv ul { list-style: none; margin: 0; padding: 0; }
+  .tv { width: max-content; font-size: .84rem; line-height: 1.3; }
+  .tv li { display: flex; align-items: center; position: relative; }
+  .tv li > ul { margin-left: 1.4rem; position: relative; }
+  .tv li > ul > li { padding: .18rem 0 .18rem 1.4rem; }
+  .tv li > ul > li::before, .tv li > ul > li::after {
+    content: ""; position: absolute; left: 0; border-left: 2px solid var(--line-strong);
+  }
+  .tv li > ul > li::before { top: 0; bottom: 50%; border-bottom: 2px solid var(--line-strong); width: 1.4rem; }
+  .tv li > ul > li::after { top: 50%; bottom: 0; }
+  .tv li > ul > li:first-child::before { top: 50%; }
+  .tv li > ul > li:last-child::after { display: none; }
+  .tv li > ul > li:only-child::before { top: 0; }
+  .tv li > ul::before {
+    content: ""; position: absolute; left: -1.4rem; top: 50%; width: 1.4rem; border-top: 2px solid var(--line-strong);
+  }
+  .tv .tn {
+    border: 1px solid var(--line-strong); border-radius: 6px; background: var(--card);
+    padding: .25rem .5rem; max-width: 15rem; min-width: 5rem;
+  }
+  .tv .tn .cn { font-weight: 700; margin-right: .3rem; }
+  .tv .tn.start { background: var(--card-2); font-weight: 700; }
+  .tv .tn.result { background: var(--good-bg); border-color: var(--good-line); }
+  .tv .tn.result .rs { font-weight: 700; display: block; }
+  .tv .tn.bad { background: var(--err-bg); border-color: var(--err-line); }
+  .tv .tn.ref { border-style: dashed; color: var(--muted); }
+  .tv .tn .route { display: block; color: var(--muted); font-size: .74rem; }
+  .tv .tn .also { display: block; color: var(--muted); font-size: .74rem; }
+  .tree-notes { margin: .5rem 0 0; padding-left: 1.2rem; font-size: .84rem; }
+  details.tree-card > summary { cursor: pointer; font-size: 1.05rem; font-weight: 700; }
+  details.tree-card > summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  /* paper: fixed colours on purpose, like the specimen table */
+  #printArea .tree-fit { width: max-content; }
+  #printArea .tv { color: #000; font-size: 10pt; }
+  #printArea .tv .tn { background: #fff; border: 1px solid #555; color: #000; }
+  #printArea .tv .tn.result { background: #eee; }
+  #printArea .tv .tn.bad { background: #fff; border: 2px solid #000; }
+  #printArea .tv .tn.ref { border-style: dashed; color: #000; }
+  #printArea .tv .tn .route, #printArea .tv .tn .also { color: #333; }
+  #printArea .tv li > ul > li::before, #printArea .tv li > ul > li::after,
+  #printArea .tv li > ul::before { border-color: #555; }
+  #printArea .tree-note { font-size: 10pt; margin: .6rem 0 0; }
+
 </style>
 </head>
 <body>
@@ -147,6 +198,26 @@
   </div>
 
   <div class="card">
+    <details class="tree-card" id="treeCard" open>
+      <summary>Tree view</summary>
+      <p class="hint" style="color:var(--muted);font-size:.8rem;margin:.4rem 0 .6rem;">
+        The same couplets drawn as branches, read left to right. The numbered steps above stay the key itself;
+        this is the picture of it, with the route to every result written on the result.</p>
+      <p class="tree-summary" id="treeSummary"></p>
+      <div class="tree-scroll" id="treeWrap" tabindex="0" role="group" aria-label="Key tree, scrolls sideways"></div>
+      <ul class="tree-notes" id="treeNotes"></ul>
+      <div class="btnrow" style="margin-top:.6rem;">
+        <button type="button" class="secondary" id="printTreeBtn">Print tree overview (one page)</button>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;">
+      <input type="checkbox" id="includeTree" style="width:auto;margin:0;">
+      Add the tree overview page when printing the worksheet + key
+    </label>
+    <p class="hint" style="margin:.3rem 0 .8rem;">Off by default: the numbered key prints exactly as before. The tree goes on its own page after the worksheet.</p>
     <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;">
       <input type="checkbox" id="includeSpecimens" checked style="width:auto;margin:0;">
       Include classification exercise (specimen worksheet + answer key) when printing
@@ -164,7 +235,7 @@
 
   var els = {};
   ['keyTitle', 'stepsWrap', 'addStepBtn', 'printBtn', 'printArea', 'warningsCard', 'warningsList', 'includeSpecimens', 'traceWrap',
-   'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'shareBtn', 'shareNote', 'treeWrap', 'treeSummary', 'treeNotes', 'printTreeBtn', 'includeTree'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { title: '', steps: [] };
 
@@ -237,6 +308,7 @@
     }).join('');
     renderWarnings();
     renderTrace();
+    renderTree();
   }
 
   /* ---------- walk a specimen through the key ----------
@@ -346,6 +418,129 @@
     renderSteps();
   });
 
+  /* ---------- tree view ----------
+     No second model: buildTreeModel() walks the same state.steps the numbered
+     list and the specimen walk read. From step 1 every couplet becomes a node;
+     a couplet that leads to a step not yet drawn has that step's two couplets
+     under it, and one that leads to a step already drawn (a shared step, or a
+     loop back up) becomes a dashed pointer instead of drawing it twice, which
+     is also what keeps a loop from running forever. A step nothing leads to is
+     not drawn and is named in the notes. A result reached from two couplets is
+     two nodes, each saying where else it can be reached. */
+  function buildTreeModel() {
+    var placed = {};          // step id -> label of the couplet it hangs under ('' for step 1)
+    var resultAt = {};        // result text (lower case) -> couplet labels
+    var model = { children: [], steps: state.steps.length, couplets: 0, results: 0, longest: 0,
+                  deadEnds: [], loops: [], unreachable: [] };
+    function walk(step, route, ancestors) {
+      return ['a', 'b'].map(function (letter) {
+        var c = step[letter];
+        var label = stepNumber(step.id) + letter;
+        var r = route.concat(label);
+        var node = { label: label, text: c.text, route: r, kind: '', children: [] };
+        model.couplets++;
+        var next = c.leadsTo ? stepById(c.leadsTo) : null;
+        if (!c.leadsTo && c.result.trim()) {
+          node.kind = 'result'; node.result = c.result.trim();
+          model.results++; model.longest = Math.max(model.longest, r.length);
+          var k = node.result.toLowerCase();
+          (resultAt[k] = resultAt[k] || []).push(node);
+        } else if (!next) {
+          node.kind = 'dead'; model.deadEnds.push(label);
+        } else if (placed[next.id] !== undefined) {
+          node.kind = 'ref'; node.step = stepNumber(next.id);
+          node.loop = ancestors.indexOf(next.id) !== -1;
+          node.at = placed[next.id];
+          if (node.loop) model.loops.push(label);
+        } else {
+          placed[next.id] = label;
+          node.kind = 'step'; node.step = stepNumber(next.id);
+          node.children = walk(next, r, ancestors.concat(next.id));
+        }
+        return node;
+      });
+    }
+    if (state.steps.length) {
+      var first = state.steps[0];
+      placed[first.id] = '';
+      model.children = walk(first, [], [first.id]);
+    }
+    Object.keys(resultAt).forEach(function (k) {
+      var list = resultAt[k];
+      list.forEach(function (n) {
+        n.also = list.filter(function (o) { return o !== n; }).map(function (o) { return o.label; });
+      });
+    });
+    state.steps.forEach(function (st, i) { if (placed[st.id] === undefined) model.unreachable.push(i + 1); });
+    return model;
+  }
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  /* A space goes in front of every span: they are blocks on screen, but a
+     reader that flattens them would otherwise run "Big" into "Loops back". */
+  function span(cls, text) { var e = el('span', cls, text); return e; }
+  function add(box, cls, text) { box.appendChild(document.createTextNode(' ')); box.appendChild(span(cls, text)); }
+
+  function treeSummaryText(m) {
+    if (!m.steps) return 'No steps yet.';
+    return m.couplets + ' couplets in ' + (m.steps - m.unreachable.length) + ' of ' + m.steps + ' steps reach ' +
+      m.results + (m.results === 1 ? ' result' : ' results') +
+      (m.results ? '; the longest route is ' + m.longest + (m.longest === 1 ? ' couplet.' : ' couplets.') : '.');
+  }
+  function nodeList(nodes) {
+    var ul = el('ul'); ul.setAttribute('role', 'list');
+    nodes.forEach(function (n) { ul.appendChild(nodeItem(n)); });
+    return ul;
+  }
+  function nodeItem(n) {
+    var li = el('li'); li.setAttribute('role', 'listitem');
+    var box = el('div', 'tn ' + (n.kind === 'step' ? '' : n.kind === 'dead' ? 'bad' : n.kind));
+    box.appendChild(span('cn', n.label + '.'));
+    box.appendChild(document.createTextNode(' '));
+    box.appendChild(document.createTextNode(n.text.trim() || '(no description yet)'));
+    if (n.kind === 'result') {
+      add(box, 'rs', 'Result: ' + n.result);
+      add(box, 'route', 'Route: ' + n.route.join(' \u203A '));
+      if (n.also && n.also.length) add(box, 'also', 'Also reached at ' + n.also.join(', '));
+    } else if (n.kind === 'dead') {
+      add(box, 'rs', 'Dead end: leads to no step and names no result');
+    } else if (n.kind === 'ref') {
+      add(box, 'rs', n.loop
+        ? 'Loops back to step ' + n.step
+        : 'Continues at step ' + n.step + ', drawn under ' + (n.at || 'the start'));
+    }
+    li.appendChild(box);
+    if (n.children.length) li.appendChild(nodeList(n.children));
+    return li;
+  }
+  /** The tree as a list, ready to put anywhere. */
+  function buildTreeEl(m, title) {
+    var root = el('ul', 'tv'); root.setAttribute('role', 'list'); root.setAttribute('aria-label', 'Key tree');
+    var li = el('li'); li.setAttribute('role', 'listitem');
+    li.appendChild(el('div', 'tn start', title || 'Start'));
+    if (m.children.length) li.appendChild(nodeList(m.children));
+    root.appendChild(li);
+    return root;
+  }
+
+  function renderTree() {
+    var m = buildTreeModel();
+    els.treeSummary.textContent = treeSummaryText(m);
+    els.treeWrap.textContent = '';
+    if (m.steps) els.treeWrap.appendChild(buildTreeEl(m, state.title.trim() || 'Start'));
+    els.treeNotes.textContent = '';
+    function note(t) { els.treeNotes.appendChild(el('li', '', t)); }
+    if (m.unreachable.length) note('Not drawn, because nothing leads to ' + (m.unreachable.length === 1 ? 'it' : 'them') + ': step' +
+      (m.unreachable.length === 1 ? ' ' : 's ') + m.unreachable.join(', ') + '.');
+    if (m.deadEnds.length) note('Dead end' + (m.deadEnds.length === 1 ? '' : 's') + ' at ' + m.deadEnds.join(', ') + '.');
+    if (m.loops.length) note('Loop' + (m.loops.length === 1 ? '' : 's') + ' at ' + m.loops.join(', ') + '.');
+  }
+
   function computeWarnings() {
     var warnings = [];
     state.steps.forEach(function (step, i) {
@@ -417,7 +612,7 @@
     save(); renderSteps();
   });
 
-  els.keyTitle.addEventListener('input', function () { state.title = els.keyTitle.value; save(); });
+  els.keyTitle.addEventListener('input', function () { state.title = els.keyTitle.value; save(); renderTree(); });
 
   function leadsToLabel(choice) {
     if (choice.leadsTo) return 'Go to step ' + stepNumber(choice.leadsTo);
@@ -432,7 +627,35 @@
     return arr;
   }
 
-  els.printBtn.addEventListener('click', function () {
+  /** Draws the tree into #treePage and shrinks it to one sheet. The screen
+   *  rule hides #printArea, so it is shown off-screen for the one measurement
+   *  that tells how big the tree is at print size. The floor of .4 is where
+   *  10pt text stops being legible; a key too big for it runs onto a second
+   *  page rather than printing in ants. */
+  function fillTreePage(title) {
+    var m = buildTreeModel();
+    var page = document.getElementById('treePage');
+    page.appendChild(el('h1', 'print-title', title + ' \u2014 the key at a glance'));
+    var fit = el('div', 'tree-fit');
+    fit.appendChild(buildTreeEl(m, title));
+    page.appendChild(fit);
+    if (m.unreachable.length) {
+      page.appendChild(el('p', 'tree-note', 'Not drawn, because nothing leads to ' + (m.unreachable.length === 1 ? 'it' : 'them') +
+        ': step' + (m.unreachable.length === 1 ? ' ' : 's ') + m.unreachable.join(', ') + '.'));
+    }
+    var pa = els.printArea, was = pa.getAttribute('style');
+    pa.style.cssText = 'display:block;position:absolute;left:-10000px;top:0;width:700px;visibility:hidden';
+    var w = fit.offsetWidth, h = fit.offsetHeight, used = page.offsetHeight - h;
+    if (was == null) pa.removeAttribute('style'); else pa.setAttribute('style', was);
+    var scale = Math.max(0.4, Math.min(1, 700 / Math.max(w, 1), (900 - used) / Math.max(h, 1)));
+    fit.style.zoom = String(Math.round(scale * 1000) / 1000);
+    return scale;
+  }
+
+  els.printTreeBtn.addEventListener('click', function () { printSheets(true); });
+  els.printBtn.addEventListener('click', function () { printSheets(false); });
+
+  function printSheets(treeOnly) {
     if (!state.steps.length) { alert('Add at least one step first.'); return; }
     var title = state.title.trim() || 'Dichotomous Key';
     var coupletsHtml = state.steps.map(function (step, i) {
@@ -441,6 +664,12 @@
         '<div class="key-couplet"><span class="cnum">' + n + 'b.</span> ' + escapeHtml(step.b.text || '…') + ' &mdash; <em>' + leadsToLabel(step.b) + '</em></div>';
     }).join('');
 
+    if (treeOnly) {
+      els.printArea.innerHTML = '<div class="tree-page" id="treePage"></div>';
+      fillTreePage(title);
+      window.print();
+      return;
+    }
     var includeSpecimens = els.includeSpecimens.checked;
     var specimens = [];
     if (includeSpecimens) {
@@ -467,9 +696,11 @@
       '<div class="sheet-page"><h1 class="print-title">' + escapeHtml(title) + '</h1>' + coupletsHtml +
       (specimens.length ? '<h2 style="font-size:1.1rem;margin-top:1rem;">Classify these specimens using the key above</h2>' + specimenSection.replace('{{ROWS}}', worksheetRows) : '') +
       '</div>' +
+      (els.includeTree.checked ? '<div class="sheet-page tree-page" id="treePage"></div>' : '') +
       (specimens.length ? '<div><h1 class="print-title">Answer Key</h1>' + specimenSection.replace('{{ROWS}}', keyRows) + '</div>' : '');
+    if (els.includeTree.checked) fillTreePage(title);
     window.print();
-  });
+  }
 
   /* ---------- share a key: _shared/share.js (Path 6 P3) ----------
      One button opens the shared sheet — copy link, QR code (greyed out with

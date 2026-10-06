@@ -102,6 +102,12 @@ eq(PK.pageCss({ paper: 'A4', orientation: 'Landscape', margin: '10mm' }),
 eq(PK.pageCss({ margin: 0.25 }).margin, '0.25in', 'a numeric margin is inches');
 eq(PK.pageCss({ margin: 0 }).margin, '0in', 'a zero margin is allowed');
 eq(PK.pageCss({ margin: '1in; } body { display: none' }).margin, '0.5in', 'a margin that is not a length never reaches the stylesheet');
+// Two lengths: top and bottom, then the sides (016's label stock, since v242).
+eq(PK.pageCss({ margin: '0.5in 0.1875in' }).css, '@page { size: letter portrait; margin: 0.5in 0.1875in; }', 'two lengths are top-and-bottom, then the sides');
+eq(PK.pageCss({ margin: ' 0.5IN   .25in ' }).margin, '0.5in .25in', 'case and spacing between the two are tidied');
+eq(PK.pageCss({ margin: '0.5in 0.25in 1in' }).margin, '0.5in', 'three lengths are not a margin the kit can divide, so they are the default');
+eq(PK.pageCss({ margin: '0.5in auto' }).margin, '0.5in', 'and nor is a second value that is not a length');
+eq(PK.pageCss({ margin: '0.5in 0.25in; } body { display: none' }).margin, '0.5in', 'two lengths with something after them never reach the stylesheet');
 eq(PK.pageCss({ paper: 'tabloid' }).paper, 'letter', 'an unknown paper is Letter');
 eq(PK.setPage({ paper: 'legal' }).h, '14in', 'setPage without a document still resolves the page');
 

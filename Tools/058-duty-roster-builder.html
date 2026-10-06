@@ -87,6 +87,19 @@
   table.print-grid th, table.print-grid td { border: 1px solid #666; padding: .6rem .6rem; text-align: center; }
   table.print-grid th { background: #eee; }
   table.print-grid td:first-child, table.print-grid th:first-child { text-align: left; font-weight: 700; }
+  .print-week { margin: 0 0 1.2rem; break-inside: avoid; page-break-inside: avoid; }
+  .print-week h2 { font-size: 1.05rem; margin: 0 0 .3rem; }
+  #printArea.is-month table.print-grid { font-size: .85rem; }
+  #printArea.is-month table.print-grid th, #printArea.is-month table.print-grid td { padding: .35rem .5rem; }
+  #printArea.is-month .print-week { margin-bottom: .9rem; }
+
+  .week-bar { display: flex; flex-wrap: wrap; gap: .8rem 1.2rem; align-items: flex-end; margin-bottom: .5rem; }
+  .week-bar > div { min-width: 11rem; }
+  .week-bar select { margin-bottom: 0; }
+  .week-note { font-size: .84rem; margin: 0 0 .7rem; color: var(--ink); }
+  td.is-edited { background: var(--card-2); box-shadow: inset 4px 0 0 var(--accent); }
+  .edited-flag { display: block; font-size: .72rem; font-weight: 600; color: var(--muted); margin-top: .15rem; }
+  [hidden] { display: none !important; }
 
 </style>
 </head>
@@ -100,7 +113,8 @@
     </div>
     <div class="btnrow" style="margin-bottom:0;">
       <button type="button" class="secondary" id="shareBtn">&#128279; Share roster&hellip;</button>
-      <button class="secondary" id="printBtn">Print roster</button>
+      <button class="secondary" id="printBtn">Print this week</button>
+      <button class="secondary" id="printMonthBtn">Print the month</button>
     </div>
   </div>
   <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
@@ -129,9 +143,21 @@
   <div class="card">
     <div class="btnrow">
       <h2 style="margin:0;flex:1;">Weekly grid</h2>
-      <button class="secondary small" id="autoFillBtn">Auto-fill round robin</button>
+      <button class="secondary small" id="autoFillBtn">Auto-fill round robin (week 1)</button>
       <button class="danger small" id="clearGridBtn">Clear grid</button>
     </div>
+    <div class="week-bar">
+      <div>
+        <label for="weekPicker">Week shown</label>
+        <select id="weekPicker"></select>
+      </div>
+      <div>
+        <label for="weeksCount">Weeks in the rotation</label>
+        <select id="weeksCount"></select>
+      </div>
+      <button type="button" class="secondary small" id="resetWeekBtn" hidden>Reset this week to the rotation</button>
+    </div>
+    <p class="week-note" id="weekNote" aria-live="polite"></p>
     <div style="overflow-x:auto;">
       <table class="roster-grid" id="gridTable"></table>
     </div>
@@ -141,7 +167,7 @@
 <div id="printArea">
   <h1 class="print-title">Duty Roster</h1>
   <p class="print-sub" id="printSub"></p>
-  <table class="print-grid" id="printGrid"></table>
+  <div id="printGrid"></div>
 </div>
 
 <script>
@@ -152,10 +178,18 @@
 
   var els = {};
   ['rosterHubSelect', 'rosterHubLoadBtn', 'staffInput', 'saveStaffBtn', 'staffListWrap', 'dutiesWrap', 'addDutyBtn', 'gridTable', 'autoFillBtn', 'clearGridBtn',
-   'printBtn', 'printSub', 'printGrid',
+   'printBtn', 'printMonthBtn', 'printArea', 'printSub', 'printGrid', 'weekPicker', 'weeksCount', 'resetWeekBtn', 'weekNote',
    'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = { staff: [], duties: [], assignments: {}, staffSkip: {} };
+  var MAX_WEEKS = 6, DEFAULT_WEEKS = 4;
+  /* Week 1 is `assignments`, the grid this tool has always had, so a roster saved
+     before weeks existed is week 1 with nothing lost. Weeks 2 and up are not
+     stored: each is the week before it with every person moved down one duty
+     (the last duty wraps to the first), day by day, and then the cells the
+     teacher has edited by hand in that week, which live in `weekOverrides`
+     ({ '2': { '<dutyId>|<day>': name } }) and stay as typed. */
+  var state = { staff: [], duties: [], assignments: {}, staffSkip: {}, weeks: DEFAULT_WEEKS, weekOverrides: {} };
+  var viewWeek = 1;
 
   function uid() { return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -182,6 +216,8 @@
     ];
     if (!state.assignments) state.assignments = {};
     if (!state.staffSkip) state.staffSkip = {};
+    state.weeks = clampWeeks(state.weeks);
+    if (!state.weekOverrides || typeof state.weekOverrides !== 'object') state.weekOverrides = {};
     return had;
   }
   function save() {
@@ -189,6 +225,39 @@
   }
 
   function cellKey(dutyId, day) { return dutyId + '|' + day; }
+  function clampWeeks(n) {
+    n = parseInt(n, 10);
+    return n >= 1 && n <= MAX_WEEKS ? n : DEFAULT_WEEKS;
+  }
+  function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function overridesOf(week) { return state.weekOverrides[week] || {}; }
+
+  /** Week n before the teacher's edits: week n-1 (edits included) with each
+      person moved one duty down. Week 1 is the saved grid itself. */
+  function derivedGrid(n) {
+    if (n <= 1) return state.assignments;
+    var prev = weekGrid(n - 1), out = {}, count = state.duties.length;
+    state.duties.forEach(function (duty, i) {
+      var to = state.duties[(i + 1) % count];
+      DAYS.forEach(function (day) {
+        var from = prev[cellKey(duty.id, day)];
+        if (from) out[cellKey(to.id, day)] = from;
+      });
+    });
+    return out;
+  }
+  /** What week n shows and prints: its rotation, with its hand edits on top. */
+  function weekGrid(n) {
+    var base = derivedGrid(n);
+    if (n <= 1) return base;
+    var out = {}, edits = overridesOf(n);
+    Object.keys(base).forEach(function (k) { out[k] = base[k]; });
+    Object.keys(edits).forEach(function (k) {
+      if (edits[k]) out[k] = edits[k]; else delete out[k];
+    });
+    return out;
+  }
+  function editedCount(n) { return n > 1 ? Object.keys(overridesOf(n)).length : 0; }
 
   function renderDuties() {
     els.dutiesWrap.innerHTML = state.duties.map(function (d) {
@@ -211,6 +280,11 @@
     state.duties = state.duties.filter(function (d) { return d.id !== id; });
     Object.keys(state.assignments).forEach(function (key) {
       if (key.indexOf(id + '|') === 0) delete state.assignments[key];
+    });
+    Object.keys(state.weekOverrides).forEach(function (w) {
+      Object.keys(state.weekOverrides[w]).forEach(function (key) {
+        if (key.indexOf(id + '|') === 0) delete state.weekOverrides[w][key];
+      });
     });
     save(); renderDuties(); renderGrid(); renderStaffList();
   });
@@ -247,9 +321,10 @@
   function assignmentCounts() {
     var counts = {};
     state.staff.forEach(function (n) { counts[n] = 0; });
-    Object.keys(state.assignments).forEach(function (key) {
-      var name = state.assignments[key];
-      if (name && counts.hasOwnProperty(name)) counts[name]++;
+    var grid = weekGrid(viewWeek);
+    Object.keys(grid).forEach(function (key) {
+      var name = grid[key];
+      if (name && has(counts, name)) counts[name]++;
     });
     return counts;
   }
@@ -262,7 +337,7 @@
       var n = counts[name] || 0;
       return '<div class="staff-row' + (skipped ? ' is-skipped' : '') + '">' +
         '<span class="staff-name">' + escapeHtml(name) + '</span>' +
-        '<span class="staff-count">' + n + ' dut' + (n === 1 ? 'y' : 'ies') + ' this week</span>' +
+        '<span class="staff-count">' + n + ' dut' + (n === 1 ? 'y' : 'ies') + ' in week ' + viewWeek + '</span>' +
         '<label class="skip-label"><input type="checkbox" data-skip="' + escapeAttr(name) + '"' + (skipped ? ' checked' : '') + '> Skip this week</label>' +
         '</div>';
     }).join('');
@@ -274,16 +349,51 @@
     save(); renderStaffList();
   });
 
+  function fillOptions(select, count, selected, label) {
+    select.textContent = '';
+    for (var i = 1; i <= count; i++) {
+      var opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = label(i);
+      opt.selected = i === selected;
+      select.appendChild(opt);
+    }
+  }
+  function renderWeekControls() {
+    fillOptions(els.weekPicker, state.weeks, viewWeek, function (i) { return 'Week ' + i; });
+    fillOptions(els.weeksCount, MAX_WEEKS, state.weeks, function (i) { return i + (i === 1 ? ' week' : ' weeks'); });
+  }
+  function renderWeekNote() {
+    var n = editedCount(viewWeek), text;
+    if (viewWeek === 1) {
+      text = 'Week 1 is the grid you fill in. Weeks 2' + (state.weeks > 2 ? ' to ' + state.weeks : '') +
+        ' follow it, each moving everyone down one duty; a change here carries into them, except the cells you edited by hand there.';
+      if (state.weeks === 1) text = 'Week 1 is the grid you fill in. Add weeks in the rotation to derive the weeks after it.';
+    } else {
+      text = 'Week ' + viewWeek + ' follows week ' + (viewWeek - 1) + ' with everyone moved down one duty. ' +
+        (n ? n + (n === 1 ? ' cell was' : ' cells were') + ' edited by hand here and stay' + (n === 1 ? 's' : '') + ' as edited; the rest follow changes in earlier weeks, and a change here carries into the weeks after.' :
+          'Nothing here is edited by hand yet: change a cell and it stays as you set it.');
+    }
+    els.weekNote.textContent = text;
+    els.resetWeekBtn.hidden = !n;
+  }
+
   function renderGrid() {
+    var grid = weekGrid(viewWeek), edits = overridesOf(viewWeek);
+    renderWeekControls();
+    renderWeekNote();
     var head = '<tr><th>Duty</th>' + DAYS.map(function (d) { return '<th>' + d + '</th>'; }).join('') + '</tr>';
     var rows = state.duties.map(function (duty) {
       var cells = DAYS.map(function (day) {
         var key = cellKey(duty.id, day);
-        var current = state.assignments[key] || '';
+        var current = grid[key] || '';
+        var edited = viewWeek > 1 && has(edits, key);
         var options = '<option value="">&mdash;</option>' + state.staff.map(function (name) {
           return '<option value="' + escapeAttr(name) + '"' + (name === current ? ' selected' : '') + '>' + escapeHtml(name) + '</option>';
         }).join('');
-        return '<td><select data-duty="' + duty.id + '" data-day="' + day + '" aria-label="' + escapeAttr(duty.name) + ', ' + day + '">' + options + '</select></td>';
+        return '<td' + (edited ? ' class="is-edited"' : '') + '><select data-duty="' + duty.id + '" data-day="' + day + '" aria-label="' +
+          escapeAttr(duty.name) + ', ' + day + (viewWeek > 1 ? ', week ' + viewWeek : '') + (edited ? ', edited by hand' : '') + '">' + options + '</select>' +
+          (edited ? '<span class="edited-flag">&#9998; edited by hand</span>' : '') + '</td>';
       }).join('');
       return '<tr><td class="duty-name-cell">' + escapeHtml(duty.name) + '</td>' + cells + '</tr>';
     }).join('');
@@ -294,8 +404,32 @@
     var dutyId = ev.target.getAttribute('data-duty');
     var day = ev.target.getAttribute('data-day');
     if (!dutyId || !day) return;
-    state.assignments[cellKey(dutyId, day)] = ev.target.value;
-    save(); renderStaffList();
+    var key = cellKey(dutyId, day);
+    if (viewWeek === 1) {
+      state.assignments[key] = ev.target.value;
+    } else {
+      /* An edit that lands on what the rotation would give anyway is not an
+         edit: the cell goes back to following it. */
+      var wk = String(viewWeek), derived = derivedGrid(viewWeek)[key] || '';
+      var edits = state.weekOverrides[wk] || (state.weekOverrides[wk] = {});
+      if (ev.target.value === derived) delete edits[key]; else edits[key] = ev.target.value;
+      if (!Object.keys(edits).length) delete state.weekOverrides[wk];
+    }
+    save(); renderGrid(); renderStaffList();
+  });
+
+  els.weekPicker.addEventListener('change', function () {
+    viewWeek = clampWeeks(els.weekPicker.value);
+    renderGrid(); renderStaffList();
+  });
+  els.weeksCount.addEventListener('change', function () {
+    state.weeks = clampWeeks(els.weeksCount.value);
+    if (viewWeek > state.weeks) viewWeek = state.weeks;
+    save(); renderGrid(); renderStaffList();
+  });
+  els.resetWeekBtn.addEventListener('click', function () {
+    delete state.weekOverrides[String(viewWeek)];
+    save(); renderGrid(); renderStaffList();
   });
 
   els.autoFillBtn.addEventListener('click', function () {
@@ -308,27 +442,43 @@
         i++;
       });
     });
+    viewWeek = 1;
     save(); renderGrid(); renderStaffList();
   });
 
   els.clearGridBtn.addEventListener('click', function () {
-    if (!confirm('Clear every assignment in the grid?')) return;
+    if (!confirm('Clear every assignment in the grid, including the hand edits in later weeks?')) return;
     state.assignments = {};
+    state.weekOverrides = {};
     save(); renderGrid(); renderStaffList();
   });
 
-  els.printBtn.addEventListener('click', function () {
-    els.printSub.textContent = 'Printed ' + new Date().toLocaleDateString();
+  /** One table per week; a week's heading names it, so a month's sheets are
+      told apart on paper. */
+  function weekTable(n) {
+    var grid = weekGrid(n);
     var head = '<tr><th>Duty</th>' + DAYS.map(function (d) { return '<th>' + d + '</th>'; }).join('') + '</tr>';
     var rows = state.duties.map(function (duty) {
       var cells = DAYS.map(function (day) {
-        var name = state.assignments[cellKey(duty.id, day)] || '';
-        return '<td>' + escapeHtml(name) + '</td>';
+        return '<td>' + escapeHtml(grid[cellKey(duty.id, day)] || '') + '</td>';
       }).join('');
       return '<tr><td>' + escapeHtml(duty.name) + '</td>' + cells + '</tr>';
     }).join('');
-    els.printGrid.innerHTML = head + rows;
+    return '<section class="print-week"><h2>Week ' + n + '</h2><table class="print-grid">' + head + rows + '</table></section>';
+  }
+  function printWeeks(weeks, sub) {
+    els.printArea.classList.toggle('is-month', weeks.length > 1);
+    els.printSub.textContent = sub + ' \u00b7 Printed ' + new Date().toLocaleDateString();
+    els.printGrid.innerHTML = weeks.map(weekTable).join('');
     window.print();
+  }
+  els.printBtn.addEventListener('click', function () {
+    printWeeks([viewWeek], 'Week ' + viewWeek + ' of ' + state.weeks);
+  });
+  els.printMonthBtn.addEventListener('click', function () {
+    var all = [];
+    for (var i = 1; i <= state.weeks; i++) all.push(i);
+    printWeeks(all, state.weeks === 1 ? 'Week 1' : 'Weeks 1 to ' + state.weeks);
   });
 
   /* ---------- share a roster: _shared/share.js (Path 6 P3) ----------
@@ -369,8 +519,8 @@
     title: 'Share this roster',
     noun: 'this roster',
     filename: 'duty roster',
-    note: 'The duty locations, the staff list, who is skipped this week and every assignment in the grid travel together. Opening it replaces the roster on the receiving device, which is asked first.',
-    successMessage: 'Link copied. Opening it on another device offers this whole roster — duties, staff and the filled-in week — in place of whatever is there.',
+    note: 'The duty locations, the staff list, who is skipped this week, every assignment in week 1, the number of weeks and any cell edited by hand in a later week travel together. Opening it replaces the roster on the receiving device, which is asked first.',
+    successMessage: 'Link copied. Opening it on another device offers this whole roster — duties, staff and the filled-in rotation — in place of whatever is there.',
     onMessage: function (text, isError) { setShareNote(text, isError); }
   });
 
@@ -402,7 +552,21 @@
     var staffSkip = {};
     Object.keys(obj.staffSkip || {}).forEach(function (n) { if (seen[n] && obj.staffSkip[n]) staffSkip[n] = true; });
 
-    return { staff: uniqueStaff, duties: duties, assignments: assignments, staffSkip: staffSkip };
+    var weekOverrides = {};
+    var src = obj.weekOverrides && typeof obj.weekOverrides === 'object' ? obj.weekOverrides : {};
+    Object.keys(src).forEach(function (w) {
+      var wn = parseInt(w, 10);
+      if (!(wn >= 2 && wn <= MAX_WEEKS) || !src[w] || typeof src[w] !== 'object') return;
+      Object.keys(src[w]).forEach(function (key) {
+        var name = src[w][key];
+        if (known[key.split('|')[0]] && (name === '' || seen[name])) {
+          (weekOverrides[wn] || (weekOverrides[wn] = {}))[key] = name;
+        }
+      });
+    });
+
+    return { staff: uniqueStaff, duties: duties, assignments: assignments, staffSkip: staffSkip,
+             weeks: clampWeeks(obj.weeks), weekOverrides: weekOverrides };
   }
 
   function importSharedRoster(hadSaved) {

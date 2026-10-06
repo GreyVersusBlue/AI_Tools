@@ -9,6 +9,962 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P4 increment 7: 035's groups template on `ExportKit`, and P4 is finished (2026-10-06, AI-13, `CACHE_VERSION` v255)
+
+Audit entry AI-13, BACKLOG rank 6 (¼). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). Path 7 has
+one row left, P5 (rank 7, the print preview), not designed and not started.
+
+- **What shipped.** 035's "Download CSV template" (`groups-template.csv`) is `ExportKit.toCsv(rows)` handed to `ExportKit.download()`; the
+  page links `../_shared/export.js` (with `defer`, as every script in its head is). It was the last page writing a CSV by hand. Nothing else
+  in 035 changed: `parseCSV()` and `handleCsvImport()` are as they were.
+- **Old file against new.** The old page (from `git show HEAD:` through `page.route()`) against the new one for five settings (the default
+  eight mods, five hours, twelve periods, four blocks, one mod): the new file is the old file's bytes with a byte order mark in front, CRLF
+  where there was LF and a CRLF after the last row, and nothing else, in 5 of 5. Its type is `text/csv;charset=utf-8` (was `text/csv`). No
+  cell is typed and none starts `=` `+` `-` or `@` (a colour starts `#`), so the guard adds no apostrophe and the import needs no unguard.
+- **The round trip.** Each file imported into each page, four ways per setting (old into old, new into new, old into new, new into old):
+  the same two groups every time (Homeroom A, grade 9, 24 students, room 101 first; Homeroom B, grade 10, no headcount, 205 then 110). The
+  mark does no harm twice over: `FileReader.readAsText` drops it, and the header is `trim()`med, which drops it too.
+- **034's published file did not move.** `brBuildPublishedHTML()` for the Northwind fixture (`Tools/schedule/test/fixture-northwind.mjs`,
+  11 rooms, 4 groups), clock pinned, old page against new: 163,269 bytes both, the same string. The comparison was a scratch script and is
+  not in the tree; `Tools/schedule/test/` is the standing check on the publisher.
+- **Tests.** 035 has a row in `Tools/export/test/_csv-adopters.mjs` and `npm run test:csv-adopters` goes 150 to 172 assertions (no new
+  suite, no new port). The row is marked `fixed` (a file the tool writes whole: the suite asserts there is nothing to guard, where for the
+  others it asserts the fixture has something), seeds five "hours" so the header is seen to follow the setting, and has a `roundTrip` with
+  its own `seed` and `want` (the import reads a grade and a headcount as numbers). The suite's script-tag check takes `defer` now. Run on
+  the old page, 10 of 035's 23 assertions fail.
+- **063's STALE warning, same commit series.** `check:registry` warned that `gmlg_custom_banks_v1` is declared and written by nothing
+  (the 063 entry below). The registry already has the marking for that: `legacy: true`, "a key or prefix nothing writes any more", which
+  the guard skips in its STALE pass. The key is marked so and the warning is gone. `ToolRegistry.lookupKey()` does not read the flag, so
+  009 still names the key, backs it up and restores it as before. Nothing new was added to `_shared/`.
+- **Not verified.** No file was opened in a spreadsheet program (huginn has none). Full `npm test` was not run. Only Chromium imported the
+  file, so "the mark is dropped on import" is Chromium's `readAsText` plus the `trim()` read off the source.
+
+## 065 Lab Report Template Builder: pre-lab and post-lab packets from one template (2026-10-05, AI-31-065, `CACHE_VERSION` v254; main took v252 and v253 first)
+
+Audit entry AI-31, BACKLOG rank 102 (½). Per-tool row; the row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** A "Pre-lab and post-lab packets" card: one select per section (Objective, Hypothesis, Materials, Procedure, Data table,
+  Observations, Conclusion) says which packet it prints in, a live count ("Pre-lab packet: 4 sections. Post-lab packet: 3 sections."), and
+  buttons **Print pre-lab**, **Print post-lab** and **Print both packets**. The header's button is now **Print whole report** (same `#printBtn`),
+  and the preview has a Show select (whole report, pre-lab, post-lab, both) that the preview's Print follows. Each packet has its own title, a
+  tag ("Pre-lab packet") and its own Name/Date/Period line, so the second can be handed out on its own; "both" puts the second on a new page
+  (`break-before: page`, with the on-screen dashed divider dropped on paper). Section headings keep with what follows them and a data row is
+  not split (print rules, all print output).
+- **Defaults and storage.** Objective, hypothesis, materials and procedure are pre-lab; data, observations and conclusion are post-lab. The
+  tool has no safety section, so none is invented. The choice is one new optional field, `split`, on the saved template, written whole only when
+  a teacher changes a select. A template saved before (no `split`) is read through the defaults and **not rewritten by being opened**; a junk
+  value in `split` falls back per section. A starter ("Load template") or New template starts at the defaults. A share link carries `split`
+  (known values only); a link from before gets none made up.
+- **The whole report did not change.** `golden-whole-report.html` is the whole-report markup recorded from the page before this change, for a
+  made-up template; the suite compares the new page to it byte for byte, before and after the split is changed.
+- **Calls taken, so they can be reversed.** (1) A packet with no sections cannot be printed (button disabled; its preview says so); "both"
+  prints only the packets that have something. (2) No running header repeated on every page of a packet: a packet that runs to a second page
+  has the title on its first. A fixed header would collide with content in `#printArea`'s flow and `audit-print` has no way to check it; the
+  rows say "headers" and this takes it as a header per packet. (3) The "Scientific Method / Experiment Design Planner" question stays open: this
+  is a split of this tool's own template, not a planning-worksheet mode; rank 98 (059's hand-off) is untouched.
+- **Tests.** New `Tools/lab-report-template-builder/test/smoke-packet-split.mjs` (`npm run test:lab-report-packets`, port 8491, 64 assertions):
+  defaults, an old save unchanged byte for byte, the golden whole report, each packet's sections, tag, name line and title, moving sections,
+  save and reload, what each print button prints (`window.print` stubbed), computed page-break rules in print media, Chromium's PDF page count (1, 1,
+  2), empty packets in both directions, junk in `split`, share links with and without `split`, a new template, the keyboard, labels, axe, no
+  console errors. **37 breaks on purpose** in the page: 34 failed a named assertion first time; 1 (a select's label broken) made the suite
+  throw rather than fail an assertion; 2 survived (the "1 sections" plural, and the pre-lab button never disabled, since the suite only
+  emptied the post-lab packet) and each got an assertion and was broken again. Not every assertion has its own break (the Name-line pattern, the two
+  `isDisabled` positive checks and the axe scan have none).
+- **Bookkeeping.** `inline-sinks-baseline.json` 065: 6 to 5 (the three print handlers now share one `innerHTML` assignment, as the ratchet asks).
+- **Checked.** `test:a11y -- --only 065`, `audit-print --check --only 065`, `smoke-typed-columns`, `smoke-print-tail`, every `check:*`, `lint`,
+  `check:precache -- --base origin/main`, `check:adoption -- --check`. Not run: full `npm test`; nothing printed on paper or read with a real
+  screen reader; a PDF page count is Chromium's, not a printer's.
+
+## 063 Grammar Mad Libs Generator: named saved stories, each with its own word bank (2026-10-05, AI-31-063, `CACHE_VERSION` v253; main took v252 from AI-13 first)
+
+Audit entry AI-31, BACKLOG rank 101 (½). Per-tool row; the rank-101 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** A "Saved story" card above the template picker: a chooser, **+ New**, **Duplicate**, **Rename** and **Delete** (behind a
+  confirm that names the story and its bank), with a polite status line ("Opened…", "Deleted…"). The controls and wording follow 048
+  (chooser, + New, Duplicate, Rename, Delete, `prompt()` for names, `confirm()` for delete) and the storage shape follows 041 (a list, a
+  current pick, a name per save). A save is `{id, name, text, banks}`: the story and its word bank travel together. Typing in the story box or
+  the bank editor autosaves into the open save, as the one story always did; with no save yet, the first edit starts "My story".
+- **No new key.** The document lives in `gmlg_custom_story_v1`, in Store's envelope at **version 2**: `{list, currentId}`. `_shared/tool-registry.js`
+  therefore needed no change (it is `_shared/`, which a per-tool row may not touch), and Backup & Restore sees the same key. Version 0
+  (`{v: 1, text}`) and version 1 (the bare string) both migrate to one save called "My story", with the old bank map (`gmlg_custom_banks_v1`)
+  as its bank, so what a teacher had is the first save with nothing lost. A bank map and no story also becomes a save. A read rewrites nothing.
+  After the list exists the old bank key is never read again, and **nothing writes it any more**: `check:registry` now prints a STALE warning for it
+  (exit 0). It was left declared on purpose: it is what a backup made before this change restores. Dropping it from the registry is a `_shared/` edit, so it is left for the platform worker.
+- **Calls taken, so they can be reversed.** (1) **Word banks are per-story**, not global; the Open Question is closed that way (the row asked for a
+  text and its bank saved together). Cost: vocabulary shared by several stories is typed once per story, and Duplicate carries it. (2) **Delete may remove the last save**
+  (048 refuses at one; this row asked for a usable empty tool): the empty state is stored as an empty list, so it is remembered across a reload and
+  the legacy keys do not resurrect it. (3) **Opening a save previews it if it has a `{blank}`**, otherwise the chosen template stays. Boot still
+  previews the first template, as before. (4) Names are not unique (048 does not force it); saves are told apart by id. (5) A pending debounced edit is flushed
+  before any switch so it cannot land on the wrong save.
+- **There was no export or state link to keep working**: 063 has no share or JSON export, so "an export made before still opens" is vacuous. The JSON export row is separate.
+- **Tests.** New `Tools/grammar-mad-libs/test/smoke-saves.mjs` (`npm run test:mad-libs-saves`, port 8490, 134 assertions): the empty tool; every legacy shape;
+  junk in the new shape; New, switch, Duplicate (a deep copy), Rename (markup stays text), Delete (cancel, middle, first, last; reload); the fast-switch race for text and
+  bank; keyboard order. `smoke-storage.mjs` sections 2 and 3 were rewritten for the new on-disk shape (1 and 4 unchanged). **35 distinct breaks on purpose** in the page: 34 failed the suite
+  on a named assertion; 1 is equivalent (the migrate step skipping `normalizeDoc`, which `loadDoc` runs again). Four survived at first
+  (deleting the neighbour, an input event with no save, the editor not refreshing on a switch, a bank edit rewriting the old key) and each got an assertion and was re-broken. The first
+  full pass of 53 was stopped after 18 for time; the other 17 were a chosen subset, one per kind of mistake, so about 18 of the 53 written breaks were never run.
+- **Checked.** `test:a11y -- --only 063` (plus axe by hand with two saves in light and dark: only the page's existing moderate landmark notes), `audit-print --check --only 063`,
+  every `check:*`, `lint`, `check:precache -- --base origin/main`, `check:adoption -- --check`. **Not run:** full `npm test`; nothing printed on paper; no screen reader.
+
+## Path 7 P4, increment 6: 001, 006, 030 and 036 are `ExportKit.toXlsx`'s first adopters, and 001, 006 and 060's CSV goes through `toCsv` (2026-10-05, AI-13, `CACHE_VERSION` v252)
+
+Audit entry AI-13, rank 6. Sixth increment of P4. **The row stays, cut to a quarter: all that is left is 035's
+three-line template CSV, which was another worker's page.** P5 untouched; its Tier 2 bullet now says what a design
+has to settle.
+
+- **What moved.** 001 (range report) and 006 (rosters) each built one table, wrote it as a CSV by hand and as a
+  workbook with `XLSX.utils` and `XLSX.writeFile`; both hand the same rows to `ExportKit.toCsv` and
+  `ExportKit.toXlsx` now. 030's blank template and 036's `final_grades.xlsx` are one `toXlsx` call each. 060's CSV
+  moved the way the six in increment 5 did. Each page's `csvCell()`, Blob and anchor click are gone; each keeps its
+  own lazy load of SheetJS.
+- **The kit changed once:** a sheet takes `widths`, characters per column, because 036 sets them
+  (`export.test.mjs` 300 to 303).
+- **Old file against new** (the old page from `git show main:` through `page.route()`), one fixture per page
+  built from cells that break a file. CSV: 001 and 006 gained the apostrophes and a CRLF after the last row and
+  nothing else; 060 also gained the byte order mark and a quoted carriage return, and its type lost a trailing
+  `;`. Workbooks, read back with the vendored SheetJS, every cell compared by address, type and value: the same
+  but for cells that were an empty string, which are no cell now (2 of 47 on 001, 14 of 56 on 006, 4 of 60 on
+  036, none on 030); same sheet names but 006's "Period 3 4  Lab  A", now single-spaced; 036's twelve column
+  widths the same; the files are about half the size (deflated) and typed as a workbook.
+- **Calls made, each reversible.** (1) 006 turns a character Excel forbids in a sheet name into a space before
+  handing the name over, as it did, so "Period 3/4" is not read back as "Period 34"; the cap and the suffix for
+  two alike are the kit's. (2) 006 takes the apostrophe off on a file import only, not on a paste. (3) 060: a
+  result typed as a plain, finite number (`String(Number(v)) === v`) is handed over as a number, so `-3` on sit and reach
+  is not guarded; `+5`, `12.50`, `7:10` and words stay typed cells. (4) The row was rewritten, not deleted and
+  the list not renumbered, with four other sessions writing `BACKLOG.md` in the same batch and one file left.
+- **Tests.** New suite `Tools/export/test/smoke-sheet-adopters.mjs` (`npm run test:sheet-adopters`, port 8489,
+  104 assertions): each file's bytes, a CSV against a writer of its own, a workbook's every cell and no formula,
+  036's widths, and the round trips: 006's CSV and its two-sheet workbook back through the import dialog, 030's
+  template back through its importer. 060 is a row in `_csv-adopters.mjs` (`test:csv-adopters` 129 to 150). Five
+  breaks in one locked run, all caught: `widths` dropped, a number written as text, 006's unguard removed, 001's
+  CSV written raw, 060's number handed over as text.
+- **Found, not fixed (the same before).** 006's import dialog does not recognise its own export's header row and
+  picks the first column with a comma in it as the name column; the suite ticks the header box and picks Name, as
+  a teacher would have to. A cell with a line break does not survive 006's CSV import.
+- **Not verified.** No file was opened in Excel, Sheets or Numbers (huginn has none). One fixture per page, not a
+  sweep of states; 006's "this roster" scope and its live-editor rows were not in the comparison (the same code
+  path after the rows are gathered). The full `npm test` was not run; CI on a later wave PR is the check for the
+  rest, and CI's browser has not run the new suite.
+
+## Path 11 P2 designed, not built: extracting 035's engines (2026-10-05, AI-20, no `CACHE_VERSION`, no code)
+
+Audit entry AI-20, rank 22 (2+). A design pass: only `BACKLOG.md` changed (the P2 bullet under "Path 11", and a
+note on rank 22). **The row stays.** Nothing was built, no suite or browser ran. It sits on P1's design and
+changes none of it.
+
+- **What the design is.** Pure ES modules under `Tools/schedule-visualizer/` (`sv-model.js`, `sv-graph.js`,
+  `sv-routes.js`, `sv-congestion.js`, `sv-playback.js`, `sv-browser.js`, then `sv-viz.js`, `sv-editor.js`,
+  `sv-whatif.js`, `sv-schedules-tab.js`, and the stylesheet as `sv.css`), each taking its inputs and touching
+  neither `AppState` nor the DOM; the page's existing `type="module"` script puts each on `window` as a namespace,
+  the way it already does `SVRecovery`; and the page keeps one thin wrapper per old name in a `BRIDGE` section, so
+  the 388 bare-name call sites and the suites' `/* global */` lines do not change. The two shared `let`s of the
+  pathfinder become a cache with `invalidate()`. Eleven increments, each a PR with the suite green and a
+  `CACHE_VERSION` bump, with the page size after each; P1's published baseline must not change through any of them,
+  the publisher's own move included. Nine pure Node suites named with their cases, and a size ledger in the shape
+  of the inline-sinks ratchet. The folders fold last.
+- **The call this session made, cheap to reverse.** The bullet's own list of engines cannot reach its 300 KB
+  target: the markup is 141 KB and the stylesheet 158 KB, and the engines named are about 210 KB of a 662 KB
+  script. The design keeps the target and goes past the engines to the stylesheet, the visualize renderer, the
+  blueprint editor, the what-if lab and the groups tab, which are moved for the number and not purified. Question 1
+  of the bullet asks Devon whether to stop at increment 7 (about 620 KB), 9 (about 520 KB) or 11 (about 270 KB).
+- **What reading the code turned up.** The page is 968,296 bytes, not 936 KB, and has 436 top-level functions, not
+  428. Comments are 137 KB of it. `AppState` is read in 57 of the main script's 68 sections. `_blueprintDirty` is
+  written nine times in three sections. The tile-drawing helpers the editor renders with sit under the evacuation
+  door cards' banner. The heat-exclude check for a cell with no `floorId` reads the floor the editor is showing,
+  so one congestion number depends on the active tab; a room with no subject publishes as `ELA`; both are kept and
+  named. The main script makes no call at parse time, which is what lets a deferred module supply its names. The
+  legacy hard-coded map (22 KB) is reached only for a project with no geometry and holds a real building's room
+  numbers. 035 loads none of the three link-input files, so there is no state link to hold.
+- **Measured, with five pure-Node probes that were not kept:** bytes by block and by banner section, comments per
+  block, markup by panel, the dependency graph between sections (every top-level name a section uses from
+  another), and `AppState`/`document`/storage counts per section. The ladder's figures are those sections summed;
+  the bridge's bytes are an estimate.
+- **Not verified.** No module exists and nothing ran. That `.toString()` of a moved `export function` publishes
+  unchanged is read off the language, and P1's baseline suite is what would prove it. The three static sweeps
+  were read to confirm they follow a linked stylesheet; `select-suites.test.mjs` was read to find its
+  `Tools/schedule/` pin. No timing of A* was done.
+## Path 14 P3 designed, not built: the seating constraint solver (2026-10-05, AI-22, no `CACHE_VERSION`, no code)
+
+Audit entry AI-22, rank 35 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P3 bullet under
+"Path 14", its Status line, and a note on rank 35). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** One pure ES module beside `seating.mjs`, `Tools/seating-chart/seating-solve.mjs`:
+  `normalizeRules()` (today's pairs, pinned desks and a new "leave empty" desk flag become rules of one shape),
+  `zones()` (front, back, edge, or desks the teacher taps), `feasibility()` (seven named impossibilities before
+  any draw), `score()` (hard, unseated, soft, compared left to right), `solve()` (today's construction pass in
+  most-constrained-first order, then min-conflicts moves and swaps, restarts while a hard rule is broken, a
+  counted budget so a seed repeats on any machine, a 2 s stop behind it), and `blame()` (impossible, held by
+  which rules, or out of budget). Rule kinds: apart, together (a pod at three or more, `anyOf` for "needs a
+  partner"), zone, seat, empty, space; a Must / Want weight; a reason field that is the sensitive text. The
+  section's old `apart` and `together` lists stay written from the rules, so an older cached page keeps the pairs
+  and loses only what it never knew. `assignSeats()` and `checkConstraints()` stay as they are, with their suites.
+- **What reading and measuring turned up.** Make grid's snap gives the 8 × 5 room column pitches of 132 and 110
+  px, so 10 of 40 desks have a diagonal neighbour and two have six while the rest have four or fewer: a keep-apart
+  pair can sit corner to corner in one column and not the next. Today's pass builds a connected pod while the
+  checker wants each pair adjacent, which is why a star of five is reported broken 45% of the time and never
+  `forced`. On a grid today's pairs are not the problem: 0% broken for up to 40 random keep-apart pairs and 8
+  together pairs over 300 seeds each. One pass costs 0.5 ms here, 800 about 400 ms; three full sections are
+  about 100 KB in the key and 6 MB across the 60-deep undo stack. The flag is read by nothing; the note travels in
+  the share link and reaches 045; 005's ids are its own, so a removed-and-re-added name loses its pairs.
+- **What the measurements were.** Two pure-Node probes importing the real `seating.mjs`, 200 to 300 invented
+  rooms and classes a shape, a Ryzen 5 2400GE; not kept. The figures are in the design.
+- **Decided here, cheap to reverse.** A tool module, not `_shared/` (only 005 solves seats; Path 13 P2's
+  seating-aware grouping reads distances from `SeatingRead`). No draw-for-draw parity with today's loop (its stop
+  rule cannot survive scored soft rules); "no worse" by measured rates instead, and golden files for the new
+  solver. The budget counted, not timed. The solve synchronous on the page until the classroom laptop says
+  otherwise. `empty` a desk field, so P4's shared room owns it. `why` stripped from the share payload by policy.
+  The grid-snap finding recorded and not fixed, since it changes every existing chart's adjacency.
+- **Left to Devon, listed in the design and not answered:** where an accommodation reason lives (005's key or the
+  shared record); whether rules travel in a link and print on the sub export; default hardness of keep-apart and
+  put-together; fill the room or leave the fought-over students out when hard rules cannot hold; chains as pods or
+  as pairs; the two new soft rules and visible weights; reading 002's pairs; tapped desks as zones before P4; what
+  "front row" means in a pod room; how long a click may take; a student in two periods.
+- **Not verified.** No solver exists and nothing ran in a browser. The search is designed, not prototyped; the
+  250 ms target is one machine's figure and a five-times guess for the laptop. The rooms were grids. No real
+  chart was read.
+
+---
+
+## 060 Fitness & Skill Assessment Tracker: a report card per student (2026-10-05, AI-31-060, `CACHE_VERSION` v251; the commit messages say v249, which `main` took first)
+
+Audit entry AI-31, BACKLOG rank 99 (½). Per-tool row; the rank-99 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** A "Report cards" card under Results: a picker, **Print this student's report card** and **Print every report card (N)**.
+  A card is one page: the student's name, then every test event in the order the events are listed, with that student's result and the class
+  average beside it. Built into `#printArea` like the existing report, with `print-area.css`; each card after the first has a page break before
+  it (never after, so the last card leaves no blank sheet). Print-all follows the order on screen, the same rule the class table and the CSV use;
+  the picker follows it too and keeps the chosen student when the grid re-sorts.
+- **Nothing is stored.** The same three fields (`roster`, `events`, `results`) under `fsat_tracker_v1`; a save from before loads and prints as it did
+  (the suite checks the saved state byte for byte after printing, and that typing a result afterwards still writes only those three fields).
+  There is no date field in this tool: a "date" is the event, named for its attempt ("Mile Run — Fall"), so every event prints.
+- **Calls taken, so they can be reversed.** (1) **A card carries no min, max, rank or best.** The table's footer shows the class range; on a page
+  that goes home, a range is another child's score with the name off. The average is a count of scores, so a card names only its own student.
+  (2) **An average of fewer than two results is not printed.** It would hand the child's own number back as the class's; the cell says "Not enough
+  results to compare yet" (and "No results yet" for none). `computeStats()` gained an `n` the footer ignores. (3) **A blank is "No result", and
+  all events print even for a student with none**, plus a line saying nothing has been recorded. A cell of spaces counts as blank. (4) **No
+  events** prints the card with "There are no test events yet." (5) The Open Question "shared report-card pattern or per tool" is closed:
+  per tool, no shared pattern exists; lift `buildCardHtml()` into `print-kit` if a second tool wants one.
+- **Tests.** New `Tools/fitness-skill-assessment-tracker/test/smoke-report-cards.mjs` (`npm run test:fitness-report-cards`, port 8487, 82
+  assertions): a class of five (full, partial, a student alone on an event, a student with nothing, one with a spaces-only cell), of one and of
+  forty; no other name or score on any card (checked on every card, against a list of every other score); markup in a name, an event or a
+  result stays text; keyboard use of the picker and both buttons; the screen UI off the paper; Chromium's PDF page count (1, 5, 40, 1; no blank
+  sheet after the last). **67 breaks on purpose** in the page, in three rounds: 61 failed the suite on a named assertion; 3 (the picker's
+  label removed, the picker always disabled) made the suite throw rather than fail an assertion, which still stops it; 3 were equivalent and
+  survived (a rule putting the card back on paper in `@media print`, three ways): `print-area.css` already hides the whole `.wrap`, and
+  removing that stylesheet fails 10 assertions, so "the picker is not on the paper" is held by that. The first round left six alive
+  (heading `scope`, the "N report cards" status text, a new saved field, a blank-with-spaces cell and two more); each got an assertion and the
+  break was repeated. Not every assertion has a break of its own: "every event deleted" is a set-up step, and the Result-column check on one
+  student needed a second mutation (a card showing the previous student's results) to fail.
+- **Checked.** `test:a11y -- --only 060`, `audit-print --check --only 060`, every `check:*`, `lint`, `check:precache -- --base origin/main`
+  and `check:adoption -- --check` (see the run recorded in the audit entry). **Not run:** full `npm test`; nothing printed on paper;
+  no screen reader. **Not verified:** how 40 cards look on a real printer, and whether families want the average at all (call 1 and 2 are
+  conservative guesses).
+
+## 061 Fraction–Decimal–Percent Drill: improper fractions, mixed numbers and negative values (2026-10-05, AI-31-061, `CACHE_VERSION` v250; the commit messages say v249, which `main` took first)
+
+Audit entry AI-31, BACKLOG rank 100 (½). Per-tool row; the rank-100 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** Two controls, both off by default: **Values** (between 0 and 1 as before; above 1 as improper fractions, as mixed
+  numbers, or both kinds) and **Include negative values**. Above 1 means a whole part of 1 to 4 and a proper remainder over the row's
+  denominator, so values run from just over 1 to just under 5 and are never whole numbers; a negative sign goes on all three
+  cells ("-1 1/2", "-1.5", "-150%"). The fraction column's heading reads "Fraction / mixed number" when mixed numbers can appear.
+- **Decisions, mine, each cheap to reverse.** (1) A non-default range makes *only* values above 1, not a mix with 0-to-1 rows: a
+  teacher who wants both prints two sheets; the control stays one select. (2) With negatives on, each row is negative by a coin
+  flip, and the last row is made negative if none was, and the last row of a "both kinds" sheet is made the missing kind: a
+  four-row sheet always shows what its settings promise (the forced row takes no draw). (3) The minus sign is ASCII "-", so a cell
+  parses back with the same regex as any other number. (4) Whole part capped at 4 (percent at most 499.9%); the cap is `MAX_WHOLE`.
+- **The arithmetic is integer.** The old code rounded `num / den` through floats. Every decimal and percent now comes from one
+  integer, the value in thousandths rounded half up (`floor((2000n + d) / 2d)`); the decimal is that over 1000 and the percent is
+  it over 10, so the two cannot disagree (2.333 and 233.3%). Rounding half up on the magnitude means a tie rounds away from
+  zero: -1 1/16 is -1.063 and -106.3%. Repeating decimals are still shown rounded to three places with no bar; that is the
+  repeating-notation row's job, not this one's.
+- **The old sheets are unchanged, proved.** `golden-old-sheets.json` holds 180 sheets read off the page at ab678d3 (3
+  difficulties x 4 given forms x 3 row counts x 5 seeds, every row's three cells and which one is given, and the exact settings
+  string the page saves); the suite loads each from a locked seed and compares all of it. The settings string and a share link carry
+  `range` and `negatives` only when they are on, so a sheet that uses neither saves and shares byte for byte as before. A saved
+  or shared value that is not one of the four ranges, or a `negatives` that is not exactly `true`, is the default.
+  The old and new float rounding were also compared outside the suite over every proper fraction with a denominator from 2 to
+  100 (4,950 pairs, which holds every denominator the three difficulties use): no difference (a scratch script, not committed).
+- **Suite.** `test:fraction-decimal-percent` (`Tools/fraction-decimal-percent-drill-generator/test/smoke-value-range.mjs`, port
+  8488), 53 assertions. An oracle written in the suite parses each cell back into whole numbers (BigInt) and checks lowest terms, the
+  mixed-number shape, the range, the sign on all three cells, the rounding and the percent over 192 sheets and 5,760 rows; known rows
+  (a repeating decimal, a percent over 100 and below 0, a tie, a negative mixed number) are pinned to literals too, so a wrong oracle
+  cannot agree with a wrong page. Also: the promises on a four-row sheet over 150 seeds, the key against the worksheet and the print
+  tables, persistence and share links, nonsense in a saved state or link, and Chromium's PDF page counts.
+- **Broken on purpose 36 times**, every one failing the suite (rounding by truncation, a tie rounding down, the percent a power of ten
+  out, the sign missing from each of the three cells, a whole part of 0 or a cap of 5, a wrong mixed whole part, unreduced fractions
+  both ways, the forced negative and forced kind removed, 90% negatives, "both" always mixed, the default written to storage for each
+  field, a bad saved or shared range and a bad `negatives` accepted, the link dropping or bloating the options, an extra draw in the
+  old path, the heading, the printed key swapped for the blank sheet, paper cell padding made larger and smaller, a lost label,
+  a renamed label, a console error, a missing select option, Generate ignoring negatives, boot ignoring the saved range). Without a
+  mutant of their own: the key's given and blank cells against the worksheet, "thirty worksheet rows", the known-rows-drawn count, the
+  same seed giving the same sheet twice, and the no-offsite check. One mutant's anchor missed on the first pass (0 matches) and was
+  re-run with a corrected anchor, so it did not count until it failed.
+- **Paper.** A 12-row sheet with every option on is two pages of PDF (worksheet and key). At 30 rows the sheet is four pages, and was
+  before these options (the table is taller than a page); the options do not make it longer, and the layout was not changed because
+  that would change today's printed sheet. `audit-print --check --only 061` and `test:a11y -- --only 061`: see the Pending merge row.
+  Not checked on paper or with a real screen reader. A mixed number is plain text ("2 1/2"), not stacked.
+- **What went wrong.** `pkill -f` and `pgrep -f` with a pattern also match the shell that is running them (and the background
+  watcher that was waiting for the mutation run, whose own command line contained the pattern, so it never saw the run end): one
+  `pkill` ended the session's shell. Match on something that the command line of the watcher does not contain, or use a pid.
+
+## Path 7 P4, increment 5: six pages save their CSV through `ExportKit.toCsv` (003, 008, 018, 033, 068, 075), and the survey of every page that writes a CSV or a workbook (2026-10-05, AI-13, `CACHE_VERSION` v249)
+
+Audit entry AI-13, rank 6 (2+). Fifth increment of P4. **The row stays, rewritten: what is left is 001 and 006
+(a CSV and a workbook each), then 030 and 036.** P5 untouched.
+
+- **The survey.** "Twelve pages hand-roll a `text/csv` download" was a grep, and two of its twelve (017, 038) are
+  a file input's `accept`. Ten pages write a CSV by hand: 001, 003, 006, 008, 018, 033, 035, 060, 068, 075. Four
+  write a workbook with `XLSX.writeFile`: 001, 006, 030, 036 (032 and 038 only read one). The table, with what
+  each saves and what was wrong with its file, is in `BACKLOG.md`, Path 7 P4.
+- **What was wrong.** None of the ten guards a formula: a typed cell that starts `=`, `+`, `-` or `@` is run by
+  the spreadsheet, so 068's outcome "-left voicemail" and 018's note "-5 is wrong" open as `#NAME?`. Six had no
+  byte order mark (003, 008, 018, 033, 060, 075), so Excel reads `Zoë` as `ZoÃ«`. Four quote on `[",\n]` and
+  leave a bare carriage return unquoted (033, 060, 068, 075), which breaks the row in two.
+- **What shipped.** 003, 008, 018, 033, 068 and 075, worst file first and the brief's limit of six. Each links
+  `_shared/export.js`, loses its own cell quoting, Blob and anchor click, and calls `ExportKit.toCsv(rows)` and
+  `ExportKit.download(text, name, 'text/csv;charset=utf-8')` with the file name it always used. `_shared/export.js`
+  did not change. Two things the helper's guard asked of a page:
+  - **003 hands its scores over as numbers.** They were strings from `fmtNum()`, and the guard would have written
+    a negative score (a level worth -1) as `'-1`, text. `csvNum()` rounds the same way and returns the number; the
+    digits in the file are the same.
+  - **075 imports its own file, so Import takes the apostrophe off** (`unguardCsv()`: a leading `'` that stands
+    before `=`, `+`, `-` or `@`). An extension typed `+1 555 0100` comes back as typed. A name a person really
+    typed as `'-x` would lose its apostrophe on import; nobody has one.
+- **Old file against new** (the old page served from `git show main:` through `page.route()`, the clock pinned),
+  for each of the six on the a11y sweep's sample data and on cells built to break a CSV (a comma, a quote, a line
+  break, a bare carriage return, `=`, `+`, `-`, `@`, letters outside ASCII, an empty cell). The new file is,
+  byte for byte, the old file's cells written again with the named fixes and nothing else: the mark (068 had it),
+  a CRLF after the last row, the apostrophes (27 cells across the six hostile files, none in a sample file), and
+  the quoted carriage return (033, 068). The sample files differ from the old by the mark and the last CRLF only.
+  003's sample has no scores and saves no file, old or new. File names are unchanged; the type is
+  `text/csv;charset=utf-8` on all six (it was `text/csv` on three).
+- **The suite.** `Tools/export/test/smoke-csv-adopters.mjs` (`npm run test:csv-adopters`, port 8486, 129
+  assertions) with its table in `_csv-adopters.mjs`: for each page the bytes it saves are read (not
+  `harness.downloadText()`, whose `Blob.text()` drops the mark) and checked for the mark, the type and name,
+  strict RFC 4180 by a reader written in the suite, the apostrophe on every typed formula and on no number, each
+  negative number written as a number, every cell as typed, and the whole file against a writer of the suite's
+  own; 075's file goes back in through Import into an empty page and gives the directory it came from, and the
+  file saved after that is the same bytes.
+- **Broken on purpose, 5 breaks in one locked run:** in `_shared/export.js`, no byte order mark (6
+  assertions fail, one a page), no guard (18), LF line ends (47), a bare carriage return not quoted (4: 033 and
+  068, the two whose fixture has one); and in the pages, 003's scores as text again with 075's Import keeping
+  the apostrophe (8). All five caught; every file put back from a copy. The assertion added after the breaks
+  (the suite's page list equals the table's) was not broken.
+- **Decisions, mine, cheap to reverse.** (1) One shared suite, not assertions in each page's own suite: the six
+  checks are the same check, and four of the six pages have one suite about something else. Its `PAGES` list
+  names the six files so CI's selector (a page edit runs the suites whose source names it) picks it up. (2) The
+  guard is left on for every typed cell, including 075's room typed `-`: the file holds `'-`. `raw: true` per
+  column does not exist and was not added. (3) 068's and 018's file type lost a trailing `;`.
+- **Not done, not verified.** 001 and 006 were left: each writes a workbook from the same rows, and 006's import
+  reads both, so they are a PR each. 060 and 035 were not mine to touch in this batch. No file was opened in
+  Excel, Sheets or Numbers (huginn has none): that an apostrophe shows as text and not as an apostrophe is what
+  those programs document, not something seen here. Full `npm test` not run. The old 075 import of a *new* file
+  was not tried (the old page is gone once this lands).
+
+## Path 11 P1 designed, not built: the publisher drift guard (2026-10-05, AI-20, no `CACHE_VERSION`, no code)
+
+Audit entry AI-20, rank 21 (1). A design pass: only `BACKLOG.md` changed (the P1 bullet under "Path 11", and a
+note on rank 21). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** Two guards and a contract. `check-publisher.mjs`, browser-free, reads 035's
+  publisher off its syntax tree, assembles the script it would publish, and fails by code on a free name
+  (the Round 7 `escHtml` bug), a live-only leak, a handler or id with nothing behind it, a preamble that fell
+  behind the page, a sloppy-mode construct, or a change in one of the 21 pieces 034 still shares with the
+  publisher (a ledger, in the shape of the inline-sinks baseline). `smoke-publish-baseline.mjs` publishes
+  Northwind under a pinned clock and diffs it by section against a committed baseline with the fonts hashed
+  out, holds the static guard to the browser's bytes, and runs every published piece once. The contract,
+  `published-contract.mjs`, names every file published so far format 0 and the next format 1 (`format`,
+  `tool`, additive), with a validator that prints shapes and never values.
+- **What reading the code turned up.** The bullet's baseline was never committed. 35 pieces are published,
+  not 26. `brRenderMap()` references `brRenderMapLegacy`, which no published file has, behind a `typeof`
+  that is never true there. The page is sloppy-mode and the published script is strict. `publishedOn` is the
+  UTC date and the footnote beside it is local. `JSON.stringify(data)` goes into a `<script>` unescaped, so a
+  name holding `</script>` ends it. 034's banner has said "may be stale" since 2026-09-13. The publisher
+  keeps one group per room per mod and one room per teacher, dropping the rest silently.
+- **Measured, with one pure-Node probe that was not kept:** 28 listed functions, all resolving once; 21 of 35
+  pieces the same text in 034, 12 forked, 2 absent; 42 functions only 034 has; the published script reaches
+  outside the language for `document` alone, plus the dead name; in 034's data (counts only, no names read
+  out) 21 one-way `co` entries, 30 of 162 section-to-teacher links without a slot, 6 room-day-mod slots
+  holding two groups, and every hard rule of the contract holding.
+- **Not verified.** No line of the design has run. That `assemble()` matches the browser byte for byte is the
+  suite's first assertion, not a result. The stale banner and the `</script>` hole are read off the code.
+- **Seven questions are Devon's** and are listed, unanswered, at the end of the P1 bullet: whether 034 stays a
+  fork; 034's own stale schedule and whether the public copy should hold the real building's at all; which
+  social branding; what a reader does with newer data; the double-booked room; pre-R60 files; the 60 days.
+
+---
+
+## Path 13 P1 designed, not built: the grouping engine's API (2026-10-05, AI-21, no `CACHE_VERSION`, no code)
+
+Audit entry AI-21, rank 31 (1). A design pass: only `BACKLOG.md` changed (the P1 bullet under "Path 13", and a
+note on rank 31). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** One pure classic script, `_shared/grouping.js` (`Grouping`): `plan()` for the
+  arithmetic, `formGroups()` for the deal and the repair search, `rotateRoles()` and `coverRoles()`, and a memory
+  (`history.*`) keyed on indexes into one list of member keys, an id where the sidecar has one and the name where
+  it does not. It writes nothing; each adopter keeps its blob, gains one field, `groupHistory`, and goes on
+  writing its old fields from it. The engine is held to making today's groups for the same random numbers, and
+  every improvement is an option an adopter turns on in a commit of its own.
+- **What reading the code turned up, each worth knowing before the build.** The split exists six times, not
+  four (021's split button and 087's `cs-core.js` are the other two), and all six share one shuffle and deal to
+  the letter, which is what makes a parity suite possible. 002's "floaters" and "leftover group" rules turn
+  "groups of 4" for 30 students into eight groups of 3 with six floaters, or a ninth group of 6. 002's no-repeat
+  search undoes "Balanced" and "Homogeneous" from the second shuffle on (the gap between group averages goes
+  from 0.38 to about 1.7). Keep-together chains are left broken in 4.5% of shuffles for two chains of three. The
+  role picker repeats a student's last role in 1% to 6% of hand-outs where a better assignment never would. 022's
+  and 027's load functions rebuild the saved object field by field, so an older cached page drops a field it
+  does not know; that is why the old fields stay written. Path 13's "Why" still says 002 keeps two generations
+  of pair history; it has kept the year since 2026-08-13.
+- **What the measurements were.** One pure-Node probe, not kept: 002's and 022's functions and the role picker
+  copied out with a seeded generator, 200 to 2,000 invented classes a case. The figures are in the design.
+- **Decided here, cheap to reverse.** `_shared/grouping.js`, not `Tools/_engines/`. No shared memory key. 022's
+  keep-apart repair becomes 002's (no worse on the same 14,000 classes: 0.65% against 0.75% at the one shape
+  where either failed). The memory is recorded by a
+  call of its own, not inside `formGroups()`.
+- **Left to Devon, listed in the design and not answered:** skill on the shared record; one memory or one per
+  tool; whether 022 and 027 start remembering pairs; whether a reshuffled-away grouping counts; what "groups of
+  4" means for 30 students; whether every tool should round the same way; balance against no repeats;
+  keep-together as a promise or a preference; how long a departed student's history is kept; other things to
+  balance on.
+- **Not verified.** No engine exists and nothing ran in a browser. The parity claim rests on reading and on the
+  probe's ports; the build must copy the legacy functions from the files, not from the design. The older-cache
+  case was read, not reproduced.
+
+---
+
+## Path 7 P4, increment 4: 011 makes booklets and several pages to a sheet on `ExportKit` (Path 17 P4's controls), and 064's zip and PNG downloads are the file helpers' first adopter (2026-10-05, AI-13, `CACHE_VERSION` v248)
+
+Audit entry AI-13, rank 6 (2+). Fourth increment of P4. **The row stays, rewritten: what is left is CSV and XLSX
+for the tools that hold a table.** Rank 51 (Path 17 P4) stays too, cut to the paper check. P5 untouched.
+
+- **What shipped in 011.** A card, "4 · Booklet & Pages per Sheet (optional)" (the queue, portfolios and Generate
+  are cards 5, 6 and 7 now): the layout (off, booklet, several pages on each sheet), pages to a side (2, 4, 6, 9),
+  two-sided printing (one side, or two-sided with the edge the printer flips on; a booklet cannot be one-sided),
+  cut marks for pages per sheet, and creep for a booklet (0.29 pt a sheet, 20 lb bond). A note under the controls
+  says, before anything is made, how many pages land on how many sheets, how many booklet pages will be blank,
+  and what to choose in the print dialog. The message after Generate says the same from the real plan. Portfolio
+  mode lays each student's PDF out the same way; the target-size ladder works on the imposed file.
+- **How it is built, which is the recipe for the next tool that draws with jsPDF.** `buildAtQuality()` used to
+  create the document, add pages and draw on them inline in three places. It now has one `startPage(w, h)` and one
+  `draw(step)`. With no layout, `startPage` makes or adds the page and `draw` runs the step at once on the
+  millimetre document: the same jsPDF calls in the same order as before. With a layout, every page is one size,
+  each page's steps are recorded, the header and "Page N of M" are added to the page's own steps (so they travel
+  with it, and N counts the reader's pages, never the sheets), and `ExportKit.toPdf(pages, opts)` runs each
+  page's steps in its slot. `toPdf` works in points, so a step multiplies its lengths by `K` (72/25.4, or 1).
+  011 holds no page order of its own; the suite checks that.
+- **The default output is the old page's.** Old page (from `git show main:` through `page.route()`) against new,
+  layout off, in 120 states: 1, 2, 3, 4, 5, 8, 9 and 17 pictures, three orientations, five page sizes, with six
+  variants spread across them (contact sheets of 4 and 6, a title page, a header, captions, a rotation, page
+  numbers off, three qualities, and every sixth state loading a settings blob saved by the old page). The same
+  message, file name and file length; the same page boxes, inflated content streams and image streams; and the
+  same pixels on 600 of 600 pages (`pdftoppm -r 96 -gray`). The clock was pinned so the title page's date and the
+  file's own date agree. That comparison is a scratch script and is not in the suite; the suite keeps a cheaper
+  guard (a state saved before the layout existed generates without going near `toPdf`, a page a picture).
+- **Decisions, mine, each cheap to reverse.**
+  - *The layout is not saved; its details are.* The brief said to save the state the way 011 saves its other
+    options. 011 saves page size, orientation, quality, density and page numbers, and says in two comments why it
+    does not save the target size or the portfolio toggle: an option that changes what the download is must not
+    be found still on next week. A forgotten "Booklet" would hand every later PDF back in folding order. So
+    `image-to-pdf-settings` gains `impose: { nup, sides, marks, creep }` (a printer and a habit) and never the
+    layout. To reverse: add `kind` to that object and read it back in `loadSettingsPrefs`.
+  - *With a layout on, every page is one size.* "Match image size" prints on Letter and "Auto" orientation is
+    upright, as the contact sheet already does, and the note says so. A booklet page is half the chosen paper,
+    upright, whatever Orientation says.
+  - *The sheet for pages per sheet is turned whichever way shows the pages larger* (two upright Letter pages go on
+    a sideways sheet, four on an upright one), a quarter inch in and an eighth apart. On Legal, six upright pages
+    are larger on an upright sheet (2 x 3), which is why it is worked out and not a table.
+  - *A booklet page keeps its pictures a quarter inch inside its edges.* 011 draws a picture the full width of
+    its page. On a booklet that is the trim on one side and the fold on the other, where no printer prints and
+    where creep would push one page's picture onto its neighbour (a slot is not clipped).
+  - *The flip edge defaults to long*, which is what most drivers default to, and the note tells the teacher to
+    choose the same in the dialog.
+  - *Creep is offered, off by default.* It is the layer's linear model; nobody has measured it on a real booklet.
+- **What the layer gained, both asked for by 011.** `toPdf(…, { compress: true })` (011's files have always been
+  deflated; without it a booklet was larger than the plain PDF, and the target size works on the file's size).
+  The option is not named to jsPDF unless it is set, so 064's file does not change. And `flip` on a two-sided
+  N-up: `nUp(n, { duplex, turnBack })` sets each back side half a turn round as a whole, and `pdfPlan` turns the
+  backs exactly when `flipAxis(sheet orientation, flip)` is horizontal, so a sideways two-up sheet from a
+  printer that flips on the long edge still reads like a book. Before this only `booklet()` knew the edge.
+  `export.test.mjs` 285 to 300, among them a paper model over 4 papers, both orientations, both edges, 6 grids and
+  0 to 25 pages: every back upright for the reader, in reading order, behind a front cell.
+- **064's zip and PNG downloads (step 2 of the brief).** `exportZip()` collects `{ name, data }` and calls
+  `ExportKit.toZip(files, { filename })`; the module's `download()` is `ExportKit.download()`. Old module against
+  new for six decks (1, 2, 5, 13, 4 with one name repeated, 7): the same entries in the same order with the same
+  bytes inside and the same two PNG downloads; the zip is 20 to 24% smaller, because `toZip` deflates and the old
+  call stored. One change in behaviour: if the zip fails to build the button comes back (it stayed "Rendering…").
+- **The new suite.** `Tools/image-to-pdf/test/smoke-impose.mjs` (`npm run test:image-to-pdf-impose`, port 8483,
+  2,726 assertions, about 80 seconds). It reads the file with a reader written in it (inflates the page streams,
+  follows the matrices) and holds it to statements made in the suite, not to `ExportKit`'s answers: every page
+  carries "Page N of M", so the reader knows which page is in which slot and which way up; a booklet is folded
+  (outermost sheet first, the back as the reader sees it for the edge) and read front to back, for 1, 2, 3, 4,
+  5, 8, 9 and 17 pages, both edges, four papers, with and without creep; pages per sheet are read side by side
+  for 2, 4, 6 and 9 to a side, the same counts, one-sided and both edges, both page orientations, four papers;
+  through the paper every back slot is on a front slot; every picture and line of text is inside its own slot
+  and a quarter inch inside the sheet; cut marks are counted and placed; and with `pdftoppm` the raster is
+  sampled in every slot (each page's picture is its own grey with a black corner). Without `pdftoppm` it says so
+  and the structure stands alone. `smoke-pdf-export.mjs` (064) went 110 to 164: it reads the zip with the export
+  suites' own zip reader and matches every entry to the PNG the page renders.
+- **Broken on purpose.** The 011 work was broken 31 ways (27 in the page, 4 in `export.js`), one at a time,
+  and the suite run on each: 29 were caught at first. The two that were not: removing the booklet's inset above a
+  picture (the fixtures are wide, so none reached the top of its page) and dropping `compress` (only the Node
+  suite saw it). Both have an assertion now, a tall picture with no header or page number and the page streams'
+  filter, and all 31 fail the suite. My first assertion for the second was itself wrong and failed on the
+  unbroken page; it reads each page's own stream head now. 064's zip and PNG change was broken 7 ways, all
+  caught.
+- **What I got wrong on the way.** The suite's first run failed 212 times and the page was right: I had worked
+  a slot's top out as if the page were as tall as the sheet (true of a booklet on Letter, false of everything
+  else). `ExportKit.matrix()` draws a page at the top left of the sheet and carries it, so the sheet's height is
+  in the matrix's last term. And the title on a half-letter page wraps to two lines, so a test that looks for the
+  whole title as one string finds nothing.
+- **Not built, and not asked for:** a preset for a one-sided printer (every front, then every back; `ExportKit`
+  has `stack: 'fronts-first'`, but which way the stack goes back in the tray is a guess per printer),
+  signatures, right-to-left. 011 has no print path of its own (no print button, no print CSS): the PDF is its
+  output, so "the print path through `ExportKit`" in the brief had nothing to move.
+- **Not verified.** Nothing was printed, no booklet folded, no sheet through a duplex unit: the fold and the turn
+  are models, in this suite and in `export.test.mjs`. The comparison and the suite ran in huginn's Chromium only.
+  No layout depends on text width (the title's wrap changes which lines exist, not where a slot is), but CI's
+  font has not run it. A two-sided pages-per-sheet file can end in an empty page (the layer always emits the last
+  sheet's back). Real photos were not used: the fixtures are 60 x 40 px greys. Full `npm test` was not run.
+## 058 Duty Roster Builder: a multi-week rotation and a month on one print (2026-10-05, AI-31-058, `CACHE_VERSION` v247)
+
+Audit entry AI-31, BACKLOG rank 97 (½). Per-tool row; the rank-97 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** Week 1 is the grid the tool always had (`assignments`). Weeks 2 to N (1 to 6, default 4, the "Weeks in
+  the rotation" select) are not stored: each is the week before it, edits included, with every person moved down one duty
+  (rows in the order shown, the last duty wraps to the first, day by day, empty cells move too), plus the cells the teacher
+  edited by hand in that week (`weekOverrides`, `{ '2': { '<dutyId>|<day>': name } }`).
+- **Decision, mine, cheap to reverse: what an edit does.** A hand edit in week N is pinned: it stays as set when
+  an earlier week changes, and the weeks after N derive from it, so it travels on by the rotation. An edit in week 1 reaches
+  every later week except the cells pinned there. An edit that lands on what the rotation gives is not an edit (the pin is
+  released); "Reset this week to the rotation" releases the week's pins. Clear grid clears week 1 and all pins; auto-fill
+  fills week 1 only and leaves pins. The page says it in a line under the week picker, and a pinned cell reads "edited by
+  hand" in words and in its select's accessible name.
+- **Not touched, as instructed:** auto-fill's order (by day, then duty) and the open question about it.
+- **Saved state.** Same key `drb_roster_v1`; a roster saved earlier has no `weeks` or `weekOverrides` and loads as week 1
+  with four derived weeks after it, nothing rewritten. Share links carry both fields; an arrival drops a pin for a duty or
+  person that did not travel or a week outside 2 to 6, and one made before this change arrives as week 1.
+- **Print.** "Print this week" (the one shown) and "Print the month" build one headed table per week into `#printGrid`
+  (now a `div`; the page's inline-sink count stays 4 because the two new selects are filled with DOM calls, not
+  `innerHTML`). Each week is `break-inside: avoid`; the month sets its table text at .85rem. `audit-print --check --only 058`
+  pass (no finding on the sheet, in light or dark), and `test:a11y -- --only 058` is 4 passed, 0 failed. Not checked on paper.
+- **Suite.** `test:duty-roster` (`Tools/duty-roster-builder/test/smoke-rotation.mjs`, port 8485), 63 assertions.
+  Broken on purpose 39 times (42 runs: three mutants first survived, the staff count reading week 1, the month class and
+  the week-number filter on arrival, so three assertions were added and those three re-run and now fail). Not every
+  assertion was broken one by one: the print sheet's `display`, the weeks following one another down the page, "two weeks
+  printed" and the offsite check were not given a mutant of their own.
+- **What went wrong.** Two mutation loops started at once (one backgrounded by the tool's timeout, one by me) and fought over
+  the page file; the first was killed and the page restored from git before anything was committed from it. Mutants must
+  be run one process at a time.
+## 057 Dichotomous Key Builder: a tree view of the key, printable on one page (2026-10-05, AI-31-057, `CACHE_VERSION` v246)
+
+Audit entry AI-31, BACKLOG rank 96 (½). Only 057's page, its suite folder and bookkeeping changed.
+
+- **What shipped.** A "Tree view" card (a native `<details>`, open) draws the key left to right from
+  `state.steps`, the same data the numbered list and the specimen walk read; there is no second model. From step 1
+  every couplet is a box; a couplet leading to an undrawn step has that step's two couplets beside it. A step
+  reached twice, and a loop back up, become dashed pointers ("Continues at step 2, drawn under 1a", "Loops back to
+  step 1") so nothing is drawn twice and a loop cannot run forever. A dead end is a marked box. A step nothing leads
+  to is not drawn and is named under the tree. A result reached from two couplets is two boxes, each naming the
+  other ("Also reached at 2a"). The numbered list is unchanged and still the default.
+- **Print.** "Print tree overview (one page)" prints the tree alone; a checkbox (off by default, so the old
+  output is unchanged) adds it as its own page after the worksheet and before the answer key. It is shrunk with CSS
+  `zoom` to fit one sheet: the page measures the tree once at print size (showing `#printArea` off-screen for that
+  moment), floor 0.4, below which 10 pt text stops being legible and the tree runs onto a second page instead.
+  The printed copy uses fixed paper colours like the specimen table.
+- **Non-redundant and not silent for a screen reader.** The tree is real nested lists (each with its role stated,
+  since `list-style: none` drops list semantics in Safari), so the level is announced by the list rather than drawn;
+  a visible summary line says what the numbered list never does (couplets reached, results, longest route); every
+  result carries the route that reaches it; the sideways-scrolling box has a tab stop and a label. It is not hidden
+  from assistive technology and holds no picture. The cost is that a reader hears the couplet text twice if they
+  read both; the disclosure can be closed.
+- **Decisions, mine, cheap to reverse.** HTML nested lists, not SVG: SVG would have been a picture a reader must be
+  told about, and needs text measuring. Tree off by default in the print, since the row said "alongside" and the old
+  output should not change. The unreachable-step note prints (one line) because the numbered key prints that step.
+- **Checks.** New suite `Tools/dichotomous-key-builder/test/smoke-tree-view.mjs` (`test:dichotomous-key-tree`,
+  port 8484): small, deep, wide and lopsided keys, one with an unreachable step and a result reached twice, one
+  with a shared step, loop and dead ends; PDF page counts (Chromium, one sheet each, 3 and 2 for the full job); axe in
+  light and dark; a key saved before the view loads byte-identical. The trace suite still passes. `test:a11y --only 057`,
+  `audit-print --check --only 057` and every `check:*` guard, `lint`, `check:precache -- --base origin/main` pass.
+- **Breaks on purpose: 19, every one now failing the suite.** 16 were caught first time. Three survived and
+  each cost an assertion: the root list's own `role` (the check skipped the root), the space between a couplet's
+  label and its text (a flattening reader would read "2a.Has fur"), and "drawing the tree never writes to storage"
+  (my first mutation wrote a different key, so it proved nothing; the second rewrites the saved key with an extra
+  field and fails the byte-for-byte check). All three were re-run and fail. Suite 84 assertions.
+- **What did not work first.** My first run failed 20 assertions: 11 were my expectations (tree order is branch by
+  branch, not 1a 1b 2a 2b) and 8 PDF page counts were a leftover `emulateMedia('screen')` from my own screenshot
+  step, which makes `page.pdf()` print the screen. Reset media to `null`, not `'screen'`.
+- **Not verified.** Nothing has been printed on paper or read with a real screen reader; the full `npm test` was not run.
+
+## Path 3 P6, the year rollover: designed, not built (2026-10-05, AI-15, a design pass, no `CACHE_VERSION` change)
+
+Audit entry AI-15, rank 4 (1). A design pass under sprint mode: no code, no suite, nothing run in a browser.
+**The row stays**, with a line saying it is designed. The design is `BACKLOG.md`, Path 3, the P6 bullet. Only
+`BACKLOG.md` and this file changed.
+
+- **How it was read.** 009's and 006's rollovers, `roster.js`, `media-db.js` and the registry by hand; then four
+  read-only passes, each citing lines: the seven mixed keys at their write sites; every unmarked key of a tool
+  that reads a roster (and of 004, 029, 044, 045); IndexedDB, the media namespaces, Cache Storage and
+  sessionStorage; and all 54 student-marked entries for setup held inside them. Two Node probes outside the repo
+  loaded the registry to count it: 89 rows, 226 keys, 54 prefixes; 44 keys and 10 prefixes student-marked, over 27
+  tools. The claim checked by hand afterwards was the first one below.
+- **What 009's rollover does today, which nobody had written down.** (1) Its archive holds no IndexedDB
+  (`buildEnvelope(lastScanGroups, [])`), so Seating Chart's student photos are not in the file, and 005's boot
+  sweep deletes them once `seating-chart-v1` is gone. (2) It never reads the file it downloaded. (3) It deletes
+  whole keys and says "your templates and settings are untouched", while 21 student-marked keys or families hold
+  setup: room layouts, hall-pass destinations, behaviour tags, contract wording, lab roles, milestones,
+  accommodation types, a field trip's text. It also deletes every class name and 006's only copy of past years.
+  (4) 006 has a second rollover that keeps class names, files the year inside the browser and touches no other
+  tool. The 2026-09-23 audit asked whether a key held student data; it did not ask what else the key held.
+- **The mixed keys are more than seven.** The seven stand as described. Four more findings, five keys: `htcm:data:*` (064's cards made by
+  "Batch-add from roster"), `drb_roster_v1` and `sdb_directory_v1` (staff lists a class roster can fill), and
+  `gvb-exit-ticket:discussion` with `:categoryTally` (student work with no names; the 2026-09-23 reading called
+  `discussion` not student data, and that is now a question for Devon, not a correction). 038's datasets cannot be
+  separated by any rule: the design scans free text for this year's roster names and asks.
+- **Decisions the design takes, cheap to reverse because nothing is built.** Clear is per field for a key with
+  setup in it (a reducer per key, pure, idempotent), not a delete. The preview and the clear are one value, so
+  they cannot differ. Nothing is cleared until a file on disk has been read back and matches. A journal key
+  (`br_rollover_v1`, hashes only) makes an interrupted clear finishable or reversible. The module is
+  `Tools/backup-restore/br-rollover.js`, not a `_shared/` file, because only 009 runs it.
+- **Left to Devon, ten questions, listed in the bullet and not answered:** whether the browser keeps past rosters
+  at all; the default for free text; items still checked out in 016; anonymous student work; a rollover for some
+  classes only; an archive reader; staff lists filled from a roster; whether the file must be picked back where
+  there is no save picker; 030's scores and 064's cards; one name for the feature.
+- **Found on the way and not ranked:** 044's share link and JSON export carry `medicalAlerts`; 050's link carries
+  `roles[].students`; 030's export carries team names.
+- **Not verified.** Everything is from reading. No tool was loaded on a reduced key; `showSaveFilePicker`, the
+  service worker's client list and a real archive's size were not tried or measured. The unmarked keys of tools
+  that read no roster were not re-read. A design pass does not make the build eligible ahead of the questions.
+
+---
+
+## Path 9 P2 designed, not built: pacing that recomputes (2026-10-05, AI-18, no `CACHE_VERSION`, no code)
+
+Audit entry AI-18, rank 13 (2+). A design pass: only `BACKLOG.md` changed (the P2 bullet under "Path 9", and a
+note on rank 13). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** A new optional `cal.plan` (courses, each with lessons or typed units, pins, lost
+  dates, a baseline), one pure module `scv-plan.js` beside `scv-pacing.js`, a placer that never changes a count,
+  "behind" as a ledger that must sum, a migration keyed on what it finds, and dates stamped into the blob at
+  every save so that a change is told and a reader outside 032 needs no placer.
+- **What reading the code turned up, each worth knowing before the build.** The lesson sequence already
+  recomputes round a closure; what never flowed is `cal.units`. `units` and `abCycle` are not in `isValid()` or
+  `migrate()`. 010 and 045 read the day's typed note, never the placement. A blob with `__v: 3` fails the shipped
+  `isValid()`, the shipped `get()` then returns the seed, and the next save writes it over the calendar, which
+  is why the design adds a field and leaves `__v` at 2. The A/B cycle slides on a lost day (all 99 later letters
+  flip after one January closure in the seed). One bump on an alternating A/B list puts 143 of 144 later lessons
+  on the other letter's day.
+- **Measured, with two pure-Node probes that were not kept:** the seed's 184 school days (13 half, 92 A and 92
+  B, marking periods of 45, 46, 47, 46); fixed unit to pinned unit gives the same school days for all 40,528
+  start/end pairs that hold one; the example dates the design's tests name.
+- **Not verified.** No line of the design has run. The equivalence of the new placer with `placeLessons()` is
+  a test the design names, not a result. The "older page ignores `plan` and writes it back" claim is read off
+  the page's code (it saves `cal` whole), not seen in a browser. The page's `buildAbMap()` walks in local time
+  and the design's `abLetters()` in UTC; that they agree is a named test, not a finding.
+- **Ten questions are Devon's** and are listed, unanswered, at the end of the P2 bullet: half days, testing
+  days, whether A/B slides after a snow day, what "behind" is measured against, buffers, freezing the past, one
+  list or two for A/B, the dated units already saved, what carries into a new year, and the words.
+
+---
+
+## Path 7 P4, increment 3: 040 is `ExportKit`'s second adopter, `_shared/duplex-print.js` is deleted, and 016's print suite no longer depends on the machine's fonts (2026-10-05, AI-13, `CACHE_VERSION` v245)
+
+Audit entry AI-13, rank 6 (2+). Third increment of P4. **The row stays, rewritten.** P5 untouched, 011 not started.
+
+- **First, a red CI run, and it was the test.** AI_Tools#350 (P3 increment 12 and P4 increment 1) failed 18
+  assertions in `Tools/qr-code-generator/test/smoke-print.mjs`, all "plain grid, 2 across" with 3, 13 and 40
+  codes: first code 26 px in where 37 was wanted, 327 px wide for 316, picture 311 for 300. Green on huginn. The
+  plain grid is `width: fit-content`, so a code is as wide as the wider of its 300 px picture and its label set on
+  one line. The suite's second label is 49 characters. In huginn's Noto Sans it is narrower than the picture; in
+  CI's font it is wider, so every column grows to its share of the page (327) and the grid starts at 26. One
+  code passed in CI because its only label is "Station 1"; three and four across passed because they are at the
+  page's share already. Reproduced here by giving the page `DejaVu Sans`: the same three numbers. The page is
+  right (the old page did the same), so the suite changed: it measures the widest label as the machine sets it
+  and asserts the rule in every plain-grid state (picture or label, whichever is wider, up to the page's share;
+  centred; the sheet's 16 px kept each side), and keeps the old page's numbers where no font can matter: one
+  code, three and four across, and four new states whose labels are narrower than the picture or wider than
+  the page in any font. 1,235 assertions to 1,617, green in both fonts.
+- **What I got wrong in increment 12, which this is.** I compared the new page with the old one on one machine
+  and wrote the numbers down as the page's. A number that comes out of text width is the machine's. Any
+  old-against-new figure a suite keeps should come from a state where the fonts cannot change the layout, or be
+  written as the rule it follows.
+- **What shipped: 040 on `ExportKit`.** 040 has no PDF export; what it had of its own was the print
+  pagination, `paginate()` and `mirrorPageRows()` in `vfg-layout.js`, the originals that 064 copied and
+  `duplex-print.js` then shared. The page loads `_shared/export.js`; `ExportKit.paginate` cuts the flashcards,
+  the fold-over cards and the word-wall cards into pages, and one `backsOf()` calls `ExportKit.mirrorPage(page,
+  { cols, rows, orientation: 'portrait', flip: 'long' })` for the cards and for the alignment test.
+  `vfg-layout.js` has neither function and exports five names, not seven.
+- **Decision, mine, cheap to reverse: `mirrorPage`, not `mirrorPageRows`.** `mirrorPageRows` would have been a
+  one-word change and gives the same cells for an upright sheet turned on its long edge. `mirrorPage` is told
+  the orientation and the edge, so the page says which turn it prints for in one place (`DUPLEX`), and a
+  short-edge setting, if 040 ever gets one, is that object and nothing else. 040 always pads a page to a full
+  grid before it mirrors, which is what `mirrorPage` needs for either edge.
+- **One turn edge, not two.** The brief asked for both turn edges. 040 offers one: its only two-sided layout
+  says "flip along the long edge" and there is no setting. So the comparison is one edge by every layout.
+- **Old against new.** The old page and the old `vfg-layout.js`, from `git show` through `page.route()`,
+  against the new, in 160 states: seven grids from 1 x 1 to 4 x 6, both index-card presets, two fold-over grids,
+  four word-wall states, five alignment tests; lists of 1, 3, 10 with a long word, 17 and 40; light and dark. Same `.page`
+  count, same PDF page count (1,174 pages in all), Letter in every file, every card's left, top, width, height,
+  class and text (4,644 cards), and the same pixels on 1,174 of 1,174 pages (`pdftoppm -r 96 -gray`, md5 of
+  each page). Nothing moved, so there is nothing better or worse to report. 040's three older suites pass
+  unedited.
+- **New suite.** `Tools/vocab-flashcard-generator/test/smoke-imposition.mjs` (`npm run test:vocab-imposition`,
+  port 8482, 764 assertions). It counts the calls the page makes to `ExportKit` and reads their arguments, and
+  then checks the turn on the paper without the function under test: a definition must be in its word's row
+  and as far from the right edge of the page as the word is from the left. It needs no outside program.
+- **`_shared/duplex-print.js` is deleted.** No page loaded it after v244. What named it, and what happened to
+  each: `sw.js` (both tiers, removed), `eslint.config.js` (the `DuplexPrint` global, removed),
+  `Tools/export/test/export.test.mjs` (it loaded this file and `vfg-layout.js` to hold `ExportKit`'s two
+  functions to their answers over 2,000 random decks; it now carries the two functions itself, word for word,
+  and the sweep is unchanged), three comments in `_shared/export.js` and one in 064's page (reworded). Left as
+  they are: the 064 suite's assertions that the page does not load it and that `DuplexPrint` is undefined,
+  which still hold; `HISTORY.md` and the older `BACKLOG.md` handoffs, which are history. No guard list, suite
+  list or doc command named it.
+- **A claim in the backlog that was not true.** The P4 bullet said `printables-logic.test.mjs` covered 040's
+  `paginate` and `mirrorPageRows`. It never called either. The only test that called them was the three-way
+  sweep in `export.test.mjs`. The bullet says so now.
+- **Broken on purpose.** The adoption 16 ways, one at a time, the new suite run against each: the turn set to the
+  short edge, the sheet called landscape, the backs not mirrored, `export.js` not loaded, the alignment test cut
+  with the wrong rows, the alignment test with a mirror of its own, pages of `cols` cards, a correct private
+  mirror with `ExportKit` not asked, a private `paginate` everywhere, `mirrorPage` called without the turn,
+  `VocabLayout` exporting `paginate` again, the service worker naming the deleted file, the ESLint global back,
+  `ExportKit.flipAxis` answering the wrong axis, the deleted file put back, a page loading it again. All 16
+  fail the suite (1 to 397 assertions each). The two that print the right sheet from private code are caught only
+  by the call counts, which is what those are for. The 016 fix was broken three ways: the sheet's side inset
+  removed (100 failures) and the grid not centred (30) are caught; dropping `max-width: 100%` from the grid is
+  not, because `fit-content` already stops at the room there is, so that declaration does nothing.
+- **Not done.** 011's booklet and N-up (Path 17 P4): the first two parts left under the 45 minutes the brief
+  set for starting it, and it is a session of its own (controls, a suite). The CSV/XLSX sweep and P5 were out of
+  scope.
+- **Not verified.** Nothing was printed and no duplex printer turned a sheet. Full `npm test` was not run (over
+  45 minutes on huginn); CI on the wave PR is the check for the rest, and it runs site-wide because `_shared/`,
+  `sw.js`, `suites.json` and `package.json` changed. The 016 fix was checked against CI's numbers by changing
+  the font here, not by running CI's browser; CI has not run it yet. Whether CI has `pdftoppm` is still not
+  known, and nothing committed leans on it.
+
+## Path 7 P4, increment 2: `ExportKit`'s file helpers (`toCsv`, `toXlsx`, `toZip`, `download`, `filename`), and 064's Download PDF is the layer's first adopter (2026-10-05, AI-13, `CACHE_VERSION` v244)
+
+Audit entry AI-13, rank 6 (2+). Second increment of P4. **The row stays, rewritten.** P5 untouched.
+
+- **What shipped, part one.** The five helpers the P4 bullet designed, built to that design and written into it as
+  built. Nothing was vendored: `toXlsx` runs on the SheetJS already in `_shared/vendor/xlsx/`, `toZip` on the JSZip
+  in `_shared/vendor/jszip/`, and each throws an error naming that file when its library is not on the page.
+- **What the repo had before, which is why they exist.** Twelve tool pages build a `text/csv` download by hand, with
+  seven private `csvCell`/`csvEscape`/`toCsv` functions between them; 38 pages call `URL.createObjectURL`;
+  `share.js` and `htcm-export.js` each have a private `download()`. None of the CSV writers guards a formula. No
+  tool was moved to the new helpers in this increment.
+- **Decisions, mine, each cheap to reverse.** (1) *The formula guard reads the type, not the text.* The design says
+  a cell that starts with `=`, `+`, `-`, `@`, a tab or a return gets a leading apostrophe. A JS number is not a
+  typed cell: `-5` the number is written `-5`, `"-5"` the string `'-5`. Guarding numbers would turn every negative
+  score into text. (2) *`toXlsx` writes dates and numbers as themselves.* The design says "every typed value
+  written as a string cell, never a formula"; I read "typed" as a string. A string is a shared-string cell whatever
+  it starts with, a number a number cell, a boolean a boolean, a Date a serial with a date format, worked out from
+  the local wall clock so SheetJS's own time-zone handling is not in it. (3) *Shared strings (`bookSST`).*
+  SheetJS's default writes `t="str"`, the type of a formula's cached string; Excel reads it as text, but `t="s"`
+  is what a spreadsheet writes itself. (4) *"Names lose their path separators" is a hyphen, not nothing:*
+  `sets/period 1/roster.csv` becomes `sets-period 1-roster.csv`. (5) `toXlsx` returns a Blob (the design did not
+  say); `toZip` deflates. (6) `download()` returns the Blob it saved, which is what lets a suite read it.
+- **How it was tested.** CSV is read back by an RFC 4180 reader written in the suite: the cases by hand, then 600
+  random tables for three delimiters with `raw: true` (cell for cell), 600 guarded, and a sweep that no guarded
+  file holds a field a spreadsheet would run. ZIP and XLSX are read by `Tools/export/test/_zip-read.mjs`, a
+  reader that walks the central directory and the local headers, inflates with `node:zlib` and works out every
+  CRC-32 itself (its CRC is checked against the standard value for "123456789"); then by `unzip -t`/`-p` and by
+  Python's `zipfile` where the machine has them, and the run prints which it used. The workbook's sheet XML,
+  shared strings and number formats are read from the package, and the same file through SheetJS's reader as a
+  second opinion. `download()` is tested in Chromium with the anchor's click caught and the file read from its
+  blob URL (name, type, bytes), plus one real click read through `harness.downloadText()` and Playwright's
+  download event for the name. `export.test.mjs` 168 to 285, `smoke-export.mjs` 76 to 106.
+- **Broken on purpose: 54 ways, 53 caught.** The one that passed is not a gap: taking `mimeType` out of
+  `generateAsync` changes nothing, because `application/zip` is JSZip's default. Two more passed on the first run
+  and were test gaps, both closed: the default BOM (my mutation text did not match, see below) and `download()`
+  outside a page (the Node context had no `URL`, so the guard was never the line that threw).
+- **What I got wrong.** A literal U+FEFF went into `export.js` and both suites where `'\uFEFF'` was meant: an
+  invisible character in source that happened to work. Found only because a mutation could not find its text;
+  all three are escapes now. A fetched blob URL reports its type without parameters (`text/csv`, not
+  `text/csv;charset=utf-8`), so the suite reads the charset off the returned Blob. JSZip tells a typed array by its
+  own realm's constructor, so the Node suite makes its arrays inside the vm context; and JSZip needs `FileReader`
+  for a Blob, so Blob and canvas inputs are browser assertions only. A helper module under `test/` is an ORPHAN to
+  `check:tests` unless its name starts with `_`.
+- **What shipped, part two: 064.** `htcm-export.js`'s `exportPdf` no longer builds a jsPDF document or places an
+  image: it asks `ExportKit.paginate` for the pages, `mirrorPage` (portrait, long edge) for the cell behind each
+  front, and `toPdf` for the sheet (N-up 3 x 2 on letter, margins and gutter in points, each card a JPEG data URL at
+  the old 0.92, an empty cell a draw function that draws nothing). The page's print button takes `paginate` and
+  `mirrorPageRows` from `ExportKit`, and the page loads `export.js` in place of `duplex-print.js`.
+  `smoke-photo.mjs` had two lines renamed from `DuplexPrint` to `ExportKit`, no assertion loosened. PNG and ZIP
+  export are untouched and still use 064's own `download()`.
+- **Old against new.** The old export was saved first, for eight decks (1, 2, 5, 6, 7 and 13 cards, three themes,
+  some cards with a theme of their own), from files identical to `origin/main`. Read with a PDF reader that
+  follows the `q`/`cm`/`Do` operators: the same page counts, every page 612 x 792, the same JPEG bytes in the same
+  order on every page, every box within 1.2e-13 pt. Rasterised (`pdftoppm -r 96 -gray`): **6 of 24 pages
+  identical at first**, the whole middle column differing. The middle card's left edge is 216 pt, exactly 288 px,
+  and `layout()` had it at 215.99999999999997 with a scale of 0.9999999999999999, so the rasteriser started the
+  picture a pixel early. `layout()` now rounds its cells, slots and scales to a billionth of a point (two Node
+  assertions), and the rasters are identical on 24 of 24 pages. That is a change to increment 1's math, asked for
+  by its first adopter; all of increment 1's assertions pass on it.
+- **The new suite.** `Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs` (`npm run
+  test:trading-card-pdf`, port 8481, 110 assertions) presses the button for eight decks and reads the download: it
+  matches every image in the file, by SHA-1, to the JPEG the page renders for one card's front or back, so it knows
+  which card is in which cell, and checks the grid, the card size and that each back is behind its own front when
+  the sheet is turned. It needs no outside program. **Broken on purpose 13 ways** (backs not mirrored, the wrong
+  edge, backs first, the gap, the card width, the margin, five to a page, the file name, `done` never called, the
+  JPEG quality, every back the first card, `tidy` removed, `backIndex`'s axes swapped): all caught.
+- **Found and left.** `_shared/duplex-print.js` now has no page loading it (`check:adoption` prints it under
+  "Referenced by no tool page"): 040 never loaded it, it has its own copy in `vfg-layout.js`. The brief for this
+  increment said not to delete it, so it is still in the tree and both precache tiers; the row says it can go
+  without waiting for 040. The old export added each card to the document as it was drawn; the new one holds
+  every card's data URL until the last is drawn, so a very large deck holds more memory at once (not measured;
+  13 cards, 26 pictures, took 0.8 s against 0.6 s).
+- **Not verified.** No CSV or workbook was opened in Excel, Google Sheets, Numbers or LibreOffice: huginn has
+  none, so the apostrophe guard and the string cells are checked as bytes and XML, not as what a spreadsheet
+  shows. Nothing was printed and no sheet of cards went through a duplex unit. A deck with photos was not in the
+  old-against-new comparison (every card had `image: null`). `download()` was run in Chromium only; Safari's
+  handling of a blob URL on an anchor was not tried. Whether CI has `unzip` or Python is not known; the suite's own
+  reader runs either way. Full `npm test` was not run: the guards, and `run-suites.mjs --only`, one folder at a
+  time, for export, historical-trading-card-maker, service-worker and board-check. CI on the wave PR is the check
+  for the rest, and it runs site-wide because `_shared/`, `suites.json` and `package.json` changed.
+
+## Path 7 P4, increment 1: `_shared/export.js`, the imposition and pagination math and `toPdf` for drawn pages; no adopter (2026-10-05, AI-13, `CACHE_VERSION` v243)
+
+Audit entry AI-13, rank 6 (2+). First increment of P4, and the part the backlog marked for Fable. **The row stays,
+rewritten; nothing adopts the file yet.** P5 untouched.
+
+- **What shipped.** `_shared/export.js` publishes `ExportKit` (a classic script, like `print-kit.js`): `booklet()`
+  (saddle stitch, signatures, a duplex unit that turns on either edge, right-bound books), `nUp()`, `sheetCount()`,
+  `sides()`, `flipAxis()`, `backIndex()`, `mirrorPage()`, `paginate()` and `mirrorPageRows()`, `layout()`, `creep()`,
+  `cutMarks()`, `matrix()`, `paginateBlocks()`, `pdfPlan()` and `toPdf()`. It is in `PRECACHE_URLS` and `SHELL_URLS`
+  and is an ESLint global. `BACKLOG.md`'s P4 bullet has the surface, including the file helpers that are not built.
+- **The one idea the duplex answers hang on.** `flip` is the edge of the paper, and what matters is the axis the
+  sheet turns about as the reader sees it: vertical for portrait long-edge and landscape short-edge, horizontal for
+  the other two. `duplex-print.js` only ever knew the first case. A booklet sheet is landscape, so it folds right
+  on the short edge; told `flip: 'long'`, `booklet()` swaps the halves of each back and turns them 180 degrees.
+- **How it was tested, since no paper is involved.** The Node suite does not restate the formulas. It folds: sheets
+  nested, leaves read off outer to inner and back, and the result must be 1, 2, 3 with every page upright, for
+  every count from 0 to 97, seven signature sizes, both edges, both bindings. A card's back is checked by turning
+  its cell over about the axis and comparing rectangles, for every grid to 5 x 6. Flow pagination is 4,000 random
+  documents against invariants (nothing lost, nothing overlapping, nothing off a page unflagged, the plain case
+  equal to a first-fit reference). The browser suite builds eleven PDFs on the real jsPDF from grey canvases with
+  a black corner, reads the `cm` operators out of the file, rasterises with `pdftoppm` and samples every slot: the
+  grey says which page, the corner which way up. 167 and 76 assertions. **The module was then broken fifteen ways
+  on purpose** (halves swapped, rotation dropped, axes swapped, a matrix term dropped, the gap ignored, creep's
+  sign, the signature offset, and so on): every one failed a suite.
+- **What I got wrong, and what the suites found.** Three of my hand-worked expectations were wrong and the code
+  right: a letter page in a half-letter cell is 65%, not 50%; 80 + 30 does not fit on a page of 100; and one
+  `flipAxis` line asserted the opposite of the sentence beside it. The property test found two real bugs: a
+  splittable block of no height was placed below the foot of a full page, and a heading with `keepWithNext` was
+  left at the foot of a page when what followed could be cut, because the heading rule and the slice rule used
+  different smallest slices. Both fixed in the module; the assertions were not loosened. The browser suite's own
+  first reading of the file skipped empty content streams and misnumbered the sides after a blank one.
+- **Decision, mine, cheap to reverse: `toPdf` takes drawn pages, not a DOM element.** The backlog wrote
+  `toPdf(printArea, …)`. jsPDF's `html()` needs html2canvas, which is not vendored, and makes a picture of the
+  page. The print dialog already saves a kit sheet as a real PDF. `BACKLOG.md`'s P4 bullet has the reasoning and
+  the three steps that reverse it.
+- **Not done on purpose:** no adoption (064, 040, then deleting `duplex-print.js`), no `toCsv` / `toXlsx` /
+  `toZip` / `download`. `duplex-print.js` and `vfg-layout.js` are untouched; the Node suite loads all three and
+  holds `paginate` and `mirrorPageRows` to the same answers over 2,000 random decks, so the copies cannot drift
+  before they are deleted.
+- **Not verified.** Nothing was printed. No booklet was folded and no duplex unit turned a sheet: the fold and the
+  turn are models written from how paper behaves, and a model can share a mistake with the code. `pdftoppm` is on
+  huginn; whether CI's runner has it was not checked, and without it the browser suite checks structure only and
+  says so. `toPdf` was run on the vendored jsPDF 2.5.2 in Chromium only. An `<img>` source was not exercised in the
+  browser (canvas, data URL and draw function were). Creep was checked as arithmetic, not against a trimmed book.
+  Full `npm test` was not run: the guards, and `run-suites.mjs --only` for export, service-worker, board-check,
+  historical-trading-card-maker and vocab-flashcard-generator.
+
+## Path 7 P3, increment 12: 016 adopts the print kit, three sheets, label stock; the Avery sheets had been printing a third of an inch low; P3 is finished (2026-10-05, AI-13, `CACHE_VERSION` v242)
+
+Audit entry AI-13, old rank 6 (2+). Twelfth and last increment of P3: 016 (QR code generator, 2,948 lines before,
+two `@media print` blocks and an `@page` it rewrote for label stock), by the recipe. **All thirteen adopters print
+through the kit, the row is deleted, and ranks 7 to 169 are 6 to 168.** P4 and P5 untouched.
+
+- **What the notes had wrong about 016, read off its source by the session before and not run:** it has three
+  print buttons and three `window.print()` calls, not five; and its printed codes are `<img>`s holding a canvas's
+  PNG, not canvases, so the "canvas drawn on `beforeprint` prints as replayed commands" trap never reached it.
+  The single code and the grid are kept current by the tool's own render all the same.
+- **Three areas inside one `#printArea`, with their old ids** (`#print-area`, `#print-area-bulk`,
+  `#print-area-inventory`). Which one prints is the tab that is showing: the body's `mode-bulk` / `mode-scan`
+  classes, which the page already had. The buttons' body classes (`print-bulk`, `print-inventory`) still go on
+  before `print()` and come off on `afterprint`, and win over the mode. My call, against the recipe's "the body
+  classes become `.active`": 016's older suite (`smoke-checkout.mjs`) asserts those classes, and it passes
+  unedited, as does `smoke-roster.mjs`.
+- **Which kind each sheet is.** *One code:* not a card, a picture centred on a page; the area is `100vh` (042's
+  finding: viewport units, not `--pk-page-h`). *The plain grid:* a grid of the tool's own, `{ cols }` and no
+  `perPage`. The old CSS was `repeat(cols, 1fr)` with a 14 px gap and no height, one grid running on over the
+  pages; a code is a share of the width and as tall as its picture and label. *Label stock:* a grid of the tool's
+  own with `{ cols, perPage: cols * rows }`. A label is exact inches (`width` and `height` inline, as before) at
+  an exact pitch, and the tool means "30 to a sheet", which it says on screen. The label's size and gutters are
+  custom properties on the area that a two-class rule reads. *The inventory:* a table, now built with
+  `textContent` (inline-sinks 9 to 8).
+- **The kit changed once, and it is the smallest thing that would do:** `PrintKit.setPage({ margin })` takes two
+  lengths, top and bottom then the sides, because Avery 5160 is half an inch down and 3/16 in from the side and
+  5163 a quarter. `--pk-margin` stays the top and bottom, which is what the half and quarter sheets divide;
+  `--pk-margin-x` is set only when the sides differ, and `--pk-area-w` reads it. Three or four lengths, or a
+  second value that is not a length, fall back to the default as any bad margin does. `print-kit.test.mjs` 85 to
+  90, `smoke-print-kit.mjs` 81 to 87. The twelve earlier adopters pass one length and their suites are untouched.
+- **`syncPrintPage()`** replaces `setPrintPageMargin()` and the `<style id="print-page-style">`: it reads the same
+  two things the CSS does (the mode, a button's class) and calls `setPage()` with the stock's margins while a
+  stock grid is the sheet that prints, and half an inch otherwise. It runs when the tab changes, when a grid is
+  generated, on each button and on `afterprint`. So Ctrl+P on the Bulk tab prints labels on the labels' page.
+- **Old against new** (old page from `git show origin/main:` through `page.route()`; `page.pdf()` on Letter at
+  half an inch where the old sheet had no `@page`, on the old `@page` for stock; print media at the printable
+  width, 720, 780 or 768 px): 58 states, light and dark. One code at four sizes and with a caption; the plain
+  grid 2, 3 and 4 across with 1, 3, 13 and 40 codes, cut lines on some; Avery 5160 with 1, 3, 30, 31 and 65
+  labels and 5163 with 1, 3, 10, 11 and 25; the inventory with 1, 6 and 70 items. **In the 38 states that are not
+  label stock everything is the same:** every box's left, top, width and height, the pictures, the text, the
+  decoded QR text, the PDF page count and the raster (`pdftoppm -r 96 -gray`, every page byte for byte). All 710
+  printed codes decode to their line's text on both pages.
+- **Label stock is not the same, and that is the fix.** On the old page `<body>` kept its `padding: 2rem 1rem
+  4rem` in print, and the grid was its flex child. So the first sheet's labels started 32 px, a third of an inch,
+  below the die cut, its last row did not fit and ran on to the next sheet (27 labels on a sheet of 30, 8 on a
+  sheet of 10), and the second sheet started in the right place. 30 labels on Avery 5160 printed two pages. This
+  is not from P2's `display: none` rule: the padding was there before it. Now the sheet starts at the first
+  label's corner. Measured: the first label's top is 0 from the printable page; every label is its exact size at
+  its exact pitch; the raster of a sheet of three is the old raster moved up 32 px and otherwise identical; the
+  first ink on 5160 is at 117, 62 px on the 816 x 1056 px page on sheets one and two alike; 30 labels are one page,
+  31 two, 65 three. The left edge was right before, by the luck of `align-items: center` on an overflowing child.
+  My call that this is "better" and not a change of position to hold: the page's own comment and its hint on
+  screen both say the labels are aligned to the vendor's template.
+- **Kept on purpose:** the plain grid and the inventory still start `2rem` down on the first page and are as wide
+  as their content, centred (`width: fit-content; max-width: 100%; margin: 0 auto`), which is what being a centred
+  flex child of `<body>` made them. That is why their rasters are identical. Dropping the `2rem` is harmless and
+  would make page one start where page two does; left for whoever wants it, since it moves every held number.
+  `<body>`'s `4rem` at the bottom is gone with the editor; it changed no page count in the 38 states.
+- **Ctrl+P** printed the single-code area whatever tab was showing, with whatever picture the button last set, or
+  none. It prints the code on screen (the picture's `src` is set by `render()`, and removed when there is no
+  code, so no broken image), the generated grid on the Bulk tab, and the inventory on the Scan tab, rebuilt on
+  `beforeprint` so its "Printed" time is the print's. That sheet is text, so `beforeprint` is safe for it.
+- **The audit lost its only view of 016 and got it back.** `audit-print` used to see 016's empty single-code area
+  (an `<img>` with alt text and no picture) and count the page as measured. With no picture there is now nothing
+  on the paper until something is typed, and the audit said "Not measured: 1". `print-audit-prep.mjs` has two
+  entries for 016 (a link typed, a bulk grid generated): six states, no finding, not measured 0.
+- **Also removed:** the `@media print` block that put `--success` and `--warn` back to their light values (AI-35).
+  Nothing on any of the three sheets uses either token; the audit's DARK is 0 and `test:theme` passes.
+
+**Suite.** `Tools/qr-code-generator/test/smoke-print.mjs` (`npm run test:qr-code-print`, port 8479, 1,235
+assertions): the static shape of the page; each button's sheet, alone on the paper, light and dark; the single
+code's box; the plain grid's left, top, widths, picture sizes and gaps against the old page's numbers; every label
+on both stocks against its size and pitch; the stock table against the vendor's arithmetic (8.5 and 11 in); every
+code decoded; PDF page counts, exact for one code and for label stock, a property of the measured rows for the
+plain grid and the inventory, whose heights are text; typed markup as text; Ctrl+P tab by tab; the page rule
+following the sheet. `smoke-print-tail.mjs` has 016's inventory button now (it had the other two): 520.
+
+**Checks.** All 13 guards incl. `check:precache -- --base origin/main` and `check:adoption -- --check`; suites via
+`run-suites.mjs --only`, one folder at a time: qr-code-generator (its two older suites and the new one), print-kit (incl. `smoke-print-tail.mjs`, 520), the twelve earlier adopters (076 070 077 043 023 042 074 051 040 064 018 017), roster, share, theme, service-worker, board-check, all 19 folders exit 0 (35 minutes); a11y sweep `--only 016` clean;
+`audit-print --only 016 --check` no finding of any kind, matches the baseline.
+
+**Not verified.** Nothing was printed on paper and no sheet of Avery labels went through a printer: the positions
+are Chromium's PDF, rasterised. No phone scanned a printed code. Full `npm test` was not run although
+`_shared/print-kit.js` and `.css` changed: every page that links the kit was covered by the folders above, and
+CI's run is the check for the rest. Not compared against the old page: an overlay or logo on the code, colours
+other than black on white, error correction other than the default, a line that fails to build, more than 70
+items. The suite was not run against the old page as a whole; the label-stock numbers it asserts are the ones
+the old page failed in the measuring run.
+
+**Traps.** `getBoundingClientRect()` after a button below the fold has the scroll in it: add `scrollY` or the first
+box is 32 px off in some states and not others. A typed link re-renders on a debounce, so a suite waits for the
+picture's `src` to change, not for it to equal the canvas. `audit-print --check` passing does not mean the page
+was measured: read the "Not measured" line. The Tier 1 table was 169 rows, not the 170 the header said (a stray
+`| 1 |` row elsewhere matches the same grep); it is 168 now. The next free suite port is 8480.
+
 ## Path 7 P3, increment 11: 017 adopts the print kit, five print buttons, a default sheet with no `.active`; the kit's word-wrap broke the slips' write-in rules (2026-10-05, AI-13, `CACHE_VERSION` v241)
 
 Audit entry AI-13, rank 6 (2+). Eleventh increment of P3: the sixth of the card-grid tools after 074, 051, 040, 064
