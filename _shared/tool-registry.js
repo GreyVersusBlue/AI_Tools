@@ -578,6 +578,11 @@
          here. Teacher content, not student data. The bank's old key is read
          by that module on every load and never written or removed, so a
          backup made before v265 still restores. */
+      /* The page RECEIVES a link and makes none: `?questions=` carries
+         questions another tool sends for the bank (053's, through
+         _shared/handoffs.js). They are shown, and stored in the bank only
+         when the teacher says so; no key is written until then. */
+      share: { param: 'questions' },
       keys: [
         { k: 'gvb-question-bank' },
         { k: 'gvb-review-board-bank:entries', legacy: true },

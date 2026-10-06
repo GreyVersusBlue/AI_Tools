@@ -43,6 +43,13 @@
        signed a safety contract, and keep-apart pairs do not: those are
        records about a student, not a seating plan written to be put up.
 
+   053 -> 030 (a teacher's own trivia -> the question bank) IS an entry,
+   the last of the rollout (2026-10-06). Questions a teacher wrote to hand
+   round are what 053's sheet already shares, and nothing else travels. 030
+   does not file the arrival silently the way the others do: the bank is one
+   list every board draws on, so it shows what came and adds it only when
+   the teacher says so.
+
    This file is that list. A handoff is one declared entry:
 
        { from:  'cognates-false-friends-builder',   the sender's slug
@@ -51,6 +58,11 @@
          note:  'every pair becomes a card',        the row's small print
          sent:  'Sent … in a new tab.',             what the sheet says after
          transform: function (state) { … } }       sender's state -> receiver's payload
+
+   Two optional fields: `sheet: false` (no row in the share sheet; the page
+   calls Handoffs.open() from a control of its own), and `maxLink` with
+   `tooLong(built)`, the longest URL open() will open and the sentence it
+   returns instead (see open(); only 053 -> 030 sets it).
 
    The receiver's FILE and PARAMETER are not in the entry. They come from
    _shared/tool-registry.js: `file` is what every row has always carried, and
@@ -309,6 +321,50 @@
           history: []
         };
       }
+    },
+    {
+      from: 'cultural-trivia-card-generator',
+      to: 'review-game-board',
+      label: 'Send to Quiz / Review Game Board',
+      note: 'your questions, for its bank',
+      sent: 'Sent your questions to the Quiz / Review Game Board in a new tab. It shows what arrived and asks before adding anything to the question bank there; your trivia here does not change.',
+      /* 053's state for this entry is its own share payload, { questions:
+         [{ category, q, a }] }: the questions this teacher added, which is
+         all its sheet shares (the built-in thirty are already on 030, as a
+         read-only seed set). The result is the question bank's link shape
+         (_shared/question-bank.js, LINKS): `q` and `a` become `prompt` and
+         `answer`, and the category becomes the unit under the label a
+         teacher reads ("Hispanic World"), as the seed set has it. No id
+         travels: 053's ids are local to one browser, and the bank gives a
+         question its id when it is added. Which built-ins are hidden, the
+         filter and the card count stay on 053. */
+      transform: function (state) {
+        var labels = (global.CulturalTriviaBank && global.CulturalTriviaBank.CAT_LABELS) || {};
+        var questions = [];
+        (state && Array.isArray(state.questions) ? state.questions : []).forEach(function (row) {
+          var prompt = clip(row && row.q, 2000), answer = clip(row && row.a, 2000);
+          if (!prompt || !answer) return;
+          var key = String(row.category == null ? '' : row.category);
+          questions.push({
+            prompt: prompt, answer: answer,
+            unit: Object.prototype.hasOwnProperty.call(labels, key) ? String(labels[key]) : ''
+          });
+        });
+        return { v: 1, from: 'cultural-trivia-card-generator', name: 'Custom trivia', questions: questions };
+      },
+      /* A teacher's list has no upper size and every question of it goes in
+         the link, so this is the one entry with a bound. 7,500 characters is
+         under the 8 KB request line common web servers take; it was not
+         measured against the live host. The suites' own server refused a
+         150-question link (about 17,000 characters) with an error page,
+         which is how this was found. About fifty short questions fit. */
+      maxLink: 7500,
+      tooLong: function (built) {
+        var n = built.payload.questions.length;
+        return 'Your ' + n + ' questions make a link of ' + built.url.length.toLocaleString('en-US') +
+          ' characters, and a link longer than about 7,500 may not open. Nothing was sent. ' +
+          'About fifty short questions fit in one link; sending a longer list is not built yet.';
+      }
     }
   ];
 
@@ -354,6 +410,14 @@
   function open(entry, state, opts) {
     var built;
     try { built = url(entry, state, opts); } catch (e) { return { ok: false, url: null, message: e.message }; }
+    /* An entry may set `maxLink`, the longest URL it will open. A link is a
+       request line, and a web server refuses one past a few thousand
+       characters with an error page: a new tab showing that is worse than a
+       sentence here. `tooLong(built)` words the refusal. */
+    if (entry.maxLink && built.url.length > entry.maxLink) {
+      return { ok: false, url: null, tooLong: true,
+        message: typeof entry.tooLong === 'function' ? entry.tooLong(built) : 'That is too much to send in one link. Nothing was sent.' };
+    }
     var w = global.open(built.url, '_blank', 'noopener');
     if (!w) return { ok: false, url: built.url, message: 'Your browser blocked the new tab. Allow pop-ups for this page and try again.' };
     return { ok: true, url: built.url, message: entry.sent || ('Sent to ' + built.target.title + ' in a new tab.') };

@@ -80,6 +80,27 @@
        from before them reads `copiedFrom` as a field it does not know, and
        keeps it.
 
+   LINKS (Path 6 P4, 053 to 030)
+   A tool sends questions to the bank's page in a share link (_shared/
+   handoffs.js builds it; 030 reads `?questions=`). What rides the link:
+     { v: 1, from: '<the sender's slug>', name: '<a title>',
+       questions: [ { prompt, answer, unit?, standard?, difficulty?, tags?,
+                      choices?, points? }, ... ] }
+   A link is the one input here that the person at the keyboard did not type,
+   so fromLink() takes NOTHING from it but those eight fields, as text of a
+   bounded length (LINK below), and at most LINK.questions questions:
+     - an `id` is dropped. A link cannot name a question in the bank, so it
+       cannot write over one; what arrives is new, or is skipped because its
+       prompt and answer are already there (merge()'s rule for a question
+       with no id). So the same link opened twice adds nothing the second
+       time, and a question once added keeps the id the bank gave it;
+     - `media`, dates, `copiedFrom` and any field this file does not know
+       are dropped. The sender's slug is kept in `sharedFrom` when it is one
+       (lower case, digits and dashes);
+     - a question with no prompt or no answer is left out and counted.
+   fromLink() stores nothing. The page shows what arrived and stores it, with
+   importQuestions(), only when the teacher says so.
+
    Plain global script, not an ES module, for store.js's reason. */
 (function (global) {
   'use strict';
@@ -397,6 +418,63 @@
     return null;
   }
 
+  /* ---- links ----------------------------------------------------------- */
+
+  var LINK_VERSION = 1;
+  /* The most a link may bring: questions, and characters or items a field. */
+  var LINK = { questions: 500, prompt: 2000, answer: 2000, unit: 120, standard: 120, tag: 60, tags: 12, choice: 500, choices: 12, name: 200 };
+
+  function clipText(v, n) { return text(v).slice(0, n).trim(); }
+  function clipList(list, each, most) {
+    var out = [], seen = {};
+    list.forEach(function (s) {
+      s = s.slice(0, each).trim();
+      var k = '$' + s.toLowerCase();
+      if (!s || own(seen, k) || out.length >= most) return;
+      seen[k] = true;
+      out.push(s);
+    });
+    return out;
+  }
+
+  /** True when `payload` is shaped like what a link carries (see LINKS). */
+  function isLink(payload) {
+    return isRecord(payload) && Array.isArray(payload.questions);
+  }
+
+  /** The questions a link carries, made safe to show and to store (see LINKS
+      above). Returns { ok, name, from, questions, dropped, over }: `dropped`
+      counts rows with no prompt or no answer, `over` the questions past
+      LINK.questions, which are not read. Pure: nothing is stored. */
+  function fromLink(payload) {
+    var res = { ok: false, name: '', from: '', questions: [], dropped: 0, over: 0 };
+    if (!isLink(payload)) return res;
+    res.ok = true;
+    res.name = clipText(payload.name, LINK.name);
+    var from = typeof payload.from === 'string' ? payload.from.trim() : '';
+    res.from = /^[a-z0-9]+(-[a-z0-9]+)*$/.test(from) && from.length <= 80 ? from : '';
+    var rows = payload.questions;
+    res.over = Math.max(0, rows.length - LINK.questions);
+    for (var i = 0; i < rows.length && i < LINK.questions; i++) {
+      var raw = isRecord(rows[i]) ? rows[i] : {};
+      var q = {
+        prompt: clipText(own(raw, 'prompt') ? raw.prompt : raw.question, LINK.prompt),
+        answer: clipText(raw.answer, LINK.answer)
+      };
+      if (!q.prompt || !q.answer) { res.dropped++; continue; }
+      var choices = clipList(choiceList(raw.choices), LINK.choice, LINK.choices);
+      if (choices.length) q.choices = choices;
+      q.unit = clipText(raw.unit, LINK.unit);
+      q.standard = clipText(raw.standard, LINK.standard);
+      q.difficulty = difficulty(raw.difficulty);
+      q.tags = clipList(textList(raw.tags, /[,;]/), LINK.tag, LINK.tags);
+      q.points = Math.max(-1000000, Math.min(1000000, Math.round(points(raw.points))));
+      if (res.from) q.sharedFrom = res.from;
+      res.questions.push(q);
+    }
+    return res;
+  }
+
   /* ---- files ----------------------------------------------------------- */
 
   /** The bank as one JSON file: every question, every field. */
@@ -693,6 +771,10 @@
     setQuestions: setQuestions,
     findSeed: findSeed,
     copyFromSet: copyFromSet,
+    LINK_VERSION: LINK_VERSION,
+    LINK: LINK,
+    isLink: isLink,
+    fromLink: fromLink,
     toJSON: toJSON,
     toRows: toRows,
     fromRows: fromRows,
