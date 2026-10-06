@@ -25,7 +25,13 @@
        ('3x3'), each card a share of the page; or, for `{ cols: 3 }`, one grid
        of cards whose height is the tool's own, running on over the pages.
 
-     PrintKit.plan(), chunk(), cardPlan(), inkClass(), pageCss(), PAPERS, PRESETS
+     PrintKit.preview({ area, trigger, onPrint, title })
+       The print preview (Path 7 P5, v256): a modal dialog that shows the
+       sheet cut into pages at the size setPage() set, one page at a time,
+       with "Page 2 of 5", and opens no print dialog. See PREVIEW below.
+
+     PrintKit.plan(), chunk(), cardPlan(), inkClass(), pageCss(), PAPERS, PRESETS,
+     pageBox(), flipMedia(), pageOf(), countPages(), fitScale()
        The pure parts of the above, which is what the Node suite tests.
 
    THE ROSTER IS HANDED IN, NOT FETCHED. `roster` is an array of names, or of
@@ -70,6 +76,7 @@
   var STYLE_ID = 'pk-page-style';
 
   var header = { class: '', date: '', title: '' };
+  var current = null;     // the page setPage() last wrote; the preview draws it
 
   function text(v) { return v === null || v === undefined ? '' : String(v).trim(); }
 
@@ -105,7 +112,7 @@
   function setPage(opts) {
     var page = pageCss(opts);
     var doc = global.document;
-    if (!doc) return page;
+    if (!doc) { current = page; return page; }
     var el = doc.getElementById(STYLE_ID);
     if (!el) {
       el = doc.createElement('style');
@@ -113,6 +120,7 @@
       doc.head.appendChild(el);
     }
     el.textContent = page.css;
+    current = page;
     var root = doc.documentElement.style;
     root.setProperty('--pk-page-w', page.w);
     root.setProperty('--pk-page-h', page.h);
@@ -315,6 +323,355 @@
     return layout.pages;
   }
 
+  /* ---- PREVIEW (Path 7 P5) ------------------------------------------------
+
+     WHERE THE BREAKS COME FROM. No browser reports where it will break a
+     page, so the preview does not work them out: it has the browser's own
+     fragmentation do it. A copy of the sheet goes into an <iframe> whose
+     <body> is a multi-column box, each column the printable page (the paper
+     less the @page margin), so the engine that breaks pages in print breaks
+     columns here, with `break-inside: avoid`, grid rows and line boxes handled
+     as it handles them on paper. Measured against Chromium's PDF on 043, 074,
+     051 and 042 (2026-10-06, BACKLOG.md Path 7 P5 has the table): the same
+     page count in every state. A walk over the laid-out boxes that cut them
+     by height was tried beside it and was wrong where a margin or a grid gap
+     meets a break, which the engine drops and a measurement cannot see.
+
+     HOW THE PRINT RULES APPLY ON SCREEN. The frame links the page's own style
+     sheets and copies its <style> elements, then rewrites every media query
+     in the frame's copy (flipMedia): `print` becomes `all`, `screen` never
+     matches. Nothing in the page itself is touched, which is why the printed
+     output cannot change.
+
+     WHAT THE FRAME CHANGES, because columns are not pages: a forced
+     `break-after/before: page` becomes `column`, `break-inside: avoid-page`
+     becomes `avoid`, a <thead> is repeated by hand at the top of each page its
+     table runs on to (print does that; columns do not), and the sheet is
+     `position: static` at the top of a <body> with no margin. A <canvas> is
+     redrawn from the live one, since a clone comes out empty.
+
+     KNOWN DIFFERENCES FROM PAPER. A fill the print dialog drops unless
+     "background graphics" is ticked is shown. A card taller than a page is
+     sliced at a slightly different line. A page whose @page rule was not
+     written by setPage() is previewed as the last page setPage() wrote, or
+     Letter. Only Chromium was measured. */
+
+  var UNIT_PX = { 'in': 96, mm: 96 / 25.4, cm: 96 / 2.54, pt: 96 / 72, px: 1 };
+  var PREVIEW_GAP = 400;  // px between columns: far more than any sheet overflows sideways
+  var ROOT_ATTR = 'data-pk-preview-root';
+  var openPreview = null;
+
+  function lenPx(len) {
+    var m = /^(\d*\.?\d+)(in|mm|cm|pt|px)$/.exec(text(len).toLowerCase());
+    return m ? parseFloat(m[1]) * UNIT_PX[m[2]] : NaN;
+  }
+
+  /** A page in CSS px: the paper (w, h), its margins (top, side) and the
+      printable box (areaW, areaH). Takes what setPage() takes. Pure. */
+  function pageBox(opts) {
+    var page = pageCss(opts);
+    var sides = page.margin.split(' ');
+    var top = lenPx(sides[0]), side = lenPx(sides[1] || sides[0]);
+    var w = lenPx(page.w), h = lenPx(page.h);
+    return {
+      paper: page.paper, orientation: page.orientation, w: w, h: h, top: top, side: side,
+      areaW: Math.max(1, w - 2 * side), areaH: Math.max(1, h - 2 * top)
+    };
+  }
+
+  /** A media query list as the preview applies it, so that what matches on
+      paper matches in the frame: `print` reads `all`, a `screen` query is
+      dropped, and a list with nothing left is `not all`. Pure. */
+  function flipMedia(mediaText) {
+    var kept = text(mediaText).toLowerCase().split(',').map(function (q) { return q.trim(); }).filter(Boolean)
+      .map(function (q) {
+        if (/^not\s+print\b/.test(q)) return '';
+        if (/^not\s+screen\b/.test(q)) return 'all';
+        if (/^(only\s+)?screen\b/.test(q)) return '';
+        return q.replace(/^(only\s+)?print\b/, 'all');
+      }).filter(Boolean);
+    if (!text(mediaText)) return 'all';
+    return kept.length ? kept.join(', ') : 'not all';
+  }
+
+  /** The page (from 0) a box starting `left` px into the frame is on. Pure. */
+  function pageOf(left, pitch) {
+    var n = Math.floor((Number(left) + 0.5) / pitch);
+    return n > 0 ? n : 0;
+  }
+
+  /** How many pages the boxes with these left edges take; at least 1. Pure. */
+  function countPages(lefts, pitch) {
+    var last = 0;
+    for (var i = 0; i < lefts.length; i++) last = Math.max(last, pageOf(lefts[i], pitch));
+    return last + 1;
+  }
+
+  /** The scale that shows a w x h paper whole in the room there is, never
+      enlarged, and never so small it is a smudge. Pure. */
+  function fitScale(w, h, roomW, roomH) {
+    var s = Math.min(1, roomW / w, roomH / h);
+    return s > 0.1 ? s : 0.1;
+  }
+
+  function make(doc, tag, cls, value) {
+    var el = doc.createElement(tag);
+    if (cls) el.className = cls;
+    if (value !== undefined) el.textContent = value;
+    return el;
+  }
+
+  function attr(v) { return String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+  /* Rewrites every media query in a style sheet of the frame, and in what it imports. */
+  function flipSheet(sheet) {
+    var rules;
+    try { rules = sheet.cssRules; } catch (e) { return; }
+    for (var i = 0; i < rules.length; i++) {
+      var r = rules[i];
+      if (r.media && (r.cssRules || r.styleSheet)) r.media.mediaText = flipMedia(r.media.mediaText);
+      if (r.styleSheet) flipSheet(r.styleSheet);
+      if (r.cssRules) flipSheet(r);
+    }
+  }
+
+  /* Lays the sheet out in the frame's document; resolves to the page count. */
+  function layOut(frame, area, box) {
+    var doc = area.ownerDocument;
+    var d = frame.contentDocument;
+    var waits = [];
+    var sheets = doc.styleSheets;
+    for (var i = 0; i < sheets.length; i++) {
+      var node = sheets[i].ownerNode;
+      if (!node || !node.tagName) continue;
+      var media = flipMedia(node.getAttribute('media'));
+      if (media === 'not all') continue;
+      var copy;
+      if (node.tagName.toLowerCase() === 'link') {
+        copy = d.createElement('link');
+        copy.rel = 'stylesheet';
+        waits.push(new Promise(function (done) { copy.onload = copy.onerror = done; }));
+        copy.href = node.href;
+      } else {
+        copy = d.createElement('style');
+        copy.textContent = node.textContent;
+      }
+      if (media !== 'all') copy.media = media;
+      d.head.appendChild(copy);
+    }
+    return Promise.all(waits).then(function () {
+      for (var s = 0; s < d.styleSheets.length; s++) flipSheet(d.styleSheets[s]);
+      var own = d.createElement('style');
+      own.textContent =
+        'html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }' +
+        'html { overflow: hidden !important; }' +
+        'body { display: block !important; position: static !important; box-sizing: content-box !important;' +
+        ' width: ' + box.areaW + 'px !important; max-width: none !important; min-height: 0 !important;' +
+        ' height: ' + box.areaH + 'px !important; overflow: visible !important;' +
+        ' column-width: ' + box.areaW + 'px !important; column-gap: ' + PREVIEW_GAP + 'px !important; column-fill: auto !important; }' +
+        '[' + ROOT_ATTR + '] { position: static !important; }';
+      d.head.appendChild(own);
+
+      var from = doc.documentElement, to = d.documentElement;
+      for (var a = 0; a < from.attributes.length; a++) to.setAttribute(from.attributes[a].name, from.attributes[a].value);
+      d.body.className = doc.body.className;
+
+      var sheet = d.importNode(area, true);
+      sheet.setAttribute(ROOT_ATTR, '');
+      d.body.appendChild(sheet);
+      var live = area.querySelectorAll('canvas'), drawn = sheet.querySelectorAll('canvas');
+      for (var c = 0; c < live.length && c < drawn.length; c++) {
+        try { if (live[c].width && live[c].height) drawn[c].getContext('2d').drawImage(live[c], 0, 0); } catch (e) { /* a tainted canvas stays blank */ }
+      }
+
+      var pending = [];
+      var imgs = sheet.querySelectorAll('img');
+      for (var m = 0; m < imgs.length; m++) {
+        if (!imgs[m].complete) pending.push(new Promise(function (done) { imgs[m].onload = imgs[m].onerror = done; }));
+      }
+      if (d.fonts && d.fonts.ready) pending.push(d.fonts.ready);
+      var patience = new Promise(function (done) { global.setTimeout(done, 3000); });
+      return Promise.race([Promise.all(pending), patience]).then(function () { return paginate(d, sheet); });
+    });
+  }
+
+  /* Turns page breaks into column breaks, repeats table headers, and counts. */
+  function paginate(d, sheet) {
+    var view = d.defaultView;
+    var pitch = sheet.parentNode.getBoundingClientRect().width + PREVIEW_GAP;
+    var all = sheet.querySelectorAll('*');
+    var forced = /^(page|always|left|right|recto|verso)$/;
+    var i;
+    for (i = 0; i < all.length; i++) {
+      var cs = view.getComputedStyle(all[i]);
+      if (forced.test(cs.breakAfter)) all[i].style.setProperty('break-after', 'column', 'important');
+      if (forced.test(cs.breakBefore)) all[i].style.setProperty('break-before', 'column', 'important');
+      if (cs.breakInside === 'avoid-page') all[i].style.setProperty('break-inside', 'avoid', 'important');
+    }
+    function column(el) {
+      var r = el.getClientRects()[0];
+      return r ? pageOf(r.left, pitch) : -1;
+    }
+    var tables = sheet.querySelectorAll('table');
+    for (i = 0; i < tables.length; i++) {
+      var head = tables[i].tHead;
+      if (!head || !head.rows.length) continue;
+      var on = column(head.rows[0]);
+      var rows = tables[i].querySelectorAll(':scope > tbody > tr');
+      for (var r = 0; r < rows.length; r++) {
+        var at = column(rows[r]);
+        if (at > on) {
+          for (var h = 0; h < head.rows.length; h++) {
+            var again = head.rows[h].cloneNode(true);
+            again.setAttribute('aria-hidden', 'true');
+            rows[r].parentNode.insertBefore(again, rows[r]);
+          }
+          at = column(rows[r]);
+        }
+        if (at >= 0) on = at;
+      }
+    }
+    var lefts = [];
+    all = sheet.querySelectorAll('*');
+    for (i = 0; i < all.length; i++) {
+      var rects = all[i].getClientRects();
+      for (var k = 0; k < rects.length; k++) if (rects[k].width || rects[k].height) lefts.push(rects[k].left);
+    }
+    return { pages: countPages(lefts, pitch), pitch: pitch };
+  }
+
+  /** Opens the print preview: a modal dialog showing `opts.area` (default
+      #printArea) as the pages it will print on, at the page setPage() wrote.
+      The sheet must already be built; the preview shows what is there and
+      changes nothing in it. `opts.trigger` gets the focus back on close
+      (default: what had it). `opts.onPrint`, if given, adds a Print button
+      that closes the preview and calls it. Resolves, once the pages are laid
+      out, to { dialog, frame, pages, page, go(n), close() }. Never calls
+      print(). */
+  function preview(opts) {
+    opts = opts || {};
+    var doc = global.document;
+    var area = opts.area || doc.getElementById('printArea');
+    if (openPreview) openPreview.close();
+    var box = pageBox(current || {});
+    var trigger = opts.trigger || doc.activeElement;
+    var state = { pages: 1, page: 1, pitch: box.areaW + PREVIEW_GAP, closed: false };
+    var settled = function () {};
+
+    var dialog = make(doc, 'dialog', 'pk-preview pk-no-print');
+    dialog.setAttribute('aria-labelledby', 'pk-preview-title');
+    var bar = make(doc, 'div', 'pk-preview-bar');
+    var title = make(doc, 'h2', 'pk-preview-title', text(opts.title) || 'Print preview');
+    title.id = 'pk-preview-title';
+    var status = make(doc, 'p', 'pk-preview-status', 'Laying out the pages…');
+    status.setAttribute('role', 'status');
+    var nav = make(doc, 'div', 'pk-preview-nav');
+    function button(cls, label) {
+      var b = make(doc, 'button', cls, label);
+      b.type = 'button';
+      nav.appendChild(b);
+      return b;
+    }
+    var prev = button('pk-preview-prev secondary', 'Previous page');
+    var next = button('pk-preview-next secondary', 'Next page');
+    var print = typeof opts.onPrint === 'function' ? button('pk-preview-print', 'Print…') : null;
+    var close = button('pk-preview-close secondary', 'Close');
+    bar.appendChild(title); bar.appendChild(status); bar.appendChild(nav);
+
+    var stage = make(doc, 'div', 'pk-preview-stage');
+    var fit = make(doc, 'div', 'pk-preview-fit');
+    var paper = make(doc, 'div', 'pk-preview-sheet');
+    var frame = make(doc, 'iframe', 'pk-preview-frame');
+    frame.setAttribute('tabindex', '-1');
+    frame.title = 'The sheet as it will print';
+    /* The paper is drawn here and not in print-kit.css, which holds no fixed
+       height and no colour but the ink-safe black and white. The frame is a
+       whole number of px, so `100vh` in it is never more than the page. */
+    paper.style.cssText = 'width:' + box.w + 'px;height:' + box.h + 'px;background:#fff;';
+    frame.style.cssText = 'left:' + box.side + 'px;top:' + box.top + 'px;width:' + Math.floor(box.areaW) + 'px;height:' + Math.floor(box.areaH) + 'px;';
+    paper.appendChild(frame); fit.appendChild(paper); stage.appendChild(fit);
+    dialog.appendChild(bar); dialog.appendChild(stage);
+
+    function size() {
+      var view = doc.documentElement;
+      stage.style.height = Math.max(160, Math.floor(view.clientHeight * 0.92) - bar.offsetHeight - 4) + 'px';
+      var pad = 32;
+      var s = fitScale(box.w, box.h, stage.clientWidth - pad, stage.clientHeight - pad);
+      paper.style.transform = 'scale(' + s + ')';
+      fit.style.width = box.w * s + 'px';
+      fit.style.height = box.h * s + 'px';
+    }
+    function show() {
+      var body = frame.contentDocument && frame.contentDocument.body;
+      if (body) body.style.transform = 'translateX(' + -(state.page - 1) * state.pitch + 'px)';
+      status.textContent = 'Page ' + state.page + ' of ' + state.pages;
+      prev.setAttribute('aria-disabled', String(state.page <= 1));
+      next.setAttribute('aria-disabled', String(state.page >= state.pages));
+      dialog.setAttribute('data-pk-page', String(state.page));
+    }
+    function go(n) {
+      var to = Math.min(state.pages, Math.max(1, Math.floor(Number(n)) || 1));
+      if (to !== state.page) { state.page = to; show(); }
+      return state.page;
+    }
+    /* Idempotent: Escape reaches it through the dialog's close event, the
+       buttons and close() call it directly, so the dialog is gone at once. */
+    function shut() {
+      if (state.closed) return;
+      state.closed = true;
+      global.removeEventListener('resize', size);
+      if (dialog.open) dialog.close();
+      if (dialog.parentNode) dialog.parentNode.removeChild(dialog);
+      if (openPreview === control) openPreview = null;
+      if (trigger && typeof trigger.focus === 'function') trigger.focus();
+      settled(control);
+    }
+
+    prev.addEventListener('click', function () { go(state.page - 1); });
+    next.addEventListener('click', function () { go(state.page + 1); });
+    close.addEventListener('click', shut);
+    if (print) print.addEventListener('click', function () { shut(); opts.onPrint(); });
+    dialog.addEventListener('keydown', function (e) {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      var to = { ArrowLeft: state.page - 1, PageUp: state.page - 1, ArrowRight: state.page + 1, PageDown: state.page + 1, Home: 1, End: state.pages }[e.key];
+      if (to === undefined) return;
+      e.preventDefault();
+      go(to);
+    });
+    global.addEventListener('resize', size);
+    dialog.addEventListener('close', shut);
+
+    var control = {
+      dialog: dialog, frame: frame, go: go, close: shut,
+      get pages() { return state.pages; },
+      get page() { return state.page; }
+    };
+    openPreview = control;
+
+    return new Promise(function (resolve) {
+      /* A preview closed before its pages were laid out still resolves. */
+      settled = resolve;
+      frame.addEventListener('load', function () {
+        layOut(frame, area, box).then(function (laid) {
+          if (state.closed) return;
+          state.pages = laid.pages;
+          state.pitch = laid.pitch;
+          dialog.setAttribute('data-pk-pages', String(laid.pages));
+          show();
+          resolve(control);
+        }, function () {
+          status.textContent = 'The preview could not be drawn.';
+          resolve(control);
+        });
+      }, { once: true });
+      frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><base href="' + attr(doc.baseURI) + '"></head><body></body></html>';
+      doc.body.appendChild(dialog);
+      dialog.showModal();
+      size();
+      close.focus();
+    });
+  }
+
   global.PrintKit = {
     PAPERS: PAPERS,
     PRESETS: PRESETS,
@@ -327,6 +684,12 @@
     inkClass: inkClass,
     renderSet: renderSet,
     cardPlan: cardPlan,
-    renderCards: renderCards
+    renderCards: renderCards,
+    pageBox: pageBox,
+    flipMedia: flipMedia,
+    pageOf: pageOf,
+    countPages: countPages,
+    fitScale: fitScale,
+    preview: preview
   };
 })(window);

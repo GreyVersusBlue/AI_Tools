@@ -157,6 +157,48 @@
   .pk-cards-3x10 > .pk-card { min-height: 1in; }
 }
 
+/* ---- print preview (Path 7 P5) --------------------------------------------- */
+
+/* The dialog PrintKit.preview() opens. The paper's size, its white and the
+   stage's height are set by print-kit.js from the page setPage() wrote: this
+   file holds no fixed height and no colour of its own. It carries
+   `.pk-no-print`, so an open preview never reaches the paper. */
+.pk-preview {
+  box-sizing: border-box;
+  width: min(96vw, 64rem);
+  max-width: none;
+  padding: 0;
+  border: 1px solid var(--line-strong, currentColor);
+  border-radius: 10px;
+  background: var(--card, Canvas);
+  color: var(--ink, CanvasText);
+}
+.pk-preview::backdrop { background: color-mix(in srgb, CanvasText 55%, transparent); }
+.pk-preview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--line, currentColor);
+}
+.pk-preview-title { margin: 0; font-size: 1.05rem; }
+.pk-preview-status { margin: 0 auto 0 0; font-variant-numeric: tabular-nums; }
+.pk-preview-nav { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.pk-preview-nav > [aria-disabled="true"] { opacity: 0.5; cursor: default; }
+.pk-preview-stage {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 16px;
+  overflow: auto;
+  background: var(--paper, Canvas);
+}
+.pk-preview-fit { flex: none; position: relative; outline: 1px solid var(--line-strong, GrayText); }
+.pk-preview-sheet { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.pk-preview-frame { position: absolute; display: block; border: 0; }
+
 /* ---- ink-safe: for anything a tool encodes in colour ------------------------ */
 
 /* The copier is black and white, and a browser drops backgrounds from print by
