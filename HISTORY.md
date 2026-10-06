@@ -9,6 +9,39 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P5 increment 2: the print preview on six more pages, and the rule for a page with several print buttons (2026-10-06, AI-13, `CACHE_VERSION` v259)
+
+Audit entry AI-13, BACKLOG rank 7 (now ½). The row stays, rewritten: six pages left (070 023 040 018 017 016). `_shared/` did not
+change; `PrintKit.preview()` is as increment 1 left it.
+
+- **What shipped.** A "Preview pages" button in front of the print button on 076 (sub note slips), 077 (accommodation cards), 051
+  (classroom labels), 042 (certificates) and 064 (trading cards), the five of the twelve with one print button that were free (070 was
+  AI-31's this batch). And four Preview buttons on 043 (field trip slips), one in front of each of its four Print buttons. Seven of the
+  thirteen print-kit pages have the preview.
+- **What an adopter changed.** Its print handler became two functions, one that builds the sheet and one that prints it, and the Preview
+  button calls the first and then `PrintKit.preview({ trigger, onPrint })`. Where Print refuses (077 with no roster or nobody in the
+  filter, 051 with no words, 064 with no cards) Preview refuses in the same words. 064 waits for its photos before it opens, as its
+  Print does. Nothing inside any `#printArea` changed.
+- **Point 4, decided: a Preview button in front of each Print button, not one preview with a "which sheet" choice.** The four pages'
+  print buttons are apart (043's in three cards, 017's in four, 018's in two, 016's on three tabs), each under the controls that shape
+  its sheet and with its own disabled rule and refusal. The full rule, (a) to (e), is in `BACKLOG.md`, Path 7 P5. Reversible: the
+  buttons are markup and one helper on 043 (`wirePreview`). Part (e), for pages that keep several areas in one `#printArea`, is written
+  from the source of 018, 017 and 016 and was not tried.
+- **Checks.** New suite `Tools/print-kit/test/smoke-preview-adopters.mjs` (`npm run test:preview-adopters`, port 8495, 3,094
+  assertions): for every state each tool's `smoke-print.mjs` prints, light and dark, the preview's count is Chromium's PDF count (200
+  state-and-button runs), every slip, card, label or certificate is in it and none past the count, a canvas shows the live one's
+  pixels, the paper is the one `setPage()` wrote, closing leaves the page as it was; then its Print, axe, a 375 px phone and the
+  refusals. Old page (`git show main:` through `page.route()`) against new, a scratch script: the built sheet's markup, PDF page count,
+  `pdftotext` and raster (`pdftoppm -r 48 -gray`) identical in 200 of 200.
+- **What I got wrong.** My suite first looked for a repeated `<thead>` in the preview; the kit repeats header *rows* inside `<tbody>`
+  (eight false failures on 051). It also demanded at least one kit sheet in every preview, and 043's reminder slips with nobody owing
+  one is a single line of text (eight more). Both were the suite's, not the pages'. The old-against-new script ran 400 page loads
+  inside one hold of the suites lock, 10.5 minutes, and two other workers queued behind it: split such a run by tool.
+- **Not done as asked.** One table-driven suite, not a suite in each tool's folder: one port was handed out, and the assertions are the
+  same for every adopter. The selector does not follow the table, so the six pages are named in the suite's header.
+- **Not verified.** Only Chromium; only huginn's font (Noto Sans), not CI's; only each tool's own paper; no 064 deck with photos; no
+  screen reader (roles, names, focus and axe are what was checked); nothing printed on paper. Full `npm test` not run.
+
 ## Path 7 P5 increment 1: the print kit has a print preview, and 074 is its one adopter (2026-10-06, AI-13, `CACHE_VERSION` v258)
 
 Audit entry AI-13, BACKLOG rank 7 (1). The row stays, rewritten to what is left: the other twelve print-kit pages, and where the control

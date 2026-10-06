@@ -87,6 +87,10 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v259), rank 7, Path 7 P5 increment 2: seven pages have the print preview now** (074, and 076, 077,
+  051, 042, 064 and 043), and the several-buttons question is settled: a Preview button in front of each Print
+  button (043 is the example; Path 7 P5, "Point 4"). The kit did not change. `npm run test:preview-adopters`
+  (port 8495). **Rank 7 stays: six pages left (070 023 040 018 017 016). The next free suite port is 8498.**
 - **AI-13 (v258), rank 7, Path 7 P5 increment 1: the kit has a print preview, `PrintKit.preview()`, and 074
   is its one adopter** ("Preview pages": the sheet cut into the pages it will print on, in a dialog, no print
   dialog). The breaks are the browser's own, in an iframe; the count equals Chromium's PDF. `npm run
@@ -242,7 +246,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v258` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v259` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **315** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
 | Suites | **221** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
@@ -387,7 +391,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 7 | Path 7 P5 (rest) — the print preview on the other twelve print-kit pages, and all that is left of Path 7. `PrintKit.preview()` shipped at v258 with 074 as its one adopter (a modal dialog, one page at a time at the size `setPage()` wrote, the breaks found by the browser's own fragmentation in an iframe; the count equals Chromium's PDF on 074, 043, 051 and 042 in both fonts). Left: a Preview button, three lines and a count-equals-PDF suite on 043 023 042 076 070 077 051 040 064 018 017 016, and first the one open design point, where the control goes on a page with several print buttons (018, 017, 043, 016). Done when the preview's page count equals `page.pdf()`'s on all thirteen | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
+| 7 | Path 7 P5 (rest) — the print preview on the last six print-kit pages, and all that is left of Path 7. `PrintKit.preview()` (v258) is on seven pages at v259: 074, the single-button pages 076 077 051 042 064, and 043, the first page with several print buttons (a Preview button in front of each Print button; the rule is in Path 7 P5, "Point 4"). Left: 070, 023 (two buttons), 040 (Print and the alignment test), then 018, 017 and 016, which keep several areas inside one `#printArea` and have to show the asked-for area before `preview()` and put the at-rest one back when it closes (not tried). Each is a button, the wiring and an entry in `Tools/print-kit/test/smoke-preview-adopters.mjs`. Done when the preview's page count equals `page.pdf()`'s on all thirteen | `_shared/` | ½ | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -2571,17 +2575,42 @@ localStorage with no file export.
   they do across pages is not known. Nothing was printed on paper.
   **Left out, on purpose:** thumbnails of every page at once, zoom, a live preview beside the editor,
   choosing the paper in the preview.
-  **What is left of P5.** (1) The other twelve adopters (043 023 042 076 070 077 051 040 064 018 017 016),
-  each a button, the three lines and a suite that holds the preview's count to Chromium's PDF over the states
-  its `smoke-print.mjs` already prints. 051, 043, 042 are measured above and need nothing new from the kit as
-  far as that went; 076, 070, 077, 023, 040, 064, 018, 017 and 016 were not run at all. (2) Point 4, where the
-  control goes on a page with several print buttons (018 six, 017 five, 043 four, 016 three). Not built and not
-  tried; the reading is that each of those pages needs its "build this sheet" step apart from its `print()` call
-  (018, 017 and 016 keep several areas inside one `#printArea` and show one), and then either one Preview
-  button beside each Print button or one Preview with a "which sheet" choice in the dialog. The preview takes
-  the whole `#printArea`, not one area inside it, because the rules that show an area are written from
-  `#printArea` down. (3) Found on 074 and not fixed, the same before: at 375 px its queue row is 26 px wider
-  than the phone.
+  **Increment 2 (AI-13, 2026-10-06, v259): six more adopters, seven of thirteen.** 076, 077, 051, 042 and 064
+  (one print button each) got 074's button, "Preview pages", in front of the print button, and 043 got four.
+  The kit did not change: nothing an adopter did showed a defect in `preview()`. The count equals Chromium's
+  PDF in every state each tool's `smoke-print.mjs` prints, light and dark (200 state-and-button runs), held by
+  `Tools/print-kit/test/smoke-preview-adopters.mjs` (`npm run test:preview-adopters`, port 8495), one table for
+  all six and not a suite in each tool's folder, as `_csv-adopters.mjs` is for the CSV pages. What an adopter
+  does: split "build the sheet" from "print it" (`renderSheet()` or the tool's `buildPrintArea()`; it returns
+  false, having said why, when there is nothing to print), and call `PrintKit.preview({ trigger, onPrint })`
+  after the build. 064 waits for its photos first, as its Print does. 051's and 042's QR canvases need nothing:
+  the kit redraws each from the live one, and the suite compares the pixels.
+  **Point 4, settled: one Preview button in front of each Print button, not one preview with a "which sheet"
+  choice.** Read off the four pages: their print buttons are not together. 043's are in three cards, 017's in
+  four, 018's in two, 016's on three tabs; each sits under the controls that shape its sheet, has its own
+  `disabled` rule and its own refusal, and a chooser in the dialog would have to know all of that and rebuild
+  the sheet from inside the kit. So: (a) every Print button gets a Preview button immediately before it in the
+  markup, `class="secondary"`, with the Print button's id and label and "preview" for "print" (`printMissingListBtn`
+  "Print missing list" has `previewMissingListBtn` "Preview missing list"); a button that says only "Print" gets
+  "Preview pages", as on the one-button pages; (b) a Print button that prints one of several layouts by a
+  choice made elsewhere (043's one / class set / blank, 040's seven faces) has one Preview, which reads the same
+  choice; (c) Preview is `disabled` whenever its Print is, and refuses in the same words; (d) it builds its
+  sheet exactly as its Print button does, then calls `preview()` with itself as `trigger` and an `onPrint` that
+  presses its Print button, so what is printed is what was looked at; (e) on a page that keeps several areas
+  inside one `#printArea` (018, 017, 016) the build step also shows the asked-for area (`.active`,
+  `.sheet-asked`, the body class) before `preview()`, because the preview copies the whole `#printArea` with
+  its classes, and puts the at-rest state back when the preview closes, as that page's `afterprint` does, so
+  Ctrl+P prints what it printed before. (e) is written from the source and **not tried**: 043, where the rule
+  was applied, renders each sheet into `#printArea` whole and has no areas. 043's wiring is one helper,
+  `wirePreview(previewBtn, build, printBtn)`, four calls.
+  **What is left of P5.** (1) Six adopters: 070 (one button; AI-31 had the page during increment 2), 023 (Print
+  Handout / Class Set and the reteach list), 040 (Print and the alignment test), and 018 (six buttons), 017
+  (five) and 016 (three) by rule (e). None of the six has been previewed at all. Each gets an entry in
+  `smoke-preview-adopters.mjs`'s `TOOLS` (`buttons` and a `pages` list for several). (2) Found and not fixed,
+  the same before: 074's queue row is 26 px wider than a 375 px phone; on 043 Ctrl+P prints whichever sheet
+  was built last (after a preview that is the previewed sheet, after a visit with no button pressed an empty
+  page), since it has no `beforeprint`. (3) Not checked in increment 2: other papers than each tool's own
+  (074's suite does that for the kit), a 064 deck with photos, DejaVu Sans (CI's font).
 
 **Model.** Opus, except P4's imposition math.
 
