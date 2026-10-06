@@ -9,6 +9,45 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 19 P3 designed, not built: the conjugation engine (2026-10-06, AI-27, no `CACHE_VERSION`, no code)
+
+Audit entry AI-27, rank 60 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P3 bullet under
+"Path 19", a Status line for the path, and a note on rank 60). **The row stays.** Nothing was built, no suite or
+browser ran; the docs guards (`check:docs-commands`, `check:adoption`) were the only checks.
+
+- **What the design is.** A plain classic script, `_shared/conjugate.js` (`Conjugate`), pure functions over data,
+  with a language as a pack (`conjugate-es.js`, `conjugate-fr.js`) registered into it. `classify()`, `lookup()`
+  (with prefix derivation and an exception list), `conjugate()` returning six slots and a note per cell saying
+  which rule made it, `table()`, `match()` with 039's three verdict names, `merge()` and `validate()` for a
+  teacher's record. The verb record and the pack share one shape: class, one stem-change token, per-tense stems,
+  sparse per-cell forms, participle, gerund, auxiliary, reflexive, defective. Orthographic changes are derived
+  from the junction, never declared. A tense is one of six data shapes (endings, infinitive stem, derived from
+  another tense, subjunctive, compound, imperative), so which tenses a pack declares is a curriculum decision and
+  not code. The teacher's overlay lives on P1's word record, and on 039's own conjugation entry until P2 lands.
+  039 gets a language and tense select and a Fill from pattern button; 079's eight hand-typed templates become
+  data computed at load. Fifteen named Node cases and a browser suite, with correctness held by the repo's own
+  forms (079's), a second derivation for every pack verb, and a printed check sheet for a teacher.
+- **What reading the code turned up.** No page conjugates a verb today: 039 has the teacher type six boxes and
+  079 ships 108 forms typed by hand. 039's quiz strips every combining mark, so `año` and `ano`, and `garçon` and
+  `garcon`, are "close" rather than wrong; `ß` and `œ` never decomposed and were never affected. 039 and 079 use the
+  same six-person order, which is why the engine's slots are fixed. Rank 85 ("Conjugation pattern engine", 039,
+  ½) is the same subject as rank 60 and was left alone: re-ranking is not a session's call.
+- **What the measurements were.** One pure-Node probe, not kept. A 40-line regular-ending table against 079's
+  templates read off the page: 108 of 108 forms equal. 039's `stripDiacritics` on ñ, ç, ß, œ, ü. One verb encoded
+  three ways: 546 bytes with every form spelled out for six tenses, 288 as stems and sparse overrides, 38 as a
+  regular record; so about 35 KB for the engine and two packs. The figures are in the design.
+- **Decided here, cheap to reverse.** One engine and a pack a language; record shape equals pack shape; derived
+  orthography; six fixed slots and a `personSlots` map in 039; ñ and ç are letters, ü is an accent; the masculine
+  singular for agreement; `entry.verb` in 039 until P2; 079's templates computed; prefixes derived with exceptions.
+- **Left to Devon, listed in the design and not answered:** which languages first (the code today has presets
+  for Spanish, French, German and Latin, templates for Spanish and French); which tenses the courses reach;
+  vosotros by default; agreement on paper; who proofreads the corpus; the 1990 French rectifications and
+  s'asseoir; paie or paye; a correction per list or site-wide; keeping 039's free-text tense label; the
+  student-facing line for the quiz; filling an unknown infinitive as regular or asking; ü.
+- **Not verified.** No module exists and nothing ran in a browser. Every form and every inventory named in the
+  design came from the session's knowledge of the two languages and was checked against nothing, which is what
+  the check sheet and the two-rules case are for. The sizes are one encoding, not a built pack.
+
 ## Path 7 P5 increment 1: the print kit has a print preview, and 074 is its one adopter (2026-10-06, AI-13, `CACHE_VERSION` v258)
 
 Audit entry AI-13, BACKLOG rank 7 (1). The row stays, rewritten to what is left: the other twelve print-kit pages, and where the control
