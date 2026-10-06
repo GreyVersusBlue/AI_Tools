@@ -440,7 +440,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 57 | Path 18 P5 — decide the product: two entry points on one engine, or one tool with a mode switch | 018 | ¼ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 58 | Path 19 P1 — `_shared/word-list.js`, owned by a Word Lists hub inside 040 | `_shared/` | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 59 | Path 19 P2 — adopters: 040, 039, 014, 027, 051, 052; delete `vfg-conjdrill-link.js` | site | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
-| 60 | Path 19 P3 — conjugation pattern engine for Spanish and French, with irregular overrides | 039 | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
+| 60 | Path 19 P3 — conjugation pattern engine for Spanish and French, with irregular overrides. **Designed, not built (AI-27, 2026-10-06): the design is in the P3 bullet**; the engine can be built before P1 and P2, its storage on the word record cannot | 039 | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 61 | Path 19 P4 — printables: Frayer page, spaced repetition, fill-in-the-blank, word wall as a system | 040 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 62 | Path 19 P5 — audio: TTS on study mode, teacher-recorded pronunciations into the media store | 051 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 63 | Path 20 P1 — `_shared/geo-project.js` + `traceFeature`, hit-test and the curriculum gazetteer | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
@@ -5026,6 +5026,10 @@ dropped) with no write-back; 014's scenario vocabulary and 027's vocabulary log 
 unbridged; 051 and 052 hold word lists in their own shapes. Regular Spanish/French
 conjugation is entirely mechanical and 039 makes teachers type every form.
 
+**Status.** Nothing built. P3 is designed, not built (AI-27, 2026-10-06): the design is in its bullet,
+with twelve questions for Devon at its end. P1, P2, P4 and P5 not started; P3's engine depends on
+neither P1 nor P2, its storage does.
+
 **Phases.**
 
 - **P1 — `_shared/word-list.js`.** Versioned store of named lists of
@@ -5040,6 +5044,252 @@ conjugation is entirely mechanical and 039 makes teachers type every form.
   the full regular table for Spanish and French (present, preterite/passé composé,
   imperfect, future, conditional, subjunctive present), with irregular overrides
   stored on the word record; 079's posters and 039's drills both consume it.
+  **Designed, not built (AI-27, 2026-10-06). Nothing below exists; the row (rank 60, 2+) stays.** The
+  design follows P4's form above. It was written from 039's page (its `conjugations[]` entries, the
+  `answerMatch` quiz check, its person presets and accent sets), 079's page (eight hand-typed templates,
+  108 forms), `vfg-conjdrill-link.js`, `_shared/handoffs.js`'s 039 → 040 entry, the registry rows and the
+  two tools' suites. **Where a verb is conjugated today:** nowhere. 039 makes the teacher type every form
+  into six boxes; 079 ships eight templates typed by hand (hablar, comer, vivir in four Spanish tenses,
+  ser and estar; parler, finir, vendre in two French tenses, avoir and être); no other page has a verb
+  form in it. A pure-Node probe (not kept) ran a 40-line regular-ending table against 079's 108 forms:
+  **108 of 108 equal**, so the regular classes are already pinned by data in the repo.
+  **What it is.** `_shared/conjugate.js`, a plain classic script publishing `window.Conjugate`: pure
+  functions over data, no DOM, no storage, no `fetch` (the offline copy runs from `file://`, where a
+  sibling JSON is blocked, which is why `tool-registry.js` inlines its data too). The engine is
+  language-neutral; **each language is a pack**, `_shared/conjugate-es.js` and `_shared/conjugate-fr.js`,
+  a data object handed to `Conjugate.register(pack)`. A page loads the engine and the packs it wants. A
+  third language is one new file and three bookkeeping lines (`PRECACHE_URLS`, the `Conjugate` global in
+  `eslint.config.js`'s `SITE_GLOBALS` once, a `suites.json` case). Not in `SHELL_URLS`: neither 039 nor 079
+  is a front-of-room tool.
+  **The surface.**
+  - `Conjugate.languages()` → `[{ id: 'es', name, persons: [6 labels], tenses: [{ id, name, mood }],
+    classes: [{ id, name, example }] }]`, read off the registered packs; a tool builds its selects from it.
+  - `Conjugate.classify(lang, infinitive)` → `{ class, stem, reflexive, base }` or `null` when the ending is
+    not a class the pack declares (a noun typed in the verb box). `levantarse` → `{ class: 'ar', stem:
+    'levant', reflexive: true, base: 'levantar' }`; `se lever` → `{ class: 'er', reflexive: true, base:
+    'lever' }`; French `-ir` is `finir`'s `-iss-` class unless the record says `ir2` (dormir, partir,
+    sortir, servir, sentir: a shortened singular stem) or `ir-er` (ouvrir, offrir, couvrir, souffrir,
+    conjugated like `-er`).
+  - `Conjugate.lookup(lang, infinitive)` → the pack's record for the verb, or the record of the longest
+    known base it ends in with the prefix glued on and a note `as: 'tener'` (mantener, suponer,
+    convenir; comprendre, revenir, défaire), or `null`. The pack lists the exceptions to prefix
+    derivation (bendecir: participle `bendecido`; a tú command gains an accent when the base was a
+    monosyllable: `ten` but `mantén`, `pon` but `supón`).
+  - `Conjugate.conjugate(lang, verb, tenseId, opts)` → `{ forms: [6], notes: [{ slot, kind, from }],
+    complete }`. `verb` is an infinitive string or a verb record (below); a string goes through `lookup`
+    then `classify`. `notes[].kind` is one of `regular`, `stem`, `spelling`, `irregular`, `defective`,
+    `derived`, `teacher`, `agreement`, `assumed` (an infinitive in no pack, conjugated as regular), so 039
+    can mark a cell and 079 colour one. `opts.pronouns: true` prefixes the subject (and the reflexive
+    pronoun) with French elision (`j'habite`, `je me lave`, `je m'appelle`, `tu t'appelles`); the pack
+    lists its aspirate-h verbs (haïr) so `je hais` is not elided. `opts.slots` picks a subset.
+  - `Conjugate.table(lang, verb, tenseIds)` → `{ tenses: [{ id, forms, notes }], participle, gerund }`.
+  - `Conjugate.match(typed, expected, opts)` → `{ verdict: 'correct' | 'close' | 'wrong', reason }`, the
+    answer check, with 039's three verdict names so its quiz adopts it as a drop-in. `reason` on `close`
+    is `accent`, `pronoun` (the reflexive or subject pronoun typed or left off) or `elision`
+    (`je habite` for `j'habite`).
+  - `Conjugate.merge(record, teacherRecord)` → one record, the teacher's value winning per field and
+    `forms` merging per cell, each merged cell noted `teacher`. `Conjugate.validate(record)` → a list of
+    problems in words (a seventh form, an unknown tense id, a stem change on a vowel the class cannot
+    change, a `stems` entry for a tense the pack does not declare).
+  - `Conjugate.register(pack)`; `Conjugate.normalize(s)` (the comparison key `match` uses, exported so a
+    suite can pin it).
+  **The verb record, and the pack is the same shape.** `{ infinitive, class, stemChange, stems, forms,
+  participle, gerund, auxiliary, reflexive, defective, gloss }`. `class` is found by `classify` unless
+  given. `stemChange` is one token: Spanish `e>ie`, `o>ue`, `e>i`, `u>ue` (jugar); French `e>è`
+  (acheter, lever, mener), `é>è` (préférer, espérer, répéter), `l>ll` (appeler), `t>tt` (jeter), `y>i`
+  (payer, employer, envoyer). `stems` replaces the regular stem for a whole tense (`{ future: 'tendr',
+  conditional: 'tendr', preterite: 'tuv' }`); a Spanish `stems.preterite` takes the strong endings
+  (`-e -iste -o -imos -isteis -ieron`, `-eron` after `j`: dijeron, condujeron). `forms` is sparse, per
+  tense, per slot, and is the last word (`{ present: { 0: 'tengo' } }`). `participle` and `gerund` are
+  strings when irregular (abierto, dicho, escrito, hecho, muerto, puesto, roto, visto, vuelto; French
+  été, eu, fait, pris, mis, dit, vu, bu, lu, écrit, venu, voulu, pu, su, dû). `auxiliary: 'être'` for the
+  French verbs that take it (aller, venir, arriver, partir, entrer, sortir, monter, descendre, rester,
+  tomber, naître, mourir, retourner, passer, devenir, revenir, rentrer); every reflexive takes it without
+  being told. `defective` names the slots or tenses the verb has (llover and nevar slot 2 only; falloir
+  `il` only; soler no future or conditional). Orthographic changes are **derived, never declared**: a
+  rule reads the stem's last letters and the ending's first vowel (`c>qu`, `g>gu`, `z>c` before e;
+  `g>j`, `gu>g`, `c>z` before a or o; `i>y` between vowels, leyó, construyó, with the `-uir` verbs taking
+  `y` before every vowel but i; French `c>ç` and `g>ge` before a or o, `y>i` before a mute e, `-ayer`
+  optional). A pack field `spelling: false` switches one off for one verb if a case ever needs it.
+  **The algorithm: one cell, in order.** (1) `forms[tense][slot]` → that, noted `teacher` or
+  `irregular`; (2) `defective` excludes the cell → empty, noted `defective`; (3) a compound tense →
+  the auxiliary's cell in its own tense plus the participle, noted `agreement` on an être verb (the
+  engine emits the masculine singular; what is printed is Devon's question 4); (4) `stems[tense]` →
+  that stem with the tense's endings (strong endings for a Spanish preterite stem); (5) a derived
+  tense builds from another: Spanish imperfect subjunctive from slot 5 of the preterite minus `-ron`
+  plus `-ra -ras -ra -´ramos -rais -ran` (tuvieron → tuviera, fueron → fuera, the accent landing on
+  the vowel before `-ramos`); present subjunctive from the `yo` stem when the present's slot 0 is
+  irregular (tengo → tenga, conozco → conozca, digo → diga) and from the regular stem otherwise, with
+  the stem change in the boot and the `e>i`/`o>u` change in slots 3 and 4 (pidamos, durmamos); the
+  French subjonctif from the `ils` stem for slots 0 1 2 5 and the `nous` stem for 3 4 (boive /
+  buvions), the imparfait from the `nous` present stem (finiss-, buv-, with `avoir` and `être` as
+  overrides), the futur and conditionnel from the infinitive minus a final `e` (vendr-, prendr-) with
+  `stems.future` for aller (ir-), faire (fer-), être (ser-), avoir (aur-), venir (viendr-), voir (verr-),
+  envoyer (enverr-), pouvoir (pourr-), vouloir (voudr-), devoir (devr-), savoir (saur-), falloir
+  (faudr-), the conditionnel always the futur's stem; Spanish commands: `usted`, `ustedes`, `nosotros`
+  and every negative are the subjunctive, `tú` affirmative is the present's slot 2 with the pack's eight
+  overrides (di, haz, ve, pon, sal, sé, ten, ven), `vosotros` the infinitive with `-r` → `-d`; French
+  impératif from the present's slots 1 3 4 with the `-er` (and `aller`) `tu` form losing its `s`;
+  (6) `stemChange` in the boot (slots 0 1 2 5 of the present indicative and present subjunctive; `e>i`
+  verbs also in the preterite's slots 2 and 5, the gerund and the subjunctive's 3 4; `o>ue` verbs
+  dormir and morir take `u` there); (7) the regular stem and the tense's ending for the class; (8)
+  the orthographic rule at the junction; (9) the Spanish accent rule for a vowel stem: `-er`/`-ir`
+  verbs whose stem ends in a vowel take `í` in the imperfect, the preterite's slots 0 1 3 4 and the
+  participle (leía, leí, leíste, leído, oído, creído) and `y` in the preterite's slots 2 5. Every form
+  is returned lowercase and NFC; a Spanish or French verb form is never capitalised, and a tool that
+  starts a sentence with one does so itself. Steps 1 and 2 happen before anything else so a teacher's
+  override of a derived form sticks.
+  **Tenses, as data.** Each pack's `tenses` list declares a tense as `{ id, name, mood, endings: { ar,
+  er, ir } }` (present, preterite, imperfect; présent, imparfait), `{ stemFrom: 'infinitive', endings }`
+  (future, conditional; futur, conditionnel), `{ derivedFrom: 'preterite', slot: 5, strip: 'ron',
+  endings }` (imperfect subjunctive), `{ subjunctive: true, endings }` (the yo-stem rule above),
+  `{ compound: { auxiliary: 'haber', tense: 'present' } }` (present perfect; passé composé with
+  `auxiliary: 'avoir'` and the record's `être`), `{ imperative: true, from: … }` (commands). The engine
+  knows these six shapes and nothing about any one tense; **which tenses a pack declares is the
+  curriculum decision** (Devon's question 2). The first packs declare the bullet's six for Spanish
+  (present, preterite, imperfect, future, conditional, present subjunctive) and six for French (présent,
+  passé composé, imparfait, futur simple, conditionnel présent, subjonctif présent), and the derivable
+  ones above cost one data entry each. **Persons are six fixed slots** in the order 039 and 079 both
+  already use (yo tú él nosotros vosotros ellos; je tu il nous vous ils); a tool that hides vosotros
+  hides slot 4 and the engine does not know. 039 keeps its editable labels and gains `personSlots`
+  (default `[0,1,2,3,4,5]`) so a set whose rows were cut to five maps `[0,1,2,3,5]` and a fill lands in
+  the right rows; a preset button resets both.
+  **Accents and capitals in answers.** `normalize` trims, lowercases, collapses spaces, turns the
+  typographic apostrophe into `'`, and NFC-composes. `match`: equal → `correct`; equal after removing
+  combining marks **from vowels only** → `close`, reason `accent`; equal after removing the subject or
+  reflexive pronoun from either side → `close`, `pronoun`; equal after undoing elision → `close`,
+  `elision`; otherwise `wrong`. **ñ and ç are letters, not accents, and are `wrong`**, which 039's
+  `stripDiacritics` gets wrong today: measured in the probe, its NFD strip makes `año` and `ano` one
+  answer, `ñ` → `n`, `ç` → `c`, while `ß` and `œ` do not decompose and were never affected. `ü` stays
+  `close` (question 12). A blank answer is `wrong`, as 039 has it.
+  **Teacher additions and corrections, and where they live.** Two layers. The packs are built in,
+  read-only, precached. A teacher's verb, or a correction to a built-in one, is a verb record in the
+  same shape, merged over `lookup`'s with `Conjugate.merge`, so a correction is one cell and a new
+  regular verb is `{ infinitive }`. **The record lives on the word** (P1's `word-list.js` record gains a
+  `verb` sub-record, the list a `lang`), which is what the bullet's "stored on the word record" means:
+  it travels with the list's share link and export, and 009 backs it up through the registry's existing
+  row, with no new key. **Until P1 and P2 exist, 039 stores the same record on its own conjugation
+  entry** (`entry.verb` inside `gvb-vocab-conj:data:<name>`, a key that already holds arbitrary state,
+  so no registry row and no `Store` version moves); P2's 039 adoption moves `entry.verb` on to the word
+  and deletes the field. Nothing site-wide: a correction applies to the list it is on (question 8).
+  **What P3 needs from P1 and P2, neither built.** From P1: the record shape allows a namespaced
+  sub-record a tool owns (`verb`), a `lang` on the list, `partOfSpeech: 'verb'` as a value, and an
+  update of one word's fields in place. From P2: 039 reading the full record (it reads two fields
+  today) so `verb` reaches it. The engine and its Node suite depend on neither and can be built first;
+  039's fill button can ship on `entry.verb` first; 079 needs nothing from either.
+  **What each adopting tool changes.** **039:** each conjugation entry gets a language and tense select
+  built from `languages()` beside its free-text tense label (the label stays editable, so "any language"
+  still works: question 9) and a **Fill from pattern** button that calls `conjugate` and writes the six
+  boxes through `personSlots`; a cell with a note other than `regular` gets a mark and a title saying
+  which rule, and the entry's `irregular` checkbox is set when any cell is (the teacher can still clear
+  it); editing a filled cell writes `entry.verb.forms[tense][slot]` and marks the cell `teacher`; the
+  quiz's `answerMatch` becomes `Conjugate.match` and its "close" message names the reason; the accent
+  helper, print, share and the 040 bridge are untouched. The share payload carries `entry.verb` as it
+  carries every field. **079:** `TEMPLATES` become `{ lang, tense, verbs: ['hablar', 'comer', 'vivir'] }`
+  and the panels are computed at load, so rank 116's irregular call-outs and its "conditional,
+  German, Italian templates" quick win become a line of data each; an "Add a verb" box conjugates on
+  the fly into a new panel; the poster still saves its forms as text, so a saved poster needs no
+  engine to print. **040, 014, 027, 051, 052:** nothing in P3; a conjugation face on a 040 card is P4's.
+  **The built-in inventory the first packs hold.** Spanish, by kind: irregular records (`forms` or
+  `stems`) ser, estar, ir, haber, tener, hacer, poder, poner, decir, venir, querer, saber, dar, ver,
+  salir, traer, caer, oír, conocer and the `-cer`/`-cir` `-zco` group, conducir and the `-ducir` group,
+  andar, caber, valer, reír, sonreír, oler, enviar, continuar (the accented `í`/`ú`), and the eight
+  irregular tú commands; stem-changers (one field) pensar, cerrar, empezar, comenzar, entender,
+  perder, volver, poder, contar, encontrar, recordar, almorzar, costar, mostrar, jugar, pedir, servir,
+  repetir, vestir, seguir, dormir, morir, sentir, preferir, mentir; spelling-changers (no field,
+  derived) buscar, sacar, tocar, llegar, pagar, cruzar, escoger, recoger, dirigir, leer, creer,
+  construir, huir, incluir; defective llover, nevar, soler; participles as listed. French: être, avoir,
+  aller, faire, dire, venir, tenir, prendre, mettre, pouvoir, vouloir, devoir, savoir, voir, croire,
+  boire, lire, écrire, connaître, paraître, recevoir, courir, mourir, rire, suivre, vivre, naître,
+  conduire, plaire, pleuvoir, falloir, valoir; the `ir2` class partir, sortir, dormir, servir, sentir;
+  the `ir-er` class ouvrir, offrir, couvrir, souffrir; stem-changers acheter, lever, mener, préférer,
+  espérer, répéter, appeler, jeter, payer, essayer, employer, envoyer; spelling-changers commencer,
+  manger; the être list; s'asseoir left out (two accepted paradigms, question 6). About 60 records a
+  pack, the rest of the language regular.
+  **Size, measured.** The probe encoded one verb: every form spelled out for six tenses by six persons
+  is 546 bytes; tener as `stems` and sparse `forms` is 288; a regular record is 38. So a pack of 60
+  records is about 10 KB sparse (33 KB if every form were spelled out, which is the encoding to
+  avoid), plus tense tables and the participle list, about 12 KB for Spanish and 10 KB for French; the
+  engine about 12 to 15 KB. **About 35 KB in three precache lines**, against `export.js`'s 41 KB. Small
+  enough; nothing is lazy-loaded.
+  **The tests.** `Tools/conjugate/test/conjugate.test.mjs` (pure Node, the engine and packs loaded in a
+  `vm` context the way `export.test.mjs` loads `export.js`), with a `test:conjugate` script and a `suites.json` line;
+  and `smoke-conjugate.mjs` (the next free port when built; 8495 at the time of writing). Cases, named:
+  (1) *079 parity*: the 108 forms 079 hardcodes today, read off the page, equal the engine's, and
+  after 079 adopts, its templates are the engine's. (2) *Regular paradigms*: hablar, comer, vivir,
+  parler, finir, vendre in every declared tense. (3) *Stem changes*: pensar (pienso … pensamos …
+  piensan), volver, pedir (pidió, pidieron, pidiendo, pidamos), dormir (durmió, durmiendo, durmamos),
+  jugar (juego, jugué), sentir (sintió); acheter (achète, achetons, achèterai), préférer (préfère,
+  préférons, préférerai), appeler (appelle, appelons, appellerai), payer (both), envoyer (enverrai).
+  (4) *Spelling*: buscar (busqué, busque), llegar (llegué), empezar (empecé, empiece, both rules in
+  one verb), escoger (escojo), seguir (sigo, siga), conocer (conozco), leer (leyó, leía, leído),
+  construir (construyo, construyó), commencer (commençons), manger (mangeons, mangeais). (5)
+  *Irregulars*: the full table in every first-pack tense for ser, estar, ir, haber, tener, hacer, poder,
+  poner, decir, venir, querer, saber, dar, ver; être, avoir, aller, faire, pouvoir, vouloir, devoir,
+  savoir, venir, prendre, mettre, voir, dire; with the pins ir and ser share a preterite (fui), dar and
+  ver take no accent (di, dio, vi, vio), haber's present (he, has, ha, hemos, habéis, han), aller's
+  future (irai), faire's (ferai), être's subjunctive (sois, soyons), avoir's (aie, ayons). (6) *Derived
+  tenses*: tuvieron → tuviera, fueron → fuera, habláramos; commands ten, mantén, di, haz, ve, pon,
+  sal, sé, ven, hablad, no tengas, no habléis; parle, va, finis, allons; he abierto, hemos dicho; je
+  suis allé, nous sommes partis is **not** emitted (masculine singular only), je me suis levé. (7)
+  *Defective*: llover has slot 2 and five empty cells with notes, falloir il faut, il fallait, il
+  faudra. (8) *Prefixes*: mantener, suponer, convenir as their bases with the accent on mantén and
+  supón; comprendre, revenir, défaire; bendecir's participle. (9) *Reflexives and elision*: levantarse
+  (me levanto … se levantan), se laver (je me lave, nous nous lavons), s'appeler (je m'appelle, tu
+  t'appelles), habiter (j'habite), aimer (j'aime), haïr (je hais, no elision). (10) *classify*: hablar,
+  levantarse, se lever, finir, dormir (ir2 by record, an unknown French `-ir` noted `assumed` as
+  finir's class), table → null. (11) *match*, a table of pairs: hablo/hablo correct, Hablo/hablo
+  correct, `hablo ` correct, hable/hablé close accent, ano/año **wrong**, garcon/garçon **wrong**,
+  pinguino/pingüino close, j’habite/j'habite correct, je habite/j'habite close elision,
+  levanto/me levanto close pronoun, blank wrong. (12) *Teacher overlay*: `merge` puts the teacher's
+  cell first and notes it; `validate` names a seventh form, an unknown tense, an impossible stem
+  change. (13) *Pack integrity*: every record classifies, every `forms` and `stems` key is a declared
+  tense and a slot 0 to 5, no two records share an infinitive, every irregular has a participle where a
+  compound tense is declared, each pack under 24 KB. (14) *Purity*: same input same output, and the
+  module writes nothing on `window` but `Conjugate`. (15) *Two rules agree*: for every pack verb, the
+  present subjunctive from the yo stem equals the one from `forms` where a record spells it out; the
+  conditional's stem equals the future's; the French imparfait stem equals the present `nous` stem;
+  the subjonctif's `ils` stem equals the present's — a form two rules disagree on fails the suite and
+  is a review item, not a guess. The browser suite drives 039: fill tener present, six cells, slot 0
+  marked, the quiz takes `tengo`, calls `ano` wrong and `tenia` close; the entry survives reload and a
+  share link carries `verb`; 079 loads a template and its panels equal `conjugate`'s; 039's
+  `smoke-share.mjs` and 079's `smoke-panel-colors.mjs` keep passing. **How correctness is established
+  without copying a table:** the regular paradigms and 079's forms are in the repo; each irregular's
+  expected forms are typed into the suite from the rules by the session, then held by case 15 against
+  a second derivation; and a small script in `Tools/conjugate/` (`print-corpus.mjs`) writes a check sheet, one page a
+  verb, for a teacher to read (who signs it off is question 5). The facts of how tener conjugates are
+  nobody's property; a published table's selection and layout are, and none is copied.
+  **Deliberately left out.** Tenses beyond the two six-packs and the derivable ones above (passé
+  simple, pluperfect, future perfect, past subjunctive compounds); voseo; participle agreement with a
+  preceding object; negative and interrogative frames; the accent on a command or gerund with a
+  pronoun attached (dámelo, levantándose); German, Italian, Latin and Portuguese packs (the pack shape
+  is for Romance stem-and-ending verbs; German's separable prefixes and Latin's principal parts need a
+  record kind the engine does not have, and that is said here so nobody tries to fit them in `stems`);
+  guessing a language from an infinitive (the teacher picks); the English gloss (typed, as today);
+  audio (P5); a conjugation face on a 040 card (P4); a site-wide "my corrections" store.
+  **Decided here, cheap to reverse.** A classic script in `_shared/`, one engine and a pack a
+  language, not one file; record shape equals pack shape; orthographic rules derived, not declared;
+  six fixed slots and `personSlots` in 039; ñ and ç are letters; the masculine singular for agreement;
+  the overlay on the word record, with `entry.verb` in 039 until P2; 079's templates computed from the
+  engine; prefixed verbs derived with an exception list; `match` keeps 039's three verdict names.
+  **Devon's questions, listed and not answered.** (1) **Which languages first.** The bullet says
+  Spanish and French; the code today has person presets and accent sets for Spanish, French, German and
+  Latin (039), twenty `speechSynthesis` languages (039), templates for Spanish and French only (079),
+  and 079's quick win asks for German and Italian. (2) **Which tenses** East Middle's courses reach: the
+  six in the bullet, or also commands, the imperfect subjunctive and the present perfect, each one data
+  entry. (3) **vosotros** shown by default (both tools show it today) or hidden. (4) **Agreement in the
+  passé composé** on paper: `allé`, `allé(e)(s)`, or all four. (5) **Who proofreads the corpus** from
+  the check sheet and signs it off. (6) **1990 French rectifications** (`-eler`/`-eter` verbs other than
+  appeler and jeter) and **s'asseoir**: pre-1990 only, or both accepted. (7) **payer**: `paie` or `paye`
+  printed. (8) A teacher's correction **per list or site-wide**. (9) Whether 039 **keeps the free-text
+  tense label** beside the select. (10) **The student-facing line**: 039's quiz is on the teacher's
+  screen today; a link that opens a self-check on a student's device stays out unless Devon says. (11)
+  An infinitive in no pack: **fill as regular and note it, or ask first**. (12) `ü` counted as an
+  accent (`close`) or a letter (`wrong`).
+  **Not verified.** No module exists and nothing ran in a browser. The inventories and every form named
+  above were written from the session's knowledge of the two languages and checked against nothing;
+  that is what question 5 and case 15 are for. The size figures come from one representative encoding,
+  not a built pack. 039's `stripDiacritics` finding was reproduced in Node, not on the page.
 - **P4 — Printables.** Frayer model page; spaced-repetition scheduling for printed
   drills (which list, which day); fill-in-the-blank sentence mode; a word wall as a
   system (cards by unit, printable index, retire a unit).
