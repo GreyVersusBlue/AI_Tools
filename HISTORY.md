@@ -9,6 +9,48 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 14 P3 designed, not built: the seating constraint solver (2026-10-05, AI-22, no `CACHE_VERSION`, no code)
+
+Audit entry AI-22, rank 35 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P3 bullet under
+"Path 14", its Status line, and a note on rank 35). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** One pure ES module beside `seating.mjs`, `Tools/seating-chart/seating-solve.mjs`:
+  `normalizeRules()` (today's pairs, pinned desks and a new "leave empty" desk flag become rules of one shape),
+  `zones()` (front, back, edge, or desks the teacher taps), `feasibility()` (seven named impossibilities before
+  any draw), `score()` (hard, unseated, soft, compared left to right), `solve()` (today's construction pass in
+  most-constrained-first order, then min-conflicts moves and swaps, restarts while a hard rule is broken, a
+  counted budget so a seed repeats on any machine, a 2 s stop behind it), and `blame()` (impossible, held by
+  which rules, or out of budget). Rule kinds: apart, together (a pod at three or more, `anyOf` for "needs a
+  partner"), zone, seat, empty, space; a Must / Want weight; a reason field that is the sensitive text. The
+  section's old `apart` and `together` lists stay written from the rules, so an older cached page keeps the pairs
+  and loses only what it never knew. `assignSeats()` and `checkConstraints()` stay as they are, with their suites.
+- **What reading and measuring turned up.** Make grid's snap gives the 8 × 5 room column pitches of 132 and 110
+  px, so 10 of 40 desks have a diagonal neighbour and two have six while the rest have four or fewer: a keep-apart
+  pair can sit corner to corner in one column and not the next. Today's pass builds a connected pod while the
+  checker wants each pair adjacent, which is why a star of five is reported broken 45% of the time and never
+  `forced`. On a grid today's pairs are not the problem: 0% broken for up to 40 random keep-apart pairs and 8
+  together pairs over 300 seeds each. One pass costs 0.5 ms here, 800 about 400 ms; three full sections are
+  about 100 KB in the key and 6 MB across the 60-deep undo stack. The flag is read by nothing; the note travels in
+  the share link and reaches 045; 005's ids are its own, so a removed-and-re-added name loses its pairs.
+- **What the measurements were.** Two pure-Node probes importing the real `seating.mjs`, 200 to 300 invented
+  rooms and classes a shape, a Ryzen 5 2400GE; not kept. The figures are in the design.
+- **Decided here, cheap to reverse.** A tool module, not `_shared/` (only 005 solves seats; Path 13 P2's
+  seating-aware grouping reads distances from `SeatingRead`). No draw-for-draw parity with today's loop (its stop
+  rule cannot survive scored soft rules); "no worse" by measured rates instead, and golden files for the new
+  solver. The budget counted, not timed. The solve synchronous on the page until the classroom laptop says
+  otherwise. `empty` a desk field, so P4's shared room owns it. `why` stripped from the share payload by policy.
+  The grid-snap finding recorded and not fixed, since it changes every existing chart's adjacency.
+- **Left to Devon, listed in the design and not answered:** where an accommodation reason lives (005's key or the
+  shared record); whether rules travel in a link and print on the sub export; default hardness of keep-apart and
+  put-together; fill the room or leave the fought-over students out when hard rules cannot hold; chains as pods or
+  as pairs; the two new soft rules and visible weights; reading 002's pairs; tapped desks as zones before P4; what
+  "front row" means in a pod room; how long a click may take; a student in two periods.
+- **Not verified.** No solver exists and nothing ran in a browser. The search is designed, not prototyped; the
+  250 ms target is one machine's figure and a five-times guess for the laptop. The rooms were grids. No real
+  chart was read.
+
+---
+
 ## 060 Fitness & Skill Assessment Tracker: a report card per student (2026-10-05, AI-31-060, `CACHE_VERSION` v251; the commit messages say v249, which `main` took first)
 
 Audit entry AI-31, BACKLOG rank 99 (½). Per-tool row; the rank-99 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).

@@ -410,7 +410,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 34 | Path 13 P4 — bracket completeness: double elimination, pools, Swiss, ties, consolation | 020 | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
-| 35 | Path 14 P3 — seating constraint solver that explains which soft constraints it broke | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
+| 35 | Path 14 P3 — seating constraint solver that explains which soft constraints it broke (**designed 2026-10-05, not built**: the design and eleven questions for Devon are under the P3 bullet) | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 36 | Path 14 P4 — the room, not the grid: a room layer shared across period assignments | 005 | 2+ | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 37 | Path 14 P5 — live mode; extract the undo stack into `_shared/undo.js` | 005 | 1 | | [Path 14](#path-14--seating-chart-room-model-constraint-solver-phone-toolbar) |
 | 38 | Path 15 P1 — split Name Picker: themes as data, sound, one module per pick mode | 007 | 1 | | [Path 15](#path-15--name-picker-split-equity-dashboard-themes-as-data) |
@@ -3536,6 +3536,318 @@ un-extracted.
   once a quarter), a scored auto-assign that reports which soft constraints it
   broke and why, and enforcement across a *sequence* of charts rather than the
   single-shot 800-attempt loop. *Fable for the solver and its explanation output.*
+  **Designed, not built (AI-22, 2026-10-05, a design pass: no code, nothing run in a browser). Everything from
+  here to P4 is the design.** Read from the tree at v251: 005's page and `Tools/seating-chart/seating.mjs`
+  (the solver, the checker, `repairState`, the history functions), `scg-photo.js`, `_shared/seating-read.js`
+  and its four readers (010, 008's `seating-layout.js`, 045, 007's `np-seat-equity.js`), `_shared/roster.js`,
+  the registry row, the six suites behind `test:seating`, the Path 13 P1 design (the grouping engine, written
+  the same day), Path 3 P5 and P6 (flags; the rollover) and Path 4 P4 (the photos). Figures marked *measured*
+  came from two pure-Node probes that imported the real `seating.mjs` from the worktree and drove
+  `assignSeats()` with a seeded generator over invented rooms and names; they were not kept. Questions that
+  are Devon's are listed at the end and not answered.
+  - *What is there today, as read.* **The constraint language is five things.** *Keep apart* and *put
+    together* are lists of student-id pairs on the section (`apart`, `together`); a pair cannot be both (the
+    page enforces it on entry, `repairSection` drops a together pair that is also apart, silently). *A locked
+    desk* keeps its occupant through auto-assign; a locked empty desk is free. *The flag* (`student.flag`) is
+    a gold outline meaning "needs a particular seat" and is read by nothing: the solver never sees it. *The
+    note* (`student.note`) is free text the page tells the teacher to keep practical ("front row, vision"
+    rather than anything medical); it never prints except on the sub export, it travels in the share link
+    (`smoke-share.mjs` asserts it) and in the file, and 045 reads it through `SeatingRead.deskRows()`. Then two
+    *soft* nudges, both gated on a recorded history: no repeat seat (`seatKey`, a grid-snapped x:y) and front
+    row once per quarter (`frontRowDeskIds`: every desk within 60% of a desk height of the frontmost). The
+    quarter is freeform text. **Adjacent** means centre-to-centre within 142 px (`ROOM.neighbor`).
+    **The search** is `onePass()` 800 times: shuffle the together blocks (union-find over the pairs) and the
+    students inside each, then place in that order, each student on a random desk among those that break no
+    keep-apart with anyone already seated; a student with a seated block-mate must take a desk beside *any*
+    seated mate, and if none is free the whole pass is thrown away. The two nudges narrow the candidate list
+    when they can. A pass is scored seated × 10 + 3 for apart clean + 3 for together clean, the first clean
+    full pass stops the loop, and if every pass was thrown away the room is filled at random (`forced`).
+    **The checker** (`checkConstraints`) is pairwise: an apart pair adjacent is broken, a together pair not
+    adjacent is broken. So the pass builds a *connected pod* while the checker wants *each listed pair
+    adjacent*; for a chain (A–B, B–C) they agree, for a star (A with B, C, D) they do not, and the status line
+    reports the checker's view. **What the teacher is told** is counts: "2 keep-apart pair(s) could not be
+    separated", the unseated count, repeats and due counts; names only on the printed violations list and
+    the sub export. **Undo** is a stack of up to 60 JSON snapshots of the whole state, pushed before every
+    mutation (auto-assign is one step), popped by Undo; an opened file empties it; there is no redo.
+    **Identity:** a student's `id` is 005's own `uid()`, minted when a name is added; the Hub picker hands over
+    names, not ids; nothing in 005 calls `Roster.trackRenames` or the sidecar. Removing a student deletes
+    their pairs and frees their desk; re-adding the name mints a new id, so the pairs do not come back.
+    **The readers** (010, 008, 045, 007) read `desks`, `assign` and `students` (name, note, flag) and never the
+    pairs; the 022 → 005 handoff builds a section with no pairs. **Storage:** `repairSection()` rebuilds the
+    section field by field, so a page from an older cache drops any field it does not know on its next save,
+    the same trap Path 13 found in 022 and 027.
+  - *Measured* (an 8 × 5 "Make grid" room of 40 desks, 36 invented students, a Ryzen 5 2400GE). (1) **Make
+    grid's snap makes the neighbourhood uneven.** The column pitch is 132, 132, 110, 132, 132, 132, 132 px
+    (each `startX + c × 128` snapped to 22), the row pitch 88 or 110, so the diagonal across the narrow
+    column is 140.9 px and counts as adjacent while every other diagonal (158.6 px) does not: 10 of the 40
+    desks have a diagonal neighbour and two have six neighbours, the rest four or fewer. A keep-apart pair can
+    sit corner to corner in one column and not in the next. Not a P3 change (it is `gridDesks()` and
+    `ROOM.neighbor`), but the solver's adjacency is this, and the design says so. (2) **Cost.** One pass with
+    20 apart and 4 together pairs, `neighborMap` and the check included, is 0.5 ms; 800 of them about 400 ms.
+    With no rules a call is 0.85 ms (the first pass is clean). An impossible together pair runs all 800
+    passes; a chain of six took 107 ms. `neighborMap` alone is 0.1 ms for 40 desks, 0.18 for 60. (3)
+    **Failure rates, 300 seeds a shape.** Random keep-apart pairs: 0% broken at 5, 10, 20, 30 and 40 pairs.
+    Disjoint together pairs: 0% at 2, 4, 6 and 8. Two chains of three, one chain of four: 0%. A star of five
+    round one student, which needs a desk with five neighbours: broken 45%, never `forced` (the pass builds
+    a connected pod and the checker then fails the pairs). 10 apart + 4 together + 3 recorded arrangements
+    with the quarter on: 0% broken, 1.4 ms. (4) **Size.** Three such sections with three recorded
+    arrangements and two saved layouts each are about 100 KB of UTF-16 in the key, and the undo stack at 60
+    deep is 6 MB in memory; no student photo is in either since v192. The failure rates say today's hard
+    pairs are not the problem on a grid; what is missing is every constraint that is not a pair, a report
+    that names students and causes, and a search that trades soft rules off instead of filtering by them.
+  - *The rule the design is held to.* The chart on disk is not changed by loading; `assignSeats()` and
+    `checkConstraints()` stay exported with their suites' assertions untouched, because the sub packet, the
+    readers' fixtures and `smoke-seating.mjs` call them; the new solver is a second function, and the page
+    switches to it in one commit. For a section with only today's constraints the new solver is held to **no
+    worse**, by measurement on the shapes above (never a higher broken or `forced` rate over 300 seeds), not
+    draw for draw: today's stop rule (the first clean pass) cannot survive scoring soft rules, so parity to
+    the draw is not a goal, and the golden files pin the new solver's own results. Nothing that is not a pair
+    is read into a rule: a note saying "front row" is still a note.
+  - *The constraint language.* A section gains `rules: [rule]`, each `{ id, kind, hard, weight, students,
+    desks, zone, anyOf, why }`. `students` and `desks` are id lists; `hard` is a boolean; `weight` is 1, 2 or
+    3 for a soft rule ("nice", "important", "really want"); `why` is optional text, the reason as the teacher
+    wrote it, and is the sensitive field (below). Kinds:
+    - `apart` (two or more students): no two of them adjacent. Today's `apart` pairs become 2-member rules.
+    - `together` (two or more): with two, adjacent; with three or more, **a pod**: every member adjacent to at
+      least one other and the set connected. A chain of today's pairs stays pairs (question 5).
+    - `together` with `anyOf` ("needs a partner who can read the board"): `students: [A]`, `anyOf: [B, C,
+      D]`, met when A is adjacent to at least one of them.
+    - `zone` (students and a zone): each listed student seated in the zone. In P3 a zone is `'front'` (today's
+      `frontRowDeskIds`), `'back'` (the same measure from the deepest desk), `'edge'` (a desk with fewer
+      neighbours than the room's median: the ends of rows), `'notEdge'`, or `desks: [id]`, a set the teacher
+      taps out on the floor ("near the door" is the desks by the door until P4 can say where the door is).
+      `'front'` is what "vision" and "hearing" accommodations become; the words are the teacher's, in `why`.
+    - `seat` (one student, one desk): a fixed seat. **Not stored as a rule:** a locked desk with an occupant
+      *is* this rule, and `normalizeRules()` derives it, so nothing changes on disk and the pin button stays
+      the way a teacher fixes a seat.
+    - `empty` (desks, no students): the desk stays empty. New; today the only way is to delete the desk. The
+      floor gets a "Leave empty" toggle beside Pin; it is stored as `desk.empty: true` (a desk field, like
+      `locked`), and `normalizeRules()` derives the rule. An empty desk is never a neighbour for `together`
+      and still one for `apart` (two students across an empty desk are not adjacent, by distance).
+    - `space` (students): no neighbour at all, hard or soft. A "needs room" accommodation; also what a
+      teacher means by "nobody next to them for a week".
+    Then **the section's soft preferences**, `prefs: { noRepeatSeat, frontRowRotation, newNeighbours,
+    spreadEmpty }`, each 0 (off) to 3, which are today's two nudges with a weight and two new ones: not the
+    same neighbour as last time, and empty desks spread out rather than clustered. Defaults reproduce today:
+    `noRepeatSeat: 2` and `frontRowRotation: 2`, active only when the section has a recorded arrangement
+    (and, for the front row, a quarter), the others 0. `prefs` is setup and survives a rollover; `rules` is
+    student data and does not.
+  - *The module: `Tools/seating-chart/seating-solve.mjs`, new, an ES module beside `seating.mjs`,* not
+    `_shared/`: only 005 solves seats, and Path 13 P2's seating-aware grouping reads distances from
+    `SeatingRead`, not this. Pure: no DOM, no storage, no clock, no `Math.random` when given `rng` or `seed`;
+    runs under Node as `seating.mjs` does. It never throws on data: a malformed rule is dropped and named in
+    `result.dropped`.
+    - `rng(seed)`: mulberry32 from a 32-bit number or a string (FNV-1a), the same two functions Path 13 P1
+      names, copied not imported (the two modules must not depend on each other); `newSeed()`.
+    - `normalizeRules(section)` → `{ rules, dropped }`: today's `apart` and `together` lists as 2-member
+      rules (ids `legacy:apart:<a>|<b>`, so the mirror below can find them), `rules` as stored, `seat` rules
+      from locked occupied desks, `empty` rules from `desk.empty`; a rule naming a student or desk that is
+      gone loses that id, and is dropped when fewer than its kind's minimum remain; a student in an `apart`
+      and a `together` of the same set is dropped from the together and named; duplicates merge.
+    - `zones(desks, nbrs)` → `{ front: Set, back: Set, edge: Set, notEdge: Set }`, geometry only; P4 adds
+      named room zones here and nothing else changes.
+    - `feasibility(section, rules, nbrs)` → `{ impossible: [{ ruleIds, code, students, desks }] }`, before any
+      draw, each `code` one of: `together-too-big` (a pod larger than the largest connected cluster of free
+      desks), `zone-full` (more hard-zoned students than desks in the zone, after seats and empties),
+      `seat-twice` (a student pinned at two desks: cannot happen from the page, can from a file), `apart-
+      clique` (more students all apart from one another than a greedy independent set of desks can hold),
+      `space-too-many` (more hard `space` students than desks with no occupied neighbour can exist for, by
+      the greedy bound), `no-room` (more students than desks, less empties: the unseated are named up front
+      rather than discovered), `contradiction` (a together pair that is also apart, which `repairSection`
+      drops today without a word). Greedy bounds can miss an impossibility; they never invent one.
+    - `score(section, assign, ctx)` → `{ hard, unseated, soft, broken: [{ ruleId, kind, students, desks,
+      weight, cost }] }`, where the score is the list `[hard, unseated, soft]` compared left to right: `hard`
+      the number of broken hard rules, `soft` the sum of weight × cost over broken soft rules and the four
+      prefs (a repeat seat costs its pref weight per student; a due student not in front costs the pref
+      weight; a repeated neighbour costs the weight per repeated pair; clustered empties cost the weight per
+      adjacent pair of empties). `ctx` is `{ rules, nbrs, zones, history, quarter, prefs }` built once by
+      `solve()` and exported so the page can score a chart a teacher dragged into shape with the same
+      function. This replaces `checkConstraints` + `checkHistoryConstraints` for the status line; the two
+      stay for everything else.
+    - `solve(section, opts)` → `{ assign, unseated, forced: false, seed, score, broken, blame, impossible,
+      dropped, stats }`. `opts`: `{ seed | rng, quarter, prefs, keep: 'locked' | 'all', absent: [id],
+      budget: { passes: 40, moves: 4000 }, timeLimitMs: 2000 }`. `keep: 'all'` is the roster-change answer
+      below. `absent` students are left out of the seating and out of every rule for this solve (P5's live
+      mode). `stats` is `{ passes, moves, improved, ms, stoppedBy }`, `stoppedBy` one of `'clean'` (hard 0,
+      no soft move left), `'budget'`, `'time'`, `'impossible'` (feasibility named something, the search still
+      ran).
+    - `blame(section, result, ctx)` → `[{ ruleId, cause, by: [ruleId], desks, students }]` for each broken
+      hard rule, `cause` one of `'impossible'` (feasibility named it: the by-list is that entry), `'held'`
+      (every desk that would mend it is held by a pinned seat, an empty, or a student whose own hard rule
+      would break if moved: `by` names those rules, `desks` the desks tried), `'budget'` (a mending move
+      exists and the search ran out; shown with "Try again"). Found by one bounded probe per broken rule:
+      for each student in it, every desk that would mend the rule, with the hard rules of its occupant that
+      the swap would break; no re-solve. The engine returns ids and codes; **the page writes the sentence**
+      (Path 13's rule, kept).
+    - `rulesToLegacy(rules)` → `{ apart, together }` (the 2-member pairs) and `absorbLegacy(section)` for the
+      mirror below.
+  - *The algorithm, in the order the draws happen.* (1) `normalizeRules`, `neighborMap` (today's, with
+    `empty` desks removed from `together` adjacency), `zones`, `feasibility`. (2) Seeds: pinned occupants, as
+    today; under `keep: 'all'` every seated student becomes a soft `seat` rule at weight 3 instead, so they
+    move only to mend a hard rule. (3) **Construct**, today's pass with a better order: most constrained
+    first (hard zone with the fewest desks, pods largest first, `space`, then the rest), ties and the order
+    inside a tier by `rng`; a candidate desk is any free desk that breaks no hard rule against what is seated,
+    chosen by the lowest soft cost among them with `rng` breaking ties; a student with no candidate takes the
+    desk that breaks the fewest hard rules (never thrown away, so there is no `forced`). (4) **Improve**:
+    min-conflicts over moves and swaps. While the score is above `[0, 0, 0]` and moves remain: take a broken
+    rule (hard first, then the costliest soft, `rng` among equals), for one of its students try every free
+    desk and every swap with a seated student, keep the move that lowers the score most, and if none does,
+    make the best sideways move at most twice in a row before giving that rule up for this pass. (5)
+    **Restart**: when a pass ends with `hard > 0` and passes remain, construct again with the next shuffle;
+    keep the best score over all passes; a pass that reaches `[0, 0, 0]` stops everything. (6) `blame` on the
+    best. With no rules, no history and no prefs the construct is one shuffle and nothing improves: a click
+    costs what it costs today.
+  - *Determinism and seeding.* `seed` wins over `rng`, which wins over `newSeed()`; the result carries the
+    seed, so `solve(section, { ...opts, seed })` repeats it; the page keeps the last seed in memory only
+    (never saved) and "Try another" is a new seed. **The budget is counted, not timed**, so a seed gives the
+    same chart on every machine; `timeLimitMs` is an emergency stop that marks `stoppedBy: 'time'` and is
+    what keeps a pathological room from hanging the tab, never what a test depends on. The page-driven suite
+    does not pin (`CLAUDE.md`); the pure suite and `golden.json` do.
+  - *Speed, and the budget.* The target is **under 250 ms for 40 desks, 36 students and 30 rules on the
+    classroom laptop**, with the 2 s stop behind it. Measured here, one pass is 0.5 ms and a move is a
+    rescore, which the build makes incremental (only the rules touching the two moved students are
+    rescored), so a pass of 100 moves is near 1 ms and the default budget (40 passes, 4,000 moves) is about
+    50 ms on this machine; the laptop is taken as five times slower, which is a guess and the reason the
+    target has room. The build ships `Tools/seating-chart/test/bench-solver.mjs` (not a suite: it prints ms
+    and `stats` per shape, the grid, a pod room from 022's handoff, a 60-desk room, with and without rules)
+    and the number is written here from the slowest machine 005 is used on, with `--repeat`; the pure suite
+    asserts `stats.moves` and `stats.passes` against the budget and prints ms without asserting it. The solve
+    stays synchronous on the page (no worker: it would need the module split in two, a second precache
+    entry and an async "assigning…" state for a wait that should not reach 250 ms); if the laptop measurement
+    says otherwise, a worker is the first thing to add and `solve()` needs no change for it.
+  - *Storage, the mirror, and what rollover and backup must know.* Same key, `SCHEMA_VERSION` stays 1:
+    `repairSection` gains `rules` (shape-checked, unknown kinds dropped), `prefs` (0 to 3 each) and
+    `desk.empty`; a chart with none of them loads exactly as today. **The old lists stay written from the
+    rules** (`rulesToLegacy` on every save), and on load `absorbLegacy` runs: a 2-member `apart` or
+    `together` rule is *represented* by the lists, so the lists win for those (an older cached page that
+    added or removed a pair is honoured, keeping the rule's `hard`, `weight` and `why` where the pair still
+    matches); rules of any other kind or size live only in `rules`, and an older page drops them on its next
+    save, which is the known loss, as in Path 13, and the reason the mirror exists for the two kinds that
+    matter most. The share payload is built by the page: `rules` travel **without `why`** (as photos are
+    stripped by policy), and `smoke-share.mjs` asserts it; the sub export prints broken and kept rules by
+    kind and name, never `why`; `SeatingRead` exposes no rule (045 keeps `note` and `flag`, unchanged).
+    **For Path 3 P6:** 005's reducer empties one more field, `rules`, and keeps `prefs` and `desk.empty`;
+    `why` is in `rules`, so it goes with the students; the registry row does not change (`seating-chart-v1`
+    is already `student: true`). **For backup:** nothing new, the key is whole. `why` on the shared record is
+    question 1.
+  - *A solved chart and a roster change.* Rules hold 005's ids, so a rename in the page keeps them; a name
+    added again after removal is a new id, as today (Undo is what brings the rules back). Loading the Hub
+    roster adds only names not present, so re-pasting a roster leaves rules alone. The chart itself:
+    `cleanAssign` already drops a departed student's seat; a new student is in the pool; "Fill the gaps"
+    (`keep: 'all'`) seats the pool around everyone else, moving a seated student only to mend a hard rule,
+    and says who moved. A student taken off the roster leaves `history` entries alone (they carry a name
+    cache). Shared ids are Path 3 P5's, not this phase's.
+  - *Undo.* Unchanged: one `pushUndo()` before `solve()`, as before `assignSeats()`. What P5's
+    `_shared/undo.js` needs from P3 is only that the solver is pure and the page's mutation is one
+    assignment; nothing here reaches into the stack.
+  - *What P4 and P5 need from it.* P4 (the room layer): `zones()` is the one place a zone is computed, so a
+    room with a door, windows and a teacher desk adds `door`, `window`, `teacher` (desks within a radius of
+    the feature) there, `rule.zone` takes those names, and every rule a teacher tapped out as `desks: [id]`
+    is still honoured; a room shared across period sections means `desk.empty` and the desks are the room's,
+    `rules` the section's, which is why `empty` is a desk field. P5 (live mode): `solve({ keep: 'all',
+    absent })` reseats around absences without moving anyone present; `score()` on the live chart after a
+    tap says what the tap broke; results are data, so the projector view renders them its own way.
+  - *What P3 shares with Path 13 P1, and what it must not.* Shared: the two words and their meaning to a
+    teacher (apart, together), `together` as a set rather than pairs (P1's `together: 'units'`), the
+    lexicographic score with hard first, a seeded mulberry32 with the seed in the result, `impossible` named
+    before the search, `dropped` for malformed input, `stoppedBy`, and the rule that the engine returns ids
+    and the tool writes the sentence. Not shared: the engine. Grouping assigns to unordered sets (apart means
+    "not the same group"); seating assigns to a geometry (apart means "not within 142 px", and a zone, a pod
+    and an empty desk have no group meaning). Not shared either: the rules themselves (002's pairs are for
+    group work and 005's for seats; question 7), the memory (002's pair history is group memory, 005's
+    `history` is seat memory), and the id space (002 keys on names and the sidecar's ids, 005 on its own).
+    Path 13 P2's seating-aware grouping stays `cost(a, b)` from `SeatingRead` distances.
+  - *What the page changes.* The Keep Apart and Put Together blocks become one **Rules** block: a kind
+    select, a student picker (one or more), for a zone rule a zone select or a "choose desks" mode that
+    highlights taps on the floor, a Must / Want (1–3) select, and a short reason field under the same hint
+    the note has ("front row, vision", nothing medical). Existing pairs appear as rules, Must. The floor's
+    desk buttons gain Leave empty beside Pin. Auto-assign calls `solve()`; **Try another** (new seed) and
+    **Fill the gaps** (`keep: 'all'`) sit beside it. The status line keeps its counts; a **Why?** link opens
+    a panel with one sentence per broken rule, from the codes: "Avery Stone and Blake Rivers are side by side:
+    the only desks that would separate them are pinned (Casey Lund) or in the front-row zone Dana Park must
+    have"; "Casey Lund sits where they sat in Unit 2 (want, 2): every other free desk broke a keep-apart";
+    "Nobody can sit next to Blake Rivers: the room has no desk with every neighbour free once the pods are
+    placed (impossible)". The printed violations list and the sub cover's "rule conflicts" count read
+    `result.broken` for every hard kind. The 022 → 005 handoff and the four readers do not change.
+  - *Tests the build ships.* `Tools/seating-chart/test/solver.test.mjs` (pure Node, a `test:seating-solver`
+    shortcut and a `suites.json` line): `normalizeRules` on the legacy lists, a locked desk, an empty desk, a
+    rule with a departed student, a contradiction, and fifteen malformed shapes (none throws, each named in
+    `dropped`); `zones` on a grid, a pod room, one row, no desks; `feasibility` for each of the seven codes
+    and none on 2,000 random satisfiable rooms; `score` against totals written in the test, and equal to
+    `checkConstraints` + `checkHistoryConstraints` on every chart made of pairs and history only (300 seeds);
+    `solve` places each present student once with no desk twice, for 500 seeds over 0 to 60 students and
+    0 to 60 desks (0 students, 0 desks, more students than desks, every desk pinned, every desk empty); the
+    same seed twice is the same chart and `seed` reproduces a `newSeed()` run; **no worse than today** on the
+    probe's shapes (the broken and `forced` rates above as ceilings, 300 seeds each); a pod of three, of six,
+    a star of five on a grid with a desk of six neighbours and on one without (`together-too-big`); `anyOf`;
+    front, back, edge and tapped zones, hard and soft; `empty` never seated and never a `together`
+    neighbour; `space`; `keep: 'all'` moves nobody when the pool fits and names the one it moves when it
+    must; `absent`; the four prefs each lower their own cost against a seeded history (a repeat seat, a due
+    student, a repeated neighbour, clustered empties), and `noRepeatSeat: 2` with `frontRowRotation: 2`
+    reproduces today's nudge assertions (the two in `smoke-seating.mjs`, re-run through `solve`); `blame`
+    gives `'impossible'`, `'held'` and `'budget'` on three built rooms; the budget holds (`stats.moves` never
+    above it, `stoppedBy` as expected) and `timeLimitMs: 0` stops after one pass; `rulesToLegacy` then
+    `absorbLegacy` is the identity on 2-member rules, an older page's added pair arrives, a removed pair
+    goes, a pod survives when the lists did not change. Twelve seeded results go to
+    `Tools/seating-chart/test/golden.json` in the P3 commit. Each assertion is seen failing once with its
+    rule broken on purpose. `drive-seating.mjs` gains: add a zone rule by tapping two desks, a soft rule
+    with a reason, Auto-assign, the Why? panel's sentence for a built conflict, Try another changes the
+    chart, Fill the gaps after adding a name moves nobody, Undo after a solve restores the chart, a blob
+    saved by the page before P3 loads with its pairs as Must rules, and Leave empty keeps a desk empty
+    through a solve. `smoke-share.mjs` gains: `why` is not in the payload and the rules are.
+    `smoke-sub-packet.mjs` gains: a broken zone rule on the cover's conflict count, no `why` anywhere on the
+    paper. The `test:seating` shortcut gets the new file, and `check:registry` needs nothing.
+  - *The build's bookkeeping.* `seating-solve.mjs`, `golden.json` and the suite in `PRECACHE_URLS` (005 is
+    not a shell tool), a `CACHE_VERSION` bump, the `inline-sinks` baseline for 005 lowered if the Rules block
+    is built with `textContent` (it should be), `check:entities` on the new sentences, the a11y sweep on the
+    new controls (005 is not on the allowlist for them), `check:print-clip` unaffected.
+  - *Deliberately left out of P3.* Height ordering and any rule over rows as rows (there is no row model;
+    P4). Door, window and teacher-desk zones (P4; tapped desks are the interim). A student in two sections
+    at once (a person is a name per section today). Planning a *sequence* of charts ahead ("front row once
+    a quarter" is solved chart by chart against the recorded history, with the pref's weight; a planner
+    that lays out the quarter's four charts at once is a different tool and would need the quarter's
+    dates). Reading a note into a rule. Importing 002's pairs. A worker. Redo. Shared ids. Any change to
+    `gridDesks()`'s snap or to `ROOM.neighbor` (found above, and a visible change to every existing chart's
+    adjacency; it is recorded, not fixed, and is a row's worth of its own with a measurement of real
+    charts). Stopping the mirror of the old lists, a later cleanup with a `CACHE_VERSION` of its own once no
+    cached page can predate P3. Anything student-facing.
+  - *Not verified.* Nothing ran in a browser and no solver exists; the min-conflicts search is designed, not
+    prototyped, so its failure rates against today's are a claim the suite must make true, and the 250 ms
+    target rests on one machine's per-pass figure and a five-times multiplier, not on the classroom laptop.
+    The probe's rooms were grids; a pod room from 022's handoff and a hand-built room were not measured.
+    `blame` was not prototyped. The older-cache mirror was read from `repairSection`, not reproduced. No
+    real chart was read: every figure is from invented rooms and names.
+  - **Questions for Devon. None is answered here; each says what the design assumes until he does.**
+    1. *Where an accommodation reason lives.* A rule's `why` ("front row, vision") is the most sensitive text
+       in the tool. Does it belong on the shared student record (Path 3 P5's "accommodation note", so every
+       tool could honour it) or only in 005's key, as the note does today? Assumed: 005's key, with P6's
+       rollover clearing it as student data.
+    2. *Whether rules travel.* The share link carries the note today. Should rules travel in a shared section
+       (without `why`), or should a shared section arrive with no rules at all? And should the sub export
+       print the rule kinds by name, as it prints broken pairs today? Assumed: rules travel without `why`;
+       the sub export prints kinds and names, never `why`.
+    3. *Default hardness.* Is keep-apart a Must or a Want by default, and put-together? Assumed: both Must
+       (today's pairs are enforced before any nudge), every new kind Want at 2 until the teacher says Must.
+    4. *When the hard rules cannot all hold.* Fill the room and say why (today), or leave the students the
+       rules fight over in the pool with the reason? Assumed: today's, fill and name.
+    5. *Chains.* "Chain several pairs to build a pod" is the page's own hint. Should a chain of today's pairs
+       become one pod rule (connected, any shape) or stay pairwise adjacent (A beside B *and* B beside C, as
+       the checker reads it)? Assumed: pairwise, so no existing chart's report changes; a pod is the new
+       three-or-more rule.
+    6. *New soft rules and their weights.* Are "not the same neighbour as last time" and "spread the empty
+       desks" wanted, and should the four weights be a setting a teacher sees, per section? Assumed: both
+       off until turned on; the four are a small settings row under Seating History.
+    7. *002's pairs.* Should the solver read Group Generator's keep-apart pairs for the same roster, or are
+       seat pairs and group pairs different lists? Assumed: different; nothing is read across.
+    8. *Zones before P4.* Is tapping desks on the floor to mark "near the door" an acceptable interim, or
+       should zone rules wait for the room layer? Assumed: tapping is enough for P3.
+    9. *What "front row" means in a pod room.* Today it is every desk within 60% of a desk height of the
+       frontmost; in a room of pods that is one pod's front edge. Keep it, or let the teacher tap the front
+       desks? Assumed: today's measure, with a tapped zone as the way round it.
+    10. *The wait.* Is up to a second on the classroom laptop acceptable for a click, or must it feel
+        instant (which lowers the budget and the quality)? Assumed: 250 ms target, 2 s stop.
+    11. *A student in two periods.* Nothing links the same person across sections; a rule in one period says
+        nothing in another. Is that right for P3? Assumed: yes, out of scope.
 - **P4 — The room, not the grid.** A room layer (doors, windows, teacher desk,
   benches, projector wall, obstacles) shared across period-specific assignments,
   so one physical room is drawn once. Reuse 035's tile editor where sensible;
@@ -3548,7 +3860,8 @@ un-extracted.
 
 **Status.** P1 shipped 2026-09-03. P2 shipped 2026-09-04 (#182, `CACHE_VERSION` v148) with
 010 as its single adopter; 008, 045 and 007 still carry their own readers, for reasons
-recorded in the module header and in this file's "what these phases leave" notes. P3–P5 open.
+recorded in the module header and in this file's "what these phases leave" notes. **P3 designed 2026-10-05
+(AI-22), not built:** the design and eleven questions for Devon are under the P3 bullet. P3–P5 open.
 
 **Model.** Fable for P3; Opus otherwise.
 
