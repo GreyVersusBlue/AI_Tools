@@ -112,6 +112,7 @@ const clean = async (page, tag) => {
   const d = await doc(page);
   eq(d.v, 2, '2: the next write is version 2');
   eq(d.data.list[0].banks.animal, ['axolotl', 'pangolin'], '2: bank and story are in the one save');
+  eq(await page.evaluate(k => localStorage.getItem(k), BANKS_KEY), legacyBanks, '2: the old bank key is still exactly what it was after an edit');
 
   // the old bank key no longer feeds a page that has a list
   await page.evaluate(([bk]) => localStorage.setItem(bk, JSON.stringify({ animal: ['intruder'] })), [BANKS_KEY]);
@@ -178,10 +179,12 @@ const clean = async (page, tag) => {
   await page.fill('#bankWordsInput', 'okapi');
   await settle(page, 600);
 
+  await page.selectOption('#bankTagSelect', 'color');   // the tag stays chosen across the switch
   const first = await page.$$eval('#storySelect option', os => os[0].value);
   await page.selectOption('#storySelect', first);
   await settle(page, 200);
   eq(await text(page), 'Story one has a {color} {noun}.', '3: switching back restores the text');
+  eq(await page.$eval('#bankWordsInput', e => e.value), 'teal, maroon', '3: its bank shows in the editor at once, for the tag already chosen');
   eq(await bankOf(page, 'color'), 'teal, maroon', '3: and its word bank');
   eq(await bankOf(page, 'animal'), '', '3: without the other story\'s words');
   ok(/teal|maroon/.test(await page.$eval('#bankBox', e => e.textContent)), '3: the on-screen bank shows this save\'s words');
@@ -336,6 +339,17 @@ const clean = async (page, tag) => {
   await again.goto(PAGE, { waitUntil: 'networkidle' });
   await settle(again, 250);
   eq(await names(again), ['No saved stories yet — type below to start one'], '7: still empty after a reload');
+
+  // an input event on the empty textarea does not invent a save
+  await page.fill('#customText', 'x');
+  await settle(page, 600);
+  page.__answers.push(true);
+  await page.click('#deleteStoryBtn');
+  await settle(page, 150);
+  await page.evaluate(() => document.getElementById('customText').dispatchEvent(new Event('input', { bubbles: true })));
+  await settle(page, 600);
+  eq((await doc(page)).data.list, [], '7: an empty box with no save does not make one');
+  eq(await names(page), ['No saved stories yet — type below to start one'], '7: nor show one');
 
   // and the empty tool takes new work
   await page.fill('#customText', 'Fresh {color}.');
