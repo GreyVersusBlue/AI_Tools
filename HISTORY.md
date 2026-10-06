@@ -9,6 +9,58 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 6 P4 finished: 053 sends a teacher's trivia to 030's question bank, and 030's markup sinks are read first (2026-10-06, AI-14, `CACHE_VERSION` v269)
+
+Audit entry AI-14, BACKLOG rank 1 (¼), the last of the Path 6 P4 rollout. The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **The audit came first, because this makes 030 take link input.** The handoff said "about thirty places that write HTML directly". `npm run
+  check:inline-sinks -- --list 030` counts **10** dynamic markup sinks (the rest of the page's sixteen `innerHTML` lines are static). Read one by one:
+  every **text** in all ten already went through the page's `escapeHtml()`. What did not: a clue's **points** in three of them (the editor row's
+  `value="…"`, the answer key, the practice quiz) and a team's **score** in the wager list. A received question cannot reach those (the bank makes
+  points a number), but a board is stored as it was saved and `loadBoardByName()` does not normalise it, so a board from a restored backup with
+  `points: '"><img …>'` wrote markup. All four are escaped now.
+- **Seven of the ten are gone.** The bank list's rows, the unit and standard filters, the category suggestions, the wager list and the two Daily
+  Double headings are built from elements with `textContent` (`el()`, `setOptions()`, `questionBody()`, `setDailyDoubleLine()`). Three are left, each
+  escaping every value: the editor's clue row and the two printed sheets. `Tools/board-check/inline-sinks-baseline.json` has a line for 030 at **3**.
+- **A bug found on the way.** A clue's overlay heading was `textContent = escapeHtml(cat.name) + …`: escaped, then written as text, so a category
+  called "Q & A" showed as "Q &amp;amp; A" in the source and so as the five characters `&amp;` on the projector. It is the name as typed now. No guard saw it (`check:entities` reads literals).
+- **The handoff.** One entry in `_shared/handoffs.js`, `cultural-trivia-card-generator` to `review-game-board`, a row in 053's share sheet (053 loads
+  `tool-registry.js` and `handoffs.js` now). What travels is what 053's sheet already shares, the teacher's **own** questions; the built-in thirty are
+  on 030 as a seed set (v267). The payload is the bank's link shape, `{ v: 1, from, name, questions: [{ prompt, answer, unit }] }`: `q` and `a` become
+  `prompt` and `answer`, the category its label as the unit ("Hispanic World"), as the seed set has it. **No id travels.**
+- **The reader.** `QuestionBank.fromLink(payload)`, new in `_shared/question-bank.js` with `isLink()`, `LINK` and `LINK_VERSION`, is the only thing that
+  reads the link. It takes eight fields (prompt, answer, unit, standard, difficulty, tags, choices, points) as text of a bounded length, at most 500
+  questions, and nothing else: an `id`, `media`, dates, `copiedFrom`, a forged `sharedFrom` and any unknown field are dropped. The sender's slug is kept
+  in `sharedFrom` when it is a slug. Pure; it stores nothing.
+- **Decision: a link cannot name a question.** `merge()` replaces a question whose id the bank has, which is right for a teacher's own bank file and
+  wrong for a link from anyone. So an arrival has no id: it is new, or it is skipped because its prompt and answer are in the bank (letter case and
+  spacing aside). The same link twice adds nothing; a question once added keeps the id the bank gave it; one the teacher has since reworded is theirs,
+  and opening the link again adds the link's wording **beside** it (as a copied seed does). To reverse: let `fromLink()` keep a namespaced id.
+- **Decision: 030 asks.** Every other receiver files an arrival under a new name without asking. The bank is one list that every board draws on, with
+  no names to file under, so 030 shows an **arrival card** (each question as text, one the bank has marked "already in your bank") and stores on "Add N
+  questions to my bank" only. "Don't add" stores nothing; a reload does not ask again (`Share.receive()` clears the parameter first). 030's registry
+  row declares `share: { param: 'questions' }`; no key is new.
+- **Found by a failing test: a long link does not open.** A 150-question link is about 17,000 characters, and the suites' own server answered it with
+  an error page. A link is a request line and web servers refuse a long one. So a handoff entry may set `maxLink` and `tooLong(built)`, and
+  `Handoffs.open()` returns the sentence in place of opening a tab. Only this entry sets it, at **7,500** characters (about fifty short questions; a
+  40-question link is 4,729). **That number is under the 8 KB common servers take and was not measured against the live host.** No other entry
+  changed. A teacher with a longer list has no route to the bank yet: BACKLOG rank 94 says so.
+- **A link from before today.** 053's `?trivia=` still adds to 053's own list with the sentence it gave (asserted). 030 read no parameter before; opened
+  with none, with `?trivia=…` or with an unrelated one it shows no card and says nothing.
+- **075's port.** `Tools/staff-directory-builder/test/smoke-wallet-cards.mjs` moved from 8501, which 074's `smoke-two-symbols.mjs` had first, to
+  **8505**, and ran green there (171).
+- **Tests.** New `Tools/review-game-board/test/smoke-received-questions.mjs` (`test:received-questions`, port 8503, **78 assertions**): a board, a team
+  and a bank question whose every field is an `<img onerror>`, a `javascript:` link and an attribute-closing quote, through the board, the overlay,
+  the Daily Double banner and wager list, both printed sheets, the editor, the bank list, its filters and a pull into a board (nothing runs, no element
+  is made, the text reads back character for character), then the arrival: shown and not stored, a reload, Don't add, Add, the same link again,
+  five links that cannot be used, a page opened as before, 40 questions in one link, axe on the card. `test:question-bank` 185 to **212** (the
+  reader), `handoffs.test.mjs` to **408** (the entry, the bound), `smoke-send-to.mjs` to **102** (053's row, 030's arrival, the refusal, an old
+  `?trivia=` link). **Breaks: 22 in pure Node, 22 caught; 12 in the browser, 11 caught and the 12th (a sender's slug the page has no name for, shown raw) given its assertion and caught.**
+- **Not verified.** The 7,500 bound against GitHub Pages. Nothing was opened on a phone or a second computer. No person used the card. The full
+  `npm test` was not run (the sprint's rule); CI on a later wave PR is the check for the rest.
+- **Left.** A route for a list too long for one link, and a board built straight from 053's questions (BACKLOG rank 94). Path 12 P2's rest, P3, P4.
+  **The next free suite port is 8506.**
+
 ## 075 Staff Directory: wallet and lanyard cards with a QR per person (2026-10-06, AI-31-075, `CACHE_VERSION` v268)
 
 Audit entry AI-31, BACKLOG rank 112 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
@@ -51,7 +103,7 @@ Audit entry AI-31, BACKLOG rank 112 (½). The row is deleted and the other ranks
   the sheet out of the flow (`display: none`, so no blank page follows the last card). 075 has its own `@media print` block, which `print-area.css` would break, so
   the kit was not used; the cards are pages built with `StaffCards.pages()`, one `.wc-page` per page with `break-after`, not a flowing grid. No print preview (075
   was not a preview adopter; the on-screen sheet at printed size stands in).
-- **Tests.** `smoke-wallet-card-core.mjs` (`test:wallet-card-core`, pure Node, **110 assertions**) and `smoke-wallet-cards.mjs` (`test:wallet-cards`, port 8501, **171
+- **Tests.** `smoke-wallet-card-core.mjs` (`test:wallet-card-core`, pure Node, **110 assertions**) and `smoke-wallet-cards.mjs` (`test:wallet-cards`, port 8505 since v269; it was written on 8501, which 074's `smoke-two-symbols.mjs` already had, **171
   assertions**). The browser suite reads the codes back: for every card it **decodes the canvas with the vendored jsQR and compares the text with the expected
   `tel:` or `mailto:` URI**, finds the first dark pixel to get px per module (a whole number, 4 or more) and the quiet zone (4 modules on all four sides), checks
   the canvas is inside the room the card gives it, that a card is 324 × 204 px (or 204 × 324) and no name runs out of it, that cut lines are shared, the PDF

@@ -539,6 +539,11 @@ files must be added there too.
   page that has the module. A set is in memory only, its ids are `seed:<set>:<the tool's id>`, and nothing stores
   a seed id: a copy into the bank is a new question with `copiedFrom`. The next tool with built-in questions does
   the same and does not load the module itself (`npm run test:seed-sets`; `BACKLOG.md`, Path 12 P2).
+  Since v269 a tool **sends** a teacher's questions to the bank by link: an entry in `_shared/handoffs.js` whose
+  transform returns `{ v, from, name, questions }`, opened by 030 at `?questions=` (053 is the one sender).
+  `QuestionBank.fromLink()` is the only reader of that link and takes no id from it, and 030 stores an arrival
+  only when the teacher presses Add; a new sender follows 053's entry, `maxLink` included
+  (`npm run test:received-questions`).
   030's old key (`gvb-review-board-bank:entries`) is read on every load
   and never written or removed: do not delete it or its registry line, which is what keeps an older page and an
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are
