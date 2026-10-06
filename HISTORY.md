@@ -9,6 +9,55 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 12 P1: the site's question bank, `_shared/question-bank.js`, with 030 as its one adopter (2026-10-06, AI-14, `CACHE_VERSION` v265)
+
+Audit entry AI-14, BACKLOG rank 27 (1). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). Rank 1 (Path 6 P4,
+053 → 030) was blocked on this and is not any more; it was not built here. Path 12's P1 bullet in `BACKLOG.md` holds the design.
+
+- **What shipped.** `_shared/question-bank.js` publishes `QuestionBank`: one shared, versioned list of questions (`{ id, prompt, answer, choices?,
+  media?, unit, standard, difficulty, tags, points, createdAt }`) in the key `gvb-question-bank`, with a pure half (normalize, validate, ids, merge,
+  filter, the file formats) and a stored half on `Store`. 030 is the one adopter: `rgb-bank-store.js` is now the page's view of the shared bank with
+  the surface it always had, so the bank tab's editor, filters and "pull into board" are the code they were. New on the tab is a "Share the bank"
+  card: Save bank file (JSON, everything), Save as spreadsheet (a workbook through `ExportKit.toXlsx`), and an import that reads either, or a CSV,
+  and only ever adds or updates.
+- **What 030 had, as found.** One key, `gvb-review-board-bank:entries`, a bare list, one shape since the commit that made it (`7219207`), no version
+  and no `migrate`. **The prompt's "its importer and template download" are the board's, not the bank's**: the bank had no import or export at all.
+  They build a board as before and were not touched.
+- **The decision: a new key, and the old one left alone.** The old key with a new shape was the other choice, and it loses data: an older 030 page
+  reads anything that is not a list as an empty bank, and its next Add writes a one-entry list over everything. So the bank is a new key in a Store
+  envelope, and the old key is read on every load and never written or removed. The module records the ids it has taken from it, which is what lets
+  an older page's later additions arrive without bringing back what was deleted on the new page. What an older page and a pre-v265 009 backup each do
+  is written out in the module's header and in the P1 bullet. Cheap to reverse: the old key is still whole in every browser.
+- **Calls made, each reversible.** `points` and `createdAt` stayed on the shared question (every entry has them; 030 needs both). Unknown fields
+  are kept, so P2 to P4 can add one without a version. An import merges and never deletes; a row with no id is matched on its prompt and answer so a
+  hand-made sheet imported twice does not double the bank. A spreadsheet row changes only the columns the sheet has. A stored `schema` above 1 is
+  read and every write into it refused. 030's own save still spells a difficulty exactly (`easy` is blank there, as it was); an import reads it in
+  any case.
+- **Found by the suites while building.** (1) `{ '__proto__': true }` in an object literal sets no key, so the first guard against a field named
+  `__proto__` guarded nothing; the pure suite's hostile question caught it. (2) Text that really begins with an apostrophe and then `=` lost the
+  apostrophe on the way back from a CSV, because the guard's apostrophe and the text's own looked alike; such text is written with one more. 075's
+  `unguardCsv()` has the same loss and was not changed. (3) A choice with a bar in it was split in two on the way back. (4) The bank list's
+  checkboxes had no accessible name (axe, serious; the a11y sweep's seed for 030 does not open the bank tab, so it had never fired). Fixed.
+- **Held by.** `npm run test:question-bank` (pure Node, 126 assertions): the schema; the migration from a bank written by the old store's own code
+  (`_rgb-bank-store-v264.js`, kept beside the suite, loaded nowhere else); an older page beside a new one; a pre-v265 backup both ways; **old against
+  new over 300 random banks (8,120 entries): the list, both dropdowns and ten filters equal, and 900 adds and deletes on an old page and a new one
+  leaving the same bank in the same order**; hostile old keys and stored payloads; a newer schema left byte for byte; and the files through the real
+  `ExportKit` and the vendored SheetJS (`=1+1`, `007`, `1/2`, `1776`, commas, quotes, line breaks). `smoke-bank-file.mjs` (port 8498, 40 assertions, in
+  `test:review-board`) does it on the page. 030's five other suites are green; one assertion in `smoke-question-bank.mjs` named the private key and
+  names the shared one now, and nothing else in them changed.
+- **Deliberate breaks, in pure Node, in a scratch copy of the seven files the suite reads.** 45 of the module and of 030's view of it (the migration
+  forgetting its ids, writing the old key, writing over a newer schema, an edit moving a question, a merge with no duplicate check, each guard
+  apostrophe, each CSV rule, each of 030's five calls): 44 caught. The one not caught, `parseCsv` keeping a byte order mark, was a missing assertion
+  and has one now. Two of the first run's breaks were bad (one did not apply, one was not a break) and were redone. No break was run in a browser.
+- **Bookkeeping.** Registry: `gvb-question-bank` on 030's row (teacher content, not student data) and in the shared row's `writes`; the old key is
+  `legacy`. `sw.js`: the module in `PRECACHE_URLS` and `SHELL_URLS`. `QuestionBank` in ESLint's `SITE_GLOBALS`. `rgb-store.js` counts the new key
+  into 030's share of its storage line.
+- **Not verified.** No file was opened in Excel, Sheets or Numbers, and no CSV saved from one was imported. No bank from a real teacher's browser
+  was migrated. A full or blocked storage during an import was not tried. The full `npm test` was not run (the sprint's rule); CI on a wave PR is the
+  check for the suites not named here.
+- **Left of Path 12.** P2 (ranks 28: the other tools read the bank; 030's editor shows no choices or tags and cannot edit in place; one bank, no
+  named sets; no preview before an import), P3 (rank 29) and P4 (rank 30: `media` is carried and means nothing yet).
+
 ## 071 Picture-Prompt Generator: named picture sets (2026-10-06, AI-31-071, `CACHE_VERSION` v264)
 
 Audit entry AI-31, BACKLOG rank 108 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).

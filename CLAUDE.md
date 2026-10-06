@@ -528,6 +528,16 @@ files must be added there too.
   made an earlier hand-derived figure about 3× too high), which pages load no
   `a11y.js` at all, and whether each still hand-rolls fullscreen instead of
   linking `_shared/stage.js`.
+- **Questions live in one bank, `_shared/question-bank.js`** (`QuestionBank`, Path 12 P1, v265): the key
+  `gvb-question-bank`, a versioned list of `{ id, prompt, answer, choices?, media?, unit, standard, difficulty,
+  tags, points }`, with 030 as the page a teacher edits it on and, so far, its only reader. A tool that needs
+  questions reads `QuestionBank.list()` and does not keep a bank of its own; one that brings questions in calls
+  `importQuestions()`, which adds and updates and never deletes. A field the module does not know is kept, so
+  add one without changing the version. 030's old key (`gvb-review-board-bank:entries`) is read on every load
+  and never written or removed: do not delete it or its registry line, which is what keeps an older page and an
+  older backup working. The module's header has the migration, the ids and the file formats. Its suites are
+  `npm run test:question-bank` (pure Node) and `smoke-bank-file.mjs` in `npm run test:review-board`; no file it
+  writes has been opened in a spreadsheet.
 - **A WebRTC pairing code is drawn with `QrDraw.fit(canvas, text)`** (`_shared/qr-draw.js`,
   AI-10, v223), which takes the size from the room the canvas's parent has, draws whole px per
   module and never under 4, and puts a note on the page when there is not room. Do not write
