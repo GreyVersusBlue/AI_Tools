@@ -113,6 +113,13 @@ const clean = async (page, tag) => {
   eq(d.v, 2, '2: the next write is version 2');
   eq(d.data.list[0].banks.animal, ['axolotl', 'pangolin'], '2: bank and story are in the one save');
   eq(await page.evaluate(k => localStorage.getItem(k), BANKS_KEY), legacyBanks, '2: the old bank key is still exactly what it was after an edit');
+  await page.selectOption('#bankTagSelect', 'animal');
+  await page.fill('#bankWordsInput', 'axolotl, pangolin, quokka');
+  await settle(page, 600);
+  eq((await doc(page)).data.list[0].banks.animal, ['axolotl', 'pangolin', 'quokka'], '2: a bank edit lands in the save');
+  eq(await page.evaluate(k => localStorage.getItem(k), BANKS_KEY), legacyBanks, '2: and still leaves the old bank key as it was');
+  await page.fill('#bankWordsInput', 'axolotl, pangolin');
+  await settle(page, 600);
 
   // the old bank key no longer feeds a page that has a list
   await page.evaluate(([bk]) => localStorage.setItem(bk, JSON.stringify({ animal: ['intruder'] })), [BANKS_KEY]);
