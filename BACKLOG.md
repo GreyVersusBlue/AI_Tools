@@ -87,6 +87,16 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-14 (v267), rank 28, Path 12 P2, increment 1 of a 2+ row (the row stays, rewritten): 053's and 062's
+  built-in questions are read-only seed sets in the question bank, and 030 plays from them.** Each tool's list
+  moved, word for word, from its inline script to a data file (`Tools/cultural-trivia-card-generator/ctcg-bank.js`,
+  `Tools/geography-bee-quiz-generator/gbq-bank.js`) that the tool reads its list from and that registers the set
+  with `QuestionBank.registerSet()` on a page that has the module (030). A set is in memory only: nothing is
+  stored until a teacher presses "Copy to my bank", and the copy is a new question of theirs (`copiedFrom` names
+  the seed). 030's bank tab has a "Questions from" chooser; a set is filtered and pulled into a board as the bank
+  is. 062's thirty map questions are not published (no reader can draw the map). `npm run test:seed-sets` (port
+  8502) and more of `test:question-bank`. **Left of P2: 040, 018, 019, 020, and 030's editor (choices, tags, edit
+  in place). Rank 1 (053 → 030) was not started. The next free suite port is 8503.**
 - **AI-14 (v265), old rank 27, Path 12 P1 is finished and its row is deleted (a gap; ranks not renumbered):
   `_shared/question-bank.js` (`QuestionBank`) is the site's one question bank, and 030 is its one adopter.**
   The bank is the key `gvb-question-bank` (a Store envelope, version 1); 030's old key
@@ -94,8 +104,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   backup from before v265 both still work. 030's bank tab reads and writes through the module and has a
   "Share the bank" card (a JSON bank file, a workbook, an import that only ever adds). `npm run
   test:question-bank` (pure Node) and `smoke-bank-file.mjs` (port 8498, in `test:review-board`). **Rank 1 (053 →
-  030) is no longer blocked. Left of Path 12: P2 to P4 (ranks 28 to 30). Nothing was opened in Excel or Sheets.
-  The next free suite port is 8502.**
+  030) is no longer blocked. Left of Path 12: P2 to P4 (ranks 28 to 30). Nothing was opened in Excel or Sheets.**
 - **AI-13 (v263), Path 7 P5 is finished, Path 7 with it, and rank 7 is deleted (a gap; ranks not renumbered):
   all thirteen print-kit pages have the print preview.** 070, 023, 040, 018, 017 and 016 got it; on the three
   that keep several sheets in one `#printArea` the Preview button presses its Print button with `previewFor` set,
@@ -426,7 +435,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 28 | Path 12 P2 — read-side adopters: 053, 062, 040, 018, 019, 020 | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Left:** 040 flashcards ↔ bank; 018 and 019 pull station questions from it; 020's academic-tournament mode; 030's editor (choices, tags, edit in place, named sets, a preview before an import); 062's thirty map questions, which are not published (they wait on P4) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 29 | Path 12 P3 — play modes in 030: every-team-answers, quiz-bowl, wheel, final wager, printed quiz | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -4084,6 +4093,53 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   shared shape (read-only seed sets); 040 flashcards ↔ bank (term/definition is a
   question); 018 and 019 pull station questions from the bank; 020 gets an
   academic-tournament mode fed by it.
+  **Increment 1 shipped (AI-14, 2026-10-06, v267): the seed sets, with 030 as their reader. The rest of this
+  bullet is that increment as built; the module's header and the two data files' headers say the same.**
+  - *A seed set.* A tool's built-in questions in the bank's shape, registered by the tool's own data file with
+    `QuestionBank.registerSet({ id, title, source, note, questions })`. New on the module: `registerSet`,
+    `sets()`, `setQuestions(id)`, `findSeed(id)`, `copyFromSet(ids)`, `isSeedId`, `seedId`, `seedSetOf`,
+    `detach`. **A set is in memory only. Nothing of it is stored under any key until a teacher copies a
+    question**, and then what is stored is one more question in `gvb-question-bank`, the key the registry
+    already has. No new key, no registry change, no migration, and the bank's version is still 1.
+  - *Ids.* `seed:<set>:<the tool's own id>`: `seed:053:b3`, `seed:062:bi12`. The tools' ids (`b<N>`, `bi<N>`)
+    are the row's place in the list and are what a teacher's hidden list already holds, so both lists are
+    append-only (the data files say so). Loading the data again, twice or in another order, gives the same ids.
+  - *Read-only.* The module hands out copies of a set's questions, never the set. `upsert()` and `merge()`
+    take a question arriving with a seed id as a **new** question of the teacher's (`detach()`: a new id, new
+    dates, the seed's id in `copiedFrom`), so no save, import or bank file can write over a seed or store one
+    under a seed id. A copy is the teacher's: it can be deleted, and a later copy of the same seed is skipped
+    while the wording still matches and added beside it once the teacher has changed theirs.
+  - *The data files.* `Tools/cultural-trivia-card-generator/ctcg-bank.js` (`CulturalTriviaBank`) and
+    `Tools/geography-bee-quiz-generator/gbq-bank.js` (`GeographyBeeBank`), classic scripts. Each tool's rows
+    moved there from its inline script word for word, and the tool reads `items()`, the list its script built
+    before. 053 and 062 do **not** load `question-bank.js`; the file registers its set only on a page that has
+    the module. So there is one copy of each list, and `check:adoption` still counts one adopter (030).
+  - *053's mapping.* `id` → `seed:053:<id>`; `q` → `prompt`; `a` → `answer`; `category` → `unit` as its label
+    ("Hispanic World") and the key kept in `category`, a field the bank carries without knowing; `custom:
+    false` → nothing (a seed is a built-in). Blank: standard, difficulty, tags, choices, media, points 0, no date.
+  - *062's mapping.* As 053's, and `area` → `tags` as its label (`['Africa']`; none for `global`) with the key
+    kept in `area`. **The thirty map questions (`bi90` to `bi119`) are not in the set**: "Which country is
+    highlighted on the map?" is not a question without the map, and only 062 can draw it. `toQuestion()` maps
+    one with its `map` kept; `questions()` leaves them out. They wait on P4. The page's multiple-choice options
+    are drawn when a quiz is built and are not data, so no seed has `choices`.
+  - *Not in either set:* a teacher's own questions on 053 or 062, and which built-ins they have hidden there
+    (a hidden built-in is still in the set).
+  - *030.* The bank tab's list card has **Questions from**: "My question bank (N)", "Cultural Trivia (built
+    in, 30 questions, read-only)", "Geography Bee (built in, 90 questions, read-only)". A set is listed,
+    filtered (its categories are the Units) and pulled into a board as the bank is, so a board is played from
+    a set with nothing copied; a seed has no points, so its pulled clues get 100, 200, ... on from the rows
+    already in the category. A set's rows have **Copy to my bank** where the bank's have Delete, and there is
+    a **Copy selected to my bank** button. A selection does not cross from one source to another.
+  - *The tools are unchanged.* `JSON.stringify` of each tool's list is byte for byte what the v266 page built
+    (hash pinned in `test:question-bank`), and 053's bank list, cards and two printed sheets and 062's bank
+    list, cards and three quiz sheets, empty and with custom and hidden questions, hash the same as the v266
+    pages gave (`test:seed-sets`, pins made with `--print` against the old pages; map pictures' pixels left out).
+  - *Left of P2.* 040, 018, 019, 020. On 030: a seed's tags and `copiedFrom` are stored and not shown, and
+    the editor still shows no choices or tags and cannot edit in place. A set cannot be copied whole in one
+    press without ticking every row. **Rank 1 (053 → 030, a teacher's own trivia by link) is not built**: it
+    makes 030 a page that takes link input, which needs its inline sinks read first (`check:inline-sinks`).
+  - *Not verified.* No person has used the chooser. A real teacher's 053 or 062 with hidden questions was not
+    opened before and after (the suite's states are made up). Not run: the full `npm test`.
 - **P3 — Play modes in 030.** Every-team-answers mode, quiz-bowl, spin-the-wheel,
   the final wager round, and a printed practice quiz/study guide with an answer key
   — all reading the same bank.

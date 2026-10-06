@@ -9,6 +9,46 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 12 P2, increment 1: 053's and 062's built-in questions as read-only seed sets (2026-10-06, AI-14, `CACHE_VERSION` v267)
+
+Audit entry AI-14, BACKLOG rank 28 (2+). One increment; the row stays, rewritten to what is left. The design as built is under Path 12's P2 bullet in `BACKLOG.md`.
+
+- **What shipped.** `_shared/question-bank.js` gained seed sets: `registerSet`, `sets`, `setQuestions`, `findSeed`, `copyFromSet`, `isSeedId`, `seedId`,
+  `seedSetOf`, `detach`. 053's thirty and 062's 120 built-in rows moved, word for word, out of each page's inline script into a data file
+  (`Tools/cultural-trivia-card-generator/ctcg-bank.js`, `Tools/geography-bee-quiz-generator/gbq-bank.js`); the tool reads `items()` from it, and the file
+  registers a set when the page has the module. 030 loads both files and its bank tab has a **Questions from** chooser: a set is listed, filtered and pulled
+  into a board as the bank is, each row has **Copy to my bank**, and there is a **Copy selected** button.
+- **What is stored, and where.** Nothing, until a copy. A set is built in memory when its data file loads. A copy is one more question in
+  `gvb-question-bank`, with a new `q-…` id, a date and `copiedFrom: 'seed:053:b3'`. No new key, so no registry row; the bank's version is still 1 and an older
+  page keeps `copiedFrom` as a field it does not know.
+- **Decisions, each reversible.**
+  - *The data file belongs to the tool, not to `_shared/`.* It sits in the tool's folder, and 030 loads it from there. One copy of each list, and the hidden
+    lists teachers already have (`ctcg_hidden_v1`, `gbq_disabled_v1`) keep pointing at the same ids. 053 and 062 do not load the module: they have nothing to
+    ask it. So `check:adoption` still reads `question-bank.js` 1.
+  - *A copy gets a new id, not the seed's.* With the seed's id, copying again after the teacher had changed their copy would have written the seed's wording
+    back over it (an import with a known id updates). With a new id the second copy is skipped while the wording matches and added beside it after.
+  - *A seed id is never stored.* `upsert()` and `merge()` detach one on the way in, so a bank file that names `seed:053:b9` adds a question and cannot pass
+    for the seed. (A stored bank edited by hand to hold one is read as it lies; nothing here writes one.)
+  - *062's thirty map questions are not published.* The prompt is "Which country is highlighted on the map?" and only 062 draws the map. Ninety are in the
+    set. `toQuestion()` still maps one, `map` kept, for the day a reader can show a picture (P4).
+  - *`category` becomes the Unit, by its label.* 030 filters by Unit, so "Capitals" or "Hispanic World" is where a teacher will look. The tool's own key is
+    kept beside it in `category` (and `area`), fields the bank carries without knowing, so nothing was dropped; `custom: false` alone has no home.
+  - *Points.* A seed has none (0). Pulled into a board, seeds get 100, 200, ... on from the rows already in the category, because a column of 0s is not a
+    board. A question from the teacher's own bank still pulls with the points it was given, 0 included, as before.
+- **Old against new.** `JSON.stringify` of each tool's list is byte for byte what the v266 inline script built (4,337 and 18,623 characters, SHA-256 pinned
+  in `test:question-bank`; the old lists were run from `git show main:` once to make the pins). In a browser, with `Math.random` fixed: 053's bank list, eight
+  cards and two printed sheets, and 062's bank list, cards, three quiz sheets (short answer and multiple choice) and twelve generated map questions, each for
+  an empty browser and for one with made-up custom and hidden questions: 22 hashes, pinned from the v266 pages with `--print` and equal on the new ones. The
+  pixels of 062's map pictures are left out of the hash (they differ between Chromium builds); where a picture sits is in it.
+- **Tests.** `test:question-bank` 126 to 185 assertions. New `Tools/question-bank/test/smoke-seed-sets.mjs` (`test:seed-sets`, port 8502, 82 assertions).
+  Deliberate breaks: 31 in pure Node (module, data files, 030's view), all caught; 18 in the browser, 17 caught, and the 18th (062's generated map questions
+  taking their wording from the data file) was given its capture and then caught.
+- **Not done.** BACKLOG rank 1 (053 → 030, a teacher's own trivia by link) was offered to this session "whole or not at all" and was not started: it makes 030
+  a page that takes link input, and 030 has about thirty `innerHTML` sinks to read first. 040, 018, 019 and 020 are the rest of P2.
+- **Not verified.** No person has used the chooser. No real teacher's 053 or 062 was opened before and after. The full `npm test` was not run (targeted
+  folders only: review-game-board, geography-bee-quiz-generator, question-bank, share, theme, service-worker, tool-registry, and the a11y sweep on 030, 053
+  and 062).
+
 ## 074 Science Safety Label Maker: two symbols on one label (2026-10-06, AI-31-074, `CACHE_VERSION` v266)
 
 Audit entry AI-31, BACKLOG rank 111 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
