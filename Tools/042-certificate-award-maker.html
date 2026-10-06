@@ -417,6 +417,7 @@
           stock, and adjust your printer's margins if it doesn't line up. Turn this off before printing the final
           copies.</p>
 
+        <button type="button" class="secondary" id="previewBtn">Preview pages</button>
         <button type="button" id="printBtn">Print / Save as PDF</button>
       </div>
     </div>
@@ -474,7 +475,7 @@
    'singleFields','batchFields','studentName','batchNames','camRosterSelect','camLoadRosterBtn',
    'awardTitle','awardTitleCustom','reason','certDate','signature',
    'signatureFile','signaturePreview','signaturePreviewImg','signatureMissing','signatureRemove',
-   'qrUrl','printBtn','showGuides','stockInset',
+   'qrUrl','printBtn','previewBtn','showGuides','stockInset',
    'orientTabs','perPageTabs',
    'previewArea','previewNote','viewToggle'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -1191,9 +1192,17 @@
   els.signature.addEventListener('input', function () { settings.signature = els.signature.value; renderAll(); });
   els.qrUrl.addEventListener('input', function () { settings.qrUrl = els.qrUrl.value; renderAll(); });
 
-  els.printBtn.addEventListener('click', function () {
+  function printSheet() {
     buildPrintArea();
     window.print();
+  }
+  els.printBtn.addEventListener('click', printSheet);
+
+  // The same sheet, cut into the pages it will print on (PrintKit.preview,
+  // Path 7 P5). It opens no print dialog; its own Print button does.
+  els.previewBtn.addEventListener('click', function () {
+    buildPrintArea();
+    PrintKit.preview({ trigger: els.previewBtn, onPrint: printSheet });
   });
   // Ctrl+P, or the browser's own Print: the sheet used to be built by the
   // button only, and anything else printed an empty page.

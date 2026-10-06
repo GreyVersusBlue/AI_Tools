@@ -104,6 +104,7 @@
       <p class="sub">Label real objects in the target language &mdash; each with a QR code that speaks the word aloud.</p>
     </div>
     <div class="btnrow">
+      <button type="button" class="secondary" id="previewBtn">Preview pages</button>
       <button class="secondary" id="printBtn">Print labels + reference sheet</button>
     </div>
   </div>
@@ -171,7 +172,7 @@
   var CURRENT_KEY = 'clm_current_v1';
 
   var els = {};
-  ['langSelect', 'wordInput', 'saveWordsBtn', 'wordCount', 'wordTable', 'printBtn', 'printArea', 'fileWarning',
+  ['langSelect', 'wordInput', 'saveWordsBtn', 'wordCount', 'wordTable', 'printBtn', 'previewBtn', 'printArea', 'fileWarning',
    'listSwitch', 'listName', 'newListBtn', 'duplicateListBtn', 'deleteListBtn',
    'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
@@ -440,10 +441,21 @@
     if (words.length) els.printArea.appendChild(buildRefSheet(words));
   }
 
-  els.printBtn.addEventListener('click', function () {
+  function printSheet() {
     if (!state.words.length) { alert('Save a word list first.'); return; }
     renderSheet();
     window.print();
+  }
+  els.printBtn.addEventListener('click', printSheet);
+
+  // The same sheet, cut into the pages it will print on (PrintKit.preview,
+  // Path 7 P5). It opens no print dialog; its own Print button does.
+  // The preview copies each QR canvas from the live one, so the sheet is built
+  // first, as it is for the paper.
+  els.previewBtn.addEventListener('click', function () {
+    if (!state.words.length) { alert('Save a word list first.'); return; }
+    renderSheet();
+    PrintKit.preview({ trigger: els.previewBtn, onPrint: printSheet });
   });
 
   /* ---------- share a label list: _shared/share.js (Path 6 P3) ----------
