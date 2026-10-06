@@ -216,6 +216,8 @@
     "Tools/peer-feedback-checklist-generator/test/smoke-print.mjs",
     "Tools/peer-feedback-checklist-generator/test/smoke-roster-sheets.mjs",
     "Tools/testing-accommodations-card-generator/test/smoke-print.mjs",
+    "Tools/testing-accommodations-card-generator/test/smoke-rooms-core.mjs",
+    "Tools/testing-accommodations-card-generator/test/smoke-rooms.mjs",
     "Tools/field-trip-permission-slip/test/smoke-print.mjs",
     "Tools/exit-ticket-generator/test/smoke-print.mjs",
     "Tools/certificate-award-maker/test/smoke-print.mjs",
