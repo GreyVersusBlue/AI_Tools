@@ -63,6 +63,77 @@ Audit entry AI-13, rank 6 (2+). Fifth increment of P4. **The row stays, rewritte
   those programs document, not something seen here. Full `npm test` not run. The old 075 import of a *new* file
   was not tried (the old page is gone once this lands).
 
+## Path 11 P1 designed, not built: the publisher drift guard (2026-10-05, AI-20, no `CACHE_VERSION`, no code)
+
+Audit entry AI-20, rank 21 (1). A design pass: only `BACKLOG.md` changed (the P1 bullet under "Path 11", and a
+note on rank 21). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** Two guards and a contract. `check-publisher.mjs`, browser-free, reads 035's
+  publisher off its syntax tree, assembles the script it would publish, and fails by code on a free name
+  (the Round 7 `escHtml` bug), a live-only leak, a handler or id with nothing behind it, a preamble that fell
+  behind the page, a sloppy-mode construct, or a change in one of the 21 pieces 034 still shares with the
+  publisher (a ledger, in the shape of the inline-sinks baseline). `smoke-publish-baseline.mjs` publishes
+  Northwind under a pinned clock and diffs it by section against a committed baseline with the fonts hashed
+  out, holds the static guard to the browser's bytes, and runs every published piece once. The contract,
+  `published-contract.mjs`, names every file published so far format 0 and the next format 1 (`format`,
+  `tool`, additive), with a validator that prints shapes and never values.
+- **What reading the code turned up.** The bullet's baseline was never committed. 35 pieces are published,
+  not 26. `brRenderMap()` references `brRenderMapLegacy`, which no published file has, behind a `typeof`
+  that is never true there. The page is sloppy-mode and the published script is strict. `publishedOn` is the
+  UTC date and the footnote beside it is local. `JSON.stringify(data)` goes into a `<script>` unescaped, so a
+  name holding `</script>` ends it. 034's banner has said "may be stale" since 2026-09-13. The publisher
+  keeps one group per room per mod and one room per teacher, dropping the rest silently.
+- **Measured, with one pure-Node probe that was not kept:** 28 listed functions, all resolving once; 21 of 35
+  pieces the same text in 034, 12 forked, 2 absent; 42 functions only 034 has; the published script reaches
+  outside the language for `document` alone, plus the dead name; in 034's data (counts only, no names read
+  out) 21 one-way `co` entries, 30 of 162 section-to-teacher links without a slot, 6 room-day-mod slots
+  holding two groups, and every hard rule of the contract holding.
+- **Not verified.** No line of the design has run. That `assemble()` matches the browser byte for byte is the
+  suite's first assertion, not a result. The stale banner and the `</script>` hole are read off the code.
+- **Seven questions are Devon's** and are listed, unanswered, at the end of the P1 bullet: whether 034 stays a
+  fork; 034's own stale schedule and whether the public copy should hold the real building's at all; which
+  social branding; what a reader does with newer data; the double-booked room; pre-R60 files; the 60 days.
+
+---
+
+## Path 13 P1 designed, not built: the grouping engine's API (2026-10-05, AI-21, no `CACHE_VERSION`, no code)
+
+Audit entry AI-21, rank 31 (1). A design pass: only `BACKLOG.md` changed (the P1 bullet under "Path 13", and a
+note on rank 31). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** One pure classic script, `_shared/grouping.js` (`Grouping`): `plan()` for the
+  arithmetic, `formGroups()` for the deal and the repair search, `rotateRoles()` and `coverRoles()`, and a memory
+  (`history.*`) keyed on indexes into one list of member keys, an id where the sidecar has one and the name where
+  it does not. It writes nothing; each adopter keeps its blob, gains one field, `groupHistory`, and goes on
+  writing its old fields from it. The engine is held to making today's groups for the same random numbers, and
+  every improvement is an option an adopter turns on in a commit of its own.
+- **What reading the code turned up, each worth knowing before the build.** The split exists six times, not
+  four (021's split button and 087's `cs-core.js` are the other two), and all six share one shuffle and deal to
+  the letter, which is what makes a parity suite possible. 002's "floaters" and "leftover group" rules turn
+  "groups of 4" for 30 students into eight groups of 3 with six floaters, or a ninth group of 6. 002's no-repeat
+  search undoes "Balanced" and "Homogeneous" from the second shuffle on (the gap between group averages goes
+  from 0.38 to about 1.7). Keep-together chains are left broken in 4.5% of shuffles for two chains of three. The
+  role picker repeats a student's last role in 1% to 6% of hand-outs where a better assignment never would. 022's
+  and 027's load functions rebuild the saved object field by field, so an older cached page drops a field it
+  does not know; that is why the old fields stay written. Path 13's "Why" still says 002 keeps two generations
+  of pair history; it has kept the year since 2026-08-13.
+- **What the measurements were.** One pure-Node probe, not kept: 002's and 022's functions and the role picker
+  copied out with a seeded generator, 200 to 2,000 invented classes a case. The figures are in the design.
+- **Decided here, cheap to reverse.** `_shared/grouping.js`, not `Tools/_engines/`. No shared memory key. 022's
+  keep-apart repair becomes 002's (no worse on the same 14,000 classes: 0.65% against 0.75% at the one shape
+  where either failed). The memory is recorded by a
+  call of its own, not inside `formGroups()`.
+- **Left to Devon, listed in the design and not answered:** skill on the shared record; one memory or one per
+  tool; whether 022 and 027 start remembering pairs; whether a reshuffled-away grouping counts; what "groups of
+  4" means for 30 students; whether every tool should round the same way; balance against no repeats;
+  keep-together as a promise or a preference; how long a departed student's history is kept; other things to
+  balance on.
+- **Not verified.** No engine exists and nothing ran in a browser. The parity claim rests on reading and on the
+  probe's ports; the build must copy the legacy functions from the files, not from the design. The older-cache
+  case was read, not reproduced.
+
+---
+
 ## Path 7 P4, increment 4: 011 makes booklets and several pages to a sheet on `ExportKit` (Path 17 P4's controls), and 064's zip and PNG downloads are the file helpers' first adopter (2026-10-05, AI-13, `CACHE_VERSION` v248)
 
 Audit entry AI-13, rank 6 (2+). Fourth increment of P4. **The row stays, rewritten: what is left is CSV and XLSX
