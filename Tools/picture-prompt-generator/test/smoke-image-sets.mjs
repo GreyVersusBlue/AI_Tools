@@ -93,6 +93,20 @@ const bytes = p => p.evaluate(async () => {
   for (const r of await st.list()) out[r.id] = (await window.MediaDB.toDataUrl(await st.getBlob(r.id))).split(',')[1];
   return out;
 });
+/* Past media-db's ten-minute grace, so that boot's collection may take any record nothing names. */
+const ageRecords = p => p.evaluate(() => new Promise((res, rej) => {
+  const req = indexedDB.open('gvb-media');
+  req.onsuccess = () => {
+    const t = req.result.transaction('blobs', 'readwrite');
+    const os = t.objectStore('blobs');
+    os.openCursor().onsuccess = e => {
+      const c = e.target.result;
+      if (c) { const v = c.value; v.savedAt = Date.now() - 3600e3; c.update(v); c.continue(); }
+    };
+    t.oncomplete = () => { req.result.close(); res(); };
+    t.onerror = () => rej(t.error);
+  };
+}));
 const options = p => p.$$eval('#imageSetSelect option', os => os.map(o => o.textContent));
 const selected = p => p.$eval('#imageSetSelect', s => s.options[s.selectedIndex].textContent);
 const thumbCount = p => p.$$eval('#thumbGrid .thumb-wrap', t => t.length);
@@ -186,6 +200,7 @@ eq(await page.$$eval('#printArea img', i => i.length), 2, 'Print puts the open s
 await page.selectOption('#imageSetSelect', firstId);
 await settle(page, 200);
 eq(await thumbCount(page), 3, 'switching shows the first set\'s three pictures');
+eq(await page.$$eval('#thumbGrid img', i => i.length), 3, 'each drawn at once, not left as "Loading…"');
 ok(/Opened “My pictures”/.test(await msg(page)), 'and says which opened');
 ok(/Click "New random image"/.test(await page.textContent('#stageCard')) || /Upload/.test(await page.textContent('#stageCard')), 'the projected card was cleared on the switch');
 ok(/^“My pictures”: 3 pictures,/.test(await usage(page)) && /All 2 sets together: 5 distinct pictures/.test(await usage(page)),
@@ -207,7 +222,9 @@ await page.waitForFunction(() => window.__printCalls === 2, null, { timeout: 500
 eq(await page.$$eval('#printArea img', i => i.length), 3, 'Print on the first set draws its three');
 /* A reload keeps both sets and the open one. */
 await page.selectOption('#imageSetSelect', d2.sets[1].id);
+await ageRecords(page);
 await load();
+eq((await records(page)).length, 5, 'a reload with every record past its grace period still keeps the first set\'s three (boot names every set\'s pictures)');
 same(await options(page), ['My pictures (3 pictures)', 'School vocabulary (2 pictures)'], 'a reload keeps both sets');
 eq(await selected(page), 'School vocabulary (2 pictures)', 'and the one that was open');
 eq(await thumbCount(page), 2, 'with its pictures drawn');
@@ -280,6 +297,7 @@ ok(refsOf(d5.sets[1]).every(r => recsAfterDel.some(x => 'idb:' + x.id === r)), '
 ok(/Deleted “Family vocabulary”/.test(await msg(page)), 'with a note');
 eq(await thumbCount(page), 2, 'and the open set still draws both');
 eq(await page.$$eval('#thumbGrid .thumb-missing', t => t.length), 0, 'none of them missing');
+await ageRecords(page);
 await load();
 eq(await page.$$eval('#thumbGrid img', i => i.length), 2, 'after a reload the shared pictures draw from the store');
 eq((await records(page)).length, 5, 'and boot collected nothing more');
@@ -361,6 +379,18 @@ full.on('dialog', d => d.accept('Will not fit').catch(() => {}));
 await click(full, 'newImageSetBtn');
 ok(/could not save that change: its storage is full or blocked/.test(await msg(full)), 'a refused write is said: ' + JSON.stringify(await msg(full)));
 await full.context().close();
+
+/* ── 2b. pictures still inline, in two sets, all move into the store ──── */
+const INLINE_RED = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGO4o6HxHwAFPAIsDsQvxQAAAABJRU5ErkJggg==';
+const INLINE_BLUE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGPQsLnzHwAEEAJArJfb0AAAAABJRU5ErkJggg==';
+await page.evaluate(([k, a, b]) => localStorage.setItem(k, JSON.stringify({ v: 2, activeId: 'p', sets: [
+  { id: 'p', name: 'Inline one', images: [{ id: 'x1', src: a, pinnedPrompts: {} }] },
+  { id: 'q', name: 'Inline two', images: [{ id: 'x2', src: b, pinnedPrompts: {} }, { id: 'x3', src: a, pinnedPrompts: {} }] }] })), [KEY, INLINE_RED, INLINE_BLUE]);
+await load();
+const d2b = await doc(page);
+ok(d2b.sets.every(s => s.images.every(i => /^idb:h[0-9a-f]{32}$/.test(i.src))), 'inline pictures in every set, not only the open one, move into the store: ' + JSON.stringify(d2b.sets.map(s => s.images.map(i => i.src.slice(0, 8)))));
+eq(d2b.sets[0].images[0].src, d2b.sets[1].images[1].src, 'a picture in two sets is one reference');
+eq(await page.evaluate(k => localStorage.getItem(k).includes('data:image'), KEY), false, 'and the key carries no image bytes');
 
 /* ── 8. a crafted key is read safely ──────────────────────────────────── */
 await page.evaluate(([k, v]) => localStorage.setItem(k, v), [KEY, JSON.stringify({
