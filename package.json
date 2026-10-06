@@ -144,6 +144,7 @@
     "test:sheet-adopters": "node Tools/export/test/smoke-sheet-adopters.mjs",
     "test:sub-note-print": "node Tools/sub-note-feedback-slip-generator/test/smoke-print.mjs",
     "test:peer-feedback-print": "node Tools/peer-feedback-checklist-generator/test/smoke-print.mjs",
+    "test:peer-feedback-roster": "node Tools/peer-feedback-checklist-generator/test/smoke-roster-sheets.mjs",
     "test:accommodations-print": "node Tools/testing-accommodations-card-generator/test/smoke-print.mjs",
     "test:permission-slip-print": "node Tools/field-trip-permission-slip/test/smoke-print.mjs",
     "test:exit-ticket-print": "node Tools/exit-ticket-generator/test/smoke-print.mjs",
