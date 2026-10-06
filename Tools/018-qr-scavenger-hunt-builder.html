@@ -315,8 +315,11 @@
         <label class="option-label" for="show-number">Show station number above the label</label>
       </div>
       <div class="btn-row">
+        <button type="button" class="btn-secondary" id="preview-stations-btn" disabled>Preview Station Cards</button>
         <button class="btn-primary" id="print-stations-btn" disabled>🖨️ Print Station Cards</button>
+        <button type="button" class="btn-secondary" id="preview-answers-btn" disabled>Preview Answer Key</button>
         <button class="btn-secondary" id="print-answers-btn" disabled>📋 Print Answer Key</button>
+        <button type="button" class="btn-secondary" id="preview-clues-btn" disabled>Preview Clue Cards (No Device)</button>
         <button class="btn-secondary" id="print-clues-btn" disabled>🧾 Print Clue Cards (No Device)</button>
         <button class="btn-secondary" id="export-csv-btn" type="button">⬇️ Export CSV</button>
       </div>
@@ -342,8 +345,11 @@
       <div id="teams-body" style="margin-top:0.9rem;"></div>
       <div class="btn-row">
         <button class="btn-secondary" id="add-team-btn" type="button">+ Add Team</button>
+        <button type="button" class="btn-secondary" id="preview-teams-btn">Preview Team Cards</button>
         <button class="btn-secondary" id="print-teams-btn" type="button">🖨️ Print Team Cards</button>
+        <button type="button" class="btn-secondary" id="preview-routes-btn">Preview Route Cards</button>
         <button class="btn-secondary" id="print-routes-btn" type="button">🖨️ Print Route Cards</button>
+        <button type="button" class="btn-secondary" id="preview-answersheets-btn">Preview Answer Sheets</button>
         <button class="btn-secondary" id="print-answersheets-btn" type="button">📝 Print Answer Sheets</button>
       </div>
       <div class="hint">Each team gets a check-in code (shown next to its name) so it can check itself in below without you hunting through a roster — print the cards so teams can carry or show their code. Answer Sheets print one per team, blank, in that team's own route order — for a day with no devices, pair them with the Build tab's Clue Cards and check them against the Print Answer Key.</div>
@@ -1066,12 +1072,32 @@
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     area.classList.add('active');
   }
+  /* A Print button builds its sheet and hands it here. So does the Preview
+     button in front of it, by pressing that Print button with `previewFor`
+     set: the same refusals, the same sheet, shown cut into its pages
+     (PrintKit.preview, Path 7 P5) with no print dialog. The preview copies
+     the whole #printArea, so the asked-for area is shown first and the
+     station cards put back when it closes, as after a print. */
+  var previewFor = null;
+  function atRest() { showSection(els.printStationArea); }
   function printSection(area) {
     showSection(area);
-    window.print();
+    if (!previewFor) { window.print(); return; }
+    var pair = previewFor;
+    PrintKit.preview({ trigger: pair.preview, onClose: atRest, onPrint: function () { pair.print.click(); } });
+  }
+  function wirePreview(previewId, printBtn) {
+    var previewBtn = document.getElementById(previewId);
+    previewBtn.disabled = printBtn.disabled;
+    new MutationObserver(function () { previewBtn.disabled = printBtn.disabled; })
+      .observe(printBtn, { attributes: true, attributeFilter: ['disabled'] });
+    previewBtn.addEventListener('click', function () {
+      previewFor = { preview: previewBtn, print: printBtn };
+      try { printBtn.click(); } finally { previewFor = null; }
+    });
   }
   // Once a sheet has printed, Ctrl+P is the station cards again.
-  window.addEventListener('afterprint', function () { showSection(els.printStationArea); });
+  window.addEventListener('afterprint', atRest);
 
   els.printStationsBtn.addEventListener('click', function () {
     if (!validStations().length) return;
@@ -1364,6 +1390,13 @@
     buildPrintAnswerSheets();
     printSection(els.printAnswersheetsArea);
   });
+
+  wirePreview('preview-stations-btn', els.printStationsBtn);
+  wirePreview('preview-answers-btn', els.printAnswersBtn);
+  wirePreview('preview-clues-btn', els.printCluesBtn);
+  wirePreview('preview-teams-btn', els.printTeamsBtn);
+  wirePreview('preview-routes-btn', els.printRoutesBtn);
+  wirePreview('preview-answersheets-btn', els.printAnswersheetsBtn);
 
   els.staggerStarts.addEventListener('change', function () {
     state.run.stagger = els.staggerStarts.checked;

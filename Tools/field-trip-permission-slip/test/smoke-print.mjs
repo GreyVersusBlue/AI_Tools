@@ -356,6 +356,48 @@ for (const theme of ['light', 'dark']) {
   }
 }
 
+// ---- Ctrl+P: the browser's own print, with no button pressed ----------------------
+// It printed whichever sheet a button or a preview had built last, and an empty
+// page on a visit with no button pressed. `beforeprint` builds the permission
+// slips now, unless a Print button has just built its own sheet. page.pdf()
+// fires `beforeprint` and `afterprint`, as the print dialog does.
+{
+  const kinds = page => page.evaluate(() => {
+    const a = document.getElementById('printArea');
+    return [a.querySelectorAll('.slip:not(.reminder-slip)').length, a.querySelectorAll('.missing-list-page').length];
+  });
+  const pdf = async page => { await page.emulateMedia({ media: null }); return pdfPageCount(await page.pdf({ preferCSSPageSize: true, printBackground: false })); };
+  const page = await open(browser, trip({}), 'light');
+  try {
+    eq(await page.evaluate(() => document.getElementById('printArea').children.length), 0, 'Ctrl+P: nothing is built before anything is pressed');
+    eq(await pdf(page), 3, 'Ctrl+P on a visit with no button pressed prints the three slips (it printed an empty page)');
+    eq((await kinds(page)).join(), '3,0', 'Ctrl+P: and the sheet is the slips');
+
+    await page.click('#printMissingListBtn');
+    await settle(page, 100);
+    eq((await kinds(page)).join(), '0,1', 'Ctrl+P: a Print button builds its own sheet');
+    eq(await pdf(page), 1, 'Ctrl+P: and the print it started is that sheet, not the slips');
+    eq((await kinds(page)).join(), '0,1', 'Ctrl+P: which beforeprint left alone');
+    eq(await pdf(page), 3, 'Ctrl+P after a missing list has printed is the slips again (it was the missing list)');
+
+    await page.click('#previewMissingListBtn');
+    await page.waitForSelector('dialog.pk-preview[data-pk-pages]', { timeout: 30000 });
+    eq((await kinds(page)).join(), '0,1', 'Ctrl+P: a preview shows the missing list');
+    await page.keyboard.press('Escape');
+    await settle(page, 100);
+    eq(await pdf(page), 3, 'Ctrl+P after a preview of the missing list has closed prints the slips (it printed the previewed sheet)');
+    eq(await page.evaluate(() => window.__printCalls), 1, 'Ctrl+P: none of this called print() but the one button');
+  } finally { await page.context().close(); }
+  const single = await open(browser, trip({ mode: 'single', studentName: 'Bella Cruz', batchNames: '' }), 'dark');
+  try {
+    await single.click('#printChaperoneBtn');
+    await settle(single, 100);
+    eq(await pdf(single), 1, 'Ctrl+P: a chaperone sheet prints as asked');
+    eq(await pdf(single), 1, 'Ctrl+P: then one named slip');
+    ok(await single.evaluate(() => /Bella Cruz/.test(document.getElementById('printArea').textContent)), 'Ctrl+P: with the student\'s name on it');
+  } finally { await single.context().close(); }
+}
+
 await browser.close();
 server.close();
 

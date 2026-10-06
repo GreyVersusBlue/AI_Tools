@@ -135,6 +135,7 @@
     </div>
     <div class="btnrow">
       <button type="button" class="secondary" id="shareBtn">&#128279; Share checklist&hellip;</button>
+      <button type="button" class="secondary" id="previewBtn">Preview checklists</button>
       <button class="secondary" id="printBtn">Print checklists</button>
     </div>
   </div>
@@ -173,6 +174,7 @@
         <select id="rosterSelect"></select>
         <label class="check" for="withReviewer"><input type="checkbox" id="withReviewer"> Fill in the reviewer too: each student reviews the next name on the list, and the last reviews the first</label>
         <p class="hint" id="rosterNote" aria-live="polite"></p>
+        <button type="button" class="secondary full" id="previewClassBtn" disabled>Preview one per student</button>
         <button class="secondary full" id="printClassBtn" disabled>Print one per student</button>
         <p class="hint">Two to a page. Cut the pile along the line and put the lower stack under the upper one, and the sheets are in roster order. Names are read from the saved roster when you print and are not kept here.</p>
       </div>
@@ -233,7 +235,7 @@
 
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'assignmentName', 'copyCount', 'categoriesWrap',
-   'addCategoryBtn', 'printBtn', 'printArea', 'sizeWarning', 'ratingStyle',
+   'addCategoryBtn', 'printBtn', 'previewBtn', 'previewClassBtn', 'printArea', 'sizeWarning', 'ratingStyle',
    'shareBtn', 'shareNote', 'rosterSelect', 'withReviewer', 'rosterNote', 'printClassBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { assignmentName: '', copyCount: 6, categories: [], ratingStyle: 'check' };
@@ -446,14 +448,26 @@
   // US Letter with half-inch margins, which is what print-kit.css's half sheet divides.
   PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
 
-  els.printBtn.addEventListener('click', function () {
-    if (!state.categories.length) { alert('Load a template or add a category first.'); return; }
+  /* Each sheet is built by a function that returns false, having said why,
+     when there is nothing to print; its Print button builds and prints, and
+     the Preview button in front of it builds and shows the pages
+     (PrintKit.preview, Path 7 P5), opening no print dialog. The preview's own
+     Print presses the Print button it stands beside. */
+  function renderBlanks() {
+    if (!state.categories.length) { alert('Load a template or add a category first.'); return false; }
     var count = Math.max(1, Math.min(60, state.copyCount || 6));
     // Two checklists to a page, the cut line under the upper one of each pair.
     PrintKit.renderSet(els.printArea, function () { return buildSheet(); },
       { mode: 'blank', count: count, sheet: 'half', cut: true, header: false, footer: false });
-    window.print();
-  });
+    return true;
+  }
+  function wirePreview(previewBtn, build, printBtn) {
+    printBtn.addEventListener('click', function () { if (build()) window.print(); });
+    previewBtn.addEventListener('click', function () {
+      if (build()) PrintKit.preview({ trigger: previewBtn, onPrint: function () { printBtn.click(); } });
+    });
+  }
+  wirePreview(els.previewBtn, renderBlanks, els.printBtn);
 
   /* ---------- one per student, from a saved roster ----------
      Roster.listRosters / getRoster are read-only, and read at print time: a
@@ -491,7 +505,7 @@
   function syncRosterUi() {
     var any = Roster.listRosters().length > 0;
     var names = chosenNames();
-    els.printClassBtn.disabled = !names.length;
+    els.printClassBtn.disabled = els.previewClassBtn.disabled = !names.length;
     els.rosterNote.textContent = !any
       ? 'No class roster is saved on this device yet. Save one in Class Roster Hub and it will be offered here. “Print checklists” still prints blank ones.'
       : !picker.getSelected() ? 'Choose a class to print a checklist with each student’s name on it.'
@@ -501,15 +515,16 @@
   }
   Roster.onChange(syncRosterUi); // the picker refreshes its own list on the same event, before this runs
 
-  els.printClassBtn.addEventListener('click', function () {
-    if (!state.categories.length) { alert('Load a template or add a category first.'); return; }
+  function renderClassSet() {
+    if (!state.categories.length) { alert('Load a template or add a category first.'); return false; }
     var names = chosenNames();
-    if (!names.length) { syncRosterUi(); return; }
+    if (!names.length) { syncRosterUi(); return false; }
     var sheets = cutStackOrder(pairings(names, els.withReviewer.checked));
     PrintKit.renderSet(els.printArea, function (sheet) { return buildSheet(sheets[sheet.n - 1]); },
       { mode: 'set', roster: sheets.map(function (s) { return s.author; }), sheet: 'half', cut: true, header: false, footer: false });
-    window.print();
-  });
+    return true;
+  }
+  wirePreview(els.previewClassBtn, renderClassSet, els.printClassBtn);
   els.withReviewer.addEventListener('change', syncRosterUi);
 
   /* ---------- share a checklist: _shared/share.js (Path 6 P3) ----------

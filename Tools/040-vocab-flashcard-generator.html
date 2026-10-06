@@ -314,6 +314,7 @@
             <option value="duplex">Double-sided (front page, then back page mirrored)</option>
             <option value="fold">Single-sided fold-over (no duplex printer needed)</option>
           </select>
+          <button type="button" class="secondary" id="previewAlignTestBtn" style="margin-top:.5rem;">Preview alignment test page</button>
           <button type="button" class="secondary" id="alignTestBtn" style="margin-top:.5rem;">Print alignment test page</button>
           <p class="hint" id="alignTestHint" style="margin:.3rem 0 0;">Prints one numbered front page and one numbered back page — no
             real cards yet — so you can check your printer's duplex settings before committing a whole class set.</p>
@@ -374,6 +375,7 @@
             and a separate answer key.</p>
         </div>
 
+        <button type="button" class="secondary" id="previewBtn">Preview pages</button>
         <button type="button" id="printBtn">Print</button>
       </div>
     </div>
@@ -404,7 +406,7 @@
    'flashOptions','wallOptions','quizOptions','wsOptions','cwOptions','bingoOptions','matchOptions',
    'flashCols','flashRows','cardSizePreset','flashLayout','wallPerPage','wallShowDef',
    'sortOrder','shuffleOrder','showGuides','bingoCount','bingoField',
-   'printBtn','alignTestBtn','alignTestHint','previewArea','previewNote','printNote','sheetView','printArea',
+   'printBtn','previewBtn','alignTestBtn','previewAlignTestBtn','alignTestHint','previewArea','previewNote','printNote','sheetView','printArea',
    'shareBtn','shareNote'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -1142,7 +1144,7 @@
     var panels = { flashcards: els.flashOptions, wordwall: els.wallOptions, quiz: els.quizOptions,
       wordsearch: els.wsOptions, crossword: els.cwOptions, bingo: els.bingoOptions, matching: els.matchOptions };
     Object.keys(panels).forEach(function (m) { panels[m].style.display = state.mode === m ? '' : 'none'; });
-    els.printBtn.style.display = state.mode === 'quiz' ? 'none' : '';
+    els.printBtn.style.display = els.previewBtn.style.display = state.mode === 'quiz' ? 'none' : '';
     syncAlignTestVisibility();
   }
 
@@ -1401,25 +1403,43 @@
   });
 
   var PRINTABLE_MODES = ['wordsearch', 'crossword', 'bingo', 'matching'];
-  els.printBtn.addEventListener('click', function () {
+  /** Builds the current mode's sheet; false, having said why, when there is
+      nothing to print. */
+  function renderSheet() {
     if (PRINTABLE_MODES.indexOf(state.mode) !== -1) {
       var res = generatePrintable(state.mode, currentItems());
-      if (!res.ok) { alert(printableFailureMessage(state.mode, res)); return; }
+      if (!res.ok) { alert(printableFailureMessage(state.mode, res)); return false; }
     } else if (!currentItems().length) {
       // Flashcards and word wall build no page from an empty list, and printing
       // an empty #printArea is a blank sheet of paper.
       alert('Add some words before printing. The list is empty.');
-      return;
+      return false;
     }
     buildPrintArea();
-    sheetBuilt = true;
-    window.print();
-  });
-  els.alignTestBtn.addEventListener('click', function () {
+    return true;
+  }
+  function renderAlignTest() {
     renderCardPages(els.printArea, alignSpec());
+    return true;
+  }
+  /** Prints the sheet that is in #printArea now, without building it again. */
+  function printBuilt() {
     sheetBuilt = true;
     window.print();
-  });
+  }
+  /* A Print button builds its sheet and prints it. The Preview button in front
+     of it builds the same sheet and shows it cut into its pages
+     (PrintKit.preview, Path 7 P5), opening no print dialog. The preview's own
+     Print prints the sheet that was looked at and does not build it again: a
+     word search, a crossword or a bingo set is drawn at random each time. */
+  function wirePreview(previewBtn, build, printBtn) {
+    printBtn.addEventListener('click', function () { if (build()) printBuilt(); });
+    previewBtn.addEventListener('click', function () {
+      if (build()) PrintKit.preview({ trigger: previewBtn, onPrint: printBuilt });
+    });
+  }
+  wirePreview(els.previewBtn, renderSheet, els.printBtn);
+  wirePreview(els.previewAlignTestBtn, renderAlignTest, els.alignTestBtn);
 
   /* ---------- boot ---------- */
   // A shared link wins over whatever list was last open: following one is an

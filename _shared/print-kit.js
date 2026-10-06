@@ -25,7 +25,7 @@
        ('3x3'), each card a share of the page; or, for `{ cols: 3 }`, one grid
        of cards whose height is the tool's own, running on over the pages.
 
-     PrintKit.preview({ area, trigger, onPrint, title })
+     PrintKit.preview({ area, trigger, onPrint, onClose, title })
        The print preview (Path 7 P5, v258): a modal dialog that shows the
        sheet cut into pages at the size setPage() set, one page at a time,
        with "Page 2 of 5", and opens no print dialog. See PREVIEW below.
@@ -545,7 +545,10 @@
       The sheet must already be built; the preview shows what is there and
       changes nothing in it. `opts.trigger` gets the focus back on close
       (default: what had it). `opts.onPrint`, if given, adds a Print button
-      that closes the preview and calls it. Resolves, once the pages are laid
+      that closes the preview and calls it. `opts.onClose`, if given, is called
+      whenever the preview closes, before `onPrint`: a page that keeps several
+      sheets in one #printArea shows the asked-for one before calling this and
+      puts its at-rest one back there. Resolves, once the pages are laid
       out, to { dialog, frame, pages, page, go(n), close() }. Never calls
       print(). */
   function preview(opts) {
@@ -624,6 +627,9 @@
       if (dialog.parentNode) dialog.parentNode.removeChild(dialog);
       if (openPreview === control) openPreview = null;
       if (trigger && typeof trigger.focus === 'function') trigger.focus();
+      /* A page that showed one of several sheets for the preview puts its
+         at-rest sheet back here. It runs before opts.onPrint. */
+      if (typeof opts.onClose === 'function') opts.onClose();
       settled(control);
     }
 

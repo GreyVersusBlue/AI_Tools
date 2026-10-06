@@ -475,10 +475,16 @@ files must be added there too.
   of the printable page, with the page's own print rules applied there (`flipMedia`), so the page itself is
   never changed. Do not write a second preview and do not measure breaks by height (that was tried and
   miscounts). 074 was the first adopter (`npm run test:safety-label-preview`, which pins the dialog itself); since v259 076, 077,
-  051, 042, 064 and 043 have it too. The next adopter adds a "Preview pages" button in front of its print button,
+  051, 042, 064 and 043 have it too, and since v262 070, 023, 040, 018, 017 and 016: every page that prints through the kit.
+  The next adopter adds a "Preview pages" button in front of its print button,
   renders its sheet, calls `preview()`, and gets an entry in `Tools/print-kit/test/smoke-preview-adopters.mjs`'s `TOOLS`
   (`npm run test:preview-adopters`), which holds the preview's count to Chromium's PDF in every state. A page with
-  several print buttons gets a Preview button in front of each (043; `BACKLOG.md`, Path 7 P5, "Point 4").
+  several print buttons gets a Preview button in front of each (043; `BACKLOG.md`, Path 7 P5, "Point 4"). A page that
+  keeps several sheets inside one `#printArea` shows the asked-for one before `preview()` and passes `onClose` to put
+  the at-rest one back (018 is the example: the Preview button presses its Print button with `previewFor` set, so the
+  refusals and the sheet cannot differ). A Print button builds its sheet and prints; Ctrl+P presses none, so a page
+  whose `#printArea` is filled only by buttons builds its main sheet on `beforeprint` unless a button just built one
+  (043 and 040; not a sheet with a canvas on it, which is kept current, as on 051).
   `_shared/export.js` (Path 7 P4, v243) is `ExportKit`, the export layer: booklet, N-up and duplex imposition for
   either edge the paper turns on, sheet geometry, flow pagination, and `toPdf(pages, opts)` on the vendored jsPDF
   for pages a tool draws (a canvas, an image, a draw function; not a DOM element). A tool that needs a card's back

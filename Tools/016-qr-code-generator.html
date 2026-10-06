@@ -855,6 +855,7 @@
       <div class="btn-row" style="width:100%;">
         <button class="btn-primary" id="btn-png" disabled>Download PNG</button>
         <button class="btn-secondary" id="btn-svg" disabled>Download SVG</button>
+        <button type="button" class="btn-secondary" id="btn-preview" disabled>Preview this code</button>
         <button class="btn-secondary" id="btn-print" disabled>Print this code</button>
       </div>
       <div class="btn-row" style="width:100%;">
@@ -868,6 +869,7 @@
       <div class="card-title" style="align-self:flex-start;">4 · Preview &amp; Print</div>
       <div id="bulk-grid" class="bulk-grid"></div>
       <div class="btn-row" style="width:100%;">
+        <button type="button" class="btn-secondary" id="btn-bulk-preview" disabled>Preview grid</button>
         <button class="btn-secondary" id="btn-bulk-print" disabled>Print grid</button>
       </div>
     </div>
@@ -906,6 +908,7 @@
         tracking this item.&rdquo;</p>
       <div id="inventory-list" class="recent-list"></div>
       <div class="btn-row">
+        <button type="button" class="btn-secondary" id="btn-preview-inventory" disabled>Preview inventory sheet</button>
         <button class="btn-secondary" type="button" id="btn-print-inventory" disabled>🖨️ Print inventory sheet</button>
       </div>
     </div>
@@ -1659,7 +1662,7 @@
     if (!lastQR) return;
     syncPrintPage();
     els.printImg.src = els.canvas.toDataURL('image/png');
-    window.print();
+    printOrPreview();
   });
 
   function buildSVG(state) {
@@ -1773,6 +1776,37 @@
     window.PrintKit.setPage({ margin: preset ? preset.marginTop + 'in ' + preset.marginSide + 'in' : '0.5in' });
   }
   syncPrintPage();
+
+  /* A Print button builds its sheet, says which one it is (a body class) and
+     calls this. So does the Preview button in front of it, by pressing that
+     Print button with `previewFor` set: the same refusals, the same sheet and
+     the same page, shown cut into its pages (PrintKit.preview, Path 7 P5)
+     with no print dialog. The preview copies the whole #printArea and
+     <body>'s classes, and when it closes the button's class comes off again,
+     as after a print. */
+  var previewFor = null;
+  function atRest() {
+    document.body.classList.remove('print-bulk', 'print-inventory');
+    syncPrintPage();
+  }
+  function printOrPreview() {
+    if (!previewFor) { window.print(); return; }
+    var pair = previewFor;
+    window.PrintKit.preview({ trigger: pair.preview, onClose: atRest, onPrint: function () { pair.print.click(); } });
+  }
+  function wirePreview(previewId, printBtn) {
+    var previewBtn = document.getElementById(previewId);
+    previewBtn.disabled = printBtn.disabled;
+    new MutationObserver(function () { previewBtn.disabled = printBtn.disabled; })
+      .observe(printBtn, { attributes: true, attributeFilter: ['disabled'] });
+    previewBtn.addEventListener('click', function () {
+      previewFor = { preview: previewBtn, print: printBtn };
+      try { printBtn.click(); } finally { previewFor = null; }
+    });
+  }
+  wirePreview('btn-preview', els.btnPrint);
+  wirePreview('btn-bulk-preview', els.btnBulkPrint);
+  wirePreview('btn-preview-inventory', els.btnPrintInventory);
 
   function syncBulkSheetUI() {
     var preset = SHEET_PRESETS[els.bulkSheet.value];
@@ -2093,7 +2127,7 @@
     if (!els.printAreaBulk.children.length) return;
     document.body.classList.add('print-bulk');
     syncPrintPage();
-    window.print();
+    printOrPreview();
   });
 
   window.addEventListener('afterprint', function () {
@@ -2869,7 +2903,7 @@
     buildInventoryPrintSheet();
     document.body.classList.add('print-inventory');
     syncPrintPage();
-    window.print();
+    printOrPreview();
   });
 
   // Ctrl+P on the Scan tab prints the inventory as it stands now. It is text,
