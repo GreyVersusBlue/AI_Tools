@@ -9,6 +9,46 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P4, increment 6: 001, 006, 030 and 036 are `ExportKit.toXlsx`'s first adopters, and 001, 006 and 060's CSV goes through `toCsv` (2026-10-05, AI-13, `CACHE_VERSION` v252)
+
+Audit entry AI-13, rank 6. Sixth increment of P4. **The row stays, cut to a quarter: all that is left is 035's
+three-line template CSV, which was another worker's page.** P5 untouched; its Tier 2 bullet now says what a design
+has to settle.
+
+- **What moved.** 001 (range report) and 006 (rosters) each built one table, wrote it as a CSV by hand and as a
+  workbook with `XLSX.utils` and `XLSX.writeFile`; both hand the same rows to `ExportKit.toCsv` and
+  `ExportKit.toXlsx` now. 030's blank template and 036's `final_grades.xlsx` are one `toXlsx` call each. 060's CSV
+  moved the way the six in increment 5 did. Each page's `csvCell()`, Blob and anchor click are gone; each keeps its
+  own lazy load of SheetJS.
+- **The kit changed once:** a sheet takes `widths`, characters per column, because 036 sets them
+  (`export.test.mjs` 300 to 303).
+- **Old file against new** (the old page from `git show main:` through `page.route()`), one fixture per page
+  built from cells that break a file. CSV: 001 and 006 gained the apostrophes and a CRLF after the last row and
+  nothing else; 060 also gained the byte order mark and a quoted carriage return, and its type lost a trailing
+  `;`. Workbooks, read back with the vendored SheetJS, every cell compared by address, type and value: the same
+  but for cells that were an empty string, which are no cell now (2 of 47 on 001, 14 of 56 on 006, 4 of 60 on
+  036, none on 030); same sheet names but 006's "Period 3 4  Lab  A", now single-spaced; 036's twelve column
+  widths the same; the files are about half the size (deflated) and typed as a workbook.
+- **Calls made, each reversible.** (1) 006 turns a character Excel forbids in a sheet name into a space before
+  handing the name over, as it did, so "Period 3/4" is not read back as "Period 34"; the cap and the suffix for
+  two alike are the kit's. (2) 006 takes the apostrophe off on a file import only, not on a paste. (3) 060: a
+  result typed as a plain, finite number (`String(Number(v)) === v`) is handed over as a number, so `-3` on sit and reach
+  is not guarded; `+5`, `12.50`, `7:10` and words stay typed cells. (4) The row was rewritten, not deleted and
+  the list not renumbered, with four other sessions writing `BACKLOG.md` in the same batch and one file left.
+- **Tests.** New suite `Tools/export/test/smoke-sheet-adopters.mjs` (`npm run test:sheet-adopters`, port 8489,
+  104 assertions): each file's bytes, a CSV against a writer of its own, a workbook's every cell and no formula,
+  036's widths, and the round trips: 006's CSV and its two-sheet workbook back through the import dialog, 030's
+  template back through its importer. 060 is a row in `_csv-adopters.mjs` (`test:csv-adopters` 129 to 150). Five
+  breaks in one locked run, all caught: `widths` dropped, a number written as text, 006's unguard removed, 001's
+  CSV written raw, 060's number handed over as text.
+- **Found, not fixed (the same before).** 006's import dialog does not recognise its own export's header row and
+  picks the first column with a comma in it as the name column; the suite ticks the header box and picks Name, as
+  a teacher would have to. A cell with a line break does not survive 006's CSV import.
+- **Not verified.** No file was opened in Excel, Sheets or Numbers (huginn has none). One fixture per page, not a
+  sweep of states; 006's "this roster" scope and its live-editor rows were not in the comparison (the same code
+  path after the rows are gathered). The full `npm test` was not run; CI on a later wave PR is the check for the
+  rest, and CI's browser has not run the new suite.
+
 ## 060 Fitness & Skill Assessment Tracker: a report card per student (2026-10-05, AI-31-060, `CACHE_VERSION` v251; the commit messages say v249, which `main` took first)
 
 Audit entry AI-31, BACKLOG rank 99 (½). Per-tool row; the rank-99 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).

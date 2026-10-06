@@ -87,11 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
-- **AI-13 (v249), rank 6, Path 7 P4 increment 5: 003, 008, 018, 033, 068 and 075 save their CSV through
-  `ExportKit.toCsv`.** Every file now has a byte order mark, CRLF, a quoted carriage return and an apostrophe before
-  a typed cell a spreadsheet would run as a formula; 075's Import takes the apostrophe off. Old file against new
-  for all six. `npm run test:csv-adopters` (port 8486). **Left in rank 6: 001 and 006 (CSV and workbook), then 030
-  and 036; `toXlsx` has no adopter. No file was opened in a spreadsheet program.**
+- **AI-13 (v252), rank 6, Path 7 P4 increments 5 and 6: every page that saves a CSV or a workbook does it through
+  `ExportKit`, but for 035's fixed template.** v249: 003, 008, 018, 033, 068 and 075's CSV. v252: 001 and 006 (CSV
+  and workbook), 030 and 036 (workbook, the first four `toXlsx` adopters; `toXlsx` takes `widths` for 036) and 060's
+  CSV. 006's import takes the guard's apostrophe off. Old file against new for all. `npm run test:csv-adopters`
+  (port 8486), `npm run test:sheet-adopters` (port 8489). **Left in rank 6: 035's three-line template, when AI-31
+  is out of the page. No file was opened in a spreadsheet program.**
 - **AI-13 (v248), rank 6, Path 7 P4 increment 4: 011 makes booklets and several pages to a sheet on `ExportKit`
   (Path 17 P4's controls, built), and 064's zip and PNG downloads are the file helpers' first adopter.** 011's
   default output is the old page's in 120 states, to the pixel. `npm run test:image-to-pdf-impose` (port 8483).
@@ -237,14 +238,14 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v251` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v252` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **315** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
 | Suites | **213** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 31 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 10 · `export.js` 9 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 31 · `export.js` 14 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -381,8 +382,8 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 6 | Path 7 P4 — `_shared/export.js`. **Increments 1 to 5 shipped (AI-13, v243 to v249):** `ExportKit` has the imposition and pagination math, `toPdf(pages, opts)` for pages a tool can draw, and the file helpers `toCsv`, `toXlsx`, `toZip`, `download` and `filename`; 064 (Download PDF, print pagination, and since v248 its zip and PNG downloads), 040 (print pagination and backs) and 011 (booklet and pages per sheet, v248) are on it, and `_shared/duplex-print.js` is deleted. **Increment 5 (AI-13, v249):** 003, 008, 018, 033, 068 and 075 save their CSV through `toCsv` and `download` (`npm run test:csv-adopters`, port 8486). **Left:** two more CSV writers, 001 and 006, which also write a workbook with `XLSX.writeFile` (the first `toXlsx` adopters; 006 has an import to round-trip), then the workbook-only 030 and 036; 035's template and 060's results are AI-31's pages to move. `toXlsx` has no adopter. Nothing else in P4 is open. A slot is not clipped and turns 0 or 180 only. Ordinary work, no Fable needed | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
-| 7 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
+| 6 | Path 7 P4 — `_shared/export.js`. **Finished but for one file (AI-13, increments 1 to 6, v243 to v252).** `ExportKit` has the imposition and pagination math, `toPdf(pages, opts)` for pages a tool can draw, and the file helpers `toCsv`, `toXlsx`, `toZip`, `download` and `filename`; 064, 040 and 011 are on the PDF and imposition half, and every page that saves a CSV or a workbook is on the file helpers: 003, 008, 018, 033, 060, 068 and 075 (CSV), 001 and 006 (CSV and workbook), 030 and 036 (workbook) (`npm run test:csv-adopters`, port 8486; `npm run test:sheet-adopters`, port 8489). **Left, and all that is left:** 035's `groups-template.csv` (three fixed lines, LF line ends, no byte order mark, nothing typed in it) moves to `toCsv` and `download` when no AI-31 worker is in 035, with a row in `_csv-adopters.mjs`; then delete this row. No file has been opened in a spreadsheet program | 035 | ¼ | | [Path 7](#path-7--print-and-export-kit) |
+| 7 | Path 7 P5 — a print preview in the page: a shared Preview control that lays the sheet in `#printArea` out as pages at the size `PrintKit.setPage()` set, so a teacher sees the page breaks and the page count before the print dialog; the thirteen print-kit pages are its adopters. Not designed and not started; the Tier 2 section says what a design has to settle | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -2386,8 +2387,9 @@ localStorage with no file export.
     becomes a hyphen, so the zip is flat, and a repeat (case-blind) gets ` (2)` before its extension.
     `download(data, filename, mime)` is the one anchor click and returns the Blob; `filename(title, ext)` is a name
     every desktop accepts. `toXlsx` and `toZip` throw an error naming the vendor file when the library is not on the
-    page; `opts.XLSX` and `opts.JSZip` hand one in. Nothing was vendored. **No tool calls any of the five yet.**
-    Not built, because nothing asked: a `header: false` for object rows, column widths, a zip with folders.
+    page; `opts.XLSX` and `opts.JSZip` hand one in. Nothing was vendored. A sheet's `widths` (characters per
+    column, v252) was added for 036. Not built, because nothing asked: a `header: false` for object rows, a zip
+    with folders.
   **`toPdf` does not take a DOM element, and that is this session's call, cheap to reverse.** The sentence above
   says `toPdf(printArea, …)`. The vendored jsPDF's `html()` needs html2canvas, which is not vendored (about 200 KB
   more in the precache), and what it makes is a picture of the page: text nobody can select, at screen resolution.
@@ -2436,12 +2438,12 @@ localStorage with no file export.
   | 033 SSR Log | reading log: student, date, book, genre, pages, minutes | no mark, no guard, a bare carriage return left unquoted (the row breaks in two) | `toCsv`, v249 |
   | 068 Parent Contact Log | contacts: date, student, method, reason, outcome, initials | no guard (an outcome typed `-left voicemail`), a bare carriage return unquoted; it had the mark | `toCsv`, v249 |
   | 075 Staff Directory | name, room, extension, department; **it also imports this file** | no mark, no guard (an extension typed `+1 555 0100`), a bare carriage return unquoted | `toCsv`, v249; Import takes the apostrophe off again |
-  | 001 Hall Pass Log | a range report (title lines, totals, every pass), as CSV and as a two-sheet workbook | no guard in the CSV; it has the mark and quotes a carriage return. The workbook is `aoa_to_sheet`, which writes a string as a string, so nothing to fix there but the copy of the code | left |
-  | 006 Class Roster Hub | one roster or all of them, as CSV and as a workbook; **it imports both** | no guard in the CSV (it has the mark and quotes a carriage return); its import would have to take the apostrophe off, as 075's does | left |
-  | 030 Review Game Board | a blank template workbook | nothing wrong; a copy of `XLSX.writeFile` | left |
-  | 036 Final Grade Checker | `final_grades.xlsx` | not read closely; `aoa_to_sheet`, so strings stay strings | left |
+  | 001 Hall Pass Log | a range report (title lines, totals, every pass), as CSV and as a two-sheet workbook | no guard in the CSV; it has the mark and quotes a carriage return. The workbook is `aoa_to_sheet`, which writes a string as a string, so nothing to fix there but the copy of the code | `toCsv` and `toXlsx`, v252 |
+  | 006 Class Roster Hub | one roster or all of them, as CSV and as a workbook; **it imports both** | no guard in the CSV (it has the mark and quotes a carriage return); its import would have to take the apostrophe off, as 075's does | `toCsv` and `toXlsx`, v252; a file import takes the apostrophe off again |
+  | 030 Review Game Board | a blank template workbook | nothing wrong; a copy of `XLSX.writeFile` | `toXlsx`, v252 |
+  | 036 Final Grade Checker | `final_grades.xlsx` | not read closely; `aoa_to_sheet`, so strings stay strings | `toXlsx` with `widths`, v252 |
   | 035 Schedule Visualizer | `groups-template.csv`, three fixed lines | LF line ends, no mark, nothing typed in it | left: 035 is AI-31's |
-  | 060 Fitness Tracker | assessment results | no mark, no guard, a bare carriage return unquoted | left: an AI-31 worker had the page in this batch |
+  | 060 Fitness Tracker | assessment results | no mark, no guard, a bare carriage return unquoted | `toCsv`, v252; a result typed as a plain number goes in as a number |
 
   032 and 038 only read a workbook. The six that moved were taken worst file first and stopped at six; 001 and
   006 are next and are the first `toXlsx` adopters (a CSV and a workbook from one table each).
@@ -2460,9 +2462,25 @@ localStorage with no file export.
   apostrophes and the quoted carriage return, and nothing else differs. What differs on purpose and a teacher may
   notice: a cell typed `-` (075's "no room") opens in a spreadsheet as `-` still, but the file holds `'-`, so a
   program that is not a spreadsheet shows the apostrophe.
-  **What is left of P4.** 001 and 006 (CSV and workbook, one PR each; 006's import round trip is the care), then
-  030 and 036's `XLSX.writeFile` calls, which are tidying and fix nothing; 035 and 060 when their pages are free.
-  `toXlsx` has no adopter. 011's layouts leave three things unbuilt, all in the layer already and none asked for: a
+  **Increment 6 shipped (AI-13, 2026-10-05, v252): the rest of the table above, and `toXlsx`'s first four
+  adopters.** 001 and 006 hand one table to `toCsv` and to `toXlsx`; 030 and 036 hand theirs to `toXlsx`; 060's
+  CSV moved as the six did. **How a page adopts `toXlsx`:** link `../_shared/export.js`, keep the page's own lazy
+  load of SheetJS (the kit finds `window.XLSX`), and replace `book_new` / `aoa_to_sheet` / `book_append_sheet` /
+  `writeFile` with one `ExportKit.toXlsx([{ name, rows, widths }], { filename })`. `widths` (characters per column)
+  is new, asked for by 036. What changes in the file, all of it: a cell that was an empty string is no cell; the
+  file is deflated (about half the size) and typed as a workbook, not `application/octet-stream`; a sheet name's
+  runs of spaces are one space (006 turns `:` `/` `[` `]` into spaces, so "Period 3/4: Lab [A]" was
+  "Period 3 4  Lab  A" and is "Period 3 4 Lab A"). Cell values and types are the same, one for one. 006's file
+  import (not a paste) takes the guard's apostrophe off. 060's result boxes are text; one typed as a plain number
+  (`-3` on sit and reach) is handed over as a number so its minus is not guarded, and anything else is a typed
+  cell. `npm run test:sheet-adopters` (port 8489) reads every file and puts 006's and 030's back in.
+  **Found on 006 and not fixed (the same before):** its import dialog does not recognise its own export's header
+  row and guesses the first column holding a comma as the name column (the course, in the suite's fixture), so a
+  teacher re-importing an export has to tick "first row is a header" and pick the Name column; the suite does
+  both. A cell with a line break in it does not survive 006's CSV import (`Roster.parseDelimited` splits on
+  lines first).
+  **What is left of P4.** 035's `groups-template.csv`, three fixed lines with nothing typed in them, when the page
+  is free. Nothing else. 011's layouts leave three things unbuilt, all in the layer already and none asked for: a
   preset for a one-sided printer (`stack: 'fronts-first'`), signatures, right-to-left.
   **Known limits, none of them a row yet.** A slot is not clipped, so a draw function that runs off its page
   runs onto its neighbour. A slot turns 0 or 180 degrees, not 90, so N-up never turns a page to fit. A booklet has
@@ -2477,6 +2495,19 @@ localStorage with no file export.
 - **P5 — A real print preview.** A shared "Preview" mode that renders the print
   DOM into an in-page paged view (CSS `@page` size emulation) so a teacher sees
   page breaks before the dialog, instead of after.
+  **Not designed, not started (AI-13, 2026-10-05). What it is, and what a design has to settle first.** One
+  control, in `_shared/print-kit.js` and `.css` since that is where the page size already lives
+  (`PrintKit.setPage()` writes paper, orientation and margin), that shows the sheet in `#printArea` cut into pages
+  at that size, with a page count, without opening the print dialog. Its adopters are the thirteen pages that
+  print through the kit; a page with a print block of its own gets it when it adopts the kit. Open, in the order
+  they block: (1) where the breaks come from. The browser does not report them, so the preview either measures
+  (`.pk-page` and `.pk-sheet` are whole pages already; a flowing grid such as 074's or 016's has to be cut by
+  height, honouring `break-inside: avoid`) or renders print media in an iframe; the measure of success is that the
+  preview's page count equals Chromium's `page.pdf()` count, which every adopter's `smoke-print.mjs` already
+  reads. (2) The print rules are in `@media print`, so a preview on screen has to apply them: a class the kit's
+  print rules are also written for, or the iframe. (3) QR canvases (051, 018, 017) do not survive `cloneNode`;
+  preview the live sheet, not a copy. (4) Where the control goes on a page with several print buttons (018, 017,
+  016, 043). None of this was tried; it is a reading of the kit, not a result.
 
 **Model.** Opus, except P4's imposition math.
 
