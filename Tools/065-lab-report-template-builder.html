@@ -107,6 +107,26 @@
   table.data-table th .ch-meta { display: block; font-weight: 400; font-size: .74rem; color: #444; margin-top: .1rem; }
   table.data-table th.num, table.data-table td.num { text-align: right; }
 
+  /* ---- pre-lab / post-lab packets ---- */
+  .split-row { display: grid; grid-template-columns: 1fr 8rem; gap: .4rem; align-items: center; padding: .15rem 0; }
+  .split-row label { margin: 0; font-weight: 600; font-size: .86rem; }
+  .split-row select { margin-bottom: 0; }
+  .split-summary { font-size: .8rem; color: var(--muted); margin: .4rem 0 .6rem; }
+  .packet-tag { display: inline-block; font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border: 1.5px solid #333; padding: .05rem .5rem; margin: 0 0 .5rem; }
+  .packet-empty { font-size: .9rem; color: #555; }
+  /* Two packets shown in one preview are two sheets; on screen a rule says so,
+     on paper the second one starts a new page. */
+  .lab-packet + .lab-packet { margin-top: 1.4rem; padding-top: 1.4rem; border-top: 2px dashed #999; }
+  .preview-pick { display: flex; align-items: center; gap: .4rem; }
+  .preview-pick label { margin: 0; }
+  .preview-pick select { width: auto; margin: 0; }
+  @media print {
+    .lab-packet + .lab-packet { break-before: page; margin-top: 0; padding-top: 0; border-top: 0; }
+    .lab-section h3 { break-after: avoid; }
+    .checklist-item, .step-item, table.data-table tr { break-inside: avoid; }
+    table.data-table thead { display: table-header-group; }
+  }
+
   .col-row { display: grid; grid-template-columns: 1fr 6.5rem 6.5rem auto auto auto; gap: .4rem; align-items: center; padding: .25rem 0; }
   .col-row input[type="text"], .col-row select { margin-bottom: 0; }
   .col-row button.small { padding: .2rem .45rem; flex-shrink: 0; }
@@ -129,7 +149,7 @@
     </div>
     <div class="btnrow">
       <button class="secondary" id="previewBtn">Preview</button>
-      <button class="secondary" id="printBtn">Print packet</button>
+      <button class="secondary" id="printBtn">Print whole report</button>
     </div>
   </div>
 
@@ -165,6 +185,31 @@
         <input type="text" id="labTitle" placeholder="e.g. Acid-Base Reactions">
         <label for="objective">Objective / purpose</label>
         <textarea id="objective" placeholder="What is this lab trying to find out?"></textarea>
+      </div>
+      <div class="card" id="packetsCard">
+        <h2>Pre-lab and post-lab packets</h2>
+        <p class="hint">Print this one template as two packets: what a class does before the lab, and what it fills in after.
+          Choose which packet each section goes in. The whole report always prints as one, whatever you choose here.</p>
+        <div class="split-row"><label for="split_objective">Objective</label>
+          <select id="split_objective" data-section="objective"><option value="pre">Pre-lab</option><option value="post">Post-lab</option></select></div>
+        <div class="split-row"><label for="split_hypothesis">Hypothesis</label>
+          <select id="split_hypothesis" data-section="hypothesis"><option value="pre">Pre-lab</option><option value="post">Post-lab</option></select></div>
+        <div class="split-row"><label for="split_materials">Materials</label>
+          <select id="split_materials" data-section="materials"><option value="pre">Pre-lab</option><option value="post">Post-lab</option></select></div>
+        <div class="split-row"><label for="split_procedure">Procedure</label>
+          <select id="split_procedure" data-section="procedure"><option value="pre">Pre-lab</option><option value="post">Post-lab</option></select></div>
+        <div class="split-row"><label for="split_data">Data table</label>
+          <select id="split_data" data-section="data"><option value="pre">Pre-lab</option><option value="post">Post-lab</option></select></div>
+        <div class="split-row"><label for="split_observations">Observations</label>
+          <select id="split_observations" data-section="observations"><option value="pre">Pre-lab</option><option value="post">Post-lab</option></select></div>
+        <div class="split-row"><label for="split_conclusion">Conclusion</label>
+          <select id="split_conclusion" data-section="conclusion"><option value="pre">Pre-lab</option><option value="post">Post-lab</option></select></div>
+        <p class="split-summary" id="splitSummary" aria-live="polite"></p>
+        <div class="btnrow">
+          <button type="button" class="secondary" id="printPreBtn">Print pre-lab</button>
+          <button type="button" class="secondary" id="printPostBtn">Print post-lab</button>
+          <button type="button" class="secondary" id="printBothBtn">Print both packets</button>
+        </div>
       </div>
       <div class="card">
         <h2>Data table</h2>
@@ -217,6 +262,15 @@
   <div class="modal-box">
     <div class="modal-header">
       <h2>Print preview</h2>
+      <div class="preview-pick">
+        <label for="previewWhich">Show</label>
+        <select id="previewWhich">
+          <option value="all">Whole report</option>
+          <option value="pre">Pre-lab packet</option>
+          <option value="post">Post-lab packet</option>
+          <option value="both">Both packets</option>
+        </select>
+      </div>
       <div class="btnrow">
         <button type="button" id="previewPrintBtn">Print</button>
         <button type="button" class="secondary" id="closePreviewBtn">Close</button>
@@ -284,7 +338,7 @@
    'observationsPrompt', 'conclusionWrap', 'addQuestionBtn', 'printBtn', 'printArea',
    'templateName', 'templateSwitch', 'newTemplateBtn', 'deleteTemplateBtn',
    'previewBtn', 'previewModal', 'previewBody', 'closePreviewBtn', 'previewPrintBtn',
-   'shareBtn', 'shareNote'].forEach(function (id) {
+   'shareBtn', 'shareNote', 'splitSummary', 'printPreBtn', 'printPostBtn', 'printBothBtn', 'previewWhich'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -297,6 +351,42 @@
     });
   }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  /* Which packet each section prints in. A template that never had a split
+     (everything saved before this) has no `split` field and is read through
+     the defaults below; the field is only written once a teacher changes one
+     choice, so an old template's saved bytes do not change by being opened. */
+  var SECTIONS = [
+    { key: 'objective', label: 'Objective' }, { key: 'hypothesis', label: 'Hypothesis' },
+    { key: 'materials', label: 'Materials' }, { key: 'procedure', label: 'Procedure' },
+    { key: 'data', label: 'Data' }, { key: 'observations', label: 'Observations' },
+    { key: 'conclusion', label: 'Conclusion' }
+  ];
+  var DEFAULT_SPLIT = { objective: 'pre', hypothesis: 'pre', materials: 'pre', procedure: 'pre',
+    data: 'post', observations: 'post', conclusion: 'post' };
+
+  function splitOf(t) {
+    var saved = t && t.split && typeof t.split === 'object' ? t.split : {};
+    var out = {};
+    SECTIONS.forEach(function (sec) {
+      out[sec.key] = (saved[sec.key] === 'pre' || saved[sec.key] === 'post') ? saved[sec.key] : DEFAULT_SPLIT[sec.key];
+    });
+    return out;
+  }
+  function packetCount(which) {
+    var split = splitOf(state);
+    return SECTIONS.filter(function (sec) { return split[sec.key] === which; }).length;
+  }
+  function renderSplit() {
+    var split = splitOf(state);
+    SECTIONS.forEach(function (sec) { document.getElementById('split_' + sec.key).value = split[sec.key]; });
+    var pre = packetCount('pre'), post = packetCount('post');
+    function n(c) { return c + (c === 1 ? ' section' : ' sections'); }
+    els.splitSummary.textContent = 'Pre-lab packet: ' + n(pre) + '. Post-lab packet: ' + n(post) + '.';
+    els.printPreBtn.disabled = !pre;
+    els.printPostBtn.disabled = !post;
+    els.printBothBtn.disabled = !pre && !post;
+  }
 
   /** Builds fresh template content from a subject starter (no "name" field —
       callers attach that separately depending on whether they're swapping
@@ -475,6 +565,7 @@
     renderListByKey('procedure');
     renderListByKey('columns');
     renderListByKey('conclusion');
+    renderSplit();
   }
 
   function bindListEvents(wrapEl, listKey) {
@@ -582,8 +673,8 @@
   bindListEvents(els.columnsWrap, 'columns');
   bindListEvents(els.conclusionWrap, 'conclusion');
 
-  function packetHtml() {
-    var title = state.title.trim() ? escapeHtml(state.title.trim()) : 'Lab Report';
+  /** Every section of the packet as markup, keyed by SECTIONS. */
+  function sectionBlocks() {
     var materials = state.materials.map(function (m) { return '<div class="checklist-item"><span class="checkbox"></span>' + escapeHtml(m.text) + '</div>'; }).join('');
     var procedure = state.procedure.map(function (p, i) { return '<div class="step-item">' + (i + 1) + '. ' + escapeHtml(p.text) + '</div>'; }).join('');
     /* Header: the column name, then a smaller line saying what belongs in the
@@ -609,36 +700,76 @@
     var conclusion = state.conclusion.map(function (q) {
       return '<p style="font-size:.9rem;margin:.3rem 0 .1rem;">' + escapeHtml(q.text) + '</p><span class="fill-line"></span><span class="fill-line"></span>';
     }).join('');
-    return '<h1 class="lab-title">' + title + '</h1>' +
-      '<p class="lab-sub">Name: __________________________ &nbsp; Date: __________ &nbsp; Period: ______</p>' +
-      '<div class="lab-section"><h3>Objective</h3><p style="font-size:.9rem;">' + escapeHtml(state.objective || '—') + '</p></div>' +
-      '<div class="lab-section"><h3>Hypothesis</h3><p style="font-size:.9rem;">' + escapeHtml(state.hypothesisPrompt) + '</p><span class="fill-line"></span><span class="fill-line"></span></div>' +
-      '<div class="lab-section"><h3>Materials</h3>' + materials + '</div>' +
-      '<div class="lab-section"><h3>Procedure</h3>' + procedure + '</div>' +
-      '<div class="lab-section"><h3>Data</h3><table class="data-table"><thead><tr>' + cols + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>' +
-      '<div class="lab-section"><h3>Observations</h3><p style="font-size:.9rem;">' + escapeHtml(state.observationsPrompt) + '</p><span class="fill-line"></span><span class="fill-line"></span></div>' +
-      '<div class="lab-section"><h3>Conclusion</h3>' + conclusion + '</div>';
+    return {
+      objective: '<div class="lab-section"><h3>Objective</h3><p style="font-size:.9rem;">' + escapeHtml(state.objective || '—') + '</p></div>',
+      hypothesis: '<div class="lab-section"><h3>Hypothesis</h3><p style="font-size:.9rem;">' + escapeHtml(state.hypothesisPrompt) + '</p><span class="fill-line"></span><span class="fill-line"></span></div>',
+      materials: '<div class="lab-section"><h3>Materials</h3>' + materials + '</div>',
+      procedure: '<div class="lab-section"><h3>Procedure</h3>' + procedure + '</div>',
+      data: '<div class="lab-section"><h3>Data</h3><table class="data-table"><thead><tr>' + cols + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>',
+      observations: '<div class="lab-section"><h3>Observations</h3><p style="font-size:.9rem;">' + escapeHtml(state.observationsPrompt) + '</p><span class="fill-line"></span><span class="fill-line"></span></div>',
+      conclusion: '<div class="lab-section"><h3>Conclusion</h3>' + conclusion + '</div>'
+    };
   }
 
-  els.printBtn.addEventListener('click', function () {
-    els.printArea.innerHTML = packetHtml();
+  var NAME_LINE = '<p class="lab-sub">Name: __________________________ &nbsp; Date: __________ &nbsp; Period: ______</p>';
+  function labTitle() { return state.title.trim() ? escapeHtml(state.title.trim()) : 'Lab Report'; }
+
+  /** One packet: its own title, tag and name line, then the sections that the
+      split puts in it, in the report's own order. */
+  function onePacketHtml(which) {
+    var split = splitOf(state), blocks = sectionBlocks();
+    var body = SECTIONS.filter(function (sec) { return split[sec.key] === which; })
+      .map(function (sec) { return blocks[sec.key]; }).join('');
+    var tag = which === 'pre' ? 'Pre-lab' : 'Post-lab';
+    return '<div class="lab-packet"><h1 class="lab-title">' + labTitle() + '</h1>' +
+      '<span class="packet-tag">' + tag + ' packet</span>' + NAME_LINE +
+      (body || '<p class="packet-empty">No sections are in this packet.</p>') + '</div>';
+  }
+
+  /** which: 'all' (the whole report, one packet as it always was), 'pre',
+      'post', or 'both' (pre then post, the second on a new page). */
+  function packetHtml(which) {
+    if (which === 'pre' || which === 'post') return onePacketHtml(which);
+    if (which === 'both') {
+      return ['pre', 'post'].filter(function (w) { return packetCount(w) > 0; }).map(onePacketHtml).join('');
+    }
+    var blocks = sectionBlocks();
+    return '<h1 class="lab-title">' + labTitle() + '</h1>' + NAME_LINE +
+      SECTIONS.map(function (sec) { return blocks[sec.key]; }).join('');
+  }
+
+  function printPacket(which) {
+    els.printArea.innerHTML = packetHtml(which);
     window.print();
+  }
+  els.printBtn.addEventListener('click', function () { printPacket('all'); });
+  els.printPreBtn.addEventListener('click', function () { printPacket('pre'); });
+  els.printPostBtn.addEventListener('click', function () { printPacket('post'); });
+  els.printBothBtn.addEventListener('click', function () { printPacket('both'); });
+
+  SECTIONS.forEach(function (sec) {
+    document.getElementById('split_' + sec.key).addEventListener('change', function (ev) {
+      var split = splitOf(state);
+      split[sec.key] = ev.target.value === 'post' ? 'post' : 'pre';
+      state.split = split;
+      save();
+      renderSplit();
+    });
   });
 
   /* ---------- print preview: reuses packetHtml() + the print CSS classes, ---------- */
   /* so what's shown here is the actual print markup, not a second renderer. */
+  function showPreview() { els.previewBody.innerHTML = packetHtml(els.previewWhich.value); }
   els.previewBtn.addEventListener('click', function () {
-    els.previewBody.innerHTML = packetHtml();
+    showPreview();
     els.previewModal.style.display = 'flex';
   });
+  els.previewWhich.addEventListener('change', showPreview);
   els.closePreviewBtn.addEventListener('click', function () { els.previewModal.style.display = 'none'; });
   els.previewModal.addEventListener('click', function (ev) {
     if (ev.target === els.previewModal) els.previewModal.style.display = 'none';
   });
-  els.previewPrintBtn.addEventListener('click', function () {
-    els.printArea.innerHTML = packetHtml();
-    window.print();
-  });
+  els.previewPrintBtn.addEventListener('click', function () { printPacket(els.previewWhich.value); });
 
   /* ---------- share a template: _shared/share.js (Path 6 P3) ----------
      This tool keeps a NAMED LIBRARY (a list of names plus a blob per name),
@@ -666,7 +797,7 @@
     title: 'Share this template',
     noun: 'this template',
     filename: function () { return (state && state.name) || 'lab report template'; },
-    note: 'The objective, hypothesis and observation prompts, every material and procedure step, the data table’s columns and the conclusion questions all travel. Opening the link saves this template on the receiving device as a new saved template; nothing already saved there is changed.',
+    note: 'The objective, hypothesis and observation prompts, every material and procedure step, the data table’s columns, the conclusion questions and which packet each section prints in all travel. Opening the link saves this template on the receiving device as a new saved template; nothing already saved there is changed.',
     successMessage: 'Link copied. Opening it anywhere saves this template there alongside whatever is already saved.',
     onMessage: function (text, isError) { setShareNote(text, isError); }
   });
@@ -688,7 +819,7 @@
       a template saved before columns carried a kind and units. */
   function normalizeTemplate(obj, name) {
     var rows = parseInt(obj.dataRows, 10);
-    return {
+    return Object.assign({
       name: name,
       title: String(obj.title || ''),
       objective: String(obj.objective || ''),
@@ -706,7 +837,7 @@
       dataRows: (rows >= 1 && rows <= 20) ? rows : 5,
       observationsPrompt: String(obj.observationsPrompt || ''),
       conclusion: textList(obj.conclusion)
-    };
+    }, obj.split && typeof obj.split === 'object' ? { split: splitOf(obj) } : {});
   }
 
   /** Consumes a ?template= link on load, saving the arrival as a NEW named

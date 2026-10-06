@@ -127,6 +127,7 @@
     "Tools/historical-trading-card-maker/test/smoke-photo.mjs",
     "Tools/historical-trading-card-maker/test/smoke-photo-store.mjs",
     "Tools/lab-report-template-builder/test/smoke-typed-columns.mjs",
+    "Tools/lab-report-template-builder/test/smoke-packet-split.mjs",
     "Tools/dichotomous-key-builder/test/smoke-trace-path.mjs",
     "Tools/dichotomous-key-builder/test/smoke-tree-view.mjs",
     "Tools/fraction-decimal-percent-drill-generator/test/smoke-value-range.mjs",

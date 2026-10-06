@@ -73,6 +73,7 @@
     "test:verb-poster": "node Tools/verb-conjugation-poster-generator/test/smoke-panel-colors.mjs",
     "test:trading-cards": "node Tools/historical-trading-card-maker/test/smoke-card-size.mjs && node Tools/historical-trading-card-maker/test/smoke-photo.mjs && node Tools/historical-trading-card-maker/test/smoke-share.mjs && node Tools/historical-trading-card-maker/test/smoke-game.mjs",
     "test:lab-report": "node Tools/lab-report-template-builder/test/smoke-typed-columns.mjs",
+    "test:lab-report-packets": "node Tools/lab-report-template-builder/test/smoke-packet-split.mjs",
     "test:dichotomous-key": "node Tools/dichotomous-key-builder/test/smoke-trace-path.mjs",
     "test:dichotomous-key-tree": "node Tools/dichotomous-key-builder/test/smoke-tree-view.mjs",
     "test:fraction-decimal-percent": "node Tools/fraction-decimal-percent-drill-generator/test/smoke-value-range.mjs",
