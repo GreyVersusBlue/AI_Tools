@@ -10362,7 +10362,7 @@ that gets students actively hunting for the error rather than passively
 reading the reveal.** Category filters get the right problem in front of
 the right class; an interactive "click the wrong step" mode turns a
 one-click reveal into real error-analysis practice; and bulk import (shipped,
-v256) means a teacher's own hand-written trick questions can join the bank in
+v257) means a teacher's own hand-written trick questions can join the bank in
 minutes, not one form submission at a time.
 
 #### Open Questions
@@ -10379,7 +10379,7 @@ minutes, not one form submission at a time.
 
 #### Platform themes that matter here
 
-- **P7 (cross-tool)** — bulk import has shipped (v256: a paste box with a
+- **P7 (cross-tool)** — bulk import has shipped (v257: a paste box with a
   preview, append or replace); the fraction/decimal/percent overlap with this
   round's next tool is still an opportunity.
 - **P3 (share links)** — the "click the wrong step" interactive mode is

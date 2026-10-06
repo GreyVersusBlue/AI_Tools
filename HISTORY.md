@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 066 Math "Find the Mistake" Warm-Up Generator: bulk import of a custom bank (2026-10-06, AI-31-066, `CACHE_VERSION` v257; the commit messages say v256, which `main` took first)
+
+Audit entry AI-31, BACKLOG rank 103 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** An "Import many problems" card on the Problem bank tab. A paste box takes one problem per line: problem, shown work (with the
+  mistake), the fix, the explanation, separated by tabs (a spreadsheet paste) or commas, header row optional. A fifth column is the topic and a sixth
+  the grade band (by label or id, any case); rows that name neither take two selects on the card. Several steps go in one cell as `<br>` (what the
+  Add form stores) or as real line breaks inside a double-quoted cell. **Preview** reads the paste and saves nothing: it says how many problems will be
+  added, names every row it cannot use by line with the reason (wrong column count, empty problem or work or fix, unknown topic or band, a quote never
+  closed, over 500 rows), names duplicates, and lists what will be added. The add button stays off until a preview has found something, and any edit to
+  the text, the mode or either default switches it off again, so what is saved is what was shown. **Add to my problems** or **Replace all my problems**
+  (a radio): replace asks `confirm()` first and leaves the switched-off built-ins alone. **Show my problems as rows** writes the teacher's bank into the box
+  in the same format (with header, topic and band), which is both the export and the way to edit a bank in a spreadsheet and put it back.
+- **Storage did not change.** Same key (`mftm_custom_v1`), same row shape `{ id, band, category, problem, work, fix, explain }`, newlines as `<br>`. A
+  bank saved before is loaded untouched (the suite compares the stored string byte for byte after load) and an append leaves the old rows exactly as saved;
+  a row with no `band` still counts as a duplicate of an imported one. Duplicates are the rule the share-link import uses: same problem and same work, any
+  case, skipped; when replacing, the old bank is not what is compared against.
+- **Text is text.** Every cell goes through the page's own `sanitizeRich()` (escape, then put back `<br>` and character entities), the one 066 already
+  applies to a shared link. A cell holding `<img onerror>`, `<script>`, `<svg onload>` or `<b onmouseover>` is stored as characters and shown as characters on the
+  projector, the worksheet, the key and the bank list, and `window.__pwned` stays 0; cells starting `=`, `+`, `@` or `-` are plain text (nothing here is a
+  spreadsheet cell). The preview is built from `textContent` and the page's `innerHTML` sink count is unchanged (`inline-sinks-baseline.json` not touched: the import
+  topic select is filled by cloning the Add form's options, not a second `innerHTML`).
+- **Calls taken, so they can be reversed.** (1) `Roster.parseDelimited` was not used: it pads short rows to the widest, which would hide a wrong column count, reads
+  line by line (no multi-line quoted cell) and decides the delimiter on the first physical line. A small reader in the page does it. (2) No file picker: the tool has
+  no other import to match (its share file is the `_shared/share.js` sheet's), so the box is the one way in. (3) The old BACKLOG bullet said `|`-separated; the row
+  said tab or comma, and `|` is absolute value in this tool's own problems, so it is not a delimiter. (4) A bad row is left out and named, the rest import; nothing is
+  guessed at. (5) 500 rows at once is the cap, so a paste cannot fill a quota without a word. (6) A refused write (`setItem` throws) puts the old bank back in memory and says
+  nothing was saved; `saveCustom()` returns whether it wrote.
+- **Found by the suite, not by reading.** The delimiter was first read from the first physical line, so a paste whose first cell is a quoted cell with a line break was read
+  as comma-separated and came out as one mangled row. It is now read from outside the quotes (`firstRowDelimiter`). Also: a `.replace(/\r\n?/g, '\n')` I had written is dead code,
+  because a textarea's `value` is already LF-only, so it is gone; and a literal U+FEFF had landed in a regex in the page (and the suite) instead of the `\uFEFF` escape, which
+  an anchor in the break run caught.
+- **Tests.** New `Tools/math-find-the-mistake-generator/test/smoke-bulk-import.mjs` (`npm run test:find-the-mistake-import`, port 8493, 123 assertions): TSV with and without a
+  header, commas, quoted cells with line breaks, commas, tabs and doubled quotes, a byte-order mark (also before a quoted cell), every bad-row reason by line, preview saves
+  nothing, the button going off on each kind of edit, duplicates in the paste and in the bank (and not when replacing), append and replace with the confirm declined and
+  accepted, a legacy bank untouched byte for byte, inert text on the preview, bank list, projector, worksheet and key, the round trip (Show as rows, replace, same bank;
+  an Add-form problem too), a refused write, labels, a fieldset legend, `aria-live`, the keyboard (Enter, Tab, Space) and axe in light and dark, no console errors, nothing
+  off-site. **47 breaks on purpose** in the page: 41 failed the suite on a named assertion or threw first time (one, a label broken, threw on `getByLabel`), 2 survived
+  (the in-memory revert after a refused write, and the BOM strip, which `trim()` makes harmless unless a quote follows it) and each got an assertion and was broken again and
+  failed; 1 (CRLF) survived because it was dead code and was deleted; 3 more were written for `firstRowDelimiter` and all failed it. One break run started in the
+  wrong directory and changed nothing (its anchors did not match the shared folder's page; the shared folder stayed clean). Not every assertion has its own break (the axe
+  scans, the share-sheet-opens check and the status wording have none).
+- **Checked.** `test:a11y -- --only 066`, `audit-print --check --only 066`, `smoke-share-rollout`, `smoke-dark-rollout`, every `check:*`, `lint`, `check:precache -- --base
+  origin/main`, `check:adoption -- --check`. Not run: full `npm test`; nothing printed on paper or read with a real screen reader; the paste was tried with made-up rows and with the
+  text a `<textarea>` hands back, not with a clipboard from Excel or Sheets.
+
 ## 068 Parent/Guardian Contact Log: the conference print packet (2026-10-06, AI-31-068, `CACHE_VERSION` v256)
 
 Audit entry AI-31, BACKLOG rank 105 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
