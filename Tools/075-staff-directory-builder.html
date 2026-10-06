@@ -116,10 +116,11 @@
   }
   #cardSheet .wc-page:last-child { margin-bottom: 0; }
   /* The cut line is the card's own dashed edge, and neighbours share it: each
-     card is its full size and gives back the 1 px its right and bottom edges
-     lie on, so two cards side by side show one line, not two. */
+     card is its full size and the tracks are 1 px short of it (above), so the
+     right and bottom edges of one lie on the left and top edges of the next
+     and two cards side by side show one line, not two. */
   #cardSheet .wc-card {
-    box-sizing: border-box; width: var(--wc-w); height: var(--wc-h); margin: 0 -1px -1px 0;
+    box-sizing: border-box; width: var(--wc-w); height: var(--wc-h);
     border: 1px dashed #888; padding: .125in; display: flex; gap: .125in;
     overflow: visible; background: #fff; color: #000; font-family: "Segoe UI", Arial, sans-serif; line-height: 1.2;
   }

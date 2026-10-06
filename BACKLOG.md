@@ -496,7 +496,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
-| 112 | Wallet-card layout with QR — a lanyard insert with a phone or email link per entry | 075 | ½ | | [075 Staff Directory / Quick-Reference Builder](#075--staff-directory--quick-reference-builder) |
 | 113 | Room-assignment view — define rooms and proctors, auto-route by accommodation, print proctor lists | 077 | ½ | | [077 Testing Accommodations Reference Card Generator](#077--testing-accommodations-reference-card-generator) |
 | 114 | Multiple named saved prompt sets — a general slip, a lab-day slip and a testing-day slip at once | 076 | ½ | | [076 Sub Note / Feedback Slip Generator](#076--sub-note--feedback-slip-generator) |
 | 115 | Named saves plus reorder and share — group and line reordering and a state-link share URL | 078 | ½ | | [078 Unit Conversion Reference Chart Builder](#078--unit-conversion-reference-chart-builder) |
@@ -11913,13 +11912,19 @@ tools.
   vs "Front Office"), the way Formula Sheet Builder and Rubric Builder
   support multiple named saves — right now it's a single flat list for the
   whole building.
-- **QR code per entry linking to an extension-dial or email**, printed next
-  to the row, for a phone-mounted or wall-mounted quick-reference version —
-  a natural pairing with this site's existing QR Code Generator/Gallery
-  Walk QR patterns.
-- **Wallet-card / lanyard-insert print layout** as an alternate to the
-  full-page table, for a personal quick-reference card instead of a
-  workroom wall poster.
+- **QR code per row on the full-page directory table**, for a wall-mounted
+  quick-reference version. (The wallet and lanyard cards below shipped with
+  a QR per person; the wall table still has none.)
+- **Shipped (2026-10-06, v267): wallet and lanyard cards.** A "Wallet cards &
+  lanyard cards" panel prints one CR80 card (3.375 × 2.125 in) per person,
+  on its side (wallet, 8 to a Letter page) or upright (lanyard, 9 to a page),
+  with dashed cut lines, name, role, room, extension and a QR that opens a
+  `tel:` or `mailto:` link. New optional `email` and `qr` fields per person
+  (absent until used); the sheet's rule and each person's own pick which link;
+  the editor says why a person has no code. Left: photo on the card, a vCard
+  QR (a contact card rather than a call or an email), business-card and 4 × 3
+  in badge-insert sizes, email in the CSV file, department grouping on the
+  cards.
 - **Import from the shared roster system** other tools use (Class Roster
   Hub's storage), if staff lists ever get maintained there — though staff
   and student rosters are different enough this may not be worth forcing
@@ -11948,12 +11953,12 @@ retyping into three different formats every August.
 
 #### Platform themes that matter here
 
-- **P6 (print quality)** — the wallet-card and department-grouped layouts
-  are print-format work on top of an already-functional table.
+- **P6 (print quality)** — the department-grouped layout and the wallet
+  cards (shipped) are print-format work on top of an already-functional table.
 - **P15 (first run)** — the bulk-paste importer already lowers first-run
   friction a lot; export/import would close the loop for reuse next year.
-- **P7 (cross-tool)** — QR-per-entry connects naturally to QR Code
-  Generator/Gallery Walk QR's existing batch-QR code.
+- **P7 (cross-tool)** — the wallet cards draw their QR through the shared
+  `qr-draw.js`; a QR per row on the wall table would use it the same way.
 
 ### 076 — Sub Note / Feedback Slip Generator
 

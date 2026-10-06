@@ -281,8 +281,9 @@ const pdfOf = async () => {
 for (const [size, per, n, want] of [['wallet', 8, 1, 1], ['wallet', 8, 8, 1], ['wallet', 8, 9, 2], ['wallet', 8, 17, 3], ['lanyard', 9, 9, 1], ['lanyard', 9, 10, 2], ['lanyard', 9, 1, 1]]) {
   await seed(many(n), size === 'wallet' ? null : { groupByDept: false, card: { size, qr: 'mail-else-tel' } });
   await page.evaluate(() => { window.__printed = 0; });
+  await page.click('#printBtn');   // fills #printArea with the directory first: it must not reach the card pages
   await page.click('#printCardsBtn');
-  eq(await page.evaluate(() => window.__printed), 1, `${size} ${n}: Print cards asks the browser to print, once`);
+  eq(await page.evaluate(() => window.__printed), 2, `${size} ${n}: Print directory then Print cards asked the browser to print twice, once each`);
   eq(await page.evaluate(() => document.body.classList.contains('print-cards')), true, `${size} ${n}: and the cards mode is on while it does`);
   await page.emulateMedia({ media: 'print' });
   const pdf = await pdfOf();
@@ -290,7 +291,7 @@ for (const [size, per, n, want] of [['wallet', 8, 1, 1], ['wallet', 8, 8, 1], ['
   ok(/612 x 792/.test(pdf.size), `${size} ${n}: on Letter (${pdf.size})`);
   const names = pdf.texts.map(t => (t.match(/Person \d\d/g) || []).length);
   eq(names.join(','), Array.from({ length: want }, (_, i) => Math.min(per, n - i * per)).join(','), `${size} ${n}: ${per} cards then the rest, none lost or doubled`);
-  ok(pdf.texts.every(t => !/Add staff member|Directory|Export CSV|Card size|Print cards/.test(t)), `${size} ${n}: nothing of the editor is on the paper`);
+  ok(pdf.texts.every(t => !/Add staff member|Staff Directory|printed|Export CSV|Card size|Print cards/.test(t)), `${size} ${n}: nothing of the editor is on the paper`);
   const geo = await page.evaluate(() => [...document.querySelectorAll('#cardSheet .wc-page')].map(p => { const r = p.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
   ok(geo.every(([w, h]) => w <= 7.75 * 96 && h <= 10.25 * 96), `${size} ${n}: each page of cards fits inside the page's margins (${JSON.stringify(geo[0])} of 744 x 984)`);
   await page.emulateMedia({ media: 'screen' });
