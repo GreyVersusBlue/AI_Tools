@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v266';
+const CACHE_VERSION = 'v267';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -410,6 +410,7 @@ const PRECACHE_URLS = [
   "Tools/seating-chart/seating.mjs",
   "Tools/084-socratic-seminar-prep-organizer.html",
   "Tools/075-staff-directory-builder.html",
+  "Tools/staff-directory-builder/wallet-card.js",
   "Tools/033-ssr-log-tracker.html",
   "Tools/045-sub-binder-generator.html",
   "Tools/076-sub-note-feedback-slip-generator.html",

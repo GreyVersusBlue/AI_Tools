@@ -37,6 +37,8 @@
     "test:gallery-walk": "node Tools/gallery-walk-qr/test/smoke-projector.mjs && node Tools/gallery-walk-qr/test/smoke-scan-verify.mjs",
     "test:accommodations": "node Tools/testing-accommodations-card-generator/test/smoke-filter.mjs",
     "test:staff-directory": "node Tools/staff-directory-builder/test/smoke-departments.mjs",
+    "test:wallet-card-core": "node Tools/staff-directory-builder/test/smoke-wallet-card-core.mjs",
+    "test:wallet-cards": "node Tools/staff-directory-builder/test/smoke-wallet-cards.mjs",
     "test:duty-roster": "node Tools/duty-roster-builder/test/smoke-rotation.mjs",
     "test:fitness": "node Tools/fitness-skill-assessment-tracker/test/smoke-sort.mjs",
     "test:fitness-report-cards": "node Tools/fitness-skill-assessment-tracker/test/smoke-report-cards.mjs",
