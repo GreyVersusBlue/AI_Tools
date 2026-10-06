@@ -26,7 +26,7 @@
        of cards whose height is the tool's own, running on over the pages.
 
      PrintKit.preview({ area, trigger, onPrint, title })
-       The print preview (Path 7 P5, v256): a modal dialog that shows the
+       The print preview (Path 7 P5, v258): a modal dialog that shows the
        sheet cut into pages at the size setPage() set, one page at a time,
        with "Page 2 of 5", and opens no print dialog. See PREVIEW below.
 

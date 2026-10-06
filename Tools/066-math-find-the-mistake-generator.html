@@ -101,6 +101,19 @@
      styling next to a styled one — invisible in light, obvious in dark. */
   select#newCategory, select#newBand { width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink); background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px; padding: .45rem .6rem; margin-bottom: .6rem; }
 
+  .imp-fieldset { border: 0; padding: 0; margin: 0 0 .6rem; }
+  .imp-fieldset legend { font-weight: 600; font-size: .82rem; padding: 0; margin-bottom: .3rem; }
+  .imp-fieldset label { display: inline-flex; align-items: center; gap: .35rem; font-weight: 500; margin: 0 1rem .2rem 0; }
+  .imp-fieldset input { width: auto; margin: 0; }
+  .imp-sum { font-weight: 600; font-size: .88rem; margin: .6rem 0 .3rem; }
+  .imp-list { margin: .2rem 0 .6rem 1.2rem; padding: 0; font-size: .84rem; }
+  .imp-list.bad li { color: var(--err); }
+  .imp-list.dup li { color: var(--muted); }
+  .imp-status { font-size: .86rem; margin: .5rem 0 0; }
+  .imp-defaults { display: flex; gap: .8rem; flex-wrap: wrap; }
+  .imp-defaults > div { flex: 1 1 14rem; }
+  #importText { min-height: 8rem; white-space: pre; overflow-x: auto; }
+
   /* Paper: #printArea is display:none on screen, so this white and the print
      block below are never on a dark surface. */
   .sheet-page { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 1.5rem 1.8rem; margin-bottom: 1rem; }
@@ -214,6 +227,38 @@
       </select>
       <button id="addProblemBtn">Add to bank</button>
     </div>
+    <div class="card" id="importCard">
+      <h2>Import many problems</h2>
+      <p class="hint">Paste one problem per line: <strong>problem</strong>, <strong>shown work (with the mistake)</strong>, <strong>correct fix</strong>, <strong>explanation</strong>, separated by tabs (a spreadsheet paste) or commas. A header row is optional. Put several steps in one cell with <code>&lt;br&gt;</code>, or wrap the cell in double quotes and use real line breaks. An optional fifth column is the topic and a sixth the grade band. Nothing is saved until you have previewed it and pressed the add button.</p>
+      <label for="importText">Rows to import</label>
+      <textarea id="importText" spellcheck="false" placeholder="Solve: 2x + 1 = 9&#9;2x = 9 + 1&lt;br&gt;x = 5&#9;2x = 8&lt;br&gt;x = 4&#9;Subtract 1 from both sides, don't add it."></textarea>
+      <div class="imp-defaults">
+        <div>
+          <label for="importCategory">Topic for rows that do not name one</label>
+          <select id="importCategory"></select>
+        </div>
+        <div>
+          <label for="importBand">Grade band for rows that do not name one</label>
+          <select id="importBand">
+            <option value="elementary">Elementary (3&ndash;5)</option>
+            <option value="middle" selected>Middle (6&ndash;8)</option>
+            <option value="high">High (9&ndash;12)</option>
+          </select>
+        </div>
+      </div>
+      <fieldset class="imp-fieldset">
+        <legend>What to do with them</legend>
+        <label><input type="radio" name="importMode" id="importModeAppend" value="append" checked> Add to my problems</label>
+        <label><input type="radio" name="importMode" id="importModeReplace" value="replace"> Replace all my problems</label>
+      </fieldset>
+      <div class="btnrow">
+        <button type="button" class="secondary" id="importPreviewBtn">Preview</button>
+        <button type="button" id="importApplyBtn" disabled>Add to bank</button>
+        <button type="button" class="secondary" id="importShowBtn">Show my problems as rows</button>
+      </div>
+      <div id="importPreview" aria-live="polite"></div>
+      <p class="imp-status" id="importStatus" role="status"></p>
+    </div>
     <div class="card">
       <h2>Full bank (<span id="bankCount">0</span> problems)</h2>
       <p class="hint">Built-in problems can&rsquo;t be deleted, but you can disable one to leave it out of the projector and worksheet. Only your own custom problems can be deleted.</p>
@@ -275,6 +320,8 @@
    'shareBtn', 'shareNote',
    'sheetCount', 'buildSheetBtn', 'printBtn', 'sheetProblems', 'sheetKey',
    'newProblem', 'newWork', 'newFix', 'newExplain', 'newCategory', 'newBand', 'addProblemBtn', 'bankCount', 'bankList',
+   'importText', 'importCategory', 'importBand', 'importModeAppend', 'importModeReplace', 'importPreviewBtn', 'importApplyBtn',
+   'importShowBtn', 'importPreview', 'importStatus',
    'categoryFilterList', 'bandFilterList'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
@@ -301,7 +348,7 @@
     if (!Array.isArray(custom)) custom = [];
   }
   function saveCustom() {
-    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom)); } catch (e) { /* storage full/blocked */ }
+    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom)); return true; } catch (e) { /* storage full/blocked */ return false; }
   }
 
   function loadDisabledBuiltins() {
@@ -488,9 +535,11 @@
   });
 
   function populateNewCategorySelect() {
-    els.newCategory.innerHTML = CATEGORIES.map(function (c) {
+    var options = CATEGORIES.map(function (c) {
       return '<option value="' + c.id + '"' + (c.id === 'other' ? ' selected' : '') + '>' + escapeHtml(c.label) + '</option>';
     }).join('');
+    els.newCategory.innerHTML = options;
+    Array.prototype.forEach.call(els.newCategory.options, function (o) { els.importCategory.appendChild(o.cloneNode(true)); });
   }
 
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
@@ -623,6 +672,261 @@
       }
     });
   }
+
+  /* ---------- bulk import (paste rows) -------------------------------------
+     Text from a paste box is data, never markup. Every cell goes through the
+     same sanitizeRich() a shared link does: escaped, with only <br> and a
+     character entity put back, so a cell holding <img onerror=...> is shown
+     as those characters and a cell starting with = is just text (nothing
+     here is ever a spreadsheet cell). The stored row has the same shape as
+     one typed in the Add form — { id, band, category, problem, work, fix,
+     explain } with newlines as <br> — so a bank saved before this existed
+     loads as it did, and "Show my problems as rows" writes a bank back out
+     in the form this reads. Duplicates are the share-link rule: the same
+     problem and work (ignoring case) is skipped. Preview first, save on the
+     second press; a row that cannot be used is named with its reason and is
+     left out, never guessed at. */
+  var IMPORT_MAX_ROWS = 500;
+  var importPlan = null; // what the last Preview found, or null when stale
+
+  /** A tab anywhere in the first row, outside double quotes, makes the paste
+      tab-separated; otherwise it is comma-separated. The first row is the
+      first line that has anything on it, and a quoted cell may run across
+      lines, so this reads past a line break that is inside quotes. */
+  function firstRowDelimiter(text) {
+    var inQuotes = false, started = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i);
+      if (ch === '"') { inQuotes = !inQuotes; started = true; continue; }
+      if (inQuotes) continue;
+      if (ch === '\t') return '\t';
+      if (ch === '\n') { if (started) return ','; continue; }
+      if (ch !== ' ' && ch !== '\r') started = true;
+    }
+    return ',';
+  }
+
+  /** Text → [{ line, cells, unclosed }]. Tab-separated when the first line
+      has a tab, otherwise comma-separated. A cell that opens with a double
+      quote runs to the closing quote and may hold line breaks and delimiters
+      ("" is a quote). Blank lines are skipped. */
+  function parseRows(text) {
+    text = String(text || '').replace(/^\uFEFF/, '');
+    var delim = firstRowDelimiter(text);
+    var rows = [], cells = [], cell = '', line = 1, rowLine = 1, i = 0, n = text.length;
+    var quoted = false, atStart = true, unclosed = false, any = false;
+    function endCell() { cells.push(cell.trim()); cell = ''; atStart = true; }
+    function endRow() {
+      endCell();
+      if (any || cells.length > 1 || cells[0] !== '') rows.push({ line: rowLine, cells: cells, unclosed: unclosed });
+      cells = []; unclosed = false; any = false;
+    }
+    while (i < n) {
+      var ch = text.charAt(i);
+      if (quoted) {
+        if (ch === '"') {
+          if (text.charAt(i + 1) === '"') { cell += '"'; i += 2; continue; }
+          quoted = false; i++; continue;
+        }
+        if (ch === '\n') line++;
+        cell += ch; i++; continue;
+      }
+      if (ch === '\n') { endRow(); line++; rowLine = line; i++; continue; }
+      if (ch === delim) { endCell(); i++; any = true; continue; }
+      if (ch === '"' && atStart && cell === '') { quoted = true; atStart = false; any = true; i++; continue; }
+      if (ch !== ' ') atStart = false;
+      cell += ch; i++;
+    }
+    if (quoted) unclosed = true;
+    if (n && (cell !== '' || cells.length || unclosed)) endRow();
+    return rows;
+  }
+
+  function lookupChoice(value, labels) {
+    var want = String(value).trim().toLowerCase();
+    var found = null;
+    Object.keys(labels).forEach(function (id) {
+      if (id.toLowerCase() === want || String(labels[id]).toLowerCase() === want) found = id;
+    });
+    return found;
+  }
+
+  function importFingerprint(problem, work) {
+    return String(problem).trim().toLowerCase() + '\u0000' + String(work).trim().toLowerCase();
+  }
+  function storedCell(raw) { return sanitizeRich(raw).trim().replace(/\n/g, '<br>'); }
+
+  /** The whole import decided without touching the bank: what would be added,
+      what is a duplicate, and which rows cannot be read, each with a reason. */
+  function planImport(text, replacing) {
+    var plan = { add: [], bad: [], dup: [], rows: 0, tooMany: false };
+    var rows = parseRows(text);
+    if (rows.length && /^problem(\s+statement)?$/i.test(rows[0].cells[0])) rows.shift();
+    plan.rows = rows.length;
+    if (rows.length > IMPORT_MAX_ROWS) { plan.tooMany = true; return plan; }
+    var have = {};
+    if (!replacing) custom.forEach(function (c) { have[importFingerprint(c.problem, c.work)] = 0; });
+    rows.forEach(function (r) {
+      var c = r.cells;
+      if (r.unclosed) { plan.bad.push({ line: r.line, why: 'a quotation mark opened here is never closed' }); return; }
+      if (c.length < 4 || c.length > 6) {
+        plan.bad.push({ line: r.line, why: 'has ' + c.length + (c.length === 1 ? ' column' : ' columns') +
+          ', expected 4 (problem, shown work, fix, explanation), or 5 or 6 with a topic and a grade band' });
+        return;
+      }
+      var empties = [];
+      if (!c[0]) empties.push('the problem');
+      if (!c[1]) empties.push('the shown work');
+      if (!c[2]) empties.push('the fix');
+      if (empties.length) { plan.bad.push({ line: r.line, why: empties.join(' and ') + (empties.length > 1 ? ' are empty' : ' is empty') }); return; }
+      var category = els.importCategory.value || 'other';
+      if (c[4]) {
+        category = lookupChoice(c[4], CATEGORY_LABELS);
+        if (!category) { plan.bad.push({ line: r.line, why: 'the topic "' + c[4] + '" is not one of this tool’s topics' }); return; }
+      }
+      var band = els.importBand.value || 'middle';
+      if (c[5]) {
+        band = lookupChoice(c[5], BAND_LABELS);
+        if (!band) { plan.bad.push({ line: r.line, why: 'the grade band "' + c[5] + '" is not elementary, middle or high' }); return; }
+      }
+      var row = { line: r.line, text: c[0], band: band, category: category,
+        problem: storedCell(c[0]), work: storedCell(c[1]), fix: storedCell(c[2]), explain: storedCell(c[3]) };
+      var fp = importFingerprint(row.problem, row.work);
+      if (Object.prototype.hasOwnProperty.call(have, fp)) {
+        plan.dup.push({ line: r.line, why: have[fp] ? 'repeats line ' + have[fp] : 'is already in your bank' });
+        return;
+      }
+      have[fp] = r.line;
+      plan.add.push(row);
+    });
+    return plan;
+  }
+
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  function addListItems(ul, items, limit, format) {
+    items.slice(0, limit).forEach(function (it) {
+      var li = document.createElement('li');
+      li.textContent = format(it);
+      ul.appendChild(li);
+    });
+    if (items.length > limit) {
+      var more = document.createElement('li');
+      more.textContent = 'and ' + (items.length - limit) + ' more';
+      ul.appendChild(more);
+    }
+  }
+  function clipText(t) { t = String(t).replace(/\s+/g, ' '); return t.length > 80 ? t.slice(0, 77) + '...' : t; }
+
+  function clearImportPreview() {
+    importPlan = null;
+    els.importApplyBtn.disabled = true;
+    els.importApplyBtn.textContent = 'Add to bank';
+    els.importPreview.textContent = '';
+  }
+
+  function renderImportPreview() {
+    var replacing = els.importModeReplace.checked;
+    els.importStatus.textContent = '';
+    els.importPreview.textContent = '';
+    if (!els.importText.value.trim()) {
+      importPlan = null;
+      els.importApplyBtn.disabled = true;
+      var none = document.createElement('p');
+      none.className = 'imp-sum';
+      none.textContent = 'Nothing to preview: paste some rows first.';
+      els.importPreview.appendChild(none);
+      return;
+    }
+    var plan = planImport(els.importText.value, replacing);
+    importPlan = plan;
+    var sum = document.createElement('p');
+    sum.className = 'imp-sum';
+    els.importPreview.appendChild(sum);
+    if (plan.tooMany) {
+      sum.textContent = 'That is ' + plan.rows + ' rows; at most ' + IMPORT_MAX_ROWS + ' can be imported at once. Split the paste and try again.';
+      importPlan = null;
+      els.importApplyBtn.disabled = true;
+      return;
+    }
+    var parts = [plural(plan.add.length, 'problem', 'problems') + ' will be ' + (replacing ? 'saved' : 'added')];
+    if (plan.dup.length) parts.push(plural(plan.dup.length, 'duplicate', 'duplicates') + ' skipped');
+    if (plan.bad.length) parts.push(plural(plan.bad.length, 'row', 'rows') + ' cannot be used and will be left out');
+    sum.textContent = parts.join('; ') + '.';
+    if (replacing && plan.add.length) {
+      var warn = document.createElement('p');
+      warn.className = 'hint';
+      warn.textContent = 'Replacing removes your ' + plural(custom.length, 'current problem', 'current problems') + '. The built-in problems are not touched.';
+      els.importPreview.appendChild(warn);
+    }
+    function section(titleText, cls, items, format) {
+      if (!items.length) return;
+      var h = document.createElement('p');
+      h.className = 'hint';
+      h.textContent = titleText;
+      els.importPreview.appendChild(h);
+      var ul = document.createElement('ul');
+      ul.className = 'imp-list ' + cls;
+      addListItems(ul, items, 50, format);
+      els.importPreview.appendChild(ul);
+    }
+    section('Rows that cannot be used:', 'bad', plan.bad, function (b) { return 'Line ' + b.line + ': ' + b.why + '.'; });
+    section('Duplicates left out:', 'dup', plan.dup, function (d) { return 'Line ' + d.line + ' ' + d.why + '.'; });
+    section('Will be ' + (replacing ? 'saved' : 'added') + ':', 'ok', plan.add, function (a) {
+      return 'Line ' + a.line + ': ' + clipText(a.text) + ' (' + CATEGORY_LABELS[a.category] + ', ' + BAND_LABELS[a.band] + ')';
+    });
+    els.importApplyBtn.disabled = !plan.add.length;
+    els.importApplyBtn.textContent = !plan.add.length ? 'Add to bank' : replacing
+      ? 'Replace my problems with these ' + plan.add.length
+      : 'Add ' + plural(plan.add.length, 'problem', 'problems') + ' to bank';
+  }
+
+  function applyImport() {
+    if (!importPlan || !importPlan.add.length) return;
+    var plan = importPlan, replacing = els.importModeReplace.checked, before = custom;
+    if (replacing && custom.length && !window.confirm('Replace your ' + plural(custom.length, 'problem', 'problems') + ' with these ' + plan.add.length + '?')) return;
+    var made = plan.add.map(function (a) {
+      return { id: uid(), band: a.band, category: a.category, problem: a.problem, work: a.work, fix: a.fix, explain: a.explain };
+    });
+    custom = replacing ? made : custom.concat(made);
+    if (!saveCustom()) {
+      custom = before;
+      els.importStatus.textContent = 'Nothing was saved: this browser would not store that many problems.';
+      return;
+    }
+    els.importText.value = '';
+    clearImportPreview();
+    resetOrder(); renderDisplay(); renderBank();
+    els.importStatus.textContent = (replacing ? 'Replaced your problems with ' : 'Added ') + plural(made.length, 'problem', 'problems') +
+      (plan.dup.length ? ', skipped ' + plural(plan.dup.length, 'duplicate', 'duplicates') : '') +
+      (plan.bad.length ? ', left out ' + plural(plan.bad.length, 'row', 'rows') + ' that could not be used' : '') + '.';
+  }
+
+  function rowCell(v) {
+    v = String(v == null ? '' : v);
+    return /[\t\n\r"]/.test(v) || /^\s|\s$/.test(v) || v.indexOf(',') !== -1 ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+  function showBankAsRows() {
+    if (!custom.length) {
+      els.importStatus.textContent = 'You have no problems of your own yet, so there is nothing to show.';
+      return;
+    }
+    var lines = [['Problem', 'Shown work', 'Fix', 'Explanation', 'Topic', 'Grade band'].join('\t')];
+    custom.forEach(function (c) {
+      lines.push([c.problem, c.work, c.fix, c.explain,
+        CATEGORY_LABELS[c.category] || 'Other', c.band && BAND_LABELS[c.band] ? BAND_LABELS[c.band] : ''].map(rowCell).join('\t'));
+    });
+    els.importText.value = lines.join('\n');
+    clearImportPreview();
+    els.importStatus.textContent = plural(custom.length, 'problem', 'problems') + ' written into the box as rows. Copy them, edit them, or choose Replace and preview to put edits back.';
+  }
+
+  els.importPreviewBtn.addEventListener('click', renderImportPreview);
+  els.importApplyBtn.addEventListener('click', applyImport);
+  els.importShowBtn.addEventListener('click', showBankAsRows);
+  [els.importText, els.importCategory, els.importBand, els.importModeAppend, els.importModeReplace].forEach(function (el) {
+    el.addEventListener('input', clearImportPreview);
+    el.addEventListener('change', clearImportPreview);
+  });
 
   /* ---------- boot ---------- */
   loadCustom();

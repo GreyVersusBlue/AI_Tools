@@ -9,11 +9,12 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## Path 7 P5 increment 1: the print kit has a print preview, and 074 is its one adopter (2026-10-06, AI-13, `CACHE_VERSION` v256)
+## Path 7 P5 increment 1: the print kit has a print preview, and 074 is its one adopter (2026-10-06, AI-13, `CACHE_VERSION` v258)
 
 Audit entry AI-13, BACKLOG rank 7 (1). The row stays, rewritten to what is left: the other twelve print-kit pages, and where the control
 goes on a page with several print buttons. P5 was "not designed, not started"; this session tried the two candidate designs, wrote the
-choice into `BACKLOG.md` (Path 7, P5) with the numbers, and built it.
+choice into `BACKLOG.md` (Path 7, P5) with the numbers, and built it. (The three commits say v256: AI-31's 068 and 066 took v256 and
+v257 on `main` before this branch merged, so the merge commit moved it to v258.)
 
 - **What shipped.** `PrintKit.preview({ area, trigger, onPrint, title })` in `_shared/print-kit.js`, its dialog's styles in
   `_shared/print-kit.css`, and a "Preview pages" button on 074 (science safety labels) beside "Print labels". The preview is a modal
@@ -59,6 +60,166 @@ choice into `BACKLOG.md` (Path 7, P5) with the numbers, and built it.
 - **Traps.** Playwright will not click an `aria-disabled` button without `force`. A fractional iframe height rounds `100vh` either way.
   An iframe with no `srcdoc` doctype is in quirks mode. `dialog.close()` fires `close` later, not at once. The shared suites lock was
   held 27 minutes by another worker's break run; queue long runs as one script whose steps each take the lock.
+
+## 066 Math "Find the Mistake" Warm-Up Generator: bulk import of a custom bank (2026-10-06, AI-31-066, `CACHE_VERSION` v257; the commit messages say v256, which `main` took first)
+
+Audit entry AI-31, BACKLOG rank 103 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** An "Import many problems" card on the Problem bank tab. A paste box takes one problem per line: problem, shown work (with the
+  mistake), the fix, the explanation, separated by tabs (a spreadsheet paste) or commas, header row optional. A fifth column is the topic and a sixth
+  the grade band (by label or id, any case); rows that name neither take two selects on the card. Several steps go in one cell as `<br>` (what the
+  Add form stores) or as real line breaks inside a double-quoted cell. **Preview** reads the paste and saves nothing: it says how many problems will be
+  added, names every row it cannot use by line with the reason (wrong column count, empty problem or work or fix, unknown topic or band, a quote never
+  closed, over 500 rows), names duplicates, and lists what will be added. The add button stays off until a preview has found something, and any edit to
+  the text, the mode or either default switches it off again, so what is saved is what was shown. **Add to my problems** or **Replace all my problems**
+  (a radio): replace asks `confirm()` first and leaves the switched-off built-ins alone. **Show my problems as rows** writes the teacher's bank into the box
+  in the same format (with header, topic and band), which is both the export and the way to edit a bank in a spreadsheet and put it back.
+- **Storage did not change.** Same key (`mftm_custom_v1`), same row shape `{ id, band, category, problem, work, fix, explain }`, newlines as `<br>`. A
+  bank saved before is loaded untouched (the suite compares the stored string byte for byte after load) and an append leaves the old rows exactly as saved;
+  a row with no `band` still counts as a duplicate of an imported one. Duplicates are the rule the share-link import uses: same problem and same work, any
+  case, skipped; when replacing, the old bank is not what is compared against.
+- **Text is text.** Every cell goes through the page's own `sanitizeRich()` (escape, then put back `<br>` and character entities), the one 066 already
+  applies to a shared link. A cell holding `<img onerror>`, `<script>`, `<svg onload>` or `<b onmouseover>` is stored as characters and shown as characters on the
+  projector, the worksheet, the key and the bank list, and `window.__pwned` stays 0; cells starting `=`, `+`, `@` or `-` are plain text (nothing here is a
+  spreadsheet cell). The preview is built from `textContent` and the page's `innerHTML` sink count is unchanged (`inline-sinks-baseline.json` not touched: the import
+  topic select is filled by cloning the Add form's options, not a second `innerHTML`).
+- **Calls taken, so they can be reversed.** (1) `Roster.parseDelimited` was not used: it pads short rows to the widest, which would hide a wrong column count, reads
+  line by line (no multi-line quoted cell) and decides the delimiter on the first physical line. A small reader in the page does it. (2) No file picker: the tool has
+  no other import to match (its share file is the `_shared/share.js` sheet's), so the box is the one way in. (3) The old BACKLOG bullet said `|`-separated; the row
+  said tab or comma, and `|` is absolute value in this tool's own problems, so it is not a delimiter. (4) A bad row is left out and named, the rest import; nothing is
+  guessed at. (5) 500 rows at once is the cap, so a paste cannot fill a quota without a word. (6) A refused write (`setItem` throws) puts the old bank back in memory and says
+  nothing was saved; `saveCustom()` returns whether it wrote.
+- **Found by the suite, not by reading.** The delimiter was first read from the first physical line, so a paste whose first cell is a quoted cell with a line break was read
+  as comma-separated and came out as one mangled row. It is now read from outside the quotes (`firstRowDelimiter`). Also: a `.replace(/\r\n?/g, '\n')` I had written is dead code,
+  because a textarea's `value` is already LF-only, so it is gone; and a literal U+FEFF had landed in a regex in the page (and the suite) instead of the `\uFEFF` escape, which
+  an anchor in the break run caught.
+- **Tests.** New `Tools/math-find-the-mistake-generator/test/smoke-bulk-import.mjs` (`npm run test:find-the-mistake-import`, port 8493, 123 assertions): TSV with and without a
+  header, commas, quoted cells with line breaks, commas, tabs and doubled quotes, a byte-order mark (also before a quoted cell), every bad-row reason by line, preview saves
+  nothing, the button going off on each kind of edit, duplicates in the paste and in the bank (and not when replacing), append and replace with the confirm declined and
+  accepted, a legacy bank untouched byte for byte, inert text on the preview, bank list, projector, worksheet and key, the round trip (Show as rows, replace, same bank;
+  an Add-form problem too), a refused write, labels, a fieldset legend, `aria-live`, the keyboard (Enter, Tab, Space) and axe in light and dark, no console errors, nothing
+  off-site. **47 breaks on purpose** in the page: 41 failed the suite on a named assertion or threw first time (one, a label broken, threw on `getByLabel`), 2 survived
+  (the in-memory revert after a refused write, and the BOM strip, which `trim()` makes harmless unless a quote follows it) and each got an assertion and was broken again and
+  failed; 1 (CRLF) survived because it was dead code and was deleted; 3 more were written for `firstRowDelimiter` and all failed it. One break run started in the
+  wrong directory and changed nothing (its anchors did not match the shared folder's page; the shared folder stayed clean). Not every assertion has its own break (the axe
+  scans, the share-sheet-opens check and the status wording have none).
+- **Checked.** `test:a11y -- --only 066`, `audit-print --check --only 066`, `smoke-share-rollout`, `smoke-dark-rollout`, every `check:*`, `lint`, `check:precache -- --base
+  origin/main`, `check:adoption -- --check`. Not run: full `npm test`; nothing printed on paper or read with a real screen reader; the paste was tried with made-up rows and with the
+  text a `<textarea>` hands back, not with a clipboard from Excel or Sheets.
+
+## 068 Parent/Guardian Contact Log: the conference print packet (2026-10-06, AI-31-068, `CACHE_VERSION` v256)
+
+Audit entry AI-31, BACKLOG rank 105 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** Each student in the roster list has a "packet" link beside "print". It prints that student's contacts oldest first
+  (date, method, reason, outcome, initials), under a heading, a printed date and a summary line (`3 contacts · first 01/01/2026 · last
+  03/21/2026 · by method: Email 2, Phone call 1`), then a ruled "Conference notes" block of 14 lines. The student's name is in the
+  table's own `thead` (which Chromium repeats on every sheet the table runs onto) and in the notes heading, because the notes block can
+  land alone on a last sheet. Rows and the notes block do not split across sheets. The student is matched exactly, never by substring.
+- **Not changed.** The old per-student "print" list and "Print this list" are byte-for-byte what they were (the new summary and notes
+  elements are hidden for them); the CSV export is untouched; no key, no field and no new stored data (the suite compares every
+  localStorage key before and after). An entry saved before reasons existed prints an em dash, as on screen.
+- **Tests.** New `Tools/parent-contact-log/test/smoke-packet.mjs` (`test:parent-log-packet`, port 8494, 80 assertions), run through
+  Chromium's PDF and `pdftotext`: students with 1, 15 and 80 contacts (1 sheet; 2; 4 as measured,
+  the suite asks for at least 3 on the 80) carry the name on every sheet; "Ann Lee" and "Ann Leeds" each get a packet with nothing of the other's name or outcome text.
+  18 breaks on purpose, all caught; 2 survived the first round (a name leaking into the date cell; a heading dropped) and got
+  assertions, and one break was a dead `hidden = false` line, which was removed from the page instead.
+- **Checks.** `test:a11y -- --only 068` 4 passed; `audit-print --check --only 068` clean; every `check:*`, `lint`,
+  `check:precache -- --base origin/main` and `check:adoption -- --check` pass; `smoke-reasons.mjs` 45 passed.
+- **Not verified.** Nothing printed on paper; no real screen reader. `audit-print` opens the page with two seeded contacts and does not
+  click a packet link (the seed is `Tools/a11y-sweep/seeds.mjs`, which this row could not edit), so its clean result says nothing about the
+  packet: the suite's PDFs are the check. Full `npm test` not run. Left: a long outcome that spans a sheet boundary is kept whole by
+  `break-inside: avoid`, which can leave white space at the foot of a sheet.
+
+## Path 18 P1 designed, not built: the shared station schema for 018 and 019 (2026-10-06, AI-26, no `CACHE_VERSION`, no code)
+
+Audit entry AI-26, rank 53 (1). A design pass: only `BACKLOG.md` changed (the P1 bullet under "Path 18", and a
+note on rank 53). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** One pure classic script, `_shared/stations.js` (`Stations`): `read()` turns either tool's
+  saved hunt or room, share payload or file into one canonical record (`set`, `station`, `answer`, `hint`, `run`,
+  every field of both tools named and placed), `write()` turns it back into the owning tool's own shape, and
+  `playPayload()`/`playRead()` are 019's `r=` format with `v: 2`, a fixed-width string of station ids and `'end'`
+  kept, so a phone with a `lock.html` cached before the build plays a new code and the new player plays every code
+  printed since the tool existed. **The canonical record lives in memory; on disk each tool keeps its shape and
+  field names and gains ids**, four characters a station, drawn once and never rewritten. No key is added, renamed
+  or deleted and no `Store` version moves. The build of P1 itself is the module, its Node suite, a browser suite for
+  the ids, and one call in each page that draws the missing ids; everything else is written down as P2's work.
+- **What reading the code turned up, each worth knowing before the build.** 019's "End here (finish room)" is not
+  honoured by the player: the payload turns `'end'` into `null`, which `lock.html` and the test run read as "next
+  in order", while the key prints "Finish". 018's live-run marks are keyed by a station's index in the filtered list,
+  so removing or moving a station mid-run moves every team's check-ins, and a mark past the end still counts on
+  the leaderboard. `cipherShift` missing and `cipherShift` 0 are different stations (3 and 13 after `clampShift`).
+  A cipher station keeps the `answers` string typed before the type switch, and a text station a leftover
+  `cipherPlain`. `normalizeTextAnswer` makes "3.14" and "314" one answer. 018 offers 9 codes a page and 019 offers
+  8, and 018 falls back to 4 for a value it lacks. An unknown station type is mapped to text on a share arrival
+  but kept in a saved room, where the matcher checks it exactly. The registry declares `escape-room-progress:`
+  under `keys` while `lock.html` writes it as a prefix. `Store.get` hands a newer envelope back as it is.
+- **What the measurements were.** One pure-Node probe, not kept: 019's `stationPayloadFor` and the base64 step
+  copied out, invented stations. A four-station code is 364 characters today, 404 with the ids string, 432 with an id
+  in every stub; thirty stations 416, 596 and 868. The figures and the QR versions they need are in the design.
+- **Decided here, cheap to reverse.** Canonical in memory and each tool's shape on disk (the other way is the
+  same `read()` with a different `write()` and two envelope bumps). The ids as one string on the played payload,
+  not an id per stub. `'end'` honoured by the P2 player. A hunt's set id is new on a share arrival, 019's rule. An
+  orphan mark is dropped when a run is re-keyed. `cipher.shift` keeps `null` against 0. `_shared/stations.js`, as
+  AI-21 placed `grouping.js`.
+- **Left to Devon, listed in the design and not answered:** where the student-facing line falls for a hunt
+  station printed as a player link, a short code typed into `lock.html`, and P3's parity; whether the accepted
+  answers stay readable inside a code or are hashed; one tool or two (P5, untouched); whether 018's unchecked
+  "Open-ended" and 019's checked "Text answer" stay two types; minutes or points when a room gains a leaderboard;
+  whether the paper code word and the typed short code are one code; whether a phone resumes or restarts a room
+  that was edited and reprinted.
+- **Not verified.** No module exists and nothing ran in a browser; `lock.html` and `monitor.html` were read, not
+  opened. The payload sizes come from a reimplementation, not the page. The parity claims rest on reading; the
+  build copies today's functions from the files into the suite, not from the design. The "End here" finding was
+  read off two functions, not reproduced in a player.
+
+## Path 17 P2 designed, not built: scanner mode for 011 (2026-10-06, AI-25, no `CACHE_VERSION`, no code)
+
+Audit entry AI-25, rank 49 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P2 bullet under
+"Path 17", a Status line for the path, and a note on rank 49). **The row stays.** Nothing was built, no suite or
+browser ran; the docs guards (`check:docs-commands`, `check:adoption`) were the only checks.
+
+- **What the design is.** A tool module, `Tools/image-to-pdf/scan.js` (`window.Scan`, pure functions over
+  `ImageData` and typed arrays) and `scan-worker.js`, the site's first Worker, for the batch. `detect()` finds the
+  sheet's four corners on a 480-px grey (Sobel, non-maximum suppression, a percentile threshold, a Hough transform,
+  two clusters of lines, support times area to pick the pair, a validated convex quad, a fallback to the inset
+  frame at confidence 0), `refine()` fits the four lines again on a 1024-px grey, `homography()`, `rectify()`
+  (inverse bilinear warp in typed arrays, since Canvas 2D has no perspective), `flatten()` (today's
+  `enhanceCanvas()` moved, same arithmetic), `threshold()` (Sauvola on integral images with a despeckle), `clean()`
+  in the fixed order warp, flatten, threshold, and `process()` as the Worker's one message. A `<dialog>` with four
+  handle buttons (pointer and arrow keys, a loupe), a live preview, three modes, Reset and Apply; Scan all with a
+  review strip flagging confidence under 0.6. A queue entry gains `scan: { quad, auto, mode, confidence, history,
+  processed }`, the finished page a Blob and never a live canvas; `processRaster()` decodes the Blob in place of the
+  File and returns a `bw` page as PNG. Nothing new on disk; the mode saved in `image-to-pdf-settings`, never the
+  on/off. Suites: `scan.test.mjs` on synthetic warped sheets with known corners (fourteen named fixtures, corners
+  within 1.5% coarse and 0.5% refined, rectified against the truth, threshold rates, a `--bench`) and
+  `smoke-scan.mjs` on port 8492.
+- **What P4 being built changes for P2.** Nothing to design for the imposition: a scanned page is a `dataURL` to
+  the same `draw(step)` and lands in its booklet or N-up slot like a photo. P2 keeps one borrowed case from
+  `smoke-impose.mjs` as the guard.
+- **What P2 needs from P1, not built.** Per-entry geometry as the same `quad` (P1's crop a rectangle-held quad,
+  its straighten the quad's rotation, so no second cropper exists), the thumbnail grid for the button and badge,
+  the real-photo fixture, and the `compact`/`min` validation that bounds a `bw` page's legibility at 850 px.
+- **What was measured.** A pure-Node probe of the arithmetic (not kept; its figures are in the design) on
+  huginn's Ryzen 5 PRO 2400GE, one thread, a synthetic 4032 x 3024 frame: downscale 65 to 90 ms, Sobel 11 to 15,
+  the warp to 1700 x 2200 190 to 400, Sauvola on it 210 to 320; about 0.8 to 1.3 s a page here, 25 to 40 s for 30
+  pages, a phone guessed at three to five times that. Memory about 120 MB a page in flight, and 30 live canvases
+  would be 450 MB, which is the rule that a finished page is a Blob.
+- **Decided here, cheap to reverse.** Tool module not `_shared/`; Hough not contours; a Worker for the batch;
+  flatten before threshold, both after the warp; Sauvola; `bw` as PNG; hand-set corners never overwritten; scans not
+  saved between visits; 0.6 as the flag line; the output size from the longer opposite sides, capped by the
+  quality preset.
+- **Left to Devon, listed in the design and not answered:** whether a scanned queue survives a reload; the
+  phone's capture path (`capture` attribute or `getUserMedia`); the default mode and detect-on-drop; an on-demand
+  OpenCV.js fallback on Tesseract's terms if the detector is not good enough; who takes and whether to commit the
+  blank-sheet photo; `_shared/` from the start for 056, 028 and 019; `bw` as PNG against the size ladder; the
+  "original" cap; whether P1 is built first at all.
+- **Not verified.** No detector exists and nothing ran in a browser; the thresholds are starting values and the
+  test bounds are targets. One machine, synthetic data, one thread. No real photograph was opened. `<dialog>` on
+  iOS, a handle under a thumb and a Worker in the precache are untried on this site.
+
+---
 
 ## Path 7 P4 increment 7: 035's groups template on `ExportKit`, and P4 is finished (2026-10-06, AI-13, `CACHE_VERSION` v255)
 
