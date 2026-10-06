@@ -51,6 +51,7 @@ note on rank 53). **The row stays.** Nothing was built, no suite or browser ran.
   opened. The payload sizes come from a reimplementation, not the page. The parity claims rest on reading; the
   build copies today's functions from the files into the suite, not from the design. The "End here" finding was
   read off two functions, not reproduced in a player.
+
 ## Path 17 P2 designed, not built: scanner mode for 011 (2026-10-06, AI-25, no `CACHE_VERSION`, no code)
 
 Audit entry AI-25, rank 49 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P2 bullet under
