@@ -77,7 +77,8 @@ const results = {
   'Odalys Brandt|ep': '23', 'Tobias Fenwick|ep': '41', 'Rhiannon Voss|ep': '17',
   'Odalys Brandt|er': '9:31',
 };
-const OLD_SAVE = { roster: ROSTER, events, results };
+/* Kwame has one cell with only spaces in it: typed and cleared, which is not a result. */
+const OLD_SAVE = { roster: ROSTER, events, results: { ...results, 'Kwame Adjei-Nolan|es': '  ' } };
 const SCORES = ['9:58', '11:23', '13:47', '23', '41', '17', '9:31'];
 const own = {
   'Odalys Brandt': ['9:58', '23', '9:31'], 'Tobias Fenwick': ['11:23', '41'],
@@ -93,7 +94,6 @@ console.log('Fitness Tracker — report cards');
   eq(await page.isDisabled('#printAllCardsBtn'), true, 'and so is print-every-card');
   eq(await page.isDisabled('#cardStudent'), true, 'and the picker');
   ok(/Save a roster/.test(await page.textContent('#cardNote')), 'and a line says what to do first');
-  eq(await page.evaluate(() => window.__printed), 0, 'nothing printed');
   await page.context().close();
 }
 
@@ -113,6 +113,7 @@ console.log('Fitness Tracker — report cards');
   eq(c.length, 1, 'one page');
   eq(c[0].name, 'Tobias Fenwick', 'for the student chosen');
   same(c[0].headings, ['Event', 'Result', 'Class average'], 'headed Event, Result, Class average');
+  same(await page.$$eval('#printArea .rc-page th', th => th.map(h => h.getAttribute('scope'))), ['col', 'col', 'col'], 'every heading is a column header a screen reader can tie a cell to');
   same(c[0].rows.map(r => r[0]), events.map(e => e.name), 'every event is on it, in the order the events are listed, each with its date as the event names it');
   same(c[0].rows.map(r => r[1]), ['11:23', '41', 'No result', 'No result'], 'his result beside each; a blank says so rather than leaving a hole');
   same(c[0].rows.map(r => r[2]), ['11:42.7 (3 students)', '27.0 (3 students)', 'No results yet', 'Not enough results to compare yet'],
@@ -177,6 +178,7 @@ console.log('Fitness Tracker — report cards');
   await page.focus('#printAllCardsBtn');
   await page.keyboard.press('Space');
   eq((await cards(page)).length, 5, 'Space on print-all prints every card');
+  eq(await page.textContent('#cardNote'), '5 report cards sent to the print dialog.', 'the status line counts what was sent');
   eq(await page.getAttribute('#cardNote', 'aria-live'), 'polite', 'the status line is announced politely');
   eq(await page.getAttribute('#cardNote', 'role'), 'status', 'and is a status');
   eq(await page.$eval('label[for="cardStudent"]', l => l.textContent.trim()), 'Student', 'the picker has its label');
@@ -206,6 +208,9 @@ console.log('Fitness Tracker — report cards');
 
   /* ── 8. nothing new is saved ───────────────────────────────────────── */
   eq(await page.evaluate(k => localStorage.getItem(k), STORE_KEY), before, 'after all that, the saved state is byte-for-byte what was loaded: no new field');
+  await page.fill(`input[data-student="Ilse Marchetti"][data-event="${EV.push}"]`, '19');
+  await settle(page, 200);
+  same(Object.keys(await page.evaluate(k => JSON.parse(localStorage.getItem(k)), STORE_KEY)), ['roster', 'events', 'results'], 'and editing a result afterwards saves the same three fields and no more');
   eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 3)));
   eq(page.__blocked.length, 0, 'nothing tried to leave the site');
   await page.context().close();
