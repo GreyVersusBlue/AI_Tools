@@ -145,6 +145,7 @@
     "test:print-tail": "node Tools/print-kit/test/smoke-print-tail.mjs",
     "test:preview-adopters": "node Tools/print-kit/test/smoke-preview-adopters.mjs",
     "test:question-bank": "node Tools/question-bank/test/question-bank.test.mjs",
+    "test:seed-sets": "node Tools/question-bank/test/smoke-seed-sets.mjs",
     "test:export": "node Tools/export/test/export.test.mjs && node Tools/export/test/smoke-export.mjs",
     "test:trading-card-pdf": "node Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs",
     "test:image-to-pdf-impose": "node Tools/image-to-pdf/test/smoke-impose.mjs",

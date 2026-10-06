@@ -8,6 +8,13 @@
    in its header); a question's other fields (choices, tags, media) are kept
    in the shared bank and left alone by a save from here.
 
+   Since v267 the page can also read a SEED SET: a tool's built-in questions,
+   published read-only through QuestionBank.registerSet() (053's and 062's so
+   far). `source` below is '' for the teacher's own bank or a set's id. A set
+   is listed, filtered and pulled into a board exactly as the bank is, but it
+   is never saved to or deleted from: copyToBank() is the one way a seed
+   question reaches the teacher's storage, as a new question of their own.
+
    A board that pulls from the bank still gets its own COPY of the entry
    (plain points/question/answer fields on the clue), not a live reference, so
    editing or deleting a bank entry later never changes a board that already
@@ -17,8 +24,36 @@
 
   var QB = global.QuestionBank;
 
-  function listEntries() {
-    return QB.list().map(QB.toLegacy);
+  /** The questions of `source`: the teacher's bank for '' (or nothing), a
+      seed set's for its id. */
+  function questionsOf(source) {
+    return source ? QB.setQuestions(source) : QB.list();
+  }
+
+  function listEntries(source) {
+    return questionsOf(source).map(QB.toLegacy);
+  }
+
+  /** What the page can list: the teacher's bank first, then every seed set.
+      [{ id, title, source, note, count, readOnly }] */
+  function sources() {
+    return [{ id: '', title: 'My question bank', source: '', note: '', count: QB.list().length, readOnly: false }]
+      .concat(QB.sets().map(function (s) {
+        return { id: s.id, title: s.title, source: s.source, note: s.note, count: s.count, readOnly: true };
+      }));
+  }
+
+  /** Any entry the page can show, by id: a seed's or the bank's. */
+  function findEntry(id) {
+    if (QB.isSeedId(id)) { var seed = QB.findSeed(id); return seed ? QB.toLegacy(seed) : null; }
+    var hit = QB.list().filter(function (q) { return q.id === id; })[0];
+    return hit ? QB.toLegacy(hit) : null;
+  }
+
+  /** Copies seed questions into the teacher's bank. Returns { ok, added,
+      skipped, missing } and the write's own flags. */
+  function copyToBank(ids) {
+    return QB.copyFromSet(ids);
   }
 
   /** Upserts by id (a missing/blank id creates a new entry). Returns the
@@ -42,19 +77,22 @@
 
   /** Distinct, non-blank values already used for `field` (unit or standard),
       sorted — what the filter dropdowns are populated from. */
-  function distinctValues(field) {
-    return QB.distinct(QB.list(), field);
+  function distinctValues(field, source) {
+    return QB.distinct(questionsOf(source), field);
   }
 
   /** Entries matching every non-empty filter field; `query` matches question
       or answer text, case-insensitively. All filters are optional/ANDed. */
-  function filterEntries(filters) {
-    return QB.filter(QB.list(), filters).map(QB.toLegacy);
+  function filterEntries(filters, source) {
+    return QB.filter(questionsOf(source), filters).map(QB.toLegacy);
   }
 
   global.ReviewBankStore = {
     DIFFICULTIES: QB.DIFFICULTIES,
     listEntries: listEntries,
+    sources: sources,
+    findEntry: findEntry,
+    copyToBank: copyToBank,
     saveEntry: saveEntry,
     deleteEntry: deleteEntry,
     distinctValues: distinctValues,

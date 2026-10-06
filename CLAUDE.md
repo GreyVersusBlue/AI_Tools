@@ -533,7 +533,13 @@ files must be added there too.
   tags, points }`, with 030 as the page a teacher edits it on and, so far, its only reader. A tool that needs
   questions reads `QuestionBank.list()` and does not keep a bank of its own; one that brings questions in calls
   `importQuestions()`, which adds and updates and never deletes. A field the module does not know is kept, so
-  add one without changing the version. 030's old key (`gvb-review-board-bank:entries`) is read on every load
+  add one without changing the version. Since v267 a tool's **built-in** questions are a read-only *seed set*:
+  its data file (`Tools/cultural-trivia-card-generator/ctcg-bank.js`, `Tools/geography-bee-quiz-generator/gbq-bank.js`)
+  holds the one copy of the list, the tool reads `items()` from it, and it calls `QuestionBank.registerSet()` on a
+  page that has the module. A set is in memory only, its ids are `seed:<set>:<the tool's id>`, and nothing stores
+  a seed id: a copy into the bank is a new question with `copiedFrom`. The next tool with built-in questions does
+  the same and does not load the module itself (`npm run test:seed-sets`; `BACKLOG.md`, Path 12 P2).
+  030's old key (`gvb-review-board-bank:entries`) is read on every load
   and never written or removed: do not delete it or its registry line, which is what keeps an older page and an
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are
   `npm run test:question-bank` (pure Node) and `smoke-bank-file.mjs` in `npm run test:review-board`; no file it
