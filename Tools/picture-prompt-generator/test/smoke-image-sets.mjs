@@ -206,6 +206,8 @@ ok(/Click "New random image"/.test(await page.textContent('#stageCard')) || /Upl
 ok(/^“My pictures”: 3 pictures,/.test(await usage(page)) && /All 2 sets together: 5 distinct pictures/.test(await usage(page)),
   'the usage line follows the set and totals all of them: ' + JSON.stringify(await usage(page)));
 eq((await doc(page)).activeId, firstId, 'the open set is saved');
+await click(page, 'newImageBtn');
+ok(/^1 of 3 images/.test(await page.textContent('#usedHint')), 'the first draw after the switch starts a round on this set\'s three, not the other set\'s leftovers: ' + JSON.stringify(await page.textContent('#usedHint')));
 const firstBytes = new Set(Object.values(bytesBefore));
 let foreign = 0;
 for (let n = 0; n < 10; n++) {
