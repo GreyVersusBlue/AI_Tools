@@ -27,6 +27,7 @@
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/export.js"></script>
 <script type="module">
   /* The shared per-student record Class Roster Hub keeps beside np_rosters:
      preferred name and pronunciation to show, and the stable id that lets this
@@ -1497,11 +1498,10 @@
       '</tbody></table>';
   }
 
-  function csvCell(v) {
-    var s = String(v);
-    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }
-
+  /* The file is ExportKit.toCsv()'s (_shared/export.js, Path 7 P4): RFC 4180
+     quoting, CRLF after every row, a byte order mark so Excel reads the
+     accents, and an apostrophe before a typed cell a spreadsheet would run as
+     a formula (one that starts = + - or @). */
   els.exportHistoryBtn.addEventListener('click', function () {
     if (!state.history.length) { showMsg('No archived days yet — archive a day first.', 'info'); return; }
     var rows = [['Date', 'Student', 'Points', 'Positive taps', 'Negative taps']];
@@ -1510,16 +1510,7 @@
         rows.push([h.date, r.name, r.points, r.pos, r.neg]);
       });
     });
-    var csv = rows.map(function (row) { return row.map(csvCell).join(','); }).join('\r\n');
-    var blob = new Blob([csv], { type: 'text/csv' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = (state.name || 'behavior-points').replace(/[\\/:*?"<>|]+/g, '-') + '-history.csv';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    ExportKit.download(ExportKit.toCsv(rows), (state.name || 'behavior-points').replace(/[\\/:*?"<>|]+/g, '-') + '-history.csv', 'text/csv;charset=utf-8');
   });
 
   function renderHistory() {

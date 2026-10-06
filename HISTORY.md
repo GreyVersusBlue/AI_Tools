@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## 061 Fraction–Decimal–Percent Drill: improper fractions, mixed numbers and negative values (2026-10-05, AI-31-061, `CACHE_VERSION` v249)
+## 061 Fraction–Decimal–Percent Drill: improper fractions, mixed numbers and negative values (2026-10-05, AI-31-061, `CACHE_VERSION` v250; the commit messages say v249, which `main` took first)
 
 Audit entry AI-31, BACKLOG rank 100 (½). Per-tool row; the rank-100 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
 
@@ -56,6 +56,131 @@ Audit entry AI-31, BACKLOG rank 100 (½). Per-tool row; the rank-100 row is dele
 - **What went wrong.** `pkill -f` and `pgrep -f` with a pattern also match the shell that is running them (and the background
   watcher that was waiting for the mutation run, whose own command line contained the pattern, so it never saw the run end): one
   `pkill` ended the session's shell. Match on something that the command line of the watcher does not contain, or use a pid.
+
+## Path 7 P4, increment 5: six pages save their CSV through `ExportKit.toCsv` (003, 008, 018, 033, 068, 075), and the survey of every page that writes a CSV or a workbook (2026-10-05, AI-13, `CACHE_VERSION` v249)
+
+Audit entry AI-13, rank 6 (2+). Fifth increment of P4. **The row stays, rewritten: what is left is 001 and 006
+(a CSV and a workbook each), then 030 and 036.** P5 untouched.
+
+- **The survey.** "Twelve pages hand-roll a `text/csv` download" was a grep, and two of its twelve (017, 038) are
+  a file input's `accept`. Ten pages write a CSV by hand: 001, 003, 006, 008, 018, 033, 035, 060, 068, 075. Four
+  write a workbook with `XLSX.writeFile`: 001, 006, 030, 036 (032 and 038 only read one). The table, with what
+  each saves and what was wrong with its file, is in `BACKLOG.md`, Path 7 P4.
+- **What was wrong.** None of the ten guards a formula: a typed cell that starts `=`, `+`, `-` or `@` is run by
+  the spreadsheet, so 068's outcome "-left voicemail" and 018's note "-5 is wrong" open as `#NAME?`. Six had no
+  byte order mark (003, 008, 018, 033, 060, 075), so Excel reads `Zoë` as `ZoÃ«`. Four quote on `[",\n]` and
+  leave a bare carriage return unquoted (033, 060, 068, 075), which breaks the row in two.
+- **What shipped.** 003, 008, 018, 033, 068 and 075, worst file first and the brief's limit of six. Each links
+  `_shared/export.js`, loses its own cell quoting, Blob and anchor click, and calls `ExportKit.toCsv(rows)` and
+  `ExportKit.download(text, name, 'text/csv;charset=utf-8')` with the file name it always used. `_shared/export.js`
+  did not change. Two things the helper's guard asked of a page:
+  - **003 hands its scores over as numbers.** They were strings from `fmtNum()`, and the guard would have written
+    a negative score (a level worth -1) as `'-1`, text. `csvNum()` rounds the same way and returns the number; the
+    digits in the file are the same.
+  - **075 imports its own file, so Import takes the apostrophe off** (`unguardCsv()`: a leading `'` that stands
+    before `=`, `+`, `-` or `@`). An extension typed `+1 555 0100` comes back as typed. A name a person really
+    typed as `'-x` would lose its apostrophe on import; nobody has one.
+- **Old file against new** (the old page served from `git show main:` through `page.route()`, the clock pinned),
+  for each of the six on the a11y sweep's sample data and on cells built to break a CSV (a comma, a quote, a line
+  break, a bare carriage return, `=`, `+`, `-`, `@`, letters outside ASCII, an empty cell). The new file is,
+  byte for byte, the old file's cells written again with the named fixes and nothing else: the mark (068 had it),
+  a CRLF after the last row, the apostrophes (27 cells across the six hostile files, none in a sample file), and
+  the quoted carriage return (033, 068). The sample files differ from the old by the mark and the last CRLF only.
+  003's sample has no scores and saves no file, old or new. File names are unchanged; the type is
+  `text/csv;charset=utf-8` on all six (it was `text/csv` on three).
+- **The suite.** `Tools/export/test/smoke-csv-adopters.mjs` (`npm run test:csv-adopters`, port 8486, 129
+  assertions) with its table in `_csv-adopters.mjs`: for each page the bytes it saves are read (not
+  `harness.downloadText()`, whose `Blob.text()` drops the mark) and checked for the mark, the type and name,
+  strict RFC 4180 by a reader written in the suite, the apostrophe on every typed formula and on no number, each
+  negative number written as a number, every cell as typed, and the whole file against a writer of the suite's
+  own; 075's file goes back in through Import into an empty page and gives the directory it came from, and the
+  file saved after that is the same bytes.
+- **Broken on purpose, 5 breaks in one locked run:** in `_shared/export.js`, no byte order mark (6
+  assertions fail, one a page), no guard (18), LF line ends (47), a bare carriage return not quoted (4: 033 and
+  068, the two whose fixture has one); and in the pages, 003's scores as text again with 075's Import keeping
+  the apostrophe (8). All five caught; every file put back from a copy. The assertion added after the breaks
+  (the suite's page list equals the table's) was not broken.
+- **Decisions, mine, cheap to reverse.** (1) One shared suite, not assertions in each page's own suite: the six
+  checks are the same check, and four of the six pages have one suite about something else. Its `PAGES` list
+  names the six files so CI's selector (a page edit runs the suites whose source names it) picks it up. (2) The
+  guard is left on for every typed cell, including 075's room typed `-`: the file holds `'-`. `raw: true` per
+  column does not exist and was not added. (3) 068's and 018's file type lost a trailing `;`.
+- **Not done, not verified.** 001 and 006 were left: each writes a workbook from the same rows, and 006's import
+  reads both, so they are a PR each. 060 and 035 were not mine to touch in this batch. No file was opened in
+  Excel, Sheets or Numbers (huginn has none): that an apostrophe shows as text and not as an apostrophe is what
+  those programs document, not something seen here. Full `npm test` not run. The old 075 import of a *new* file
+  was not tried (the old page is gone once this lands).
+
+## Path 11 P1 designed, not built: the publisher drift guard (2026-10-05, AI-20, no `CACHE_VERSION`, no code)
+
+Audit entry AI-20, rank 21 (1). A design pass: only `BACKLOG.md` changed (the P1 bullet under "Path 11", and a
+note on rank 21). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** Two guards and a contract. `check-publisher.mjs`, browser-free, reads 035's
+  publisher off its syntax tree, assembles the script it would publish, and fails by code on a free name
+  (the Round 7 `escHtml` bug), a live-only leak, a handler or id with nothing behind it, a preamble that fell
+  behind the page, a sloppy-mode construct, or a change in one of the 21 pieces 034 still shares with the
+  publisher (a ledger, in the shape of the inline-sinks baseline). `smoke-publish-baseline.mjs` publishes
+  Northwind under a pinned clock and diffs it by section against a committed baseline with the fonts hashed
+  out, holds the static guard to the browser's bytes, and runs every published piece once. The contract,
+  `published-contract.mjs`, names every file published so far format 0 and the next format 1 (`format`,
+  `tool`, additive), with a validator that prints shapes and never values.
+- **What reading the code turned up.** The bullet's baseline was never committed. 35 pieces are published,
+  not 26. `brRenderMap()` references `brRenderMapLegacy`, which no published file has, behind a `typeof`
+  that is never true there. The page is sloppy-mode and the published script is strict. `publishedOn` is the
+  UTC date and the footnote beside it is local. `JSON.stringify(data)` goes into a `<script>` unescaped, so a
+  name holding `</script>` ends it. 034's banner has said "may be stale" since 2026-09-13. The publisher
+  keeps one group per room per mod and one room per teacher, dropping the rest silently.
+- **Measured, with one pure-Node probe that was not kept:** 28 listed functions, all resolving once; 21 of 35
+  pieces the same text in 034, 12 forked, 2 absent; 42 functions only 034 has; the published script reaches
+  outside the language for `document` alone, plus the dead name; in 034's data (counts only, no names read
+  out) 21 one-way `co` entries, 30 of 162 section-to-teacher links without a slot, 6 room-day-mod slots
+  holding two groups, and every hard rule of the contract holding.
+- **Not verified.** No line of the design has run. That `assemble()` matches the browser byte for byte is the
+  suite's first assertion, not a result. The stale banner and the `</script>` hole are read off the code.
+- **Seven questions are Devon's** and are listed, unanswered, at the end of the P1 bullet: whether 034 stays a
+  fork; 034's own stale schedule and whether the public copy should hold the real building's at all; which
+  social branding; what a reader does with newer data; the double-booked room; pre-R60 files; the 60 days.
+
+---
+
+## Path 13 P1 designed, not built: the grouping engine's API (2026-10-05, AI-21, no `CACHE_VERSION`, no code)
+
+Audit entry AI-21, rank 31 (1). A design pass: only `BACKLOG.md` changed (the P1 bullet under "Path 13", and a
+note on rank 31). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** One pure classic script, `_shared/grouping.js` (`Grouping`): `plan()` for the
+  arithmetic, `formGroups()` for the deal and the repair search, `rotateRoles()` and `coverRoles()`, and a memory
+  (`history.*`) keyed on indexes into one list of member keys, an id where the sidecar has one and the name where
+  it does not. It writes nothing; each adopter keeps its blob, gains one field, `groupHistory`, and goes on
+  writing its old fields from it. The engine is held to making today's groups for the same random numbers, and
+  every improvement is an option an adopter turns on in a commit of its own.
+- **What reading the code turned up, each worth knowing before the build.** The split exists six times, not
+  four (021's split button and 087's `cs-core.js` are the other two), and all six share one shuffle and deal to
+  the letter, which is what makes a parity suite possible. 002's "floaters" and "leftover group" rules turn
+  "groups of 4" for 30 students into eight groups of 3 with six floaters, or a ninth group of 6. 002's no-repeat
+  search undoes "Balanced" and "Homogeneous" from the second shuffle on (the gap between group averages goes
+  from 0.38 to about 1.7). Keep-together chains are left broken in 4.5% of shuffles for two chains of three. The
+  role picker repeats a student's last role in 1% to 6% of hand-outs where a better assignment never would. 022's
+  and 027's load functions rebuild the saved object field by field, so an older cached page drops a field it
+  does not know; that is why the old fields stay written. Path 13's "Why" still says 002 keeps two generations
+  of pair history; it has kept the year since 2026-08-13.
+- **What the measurements were.** One pure-Node probe, not kept: 002's and 022's functions and the role picker
+  copied out with a seeded generator, 200 to 2,000 invented classes a case. The figures are in the design.
+- **Decided here, cheap to reverse.** `_shared/grouping.js`, not `Tools/_engines/`. No shared memory key. 022's
+  keep-apart repair becomes 002's (no worse on the same 14,000 classes: 0.65% against 0.75% at the one shape
+  where either failed). The memory is recorded by a
+  call of its own, not inside `formGroups()`.
+- **Left to Devon, listed in the design and not answered:** skill on the shared record; one memory or one per
+  tool; whether 022 and 027 start remembering pairs; whether a reshuffled-away grouping counts; what "groups of
+  4" means for 30 students; whether every tool should round the same way; balance against no repeats;
+  keep-together as a promise or a preference; how long a departed student's history is kept; other things to
+  balance on.
+- **Not verified.** No engine exists and nothing ran in a browser. The parity claim rests on reading and on the
+  probe's ports; the build must copy the legacy functions from the files, not from the design. The older-cache
+  case was read, not reproduced.
+
+---
 
 ## Path 7 P4, increment 4: 011 makes booklets and several pages to a sheet on `ExportKit` (Path 17 P4's controls), and 064's zip and PNG downloads are the file helpers' first adopter (2026-10-05, AI-13, `CACHE_VERSION` v248)
 

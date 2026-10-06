@@ -34,6 +34,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/export.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -1387,11 +1388,13 @@
     }).join('');
   }
 
-  function csvEscape(v) {
-    var s = String(v == null ? '' : v);
-    if (/[",\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
-    return s;
-  }
+  /* The file is ExportKit.toCsv()'s (_shared/export.js, Path 7 P4): RFC 4180
+     quoting, CRLF after every row, a byte order mark so Excel reads the
+     accents, and an apostrophe before a typed cell a spreadsheet would run as
+     a formula (one that starts = + - or @). */
+  /* A computed cell is handed over as a number, so a negative score is still
+     a number in the sheet and not text behind an apostrophe. */
+  function csvNum(n) { return Math.round(n * 100) / 100; }
 
   function exportScoresCsv() {
     if (!state) return;
@@ -1407,22 +1410,13 @@
       var rowVals = state.criteria.map(function (c) {
         var sel = normalizeSelectionValue(rec.selections[c.id]);
         var pts = pointsForSelection(levelsById, sel);
-        return pts == null ? '' : fmtNum(pts * (c.weight || 1));
+        return pts == null ? '' : csvNum(pts * (c.weight || 1));
       });
       var earned = earnedPoints(rec);
-      var pct = possible > 0 ? fmtNum((earned / possible) * 100) : '';
-      return [name].concat(rowVals).concat([fmtNum(earned), fmtNum(possible), pct, rec.overallComment || '']);
+      var pct = possible > 0 ? csvNum((earned / possible) * 100) : '';
+      return [name].concat(rowVals).concat([csvNum(earned), csvNum(possible), pct, rec.overallComment || '']);
     });
-    var csv = [header].concat(rows).map(function (r) { return r.map(csvEscape).join(','); }).join('\r\n');
-    var blob = new Blob([csv], { type: 'text/csv' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = sanitizeFilename(state.name) + '-scores.csv';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    ExportKit.download(ExportKit.toCsv([header].concat(rows)), sanitizeFilename(state.name) + '-scores.csv', 'text/csv;charset=utf-8');
   }
 
   /** Read-only-of-its-own-data write handoff (P7): sends this rubric's
