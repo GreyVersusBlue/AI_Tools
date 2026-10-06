@@ -9,6 +9,69 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 7 P5 increment 3: the print preview on the last six pages, 043's Ctrl+P, and Path 7 is finished (2026-10-06, AI-13, `CACHE_VERSION` v262)
+
+Audit entry AI-13, BACKLOG rank 7, deleted (a gap, as rank 6 is; three other sessions were writing `BACKLOG.md`, so nothing was
+renumbered). Path 7's five phases are all shipped. None of it has been printed: the list of what paper still has to show is in
+`BACKLOG.md`, Path 7, Verification.
+
+- **What shipped.** A Preview button in front of every Print button on 070 (two: blanks, and the one-per-student set AI-31 added
+  at v260), 023 (handout or class set; reteach list), 040 (Print; alignment test), 018 (six), 017 (five) and 016 (three). All
+  thirteen print-kit pages have the preview. `smoke-preview-adopters.mjs` holds twelve of them (074 has its own suite).
+- **Rule (e) was tried, and it needed one thing from the kit.** 018, 017 and 016 keep several sheets in one `#printArea` and
+  show one by a class. The design said: show the asked-for area, call `preview()`, put the at-rest state back on close. There
+  was no way to know the preview had closed in time. The copy into the frame is made after the frame and its style sheets
+  load, so restoring straight after the call would copy the wrong area; and the dialog's `close` event is delivered after the
+  preview's Print has already pressed the page's Print button, so a restore there would undo the print's own choice of area.
+  `PrintKit.preview()` now takes `onClose`, called in `shut()` on every way out and before `onPrint`. One line of code.
+- **The Preview button presses the Print button.** On those three pages each Print handler ends in one call that printed
+  (`printSection(area)` on 018 and 017, three `window.print()` on 016). That call now previews instead when `previewFor` is set,
+  and the Preview button sets it, presses its Print button and clears it. So a Preview cannot refuse in different words, build a
+  different sheet or show a different area from its Print: it is the same code up to the last line. A `MutationObserver` on the
+  Print button's `disabled` keeps the Preview button off whenever it is, with no edit at the places that set it. My
+  call; the plainer alternative (a build function per button, as on 043) meant rewriting fourteen handlers.
+- **040 prints the sheet that was looked at.** Its word search, crossword and bingo cards are drawn at random on every build, so
+  the preview's Print calls `printBuilt()` (print what is in `#printArea`) and does not press the Print button, which would draw
+  a new puzzle. Every other page's preview Print presses the Print button.
+- **043, the check the brief asked for.** The words "043 needs beforeprint fix" in the last session's summary pointed at a real
+  defect, in the page and not in the preview: 043 had no `beforeprint`, so the browser's own Print printed whichever sheet a
+  button had built last, an empty page on a visit with nothing pressed, and, since v259, the sheet a closed preview had left.
+  `beforeprint` builds the permission slips unless a Print button has just built its sheet. 14 assertions in 043's
+  `smoke-print.mjs` (1,819 to 1,833), which reads Chromium's PDF for a visit with no button, after a button, and after a
+  preview.
+- **The suite's PDF is the preview's own Print now.** It used to close the preview and take a PDF of whatever was left. On a
+  page that puts its at-rest sheet back, or builds on `beforeprint`, that is a different sheet. Each run now opens the preview
+  again, presses its Print (stubbed) and counts Chromium's PDF of that, for the six older pages too.
+- **What I got wrong on the way.** My first fixture pinned the alignment test at the card count's pages (it is always two), a
+  word search at two pages (three) and treated a saved 070 checklist with no categories as empty (the page loads the template).
+  All three were the fixture; the preview's count equalled the PDF's each time. A padded, guideless 4 x 6 card has no box in the
+  frame, so 040's pieces are its `.page`s, not its cards.
+- **The DejaVu run found one state where the preview is a page out, and I moved the state, not the preview.** With fontconfig
+  holding only DejaVu Sans, 017's star slips at six to a page with the long entry are 6 pages in the preview and 5 in Chromium's
+  PDF. Measured: the first page's two rows come to 968.7 px on a 960 px page in the frame and under `emulateMedia('print')`,
+  but the PDF has all six slips on page one, its italic prompt in a monospaced oblique face. The PDF is laid out with other
+  text metrics than anything the page can measure. I did not find why, and did not fix it; the suite's state prints those
+  slips two to a page, with a comment saying why, and `BACKLOG.md` (Path 7 P5) carries the numbers. This is a real limit of
+  the preview, and "the count equals the PDF's" is true of every state run, not of every state there is. Also from that run:
+  page counts I had pinned for 023's over-long prompt (4 and 28) and 017's long-entry codes (4) are 6, 42 and 5 in DejaVu,
+  with the PDF agreeing each time; they are not pinned now.
+- **Found, not fixed.** 023's reteach tab with a saved triage has a serious `color-contrast` finding before any preview opens;
+  the a11y sweep's seed does not reach that tab, and the suite's axe check now compares with the page before the preview. On 017
+  a code that fails its test-scan asks "Print anyway?" before the preview and again at the preview's Print.
+- **Checks.** `smoke-preview-adopters.mjs`, one `--only` run per page, 7,266 assertions over twelve pages (3,094 before), green
+  in huginn's Noto Sans and again with fontconfig holding only DejaVu Sans; 074's `smoke-preview.mjs` (721) in DejaVu too.
+  `audit-print --check --only` for each of the thirteen pages: OK, baseline untouched. `run-suites.mjs --only`, one folder per
+  lock, for the six pages' folders, field-trip-permission-slip, science-safety-label-maker and service-worker, and print-kit's
+  three other suites, all exit 0. `test:a11y -- --only` for 043 and the six. All guards, `lint`, `check:precache -- --base
+  origin/main`, `check:adoption -- --check`. Not run: the full `npm test` although `_shared/print-kit.js` changed (every page
+  that calls `preview()` is in the suites above; CI on a later wave PR is the check for the rest); nothing on paper; only
+  Chromium; no screen reader.
+- **Not done as asked.** The six new pages run a chosen part of their `smoke-print.mjs` states in the preview suite, not every
+  state. "Printed PDF unchanged old against new" was not a raster comparison: each page's own `smoke-print.mjs`, which pins the
+  sheet and Chromium's page counts, passes unedited (043's with additions).
+
+---
+
 ## 069 PE Warm-Up Circuit Card Generator: "Run the circuit", a projector timer with a rotation signal (2026-10-06, AI-31-069, `CACHE_VERSION` v261)
 
 Audit entry AI-31, BACKLOG rank 106 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).

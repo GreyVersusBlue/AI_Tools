@@ -87,19 +87,25 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v262), Path 7 P5 is finished, Path 7 with it, and rank 7 is deleted (a gap; ranks not renumbered):
+  all thirteen print-kit pages have the print preview.** 070, 023, 040, 018, 017 and 016 got it; on the three
+  that keep several sheets in one `#printArea` the Preview button presses its Print button with `previewFor` set,
+  and `PrintKit.preview()`'s new `onClose` puts the at-rest sheet back. 043's Ctrl+P prints the slips now (it
+  printed whichever sheet was built last). `npm run test:preview-adopters` covers all twelve after 074. **Nothing
+  of Path 7 was ever printed on paper: the list is in Path 7's Verification. The next free suite port is 8498.**
 - **AI-13 (v259), rank 7, Path 7 P5 increment 2: seven pages have the print preview now** (074, and 076, 077,
   051, 042, 064 and 043), and the several-buttons question is settled: a Preview button in front of each Print
   button (043 is the example; Path 7 P5, "Point 4"). The kit did not change. `npm run test:preview-adopters`
-  (port 8495). **Rank 7 stays: six pages left (070 023 040 018 017 016). The next free suite port is 8498.**
+  (port 8495). Superseded by v262 above.
 - **AI-13 (v258), rank 7, Path 7 P5 increment 1: the kit has a print preview, `PrintKit.preview()`, and 074
   is its one adopter** ("Preview pages": the sheet cut into the pages it will print on, in a dialog, no print
   dialog). The breaks are the browser's own, in an iframe; the count equals Chromium's PDF. `npm run
-  test:safety-label-preview` (port 8492). **Rank 7 stays: twelve adopters and the several-buttons question.**
+  test:safety-label-preview` (port 8492). Finished at v262, above.
 - **AI-13 (v255), Path 7 P4 is finished and rank 6 is deleted (a gap; ranks not renumbered): every page that
   saves a CSV or a workbook does it through `ExportKit`.** v249: 003, 008, 018, 033, 068 and 075's CSV. v252: 001
   and 006 (CSV and workbook), 030 and 036 (workbook) and 060's CSV. v255: 035's `groups-template.csv`, the last.
   `npm run test:csv-adopters` (port 8486), `npm run test:sheet-adopters` (port 8489). Also v255: 063's old bank
-  key is `legacy` in the registry, so `check:registry` prints no STALE. **Left of Path 7: P5 only (rank 7). No
+  key is `legacy` in the registry, so `check:registry` prints no STALE. **P5, the last of Path 7, finished at v262. No
   file was opened in a spreadsheet program.**
 - **AI-13 (v248), rank 6, Path 7 P4 increment 4: 011 makes booklets and several pages to a sheet on `ExportKit`
   (Path 17 P4's controls, built), and 064's zip and PNG downloads are the file helpers' first adopter.** 011's
@@ -391,7 +397,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 7 | Path 7 P5 (rest) — the print preview on the last six print-kit pages, and all that is left of Path 7. `PrintKit.preview()` (v258) is on seven pages at v259: 074, the single-button pages 076 077 051 042 064, and 043, the first page with several print buttons (a Preview button in front of each Print button; the rule is in Path 7 P5, "Point 4"). Left: 070, 023 (two buttons), 040 (Print and the alignment test), then 018, 017 and 016, which keep several areas inside one `#printArea` and have to show the asked-for area before `preview()` and put the at-rest one back when it closes (not tried). Each is a button, the wiring and an entry in `Tools/print-kit/test/smoke-preview-adopters.mjs`. Done when the preview's page count equals `page.pdf()`'s on all thirteen | `_shared/` | ½ | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -2601,14 +2606,45 @@ localStorage with no file export.
   Ctrl+P prints what it printed before. (e) is written from the source and **not tried**: 043, where the rule
   was applied, renders each sheet into `#printArea` whole and has no areas. 043's wiring is one helper,
   `wirePreview(previewBtn, build, printBtn)`, four calls.
-  **What is left of P5.** (1) Six adopters: 070 (one button; AI-31 had the page during increment 2), 023 (Print
-  Handout / Class Set and the reteach list), 040 (Print and the alignment test), and 018 (six buttons), 017
-  (five) and 016 (three) by rule (e). None of the six has been previewed at all. Each gets an entry in
-  `smoke-preview-adopters.mjs`'s `TOOLS` (`buttons` and a `pages` list for several). (2) Found and not fixed,
-  the same before: 074's queue row is 26 px wider than a 375 px phone; on 043 Ctrl+P prints whichever sheet
-  was built last (after a preview that is the previewed sheet, after a visit with no button pressed an empty
-  page), since it has no `beforeprint`. (3) Not checked in increment 2: other papers than each tool's own
-  (074's suite does that for the kit), a 064 deck with photos, DejaVu Sans (CI's font).
+  **Increment 3 (AI-13, 2026-10-06, v262): the last six adopters, and P5 is finished.** 070 (two buttons now:
+  blanks, and AI-31's one per student), 023 (handout or class set, and the reteach list) and 040 (Print and the
+  alignment test) each split "build" from "print" as 043 did. 040's preview Print prints the sheet that was
+  looked at without building it again, because a word search, a crossword and a bingo set are drawn at random.
+  **Rule (e), tried and kept, with one change to the kit.** On 018, 017 and 016 the Preview button does not
+  build anything itself: it sets `previewFor` and presses its Print button, whose handler runs as it always did
+  (the same refusals, the same build, the same area shown) until the one place that called `window.print()`,
+  which calls `PrintKit.preview()` when `previewFor` is set. A `MutationObserver` on the Print button's
+  `disabled` keeps the Preview button off whenever it is. Putting the at-rest sheet back needed a hook the kit
+  did not have: the copy into the frame is made after the frame and its style sheets load, so the page cannot
+  restore straight after calling `preview()`, and the dialog's `close` event comes after the preview's own Print
+  has already pressed the Print button. So `preview()` takes `onClose`, called on every way out (Escape, Close,
+  Print) and before `onPrint`. 023's reteach list uses it too (the handout goes back). 016 needed no area logic:
+  its tab already decides which sheet prints, so `onClose` only takes the button's body class off.
+  **043, checked as asked.** The preview had no defect. The page had one, older than the preview: with no
+  `beforeprint`, the browser's own Print printed whichever sheet a button (or, since v259, a preview) built
+  last, and an empty page on a visit with nothing pressed. `beforeprint` builds the permission slips now unless
+  a Print button has just built its own sheet (`sheetAsked`); the slips have no canvas, so they can be built
+  there.
+  **Held by** `smoke-preview-adopters.mjs`: for each state and button, light and dark, the count, every piece on
+  a page of it, canvases copied, the paper, the at-rest sheet back after Escape and after Close, then the
+  preview opened again, its Print pressed and Chromium's PDF of that print counted. The six new pages run a part
+  of their `smoke-print.mjs` states, chosen to cover each button, grid and paper, not all of them.
+  **A known difference, measured and left: the preview and the PDF can disagree by a page where the two set
+  text in different faces.** With fontconfig holding only DejaVu Sans (no italic face), 017's feedback slips,
+  stars style, six to a page, with the long entry: the two rows of the first page are 480.3 px each, 968.7 px
+  with the gap, on a 960 px page, in the preview's frame and in the page under `emulateMedia('print')` alike.
+  The preview moves the second row on and says 6 pages. Chromium's PDF says 5, with all six slips on page one
+  and room under them: in the PDF the slip's italic prompt is set in a monospaced oblique face, and its rows
+  are shorter. So the PDF is not laid out from the same text metrics as any layout a page can measure, and
+  the preview cannot see that. In huginn's Noto Sans the same state is 5 and 5. Why the two paths pick
+  different faces was not found (adding DejaVu Serif changed nothing); whether CI's fonts do it is not known.
+  The suite's 017 state with the long entry prints its slips two to a page for this reason, and says so.
+  Every other state in the suite, all twelve pages, has the PDF's count in both font setups.
+  **Found, not fixed.** 023's reteach tab, seeded, has a serious `color-contrast` finding with no preview open
+  (the a11y sweep's seed does not reach it); the suite's axe check compares with the page before the preview
+  for that reason. On 017 a code that fails its test-scan asks "Print anyway?" before the preview and again at
+  the preview's Print. 074's queue row is 26 px wider than a 375 px phone. A 064 deck with photos was not
+  previewed. Only Chromium ran any of it; no screen reader.
 
 **Model.** Opus, except P4's imposition math.
 
@@ -2616,6 +2652,17 @@ localStorage with no file export.
 tool's test folder; one physical print run on the school's black-and-white copier
 recorded here (the notes say real paper has never been validated for Avery stock,
 6-per-page cards, or the calibration page).
+**Path 7 is finished in code (P1 to P5, v221 to v262) and none of it has been on paper.** What every phase
+left to the one physical print run, which is a person's job and is not ranked: (1) any sheet at all on the
+school copier, for the half-inch margins the kit assumes and the black ink `.pk-paper` and `.pk-ink-safe`
+promise; (2) label stock: 016's Avery 5160 and 5163 at the die cut, 074's and 051's labels; (3) cut lines on
+half and quarter sheets (076, 070, 023, 043) under a guillotine, and 070's cut-stack order; (4) duplex: 040's
+and 064's backs behind their fronts, 040's alignment test, 011's booklet folded and its N-up turned on each
+edge; (5) 042 on certificate stock with its inset; (6) a phone scanning a printed QR code from 016, 017, 018,
+051 and 043; (7) the preview beside the paper it describes, in a browser other than Chromium and with the
+print dialog's "background graphics" both ways; (8) a CSV or workbook from `ExportKit` opened in a
+spreadsheet program. The per-adopter screenshots this paragraph asks for were not made: each adopter has a
+suite that reads Chromium's PDF instead.
 
 ---
 
