@@ -874,6 +874,11 @@ eq(EK.filename('notes', '../sh'), 'notes.sh', 'an extension is letters and digit
   eq(Object.keys(mb.sheets[2]), [], 'a sheet with no rows is an empty sheet, not an error');
   eq(readXlsx(await bytesOf(K.toXlsx({ name: 'Only', rows: [['a']] }))).names, ['Only'], 'one sheet object is one sheet');
   eq(readXlsx(await bytesOf(K.toXlsx([]))).names, ['Sheet1'], 'no rows at all is one empty sheet');
+  const colsOf = async blob => [...readZip(await bytesOf(blob)).find(e => e.name === 'xl/worksheets/sheet1.xml').data.toString('utf8').matchAll(/<col min="(\d+)" max="(\d+)" width="([\d.]+)"/g)].map(m => [+m[1], +m[2], Math.round(+m[3])]);
+  eq((await colsOf(K.toXlsx({ rows: [['a', 'b', 'c']], widths: [4, 30, 9] }))).map(c => c[0]), [1, 2, 3], 'widths gives each column a width, left to right');
+  const wide = await colsOf(K.toXlsx({ rows: [['a', 'b', 'c']], widths: [4, 30, 9] }));
+  ok(wide[0][2] < wide[2][2] && wide[2][2] < wide[1][2], 'a wider width is a wider column (4 < 9 < 30 characters)');
+  eq(await colsOf(K.toXlsx({ rows: [['a', 'b']] })), [], 'no widths, no column records');
   eq(readXlsx(await bytesOf(K.toXlsx([{ rows: 'not rows' }, { b: 2 }]))).sheets[0].A1.v, 'rows', 'a list of objects without row lists is rows, not sheets');
   let threw = '';
   try { EK.toXlsx([['a']]); } catch (e) { threw = String(e.message); }
