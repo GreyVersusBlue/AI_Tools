@@ -1418,19 +1418,33 @@
       { mode: 'one', name: state.name, sheet: 'page', header: !!(head.title || head.class || head.date), footer: false });
   }
 
+  /* A button builds its sheet and prints it. Ctrl+P presses no button, so
+     `beforeprint` builds the permission slips then: it used to print whichever
+     sheet a button or a preview had built last, and an empty page on a visit
+     with no button pressed. `sheetAsked` keeps it from replacing a sheet a
+     button has just built. The slips carry no canvas (the QR code is an
+     <img>), so they can be built inside the event. */
+  var sheetAsked = false;
+  function printBuilt() {
+    sheetAsked = true;
+    window.print();
+  }
+  window.addEventListener('beforeprint', function () { if (!sheetAsked && state) buildPrintArea(); });
+  window.addEventListener('afterprint', function () { sheetAsked = false; });
+
   els.printChaperoneBtn.addEventListener('click', function () {
     buildChaperonePrintArea();
-    window.print();
+    printBuilt();
   });
 
   els.printMissingListBtn.addEventListener('click', function () {
     buildMissingListPrintArea();
-    window.print();
+    printBuilt();
   });
 
   els.printReminderSlipsBtn.addEventListener('click', function () {
     buildReminderPrintArea();
-    window.print();
+    printBuilt();
   });
 
   /* The print preview (PrintKit.preview, Path 7 P5). This page prints four
@@ -1519,7 +1533,7 @@
 
   els.printBtn.addEventListener('click', function () {
     buildPrintArea();
-    window.print();
+    printBuilt();
   });
 
   els.downloadIcsBtn.addEventListener('click', function () {

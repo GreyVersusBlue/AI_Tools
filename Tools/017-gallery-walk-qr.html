@@ -412,7 +412,9 @@
         <div id="dupWarning"></div>
         <div id="scanWarning"></div>
         <div class="btn-row">
+          <button type="button" class="secondary" id="previewCodesBtn" disabled>Preview QR Codes</button>
           <button id="printCodesBtn" disabled type="button">Print QR Codes</button>
+          <button type="button" class="secondary" id="previewRefBtn" disabled>Preview Reference Sheet</button>
           <button class="secondary" id="printRefBtn" disabled type="button">Print Reference Sheet</button>
           <button class="secondary" id="copyLinksBtn" disabled type="button">Copy all links</button>
         </div>
@@ -450,6 +452,7 @@
           </select>
         </div>
         <div class="btn-row">
+          <button type="button" class="secondary" id="previewSlipsBtn" disabled>Preview Feedback Slips</button>
           <button class="secondary" id="printSlipsBtn" disabled type="button">Print Feedback Slips</button>
         </div>
         <div class="hint">Slips don't need a link or QR code &mdash; a named entry with no link still gets a station slip, for work that's on paper or on display in the room.</div>
@@ -519,6 +522,7 @@
         <div class="hint" id="walkStopsHint"></div>
         <div class="btn-row">
           <button class="secondary" id="generateWalkOrderBtn" type="button">Generate walking order</button>
+          <button type="button" class="secondary" id="previewRouteCardsBtn" disabled>Preview Route Cards</button>
           <button class="secondary" id="printRouteCardsBtn" disabled type="button">Print Route Cards</button>
         </div>
         <div class="hint">Each route card's number of stops matches "Number of rotations" in the timer above, so the printed route always matches how many times the timer will call a rotation.</div>
@@ -529,6 +533,7 @@
         <div class="hint">After the walk, jot down or paste what came back on the slips for any station &mdash; one comment per line &mdash; then print a take-home packet per student showing what their classmates said.</div>
         <div class="notes-list" id="notesList"><p class="empty-hint">Add at least one entry to collect feedback for it.</p></div>
         <div class="btn-row">
+          <button type="button" class="secondary" id="previewPacketsBtn" disabled>Preview Feedback Packets</button>
           <button class="secondary" id="printPacketsBtn" disabled type="button">Print Feedback Packets</button>
         </div>
       </div>
@@ -1480,11 +1485,36 @@
     if (area) area.classList.add('active');
     document.getElementById('printArea').classList.toggle('sheet-asked', !!area);
   }
+  /* A Print button builds its sheet and hands it here. So does the Preview
+     button in front of it, by pressing that Print button with `previewFor`
+     set: the same refusals, the same sheet, shown cut into its pages
+     (PrintKit.preview, Path 7 P5) with no print dialog. The preview copies
+     the whole #printArea, so the asked-for area is shown first and the
+     at-rest state put back when it closes, as after a print. */
+  var previewFor = null;
+  function atRest() { showSection(null); }
   function printSection(area) {
     showSection(area);
-    window.print();
+    if (!previewFor) { window.print(); return; }
+    var pair = previewFor;
+    PrintKit.preview({ trigger: pair.preview, onClose: atRest, onPrint: function () { pair.print.click(); } });
   }
-  window.addEventListener('afterprint', function () { showSection(null); });
+  function wirePreview(previewId, printBtn) {
+    var previewBtn = document.getElementById(previewId);
+    previewBtn.disabled = printBtn.disabled;
+    new MutationObserver(function () { previewBtn.disabled = printBtn.disabled; })
+      .observe(printBtn, { attributes: true, attributeFilter: ['disabled'] });
+    previewBtn.addEventListener('click', function () {
+      previewFor = { preview: previewBtn, print: printBtn };
+      try { printBtn.click(); } finally { previewFor = null; }
+    });
+  }
+  window.addEventListener('afterprint', atRest);
+  wirePreview('previewCodesBtn', els.printCodesBtn);
+  wirePreview('previewRefBtn', els.printRefBtn);
+  wirePreview('previewSlipsBtn', els.printSlipsBtn);
+  wirePreview('previewRouteCardsBtn', els.printRouteCardsBtn);
+  wirePreview('previewPacketsBtn', els.printPacketsBtn);
 
   els.printCodesBtn.addEventListener('click', function () {
     if (!validEntries().length) return;

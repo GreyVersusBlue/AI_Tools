@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## 071 Picture-Prompt Generator: named picture sets (2026-10-06, AI-31-071, `CACHE_VERSION` v262)
+## 071 Picture-Prompt Generator: named picture sets (2026-10-06, AI-31-071, `CACHE_VERSION` v264)
 
 Audit entry AI-31, BACKLOG rank 108 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
 
@@ -44,6 +44,132 @@ Audit entry AI-31, BACKLOG rank 108 (½). The row is deleted and the other ranks
   `check:precache -- --base main` and `check:adoption -- --check` pass.
 - **Not run / not verified.** The full `npm test`; nothing printed on paper; no real screen reader; no browser near its real quota; a duplicate made while
   pictures are still inline (a browser with no IndexedDB) does copy the text into localStorage, since there is no shared record to point at.
+
+## Path 7 P5 increment 3: the print preview on the last six pages, 043's Ctrl+P, and Path 7 is finished (2026-10-06, AI-13, `CACHE_VERSION` v263; the commit messages say v262, which `main` took first)
+
+Audit entry AI-13, BACKLOG rank 7, deleted (a gap, as rank 6 is; three other sessions were writing `BACKLOG.md`, so nothing was
+renumbered). Path 7's five phases are all shipped. None of it has been printed: the list of what paper still has to show is in
+`BACKLOG.md`, Path 7, Verification.
+
+- **What shipped.** A Preview button in front of every Print button on 070 (two: blanks, and the one-per-student set AI-31 added
+  at v260), 023 (handout or class set; reteach list), 040 (Print; alignment test), 018 (six), 017 (five) and 016 (three). All
+  thirteen print-kit pages have the preview. `smoke-preview-adopters.mjs` holds twelve of them (074 has its own suite).
+- **Rule (e) was tried, and it needed one thing from the kit.** 018, 017 and 016 keep several sheets in one `#printArea` and
+  show one by a class. The design said: show the asked-for area, call `preview()`, put the at-rest state back on close. There
+  was no way to know the preview had closed in time. The copy into the frame is made after the frame and its style sheets
+  load, so restoring straight after the call would copy the wrong area; and the dialog's `close` event is delivered after the
+  preview's Print has already pressed the page's Print button, so a restore there would undo the print's own choice of area.
+  `PrintKit.preview()` now takes `onClose`, called in `shut()` on every way out and before `onPrint`. One line of code.
+- **The Preview button presses the Print button.** On those three pages each Print handler ends in one call that printed
+  (`printSection(area)` on 018 and 017, three `window.print()` on 016). That call now previews instead when `previewFor` is set,
+  and the Preview button sets it, presses its Print button and clears it. So a Preview cannot refuse in different words, build a
+  different sheet or show a different area from its Print: it is the same code up to the last line. A `MutationObserver` on the
+  Print button's `disabled` keeps the Preview button off whenever it is, with no edit at the places that set it. My
+  call; the plainer alternative (a build function per button, as on 043) meant rewriting fourteen handlers.
+- **040 prints the sheet that was looked at.** Its word search, crossword and bingo cards are drawn at random on every build, so
+  the preview's Print calls `printBuilt()` (print what is in `#printArea`) and does not press the Print button, which would draw
+  a new puzzle. Every other page's preview Print presses the Print button.
+- **043, the check the brief asked for.** The words "043 needs beforeprint fix" in the last session's summary pointed at a real
+  defect, in the page and not in the preview: 043 had no `beforeprint`, so the browser's own Print printed whichever sheet a
+  button had built last, an empty page on a visit with nothing pressed, and, since v259, the sheet a closed preview had left.
+  `beforeprint` builds the permission slips unless a Print button has just built its sheet. 14 assertions in 043's
+  `smoke-print.mjs` (1,819 to 1,833), which reads Chromium's PDF for a visit with no button, after a button, and after a
+  preview.
+- **The suite's PDF is the preview's own Print now.** It used to close the preview and take a PDF of whatever was left. On a
+  page that puts its at-rest sheet back, or builds on `beforeprint`, that is a different sheet. Each run now opens the preview
+  again, presses its Print (stubbed) and counts Chromium's PDF of that, for the six older pages too.
+- **What I got wrong on the way.** My first fixture pinned the alignment test at the card count's pages (it is always two), a
+  word search at two pages (three) and treated a saved 070 checklist with no categories as empty (the page loads the template).
+  All three were the fixture; the preview's count equalled the PDF's each time. A padded, guideless 4 x 6 card has no box in the
+  frame, so 040's pieces are its `.page`s, not its cards.
+- **The DejaVu run found one state where the preview is a page out, and I moved the state, not the preview.** With fontconfig
+  holding only DejaVu Sans, 017's star slips at six to a page with the long entry are 6 pages in the preview and 5 in Chromium's
+  PDF. Measured: the first page's two rows come to 968.7 px on a 960 px page in the frame and under `emulateMedia('print')`,
+  but the PDF has all six slips on page one, its italic prompt in a monospaced oblique face. The PDF is laid out with other
+  text metrics than anything the page can measure. I did not find why, and did not fix it; the suite's state prints those
+  slips two to a page, with a comment saying why, and `BACKLOG.md` (Path 7 P5) carries the numbers. This is a real limit of
+  the preview, and "the count equals the PDF's" is true of every state run, not of every state there is. Also from that run:
+  page counts I had pinned for 023's over-long prompt (4 and 28) and 017's long-entry codes (4) are 6, 42 and 5 in DejaVu,
+  with the PDF agreeing each time; they are not pinned now.
+- **Found, not fixed.** 023's reteach tab with a saved triage has a serious `color-contrast` finding before any preview opens;
+  the a11y sweep's seed does not reach that tab, and the suite's axe check now compares with the page before the preview. On 017
+  a code that fails its test-scan asks "Print anyway?" before the preview and again at the preview's Print.
+- **Checks.** `smoke-preview-adopters.mjs`, one `--only` run per page, 7,266 assertions over twelve pages (3,094 before), green
+  in huginn's Noto Sans and again with fontconfig holding only DejaVu Sans; 074's `smoke-preview.mjs` (721) in DejaVu too.
+  `audit-print --check --only` for each of the thirteen pages: OK, baseline untouched. `run-suites.mjs --only`, one folder per
+  lock, for the six pages' folders, field-trip-permission-slip, science-safety-label-maker and service-worker, and print-kit's
+  three other suites, all exit 0. `test:a11y -- --only` for 043 and the six. All guards, `lint`, `check:precache -- --base
+  origin/main`, `check:adoption -- --check`. Not run: the full `npm test` although `_shared/print-kit.js` changed (every page
+  that calls `preview()` is in the suites above; CI on a later wave PR is the check for the rest); nothing on paper; only
+  Chromium; no screen reader.
+- **Not done as asked.** The six new pages run a chosen part of their `smoke-print.mjs` states in the preview suite, not every
+  state. "Printed PDF unchanged old against new" was not a raster comparison: each page's own `smoke-print.mjs`, which pins the
+  sheet and Chromium's page counts, passes unedited (043's with additions).
+
+---
+
+## 073 Science Fair Project Tracker: named saved trackers, one per cohort (2026-10-06, AI-31-073, `CACHE_VERSION` v262)
+
+Audit entry AI-31, BACKLOG rank 110 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). Rank 109 (tool 072, share a
+diagram by link) was also deleted: it shipped in #239 (Path 6 P3, v173) and the row was stale, as the Selector's note in the audit said. 072's own section was not touched.
+
+- **What shipped.** A **Saved tracker** card: a chooser, + New, Duplicate, Rename and Delete behind a confirm that names what goes with the tracker, with the
+  same labels and wording as 063's saved stories. Each tracker holds a whole cohort: students, milestones with due dates, ticks and status notes. Print puts
+  the tracker's name on the report ("Period 3 · Printed ..."). Share still sends the milestone list and due dates only, from the open tracker, and an arriving
+  link replaces the open tracker's milestones after a confirm that names it (an empty device opens the link without asking and saves it as the first tracker).
+- **Storage.** The key `sfpt_tracker_v1` is the same; it now holds Store's envelope at version 2, `{list: [{id, name, roster, milestones, done, notes}], currentId}`.
+  The old bare object (version 0) becomes one tracker called "My tracker" with nothing lost; it is not rewritten until the first edit. An untouched page writes
+  nothing (the tracker on screen is a draft that joins the list on its first edit). Delete of the last tracker leaves the empty tool, as 063 does.
+  The registry row, 009's backup and the `student: true` mark are unchanged, because the key is. The tracker names are set with `textContent`, so the inline-sink
+  baseline for 073 stays at 4.
+- **Not applicable.** 073 does not use `Roster.trackRenames`, so there is no per-student history that follows a rename to carry across trackers.
+- **Checks.** New suite `Tools/science-fair-project-tracker/test/smoke-saves.mjs` (`test:science-fair-saves`, port 8500, 128 assertions). 17 breaks on purpose, each
+  run once: 14 failed on a named assertion first time, 1 was dead code (a `draft = null` in Delete that could never matter) and was deleted, 1 survived (which
+  neighbour Delete opens) and got section 5b. Not every assertion has a break of its own (most of section 7, the share arrival, was broken only through
+  the message text). `test:a11y --only 073`, `audit-print --check --only 073`, `smoke-share-rollout` and every `check:*`, `lint` pass; see the audit note.
+- **Not run.** Full `npm test`; nothing printed on paper or read with a real screen reader.
+- **Left on 073.** Student self-check-in, ICS export. No tracker-to-tracker move of a student; no merge of two trackers.
+
+## Path 11 P5 designed, not built: master-schedule checks for 035 (2026-10-06, AI-20, no `CACHE_VERSION`, no code)
+
+Audit entry AI-20, rank 25 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P5 bullet under
+"Path 11", and a note on rank 25). **The row stays.** Nothing was built, no suite or browser ran. It sits on the P1
+and P2 designs and changes neither; the last undesigned Fable phase on the sprint's list.
+
+- **What the design is.** `Tools/schedule-visualizer/sv-check.js`, a pure module in P2's shape: `checkSchedule()`
+  returns findings with a code, a severity (error, warn, note), ids and numbers, and a stable fingerprint; fourteen
+  kinds (two groups in a room, a teacher in two rooms at once, over capacity, no planning, too many in a row, a
+  teacher who moves between mods against the passing time, a group whose walk is longer than the bell gap, an
+  unknown room, a blank slot, and five notes); `sentence()` writes one English line per kind for the banner, the
+  lab, the paper and the suite; today's `computeScheduleConflicts` and `whatIfMetrics` pass 5 become one call. A
+  second module, `sv-suggest.js`, finds a fix for one finding over an enumerable set (reorder the group's day; the
+  same teacher's other room or a teacherless room; another teacher's room only behind a switch that is off), checks
+  every candidate in under a millisecond, routes the top five, and hands the chosen one to the what-if lab as an
+  override, where Apply is the only commit. Two printed sheets through PrintKit (the findings with a teacher-by-mod
+  grid; the top-ten congestion cells with the scenario's delta), and "compare with a project file" as a way of
+  loading the lab by group name on one building. Storage: `tile.capacity` (additive, version 5 stays),
+  `settings.checks`, and one new key `stviz_checks` for accepted findings; findings themselves are never stored.
+  Four increments, 035 only, 034 untouched, no `_shared/` change.
+- **What reading the code turned up.** 035 has no teachers and no students: a teacher is a string on a tile, a
+  group is a cohort with a size, and a teacher's day has to be derived the way the publisher derives its `Planning`
+  slots. There is no capacity field anywhere. Room double-booking is checked in three copies (the banner, the lab,
+  and the publisher's silent last-writer walk). A room in this model is also a teacher and a subject, so a suggestion
+  that moves a group to another teacher's room changes who teaches whom, and the data cannot say whether that is
+  allowed; that is why the honest moves are a reorder and the same teacher's rooms, and the rest is Devon's.
+- **Measured, with two pure-Node probes that were not kept.** Northwind (invented): no double-booking, every teacher
+  has a planning block on both days (the README says one has it on only one day; not so in the committed fixture),
+  two teachers idle all A day and two all B day, the Library teacherless. An invented 90-room, 72-teacher, 60-group,
+  8-mod building with slots filled at random: one full check of every non-travel kind is 0.92 ms (mean of 1,000,
+  Node 22, huginn), so the checks run on every bulk-editor keystroke with no debounce.
+- **Decided here, cheap to reverse.** Severity in three levels with notes folded and uncounted. The engine returns
+  codes and the page the sentence (Path 13's rule), with the one formatter exported because four surfaces print it.
+  No randomness and no seed: the candidate set is enumerable. Suggestions land as what-if overrides, never on the
+  live schedule. A new key for acks rather than a field on settings. Teacher names matched exactly.
+- **Shared with Path 13 P1 and Path 14 P3:** the vocabulary (codes out, `dropped`, severity compared left to
+  right, `stoppedBy`) and the feasibility-then-blame pattern. **Not shared:** the engine, identity, students,
+  randomness, memory. A `_shared/findings.js` is noted, not proposed.
+- **Not verified.** Nothing ran in a browser and no module exists. The two travel checks were not timed. No
+  counsellor read a sentence. P1's `EXPECTED` was not opened. Nine questions for Devon are at the end of the bullet.
 
 ---
 

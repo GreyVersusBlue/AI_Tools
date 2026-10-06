@@ -523,6 +523,7 @@
     <div class="card" id="triageResultsCard" hidden>
       <div class="card-title"><span>Reteach List &amp; Small Groups</span></div>
       <div id="triageResults"></div>
+      <button type="button" class="secondary" id="previewTriageBtn">Preview Reteach List</button>
       <button type="button" id="printTriageBtn">Print Reteach List</button>
     </div>
   </section>
@@ -671,6 +672,7 @@
         <button type="button" class="secondary" id="reshuffleSlipsBtn">&#128256; New set of prompts</button>
         <p class="hint">Draws distinct prompts from whatever category / My Prompts settings are active on the Prompt &amp; Display tab &mdash; handy for handing one prompt per table group instead of the whole class getting the same one.</p>
       </div>
+      <button type="button" class="secondary" id="previewBtn">Preview Handout</button>
       <button type="button" id="printBtn">Print Handout</button>
       <p class="hint">Cut along the dashed lines after printing. 2-per-page gives half-sheets; 4-per-page gives quarter-sheets.</p>
     </div>
@@ -710,14 +712,14 @@
   ['categorySelect', 'includeMineCheck', 'shuffleBtn', 'stage', 'promptText', 'metaRow', 'fullscreenBtn',
    'customPrompt', 'useCustomBtn', 'newBankPrompt', 'addBankBtn', 'bankList', 'historyList', 'shareBtn', 'shareNote',
    'handoutPromptDisplay', 'gotoBankBtn', 'perPageSelect', 'answerStyleSelect', 'answerStyleNote', 'answerSpaceSelect', 'answerSpaceNote',
-   'showNameCheck', 'showDateCheck', 'printBtn', 'handoutPreview', 'printArea',
+   'showNameCheck', 'showDateCheck', 'printBtn', 'previewBtn', 'handoutPreview', 'printArea',
    'thinkTimeSelect', 'thinkTimer', 'slipModeSelect', 'differentSlipRow', 'reshuffleSlipsBtn',
    'qrEnabledCheck', 'qrUrlRow', 'qrUrlInput',
    'tallyGrid', 'tallyResults', 'tallyTotal', 'tallyResetBtn',
    'addCatTallyBtn', 'catTallyGrid', 'catTallyTotal', 'saveCatTallyBtn', 'catTallyHistory',
    'triageRosterSelect', 'triageGroupSizeInput', 'triageNamesInput', 'buildTriageBtn',
    'triageGridCard', 'triageSummary', 'triageGrid', 'resetTriageBtn',
-   'triageResultsCard', 'triageResults', 'printTriageBtn',
+   'triageResultsCard', 'triageResults', 'printTriageBtn', 'previewTriageBtn',
    'discussionInput', 'addDiscussionBtn', 'discussionManageList', 'clearDiscussionBtn',
    'discussionStage', 'discussionBoard', 'discussionEmpty', 'discussionFullscreenBtn',
    'batchModeCheck', 'batchRosterRow', 'batchRosterSelect', 'batchNamesInput',
@@ -1759,6 +1761,16 @@
     renderTriagePrintArea();
     window.print();
   });
+  // The reteach list cut into its pages (PrintKit.preview, Path 7 P5), with no
+  // print dialog. The list borrows #printArea, so the handout goes back when
+  // the preview closes, as it does after a print.
+  els.previewTriageBtn.addEventListener('click', function () {
+    renderTriagePrintArea();
+    PrintKit.preview({
+      trigger: els.previewTriageBtn, onClose: renderHandout,
+      onPrint: function () { els.printTriageBtn.click(); }
+    });
+  });
 
   // ── Discussion Board ─────────────────────────────────────────────────────
   function discussionLetter(i) { return String.fromCharCode(65 + (i % 26)); }
@@ -2213,6 +2225,7 @@
 
   function updatePrintBtnLabel() {
     els.printBtn.textContent = settings.batchMode ? 'Print Class Set' : 'Print Handout';
+    els.previewBtn.textContent = settings.batchMode ? 'Preview Class Set' : 'Preview Handout';
   }
 
   /** The grid is the one response style that makes a promise about physical
@@ -2329,6 +2342,12 @@
   els.printBtn.addEventListener('click', function () {
     renderHandout();
     window.print();
+  });
+  // The handout or the class set, whichever the button would print, cut into
+  // its pages (PrintKit.preview, Path 7 P5). It opens no print dialog.
+  els.previewBtn.addEventListener('click', function () {
+    renderHandout();
+    PrintKit.preview({ trigger: els.previewBtn, onPrint: function () { els.printBtn.click(); } });
   });
   // The reteach list borrows #printArea; the handout goes back afterwards, so
   // Ctrl+P prints what the Printable Handout tab previews.
