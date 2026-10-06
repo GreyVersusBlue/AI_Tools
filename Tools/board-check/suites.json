@@ -112,6 +112,7 @@
     "Tools/grammar-mad-libs/test/smoke-storage.mjs",
     "Tools/grammar-mad-libs/test/smoke-saves.mjs",
     "Tools/parent-contact-log/test/smoke-reasons.mjs",
+    "Tools/parent-contact-log/test/smoke-packet.mjs",
     "Tools/rubric-builder/test/smoke-peer-form.mjs",
     "Tools/rubric-builder/test/smoke-share.mjs",
     "Tools/sub-binder-generator/test/smoke-feedback-page.mjs",
