@@ -736,7 +736,8 @@
   }
 
   /** A workbook as a Blob. `sheets` is one sheet's rows, or
-      [{ name, rows, columns }]; rows and columns are toCsv()'s. A string is
+      [{ name, rows, columns, widths }]; rows and columns are toCsv()'s, and
+      `widths` is each column's width in characters, left to right. A string is
       a string cell whatever it starts with, a finite number a number, a
       boolean a boolean, and a Date a date cell showing dateText()'s form in
       local time. No cell is ever a formula. opts: `filename` saves the file
@@ -776,6 +777,9 @@
         }
       }
       ws['!ref'] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(0, table.length - 1), c: Math.max(0, width - 1) } });
+      if (Array.isArray(list[i].widths)) {
+        ws['!cols'] = list[i].widths.map(function (w) { return Number(w) > 0 ? { wch: Number(w) } : {}; });
+      }
       X.utils.book_append_sheet(wb, ws, sheetName(list[i].name, i, taken));
     }
     var bytes = X.write(wb, { bookType: 'xlsx', type: 'array', compression: true, bookSST: true });

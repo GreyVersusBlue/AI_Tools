@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## 065 Lab Report Template Builder: pre-lab and post-lab packets from one template (2026-10-05, AI-31-065, `CACHE_VERSION` v252)
+## 065 Lab Report Template Builder: pre-lab and post-lab packets from one template (2026-10-05, AI-31-065, `CACHE_VERSION` v254; main took v252 and v253 first)
 
 Audit entry AI-31, BACKLOG rank 102 (½). Per-tool row; the row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
 
@@ -44,6 +44,156 @@ Audit entry AI-31, BACKLOG rank 102 (½). Per-tool row; the row is deleted and t
 - **Checked.** `test:a11y -- --only 065`, `audit-print --check --only 065`, `smoke-typed-columns`, `smoke-print-tail`, every `check:*`, `lint`,
   `check:precache -- --base origin/main`, `check:adoption -- --check`. Not run: full `npm test`; nothing printed on paper or read with a real
   screen reader; a PDF page count is Chromium's, not a printer's.
+
+## 063 Grammar Mad Libs Generator: named saved stories, each with its own word bank (2026-10-05, AI-31-063, `CACHE_VERSION` v253; main took v252 from AI-13 first)
+
+Audit entry AI-31, BACKLOG rank 101 (½). Per-tool row; the rank-101 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** A "Saved story" card above the template picker: a chooser, **+ New**, **Duplicate**, **Rename** and **Delete** (behind a
+  confirm that names the story and its bank), with a polite status line ("Opened…", "Deleted…"). The controls and wording follow 048
+  (chooser, + New, Duplicate, Rename, Delete, `prompt()` for names, `confirm()` for delete) and the storage shape follows 041 (a list, a
+  current pick, a name per save). A save is `{id, name, text, banks}`: the story and its word bank travel together. Typing in the story box or
+  the bank editor autosaves into the open save, as the one story always did; with no save yet, the first edit starts "My story".
+- **No new key.** The document lives in `gmlg_custom_story_v1`, in Store's envelope at **version 2**: `{list, currentId}`. `_shared/tool-registry.js`
+  therefore needed no change (it is `_shared/`, which a per-tool row may not touch), and Backup & Restore sees the same key. Version 0
+  (`{v: 1, text}`) and version 1 (the bare string) both migrate to one save called "My story", with the old bank map (`gmlg_custom_banks_v1`)
+  as its bank, so what a teacher had is the first save with nothing lost. A bank map and no story also becomes a save. A read rewrites nothing.
+  After the list exists the old bank key is never read again, and **nothing writes it any more**: `check:registry` now prints a STALE warning for it
+  (exit 0). It was left declared on purpose: it is what a backup made before this change restores. Dropping it from the registry is a `_shared/` edit, so it is left for the platform worker.
+- **Calls taken, so they can be reversed.** (1) **Word banks are per-story**, not global; the Open Question is closed that way (the row asked for a
+  text and its bank saved together). Cost: vocabulary shared by several stories is typed once per story, and Duplicate carries it. (2) **Delete may remove the last save**
+  (048 refuses at one; this row asked for a usable empty tool): the empty state is stored as an empty list, so it is remembered across a reload and
+  the legacy keys do not resurrect it. (3) **Opening a save previews it if it has a `{blank}`**, otherwise the chosen template stays. Boot still
+  previews the first template, as before. (4) Names are not unique (048 does not force it); saves are told apart by id. (5) A pending debounced edit is flushed
+  before any switch so it cannot land on the wrong save.
+- **There was no export or state link to keep working**: 063 has no share or JSON export, so "an export made before still opens" is vacuous. The JSON export row is separate.
+- **Tests.** New `Tools/grammar-mad-libs/test/smoke-saves.mjs` (`npm run test:mad-libs-saves`, port 8490, 134 assertions): the empty tool; every legacy shape;
+  junk in the new shape; New, switch, Duplicate (a deep copy), Rename (markup stays text), Delete (cancel, middle, first, last; reload); the fast-switch race for text and
+  bank; keyboard order. `smoke-storage.mjs` sections 2 and 3 were rewritten for the new on-disk shape (1 and 4 unchanged). **35 distinct breaks on purpose** in the page: 34 failed the suite
+  on a named assertion; 1 is equivalent (the migrate step skipping `normalizeDoc`, which `loadDoc` runs again). Four survived at first
+  (deleting the neighbour, an input event with no save, the editor not refreshing on a switch, a bank edit rewriting the old key) and each got an assertion and was re-broken. The first
+  full pass of 53 was stopped after 18 for time; the other 17 were a chosen subset, one per kind of mistake, so about 18 of the 53 written breaks were never run.
+- **Checked.** `test:a11y -- --only 063` (plus axe by hand with two saves in light and dark: only the page's existing moderate landmark notes), `audit-print --check --only 063`,
+  every `check:*`, `lint`, `check:precache -- --base origin/main`, `check:adoption -- --check`. **Not run:** full `npm test`; nothing printed on paper; no screen reader.
+
+## Path 7 P4, increment 6: 001, 006, 030 and 036 are `ExportKit.toXlsx`'s first adopters, and 001, 006 and 060's CSV goes through `toCsv` (2026-10-05, AI-13, `CACHE_VERSION` v252)
+
+Audit entry AI-13, rank 6. Sixth increment of P4. **The row stays, cut to a quarter: all that is left is 035's
+three-line template CSV, which was another worker's page.** P5 untouched; its Tier 2 bullet now says what a design
+has to settle.
+
+- **What moved.** 001 (range report) and 006 (rosters) each built one table, wrote it as a CSV by hand and as a
+  workbook with `XLSX.utils` and `XLSX.writeFile`; both hand the same rows to `ExportKit.toCsv` and
+  `ExportKit.toXlsx` now. 030's blank template and 036's `final_grades.xlsx` are one `toXlsx` call each. 060's CSV
+  moved the way the six in increment 5 did. Each page's `csvCell()`, Blob and anchor click are gone; each keeps its
+  own lazy load of SheetJS.
+- **The kit changed once:** a sheet takes `widths`, characters per column, because 036 sets them
+  (`export.test.mjs` 300 to 303).
+- **Old file against new** (the old page from `git show main:` through `page.route()`), one fixture per page
+  built from cells that break a file. CSV: 001 and 006 gained the apostrophes and a CRLF after the last row and
+  nothing else; 060 also gained the byte order mark and a quoted carriage return, and its type lost a trailing
+  `;`. Workbooks, read back with the vendored SheetJS, every cell compared by address, type and value: the same
+  but for cells that were an empty string, which are no cell now (2 of 47 on 001, 14 of 56 on 006, 4 of 60 on
+  036, none on 030); same sheet names but 006's "Period 3 4  Lab  A", now single-spaced; 036's twelve column
+  widths the same; the files are about half the size (deflated) and typed as a workbook.
+- **Calls made, each reversible.** (1) 006 turns a character Excel forbids in a sheet name into a space before
+  handing the name over, as it did, so "Period 3/4" is not read back as "Period 34"; the cap and the suffix for
+  two alike are the kit's. (2) 006 takes the apostrophe off on a file import only, not on a paste. (3) 060: a
+  result typed as a plain, finite number (`String(Number(v)) === v`) is handed over as a number, so `-3` on sit and reach
+  is not guarded; `+5`, `12.50`, `7:10` and words stay typed cells. (4) The row was rewritten, not deleted and
+  the list not renumbered, with four other sessions writing `BACKLOG.md` in the same batch and one file left.
+- **Tests.** New suite `Tools/export/test/smoke-sheet-adopters.mjs` (`npm run test:sheet-adopters`, port 8489,
+  104 assertions): each file's bytes, a CSV against a writer of its own, a workbook's every cell and no formula,
+  036's widths, and the round trips: 006's CSV and its two-sheet workbook back through the import dialog, 030's
+  template back through its importer. 060 is a row in `_csv-adopters.mjs` (`test:csv-adopters` 129 to 150). Five
+  breaks in one locked run, all caught: `widths` dropped, a number written as text, 006's unguard removed, 001's
+  CSV written raw, 060's number handed over as text.
+- **Found, not fixed (the same before).** 006's import dialog does not recognise its own export's header row and
+  picks the first column with a comma in it as the name column; the suite ticks the header box and picks Name, as
+  a teacher would have to. A cell with a line break does not survive 006's CSV import.
+- **Not verified.** No file was opened in Excel, Sheets or Numbers (huginn has none). One fixture per page, not a
+  sweep of states; 006's "this roster" scope and its live-editor rows were not in the comparison (the same code
+  path after the rows are gathered). The full `npm test` was not run; CI on a later wave PR is the check for the
+  rest, and CI's browser has not run the new suite.
+
+## Path 11 P2 designed, not built: extracting 035's engines (2026-10-05, AI-20, no `CACHE_VERSION`, no code)
+
+Audit entry AI-20, rank 22 (2+). A design pass: only `BACKLOG.md` changed (the P2 bullet under "Path 11", and a
+note on rank 22). **The row stays.** Nothing was built, no suite or browser ran. It sits on P1's design and
+changes none of it.
+
+- **What the design is.** Pure ES modules under `Tools/schedule-visualizer/` (`sv-model.js`, `sv-graph.js`,
+  `sv-routes.js`, `sv-congestion.js`, `sv-playback.js`, `sv-browser.js`, then `sv-viz.js`, `sv-editor.js`,
+  `sv-whatif.js`, `sv-schedules-tab.js`, and the stylesheet as `sv.css`), each taking its inputs and touching
+  neither `AppState` nor the DOM; the page's existing `type="module"` script puts each on `window` as a namespace,
+  the way it already does `SVRecovery`; and the page keeps one thin wrapper per old name in a `BRIDGE` section, so
+  the 388 bare-name call sites and the suites' `/* global */` lines do not change. The two shared `let`s of the
+  pathfinder become a cache with `invalidate()`. Eleven increments, each a PR with the suite green and a
+  `CACHE_VERSION` bump, with the page size after each; P1's published baseline must not change through any of them,
+  the publisher's own move included. Nine pure Node suites named with their cases, and a size ledger in the shape
+  of the inline-sinks ratchet. The folders fold last.
+- **The call this session made, cheap to reverse.** The bullet's own list of engines cannot reach its 300 KB
+  target: the markup is 141 KB and the stylesheet 158 KB, and the engines named are about 210 KB of a 662 KB
+  script. The design keeps the target and goes past the engines to the stylesheet, the visualize renderer, the
+  blueprint editor, the what-if lab and the groups tab, which are moved for the number and not purified. Question 1
+  of the bullet asks Devon whether to stop at increment 7 (about 620 KB), 9 (about 520 KB) or 11 (about 270 KB).
+- **What reading the code turned up.** The page is 968,296 bytes, not 936 KB, and has 436 top-level functions, not
+  428. Comments are 137 KB of it. `AppState` is read in 57 of the main script's 68 sections. `_blueprintDirty` is
+  written nine times in three sections. The tile-drawing helpers the editor renders with sit under the evacuation
+  door cards' banner. The heat-exclude check for a cell with no `floorId` reads the floor the editor is showing,
+  so one congestion number depends on the active tab; a room with no subject publishes as `ELA`; both are kept and
+  named. The main script makes no call at parse time, which is what lets a deferred module supply its names. The
+  legacy hard-coded map (22 KB) is reached only for a project with no geometry and holds a real building's room
+  numbers. 035 loads none of the three link-input files, so there is no state link to hold.
+- **Measured, with five pure-Node probes that were not kept:** bytes by block and by banner section, comments per
+  block, markup by panel, the dependency graph between sections (every top-level name a section uses from
+  another), and `AppState`/`document`/storage counts per section. The ladder's figures are those sections summed;
+  the bridge's bytes are an estimate.
+- **Not verified.** No module exists and nothing ran. That `.toString()` of a moved `export function` publishes
+  unchanged is read off the language, and P1's baseline suite is what would prove it. The three static sweeps
+  were read to confirm they follow a linked stylesheet; `select-suites.test.mjs` was read to find its
+  `Tools/schedule/` pin. No timing of A* was done.
+## Path 14 P3 designed, not built: the seating constraint solver (2026-10-05, AI-22, no `CACHE_VERSION`, no code)
+
+Audit entry AI-22, rank 35 (2+). A design pass under sprint mode: only `BACKLOG.md` changed (the P3 bullet under
+"Path 14", its Status line, and a note on rank 35). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** One pure ES module beside `seating.mjs`, `Tools/seating-chart/seating-solve.mjs`:
+  `normalizeRules()` (today's pairs, pinned desks and a new "leave empty" desk flag become rules of one shape),
+  `zones()` (front, back, edge, or desks the teacher taps), `feasibility()` (seven named impossibilities before
+  any draw), `score()` (hard, unseated, soft, compared left to right), `solve()` (today's construction pass in
+  most-constrained-first order, then min-conflicts moves and swaps, restarts while a hard rule is broken, a
+  counted budget so a seed repeats on any machine, a 2 s stop behind it), and `blame()` (impossible, held by
+  which rules, or out of budget). Rule kinds: apart, together (a pod at three or more, `anyOf` for "needs a
+  partner"), zone, seat, empty, space; a Must / Want weight; a reason field that is the sensitive text. The
+  section's old `apart` and `together` lists stay written from the rules, so an older cached page keeps the pairs
+  and loses only what it never knew. `assignSeats()` and `checkConstraints()` stay as they are, with their suites.
+- **What reading and measuring turned up.** Make grid's snap gives the 8 × 5 room column pitches of 132 and 110
+  px, so 10 of 40 desks have a diagonal neighbour and two have six while the rest have four or fewer: a keep-apart
+  pair can sit corner to corner in one column and not the next. Today's pass builds a connected pod while the
+  checker wants each pair adjacent, which is why a star of five is reported broken 45% of the time and never
+  `forced`. On a grid today's pairs are not the problem: 0% broken for up to 40 random keep-apart pairs and 8
+  together pairs over 300 seeds each. One pass costs 0.5 ms here, 800 about 400 ms; three full sections are
+  about 100 KB in the key and 6 MB across the 60-deep undo stack. The flag is read by nothing; the note travels in
+  the share link and reaches 045; 005's ids are its own, so a removed-and-re-added name loses its pairs.
+- **What the measurements were.** Two pure-Node probes importing the real `seating.mjs`, 200 to 300 invented
+  rooms and classes a shape, a Ryzen 5 2400GE; not kept. The figures are in the design.
+- **Decided here, cheap to reverse.** A tool module, not `_shared/` (only 005 solves seats; Path 13 P2's
+  seating-aware grouping reads distances from `SeatingRead`). No draw-for-draw parity with today's loop (its stop
+  rule cannot survive scored soft rules); "no worse" by measured rates instead, and golden files for the new
+  solver. The budget counted, not timed. The solve synchronous on the page until the classroom laptop says
+  otherwise. `empty` a desk field, so P4's shared room owns it. `why` stripped from the share payload by policy.
+  The grid-snap finding recorded and not fixed, since it changes every existing chart's adjacency.
+- **Left to Devon, listed in the design and not answered:** where an accommodation reason lives (005's key or the
+  shared record); whether rules travel in a link and print on the sub export; default hardness of keep-apart and
+  put-together; fill the room or leave the fought-over students out when hard rules cannot hold; chains as pods or
+  as pairs; the two new soft rules and visible weights; reading 002's pairs; tapped desks as zones before P4; what
+  "front row" means in a pod room; how long a click may take; a student in two periods.
+- **Not verified.** No solver exists and nothing ran in a browser. The search is designed, not prototyped; the
+  250 ms target is one machine's figure and a five-times guess for the laptop. The rooms were grids. No real
+  chart was read.
+
+---
 
 ## 060 Fitness & Skill Assessment Tracker: a report card per student (2026-10-05, AI-31-060, `CACHE_VERSION` v251; the commit messages say v249, which `main` took first)
 

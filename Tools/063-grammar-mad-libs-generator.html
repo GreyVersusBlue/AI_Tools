@@ -70,6 +70,14 @@
   }
   .tag-chip:hover { background: var(--accent-2); color: var(--accent-ink); border-color: var(--accent-2); }
 
+  .ws-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+  .ws-row label { margin: 0; }
+  .ws-row select { width: auto; flex: 1 1 14rem; min-width: 10rem; margin-bottom: 0; }
+  .ws-row button { padding: .4rem .75rem; font-size: .84rem; }
+  button.danger { background: var(--card); color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: var(--accent-ink); border-color: var(--err); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .save-msg { font-size: .8rem; color: var(--muted); min-height: 1.2em; margin: .5rem 0 0; }
   #printArea { display: none; }
   @media print {
     body * { visibility: hidden; }
@@ -98,13 +106,26 @@
   </div>
 
   <div class="card">
+    <div class="ws-row">
+      <label for="storySelect">Saved story</label>
+      <select id="storySelect"></select>
+      <button type="button" class="secondary" id="newStoryBtn">+ New</button>
+      <button type="button" class="secondary" id="dupStoryBtn">Duplicate</button>
+      <button type="button" class="secondary" id="renameStoryBtn">Rename</button>
+      <button type="button" class="danger" id="deleteStoryBtn">Delete</button>
+    </div>
+    <p class="hint" style="margin:.5rem 0 0;">Each saved story keeps its own text and its own word bank together, so a unit&rsquo;s story and its vocabulary come back as a pair.</p>
+    <p class="save-msg" id="storyMsg" role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="card">
     <label for="templateSelect">Story template</label>
     <select id="templateSelect"></select>
     <label for="customText" style="margin-top:.6rem;">Or write your own (mark blanks with tags — click one below to insert it)</label>
     <div class="tag-ref" id="tagRef" aria-label="Available story tags"></div>
     <textarea id="customText" placeholder="Once there was a {adjective} {animal} who loved to {verb}..."></textarea>
     <button class="secondary" id="useCustomBtn">Use my own story</button>
-    <p class="hint" id="customSavedHint" style="margin-top:.3rem;">Your custom story is saved automatically in this browser.</p>
+    <p class="hint" id="customSavedHint" style="margin-top:.3rem;">Your custom story and word banks are saved automatically, under the saved story chosen above, in this browser.</p>
   </div>
 
   <div class="card">
@@ -183,7 +204,8 @@
   var els = {};
   ['templateSelect', 'customText', 'useCustomBtn', 'storyPreview', 'bankBox', 'fillRandomBtn', 'clearFillBtn',
    'printBtn', 'printStory', 'printBank', 'tagRef',
-   'bankTagSelect', 'bankWordsInput', 'bankBuiltinHint', 'resetBankBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'bankTagSelect', 'bankWordsInput', 'bankBuiltinHint', 'resetBankBtn',
+   'storySelect', 'newStoryBtn', 'dupStoryBtn', 'renameStoryBtn', 'deleteStoryBtn', 'storyMsg'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var currentText = TEMPLATES[0].text;
   var filled = false;
@@ -206,7 +228,6 @@
   var STORE_VERSION = 1;
 
   var CUSTOM_BANKS_KEY = 'gmlg_custom_banks_v1';
-  var customBanks = {};
 
   /* A tag map, from either era: only the shape check the old loader ran. */
   function migrateBanks(fromVersion, data) {
@@ -214,18 +235,27 @@
     return data;
   }
 
-  function loadCustomBanks() {
-    customBanks = Store.get(CUSTOM_BANKS_KEY, {
+  /* The pre-multi-save word-bank map. Nothing writes this key any more: it is
+     read once, at boot, and becomes the first saved story's bank when the story
+     key has no saved-story list yet. It is left on disk untouched. */
+  function loadLegacyBanks() {
+    var banks = Store.get(CUSTOM_BANKS_KEY, {
       version: STORE_VERSION,
       migrate: migrateBanks,
       'default': {}
     }) || {};
-    Object.keys(customBanks).forEach(function (tag) {
-      if (!Array.isArray(customBanks[tag]) || !customBanks[tag].length) delete customBanks[tag];
-    });
+    return cleanBanks(banks);
   }
-  function saveCustomBanks() {
-    Store.set(CUSTOM_BANKS_KEY, customBanks, { version: STORE_VERSION });
+  function cleanBanks(banks) {
+    var out = {};
+    if (!banks || typeof banks !== 'object' || Array.isArray(banks)) return out;
+    Object.keys(banks).forEach(function (tag) {
+      var words = banks[tag];
+      if (!Array.isArray(words)) return;
+      words = words.filter(function (w) { return typeof w === 'string' && w.trim(); });
+      if (words.length) out[tag] = words;
+    });
+    return out;
   }
   function effectiveBank(tag) {
     return (customBanks[tag] && customBanks[tag].length) ? customBanks[tag] : (WORD_BANK[tag] || []);
@@ -236,30 +266,114 @@
       .filter(Boolean);
   }
 
-  /* ---------- custom story persistence ---------- */
-  var CUSTOM_STORY_KEY = 'gmlg_custom_story_v1';
-  var customSaveTimer = null;
+  /* ---------- saved stories ---------- */
+  /* Several named stories, each holding its text and its word bank together.
+     The shape is the toolkit's multi-save one (041, 048): a list, a current
+     pick, and a name per entry, with a Duplicate, Rename and Delete beside a
+     chooser. It lives in the story key this tool has always used, in Store's
+     envelope at version 2: {list: [{id, name, text, banks}], currentId}. No
+     new key, so Backup & Restore and the registry see nothing new.
 
-  /* The stored value is now the story text itself, inside Store's envelope.
-     The pre-adoption payload was {v: 1, text: "..."} — a hand-rolled version
-     stamp that nothing ever dispatched on — and arrives here as version 0. */
+     Version 0 is {v: 1, text} (written before Store); version 1 is the bare
+     story text. Both become one saved story called "My story" together with the
+     legacy bank map, so what a teacher had comes back as the first save with
+     nothing lost. An empty list is a real state: it is what Delete leaves. */
+  var CUSTOM_STORY_KEY = 'gmlg_custom_story_v1';
+  var DOC_VERSION = 2;
+  var FIRST_NAME = 'My story';
+  var customSaveTimer = null;
+  var bankSaveTimer = null;
+  var doc = { list: [], currentId: null };
+  var customBanks = {};          // the current saved story's bank (or {} with none)
+  var legacyBanks = {};
+
+  function uid() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  function makeSave(name, text, banks) {
+    return { id: uid(), name: name, text: text || '', banks: banks || {} };
+  }
+
+  function docFromLegacy(text, banks) {
+    var t = typeof text === 'string' ? text : '';
+    banks = cleanBanks(banks);
+    if (!t && !Object.keys(banks).length) return { list: [], currentId: null };
+    var first = makeSave(FIRST_NAME, t, banks);
+    return { list: [first], currentId: first.id };
+  }
+
+  function normalizeDoc(d) {
+    if (!d || typeof d !== 'object' || !Array.isArray(d.list)) return null;
+    var seen = {};
+    var list = [];
+    d.list.forEach(function (e) {
+      if (!e || typeof e !== 'object' || typeof e.id !== 'string' || !e.id || seen[e.id]) return;
+      seen[e.id] = true;
+      list.push({
+        id: e.id,
+        name: (typeof e.name === 'string' && e.name.trim()) ? e.name : FIRST_NAME,
+        text: typeof e.text === 'string' ? e.text : '',
+        banks: cleanBanks(e.banks)
+      });
+    });
+    var cur = typeof d.currentId === 'string' && seen[d.currentId] ? d.currentId : (list.length ? list[0].id : null);
+    return { list: list, currentId: cur };
+  }
+
   function migrateStory(fromVersion, data) {
-    if (typeof data === 'string') return data;
-    if (data && typeof data.text === 'string') return data.text;
+    if (fromVersion >= DOC_VERSION) return normalizeDoc(data);
+    if (typeof data === 'string') return docFromLegacy(data, legacyBanks);
+    if (data && typeof data.text === 'string') return docFromLegacy(data.text, legacyBanks);
     return null;
   }
 
-  function loadCustomStory() {
-    var text = Store.get(CUSTOM_STORY_KEY, {
-      version: STORE_VERSION,
+  function loadDoc() {
+    var d = Store.get(CUSTOM_STORY_KEY, {
+      version: DOC_VERSION,
       migrate: migrateStory,
       'default': null
     });
-    if (typeof text === 'string') els.customText.value = text;
+    doc = normalizeDoc(d) || docFromLegacy('', legacyBanks);
+  }
+
+  function saveDoc() {
+    Store.set(CUSTOM_STORY_KEY, doc, { version: DOC_VERSION });
+  }
+
+  function currentSave() {
+    for (var i = 0; i < doc.list.length; i++) if (doc.list[i].id === doc.currentId) return doc.list[i];
+    return null;
+  }
+
+  /* Typing with no saved story creates the first one, so nothing typed is lost
+     and nothing is stored for an untouched page. */
+  function ensureSave() {
+    var cur = currentSave();
+    if (cur) return cur;
+    cur = makeSave(FIRST_NAME, '', customBanks);
+    doc.list.push(cur);
+    doc.currentId = cur.id;
+    customBanks = cur.banks;
+    renderStorySelect();
+    return cur;
+  }
+
+  function saveCustomBanks() {
+    if (!currentSave() && !Object.keys(customBanks).length) return;
+    ensureSave().banks = customBanks;
+    saveDoc();
   }
 
   function saveCustomStory() {
-    Store.set(CUSTOM_STORY_KEY, els.customText.value, { version: STORE_VERSION });
+    if (!currentSave() && !els.customText.value) return;
+    ensureSave().text = els.customText.value;
+    saveDoc();
+  }
+
+  /* A debounced write must land on the story it was typed into, so every switch
+     flushes both timers before it moves. */
+  function flushPending() {
+    if (customSaveTimer) { clearTimeout(customSaveTimer); customSaveTimer = null; saveCustomStory(); }
+    if (bankSaveTimer) { clearTimeout(bankSaveTimer); bankSaveTimer = null; commitBankEdit(); }
   }
 
   function escapeHtml(s) {
@@ -335,26 +449,27 @@
     var mine = customBanks[tag] || [];
     els.bankWordsInput.value = mine.join(', ');
     els.bankWordsInput.placeholder = (WORD_BANK[tag] || []).join(', ');
-    els.bankBuiltinHint.textContent = mine.length
+    els.bankBuiltinHint.textContent = bankHintText(tag);
+  }
+  function bankHintText(tag) {
+    var mine = customBanks[tag] || [];
+    return mine.length
       ? 'Using your ' + mine.length + '-word list for this tag. Built-in: ' + (WORD_BANK[tag] || []).join(', ')
       : 'Using the built-in list (shown greyed in the box above). Type or paste words to replace it.';
   }
-  var bankSaveTimer = null;
+  function commitBankEdit() {
+    var tag = els.bankTagSelect.value;
+    var words = parseWordList(els.bankWordsInput.value);
+    if (words.length) customBanks[tag] = words;
+    else delete customBanks[tag];
+    saveCustomBanks();
+    renderBankTagSelect();
+    els.bankBuiltinHint.textContent = bankHintText(tag);
+    refresh();
+  }
   els.bankWordsInput.addEventListener('input', function () {
     clearTimeout(bankSaveTimer);
-    bankSaveTimer = setTimeout(function () {
-      var tag = els.bankTagSelect.value;
-      var words = parseWordList(els.bankWordsInput.value);
-      if (words.length) customBanks[tag] = words;
-      else delete customBanks[tag];
-      saveCustomBanks();
-      renderBankTagSelect();
-      var mine = customBanks[tag] || [];
-      els.bankBuiltinHint.textContent = mine.length
-        ? 'Using your ' + mine.length + '-word list for this tag. Built-in: ' + (WORD_BANK[tag] || []).join(', ')
-        : 'Using the built-in list (shown greyed in the box above). Type or paste words to replace it.';
-      refresh();
-    }, 250);
+    bankSaveTimer = setTimeout(function () { bankSaveTimer = null; commitBankEdit(); }, 250);
   });
   els.bankTagSelect.addEventListener('change', renderBankEditor);
   els.resetBankBtn.addEventListener('click', function () {
@@ -379,7 +494,104 @@
 
   els.customText.addEventListener('input', function () {
     clearTimeout(customSaveTimer);
-    customSaveTimer = setTimeout(saveCustomStory, 300);
+    customSaveTimer = setTimeout(function () { customSaveTimer = null; saveCustomStory(); }, 300);
+  });
+
+  /* ---------- saved-story controls ---------- */
+  function say(text) { els.storyMsg.textContent = text; }
+
+  function renderStorySelect() {
+    if (!doc.list.length) {
+      els.storySelect.innerHTML = '<option value="">No saved stories yet &mdash; type below to start one</option>';
+    } else {
+      els.storySelect.innerHTML = doc.list.map(function (e) {
+        return '<option value="' + escapeHtml(e.id) + '"' + (e.id === doc.currentId ? ' selected' : '') + '>' + escapeHtml(e.name) + '</option>';
+      }).join('');
+    }
+    var none = !doc.list.length;
+    els.storySelect.disabled = none;
+    els.dupStoryBtn.disabled = none;
+    els.renameStoryBtn.disabled = none;
+    els.deleteStoryBtn.disabled = none;
+  }
+
+  /* Show the current save (or the empty tool): its text, its bank, its preview.
+     A story that has a blank becomes the preview, as "Use my own story" does;
+     anything else leaves the chosen template showing. */
+  function showCurrent() {
+    var cur = currentSave();
+    customBanks = cur ? cur.banks : {};
+    els.customText.value = cur ? cur.text : '';
+    var text = els.customText.value.trim();
+    currentText = /\{[a-z-]+\}/.test(text) ? text : TEMPLATES[parseInt(els.templateSelect.value, 10) || 0].text;
+    filled = false;
+    renderStorySelect();
+    renderBankTagSelect();
+    renderBankEditor();
+    refresh();
+  }
+
+  function switchTo(id) {
+    flushPending();
+    if (!doc.list.some(function (e) { return e.id === id; })) return;
+    doc.currentId = id;
+    saveDoc();
+    showCurrent();
+    say('Opened \u201c' + currentSave().name + '\u201d.');
+  }
+
+  els.storySelect.addEventListener('change', function () { switchTo(els.storySelect.value); });
+
+  els.newStoryBtn.addEventListener('click', function () {
+    flushPending();
+    var name = window.prompt('Name for the new story:', 'New story');
+    if (name === null) return;
+    var e = makeSave(name.trim() || 'New story', '', {});
+    doc.list.push(e);
+    doc.currentId = e.id;
+    saveDoc();
+    showCurrent();
+    say('Started \u201c' + e.name + '\u201d, empty.');
+  });
+
+  els.dupStoryBtn.addEventListener('click', function () {
+    flushPending();
+    var cur = currentSave();
+    if (!cur) return;
+    var name = window.prompt('Name for the duplicate:', cur.name + ' (copy)');
+    if (name === null) return;
+    var copy = JSON.parse(JSON.stringify(cur));
+    copy.id = uid();
+    copy.name = name.trim() || (cur.name + ' (copy)');
+    doc.list.push(copy);
+    doc.currentId = copy.id;
+    saveDoc();
+    showCurrent();
+    say('Duplicated as \u201c' + copy.name + '\u201d.');
+  });
+
+  els.renameStoryBtn.addEventListener('click', function () {
+    var cur = currentSave();
+    if (!cur) return;
+    var name = window.prompt('Rename this story:', cur.name);
+    if (name === null) return;
+    cur.name = name.trim() || cur.name;
+    saveDoc();
+    renderStorySelect();
+    say('Renamed to \u201c' + cur.name + '\u201d.');
+  });
+
+  els.deleteStoryBtn.addEventListener('click', function () {
+    var cur = currentSave();
+    if (!cur) return;
+    if (!window.confirm('Delete \u201c' + cur.name + '\u201d, with its word bank? This cannot be undone.')) return;
+    flushPending();
+    var idx = doc.list.indexOf(cur);
+    doc.list.splice(idx, 1);
+    doc.currentId = doc.list.length ? doc.list[Math.max(0, idx - 1)].id : null;
+    saveDoc();
+    showCurrent();
+    say('Deleted \u201c' + cur.name + '\u201d.' + (doc.list.length ? '' : ' Nothing is saved now; type to start a new story.'));
   });
 
   els.useCustomBtn.addEventListener('click', function () {
@@ -407,8 +619,12 @@
   });
 
   /* ---------- boot ---------- */
-  loadCustomStory();
-  loadCustomBanks();
+  legacyBanks = loadLegacyBanks();
+  loadDoc();
+  var bootSave = currentSave();
+  customBanks = bootSave ? bootSave.banks : {};
+  els.customText.value = bootSave ? bootSave.text : '';
+  renderStorySelect();
   renderBankTagSelect();
   renderBankEditor();
   refresh();

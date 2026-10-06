@@ -83,8 +83,10 @@ const browser = await launch();
   await settle(page, 600);                 // the 300 ms debounce, with room
 
   const wrapped = await page.evaluate(k => JSON.parse(localStorage.getItem(k)), STORY_KEY);
-  eq(wrapped.v, 1, '2: the write stamps a Store envelope');
-  eq(wrapped.data, 'A {adjective} {food} rolled downhill.', '2: the story is the envelope payload, not a {text} blob');
+  eq(wrapped.v, 2, '2: the write stamps a Store envelope, at the saved-stories version');
+  eq(wrapped.data.list.length, 1, '2: the old story is now one saved story');
+  eq(wrapped.data.list[0].text, 'A {adjective} {food} rolled downhill.', '2: the story text is that save\'s text, not a {text} blob');
+  eq(wrapped.data.list[0].name, 'My story', '2: named My story');
 
   // and it comes back on the next visit, which is the whole point
   const second = await page.context().newPage();
@@ -105,9 +107,10 @@ const browser = await launch();
   await page.fill('#bankWordsInput', 'tteokbokki, injera, pierogi');
   await settle(page, 600);
 
-  const banks = await page.evaluate(k => JSON.parse(localStorage.getItem(k)), BANKS_KEY);
-  eq(banks.v, 1, '3: the bank map is enveloped');
-  eq(banks.data.food, ['tteokbokki', 'injera', 'pierogi'], '3: with the teacher\'s words inside it');
+  const stored = await page.evaluate(k => JSON.parse(localStorage.getItem(k)), STORY_KEY);
+  eq(stored.v, 2, '3: the bank rides inside the saved-story envelope');
+  eq(stored.data.list[0].banks.food, ['tteokbokki', 'injera', 'pierogi'], '3: with the teacher\'s words inside that save');
+  eq(await page.evaluate(k => localStorage.getItem(k), BANKS_KEY), null, '3: the old bank key is not written any more');
 
   const second = await page.context().newPage();
   await second.goto(PAGE, { waitUntil: 'networkidle' });

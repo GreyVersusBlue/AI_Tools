@@ -30,6 +30,7 @@
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/export.js"></script>
 <script src="review-game-board/rgb-store.js"></script>
 <script src="review-game-board/rgb-bank-store.js"></script>
 <script src="../_shared/media-db.js"></script>
@@ -1263,10 +1264,7 @@
         ['Example Category', 100, 'This is a sample question.', 'This is the sample answer.'],
         ['Example Category', 200, 'A harder sample question.', 'Its answer.']
       ];
-      var ws = XLSX.utils.aoa_to_sheet(aoa);
-      var wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Questions');
-      XLSX.writeFile(wb, 'review-game-board-template.xlsx');
+      ExportKit.toXlsx({ name: 'Questions', rows: aoa }, { filename: 'review-game-board-template.xlsx' });
     }).catch(function (err) {
       alert(err.message);
     });

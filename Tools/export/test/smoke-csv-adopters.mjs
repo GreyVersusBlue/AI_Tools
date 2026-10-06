@@ -1,5 +1,5 @@
 // smoke-csv-adopters.mjs — the pages that save a CSV through ExportKit.toCsv()
-// (Path 7 P4): 003, 008, 018, 033, 068 and 075.
+// (Path 7 P4): 003, 008, 018, 033, 060, 068 and 075.
 //
 //   node Tools/export/test/smoke-csv-adopters.mjs      (npm run test:csv-adopters)
 //
@@ -34,13 +34,14 @@ const eq = (a, b, label) => ok(JSON.stringify(a) === JSON.stringify(b), `${label
 const sorted = rows => rows.map(r => JSON.stringify(r)).sort();
 
 /* The pages, by name. CI's selector runs a suite when a page its source names
-   changes (select-suites.mjs, rule 3) and does not follow imports, so the six
+   changes (select-suites.mjs, rule 3) and does not follow imports, so they
    are written here as well as in the table, and the two lists have to agree. */
 const PAGES = [
   'Tools/003-rubric-builder.html',
   'Tools/008-behavior-points-tracker.html',
   'Tools/018-qr-scavenger-hunt-builder.html',
   'Tools/033-ssr-log-tracker.html',
+  'Tools/060-fitness-skill-assessment-tracker.html',
   'Tools/068-parent-contact-log.html',
   'Tools/075-staff-directory-builder.html',
 ];
