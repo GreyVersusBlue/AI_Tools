@@ -9,6 +9,49 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 074 Science Safety Label Maker: two symbols on one label (2026-10-06, AI-31-074, `CACHE_VERSION` v265)
+
+Audit entry AI-31, BACKLOG rank 111 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** A queued label may carry an optional second symbol, `symbol2`, printed beside the first. The edit form has a **Second symbol (optional)**
+  picker under the first: "No second symbol" and the nine hazard symbols, never the equipment box. The symbol chosen as the first is disabled in it, choosing
+  the second as the first clears the second, and an equipment label has no second symbol to offer. Add, Edit, Save changes and the Duplicate button carry it;
+  a queue row shows both symbols and names them ("Flammable + Toxic / Poison"). Both pickers say which button is chosen with `aria-pressed`, are named groups,
+  and keep focus on the pressed button when they are rebuilt.
+- **Shape, not array.** The row's text said the item "would need to hold an array of symbols". It is one optional field instead: three symbols were never asked
+  for, a one-symbol label stays byte for byte what it was, and a share link to an older page still prints the first symbol. A label with no second symbol
+  stores **no** `symbol2` key at all (not `''`), so a saved set is never rewritten by this change. `secondKey(item)` is the one place a second symbol is
+  judged: it is the key only if this build knows it, it is not the equipment box, it is not the first symbol again, and the label is not the equipment box.
+  Anything else (a share link from a newer build, hand-edited storage) prints the first symbol only and is not rewritten.
+- **What a duplicate is (the row asked me to say).** The page had no duplicate detection, only the Duplicate button, which copies a row. So a new, soft
+  one: two labels are the same when their text matches (case and outer spaces ignored) **and** they carry the same symbols **in the same order**. Order counts
+  because the label prints in that order; flammable-then-toxic and toxic-then-flammable are two labels, and one symbol is never the same as two. Copies are not
+  part of it. Adding or editing onto a twin shows a note (`#dupNote`, `role=status`) and **still adds** (or keeps both rows), as an old duplicate always did:
+  merging or refusing would change what a teacher who wants two rows gets. The Duplicate button copies both symbols and says nothing. Reversible: the note is
+  one function, `labelKey()`.
+- **The printed card.** A one-symbol card is the svg and the text, exactly as before. A two-symbol card is a `.lsyms` row of two svgs and the text. The row is
+  the height of one symbol with the same margin, so a two-symbol label is as tall and as wide as its one-symbol twin at all three sizes, the 1.5, 2 and
+  2.75 in minimum holds, and a sheet takes the same pages. The row is `flex-wrap`, so on a paper too narrow for two symbols across a label (a small label on A5)
+  it wraps to two lines and the card grows; nothing clips. Symbols keep 44 px (60 large) and a 0.1 in gap.
+- **Old against new.** A saved set of 41 labels (every symbol, one long label) at small, medium and large: the printed sheet's HTML is identical to the old page's
+  byte for byte, the stored string is untouched, and `pdftoppm` at 60 dpi of the old and new PDFs hashes the same page for page (2, 4 and 7 pages). Done once by hand
+  against `git show main:` (not kept as a test); what stays is a golden of the first old card's `outerHTML`, a stored-string check and the page-count twin
+  below.
+- **Tests.** New `Tools/science-safety-label-maker/test/smoke-two-symbols.mjs` (`test:safety-label-two-symbols`, port 8501, **239 assertions**; `ONLY=2,3` runs
+  chosen sections). The form, the duplicates, the card geometry at the three sizes in light and dark (no clipping, overlap, squeeze or spill; heights and
+  widths equal to the one-symbol twin sheet; 0.1 in gap), 18 PDF page counts of a set with second symbols against the same set without, the A5 wrap, the
+  preview's page count against Chromium's PDF on four sheets, a share round trip with five unusable second symbols, hand-edited storage, and axe. The existing
+  074 suites are unchanged and pass: smoke-print 946, smoke-preview 721; `smoke-share-rollout` 1580; `test:a11y -- --only 074` and `audit-print --check --only 074`
+  clean; every `check:*`, `lint`, `check:precache -- --base origin/main`, `check:adoption -- --check` pass.
+- **35 breaks on purpose** (the page, one change each). 11 caught first time in a first batch; of 24 in the second, 21 were caught, 2 survived and 1 never ran
+  (a wrong anchor). The survivors: **B23** (the preview skipped building the sheet) survived because the test took the PDF first and printing builds the sheet,
+  so section 7 now opens the preview first; **B31** (focus lost after choosing the first symbol) had no assertion, now has one. B30 was re-written and run. All three
+  are caught. B29 (picker group unnamed) is caught by a thrown error rather than a named assertion. Not broken: the `btn.disabled` guard in the second picker's click
+  handler, which is equivalent (a disabled button fires no click, in a browser or from `.click()`).
+- **Did not do / did not verify.** `audit-print`'s seed (`Tools/a11y-sweep/seeds.mjs`) has no two-symbol label and is outside this row's files, so its run covers
+  the old sheet; the suite's own print-media measures are the check for the new card. No label stock was tried, nothing was printed on paper, no screen reader
+  was used, and the full `npm test` was not run. Left in the section: multiple saved label sets, the Lab Safety Contract Tracker link, GHS pictograms, QR to SDS.
+
 ## 071 Picture-Prompt Generator: named picture sets (2026-10-06, AI-31-071, `CACHE_VERSION` v264)
 
 Audit entry AI-31, BACKLOG rank 108 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).

@@ -487,7 +487,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
-| 111 | Two symbols per label — across the edit form, duplicate logic and the printed card | 074 | ½ | | [074 Science Safety Symbol & Equipment Label Maker](#074--science-safety-symbol--equipment-label-maker) |
 | 112 | Wallet-card layout with QR — a lanyard insert with a phone or email link per entry | 075 | ½ | | [075 Staff Directory / Quick-Reference Builder](#075--staff-directory--quick-reference-builder) |
 | 113 | Room-assignment view — define rooms and proctors, auto-route by accommodation, print proctor lists | 077 | ½ | | [077 Testing Accommodations Reference Card Generator](#077--testing-accommodations-reference-card-generator) |
 | 114 | Multiple named saved prompt sets — a general slip, a lab-day slip and a testing-day slip at once | 076 | ½ | | [076 Sub Note / Feedback Slip Generator](#076--sub-note--feedback-slip-generator) |
@@ -11816,12 +11815,11 @@ tools.
   else) or to a teacher-authored local page/note per hazard (simpler,
   fully local, but less authoritative)?
 - ~~Still open from the Quick Wins list: **reordering the queue**~~ —
-  **done, 2026-08-12** (see Status). Still open: **combining two symbols
-  on one label**, which
-  would need the queue item shape to hold an array of symbols instead of
-  one and touches the print-card rendering, the edit form, and the
-  duplicate logic all at once — sizeable enough to deserve its own round
-  rather than being folded in here.
+  **done, 2026-08-12** (see Status). ~~**Combining two symbols on one label**~~ —
+  **done, 2026-10-06 (v265, AI-31-074).** A label may carry an optional second
+  symbol, `symbol2`, beside the first: an optional field rather than an array, so a
+  saved sheet from before reads as it was. See `HISTORY.md`. Three or more symbols on
+  one label were not built and nobody has asked.
 
 #### Platform themes that matter here
 
