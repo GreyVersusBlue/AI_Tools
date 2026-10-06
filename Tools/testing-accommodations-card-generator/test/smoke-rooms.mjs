@@ -333,7 +333,7 @@ console.log('077 — rooms, proctors and the route');
   eq(await page.evaluate(() => window.__printCalls), 0, 'Preview opens no print dialog');
   await page.keyboard.press('Escape');
   await settle(page, 100);
-  eq(await page.evaluate(() => document.activeElement.id), 'previewRoomsBtn', 'Escape closes the preview and the focus is back on the button');
+  eq(await page.evaluate(() => document.activeElement.id), 'previewBtn', 'Escape closes the preview and the focus is back on the Preview pages button it is built on');
   await page.emulateMedia({ media: 'print' });
   const buf = await page.pdf({ preferCSSPageSize: true, printBackground: false });
   await page.emulateMedia({ media: null });

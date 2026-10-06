@@ -509,8 +509,15 @@
   // US Letter with half-inch margins, which is what print-kit.css's card rows divide.
   PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
 
+  /* What Print and Preview build: the cards (the header buttons) or the proctor
+     lists (the buttons on the rooms card). One sheet area, one preview call
+     site: the rooms buttons set this and press the same Preview / Print the
+     header has, the way 018's do, so the two cannot disagree about the sheet. */
+  var sheetMode = 'cards';
+
   /** Builds the sheet. False, with the reason said, when there is nobody to print. */
   function renderSheet() {
+    if (sheetMode === 'rooms') return renderProctorSheets();
     if (!state.roster.length) { alert('Save a roster first.'); return false; }
     var who = els.printWhoSelect.value;
     var names = who ? [who] : visibleRoster();
@@ -523,11 +530,13 @@
   function printSheet() {
     if (renderSheet()) window.print();
   }
-  els.printBtn.addEventListener('click', printSheet);
+  els.printBtn.addEventListener('click', function () { sheetMode = 'cards'; printSheet(); });
 
   // The same sheet, cut into the pages it will print on (PrintKit.preview,
   // Path 7 P5). It opens no print dialog; its own Print button does.
+  var roomsAsked = false;
   els.previewBtn.addEventListener('click', function () {
+    sheetMode = roomsAsked ? 'rooms' : 'cards';
     if (renderSheet()) PrintKit.preview({ trigger: els.previewBtn, onPrint: printSheet });
   });
 
@@ -886,12 +895,10 @@
     chosen.forEach(function (r) { els.printArea.appendChild(buildProctorSheet(r, placed)); });
     return true;
   }
-  function printProctorSheets() {
-    if (renderProctorSheets()) window.print();
-  }
-  els.printRoomsBtn.addEventListener('click', printProctorSheets);
+  els.printRoomsBtn.addEventListener('click', function () { sheetMode = 'rooms'; printSheet(); });
   els.previewRoomsBtn.addEventListener('click', function () {
-    if (renderProctorSheets()) PrintKit.preview({ trigger: els.previewRoomsBtn, onPrint: printProctorSheets });
+    roomsAsked = true;
+    try { els.previewBtn.click(); } finally { roomsAsked = false; }
   });
 
   /* ---------- share the accommodation list: _shared/share.js (Path 6 P3) ----------
