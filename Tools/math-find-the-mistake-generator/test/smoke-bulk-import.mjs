@@ -6,8 +6,8 @@
 //
 //   Reading. Tab- or comma-separated rows of problem, shown work, fix and
 //   explanation (plus an optional topic and grade band), with a header row
-//   optional, quoted cells that hold line breaks, commas and quotes, CRLF
-//   and a byte-order mark.
+//   optional, quoted cells that hold line breaks, commas, tabs and quotes
+//   (even in the first row), and a byte-order mark.
 //
 //   Preview before anything is saved. Each row that cannot be used is named
 //   by line with its reason (wrong column count, empty problem, unknown topic,
@@ -128,9 +128,9 @@ eq(b2[0].category + '/' + b2[0].band, 'fractions/elementary', 'a row without top
 eq(b2[1].category + '/' + b2[1].band, 'percents/high', 'a row naming them (by label, and by band id) takes those');
 eq(b2[0].problem, 'Find 10% of 80', 'a comma-separated problem is read');
 
-/* ── 3. quoted cells, CRLF, BOM ──────────────────────────────────────────── */
+/* ── 3. quoted cells, BOM ──────────────────────────────────────────── */
 await load();
-await paste('﻿Problem' + T + 'Work' + T + 'Fix' + T + 'Explain\r\n"Solve: ""x"" + 1 = 2, then check"' + T + '"1 + 1 = 2' + '\nx = 1"' + T + '"x = 1' + T + 'again"' + T + 'Quoted, with a comma\r\n');
+await paste('\uFEFFProblem' + T + 'Work' + T + 'Fix' + T + 'Explain\n"Solve: ""x"" + 1 = 2, then check"' + T + '"1 + 1 = 2' + '\nx = 1"' + T + '"x = 1' + T + 'again"' + T + 'Quoted, with a comma\n');
 l = (await preview(), await lists());
 eq(l.add.length, 1, 'a quoted row with line breaks, a comma, a tab and doubled quotes is one row');
 await page.click('#importApplyBtn');
@@ -138,7 +138,30 @@ let b3 = (await bankParsed())[0];
 eq(b3.problem, 'Solve: &quot;x&quot; + 1 = 2, then check', 'a doubled quote is one quote (stored as text)');
 eq(b3.work, '1 + 1 = 2<br>x = 1', 'a line break inside quotes becomes a step break');
 eq(b3.fix, 'x = 1\tagain', 'a tab inside quotes stays in the cell');
-eq(b3.explain, 'Quoted, with a comma', 'CRLF and a byte-order mark do not leak into the cells');
+eq(b3.explain, 'Quoted, with a comma', 'a byte-order mark does not leak into the cells');
+// a byte-order mark in front of a quoted first cell (a file read as text) does not stop the quote opening
+await load();
+await paste('\uFEFF"Quoted, first"' + T + 'w' + T + 'f' + T + 'e');
+await preview();
+eq((await lists()).add.length, 1, 'a byte-order mark before a quoted first cell leaves it one cell');
+await page.click('#importApplyBtn');
+eq((await bankParsed())[0].problem, 'Quoted, first', 'with the quotes taken off and the comma kept');
+// the first row of the paste starts with a quoted cell that runs over a line break: the delimiter still comes from outside the quotes
+await load();
+await paste('"Line one\nline two"' + T + '"a\nb"' + T + 'f' + T + 'e\nSecond' + T + 'w' + T + 'f' + T + 'e');
+await preview();
+l = await lists();
+eq(l.add.length + '/' + l.bad.length, '2/0', 'tab-separated rows are read when the first cell has a line break inside quotes');
+await page.click('#importApplyBtn');
+const multi = (await bankParsed())[0];
+eq(multi.problem + '|' + multi.work, 'Line one<br>line two|a<br>b', 'and the line breaks in that first row are step breaks');
+// a tab inside quotes in a comma paste does not turn it into a tab paste
+await load();
+await paste('"a\tb",w,f,e');
+await preview();
+eq((await lists()).add.length, 1, 'a tab inside quotes does not make a comma paste tab-separated');
+await page.click('#importApplyBtn');
+eq((await bankParsed())[0].problem, 'a\tb', 'and stays in the cell');
 
 /* ── 4. bad rows are named with a reason ─────────────────────────────────── */
 await load();
@@ -367,6 +390,9 @@ await page.click('#importApplyBtn');
 ok(/Nothing was saved/.test(await status()), 'a refused save says so: ' + await status());
 ok(/Keep me/.test(await page.innerText('#bankList')) && !/Too big/.test(await page.innerText('#bankList')), 'and the bank on screen is the old one');
 eq(await page.inputValue('#importText'), ['Too big', 'w', 'f', 'e'].join(T), 'and the paste is still there to try again');
+await page.click('#bankList [data-toggle="b0"]');
+ok(!/Too big/.test(await page.innerText('#bankList')), 'and the refused problem is not in memory either: the next redraw of the bank does not show it');
+eq(await page.evaluate(() => document.getElementById('bankCount').textContent), '19', 'the count after that redraw is the 18 built-ins and the one kept');
 
 /* ── 13. imported problems travel in a share link like any other ─────────── */
 await load();

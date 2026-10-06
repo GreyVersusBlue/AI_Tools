@@ -689,14 +689,30 @@
   var IMPORT_MAX_ROWS = 500;
   var importPlan = null; // what the last Preview found, or null when stale
 
+  /** A tab anywhere in the first row, outside double quotes, makes the paste
+      tab-separated; otherwise it is comma-separated. The first row is the
+      first line that has anything on it, and a quoted cell may run across
+      lines, so this reads past a line break that is inside quotes. */
+  function firstRowDelimiter(text) {
+    var inQuotes = false, started = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i);
+      if (ch === '"') { inQuotes = !inQuotes; started = true; continue; }
+      if (inQuotes) continue;
+      if (ch === '\t') return '\t';
+      if (ch === '\n') { if (started) return ','; continue; }
+      if (ch !== ' ' && ch !== '\r') started = true;
+    }
+    return ',';
+  }
+
   /** Text → [{ line, cells, unclosed }]. Tab-separated when the first line
       has a tab, otherwise comma-separated. A cell that opens with a double
       quote runs to the closing quote and may hold line breaks and delimiters
       ("" is a quote). Blank lines are skipped. */
   function parseRows(text) {
-    text = String(text || '').replace(/^﻿/, '').replace(/\r\n?/g, '\n');
-    var firstLine = text.split('\n').filter(function (l) { return l.trim() !== ''; })[0] || '';
-    var delim = firstLine.indexOf('\t') !== -1 ? '\t' : ',';
+    text = String(text || '').replace(/^\uFEFF/, '');
+    var delim = firstRowDelimiter(text);
     var rows = [], cells = [], cell = '', line = 1, rowLine = 1, i = 0, n = text.length;
     var quoted = false, atStart = true, unclosed = false, any = false;
     function endCell() { cells.push(cell.trim()); cell = ''; atStart = true; }

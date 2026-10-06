@@ -473,7 +473,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 94 | Export into Review Game Board — emit the question set in the board’s category/points format | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
-| 103 | Bulk import a custom bank — paste problem/work/fix/explain rows for a whole unit | 066 | ½ | | [066 Math "Find the Mistake" Warm-Up Generator](#066--math-find-the-mistake-warm-up-generator) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 105 | Conference print packet — one student’s full contact history plus a blank note area | 068 | ½ | | [068 Parent/Guardian Contact Log](#068--parentguardian-contact-log) |
 | 106 | Live circuit rotation timer — a projector mode that counts down each station and signals the rotation | 069 | ½ | | [069 PE Warm-Up Circuit Card Generator](#069--pe-warm-up-circuit-card-generator) |
@@ -9797,10 +9796,6 @@ mean updating two different tools.
 
 #### Major Features
 
-- **Bulk import a custom bank** from a pasted list (problem | work | fix |
-  explain, tab- or `|`-separated), matching the bulk-import pattern already
-  proven in Staff Directory Builder and Review Game Board — typing one
-  problem at a time in the Add form doesn't scale past a handful.
 - **Fraction/decimal/percent overlap with the sibling backlog idea**:
   this backlog separately lists a Fraction&ndash;Decimal&ndash;Percent
   Conversion Drill Generator (building next in this round). Some of this
@@ -9823,9 +9818,9 @@ pull exactly the error type their class is struggling with, in the format
 that gets students actively hunting for the error rather than passively
 reading the reveal.** Category filters get the right problem in front of
 the right class; an interactive "click the wrong step" mode turns a
-one-click reveal into real error-analysis practice; and bulk import means
-a teacher's own hand-written trick questions can join the bank in minutes,
-not one form submission at a time.
+one-click reveal into real error-analysis practice; and bulk import (shipped,
+v256) means a teacher's own hand-written trick questions can join the bank in
+minutes, not one form submission at a time.
 
 #### Open Questions
 
@@ -9841,9 +9836,9 @@ not one form submission at a time.
 
 #### Platform themes that matter here
 
-- **P7 (cross-tool)** — bulk import (Staff Directory Builder, Review Game
-  Board) and the fraction/decimal/percent overlap with this round's next
-  tool are both direct opportunities.
+- **P7 (cross-tool)** — bulk import has shipped (v256: a paste box with a
+  preview, append or replace); the fraction/decimal/percent overlap with this
+  round's next tool is still an opportunity.
 - **P3 (share links)** — the "click the wrong step" interactive mode is
   this toolkit's on-screen-practice pattern applied to error analysis.
 - **P15 (first run)** — category filters and grade-band scoping both
