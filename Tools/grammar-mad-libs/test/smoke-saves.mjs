@@ -362,6 +362,32 @@ const clean = async (page, tag) => {
   await clean(page, '7b');
 }
 
+/* ── 7c. Which save opens after a delete (three saves) ────────────────── */
+{
+  const page = await open();
+  await page.fill('#customText', 'Alpha {noun}.');
+  await settle(page, 600);
+  for (const n of ['Beta', 'Gamma']) {
+    page.__answers.push(n);
+    await page.click('#newStoryBtn');
+    await page.fill('#customText', n + ' {noun}.');
+    await settle(page, 600);
+  }
+  const ids = await page.$$eval('#storySelect option', os => os.map(o => o.value));
+  await page.selectOption('#storySelect', ids[1]);          // Beta, the middle one
+  await settle(page, 100);
+  page.__answers.push(true);
+  await page.click('#deleteStoryBtn');
+  await settle(page, 150);
+  eq(await names(page), ['My story', 'Gamma'], '7c: the middle save is gone');
+  eq(await selectedName(page), 'My story', '7c: deleting a middle save opens the one before it');
+  page.__answers.push(true);
+  await page.click('#deleteStoryBtn');                     // the first one
+  await settle(page, 150);
+  eq(await selectedName(page), 'Gamma', '7c: deleting the first save opens the one after it');
+  await clean(page, '7c');
+}
+
 /* ── 8. Opening a save chooses what previews ──────────────────────────── */
 {
   const page = await open();
