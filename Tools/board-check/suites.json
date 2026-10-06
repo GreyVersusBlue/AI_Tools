@@ -128,6 +128,7 @@
     "Tools/lab-report-template-builder/test/smoke-typed-columns.mjs",
     "Tools/dichotomous-key-builder/test/smoke-trace-path.mjs",
     "Tools/dichotomous-key-builder/test/smoke-tree-view.mjs",
+    "Tools/fraction-decimal-percent-drill-generator/test/smoke-value-range.mjs",
     "Tools/music-sightreading-generator/test/smoke-glyph-fallback.mjs",
     "Tools/virtual-manipulatives-board/test/smoke-snap-grid.mjs",
     "Tools/virtual-manipulatives-board/test/smoke-rendered-pieces.mjs",
