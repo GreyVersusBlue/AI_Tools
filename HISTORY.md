@@ -9,6 +9,44 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 071 Picture-Prompt Generator: named picture sets (2026-10-06, AI-31-071, `CACHE_VERSION` v262)
+
+Audit entry AI-31, BACKLOG rank 108 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** A **Picture set** chooser on the upload card with **+ New**, **Duplicate**, **Rename** and **Delete** (063's labels and its prompt-and-confirm
+  wording), each set holding its pictures and the prompts pinned to them. The stage, the round count and the printed cards draw only from the open set;
+  the 12 starter pictures stay a separate switch, in their own key, outside every set. Prompt sets are untouched and independent of picture sets.
+- **Where the pictures live, and what a set costs.** In the shared media store, as since Path 4 P4, by content hash; a set holds only `idb:` references.
+  So a set costs exactly the bytes of its distinct pictures and **a duplicate costs nothing** (one stored record, two names). The line under the chooser
+  says it: "“name”: N pictures, X KB", and, with more than one set, the total of distinct pictures. `ppg-image.js` gained `discard(refs)`, which removes
+  records through the existing `MediaDB.store({ns}).remove`; `_shared/` is untouched.
+- **Quota.** Before this, a refused localStorage write was swallowed silently. Now `saveImages()` returns whether it wrote, and a failure is said in the
+  set bar's status line ("could not save that change: its storage is full or blocked") instead of the success message. The usage line turns into a warning
+  at 80% of `navigator.storage.estimate()` ("used X of the Y it allows this site, so it is nearly full. Delete a picture set…"). Nothing blocks an upload.
+  Not measured: a real browser near its quota; the estimate is mocked in the suite.
+- **Storage shape, no new key.** `ppg_images_v1` is now `{ v: 2, activeId, sets: [{ id, name, images }] }`; before it was the bare list. A bare list reads as one
+  set, "My pictures", **entry for entry, and is not rewritten until the teacher changes something** (assertions: the key is byte-identical after load; after
+  the first change the set deep-equals the old list; every stored record has the same id and the same bytes, nothing re-encoded). The registry row for 071
+  already declares the key and `gvb-media` is backed up by default, so 009 captures every set with no registry edit (the suite asserts both against the file).
+  **Trap:** an older copy of the page, still cached in another tab, reads the new shape as no pictures and would write a bare list over it. Same trade 063
+  took; a service-worker update replaces the copy.
+- **Delete.** Confirms, naming the set and its pictures and saying a shared picture stays. It frees the pictures no other set names **at once** (computed from
+  memory and a fresh read of the key), not at the next boot, because boot's collection has a ten-minute grace period. Boot's collection now keeps every set's
+  references, not just the open set's. Deleting the last set leaves one empty "My pictures". Deleting a prompt set now clears its pins on pictures in
+  every picture set (it used to touch only the open list).
+- **Decisions, reversible.** Duplicate shares references instead of copying bytes. A set's name need not be unique. The inline-sink baseline for 071 stays at 5: the chooser is built as
+  elements with `textContent`, because the first version (an escaped `innerHTML`) raised the count to 6.
+- **Tests.** New `Tools/picture-prompt-generator/test/smoke-image-sets.mjs` (`test:picture-prompt-image-sets`, port 8499, 112 assertions); the other three 071
+  suites read the key through the active set (their seeds still use the old list, which is the migration case). **34 breaks on purpose, all failing the
+  suite** (a break needing a browser was one run each); two survived at first and got assertions (a switch that left stale round indexes, and a boot that
+  hydrated only the open set); a planned break for print drawing from every set was not written, the pool break covers the same line. `test:a11y --only 071`,
+  `audit-print --check --only 071`, `smoke-share-rollout` (1580), `smoke-dark-rollout` (966), the service-worker suites, every `check:*`, `lint`,
+  `check:precache -- --base main` and `check:adoption -- --check` pass.
+- **Not run / not verified.** The full `npm test`; nothing printed on paper; no real screen reader; no browser near its real quota; a duplicate made while
+  pictures are still inline (a browser with no IndexedDB) does copy the text into localStorage, since there is no shared record to point at.
+
+---
+
 ## 069 PE Warm-Up Circuit Card Generator: "Run the circuit", a projector timer with a rotation signal (2026-10-06, AI-31-069, `CACHE_VERSION` v261)
 
 Audit entry AI-31, BACKLOG rank 106 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
