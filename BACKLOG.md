@@ -475,7 +475,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 103 | Bulk import a custom bank — paste problem/work/fix/explain rows for a whole unit | 066 | ½ | | [066 Math "Find the Mistake" Warm-Up Generator](#066--math-find-the-mistake-warm-up-generator) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
-| 105 | Conference print packet — one student’s full contact history plus a blank note area | 068 | ½ | | [068 Parent/Guardian Contact Log](#068--parentguardian-contact-log) |
 | 106 | Live circuit rotation timer — a projector mode that counts down each station and signals the rotation | 069 | ½ | | [069 PE Warm-Up Circuit Card Generator](#069--pe-warm-up-circuit-card-generator) |
 | 107 | Roster-driven pre-named half-sheets — read `np_rosters` and print one per student | 070 | ½ | | [070 Peer Feedback / Editing Checklist Generator](#070--peer-feedback--editing-checklist-generator) |
 | 108 | Multiple named saved image sets, so two vocabulary libraries coexist without re-uploading | 071 | ½ | | [071 Picture-Prompt Speaking/Writing Task Generator](#071--picture-prompt-speakingwriting-task-generator) |
@@ -9928,10 +9927,6 @@ an instructor physically present.
 - **Year-end archive/rollover**: snapshot the year's log into a dated export
   and start fresh, mirroring the archive pattern already built for Hall Pass
   Log and Behavior & Points Tracker's daily history.
-- **A real conference print packet**: one student's contact history plus a
-  blank note-taking area, formatted for handing to an admin or printing right
-  before a parent walks in — the actual "quick reference before a
-  conference" the backlog idea named.
 
 #### Moonshot / North Star
 
@@ -9960,9 +9955,9 @@ change?").
 - **P7 (cross-tool)** — shares roster storage with Name Picker/Class Roster
   Hub already; multiple sections would make it a first-class citizen of that
   shared-roster ecosystem instead of a one-off reader.
-- **P6 (print quality)** — the conference packet above is the whole point of
-  this tool's existence per the backlog description; it's currently just a
-  plain table.
+- **P6 (print quality)** — the conference packet shipped (v256): oldest first,
+  a summary line, the name on every sheet, a ruled notes area. It has not been
+  printed on paper.
 - **P15 (first run)** — outcome templates would remove almost all the typing
   from the first time someone uses this mid-class-period.
 

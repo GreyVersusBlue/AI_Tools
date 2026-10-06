@@ -9,6 +9,30 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 068 Parent/Guardian Contact Log: the conference print packet (2026-10-06, AI-31-068, `CACHE_VERSION` v256)
+
+Audit entry AI-31, BACKLOG rank 105 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** Each student in the roster list has a "packet" link beside "print". It prints that student's contacts oldest first
+  (date, method, reason, outcome, initials), under a heading, a printed date and a summary line (`3 contacts · first 01/01/2026 · last
+  03/21/2026 · by method: Email 2, Phone call 1`), then a ruled "Conference notes" block of 14 lines. The student's name is in the
+  table's own `thead` (which Chromium repeats on every sheet the table runs onto) and in the notes heading, because the notes block can
+  land alone on a last sheet. Rows and the notes block do not split across sheets. The student is matched exactly, never by substring.
+- **Not changed.** The old per-student "print" list and "Print this list" are byte-for-byte what they were (the new summary and notes
+  elements are hidden for them); the CSV export is untouched; no key, no field and no new stored data (the suite compares every
+  localStorage key before and after). An entry saved before reasons existed prints an em dash, as on screen.
+- **Tests.** New `Tools/parent-contact-log/test/smoke-packet.mjs` (`test:parent-log-packet`, port 8494, 80 assertions), run through
+  Chromium's PDF and `pdftotext`: students with 1, 15 and 80 contacts (1 sheet; 2; 4 as measured,
+  the suite asks for at least 3 on the 80) carry the name on every sheet; "Ann Lee" and "Ann Leeds" each get a packet with nothing of the other's name or outcome text.
+  18 breaks on purpose, all caught; 2 survived the first round (a name leaking into the date cell; a heading dropped) and got
+  assertions, and one break was a dead `hidden = false` line, which was removed from the page instead.
+- **Checks.** `test:a11y -- --only 068` 4 passed; `audit-print --check --only 068` clean; every `check:*`, `lint`,
+  `check:precache -- --base origin/main` and `check:adoption -- --check` pass; `smoke-reasons.mjs` 45 passed.
+- **Not verified.** Nothing printed on paper; no real screen reader. `audit-print` opens the page with two seeded contacts and does not
+  click a packet link (the seed is `Tools/a11y-sweep/seeds.mjs`, which this row could not edit), so its clean result says nothing about the
+  packet: the suite's PDFs are the check. Full `npm test` not run. Left: a long outcome that spans a sheet boundary is kept whole by
+  `break-inside: avoid`, which can leave white space at the foot of a sheet.
+
 ## Path 7 P4 increment 7: 035's groups template on `ExportKit`, and P4 is finished (2026-10-06, AI-13, `CACHE_VERSION` v255)
 
 Audit entry AI-13, BACKLOG rank 6 (¼). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). Path 7 has
