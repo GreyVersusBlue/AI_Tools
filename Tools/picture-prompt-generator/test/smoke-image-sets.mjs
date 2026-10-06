@@ -411,6 +411,12 @@ await page.evaluate(([k, v]) => localStorage.setItem(k, v), [KEY, JSON.stringify
 await load();
 same(await options(page), ['My pictures (1 picture)', 'Second (0 pictures)'], 'bad entries, a repeated id and a blank name are cleaned');
 eq(await selected(page), 'My pictures (1 picture)', 'and an active id that is not there falls to the first set');
+const MARKUP = '<img src=x onerror="window.__pwned=1">';
+await page.evaluate(([k, v]) => localStorage.setItem(k, v), [KEY, JSON.stringify({ v: 2, activeId: 'm', sets: [{ id: 'm', name: MARKUP, images: [] }] })]);
+await load();
+same(await options(page), [MARKUP + ' (0 pictures)'], 'a set named with markup is shown as text');
+eq(await page.evaluate(() => window.__pwned), undefined, 'and runs nothing');
+eq(await page.$$eval('#imageSetSelect *:not(option)', e => e.length), 0, 'and makes no element inside the chooser');
 await page.evaluate(([k, v]) => localStorage.setItem(k, v), [KEY, '{"sets": []}']);
 await load();
 same(await options(page), ['My pictures (0 pictures)'], 'a key with no sets reads as one empty set');

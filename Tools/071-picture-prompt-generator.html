@@ -589,11 +589,15 @@
     els.imageSetMsg.textContent = text || '';
   }
   function renderImageSetPicker() {
-    els.imageSetSelect.innerHTML = imageSets.map(function (s) {
-      var n = s.images.length;
-      return '<option value="' + escapeAttr(s.id) + '"' + (s.id === activeImageSetId ? ' selected' : '') + '>' +
-        escapeHtml(s.name) + ' (' + n + ' picture' + (n === 1 ? '' : 's') + ')</option>';
-    }).join('');
+    /* Built as elements, with the name as text: a set's name can be anything a
+       teacher typed, or a crafted key carried, and never becomes markup. */
+    els.imageSetSelect.replaceChildren.apply(els.imageSetSelect, imageSets.map(function (s) {
+      var o = document.createElement('option');
+      o.value = s.id;
+      o.selected = s.id === activeImageSetId;
+      o.textContent = s.name + ' (' + plural(s.images.length, 'picture') + ')';
+      return o;
+    }));
   }
   /** Show whichever set is active now: its thumbnails, an empty stage. */
   function showActiveImageSet() {
