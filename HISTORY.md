@@ -9,6 +9,44 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P2 designed, not built: extracting 035's engines (2026-10-05, AI-20, no `CACHE_VERSION`, no code)
+
+Audit entry AI-20, rank 22 (2+). A design pass: only `BACKLOG.md` changed (the P2 bullet under "Path 11", and a
+note on rank 22). **The row stays.** Nothing was built, no suite or browser ran. It sits on P1's design and
+changes none of it.
+
+- **What the design is.** Pure ES modules under `Tools/schedule-visualizer/` (`sv-model.js`, `sv-graph.js`,
+  `sv-routes.js`, `sv-congestion.js`, `sv-playback.js`, `sv-browser.js`, then `sv-viz.js`, `sv-editor.js`,
+  `sv-whatif.js`, `sv-schedules-tab.js`, and the stylesheet as `sv.css`), each taking its inputs and touching
+  neither `AppState` nor the DOM; the page's existing `type="module"` script puts each on `window` as a namespace,
+  the way it already does `SVRecovery`; and the page keeps one thin wrapper per old name in a `BRIDGE` section, so
+  the 388 bare-name call sites and the suites' `/* global */` lines do not change. The two shared `let`s of the
+  pathfinder become a cache with `invalidate()`. Eleven increments, each a PR with the suite green and a
+  `CACHE_VERSION` bump, with the page size after each; P1's published baseline must not change through any of them,
+  the publisher's own move included. Nine pure Node suites named with their cases, and a size ledger in the shape
+  of the inline-sinks ratchet. The folders fold last.
+- **The call this session made, cheap to reverse.** The bullet's own list of engines cannot reach its 300 KB
+  target: the markup is 141 KB and the stylesheet 158 KB, and the engines named are about 210 KB of a 662 KB
+  script. The design keeps the target and goes past the engines to the stylesheet, the visualize renderer, the
+  blueprint editor, the what-if lab and the groups tab, which are moved for the number and not purified. Question 1
+  of the bullet asks Devon whether to stop at increment 7 (about 620 KB), 9 (about 520 KB) or 11 (about 270 KB).
+- **What reading the code turned up.** The page is 968,296 bytes, not 936 KB, and has 436 top-level functions, not
+  428. Comments are 137 KB of it. `AppState` is read in 57 of the main script's 68 sections. `_blueprintDirty` is
+  written nine times in three sections. The tile-drawing helpers the editor renders with sit under the evacuation
+  door cards' banner. The heat-exclude check for a cell with no `floorId` reads the floor the editor is showing,
+  so one congestion number depends on the active tab; a room with no subject publishes as `ELA`; both are kept and
+  named. The main script makes no call at parse time, which is what lets a deferred module supply its names. The
+  legacy hard-coded map (22 KB) is reached only for a project with no geometry and holds a real building's room
+  numbers. 035 loads none of the three link-input files, so there is no state link to hold.
+- **Measured, with five pure-Node probes that were not kept:** bytes by block and by banner section, comments per
+  block, markup by panel, the dependency graph between sections (every top-level name a section uses from
+  another), and `AppState`/`document`/storage counts per section. The ladder's figures are those sections summed;
+  the bridge's bytes are an estimate.
+- **Not verified.** No module exists and nothing ran. That `.toString()` of a moved `export function` publishes
+  unchanged is read off the language, and P1's baseline suite is what would prove it. The three static sweeps
+  were read to confirm they follow a linked stylesheet; `select-suites.test.mjs` was read to find its
+  `Tools/schedule/` pin. No timing of A* was done.
+
 ## 060 Fitness & Skill Assessment Tracker: a report card per student (2026-10-05, AI-31-060, `CACHE_VERSION` v251; the commit messages say v249, which `main` took first)
 
 Audit entry AI-31, BACKLOG rank 99 (½). Per-tool row; the rank-99 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).

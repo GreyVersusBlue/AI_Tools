@@ -397,7 +397,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 21 | Path 11 P1 — publisher drift guard before any extraction. **Designed 2026-10-05 (AI-20), not built: the P1 bullet has the whole design and seven questions for Devon** | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 22 | Path 11 P2 — extract the pure engines; target the HTML under ~300 KB | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 22 | Path 11 P2 — extract the pure engines; target the HTML under ~300 KB. **Designed 2026-10-05 (AI-20), not built: the P2 bullet has the whole design, a measured ladder of eleven increments (the page is 968 KB; the engines alone leave it at about 620 KB, the full ladder at about 270 KB), and five questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 23 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
@@ -3129,6 +3129,345 @@ a real pathfinder that the published browser never exposes.
   one PR with a Node unit suite for the pure part (today all coverage is Playwright).
   Fold the two folders (`schedule/` and `schedule-visualizer/`) into one and fix the
   stale README. Target: the HTML under ~300 KB.
+  **P2 is designed, not built (AI-20, 2026-10-05, a design pass: no code, no suite, no browser).** It sits on P1's
+  design above and changes none of it. Written from the code at v61 (`TOOL_VERSION`; site `CACHE_VERSION` v251) and
+  from five pure-Node probes over the page's text, kept in a scratch folder and not committed (what they measured is
+  marked *measured*; everything else is read off the code). Every name in an example is made up.
+  **What the bullets above get wrong, first.** The page is **968,296 bytes** and 20,849 lines, not 936 KB; it has grown
+  32 KB since the "Why" was written (the print rules of Path 7 P2, the trace images, the pairing codes). The main
+  script has 388 top-level function declarations and the browser script 48, so 436, not 428. The support folder holds
+  three modules, not two: `sv-trace-image.js` has been there since Path 4 P4 (v211). And the order in the bullet
+  ("schedule model, pathfinding, multi-floor graph, evacuation routes, congestion, playback renderer, publisher")
+  stops about 320 KB short of its own target: **the markup alone is 141 KB and the stylesheet 158 KB**, so no amount
+  of script leaving the page gets it under 300 KB while the stylesheet stays, and the engines named are about 210 KB
+  of a 662 KB script. The ladder below reaches the target, but only by also moving the stylesheet, the visualize
+  tab's renderer, the blueprint editor, the what-if lab and the groups tab, none of which is a pure engine. That is this design's first call (recorded in
+  `HISTORY.md`; question 1 asks whether it is wanted).
+  - *The page by part (measured, bytes of UTF-8, LF line ends throughout).*
+
+    | Part | Bytes | Of which comments and blank lines | Note |
+    |---|---|---|---|
+    | head, markup between the blocks | 141,326 | — | `#panel-blueprint` 40 KB, `#panel-visualize` 20 KB, `#panel-settings` 20 KB, `#panel-schedules` 16 KB, nine modals 27 KB, the live `#app-browser` 3.7 KB |
+    | first `<style>` (line 59) | 157,702 | 9,397 | the app; one `@media print` block at line 2813; no `@font-face` (fonts are `schedule/fonts/fonts.css`) |
+    | second `<style>` (line 4275) | 7,735 | 67 | the settings panel |
+    | inline `type="module"` script (line 52) | 314 | — | imports `sv-handoff.js` and `sv-recovery.js`, puts them on `window` |
+    | main classic script (line 5210) | 578,715 | 114,423 | 68 banner sections, 388 functions, 81 top-level `let`/`const`, one `class` (`MinHeap`) |
+    | browser script (line 19352) | 82,818 | 13,080 | `BR_CSS` 30 KB, data derivation 14 KB, the legacy hard-coded map 22 KB, the publisher |
+
+    Comments are 137 KB of the page. They move with their code and are not a lever: stripping them is not extraction.
+    The main script's banner sections, largest first: path visualization 107,689; playback and travel time 54,613;
+    room search and what-if 48,957; evacuation door cards 35,468; multi-floor graph 26,495; bulk editor 17,107;
+    blueprint persistence 15,922; canvas event binding 14,823; schedules editor 13,949; settings panel 10,517.
+  - *The seams (measured: a probe that stripped comments and strings and counted every top-level name each banner
+    section uses from another).* `AppState` is read in 57 of the 68 sections and in the browser script. The engines
+    the bullet names are these sections, with what each reaches for:
+
+    | Section (line) | Bytes | Reads from the page | Called by | Pure today? |
+    |---|---|---|---|---|
+    | Round 7 pathfinding engine (12862) | 2,345 | nothing; owns `pathfindingGraph`, `_blueprintDirty`, `ORTHO` and the three key helpers | every engine below, door cards, what-if; `_blueprintDirty = true` is written **nine times in three** page sections (persistence once, blueprint data five times, staircase pairing three) | yes, but its cache is a shared `let` |
+    | Round 31 multi-floor graph (12916) | 26,495 | `AppState.blueprint.floors` and `.crossFloorPairs` (in `buildMultiFloorGraph`, `buildStaircasePairLookup`), `AppState.schedules.groups` and `.settings.modCount` (`findGroupDayPath`, `computeCongestionMap`), `getAllModLabels()`, `groupWeight()`, `getPairLabel()`, `isCellHeatExcluded()` | viz (`findGroupDayPath`), what-if (`resolveRoomPath`), evacuation (`astar`) | the graph build, A*, `buildPathMetadata` and `resolveRoomPath` are pure given a graph; the two group functions read state |
+    | Evacuation routes (13562) | 5,970 | `AppState.blueprint.floors` (`collectExitPoints`), `getPathfindingGraph()`, `astar()` | door cards only | pure given a graph and the floors |
+    | Congestion: `computeCongestionMap` (multi-floor), `buildCongestionData` (viz, 14355), `computeTravelTimes` (playback, 16190), `wiComputeMetrics`/`wiComputeDiff` (what-if, 18560) | about 16,000 across four sections | `AppState.settings` (`tileWalkTime`, `staircaseTime`, `defaultGroupSize`, `modCount`), `.schedules.groups`, `.blueprint.floors[0].id`, `groupWeight()`, `congestionDelayMult()`, `isCellHeatExcluded()`, `floorCellKey()` | viz, playback, what-if | the arithmetic is pure; every entry point reads state |
+    | Round 30 playback engine (16190) | 54,613 | `AppState` (63 times), the viz canvas and ten viz functions, `showToast` | blueprint data (`PlaybackController.stop`), tab navigation | a renderer: pure given a 2D context and the render data; `PlaybackController` holds the animation clock |
+    | Round 41 browser and publisher (19353) | 82,818 | `AppState.settings`, `.blueprint`, `.schedules.groups` (in `brLoadFromVisualizer` and `brBuildPublishedHTML`), `getSubjects()`, `formatModTime()`, `TOOL_VERSION`, `escHtml`/`escJsAttr` (schedules rendering), `window.BR_PUBLISHED_FONT_CSS` | the subjects editor (`brSyncDeptFromSettings`), what-if (`BR_CSS`), the live preview's `onclick` strings | `brDeriveScheduleData(settings, blueprint, groups)` and `brBuildGeometrySnapshot(blueprint)` already take their inputs; the rest reads module-level `BR_*` state |
+    | Round 9 path visualization (13706) | 107,689 | `AppState` (162 times), `document` (90), the blueprint canvas helpers, the door-card drawing helpers (`drawTile`, `drawRoomLabel`…), `findGroupDayPath` | playback, what-if, sidebar init | not an engine: a tab's UI and its canvas, with `buildVizRenderData` the one data function |
+    | The schedule model, which has no section of its own: `normalizeSettings`, `getBellDay`, `formatModTime`, `groupWeight`, `congestionDelayMult`, `anyGroupSized` (settings, 5347); `modLabel`, `getAllModLabels` (5327); `rebuildRoomRegistry` (5630); `serializeBlueprint`, `migrateBlueprintToFloors`, `applyBlueprintData`, `validateBlueprintData` (5687); `deriveSameFloorPairs` (6214); `computeScheduleConflicts`, `generateGroupId`, `getNextGroupColor` (11132); `serializeFullProject`'s group shape (17505) | about 22,000 | `AppState` throughout, `roomRegistry` (a page `let`), `localStorage` in the save/load pairs | everything | the normalizers and the conflict check are pure given their inputs; the save/load pairs are the page's and stay |
+
+    The blueprint editor (sections 6214 to 10558, about 113 KB) reads `AppState` 300 times and `document` 250 and
+    owns `canvas` and `ctx` (`let canvas, ctx`, line 6664) which the door cards swap under `renderCanvas()`. It is
+    not an engine and nothing in P3 to P6 needs it in a module; it is in the ladder only for the number.
+  - *The shape of a module, decided.* **Pure ES modules under `Tools/schedule-visualizer/`, with `export`ed
+    functions that take their inputs and touch neither `AppState` nor the DOM; the page's inline `type="module"`
+    script imports each and puts it on `window` as a namespace (`window.SVGraph = …`, exactly as it does
+    `window.SVRecovery` today); and the page keeps one thin wrapper per old name in a short `BRIDGE` banner
+    section of its classic script, reading `AppState` and calling the namespace.** So the 388 bare-name call
+    sites and the suites' `/* global getPathfindingGraph, applyFullProject … */` lines are untouched: the
+    wrapper is hoisted at parse like the function it replaces, and it dereferences the namespace at call time.
+    Why not classic `<script src>` files with bare top-level functions (015's and 009's shape): the lint config
+    parses every `Tools/*/*.js` as a module with browser globals, so a classic file's page-only functions fail
+    `no-unused-vars` and its reads of `AppState` fail `no-undef` without a `/* global */` line per file; a classic
+    file is sloppy unless it says otherwise, and P1 counts on modules being strict; `select-suites` rule 2 and
+    `check-adoption` follow `import`, which is how a change to `sv-graph.js` selects every suite that opens 035;
+    and P1's `readPublisher()` is to learn a `sources` list of modules, not scripts. Why not an IIFE with
+    `global.X = X` (015's shape): it hides the shared `let`s, which is right, but it still cannot be `import`ed by
+    the Node suite the bullet asks for, and the one repo precedent for testing such a file (`export.test.mjs`'s
+    `vm.runInContext`) exists because `_shared/export.js` must load on pages that have no module script. 035 has
+    one. **The shared `let`s are the one thing a module cannot keep:** `pathfindingGraph` and `_blueprintDirty` are
+    assigned from four page sections, which a module binding does not allow. They become a cache object the
+    graph module owns, `SVGraph.cache(blueprint)` returning the graph for that blueprint and
+    `SVGraph.invalidate()`; the nine `_blueprintDirty = true` writes (*measured:* lines 5834, 6269, 6340, 6364, 6381, 6449, 6526, 6542 and
+    6574 in the page as it stands) become `invalidate()` calls, and the wrapper `getPathfindingGraph()` is
+    `SVGraph.cache(AppState.blueprint)`. `roomRegistry` stays the page's and is passed in. **The parse-time rule:**
+    the main classic script runs during parsing and the module scripts run after it, before `DOMContentLoaded`;
+    `init()` runs on `DOMContentLoaded` (line 17770) and every other call is in a listener, so a wrapper is never
+    called before its namespace exists (*measured:* no top-level statement of the main script calls a function; its
+    top-level statements are `addEventListener` wiring, `window.X = X` lines that move with their functions, and
+    `AppState.viz = {…}`). A wrapper whose namespace is missing throws `SVGraph is not loaded` by name rather than a
+    bare `TypeError`, and the pure test below holds the page to the rule statically so that it cannot drift.
+  - *The surface, module by module. Every function is pure unless it says otherwise; every object is plain JSON
+    except the `Map`s the graph has always used; nothing reads or writes storage.* Shapes are the ones in the page
+    today, renamed only where a name was the page's (`gridData` stays `gridData`).
+    **`sv-model.js`** — `normalizeSettings(s) → settings` (the page's, which fills `bellSchedule`, `subjects`, the
+    walk and stair seconds, `defaultGroupSize`); `modLabel(index, style)`, `modLabels(settings) → [string]`;
+    `bellDay(settings, day) → [{start,end}|null]|null` (B falls back to A, the page's rule); `formatClockTime`,
+    `formatModTime(settings, day, modIdx) → ''|'8:00–8:42'`; `groupWeight(group, settings) → integer`;
+    `congestionDelayMult(effOthers)`; `dayMods(group, day) → [room|'']` (A is `modsA || mods`, B is a non-empty
+    `modsB` else A for paths but `modsB || []` for the publisher: **two rules today**, both kept and both named,
+    `dayMods(group, day, { emptyB: true })` for the publisher's); `roomRegistryOf(blueprint) → [{roomNumber,
+    teacher, dept, floorId, col, row, excludeFromConflict}]`; `scheduleConflicts(groups, day, { registry, modLabels
+    }) → [{mod, modLabel, room, groupNames}]`; `serializeBlueprint(blueprint, settings, { portable, traceImage })`
+    returning the version-5 object the page writes today (`savedAt` is the caller's; `traceImage` is a function the
+    page hands in, since `portableTraceImage` reaches into `SVTraceImage`); `migrateBlueprint(data) → data` (the
+    page's `migrateBlueprintToFloors`, the floors-and-pairs normaliser, which mutates in place and keeps doing so);
+    `validateBlueprint(data) → { ok, errors }`; `blueprintFromData(data) → blueprint` (the pure half of
+    `applyBlueprintData`: `cells` to `gridData`, no `AppState`, no canvas); `deriveSameFloorPairs(blueprint,
+    floorId)`; `pairLabel(i)`; `groupRecord(g) → {name, grade, color, size, modsA, modsB, mods}` (the project file's
+    shape, so the project export and the publisher agree on one normaliser); `nextGroupColor(groups)`, `groupId()`.
+    **`sv-graph.js`** — `cellKey`, `floorCellKey`, `parseKey`, `manhattan`, `ORTHO`; `buildLocalFloorGraph(gridData,
+    cols, rows) → { adjacency, types, roomToKey }`; `buildGraph(blueprint) → graph` (today's
+    `buildMultiFloorGraph` with the blueprint as its argument: `{ adjacency: Map<key,[{key,cost,teleport?}]>,
+    types: Map<key,type>, roomToKey: Map<room,key>, portals: [{key,partnerKey}], cols, rows, walkableCount,
+    classroomCount, edgeCount, portalCount, isWalkable(key) }`); `heuristic(graph, goalKey) → (key) → number`;
+    `astar(graph, startKey, goalKey) → [key]|null`; `pathMetadata(keys, graph, { pairs }) → { path: [{x,y,floorId}],
+    pathLength, usesStaircase, staircasePairsUsed: [label], hallwayCells, crossesFloor }`;
+    `resolveRoomPath(graph, fromRoom, toRoom, { pairs }) → metadata | { noTravel: true, … } | { error, severity }`
+    (the four messages exactly as today: `Mod not assigned` and `Room not found in blueprint` are warnings,
+    `Room unreachable — not connected to any hallway` and `No valid path between rooms` are errors);
+    `findPath(graph, fromRoom, toRoom)`; `createCache() → { get(blueprint), invalidate() }`.
+    **`sv-routes.js`** — `groupDayPath(group, day, { graph, settings, pairs }) → [segment]|null` (today's
+    `findGroupDayPath`: `modCount − 1` segments of `{ fromMod, toMod, fromModLabel, toModLabel, fromRoom, toRoom,
+    path, pathLength, usesStaircase, staircasePairsUsed, hallwayCells, noTravel?, error?, severity? }`);
+    `congestionMap(groups, day, { graph, settings, blueprint, isExcluded }) → Map<key, load>` (one tally per segment
+    per cell, weighted by `groupWeight`; a cell with no `floorId` is on the first floor, the page's fallback);
+    `isCellExcluded(blueprint, x, y, floorId)`; `collectExitPoints(blueprint, graph) → [{key, floorId, col, row,
+    label, assemblyPoint}]` (a marked exit that is not in the graph's adjacency is dropped, as today);
+    `evacPathCost(graph, path)`; `evacuationRoute(graph, roomKey, exits) → { path, exit, cost, crossesFloor } |
+    null`; `evacDirectionLabel(dx, dy)`; `evacuationSteps(path, exit, graph) → [string]`.
+    **`sv-congestion.js`** — `congestionData(entries, settings, { blueprint, transFilt }) → { congestion: Map,
+    contributors: Map, maxCongestion }` (the pure body of `buildCongestionData`); `travelTimes(entries, settings, {
+    congestion }) → entries` (the pure body of `computeTravelTimes`: each segment gains `travelSec` and `delaySec`,
+    `walkSec` per hallway cell plus `stairSec` per teleport plus `walkSec × congestionDelayMult(others / dgs)`);
+    `whatIfMetrics(groups, day, overrides, { graph, settings, blueprint, pairs }) → { groups: [{id, name, grade,
+    color, mods, segments, weight}], totals… }` and `whatIfDiff(base, scenario)` (the pure cores of `wiComputeMetrics`
+    and `wiComputeDiff`; the two are on `window` today and the what-if suite-to-be reads them there). The
+    renderers that paint these (`renderCongestionSummary`, `wiRenderCards`…) stay on the page.
+    **`sv-playback.js`** — `createPlayback({ draw, now, raf, reducedMotion }) → controller` (today's
+    `PlaybackController` with its clock and `requestAnimationFrame` injected, so the Node suite can step it);
+    `teleportLegs(segment, graph)`, `sequentialDwell(…)`, `collisionSimulation(entries, settings)` (pure);
+    `drawPlaybackFrame(ctx, frame, geometry)`, `drawPortalDwellArc(ctx, …)`, `drawPortalPulse(ctx, …)` (renderers:
+    they take the context and the numbers and read nothing). The viz canvas's size and offsets come in as
+    `geometry` (`{ cellSize, floorOffsetY(floorId), lane }`), which the page computes from its canvas as it does now.
+    **`sv-browser.js`** — the whole browser script, in one module, because the live preview and the published file
+    run the same functions and P1's ledger names them by text: `BR_CSS`, `BR_STALE_DAYS`, `BR_LEGACY_SHORT`,
+    `BR_DEPT_FALLBACK`; `deriveScheduleData(settings, blueprint, groups, { dept, order })` (today's
+    `brDeriveScheduleData` without the `brSyncDeptFromSettings()` call inside it: the palette is an argument);
+    `deptFromSubjects(subjects) → { dept, order }`; `snapshotBell(settings) → bell|null`;
+    `geometrySnapshot(blueprint)`; `publishedData({ settings, blueprint, groups, subjects, now, tool }) → data` (the
+    object `brBuildPublishedHTML` builds, at P1's `FORMAT`); `publishedMarkup(school, dateStr, tool)`;
+    `publishedHTML(data, { fontCss, dateStr, tool }) → string`; `publishFileName(school, now)`; and the 28 listed
+    functions and 7 constants **as named exports with their names unchanged** (`brRenderTeacher`,
+    `brDColor`…), with `publishFnList()` the module's own list of them. `brLoadFromVisualizer`, `brPublish`,
+    `brCopyPublishedHTML`, `toggleApp` and the legacy map (`BR_WINGS`, `brRenderMapLegacy` and the 20 functions
+    of the "Building map (legacy hardcoded geometry)" section, 22 KB, which no published file has had since R60 and
+    the live preview reaches only for a project with no geometry; it holds a real building's room numbers and is
+    worth a look of its own) move with the module, unexported.
+    The published functions keep reading the module-level `BR_TEACHERS`, `brMode`… that the published preamble
+    declares; in the module those are `let`s the page sets through `SVBrowser.load(data)`, which is what
+    `brLoadFromVisualizer` becomes.
+    **`sv-viz.js`** (increment 9) — the visualize tab's canvas: `vizRenderData(groups, day, { graph, settings, pairs
+    })` (pure), the `draw*` functions taking `(ctx, geometry, data)`, and the tab's controls as today, reading
+    `AppState` through a `ctx` object the page hands in. **`sv-editor.js`** (increment 10) — the blueprint editor,
+    moved as a module that takes `{ state: AppState, canvas, els }` at `init` and otherwise unchanged; not purified.
+    **`sv.css`** (increment 1) — the first `<style>` block, verbatim, linked by `<link rel="stylesheet"
+    href="schedule-visualizer/sv.css">` where the block was. **Storage keys and migrations: none change.** The
+    seven keys and four prefixes of the registry row stay the page's; `stviz_blueprint` stays version 5; the
+    project file stays `fileType` `PROJECT_FILE_TYPE`, `version` 1, `schemaVersion` 31; the recovery ring stays
+    `sv-recovery.js`'s. There is no migration in P2 because no stored shape changes, and a save or project from v61
+    loads on the last increment as it does today (the test holds it).
+  - *The algorithms, with their edge cases, which the Node suites pin so the move cannot change them.*
+    **The graph.** A floor's cells are classified `hallway`, `staircase` or `classroom`; `dummy` tiles and empty
+    cells are not nodes. A room number maps to the first cell found in row-major order; a grouped room's cells
+    carry `roomNumber` only on the anchor (Round 55), so every cell's room is resolved through its group anchor
+    (`effectiveRoomNumber`, cached per `groupId`), and a corridor touching *any* cell of a room reaches it. Edges
+    are orthogonal, cost 1. A classroom with doorways (`classroomDoorEdges`) connects to a corridor only through
+    them; one with none connects on every side. Floors join through `crossFloorPairs` whose two ends are both
+    staircases, as zero-cost `teleport` edges; a pair naming a cell that is not a staircase is skipped. A* never
+    expands through a classroom that is not the start, and never steps onto a classroom that is not the goal
+    (rooms are terminals, not corridors). The heuristic is a portal Dijkstra from the goal over every staircase
+    cell with Manhattan edges, so it stays admissible under teleports; because it is not consistent, a closed node
+    is reopened when a cheaper route reaches it. `resolveRoomPath`: blank room on either side is the warning `Mod
+    not assigned`; the same room both sides is `noTravel`; an unknown room is `Room not found in blueprint`; a room
+    with no edges is the error `unreachable`; a search that exhausts is `No valid path`. `pathMetadata` records
+    `usesStaircase` and the pair labels crossed, `hallwayCells` (hallway-typed cells only, with `floorId`), and
+    `crossesFloor`. **Routes and congestion.** A day's mods are `modsA || mods` for A and a non-empty `modsB`, else
+    A's, for B; a segment runs mod `i` to `i+1` for `modCount − 1` segments and carries the labels from
+    `modLabels(settings)`. Congestion counts each segment once per cell, weighted by `groupWeight` (the group's
+    `size` if a positive number, else `settings.defaultGroupSize`, else 25), skipping cells inside a heat-exclude
+    zone **on the cell's own floor** (a cell with no `floorId` is checked against the active floor's zones today,
+    which is the one place the engine's answer depends on which floor the editor is showing: the module takes the
+    first floor instead, which is what `floorCellKey` already assumes two lines later, and the test names the
+    difference). Travel time is `walkSec` per hallway cell, `stairSec` per teleport, and a delay of `walkSec ×
+    congestionDelayMult(othersWeight / defaultGroupSize)` per cell shared with other groups in the same transition
+    (`0.2 × n` below one other group's worth, `0.2 + 0.3 × (n − 1)` to two, `0.5 + 0.3 × (n − 2)` to three, `0.8`
+    from three). **Evacuation.** Exits are hallway cells with `isExit` that are in the graph; the route for a room is the
+    exit with the least real edge cost (teleports free), ties to the first found; a route through a staircase pair
+    is `crossesFloor`, and the door card then prints steps without a map crop (the card's choice, which stays on
+    the page). Steps are runs of one direction with the length in cells and a turn word from `evacDirectionLabel`.
+    **The model.** `scheduleConflicts` keys `mod-room` over a day's mods, skips blank rooms and rooms flagged
+    `excludeFromConflict` in the registry, reports keys with two or more groups sorted by mod; the room is
+    re-joined on `-` because a room number may contain one. **The publisher.** `deriveScheduleData` walks each
+    floor's `gridData` (not `cells`), takes one record per room (a grouped room once, by `groupId`), one room per
+    teacher (the last found) and one group per teacher-room-mod (the last written; P1 question 5), builds `plan`
+    from the Planning slots with the `A1 / A2 / B3` form, `sec`, `co` (mates across shared sections, sorted),
+    `room2teacher`, `groupRooms` with B independent of A, and a missing `dept` is `ELA`. **These are the rules as
+    they are; P2 changes none of them**, including the two it finds doubtful (the active-floor zone check, the
+    `ELA` default), which it names in the suite and leaves to P5.
+  - *The order of extraction. Eleven increments, each one PR with the suite green, each bumping `CACHE_VERSION`,
+    each adding its files to `PRECACHE_URLS` (never to `SHELL_URLS`: 035 is not one of the ten shell tools). The page
+    size after each is measured on the sections as they stand, so the moved-out bytes are exact and the bridge's
+    added bytes are an estimate of about 0.3 KB per wrapper.*
+    1. **`sv.css`.** The first `<style>` out, verbatim, one `<link>` in its place. **811 KB.** No JavaScript seam;
+       it proves the precache, `check:precache`, `check:hidden-flex` and `check:print-clip` (both follow a linked
+       stylesheet, read off their source), `test:theme`, `audit-print --only 035` and the offline path on a new
+       file before any function moves. The theme sweep and the print audit must come out identical.
+    2. **`sv-model.js`** and the `BRIDGE` section. The normalisers, labels, bell, weights, conflicts, registry
+       derivation, blueprint serialise/migrate/validate and the group record. The page's `saveSettings`,
+       `loadBlueprintFromLocalStorage`, `applyBlueprintData` and friends keep their names and storage calls and call
+       the module for the pure half. **794 KB.** The first Node suite (`model.test.mjs`) and the first
+       `readPublisher()` `sources` entry are in this PR, because `formatModTime` and `getSubjects` are reached by the
+       publisher and the static guard would otherwise fail FREE on the move. The byte-identical save test lands here.
+    3. **`sv-graph.js`.** The cache object replaces the two shared `let`s; the nine `_blueprintDirty = true` writes
+       become `SVGraph`'s `invalidate()`. **771 KB.** `graph.test.mjs`.
+    4. **`sv-routes.js`.** Group day paths, congestion map, evacuation. **762 KB.** `routes.test.mjs`;
+       `smoke-evacuation.mjs` runs unchanged (it reads `window.computeEvacuationRouteForRoom`, which the bridge
+       keeps).
+    5. **`sv-congestion.js`.** The four pure cores out of viz, playback and what-if; their renderers stay. **748
+       KB.** `congestion.test.mjs`, which is the first test the what-if lab has ever had.
+    6. **`sv-playback.js`.** **699 KB.** `playback.test.mjs` steps the controller with an injected clock.
+    7. **`sv-browser.js`.** The publisher and the shared browser functions; the live preview's nine `onclick`
+       names set on `window` by the bridge. **623 KB.** P1's baseline is regenerated **and must not change**: this
+       is the increment P1's "regenerate and diff" exists for, and the first real use of `readPublisher()`'s
+       `sources`. `test:schedule` and all four `test:schedule-browser` suites unchanged.
+    8. **`check-precache` follows `import`.** A guard change in `Tools/board-check/`, its own PR, site-wide CI once:
+       `sv-routes.js` imports `sv-graph.js` and nothing on a page names `sv-graph.js` directly, so from increment 4
+       the list has been hand-kept for module-to-module imports. (Until then `imports.test.mjs` below holds it.)
+    9. **`sv-viz.js`.** The visualize tab's renderer and controls. **518 KB.**
+    10. **`sv-editor.js`.** The blueprint editor **with the tile-drawing helpers and the evacuation door cards**,
+        which live under the door-cards banner but are what `renderCanvas()` draws with (`drawTile`, `drawRoomLabel`,
+        `drawStaircaseIcon`…), as a module that is handed `AppState`, the canvas and its elements, and is not
+        purified. **368 KB.** Its suite is the existing `smoke-print.mjs` and
+        `smoke-trace-image.mjs` plus a new `smoke-editor.mjs` that paints a plan, pairs stairs, undoes, and saves.
+    11. **`sv-whatif.js`** (the what-if lab's controls and room search, 41 KB after increment 5 took its arithmetic),
+        **`sv-schedules-tab.js`** (the groups editor, bulk editor, CSV import and conflicts banner, 63 KB) **and the
+        folding of the two folders.** **About 270 KB**, under the line with some 30 KB to spare for the bridge's
+        growth and whatever the moves find. The folding: `Tools/schedule/fonts/` (13 precache lines, the page's `<link>` and `published-fonts.js` tag, the
+        build script and its README) and `Tools/schedule/test/` (`publish.mjs`, `smoke.mjs`, the fixture, P1's
+        contract, ledger and baseline) move to `Tools/schedule-visualizer/`; `suites.json`, `package.json`,
+        `sw.js`, `select-suites.mjs`'s header comment and **`select-suites.test.mjs`, which pins the rule-2 example
+        "an edit to `Tools/schedule/*.js` selects schedule-visualizer's suites"** (read off the header; the test's
+        text was not opened), and `Tools/schedule/README.md`, rewritten as `Tools/schedule-visualizer/README.md`
+        with the file list, the module map and the suites. Last on purpose: every path P1 names is in it.
+    **The page after increment 11 is about 270 KB: the markup 141 KB, the second style block and head 10 KB, the
+    bridge about 15 KB and the rest of the script about 100 KB** (app state and keys, the storage pairs, settings
+    panel, bell and subjects editors, tabs, toasts, trace images, hand-off, onboarding, project export and import,
+    sidebar init, snapshots, recovery, presentation mode). Each figure is today's sections summed; the bridge is an
+    estimate. **How the target is measured:** `fs.statSync(page).size`, bytes on disk of
+    `Tools/035-schedule-visualizer.html`, which is the figure every note about this file has used. A ledger holds
+    it: `Tools/schedule-visualizer/test/size-ledger.json`, `{ page, modules: { file: bytes } }`, and
+    `size.test.mjs` fails when the page is larger than its ledger line and when it is smaller by more than 2 KB
+    (lower it in the same commit), the inline-sinks ratchet's shape; the modules' lines are a record, not a cap.
+  - *What stays byte-identical, and how each is held.* **The published file for Northwind**, from increment 1 to
+    11, under P1's pinned clock: P1's `smoke-publish-baseline.mjs` against the committed baseline, section by
+    section. The publisher's own move (increment 7) keeps it: `.toString()` of an `export function` is its text
+    from `function` on, and the 35 pieces are moved as declarations, never as methods or arrows; `assemble()`
+    equals the browser's bytes is P1's assertion and it runs here on a page whose publisher is a module. **034**:
+    not opened by any increment (the folder fold does not touch it). **Saved state**: `model.test.mjs` loads a
+    `stviz_blueprint` captured from v61 (a fixture with made-up rooms), runs it through `migrateBlueprint`,
+    `blueprintFromData` and `serializeBlueprint`, and gets the same JSON with only `savedAt` differing; the same
+    for `stviz_settings` through `normalizeSettings` and for a project file through `groupRecord`;
+    `smoke-recovery.mjs` already proves the ring survives a reload. **State links**: 035 loads none of `share.js`,
+    `state-link.js` or `handoffs.js` and takes no input from a URL (*measured*: zero references), so there is
+    nothing to hold and no `inline-sinks` baseline line to add. **The data contract**: `publishedData()` validates
+    at P1's `FORMAT` with no error and no warning on Northwind, unchanged by the move.
+  - *Load order and offline.* The page's module script (line 52) grows one `import` per increment and one
+    `window.SV<Name> = …` line; a wrapper in the `BRIDGE` section per old name. Module scripts and `defer` scripts
+    run in document order after parsing and before `DOMContentLoaded`, which is when `init()` runs, so the
+    namespaces exist before the first call; the parse-time rule above is what makes that true, and
+    `bridge.test.mjs` reads the page with the parser P1's guard uses and fails if a top-level statement of a
+    classic script calls, or reads a property of, a bridged name. Every new file is in `PRECACHE_URLS` in the
+    increment that adds it, so a teacher who has visited the site once has it offline after the deferred pass; the
+    precache is versioned, so the bump re-fetches the page and its files together and a stale page never meets a
+    new module. A module that only another module imports is not seen by `check:precache` until increment 8;
+    `imports.test.mjs` walks the `import` graph from the page and fails on a file the list lacks, from increment 2.
+    The published file is the only thing of 035's opened from `file://`, and it imports nothing: it is one file by
+    design (P1's "nothing happens to it"). `make-offline-copy.mjs` ships the modules and drops `test/`, as it does
+    for 046's seventeen. Nothing here loads lazily: a module that `import()`ed on first use would make the first
+    offline use of a tab a failure, so every import is static.
+  - *The tests that would prove it, named.* Pure Node, under `Tools/schedule-visualizer/test/`, each with a
+    `test:<name>` shortcut and a `suites.json` line (`check:tests` fails otherwise), fixtures built in the test with
+    made-up names (Ms. Okafor in 204, Mr. Lindqvist in 116, groups 7-1 to 7-4) and the Northwind project:
+    `model.test.mjs` (labels in all four styles; `bellDay` B falling back to A; `formatModTime` blank on a missing
+    end; `groupWeight` with a size, a blank, a string, a zero, and no default; the two `dayMods` rules; conflicts:
+    none, one, a flagged room, a room with a hyphen, both days; `migrateBlueprint` on a save from before floors existed (no
+    `floors` key, a top-level `cells`), on a version-5 save, and on one with a pair naming a missing floor; the byte-identical round trips above; `validateBlueprint` on
+    each malformed field). `graph.test.mjs` (a 3×3 floor: classification, orthogonal edges, a dummy tile as a wall;
+    a room with one doorway reachable only through it; a grouped room reached through a non-anchor cell; two floors
+    joined by a pair, the teleport edge and its zero cost; a pair naming a hallway cell, skipped; A* through a
+    teleport shorter than the stairs' Manhattan distance, which is the admissibility case; the reopen case built
+    by hand; a path that must not cut through a third classroom; `resolveRoomPath`'s five answers; `pathMetadata`'s
+    `hallwayCells` holding no staircase; the cache returning the same object until `invalidate()`).
+    `routes.test.mjs` (a four-mod day with a Planning gap, a same-room pair and an unknown room; congestion with
+    two groups sharing a corridor, one sized, one not; a zone on floor 2 that excludes a floor-2 cell and not the
+    floor-1 cell under it; exits: nearest by cost through a teleport, a tie, no exit at all, an exit cell not in the
+    graph; steps for a path with two turns). `congestion.test.mjs` (`congestionDelayMult` at 0, 0.5, 1, 1.5, 2, 2.5,
+    3, 4; `travelTimes` on a segment with two teleports; `whatIfMetrics` with an override that removes a trip and
+    `whatIfDiff` reporting it). `playback.test.mjs` (a controller stepped by an injected clock through two
+    transitions; reduced motion; `collisionSimulation` on two groups crossing). `browser.test.mjs`
+    (`deriveScheduleData` on Northwind equals P1's `EXPECTED`; the `ELA` default and the last-writer rules, named;
+    `publishedHTML` on Northwind with a fixed `now` equals P1's baseline's script and markup sections;
+    `publishFnList()` is the 28 names). `bridge.test.mjs`, `imports.test.mjs`, `size.test.mjs` as above. Browser:
+    `smoke-editor.mjs` (increment 10) on the next free port after P1's (8489 is free at v251; the header's note on
+    ports is the record); every existing suite unchanged. **The breaks on purpose** each increment is held to: a
+    moved function's text changed by one character (P1's baseline names the section); a wrapper deleted (the
+    evacuation suite fails on the missing global); a module file left out of `PRECACHE_URLS` (`imports.test.mjs`);
+    a top-level call to a bridged name added to the page (`bridge.test.mjs`); a `let` made shared again
+    (`graph.test.mjs`'s cache case); the page grown by a 3 KB comment (`size.test.mjs`).
+  - *What each adopting tool changes.* 035 only, as above. 034 changes nothing. P1's `check-publisher.mjs` gains
+    `sources` (the page, then every module its `type="module"` script imports, followed transitively) in increment
+    2, and reads `export function` and `export const` as declarations. No other tool imports from
+    `Tools/schedule-visualizer/`, and P2 does not offer one: a shared bell schedule (P7) is a later row.
+  - *Left to P3 to P6, on purpose.* P3 takes `sv-graph.js`'s edge cost and `sv-routes.js`'s options (`{ weights:
+    { stairs, elevator }, avoid }`) and `collectExitPoints`' shape; it needs increments 3 and 4 and nothing after.
+    P4 needs the door cards out of the page (they go with the editor in increment 10; P4 may want them as their own
+    `sv-cards.js`), and `ExportKit.toPdf` for the packs. P5 needs `scheduleConflicts` and `whatIfMetrics` (increments 2 and
+    5) and adds the teacher-with-three-rooms and double-booked-room checks beside them. P6 needs `sv-browser.js`
+    (increment 7) and P1's contract; whether 034 is a fork (P1 question 1) decides whether it imports the module
+    or is published from it.
+  - *Left out altogether.* Templating the 141 KB of markup, which is the floor under the number. Bundling or
+    minifying anything (no build step on this site). Stripping comments. Changing any algorithm, default or
+    message the suites find doubtful (named in the tests, left for P5). Adopting `a11y.js` or `ink-paper.css`
+    (rank 5, Devon's). Lazy loading. A per-floor or per-building data model beyond what the page has. Fixing the
+    stale `README.md` before increment 11 (it would be rewritten twice). Nothing here was run: no module exists,
+    the sizes after each increment are sums of today's sections and will move by the bridge's bytes and by whatever
+    the move finds, the "about 270 KB" at increment 11 could be 30 KB either way, and whether a
+    reopen-tolerant A* on a 60×40 three-floor school stays fast in a module is the same question it is today
+    (the page has no timing test; none is designed).
+  - *Questions that are Devon's. None is answered here; the build waits on none of them except where said.*
+    1. **Is under 300 KB the right target, now that it is measured?** The engines and the publisher (increments 1
+       to 7) leave the page at about 620 KB with every Node suite in place, the visualize renderer (9) at about
+       520 KB; the last 250 KB are the editor, the what-if lab and the groups tab, moved for the number and not
+       purified. Stop at 7, at 9, or go to 11? The design goes to
+       11 because the bullet says so; it is the cheapest decision in this list to reverse.
+    2. **Should the two folders be folded at all?** It moves every path P1 names and a `select-suites` test pin,
+       for a tidier tree. The design folds last; if the answer is no, increment 11 rewrites the README in place.
+    3. **May the two doubtful rules change in P2's suites, or only in P5's?** A heat-exclude zone is checked against
+       the floor the editor is showing when a cell has no `floorId`; a room with no subject publishes as `ELA`. The
+       design keeps both and names them; changing either changes a congestion number or a published colour.
+    4. **Is `sv-browser.js` one module or two** (the shared browser functions, which 034 mirrors, apart from the
+       publisher that assembles the file)? One keeps P1's ledger on one file; two lets P6's reader import the
+       browser without the publisher. The design says one, for P1's sake.
+    5. **Does the help and onboarding prose stay in the markup?** It is 7.6 KB and the only markup a template could
+       carry without changing what a teacher sees before `init()`.
 - **P3 — Accessibility routing.** Wheelchair/elevator-weighted routes over the
   existing graph, per-student route sheets, and "which rooms can't be reached
   without stairs" as a printable report — the notes call this "a real legal and
