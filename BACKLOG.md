@@ -87,6 +87,11 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-13 (v249), rank 6, Path 7 P4 increment 5: 003, 008, 018, 033, 068 and 075 save their CSV through
+  `ExportKit.toCsv`.** Every file now has a byte order mark, CRLF, a quoted carriage return and an apostrophe before
+  a typed cell a spreadsheet would run as a formula; 075's Import takes the apostrophe off. Old file against new
+  for all six. `npm run test:csv-adopters` (port 8486). **Left in rank 6: 001 and 006 (CSV and workbook), then 030
+  and 036; `toXlsx` has no adopter. No file was opened in a spreadsheet program.**
 - **AI-13 (v248), rank 6, Path 7 P4 increment 4: 011 makes booklets and several pages to a sheet on `ExportKit`
   (Path 17 P4's controls, built), and 064's zip and PNG downloads are the file helpers' first adopter.** 011's
   default output is the old page's in 120 states, to the pixel. `npm run test:image-to-pdf-impose` (port 8483).
@@ -232,14 +237,14 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v244` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
+| `CACHE_VERSION` | `v251` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
 | Precache entries | **315** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **208** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| Suites | **213** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 31 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `export.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 31 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 10 · `export.js` 9 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -376,7 +381,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 6 | Path 7 P4 — `_shared/export.js`. **Increments 1 to 4 shipped (AI-13, v243 to v248):** `ExportKit` has the imposition and pagination math, `toPdf(pages, opts)` for pages a tool can draw, and the file helpers `toCsv`, `toXlsx`, `toZip`, `download` and `filename`; 064 (Download PDF, print pagination, and since v248 its zip and PNG downloads), 040 (print pagination and backs) and 011 (booklet and pages per sheet, v248) are on it, and `_shared/duplex-print.js` is deleted. **Left:** `toCsv` and `toXlsx` have no adopter: twelve pages hand-roll a `text/csv` download with no formula guard, and they move one or two to a PR, old file against new. Nothing else in P4 is open. A slot is not clipped and turns 0 or 180 only. Ordinary work, no Fable needed | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
+| 6 | Path 7 P4 — `_shared/export.js`. **Increments 1 to 5 shipped (AI-13, v243 to v249):** `ExportKit` has the imposition and pagination math, `toPdf(pages, opts)` for pages a tool can draw, and the file helpers `toCsv`, `toXlsx`, `toZip`, `download` and `filename`; 064 (Download PDF, print pagination, and since v248 its zip and PNG downloads), 040 (print pagination and backs) and 011 (booklet and pages per sheet, v248) are on it, and `_shared/duplex-print.js` is deleted. **Increment 5 (AI-13, v249):** 003, 008, 018, 033, 068 and 075 save their CSV through `toCsv` and `download` (`npm run test:csv-adopters`, port 8486). **Left:** two more CSV writers, 001 and 006, which also write a workbook with `XLSX.writeFile` (the first `toXlsx` adopters; 006 has an import to round-trip), then the workbook-only 030 and 036; 035's template and 060's results are AI-31's pages to move. `toXlsx` has no adopter. Nothing else in P4 is open. A slot is not clipped and turns 0 or 180 only. Ordinary work, no Fable needed | `_shared/` | 2+ | | [Path 7](#path-7--print-and-export-kit) |
 | 7 | Path 7 P5 — a real in-page print preview with `@page` size emulation | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -391,7 +396,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 21 | Path 11 P1 — publisher drift guard before any extraction | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 21 | Path 11 P1 — publisher drift guard before any extraction. **Designed 2026-10-05 (AI-20), not built: the P1 bullet has the whole design and seven questions for Devon** | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 22 | Path 11 P2 — extract the pure engines; target the HTML under ~300 KB | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 23 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
@@ -401,7 +406,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 28 | Path 12 P2 — read-side adopters: 053, 062, 040, 018, 019, 020 | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 29 | Path 12 P3 — play modes in 030: every-team-answers, quiz-bowl, wheel, final wager, printed quiz | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
+| 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 34 | Path 13 P4 — bracket completeness: double elimination, pools, Swiss, ties, consolation | 020 | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -467,7 +472,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 94 | Export into Review Game Board — emit the question set in the board’s category/points format | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
-| 100 | Improper, mixed and negative values — extend operand generation past 0–1 | 061 | ½ | | [061 Fraction–Decimal–Percent Conversion Drill Generator](#061--fractiondecimalpercent-conversion-drill-generator) |
 | 101 | Multiple saved custom stories — named multi-save for templates plus their word banks | 063 | ½ | | [063 Grammar Mad Libs Generator](#063--grammar-mad-libs-generator) |
 | 102 | Pre-lab and post-lab packet split from one saved template | 065 | ½ | | [065 Lab Report Template Builder](#065--lab-report-template-builder) |
 | 103 | Bulk import a custom bank — paste problem/work/fix/explain rows for a whole unit | 066 | ½ | | [066 Math "Find the Mistake" Warm-Up Generator](#066--math-find-the-mistake-warm-up-generator) |
@@ -2420,10 +2424,45 @@ localStorage with no file export.
   `npm run test:image-to-pdf-impose` (port 8483) reads the file. 064's `exportZip` builds its list and calls
   `toZip`, and its PNG and zip downloads go through `download`: the same entries with the same bytes inside, the
   file about a fifth smaller (deflated; it was stored). `npm run test:trading-card-pdf` reads the zip now too.
-  **What is left of P4.** `toCsv` and `toXlsx` have no adopter. Twelve pages hand-roll a `text/csv` download
-  today and none of them guards a formula; they move one or two to a PR, each with its old file compared with
-  the new (a typed cell that starts `=`, `+`, `-` or `@` gains an apostrophe, which is the point and is the one
-  difference to expect). 011's layouts leave three things unbuilt, all in the layer already and none asked for: a
+  **Increment 5 shipped (AI-13, 2026-10-05, v249): six pages save their CSV through `toCsv`.** The survey
+  first, since "twelve pages" above was a grep for `text/csv` and two of its hits (017, 038) are a file
+  input's `accept`. **Ten pages write a CSV by hand, and four write a workbook:**
+
+  | Tool | What it saves | What was wrong with the file | Now |
+  |---|---|---|---|
+  | 003 Rubric Builder | every scored student: points per criterion, total, percent, comment | no byte order mark (Excel shows `Zoë` as `ZoÃ«`), no formula guard | `toCsv`, v249 |
+  | 008 Behavior Points | archived days: date, student, points, taps | no mark, no guard | `toCsv`, v249 |
+  | 018 QR Scavenger Hunt | stations: label, question, note, type, answer, hint, code word | no mark, no guard (a note typed `-5 is wrong` opened as `#NAME?`) | `toCsv`, v249 |
+  | 033 SSR Log | reading log: student, date, book, genre, pages, minutes | no mark, no guard, a bare carriage return left unquoted (the row breaks in two) | `toCsv`, v249 |
+  | 068 Parent Contact Log | contacts: date, student, method, reason, outcome, initials | no guard (an outcome typed `-left voicemail`), a bare carriage return unquoted; it had the mark | `toCsv`, v249 |
+  | 075 Staff Directory | name, room, extension, department; **it also imports this file** | no mark, no guard (an extension typed `+1 555 0100`), a bare carriage return unquoted | `toCsv`, v249; Import takes the apostrophe off again |
+  | 001 Hall Pass Log | a range report (title lines, totals, every pass), as CSV and as a two-sheet workbook | no guard in the CSV; it has the mark and quotes a carriage return. The workbook is `aoa_to_sheet`, which writes a string as a string, so nothing to fix there but the copy of the code | left |
+  | 006 Class Roster Hub | one roster or all of them, as CSV and as a workbook; **it imports both** | no guard in the CSV (it has the mark and quotes a carriage return); its import would have to take the apostrophe off, as 075's does | left |
+  | 030 Review Game Board | a blank template workbook | nothing wrong; a copy of `XLSX.writeFile` | left |
+  | 036 Final Grade Checker | `final_grades.xlsx` | not read closely; `aoa_to_sheet`, so strings stay strings | left |
+  | 035 Schedule Visualizer | `groups-template.csv`, three fixed lines | LF line ends, no mark, nothing typed in it | left: 035 is AI-31's |
+  | 060 Fitness Tracker | assessment results | no mark, no guard, a bare carriage return unquoted | left: an AI-31 worker had the page in this batch |
+
+  032 and 038 only read a workbook. The six that moved were taken worst file first and stopped at six; 001 and
+  006 are next and are the first `toXlsx` adopters (a CSV and a workbook from one table each).
+  **How a page adopts `toCsv`, as the six did.** Link `../_shared/export.js`; delete the page's own cell
+  quoting and its Blob and anchor; hand the rows as arrays to `ExportKit.toCsv(rows)` and the text to
+  `ExportKit.download(text, name, 'text/csv;charset=utf-8')`, keeping the tool's own file name. **A computed
+  number goes in as a number, not as its text:** the guard is for typed cells, and `"-3"` the string would come
+  out `'-3` (003's scores were strings from `fmtNum()`; they are numbers now, the same digits). A page that
+  imports its own file strips a leading apostrophe that stands before `=`, `+`, `-` or `@` (075's
+  `unguardCsv()`). Then a row in `Tools/export/test/_csv-adopters.mjs`: the seed, the button, the file name, the
+  numeric columns and the table the file must hold; `smoke-csv-adopters.mjs` does the rest (the mark, CRLF, strict
+  RFC 4180, the apostrophe on every typed formula and on no number, every cell as typed, the bytes against a
+  writer of its own, and the round trip for a page with an import), and its `PAGES` list gets the page so CI's
+  selector runs it when the page changes. Old against new for the six, each on its sample data and on cells
+  built to break a CSV: the new file is the old file's cells with the mark, a CRLF after the last row, the
+  apostrophes and the quoted carriage return, and nothing else differs. What differs on purpose and a teacher may
+  notice: a cell typed `-` (075's "no room") opens in a spreadsheet as `-` still, but the file holds `'-`, so a
+  program that is not a spreadsheet shows the apostrophe.
+  **What is left of P4.** 001 and 006 (CSV and workbook, one PR each; 006's import round trip is the care), then
+  030 and 036's `XLSX.writeFile` calls, which are tidying and fix nothing; 035 and 060 when their pages are free.
+  `toXlsx` has no adopter. 011's layouts leave three things unbuilt, all in the layer already and none asked for: a
   preset for a one-sided printer (`stack: 'fronts-first'`), signatures, right-to-left.
   **Known limits, none of them a row yet.** A slot is not clipped, so a draw function that runs off its page
   runs onto its neighbour. A slot turns 0 or 180 degrees, not 90, so N-up never turns a page to fit. A booklet has
@@ -2855,6 +2894,235 @@ a real pathfinder that the published browser never exposes.
   newer social branding. Only after this is green does extraction start. *Fable
   because the coupling is by string name and by closure, and the failure is a
   silently wrong published file that teachers rely on.*
+  **P1 is designed, not built (AI-20, 2026-10-05, a design pass: no code, no suite, no browser).** What follows is
+  the whole of it. It was written from the code as it stands at v248 and from one static probe, a scratch
+  script that was not kept (what it measured is marked *measured*; everything else is read off the code).
+  **What the bullet above gets wrong, first.** There is no baseline: `test/publish.mjs` writes
+  `Tools/schedule/test/baseline.html` when run with no argument, and that file has never been committed (it is
+  not ignored either, so a bare run leaves an untracked file). The list is 28 functions now, not 26, and the
+  published script is 35 named pieces, because seven more go in through a second list of `.toString()` calls
+  inside `brBuildPublishedHTML()` (`brDColor`, `brDeptInk`, `brTDept`, `brDShort`, `brOrderOf`, `escHtml`,
+  `escJsAttr`). "Every function in the list still exists" cannot fail in a way that matters: a missing one is a
+  `ReferenceError` the moment the page loads. And "the published head block matches the newer social branding"
+  names a block the publisher does not write and, by `Tools/schedule/README.md`, must not; the block is 034's,
+  it is the *older* branding, and which is right is undecided (question 3).
+  - *What can drift. Three pairs, and they are not the same problem.*
+    **(a) 035 live against what 035 publishes.** The published script is assembled from strings: a hand-typed
+    preamble (`let brMode = 'teacher'…`), two JSON constants, seven `.toString()` constants, the 28 functions,
+    five boot calls and the empty-data notice. So it drifts from the page it was cut from whenever (1) a published function reaches for
+    a name that is not in the file (Round 7: `escHtml` and `escJsAttr`, a `ReferenceError` when a teacher was
+    opened); (2) a string-built handler (`onclick="brJumpTeacher(…)"`) or the markup template names a function
+    that is not published; (3) a published function looks up an element id the published markup does not have;
+    (4) a preamble `let` falls behind the live declaration; (5) something live-only leaks in (`AppState`,
+    storage, a URL); (6) a function is declared twice, or stops being a top-level `function` declaration, so
+    `.toString()` yields something that defines nothing at top level (an arrow, a method shorthand); (7) the
+    live page is sloppy-mode and the published script begins `'use strict'` (*measured:* none of 035's three
+    inline scripts is strict), so a construct can work live and throw published. *Measured today:* all 28
+    resolve to one top-level declaration each; every handler name (nine) and every looked-up id (eight) resolves; the only
+    names the script reaches for beyond the language's own are `document` and `brRenderMapLegacy`, and the
+    second is a real hole behind a dead door (`brRenderMap()` calls it only when `typeof BR_WINGS !==
+    'undefined'`, which is never true in a published file); the only URL is the SVG namespace.
+    **(b) The publisher against its own last output.** Nothing records what a publish produced, so a refactor
+    that changes it is seen by nobody. This is the one P2 is about to make likely.
+    **(c) 035's publisher against the committed `034-schedule-browser.html`.** 034 was published by v60 on
+    2026-07-15 and then edited here; the README calls it a second implementation and says not to resync it.
+    *Measured:* of the 35 published pieces, 21 are the same text in 034, 12 differ (`brCheckStaleness`,
+    `brBuildOpts`, `brRenderMenu`, `brOnKey`, `brSetMode`, `brChoose`, `brDayRows`, `brRenderTeacher`,
+    `brRenderGroup`, `brGeoFloorSVG`, `brMiniMapHTML`, `brGroupMapHTML`) and 2 are absent (034 has its own
+    `brEscHtml` and `brJsAttr`); 034 has 42 functions 035 has never had, six tabs to three, and two
+    localStorage keys (`br_home_teacher`, `br_personal_notes_v1`) where a published file has none. Two suites
+    already hold the parts that must agree (`smoke-mode-tabs.mjs` the tab markup, `smoke-dark-theme.mjs` the
+    theme CSS, byte for byte). Nothing holds the 21 functions that agree today: a fix to one of them in one
+    file is the R61–R63 drift again, and it would be silent.
+    **There is no fourth pair.** Nothing but 034 and the file's own script reads `PUBLISHED_DATA` (searched
+    the tree); a published file's reader and data are always the same age, because they are one file. The data
+    and its reader come apart in exactly two places, both later: when 034's data is refreshed by hand under
+    034's own reader, and in P6, where one browser file takes many data files. The contract below is for those.
+  - *The contract for the data, written down once.* `Tools/schedule/test/published-contract.mjs`, pure Node,
+    no DOM, test-side only in P1 (a published file cannot import, and no reader needs a runtime check until P6).
+    `FORMAT = 1`. `formatOf(data)` returns the integer in `data.format`, or `0` when there is none: **format 0
+    is every file published up to v61, 034's included.** `validate(data, { fixture })` returns `{ ok, format,
+    errors: [{ path, message }], warnings: [...] }`; `upgrade(data)` returns a copy at `FORMAT` (0 to 1 adds
+    the two fields below and changes nothing else) and throws on a format above `FORMAT`; `readEmbedded(html)`
+    takes the one `const PUBLISHED_DATA = …;` line out of a published file and parses it;
+    `shapeOf(data)` is a summary of types and counts with no values in it, **and it is the only thing a failure
+    prints**: 034's data is a real staff list and CI's log is public. The shape, formats 0 and 1 alike:
+    `school` string; `publishedOn` `YYYY-MM-DD`; `dept` `{ code: { c: '#rrggbb', name } }`; `order` `{ code:
+    integer }`; `teachers` `{ name: { dept, room, plan, sec: [group], A: [modCount], B: [modCount], co: [name]
+    } }`, a slot being a group's name or the word `Planning`; `sections` `{ group: [teacher] }`; `room2teacher`
+    `{ room: teacher }`; `groupRooms` `{ group: { A: [modCount of room or null], B: the same } }`; `modCount`
+    integer of 1 or more; `modLabel` string; `bell` null or `{ A: [modCount strings], B: the same }`;
+    `geometry` `{ floors: [{ id, label, cols, rows, hall: [[c, r]], stair: [[c, r]], rooms: [{ rn, dept,
+    teacher, cells: [[c, r]] }] }] }`. Format 1 adds `format: 1` and `tool` (the `TOOL_VERSION` string).
+    `groupRooms`, `bell` and `geometry` may be missing in format 0 (the reader already allows it: `||
+    {}`, "No building map available"). *Errors:* a wrong type, a slot array that is not `modCount` long, a
+    slot naming no group, a `sec` entry or a `sections` teacher that does not exist, `room2teacher[t.room]`
+    not the teacher, a cell outside `cols` by `rows`, a room number on two rooms. *Warnings, never errors:* a
+    department code with no entry (the reader falls back to grey on purpose); a `co` list that is not
+    mirrored; a section that lists a teacher whose own day never shows that group. **The last two cannot be
+    errors because 034's committed data has them** (*measured, counts only:* 21 one-way `co` entries; 30 of
+    162 section-to-teacher links with no matching slot; 6 room-day-mod slots holding more than one group;
+    every hard rule above holds). The cause is in `brDeriveScheduleData()`: a room holds one group per mod, the
+    last one written, and a teacher has one room, the last one found. That is the publisher dropping a group
+    from a teacher's printed day without a word. P1 measures it and does not change it (question 5).
+    **The rule for a later format:** adding a field does not raise `FORMAT`; a change that would make an older
+    reader show something wrong does, and `upgrade()` gains the step in the same commit. A reader at N reads
+    everything at or below N through `upgrade()`. What a reader does with data *above* its own format is
+    question 4, and nothing in P1 builds it.
+  - *The guard that needs no browser.* `Tools/board-check/check-publisher.mjs`, an npm script named
+    `check:publisher`, in CI beside the other guards (a new step in `ci.yml`). It reads the two HTML files as
+    text and parses 035's classic inline scripts with ESLint's own `Linter` (ESLint and `globals` are direct
+    devDependencies; `espree` is not, so it is not imported by name). Exports, for its test and for the browser
+    suite: `readPublisher(html)` returns `{ fns: [{ name, text, line }], consts: [{ name, from, kind, text }],
+    json: [{ name, from }], preamble: [string], boot: [string], markup, css, dataKeys, problems }`;
+    `assemble(pub, data)` returns the `<script>` text the page would publish for that data; `freeNames(script)`
+    returns `[{ name, line }]`; `forkState(pub, html034)` returns `[{ name, state: 'same' | 'forked' |
+    'absent' }]`; `check({ root })` returns `{ failures: [{ code, message }], notes }`. Flags: `--list` (the 35
+    pieces and where each is declared), `--json`, `--explain <name>` (the first line where 034's copy parts
+    from 035's), `--ledger` (rewrites the ledger's `same` list only, after you have read what moved).
+    **How it reads the publisher.** It walks the syntax tree of `brPublishFnList()` (the returned array must
+    be a plain list of identifiers) and of the `consts` and `js` arrays in `brBuildPublishedHTML()`, whose
+    elements must each be one of five forms: a string literal; `'const X = ' + Y.toString() + ';'`; `'const X
+    = ' + JSON.stringify(Y) + ';'`; `'const X = ' + Y + ';'`; the functions' `map(f => f.toString()).join()`.
+    **Anything else fails as "publisher not understood", with the line.** Not knowing what is published has to
+    fail, never pass. The module script at the top of 035 is skipped: its bindings are not page globals.
+    A function's published text is its source from `function` to its closing brace; an arrow constant's is
+    its initializer. That is what `.toString()` returns, and the browser suite holds the guard to it (below).
+    **What it fails on, by code.** **LIST**: a listed name with no top-level `function` declaration in a
+    classic script, or with two. **CONST**: X and Y differ (the piece would publish under another name), or Y
+    is not a top-level arrow constant or function. **FREE**: a name the assembled script uses and does not
+    define. The allowed outside names are a list in the guard, `PUBLISHED_GLOBALS`, seeded with what is used
+    today, which is `document` alone; ESLint's whole browser set would wave through a bare `name`, `status` or
+    `event`. `brRenderMapLegacy` goes in `KNOWN_FREE` with its reason, and the guard fails if a `KNOWN_FREE`
+    name stops being free, so the entry cannot outlive the hole. `typeof X` is not a use. **STRICT**: the
+    assembled script does not parse as strict code. **LIVE**: `AppState`, `localStorage`, `sessionStorage`,
+    `indexedDB`, `fetch`, `XMLHttpRequest`, `WebSocket`, `import(`, `getSubjects`, `toggleApp`, `showToast`,
+    `brLoadFromVisualizer`, or any URL but the SVG namespace, anywhere in the assembled script, the markup or
+    `BR_CSS`. **HANDLER**: an `on…="name(` in the markup template or inside a published function's text that
+    is not a published function (`window.print()` is allowed). **ID**: a literal `getElementById('x')` in a
+    published function with no `id="x"` in the markup template or in a published function's own strings.
+    **STATE**: a preamble `let` whose name or initial value differs from the live top-level declaration (`brMode`,
+    `brCurrent`, `brActiveIdx`, `brOpts`, `brGrpDay`, `brMapFloorIdx`). **HEAD**: the page template gains a
+    `<link`, a `<script src`, a manifest or a `gvb:social` marker. **DATA**: 034's embedded `PUBLISHED_DATA` is
+    not one parseable line, or has a contract error at its own format; and the keys the publisher writes
+    (`dataKeys`) are not the contract's. **FORK**, the 034 pair, a ledger in the shape of
+    `inline-sinks-baseline.json`: `Tools/schedule/test/publisher-ledger.json` holds `same` (21 names), `forked`
+    (12, each with a sentence saying what 034's copy does that 035's does not) and `absent` (2, each with what
+    034 uses in its place). It fails when a `same` piece differs (the fix landed in one file: port it, or move
+    the name to `forked` and say why), when a `forked` piece has become the same (lower the list in the same
+    commit), and when a published name is in none of the three. Text is compared exactly, after CRLF is
+    stripped. The 42 functions only 034 has are not in the ledger; they have no second copy to drift from.
+    **Edge cases.** A function moved into a block, an IIFE or a module is not a page global and fails LIST with
+    that said. A comment or JSDoc above a function is not part of its published text and may change freely. A
+    backtick in a `BR_CSS` comment ends the template literal (the README's trap): the script no longer parses
+    and the guard says "035's script does not parse" with the parser's line, before anything else. A name used
+    only as a property (`x.fetch`) is not a LIVE hit; the check is on identifiers and string contents, with
+    comments skipped. CSS classes a function emits against the selectors in `BR_CSS` are **not** checked: a
+    class with no rule is common and harmless, and a guard that guesses is worse than none.
+  - *The guard that needs a browser, which is the bullet's "regenerate and diff".*
+    `Tools/schedule/test/smoke-publish-baseline.mjs`, a suite and a `test:schedule-publish` shortcut, on the
+    next free port. `publishFromFixture()` gains one option, `{ now }`, which calls `page.clock.setFixedTime`
+    before the page loads; the suite pins **2026-01-15 17:00 UTC**, noon on the east coast and the same date in
+    every US zone and in UTC. With the clock pinned the output has no other moving part (Playwright's default
+    locale is en-US, so the footnote reads "January 15, 2026"; `JSON.stringify` keeps insertion order;
+    `.toString()` is the source text in every Chromium). It cuts the published file into named sections (page
+    template, fonts, `BR_CSS`, overrides, markup, preamble, data, each constant, each function, boot) and
+    compares them with the committed `Tools/schedule/test/baseline-northwind.html`, **which is the published
+    file with the 103 KB font block replaced by one line giving its SHA-256 and length**, so the baseline is
+    about 75 KB of text a person can diff in a PR. A mismatch names the section and prints the first differing
+    line of each side. `--update` rewrites the baseline; the diff of that file in the PR is the review. The
+    folder is `test/`, so the file is never precached and `make-offline-copy.mjs` leaves it out.
+    The other assertions: **the static guard's `assemble(readPublisher(html), data)` equals the real published
+    `<script>` byte for byte**, which is what entitles `check:publisher` to speak for the page with no browser;
+    the published data validates at `FORMAT` with no error and no warning and matches the fixture's `EXPECTED`;
+    the file opened from `file://` runs **every one of the 35 pieces at least once** while the suite picks a
+    teacher, a group, a mate, a room on the map, a floor tab, an A/B day, types in the search box and walks the
+    tabs by keyboard (Chromium's JS coverage names what never ran; a piece nothing can reach is reported and
+    fails); a published file whose data is replaced by `fixture-published-format0.json` (Northwind as v61
+    wrote it, captured from the unmodified tool) still shows the same teacher's day, so **a newer reader reads
+    an older file's data**; a fixture whose school is named `</script><b>` publishes a file with one script
+    block and that name in its masthead as text; and a publish at 23:30 local says the local date in both
+    places it says a date.
+  - *What an artefact from an older 035 is, and what happens to it.* **Nothing happens to it, by design.** A
+    file a teacher was emailed carries its own reader, data, styles and fonts; no page of this site opens it,
+    nothing imports it, and no storage key belongs to it, so there is nothing to migrate and no version of 035
+    can break it. Its one way of ageing is the banner after `BR_STALE_DAYS` (60). It is format 0, and P1 gives
+    that a name, a validator and a test that the current reader still reads it. 034 is the one old artefact
+    the repo holds: format 0, v60, and by its own date and rule its banner has been showing on the live site
+    since 2026-09-13 (82 days on 2026-10-05; read off the code, not seen in a browser). P1 does not refresh it
+    (question 2).
+  - *What each tool changes, in two increments, so the first proves the guard on the tool as it is.*
+    **Increment 1, no page changes, no `CACHE_VERSION`:** the guard, the contract, the ledger, the baseline
+    taken from 035 untouched, the format-0 fixture, the suite and the pure test; `package.json`, `suites.json`,
+    `ci.yml` and the README's "regression baseline" section rewritten. `Tools/board-check/` and `.github/`
+    change, so CI runs site-wide once. **Increment 2, 035 only, a `CACHE_VERSION` bump and `TOOL_VERSION` v62,
+    the baseline regenerated in the same commit** (the first intended change of it, which is the workflow
+    working): `data` gains `format: 1` and `tool`; `publishedOn` becomes the **local** date (it is
+    `toISOString()` today, the UTC date, while the footnote beside it is local and the reader parses the field
+    as local midnight, so a file published after 8 pm eastern is dated tomorrow); and `JSON.stringify(data)`
+    has every `<` written as `<` (today a room, teacher or school name holding `</script>` ends the
+    published script; the name can arrive in an imported project file or over a hand-off, and the file is then
+    emailed to staff; read off line 20743, not run). **034 does not change in P1**, not even its data, and no
+    storage key, registry row or precache line changes anywhere. `brRenderMapLegacy` stays where it is, listed.
+  - *The tests that would prove it.* `Tools/board-check/test/check-publisher.test.mjs` (pure Node, a
+    `test:check-publisher` shortcut), on the real tree and on edited copies of 035's text: the tree passes;
+    the extraction is 28 functions, 7 `.toString()` constants, 2 JSON constants, `BR_STALE_DAYS`, 6 state names, 5 boot calls; and **each
+    break on purpose fails with its own code and no other**: `escHtml` taken out of `consts` (FREE, naming
+    it, the Round 7 bug); a listed function renamed at its declaration (LIST); a listed function turned into
+    `const f = () =>` (LIST); a second declaration of one (LIST); `'const brDColor = ' + brDeptInk.toString()`
+    (CONST); `AppState.settings` read inside `brRenderTeacher` (FREE and LIVE); a `localStorage` read (LIVE); an
+    `onclick="brNope()"` in a template (HANDLER); `br-view` renamed in the markup (ID); `brGrpDay = 'B'` in the
+    preamble only (STATE); an undeclared assignment and a duplicate parameter (STRICT); a `<link>` in the head
+    (HEAD); a spread in the function list and a ternary in `consts` ("not understood"); a backtick in a CSS
+    comment (does not parse); one character changed in `brOverviewHTML` in 035 only, then in 034 only (FORK,
+    both ways); a `forked` function made identical (FORK asks for the ledger to be lowered); a new name added
+    to the list and to no ledger group (FORK); `brRenderMapLegacy` published after all (`KNOWN_FREE` expired).
+    The contract, on built data with made-up names (Ms. Okafor in 204, group 7-3): each error above one at a
+    time; each warning; format 0 with and without its three optional keys; `upgrade()` idempotent, never
+    changing a field it was given, throwing on format 2; `shapeOf()` output containing no string from its
+    input. The browser suite's cases are the paragraph above; its breaks on purpose are made by rewriting 035
+    on the way in with `page.route()`: a property dropped from the teacher record, a function reordered in the
+    list, one CSS declaration changed, the footnote reworded, each failing the named section and only it.
+  - *Left to P2, on purpose.* Following `import`s: the reader takes 035's inline classic scripts and nothing
+    else, so the first function P2 moves into a module fails LIST, and that failure is the prompt to teach
+    `readPublisher()` a `sources` list (the page, then each module it loads, the way `check-adoption.mjs`
+    follows them). What P2 should know before it starts: `.toString()` of an `export function` is the same
+    text without `export`, so a moved function publishes unchanged; a method shorthand or a bundled or
+    minified function does not; a helper a moved function imports becomes a free name and FREE says so;
+    modules are strict, which closes pair (a)'s seventh gap by itself. Publishing from Node with no browser
+    (so that the baseline is a pure suite) waits for `brDeriveScheduleData`, `brBuildGeometrySnapshot` and the
+    publisher to be extracted, which is the last step of P2's order. Folding `schedule/` and
+    `schedule-visualizer/` into one folder moves every path named here; P1 uses `schedule/test/` because the
+    fixture and `publish.mjs` are there.
+  - *Left out altogether.* Making 034 a pure publish again, or teaching 035 any of 034's 42 functions
+    (question 1). Refreshing 034's data. A runtime format check in any reader, and swappable data (P6). The
+    theme region and tab markup, which have their suites. The publisher's CSS-to-markup agreement. The 400-odd
+    functions of 035 that are not published. Fixing the double-booked room and the teacher with two rooms
+    (P5's constraint checks; P1 only counts them). Any social block. Nothing here was run: no line of the
+    guard exists, the 75 KB is an estimate (28 KB of `BR_CSS`, 24 KB of script, the data, the markup), and
+    the claim that `assemble()` can match the browser byte for byte is the suite's first assertion, not a
+    result. The probe compared whole declarations for functions and initializers for arrow constants.
+  - *Questions that are Devon's. None is answered here, and the build waits on none of them except where said.*
+    1. **Is 034 a fork for good?** Today it is a second implementation with a ledger round it. The other
+       course is to teach 035's publisher 034's features (three more tabs, notes, links, the PNG, the door
+       sign) so that 034 is again exactly what Publish makes. P6 needs to know which before it starts.
+    2. **034's own schedule is from 2026-07-15 and has been telling visitors it may be stale since
+       2026-09-13.** Refresh it (from which project file; none is in the repo), quiet the banner on the site
+       copy, or leave it? And should the public site's copy carry the real building's schedule at all, or
+       the invented Northwind one?
+    3. **Which social branding is right for 034's head block:** the older greyversusblue block with the
+       guild-board image that it has, or the newer AsPerMyLessonPlan block with none? P1's bullet assumed the
+       newer; `CLAUDE.md` says the policy is undecided. Until it is, the guard checks only that a file made
+       by Publish carries no block.
+    4. **When a reader meets data from a newer format than it knows** (034 after a hand refresh, P6's
+       swappable data): show it with a warning, or refuse and say "ask for a new copy"?
+    5. **Two groups in one room in one mod, and one teacher named in two rooms:** the published file shows
+       one and drops the other, silently. Should Publish refuse, warn and go on, or show both? 034's
+       committed data has 6 such room slots.
+    6. **Do files published before R60 still circulate** (no map, no bell times, no group rooms)? The
+       contract reads them as format 0 with those keys missing; if none exist, that allowance can go.
+    7. **Is 60 days the right age for the stale banner** for a schedule that holds a semester? It is one
+       constant, and it is in every file already sent.
 - **P2 — Extract the pure engines to `Tools/schedule-visualizer/`** in this order:
   schedule model, pathfinding (`astar`, `computeTravelTimes`), multi-floor graph,
   evacuation routes, congestion, playback renderer, publisher. Each extraction is
@@ -2933,6 +3201,295 @@ match; 021 silently overwrites a saved unit on a name collision (a real bug).
   history model keyed on student ids (Path 3) with a retention policy that is a
   setting, not a constant. *Fable for reconciling four tools' constraint semantics
   into one API without changing any tool's results for existing inputs.*
+  **Designed, not built (AI-21, 2026-10-05, a design pass: no code, nothing run in a browser). Everything from
+  here to P2 is the design.** Read from the tree at v248: 002, 022, 027 and 021's pages, 007's page and
+  `Tools/name-picker/np-pick.js`, 087's `Tools/class-screen/cs-core.js`, 020's pools, `_shared/roster.js`
+  (`trackRenames`, `reconcile`, `idIndex`), `_shared/seating-read.js`, the registry rows and the suites behind
+  `test:groups`, `test:lab-groups`, `test:novel-study` and `test:name-picker`. Figures marked *measured* came
+  from one pure-Node probe: 002's and 022's grouping functions and 022/027's role picker copied out line for
+  line, with a seeded generator in place of `Math.random`, and invented names. It was not kept. Questions that
+  are Devon's are listed at the end and not answered.
+  - *What is there today, as read.* The split into groups exists **six** times, not four: 002, 022, 027,
+    `np-pick.js` (007), 021's "split the roster" button and `cs-core.js` (087's groups widget); 020's
+    `distributeIntoPools` is a seventh deal, by seed order. All six share one core, to the letter: a Fisher-Yates
+    shuffle from the end (`j = floor(rng() * (i + 1))`), then name `i` goes to group `i % k`. So for the same
+    random numbers all six make the same groups, and that is what a shared engine can be held to. They differ
+    round the core. *The count:* 002, 022 and 027 take "students per group" as `ceil(n / size)` (never over the
+    size, often under); 087 takes `floor`, plus one when the remainder is at least half a group; 007 has a count
+    only, at least 2, and drops repeated names; 022 can take the count from its scarcest equipment; 021 has a
+    count only. *Constraints:* 002 has keep-apart, keep-together, locked groups, absent students, five
+    strategies (random; a snake draft, three tiers and sorted slices on a 1 to 5 skill typed after the name, a
+    missing one read as 3; and "everyone pairs with everyone") and three remainder rules; 022 has keep-apart
+    only, and a safety gate that takes names out before the split; the rest have none. *The repair:* 002 and 022
+    each run a random-swap search after the deal (800 and 600 tries), scored in 002 as broken pairs times
+    100,000 plus 1,000 for a pair that shared a group last time and 100 for the time before. *Memory:* 002 keeps
+    `pairHistory` (`"nameA␟nameB"` to `{ gen, count }`) and `pairGen` in `gtg:data:<class>`, for the whole year
+    since 2026-08-13 (the "Why" above still says two generations), cut only when a name leaves the list; 022 and
+    027 keep `history` (`name` to the last 30 role names) in `lgrr_rosters` and `novel-study-circles`. All three
+    are keyed on the name and follow a rename through `Roster.trackRenames` with an `idNames` map and a
+    `renameStudentData()` of their own (002 adds the counts of two pairs that become one; 022 and 027 refuse to
+    put one student's roles onto a name that has some). *Roles:* 022 and 027 hold the same picker: members in
+    random order, each takes the open role it held longest ago, with a random tie-break. *Saving:* 002 keeps
+    the loaded object whole and saves it back; **022's `normalizeRosterData()` and 027's `loadProjectByName()`
+    rebuild the object field by field, so a page from an older cache drops any field it does not know on its
+    next save.** Every random draw in all six is `Math.random`; only `np-pick.js` and `cs-core.js` take an `rng`.
+  - *Measured.* (1) **002's "floaters" and "leftover group" rules misread "students per group".** 30 students,
+    groups of 4, floaters: 8 groups of 3 and 6 floaters; with "leftover group", 8 groups of 3 and a ninth of 6.
+    The same for 22, 26, 27, 29 and 31 students (4 to 7 floaters, every group a 3). The rule pops every group
+    down to the smallest after a deal into `ceil(n / size)` groups. (2) **The no-repeat search undoes the skill
+    strategies after the first shuffle.** 28 students with random skills, 7 groups, 500 classes: under
+    "Balanced" the gap between the highest and lowest group average is 0.38 on the first shuffle and 1.56, 1.89
+    and 1.74 on the next three; under "Homogeneous" the range of skill inside a group goes from 0.43 to 3.05.
+    The search swaps for recency and its score has no term for the strategy. (3) Keep-apart: 002's and 022's
+    searches fail equally often on the same 2,000 classes at each of seven shapes: never for 28 in 7 groups with
+    up to 30 pairs or 24 in 4 with 20; 0.65% and 0.75% for 30 in 3 with 20 pairs, where 20,000 tries also leave
+    0.65% (those cannot be done). (4) Keep-together as pairs: two chains of three (A with B, B with C; D with
+    E, E with F) in 28 by 7 are left broken in 4.5% of 2,000 shuffles; one pair, four pairs and one chain of
+    four never were. (5) Roles: with the same four students and four roles over 12 meetings the picker hands
+    someone the role they held last time in 1.1% of hand-outs, 6.0% with three roles and 3.6% with five students
+    and four roles; the cheapest assignment over the same scores never does. (6) "Everyone pairs with everyone",
+    28 in groups of 4: every pair has met after a median of 30 shuffles (23 to 46 over 200 classes), against 41
+    (27 to 77) for random; the floor is 9. The first three shuffles are all new pairs, the tenth 36% new.
+    (7) A full pair table for 30 students is 23.6 KB keyed on names, 24.8 KB keyed on ids, 6.8 KB keyed on two
+    indexes into one list of keys. (8) The search costs about 1 ms a shuffle for 36 students in 9 groups;
+    for 28 in 7 with memory and no constraints it used a mean of 22 of its 800 tries and never all of them.
+  - *The rule the design is held to.* For the same random numbers the engine makes the groups, floaters and
+    roles each tool makes today, for every option the tool has today, with two named exceptions: 022's
+    keep-apart repair becomes 002's (same failure rate, measured above; different draws), and a class with a
+    repeated name. Everything better than today (items 1, 2, 4 and 5 above) is an option that is off until an
+    adopter turns it on in a commit of its own, after the commit that proves the port.
+  - *The module: `_shared/grouping.js`, new, a classic script publishing `Grouping`* (not `Tools/_engines/`:
+    `_shared/` is the one shared location). Pure: no DOM, no storage, no clock, and no `Math.random` when it is
+    given `rng` or `seed`. It runs in a `vm` context under Node as `export.js` does. It never throws on data: a
+    malformed option is dropped and named in `result.dropped`. A **member** is `{ key, name, attrs }`; `key` is
+    any string unique in the call, `attrs` an optional map of teacher-set values (`{ skill: 4 }`). Groups are
+    lists of keys throughout; the caller keeps its own records and maps back.
+    - `rng(seed)`: a generator (mulberry32) from a 32-bit number or a string (FNV-1a); `newSeed()`.
+      `pin(seed|null)`: a test hook; while set, a call with no `rng` or `seed` draws from it.
+    - `plan(n, { count | size, sizeRule, remainder, min })` returns `{ count, sizes, floaters, ownGroup,
+      note }` and draws nothing: the arithmetic a page shows before the shuffle. `sizeRule` is `'ceil'`
+      (002, 022, 027 today), `'near'` (087) or `'floor'`; `remainder` is `'spread'` (some groups get one more),
+      `'floaters'` or `'own-group'` (two or more left over make a group; one stays a floater, with `note`).
+      Count is clamped to `[max(1, min), n]`. Today's 002 is `ceil` with any remainder rule; item 1's fix is
+      `floor` when the rule is not `spread`, and nothing else.
+    - `formGroups(members, opts)`. `opts`: `count` or `size`, `sizeRule`, `remainder`, `min`; `absent: [key]`
+      (left out of the groups, kept in the memory); `strategy`: `'random'`, `'balanced'`, `'heterogeneous'`,
+      `'homogeneous'`, `'coverage'` (002's five stored words, so nothing saved is renamed) or `'spread'` (a
+      category dealt evenly); `by: 'skill'` and `missing: 3` for the strategies that read an attribute;
+      `apart` and `together`: lists of key pairs; `previous: [[key]]` with `lock: [bool]` (002's locked
+      groups: kept at their index, the count fixed at `previous.length`); `history` (read, never changed);
+      `recency: { penalties: [1000, 100] }`; `cost(aKey, bKey)`, an optional number added for each pair that
+      shares a group (P2's seating distance; nothing in P1 supplies one); `search: { attempts: 800, restarts: 0,
+      keepStrategy: false, together: 'pairs' }`; `rng` or `seed`. It returns `{ groups, floaters, absent,
+      seed, violations: { apart, together, repeats }, impossible, dropped, stats }`, where `stats` is
+      `{ strategy, fellBack, count, sizes, ownGroup, note, lockedCount, placed, locksDropped, newPairs,
+      totalPairs, attempts, tries, score, stoppedBy, spread }`. **It does not write the memory**; `history.record()`
+      does, so Undo is the old object and a preview costs nothing.
+    - `rotateRoles(groups, roles, history, { method, rng, seed })` returns `{ byGroup: [[{ key, role }]],
+      repeats: [key] }`; a member past the last role gets `role: null`. `method: 'greedy'` is today's picker
+      draw for draw; `'best'` is the cheapest assignment over the same scores (every ordering tried for up to
+      8 members, greedy then pair swaps above that), ties broken by `rng`.
+    - `coverRoles(group, absentKeys)`: 022's `computeEffectiveMembers()`, which hands an absent member's role
+      round the present ones; no draws.
+    - `history.*`, all returning a new object: `empty()`, `normalize(h)` (repairs or empties, never throws,
+      refuses `__proto__`, `constructor` and `prototype` as keys, as 022 does for an arriving link),
+      `record(h, groups, { roles, members })`, `count(h, a, b)`, `lastGen(h, a, b)`, `rolesOf(h, key)`,
+      `coverage(h, keys)` (`{ met, possible, never: [[a, b]], counts }`, which is 002's grid and the answer to
+      "has everyone worked with everyone"), `rekey(h, from, to)`, `prune(h, keys, policy)`,
+      `identify(h, names, ids)`, `fromLegacy({ pairHistory, pairGen, roles, idNames })`, `toLegacyPairs(h)`,
+      `toLegacyRoles(h)` and `absorbLegacy(h, legacy)`.
+  - *The memory.* `{ v: 1, gen, keys: [key], names: [name], seen: [gen], pairs: { "i.j": [lastGen, count] },
+    roles: { "i": [roleName] } }`, where `i < j` index `keys`. Index keys are why a rename or a new id is one
+    string changed and not up to 29 pair keys rebuilt, and why the table is 6.8 KB and not 23.6 (measured).
+    `gen` is the number of recorded groupings; `seen[i]` the last `gen` member `i` was handed in, absent or
+    not; `roles` holds the last `maxRoles` (30, today's cap) per member, oldest first. A role is its name, as
+    today: renaming a role in a tool's editor starts that role's memory again, which is today's behaviour and
+    is not fixed here.
+  - *Keys, and how the memory survives a rename.* `identify(h, names, ids)` is the one place a name becomes a
+    key. `ids` is `{ name: id|null }` from the sidecar; the build adds one read-only export to `roster.js`,
+    `Roster.idsFor(names, rosterName)`, over the `idIndex()` and `idFor()` that `trackRenames` already uses
+    (same precedence: the tool's roster first, then the first roster that knows the name). For each name in
+    order: (a) it has an id the memory knows (`i:<id>`): that member, and the stored name is updated, which is
+    all a followed rename is; (b) else the memory holds a key no other current name has claimed whose stored
+    name is this exact string: that member, re-keyed to `i:<id>` when there is one. This is the first sighting
+    of an id for a student known by name, and also a roster deleted and made again in 006, which mints new ids
+    for the same names; (c) else a new member, `i:<id>` or `n:<name>`. A name that appears twice gets `#2`,
+    `#3` on its key in list order, and the call says so in `duplicates`; today 002 treats two students of one
+    name as one in every constraint. It returns `{ members, history, moved: [{ from, to, why }], duplicates }`
+    and needs no `idNames`: `names[]` is that record. What it cannot follow is what `trackRenames` cannot: a
+    student retyped under a different name with no id carried over (`roster.js`, assertion 27b).
+    `rekey(h, from, to)` when `to` exists keeps both tools' rules: pair counts add and the later `gen` wins
+    (002); roles are not merged, `to` keeps its own (022, 027); the pair of the two with each other is dropped.
+  - *Retention is `prune(h, keys, { departed, maxRoles })`,* called by the tool once per grouping, never per
+    keystroke (002's reason stands: a name half retyped must not lose its year). `departed` is `'drop'` (002
+    today: a member not in the list loses every pair), `'keep'` (022 and 027 today) or `{ gens: N }` (kept
+    until N groupings have been recorded without them). Absent members are in the list. Nothing is pruned by
+    age. The policy is an argument each adopter passes; whether a teacher sees it as a setting is a question
+    below.
+  - *The algorithm, in the order the draws happen.* (1) Take out `absent`. With `previous` and `lock`, if
+    every locked member is present the locked groups stay and the pool is the rest; if not, the locks are
+    dropped, `locksDropped` is set and the whole class is dealt (today's silent fallback, now reported).
+    (2) `plan()`. (3) The deal, each strategy a port: `random` shuffles and deals round-robin; `balanced`
+    shuffles, sorts by the attribute (stable, highest first) and snakes; `heterogeneous` sorts the same way,
+    cuts three tiers at `ceil(n / 3)` and `ceil((n - t1) / 2) + t1`, shuffles each and deals each round-robin;
+    `homogeneous` cuts sorted slices; `coverage` takes students in shuffled order and puts each in the smallest
+    group, shuffled among equals, where the sum of `count()` with its members is least; `spread` is new:
+    shuffle, stable sort by category, round-robin. A strategy that reads an attribute no member has falls back
+    to `random` (`fellBack`). With `together: 'units'` the pairs are joined into sets first and a set is dealt
+    as one block into the smallest group. (4) The remainder: for `floaters` and `own-group`, pop from the end
+    of each dealt group, in group order, down to the size `plan()` gave. (5) The repair, 002's
+    `resolveConstraints()` to the draw: while the score is above zero and tries remain, pick a broken pair at
+    random (apart, then together, then repeats in the list); if the two share a group, swap the second with a
+    random member of a random other unlocked group, and if they should be together, swap the second with a
+    random member of the first's group; undo the swap only if the score rose. It is skipped when there are no
+    constraints and the memory is empty, or fewer than two unlocked groups. (6) Count `newPairs` against the
+    memory as it was handed in.
+  - *The quality measure, and when the search stops.* The score is a list compared left to right: `[hard,
+    strategy, repeats, cost]`. `hard` is the number of broken apart and together pairs; `repeats` is today's
+    sum of 1,000 and 100; `cost` the sum of `cost()`; `strategy` is 0 unless `search.keepStrategy` is on, and
+    then it is the measure the chosen strategy deals for (`balanced`: the gap between the highest and lowest
+    group mean, in hundredths; `homogeneous`: the summed range inside groups; `heterogeneous`: groups missing
+    a tier; `spread`: the largest difference in a category's count between groups). With `keepStrategy` off
+    and no `cost` this orders every pair of arrangements as 002's single number does while a swap moves fewer
+    than 100,000 points of recency, which holds for any group of 50 students or fewer. `stoppedBy` is `'clean'`
+    (score all zero), `'nothing'` (no broken pair to pick), `'budget'` (`attempts` used), or `'skipped'`.
+    `restarts: N` deals again, up to N times, only when a try ends with `hard` above zero, and keeps the best
+    try; `tries` says how many ran. Before any draw, `impossible` names what no search can do: a together set
+    larger than the largest group, a together set that contains an apart pair, and a set of members all apart
+    from one another that is larger than the group count (found greedily, so it can miss one; it never
+    invents one). An impossible constraint is still scored, so the result is still the best found.
+  - *Seeding.* `seed` wins over `rng`, which wins over `pin()`, which wins over a fresh `newSeed()`; the
+    result carries the seed when the engine chose or was given one, so `formGroups(members, { ...opts, seed })`
+    gives the same result again. A page-driven property suite does not pin (`CLAUDE.md`: seeding turns a
+    property test into a single-path test); the pure suite and the golden files do.
+  - *Storage: P1 adds no key, and no adopter needs one.* Each adopter keeps its blob and gains one field,
+    `groupHistory` (the memory above), so `tool-registry.js` and 009 are untouched and the year rollover
+    already deletes it with the key. **The old fields stay written, derived from the new one, and on load the
+    old field wins where it is ahead.** The reason is the line in "as read": an older cached page of 022 or 027
+    (a second device restored from a 009 backup, or 022's own roster file opened on one) drops `groupHistory`
+    when it saves, and an older 002 would shuffle against an empty `pairHistory` if the field were moved. So
+    on every save the page writes `pairHistory` and `pairGen` (002) or `history` (022, 027) from
+    `toLegacyPairs()` and `toLegacyRoles()`, and on load `absorbLegacy()` runs: no `groupHistory` means
+    `fromLegacy()` (first visit after the update, or after an older page dropped it; roles and pairs as the
+    old field has them); `pairGen` above `groupHistory.gen` means an older page shuffled since, and each pair
+    with a newer `gen` adds its count difference and takes that `gen`; a role list that differs from the
+    derived one replaces it. 002's bare-number pair entries (before `{ gen, count }`) and `gtg-settings` keep
+    their existing migrations, which run first. `idNames` is read once by `fromLegacy()` (it maps a legacy
+    name to its id) and written no more. Cost, measured: about 30 KB a class of 30 with every pair met, against
+    23.6 KB today. Keep-apart and keep-together pairs, absent lists, `lastGroups` and 027's meetings stay
+    names on disk, as typed and as shown; the tool maps them to keys for the call and keeps the few lines of
+    its `renameStudentData()` that move them, driven by `identify()`'s `moved`.
+  - *What each adopter changes in P2* (one PR each; the first commit of each is the port, proved by the golden
+    files, and each improvement is a later commit with a `CACHE_VERSION` of its own).
+    **007**: the page's `makeGroups()` calls `formGroups(names, { count, min: 2 })`; `np-pick.js` loses
+    `makeGroups` and the suite's six assertions on it move to the parity suite. No memory.
+    **087** and **021** (neither is named in P2 above; they are the fifth and sixth copies and the two
+    smallest ports): `cs-core.js`'s `makeGroups` becomes a call with `sizeRule: 'near'`; 021's split button a
+    call with `count`, its groups still saved as comma-joined text.
+    **027**: `makeGroups()`, `shuffle()`, `roleRecencyScore()`, `assignRolesForGroup()` and `recordHistory()`
+    go; the split keeps its group ids and labels; `logMeeting()` calls `rotateRoles()` then `history.record()`
+    with the roles only (027 has never remembered pairs; whether it starts is a question below); the hint and
+    "Reset role history" read and empty `groupHistory`.
+    **022**: the same five functions and `resolveKeepApart()`, `groupIndexOf()`, `findApartViolations()` and
+    `computeEffectiveMembers()` go; equipment mode still works out the count and passes `count`; the safety
+    gate's excluded names are left out of `members` and the policy is `departed: 'keep'`, so they lose
+    nothing; `normalizeRosterData()` learns `groupHistory`, and so does the roster file it exports and
+    imports. Its warning text is written from `violations.apart`.
+    **002**: `makeGroups()` and everything under it (the five strategies, `applyOddHandling()`,
+    `resolveConstraints()`, the pair functions, `prunePairHistoryToRoster()`, `followRenames()` and most of
+    `renameStudentData()`) goes; `buildExplanation()` stays and reads `result`; the pairing grid reads
+    `history.coverage()`; Undo keeps the previous memory object and stops deep-copying it; the share payload
+    is unchanged and still carries no memory (`smoke-share.mjs` asserts it). Then, each its own commit: the
+    floater fix (`sizeRule: 'floor'`), `keepStrategy`, `together: 'units'`, `restarts`, and for 022 and 027
+    `method: 'best'`. Seating-aware grouping is `cost` fed from `SeatingRead`; project teams are a 002 feature
+    on top of `previous` and `lock`. Both stay P2's.
+  - *Tests the build ships* (no page loads the module in P1, so no browser suite; the suites are pure Node on
+    the `vm` loader, under a new `test:grouping` shortcut and a `suites.json` entry).
+    `Tools/grouping/test/grouping.test.mjs`: `plan()` for every `n` from 0 to 60 against every rule (sizes sum
+    to `n` less floaters, differ by at most one under `spread`, never exceed `size` under `ceil` or fall below
+    it under `floor` when `n >= size`; 30 by 4 is `[4,4,4,4,4,4,3,3]`, then 7 fours and 2 floaters under
+    `floor`); every strategy places each present member exactly once for 500 seeds and `n` from 0 to 40
+    (0 and 1 member, more groups than members, everyone absent); the same seed twice gives the same result,
+    and `seed` reproduces a result made from `newSeed()`; locks (kept at their index; a locked member absent
+    sets `locksDropped`); `impossible` for the three shapes, and none reported on 2,000 random satisfiable
+    classes; `together: 'units'` leaves no chain broken where `'pairs'` leaves some (the two-triples case,
+    with its measured rate as a band); `keepStrategy` holds the `balanced` gap after four generations within a
+    stated bound of the first; `restarts` never returns a worse score than no restarts; `rotateRoles` `'best'`
+    never repeats a role when an assignment without a repeat exists, and `'greedy'`'s rate is inside a band
+    round the measured 1.1%; `coverRoles` against 022's cases (one absent, two absent, everyone absent, an
+    absent member with no role). The memory: `record` then `count` and `lastGen`; `normalize` on fifteen
+    broken shapes; `prune` under the three policies; `rekey` onto an existing key (counts add, roles not
+    merged); `identify` for a first id, a rename by id, a roster made again with new ids, two students of one
+    name, a name retyped that still exists as another student, and no ids at all; `coverage` against a count
+    written in the test. Each assertion is seen failing once with its rule broken on purpose.
+    `Tools/grouping/test/parity.test.mjs`, with `_legacy.mjs` beside it holding today's functions copied out
+    of 002, 022, 027, `np-pick.js`, `cs-core.js` and 021 before P2 deletes them (as `export.test.mjs` keeps
+    `duplex-print.js`'s two): for 300 seeds and class sizes 1 to 36, old and new are fed the same generator
+    and must return the same groups in the same order, the same floaters, and leave the generator at the same
+    point, for 007, 087 (both rules), 021, 027, 022 with no keep-apart pair, and 002 across the grid of five
+    strategies, three remainder rules, count and size, with and without pairs, locks, absences and one to six
+    generations of memory; the roles for 022 and 027 across eight meetings; and `fromLegacy()` then
+    `toLegacyPairs()` and `toLegacyRoles()` give back what went in. For 022 with keep-apart pairs the suite
+    asserts the measured claim, not equality: over 2,000 classes at each of the seven shapes the engine fails
+    no more often than 022's copy. `absorbLegacy()` is driven by blobs an older page would write: the field
+    missing, `pairGen` ahead, a longer role list. Nothing is called a golden file unless it is on disk: twelve
+    results for fixed seeds are written to `Tools/grouping/test/golden.json` in the P1 commit so that a later
+    change to the engine that moves a draw fails by name.
+    P2's adopters keep their own suites (`test:groups`, `test:lab-groups`, `test:novel-study`,
+    `test:name-picker`, `test:class-screen`, `test:pe-stations`) and each adds a load of a blob saved by the
+    page before it.
+  - *The build's bookkeeping, so it is not found by a red guard.* `_shared/grouping.js` in `PRECACHE_URLS` and
+    `SHELL_URLS` with a `CACHE_VERSION` bump; `Grouping` in `eslint.config.js`'s `SITE_GLOBALS`; the
+    `roster.js` export covered in `Tools/roster/test/smoke-rename-follow.mjs`; the suite in `suites.json` with
+    its shortcut; `_shared/` changes run every suite in CI.
+  - *Deliberately left out of P1.* Any page change. A shared memory key. A setting a teacher sees. The words
+    of 002's explanation (the engine returns counts and pairs, the tool writes the sentence). Group labels,
+    tents, sheets and the grid's drawing. Stations: 022's `assignStationsToGroups()` and 021's
+    `computeAssignment()` are rotation, P3's `_shared/rotation.js`, with the timers. Brackets, pools, Swiss
+    pairing and seeding orders are P3 and P4; 020's `distributeIntoPools` (a snake over a seeded order, no
+    shuffle) can call the deal from `bracket.js` then or stay where it is. An exact solver: the search is
+    today's, bounded, and says when it gave up. Balance on two attributes at once. A minimum or maximum group
+    size beyond the three rules. Stopping the mirror of the old fields, which is a later cleanup with a
+    `CACHE_VERSION` of its own once no cached page can predate P2.
+  - *Not verified.* Nothing here ran in a browser and no engine exists; the parity claim is from reading the
+    six copies and from the probe's ports, which the build's `_legacy.mjs` must redo from the files and not
+    from this text. The probe's classes were random pairs and random skills, not a real class's constraints.
+    The older-cache case was read from 022's and 027's load functions, not reproduced. `identify()`'s rule (b)
+    has not been run against a sidecar written by 006.
+  - **Questions for Devon. None is answered here; each says what the design assumes until he does.**
+    1. *Skill on the shared record* (Path 3's Decisions, and 002's open question). Do skill or level values
+       belong on the shared student record, or only inside the tool that asks for them? Assumed: the standing
+       default, no; `attrs` is handed in by the calling tool from its own storage, and the engine stores no
+       attribute anywhere.
+    2. *One memory or several.* 002's north star is one memory "across every tool on the site that forms
+       groups". Should a pair made in Lab Groups count in the Group Generator, and a role held in one count
+       in another? Assumed: no; each tool keeps its own memory per class, as today, and 007's and 087's quick
+       groups remember nothing.
+    3. *Should Lab Groups and Novel Circles start remembering who worked with whom?* It is new student data
+       in two tools that hold only role memory today. Assumed: not in P2's ports; the engine can.
+    4. *A grouping that is reshuffled away.* Today every press of Make Groups or Reshuffle counts as "these
+       students worked together", including the four a teacher rejects before the one they use; Undo takes
+       back one. Should only the grouping that is kept count, and what marks it as kept (printing, a button)?
+       Assumed: today's rule.
+    5. *"Groups of 4" with 30 students.* Eight groups (six of 4, two of 3: never over the size, 002 today) or
+       seven (two of 5: never under)? With floaters: seven groups of 4 and 2 floaters (the fix), where today
+       gives eight groups of 3 and 6 floaters? Assumed: never over, and the fix.
+    6. *Should every tool that makes groups read "students per group" the same way?* 002, 022 and 027 round
+       the count up; 087's widget rounds to the nearest. Assumed: each keeps its rule through P2.
+    7. *Balance against no repeats.* When "Balanced by skill" and "nobody with last time's partner" cannot
+       both hold, which gives way? Today the repeat rule wins without saying so (measured above). Assumed for
+       `keepStrategy`: the strategy the teacher picked wins, and the result says which repeats it kept.
+    8. *Keep-together.* Is a keep-together pair a promise (the pair moves as one block, and a chain of pairs
+       is one block) or a preference? When a keep-apart and a keep-together cannot both hold, which is broken
+       first? Assumed: a block once `together: 'units'` is turned on, and today's equal weight until then.
+    9. *How long a student's history is kept.* Today the Group Generator drops every pair of a student the
+       moment they are off the list at the next shuffle (loading another class into the same saved class
+       empties the memory), and the two role tools keep a departed name's roles for good. Should a departed
+       student's history wait some number of groupings, and is that a setting a teacher sees? Assumed: each
+       tool's rule today.
+    10. *Other things to balance on.* The engine can spread any teacher-set category evenly (`spread`). Is
+        there one he wants offered beyond skill, and may a tool store it? Assumed: none is offered; the option
+        exists for the suite only until he names one.
 - **P2 — Adopt in 002, 022, 027, 007** one PR each, deleting local engines. Add
   seating-aware grouping (groups that are physically possible given
   `seating-chart-v1`) and project-team mode (longer-lived named teams with a
@@ -8236,7 +8793,7 @@ scientific-method workflow.
 - **Retest workflow**: duplicate an existing event as "<name> — Retest"
   in one click, pre-filling nothing but keeping the same type, instead of
   manually adding and renaming a new event every time.
-- ~~**Individual student report cards**~~ — shipped (v250, 2026-10-05): see
+- ~~**Individual student report cards**~~ — shipped (v251, 2026-10-05): see
   `HISTORY.md`. A "Report cards" card prints one page per student (one chosen,
   or everyone); there is still no min, max, rank or trend on it.
 
@@ -8295,10 +8852,6 @@ reporting requirements instead of just a spreadsheet substitute.
 
 #### Major Features
 
-- **Negative number support** — all current values are positive fractions
-  between 0 and 1; extending to values above 1 (improper
-  fractions/mixed numbers) and negative values would substantially widen
-  what this drill can practice.
 - **Word-problem wrapping**: this backlog’s broader pattern (word
   problems as a wrapper around numeric drills) applies here too — "a
   recipe calls for 3/4 cup of sugar; what percent of a full cup is that?"

@@ -25,6 +25,7 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/export.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -568,22 +569,16 @@
     toastTimer = setTimeout(function () { els.toast.classList.remove('show'); }, 2200);
   }
 
-  function csvCell(s) {
-    var v = String(s == null ? '' : s);
-    if (/[",\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
-    return v;
-  }
+  /* The file is ExportKit.toCsv()'s (_shared/export.js, Path 7 P4): RFC 4180
+     quoting, CRLF after every row, a byte order mark so Excel reads the
+     accents, and an apostrophe before a typed cell a spreadsheet would run as
+     a formula (one that starts = + - or @). */
   function downloadCsv(filename, rows) {
     var header = ['Date', 'Student', 'Method', 'Reason', 'Outcome', 'By'];
-    var lines = [header.map(csvCell).join(',')].concat(rows.map(function (e) {
-      return [e.date, e.student, e.method, reasonOf(e), e.outcome, e.initials || ''].map(csvCell).join(',');
+    var table = [header].concat(rows.map(function (e) {
+      return [e.date, e.student, e.method, reasonOf(e), e.outcome, e.initials || ''];
     }));
-    var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    ExportKit.download(ExportKit.toCsv(table), filename, 'text/csv;charset=utf-8');
   }
 
   els.saveRosterBtn.addEventListener('click', function () {

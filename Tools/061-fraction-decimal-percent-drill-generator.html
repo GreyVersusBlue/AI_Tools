@@ -118,6 +118,15 @@
           <option value="percent">Always percent</option>
         </select>
       </div>
+      <div class="field">
+        <label for="range">Values</label>
+        <select id="range">
+          <option value="proper" selected>Between 0 and 1</option>
+          <option value="improper">Above 1 &mdash; improper fractions</option>
+          <option value="mixed">Above 1 &mdash; mixed numbers</option>
+          <option value="both">Above 1 &mdash; both kinds</option>
+        </select>
+      </div>
       <div class="field" style="max-width:7rem;">
         <label for="rowCount">Rows</label>
         <input type="number" id="rowCount" value="12" min="4" max="30">
@@ -127,6 +136,11 @@
       </div>
     </div>
     <div class="controls" style="margin-top:.8rem;">
+      <div class="field" style="min-width:auto;">
+        <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;white-space:nowrap;">
+          <input type="checkbox" id="negatives" style="width:auto;"> Include negative values
+        </label>
+      </div>
       <div class="field">
         <label for="seedDisplay">Sheet seed</label>
         <input type="text" id="seedDisplay" readonly aria-label="Sheet seed, used to reprint this exact sheet">
@@ -209,24 +223,55 @@
     if (str.indexOf('.') === -1) return str;
     return str.replace(/0+$/, '').replace(/\.$/, '');
   }
-  function roundedDecimalValue(value) { return Math.round(value * 1000) / 1000; }
 
-  function makeRow(rng, difficulty, givenSetting) {
-    var denoms = DENOMS[difficulty];
-    var den = pick(rng, denoms);
-    var num = randInt(rng, 1, den - 1);
-    var value = num / den;
-    var roundedValue = roundedDecimalValue(value);
-    var fraction = fmtFraction(num, den);
-    var decimal = trimNumberString(roundedValue.toString());
-    var percentValue = Math.round(roundedValue * 100 * 1000) / 1000;
-    var percent = trimNumberString(percentValue.toString()) + '%';
+  /* num/den to thousandths, rounded half up, in whole numbers. A float
+     (num / den * 1000) can land a hair under a .5 and round the wrong way, and
+     a value above 1 or below 0 has more digits to go wrong. Everything the
+     three columns show comes from this one integer, so the decimal and the
+     percent can never disagree: 0.333 and 33.3%, 2.333 and 233.3%. */
+  function thousandths(num, den) { return Math.floor((2000 * num + den) / (2 * den)); }
+  function decimalOf(t) {
+    return trimNumberString(Math.floor(t / 1000) + '.' + ('00' + (t % 1000)).slice(-3));
+  }
+  function percentOf(t) {
+    return trimNumberString(Math.floor(t / 10) + '.' + (t % 10)) + '%';
+  }
+
+  /* Values above 1 run to just under MAX_WHOLE + 1. */
+  var MAX_WHOLE = 4;
+
+  /* range: 'proper' draws exactly as this tool always has, so a sheet from
+     before the option comes out row for row. The others draw a whole part and a
+     proper remainder (never a whole number, so the fraction column is never
+     just "3"), and show the fraction as improper, mixed or either. `force` is
+     what buildRows() asks of the last row when the draw has left a promise
+     unkept: a sheet that says "negatives" or "both kinds" has at least one
+     of each. */
+  function makeRow(rng, difficulty, givenSetting, range, negatives, force) {
+    var den = pick(rng, DENOMS[difficulty]);
+    var num, rem, whole = 0, mixed = false;
+    if (range === 'proper') {
+      rem = randInt(rng, 1, den - 1);
+      num = rem;
+    } else {
+      whole = randInt(rng, 1, MAX_WHOLE);
+      rem = randInt(rng, 1, den - 1);
+      num = whole * den + rem;
+      if (range === 'mixed') mixed = true;
+      else if (range === 'both') mixed = force && force.kind ? force.kind === 'mixed' : rng() < 0.5;
+    }
+    var negative = negatives ? (force && force.negative ? true : rng() < 0.5) : false;
+    var sign = negative ? '-' : '';
+    var fraction = sign + (mixed ? whole + ' ' + fmtFraction(rem, den) : fmtFraction(num, den));
+    var t = thousandths(num, den);
+    var decimal = sign + decimalOf(t);
+    var percent = sign + percentOf(t);
     var given = givenSetting === 'random' ? pick(rng, ['fraction', 'decimal', 'percent']) : givenSetting;
-    return { fraction: fraction, decimal: decimal, percent: percent, given: given };
+    return { fraction: fraction, decimal: decimal, percent: percent, given: given, mixed: mixed, negative: negative };
   }
 
   var els = {};
-  ['difficulty', 'givenForm', 'rowCount', 'generateBtn', 'worksheetTable', 'keyTable',
+  ['difficulty', 'givenForm', 'range', 'negatives', 'rowCount', 'generateBtn', 'worksheetTable', 'keyTable',
    'printWorksheetBtn', 'printKeyBtn', 'printWorksheetTable', 'printKeyTable',
    'seedDisplay', 'lockSeed', 'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
@@ -234,7 +279,20 @@
 
   var DIFFICULTIES = ['easy', 'medium', 'hard'];
   var GIVEN_FORMS = ['random', 'fraction', 'decimal', 'percent'];
-  var settings = { difficulty: 'medium', givenForm: 'random', rowCount: 12, lockSeed: false, seed: null };
+  var RANGES = ['proper', 'improper', 'mixed', 'both'];
+  var settings = { difficulty: 'medium', givenForm: 'random', range: 'proper', negatives: false, rowCount: 12, lockSeed: false, seed: null };
+
+  /* The two options that came later are written only when they are on, so a
+     sheet that uses neither saves and shares exactly the four-number state it
+     always has, and one saved before them reads back as 'proper', no negatives. */
+  function stateOf(withLock) {
+    var o = { difficulty: settings.difficulty, givenForm: settings.givenForm, rowCount: settings.rowCount };
+    if (settings.range !== 'proper') o.range = settings.range;
+    if (settings.negatives) o.negatives = true;
+    if (withLock) o.lockSeed = settings.lockSeed;
+    o.seed = settings.seed;
+    return o;
+  }
   function loadSettings() {
     try {
       var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
@@ -242,19 +300,23 @@
         if (saved.difficulty) settings.difficulty = saved.difficulty;
         if (saved.givenForm) settings.givenForm = saved.givenForm;
         if (saved.rowCount) settings.rowCount = saved.rowCount;
+        settings.range = RANGES.indexOf(saved.range) === -1 ? 'proper' : saved.range;
+        settings.negatives = saved.negatives === true;
         settings.lockSeed = !!saved.lockSeed;
         settings.seed = typeof saved.seed === 'number' ? saved.seed : null;
       }
     } catch (e) { /* ignore */ }
   }
   function saveSettings() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(settings)); } catch (e) { /* storage full/blocked */ }
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(stateOf(true)));
+    } catch (e) { /* storage full/blocked */ }
   }
 
   var rows = [];
 
   function tableHtml(showAnswers) {
-    var head = '<tr><th>#</th><th>Fraction</th><th>Decimal</th><th>Percent</th></tr>';
+    var head = '<tr><th>#</th><th>' + (settings.range === 'mixed' || settings.range === 'both' ? 'Fraction / mixed number' : 'Fraction') + '</th><th>Decimal</th><th>Percent</th></tr>';
     var body = rows.map(function (r, i) {
       function cell(form, value) {
         if (form === r.given) return '<td class="given">' + value + '</td>';
@@ -278,7 +340,20 @@
   function buildRows() {
     var rng = makeRng(settings.seed);
     rows = [];
-    for (var i = 0; i < settings.rowCount; i++) rows.push(makeRow(rng, settings.difficulty, settings.givenForm));
+    var sawNegative = false, sawMixed = false, sawImproper = false;
+    for (var i = 0; i < settings.rowCount; i++) {
+      var force = null;
+      if (i === settings.rowCount - 1) {
+        force = {
+          negative: settings.negatives && !sawNegative,
+          kind: settings.range === 'both' && sawMixed !== sawImproper ? (sawMixed ? 'improper' : 'mixed') : null
+        };
+      }
+      var row = makeRow(rng, settings.difficulty, settings.givenForm, settings.range, settings.negatives, force);
+      if (row.negative) sawNegative = true;
+      if (row.mixed) sawMixed = true; else sawImproper = true;
+      rows.push(row);
+    }
     els.seedDisplay.value = settings.seed;
     render();
   }
@@ -286,6 +361,8 @@
   function generate() {
     settings.difficulty = els.difficulty.value;
     settings.givenForm = els.givenForm.value;
+    settings.range = els.range.value;
+    settings.negatives = els.negatives.checked;
     settings.rowCount = Math.max(4, Math.min(30, parseInt(els.rowCount.value, 10) || 12));
     settings.lockSeed = els.lockSeed.checked;
     settings.seed = nextSeed();
@@ -325,7 +402,8 @@
      THE LINK IS THE WORKSHEET. Nothing here is authored — every row is drawn
      by mulberry32 from the seed above — so what travels is the four numbers
      that regenerate it: difficulty, which form is given, how many rows, and
-     the seed. The receiving device rebuilds the same sheet and the same
+     the seed (and, only when they are on, the range of values and the negatives
+     option). The receiving device rebuilds the same sheet and the same
      answer key, row for row, which is more than a list of rows would have
      given it: it can print more copies, print the key on its own, or change
      the difficulty and get a matched sheet.
@@ -345,10 +423,7 @@
   Share.mount(els.shareBtn, {
     getState: function () {
       if (settings.seed == null || !rows.length) return null;
-      return {
-        difficulty: settings.difficulty, givenForm: settings.givenForm,
-        rowCount: settings.rowCount, seed: settings.seed
-      };
+      return stateOf(false);
     },
     param: SHARE_PARAM,
     tool: 'fraction-decimal-percent-drill-generator',
@@ -375,6 +450,8 @@
         settings.difficulty = decoded.difficulty;
         settings.givenForm = GIVEN_FORMS.indexOf(decoded.givenForm) === -1 ? 'random' : decoded.givenForm;
         settings.rowCount = Math.max(4, Math.min(30, parseInt(decoded.rowCount, 10) || 12));
+        settings.range = RANGES.indexOf(decoded.range) === -1 ? 'proper' : decoded.range;
+        settings.negatives = decoded.negatives === true;
         settings.seed = decoded.seed >>> 0;
         saveSettings();
         setShareNote('Loaded a shared drill sheet — the same ' + settings.rowCount +
@@ -389,6 +466,8 @@
   var arrived = importSharedSheet();
   els.difficulty.value = settings.difficulty;
   els.givenForm.value = settings.givenForm;
+  els.range.value = settings.range;
+  els.negatives.checked = settings.negatives;
   els.rowCount.value = settings.rowCount;
   els.lockSeed.checked = settings.lockSeed;
   /* generate() draws a NEW seed unless the seed is locked, so a shared sheet

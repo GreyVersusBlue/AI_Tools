@@ -9,6 +9,214 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 060 Fitness & Skill Assessment Tracker: a report card per student (2026-10-05, AI-31-060, `CACHE_VERSION` v251; the commit messages say v249, which `main` took first)
+
+Audit entry AI-31, BACKLOG rank 99 (½). Per-tool row; the rank-99 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** A "Report cards" card under Results: a picker, **Print this student's report card** and **Print every report card (N)**.
+  A card is one page: the student's name, then every test event in the order the events are listed, with that student's result and the class
+  average beside it. Built into `#printArea` like the existing report, with `print-area.css`; each card after the first has a page break before
+  it (never after, so the last card leaves no blank sheet). Print-all follows the order on screen, the same rule the class table and the CSV use;
+  the picker follows it too and keeps the chosen student when the grid re-sorts.
+- **Nothing is stored.** The same three fields (`roster`, `events`, `results`) under `fsat_tracker_v1`; a save from before loads and prints as it did
+  (the suite checks the saved state byte for byte after printing, and that typing a result afterwards still writes only those three fields).
+  There is no date field in this tool: a "date" is the event, named for its attempt ("Mile Run — Fall"), so every event prints.
+- **Calls taken, so they can be reversed.** (1) **A card carries no min, max, rank or best.** The table's footer shows the class range; on a page
+  that goes home, a range is another child's score with the name off. The average is a count of scores, so a card names only its own student.
+  (2) **An average of fewer than two results is not printed.** It would hand the child's own number back as the class's; the cell says "Not enough
+  results to compare yet" (and "No results yet" for none). `computeStats()` gained an `n` the footer ignores. (3) **A blank is "No result", and
+  all events print even for a student with none**, plus a line saying nothing has been recorded. A cell of spaces counts as blank. (4) **No
+  events** prints the card with "There are no test events yet." (5) The Open Question "shared report-card pattern or per tool" is closed:
+  per tool, no shared pattern exists; lift `buildCardHtml()` into `print-kit` if a second tool wants one.
+- **Tests.** New `Tools/fitness-skill-assessment-tracker/test/smoke-report-cards.mjs` (`npm run test:fitness-report-cards`, port 8487, 82
+  assertions): a class of five (full, partial, a student alone on an event, a student with nothing, one with a spaces-only cell), of one and of
+  forty; no other name or score on any card (checked on every card, against a list of every other score); markup in a name, an event or a
+  result stays text; keyboard use of the picker and both buttons; the screen UI off the paper; Chromium's PDF page count (1, 5, 40, 1; no blank
+  sheet after the last). **67 breaks on purpose** in the page, in three rounds: 61 failed the suite on a named assertion; 3 (the picker's
+  label removed, the picker always disabled) made the suite throw rather than fail an assertion, which still stops it; 3 were equivalent and
+  survived (a rule putting the card back on paper in `@media print`, three ways): `print-area.css` already hides the whole `.wrap`, and
+  removing that stylesheet fails 10 assertions, so "the picker is not on the paper" is held by that. The first round left six alive
+  (heading `scope`, the "N report cards" status text, a new saved field, a blank-with-spaces cell and two more); each got an assertion and the
+  break was repeated. Not every assertion has a break of its own: "every event deleted" is a set-up step, and the Result-column check on one
+  student needed a second mutation (a card showing the previous student's results) to fail.
+- **Checked.** `test:a11y -- --only 060`, `audit-print --check --only 060`, every `check:*`, `lint`, `check:precache -- --base origin/main`
+  and `check:adoption -- --check` (see the run recorded in the audit entry). **Not run:** full `npm test`; nothing printed on paper;
+  no screen reader. **Not verified:** how 40 cards look on a real printer, and whether families want the average at all (call 1 and 2 are
+  conservative guesses).
+
+## 061 Fraction–Decimal–Percent Drill: improper fractions, mixed numbers and negative values (2026-10-05, AI-31-061, `CACHE_VERSION` v250; the commit messages say v249, which `main` took first)
+
+Audit entry AI-31, BACKLOG rank 100 (½). Per-tool row; the rank-100 row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** Two controls, both off by default: **Values** (between 0 and 1 as before; above 1 as improper fractions, as mixed
+  numbers, or both kinds) and **Include negative values**. Above 1 means a whole part of 1 to 4 and a proper remainder over the row's
+  denominator, so values run from just over 1 to just under 5 and are never whole numbers; a negative sign goes on all three
+  cells ("-1 1/2", "-1.5", "-150%"). The fraction column's heading reads "Fraction / mixed number" when mixed numbers can appear.
+- **Decisions, mine, each cheap to reverse.** (1) A non-default range makes *only* values above 1, not a mix with 0-to-1 rows: a
+  teacher who wants both prints two sheets; the control stays one select. (2) With negatives on, each row is negative by a coin
+  flip, and the last row is made negative if none was, and the last row of a "both kinds" sheet is made the missing kind: a
+  four-row sheet always shows what its settings promise (the forced row takes no draw). (3) The minus sign is ASCII "-", so a cell
+  parses back with the same regex as any other number. (4) Whole part capped at 4 (percent at most 499.9%); the cap is `MAX_WHOLE`.
+- **The arithmetic is integer.** The old code rounded `num / den` through floats. Every decimal and percent now comes from one
+  integer, the value in thousandths rounded half up (`floor((2000n + d) / 2d)`); the decimal is that over 1000 and the percent is
+  it over 10, so the two cannot disagree (2.333 and 233.3%). Rounding half up on the magnitude means a tie rounds away from
+  zero: -1 1/16 is -1.063 and -106.3%. Repeating decimals are still shown rounded to three places with no bar; that is the
+  repeating-notation row's job, not this one's.
+- **The old sheets are unchanged, proved.** `golden-old-sheets.json` holds 180 sheets read off the page at ab678d3 (3
+  difficulties x 4 given forms x 3 row counts x 5 seeds, every row's three cells and which one is given, and the exact settings
+  string the page saves); the suite loads each from a locked seed and compares all of it. The settings string and a share link carry
+  `range` and `negatives` only when they are on, so a sheet that uses neither saves and shares byte for byte as before. A saved
+  or shared value that is not one of the four ranges, or a `negatives` that is not exactly `true`, is the default.
+  The old and new float rounding were also compared outside the suite over every proper fraction with a denominator from 2 to
+  100 (4,950 pairs, which holds every denominator the three difficulties use): no difference (a scratch script, not committed).
+- **Suite.** `test:fraction-decimal-percent` (`Tools/fraction-decimal-percent-drill-generator/test/smoke-value-range.mjs`, port
+  8488), 53 assertions. An oracle written in the suite parses each cell back into whole numbers (BigInt) and checks lowest terms, the
+  mixed-number shape, the range, the sign on all three cells, the rounding and the percent over 192 sheets and 5,760 rows; known rows
+  (a repeating decimal, a percent over 100 and below 0, a tie, a negative mixed number) are pinned to literals too, so a wrong oracle
+  cannot agree with a wrong page. Also: the promises on a four-row sheet over 150 seeds, the key against the worksheet and the print
+  tables, persistence and share links, nonsense in a saved state or link, and Chromium's PDF page counts.
+- **Broken on purpose 36 times**, every one failing the suite (rounding by truncation, a tie rounding down, the percent a power of ten
+  out, the sign missing from each of the three cells, a whole part of 0 or a cap of 5, a wrong mixed whole part, unreduced fractions
+  both ways, the forced negative and forced kind removed, 90% negatives, "both" always mixed, the default written to storage for each
+  field, a bad saved or shared range and a bad `negatives` accepted, the link dropping or bloating the options, an extra draw in the
+  old path, the heading, the printed key swapped for the blank sheet, paper cell padding made larger and smaller, a lost label,
+  a renamed label, a console error, a missing select option, Generate ignoring negatives, boot ignoring the saved range). Without a
+  mutant of their own: the key's given and blank cells against the worksheet, "thirty worksheet rows", the known-rows-drawn count, the
+  same seed giving the same sheet twice, and the no-offsite check. One mutant's anchor missed on the first pass (0 matches) and was
+  re-run with a corrected anchor, so it did not count until it failed.
+- **Paper.** A 12-row sheet with every option on is two pages of PDF (worksheet and key). At 30 rows the sheet is four pages, and was
+  before these options (the table is taller than a page); the options do not make it longer, and the layout was not changed because
+  that would change today's printed sheet. `audit-print --check --only 061` and `test:a11y -- --only 061`: see the Pending merge row.
+  Not checked on paper or with a real screen reader. A mixed number is plain text ("2 1/2"), not stacked.
+- **What went wrong.** `pkill -f` and `pgrep -f` with a pattern also match the shell that is running them (and the background
+  watcher that was waiting for the mutation run, whose own command line contained the pattern, so it never saw the run end): one
+  `pkill` ended the session's shell. Match on something that the command line of the watcher does not contain, or use a pid.
+
+## Path 7 P4, increment 5: six pages save their CSV through `ExportKit.toCsv` (003, 008, 018, 033, 068, 075), and the survey of every page that writes a CSV or a workbook (2026-10-05, AI-13, `CACHE_VERSION` v249)
+
+Audit entry AI-13, rank 6 (2+). Fifth increment of P4. **The row stays, rewritten: what is left is 001 and 006
+(a CSV and a workbook each), then 030 and 036.** P5 untouched.
+
+- **The survey.** "Twelve pages hand-roll a `text/csv` download" was a grep, and two of its twelve (017, 038) are
+  a file input's `accept`. Ten pages write a CSV by hand: 001, 003, 006, 008, 018, 033, 035, 060, 068, 075. Four
+  write a workbook with `XLSX.writeFile`: 001, 006, 030, 036 (032 and 038 only read one). The table, with what
+  each saves and what was wrong with its file, is in `BACKLOG.md`, Path 7 P4.
+- **What was wrong.** None of the ten guards a formula: a typed cell that starts `=`, `+`, `-` or `@` is run by
+  the spreadsheet, so 068's outcome "-left voicemail" and 018's note "-5 is wrong" open as `#NAME?`. Six had no
+  byte order mark (003, 008, 018, 033, 060, 075), so Excel reads `Zoë` as `ZoÃ«`. Four quote on `[",\n]` and
+  leave a bare carriage return unquoted (033, 060, 068, 075), which breaks the row in two.
+- **What shipped.** 003, 008, 018, 033, 068 and 075, worst file first and the brief's limit of six. Each links
+  `_shared/export.js`, loses its own cell quoting, Blob and anchor click, and calls `ExportKit.toCsv(rows)` and
+  `ExportKit.download(text, name, 'text/csv;charset=utf-8')` with the file name it always used. `_shared/export.js`
+  did not change. Two things the helper's guard asked of a page:
+  - **003 hands its scores over as numbers.** They were strings from `fmtNum()`, and the guard would have written
+    a negative score (a level worth -1) as `'-1`, text. `csvNum()` rounds the same way and returns the number; the
+    digits in the file are the same.
+  - **075 imports its own file, so Import takes the apostrophe off** (`unguardCsv()`: a leading `'` that stands
+    before `=`, `+`, `-` or `@`). An extension typed `+1 555 0100` comes back as typed. A name a person really
+    typed as `'-x` would lose its apostrophe on import; nobody has one.
+- **Old file against new** (the old page served from `git show main:` through `page.route()`, the clock pinned),
+  for each of the six on the a11y sweep's sample data and on cells built to break a CSV (a comma, a quote, a line
+  break, a bare carriage return, `=`, `+`, `-`, `@`, letters outside ASCII, an empty cell). The new file is,
+  byte for byte, the old file's cells written again with the named fixes and nothing else: the mark (068 had it),
+  a CRLF after the last row, the apostrophes (27 cells across the six hostile files, none in a sample file), and
+  the quoted carriage return (033, 068). The sample files differ from the old by the mark and the last CRLF only.
+  003's sample has no scores and saves no file, old or new. File names are unchanged; the type is
+  `text/csv;charset=utf-8` on all six (it was `text/csv` on three).
+- **The suite.** `Tools/export/test/smoke-csv-adopters.mjs` (`npm run test:csv-adopters`, port 8486, 129
+  assertions) with its table in `_csv-adopters.mjs`: for each page the bytes it saves are read (not
+  `harness.downloadText()`, whose `Blob.text()` drops the mark) and checked for the mark, the type and name,
+  strict RFC 4180 by a reader written in the suite, the apostrophe on every typed formula and on no number, each
+  negative number written as a number, every cell as typed, and the whole file against a writer of the suite's
+  own; 075's file goes back in through Import into an empty page and gives the directory it came from, and the
+  file saved after that is the same bytes.
+- **Broken on purpose, 5 breaks in one locked run:** in `_shared/export.js`, no byte order mark (6
+  assertions fail, one a page), no guard (18), LF line ends (47), a bare carriage return not quoted (4: 033 and
+  068, the two whose fixture has one); and in the pages, 003's scores as text again with 075's Import keeping
+  the apostrophe (8). All five caught; every file put back from a copy. The assertion added after the breaks
+  (the suite's page list equals the table's) was not broken.
+- **Decisions, mine, cheap to reverse.** (1) One shared suite, not assertions in each page's own suite: the six
+  checks are the same check, and four of the six pages have one suite about something else. Its `PAGES` list
+  names the six files so CI's selector (a page edit runs the suites whose source names it) picks it up. (2) The
+  guard is left on for every typed cell, including 075's room typed `-`: the file holds `'-`. `raw: true` per
+  column does not exist and was not added. (3) 068's and 018's file type lost a trailing `;`.
+- **Not done, not verified.** 001 and 006 were left: each writes a workbook from the same rows, and 006's import
+  reads both, so they are a PR each. 060 and 035 were not mine to touch in this batch. No file was opened in
+  Excel, Sheets or Numbers (huginn has none): that an apostrophe shows as text and not as an apostrophe is what
+  those programs document, not something seen here. Full `npm test` not run. The old 075 import of a *new* file
+  was not tried (the old page is gone once this lands).
+
+## Path 11 P1 designed, not built: the publisher drift guard (2026-10-05, AI-20, no `CACHE_VERSION`, no code)
+
+Audit entry AI-20, rank 21 (1). A design pass: only `BACKLOG.md` changed (the P1 bullet under "Path 11", and a
+note on rank 21). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** Two guards and a contract. `check-publisher.mjs`, browser-free, reads 035's
+  publisher off its syntax tree, assembles the script it would publish, and fails by code on a free name
+  (the Round 7 `escHtml` bug), a live-only leak, a handler or id with nothing behind it, a preamble that fell
+  behind the page, a sloppy-mode construct, or a change in one of the 21 pieces 034 still shares with the
+  publisher (a ledger, in the shape of the inline-sinks baseline). `smoke-publish-baseline.mjs` publishes
+  Northwind under a pinned clock and diffs it by section against a committed baseline with the fonts hashed
+  out, holds the static guard to the browser's bytes, and runs every published piece once. The contract,
+  `published-contract.mjs`, names every file published so far format 0 and the next format 1 (`format`,
+  `tool`, additive), with a validator that prints shapes and never values.
+- **What reading the code turned up.** The bullet's baseline was never committed. 35 pieces are published,
+  not 26. `brRenderMap()` references `brRenderMapLegacy`, which no published file has, behind a `typeof`
+  that is never true there. The page is sloppy-mode and the published script is strict. `publishedOn` is the
+  UTC date and the footnote beside it is local. `JSON.stringify(data)` goes into a `<script>` unescaped, so a
+  name holding `</script>` ends it. 034's banner has said "may be stale" since 2026-09-13. The publisher
+  keeps one group per room per mod and one room per teacher, dropping the rest silently.
+- **Measured, with one pure-Node probe that was not kept:** 28 listed functions, all resolving once; 21 of 35
+  pieces the same text in 034, 12 forked, 2 absent; 42 functions only 034 has; the published script reaches
+  outside the language for `document` alone, plus the dead name; in 034's data (counts only, no names read
+  out) 21 one-way `co` entries, 30 of 162 section-to-teacher links without a slot, 6 room-day-mod slots
+  holding two groups, and every hard rule of the contract holding.
+- **Not verified.** No line of the design has run. That `assemble()` matches the browser byte for byte is the
+  suite's first assertion, not a result. The stale banner and the `</script>` hole are read off the code.
+- **Seven questions are Devon's** and are listed, unanswered, at the end of the P1 bullet: whether 034 stays a
+  fork; 034's own stale schedule and whether the public copy should hold the real building's at all; which
+  social branding; what a reader does with newer data; the double-booked room; pre-R60 files; the 60 days.
+
+---
+
+## Path 13 P1 designed, not built: the grouping engine's API (2026-10-05, AI-21, no `CACHE_VERSION`, no code)
+
+Audit entry AI-21, rank 31 (1). A design pass: only `BACKLOG.md` changed (the P1 bullet under "Path 13", and a
+note on rank 31). **The row stays.** Nothing was built, no suite or browser ran.
+
+- **What the design is.** One pure classic script, `_shared/grouping.js` (`Grouping`): `plan()` for the
+  arithmetic, `formGroups()` for the deal and the repair search, `rotateRoles()` and `coverRoles()`, and a memory
+  (`history.*`) keyed on indexes into one list of member keys, an id where the sidecar has one and the name where
+  it does not. It writes nothing; each adopter keeps its blob, gains one field, `groupHistory`, and goes on
+  writing its old fields from it. The engine is held to making today's groups for the same random numbers, and
+  every improvement is an option an adopter turns on in a commit of its own.
+- **What reading the code turned up, each worth knowing before the build.** The split exists six times, not
+  four (021's split button and 087's `cs-core.js` are the other two), and all six share one shuffle and deal to
+  the letter, which is what makes a parity suite possible. 002's "floaters" and "leftover group" rules turn
+  "groups of 4" for 30 students into eight groups of 3 with six floaters, or a ninth group of 6. 002's no-repeat
+  search undoes "Balanced" and "Homogeneous" from the second shuffle on (the gap between group averages goes
+  from 0.38 to about 1.7). Keep-together chains are left broken in 4.5% of shuffles for two chains of three. The
+  role picker repeats a student's last role in 1% to 6% of hand-outs where a better assignment never would. 022's
+  and 027's load functions rebuild the saved object field by field, so an older cached page drops a field it
+  does not know; that is why the old fields stay written. Path 13's "Why" still says 002 keeps two generations
+  of pair history; it has kept the year since 2026-08-13.
+- **What the measurements were.** One pure-Node probe, not kept: 002's and 022's functions and the role picker
+  copied out with a seeded generator, 200 to 2,000 invented classes a case. The figures are in the design.
+- **Decided here, cheap to reverse.** `_shared/grouping.js`, not `Tools/_engines/`. No shared memory key. 022's
+  keep-apart repair becomes 002's (no worse on the same 14,000 classes: 0.65% against 0.75% at the one shape
+  where either failed). The memory is recorded by a
+  call of its own, not inside `formGroups()`.
+- **Left to Devon, listed in the design and not answered:** skill on the shared record; one memory or one per
+  tool; whether 022 and 027 start remembering pairs; whether a reshuffled-away grouping counts; what "groups of
+  4" means for 30 students; whether every tool should round the same way; balance against no repeats;
+  keep-together as a promise or a preference; how long a departed student's history is kept; other things to
+  balance on.
+- **Not verified.** No engine exists and nothing ran in a browser. The parity claim rests on reading and on the
+  probe's ports; the build must copy the legacy functions from the files, not from the design. The older-cache
+  case was read, not reproduced.
+
+---
+
 ## Path 7 P4, increment 4: 011 makes booklets and several pages to a sheet on `ExportKit` (Path 17 P4's controls), and 064's zip and PNG downloads are the file helpers' first adopter (2026-10-05, AI-13, `CACHE_VERSION` v248)
 
 Audit entry AI-13, rank 6 (2+). Fourth increment of P4. **The row stays, rewritten: what is left is CSV and XLSX

@@ -479,8 +479,11 @@ files must be added there too.
   the first adopter (`npm run test:trading-card-pdf`) and 040's double-sided cards the second (`npm run
   test:vocab-imposition`, v245, when `_shared/duplex-print.js` was deleted) and 011's booklet and pages-per-sheet
   layouts the third (`npm run test:image-to-pdf-impose`, v248: a tool records each page as drawing steps and hands
-  the pages to `toPdf` with `impose`; `compress: true` and, for a two-sided N-up, `flip` came with it); nothing calls
-  the file helpers yet (`BACKLOG.md`, Path 7 P4).
+  the pages to `toPdf` with `impose`; `compress: true` and, for a two-sided N-up, `flip` came with it). Since v249
+  003, 008, 018, 033, 068 and 075 save their CSV through `toCsv` and `download` (`npm run test:csv-adopters`; a new
+  one gets a row in `Tools/export/test/_csv-adopters.mjs`, hands a computed number over as a number so the guard
+  leaves it alone, and, if it imports its own file, takes the apostrophe off as 075's `unguardCsv()` does); 001, 006,
+  030, 036, 035 and 060 still write their own, and nothing calls `toXlsx` (`BACKLOG.md`, Path 7 P4).
   Its suites are `npm run test:export`; no booklet has been printed or folded, and no file opened in a spreadsheet.
   `npm run path7:next` (`Tools/board-check/audit-print.mjs`, Path 7 P2, read-only, a browser
   sweep of about 12 minutes on port 8464, not in CI) is the runtime half of `check:print-clip`:
