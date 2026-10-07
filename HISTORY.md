@@ -9,6 +9,50 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 12 P2, increment 4: 020's academic-tournament mode (2026-10-07, AI-14, `CACHE_VERSION` v277)
+
+Audit entry AI-14, BACKLOG rank 28 (a 2+ row; it stays, rewritten to what is left). The session was handed one group of P2, "020's
+academic-tournament mode", and nothing else. First check: the item was open (at v276 020 loaded `store.js` and not `question-bank.js`, and no
+script of it named the bank). The design asks one clause of 020, "020 gets an academic-tournament mode fed by it".
+
+**What shipped.** An **Academic tournament** card under a bracket, off until its box is ticked, on all five bracket types. On: a source (the
+teacher's bank or a built-in set, listed by the module's `sources()` and `sourceLabel()`), a Unit filter and a number of questions a match; a
+**Questions** button under each match that is ready; a panel that shows the match's questions with each answer hidden until **Show answer**, and a
+**Who got question N?** group (either side, or Neither); and **Print match sheets**, which prints the ready matches for a reader and, on a page of
+its own, the answer key. New file `Tools/bracket-tournament-generator/bt-academic.js` (the pure half and `mount()`); the page gained about ninety
+lines of hooks, markup and CSS. `_shared/question-bank.js` was not edited.
+
+**How a match is decided.** One point a question to the side that got it. The mode does not decide a match: when the last question is marked it
+writes the two totals into the match's own score boxes and fires their `change`, so the page's existing rule runs (two scores that differ decide; a
+tie decides nothing). That is why one small hook (`matchBoxes`, filled by `buildScoreInputs()`) covers five renderers and seven kinds of match key,
+and why standings and Undo needed nothing. The override is the page's own: a click on a name (the panel has a button for each side), and Undo last
+pick to take a recorded winner back.
+
+**The deal.** A seed made once, stored with the bracket; the source's questions ordered by a hash of the seed and the id; a match gets the first N
+no match holds, when it is first opened or printed, and its ids are stored. When the source runs out the deal goes round again and the panel says
+so; a source with fewer than N, or none, is said on the card and in the panel.
+
+**What is stored.** One field on the bracket (`academic`: on, seed, source, unit, per, drawn, marks; ids, never words). No key, no write to the
+bank: 020 reads with `peek()`. The registry row gained two reads. A link carries the field, cleaned on arrival to those seven fields.
+
+**Decisions taken, and why (each is a question for Devon in BACKLOG's Path 12 P2, 9 to 17).** One point a question, not the bank's `points` (most
+bank questions have 0 or a Jeopardy value). Three questions a match to start. Repeats only after the source runs out, and said. A tie decides
+nothing. One side or neither gets a question. The winner is recorded on the last mark. Reset picks deals the same questions. Ids, not words, in
+the bracket. Dealt on open, not up front.
+
+**Got wrong on the way, and caught by a test.** (1) `clean()` first allowed any match key of letters, digits and underscores; `__proto__` is one,
+and a link naming it made the array its value the prototype of the cleaned `drawn` object. The core test's `__proto__` case failed; the pattern is
+now the page's own seven key shapes. (2) The panel stayed open across Reset picks, where it dealt the match again by itself, and across a switch
+to another bracket, where it showed that bracket's match of the same key; found when two later steps of the suite toggled it shut. It closes on
+both now, and never deals without a press. (3) Three of the suite's own assertions were wrong, not the page: `querySelectorAll` returns document
+order, not the selector's.
+
+**Checks.** `test:bracket-academic-core` (pure Node, 76); `test:bracket-academic` (port 8512, 177: 39 pins of old brackets, the bank never
+written, the mode, the deal across a reload, the sheet and its PDF, markup as text, the link, axe in both themes). The numbers of the deliberate
+breaks, the other suites and the guards are in the audit note for this session. Not run: the full `npm test`.
+
+**Not verified.** No person used it; no class played a match; no screen reader; nothing printed on paper; CI has not run this tree.
+
 ## CI: the test job's timeout is 120 minutes, was 60 (2026-10-07, AI-14, no `CACHE_VERSION`)
 
 Asked for by the Selector during the sprint, as one commit on AI-14's branch. The wave PR's full run (AI_Tools#352) was cancelled at the job's

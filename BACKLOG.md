@@ -87,6 +87,19 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-14 (v277), rank 28 (kept, rewritten), Path 12 P2 increment 4: 020's academic-tournament mode.** A bracket
+  of any of the five types has an **Academic tournament** card, off until ticked. On, every match that is ready gets a
+  Questions button: the teacher picks a source (their bank or a built-in set, the module's chooser, with a Unit filter)
+  and how many a match gets; a match shows its questions with each answer hidden until revealed, the teacher marks who
+  got each, and when every one is marked the two totals go into the match's score boxes and the page decides it as it
+  always has from two scores (a tie decides nothing: a tiebreak question, or a pick by name). **Print match sheets**
+  prints the ready matches for a reader, the answers on a page of their own. Stored on the bracket, as one `academic`
+  field (a seed, the settings, question ids and marks); **nothing in the bank, which 020 reads with `peek()` and never
+  writes**; a bracket that never had it on is byte for byte what it was (39 pins from the v276 page). The code is
+  `Tools/bracket-tournament-generator/bt-academic.js`; `_shared/question-bank.js` is unchanged. `npm run
+  test:bracket-academic` (port 8512) and `test:bracket-academic-core`. **Nine choices that are Devon's are questions 9
+  to 17 in the Path 12 section. Left of P2: 018 and 019 station questions, 062's map questions, named sets. Next free
+  suite port: 8515 (8513 and 8514 were handed to AI-31's workers).**
 - **AI-14 (v276), rank 28 (kept, rewritten), Path 12 P2 increment 3: 030's editor.** The bank tab shows and edits
   everything a question holds: the add card has a choices editor (add, remove, move up and down, mark the right one,
   which is the choice whose text is the answer; no new field) and tags as tokens (typed, or picked from the bank's
@@ -306,7 +319,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `qr-scan.js` 10 · `tool-registry.js` 9 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 2 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `qr-scan.js` 10 · `tool-registry.js` 9 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -462,7 +475,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Left:** 018 and 019 pull station questions from it; 020's academic-tournament mode; 062's thirty map questions, which are not published (they wait on P4); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Eight questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v277): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; 062's thirty map questions, which are not published (they wait on P4); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Seventeen questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 29 | Path 12 P3 — play modes in 030: every-team-answers, quiz-bowl, wheel, final wager, printed quiz | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -4288,6 +4301,102 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   - *Not verified.* No person used the editor, and no screen reader was run over it (axe, names and keys only). No
     real teacher's bank was opened before and after (the suite's are made up). The preview was not tried with a
     file of thousands of questions (it runs `merge()` once a row for the first 500). Not run: the full `npm test`.
+  **Increment 4 shipped (AI-14, 2026-10-07, v277): 020's academic-tournament mode. The rest of this bullet is that
+  increment as built; `Tools/bracket-tournament-generator/bt-academic.js`'s header says the same and is the reference.**
+  - *What the design asked.* One clause: "020 gets an academic-tournament mode fed by it", and under Why, "Bracket
+    (academic tournament)" as one of four tools that need questions and cannot get them. So: a bracket whose matches
+    are decided by questions from the bank. How a match is scored, how many questions it gets, whether one may repeat
+    and what a tie does are not in the design. Each was taken the way that **stores nothing in the bank, changes no
+    bracket that does not use the mode, and is the shortest to say to a teacher**, and is a question at the end.
+  - *Where it is.* Under the bracket, an **Academic tournament** card with one tick box, on every bracket of all five
+    types (single and double elimination, round robin, pools, Swiss). Off, the page is what it was. On: **Questions
+    from** (the bank and the built-in sets, `sources({ peek: true })` and `sourceLabel()`, so the wording is 030's and
+    040's), **Unit**, **Questions a match** (1 to 20, three to start), a line saying how many matches the source
+    covers before a question repeats, the rule, and **Print match sheets**. 020 loads 053's and 062's data files, as
+    040 does, so both sets are there.
+  - *A match.* Every match the page draws score boxes for, with both sides known, gets a **Questions** button under
+    them (it reads "Questions: 2–1" once marks are made). It opens a panel under the bracket, one match at a time: the
+    questions, each with **Show answer** (hidden every time the panel opens, so the panel can be on the projector)
+    and a **Who got question N?** group: either side, or Neither. The panel shows in Present mode; the card does not.
+  - *The rule, as the page says it.* "Each question is one point to the side that got it. When every question is
+    marked, the side with more points wins the match. A tie decides nothing: add a tiebreak question, or pick the
+    winner by name." The mode does not decide a match itself: when the last question is marked it writes the two
+    totals into the match's score boxes and the page's own score rule runs (two scores that differ decide; the same
+    code path as typing them, Undo included). So standings, PF/PA and every bracket type work with no second rule.
+  - *The override.* A name can be clicked at any time, as always, and the panel has **Pick A as the winner** and
+    **Pick B** while the match has no winner. A winner already recorded is taken back with **Undo last pick**, which
+    is the page's only way to undo any pick and reaches one step back; the marks stay, and the panel says who is
+    ahead and that no winner is recorded. When the recorded winner is not the side the questions favour, the panel
+    says the winner was picked by name.
+  - *The deal.* The bracket holds a seed, made once when the mode is turned on. The source's usable questions (a
+    question and an answer both; the chosen unit) are ordered by a hash of the seed and the question's id, so the
+    order does not depend on the source's own order and a question added later slots in without moving the rest.
+    A match is dealt, the first time it is opened or printed, the first N of that order that no match of the bracket
+    holds, and the ids are stored. **So the same bracket shows the same questions every time; which match gets which
+    follows from the order the matches are opened in** (printing deals every ready match in page order). When every
+    question is held the deal goes round again, never the same question twice in one match, and the panel says how
+    many of a match's questions are also in another match; a source with fewer than N gives what it has, and the card
+    and the panel say so; an empty source deals nothing, stores nothing and says so. A changed source, unit or number
+    applies to matches dealt from then on.
+  - *What is stored.* On the bracket, in its own key, one more field: `academic: { on, seed, source, unit, per,
+    drawn: { match key: [question ids] }, marks: { match key: { question id: 'a' | 'b' | 'n' } } }`. Questions are
+    ids, not words: the words are read from the source each time. No new key; the registry row gained two **reads**
+    (the bank's key and 030's old one) and no write. **The bank's version is still 1, `_shared/question-bank.js` was
+    not edited, and 020 never writes the bank**: it reads with `peek()`, so opening 020, playing a match and printing
+    write no bank key, not even the move of 030's old bank (asserted with only the old key present). Turning the mode
+    off keeps the field with `on: false`. Reset picks keeps the seed and settings and clears the deal and the marks,
+    so the deal starts again from the top (the same questions in the same opening order).
+  - *The share link.* It carried the whole bracket and still does, so the field rides it. On arrival nothing of the
+    link's `academic` is kept but those seven fields, of their types and within limits (`BtAcademic.clean()`: a match
+    key must be one of the page's own score keys, so not `__proto__`; at most 40 ids a match and 600 matches). A
+    built-in set's questions show on any device; the sender's own bank's show only where that bank is, and elsewhere
+    each says it is no longer in its source and can still be marked. `inline-sinks-baseline.json` has 020 at 2, as
+    before: everything is built from elements, and a prompt, an answer, a unit, a source id and a team name that are
+    markup are text on the page and on the sheet (asserted, a crafted link among them).
+  - *The printed sheet.* **Print match sheets** builds, for every match that is ready and has no winner, a section
+    for the reader (the questions, a box for either side and for neither, a line for the points and the winner) and,
+    starting a new page, an **answer key** with the same sections. It prints alone (`body.printing-sheet`, taken off
+    on `afterprint` and by any change to the bracket, so Ctrl+P and the Print button print the bracket as before).
+    Nothing has a fixed height; a question is not split across pages; sixty questions and their key ran to several
+    pages in Chromium's PDF with nothing clipped. The card and the panel never print. `audit-print --check --only 020`
+    is clean, with a seed in `Tools/a11y-sweep/seeds.mjs` that turns the mode on so the audit reaches the sheet.
+  - *A bracket from before.* One of each type, built on the v276 page with a pick, a score and a schedule, hashes the
+    same as that page gave for: storage after the page opens, the bracket card, the champion banner, the blank
+    printed sheet, the printed bracket, the share link, the card and the stored bracket after one more pick, and an
+    old link opened on an empty device (`test:bracket-academic`, 39 pins and the brackets themselves in
+    `golden-old-brackets.json`, made with `--print` before the page was edited). What an old bracket gains on screen
+    is the card with its tick box, outside the bracket card.
+  - *Found by the tests.* A match key from a link was first checked against "letters, digits and underscores", which
+    `__proto__` passes: it became the prototype of the cleaned list. The pattern is now the page's seven key shapes.
+    The panel stayed open across Reset picks (and dealt again by itself) and across a switch to another bracket
+    (showing that bracket's match of the same key); it now closes on both.
+  - *Questions for Devon (each has a default taken, said here, and is cheap to reverse).*
+    9. **How a match is scored**: one point a question (taken), or the question's own `points` from the bank?
+    10. **How many questions a match gets**: three to start, the teacher's choice from 1 to 20 (taken). Another
+        number to start from? A different number for a final?
+    11. **May a question repeat across matches?** Taken: not until the source runs out, then yes, said in the panel.
+        The other readings: refuse to deal a match the source cannot cover, or never repeat and deal short.
+    12. **What a tie does.** Taken: nothing; the teacher adds a tiebreak question or picks by name. The others:
+        sudden death dealt by itself, or the higher seed goes through.
+    13. **Who can get a question**: one side or neither (taken). Should both sides be able to (written answers)?
+    14. **The winner is recorded the moment the last question is marked** (taken; Undo last pick takes it back), or
+        only on a press?
+    15. **Reset picks deals the same questions again** (taken: same seed). Should it, or a button beside it, deal
+        new ones (a new seed)? There is no such button today.
+    16. **Questions are kept by id and read from the source each time** (taken), so an edit on 030 changes a match
+        already dealt and a link opened where the bank is not shows no words. The other reading copies the words
+        into the bracket: a bigger save and link, and bank text stored outside the bank.
+    17. **A match is dealt when it is opened or printed** (taken), so which match gets which questions follows the
+        order they are opened in. The other reading deals every match when the mode is turned on, which Swiss and
+        pools cannot do (their later matches do not exist yet).
+  - *Not built.* A way to change a winner already recorded other than the page's one-step Undo; a "deal new
+    questions" button; a question's choices or picture in the panel (the text only); a print preview for the sheet
+    (020 does not print through the print kit); the sheet for matches not yet ready (a later round is not known).
+    A Questions button pressed straight after typing in **Questions a match** may need a second press (the field's
+    change redraws the bracket; the page's score boxes have always done the same).
+  - *Not verified.* No person used the mode, and no class played a match. No screen reader was run (axe, names, keys
+    and focus only). Nothing was printed on paper: the page count is Chromium's PDF. A bank of thousands in the
+    chooser was not tried (every render reads the source once). Not run: the full `npm test`.
 - **P3 — Play modes in 030.** Every-team-answers mode, quiz-bowl, spin-the-wheel,
   the final wager round, and a printed practice quiz/study guide with an answer key
   — all reading the same bank.
