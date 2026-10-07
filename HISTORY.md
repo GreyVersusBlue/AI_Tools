@@ -34,13 +34,13 @@ squares per inch", so it is now a named size.
   this page; I did not find out why (a wider viewport than a Letter page is the likely reason), and the suite measures the PDF instead.
 - **The sheet-type buttons were `div`s a keyboard could not reach.** All twelve are now `role="button"` with `tabindex="0"`, `aria-pressed`, and Enter / Space.
 - **Tests.** `smoke-grid-types-core.mjs` (pure Node, 52,353 assertions: each sheet's geometry read off its SVG over every orientation, header, size and option, plus 1000
-  random option sets including invalid ones) and `smoke-grid-types.mjs` (port 8517, 397 assertions: the preview is exactly the renderer's sheet for what was typed, the
-  old presets, saving and reloading, keyboard tabs, and one Letter page for 8 old and 16 new sheets in each orientation). Breaks on purpose: 79 in the renderer, all
+  random option sets including invalid ones) and `smoke-grid-types.mjs` (port 8517, 413 assertions: the preview is exactly the renderer's sheet for what was typed, the
+  old presets, saving and reloading, keyboard tabs, one Letter page for 8 old and 16 new sheets in each orientation, and axe over every new panel). Breaks on purpose: 79 in the renderer, all
   caught (55 for polar, log, number lines and the old isometric and golden, 24 for hex, storyboard and music; two of the first set first survived: a degree label that
-  rounds, and a zero step that was only checked loosely, and got assertions), and 28 in the page. The page breaks were first run 14 at a time in one suite run, which
+  rounds, and a zero step that was only checked loosely, and got assertions), and 30 in the page (two of them, a label pointing nowhere and a select with none, caught by the axe pass). The page breaks were first run 14 at a time in one suite run, which
   proved nothing for the nine that were not reported: one failing early assertion (a tab that would not open a panel) stopped the run before the rest. They were re-run in
   groups of breaks that cannot derail each other; one of those, "old presets not given their new defaults", was first reported uncaught because the assertion I named
-  for it was the wrong one (the golden preview is the one that fails); all 28 are caught. Not every assertion has its own break.
+  for it was the wrong one (the golden preview is the one that fails); all 30 are caught. Not every assertion has its own break.
 - **Not done, not verified.** Engineering paper has no border or title block; the staves have no clef or key signature; polar has no radian labels. Nothing printed on
   paper, no hexagon or staff measured with a ruler, no screen reader. `audit-print`'s seed is the default graph sheet, so it does not reach the new tabs; the suite
   measures their PDFs itself. The hexagon corners were found by tolerance: two floats a hair apart are one corner, which is what the renderer does and the test checks
