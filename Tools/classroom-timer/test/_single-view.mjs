@@ -9,9 +9,7 @@
 // actions on a frozen clock; `old` is what a save written by the old page
 // reads back as. golden-single-view.json was captured from the v276 page.
 
-import crypto from 'node:crypto';
 
-const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const URL_PAGE = (base) => base + '/Tools/004-Classroom%20Timer.html';
 const T0 = new Date('2026-03-02T15:00:00Z').getTime();
 
