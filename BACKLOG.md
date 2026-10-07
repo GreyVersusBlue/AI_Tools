@@ -552,7 +552,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 122 | A constraint solver worth the name; the room, not the grid | 005 | ½ | | [005 Seating Chart Generator](#005--seating-chart-generator) |
 | 123 | Bulk operations across rosters | 006 | ½ | | [006 Class Roster Hub](#006--class-roster-hub) |
 | 124 | `prefers-reduced-motion` respect; equity across weeks and periods | 007 | ½ | | [007 Name Picker](#007--name-picker) |
-| 125 | Team / house points; longitudinal reports | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
+| 125 | Longitudinal reports (a term or year view across archived days and sections; team totals are kept as one running total, with no per-day team history). Team / house points shipped v280 | 008 | ½ | | [008 Behavior & Points Tracker](#008--behavior--points-tracker) |
 | 126 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
 | 127 | Reuse the real timer; period-aware auto-advance | 010 | ½ | | [010 Command Center](#010--command-center) |
 | 128 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
@@ -7848,9 +7848,28 @@ hold that responsibility.
 
 #### Major Features
 
-- **Team / house points.** Aggregate individual points into groups from
-  Group/Team Generator, with a projector leaderboard — a very common classroom
-  economy that currently needs a whiteboard.
+- **Done (2026-10-07, v280) — Team / house points.** A Teams / houses card: two to eight
+  teams per section (a name each, an optional colour that is never the only cue), students
+  put on a team by hand or by an even deal that is the same for the same seed
+  (`teams.js`, `BPTeams.deal`: sorted names, a seeded shuffle, round robin, so sizes differ
+  by at most one). Every tap, "Award everyone" and undo counts for the student's team, and a
+  team can be given points directly (a form, or +1/−1 on its tile; the last five can be
+  undone). The **team board** sits above the student cards: one tile per team, best first,
+  with its position in words ("1st", "Tied for 2nd"), "Leading" or "Tied for the lead", the
+  total at projector size, and no student's name, tally or note; "Teams only" hides the
+  student cards, "positives only" floors the totals at 0 as it does for students, and a
+  polite live region says when a new team takes the lead. Team totals run across days
+  (Archive Day moves today into the bank); "Undo the whole day" drops only today's share;
+  "Reset team totals" (behind a confirm) zeroes the teams and touches no student. The
+  printed report gains a Team standings block when there are teams. Stored as optional
+  fields (`teams`, `teamOf`, `teamBank`, `teamDay`, `teamLog`, `teamSeed`) in the same
+  section of the same key: no new key, nothing in a share link, a section that never made a
+  team is byte for byte what it was (a golden from the v279 page pins the board in every
+  mode, taps, undo, both printouts, the CSV, the archive and its stored string). Teams are
+  this tool's own; reading them from Group Generator or the roster's sections is a
+  cross-tool hand-off that was not started. Not done: team totals per archived day (only
+  the running total), a team in the CSV or the student summary, a fullscreen stage view,
+  teams that carry across sections.
 - **Redeemable points / classroom economy.** Points spent on rewards, with a
   balance rather than a total.
 

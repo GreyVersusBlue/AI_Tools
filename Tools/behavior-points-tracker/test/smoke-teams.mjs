@@ -120,12 +120,15 @@ const studentSide = s => ({ points: s.points, posCount: s.posCount, negCount: s.
   await page.fill('#teamsEditor .team-row:last-child .team-name', 'Falcons');
   await page.click('#addTeamBtn');
   await page.fill('#teamsEditor .team-row:last-child .team-name', 'Herons');
+  eq((await section(page)).teams[1].name, 'Herons', 'make: a typed name is saved at once');
   eq(await boardShown(page), true, 'make: two teams show the board');
   await page.click('#addTeamBtn');
   eq(await page.$$eval('#teamsEditor .team-row', r => r.length), 3, 'make: a third row');
   const colors = await page.$$eval('#teamsEditor .team-color', s => s.map(x => x.value));
   eq(new Set(colors).size, 3, 'make: each new team starts on its own colour');
   ok(colors.every(Boolean), 'make: and every one has a colour');
+  await page.selectOption('#teamsEditor .team-row:first-child .team-color', 'purple');
+  eq((await section(page)).teams[0].color, 'purple', 'make: a chosen colour is saved at once');
   await page.selectOption('#teamsEditor .team-row:first-child .team-color', '');
   eq((await tiles(page))[0].name.trim(), 'Falcons', 'make: a team with no colour still has its name on the board');
   ok(!/tm-/.test((await tiles(page)).find(t => /Falcons/.test(t.name)).cls), 'make: and no colour class');
