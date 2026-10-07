@@ -58,7 +58,13 @@ const ok = (cond, label) => {
   failed++; fails.push(label); console.log('  FAIL ' + label); return false;
 };
 const eq = (a, b, label) => ok(JSON.stringify(a) === JSON.stringify(b), `${label} (got ${JSON.stringify(a)}, want ${JSON.stringify(b)})`);
-const group = (name) => console.log('\n' + name);
+// TLB_GROUPS=2,3 runs only those numbered groups (for a deliberate break aimed at one)
+const WANT = process.env.TLB_GROUPS ? new Set(process.env.TLB_GROUPS.split(',')) : null;
+const group = (name) => {
+  if (WANT && !WANT.has(name.split('.')[0])) return false;
+  console.log('\n' + name);
+  return true;
+};
 
 const server = await serve(PORT);
 const browser = await launch();
@@ -147,8 +153,7 @@ const LABEL = { 1: '2500 BCE', 2: '1200 BCE', 3: '300 BCE', 4: '40–55', 8: '10
 console.log('Timeline Builder — blanking dates, and the ordering activity');
 
 /* ── 1. a saved timeline from before prints what it always did ──────────── */
-group('1. older timelines are unchanged');
-{
+if (group('1. older timelines are unchanged')) {
   const golden = JSON.parse(fs.readFileSync(path.join(dir, 'golden-old-worksheet.json'), 'utf8'));
   const cases = [
     { id: 'river-default', tl: riverTimeline(), setup: {} },
@@ -186,8 +191,7 @@ group('1. older timelines are unchanged');
 }
 
 /* ── 2. blanking dates ──────────────────────────────────────────────────── */
-group('2. dates blanked');
-{
+if (group('2. dates blanked')) {
   const page = await open(riverTimeline());
   await printWorksheet(page, { what: 'date', hand: [1, 3, 9, 11], bank: true, key: true });
   const [sheet, key] = await readSheets(page);
@@ -234,8 +238,7 @@ group('2. dates blanked');
 }
 
 /* ── 3. both, every nth, the ones I choose ──────────────────────────────── */
-group('3. both, nth, by hand');
-{
+if (group('3. both, nth, by hand')) {
   const page = await open(riverTimeline());
   await printWorksheet(page, { what: 'both', hand: [2, 4, 12] });
   const [sheet, key] = await readSheets(page);
@@ -303,8 +306,7 @@ group('3. both, nth, by hand');
 }
 
 /* ── 4. saved, restored, shared ─────────────────────────────────────────── */
-group('4. saved with the timeline');
-{
+if (group('4. saved with the timeline')) {
   const page = await open(riverTimeline());
   await printWorksheet(page, { what: 'both', pick: 'nth', nth: 4, versions: 2 });
   let ws = (await storedState(page)).worksheet;
@@ -404,8 +406,7 @@ group('4. saved with the timeline');
 }
 
 /* ── 5. the ordering activity ───────────────────────────────────────────── */
-group('5. ordering activity');
-{
+if (group('5. ordering activity')) {
   const page = await open(riverTimeline());
   await page.click('#orderingToggleBtn');
   ok(/11 events, dealt with shuffle number 1/.test(await page.textContent('#ordNote')), 'the panel says how many events and which shuffle: ' + await page.textContent('#ordNote'));
@@ -499,18 +500,28 @@ group('5. ordering activity');
 
   // three events: never in order, however often Reshuffle is pressed
   const tri = await open(smallTimeline(3));
-  let inOrder = 0, seen = new Set();
+  let inOrder = 0, repeats = 0, previous = null, seen = new Set();
   await tri.click('#orderingToggleBtn');
   for (let i = 0; i < 14; i++) {
     await tri.click('#btnOrderingGo'); await settle(tri, 120);
     const titles = await tri.evaluate(() => [...document.querySelectorAll('#orderingPages .ordCard .ordTitle')].map(t => t.textContent));
     if (titles.join() === 'Event A,Event B,Event C') inOrder++;
+    if (previous !== null && previous === titles.join()) repeats++;
+    previous = titles.join();
     seen.add(titles.join());
     await tri.click('#orderingToggleBtn');
     await tri.click('#btnOrdReshuffle');
   }
   eq(inOrder, 0, 'three events: fourteen reshuffles, never in order');
+  eq(repeats, 0, 'and no reshuffle deals what the one before it dealt');
   ok(seen.size >= 4, 'and several different orders: ' + [...seen].join(' / '));
+
+  // the teardown after printing puts the page back
+  await page.click('#orderingToggleBtn');
+  await page.click('#btnOrderingGo'); await settle(page, 300);
+  ok(await page.evaluate(() => document.body.classList.contains('ordering-printing') && document.getElementById('orderingPages').children.length > 0), 'while printing, the sheets are built and the page is in ordering-printing mode');
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  ok(await page.evaluate(() => !document.body.classList.contains('ordering-printing') && document.getElementById('orderingPages').children.length === 0 && !document.getElementById('tiledPageSizeStyle')), 'afterprint empties the sheets and takes the mode and the page size off');
 
   // too few
   const one = await open(smallTimeline(1));
@@ -522,7 +533,7 @@ group('5. ordering activity');
 }
 
 /* ── 6. printing: nothing cut off, no blank page ────────────────────────── */
-group('6. print layout');
+const g6 = group('6. print layout');
 const longTitle = 'The committee of the lower river wards formally resolved, after three years of argument and two failed votes, to carry the whole of the northern levee works across the old toll road and onward to the sea';
 const unbroken = 'Supercalifragilisticexpialidocious' + 'Pneumonoultramicroscopic'.repeat(2);
 const longTimeline = {
@@ -535,7 +546,7 @@ const longTimeline = {
     mk(17, 'Seventeenth', 1960), mk(18, 'Eighteenth', 1970), mk(19, 'Nineteenth', 1980), mk(20, 'Twentieth', 1990)
   ]
 };
-{
+if (g6) {
   const norm = (t) => t.replace(/\s+/g, '').toLowerCase();
   for (const paper of ['Letter', 'A4']) {
     const page = await open(longTimeline);
@@ -559,6 +570,7 @@ const longTimeline = {
         pageCount: pages.length, cards: cards.length, bad,
         sameSize: new Set(heights).size === 1 && new Set(widths).size === 1,
         cols: grids[0] ? getComputedStyle(grids[0]).gridTemplateColumns.split(' ').length : 0,
+        rowsFirst: grids[0] ? Math.round(grids[0].children.length / getComputedStyle(grids[0]).gridTemplateColumns.split(' ').length) : 0,
         gridBottom: Math.max(...grids.map(g => g.getBoundingClientRect().height)),
         gridWidth: Math.max(...grids.map(g => g.getBoundingClientRect().width)),
         cardH: heights[0], longestTitleLines: Math.round(cards.find(c => c.textContent.includes('committee')).getBoundingClientRect().height)
@@ -566,6 +578,7 @@ const longTimeline = {
     });
     eq(m.cards, 20, `${paper}: all twenty cards`);
     eq(m.bad, 0, `${paper}: no card is cut off, the longest title is whole on its card`);
+    ok(m.rowsFirst >= 2, `${paper}: even with the longest title a page holds at least two rows of cards (${m.rowsFirst} rows of ${m.cols})`);
     ok(m.sameSize, `${paper}: every card is the same size, so they cut and stack alike (${m.cardH}px)`);
     ok(m.gridWidth <= 960 + 2, `${paper}: the grid fits the 10in the page is built to (${Math.round(m.gridWidth)}px)`);
     ok(m.gridBottom <= 6.2 * 96 + 4, `${paper}: a page of cards fits the height budgeted for it (${Math.round(m.gridBottom)}px)`);
@@ -618,8 +631,7 @@ const longTimeline = {
 }
 
 /* ── 7. keyboard and screen reader ──────────────────────────────────────── */
-group('7. keyboard and screen reader');
-{
+if (group('7. keyboard and screen reader')) {
   const page = await open(riverTimeline());
   // every new control has a name
   await page.click('#worksheetToggleBtn');

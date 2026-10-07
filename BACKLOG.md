@@ -557,7 +557,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 127 | Reuse the real timer; period-aware auto-advance | 010 | ½ | | [010 Command Center](#010--command-center) |
 | 128 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
 | 130 | Date-received per student; contract-gate reporting | 013 | ½ | | [013 Lab Safety Contract Tracker](#013--lab-safety-contract-tracker) |
-| 131 | Printed ordering activity; blanking dates, not just titles | 015 | ½ | | [015 Timeline Builder](#015--timeline-builder) |
 | 132 | A label under each code; batch codes from a spreadsheet | 016 | ½ | | [016 QR Code Generator](#016--qr-code-generator) |
 | 133 | Peer feedback slips; gallery-walk reactions | 017 | ½ | | [017 Gallery Walk QR Codes](#017--gallery-walk-qr-codes) |
 | 134 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
@@ -8230,9 +8229,10 @@ open; struck through in session `c1jqjp` after checking each against the
 source. The list was pointing later rounds at finished work.
 
 - ~~**Blank / student-fill version**~~ — **done, 2026-08-14** (SS demo round
-  2: the timeline worksheet print, `tlb-worksheet.js`). Blanks titles only;
-  blanking *dates* instead is still open and is listed under "Where the next
-  round should pick up" for that round.
+  2: the timeline worksheet print, `tlb-worksheet.js`). Blanked titles only
+  until 2026-10-07 (AI-31-015, v281): a worksheet now blanks titles, dates or
+  both, for a random number, every nth event or events picked by hand, with the
+  year scale left off the sheet and kept on the key.
 No Quick Wins remain open. A future round should look to Major Features
 below, or find a genuinely new gap — the label de-overlap fix that session
 `c1jqjp` shipped was one of those, and it came out of the previous round's
@@ -8240,11 +8240,12 @@ notes rather than out of this list.
 
 #### Major Features
 
-- **Printed ordering activity** — *partly done*. The paper half shipped
-  2026-08-14 as the timeline worksheet (numbered blanks, word bank, answer
-  key). What is still unbuilt is the **cut-apart cards** version: ten events
-  on separate cards for students to physically sequence, which is a different
-  print layout from the worksheet's spatial strip.
+- ~~**Printed ordering activity**~~ — **done, 2026-10-07** (AI-31-015, v281): an
+  "Ordering activity" panel prints the titled events with no dates as cut-apart
+  cards or a numbered list, dealt from a seed stored with the timeline (Reshuffle
+  moves it; three or more events are never dealt in order), with an answer key
+  on a page of its own. It prints through the tool's own containers, not the
+  shared print kit (this page never did), landscape on Letter or A4.
 - **Comparative timelines as a first-class teaching device.** Compare mode
   exists; framing it as "what was happening in China while this happened in
   Europe" — with a shipped set of reference timelines for major periods —

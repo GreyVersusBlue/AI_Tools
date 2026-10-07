@@ -163,6 +163,14 @@ group('6. ordering deal');
   eq(keyRight, cases, 'the key is the right order, numbered 1..n');
   eq(cardsHoldKey, cases, 'each key row names the card that holds its event, and cards are numbered 1..n in dealt order');
 
+  // three events is the worst case: one draw in six is already in order, so a
+  // redraw that is itself in order has to be redrawn again
+  let sorted3 = 0;
+  for (let seed = 1; seed <= 4000; seed++) {
+    if (W.deal(mk(3), seed).cards.map(c => c.event.id).join() === '100,101,102') sorted3++;
+  }
+  eq(sorted3, 0, 'three events over 4000 seeds: never in order');
+
   // seeds beyond the small ones, and a seed that is hostile
   eq(W.cleanSeed(0), 1, 'seed 0 is 1');
   eq(W.cleanSeed(-5), 1, 'a negative seed is 1');
@@ -204,6 +212,7 @@ group('6. ordering deal');
   // all in one year: nothing to get wrong, and no endless search
   const flat = [1, 2, 3, 4].map(i => ({ id: i, title: 'T' + i, yearStart: 1800 }));
   eq(W.deal(flat, 1).cards.length, 4, 'four events in one year still deal');
+  eq(W.deal(flat, 1).cards.map(c => c.event.id), W.shuffled(flat, 104729).map(e => e.id), 'and it is the first draw, not the last of a long search');
 
   // Reshuffle
   let changed = 0, trials = 0;
@@ -215,7 +224,7 @@ group('6. ordering deal');
     }
   }
   eq(changed, trials, 'the next seed always changes the deal, even with three events (' + trials + ' tries)');
-  ok(W.nextSeed(mk(5), 2147483647) >= 1, 'the next seed after the largest wraps to a valid one');
+  eq(W.cleanSeed(W.nextSeed(mk(5), 2147483647)), W.nextSeed(mk(5), 2147483647), 'the next seed after the largest wraps to a valid one');
   eq(W.nextSeed(mk(1), 3) > 0, true, 'one event: Reshuffle still returns a seed');
 }
 
