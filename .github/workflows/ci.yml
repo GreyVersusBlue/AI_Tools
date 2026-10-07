@@ -48,7 +48,10 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # 120 since 2026-10-07: the full list (240 suites) took 54 minutes on the
+    # last wave and was cancelled at 60 on the next, in suite 209 with none
+    # failed. Splitting the suites across jobs is the real fix and is not done.
+    timeout-minutes: 120
 
     steps:
       # Pinned to the current majors (checkout v7, setup-node v7, cache v6,
