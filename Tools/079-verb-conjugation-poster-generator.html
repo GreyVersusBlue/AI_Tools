@@ -26,6 +26,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="verb-conjugation-poster-generator/irregulars.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -107,6 +108,33 @@
   .colorbar { display: flex; align-items: center; gap: .45rem; margin: .55rem 0 0; font-size: .84rem; }
   .colorbar input { width: auto; margin: 0; }
   .colorbar label { margin: 0; font-weight: 600; font-size: .84rem; }
+  fieldset.callout-verbs { border: 1px solid var(--line); border-radius: 8px; margin: .2rem 0 .4rem; padding: .4rem .7rem .5rem; }
+  fieldset.callout-verbs legend { font-weight: 600; font-size: .82rem; padding: 0 .3rem; }
+  .callout-verb { display: flex; align-items: center; gap: .45rem; font-size: .84rem; margin: .2rem 0; }
+  .callout-verb input { width: auto; margin: 0; }
+  .callout-verb label { margin: 0; font-weight: 400; font-size: .84rem; }
+  .callout-status { font-size: .78rem; color: var(--muted); margin: 0; }
+
+  /* The call-out box prints under the panels: small, one line per verb, so a
+     poster that fits its page still fits it with the box. Paper, like the rest
+     of .poster-*. It exists only when a poster asks for it. */
+  .poster-callout { margin-top: 1rem; border: 2px dashed #333; border-radius: 10px; padding: .4rem .8rem .5rem; break-inside: avoid; }
+  .poster-callout h3 { margin: 0 0 .25rem; font-size: 1.05rem; text-align: center; }
+  .poster-callout table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .poster-callout th, .poster-callout td { padding: .12rem .25rem; font-size: .84rem; text-align: left; border-bottom: 1px dotted #999; }
+  .poster-callout thead th { font-size: .72rem; color: #555; font-weight: 600; }
+  .poster-callout tbody th { width: 25%; font-weight: 700; }
+  .poster-callout td { font-weight: 700; color: #1f3550; }
+  /* With the box on, the panels above it tighten (the page class is set when the
+     poster is built) so a poster that fills its page without the box still has
+     room for it. A poster without the box never gets this class. */
+  #printArea.has-callout .poster-title { font-size: 1.6rem; margin: 0 0 .6rem; }
+  #printArea.has-callout .poster-grid { gap: .8rem; }
+  #printArea.has-callout .poster-panel { padding-bottom: .4rem; }
+  #printArea.has-callout .poster-panel h3 { font-size: 1.15rem; margin: 0 0 .2rem; padding: .2rem .5rem; }
+  #printArea.has-callout .poster-panel td { padding: .07rem .3rem; font-size: 1rem; }
+  #printArea.has-callout .poster-callout { margin-top: .8rem; }
+  .poster-callout p.callnote { margin: .25rem 0 0; font-size: .74rem; color: #555; }
 
 </style>
 </head>
@@ -167,6 +195,26 @@
       </div>
 
       <div class="card">
+        <h2>Irregular verb call-out</h2>
+        <p class="hint">An optional box under the panels listing three to five common irregular verbs in one tense.
+          The forms come from a short list kept with this tool, which no language teacher has reviewed yet &mdash; check
+          them before they go on a wall.</p>
+        <p class="colorbar">
+          <input type="checkbox" id="calloutOn">
+          <label for="calloutOn">Print a call-out box of common irregular verbs</label>
+        </p>
+        <label for="calloutLang">Language</label>
+        <select id="calloutLang"></select>
+        <label for="calloutTense">Tense</label>
+        <select id="calloutTense"></select>
+        <fieldset class="callout-verbs">
+          <legend>Verbs in the box (up to 5)</legend>
+          <div id="calloutVerbs"></div>
+        </fieldset>
+        <p class="callout-status" id="calloutStatus" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="card">
         <h2>Subjects / persons</h2>
         <p class="hint">Same order on every panel &mdash; edit to match whatever language you teach.</p>
         <div id="personsWrap"></div>
@@ -211,6 +259,7 @@
 
   var TEMPLATES = {
     es_present: {
+      lang: 'es', tense: 'present',
       title: 'Present Tense — Regular Verbs',
       persons: DEFAULT_PERSONS,
       panels: [
@@ -220,6 +269,7 @@
       ]
     },
     es_preterite: {
+      lang: 'es', tense: 'preterite',
       title: 'Preterite Tense — Regular Verbs',
       persons: DEFAULT_PERSONS,
       panels: [
@@ -229,6 +279,7 @@
       ]
     },
     es_imperfect: {
+      lang: 'es', tense: 'imperfect',
       title: 'Imperfect Tense — Regular Verbs',
       persons: DEFAULT_PERSONS,
       panels: [
@@ -238,6 +289,7 @@
       ]
     },
     es_future: {
+      lang: 'es', tense: 'future',
       title: 'Future Tense — Regular Verbs',
       persons: DEFAULT_PERSONS,
       panels: [
@@ -247,6 +299,7 @@
       ]
     },
     es_irregulars: {
+      lang: 'es', tense: 'present',
       title: 'Irregular Verbs — Present Tense',
       persons: DEFAULT_PERSONS,
       panels: [
@@ -255,6 +308,7 @@
       ]
     },
     fr_present: {
+      lang: 'fr', tense: 'present',
       title: 'Present Tense — Regular Verbs',
       persons: ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'],
       panels: [
@@ -264,6 +318,7 @@
       ]
     },
     fr_imperfect: {
+      lang: 'fr', tense: 'imperfect',
       title: 'Imperfect Tense — Regular Verbs',
       persons: ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'],
       panels: [
@@ -273,6 +328,7 @@
       ]
     },
     fr_irregulars: {
+      lang: 'fr', tense: 'present',
       title: 'Irregular Verbs — Present Tense',
       persons: ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'],
       panels: [
@@ -290,6 +346,7 @@
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'posterTitle', 'personsWrap', 'panelsWrap', 'addPanelBtn',
    'printBtn', 'printArea', 'colCount', 'colorPanels',
+   'calloutOn', 'calloutLang', 'calloutTense', 'calloutVerbs', 'calloutStatus',
    'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var COLS_KEY = 'vcp_columns_v1';
@@ -313,6 +370,36 @@
       persons: t.persons.slice(),
       panels: t.panels.map(function (p) { return { id: uid(), name: p.name, forms: p.forms.slice(), color: 'auto' }; })
     };
+    /* A starter for a language the call-out has verbs for opens with the box
+       set to that tense and OFF; a poster saved before the boxes has no
+       `callout` at all, which is the same as off. */
+    var td = t.lang && tenseData(t.lang, t.tense);
+    if (td) state.callout = { on: false, lang: t.lang, tense: t.tense, verbs: td.defaults.slice() };
+  }
+
+  /* ---------- irregular verb call-out ----------
+     The verbs are data (irregulars.js); a poster stores only which tense and
+     which verb ids, so a teacher cannot save a form the data does not have and
+     a share link cannot carry text into the box. */
+  var CALLOUT_MAX = 5;
+  function irregulars() { return window.VCP_IRREGULARS || { languages: {}, tenses: {} }; }
+  function tenseData(lang, tense) { return irregulars().tenses[lang + ':' + tense] || null; }
+
+  /** A clean `{ on, lang, tense, verbs }`, or null when it is not one: an unknown
+      language or tense, or verb ids the data does not have, are dropped. */
+  function cleanCallout(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    var td = tenseData(String(obj.lang), String(obj.tense));
+    if (!td) return null;
+    var seen = {}, verbs = [];
+    (Array.isArray(obj.verbs) ? obj.verbs : []).forEach(function (id) {
+      var known = td.verbs.some(function (x) { return x.id === id; });
+      if (known && !seen[id] && verbs.length < CALLOUT_MAX) { seen[id] = true; verbs.push(id); }
+    });
+    /* The data's order, whatever order they came in, so the box reads the same
+       from a link as from the checkboxes. */
+    verbs = td.verbs.map(function (x) { return x.id; }).filter(function (id) { return seen[id]; });
+    return { on: obj.on === true, lang: td.lang, tense: td.tense, verbs: verbs };
   }
 
   /** True when there was a saved poster here — which is what tells an
@@ -331,6 +418,12 @@
       if (typeof state.colorPanels !== 'boolean') { state.colorPanels = true; upgraded = true; }
       state.panels.forEach(function (p) { if (!p.color) { p.color = 'auto'; upgraded = true; } });
       if (upgraded) save();
+      /* In memory only: a saved box that is not a usable one is dropped, never
+         rewritten, and a poster with none is left exactly as it was saved. */
+      if ('callout' in state) {
+        var cc = cleanCallout(state.callout);
+        if (cc) state.callout = cc; else delete state.callout;
+      }
     }
     return had;
   }
@@ -419,6 +512,100 @@
     save(); renderPanels();
   });
 
+  /* ---------- call-out controls ----------
+     The box is off until a teacher turns it on, and its settings are saved with
+     the poster as `callout` once they touch a control. What a control shows when
+     the poster has none is the Spanish present, off. */
+  function calloutOrDefault() {
+    var c = state.callout && cleanCallout(state.callout);
+    if (c) return c;
+    var td = tenseData('es', 'present');
+    return { on: false, lang: 'es', tense: 'present', verbs: td ? td.defaults.slice() : [] };
+  }
+
+  function option(value, text, selected) {
+    var o = document.createElement('option');
+    o.value = value; o.textContent = text; o.selected = selected;
+    return o;
+  }
+
+  function renderCallout() {
+    var c = calloutOrDefault();
+    var data = irregulars();
+    els.calloutOn.checked = c.on;
+    els.calloutLang.textContent = '';
+    Object.keys(data.languages).forEach(function (l) {
+      els.calloutLang.appendChild(option(l, data.languages[l].name, l === c.lang));
+    });
+    els.calloutTense.textContent = '';
+    Object.keys(data.tenses).forEach(function (k) {
+      var td = data.tenses[k];
+      if (td.lang === c.lang) els.calloutTense.appendChild(option(td.tense, td.name, td.tense === c.tense));
+    });
+    els.calloutVerbs.textContent = '';
+    tenseData(c.lang, c.tense).verbs.forEach(function (verb) {
+      var row = document.createElement('div');
+      row.className = 'callout-verb';
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.id = 'calloutVerb_' + verb.id;
+      box.setAttribute('data-callout-verb', verb.id);
+      box.checked = c.verbs.indexOf(verb.id) !== -1;
+      var label = document.createElement('label');
+      label.htmlFor = box.id;
+      label.textContent = verb.name + ' \u2014 ' + verb.forms.join(', ');
+      row.appendChild(box);
+      row.appendChild(label);
+      els.calloutVerbs.appendChild(row);
+    });
+    syncCalloutVerbs(c);
+  }
+
+  /** Disable the unticked boxes once five are chosen and say how many are; the
+      checkboxes themselves are left in place, so focus stays where it is. */
+  function syncCalloutVerbs(c) {
+    var full = c.verbs.length >= CALLOUT_MAX;
+    Array.prototype.forEach.call(els.calloutVerbs.querySelectorAll('input'), function (box) {
+      box.disabled = full && !box.checked;
+    });
+    els.calloutStatus.textContent = c.verbs.length + ' of ' + CALLOUT_MAX + ' verbs chosen' +
+      (full ? ' (the most a box holds; untick one to pick another)' : '') +
+      (c.on && !c.verbs.length ? '. Nothing will print until you pick at least one.' : '.');
+  }
+
+  function setCallout(next, keepList) {
+    state.callout = next; save();
+    if (keepList) syncCalloutVerbs(next); else renderCallout();
+  }
+
+  els.calloutOn.addEventListener('change', function () {
+    var c = calloutOrDefault(); c.on = els.calloutOn.checked; setCallout(c, true);
+  });
+  els.calloutLang.addEventListener('change', function () {
+    var c = calloutOrDefault();
+    var first = Object.keys(irregulars().tenses).filter(function (k) { return irregulars().tenses[k].lang === els.calloutLang.value; })[0];
+    var td = irregulars().tenses[first];
+    setCallout({ on: c.on, lang: td.lang, tense: td.tense, verbs: td.defaults.slice() });
+  });
+  els.calloutTense.addEventListener('change', function () {
+    var c = calloutOrDefault();
+    var td = tenseData(c.lang, els.calloutTense.value);
+    if (!td) return;
+    setCallout({ on: c.on, lang: c.lang, tense: td.tense, verbs: td.defaults.slice() });
+  });
+  els.calloutVerbs.addEventListener('change', function (ev) {
+    var id = ev.target.getAttribute('data-callout-verb');
+    if (id === null) return;
+    var c = calloutOrDefault();
+    var td = tenseData(c.lang, c.tense);
+    /* Kept in the order the data lists them, so the box reads the same however
+       the boxes were ticked. */
+    var chosen = c.verbs.filter(function (x) { return x !== id; });
+    if (ev.target.checked) chosen.push(id);
+    c.verbs = td.verbs.map(function (x) { return x.id; }).filter(function (x) { return chosen.indexOf(x) !== -1; }).slice(0, CALLOUT_MAX);
+    setCallout(c, true);
+  });
+
   els.loadTemplateBtn.addEventListener('click', function () {
     if (state && state.panels.length && !confirm('Replace the current poster with this template?')) return;
     fromTemplate(els.templateSelect.value);
@@ -433,6 +620,7 @@
     els.colorPanels.checked = state.colorPanels !== false;
     renderPersons();
     renderPanels();
+    renderCallout();
   }
 
   function posterHtml() {
@@ -446,12 +634,33 @@
         '<h3 style="background:' + c.tint + ';color:' + c.line + ';">' + escapeHtml(panel.name) + '</h3>' +
         '<table>' + rows + '</table></div>';
     }).join('');
-    return '<h1 class="poster-title">' + title + '</h1><div class="poster-grid" style="grid-template-columns: repeat(' + columns + ', 1fr);">' + panels + '</div>';
+    return '<h1 class="poster-title">' + title + '</h1><div class="poster-grid" style="grid-template-columns: repeat(' + columns + ', 1fr);">' + panels + '</div>' + calloutHtml();
+  }
+
+  /** The call-out box, or '' — which is what keeps a poster with the box off
+      printing the markup it always did. */
+  function calloutHtml() {
+    var c = state.callout && cleanCallout(state.callout);
+    if (!c || !c.on) return '';
+    var td = tenseData(c.lang, c.tense);
+    var persons = irregulars().languages[c.lang].persons;
+    var rows = c.verbs.map(function (id) {
+      var verb = td.verbs.filter(function (x) { return x.id === id; })[0];
+      return '<tr><th scope="row">' + escapeHtml(verb.name) + '</th>' +
+        verb.forms.map(function (f) { return '<td>' + escapeHtml(f) + '</td>'; }).join('') + '</tr>';
+    }).join('');
+    if (!rows) return '';
+    return '<div class="poster-callout" data-lang="' + c.lang + '" data-tense="' + c.tense + '">' +
+      '<h3>Common irregular verbs &mdash; ' + escapeHtml(td.name) + '</h3>' +
+      '<table><thead><tr><td></td>' + persons.map(function (p) { return '<th scope="col">' + escapeHtml(p) + '</th>'; }).join('') + '</tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>' +
+      (td.note ? '<p class="callnote">' + escapeHtml(td.note) + '</p>' : '') + '</div>';
   }
 
   els.printBtn.addEventListener('click', function () {
     if (!state.panels.length) { alert('Load a template or add a panel first.'); return; }
     els.printArea.innerHTML = posterHtml();
+    els.printArea.classList.toggle('has-callout', !!els.printArea.querySelector('.poster-callout'));
     window.print();
   });
 
@@ -491,7 +700,7 @@
     title: 'Share this poster',
     noun: 'this poster',
     filename: function () { return (state && state.title) || 'conjugation poster'; },
-    note: 'The whole poster travels — its title, its persons, every panel and its colour. How many columns it prints in stays a setting of each device.',
+    note: 'The whole poster travels — its title, its persons, every panel, its colour and its irregular-verb call-out settings. How many columns it prints in stays a setting of each device.',
     successMessage: 'Link copied. Opening it on another device offers this whole poster in place of whatever is there.',
     onMessage: function (text, isError) { setShareNote(text, isError); }
   });
@@ -501,7 +710,7 @@
   }
 
   function normalizePoster(obj) {
-    return {
+    var out = {
       title: typeof obj.title === 'string' ? obj.title : '',
       colorPanels: typeof obj.colorPanels === 'boolean' ? obj.colorPanels : true,
       persons: obj.persons.map(function (x) { return String(x == null ? '' : x); }),
@@ -514,6 +723,11 @@
         };
       })
     };
+    /* The call-out settings travel when they are usable; a link made before the
+       boxes has none and opens exactly as it did. */
+    var cc = 'callout' in obj ? cleanCallout(obj.callout) : null;
+    if (cc) out.callout = cc;
+    return out;
   }
 
   function importSharedPoster(hadSaved) {

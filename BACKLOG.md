@@ -521,7 +521,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
-| 116 | Irregular verb call-out boxes — three to five common irregulars per tense | 079 | ½ | | [079 Verb Conjugation Reference Poster Generator](#079--verb-conjugation-reference-poster-generator) |
 | 117 | Two-step word problems — chained-operation templates for the upper grade band | 081 | ½ | | [081 Word Problem Warm-Up Generator](#081--word-problem-warm-up-generator) |
 | 118 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
 | 119 | Roles built into a group; project-team mode; a pair-history that spans the year | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
@@ -12293,9 +12292,13 @@ need rebuilding for sixth-grade customary-to-metric next period.
 
 #### Major Features
 
-- **Irregular verb call-out boxes** — a small side panel per poster
-  listing 3&ndash;5 common irregular verbs in that tense, since regular
-  patterns are only half of what a wall reference needs to be useful.
+- ~~**Irregular verb call-out boxes**~~ — shipped (v274, 2026-10-07, AI-31-079): an
+  optional box under the panels, per poster, listing three to five irregulars in one
+  of six tenses (Spanish present, preterite, imperfect, future; French present,
+  imperfect), chosen by the teacher and saved with the poster. The data is
+  `Tools/verb-conjugation-poster-generator/irregulars.js` and **has not been reviewed
+  by a language teacher** (HISTORY lists every verb). Still open: German and Italian
+  data, other tenses, a box per panel rather than one per poster.
 - **JSON export/import**, for sharing a built poster with another teacher
   on the same team, or backing one up before a school year ends.
 - **A "shrink to fit one page" print mode toggle** — right now font sizes
@@ -12327,9 +12330,9 @@ every year the same unit comes around.
   loaded like any other template) rather than a call-out box grafted onto
   a regular-pattern poster — simpler to build with the existing panel
   model and keeps a teacher's "irregulars" poster separately printable
-  from their "regular pattern" one. The Major Features item calling for a
-  *combined* poster (regular panels + a small irregular-verb side box on
-  the same page) is still open if that's the better pedagogical shape.
+  from their "regular pattern" one. The *combined* poster (regular panels + an
+  irregular-verb box on the same page) shipped as an opt-in box (v274), so both
+  shapes now exist.
 
 #### Platform themes that matter here
 
