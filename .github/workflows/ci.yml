@@ -96,6 +96,15 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
+      # Four suites read the PDFs Chromium writes with poppler's `pdftotext`
+      # and `pdfinfo` (075's wallet cards, 068's packet, 079's call-outs, 077's
+      # rooms), and the runner image does not ship them: all four crashed in
+      # AI_Tools#353's full run. Two more (export, image-to-pdf) use `pdftoppm`
+      # when it is there and skip that check when it is not, so this turns
+      # those checks on in CI too.
+      - name: Install poppler-utils (pdftotext, pdfinfo, pdftoppm)
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
       # The guards are read-only and fast, so they run first and independently:
       # `!cancelled()` means one failing guard still lets the others report,
       # rather than the first one hiding the rest — the same reasoning that

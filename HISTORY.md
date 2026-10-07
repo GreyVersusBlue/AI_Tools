@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## 004 Classroom Timer: a timer board of two to four independent timers (2026-10-07, AI-31-004, `CACHE_VERSION` v277)
+## 004 Classroom Timer: a timer board of two to four independent timers (2026-10-07, AI-31-004, `CACHE_VERSION` v279; the code commit says v277, which main passed before the merge)
 
 BACKLOG rank 121 had three parts; this session did one, the multi-timer board. Bell-schedule awareness (needs 032's key in the registry) and the
 reconnecting mirror (`_shared/webrtc-pair.js`) are not started, and the row says so.
@@ -36,6 +36,100 @@ reconnecting mirror (`_shared/webrtc-pair.js`) are not started, and the row says
   Breaks on purpose: 35 in the core (31 caught first time; 4 survived as equivalent redundant guards, which were deleted) and 19 in the page (all
   caught; B5, the single timer's Space key, first survived because the test pressed R before reading the key it had just cleared, and was reordered and
   caught). A break run killed by a host restart left one mutated line, found with `git status` and restored. Not every assertion has its own break.
+## CI installs poppler-utils (2026-10-07, AI-14, no `CACHE_VERSION`)
+
+Asked for by the Selector, as one commit on AI-14's branch. The landing's full run on AI_Tools#353 (245 suites, 73.7 minutes) failed on four, for one
+cause: `Tools/staff-directory-builder/test/smoke-wallet-cards.mjs` (through `_old-print.mjs`), `Tools/parent-contact-log/test/smoke-packet.mjs`,
+`Tools/verb-conjugation-poster-generator/test/smoke-callouts.mjs` and `Tools/testing-accommodations-card-generator/test/smoke-rooms.mjs` spawn
+`pdftotext` or `pdfinfo`, which huginn has and the GitHub runner does not. `.github/workflows/ci.yml`'s one job now has a step after the Chromium
+ones, `sudo apt-get update && sudo apt-get install -y poppler-utils`; nothing else in the workflow changed. **The suites depend on poppler-utils, on
+huginn and in CI**; a suite that needs it on a machine without it crashes with no FAIL line. Every other spawn under `Tools/*/test` was read:
+`git ls-files` (theme, and a string in select-suites' own test), `unzip` (export.test.mjs, only when it is there) and `pdftoppm`
+(`smoke-export.mjs`, image-to-pdf's `smoke-impose.mjs`), which both skip their pixel check when it is absent. **So those two checks have never run
+in CI and will for the first time after this**: if one is red on the runner's poppler, that is a new finding, not a regression. 020's new suites spawn
+nothing. Not verified: no CI run has finished with the step.
+
+## Path 12 P2, increment 4: 020's academic-tournament mode (2026-10-07, AI-14, `CACHE_VERSION` v278)
+
+Audit entry AI-14, BACKLOG rank 28 (a 2+ row; it stays, rewritten to what is left). The session was handed one group of P2, "020's
+academic-tournament mode", and nothing else. First check: the item was open (at v276 020 loaded `store.js` and not `question-bank.js`, and no
+script of it named the bank). The design asks one clause of 020, "020 gets an academic-tournament mode fed by it".
+
+**What shipped.** An **Academic tournament** card under a bracket, off until its box is ticked, on all five bracket types. On: a source (the
+teacher's bank or a built-in set, listed by the module's `sources()` and `sourceLabel()`), a Unit filter and a number of questions a match; a
+**Questions** button under each match that is ready; a panel that shows the match's questions with each answer hidden until **Show answer**, and a
+**Who got question N?** group (either side, or Neither); and **Print match sheets**, which prints the ready matches for a reader and, on a page of
+its own, the answer key. New file `Tools/bracket-tournament-generator/bt-academic.js` (the pure half and `mount()`); the page gained about 160
+lines of hooks, markup and CSS. `_shared/question-bank.js` was not edited.
+
+**How a match is decided.** One point a question to the side that got it. The mode does not decide a match: when the last question is marked it
+writes the two totals into the match's own score boxes and fires their `change`, so the page's existing rule runs (two scores that differ decide; a
+tie decides nothing). That is why one small hook (`matchBoxes`, filled by `buildScoreInputs()`) covers five renderers and seven kinds of match key,
+and why standings and Undo needed nothing. The override is the page's own: a click on a name (the panel has a button for each side), and Undo last
+pick to take a recorded winner back.
+
+**The deal.** A seed made once, stored with the bracket; the source's questions ordered by a hash of the seed and the id; a match gets the first N
+no match holds, when it is first opened or printed, and its ids are stored. When the source runs out the deal goes round again and the panel says
+so; a source with fewer than N, or none, is said on the card and in the panel.
+
+**What is stored.** One field on the bracket (`academic`: on, seed, source, unit, per, drawn, marks; ids, never words). No key, no write to the
+bank: 020 reads with `peek()`. The registry row gained two reads. A link carries the field, cleaned on arrival to those seven fields.
+
+**Decisions taken, and why (each is a question for Devon in BACKLOG's Path 12 P2, 9 to 17).** One point a question, not the bank's `points` (most
+bank questions have 0 or a Jeopardy value). Three questions a match to start. Repeats only after the source runs out, and said. A tie decides
+nothing. One side or neither gets a question. The winner is recorded on the last mark. Reset picks deals the same questions. Ids, not words, in
+the bracket. Dealt on open, not up front.
+
+**Got wrong on the way, and caught by a test.** (1) `clean()` first allowed any match key of letters, digits and underscores; `__proto__` is one,
+and a link naming it made the array its value the prototype of the cleaned `drawn` object. The core test's `__proto__` case failed; the pattern is
+now the page's own seven key shapes. (2) The panel stayed open across Reset picks, where it dealt the match again by itself, and across a switch
+to another bracket, where it showed that bracket's match of the same key; found when two later steps of the suite toggled it shut. It closes on
+both now, and never deals without a press. (3) Three of the suite's own assertions were wrong, not the page: `querySelectorAll` returns document
+order, not the selector's.
+
+**Checks.** `test:bracket-academic-core` (pure Node, 76); `test:bracket-academic` (port 8512, 177: 39 pins of old brackets, the bank never
+written, the mode, the deal across a reload, the sheet and its PDF, markup as text, the link, axe in both themes). The numbers of the deliberate
+breaks, the other suites and the guards are in the audit note for this session. Not run: the full `npm test`.
+
+**Not verified.** No person used it; no class played a match; no screen reader; nothing printed on paper; CI has not run this tree.
+## 002 Group / Team Generator: a year-long pair memory and roles in each group (2026-10-07, AI-31-002, `CACHE_VERSION` v277)
+
+Audit entry AI-31, BACKLOG rank 119 (½), rewritten to what is left: project-team mode. Two of the three parts shipped whole.
+
+- **Part 1 was half stale; found by reading the page first.** The row and the 002 section said `pairHistory` keeps only two generations. It has kept every
+  pair's count for the whole year since 2026-08-13 (bounded by C(roster, 2), cut when a name leaves), the Pairing Grid shows counts and blanks, and Reset
+  pairing memory already asks first. Only the *steering* looked at two generations. So what was built: an opt-in **long memory** checkbox (`longMemory: true`,
+  written only when ticked), and a plain "Who has not yet worked together" list under the grid (per student: met N of M, and who not).
+- **How long memory works.** `Tools/group-team-generator/gtg-memory.js` (`GtgMemory`, precached and in `SHELL_URLS`, takes an `rng`, never `Math.random`):
+  after the page's own deal and repair, `refine()` swaps students between unlocked groups, steepest improvement first, comparing (broken keep rules, recent
+  repeat penalty, sum of count squared) in that order. Hard rules are never traded; a recent repeat is taken only to mend a broken rule; locked groups, sizes and
+  absent students do not move. Count squared, not count: a plain total ties {A,B met 4 times} with {two pairs met twice}. Bound: nothing new is stored, so the
+  bound is the existing one (the roster's C(n, 2) entries); nothing is dropped by age, as before.
+- **Roles are this tool's own, in its own code.** The 002 section did not say roles must come from 022, so nothing imports, edits or links 022 or 027
+  (their role histories are separate and nothing reads them). Section 6: a list, one role per line (12 at most, 40 characters each). Each shuffle gives
+  every group its roles by the cheapest whole assignment (Hungarian method on a student's count for each role, then the role held longest ago, ties by
+  chance). A group past the list leaves "no role", which counts as a turn; a group short of it leaves the last roles unfilled. A **locked group keeps its
+  students and rotates its roles** (decided here: locking is about who, and the same group next week is the usual reason to lock). History is
+  `roleHistory` in the class's own `gtg:data:<class>`, written only once roles are used; Undo restores it; roster pruning and a roster rename carry it; its own
+  Reset role history asks first and leaves the pairing memory alone. Roles show on cards, tents, sheets and Copy as Text; the share link carries none.
+- **Part 3, project-team mode, not built.** The section does not say enough (storage, who sees the task list, what the contract says, whether it counts in
+  the pair memory, whether it is Path 13 P2's); six questions are in 002's Open Questions. Rank 119 is rewritten to that.
+- **Old behaviour pinned.** `golden-old-groupings.json`, recorded once from the page at 4162d61 (`_record-golden.mjs`, `Math.random` seeded): twelve classes,
+  five rounds each, every strategy, locks, absences, keep-apart and keep-together. Groups, floaters and the saved string (SHA-256) are identical with both
+  options off, and the save gains no field. An old save opens as the old page opened it.
+- **Suites.** `smoke-year-memory-core.mjs` (`test:year-memory-core`, pure Node, 110 assertions): never worse on hard rules, locked groups, sizes, same answer for
+  same rng; over 10 class shapes x 40 seeds x 12 rounds, spread of pair counts and never-met pairs are lower with it on in every shape (28 in 7: never-met 62.6
+  to 10.4; variance 0.74 to 0.28); roles Latin-square exactly (4 and 4 over 8 rounds, 5 and 4 over 5), assignment optimal against every permutation.
+  `smoke-year-memory.mjs` (`test:year-memory`, port 8514, 154 assertions): the golden, long memory on the real page (3 shapes x 4 seeds, no worse and fewer
+  never-met), rules and locks held over 14 rounds, roles, tents, sheets, copy, undo, rename, damaged history, axe, share link. **Breaks on purpose:** 33 in the
+  module (28 caught first time, 3 survived and got assertions, 2 are equivalent: a linear role cost, since 2c+1 is linear in c and gives the same minimum,
+  and reporting the tracked score instead of a recomputed one) and 28 in the page (26 caught by their own assertion first time, 2 survived and got assertions:
+  the "how many met" count and a damaged role history). The module breaks ran one at a time; the page breaks after 7 were run in batches of independent
+  mutants, each required to fail on its own named assertion, because the suites lock was held by others for hours.
+- **Not verified.** Nothing printed on paper, no real screen reader, no real class. Fairness is measured against the old page's own repair on seeded
+  random classes, not on a teacher's real keep-apart lists. The full `npm test` was not run.
+- **For the platform worker (Path 13 P1/P2).** `gtg-memory.js` is a second implementation of `rotateRoles` and the pair history; the shared module should be
+  held to its results, and 002 will have to be moved onto it by a commit of its own.
 
 ## CI: the test job's timeout is 120 minutes, was 60 (2026-10-07, AI-14, no `CACHE_VERSION`)
 

@@ -25,6 +25,10 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="bracket-tournament-generator/bt-store.js"></script>
+<script src="../_shared/question-bank.js"></script>
+<script src="cultural-trivia-card-generator/ctcg-bank.js"></script>
+<script src="geography-bee-quiz-generator/gbq-bank.js"></script>
+<script src="bracket-tournament-generator/bt-academic.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -214,7 +218,56 @@
   body.presenting .champion-banner { font-size: 1.7rem; padding: 1.3rem 1.5rem; }
   body.presenting .standings-table, body.presenting .schedule-table { font-size: 1.15rem; }
 
+  /* ---- academic-tournament mode (Path 12 P2): bt-academic.js builds what
+     these style. Nothing here shows for a bracket that has the mode off but
+     the one card with its tick box, and that card never prints. ---- */
+  [hidden] { display: none !important; }
+  #academicCard select, #academicCard input[type="number"] {
+    width: 100%; font-family: inherit; font-size: .95rem; color: var(--ink);
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .55rem .7rem;
+  }
+  #academicCard .share-note { margin-top: .9rem; }
+  .match-q-btn { font-size: .78rem; padding: .25rem .55rem; align-self: flex-start; }
+  .ac-questions { padding-left: 1.5rem; margin: .6rem 0; }
+  .ac-q { margin-bottom: 1.1rem; }
+  .ac-prompt { font-size: 1.05rem; font-weight: 600; margin: 0 0 .45rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ac-answer {
+    background: var(--good-bg); border: 1px solid var(--good); border-radius: 6px; color: var(--ink);
+    padding: .45rem .7rem; margin: .5rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .ac-who {
+    display: flex; gap: .4rem 1.3rem; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 6px;
+    margin: .55rem 0 0; padding: .4rem .7rem .5rem; min-width: 0;
+  }
+  .ac-who legend { font-weight: 600; font-size: .85rem; padding: 0 .3rem; }
+  .ac-who label { display: inline-flex; align-items: center; gap: .35rem; margin: 0; font-weight: 400; font-size: .95rem; overflow-wrap: anywhere; }
+  .ac-score { font-weight: 600; margin: .4rem 0 0; }
+  body.presenting #academicCard { display: none; }
+  body.presenting .match-q-btn { font-size: 1rem; }
+  body.presenting .ac-prompt { font-size: 1.6rem; }
+  body.presenting .ac-answer, body.presenting .ac-who label { font-size: 1.25rem; }
+
+  /* The printed match sheet: off the screen always, and on paper only while
+     the body has .printing-sheet (the Print match sheets button), when it is
+     the only thing printed. Sized by content; nothing has a fixed height. */
+  #matchSheet { display: none; color: #000; background: #fff; font-size: 12pt; line-height: 1.35; }
+  #matchSheet .ms-title { font-size: 16pt; margin: 0 0 6pt; }
+  #matchSheet .ms-rule { font-size: 10pt; margin: 0 0 10pt; }
+  #matchSheet h2 { font-size: 13pt; margin: 14pt 0 6pt; padding-bottom: 2pt; border-bottom: 1px solid #000; break-after: avoid; }
+  #matchSheet ol { margin: 0; padding-left: 20pt; }
+  #matchSheet li { break-inside: avoid; margin-bottom: 8pt; white-space: pre-wrap; overflow-wrap: anywhere; }
+  #matchSheet .ms-q { margin: 0 0 3pt; }
+  #matchSheet .ms-who { margin: 0; font-size: 10pt; white-space: normal; }
+  #matchSheet .ms-opt { display: inline-block; margin-right: 14pt; }
+  #matchSheet .ms-box { display: inline-block; min-width: 9pt; min-height: 9pt; border: 1px solid #000; vertical-align: -1pt; }
+  #matchSheet .ms-total { margin: 6pt 0 0; break-inside: avoid; }
+  #matchSheet .ms-key { break-before: page; }
+
   @media print {
+    #academicCard, #academicPanel, .match-q-btn { display: none !important; }
+    body.printing-sheet .wrap > *:not(#matchSheet) { display: none !important; }
+    body.printing-sheet #matchSheet { display: block; }
     /* Paper is light whatever the screen is: the champion banner's tint was
        printing its dark value (#332711) with dark on. */
     :root[data-theme="dark"]:not(.a11y-filter-dark) { --warn-bg: #fdf0dc; --warn-line: #eecda0; --warn-ink: #8a5a13; }
@@ -368,6 +421,38 @@
     <div id="bracketView"></div>
   </div>
 
+  <div class="card" id="academicCard" style="display:none;">
+    <h2>Academic tournament</h2>
+    <label class="checkline" for="acOn"><input type="checkbox" id="acOn"> Decide this bracket&rsquo;s matches with questions from the question bank</label>
+    <p class="hint" style="margin-top:.4rem;">Off, this bracket works as it always has. On, each match that is ready to play gets a Questions button: the questions come from your question bank (kept on the Quiz / Review Game Board) or a built-in set, and nothing is added to the bank or changed in it.</p>
+    <div id="acSettings" hidden>
+      <div class="row">
+        <div>
+          <label for="acSource">Questions from</label>
+          <select id="acSource"></select>
+        </div>
+        <div>
+          <label for="acUnit">Unit</label>
+          <select id="acUnit"></select>
+        </div>
+        <div>
+          <label for="acPer">Questions a match</label>
+          <input type="number" id="acPer" min="1" max="20" step="1" value="3">
+        </div>
+      </div>
+      <p class="share-note" id="acSupply" role="status"></p>
+      <p class="hint" id="acRule" style="margin-top:.8rem;"></p>
+      <div class="stage-action" style="margin-bottom:0;">
+        <button type="button" id="acPrintBtn">Print match sheets</button>
+        <span class="hint" id="acPrintNote" role="status" style="margin:0;"></span>
+      </div>
+    </div>
+  </div>
+
+  <section class="card" id="academicPanel" aria-labelledby="acPanelTitle" hidden></section>
+
+  <div id="matchSheet"></div>
+
   <footer class="note">
     Runs entirely in your browser — nothing is uploaded. Click a name, or enter both scores, to advance it to the next round.
   </footer>
@@ -435,6 +520,47 @@
      pick, on Undo itself, and whenever the bracket is switched/reset/
      regenerated so Undo never reaches across those boundaries. */
   var undoSnapshot = null;
+
+  /* ---------- academic-tournament mode (Path 12 P2) ----------
+     bt-academic.js owns the card, the match panel and the printed sheet. What
+     it needs of this page is below: the open bracket, save and render, and
+     the matches the last render drew. A match is known here by the score
+     boxes every renderer already gives it (buildScoreInputs), which is also
+     how the mode decides one: it fills the two boxes and lets the page's own
+     score rule run. `matchBoxes` is emptied at the start of every render. */
+  var matchBoxes = [];
+
+  function matchPlayable(key, a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string') return false;      // a side still TBD
+    if (key === 'g0' || key === 'g1') {
+      var gf = state.grandFinal;
+      return !!gf && gf.p[0] !== false && gf.p[1] !== false && (key === 'g0' || !!gf.needsReset);
+    }
+    return true;
+  }
+
+  var academic = BtAcademic.mount({
+    state: function () { return state; },
+    save: function () { save(); },
+    render: function () { render(); },
+    matches: function () {
+      return matchBoxes.map(function (e) {
+        function slots() { return e.wrap.parentNode ? e.wrap.parentNode.querySelectorAll('.slot') : []; }
+        return {
+          key: e.key, a: e.a, b: e.b, playable: e.playable, open: e.open,
+          winner: function () {
+            var s = slots();
+            return s.length !== 2 ? null : s[0].classList.contains('slot-winner') ? 0 : s[1].classList.contains('slot-winner') ? 1 : null;
+          },
+          setScore: function (a, b) {
+            e.aInput.value = a; e.bInput.value = b;
+            e.aInput.dispatchEvent(new Event('change'));
+          },
+          pick: function (side) { var s = slots(); if (s.length === 2) s[side].click(); }
+        };
+      });
+    }
+  });
 
   function captureUndoSnapshot() {
     if (state) undoSnapshot = JSON.stringify(state);
@@ -1468,11 +1594,13 @@
     // elimination's problem — pool/round pairings past round 1 depend on
     // results — so all three are excluded the same way double elim is.
     els.scheduleBtn.style.display = (state.type === 'double' || state.type === 'pools' || state.type === 'swiss') ? 'none' : '';
-    if (state.type === 'double') { renderDouble(); return; }
-    if (state.type === 'roundrobin') { renderRoundRobin(); return; }
-    if (state.type === 'pools') { renderPools(); return; }
-    if (state.type === 'swiss') { renderSwiss(); return; }
-    renderSingle();
+    matchBoxes = [];
+    if (state.type === 'double') renderDouble();
+    else if (state.type === 'roundrobin') renderRoundRobin();
+    else if (state.type === 'pools') renderPools();
+    else if (state.type === 'swiss') renderSwiss();
+    else renderSingle();
+    academic.sync();
   }
 
   function renderBlank() {
@@ -2269,6 +2397,15 @@
     wrap.appendChild(aInput);
     wrap.appendChild(sep);
     wrap.appendChild(bInput);
+
+    var box = { key: key, a: aLabel, b: bLabel, open: !!decideFn, playable: matchPlayable(key, aLabel, bLabel), wrap: wrap, aInput: aInput, bInput: bInput };
+    matchBoxes.push(box);
+    if (box.playable && academic.isOn()) {                     // academic mode only: a Questions button under the boxes
+      var both = document.createDocumentFragment();
+      both.appendChild(wrap);
+      both.appendChild(academic.button(key, aLabel, bLabel));
+      return both;
+    }
     return wrap;
   }
 
@@ -2986,6 +3123,10 @@
       }
     }
     migrateScores(state); // normalizes any pre-structured-score free-text scores
+    if (state.academic !== undefined) {                        // only a bracket that has had the mode on
+      var mode = BtAcademic.clean(state.academic);
+      if (mode) state.academic = mode; else delete state.academic;
+    }
     BracketStore.setCurrentName(name);
     refreshSwitcher();
     render();
@@ -3008,6 +3149,7 @@
     updateFormatFields();
     populateRosterSelect();
     refreshSwitcher();
+    academic.sync();
   }
 
   function buildForType(type, name, names, seedMode) {
@@ -3063,6 +3205,9 @@
     if (!state) return;
     if (!confirm('Clear all picks in "' + state.name + '" and start the bracket over with the same contestants?')) return;
     undoSnapshot = null; // a full reset starts a fresh undo history too
+    // Academic mode: the settings and the seed stay, the questions dealt and
+    // the marks go with the picks, so the deal starts over from the top.
+    var mode = state.academic;
     if (state.type === 'roundrobin') {
       var schedule = state.schedule;
       var seeds = state.seeds;
@@ -3092,6 +3237,7 @@
       if (state.schedule) rebuilt.schedule = state.schedule;
       state = rebuilt;
     }
+    if (mode) state.academic = { on: mode.on, seed: mode.seed, source: mode.source, unit: mode.unit, per: mode.per, drawn: {}, marks: {} };
     render();
   });
 
@@ -3226,6 +3372,11 @@
       state.seedMode = decoded.seedMode;
     }
     migrateScores(state); // normalizes any pre-structured-score free-text scores from an old share link
+    // Academic mode travels as its seven fields and nothing else of what the
+    // link says (BtAcademic.clean). The questions are ids: a built-in set's
+    // show on any device, the sender's own bank's only where that bank is.
+    var sharedMode = BtAcademic.clean(decoded.academic);
+    if (sharedMode) state.academic = sharedMode;
     BracketStore.saveBracket(name, state);
     render();
     setShareNote('Loaded a shared bracket as \u201c' + name + '\u201d.');
