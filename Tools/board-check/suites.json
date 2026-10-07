@@ -147,6 +147,8 @@
     "Tools/graph-paper-generator/test/smoke-grid-types.mjs",
     "Tools/grade-distribution-visualizer/test/smoke-copy-chart.mjs",
     "Tools/school-calendar/test/smoke-week.mjs",
+    "Tools/school-calendar/test/smoke-weeks-core.mjs",
+    "Tools/school-calendar/test/smoke-weeks.mjs",
     "Tools/blank-map-generator/test/smoke-starters.mjs",
     "Tools/picture-prompt-generator/test/smoke-prompt-sets.mjs",
     "Tools/picture-prompt-generator/test/smoke-picture-store.mjs",

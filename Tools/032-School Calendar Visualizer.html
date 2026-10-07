@@ -233,6 +233,14 @@
     border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 1px 0;
   }
   .yday.empty { visibility: hidden; }
+  /* A/B badges on the year grid (only while the A/B cycle is on). The letter is text in a box,
+     not a colour; a weekday with no school shows an en dash on a hatched cell, so a black and
+     white copy tells the two apart. */
+  .yab { display: block; margin: 1px auto 0; min-width: 1.4em; max-width: 2.2em; font-size: 0.56rem; font-weight: 700; line-height: 1.2;
+    color: var(--accent-2); border: 1px solid var(--accent-2); border-radius: 3px; }
+  .yab.yab-off { border-color: transparent; color: var(--muted); }
+  .yday.yoff { background-image: repeating-linear-gradient(135deg, transparent 0 3px, var(--line) 3px 4px); }
+  .year-key { grid-column: 1 / -1; margin: 2px 0 0; font-size: 0.62rem; color: var(--muted); }
   .ydots { display: flex; justify-content: center; gap: 1px; margin-top: 1px; }
   .ydot { width: 4px; height: 4px; border-radius: 50%; border: 0.5px solid rgba(0,0,0,.35); }
 
@@ -279,6 +287,9 @@
   .week-strip .week-lines { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
   .week-strip .week-lines strong { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }
   .week-strip .week-lines .rule { border-bottom: 1px solid var(--line-strong); height: 18px; }
+  /* A range of weeks: each week is a page of its own. */
+  .week-page + .week-page { margin-top: 22px; }
+  #weekCount { font-size: 0.8rem; color: var(--muted); }
 
   @media print {
     body { padding: 8px; background: #fff; }
@@ -287,6 +298,12 @@
     body.view-week .week-day { break-inside: avoid; page-break-inside: avoid; }
     body.view-week .week-day.is-off { background: #f2f2f2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     body.view-week .week-day .wd-paced { color: #000 !important; }
+    body.view-week .week-page { break-after: page; page-break-after: always; }
+    body.view-week .week-page:last-child { break-after: auto; page-break-after: auto; }
+    body.view-week .week-page + .week-page { margin-top: 0; }
+    .yab { color: #000 !important; border-color: #000 !important; }
+    .yab.yab-off { border-color: transparent !important; }
+    .yday.yoff { background-color: #eee !important; background-image: none !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     @page { size: auto; }
     .toolbar, .card.legend-card, .card.meta-card, #drawer, .storage-warn, .no-print { display: none !important; }
     .months { gap: 10px; }
@@ -338,6 +355,10 @@
     <span class="print-mode" id="weekPickWrap" style="display:none;">
       <label for="weekPick">Week of</label>
       <input type="date" id="weekPick">
+      <label for="weekThrough">through the week of</label>
+      <input type="date" id="weekThrough">
+      <button type="button" id="btnAllWeeks" class="small">Every week of the year</button>
+      <span id="weekCount" role="status" aria-live="polite"></span>
     </span>
     <button id="btnPrint" class="primary">Print / Save PDF</button>
   </div>
@@ -456,6 +477,7 @@ import {
   parseLessonList, placeLessons, isTeachableDay, rebindAdjustments,
   parsePacingRows, emptyPacing, unitInstructionalStats,
 } from './school-calendar/scv-pacing.js';
+import { abLetters, yearBadge, mondayOf, weekDates, weekRange, isoToMs, MAX_WEEKS } from './school-calendar/scv-weeks.js';
 
 Store.configure({ toolName: 'School Calendar Visualizer' });
 
@@ -645,6 +667,7 @@ function renderYearGrid() {
   const list = monthsBetween(cal.meta.start, cal.meta.end);
   const startDate = new Date(cal.meta.start + "T00:00:00");
   const endDate = new Date(cal.meta.end + "T00:00:00");
+  const abMap = buildAbMap();
 
   list.forEach(({ y, m }) => {
     const monthEl = document.createElement("div");
@@ -671,7 +694,10 @@ function renderYearGrid() {
         grid.appendChild(cell);
         continue;
       }
-      cell.className = "yday" + (dateISO === todayISO() ? " today" : "");
+      // With the A/B cycle on, a school day says its letter and a weekday with no school says
+      // so (an en dash on a hatched cell); with it off the cell is what it always was.
+      const badge = yearBadge(cal, abMap, dateISO);
+      cell.className = "yday" + (badge && badge.kind === "off" ? " yoff" : "") + (dateISO === todayISO() ? " today" : "");
       const entry = cal.days[dateISO];
       const dots = (entry && entry.types.length)
         ? `<div class="ydots">${entry.types.map(id => {
@@ -679,10 +705,19 @@ function renderYearGrid() {
             return t ? `<div class="ydot pat-${t.pattern}" style="background-color:${t.color}" title="${escapeAttr(t.label)}"></div>` : "";
           }).join("")}</div>`
         : "";
-      cell.innerHTML = `${d}${dots}`;
+      const badgeHtml = badge
+        ? `<span class="yab${badge.kind === "off" ? " yab-off" : ""}" role="img" aria-label="${badge.spoken}" title="${badge.spoken}">${badge.text}</span>`
+        : "";
+      cell.innerHTML = `${d}${badgeHtml}${dots}`;
       grid.appendChild(cell);
     }
   });
+  if (Object.keys(abMap).length) {
+    const key = document.createElement("p");
+    key.className = "year-key";
+    key.textContent = "A and B: the school day\u2019s letter. \u2013 : a weekday with no school.";
+    wrap.appendChild(key);
+  }
 }
 
 function todayISO() {
@@ -732,52 +767,12 @@ function computePlacement() {
   });
 }
 
-function countAbEligibleStrictlyBetween(aISO, bISO) {
-  // aISO must be < bISO. Counts eligible days strictly between them.
-  let count = 0;
-  const cur = new Date(aISO + "T00:00:00");
-  const end = new Date(bISO + "T00:00:00");
-  cur.setDate(cur.getDate() + 1);
-  while (cur < end) {
-    if (isEligibleForAbCycle(iso(cur.getFullYear(), cur.getMonth(), cur.getDate()))) count++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return count;
-}
-
-/** Maps every eligible date in [lo, hi] (the calendar's displayed range,
-    extended to include the anchor date if it falls outside it) to "A" or
-    "B". Built once per render rather than walked fresh from the anchor for
-    every cell. */
+/** Maps every eligible date in the calendar's displayed range (extended to include the anchor
+    date if it falls outside it) to "A" or "B". The rule lives in school-calendar/scv-weeks.js,
+    which the month grid, the year grid's badges and the printed weeks all read, so they cannot
+    disagree; it is walked by calendar date, not by local-time Date arithmetic. */
 function buildAbMap() {
-  const map = {};
-  const ac = cal.abCycle;
-  if (!ac || !ac.enabled || !ac.anchorDate) return map;
-  const anchorISO = ac.anchorDate;
-  const anchorLetter = ac.anchorLetter === "B" ? "B" : "A";
-  const lo = anchorISO < cal.meta.start ? anchorISO : cal.meta.start;
-  const hi = anchorISO > cal.meta.end ? anchorISO : cal.meta.end;
-  if (lo > hi) return map;
-
-  let letter;
-  if (lo === anchorISO) {
-    letter = anchorLetter;
-  } else {
-    const between = lo < anchorISO ? countAbEligibleStrictlyBetween(lo, anchorISO) : countAbEligibleStrictlyBetween(anchorISO, lo);
-    letter = (between % 2 === 0) ? anchorLetter : (anchorLetter === "A" ? "B" : "A");
-  }
-
-  const cur = new Date(lo + "T00:00:00");
-  const end = new Date(hi + "T00:00:00");
-  while (cur <= end) {
-    const curISO = iso(cur.getFullYear(), cur.getMonth(), cur.getDate());
-    if (isEligibleForAbCycle(curISO)) {
-      map[curISO] = letter;
-      letter = letter === "A" ? "B" : "A";
-    }
-    cur.setDate(cur.getDate() + 1);
-  }
-  return map;
+  return abLetters(cal);
 }
 
 function syncAbControls() {
@@ -836,14 +831,10 @@ function render() { computePlacement(); renderLegend(); renderMonths(); renderYe
 --------------------------------------------------------------------------- */
 const WEEK_DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
-/** The Monday of the week containing `dateISO`. */
-function mondayOf(dateISO) {
-  const d = new Date(dateISO + "T00:00:00");
-  if (isNaN(d)) return null;
-  const shift = (d.getDay() + 6) % 7;          // Sun=0 -> 6, Mon=1 -> 0
-  d.setDate(d.getDate() - shift);
-  return iso(d.getFullYear(), d.getMonth(), d.getDate());
-}
+/* The weeks are worked out by calendar date in school-calendar/scv-weeks.js (mondayOf, weekDates,
+   weekRange), never by Date arithmetic here, so a daylight-saving week is five consecutive days and
+   the machine's zone cannot move one. The week is Monday to Friday; this page has no setting for
+   the day a week starts, and the month grid, which starts on Sunday, is not the week print. */
 
 /** The week the printed strip should default to: the one containing today if
     that falls inside the calendar, otherwise the first week of the year. */
@@ -859,22 +850,14 @@ function weekStripStart() {
 }
 
 function longDate(dateISO) {
-  const d = new Date(dateISO + "T00:00:00");
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return new Date(isoToMs(dateISO)).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-function renderWeekStrip() {
-  const wrap = document.getElementById("weekStrip");
-  if (!wrap) return;
-  const start = weekStripStart();
-  if (!start) { wrap.innerHTML = ""; return; }
-  const abMap = buildAbMap();
-  const startD = new Date(start + "T00:00:00");
-
+/** One printed week: the heading, the five days and the lines for notes. */
+function weekPageHtml(start, abMap) {
+  const dates = weekDates(start);
   const cells = WEEK_DAY_NAMES.map((name, i) => {
-    const d = new Date(startD);
-    d.setDate(d.getDate() + i);
-    const dateISO = iso(d.getFullYear(), d.getMonth(), d.getDate());
+    const dateISO = dates[i];
     const inRange = dateISO >= cal.meta.start && dateISO <= cal.meta.end;
     const entry = (cal.days && cal.days[dateISO]) || { types: [], label: "", note: "", lesson: "" };
     const types = (entry.types || []).map(id => typeById(id)).filter(Boolean);
@@ -899,16 +882,31 @@ function renderWeekStrip() {
       '</div>';
   }).join("");
 
-  const endD = new Date(startD);
-  endD.setDate(endD.getDate() + 4);
-  const endISO = iso(endD.getFullYear(), endD.getMonth(), endD.getDate());
-
-  wrap.innerHTML =
-    '<h2>' + escapeHtml(cal.meta.yearLabel || "School year") + ' &mdash; week of ' + escapeHtml(longDate(start)) + '</h2>' +
-    '<p class="week-sub">' + escapeHtml(longDate(start)) + ' to ' + escapeHtml(longDate(endISO)) + '</p>' +
+  return '<h2>' + escapeHtml(cal.meta.yearLabel || "School year") + ' &mdash; week of ' + escapeHtml(longDate(start)) + '</h2>' +
+    '<p class="week-sub">' + escapeHtml(longDate(start)) + ' to ' + escapeHtml(longDate(dates[4])) + '</p>' +
     '<div class="week-days">' + cells + '</div>' +
     '<div class="week-lines"><strong>Notes for the week</strong>' +
     '<div class="rule"></div><div class="rule"></div><div class="rule"></div></div>';
+}
+
+/** One week as it always was, or a page per week from "Week of" through "through the week of". */
+function renderWeekStrip() {
+  const wrap = document.getElementById("weekStrip");
+  if (!wrap) return;
+  const start = weekStripStart();
+  const count = document.getElementById("weekCount");
+  if (!start) { wrap.innerHTML = ""; if (count) count.textContent = ""; return; }
+  const abMap = buildAbMap();
+  const through = document.getElementById("weekThrough").value;
+  const starts = weekRange(start, through, cal.meta.start, cal.meta.end);
+  if (!starts.length) starts.push(start);
+  wrap.innerHTML = starts.length === 1
+    ? weekPageHtml(starts[0], abMap)
+    : starts.map(m => '<div class="week-page">' + weekPageHtml(m, abMap) + '</div>').join("");
+  if (count) {
+    const capped = through && starts.length >= MAX_WEEKS ? " (the most one print holds)" : "";
+    count.textContent = starts.length === 1 ? "Prints 1 page." : "Prints " + starts.length + " pages, one per week" + capped + ".";
+  }
 }
 
 function syncMeta() {
@@ -1657,6 +1655,12 @@ document.querySelectorAll('input[name="printMode"]').forEach(el => {
 });
 
 document.getElementById("weekPick").addEventListener("change", renderWeekStrip);
+document.getElementById("weekThrough").addEventListener("change", renderWeekStrip);
+document.getElementById("btnAllWeeks").addEventListener("click", () => {
+  document.getElementById("weekPick").value = mondayOf(cal.meta.start) || "";
+  document.getElementById("weekThrough").value = mondayOf(cal.meta.end) || "";
+  renderWeekStrip();
+});
 
 document.getElementById("btnPrint").addEventListener("click", () => window.print());
 
