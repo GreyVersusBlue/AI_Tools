@@ -87,6 +87,16 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-14 (v280), rank 29 (kept, rewritten), Path 12 P3 increment 1: every-team-answers and the printed quiz and
+  study guide on 030.** A board has an **Every team answers** tick box, off until ticked: on, showing a clue's answer
+  shows a marking panel (Right, Wrong or No answer for each team; keys 1 to 9 and Enter) where the one-team award
+  buttons were, and Score this clue gives the points to every team marked right. The toolbar and the bank tab each
+  have **a practice quiz with its answer key** (the key starts a new page) and **a study guide** (answers beside the
+  questions). A board that never ticked the box is byte for byte what it was (32 pins from the v279 page). The code is
+  `Tools/review-game-board/rgb-play.js`; `_shared/question-bank.js` is unchanged. `npm run test:play-modes` (port 8515)
+  and `test:play-modes-core`. **030 does not print through the print kit, whatever a prompt says: the new sheets use
+  the page's own `#printArea`. Thirteen choices that are Devon's are questions 18 to 30 in the Path 12 section. Left
+  of P3: quiz-bowl, the wheel, the final wager. Next free suite port: 8518 (8516 and 8517 were handed to AI-31's workers).**
 - **AI-14 (v278), rank 28 (kept, rewritten), Path 12 P2 increment 4: 020's academic-tournament mode.** A bracket
   of any of the five types has an **Academic tournament** card, off until ticked. On, every match that is ready gets a
   Questions button: the teacher picks a source (their bank or a built-in set, the module's chooser, with a Unit filter)
@@ -476,7 +486,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; 062's thirty map questions, which are not published (they wait on P4); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Seventeen questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 29 | Path 12 P3 — play modes in 030: every-team-answers, quiz-bowl, wheel, final wager, printed quiz | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 29 | Path 12 P3 — play modes in 030. **Increment 1 (AI-14, v280): every-team-answers (a tick box on a board: when the answer is shown each team is marked right, wrong or no answer and one press scores the clue; a right answer scores the clue's points, a wrong answer and no answer nothing; one Undo takes the clue back) and the printed sheets (a practice quiz with room to answer and its answer key starting a new page, and a study guide with each answer beside its question, from a board or from what the bank tab's list shows).** **Left:** quiz-bowl, spin-the-wheel, the final wager round. Thirteen questions for Devon (18 to 30) are in the section | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -4400,6 +4410,82 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
 - **P3 — Play modes in 030.** Every-team-answers mode, quiz-bowl, spin-the-wheel,
   the final wager round, and a printed practice quiz/study guide with an answer key
   — all reading the same bank.
+  **Increment 1 shipped (AI-14, 2026-10-07, v280): every-team-answers, and the printed quiz and study guide. Left:
+  quiz-bowl, spin-the-wheel and the final wager round. The rest of this bullet is that increment as built;
+  `Tools/review-game-board/rgb-play.js`'s header says the same and is the reference.**
+  - *How a board was played, and still is by default.* A clue is opened from the grid, **Show answer** (or Space)
+    shows the answer and a row of buttons, one a team (`+200 Otters`), and the teacher presses the ONE team that got
+    it (or keys 1 to 9), or closes the clue with no points. Nothing is taken off for a wrong answer. A Daily Double is
+    one team's wager, won or lost. There are no turns: the page does not say whose clue it is. The projector view is
+    the same overlay. The page had two printed sheets, **Print answer key** (a table) and **Print practice quiz** (the
+    board's questions with two lines each, **no key in the same print** and nothing from the bank); both are kept as
+    they were. So the practice quiz half-existed: what was missing was the key on its own page, the study guide, and
+    either from the bank.
+  - *Every team answers.* A tick box in the board's options, off on every board until ticked, with the rule under it
+    in words while it is on. On, showing a clue's answer puts a **marking panel** where the award buttons were: a
+    group a team (its number and name) of three radio buttons, **Right, Wrong, No answer**, every team at No answer to
+    start, and **Score this clue**. *The rule, as the page says it:* a right answer scores the clue's points; a wrong
+    answer or no answer scores nothing. Scoring keeps the marks on the clue, uses it and closes it, and says what
+    was scored in a status line ("Deltas 100. Right, +100: Otters. Wrong: Finches. No answer: Herons."). Each team's
+    chip shows its count ("1 right · 0 wrong · 1 no answer"), which is the only place wrong differs from no answer.
+    **Undo** takes the whole clue back in one press (every team's points, used, the marks). *Mark used & close* and
+    Escape still close a clue with no points and no marks. **A Daily Double is still one team's wager.**
+  - *Keys and a screen reader.* The marks are real radio groups in a `fieldset` with the team as its `legend`, so
+    Tab, the arrow keys and Space work as they do anywhere; focus goes to the first team's mark when the answer is
+    shown and to the next clue when it is scored. Keys **1 to 9** move that team's mark on (no answer, right, wrong)
+    and say it in the panel's status line; **Enter** scores. The one-team game's keys are unchanged.
+  - *What is stored.* On the board, through the way the board has always grown fields (absent means off, as
+    `dailyDoubleEnabled` was read): `everyTeam` (true or false, **absent on a board that never ticked the box**) and,
+    on a clue scored in the mode, `marks` (`['r', 'w', 'n']`, one a team in the scoreboard's order). No new key, no
+    registry change. A removed team's mark leaves every clue; Reset game clears the marks and keeps the mode; Edit
+    questions and Save board keep both; turning the mode off keeps the marks. **Export JSON** carries both and
+    **Import JSON** cleans them (`everyTeam` only if it is true or false; marks only on a used clue, only `r`, `w`
+    or `n`, one a team). 030's share link carries questions for the bank, never a board, so no link changed.
+  - *A board from before.* One board played through every path of the one-team game on the v279 page before it was
+    edited (load, open, reveal, award by key and by mouse, Undo, close unasked, close used, plus and minus, both old
+    printed sheets, Export, Edit and Save, Reset, an old file imported, a Daily Double won and lost): 32 hashes of
+    storage, the scoreboard, the grid, the open clue and the files, all the same on the new page
+    (`test:play-modes`; the game is `Tools/review-game-board/test/_old-game.mjs`). What an old board gains on screen
+    is the tick box, two toolbar buttons and an empty status line.
+  - *The printed sheets.* **Print quiz with answer key** and **Print study guide** in the board's toolbar (grouped by
+    category), and **Practice quiz with answer key** and **Study guide** under the bank tab's list (the ticked
+    questions, or every question the list shows when none is ticked, from whichever source is chosen, grouped by
+    unit, named for the unit filter or the source). The quiz numbers the questions through the groups, gives two
+    lines to answer on (one under a question with choices, which print as a lettered list), and its **answer key
+    starts a new page** with the same numbers (and the choice's letter). The study guide is a table a group: the
+    question, and its answer beside it. A clue's picture prints; a clip is named. Nothing is stored by printing.
+  - *How they print.* **030 does not print through the print kit and never has** (the session's prompt said it did):
+    its two old sheets go into `#printArea` under the page's own `@media print`, which hides the screen with
+    `visibility`. The new sheets go into the same `#printArea` with `printing-sheet` on `<body>`, under which the
+    screen is `display: none` and the sheet is in the flow, so the key's page break is honoured and no blank page
+    follows a sheet printed from the tall bank tab. No box has a fixed height. Sixty questions and their key ran to
+    several pages in Chromium's PDF, every page with text, the key at the top of a page of its own. The old two
+    buttons take the class off and print as they did. **Not done: moving 030 onto the print kit, and so no print
+    preview** (that is Path 7's recipe and changes the two old sheets).
+  - *Text.* Everything on the panel and the sheets is built from elements; `inline-sinks-baseline.json` has 030 at
+    3, as before. A team, a category, a question, an answer and a choice that are markup are text (asserted).
+  - *Questions for Devon (each has a default taken, said here, and is cheap to reverse).*
+    18. **What a wrong answer scores** with every team answering: nothing (taken), or the clue's points off?
+    19. **In secret or aloud?** The page does not manage it (taken): the teacher runs the room (boards held up,
+        hands, slips) and marks. The other reading is a step where answers are locked before the reveal.
+    20. **A Daily Double in the mode**: still one team's wager (taken), or every team wagers?
+    21. **Every team starts at No answer** (taken), so an unmarked team scores nothing. Or refuse to score until
+        every team has been marked by hand?
+    22. **The count under each team** (right, wrong, no answer): shown while the mode is on (taken). Wanted?
+    23. **Marks are kept by a team's place**, not its name (taken): a removed team's marks go, and a team that joins
+        later counts as no answer on the clues already scored.
+    24. **Turning the mode off keeps the marks** already made (taken), or clears them?
+    25. **What a study guide groups by**: the board's categories, the bank's units, in the order they first appear
+        (taken). Others: standard, difficulty, a tag; alphabetical.
+    26. **The quiz from the bank is the list's order**, gathered by unit (taken). Shuffled? "Any ten of these"?
+    27. **Choices print in the order they are stored** (taken), so the right one is where the teacher typed it.
+    28. **The new sheets print no points** (the old practice quiz prints "[Rivers — 100 pts]").
+    29. **Four print buttons on a board**: the old answer key and old practice quiz were kept beside the new two
+        (taken, so nothing a teacher uses changed). Should the old two go?
+    30. **A clue already played is on the sheets** (taken, as on the old quiz).
+  - *Not verified.* No class played the mode and no person used the panel; no screen reader was run (axe, names,
+    roles, keys and focus only). Nothing was printed on paper: pages are Chromium's PDF read with `pdftotext`. A
+    bank of thousands was not printed. Not run: the full `npm test`.
 - **P4 — Media.** Clue images move to the media store (Path 4) beside the existing
   clue audio; media travels in export as data URLs.
 
