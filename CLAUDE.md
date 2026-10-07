@@ -565,7 +565,7 @@ files must be added there too.
   Since v281 030 has its first two **play modes** (Path 12 P3; `Tools/review-game-board/rgb-play.js`): every-team-answers,
   an opt-in field on a board (`everyTeam`, and `marks` on a clue scored in it; a board without them is the one-team
   game, held by 32 hashes in `Tools/review-game-board/test/_old-game.mjs`), and the printed practice quiz with its key
-  and the study guide, from a board or the bank tab's list, built from elements. Since v283 it has the final wager round
+  and the study guide, from a board or the bank tab's list, built from elements. Since v284 it has the final wager round
   and quiz-bowl too: one field each on the board (`final`, `quizBowl`, the quiz-bowl log holding question ids), the
   bank read with `peek()` and never written, both played on one overlay (`#roundOverlay`) and each with its own
   take-back button. The next mode (the wheel) is opt-in the same way, adds its fields only once used, and runs

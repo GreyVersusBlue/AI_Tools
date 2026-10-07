@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## Path 12 P3, increment 2: the final wager round and quiz-bowl on 030 (2026-10-07, AI-14, `CACHE_VERSION` v283)
+## Path 12 P3, increment 2: the final wager round and quiz-bowl on 030 (2026-10-07, AI-14, `CACHE_VERSION` v284; the code commit says v283, which AI-31-016 took before the merge)
 
 BACKLOG rank 29 had three modes left; this session was handed two, the final wager round and then quiz-bowl. The
 wheel is not started and the row says so. The design as built is in BACKLOG's Path 12 section, P3, "Increment 2";
@@ -54,6 +54,42 @@ Every guard exit 0. Not run: the full `npm test`.
 **Not verified.** No class played either round; no person used the overlay; no screen reader (axe in both themes,
 roles, names, keys, focus); no password manager against the wager boxes; a bank of thousands as a source; CI on this
 tree.
+## 016 QR Code Generator: batch codes from a CSV or paste, and the label rule stated (2026-10-07, AI-31-016, `CACHE_VERSION` v283)
+
+BACKLOG rank 132, "A label under each code; batch codes from a spreadsheet". **Half of it was already there.** Found first and not rebuilt: a single code has had a
+caption band since before this row (drawn into the PNG, the SVG and the print), and Bulk mode already took `label, link` lines, comma or tab separated, with the label
+under each code on screen, on plain paper and on Avery 5160/5163 stock. What was missing is what shipped.
+
+- **Check rows and the batch.** `Tools/qr-code-generator/bulk-rows.js` (new, precached; global `QrBulkRows`) reads the paste: a first row of column names (every
+  cell a column name; one cell only for a word that names a link, so a list whose first line is "Station" is not eaten) is skipped; a cell in "double quotes" keeps
+  its comma, through `Roster.splitCells` (already loaded on the page, called as it is; a row with no quoted cell never goes near it, so a list pasted before reads
+  byte for byte as it did: the first delimiter splits, a line with none is its own label and link, a tab beats a comma). A **Check rows** button (and Generate grid,
+  which runs the same check) names every row that will not make a code by its line in what was pasted, header and blank lines counted: empty, too long at the chosen
+  error correction (read off the real encoder: 2953 / 2331 / 1663 / 1273 UTF-8 bytes at L / M / Q / H, one more throws), or the same label **and** link as an
+  earlier row. Two labels on one link are fine (a form for a whole class). Generate makes the rest and says how many were left out. A **spreadsheet saved as CSV**
+  can be chosen (read in the browser, nothing uploaded, over 1 MB refused; added after what is in the box, and a second file's own header row is dropped); a
+  **Columns are** select reads label-then-link (the way the page always read, kept as the default) or link-then-label. The 400-code limit is stated on the page.
+- **The label rule.** A label over 60 characters is shown as its first 59 and an ellipsis, in the grid, on plain paper and on label stock; the code is never
+  shortened. The single caption's rule (60 characters, shrinks to 8 px to fit the code's width, then ends in an ellipsis, below the code's blank border) is now stated
+  under its field. **Decision (reversible):** 60 because the caption field already stopped there; it changes the old page for a label of 61 or more, which used
+  to wrap on screen and, on plain paper, widen the whole grid to the page. `smoke-print.mjs`'s "wide" labels were 150 characters and are now sixty `W`.
+- **Decisions.** Column order stays label-then-link (the row said link first; the old page and every saved paste said label first, so the select offers both). A duplicate is
+  the same label and link, not the same link. A quoted row with more than two cells rejoins the rest with the delimiter and no space. Quoted cells that span lines are not
+  supported (a line is a row). The header skip applies to the first row only. Nothing about this was stored: no new key, no registry row, nothing in a share link.
+- **Tests.** `smoke-bulk-core.mjs` (`test:qr-bulk-core`, pure Node, 99 assertions, the limit read off the vendored encoder) and `smoke-bulk.mjs` (`test:qr-bulk`, port 8520,
+  128 assertions): the quiet zone and the caption's letters read off the canvas's pixels at 200, 400 and 1000 px (the gap to the code is at least four modules, the border
+  under the code blank, the code decoded by the page's own jsQR and bit for bit the same with and without a caption), a 60-character caption inside the code's width, markup in
+  a caption, a label and a row left out as text on screen, on the sheet, in the alt text and in the downloaded SVG, Check rows and Generate on a paste with every kind
+  of bad row, the limit at 400 and 401, a BOM'd CSV with CRLF, a second file, a file over 1 MB, an old-style paste making the codes and labels the old page made, a saved
+  size and level opening as they were, axe with the list showing, Tab order. Lengths are relations, never pixels of text. **Breaks on purpose: 38 against the module** (35
+  caught; 3 equivalent: an `&&` that the fill rule makes redundant, a swap of one cell with itself, and a `\r?` that `trim()` covers) **and 15 against the page**: 14 caught,
+  1 dead code (a BOM strip that `FileReader.readAsText` already does) which was deleted; 14 more written and not run, for time (each run is two minutes behind the lock).
+  Not every assertion has its own break.
+- **Checks.** See the audit entry. `test:a11y -- --only 016`, `audit-print --check --only 016`, `smoke-print` (1617), `test:qr` and every `check:*` and `lint`.
+- **Not verified.** Nothing printed on paper; no phone scanned a printed code; no real spreadsheet export (the files in the suite are written by hand, one with a BOM and CRLF);
+  no screen reader; no sheet of real label stock. The audit's print seed has no batch with a header or a long label, so the print block is measured by `smoke-bulk.mjs`
+  and `smoke-print.mjs`, not by `audit-print`. Left: multi-line quoted cells, a column picker for a CSV with more than two columns, saving a batch.
+
 
 ## 008 Behavior & Points Tracker: team / house points (2026-10-07, AI-31-008, `CACHE_VERSION` v282; the code commit says v280, which AI-31-012 and then AI-14 passed before the merge)
 

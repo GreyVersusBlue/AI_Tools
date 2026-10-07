@@ -1,5 +1,5 @@
 /* Quiz / Review Game Board — play modes and printed sheets (Path 12 P3,
-   increments 1 and 2, v281 and v283). Publishes window.ReviewBoardPlay. Stores nothing and
+   increments 1 and 2, v281 and v284). Publishes window.ReviewBoardPlay. Stores nothing and
    reads nothing: the page hands in a board or a list of questions and saves
    the board itself, as it always has.
 
@@ -31,7 +31,7 @@
    THROUGH textContent: a question, an answer, a choice, a category and a
    board's name are never parsed as markup.
 
-   THE FINAL WAGER ROUND (increment 2, v283)
+   THE FINAL WAGER ROUND (increment 2, v284)
    One last question after the board. `board.final` appears once the tick box
    has been used: { on, question, answer } and, once the round is scored,
    { wagers, marks, deltas }, one a team in the scoreboard's order. THE RULE,
@@ -39,7 +39,7 @@
    a team at 0 or below may wager up to FINAL_FLOOR (100). Right adds the
    wager, wrong takes it off. Wagers in progress are never stored.
 
-   QUIZ-BOWL (increment 2, v283)
+   QUIZ-BOWL (increment 2, v284)
    Toss-up questions open to every team; the TEACHER records the buzz. A
    wrong answer locks that team out of the question and costs `penalty`
    (0 unless the teacher sets it); a right one scores `tossup` and earns that

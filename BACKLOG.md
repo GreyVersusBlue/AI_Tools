@@ -87,7 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
-- **AI-14 (v283), rank 29 (kept, rewritten), Path 12 P3 increment 2: the final wager round and quiz-bowl on 030.**
+- **AI-14 (v284; the code commit says v283, which AI-31-016 took), rank 29 (kept, rewritten), Path 12 P3 increment 2: the final wager round and quiz-bowl on 030.**
   Two more tick boxes in a board's options, both off until ticked, each with its rule in words under it. **Final
   wager round:** one last question (typed on the board, or copied from the bank or a built-in set); the teacher types
   each team's wager into a hidden box (0 to its score; **up to 100 for a team at 0 or below**), the question shows only
@@ -102,7 +102,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   every-team-answers taken before the page was edited). Rules in `Tools/review-game-board/rgb-play.js`;
   `_shared/question-bank.js` is unchanged. `npm run test:play-rounds` (port 8519) and `test:play-modes-core`.
   **Left of P3: the wheel. Fourteen more choices that are Devon's are questions 31 to 44 in the Path 12 section. No
-  class has played either round. Next free suite port: 8520.**
+  class has played either round. Next free suite port: 8521 (8520 is 016's).**
 - **AI-14 (v281), rank 29 (kept, rewritten), Path 12 P3 increment 1: every-team-answers and the printed quiz and
   study guide on 030.** A board has an **Every team answers** tick box, off until ticked: on, showing a clue's answer
   shows a marking panel (Right, Wrong or No answer for each team; keys 1 to 9 and Enter) where the one-team award
@@ -502,7 +502,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; 062's thirty map questions, which are not published (they wait on P4); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Seventeen questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 29 | Path 12 P3 — play modes in 030. **Increment 1 (AI-14, v281): every-team-answers and the printed sheets (a practice quiz with its answer key on a new page, and a study guide), from a board or the bank tab's list. Increment 2 (AI-14, v283): the final wager round (each team wagers 0 to its score, to 100 at 0 or below; wagers typed hidden until all are in; right adds the wager and wrong takes it off; the result names the winner or the tie; one button takes the round back) and quiz-bowl (toss-ups from the bank or a built-in set in its order, none twice; the teacher records the buzz; a wrong answer locks the team out and costs nothing unless set; a right one scores the toss-up and gives that team alone a bonus; a summary at the end; the last toss-up can be undone).** **Left:** spin-the-wheel only. Twenty-seven questions for Devon (18 to 44) are in the section | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 29 | Path 12 P3 — play modes in 030. **Increment 1 (AI-14, v281): every-team-answers and the printed sheets (a practice quiz with its answer key on a new page, and a study guide), from a board or the bank tab's list. Increment 2 (AI-14, v284): the final wager round (each team wagers 0 to its score, to 100 at 0 or below; wagers typed hidden until all are in; right adds the wager and wrong takes it off; the result names the winner or the tie; one button takes the round back) and quiz-bowl (toss-ups from the bank or a built-in set in its order, none twice; the teacher records the buzz; a wrong answer locks the team out and costs nothing unless set; a right one scores the toss-up and gives that team alone a bonus; a summary at the end; the last toss-up can be undone).** **Left:** spin-the-wheel only. Twenty-seven questions for Devon (18 to 44) are in the section | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -584,7 +584,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 128 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
 | 130 | Date-received per student; contract-gate reporting | 013 | ½ | | [013 Lab Safety Contract Tracker](#013--lab-safety-contract-tracker) |
 | 131 | Printed ordering activity; blanking dates, not just titles | 015 | ½ | | [015 Timeline Builder](#015--timeline-builder) |
-| 132 | A label under each code; batch codes from a spreadsheet | 016 | ½ | | [016 QR Code Generator](#016--qr-code-generator) |
 | 133 | Peer feedback slips; gallery-walk reactions | 017 | ½ | | [017 Gallery Walk QR Codes](#017--gallery-walk-qr-codes) |
 | 134 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
 | 135 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
@@ -4426,7 +4425,7 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   the final wager round, and a printed practice quiz/study guide with an answer key
   — all reading the same bank.
   **Increment 1 shipped (AI-14, 2026-10-07, v281; the code commit says v280, which AI-31-012 took): every-team-answers, and the printed quiz and study guide.
-  Increment 2 shipped (AI-14, 2026-10-07, v283): the final wager round and quiz-bowl. Left: spin-the-wheel. The
+  Increment 2 shipped (AI-14, 2026-10-07, v284; the code commit says v283, which AI-31-016 took): the final wager round and quiz-bowl. Left: spin-the-wheel. The
   rest of this bullet is increment 1 as built, then increment 2 as built;
   `Tools/review-game-board/rgb-play.js`'s header says the same and is the reference.**
   - *How a board was played, and still is by default.* A clue is opened from the grid, **Show answer** (or Space)
@@ -4502,7 +4501,7 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   - *Not verified.* No class played the mode and no person used the panel; no screen reader was run (axe, names,
     roles, keys and focus only). Nothing was printed on paper: pages are Chromium's PDF read with `pdftotext`. A
     bank of thousands was not printed. Not run: the full `npm test`.
-  - **Increment 2 (v283): the final wager round and quiz-bowl.** Both are a tick box in the board's options, off on
+  - **Increment 2 (v284): the final wager round and quiz-bowl.** Both are a tick box in the board's options, off on
     every board until ticked, with a setup block under the options while on. Both play on one new overlay
     (`#roundOverlay`, a `dialog` named by its heading, with a status line and a Close button; Escape closes it and
     focus returns to the button that opened it). Nothing here is student-facing: the teacher types each wager and
@@ -8497,8 +8496,11 @@ work, and don't promote one without Devon saying so.
 
 #### Quick Wins
 
-- **Label under each code**, in the single view and in the bulk grid, so a
-  printed sheet of thirty codes is identifiable without scanning.
+- **Done (v283).** **Label under each code**, in the single view and in the bulk
+  grid, so a printed sheet of thirty codes is identifiable without scanning.
+  *(The single code's caption and the bulk labels predate v283; v283 stated the
+  rule, 60 characters shrinking then ending in an ellipsis, and measured the
+  four-module quiet zone and the smallest size.)*
 - **Partly done.** **Sizing guidance.** "At this size this code is scannable from about 3
   feet" — a printed classroom code is useless if it's too small, and the
   arithmetic is simple. *(Shipped for the new Avery label presets only,
@@ -8518,11 +8520,13 @@ work, and don't promote one without Devon saying so.
   share-by-link mechanism produces long URLs that make dense, hard-to-scan
   codes. A shared "is this payload too big for a reliable code?" check
   belongs here.
-- **Done (roster half) —** **Batch codes from a roster or a spreadsheet**
+- **Done —** **Batch codes from a roster or a spreadsheet**
   (P2/P13) — one code per student, labelled with their name, printed as a grid.
   That's the pattern Gallery Walk and Scavenger Hunt each reimplement.
-  *(The `np_rosters` path shipped in Pass 2 — Round 2 below; a spreadsheet
-  import is still only the existing comma/tab paste.)*
+  *(The `np_rosters` path shipped in Pass 2 — Round 2 below. v283 added the
+  spreadsheet half: a CSV file or a paste, a header row skipped, quoted cells,
+  either column order, a Check rows list naming each row that will not make a
+  code, up to 400 codes.)*
 - **Scanner mode as a first-class feature.** `jsqr.js` is already vendored;
   a "scan a code and act on it" mode would let this tool serve the check-in
   and collection-tracking flows other tools need (P7).
