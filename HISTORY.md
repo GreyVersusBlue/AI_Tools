@@ -9,6 +9,49 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 008 Behavior & Points Tracker: team / house points (2026-10-07, AI-31-008, `CACHE_VERSION` v280)
+
+BACKLOG rank 125 had two parts; this session did the first, team / house points. Longitudinal reports stay on the row, rewritten.
+
+- **What it is.** A Teams / houses card: two to eight teams per section (a name each, an optional colour from eight, never the only cue), students
+  put on a team by hand (a table of selects behind a `<details>`) or by **Deal evenly**, which is a pure function of the seed box, the team order and the
+  roster (`teams.js`, `BPTeams.deal`: names sorted by code point, a mulberry32 Fisher-Yates shuffle, round robin, so sizes differ by at most one and
+  the order the names arrive in changes nothing; dealing again asks first). Every tap, "Award everyone" and undo counts for the student's team; the log
+  entry carries the team id, so an undo takes the points off the team that got them even if the student has moved since. A team can be given points
+  directly (a form with a reason, or +1 / −1 on its tile; the last five are listed with Undo).
+- **The board.** One tile per team above the student cards, best first: its position in words ("1st", "Tied for 2nd"), the name, the total at 2.2 to
+  4.6 rem, and "Leading" or "Tied for the lead" in words (nobody leads while every total is the same 0). The colour is a swatch and a left stripe and
+  nothing else. It holds no student's name, tally, behaviour or note. "Teams only" hides the student cards (session only, `aria-pressed`); "positives only"
+  floors team totals at 0 as it does students' and ranks on what is shown; a polite live region says when a new team takes the sole lead; focus stays on a
+  tile button after it redraws. The printed end-of-day report gains a Team standings block when there are teams.
+- **Totals.** `teamBank` (before today) plus `teamDay`: Archive Day moves today into the bank, so house points run all term; "Undo the whole day" drops
+  today's share and keeps the bank (exact, not read off the 300-entry log); "Reset team totals" (a confirm) zeroes both and reads or writes no student.
+- **Stored** as optional fields in the same section of the same key (`teams`, `teamOf`, `teamBank`, `teamDay`, `teamLog`, `teamSeed`): no new key, no
+  registry row, nothing in a share link (the page has none). A section that never made a team has none of them, and a log entry only has `team` when its
+  student had one. Load cleans a hand-edited section (duplicate ids, more than eight, an unknown colour, an assignment to a missing team, a fractional bank).
+- **Decisions.** Teams are this tool's own: the row's "from Group/Team Generator" is a cross-tool hand-off and was not started. Team totals can go
+  negative, as students' do (the section's open question about negatives is still Devon's). No per-day team history: only the running total, which is the
+  first thing the longitudinal row will want. A team in the CSV and the student summary was left out so those files stay what they were.
+- **The golden.** `golden-no-teams.json` was recorded from the v279 page before any edit (`_capture-golden-no-teams.mjs`, run once, deterministic: two
+  captures were identical): a fixed walk of every Show and Sort mode, taps, Award everyone / ticked / the rest, undo, both printouts, the CSV, archive and
+  undo-the-day, with every board, feed, table and the **stored string** after each step. Today's page matches it to the byte (`smoke-teams.mjs` section 1).
+- **Tests.** `smoke-teams-core.mjs` (pure Node, 114 assertions) and `smoke-teams.mjs` (port 8516, 219 assertions: the golden, making teams, the deal, points
+  and undo, the board's text and size, direct points, archive / undo-the-day / reset, load, a Class Roster Hub rename carrying the team, axe and names).
+  Breaks on purpose: **64 in the core**, 56 caught first time; 7 survived and got assertions (a stale assignment, a second archive adding to the bank, the
+  limit written as `T.NAME_MAX` against itself, a lone team's lead, a stale team in `counts`, an empty deal that built `{undefined}` and passed as `{}`,
+  a biased shuffle, which now needs a 3,000-seed fairness check); the one left, a tie broken by sort stability, is equivalent. **41 written against the
+  page, 37 run and all caught**: 3 first survived because the test was weak (positives-only mode with no negative team on screen; the key list read after
+  the page had already written its extra key; load cleaning checked only after an Add team that cleans as well) and were fixed; 5 more were first marked
+  "survived" only because the suite had aborted on an earlier break's missing button (the driver now reports ABORTED) and were rerun alone; 2 more first
+  looked like survivors because the driver searched for a label the test had since renamed. Not run: the four whose failure cascades through every total
+  (the registry's `award` call removed outright, a board with no position words, the board drawn only from `renderBoard`, an archive that resets teams) and
+  the one for the direct-award undo. Not every assertion has its own break.
+- **Checks.** `test:a11y -- --only 008` and `audit-print --check --only 008` clean; the suites of `behavior-points-tracker`, `roster`, `theme`, `export` and
+  `service-worker` pass; every `check:*`, `lint` and `check:precache -- --base origin/main` exit 0. `audit-print` seeds no teams, so the Team standings
+  rows are asserted in `smoke-teams.mjs` and were not measured in print media.
+- **Not verified.** Nothing projected on a real board; no screen reader; nothing printed on paper; no real second tab; the live region's wording heard by
+  nobody. Not built: team totals per archived day, teams in the CSV or the student summary, a fullscreen stage view, carrying teams across sections.
+
 ## 004 Classroom Timer: a timer board of two to four independent timers (2026-10-07, AI-31-004, `CACHE_VERSION` v279; the code commit says v277, which main passed before the merge)
 
 BACKLOG rank 121 had three parts; this session did one, the multi-timer board. Bell-schedule awareness (needs 032's key in the registry) and the
