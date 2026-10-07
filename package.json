@@ -161,6 +161,8 @@
     "test:received-questions": "node Tools/review-game-board/test/smoke-received-questions.mjs",
     "test:bank-editor-core": "node Tools/review-game-board/test/smoke-bank-editor-core.mjs",
     "test:bank-editor": "node Tools/review-game-board/test/smoke-bank-editor.mjs",
+    "test:play-modes-core": "node Tools/review-game-board/test/smoke-play-core.mjs",
+    "test:play-modes": "node Tools/review-game-board/test/smoke-play-modes.mjs",
     "test:export": "node Tools/export/test/export.test.mjs && node Tools/export/test/smoke-export.mjs",
     "test:trading-card-pdf": "node Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs",
     "test:image-to-pdf-impose": "node Tools/image-to-pdf/test/smoke-impose.mjs",

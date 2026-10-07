@@ -562,6 +562,13 @@ files must be added there too.
   one `academic` field of the bracket), reads the words from the source each time, and cleans that field when it
   arrives by link. It decides a match by filling the page's own score boxes, so it added no second rule. A bracket
   without the field is unchanged (`npm run test:bracket-academic`, `npm run test:bracket-academic-core`).
+  Since v281 030 has its first two **play modes** (Path 12 P3; `Tools/review-game-board/rgb-play.js`): every-team-answers,
+  an opt-in field on a board (`everyTeam`, and `marks` on a clue scored in it; a board without them is the one-team
+  game, held by 32 hashes in `Tools/review-game-board/test/_old-game.mjs`), and the printed practice quiz with its key
+  and the study guide, from a board or the bank tab's list, built from elements. The next mode (quiz-bowl, the wheel,
+  the final wager) is opt-in the same way, adds its fields only once used, and runs `_old-game.mjs` unchanged. **030
+  does not print through the print kit**: its sheets go into its own `#printArea`, the new ones with `printing-sheet`
+  on `<body>` so the screen is out of the flow (`npm run test:play-modes`, `npm run test:play-modes-core`).
   030's old key (`gvb-review-board-bank:entries`) is read on every load
   and never written or removed: do not delete it or its registry line, which is what keeps an older page and an
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are

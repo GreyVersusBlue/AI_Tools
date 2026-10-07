@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## 008 Behavior & Points Tracker: team / house points (2026-10-07, AI-31-008, `CACHE_VERSION` v281; the code commit says v280, which AI-31-012 took first)
+## 008 Behavior & Points Tracker: team / house points (2026-10-07, AI-31-008, `CACHE_VERSION` v282; the code commit says v280, which AI-31-012 and then AI-14 passed before the merge)
 
 BACKLOG rank 125 had two parts; this session did the first, team / house points. Longitudinal reports stay on the row, rewritten.
 
@@ -52,6 +52,40 @@ BACKLOG rank 125 had two parts; this session did the first, team / house points.
 - **Not verified.** Nothing projected on a real board; no screen reader; nothing printed on paper; no real second tab; the live region's wording heard by
   nobody. Not built: team totals per archived day, teams in the CSV or the student summary, a fullscreen stage view, carrying teams across sections.
 
+
+## Path 12 P3, increment 1: every-team-answers and the printed quiz and study guide on 030 (2026-10-07, AI-14, `CACHE_VERSION` v281; the code commit says v280, which AI-31-012 took before the merge)
+
+BACKLOG rank 29 names five things; this session was handed two of them. Quiz-bowl, the wheel and the final wager are
+not started, and the row says so. The design as built is in BACKLOG's Path 12 section, P3; this is what happened.
+
+- **What was there.** The one-team game (show the answer, press the one team that got it) and two printed sheets from
+  a board, an answer key and a practice quiz with no key. So "a printed practice quiz" half-existed, and the session
+  built what did not: the key on a page of its own in the same print, the study guide, and both from the bank.
+- **Every team answers.** An opt-in tick box on a board. On, the answer brings a panel of radio groups (Right, Wrong,
+  No answer, a team) and one Score button; right scores the clue's points, wrong and no answer nothing; the marks stay
+  on the clue and each team shows its count; one Undo takes the clue back. Keys 1 to 9 and Enter. Stored as
+  `everyTeam` on the board and `marks` on a scored clue, both absent on a board that never used the mode.
+- **The sheets.** `rgb-play.js` builds a quiz and its key (the key starts a new page) or a study guide (a table, the
+  answer beside the question) from elements, from a board's clues by category or from the bank tab's list by unit.
+- **A premise that was wrong.** The session's prompt said to print "through the shared print kit as 030 already
+  does". 030 links no print-kit file and never has: it prints `#printArea` under its own `@media print`, with the
+  screen hidden by `visibility`, which leaves the screen's height in the print. Printed from the bank tab, which is
+  tall, a short sheet would have been followed by blank pages. The new sheets are printed with a class on `<body>`
+  that takes the screen out with `display: none`; the two old sheets were left exactly as they were (they are
+  printed from the board, which is short). Moving 030 onto the kit, with a preview, is Path 7 work and is not done.
+- **The old game, held.** `_old-game.mjs` plays one board through every path of the one-team game; its 32 captures
+  were hashed on the v279 page before any edit (twice, the same) and are the same on the new page.
+- **Decisions taken, each a question for Devon in BACKLOG (18 to 30).** A wrong answer scores nothing; the page does
+  not manage secret answers; a Daily Double stays one team's wager; every team starts at No answer; marks go by a
+  team's place; a guide groups by category or unit in first-appearance order; choices print in stored order; the two
+  old print buttons stay.
+- **Tests.** `smoke-play-core.mjs` (pure Node, 83 assertions) and `smoke-play-modes.mjs` (port 8515, 182 assertions).
+  Breaks on purpose: 49 in `rgb-play.js`, in pure Node (47 caught by an assertion, 2 stopped the suite with a crash: a group named `__proto__` with the key prefix taken off, and `innerHTML` in place of `textContent`, which the suite's document refuses). In the page, 24 written and **only 12 run**, one suite run per lock (the lock was shared with two other workers and a run took 3 to 5 minutes), all 12 caught by an assertion. **Not broken on purpose:** Reset game leaving the marks, a removed team's mark staying, Edit questions losing the mode or the marks, the bank print taking ticks the list does not show, the number keys, the starting mark, focus on reveal, a wrong team losing points, a line's height, the empty list, the bank sheet's name.
+- **Got wrong on the way.** The first pure break list had one change that changed nothing (it added a field nobody
+  read) and survived; it was replaced by a real one. The suite first expected an imported clue's marks to be two
+  long when the board had three teams by then: an import fills a short list with No answer, which is right.
+- **Not verified.** No class, no person, no screen reader, no paper. Not run: the full `npm test`.
+ of two to four independent timers (2026-10-07, AI-31-004, `CACHE_VERSION` v279; the code commit says v277, which main passed before the merge)
 ## 012 Graph Paper: polar, log, hexagonal, storyboard and music paper, and seven number-line kinds (2026-10-07, AI-31-012, `CACHE_VERSION` v280)
 
 BACKLOG rank 129, "More grid types; number-line variants", is built whole and the row is deleted. The page was checked first: it already had square, dot, isometric
