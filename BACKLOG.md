@@ -535,7 +535,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 118 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
 | 119 | Roles built into a group; project-team mode; a pair-history that spans the year | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
 | 120 | Peer review mode; rubric handoff to the grades tools | 003 | ½ | | [003 Rubric Builder](#003--rubric-builder) |
-| 121 | Bell-schedule awareness; a multi-timer board; a reconnecting mirror | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
+| 121 | Bell-schedule awareness (reads 032's `scv_calendar_v1`; needs a registry and cross-tool decision); a reconnecting mirror (`_shared/webrtc-pair.js`, a platform edit). The multi-timer board shipped v277 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
 | 122 | A constraint solver worth the name; the room, not the grid | 005 | ½ | | [005 Seating Chart Generator](#005--seating-chart-generator) |
 | 123 | Bulk operations across rosters | 006 | ½ | | [006 Class Roster Hub](#006--class-roster-hub) |
 | 124 | `prefers-reduced-motion` respect; equity across weeks and periods | 007 | ½ | | [007 Name Picker](#007--name-picker) |
@@ -7466,9 +7466,14 @@ work, and don't promote one without Devon saying so.
   (`scv_calendar_v1`) and/or a stored bell schedule so the timer can offer
   "rest of this period" as a one-click duration and know that today is a half
   day. See P7.
-- **Multi-timer board.** Two to four independent timers side by side on one
-  projected page — for stations, for differentiated group work, or for a lab
-  with staggered steps.
+- **Done (2026-10-07, v277) — Multi-timer board.** A header button, "Timer board",
+  swaps the single timer for two to four independent timers (label, length,
+  start / pause / resume / reset, finished state each), saved as `board` inside
+  `ct_prefs` and restored after a reload from wall-clock end times. The
+  single-timer view is the default and is pinned to the v276 page by a golden.
+  Not done: the mirror, the ambient strip and the phone remote still show and
+  drive the single timer only; there is no share link on this page; board timers
+  stop at zero (no overtime) and have no sounds of their own.
 - **Sound design that survives a school laptop.** Ship several vendored
   alert sounds (not just three tones), allow a locally-chosen audio file, and
   fall back to Web Audio synthesis when a file won't play.

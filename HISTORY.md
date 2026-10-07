@@ -9,6 +9,34 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 004 Classroom Timer: a timer board of two to four independent timers (2026-10-07, AI-31-004, `CACHE_VERSION` v277)
+
+BACKLOG rank 121 had three parts; this session did one, the multi-timer board. Bell-schedule awareness (needs 032's key in the registry) and the
+reconnecting mirror (`_shared/webrtc-pair.js`) are not started, and the row says so.
+
+- **What it is.** A "Timer board" button in the header swaps the single timer for two to four timers, each with a label, minutes and seconds, a
+  Start / Pause / Resume button and Reset. `ct-board-core.js` (no DOM) puts each timer on `_shared/countdown.js`, so it runs off a wall-clock end time;
+  `ct-board.js` is the page. Digits are sized from the card (`cqw`), 2x2 for four timers on a projector, one column on a phone. Keys 1-4 start, pause
+  or resume that timer, never while typing in a field or behind a dialog.
+- **Saved** in the existing `ct_prefs` as an optional `board` (version stays 1; no new key, so the registry is untouched). A load never invents one: a save
+  from before reads back with no `board`, and the single view's ct_prefs and ct_running_v1 strings are byte for byte the old page's (golden captured from
+  the v276 page before any edit). After a reload a running timer keeps counting from its end time, a paused one keeps what was left, and one that ran out
+  while closed comes back finished and does not ring. A board left open reopens open.
+- **Finish.** Announced once through one polite live region (the ticking digits are not live), shown by a 7px border and the words "Time's up" as well as
+  colour. One sound and one flash per tick however many timers ended in it, through the Alert Sound card (mute, none, volume, flash all honoured).
+- **Guards.** The board will not open over a running single timer, nor close over a running or paused board timer, and says why in words. While it is
+  open Space, R, 1-9 presets and the phone remote's commands do nothing to the hidden single timer.
+- **A bug the first run found.** A timer paused in the same millisecond it started has `leftMs == totalMs` and read as "Ready"; it now carries an explicit
+  `paused` flag, saved with it.
+- **Seen, not changed.** The header's buttons already overflow a 375px screen in the single view (right edge 491px). The board wraps them in board mode only;
+  the single view is untouched. The dark theme's white-on-light-blue `.btn-primary` fails 4.5:1 on the single Start button; the board's Start uses dark text.
+- **Not done / not verified.** No share link exists on this page, so none carries a board. The mirror and the ambient strip follow the single timer only.
+  Nothing projected, no real laptop sleep (the clock was moved in Chromium), no real screen reader, no sound heard (Web Audio was recorded, not played).
+- **Tests.** `smoke-board-core.mjs` (pure Node, 106 assertions) and `smoke-board.mjs` (port 8513, 146 assertions, with `golden-single-view.json`).
+  Breaks on purpose: 35 in the core (31 caught first time; 4 survived as equivalent redundant guards, which were deleted) and 19 in the page (all
+  caught; B5, the single timer's Space key, first survived because the test pressed R before reading the key it had just cleared, and was reordered and
+  caught). A break run killed by a host restart left one mutated line, found with `git status` and restored. Not every assertion has its own break.
+
 ## CI: the test job's timeout is 120 minutes, was 60 (2026-10-07, AI-14, no `CACHE_VERSION`)
 
 Asked for by the Selector during the sprint, as one commit on AI-14's branch. The wave PR's full run (AI_Tools#352) was cancelled at the job's
