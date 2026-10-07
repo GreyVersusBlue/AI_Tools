@@ -77,6 +77,8 @@
     "Tools/review-game-board/test/smoke-received-questions.mjs",
     "Tools/review-game-board/test/smoke-bank-editor-core.mjs",
     "Tools/review-game-board/test/smoke-bank-editor.mjs",
+    "Tools/review-game-board/test/smoke-play-core.mjs",
+    "Tools/review-game-board/test/smoke-play-modes.mjs",
     "Tools/rubric-builder/test/smoke-gdv-handoff.mjs",
     "Tools/vocab-flashcard-generator/test/printables-logic.test.mjs",
     "Tools/vocab-flashcard-generator/test/smoke-printables.mjs",

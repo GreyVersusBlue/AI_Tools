@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v279';
+const CACHE_VERSION = 'v280';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -385,6 +385,7 @@ const PRECACHE_URLS = [
   "Tools/review-game-board/art/header.webp",
   "Tools/review-game-board/rgb-audio-db.js",
   "Tools/review-game-board/rgb-bank-editor.js",
+  "Tools/review-game-board/rgb-play.js",
   "Tools/review-game-board/rgb-bank-store.js",
   "Tools/review-game-board/rgb-image.js",
   "Tools/review-game-board/rgb-store.js",

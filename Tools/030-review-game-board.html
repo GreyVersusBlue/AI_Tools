@@ -32,6 +32,8 @@
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/export.js"></script>
 <script src="review-game-board/rgb-store.js"></script>
+<!-- Every-team-answers and the printed quiz and study guide (Path 12 P3). -->
+<script src="review-game-board/rgb-play.js"></script>
 <script src="../_shared/question-bank.js"></script>
 <!-- Questions another tool sends by link (Path 6 P4): share.js reads `?questions=`. -->
 <script src="../_shared/state-link.js"></script>
@@ -366,6 +368,40 @@
   .key-img { display: block; max-width: 1.4in; max-height: 1in; object-fit: contain; margin-top: .25rem; }
   .quiz-lines .quiz-line { border-bottom: 1px solid #999; height: 1.3rem; margin-bottom: .2rem; }
 
+  /* Every team answers (Path 12 P3, rgb-play.js): the marking panel sits on
+     the overlay where the award buttons are in the one-team game, so it is
+     the projector's navy and white in both themes, as they are. */
+  .eta-panel { display: none; max-width: 56rem; }
+  .eta-panel.show { display: block; }
+  .eta-rule { color: #cfd6ea; font-size: .95rem; margin: 0 0 .9rem; }
+  .eta-teams { display: flex; flex-wrap: wrap; gap: .7rem; justify-content: center; margin-bottom: 1rem; }
+  .eta-team { border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: .5rem .8rem .6rem; margin: 0; min-width: 0; }
+  .eta-team legend { color: #fff; font-weight: 700; padding: 0 .4rem; }
+  .eta-team label { display: inline-flex; align-items: center; gap: .3rem; color: #fff; font-size: .95rem; margin: 0 .5rem 0 0; }
+  .eta-team input[type="radio"] { width: 1.1rem; height: 1.1rem; }
+  .eta-status { color: #cfd6ea; font-size: .9rem; min-height: 1.3rem; margin: 0; }
+  .team-tally { font-size: .78rem; color: var(--muted); }
+  .sheet-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .9rem; }
+
+  /* The practice quiz with its key, and the study guide (rgb-play.js). Like
+     the two sheets above these are drawn only in #printArea, so the greys
+     are print values. No box has a fixed height: a long question grows. */
+  .pq-sheet h2 { margin: 0 0 .5rem; font-size: 1.25rem; }
+  .pq-sub { font-size: .9rem; color: #444; margin: 0 0 1rem; white-space: pre-wrap; }
+  .pq-group { font-size: 1rem; margin: 1rem 0 .45rem; padding-bottom: .15rem; border-bottom: 1px solid #999; break-after: avoid; }
+  .pq-item { break-inside: avoid; margin-bottom: 1rem; }
+  .pq-q { margin: 0 0 .35rem; font-size: .95rem; overflow-wrap: anywhere; }
+  .pq-choices { margin: .2rem 0 .4rem 1.6rem; padding: 0; font-size: .95rem; overflow-wrap: anywhere; }
+  .pq-line { border-bottom: 1px solid #999; min-height: 1.3rem; margin-bottom: .2rem; }
+  .pq-key { break-before: page; }
+  .pq-key-row { margin: 0 0 .3rem; font-size: .95rem; break-inside: avoid; overflow-wrap: anywhere; }
+  .pq-guide-table { width: 100%; border-collapse: collapse; font-size: .9rem; table-layout: fixed; }
+  .pq-guide-table th, .pq-guide-table td { border: 1px solid #999; padding: 5px 8px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+  .pq-guide-table th { background: #eee; }
+  .pq-guide-table tr { break-inside: avoid; }
+  .pq-guide-table .pq-q { margin: 0; }
+  .pq-guide-a { width: 38%; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   .print-only { display: none; }
@@ -377,6 +413,14 @@
     #printArea, #printArea * { visibility: visible; }
     #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0.4in; color: #000; background: #fff; }
     @page { size: letter portrait; margin: 0.4in; }
+    /* The quiz-with-key and the study guide run over several pages and may
+       be printed from the bank tab, which is tall: the screen is taken out
+       of the flow, not only hidden, so no blank page follows the sheet, and
+       the sheet is in the flow, so its key can start a new page. The two
+       older sheets print as they did (the class is off for them). */
+    body.printing-sheet { padding: 0; }
+    body.printing-sheet > *:not(#printArea) { display: none !important; }
+    body.printing-sheet #printArea { position: static; padding: 0; }
   }
 </style>
 </head>
@@ -416,6 +460,8 @@
     <button class="secondary" id="resetGameBtn">Reset game</button>
     <button class="secondary" id="printAnswerKeyBtn">Print answer key</button>
     <button class="secondary" id="printQuizBtn">Print practice quiz</button>
+    <button class="secondary" id="printQuizKeyBtn">Print quiz with answer key</button>
+    <button class="secondary" id="printGuideBtn">Print study guide</button>
     <button class="secondary" id="exportBoardBtn">Export JSON</button>
     <button class="secondary" id="importBoardBtn">Import JSON</button>
     <input type="file" id="importBoardFile" accept="application/json,.json" style="display:none;">
@@ -481,12 +527,18 @@
       <button type="button" class="secondary small" id="redrawDailyDoubleBtn">Redraw Daily Double</button>
       <label><input type="checkbox" id="lightningRoundToggle"> Lightning round (visible countdown per question)</label>
       <label for="lightningRoundSeconds">Seconds: <input type="number" id="lightningRoundSeconds" class="seconds-input" min="3" max="120" value="15"></label>
+      <label><input type="checkbox" id="everyTeamToggle" aria-describedby="everyTeamRule"> Every team answers (mark each team on every clue)</label>
     </div>
+    <p class="hint" id="everyTeamRule" hidden>Every team answers each clue. When the answer is shown, mark each team
+      right, wrong or no answer, then press <b>Score this clue</b>. A right answer scores the clue&rsquo;s points; a
+      wrong answer or no answer scores nothing. A Daily Double is still one team&rsquo;s wager. While the marks are
+      showing: <kbd>1</kbd>-<kbd>9</kbd> change that team&rsquo;s mark &middot; <kbd>Enter</kbd> scores the clue.</p>
     <div class="scoreboard" id="scoreboard"></div>
     <div class="score-toolbar">
       <button type="button" class="secondary small" id="undoScoreBtn" disabled>Undo last score change</button>
       <span class="kbd-hint">While a clue is open: <kbd>Space</kbd> reveal &middot; <kbd>1</kbd>-<kbd>9</kbd> award &middot; <kbd>Esc</kbd> close</span>
     </div>
+    <p class="import-status" id="boardStatus" role="status"></p>
     <div class="board-grid">
       <div class="board-cols" id="boardCols"></div>
     </div>
@@ -574,6 +626,15 @@
         <button type="button" id="bankPullBtn">Pull selected into board</button>
         <span class="import-status" id="bankPullStatus"></span>
       </div>
+      <div class="sheet-row">
+        <span id="bankPrintLabel">Print these questions:</span>
+        <button type="button" class="secondary" id="bankPrintQuizBtn" aria-describedby="bankPrintHint">Practice quiz with answer key</button>
+        <button type="button" class="secondary" id="bankPrintGuideBtn" aria-describedby="bankPrintHint">Study guide</button>
+        <span class="import-status" id="bankPrintStatus" role="status"></span>
+      </div>
+      <p class="hint" id="bankPrintHint" style="margin-top:.4rem;">Prints the ticked questions, or every question the list shows when none is
+        ticked, grouped by unit. The quiz has room to answer and its answer key starts a new page; the study guide
+        has each answer beside its question.</p>
       <div class="bank-copy-row" id="bankCopyRow" hidden>
         <button type="button" class="secondary" id="bankCopyBtn">Copy selected to my bank</button>
         <span class="import-status" id="bankCopyStatus" role="status"></span>
@@ -636,6 +697,12 @@
     <button class="ghost" id="closeNoAskBtn">Close (didn't ask this one)</button>
   </div>
   <div class="award-row" id="awardRow"></div>
+  <div class="eta-panel" id="etaPanel">
+    <p class="eta-rule" id="etaRule"></p>
+    <div class="eta-teams" id="etaTeams"></div>
+    <div class="overlay-actions"><button type="button" id="etaScoreBtn">Score this clue</button></div>
+    <p class="eta-status" id="etaStatus" role="status"></p>
+  </div>
   <div class="overlay-actions" id="closeUsedRow" style="display:none;">
     <button class="ghost" id="closeUsedBtn">Mark used &amp; close (no points awarded)</button>
   </div>
@@ -678,7 +745,9 @@
    'bankExportBtn','bankExportSheetBtn','bankImportFile','bankFileStatus',
    'bankAddChoices','bankAddTags','bankListStatus',
    'bankImportPreview','bankImportSummary','bankImportList','bankImportMore','bankImportAddBtn','bankImportCancelBtn',
-   'arrivalCard','arrivalSummary','arrivalList','arrivalAddBtn','arrivalDismissBtn','arrivalStatus'
+   'arrivalCard','arrivalSummary','arrivalList','arrivalAddBtn','arrivalDismissBtn','arrivalStatus',
+   'everyTeamToggle','everyTeamRule','boardStatus','etaPanel','etaRule','etaTeams','etaScoreBtn','etaStatus',
+   'printQuizKeyBtn','printGuideBtn','bankPrintQuizBtn','bankPrintGuideBtn','bankPrintStatus'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, categories:[{name, clues:[{points,question,answer,used}]}], teams:[{name,score}] }
@@ -715,6 +784,11 @@
   function renderUndoButton() {
     if (!els.undoScoreBtn) return;
     var entry = undoStack[undoStack.length - 1];
+    if (entry && entry.group && state) {            // a clue scored for every team: one press takes it all back
+      els.undoScoreBtn.disabled = false;
+      els.undoScoreBtn.textContent = 'Undo: ' + entry.label + ' (every team)';
+      return;
+    }
     if (!entry || !state || !state.teams[entry.teamIndex]) {
       els.undoScoreBtn.disabled = true;
       els.undoScoreBtn.textContent = 'Undo last score change';
@@ -729,6 +803,7 @@
       var entry = undoStack.pop();
       renderUndoButton();
       if (!entry || !state) return;
+      if (entry.group) { undoEveryTeam(entry); return; }
       var team = state.teams[entry.teamIndex];
       if (team) team.score -= entry.delta;
       if (entry.catIdx != null && entry.clueIdx != null) {
@@ -1445,7 +1520,7 @@
   }
 
   /* ---------- board lifecycle ---------- */
-  function startBoard(name, categories, teams, dailyDoubleEnabled, lightningRoundEnabled, lightningRoundSeconds) {
+  function startBoard(name, categories, teams, dailyDoubleEnabled, lightningRoundEnabled, lightningRoundSeconds, everyTeam) {
     state = {
       name: name,
       categories: categories,
@@ -1454,6 +1529,8 @@
       lightningRoundEnabled: !!lightningRoundEnabled,
       lightningRoundSeconds: lightningRoundSeconds || 15
     };
+    // Only a board that has used every-team-answers carries the field at all.
+    if (everyTeam !== undefined) state.everyTeam = !!everyTeam;
     ReviewBoardStore.setCurrentName(name);
     assignDailyDouble();
     clearUndoStack();
@@ -1536,6 +1613,7 @@
 
   els.printAnswerKeyBtn.addEventListener('click', function () {
     if (!state) return;
+    document.body.classList.remove('printing-sheet');
     els.printArea.innerHTML = answerKeyHtml();
     waitForImages(els.printArea).then(function () { window.print(); });
   });
@@ -1581,9 +1659,35 @@
 
   els.printQuizBtn.addEventListener('click', function () {
     if (!state) return;
+    document.body.classList.remove('printing-sheet');
     els.printArea.innerHTML = studentQuizHtml();
     waitForImages(els.printArea).then(function () { window.print(); });
   });
+
+  /* ---------- the quiz with its key, and the study guide (Path 12 P3) ----------
+     rgb-play.js builds both from elements: the practice quiz with room to
+     answer and, starting a new page, its answer key; and the study guide,
+     each question with its answer beside it. From this board (grouped by
+     category) with the two buttons in the toolbar, or from whatever the
+     Question Bank tab's list shows (grouped by unit) with the two under it.
+     `printing-sheet` stays on <body> while one of them is in #printArea, so
+     Ctrl+P prints it again the same way; the two older buttons take it off. */
+  function printSheet(kind, title, items) {
+    var model = ReviewBoardPlay.sheetModel(kind, title, items);
+    els.printArea.textContent = '';
+    els.printArea.appendChild(ReviewBoardPlay.buildSheet(document, model));
+    document.body.classList.add('printing-sheet');
+    waitForImages(els.printArea).then(function () { window.print(); });
+    return model;
+  }
+  function printBoardSheet(kind) {
+    if (!state) return;
+    var model = printSheet(kind, state.name, ReviewBoardPlay.itemsFromBoard(state, ReviewBoardImage.url));
+    els.boardStatus.className = 'import-status ok';
+    els.boardStatus.textContent = ReviewBoardPlay.sheetSentence(model);
+  }
+  els.printQuizKeyBtn.addEventListener('click', function () { printBoardSheet('quiz'); });
+  els.printGuideBtn.addEventListener('click', function () { printBoardSheet('guide'); });
 
   /* ---------- JSON export / import ---------- */
   function sanitizeFilename(s) {
@@ -1608,6 +1712,7 @@
   /** Defensively rebuilds a board object loaded from anywhere (a JSON
       import) so type mismatches or missing fields can't corrupt state. */
   function normalizeBoard(loaded, name) {
+    var teamCount = Array.isArray(loaded.teams) && loaded.teams.length ? loaded.teams.length : 2;
     var categories = (Array.isArray(loaded.categories) ? loaded.categories : []).map(function (c) {
       var clues = (Array.isArray(c && c.clues) ? c.clues : []).map(function (cl) {
         var out = {
@@ -1627,6 +1732,9 @@
         // local IndexedDB clip) or been stripped — never a raw pointer from
         // whatever browser exported the file.
         if (typeof (cl && cl.audioId) === 'string' && cl.audioId) out.audioId = cl.audioId;
+        // A clue scored with every team answering keeps its marks, cleaned.
+        var marks = out.used ? ReviewBoardPlay.cleanMarks(cl && cl.marks, teamCount) : null;
+        if (marks) out.marks = marks;
         return out;
       }).filter(function (cl) { return cl.question || cl.answer || cl.image || cl.audioId; });
       return { name: String((c && c.name) || ''), clues: clues };
@@ -1634,7 +1742,7 @@
     var teams = (Array.isArray(loaded.teams) ? loaded.teams : []).map(function (t) {
       return { name: String((t && t.name) || 'Team'), score: Number(t && t.score) || 0 };
     });
-    return {
+    var board = {
       name: name,
       categories: categories,
       teams: teams.length ? teams : [{ name: 'Team 1', score: 0 }, { name: 'Team 2', score: 0 }],
@@ -1642,6 +1750,9 @@
       lightningRoundEnabled: !!loaded.lightningRoundEnabled,
       lightningRoundSeconds: Number(loaded.lightningRoundSeconds) || 15
     };
+    // Absent on a file from before the mode, and then absent here too.
+    if (typeof loaded.everyTeam === 'boolean') board.everyTeam = loaded.everyTeam;
+    return board;
   }
 
   /** A clip's blob, base64-encoded as a data: URL — the same shape an
@@ -1812,6 +1923,9 @@
     els.redrawDailyDoubleBtn.disabled = !state.dailyDoubleEnabled;
     els.lightningRoundToggle.checked = !!state.lightningRoundEnabled;
     els.lightningRoundSeconds.value = state.lightningRoundSeconds;
+    els.everyTeamToggle.checked = !!state.everyTeam;
+    els.everyTeamRule.hidden = !state.everyTeam;
+    var teamTally = state.everyTeam ? ReviewBoardPlay.tally(state.categories, state.teams.length) : null;
 
     // scoreboard
     els.scoreboard.innerHTML = '';
@@ -1836,10 +1950,12 @@
       removeBtn.className = 'small danger'; removeBtn.textContent = '×';
       removeBtn.title = 'Remove team';
       removeBtn.addEventListener('click', function () {
+        ReviewBoardPlay.dropTeam(state.categories, i);   // its mark leaves every clue scored for every team
         state.teams.splice(i, 1); clearUndoStack(); renderBoard();
       });
       chip.appendChild(nameInput); chip.appendChild(minus); chip.appendChild(scoreSpan);
       chip.appendChild(plus); chip.appendChild(removeBtn);
+      if (teamTally) chip.appendChild(el('span', 'team-tally', ReviewBoardPlay.tallyLine(teamTally[i])));
       els.scoreboard.appendChild(chip);
     });
     var addTeamBtn = document.createElement('button');
@@ -1937,6 +2053,7 @@
     els.overlayAnswer.textContent = clue.answer;
     els.overlayAnswer.classList.remove('show');
     els.awardRow.classList.remove('show');
+    els.etaPanel.classList.remove('show');
     els.closeUsedRow.style.display = 'none';
     els.wagerPanel.style.display = 'none';
     els.overlayQuestion.style.display = '';
@@ -1993,6 +2110,7 @@
     overlayAudioToken++; // invalidate any still-in-flight IndexedDB fetch for the clue we're leaving
     hideOverlayAudio();
     els.overlay.classList.remove('show');
+    els.etaPanel.classList.remove('show');
     currentClue = null;
   }
 
@@ -2031,6 +2149,10 @@
     els.awardRow.innerHTML = '';
     var savedClue = currentClue; // closeOverlay() clears currentClue, so capture indices for the undo entry now
     var clue = state.categories[currentClue.catIdx].clues[currentClue.clueIdx];
+
+    // Every team answers: the marking panel, not one team's button. A Daily
+    // Double stays one team's wager, so it takes the branch it always took.
+    if (state.everyTeam && !dailyDoubleWager) { showEveryTeamPanel(clue, savedClue); return; }
 
     if (dailyDoubleWager) {
       var wTeam = state.teams[dailyDoubleWager.teamIndex];
@@ -2071,6 +2193,103 @@
     els.awardRow.classList.add('show');
   }
 
+  /* ---------- every team answers (Path 12 P3, rgb-play.js) ----------
+     Opt-in on a board (`state.everyTeam`). Once the answer is shown, each team
+     has a group of three radio buttons (Right, Wrong, No answer; No answer to
+     start), and Score this clue gives the clue's points to every team marked
+     right, keeps the marks on the clue and closes it. One Undo takes the
+     whole clue back. A board that never turned the mode on has neither field
+     and none of this runs. */
+  var everyTeamClue = null;   // { catIdx, clueIdx } while the marks are showing
+
+  function everyTeamMarks() {
+    return state.teams.map(function (team, i) {
+      var picked = els.etaTeams.querySelector('input[name="eta-team-' + i + '"]:checked');
+      return picked ? picked.value : 'n';
+    });
+  }
+
+  function showEveryTeamPanel(clue, at) {
+    everyTeamClue = at;
+    els.etaRule.textContent = 'Mark every team, then score the clue. Right scores ' + (Number(clue.points) || 0) +
+      '; wrong and no answer score nothing.';
+    els.etaStatus.textContent = '';
+    els.etaTeams.textContent = '';
+    state.teams.forEach(function (team, i) {
+      var box = el('fieldset', 'eta-team');
+      box.appendChild(el('legend', '', (i + 1) + '. ' + team.name));
+      ReviewBoardPlay.MARKS.forEach(function (mark) {
+        var label = el('label'), radio = el('input');
+        radio.type = 'radio';
+        radio.name = 'eta-team-' + i;
+        radio.value = mark;
+        radio.checked = mark === 'n';
+        label.appendChild(radio);
+        var word = ReviewBoardPlay.markWord(mark);
+        label.appendChild(document.createTextNode(word.charAt(0).toUpperCase() + word.slice(1)));
+        box.appendChild(label);
+      });
+      els.etaTeams.appendChild(box);
+    });
+    els.etaPanel.classList.add('show');
+    var first = els.etaTeams.querySelector('input:checked');
+    (first || els.etaScoreBtn).focus();
+  }
+
+  /** A number key: that team's mark moves on (no answer, right, wrong). */
+  function cycleEveryTeamMark(i) {
+    var team = state.teams[i];
+    if (!team) return;
+    var next = ReviewBoardPlay.nextMark(everyTeamMarks()[i]);
+    var radio = els.etaTeams.querySelector('input[name="eta-team-' + i + '"][value="' + next + '"]');
+    if (!radio) return;
+    radio.checked = true;
+    radio.focus();
+    els.etaStatus.textContent = team.name + ': ' + ReviewBoardPlay.markWord(next) + '.';
+  }
+
+  els.etaScoreBtn.addEventListener('click', function () {
+    if (!state || !everyTeamClue || !currentClue) return;
+    var at = everyTeamClue, cat = state.categories[at.catIdx], clue = cat.clues[at.clueIdx];
+    var marks = everyTeamMarks(), deltas = ReviewBoardPlay.score(clue.points, marks);
+    var label = cat.name + ' ' + clue.points;
+    deltas.forEach(function (d, i) { state.teams[i].score += d; });
+    clue.marks = marks;
+    undoStack.push({ group: deltas, label: label, catIdx: at.catIdx, clueIdx: at.clueIdx });
+    if (undoStack.length > UNDO_MAX) undoStack.shift();
+    everyTeamClue = null;
+    markCurrentClueUsed();
+    closeOverlay();
+    renderBoard();
+    deltas.forEach(function (d, i) { if (d) flashTeamScore(i, d > 0); });
+    els.boardStatus.className = 'import-status ok';
+    els.boardStatus.textContent = ReviewBoardPlay.summary(label, clue.points,
+      state.teams.map(function (t) { return t.name; }), marks);
+    var next = els.boardCols.querySelector('.cell:not(.used):not(.blank)');
+    (next || els.undoScoreBtn).focus();
+  });
+
+  function undoEveryTeam(entry) {
+    entry.group.forEach(function (d, i) { if (state.teams[i]) state.teams[i].score -= d; });
+    var cat = state.categories[entry.catIdx], clue = cat && cat.clues[entry.clueIdx];
+    if (clue) { clue.used = false; delete clue.marks; }
+    save();
+    renderBoard();
+    els.boardStatus.className = 'import-status';
+    els.boardStatus.textContent = 'Took back ' + entry.label + ': its points are off every team and it can be asked again.';
+  }
+
+  els.everyTeamToggle.addEventListener('change', function () {
+    if (!state) return;
+    state.everyTeam = els.everyTeamToggle.checked;
+    save();
+    renderBoard();
+    els.boardStatus.className = 'import-status';
+    els.boardStatus.textContent = state.everyTeam
+      ? 'Every team answers each clue from now on. The rule is under the options above.'
+      : 'One team answers each clue, as before. The marks already made are kept.';
+  });
+
   els.showAnswerBtn.addEventListener('click', revealAnswer);
 
   els.closeNoAskBtn.addEventListener('click', function () {
@@ -2095,6 +2314,11 @@
       e.preventDefault();
       if (els.closeUsedRow.style.display !== 'none') els.closeUsedBtn.click();
       else if (els.closeNoAskBtn.style.display !== 'none') els.closeNoAskBtn.click();
+      return;
+    }
+    if (els.etaPanel.classList.contains('show')) {
+      if (/^[1-9]$/.test(e.key)) { e.preventDefault(); cycleEveryTeamMark(Number(e.key) - 1); return; }
+      if (e.key === 'Enter' && !(e.target && e.target.tagName === 'BUTTON')) { e.preventDefault(); els.etaScoreBtn.click(); }
       return;
     }
     if (/^[1-9]$/.test(e.key) && els.awardRow.classList.contains('show')) {
@@ -2143,10 +2367,11 @@
           c.clues.forEach(function (cl) {
             var key = c.name + '||' + cl.question;
             if (Object.prototype.hasOwnProperty.call(editingBoard.usedMap, key)) cl.used = editingBoard.usedMap[key];
+            if (cl.used && Object.prototype.hasOwnProperty.call(editingBoard.marksMap, key)) cl.marks = editingBoard.marksMap[key];
           });
         });
         startBoard(name, categories, editingBoard.teams, editingBoard.dailyDoubleEnabled,
-          editingBoard.lightningRoundEnabled, editingBoard.lightningRoundSeconds);
+          editingBoard.lightningRoundEnabled, editingBoard.lightningRoundSeconds, editingBoard.everyTeam);
       } else {
         startBoard(name, categories, takePendingRosterTeams());
       }
@@ -2212,10 +2437,16 @@
     var dailyDoubleEnabled = state.dailyDoubleEnabled;
     var lightningRoundEnabled = state.lightningRoundEnabled;
     var lightningRoundSeconds = state.lightningRoundSeconds;
+    var everyTeam = state.everyTeam;           // undefined on a board that never used the mode
+    var marksMap = {};
+    categories.forEach(function (c) {
+      c.clues.forEach(function (cl) { if (Array.isArray(cl.marks)) marksMap[c.name + '||' + cl.question] = cl.marks; });
+    });
     showSetup(categories);
     editingBoard = {
       name: name, teams: teams, usedMap: usedMap, audioIds: audioIds, dailyDoubleEnabled: dailyDoubleEnabled,
-      lightningRoundEnabled: lightningRoundEnabled, lightningRoundSeconds: lightningRoundSeconds
+      lightningRoundEnabled: lightningRoundEnabled, lightningRoundSeconds: lightningRoundSeconds,
+      everyTeam: everyTeam, marksMap: marksMap
     };
     els.boardName.value = name;
   });
@@ -2225,6 +2456,7 @@
     if (!confirm('Clear all used questions and reset scores to 0 in "' + state.name + '"? Questions themselves are kept.')) return;
     state.categories.forEach(function (c) { c.clues.forEach(function (cl) { cl.used = false; }); });
     state.teams.forEach(function (t) { t.score = 0; });
+    ReviewBoardPlay.clearMarks(state.categories);
     assignDailyDouble();
     clearUndoStack();
     save();
@@ -2585,6 +2817,35 @@
     els.bankFilterDifficulty.value = ''; els.bankFilterQuery.value = '';
     renderBankList();
   });
+
+  /* The printed quiz and study guide from the bank (Path 12 P3): the ticked
+     questions, or every question the list shows when none is ticked, from
+     whichever source is chosen. Nothing is stored and nothing is copied. */
+  function bankPrintQuestions() {
+    var source = bankSource();
+    var shown = QuestionBank.filter(QuestionBank.questionsOf(source), currentBankFilters());
+    var ticked = shown.filter(function (q) { return bankSelected[q.id]; });
+    return ticked.length ? ticked : shown;
+  }
+  function bankPrintTitle() {
+    if (els.bankFilterUnit.value) return els.bankFilterUnit.value;
+    var source = bankSource();
+    var chosen = ReviewBankStore.sources().filter(function (src) { return src.id === source; })[0];
+    return chosen ? chosen.title : 'Questions';
+  }
+  function printBankSheet(kind) {
+    var items = ReviewBoardPlay.itemsFromQuestions(bankPrintQuestions());
+    if (!items.length) {
+      els.bankPrintStatus.className = 'import-status error';
+      els.bankPrintStatus.textContent = 'There is no question to print: the list is empty.';
+      return;
+    }
+    var model = printSheet(kind, bankPrintTitle(), items);
+    els.bankPrintStatus.className = 'import-status ok';
+    els.bankPrintStatus.textContent = ReviewBoardPlay.sheetSentence(model);
+  }
+  els.bankPrintQuizBtn.addEventListener('click', function () { printBankSheet('quiz'); });
+  els.bankPrintGuideBtn.addEventListener('click', function () { printBankSheet('guide'); });
 
   /** Opens the board editor on whatever board is "current" if it isn't
       already open, so "pull into board" always has somewhere to land — the
