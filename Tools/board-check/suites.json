@@ -70,6 +70,7 @@
     "Tools/review-game-board/test/smoke-clue-audio.mjs",
     "Tools/review-game-board/test/smoke-question-bank.mjs",
     "Tools/review-game-board/test/smoke-bank-file.mjs",
+    "Tools/review-game-board/test/smoke-received-questions.mjs",
     "Tools/rubric-builder/test/smoke-gdv-handoff.mjs",
     "Tools/vocab-flashcard-generator/test/printables-logic.test.mjs",
     "Tools/vocab-flashcard-generator/test/smoke-printables.mjs",

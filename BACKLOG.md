@@ -87,6 +87,15 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-14 (v269), rank 1, Path 6 P4 is finished and its row is deleted (a gap; ranks not renumbered): 053 sends a
+  teacher's own trivia to 030's question bank by link.** The entry is in `_shared/handoffs.js` (a row in 053's
+  share sheet); 030 reads `?questions=` through `QuestionBank.fromLink()`, which takes eight fields as bounded text
+  and never an id, shows what arrived, and stores it only on "Add to my bank" (the same link twice adds nothing).
+  030 takes link input now: its dynamic markup sinks went from 10 to 3, all escaped (`check:inline-sinks` holds it),
+  and a clue's points and a team's score are escaped too. `npm run test:received-questions` (port 8503).
+  **A link past 7,500 characters is refused in the sheet (about fifty short questions fit); a longer list has no
+  route yet (rank 94). The bound is not measured against the live host. The next free suite port is 8506** (075's
+  `smoke-wallet-cards.mjs` moved from 8501, which 074 had, to 8505).
 - **AI-14 (v267), rank 28, Path 12 P2, increment 1 of a 2+ row (the row stays, rewritten): 053's and 062's
   built-in questions are read-only seed sets in the question bank, and 030 plays from them.** Each tool's list
   moved, word for word, from its inline script to a data file (`Tools/cultural-trivia-card-generator/ctcg-bank.js`,
@@ -96,7 +105,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   the seed). 030's bank tab has a "Questions from" chooser; a set is filtered and pulled into a board as the bank
   is. 062's thirty map questions are not published (no reader can draw the map). `npm run test:seed-sets` (port
   8502) and more of `test:question-bank`. **Left of P2: 040, 018, 019, 020, and 030's editor (choices, tags, edit
-  in place). Rank 1 (053 → 030) was not started. The next free suite port is 8503.**
+  in place). Rank 1 (053 → 030) shipped next, at v269 (above).**
 - **AI-14 (v265), old rank 27, Path 12 P1 is finished and its row is deleted (a gap; ranks not renumbered):
   `_shared/question-bank.js` (`QuestionBank`) is the site's one question bank, and 030 is its one adopter.**
   The bank is the key `gvb-question-bank` (a Store envelope, version 1); 030's old key
@@ -104,7 +113,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   backup from before v265 both still work. 030's bank tab reads and writes through the module and has a
   "Share the bank" card (a JSON bank file, a workbook, an import that only ever adds). `npm run
   test:question-bank` (pure Node) and `smoke-bank-file.mjs` (port 8498, in `test:review-board`). **Rank 1 (053 →
-  030) is no longer blocked. Left of Path 12: P2 to P4 (ranks 28 to 30). Nothing was opened in Excel or Sheets.**
+  030) shipped at v269. Left of Path 12: P2 to P4 (ranks 28 to 30). Nothing was opened in Excel or Sheets.**
 - **AI-13 (v263), Path 7 P5 is finished, Path 7 with it, and rank 7 is deleted (a gap; ranks not renumbered):
   all thirteen print-kit pages have the print preview.** 070, 023, 040, 018, 017 and 016 got it; on the three
   that keep several sheets in one `#printArea` the Preview button presses its Print button with `previewFor` set,
@@ -246,8 +255,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 - **Path 22 P1–P5 are done.** His later asks are ranks 160–168 (P6–P14), unranked by him.
 
 **Start here.** Path 21 is finished (046's relief was its last row, AI-03), so no row needs Blender.
-- Rank 1 (Path 6 P4) was blocked on old rank 27 (Path 12 P1), which shipped at v265 (AI-14): it is a ¼ row
-  now, one registry entry and a `smoke-send-to.mjs` row. Then **rank 2**, the rest of Path 4 P5: per-tool restore
+- Rank 1 (Path 6 P4, 053 → 030) shipped at v269 (AI-14) and its row is gone. Start at **rank 2**, the rest of Path 4 P5: per-tool restore
   as a shared control any tool can host (½). It needs 009's `recordDiff`/merge logic moved out of 009's
   inline script into `_shared/`, and `ToolRegistry` to pick one tool's keys. Pair it with another ½ or two
   ¼ rows. A new suite takes port **8481** (8480 is the export kit's `smoke-export.mjs`, 8479 is 016's `smoke-print.mjs`, 8478 is 017's, 8477 is 018's, 8476 is 064's, 8475 is 040's, 8474 is 051's, 8473 is 074's, 8472 is 042's, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
@@ -278,7 +286,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 38 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `qr-scan.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `question-bank.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 38 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `qr-scan.js` 10 · `tool-registry.js` 9 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `question-bank.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -411,7 +419,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 (#257, v182):** 046 → 015, 056 → 028 (`sheet: false`) and 039 → 040 are entries; **003 → 037 is a documented exception** (student scores never ride a link); `share.js` gained `sendState(entry)` and `sheet: false`. **Increment 2 (#259, v183), the roster chain:** **002 → 022** is a sheet row and **022 → 005** a `sheet: false` entry from 022's "Seat these groups" button; **006/007 → 002 is not a link** (the roster already reaches 002 through `roster.js`). **Left: only 053 → 030. It was blocked on Path 12 P1 (the question bank with 030 as the front door), which shipped at v265 (AI-14), so it can start:** one entry plus a row in `smoke-send-to.mjs`. What arrives goes into the bank through `QuestionBank.importQuestions()` (Path 12's P1 bullet has the surface) | site | ¼ | | [Path 6](#path-6--share-everywhere) |
 | 2 | Path 4 P5 (rest) — per-tool restore as a shared control any tool can host | 009 | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
@@ -501,7 +508,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 91 | Spreadsheet book-list import via the shared SheetJS build, with a genre-balance warning | 049 | ½ | | [049 Book Tasting Menu Generator](#049--book-tasting-menu-generator) |
 | 92 | Teacher-recorded audio fallback via MediaRecorder, so labels work with no target-language voice | 051 | ½ | | [051 Classroom Label Maker (Target Language)](#051--classroom-label-maker-target-language) |
 | 93 | Practice worksheet variants — matching, fill-in-the-blank and "trap or true cognate" with answer keys | 052 | ½ | | [052 Cognates & False Friends Reference List Builder](#052--cognates--false-friends-reference-list-builder) |
-| 94 | Export into Review Game Board — emit the question set in the board’s category/points format | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
+| 94 | Export into Review Game Board — emit the question set in the board’s category/points format. **Since v269 the sheet’s “Send to Quiz / Review Game Board” row puts a teacher’s own questions in 030’s bank by link (Path 6 P4), up to about fifty: a link past 7,500 characters is refused. Left: a route for a longer list (a file 030’s bank import reads, or a choice of which questions to send), and a board built straight from the questions with categories and points** | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
@@ -1892,6 +1899,15 @@ download-as-file as the third option.
   022 → 005 is `sheet: false`, from 022's "Seat these groups" button (a new section, one pod per
   group); **006/007 → 002 is not a link**, because 002 already reads the saved roster through
   `roster.js` on the same device. Left: trivia → review board (053 → 030), which waited on Path 12 P1 (shipped, v265).
+  **Rollout increment 3 (AI-14, v269), the last: 053 → 030, and P4 is finished.** A sheet row on 053 sends the
+  teacher's own questions (what its sheet already shares; the built-in thirty are on 030 as a seed set) in the
+  bank's link shape, `{ v, from, name, questions: [{ prompt, answer, unit }] }`. 030 declares `share: { param:
+  'questions' }` and is the first receiver that **asks**: the others file an arrival under a new name, but the
+  bank is one list every board draws on, so 030 shows the questions (each marked when the bank has it) and
+  stores them on "Add to my bank" only. `QuestionBank.fromLink()` is the one reader of the link and the header of
+  `_shared/question-bank.js` (LINKS) has its rules: no id is taken, so a link cannot write over a question.
+  An entry may now set `maxLink` and `tooLong(built)`; only this one does (7,500 characters), because a teacher's
+  list has no upper size. **Not verified:** that bound against the live host; a real phone or a second computer.
 
 **Model.** Opus.
 
@@ -4082,7 +4098,7 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   - *Left to P2 to P4, and not done here.* P2: no other tool reads the bank; 030's editor shows no choices or
     tags and cannot edit a question in place (delete and add again); there is one bank, with no named sets, and
     no preview before an import. P3: nothing. P4: `media` has no meaning and no picture travels in the file
-    beyond the reference a question already holds. Rank 1 (053 → 030) is unblocked and not built.
+    beyond the reference a question already holds. Rank 1 (053 → 030) shipped at v269 (Path 6 P4 has it).
   - *Not verified.* No file was opened in Excel, Sheets or Numbers; a CSV saved from one was not imported (the
     suites read the files with SheetJS and a reader of their own). No real bank from a teacher's browser was
     migrated: the old banks in the suites were written by the old store's own code. A browser with storage
@@ -4134,8 +4150,8 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
     pages gave (`test:seed-sets`, pins made with `--print` against the old pages; map pictures' pixels left out).
   - *Left of P2.* 040, 018, 019, 020. On 030: a seed's tags and `copiedFrom` are stored and not shown, and
     the editor still shows no choices or tags and cannot edit in place. A set cannot be copied whole in one
-    press without ticking every row. **Rank 1 (053 → 030, a teacher's own trivia by link) is not built**: it
-    makes 030 a page that takes link input, which needs its inline sinks read first (`check:inline-sinks`).
+    press without ticking every row. **Rank 1 (053 → 030, a teacher's own trivia by link) shipped at v269**
+    (Path 6 P4): 030 takes link input now and its inline sinks were read and cut from 10 to 3 first.
   - *Not verified.* No person has used the chooser. A real teacher's 053 or 062 with hidden questions was not
     opened before and after (the suite's states are made up). Not run: the full `npm test`.
 - **P3 — Play modes in 030.** Every-team-answers mode, quiz-bowl, spin-the-wheel,
@@ -12086,7 +12102,7 @@ elsewhere in this toolkit.
 - **An expiration/review-date field** per student, since accommodations
   (like IEP/504 plans) are periodically reviewed and a stale card is worse
   than no card if a teacher trusts it without checking.
-- *(Shipped 2026-10-06, v269, AI-31-077: rooms, proctors, auto-route by
+- *(Shipped 2026-10-06, v270, AI-31-077: rooms, proctors, auto-route by
   accommodation and printed proctor lists. Left: a review-date field, and
   anything for a testing coordinator across several teachers' rosters. See
   HISTORY.)*

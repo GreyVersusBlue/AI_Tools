@@ -629,5 +629,78 @@ const seedPage = (storage, scripts = [QB_SRC, CTCG_SRC, GBQ_SRC, NEW_SRC]) => pa
   ], 'a copied seed saves to the spreadsheet as any question does');
 }
 
+console.log('QuestionBank — a link: eight fields as bounded text, and nothing else');
+{
+  const storage = fakeStorage();
+  const q = page(storage, [QB_SRC]).QuestionBank;
+  const HOSTILE = '<img src=x onerror="window.__pwned=1">';
+  eq([q.isLink(null), q.isLink([]), q.isLink({}), q.isLink({ questions: 'x' }), q.isLink({ questions: [] })],
+    [false, false, false, false, true], 'a link payload is a record with a list of questions');
+  eq(q.fromLink('nope'), { ok: false, name: '', from: '', questions: [], dropped: 0, over: 0 }, 'anything else is read as nothing');
+
+  // an own key named __proto__, as JSON.parse makes it (a literal would set the prototype)
+  const sneaky = JSON.parse('{"prompt":"P","answer":"A","__proto__":{"polluted":true},"constructor":"x"}');
+  const got = q.fromLink({
+    v: 1, from: 'cultural-trivia-card-generator', name: '  A set  ',
+    questions: [
+      { id: 'q-victim', prompt: ' Capital of Peru? ', answer: ' Lima ', unit: 'Hispanic World', standard: 'S1', difficulty: 'hard',
+        tags: ['a', 'A', ' b '], choices: ['Lima', 'Quito'], points: '200', media: { src: 'javascript:alert(1)' },
+        createdAt: '2020', updatedAt: '2021', copiedFrom: 'seed:053:b1', sharedFrom: 'evil', extra: HOSTILE },
+      { question: 'Old name?', answer: 'Yes' },
+      { prompt: '', answer: 'no prompt' }, { prompt: 'no answer' }, null, 'text', 7,
+      sneaky,
+    ],
+  });
+  eq(got.questions[0], { prompt: 'Capital of Peru?', answer: 'Lima', choices: ['Lima', 'Quito'], unit: 'Hispanic World', standard: 'S1',
+    difficulty: 'Hard', tags: ['a', 'b'], points: 200, sharedFrom: 'cultural-trivia-card-generator' },
+    'the eight fields arrive, trimmed and typed; the id, media, dates, copiedFrom, a forged sharedFrom and an unknown field do not');
+  eq(Object.keys(got.questions[0]).sort(), ['answer', 'choices', 'difficulty', 'points', 'prompt', 'sharedFrom', 'standard', 'tags', 'unit'], 'and those are all its keys');
+  eq(got.questions[1].prompt, 'Old name?', '030\'s old name for the prompt is read');
+  eq([got.ok, got.name, got.from, got.questions.length, got.dropped, got.over], [true, 'A set', 'cultural-trivia-card-generator', 3, 5, 0],
+    'rows with no prompt or no answer, and rows that are not records, are left out and counted');
+  eq([Object.keys(got.questions[2]).includes('__proto__'), got.questions[2].polluted, ({}).polluted, Object.keys(got.questions[2]).includes('constructor')],
+    [false, undefined, undefined, false], 'a __proto__ or constructor key in a link reaches nothing');
+
+  // the sender's name: a slug or nothing
+  for (const bad of ['<b>x</b>', 'Has Space', 'UPPER', 'a--b', '-a', 'a'.repeat(81), 7, null, { toString: () => 'x' }]) {
+    const r = q.fromLink({ from: bad, questions: [{ prompt: 'P', answer: 'A' }] });
+    eq([r.from, 'sharedFrom' in r.questions[0]], ['', false], 'a sender that is not a slug is dropped: ' + JSON.stringify(bad));
+  }
+
+  // bounds
+  const L = q.LINK, long = 'x'.repeat(5000);
+  const big = q.fromLink({ name: long, questions: [{ prompt: long, answer: long, unit: long, standard: long,
+    tags: Array.from({ length: 40 }, (_, i) => i + long), choices: Array.from({ length: 40 }, (_, i) => i + long), points: 1e300 }] });
+  const b = big.questions[0];
+  eq([big.name.length, b.prompt.length, b.answer.length, b.unit.length, b.standard.length, b.tags.length, Math.max(...b.tags.map(t => t.length)),
+    b.choices.length, Math.max(...b.choices.map(t => t.length)), b.points],
+    [L.name, L.prompt, L.answer, L.unit, L.standard, L.tags, L.tag, L.choices, L.choice, 1000000], 'every text and list is cut to its bound, and points to a million');
+  eq(q.fromLink({ questions: [{ prompt: 'P', answer: 'A', points: 'lots' }, { prompt: 'Q', answer: 'A', points: -5e9 }, { prompt: 'R', answer: 'A', points: 12.6 }] })
+    .questions.map(x => x.points), [0, -1000000, 13], 'points that are not a number are 0; a number is whole and bounded');
+  const many = q.fromLink({ questions: Array.from({ length: L.questions + 25 }, (_, i) => ({ prompt: 'Q' + i, answer: 'A' })) });
+  eq([many.questions.length, many.over, many.questions[L.questions - 1].prompt], [L.questions, 25, 'Q' + (L.questions - 1)], 'a link brings at most LINK.questions; the rest are counted and not read');
+  eq(q.fromLink({ questions: [{ prompt: 'P', answer: 'A', unit: { toString: () => HOSTILE }, tags: [{ a: 1 }, ['x']], choices: [[HOSTILE]] }] }).questions[0],
+    { prompt: 'P', answer: 'A', unit: '', standard: '', difficulty: '', tags: [], points: 0 }, 'a field that is not text is blank, never an object\'s own string');
+  eq(q.fromLink({ questions: [{ prompt: HOSTILE, answer: 'javascript:alert(1)', unit: HOSTILE, tags: [HOSTILE], choices: [HOSTILE, 'b'] }] }).questions[0],
+    { prompt: HOSTILE, answer: 'javascript:alert(1)', choices: [HOSTILE, 'b'], unit: HOSTILE, standard: '', difficulty: '', tags: [HOSTILE], points: 0 },
+    'markup in a text is kept as the text it is (the page shows it as text)');
+  eq(storage.writes, [], 'fromLink() stores nothing');
+
+  // a link cannot write over a question, and twice is once
+  q.saveQuestion({ id: 'q-victim', prompt: 'Mine', answer: 'Kept' }, { now: 'T0' });
+  const first = q.importQuestions(got.questions, { now: 'T1', nowMs: 5, random: () => 0.5 });
+  eq([first.added, first.updated, first.same, first.skipped], [3, 0, 0, 0], 'what a link brings is added as new questions');
+  eq(plain(q.list()[0]).prompt + '/' + plain(q.list()[0]).answer, 'Mine/Kept', 'the question whose id the link named is untouched');
+  const ids = q.list().map(x => x.id);
+  eq([new Set(ids).size, ids.filter(i => i === 'q-victim').length, ids.slice(1).every(i => /^q-/.test(i))], [4, 1, true], 'each arrival has an id the bank made');
+  const second = q.importQuestions(q.fromLink({ from: 'cultural-trivia-card-generator', questions: [
+    { prompt: 'capital of  peru?', answer: 'LIMA' }, { prompt: 'Old name?', answer: 'Yes' }, { prompt: 'P', answer: 'A' }] }).questions, { now: 'T2' });
+  eq([second.added, second.skipped, q.list().map(x => x.id)], [0, 3, ids], 'the same link again adds nothing (letter case and spacing aside), and no id moves');
+  const edited = plain(q.list()[1]); edited.prompt = 'Capital city of Peru?';
+  q.saveQuestion(edited, { now: 'T3' });
+  const third = q.importQuestions(got.questions, { now: 'T4', nowMs: 9, random: () => 0.75 });
+  eq([third.added, plain(q.list()[1]).prompt, q.list().length], [1, 'Capital city of Peru?', 5], 'a question the teacher has since reworded is theirs: the link\'s wording is added beside it, not over it');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
