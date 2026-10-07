@@ -568,8 +568,10 @@ files must be added there too.
   and the study guide, from a board or the bank tab's list, built from elements. Since v284 it has the final wager round
   and quiz-bowl too: one field each on the board (`final`, `quizBowl`, the quiz-bowl log holding question ids), the
   bank read with `peek()` and never written, both played on one overlay (`#roundOverlay`) and each with its own
-  take-back button. The next mode (the wheel) is opt-in the same way, adds its fields only once used, and runs
-  `_old-game.mjs` and `_every-team-game.mjs` unchanged (`npm run test:play-rounds` holds the second). **030
+  take-back button. Since v285 it has spin-the-wheel, the last of the modes: one `wheel` field, and **the
+  spin is never chance at play time** (it is worked out from a seed stored on the board and the spin's number, and saved
+  before the picture turns; do not call `Math.random` for a spin). A later mode is opt-in the same way, adds its fields only once used, and runs
+  `_old-game.mjs`, `_every-team-game.mjs` and `_rounds-game.mjs` unchanged (`npm run test:play-rounds` holds the second, `npm run test:play-wheel` the third). **030
   does not print through the print kit**: its sheets go into its own `#printArea`, the new ones with `printing-sheet`
   on `<body>` so the screen is out of the flow (`npm run test:play-modes`, `npm run test:play-modes-core`).
   030's old key (`gvb-review-board-bank:entries`) is read on every load

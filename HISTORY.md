@@ -9,6 +9,71 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 12 P3, increment 3: spin-the-wheel on 030; P3 is whole (2026-10-07, AI-14, `CACHE_VERSION` v285)
+
+**What shipped.** The last play mode of BACKLOG rank 29, so the row is deleted. A board has a **Spin the wheel**
+tick box, off until ticked. On, a spin chooses the clue for the team: one wedge for every clue not yet played, each
+as likely as any other, and one more each for two extra wedges a teacher may tick, **Lose a turn** and **Double
+points** (the next clue played is worth twice its points). `BACKLOG.md`'s Path 12 section, "Increment 3", is the
+design as built; `Tools/review-game-board/rgb-play.js`'s header says the same.
+
+**The one idea worth keeping.** The spin is not chance at play time. A seed is made once a game (when the box is
+ticked, and by Reset game) and stored on the board; spin number n is a pure function of the seed, n and the wedges as
+they stand; and the page records and saves the spin before the picture starts to turn. So a reload cannot re-roll, the
+picture cannot disagree with the result, and the whole mode is testable in pure Node: a game is replayed twice and
+once more through a JSON round trip and gives the same sequence.
+
+**First check.** The mode did not exist: no `wheel` anywhere in 030 or `rgb-play.js`. Before any edit, the final
+wager round and quiz-bowl as v284 left them were played through every stage and hashed twice (65 pins,
+`Tools/review-game-board/test/_rounds-game.mjs`); they, the 32 one-team pins and the 23 every-team pins are green on
+the finished page.
+
+**Calls made (each is a question for Devon, 45 to 58 in BACKLOG's Path 12 section).** The wheel lands on a clue,
+not a category. Every wedge is equally likely, the extras included. Lose a turn only says so, because the page keeps
+no turns. Double points doubles the next clue played however it is opened, in both ways of scoring; a Daily Double
+keeps its wager and the double waits. Reset game draws a new seed, so a replay is a new order (the other reading, the
+same order again, is what a teacher would notice as a fault). A clue can still be opened by hand. The wheel does not
+open the clue: the focus lands on it and Enter opens it. S spins.
+
+**What changed in code that was already there.** Five places now read a clue's worth through
+`ReviewBoardPlay.wheelWorth(points, state.wheel)`, which returns `points` itself (the same value, the same type)
+unless a double is waiting: the clue heading, the one-team award buttons, the every-team panel's rule, its scoring
+and its status sentence. `markCurrentClueUsed()` spends the double. `cleanRounds()`, `startBoard()`, Save board and
+Reset game each gained one line for the field. The grid marks the landed cell (a class and an `aria-label`), on a
+board with a wheel only. Nothing else in the page moved; `_shared/question-bank.js` is not edited; inline-sink
+baseline for 030 still 3.
+
+**Tests.** `test:play-modes-core` 273 assertions (194 before, pure Node): the draw (a golden sequence, fairness
+over 24,000 fixed seeds within 1.5 percentage points of 1 in N for 2, 5, 12 and 30 wedges and for 24,000 spins of
+one seed, 3,000 seeded games never landing on a played clue), the wedges, what a spin records, the double, the
+words, a wheel from a file, Reset. New `test:play-wheel` (port 8522), 162 assertions: the 65 pins, off until
+ticked, a whole seeded game by button and by S across two reloads, the status line written once (a
+MutationObserver), focus and the landed cell's name and mark, the turning (1.2 s with motion, 0 s without; the
+spin already stored while it turns; a second press ignored; the wedge under the pointer at rest), both extra wedges,
+the double in both ways of scoring and beside a Daily Double, Export, Import, Edit, Reset, unticking, markup as text,
+axe in both themes.
+
+**Breaks on purpose.** Pure Node, 56: 51 caught by an assertion, 3 stopped the suite with a crash (a guard on a
+missing wheel removed), 2 changed nothing a test can see (`wheelLanded` without its kind test still finds no clue
+for Lose a turn; the draw without its thrown-away tail is biased by under one part in a hundred million).
+In the page, 8 written and **4 run**, one suite run per lock, all 4 caught by an assertion: the double not spent, the
+spin not saved before the picture turns, no focus on the chosen clue, S spinning under an open clue. **Not broken
+on purpose in the page:** the seed given to a file's wheel that has none, the reduced-motion rule, Edit questions
+forgetting the last spin, the guard against a second spin while turning, the landed cell's name and mark, Reset's
+new seed, the extra wedges' tick boxes, the every-team and Daily Double halves of the double.
+
+**Got wrong.** Nine expectations in the first run of the new suite were mine, not the page's: I took the board's
+first open cell to be Rivers 200 when the grid is laid out by row and it is Deltas 100, and I guessed the golden
+game of seed-1 before running it. One golden in the pure suite was guessed too and replaced with what the rule
+gives. The four page breaks were started in one foreground command that outran the tool's ten-minute limit while it
+waited on the suites lock, and finished in the background; nothing was committed while the page was broken.
+
+**Not verified.** No class spun the wheel; no person used it; no screen reader was run. The turning was checked by
+its CSS and where it rests, not watched. Hundreds of clues on one wheel. Not run: the full `npm test`.
+
+**Left of Path 12.** P2's leftovers on rank 28 (018 and 019 station questions, 062's map questions, named sets and
+a tag filter on 030), P4 media on rank 30, and the long-list route.
+
 ## Path 12 P3, increment 2: the final wager round and quiz-bowl on 030 (2026-10-07, AI-14, `CACHE_VERSION` v284; the code commit says v283, which AI-31-016 took before the merge)
 
 BACKLOG rank 29 had three modes left; this session was handed two, the final wager round and then quiz-bowl. The
