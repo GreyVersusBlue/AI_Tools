@@ -149,7 +149,8 @@ await page.click('.top-tab-btn[data-top="bank"]');
 await settle(page, 250);
 eq(await page.$$eval('#bankList .bank-entry', rows => rows.map(r => [r.querySelector('.bank-q').textContent, r.querySelector('.bank-a').textContent,
   Array.from(r.querySelectorAll('.bank-tag')).map(t => t.textContent)])),
-  [[X('bq'), X('ba'), [X('unit'), X('std'), 'Hard', '300 pts']], ['Capital of Peru?', 'Lima', ['Unit 1', '100 pts']]], 'the bank list is every field as text');
+  // Since v274 a row shows the question's own tags too, after the four it always showed.
+  [[X('bq'), X('ba'), [X('unit'), X('std'), 'Hard', '300 pts', X('tag')]], ['Capital of Peru?', 'Lima', ['Unit 1', '100 pts']]], 'the bank list is every field as text, the question\'s tag among them');
 eq(await page.$$eval('#bankFilterUnit option', os => os.map(o => [o.value, o.textContent])), [['', 'All units'], [X('unit'), X('unit')], ['Unit 1', 'Unit 1']].sort((a, b) => (a[0] === '' ? -1 : b[0] === '' ? 1 : a[0].localeCompare(b[0]))),
   'the unit filter lists each unit as its own value and label');
 eq(await page.$$eval('#bankFilterStandard option', os => os.map(o => [o.value, o.textContent])), [['', 'All standards'], [X('std'), X('std')]], 'and the standard filter');
