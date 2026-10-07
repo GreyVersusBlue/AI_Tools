@@ -253,6 +253,8 @@
     "Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs",
     "Tools/gallery-walk-qr/test/smoke-print.mjs",
     "Tools/qr-code-generator/test/smoke-print.mjs",
+    "Tools/qr-code-generator/test/smoke-bulk-core.mjs",
+    "Tools/qr-code-generator/test/smoke-bulk.mjs",
     "Tools/question-bank/test/question-bank.test.mjs",
     "Tools/question-bank/test/smoke-seed-sets.mjs",
     "Tools/export/test/export.test.mjs",

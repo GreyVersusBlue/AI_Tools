@@ -190,6 +190,8 @@
     "test:scavenger-hunt-print": "node Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs",
     "test:gallery-walk-print": "node Tools/gallery-walk-qr/test/smoke-print.mjs",
     "test:qr-code-print": "node Tools/qr-code-generator/test/smoke-print.mjs",
+    "test:qr-bulk-core": "node Tools/qr-code-generator/test/smoke-bulk-core.mjs",
+    "test:qr-bulk": "node Tools/qr-code-generator/test/smoke-bulk.mjs",
     "test:stage": "node Tools/stage/test/stage.test.mjs && node Tools/stage/test/smoke-stage-rollout.mjs",
     "test:media": "node Tools/media/test/media-db.test.mjs && node Tools/media/test/smoke-media-db.mjs",
     "test:seating-read": "node Tools/seating-read/test/seating-read.test.mjs",
