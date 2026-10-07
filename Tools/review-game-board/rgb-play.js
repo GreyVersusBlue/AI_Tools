@@ -1,5 +1,5 @@
 /* Quiz / Review Game Board — play modes and printed sheets (Path 12 P3,
-   increment 1, v280). Publishes window.ReviewBoardPlay. Stores nothing and
+   increment 1, v281). Publishes window.ReviewBoardPlay. Stores nothing and
    reads nothing: the page hands in a board or a list of questions and saves
    the board itself, as it always has.
 

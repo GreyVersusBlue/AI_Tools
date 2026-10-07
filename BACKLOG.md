@@ -87,7 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
-- **AI-14 (v280), rank 29 (kept, rewritten), Path 12 P3 increment 1: every-team-answers and the printed quiz and
+- **AI-14 (v281), rank 29 (kept, rewritten), Path 12 P3 increment 1: every-team-answers and the printed quiz and
   study guide on 030.** A board has an **Every team answers** tick box, off until ticked: on, showing a clue's answer
   shows a marking panel (Right, Wrong or No answer for each team; keys 1 to 9 and Enter) where the one-team award
   buttons were, and Score this clue gives the points to every team marked right. The toolbar and the bank tab each
@@ -486,7 +486,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; 062's thirty map questions, which are not published (they wait on P4); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Seventeen questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 29 | Path 12 P3 — play modes in 030. **Increment 1 (AI-14, v280): every-team-answers (a tick box on a board: when the answer is shown each team is marked right, wrong or no answer and one press scores the clue; a right answer scores the clue's points, a wrong answer and no answer nothing; one Undo takes the clue back) and the printed sheets (a practice quiz with room to answer and its answer key starting a new page, and a study guide with each answer beside its question, from a board or from what the bank tab's list shows).** **Left:** quiz-bowl, spin-the-wheel, the final wager round. Thirteen questions for Devon (18 to 30) are in the section | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 29 | Path 12 P3 — play modes in 030. **Increment 1 (AI-14, v281): every-team-answers (a tick box on a board: when the answer is shown each team is marked right, wrong or no answer and one press scores the clue; a right answer scores the clue's points, a wrong answer and no answer nothing; one Undo takes the clue back) and the printed sheets (a practice quiz with room to answer and its answer key starting a new page, and a study guide with each answer beside its question, from a board or from what the bank tab's list shows).** **Left:** quiz-bowl, spin-the-wheel, the final wager round. Thirteen questions for Devon (18 to 30) are in the section | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -566,7 +566,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 126 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
 | 127 | Reuse the real timer; period-aware auto-advance | 010 | ½ | | [010 Command Center](#010--command-center) |
 | 128 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
-| 129 | More grid types; number-line variants | 012 | ½ | | [012 Graph Paper & Number Line Generator](#012--graph-paper--number-line-generator) |
 | 130 | Date-received per student; contract-gate reporting | 013 | ½ | | [013 Lab Safety Contract Tracker](#013--lab-safety-contract-tracker) |
 | 131 | Printed ordering activity; blanking dates, not just titles | 015 | ½ | | [015 Timeline Builder](#015--timeline-builder) |
 | 132 | A label under each code; batch codes from a spreadsheet | 016 | ½ | | [016 QR Code Generator](#016--qr-code-generator) |
@@ -4410,7 +4409,7 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
 - **P3 — Play modes in 030.** Every-team-answers mode, quiz-bowl, spin-the-wheel,
   the final wager round, and a printed practice quiz/study guide with an answer key
   — all reading the same bank.
-  **Increment 1 shipped (AI-14, 2026-10-07, v280): every-team-answers, and the printed quiz and study guide. Left:
+  **Increment 1 shipped (AI-14, 2026-10-07, v281; the code commit says v280, which AI-31-012 took): every-team-answers, and the printed quiz and study guide. Left:
   quiz-bowl, spin-the-wheel and the final wager round. The rest of this bullet is that increment as built;
   `Tools/review-game-board/rgb-play.js`'s header says the same and is the reference.**
   - *How a board was played, and still is by default.* A clue is opened from the grid, **Show answer** (or Space)
@@ -8135,17 +8134,21 @@ optionally imposed as a booklet — without any of it touching a cloud service.
 
 #### Quick Wins
 
-- **More grid types**: hexagonal, polar, log/semi-log, engineering (5 squares
-  per inch), Cornell-notes ruling, handwriting lines with a dashed midline,
-  storyboard boxes, music staff.
+None open. The grid types the row asked for are all there (hexagonal, polar, log and
+semi-log, engineering at 5 squares per inch, Cornell notes, handwriting lines,
+storyboard frames, music staves), and so are the number-line kinds (integers with zero
+marked, decimals, fractions and mixed numbers, open, double, thermometer). Not built:
+engineering paper's title block or border, a clef or key signature on the staves, and
+polar paper in radians.
 
 #### Major Features
 
 - **Pre-plotted content** (outside worksheet mode, on the plain coordinate
   plane / graph paper modes) is still open. Worksheet mode (below) shipped
   its own copy of the expression parser scoped to that mode's problems only.
-- **Isometric and dot paper for other subjects** — technical drawing, 3D
-  volume nets, perspective grids for art.
+- **Subject templates on the paper that exists** — isometric and dot paper are
+  there; what is not is technical-drawing frames, 3D volume nets and perspective
+  grids for art.
 - **Graph paper with a data table beside it**, for science labs — the exact
   page a lab handout needs and nobody generates.
 - **A grid the student can also use on screen** via a share link (P3) — plot
