@@ -2,6 +2,8 @@
 // Guarded read/write so a corrupt or missing value never throws; callers always
 // get a fully-shaped object back.
 
+import { sanitizeBoard } from './ct-board-core.js';
+
 const KEY = 'ct_prefs';
 // Separate key from KEY: this is a snapshot of an in-progress `phase` object,
 // not a preference, and its shape varies per mode — sanitize() above assumes
@@ -96,6 +98,11 @@ function sanitize(raw) {
     out.display.overtimeEnabled = raw.display.overtimeEnabled !== undefined ? !!raw.display.overtimeEnabled : out.display.overtimeEnabled;
     out.display.endMessage = String(raw.display.endMessage || '').slice(0, 60);
   }
+  // The timer board (ct-board.js) is optional: a save from before it has no
+  // `board`, and a load never invents one, so the single-timer view's saved
+  // string stays byte for byte what it was until the board is opened.
+  const board = sanitizeBoard(raw.board);
+  if (board) out.board = board;
   if (Array.isArray(raw.customPresets)) {
     out.customPresets = raw.customPresets
       .filter(p => p && typeof p === 'object')

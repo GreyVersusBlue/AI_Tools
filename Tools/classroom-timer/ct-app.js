@@ -6,6 +6,7 @@
 
 import { load, save, loadRunning, saveRunning, clearRunning, MAX_AGENDA_SEGMENTS } from './ct-store.js';
 import * as Sounds from './ct-sounds.js';
+import { initBoard } from './ct-board.js';
 
 const RING_R = 90;
 const RING_C = 2 * Math.PI * RING_R;
@@ -20,6 +21,7 @@ let prefs = load();
 let mode = prefs.activeTab;
 let timerId = null;
 let phase = { status: 'idle' };
+let board = null;   // the timer board's handle (ct-board.js), once the full view is up
 
 const els = {};
 function q(id) { return document.getElementById(id); }
@@ -138,7 +140,7 @@ function releaseWakeLock() {
 // if the timer keeps running underneath — re-request it on return so a
 // teacher who alt-tabbed away and back still gets a screen that stays awake.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && phase.status === 'running') acquireWakeLock();
+  if (document.visibilityState === 'visible' && (phase.status === 'running' || (board && board.isBusy()))) acquireWakeLock();
 });
 
 /** Read-only snapshot of what's currently on screen, for the "mirror to a
@@ -170,7 +172,9 @@ export function getDisplaySnapshot() {
     no-op in strip mode — the ambient strip is a read-only second window and
     was never the thing being paired with in the first place. */
 export function applyRemoteCommand(cmd) {
-  if (STRIP_MODE) return;
+  // The paired phone mirrors and drives the single timer. While the board is
+  // up that timer is hidden, so a command must not start it unseen.
+  if (STRIP_MODE || (board && board.isOpen())) return;
   if (cmd === 'start') {
     if (phase.status === 'idle' || phase.status === 'done') onStart();
   } else if (cmd === 'pause') {
@@ -940,6 +944,9 @@ function initControls() {
     if (e.key === 'Escape' && !els.helpOverlay.hidden) { toggleHelpOverlay(false); return; }
     if (e.key === '?' && !typing) { e.preventDefault(); toggleHelpOverlay(); return; }
     if (typing) return;
+    // The board has its own keys (1-4); Space, R and the presets belong to the
+    // single timer, which is hidden while the board is up.
+    if (board && board.isOpen()) return;
 
     if (e.code === 'Space') {
       if (tag === 'BUTTON') return;
@@ -1122,6 +1129,15 @@ function init() {
   initDisplayPanel();
   initControls();
   if (!restored) resetPhaseForMode();
+  board = initBoard({
+    getPrefs: () => prefs,
+    isSingleBusy: () => phase.status === 'running' || phase.status === 'paused',
+    unlock: () => Sounds.unlock(),
+    // One sound and one flash per tick, however many timers ended in it, by
+    // the same Alert Sound card the single timer reads.
+    onRing: () => { Sounds.play(prefs.sound.choice, effectiveVolume()); startZeroFlash(); },
+    onRunning: (running) => { if (running) acquireWakeLock(); else releaseWakeLock(); }
+  });
 }
 
 if (document.readyState === 'loading') {

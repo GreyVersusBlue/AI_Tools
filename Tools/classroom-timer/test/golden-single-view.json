@@ -1,0 +1,23 @@
+{
+  "dom": {
+    "tabs": "db42c8e4bf82ee985e4cb32a11d5e6314c9201f1c5c279777f615c4a18ed0002",
+    "stage": "c0b878a44453897fc1f267e66baef7d6435bb17ab8eca6a04a86f5accbb4edb7",
+    "settings": "a6ec824f0ddfaaead960d87797870b727bfed61b85d4fcaa2752bbade176885d",
+    "soundCard": "166b2a23a52053f6ccc2e2feaf99b2fabf802dc7eeb5edfd33ca26920c647937",
+    "displayCard": "0c9ed31853febf3f28d78d3218d68dbf24909d9dd1024cab49eeef7dc99ef2c4",
+    "strip": "760f461a3d0817316af8d1e9029339a6871da1e4584f6bc4833a40beaaf61c80",
+    "display": "05:00",
+    "prefsWritten": null
+  },
+  "prefs": "{\"v\":1,\"activeTab\":\"countdown\",\"countdown\":{\"minutes\":7,\"seconds\":0,\"untilEnabled\":false,\"untilTime\":\"\"},\"transition\":{\"minutes\":2,\"seconds\":0},\"random\":{\"minMinutes\":3,\"maxMinutes\":8},\"roundrobin\":{\"minutes\":2,\"seconds\":0,\"stations\":5,\"loop\":false},\"agenda\":{\"segments\":[{\"name\":\"Do Now\",\"minutes\":5,\"seconds\":0},{\"name\":\"Notes\",\"minutes\":15,\"seconds\":0},{\"name\":\"Practice\",\"minutes\":20,\"seconds\":0},{\"name\":\"Exit Ticket\",\"minutes\":5,\"seconds\":0}]},\"sound\":{\"choice\":\"chime\",\"volume\":0.7,\"muted\":false,\"flashEnabled\":false},\"display\":{\"amberPct\":25,\"redPct\":10,\"overtimeEnabled\":true,\"endMessage\":\"\"},\"customPresets\":[{\"name\":\"Quiz\",\"minutes\":7,\"seconds\":0,\"icon\":\"\",\"color\":\"#2a6db0\"}]}",
+  "running": "{\"mode\":\"countdown\",\"phase\":{\"status\":\"paused\",\"laps\":[],\"totalMs\":420000,\"endAt\":1772464021000,\"remainingAtPause\":390000}}",
+  "old": {
+    "time": "03:15",
+    "active": "transition",
+    "sound": "bell",
+    "muted": true,
+    "end": "Pencils down.",
+    "presets": "🔔 Bell ringer (4:00) ×",
+    "stored": "{\"v\":1,\"activeTab\":\"transition\",\"countdown\":{\"minutes\":12,\"seconds\":30,\"untilEnabled\":false,\"untilTime\":\"\"},\"transition\":{\"minutes\":3,\"seconds\":15},\"sound\":{\"choice\":\"bell\",\"volume\":0.4,\"muted\":true,\"flashEnabled\":true},\"display\":{\"amberPct\":30,\"redPct\":12,\"overtimeEnabled\":false,\"endMessage\":\"Pencils down.\"},\"customPresets\":[{\"name\":\"Bell ringer\",\"minutes\":4,\"seconds\":0,\"icon\":\"🔔\",\"color\":\"#2a6db0\"}]}"
+  }
+}

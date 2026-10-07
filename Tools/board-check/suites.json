@@ -50,6 +50,8 @@
     "Tools/sub-plan-builder/test/smoke-share.mjs",
     "Tools/classroom-timer/test/smoke-strip.mjs",
     "Tools/classroom-timer/test/smoke-remote.mjs",
+    "Tools/classroom-timer/test/smoke-board-core.mjs",
+    "Tools/classroom-timer/test/smoke-board.mjs",
     "Tools/final-grade-checker/grade-math.test.mjs",
     "Tools/final-grade-checker/test/smoke-whatif.mjs",
     "Tools/data-chart-builder/test/smoke-xlsx.mjs",

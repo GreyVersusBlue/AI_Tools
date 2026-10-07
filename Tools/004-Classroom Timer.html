@@ -366,6 +366,60 @@
   .mirror-status { font-size: 0.85rem; color: var(--color-dim); margin-top: 0.6rem; }
   .mirror-status.bad { color: var(--color-danger); }
   .mirror-status.good { color: var(--color-success); }
+
+  /* ---------- timer board (classroom-timer/ct-board.js) ----------
+     Two to four timers side by side; they stack on a narrow screen. A finished
+     timer is shown by its thick border and its words, not by colour alone. */
+  .board-note { margin: 0 0 1rem; font-weight: 600; color: var(--color-warn); }
+  .board-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  body.board-mode .mode-tabs,
+  body.board-mode .timer-stage,
+  body.board-mode #modeSettings { display: none; }
+  body.board-mode .container { max-width: 1400px; }
+  /* The header's six buttons are wider than a phone. Wrapping them is done for
+     the board only: the single-timer view is left exactly as it was. */
+  body.board-mode .header-actions { flex-wrap: wrap; }
+  .board-bar { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .board-bar label { font-size: 0.85rem; color: var(--color-dim); }
+  .board-hint { font-size: 0.85rem; color: var(--color-dim); }
+  .board-grid { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); margin-bottom: 1.5rem; }
+  @media (min-width: 720px) { .board-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 1100px) { .board-grid[data-count="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .bt {
+    container-type: inline-size;
+    display: flex; flex-direction: column; gap: 0.7rem;
+    background: var(--color-surface);
+    border: 3px solid var(--color-divider);
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+  .bt[data-state="running"] { border-color: var(--color-accent); }
+  .bt[data-state="paused"] { border-style: dashed; border-color: var(--color-dim); }
+  .bt[data-state="done"] { border-width: 7px; border-color: var(--color-danger); }
+  .bt-label { width: 100%; font-size: 1.1rem; font-weight: 700; }
+  .bt-time {
+    font-family: 'Consolas', 'SFMono-Regular', ui-monospace, monospace;
+    font-weight: 700; text-align: center; line-height: 1;
+    font-variant-numeric: tabular-nums;
+    font-size: 3rem;
+    font-size: clamp(2.2rem, 18cqw, 6rem);
+  }
+  /* Small text stays the page's text colour (the amber text token is under 4.5:1
+     on a white card); the big digits and the bar carry the colour. */
+  .bt[data-urgency="warn"] .bt-time { color: var(--color-warn); }
+  .bt[data-urgency="critical"] .bt-time { color: var(--color-danger); }
+  .bt-track { height: 8px; background: var(--color-divider); border-radius: 999px; overflow: hidden; }
+  .bt-fill { height: 100%; width: 100%; background: var(--color-accent); transition: width 0.25s linear; }
+  .bt[data-urgency="warn"] .bt-fill { background: var(--color-warn); }
+  .bt[data-urgency="critical"] .bt-fill { background: var(--color-danger); }
+  .bt-status { display: flex; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; min-height: 1.4em; font-weight: 700; }
+  .bt-badge { font-size: 0.85rem; }
+  .bt-dur { justify-content: center; }
+  .bt-controls button { min-width: 0; flex: 1 1 6rem; }
+  /* White on the dark theme's lighter blue is under 4.5:1; the board's Start
+     takes dark text there (the single view's Start button is left as it was). */
+  [data-theme="dark"] .bt-go.btn-primary { color: #0b1420; }
+  @media (prefers-reduced-motion: reduce) { .bt-fill { transition: none; } }
 </style>
 </head>
 <body>
@@ -379,6 +433,7 @@
     </div>
     <div class="header-actions">
       <span class="mirror-live-badge" id="mirrorLiveBadge"><span class="dot" aria-hidden="true"></span>Mirroring</span>
+      <button type="button" id="boardBtn" title="Two to four independent timers side by side">Timer board</button>
       <button type="button" id="fullscreenBtn" title="Toggle fullscreen (F)">⛶ Fullscreen</button>
       <button type="button" id="stripBtn" title="Open a thin period strip in its own window, to sit above a slide deck">▬ Ambient strip</button>
       <button type="button" id="mirrorBtn">Mirror to a device</button>
@@ -414,6 +469,25 @@
       <div class="mirror-body" id="mirrorBody"></div>
     </div>
   </div>
+
+  <p class="board-note" id="boardNote" role="status" hidden></p>
+
+  <!-- Timer board: two to four independent timers on one screen. Built by
+       classroom-timer/ct-board.js; hidden until the header button opens it. -->
+  <section class="board" id="board" aria-label="Timer board" hidden>
+    <div class="board-bar">
+      <label for="boardCount">Timers</label>
+      <select id="boardCount">
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
+      <button type="button" id="boardResetAll">Reset all</button>
+      <span class="board-hint">Keys <kbd>1</kbd>&ndash;<kbd>4</kbd> start, pause or resume that timer.</span>
+    </div>
+    <div class="board-grid" id="boardGrid"></div>
+    <div class="board-live" id="boardLive" role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
 
   <nav class="mode-tabs" role="tablist" aria-label="Timer mode">
     <button class="mode-tab" role="tab" data-mode="countdown">Countdown</button>
