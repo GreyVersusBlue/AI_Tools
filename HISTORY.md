@@ -9,6 +9,45 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 002 Group / Team Generator: a year-long pair memory and roles in each group (2026-10-07, AI-31-002, `CACHE_VERSION` v277)
+
+Audit entry AI-31, BACKLOG rank 119 (½), rewritten to what is left: project-team mode. Two of the three parts shipped whole.
+
+- **Part 1 was half stale; found by reading the page first.** The row and the 002 section said `pairHistory` keeps only two generations. It has kept every
+  pair's count for the whole year since 2026-08-13 (bounded by C(roster, 2), cut when a name leaves), the Pairing Grid shows counts and blanks, and Reset
+  pairing memory already asks first. Only the *steering* looked at two generations. So what was built: an opt-in **long memory** checkbox (`longMemory: true`,
+  written only when ticked), and a plain "Who has not yet worked together" list under the grid (per student: met N of M, and who not).
+- **How long memory works.** `Tools/group-team-generator/gtg-memory.js` (`GtgMemory`, precached and in `SHELL_URLS`, takes an `rng`, never `Math.random`):
+  after the page's own deal and repair, `refine()` swaps students between unlocked groups, steepest improvement first, comparing (broken keep rules, recent
+  repeat penalty, sum of count squared) in that order. Hard rules are never traded; a recent repeat is taken only to mend a broken rule; locked groups, sizes and
+  absent students do not move. Count squared, not count: a plain total ties {A,B met 4 times} with {two pairs met twice}. Bound: nothing new is stored, so the
+  bound is the existing one (the roster's C(n, 2) entries); nothing is dropped by age, as before.
+- **Roles are this tool's own, in its own code.** The 002 section did not say roles must come from 022, so nothing imports, edits or links 022 or 027
+  (their role histories are separate and nothing reads them). Section 6: a list, one role per line (12 at most, 40 characters each). Each shuffle gives
+  every group its roles by the cheapest whole assignment (Hungarian method on a student's count for each role, then the role held longest ago, ties by
+  chance). A group past the list leaves "no role", which counts as a turn; a group short of it leaves the last roles unfilled. A **locked group keeps its
+  students and rotates its roles** (decided here: locking is about who, and the same group next week is the usual reason to lock). History is
+  `roleHistory` in the class's own `gtg:data:<class>`, written only once roles are used; Undo restores it; roster pruning and a roster rename carry it; its own
+  Reset role history asks first and leaves the pairing memory alone. Roles show on cards, tents, sheets and Copy as Text; the share link carries none.
+- **Part 3, project-team mode, not built.** The section does not say enough (storage, who sees the task list, what the contract says, whether it counts in
+  the pair memory, whether it is Path 13 P2's); six questions are in 002's Open Questions. Rank 119 is rewritten to that.
+- **Old behaviour pinned.** `golden-old-groupings.json`, recorded once from the page at 4162d61 (`_record-golden.mjs`, `Math.random` seeded): twelve classes,
+  five rounds each, every strategy, locks, absences, keep-apart and keep-together. Groups, floaters and the saved string (SHA-256) are identical with both
+  options off, and the save gains no field. An old save opens as the old page opened it.
+- **Suites.** `smoke-year-memory-core.mjs` (`test:year-memory-core`, pure Node, 110 assertions): never worse on hard rules, locked groups, sizes, same answer for
+  same rng; over 10 class shapes x 40 seeds x 12 rounds, spread of pair counts and never-met pairs are lower with it on in every shape (28 in 7: never-met 62.6
+  to 10.4; variance 0.74 to 0.28); roles Latin-square exactly (4 and 4 over 8 rounds, 5 and 4 over 5), assignment optimal against every permutation.
+  `smoke-year-memory.mjs` (`test:year-memory`, port 8514, 154 assertions): the golden, long memory on the real page (3 shapes x 4 seeds, no worse and fewer
+  never-met), rules and locks held over 14 rounds, roles, tents, sheets, copy, undo, rename, damaged history, axe, share link. **Breaks on purpose:** 33 in the
+  module (28 caught first time, 3 survived and got assertions, 2 are equivalent: a linear role cost, since 2c+1 is linear in c and gives the same minimum,
+  and reporting the tracked score instead of a recomputed one) and 28 in the page (26 caught by their own assertion first time, 2 survived and got assertions:
+  the "how many met" count and a damaged role history). The module breaks ran one at a time; the page breaks after 7 were run in batches of independent
+  mutants, each required to fail on its own named assertion, because the suites lock was held by others for hours.
+- **Not verified.** Nothing printed on paper, no real screen reader, no real class. Fairness is measured against the old page's own repair on seeded
+  random classes, not on a teacher's real keep-apart lists. The full `npm test` was not run.
+- **For the platform worker (Path 13 P1/P2).** `gtg-memory.js` is a second implementation of `rotateRoles` and the pair history; the shared module should be
+  held to its results, and 002 will have to be moved onto it by a commit of its own.
+
 ## CI: the test job's timeout is 120 minutes, was 60 (2026-10-07, AI-14, no `CACHE_VERSION`)
 
 Asked for by the Selector during the sprint, as one commit on AI-14's branch. The wave PR's full run (AI_Tools#352) was cancelled at the job's
