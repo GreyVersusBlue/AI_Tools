@@ -1,6 +1,6 @@
 // _golden-scenarios.mjs — the fixed scenarios that pin 002's grouping.
 //
-// Used by record-golden.mjs (run ONCE, on the page as it was before the year
+// Used by _record-golden.mjs (run ONCE, on the page as it was before the year
 // memory and roles were added, to write golden-old-groupings.json) and by
 // smoke-year-memory.mjs (which replays them on the current page with both new
 // options off and demands the same groups, the same floaters and the same saved

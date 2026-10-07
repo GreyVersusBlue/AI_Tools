@@ -1,7 +1,7 @@
-// record-golden.mjs — writes golden-old-groupings.json from the page AS IT IS.
+// _record-golden.mjs — writes golden-old-groupings.json from the page AS IT IS.
 // Run once, on the page before the year memory and roles existed, and never
 // again: the point of the file is that it came from the old page.
-//   node Tools/group-team-generator/test/record-golden.mjs
+//   node Tools/group-team-generator/test/_record-golden.mjs
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';

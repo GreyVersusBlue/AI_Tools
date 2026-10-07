@@ -121,6 +121,10 @@
   .group-card ul { list-style: none; display: flex; flex-direction: column; gap: 0.25rem; }
   .group-card li { font-size: 0.85rem; display: flex; justify-content: space-between; gap: 0.5rem; }
   .group-card li .skill { color: var(--text-dim); font-size: 0.75rem; font-family: var(--mono); }
+  .group-card li .member-role { margin-left: auto; color: var(--accent2); font-size: 0.75rem; font-weight: 600; }
+  .group-card li .member-role + .skill { margin-left: 0.5rem; }
+  .check-row { display: flex; gap: 0.55rem; align-items: flex-start; font-size: 0.82rem; color: var(--text); cursor: pointer; margin-bottom: 0; }
+  .check-row input { margin-top: 0.15rem; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
 
   .lock-btn { flex-shrink: 0; background: transparent; border: 1px solid var(--border); color: var(--text-dim); font-size: 0.68rem; font-weight: 600; padding: 0.2rem 0.45rem; border-radius: 5px; }
   .lock-btn.locked { color: var(--warn); border-color: var(--warn); }
@@ -146,6 +150,8 @@
   .tent-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
   .tent-list li { display: flex; justify-content: center; gap: 0.6rem; font-size: 1rem; }
   .tent-list .t-skill { color: var(--text-dim); font-family: var(--mono); font-size: 0.85rem; }
+  .tent-list .t-role { color: var(--accent2); font-weight: 700; font-size: 0.85rem; }
+  .sheet-names .s-role { color: var(--text-dim); font-weight: 600; }
 
   .sheet-page { border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem 1.4rem; margin-bottom: 1rem; }
   .sheet-page h2 { font-size: 1.4rem; margin-bottom: 0.3rem; }
@@ -178,6 +184,11 @@
   table.pairing-grid td.grid-self { color: var(--text-dim); background: var(--surface2); }
   table.pairing-grid td.grid-hit { color: var(--accent2); font-weight: 700; }
   table.pairing-grid td.grid-miss { color: var(--text-dim); }
+  .grid-section { margin-top: 0.9rem; }
+  .grid-section h3 { font-size: 0.82rem; margin-bottom: 0.35rem; }
+  .never-list { list-style: none; margin: 0; padding: 0; font-size: 0.78rem; line-height: 1.5; }
+  .never-list li { padding: 0.2rem 0; border-bottom: 1px dashed var(--border); }
+  .never-list .met { color: var(--text-dim); }
 
   .warn-box { font-size: 0.78rem; padding: 0.6rem 0.75rem; border-radius: 6px; margin-bottom: 0.85rem; background: rgba(251, 191, 36, 0.1); color: var(--warn); border: 1px solid rgba(251, 191, 36, 0.3); line-height: 1.5; }
   #msg { font-size: 0.78rem; padding: 0.55rem 0.75rem; border-radius: 6px; display: none; margin-top: 0.75rem; width: 100%; white-space: pre-line; }
@@ -198,6 +209,9 @@
     .group-card { border: 1px solid #999; break-inside: avoid; margin-bottom: 0.5rem; }
     .group-card h3 { color: #000; }
     .group-card li .skill { color: #555; }
+    .group-card li .member-role { color: #000; }
+    .tent-list .t-role, .sheet-names .s-role, .never-list .met { color: #333; }
+    .never-list li { border-bottom: 1px dashed #999; }
     .lock-btn, #results-heading { display: none !important; }
     .floater-box { border: 1px dashed #999; color: #333; }
     #print-title { display: block !important; font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem; }
@@ -231,6 +245,7 @@
 <script src="../_shared/handoffs.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="group-team-generator/gtg-memory.js"></script>
 </head>
 <body>
 
@@ -300,6 +315,10 @@
           <option value="pair">Put the leftover students in their own small group</option>
         </select>
       </div>
+      <div class="control-group">
+        <label class="check-row" for="long-memory-check"><input type="checkbox" id="long-memory-check"><span>Spread pairings across the whole year (long memory)</span></label>
+        <div class="hint" id="long-memory-hint">Off: a reshuffle only avoids repeating the last shuffle or two. On: it also swaps students between groups to give pairs who have worked together least a turn, never at the cost of a keep-apart or keep-together rule or of a locked group.</div>
+      </div>
     </div>
 
     <div class="card">
@@ -340,6 +359,18 @@
       <div class="control-group" id="custom-names-wrap" style="display:none;">
         <label for="custom-names-input">One name per line, in order</label>
         <textarea id="custom-names-input" placeholder="Red Team&#10;Blue Team&#10;Green Team&#10;..." spellcheck="false" style="min-height:90px;"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">6 · Roles in each group (optional)</div>
+      <div class="control-group">
+        <label for="roles-input">One role per line</label>
+        <textarea id="roles-input" placeholder="Recorder&#10;Reporter&#10;Timekeeper&#10;Materials manager" spellcheck="false" style="min-height:90px;"></textarea>
+        <div class="hint" id="roles-hint">Leave empty for no roles. With a list, every group is given its roles each time you make or reshuffle groups, so that nobody holds a role again before the others in their group have had a turn. A group with fewer students than roles leaves the last roles of the list unfilled; a group with more gives the extra students no role, and that counts as a turn too. A locked group keeps its students but its roles rotate.</div>
+      </div>
+      <div class="btn-row" style="margin-top:0;">
+        <button class="btn-secondary btn-small" id="reset-roles-btn" type="button">Reset role history</button>
       </div>
     </div>
 
@@ -434,6 +465,9 @@
     undoBtn: document.getElementById('undo-btn'),
     pairHistoryHint: document.getElementById('pair-history-hint'),
     resetPairHistoryBtn: document.getElementById('reset-pair-history-btn'),
+    longMemoryCheck: document.getElementById('long-memory-check'),
+    rolesInput: document.getElementById('roles-input'),
+    resetRolesBtn: document.getElementById('reset-roles-btn'),
     explainArea: document.getElementById('explain-area'),
     warnArea: document.getElementById('warn-area'),
     results: document.getElementById('results'),
@@ -556,6 +590,10 @@
     state.customNames = els.customNamesInput.value;
     state.keepApart = keepApart;
     state.keepTogether = keepTogether;
+    /* Written only when used, so a class that never turns these on saves the
+       same string it always did. */
+    if (els.longMemoryCheck.checked) state.longMemory = true; else delete state.longMemory;
+    if (els.rolesInput.value.trim()) state.rolesText = els.rolesInput.value; else delete state.rolesText;
     if (!Array.isArray(state.absentNames)) state.absentNames = [];
     saveConfig(state.name, state);
   }
@@ -572,6 +610,8 @@
     els.namingSelect.value = state.namingMode;
     els.customNamesInput.value = state.customNames || '';
     els.customNamesWrap.style.display = state.namingMode === 'custom' ? '' : 'none';
+    els.longMemoryCheck.checked = state.longMemory === true;
+    els.rolesInput.value = typeof state.rolesText === 'string' ? state.rolesText : '';
     if (!Array.isArray(state.absentNames)) state.absentNames = [];
     keepApart = Array.isArray(state.keepApart) ? state.keepApart : [];
     keepTogether = Array.isArray(state.keepTogether) ? state.keepTogether : [];
@@ -614,6 +654,10 @@
        exactly like "no ids known", so nothing migrates. */
     if (typeof state.rosterName !== 'string') state.rosterName = '';
     if (!state.idNames || typeof state.idNames !== 'object') state.idNames = {};
+    /* Role history exists only on a class that has used roles; one that is
+       there but not the shape below is read defensively, one that is absent
+       stays absent. */
+    if ('roleHistory' in state) state.roleHistory = GtgMemory.normalizeRoles(state.roleHistory);
     localStorage.setItem(CURRENT_KEY, name);
     refreshConfigSwitcher();
     applyStateToForm();
@@ -730,6 +774,11 @@
       }
     });
     state.pairHistory = next;
+
+    if (state.roleHistory && Object.prototype.hasOwnProperty.call(state.roleHistory, from)) {
+      state.roleHistory = GtgMemory.renameRoles(state.roleHistory, from, to);
+      moved = true;
+    }
 
     var ai = state.absentNames.indexOf(from);
     if (ai !== -1) {
@@ -1111,6 +1160,9 @@
     // retention-policy note above prunePairHistoryToRoster's definition.
     // Run once per deliberate generation, not per keystroke.
     prunePairHistoryToRoster();
+    if (state && state.roleHistory) {
+      state.roleHistory = GtgMemory.pruneRoles(state.roleHistory, students.map(function (x) { return x.name; }));
+    }
     var activeStudents = getActiveStudents();
     var strategy = getStrategy();
     var oddMode = els.oddModeSelect.value;
@@ -1142,13 +1194,25 @@
     var oddResult = applyOddHandling(groups, targetIdx, oddMode);
 
     resolveConstraints(groups, lockedIdxSet);
+    var longMemory = state && state.longMemory === true;
+    if (longMemory) {
+      GtgMemory.refine(groups, {
+        history: state.pairHistory, gen: state.pairGen || 0, apart: keepApart, together: keepTogether,
+        locked: lockedIdxSet, rng: Math.random, spread: true
+      });
+    }
     var violations = findApartViolations(groups);
     var togetherViolations = findTogetherViolations(groups);
     var repeatViolations = findRecentPairViolations(groups);
     // Read BEFORE recordPairHistory bumps the counts, so "brand new" means
     // genuinely never-before-seen going into this shuffle.
     var pairStats = countPairingsInGroups(groups);
+    var busiest = longMemory ? busiestPairing(groups) : 0;
+    var roleResult = assignGroupRoles(groups);
     recordPairHistory(groups);
+    if (roleResult) {
+      state.roleHistory = GtgMemory.recordRoles(state.roleHistory || {}, roleResult.names, roleResult.flat, state.pairGen);
+    }
 
     return {
       groups: groups,
@@ -1156,13 +1220,55 @@
       togetherViolations: togetherViolations,
       repeatViolations: repeatViolations,
       floaters: oddResult.floaters,
+      roles: roleResult ? roleResult.byGroup : null,
       meta: {
+        longMemory: longMemory, busiestPairing: busiest,
+        rolesFresh: roleResult ? roleResult.fresh : 0, rolesTotal: roleResult ? roleResult.total : 0,
         strategy: strategy, oddMode: oddMode, lockedCount: lockedCount, reshuffledCount: reshuffledCount,
         usedLocks: usedLocks, totalActive: activeStudents.length, groupCountTarget: targetIdx.length,
         fallbackNote: oddResult.fallbackNote, bonusGroupSize: oddResult.bonusGroupSize,
         newPairsThisGen: pairStats.brandNew, totalPairsThisGen: pairStats.total
       }
     };
+  }
+
+  /** The most times any pair in these groups has already worked together,
+   *  read before this shuffle is recorded. */
+  function busiestPairing(groups) {
+    var most = 0;
+    groups.forEach(function (group) {
+      for (var i = 0; i < group.length; i++) {
+        for (var j = i + 1; j < group.length; j++) most = Math.max(most, pairHistoryCount(group[i].name, group[j].name));
+      }
+    });
+    return most;
+  }
+
+  /** The teacher's role list, as a clean array ([] when there is none). */
+  function activeRoles() {
+    return GtgMemory.parseRoles(state && state.rolesText);
+  }
+
+  /** Gives every group its roles from the saved role history, or null when
+   *  the teacher has named none. Reads state.roleHistory, writes nothing:
+   *  makeGroups records the result once the shuffle is final. A locked group
+   *  keeps its students but takes its turn at the roles like any other. */
+  function assignGroupRoles(groups) {
+    var roles = activeRoles();
+    if (!roles.length) return null;
+    var history = state.roleHistory || {};
+    var gen = (state.pairGen || 0) + 1;
+    var byGroup = [], names = [], flat = [], fresh = 0, total = 0;
+    groups.forEach(function (group) {
+      var ms = group.map(function (s) { return s.name; });
+      var given = GtgMemory.assignRoles(ms, roles, history, gen, Math.random);
+      byGroup.push(given);
+      ms.forEach(function (n, i) {
+        names.push(n); flat.push(given[i]); total++;
+        if (given[i] && !GtgMemory.roleCount(history, n, given[i])) fresh++;
+      });
+    });
+    return { byGroup: byGroup, names: names, flat: flat, fresh: fresh, total: total };
   }
 
   /** Every same-group pairing in this arrangement, and how many of them have
@@ -1449,6 +1555,16 @@
         ' brand new — nobody in ' + (tp === 1 ? 'it has' : 'them has') +
         ' shared a group before, going back to the last pairing-memory reset.');
     }
+    if (result.meta.longMemory && result.meta.totalPairsThisGen) {
+      var lnp = result.meta.newPairsThisGen, ltp = result.meta.totalPairsThisGen;
+      lines.push('Long memory is on: ' + lnp + ' of ' + ltp + ' pairing' + (ltp === 1 ? '' : 's') + ' in this grouping ' +
+        (lnp === 1 ? 'has' : 'have') + ' never worked together before; the most any pair here has worked together so far is ' +
+        result.meta.busiestPairing + ' time' + (result.meta.busiestPairing === 1 ? '' : 's') + '.');
+    }
+    if (result.roles) {
+      lines.push(result.meta.rolesFresh + ' of ' + result.meta.rolesTotal + ' student' + (result.meta.rolesTotal === 1 ? '' : 's') +
+        ' got a role they had not held before' + (result.meta.rolesFresh === result.meta.rolesTotal ? '.' : '; the rest had held every role their group could give them, or sat out, the fewest times.'));
+    }
     if (result.meta.bonusGroupSize) {
       lines.push('The ' + result.meta.bonusGroupSize + ' leftover student' + (result.meta.bonusGroupSize === 1 ? '' : 's') +
         ' formed a separate small group instead of enlarging the others.');
@@ -1469,6 +1585,13 @@
   }
 
   // ── Rendering ────────────────────────────────────────────────────────────
+  /** The role of member `mi` of group `gi` as a span, or '' when the result
+   *  has no roles or that student has none. */
+  function roleSpan(result, gi, mi, cls) {
+    var role = result.roles && result.roles[gi] ? result.roles[gi][mi] : '';
+    return role ? '<span class="' + cls + '">' + escapeHtml(role) + '</span>' : '';
+  }
+
   function renderResults(result) {
     lastGroups = result;
     if (lockedFlags.length !== result.groups.length) {
@@ -1495,12 +1618,13 @@
       var avg = showAvg ? avgSkill(group) : null;
       var locked = !!lockedFlags[i];
       var label = groupLabel(i);
+      var gi = 0;
       return '<div class="group-card' + (locked ? ' locked' : '') + '"><h3><span>' + escapeHtml(label) +
         (avg !== null ? '<span class="avg">avg skill ' + avg + '</span>' : '') + '</span>' +
         '<button type="button" class="lock-btn' + (locked ? ' locked' : '') + '" data-lock="' + i + '" title="' +
         (locked ? 'Unlock this group' : 'Lock this group so reshuffle leaves it alone') + '">' +
         (locked ? '🔒 Locked' : '🔓 Lock') + '</button></h3><ul>' + group.map(function (s) {
-          return '<li><span>' + escapeHtml(s.name) + '</span>' + (s.skill !== null ? '<span class="skill">' + s.skill + '</span>' : '') + '</li>';
+          return '<li><span>' + escapeHtml(s.name) + '</span>' + roleSpan(result, i, gi++, 'member-role') + (s.skill !== null ? '<span class="skill">' + s.skill + '</span>' : '') + '</li>';
         }).join('') + '</ul></div>';
     }).join('');
 
@@ -1527,7 +1651,8 @@
   function renderPairHistoryHint() {
     var count = state && state.pairHistory ? Object.keys(state.pairHistory).length : 0;
     els.pairHistoryHint.textContent = count
-      ? 'Retaining ' + count + ' pairing' + (count === 1 ? '' : 's') + ' for this class, going back to the last reset — reshuffles bias away from repeating the most recent one or two, and the pairing grid uses the full history.'
+      ? 'Retaining ' + count + ' pairing' + (count === 1 ? '' : 's') + ' for this class, going back to the last reset — reshuffles bias away from repeating the most recent one or two, and the pairing grid uses the full history.' +
+        (state.longMemory === true ? ' Long memory is on, so reshuffles also steer toward pairs who have worked together least.' : '')
       : 'No pairing memory yet for this class — shuffle once to start tracking who has worked with whom.';
   }
 
@@ -1539,6 +1664,20 @@
     saveCurrentConfig();
     renderPairHistoryHint();
     showMsg('Pairing memory and pairing grid reset for this class.');
+  });
+
+  els.longMemoryCheck.addEventListener('change', function () {
+    if (!state) return;
+    saveCurrentConfig();
+    renderPairHistoryHint();
+  });
+  els.rolesInput.addEventListener('input', function () { if (state) saveCurrentConfig(); });
+  els.resetRolesBtn.addEventListener('click', function () {
+    if (!state) return;
+    if (!confirm('Clear ALL role history for "' + state.name + '"? Everyone starts again as if nobody had held a role, and this can\'t be undone. The pairing memory is not touched.')) return;
+    delete state.roleHistory;
+    saveCurrentConfig();
+    showMsg('Role history reset for this class.');
   });
 
   // ── Transient per-shuffle state (locks, undo) ────────────────────────────
@@ -1561,6 +1700,7 @@
       lastGroups: JSON.parse(JSON.stringify(lastGroups)),
       pairHistory: state && state.pairHistory ? JSON.parse(JSON.stringify(state.pairHistory)) : {},
       pairGen: state ? (state.pairGen || 0) : 0,
+      roleHistory: state && state.roleHistory ? JSON.parse(JSON.stringify(state.roleHistory)) : null,
       lockedFlags: lockedFlags.slice()
     };
   }
@@ -1590,7 +1730,10 @@
   });
   els.undoBtn.addEventListener('click', function () {
     if (!undoSnapshot) return;
-    if (state) { state.pairHistory = undoSnapshot.pairHistory; state.pairGen = undoSnapshot.pairGen; }
+    if (state) {
+      state.pairHistory = undoSnapshot.pairHistory; state.pairGen = undoSnapshot.pairGen;
+      if (undoSnapshot.roleHistory) state.roleHistory = undoSnapshot.roleHistory; else delete state.roleHistory;
+    }
     lockedFlags = undoSnapshot.lockedFlags.slice();
     renderResults(undoSnapshot.lastGroups);
     undoSnapshot = null;
@@ -1604,7 +1747,10 @@
   function groupsAsText() {
     if (!lastGroups) return '';
     var text = lastGroups.groups.map(function (group, i) {
-      return groupLabel(i) + '\n' + group.map(function (s) { return '  ' + s.name; }).join('\n');
+      return groupLabel(i) + '\n' + group.map(function (s, mi) {
+        var role = lastGroups.roles && lastGroups.roles[i] ? lastGroups.roles[i][mi] : '';
+        return '  ' + s.name + (role ? ' — ' + role : '');
+      }).join('\n');
     }).join('\n\n');
     if (lastGroups.floaters && lastGroups.floaters.length) {
       text += '\n\nFloaters (not assigned)\n' + lastGroups.floaters.map(function (s) { return '  ' + s.name; }).join('\n');
@@ -1631,16 +1777,16 @@
   // Each card prints the same panel twice, the top copy rotated 180°, so
   // folding the sheet along the middle dashed line makes it stand up like a
   // tent with upright text on both faces — set one out at each group's table.
-  function tentPanelHtml(group, label) {
-    var rows = group.map(function (s) {
-      return '<li><span>' + escapeHtml(s.name) + '</span>' + (s.skill !== null ? '<span class="t-skill">' + s.skill + '</span>' : '') + '</li>';
+  function tentPanelHtml(group, label, result, gi) {
+    var rows = group.map(function (s, mi) {
+      return '<li><span>' + escapeHtml(s.name) + '</span>' + roleSpan(result, gi, mi, 't-role') + (s.skill !== null ? '<span class="t-skill">' + s.skill + '</span>' : '') + '</li>';
     }).join('');
     return '<div class="tent-groupname">' + escapeHtml(label) + '</div><ul class="tent-list">' + rows + '</ul>';
   }
 
   function tentsHtml(result) {
     return '<div class="tent-sheet">' + result.groups.map(function (group, i) {
-      var panel = tentPanelHtml(group, groupLabel(i));
+      var panel = tentPanelHtml(group, groupLabel(i), result, i);
       return '<div class="tent-card"><div class="tent-half tent-flip">' + panel + '</div>' +
         '<div class="tent-fold"></div><div class="tent-half">' + panel + '</div></div>';
     }).join('') + '</div>';
@@ -1651,7 +1797,10 @@
     var pages = result.groups.map(function (group, i) {
       return '<div class="sheet-page"><h2>' + escapeHtml(groupLabel(i)) + '</h2>' +
         '<div class="sheet-table-line">Table / Station: ______________</div>' +
-        '<ul class="sheet-names">' + group.map(function (s) { return '<li>' + escapeHtml(s.name) + '</li>'; }).join('') + '</ul>' +
+        '<ul class="sheet-names">' + group.map(function (s, mi) {
+          var role = result.roles && result.roles[i] ? result.roles[i][mi] : '';
+          return '<li>' + escapeHtml(s.name) + (role ? ' <span class="s-role">— ' + escapeHtml(role) + '</span>' : '') + '</li>';
+        }).join('') + '</ul>' +
         '<div class="sheet-task-box"><strong>Task / Notes:</strong></div></div>';
     });
     if (result.floaters && result.floaters.length) {
@@ -1721,7 +1870,38 @@
     var pct = totalPairs ? Math.round(100 * pairedCount / totalPairs) : 0;
     return '<div class="grid-summary">' + pairedCount + ' of ' + totalPairs + ' possible pair' + (totalPairs === 1 ? '' : 's') +
       ' (' + pct + '%) have worked together at least once, going back to the last pairing-memory reset. A number is how many times; a blank cell means never.</div>' +
-      '<div class="grid-scroll"><table class="pairing-grid">' + '<tr>' + headCells + '</tr>' + bodyRows + '</table></div>';
+      '<div class="grid-scroll"><table class="pairing-grid">' + '<tr>' + headCells + '</tr>' + bodyRows + '</table></div>' +
+      notYetHtml(names) + rolesHeldHtml(names);
+  }
+
+  /** The same facts as the grid's blank cells, as text a screen reader can walk. */
+  function notYetHtml(names) {
+    var rows = GtgMemory.notYet(state && state.pairHistory, names);
+    var open = rows.filter(function (r) { return r.never.length; });
+    var body = open.length
+      ? '<ul class="never-list">' + open.map(function (r) {
+          return '<li><strong>' + escapeHtml(r.name) + '</strong> <span class="met">has worked with ' + r.met + ' of ' + r.of +
+            ' — not yet with:</span> ' + r.never.map(escapeHtml).join(', ') + '</li>';
+        }).join('') + '</ul>'
+      : '<p class="hint">Everyone on the roster has worked with everyone else at least once.</p>';
+    return '<div class="grid-section"><h3>Who has not yet worked together</h3>' + body + '</div>';
+  }
+
+  /** How many times each student has held each of the teacher's roles, or ''
+   *  when no roles are in use. */
+  function rolesHeldHtml(names) {
+    var roles = activeRoles();
+    var hist = state && state.roleHistory;
+    if (!roles.length || !hist || !Object.keys(hist).length) return '';
+    var cols = roles.concat(['']);
+    var head = '<th scope="col">Student</th>' + cols.map(function (r) { return '<th scope="col">' + (r ? escapeHtml(r) : 'No role') + '</th>'; }).join('');
+    var rows = names.map(function (n) {
+      return '<tr><th scope="row">' + escapeHtml(n) + '</th>' + cols.map(function (r) {
+        var c = GtgMemory.roleCount(hist, n, r);
+        return '<td class="' + (c ? 'grid-hit' : 'grid-miss') + '">' + (c || '') + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+    return '<div class="grid-section"><h3>Roles held this year</h3><div class="grid-scroll"><table class="pairing-grid"><tr>' + head + '</tr>' + rows + '</table></div></div>';
   }
 
   var gridEls = {

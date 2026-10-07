@@ -131,6 +131,28 @@ function recordPairs(h, gs, gen) {
   const off = M.refine(gs2, { history: h2, gen: 9, rng: mulberry(1), spread: false });
   eq(off.swaps, 0, 'with the long memory off the same groups are left alone (nothing recent, nothing broken)');
 
+  // Evenness is count SQUARED: {A,B} met four times and {C,D} never costs 16; two pairs that met twice cost 8.
+  // A plain total says 4 against 4 and would not move.
+  const h6 = { [K('Ada', 'Bo')]: { gen: 1, count: 4 }, [K('Ada', 'Cy')]: { gen: 1, count: 2 }, [K('Bo', 'Di')]: { gen: 1, count: 2 }, [K('Ada', 'Di')]: { gen: 1, count: 2 }, [K('Bo', 'Cy')]: { gen: 1, count: 2 } };
+  const gs6 = groupsOf([['Ada', 'Bo'], ['Cy', 'Di']]);
+  const r6 = M.refine(gs6, { history: h6, gen: 9, rng: mulberry(4), spread: true });
+  same(r6.before, [0, 0, 16], 'one pair met four times, one never: 16');
+  same(r6.after, [0, 0, 8], 'it is moved to two pairs that met twice: 8, though the plain total of counts is 4 either way');
+  // The swap cap is a cap.
+  let capped = 0, needsMore = 0;
+  for (let seed = 1; seed <= 20; seed++) {
+    const ns2 = names(20); let hh = {}; const rr = mulberry(seed * 3);
+    for (let g = 1; g <= 4; g++) hh = recordPairs(hh, dealRandom(ns2, 5, rr), g);
+    const base = dealRandom(ns2, 5, rr);
+    const one = base.map(g => g.slice()), many = base.map(g => g.slice());
+    const a = M.refine(one, { history: hh, gen: 4, rng: mulberry(seed), spread: true, maxSwaps: 1 });
+    const b = M.refine(many, { history: hh, gen: 4, rng: mulberry(seed), spread: true });
+    if (a.swaps <= 1) capped++;
+    if (b.swaps >= 2) needsMore++;
+  }
+  eq(capped, 20, 'maxSwaps: 1 stops after one swap, on all 20 classes');
+  ok(needsMore >= 15, `... and those classes did need more (${needsMore} of 20 take two swaps or more uncapped)`);
+
   // Hard rules beat evenness: A and C must stay apart and B and D together... the even grouping would break them.
   const gs3 = groupsOf([['Ada', 'Bo'], ['Cy', 'Di']]);
   const r3 = M.refine(gs3, { history: h2, gen: 9, apart: [['Ada', 'Bo']], together: [], rng: mulberry(1), spread: true });
@@ -305,6 +327,7 @@ function recordPairs(h, gs, gen) {
   const bad = JSON.parse('{"__proto__":{"counts":{"x":1}},"Ada":{"counts":{"Recorder":2,"__proto__":3,"neg":-1,"str":"a"},"last":{"Recorder":4,"ghost":9}},"Bo":5,"Cy":{"counts":null}}');
   const nn = M.normalizeRoles(bad);
   same(nn, { Ada: { counts: { Recorder: 2 }, last: { Recorder: 4 } }, Cy: { counts: {}, last: {} } }, 'normalizeRoles keeps good counts and drops poison keys, negatives, strings and a last with no count');
+  ok(Object.getPrototypeOf(nn) === Object.prototype && !Object.prototype.hasOwnProperty.call(nn, '__proto__'), 'a student named __proto__ in a saved history does not become the result\'s prototype');
   same(M.normalizeRoles('nope'), {}, 'normalizeRoles of a non-object is empty');
   ok(!({}).x, 'and Object.prototype was not polluted');
 

@@ -533,7 +533,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 118 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
-| 119 | Roles built into a group; project-team mode; a pair-history that spans the year | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
+| 119 | Project-team mode: longer-lived named teams, a shared task list, a printable team contract (roles and the year-long pair memory shipped, v277; this part waits on the questions in 002's section) | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
 | 120 | Peer review mode; rubric handoff to the grades tools | 003 | ½ | | [003 Rubric Builder](#003--rubric-builder) |
 | 121 | Bell-schedule awareness; a multi-timer board; a reconnecting mirror | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
 | 122 | A constraint solver worth the name; the room, not the grid | 005 | ½ | | [005 Seating Chart Generator](#005--seating-chart-generator) |
@@ -4307,8 +4307,10 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
 **Why.** Group formation exists four times (002, 022, 027, Name Picker's Groups
 mode); role rotation with recency memory twice; the bracket algorithm is
 "line-for-line the same" in 020 and 021; the station-rotation timer exists in 004's
-round-robin mode, 021, 017 and 069. 002's `pairHistory` keeps two generations, so
-"everyone has worked with everyone this year" is unanswerable. 020 still lacks
+round-robin mode, 021, 017 and 069. ~~002's `pairHistory` keeps two generations, so
+"everyone has worked with everyone this year" is unanswerable.~~ (Stale since 2026-08-13: 002 keeps every pair's
+count for the year, and since v277 has an opt-in long memory and a who-has-not-met list; what no tool has is
+one history for all of them.) 020 still lacks
 double elimination, pools and Swiss scheduling, tie handling and re-deciding a
 match; 021 silently overwrites a saved unit on a name collision (a real bug).
 
@@ -7327,19 +7329,30 @@ room and what was happening in class at the time.
 
 #### Major Features
 
-- **Roles built in** (P7). `022-lab-group-role-randomizer.html` assigns roles with
-  a recency memory; `027-novel-study-circles-manager.html` does the same for
-  reading circles. Three tools implement group-formation and two implement
-  role rotation. One engine should serve all of them. **Skip (2026-08-10)** —
-  explicitly out of scope for this round per the cross-tool consolidation
-  note; still open for a dedicated round.
-- **Group history across the year.** "Everyone has worked with everyone at
-  least once" is a real goal and the pair history already tracks the data
-  needed to visualize and drive it. **Skip (2026-08-10)** — out of scope for
-  this round; note that `pairHistory` currently only retains
-  `PAIR_MEMORY_WINDOW` (2) generations, so a real "across the year" view
-  would need a retention-policy decision first.
-- **Seating-aware grouping** (P7). Groups that are physically possible given
+- **Roles built in** (P7). **Done in this tool's own code (v277, AI-31-002).** Section 6 on the page takes a
+  list of roles, one per line (twelve at most); every Make Groups and Reshuffle then gives each group its
+  roles so that nobody holds a role again before the others in their group have had a turn (the cheapest
+  whole assignment, the Hungarian method, on the marginal cost of a student's count for a role, then the
+  role held longest ago, ties by chance; "no role", for a student past the end of the list, counts as a
+  turn too). The history is `roleHistory` in the class's own `gtg:data:<class>` (written only once roles are
+  used), undone by Undo, pruned to the roster, carried across a roster rename, and has its own Reset role
+  history (asks first). It shows on the cards, the table tents, the group sheets and Copy as Text. A
+  locked group keeps its students and rotates its roles. The pure half is `Tools/group-team-generator/gtg-memory.js`
+  (`GtgMemory`). **What is not done:** it does not import 022's or 027's role history, and neither reads
+  this one; "one engine for 022, 027 and 002" is still Path 13 P1/P2's, and P1's `rotateRoles` and
+  `history.*` will have to take `gtg-memory.js`'s shape (above) as the second implementation to port, not
+  a clean slate. 022's roles are still its own page's.
+- **Group history across the year.** **Done (v277, AI-31-002).** The retention-policy question this bullet
+  names was answered on 2026-08-13: `pairHistory` has kept every pair's count for the whole year since
+  then (bounded by C(roster, 2), cut when a name leaves), and the Pairing Grid shows it; this row's text
+  was stale. What was missing, and is now built: an opt-in **long memory** checkbox (card 2, saved as
+  `longMemory: true` only when ticked) that, after the page's own repair, swaps students between unlocked
+  groups so pairs who have worked together least get a turn (the sum over same-group pairs of count
+  squared, lowered while no keep-apart or keep-together rule is made worse, no recent repeat is made worse
+  unless that mends a broken rule, and no locked group moves); the explanation line says how many pairings
+  in the grouping are new; and the grid has a plain **Who has not yet worked together** list (per student,
+  how many classmates they have met and who they have not). Off, the page is byte for byte what it was.
+- - **Seating-aware grouping** (P7). Groups that are physically possible given
   the seating chart — four students who sit near each other — versus groups
   that require a room reshuffle. **Skip (2026-08-10)** — depends on Seating
   Chart Generator's data, out of scope for this round.
@@ -7347,6 +7360,9 @@ room and what was happening in class at the time.
   and a printable team contract, rather than a one-period grouping. **Skip
   (2026-08-10)** — out of scope for this round; a persistent multi-day team
   is a different data model than this tool's per-period generate/print flow.
+  **Not built in v277 (AI-31-002): the section does not say enough to build it
+  without a decision that is Devon's.** The questions, under Open Questions
+  below, come first.
 
 #### Moonshot / North Star
 
@@ -7363,7 +7379,28 @@ every tool on the site that forms groups, using the same memory.
   by the four tools that need it, or should one of them become the canonical
   tool and the others link to it?
 - Where should skill values live — here, or on the shared student record (P2)?
-  They're arguably the most sensitive thing the site would store.
+  They're arguably the most sensitive thing the site would store. (Path 3 P4
+  answered it: 002's skill ratings and pairing memory stay in 002's own
+  storage.)
+- **Project-team mode, for Devon (asked 2026-10-07, none answered):**
+  1. *Which project is it?* A team that lasts a few weeks, kept as named teams with the same students
+     until the teacher dissolves them: stored in this class's `gtg:data:<class>` (no new key), or in a key of
+     its own with a registry row and per-key student data flags?
+  2. *Who sees the task list?* A list the teacher prints and keeps, or one students tick off? The second is
+     student-facing, and nothing is student-facing right now, so the default is the first, and this question
+     is only whether the first is what is wanted.
+  3. *What does the contract say?* A teacher-written text with blanks, fixed clauses, or a template the teacher
+     edits (and does it save)? A signature line on paper only, or a record of who signed (that is student data
+     with its own key and backup)?
+  4. *Does a project team count in the pair memory?* A month of the same four is four hundred pair-sessions
+     if it is recorded per day, and one if it is recorded once. The default if no answer comes: once, when the
+     team is made.
+  5. *Is this Path 13 P2's "project teams" (the platform worker's, in `_shared/grouping.js`) or this tool's
+     alone?* 027 (reading circles) and 073 (science-fair trackers) already keep long-lived groups of their own.
+     One home for "a team that lasts" is a platform decision, and building a third here first would be the
+     fourth copy of the thing Path 13 exists to stop.
+  6. *Changes mid-project:* a student joins, leaves or is absent for a week: moved by hand, or by the
+     generator?
 
 #### Platform themes that matter here
 
