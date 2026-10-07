@@ -78,6 +78,8 @@
     "test:graph-paper-grids": "node Tools/graph-paper-generator/test/smoke-grid-types.mjs",
     "test:grade-dist": "node Tools/grade-distribution-visualizer/test/smoke-copy-chart.mjs",
     "test:chart-builder": "node Tools/data-chart-builder/test/smoke-xlsx.mjs",
+    "test:final-grade-scenario-core": "node Tools/final-grade-checker/scenario-math.test.mjs",
+    "test:final-grade-scenarios": "node Tools/final-grade-checker/test/smoke-scenarios.mjs",
     "test:final-grade": "node Tools/final-grade-checker/grade-math.test.mjs && node Tools/final-grade-checker/test/smoke-whatif.mjs && node Tools/final-grade-checker/test/smoke-triage.mjs",
     "test:school-calendar": "node Tools/school-calendar/test/smoke-pacing.mjs && node Tools/school-calendar/test/smoke-week.mjs",
     "test:school-calendar-weeks-core": "node Tools/school-calendar/test/smoke-weeks-core.mjs",

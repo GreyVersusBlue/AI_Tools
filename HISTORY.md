@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## 032 School Calendar Visualizer: A/B badges on the year grid, and a printed page per week (2026-10-07, AI-31-032, `CACHE_VERSION` v291)
+## 032 School Calendar Visualizer: A/B badges on the year grid, and a printed page per week (2026-10-07, AI-31-032, `CACHE_VERSION` v292; the code commit says v291, which AI-31-036 took)
 
 BACKLOG rank 146, both parts built, in the tool's own files (`Tools/032-School Calendar Visualizer.html`, `Tools/school-calendar/`). Checked first: the page already had
 the A/B letters on the month grid (since 2026-08) and a **one**-week print (`smoke-week.mjs`); the year grid had no letters and the week print could only be one week. The
@@ -51,6 +51,46 @@ last week, which Chromium drops, so it adds no blank page there; the rule stays 
 check. Landscape is not forced; in portrait the five columns are about 1.5 inches wide on Letter. The weeks print the page's own title above them, as the one-week print always did.
 
 ---
+## 036 Final Grade Checker: scenarios (drop, curve, re-weight) beside the real grades (2026-10-07, AI-31-036, `CACHE_VERSION` v291)
+
+BACKLOG rank 149, built on what the tool actually is. **Checked first:** the tool does not grade categories of assignments; it grades **four quarter percentages per
+student** (quality points and percentage average, the higher reported, ten-point scale, exactly .5 rounds up, Grading Settings for strict rounding, precision and
+quarter weights), keeps no gradebook, and by policy stores no names or grades (only the Grading Settings object, and only when "Remember" is ticked). It already
+had a quick class-wide what-if (add points to every quarter; replace each student's lowest quarter with the mean of the others, tested in `smoke-whatif.mjs`) and
+custom quarter weights. So "category" below is the four quarters and "assessment" is a quarter. **A categories-and-assessments gradebook, and a "gradebook saved with
+versioning", do not exist in this tool and were not invented; that is a different tool, and the call is Devon's if he wants it.**
+
+- **New `Tools/final-grade-checker/scenario-math.mjs`** (precached, pure, no DOM) and a Scenarios card on the page, hidden until a class is imported, `no-print`, below the
+  quick what-if (which is untouched and still answers as it did; the card says how the two drops differ). Fixed order, stated on the page: **drop** each student's lowest
+  0 to 3 quarters (one always stays; ties drop the earlier quarter; a quarter with weight 0 is never counted or dropped; dropped quarters are left out of both averages,
+  not replaced), **curve** the kept quarters (add or take off points, 50 at most; or scale so each quarter's own class top becomes 100; every quarter or one; rounded to
+  the hundredth, floor 0, cap 100 or 200 with extra credit; a top of 0 scales nothing), **weight** (each kept quarter counts its weight over the kept total, so weights need
+  not add to 100; 0 leaves a quarter out; negative, non-numeric or all-zero weights are refused and Grading Settings' weights stay). The result is a table, per student:
+  real grade, scenario grade, change (letter and points), quarters left out; with the up/down/unchanged counts and the letter counts before and after. The real grade is
+  `calcFinals()` with the page's own `calcOpts()`. A student missing a quarter that counts has no final, as on the page.
+- **Named scenarios** (name, Save, Use it, Delete behind a confirm, Clear scenario, at most 20, same name any case updates) live in the existing Grading Settings object as
+  `settings.scenarios`, **added only once one is saved and the key removed when the last is deleted**, so the stored string for anyone who never saves one is byte for byte the
+  old one. They are written only when "Remember these settings" is ticked, hold settings and nothing else (asserted: no name or grade in the stored string), and a corrupt entry
+  is cleaned on load. No new key, no registry change, nothing in a link.
+- **The arithmetic is integers** (hundredths of a percent, hundredths of weight, averages in ten-thousandths rounded half up, the county rule's own four decimals), so a
+  boundary student is not a float accident. `scenario-math.test.mjs` (`test:final-grade-scenario-core`, pure Node, 21,182 assertions) checks it against an oracle on BigInt
+  fractions that shares no code with it, over 6,000 seeded books with random scenarios (about 17,000 students; 6 settings; weights with zeros; extra credit; ties; scores on
+  the letter boundaries), plus 60,000 books proving that **no scenario equals `calcFinals()` exactly**, including the strict and rounding settings, plus hand-worked cases. The
+  choices that are rules, not arithmetic, are the same two in module and oracle and are stated in both: a curved score is rounded to the hundredth, and an average is rounded
+  half up to four decimals before a cutoff.
+- **Old behaviour pinned before the change:** `grade-math.mjs` over 4,000 seeded books and 9 option sets hashes the same (`_golden-math.mjs`, recorded from 235dcf3), and
+  `golden-old-page.json` (12 fingerprints of the cards, triage and old what-if for 3 pastes under 4 settings, the 4 old what-if states, and the stored string) was recorded from
+  the page at 235dcf3 and is equal now. `smoke-scenarios.mjs` (`test:final-grade-scenarios`, port 8528) drives the panel on the page: the cards, the paste and all of localStorage
+  are identical after every drop, curve and re-weight action, saved scenarios, the refusals, the order, strict rounding, print (the card does not print) and axe on the card.
+- **Breaks on purpose.** 36 in pure Node, in a mutated copy of the module (SCENARIO_MODULE), all caught after 7 survivors got assertions (one more, "scores mutated in place",
+  is caught only because the test freezes the input and the run crashes). 9 on the page, one suite run each, all caught: saving writing storage without Remember, the last
+  delete leaving an empty list, the scenario editing a real score, the card printing, the results box not keyboard-reachable, the scenario ignoring Grading Settings, the saved
+  list not rebuilt on load, delete without a confirm (a first attempt had a syntax slip in the mutation and proved nothing; redone), same name compared case-sensitively. Not
+  broken: the rules paragraph's wording, Clear resetting the form, the points box hiding, the "toFixed" rounding of the after column (7 more were written, not run: the suites
+  lock was held by other workers for hours). One unfixed oddity found on the way: the existing code shows `toFixed(2)` of a float, so 86.235 reads 86.23 on the old cards; the scenario column is
+  rounded half up exactly (86.24), so a student can look one hundredth different between the two columns at an exact half-hundredth. Not changed.
+- **Not done / not verified:** the before/after is a table and letter counts, not a chart (Path 16 P4, once the shared chart engine exists); no category/assessment model;
+  nothing printed (the card is screen only); no screen reader; the page's older contrast and import-status axe violations after an import are not this row's and were not touched.
 
 ## 026 Math Fact Drill Sheet Generator: fraction multiplication and division, exponents, one-step equations (2026-10-07, AI-31-026, `CACHE_VERSION` v290; the code commit says v288, which AI-31-025 took, and main passed v289 before the merge)
 

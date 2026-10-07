@@ -163,6 +163,31 @@
   .whatif-line.down { background: rgba(196, 58, 47, 0.10); }
   @media print { .whatif-line { border-style: solid; } }
 
+  /* Scenario modelling: drop, curve, re-weight */
+  .sc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-4); margin-top: 8px; }
+  .sc-group { border: 1px solid var(--color-divider); padding: 8px 10px; margin: 0; min-width: 0; }
+  .sc-group legend { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.8; padding: 0 4px; }
+  .sc-group label { display: block; margin: 4px 0; font-size: 13px; }
+  .sc-group .input { max-width: 100%; }
+  .sc-weights { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .sc-weights label { display: flex; flex-direction: column; font-size: 10px; font-weight: 700; text-transform: uppercase; opacity: 0.8; align-items: center; margin: 0; }
+  .sc-weights input { width: 64px; text-align: center; padding: 5px 4px; }
+  .sc-rules { font-size: 12px; opacity: 0.8; max-width: 80ch; margin: 8px 0 0; line-height: 1.5; }
+  .sc-save { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+  .sc-save label { font-size: 12px; font-weight: 700; opacity: 0.8; }
+  .sc-save .input { width: 180px; }
+  .sc-note { font-size: 12.5px; margin-top: 6px; min-height: 1.2em; }
+  .sc-note.warn { color: var(--color-warn); font-weight: 600; }
+  .sc-summary { margin-top: 10px; font-size: 13px; line-height: 1.55; }
+  .sc-summary:empty { display: none; }
+  .sc-scroll { max-height: 340px; overflow: auto; margin-top: 8px; border: 1px solid var(--color-divider); }
+  .sc-table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  .sc-table caption { text-align: left; font-weight: 700; padding: 6px 8px; font-size: 12px; }
+  .sc-table th, .sc-table td { text-align: left; padding: 4px 8px; border-top: 1px solid var(--color-divider); }
+  .sc-table thead th { position: sticky; top: 0; background: var(--color-surface); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .sc-table .up { color: var(--color-success); font-weight: 700; }
+  .sc-table .down { color: var(--color-danger); font-weight: 700; }
+
   /* ── Missing-work triage ─────────────────────────────────── */
   .triage-count { font-size: 12.5px; font-weight: 700; opacity: 0.8; margin: 4px 0 10px; }
   .triage-columns { display: flex; gap: var(--space-6); flex-wrap: wrap; }
@@ -372,6 +397,81 @@
     </div>
   </div>
 
+  <!-- Scenario modelling: drop the lowest, curve, re-weight. Like the what-if
+       above it is a question, not an edit: the pasted grades are never changed. -->
+  <div class="card blueprint no-print" id="scenario-card" style="display:none;">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="settings-row">
+      <strong>Scenarios: drop, curve, re-weight</strong>
+      <p class="whatif-hint">Asks &ldquo;what would the class get if&hellip;&rdquo; beside the real grades, never instead of them. Nothing you pasted is changed, and the cards and slips below keep showing the real numbers. The quick what-if above replaces a student&rsquo;s lowest quarter with the average of the others; here a dropped quarter is left out of both averages.</p>
+      <div class="sc-grid">
+        <fieldset class="sc-group">
+          <legend>1. Drop</legend>
+          <label for="sc-drop">Leave out each student&rsquo;s lowest</label>
+          <select id="sc-drop" class="input">
+            <option value="0">no quarters</option>
+            <option value="1">1 quarter</option>
+            <option value="2">2 quarters</option>
+            <option value="3">3 quarters</option>
+          </select>
+        </fieldset>
+        <fieldset class="sc-group">
+          <legend>2. Curve</legend>
+          <label for="sc-curve-mode">Kind of curve</label>
+          <select id="sc-curve-mode" class="input">
+            <option value="none">No curve</option>
+            <option value="plus">Add points</option>
+            <option value="top">Scale so the class&rsquo;s top score becomes 100</option>
+          </select>
+          <div id="sc-points-row" hidden>
+            <label for="sc-points">Points to add (a minus takes points off)</label>
+            <input type="number" id="sc-points" class="input" value="0" step="0.01" min="-50" max="50" style="width:100px;">
+          </div>
+          <label for="sc-apply">Apply it to</label>
+          <select id="sc-apply" class="input">
+            <option value="all">Every quarter</option>
+            <option value="0">Quarter 1 only</option>
+            <option value="1">Quarter 2 only</option>
+            <option value="2">Quarter 3 only</option>
+            <option value="3">Quarter 4 only</option>
+          </select>
+          <label><input type="checkbox" id="sc-extra"> Allow extra credit (scores may go above 100)</label>
+        </fieldset>
+        <fieldset class="sc-group">
+          <legend>3. Re-weight</legend>
+          <label><input type="checkbox" id="sc-rw"> Use different quarter weights for this scenario</label>
+          <div class="sc-weights" id="sc-weights" hidden>
+            <label for="sc-w1">Q1<input class="input" type="number" id="sc-w1" min="0" step="0.01" value="25"></label>
+            <label for="sc-w2">Q2<input class="input" type="number" id="sc-w2" min="0" step="0.01" value="25"></label>
+            <label for="sc-w3">Q3<input class="input" type="number" id="sc-w3" min="0" step="0.01" value="25"></label>
+            <label for="sc-w4">Q4<input class="input" type="number" id="sc-w4" min="0" step="0.01" value="25"></label>
+          </div>
+        </fieldset>
+      </div>
+      <p class="sc-rules" id="sc-rules">The three steps always run in this order: drop, then curve, then weight.
+        <strong>Drop</strong> leaves a student&rsquo;s lowest quarters out of both averages (a tie drops the earlier quarter first), and always leaves at least one; a quarter with no weight is never dropped.
+        <strong>Curve</strong> works on the quarters that were kept, rounds each curved score to the hundredth, never goes below 0, and stops at 100 unless extra credit is allowed (then 200).
+        Scaling uses each quarter&rsquo;s own highest score in the class, and a top of 0 scales nothing.
+        <strong>Weight</strong> gives each kept quarter its weight divided by the total of the kept weights, so the weights need not add to 100; a weight of 0 leaves that quarter out. Weights that are negative, not numbers or all zero are refused, and the weights in Grading Settings are used instead.
+        Rounding, the ten-point scale and the higher-of-two-methods rule are the ones in Grading Settings. A student missing a quarter that counts still has no final.</p>
+      <div class="sc-save">
+        <label for="sc-name">Name this scenario</label>
+        <input type="text" id="sc-name" class="input" maxlength="40" autocomplete="off">
+        <button class="btn btn-secondary" id="sc-save-btn" type="button">Save scenario</button>
+        <label for="sc-saved">Saved scenarios</label>
+        <select id="sc-saved" class="input"><option value="">None saved</option></select>
+        <button class="btn btn-secondary" id="sc-load-btn" type="button">Use it</button>
+        <button class="btn btn-secondary" id="sc-delete-btn" type="button">Delete</button>
+        <button class="btn btn-secondary" id="sc-clear-btn" type="button">Clear scenario</button>
+      </div>
+      <div id="sc-note" class="sc-note" role="status" aria-live="polite"></div>
+      <div id="sc-summary" class="sc-summary" role="status" aria-live="polite"></div>
+      <div id="sc-scroll" class="sc-scroll" tabindex="0" role="region" aria-label="Scenario results by student" hidden>
+        <table class="sc-table" id="sc-table"></table>
+      </div>
+    </div>
+  </div>
+
   <!-- Missing-work triage. Hidden until a class is imported, like the
        what-if above — there is nothing to triage about one hand-entered
        student, and the whole point is reading it straight off the paste. -->
@@ -485,6 +585,9 @@ import {
   isGradeCell, Q1_COLUMN, QUARTERS, getQP, qpToFinalLetter, RANK,
   findQuarterWindow, splitRow, curveScores, triageStudent,
 } from './final-grade-checker/grade-math.mjs';
+import {
+  cleanScenario, compareClass, describeScenario, isNoScenario,
+} from './final-grade-checker/scenario-math.mjs';
 
 /** How close `value` sits to the nearest letter-boundary in `cutoffs` (grade-math.mjs's
  * own LETTER_CUTOFFS/QP_CUTOFFS), or null if it's not within `margin`. A student this
@@ -1009,6 +1112,8 @@ function renderImportedStudents(students) {
   document.getElementById('add-student-row').style.display = 'none';
   document.getElementById('whatif-card').style.display = students.length ? '' : 'none';
   renderWhatIfSummary(students);
+  document.getElementById('scenario-card').style.display = students.length ? '' : 'none';
+  renderScenario(students);
   document.getElementById('triage-card').style.display = students.length ? '' : 'none';
   renderTriageSummary(students);
 }
@@ -1109,6 +1214,193 @@ document.getElementById('whatif-reset').addEventListener('click', () => {
   document.getElementById('whatif-drop').checked = false;
   refreshWhatIf();
 });
+
+/* ── Scenarios: drop, curve, re-weight ───────────────────────────────────────
+   The arithmetic is scenario-math.mjs and is checked against an exact-fraction
+   second calculation in scenario-math.test.mjs. This block only reads the
+   form, asks that module, and writes the answer out.
+
+   Same two rules as the quick what-if above, because they are what make it safe:
+     1. It never touches the pasted data. compareClass() reads the students and
+        returns new rows; the cards, the exports and the slips are the real ones.
+     2. The real result beside it is calcFinals() with calcOpts(), the page's own.
+
+   Saved scenarios hold the settings of a scenario and nothing else. They ride in
+   the Grading Settings object (settings.scenarios, added only once one is saved),
+   so they are written only when "Remember these settings" is ticked, and never
+   hold a name or a grade. */
+const $ = id => document.getElementById(id);
+
+function readScenarioForm() {
+  const mode = $('sc-curve-mode').value;
+  const pts = parseFloat($('sc-points').value);
+  const applyV = $('sc-apply').value;
+  return cleanScenario({
+    dropN: parseInt($('sc-drop').value, 10) || 0,
+    curve: {
+      mode,
+      points: Number.isFinite(pts) ? Math.round(pts * 100) : 0,
+      apply: applyV === 'all' ? 'all' : parseInt(applyV, 10),
+      extra: $('sc-extra').checked,
+    },
+    weights: $('sc-rw').checked ? [1, 2, 3, 4].map(n => parseFloat($('sc-w' + n).value)) : null,
+  });
+}
+
+function scenarioToForm(sc) {
+  $('sc-drop').value = String(sc.dropN);
+  $('sc-curve-mode').value = sc.curve.mode;
+  $('sc-points').value = String(sc.curve.points / 100);
+  $('sc-apply').value = sc.curve.apply === 'all' ? 'all' : String(sc.curve.apply);
+  $('sc-extra').checked = !!sc.curve.extra;
+  $('sc-rw').checked = !!sc.weights;
+  if (sc.weights) sc.weights.forEach((w, i) => { $('sc-w' + (i + 1)).value = String(w / 100); });
+  syncScenarioForm();
+}
+
+function syncScenarioForm() {
+  $('sc-points-row').hidden = $('sc-curve-mode').value !== 'plus';
+  $('sc-apply').disabled = $('sc-curve-mode').value === 'none';
+  $('sc-extra').disabled = $('sc-curve-mode').value === 'none';
+  $('sc-weights').hidden = !$('sc-rw').checked;
+}
+
+function letterTally(t) {
+  return ['A', 'B', 'C', 'D', 'F'].map(l => `${l} ${t[l]}`).join(', ') + (t.none ? `, no final ${t.none}` : '');
+}
+
+function fmtSigned(n) { return (n > 0 ? '+' : n < 0 ? '\u2212' : '') + Math.abs(n).toFixed(2); }
+
+function renderScenario(students) {
+  const note = $('sc-note'), summary = $('sc-summary'), box = $('sc-scroll'), table = $('sc-table');
+  const { scenario, problems } = readScenarioForm();
+  note.textContent = problems.join(' ');
+  note.classList.toggle('warn', problems.length > 0);
+  table.textContent = '';
+  if (!students || !students.length || isNoScenario(scenario)) {
+    summary.textContent = students && students.length ? describeScenario(scenario) : '';
+    box.hidden = true;
+    return;
+  }
+  const c = compareClass(students, scenario, calcOpts());
+  const parts = [`${c.up} up`, `${c.down} down`, `${c.same} unchanged`];
+  if (c.noFinal) parts.push(`${c.noFinal} with no final on one side or both (a quarter that counts is missing)`);
+  summary.textContent = '';
+  const l1 = document.createElement('div');
+  const em = document.createElement('em'); em.textContent = describeScenario(scenario);
+  l1.append(em, ' \u2014 final letters: ' + parts.join(', ') + '.');
+  const l2 = document.createElement('div');
+  l2.textContent = 'Letters before: ' + letterTally(c.letters.before) + '. After: ' + letterTally(c.letters.after) + '.';
+  summary.append(l1, l2);
+
+  const cap = document.createElement('caption');
+  cap.textContent = 'Real grade and scenario grade for each student (percentage average and final letter)';
+  const head = document.createElement('tr');
+  ['Student', 'Real grade', 'Scenario grade', 'Change', 'Left out'].forEach(h => {
+    const th = document.createElement('th'); th.scope = 'col'; th.textContent = h; head.append(th);
+  });
+  const thead = document.createElement('thead'); thead.append(head);
+  const tbody = document.createElement('tbody');
+  c.rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const cell = txt => { const td = document.createElement('td'); td.textContent = txt; tr.append(td); return td; };
+    const th = document.createElement('th'); th.scope = 'row'; th.textContent = r.name; tr.append(th);
+    // the scenario's average is held in ten-thousandths, so it is rounded half up to the hundredth exactly (toFixed on a float would show 86.235 as 86.23)
+    const show = f => f ? `${f.finalLetter} (${f.pct4 === undefined ? f.pctAvg.toFixed(2) : (Math.floor((f.pct4 + 50) / 100) / 100).toFixed(2)}%)` : 'no final';
+    cell(show(r.before));
+    cell(show(r.after));
+    const ch = cell('');
+    if (r.moved) {
+      ch.textContent = (r.moved === 'same' ? `${r.after.finalLetter}, no letter change` : `${r.before.finalLetter} \u2192 ${r.after.finalLetter} (${r.moved})`) + `; ${fmtSigned(r.diffPct)} points`;
+      if (r.moved !== 'same') ch.className = r.moved;
+    } else ch.textContent = '\u2014';
+    cell(r.dropped.length ? r.dropped.map(q => 'Q' + (q + 1)).join(', ') : '\u2014');
+    tbody.append(tr);
+  });
+  table.append(cap, thead, tbody);
+  box.hidden = false;
+}
+
+function refreshScenario() { if (currentStudents && currentStudents.length && mode !== 'manual') renderScenario(currentStudents); }
+
+// ── Saved scenarios ──
+function savedScenarios() {
+  const raw = Array.isArray(settings.scenarios) ? settings.scenarios : [];
+  return raw.filter(x => x && typeof x.name === 'string' && x.name.trim()).slice(0, 20)
+    .map(x => ({ name: x.name.trim().slice(0, 40), ...cleanScenario(x).scenario }));
+}
+
+function renderSavedScenarios(selectedName) {
+  const sel = $('sc-saved');
+  const list = savedScenarios();
+  sel.textContent = '';
+  if (!list.length) { const o = document.createElement('option'); o.value = ''; o.textContent = 'None saved'; sel.append(o); }
+  list.forEach(x => { const o = document.createElement('option'); o.value = x.name; o.textContent = x.name; sel.append(o); });
+  if (selectedName) sel.value = selectedName;
+  $('sc-load-btn').disabled = $('sc-delete-btn').disabled = !list.length;
+}
+
+function keepNote() {
+  return settings.persist
+    ? 'It is kept in this browser with your other settings.'
+    : 'It is kept for this tab only. Tick \u201cRemember these settings\u201d in Grading Settings to keep it; a saved scenario holds only these settings, never a name or a grade.';
+}
+
+function saveScenario() {
+  const name = $('sc-name').value.trim().slice(0, 40);
+  if (!name) { $('sc-note').textContent = 'Give the scenario a name first.'; $('sc-note').classList.add('warn'); $('sc-name').focus(); return; }
+  const { scenario, problems } = readScenarioForm();
+  if (problems.length) { $('sc-note').textContent = 'Fix this first: ' + problems.join(' '); $('sc-note').classList.add('warn'); return; }
+  const list = savedScenarios();
+  const rec = { name, dropN: scenario.dropN, curve: { ...scenario.curve }, weights: scenario.weights };
+  const at = list.findIndex(x => x.name.toLowerCase() === name.toLowerCase());
+  if (at >= 0) list[at] = rec;
+  else if (list.length >= 20) { $('sc-note').textContent = 'Twenty scenarios is the most; delete one first.'; $('sc-note').classList.add('warn'); return; }
+  else list.push(rec);
+  settings.scenarios = list;
+  savePersistedSettings();
+  renderSavedScenarios(name);
+  $('sc-note').classList.remove('warn');
+  $('sc-note').textContent = (at >= 0 ? `Updated \u201c${name}\u201d. ` : `Saved \u201c${name}\u201d. `) + keepNote();
+}
+
+function loadScenario() {
+  const name = $('sc-saved').value;
+  const sc = savedScenarios().find(x => x.name === name);
+  if (!sc) return;
+  scenarioToForm(sc);
+  $('sc-name').value = sc.name;
+  refreshScenario();
+  $('sc-note').classList.remove('warn');
+  $('sc-note').textContent = `Using \u201c${sc.name}\u201d. ` + describeScenario(sc);
+}
+
+function deleteScenario() {
+  const name = $('sc-saved').value;
+  if (!name || !savedScenarios().some(x => x.name === name)) return;
+  if (!confirm(`Delete the scenario \u201c${name}\u201d? The pasted grades are not affected.`)) return;
+  const list = savedScenarios().filter(x => x.name !== name);
+  if (list.length) settings.scenarios = list; else delete settings.scenarios;
+  savePersistedSettings();
+  renderSavedScenarios();
+  $('sc-note').classList.remove('warn');
+  $('sc-note').textContent = `Deleted \u201c${name}\u201d.`;
+}
+
+function clearScenario() {
+  scenarioToForm({ dropN: 0, curve: { mode: 'none', points: 0, apply: 'all', extra: false }, weights: null });
+  refreshScenario();
+  $('sc-note').classList.remove('warn');
+  $('sc-note').textContent = 'Scenario cleared.';
+}
+
+['sc-drop', 'sc-curve-mode', 'sc-apply', 'sc-extra', 'sc-rw'].forEach(id => $(id).addEventListener('change', () => { syncScenarioForm(); refreshScenario(); }));
+['sc-points', 'sc-w1', 'sc-w2', 'sc-w3', 'sc-w4'].forEach(id => $(id).addEventListener('input', refreshScenario));
+$('sc-save-btn').addEventListener('click', saveScenario);
+$('sc-load-btn').addEventListener('click', loadScenario);
+$('sc-delete-btn').addEventListener('click', deleteScenario);
+$('sc-clear-btn').addEventListener('click', clearScenario);
+syncScenarioForm();
 
 /* ── Missing-work triage ──────────────────────────────────────────────────
    Two questions, from the same paste, that a teacher would otherwise have to
@@ -1286,6 +1578,7 @@ function switchToManual() {
   // The what-if and the triage are both questions about a whole roster; there
   // is nothing to ask, or triage, about a single hand-entered student.
   document.getElementById('whatif-card').style.display = 'none';
+  document.getElementById('scenario-card').style.display = 'none';
   document.getElementById('triage-card').style.display = 'none';
   document.getElementById('import-area').value = '';
   setStatus('','');
@@ -1761,6 +2054,7 @@ function applySettingsToForm() {
   document.getElementById('show-work-toggle').checked = settings.showWork;
   document.body.classList.toggle('show-work', settings.showWork);
   document.getElementById('settings-persist').checked = settings.persist;
+  renderSavedScenarios();
 }
 
 /** Recomputes every visible grade after a Grading Settings change — cheap

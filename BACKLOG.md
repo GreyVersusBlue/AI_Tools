@@ -542,7 +542,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 43 | Path 16 P1 — `_shared/chart-svg.js` with 037’s accessibility patterns; 038 gets the a11y baseline | `_shared/` | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 44 | Path 16 P2 — `_shared/paste-table.js`, one parser for pasted spreadsheet regions | `_shared/` | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 45 | Path 16 P3 — per-question item analysis in 037 and a printed reteach priority list | 037 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
-| 46 | Path 16 P4 — 036 modelling: term count, scenario modelling, grading window, roster join | 036 | 2+ | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
+| 46 | Path 16 P4 — 036 modelling: term count, a chart of the scenario panel's before/after distribution, grading window, roster join | 036 | 2+ | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 47 | Path 16 P5 — 038 for science: regression, log axes, annotation layer, handoffs to 065 and 073 | 038 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 48 | Path 17 P1 — thumbnail-grid reordering, crop/straighten, real-photo validation of the retry presets | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 49 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold. **Designed, not built (AI-25, 2026-10-06): the design is under the P2 bullet; P1 is not built and the design says what P2 needs from it** | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
@@ -616,10 +616,9 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 143 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 144 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
 | 145 | Projector styling (the site-wide question bank shipped as Path 12 P1, v265; its other formats are Path 12 P2 and P3) | 030 | ½ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
-| 146 | The A/B cycle's anchor date shows the other letter when the anchor is a school day after the calendar's first school day (`scv-weeks.js`, `ANCHOR_QUIRK`; fixing it flips every letter of such a saved calendar, so it is a decision, not a quiet fix); cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); a "week starts on" setting (none exists; the week print is Monday to Friday). Year-grid badges and the page-per-week print shipped v291 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
+| 146 | The A/B cycle's anchor date shows the other letter when the anchor is a school day after the calendar's first school day (`scv-weeks.js`, `ANCHOR_QUIRK`; fixing it flips every letter of such a saved calendar, so it is a decision, not a quiet fix); cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); a "week starts on" setting (none exists; the week print is Monday to Friday). Year-grid badges and the page-per-week print shipped v292 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
 | 147 | "Where is this student right now?"; the published pathfinder | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
 | 148 | Split the file; accessibility routing | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
-| 149 | Scenario modelling — drop lowest, curve, re-weight | 036 | ½ | | [036 Final Grade Checker](#036--final-grade-checker) |
 | 150 | Image on a card; the Frayer model page | 040 | ½ | | [040 Vocabulary Flashcard & Word Wall Generator](#040--vocabulary-flashcard--word-wall-generator) |
 | 151 | A second language version; trip-day rosters | 043 | ½ | | [043 Field Trip Permission Slip Generator](#043--field-trip-permission-slip-generator) |
 | 152 | Seating chart and roster references by name | 044 | ½ | | [044 Sub Plan Builder](#044--sub-plan-builder) |
@@ -9779,7 +9778,7 @@ written.
   Visualizer) is built around A/B days; this calendar doesn't know about them,
   so it can't answer "is the Monday after break an A day?" — which is the
   single most-asked calendar question in a block-schedule school. *(Month
-  grid, and since v291 the year grid too: each school day says its letter as
+  grid, and since v292 the year grid too: each school day says its letter as
   text in a box, a closed weekday an en dash on a hatched cell, a weekend
   nothing; the letters come from one function, `scv-weeks.js` `abLetters()`,
   that the month grid, the year grid and the printed weeks all read. Not
@@ -9787,7 +9786,7 @@ written.
   146; and only A and B exist, the store has no field for the cycle's own
   labels.)*
 - **Done —** **Week-at-a-glance print** in addition to the month/year views.
-  *(One week since 2026-08; since v291 "Week of" through "the week of" or
+  *(One week since 2026-08; since v292 "Week of" through "the week of" or
   "Every week of the year" prints a page per week, up to 60, Monday to Friday,
   by calendar date and not by `Date` arithmetic. There is no setting for the day
   a week starts on, and the page does not force an orientation: choose
@@ -10097,10 +10096,15 @@ laptop by QR code across a desk.
 
 #### Major Features
 
-- **Skipped — deferred.** **Scenario modelling.** "If everyone's lowest test is dropped", "if I curve
-  by 4 points", "if this assignment is worth 50 instead of 100" — recomputed
-  across the class instantly, with a before/after distribution. *(Not
-  attempted this round.)*
+- **Done (2026-10-07, AI-31-036, v291) —** **Scenario modelling.** A Scenarios card beside the real
+  grades (`Tools/final-grade-checker/scenario-math.mjs`, checked against an exact-fraction oracle):
+  drop each student's lowest 0 to 3 quarters, curve (add points, or scale so each quarter's class top
+  becomes 100; every quarter or one; extra credit optional), re-weight the quarters (0 leaves one out;
+  bad weights refused), always in that order, with the rules in words on the page; before and after
+  per student with the difference and letter counts; named scenarios saved in the existing settings
+  key only when "Remember" is ticked. *This tool grades four quarters, not categories of
+  assignments, so "category" is the four quarters; a category/assessment gradebook would be a
+  different model and was not built. The before/after is a table and letter counts, not a chart (Path 16 P4, after P1).*
 - **Skipped — deferred.** **Grade-window awareness** (P7). If `032-School Calendar Visualizer.html`
   knows when the quarter ends, "remaining quarter" stops being a manual input.
   *(Not attempted this round.)*
