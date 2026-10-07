@@ -196,10 +196,10 @@ const LEGACY = { copyCount: 3, prompts: P('Which table was loudest?', 'Did the q
   const page = await open(LEGACY);
   eq((await doc(page)), JSON.parse(JSON.stringify(LEGACY)), '5: before any action there is only the one slip (nothing created unasked)');
   const starters = {
-    general: { name: 'General', first: 'What worked well today?', n: 4 },
-    lab: { name: 'Lab day', first: 'Did every group finish the lab, and where did groups get stuck?', n: 4 },
-    testing: { name: 'Testing day', first: 'Did everyone finish the test in the time given?', n: 4 },
-    blank: { name: 'One empty prompt', first: '', n: 1 },
+    general: { name: 'General', all: ['What worked well today?', 'What didn’t go as planned?', 'Any names or notes I should know for tomorrow?', 'Anything else the teacher should know?'] },
+    lab: { name: 'Lab day', all: ['Did every group finish the lab, and where did groups get stuck?', 'Were there any safety concerns or spills?', 'Was all equipment returned and the stations cleaned up?', 'Any names or notes I should know for tomorrow?'] },
+    testing: { name: 'Testing day', all: ['Did everyone finish the test in the time given?', 'Did anyone need an accommodation, a break or a different seat?', 'Any concerns about how the test went?', 'Any names or notes I should know for tomorrow?'] },
+    blank: { name: 'One empty prompt', all: [''] },
   };
   for (const id of Object.keys(starters)) {
     await page.selectOption('#starterSelect', id);
@@ -209,8 +209,7 @@ const LEGACY = { copyCount: 3, prompts: P('Which table was loudest?', 'Did the q
     eq([dlg.type, dlg.message, dlg.def], ['prompt', 'Name for the new slip:', id === 'blank' ? 'New slip' : starters[id].name], `5: ${id}: the name prompt offers a default`);
     eq((await names(page)).length, before + 1, `5: ${id}: one slip is added`);
     eq((await selected(page)), id === 'blank' ? 'New slip' : starters[id].name, `5: ${id}: a blank name takes the default`);
-    const t = await promptTexts(page);
-    eq([t.length, t[0]], [starters[id].n, starters[id].first], `5: ${id}: the starter's prompts`);
+    eq(await promptTexts(page), starters[id].all, `5: ${id}: the starter's prompts, word for word`);
     eq(await fields(page), { copyCount: '2', classPeriod: '', urgency: true }, `5: ${id}: with default settings, not the previous slip's`);
     ok((await msg(page)).includes('Started'), `5: ${id}: and says so: ${await msg(page)}`);
   }
@@ -342,23 +341,24 @@ const LEGACY = { copyCount: 3, prompts: P('Which table was loudest?', 'Did the q
   ok(await enabled(page, 'deleteSetBtn'), '11: Delete is on with several');
   await say(page, [false], 'deleteSetBtn');
   const dlg = page.__dialogs[page.__dialogs.length - 1];
-  eq([dlg.type, dlg.message], ['confirm', 'Delete “Third”, with its prompts and settings? This cannot be undone.'], '11: it asks first, naming the slip');
+  eq([dlg.type, dlg.message], ['confirm', 'Delete \u201cThird\u201d, with its prompts and settings? This cannot be undone.'], '11: it asks first, naming the slip');
   eq((await names(page)).length, 3, '11: declining deletes nothing');
-  await page.selectOption('#setSelect', { label: 'Second' }); await settle(page, 80);
   await say(page, [true], 'deleteSetBtn');
-  eq(await names(page), ['My slip', 'Third'], '11: accepting deletes the open slip');
-  eq(await selected(page), 'My slip', '11: and opens the one before it');
-  eq((await doc(page)).sets.map(s => s.name), ['My slip', 'Third'], '11: on disk too');
-  eq((await doc(page)).currentId, (await doc(page)).sets[0].id, '11: the current slip on disk is the open one');
-  eq(await promptTexts(page), ['Which table was loudest?', 'Did the quiz finish?'], '11: with its own prompts showing');
+  eq(await names(page), ['My slip', 'Second'], '11: accepting deletes the open slip');
+  eq(await selected(page), 'Second', '11: and opens the one before it, not the first');
+  eq((await doc(page)).sets.map(s => s.name), ['My slip', 'Second'], '11: on disk too');
+  eq((await doc(page)).currentId, (await doc(page)).sets[1].id, '11: the current slip on disk is the open one');
+  eq((await promptTexts(page)).length, 4, '11: with its own prompts showing');
+  await page.selectOption('#setSelect', { label: 'My slip' }); await settle(page, 80);
   await say(page, [true], 'deleteSetBtn');
-  eq((await names(page)), ['Third'], '11: delete down to one');
-  eq(await selected(page), 'Third', '11: the neighbour is opened');
+  eq((await names(page)), ['Second'], '11: deleting the first leaves the rest');
+  eq(await selected(page), 'Second', '11: and opens what is left');
+  eq((await doc(page)).currentId, (await doc(page)).sets[0].id, '11: on disk too');
   ok(!(await enabled(page, 'deleteSetBtn')), '11: with one left Delete is off');
   const keep = await raw(page);
   await page.evaluate(() => document.getElementById('deleteSetBtn').click());
   await settle(page, 120);
-  eq([await raw(page), await names(page)], [keep, ['Third']], '11: and a click on the disabled button removes nothing');
+  eq([await raw(page), await names(page)], [keep, ['Second']], '11: and a click on the disabled button removes nothing');
   eq(page.__dialogs.filter(d => d.type === 'confirm').length, 3, '11: and asks nothing');
   eq((await promptTexts(page)).length, 4, '11: the last slip is still a usable tool');
   await clean(page, '11');
@@ -458,7 +458,11 @@ const LEGACY = { copyCount: 3, prompts: P('Which table was loudest?', 'Did the q
     eq((await fields(page)).classPeriod, 'ok', `${tag}: and takes an edit`);
     await clean(page, tag);
   }
-  const page = await open(JSON.stringify({ v: 2, currentId: 'b', sets: [{ id: 'a', name: 'A', copyCount: 'x', prompts: P('A?') }, { id: 'b', name: 'B', copyCount: 500, urgencyBox: 'yes', prompts: P('B?') }] }));
+  const bad = { v: 2, currentId: 'b', sets: [{ id: 'a', name: 'A', copyCount: 'x', prompts: P('A?') }, { id: 'b', name: 'B', copyCount: 500, urgencyBox: 'yes', prompts: P('B?') }] };
+  const other = await open(JSON.stringify({ ...bad, currentId: 'a' }));
+  eq((await fields(other)).copyCount, '2', '14: a slip whose stored count is not a number reads as two copies');
+  await clean(other, '14 count');
+  const page = await open(JSON.stringify(bad));
   eq(await fields(page), { copyCount: '500', classPeriod: '', urgency: true }, '14: a stored count and a non-boolean box read as the old page read them');
   eq((await sheet(page)).match(/class="pk-half/g).length, 20, '14: and print still clamps to 20');
   await clean(page, '14 counts');
