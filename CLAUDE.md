@@ -556,7 +556,7 @@ files must be added there too.
   from a form sends only the fields the form shows, with the id, so the rest of the question stays; and **a file is
   shown before it is stored** (`importPlan()`, the bank's own `merge()` over a copy), which the next import route
   does too (`npm run test:bank-editor`, `npm run test:bank-editor-core`).
-  Since v277 020 is the third page with the module, and the model for **a tool that plays from the bank and keeps
+  Since v278 020 is the third page with the module, and the model for **a tool that plays from the bank and keeps
   no question**: its academic-tournament mode (`Tools/bracket-tournament-generator/bt-academic.js`) reads with
   `peek()` and never writes the bank, stores question **ids** on its own record (a seed, the settings, ids and marks in
   one `academic` field of the bracket), reads the words from the source each time, and cleans that field when it

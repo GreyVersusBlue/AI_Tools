@@ -1,0 +1,2517 @@
+{
+ "recordedAt": "4162d61",
+ "scenarios": {
+  "random-28-by-7": {
+   "steps": [
+    {
+     "groups": [
+      [
+       "Zed TestZ",
+       "Eli TestE",
+       "Kai TestK",
+       "Bo TestB"
+      ],
+      [
+       "Fay TestF",
+       "Nia TestN",
+       "Gus TestG",
+       "Mo TestM"
+      ],
+      [
+       "Hana TestH",
+       "Quin TestQ",
+       "Yul TestY",
+       "Uri TestU"
+      ],
+      [
+       "Val TestV",
+       "Di TestD",
+       "Sol TestS",
+       "Abe TestA"
+      ],
+      [
+       "Xan TestX",
+       "Tess TestT",
+       "Ira TestI",
+       "Pia TestP"
+      ],
+      [
+       "Rae TestR",
+       "Cy TestC",
+       "Wen TestW",
+       "Bea TestB"
+      ],
+      [
+       "Ada TestA",
+       "Jo TestJ",
+       "Lena TestL",
+       "Oz TestO"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Val TestV",
+       "Gus TestG",
+       "Wen TestW",
+       "Zed TestZ"
+      ],
+      [
+       "Abe TestA",
+       "Bo TestB",
+       "Xan TestX",
+       "Rae TestR"
+      ],
+      [
+       "Fay TestF",
+       "Ada TestA",
+       "Sol TestS",
+       "Tess TestT"
+      ],
+      [
+       "Jo TestJ",
+       "Eli TestE",
+       "Uri TestU",
+       "Mo TestM"
+      ],
+      [
+       "Nia TestN",
+       "Bea TestB",
+       "Oz TestO",
+       "Quin TestQ"
+      ],
+      [
+       "Hana TestH",
+       "Lena TestL",
+       "Cy TestC",
+       "Ira TestI"
+      ],
+      [
+       "Di TestD",
+       "Pia TestP",
+       "Yul TestY",
+       "Kai TestK"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Sol TestS",
+       "Ira TestI",
+       "Nia TestN",
+       "Wen TestW"
+      ],
+      [
+       "Mo TestM",
+       "Zed TestZ",
+       "Quin TestQ",
+       "Xan TestX"
+      ],
+      [
+       "Bea TestB",
+       "Gus TestG",
+       "Pia TestP",
+       "Bo TestB"
+      ],
+      [
+       "Tess TestT",
+       "Lena TestL",
+       "Rae TestR",
+       "Di TestD"
+      ],
+      [
+       "Hana TestH",
+       "Fay TestF",
+       "Jo TestJ",
+       "Kai TestK"
+      ],
+      [
+       "Ada TestA",
+       "Cy TestC",
+       "Abe TestA",
+       "Uri TestU"
+      ],
+      [
+       "Eli TestE",
+       "Oz TestO",
+       "Val TestV",
+       "Yul TestY"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Nia TestN",
+       "Lena TestL",
+       "Kai TestK",
+       "Zed TestZ"
+      ],
+      [
+       "Tess TestT",
+       "Xan TestX",
+       "Val TestV",
+       "Ira TestI"
+      ],
+      [
+       "Ada TestA",
+       "Quin TestQ",
+       "Rae TestR",
+       "Yul TestY"
+      ],
+      [
+       "Fay TestF",
+       "Bo TestB",
+       "Di TestD",
+       "Uri TestU"
+      ],
+      [
+       "Bea TestB",
+       "Eli TestE",
+       "Cy TestC",
+       "Wen TestW"
+      ],
+      [
+       "Sol TestS",
+       "Mo TestM",
+       "Hana TestH",
+       "Gus TestG"
+      ],
+      [
+       "Abe TestA",
+       "Pia TestP",
+       "Oz TestO",
+       "Jo TestJ"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Jo TestJ",
+       "Bo TestB",
+       "Quin TestQ",
+       "Val TestV"
+      ],
+      [
+       "Cy TestC",
+       "Lena TestL",
+       "Sol TestS",
+       "Oz TestO"
+      ],
+      [
+       "Nia TestN",
+       "Xan TestX",
+       "Abe TestA",
+       "Fay TestF"
+      ],
+      [
+       "Kai TestK",
+       "Mo TestM",
+       "Uri TestU",
+       "Eli TestE"
+      ],
+      [
+       "Ira TestI",
+       "Rae TestR",
+       "Bea TestB",
+       "Hana TestH"
+      ],
+      [
+       "Yul TestY",
+       "Wen TestW",
+       "Pia TestP",
+       "Tess TestT"
+      ],
+      [
+       "Zed TestZ",
+       "Gus TestG",
+       "Ada TestA",
+       "Di TestD"
+      ]
+     ],
+     "floaters": ""
+    }
+   ],
+   "savedSha256": "7e67973eedb2ff6ee69cca39a7ecab8cf466a1b4d78502ad24814b83a39b0dcc",
+   "savedLength": 8392
+  },
+  "random-27-size4": {
+   "steps": [
+    {
+     "groups": [
+      [
+       "Xan TestX",
+       "Zed TestZ",
+       "Eli TestE",
+       "Ada TestA"
+      ],
+      [
+       "Gus TestG",
+       "Ira TestI",
+       "Uri TestU",
+       "Di TestD"
+      ],
+      [
+       "Quin TestQ",
+       "Lena TestL",
+       "Val TestV",
+       "Wen TestW"
+      ],
+      [
+       "Pia TestP",
+       "Fay TestF",
+       "Nia TestN",
+       "Oz TestO"
+      ],
+      [
+       "Tess TestT",
+       "Rae TestR",
+       "Kai TestK",
+       "Bo TestB"
+      ],
+      [
+       "Sol TestS",
+       "Jo TestJ",
+       "Mo TestM",
+       "Hana TestH"
+      ],
+      [
+       "Cy TestC",
+       "Abe TestA",
+       "Yul TestY"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Kai TestK",
+       "Lena TestL",
+       "Cy TestC",
+       "Di TestD"
+      ],
+      [
+       "Rae TestR",
+       "Zed TestZ",
+       "Val TestV",
+       "Pia TestP"
+      ],
+      [
+       "Xan TestX",
+       "Ira TestI",
+       "Sol TestS",
+       "Bo TestB"
+      ],
+      [
+       "Oz TestO",
+       "Yul TestY",
+       "Jo TestJ",
+       "Gus TestG"
+      ],
+      [
+       "Wen TestW",
+       "Hana TestH",
+       "Fay TestF",
+       "Ada TestA"
+      ],
+      [
+       "Tess TestT",
+       "Quin TestQ",
+       "Uri TestU",
+       "Nia TestN"
+      ],
+      [
+       "Eli TestE",
+       "Abe TestA",
+       "Mo TestM"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Quin TestQ",
+       "Rae TestR",
+       "Yul TestY",
+       "Fay TestF"
+      ],
+      [
+       "Tess TestT",
+       "Mo TestM",
+       "Zed TestZ",
+       "Gus TestG"
+      ],
+      [
+       "Ada TestA",
+       "Lena TestL",
+       "Bo TestB",
+       "Nia TestN"
+      ],
+      [
+       "Hana TestH",
+       "Val TestV",
+       "Abe TestA",
+       "Ira TestI"
+      ],
+      [
+       "Sol TestS",
+       "Pia TestP",
+       "Cy TestC",
+       "Wen TestW"
+      ],
+      [
+       "Jo TestJ",
+       "Kai TestK",
+       "Xan TestX",
+       "Uri TestU"
+      ],
+      [
+       "Oz TestO",
+       "Di TestD",
+       "Eli TestE"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Quin TestQ",
+       "Gus TestG",
+       "Kai TestK",
+       "Hana TestH"
+      ],
+      [
+       "Ira TestI",
+       "Nia TestN",
+       "Wen TestW",
+       "Zed TestZ"
+      ],
+      [
+       "Oz TestO",
+       "Fay TestF",
+       "Lena TestL",
+       "Sol TestS"
+      ],
+      [
+       "Yul TestY",
+       "Uri TestU",
+       "Eli TestE",
+       "Pia TestP"
+      ],
+      [
+       "Cy TestC",
+       "Xan TestX",
+       "Tess TestT",
+       "Val TestV"
+      ],
+      [
+       "Abe TestA",
+       "Bo TestB",
+       "Rae TestR",
+       "Jo TestJ"
+      ],
+      [
+       "Ada TestA",
+       "Mo TestM",
+       "Di TestD"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Lena TestL",
+       "Cy TestC",
+       "Di TestD",
+       "Abe TestA"
+      ],
+      [
+       "Val TestV",
+       "Quin TestQ",
+       "Oz TestO",
+       "Jo TestJ"
+      ],
+      [
+       "Zed TestZ",
+       "Kai TestK",
+       "Fay TestF",
+       "Bo TestB"
+      ],
+      [
+       "Uri TestU",
+       "Gus TestG",
+       "Rae TestR",
+       "Nia TestN"
+      ],
+      [
+       "Tess TestT",
+       "Yul TestY",
+       "Sol TestS",
+       "Ira TestI"
+      ],
+      [
+       "Hana TestH",
+       "Eli TestE",
+       "Wen TestW",
+       "Ada TestA"
+      ],
+      [
+       "Xan TestX",
+       "Mo TestM",
+       "Pia TestP"
+      ]
+     ],
+     "floaters": ""
+    }
+   ],
+   "savedSha256": "52ec3d0980977ef28e3d4b1bed55d4de65729e9f333d2ddebc6cd55777b9698d",
+   "savedLength": 8054
+  },
+  "random-27-floaters": {
+   "steps": [
+    {
+     "groups": [
+      [
+       "Quin TestQ",
+       "Fay TestF",
+       "Eli TestE"
+      ],
+      [
+       "Rae TestR",
+       "Uri TestU",
+       "Mo TestM"
+      ],
+      [
+       "Nia TestN",
+       "Sol TestS",
+       "Lena TestL"
+      ],
+      [
+       "Val TestV",
+       "Gus TestG",
+       "Abe TestA"
+      ],
+      [
+       "Ira TestI",
+       "Oz TestO",
+       "Kai TestK"
+      ],
+      [
+       "Zed TestZ",
+       "Tess TestT",
+       "Hana TestH"
+      ],
+      [
+       "Di TestD",
+       "Cy TestC",
+       "Xan TestX"
+      ]
+     ],
+     "floaters": "Floaters (not assigned to a group): Wen TestW, Ada TestA, Yul TestY, Bo TestB, Jo TestJ, Pia TestP"
+    },
+    {
+     "groups": [
+      [
+       "Zed TestZ",
+       "Eli TestE",
+       "Ada TestA"
+      ],
+      [
+       "Nia TestN",
+       "Jo TestJ",
+       "Hana TestH"
+      ],
+      [
+       "Kai TestK",
+       "Mo TestM",
+       "Fay TestF"
+      ],
+      [
+       "Di TestD",
+       "Sol TestS",
+       "Wen TestW"
+      ],
+      [
+       "Quin TestQ",
+       "Abe TestA",
+       "Pia TestP"
+      ],
+      [
+       "Tess TestT",
+       "Xan TestX",
+       "Oz TestO"
+      ],
+      [
+       "Rae TestR",
+       "Val TestV",
+       "Lena TestL"
+      ]
+     ],
+     "floaters": "Floaters (not assigned to a group): Uri TestU, Gus TestG, Yul TestY, Bo TestB, Ira TestI, Cy TestC"
+    },
+    {
+     "groups": [
+      [
+       "Cy TestC",
+       "Gus TestG",
+       "Eli TestE"
+      ],
+      [
+       "Ada TestA",
+       "Jo TestJ",
+       "Oz TestO"
+      ],
+      [
+       "Kai TestK",
+       "Zed TestZ",
+       "Lena TestL"
+      ],
+      [
+       "Ira TestI",
+       "Xan TestX",
+       "Sol TestS"
+      ],
+      [
+       "Mo TestM",
+       "Quin TestQ",
+       "Hana TestH"
+      ],
+      [
+       "Wen TestW",
+       "Nia TestN",
+       "Val TestV"
+      ],
+      [
+       "Abe TestA",
+       "Tess TestT",
+       "Rae TestR"
+      ]
+     ],
+     "floaters": "Floaters (not assigned to a group): Pia TestP, Yul TestY, Fay TestF, Di TestD, Uri TestU, Bo TestB"
+    },
+    {
+     "groups": [
+      [
+       "Zed TestZ",
+       "Bo TestB",
+       "Oz TestO"
+      ],
+      [
+       "Sol TestS",
+       "Eli TestE",
+       "Mo TestM"
+      ],
+      [
+       "Val TestV",
+       "Quin TestQ",
+       "Uri TestU"
+      ],
+      [
+       "Nia TestN",
+       "Ada TestA",
+       "Kai TestK"
+      ],
+      [
+       "Ira TestI",
+       "Tess TestT",
+       "Yul TestY"
+      ],
+      [
+       "Rae TestR",
+       "Pia TestP",
+       "Gus TestG"
+      ],
+      [
+       "Fay TestF",
+       "Lena TestL",
+       "Abe TestA"
+      ]
+     ],
+     "floaters": "Floaters (not assigned to a group): Cy TestC, Hana TestH, Di TestD, Wen TestW, Xan TestX, Jo TestJ"
+    },
+    {
+     "groups": [
+      [
+       "Quin TestQ",
+       "Oz TestO",
+       "Lena TestL"
+      ],
+      [
+       "Zed TestZ",
+       "Gus TestG",
+       "Tess TestT"
+      ],
+      [
+       "Abe TestA",
+       "Nia TestN",
+       "Di TestD"
+      ],
+      [
+       "Rae TestR",
+       "Ira TestI",
+       "Ada TestA"
+      ],
+      [
+       "Sol TestS",
+       "Hana TestH",
+       "Pia TestP"
+      ],
+      [
+       "Fay TestF",
+       "Uri TestU",
+       "Xan TestX"
+      ],
+      [
+       "Yul TestY",
+       "Bo TestB",
+       "Kai TestK"
+      ]
+     ],
+     "floaters": "Floaters (not assigned to a group): Val TestV, Wen TestW, Mo TestM, Cy TestC, Jo TestJ, Eli TestE"
+    }
+   ],
+   "savedSha256": "6007cee88410994c41cca083c05a948804f272b98dc6640b0a6c363e0464ce82",
+   "savedLength": 4925
+  },
+  "random-27-own-group": {
+   "steps": [
+    {
+     "groups": [
+      [
+       "Xan TestX",
+       "Fay TestF",
+       "Zed TestZ"
+      ],
+      [
+       "Yul TestY",
+       "Nia TestN",
+       "Bo TestB"
+      ],
+      [
+       "Hana TestH",
+       "Val TestV",
+       "Gus TestG"
+      ],
+      [
+       "Di TestD",
+       "Uri TestU",
+       "Pia TestP"
+      ],
+      [
+       "Quin TestQ",
+       "Wen TestW",
+       "Rae TestR"
+      ],
+      [
+       "Kai TestK",
+       "Cy TestC",
+       "Ada TestA"
+      ],
+      [
+       "Sol TestS",
+       "Tess TestT",
+       "Oz TestO"
+      ],
+      [
+       "Jo TestJ",
+       "Eli TestE",
+       "Ira TestI",
+       "Abe TestA",
+       "Lena TestL",
+       "Mo TestM"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Lena TestL",
+       "Oz TestO",
+       "Gus TestG"
+      ],
+      [
+       "Ira TestI",
+       "Xan TestX",
+       "Uri TestU"
+      ],
+      [
+       "Kai TestK",
+       "Sol TestS",
+       "Jo TestJ"
+      ],
+      [
+       "Ada TestA",
+       "Mo TestM",
+       "Rae TestR"
+      ],
+      [
+       "Cy TestC",
+       "Pia TestP",
+       "Eli TestE"
+      ],
+      [
+       "Yul TestY",
+       "Val TestV",
+       "Wen TestW"
+      ],
+      [
+       "Abe TestA",
+       "Fay TestF",
+       "Nia TestN"
+      ],
+      [
+       "Di TestD",
+       "Zed TestZ",
+       "Tess TestT",
+       "Bo TestB",
+       "Quin TestQ",
+       "Hana TestH"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Uri TestU",
+       "Zed TestZ",
+       "Eli TestE"
+      ],
+      [
+       "Quin TestQ",
+       "Abe TestA",
+       "Cy TestC"
+      ],
+      [
+       "Yul TestY",
+       "Fay TestF",
+       "Kai TestK"
+      ],
+      [
+       "Tess TestT",
+       "Jo TestJ",
+       "Pia TestP"
+      ],
+      [
+       "Oz TestO",
+       "Nia TestN",
+       "Rae TestR"
+      ],
+      [
+       "Ira TestI",
+       "Wen TestW",
+       "Hana TestH"
+      ],
+      [
+       "Mo TestM",
+       "Bo TestB",
+       "Gus TestG"
+      ],
+      [
+       "Val TestV",
+       "Lena TestL",
+       "Sol TestS",
+       "Xan TestX",
+       "Ada TestA",
+       "Di TestD"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Oz TestO",
+       "Xan TestX",
+       "Mo TestM"
+      ],
+      [
+       "Zed TestZ",
+       "Ada TestA",
+       "Nia TestN"
+      ],
+      [
+       "Tess TestT",
+       "Val TestV",
+       "Cy TestC"
+      ],
+      [
+       "Uri TestU",
+       "Di TestD",
+       "Pia TestP"
+      ],
+      [
+       "Jo TestJ",
+       "Fay TestF",
+       "Bo TestB"
+      ],
+      [
+       "Hana TestH",
+       "Yul TestY",
+       "Gus TestG"
+      ],
+      [
+       "Ira TestI",
+       "Quin TestQ",
+       "Sol TestS"
+      ],
+      [
+       "Wen TestW",
+       "Abe TestA",
+       "Eli TestE",
+       "Lena TestL",
+       "Kai TestK",
+       "Rae TestR"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Zed TestZ",
+       "Ira TestI",
+       "Fay TestF"
+      ],
+      [
+       "Cy TestC",
+       "Di TestD",
+       "Wen TestW"
+      ],
+      [
+       "Ada TestA",
+       "Abe TestA",
+       "Yul TestY"
+      ],
+      [
+       "Bo TestB",
+       "Val TestV",
+       "Rae TestR"
+      ],
+      [
+       "Lena TestL",
+       "Oz TestO",
+       "Tess TestT"
+      ],
+      [
+       "Gus TestG",
+       "Uri TestU",
+       "Sol TestS"
+      ],
+      [
+       "Mo TestM",
+       "Kai TestK",
+       "Jo TestJ"
+      ],
+      [
+       "Xan TestX",
+       "Eli TestE",
+       "Nia TestN",
+       "Hana TestH",
+       "Pia TestP",
+       "Quin TestQ"
+      ]
+     ],
+     "floaters": ""
+    }
+   ],
+   "savedSha256": "927af37b686f04b3f05644275e0070f8d571eb2e88df34b614e62e5359b4a0e1",
+   "savedLength": 7472
+  },
+  "apart-together-24": {
+   "steps": [
+    {
+     "groups": [
+      [
+       "Di TestD",
+       "Gus TestG",
+       "Tess TestT",
+       "Mo TestM"
+      ],
+      [
+       "Val TestV",
+       "Wen TestW",
+       "Oz TestO",
+       "Eli TestE"
+      ],
+      [
+       "Kai TestK",
+       "Uri TestU",
+       "Rae TestR",
+       "Lena TestL"
+      ],
+      [
+       "Pia TestP",
+       "Jo TestJ",
+       "Bo TestB",
+       "Ira TestI"
+      ],
+      [
+       "Sol TestS",
+       "Hana TestH",
+       "Xan TestX",
+       "Cy TestC"
+      ],
+      [
+       "Nia TestN",
+       "Ada TestA",
+       "Quin TestQ",
+       "Fay TestF"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Nia TestN",
+       "Gus TestG",
+       "Wen TestW",
+       "Cy TestC"
+      ],
+      [
+       "Eli TestE",
+       "Ada TestA",
+       "Sol TestS",
+       "Mo TestM"
+      ],
+      [
+       "Di TestD",
+       "Val TestV",
+       "Bo TestB",
+       "Quin TestQ"
+      ],
+      [
+       "Oz TestO",
+       "Kai TestK",
+       "Lena TestL",
+       "Fay TestF"
+      ],
+      [
+       "Rae TestR",
+       "Pia TestP",
+       "Tess TestT",
+       "Xan TestX"
+      ],
+      [
+       "Uri TestU",
+       "Ira TestI",
+       "Jo TestJ",
+       "Hana TestH"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Cy TestC",
+       "Rae TestR",
+       "Val TestV",
+       "Ada TestA"
+      ],
+      [
+       "Pia TestP",
+       "Sol TestS",
+       "Wen TestW",
+       "Quin TestQ"
+      ],
+      [
+       "Gus TestG",
+       "Xan TestX",
+       "Uri TestU",
+       "Fay TestF"
+      ],
+      [
+       "Kai TestK",
+       "Nia TestN",
+       "Mo TestM",
+       "Lena TestL"
+      ],
+      [
+       "Jo TestJ",
+       "Di TestD",
+       "Eli TestE",
+       "Ira TestI"
+      ],
+      [
+       "Tess TestT",
+       "Hana TestH",
+       "Bo TestB",
+       "Oz TestO"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Jo TestJ",
+       "Mo TestM",
+       "Ira TestI",
+       "Gus TestG"
+      ],
+      [
+       "Uri TestU",
+       "Quin TestQ",
+       "Ada TestA",
+       "Nia TestN"
+      ],
+      [
+       "Lena TestL",
+       "Bo TestB",
+       "Rae TestR",
+       "Kai TestK"
+      ],
+      [
+       "Pia TestP",
+       "Eli TestE",
+       "Cy TestC",
+       "Oz TestO"
+      ],
+      [
+       "Tess TestT",
+       "Fay TestF",
+       "Val TestV",
+       "Sol TestS"
+      ],
+      [
+       "Hana TestH",
+       "Di TestD",
+       "Wen TestW",
+       "Xan TestX"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Wen TestW",
+       "Cy TestC",
+       "Tess TestT",
+       "Nia TestN"
+      ],
+      [
+       "Uri TestU",
+       "Jo TestJ",
+       "Val TestV",
+       "Ira TestI"
+      ],
+      [
+       "Di TestD",
+       "Oz TestO",
+       "Ada TestA",
+       "Sol TestS"
+      ],
+      [
+       "Pia TestP",
+       "Hana TestH",
+       "Fay TestF",
+       "Mo TestM"
+      ],
+      [
+       "Eli TestE",
+       "Bo TestB",
+       "Xan TestX",
+       "Quin TestQ"
+      ],
+      [
+       "Rae TestR",
+       "Lena TestL",
+       "Gus TestG",
+       "Kai TestK"
+      ]
+     ],
+     "floaters": ""
+    }
+   ],
+   "savedSha256": "744132514ef0a0a3892e20c297654f7a48eb06765e2840facf3a0c83626ccdfb",
+   "savedLength": 7154
+  },
+  "balanced-26": {
+   "steps": [
+    {
+     "groups": [
+      [
+       "Mo TestM",
+       "Jo TestJ",
+       "Bo TestB",
+       "Di TestD",
+       "Zed TestZ"
+      ],
+      [
+       "Wen TestW",
+       "Yul TestY",
+       "Lena TestL",
+       "Sol TestS",
+       "Kai TestK"
+      ],
+      [
+       "Cy TestC",
+       "Tess TestT",
+       "Gus TestG",
+       "Ira TestI",
+       "Fay TestF"
+      ],
+      [
+       "Rae TestR",
+       "Eli TestE",
+       "Val TestV",
+       "Xan TestX",
+       "Uri TestU"
+      ],
+      [
+       "Hana TestH",
+       "Oz TestO",
+       "Quin TestQ",
+       "Nia TestN",
+       "Pia TestP",
+       "Ada TestA"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Eli TestE",
+       "Yul TestY",
+       "Quin TestQ",
+       "Mo TestM",
+       "Tess TestT"
+      ],
+      [
+       "Di TestD",
+       "Val TestV",
+       "Sol TestS",
+       "Nia TestN",
+       "Gus TestG"
+      ],
+      [
+       "Uri TestU",
+       "Ira TestI",
+       "Bo TestB",
+       "Oz TestO",
+       "Wen TestW"
+      ],
+      [
+       "Rae TestR",
+       "Fay TestF",
+       "Ada TestA",
+       "Jo TestJ",
+       "Kai TestK"
+      ],
+      [
+       "Cy TestC",
+       "Zed TestZ",
+       "Lena TestL",
+       "Xan TestX",
+       "Hana TestH",
+       "Pia TestP"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Nia TestN",
+       "Yul TestY",
+       "Zed TestZ",
+       "Ira TestI",
+       "Rae TestR"
+      ],
+      [
+       "Quin TestQ",
+       "Xan TestX",
+       "Wen TestW",
+       "Gus TestG",
+       "Jo TestJ"
+      ],
+      [
+       "Eli TestE",
+       "Fay TestF",
+       "Sol TestS",
+       "Hana TestH",
+       "Bo TestB"
+      ],
+      [
+       "Ada TestA",
+       "Tess TestT",
+       "Lena TestL",
+       "Di TestD",
+       "Uri TestU"
+      ],
+      [
+       "Cy TestC",
+       "Kai TestK",
+       "Val TestV",
+       "Oz TestO",
+       "Mo TestM",
+       "Pia TestP"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Ira TestI",
+       "Ada TestA",
+       "Eli TestE",
+       "Xan TestX",
+       "Val TestV"
+      ],
+      [
+       "Hana TestH",
+       "Di TestD",
+       "Quin TestQ",
+       "Oz TestO",
+       "Rae TestR"
+      ],
+      [
+       "Cy TestC",
+       "Nia TestN",
+       "Jo TestJ",
+       "Tess TestT",
+       "Bo TestB"
+      ],
+      [
+       "Pia TestP",
+       "Fay TestF",
+       "Gus TestG",
+       "Uri TestU",
+       "Yul TestY"
+      ],
+      [
+       "Wen TestW",
+       "Kai TestK",
+       "Sol TestS",
+       "Lena TestL",
+       "Mo TestM",
+       "Zed TestZ"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Di TestD",
+       "Yul TestY",
+       "Bo TestB",
+       "Xan TestX",
+       "Kai TestK"
+      ],
+      [
+       "Wen TestW",
+       "Oz TestO",
+       "Eli TestE",
+       "Nia TestN",
+       "Uri TestU"
+      ],
+      [
+       "Rae TestR",
+       "Jo TestJ",
+       "Pia TestP",
+       "Sol TestS",
+       "Ada TestA"
+      ],
+      [
+       "Cy TestC",
+       "Ira TestI",
+       "Lena TestL",
+       "Hana TestH",
+       "Gus TestG"
+      ],
+      [
+       "Mo TestM",
+       "Quin TestQ",
+       "Fay TestF",
+       "Tess TestT",
+       "Zed TestZ",
+       "Val TestV"
+      ]
+     ],
+     "floaters": ""
+    }
+   ],
+   "savedSha256": "7906bf00bd0d8ad87b6a2599479fe28d1808fc80938727cd3ddd2f96338454b2",
+   "savedLength": 10291
+  },
+  "hetero-26": {
+   "steps": [
+    {
+     "groups": [
+      [
+       "Cy TestC",
+       "Tess TestT",
+       "Bo TestB",
+       "Gus TestG",
+       "Pia TestP",
+       "Zed TestZ"
+      ],
+      [
+       "Rae TestR",
+       "Wen TestW",
+       "Quin TestQ",
+       "Nia TestN",
+       "Fay TestF",
+       "Xan TestX"
+      ],
+      [
+       "Yul TestY",
+       "Oz TestO",
+       "Lena TestL",
+       "Eli TestE",
+       "Ada TestA",
+       "Kai TestK"
+      ],
+      [
+       "Jo TestJ",
+       "Hana TestH",
+       "Val TestV",
+       "Sol TestS",
+       "Uri TestU"
+      ],
+      [
+       "Mo TestM",
+       "Ira TestI",
+       "Di TestD"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Quin TestQ",
+       "Ada TestA",
+       "Jo TestJ",
+       "Gus TestG",
+       "Wen TestW",
+       "Bo TestB"
+      ],
+      [
+       "Kai TestK",
+       "Val TestV",
+       "Pia TestP",
+       "Lena TestL",
+       "Mo TestM",
+       "Xan TestX"
+      ],
+      [
+       "Uri TestU",
+       "Eli TestE",
+       "Nia TestN",
+       "Cy TestC",
+       "Yul TestY",
+       "Di TestD"
+      ],
+      [
+       "Hana TestH",
+       "Oz TestO",
+       "Zed TestZ",
+       "Fay TestF",
+       "Ira TestI"
+      ],
+      [
+       "Sol TestS",
+       "Tess TestT",
+       "Rae TestR"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Yul TestY",
+       "Tess TestT",
+       "Ira TestI",
+       "Val TestV",
+       "Eli TestE",
+       "Quin TestQ"
+      ],
+      [
+       "Bo TestB",
+       "Oz TestO",
+       "Uri TestU",
+       "Fay TestF",
+       "Mo TestM",
+       "Sol TestS"
+      ],
+      [
+       "Zed TestZ",
+       "Kai TestK",
+       "Jo TestJ",
+       "Nia TestN",
+       "Rae TestR",
+       "Pia TestP"
+      ],
+      [
+       "Xan TestX",
+       "Hana TestH",
+       "Ada TestA",
+       "Gus TestG",
+       "Di TestD"
+      ],
+      [
+       "Wen TestW",
+       "Lena TestL",
+       "Cy TestC"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Jo TestJ",
+       "Val TestV",
+       "Di TestD",
+       "Oz TestO",
+       "Yul TestY",
+       "Fay TestF"
+      ],
+      [
+       "Ira TestI",
+       "Ada TestA",
+       "Mo TestM",
+       "Gus TestG",
+       "Cy TestC",
+       "Rae TestR"
+      ],
+      [
+       "Quin TestQ",
+       "Sol TestS",
+       "Nia TestN",
+       "Zed TestZ",
+       "Xan TestX",
+       "Lena TestL"
+      ],
+      [
+       "Wen TestW",
+       "Hana TestH",
+       "Pia TestP",
+       "Uri TestU",
+       "Tess TestT"
+      ],
+      [
+       "Kai TestK",
+       "Eli TestE",
+       "Bo TestB"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Pia TestP",
+       "Yul TestY",
+       "Gus TestG",
+       "Lena TestL",
+       "Bo TestB",
+       "Val TestV"
+      ],
+      [
+       "Kai TestK",
+       "Quin TestQ",
+       "Cy TestC",
+       "Hana TestH",
+       "Fay TestF",
+       "Oz TestO"
+      ],
+      [
+       "Nia TestN",
+       "Mo TestM",
+       "Zed TestZ",
+       "Eli TestE",
+       "Wen TestW",
+       "Di TestD"
+      ],
+      [
+       "Jo TestJ",
+       "Sol TestS",
+       "Tess TestT",
+       "Ira TestI",
+       "Ada TestA"
+      ],
+      [
+       "Xan TestX",
+       "Uri TestU",
+       "Rae TestR"
+      ]
+     ],
+     "floaters": ""
+    }
+   ],
+   "savedSha256": "fb4907c51c32199c8637a87fc0393f7f16a864aefdac4f8b9fb4ca91f2ce6b70",
+   "savedLength": 10583
+  },
+  "homo-26": {
+   "steps": [
+    {
+     "groups": [
+      [
+       "Wen TestW",
+       "Hana TestH",
+       "Cy TestC",
+       "Rae TestR",
+       "Mo TestM"
+      ],
+      [
+       "Yul TestY",
+       "Jo TestJ",
+       "Oz TestO",
+       "Eli TestE",
+       "Bo TestB"
+      ],
+      [
+       "Quin TestQ",
+       "Val TestV",
+       "Gus TestG",
+       "Lena TestL",
+       "Nia TestN"
+      ],
+      [
+       "Ira TestI",
+       "Sol TestS",
+       "Xan TestX",
+       "Di TestD",
+       "Fay TestF"
+      ],
+      [
+       "Zed TestZ",
+       "Uri TestU",
+       "Ada TestA",
+       "Pia TestP",
+       "Kai TestK"
+      ]
+     ],
+     "floaters": "Floater (not assigned to a group): Tess TestT"
+    },
+    {
+     "groups": [
+      [
+       "Cy TestC",
+       "Gus TestG",
+       "Ada TestA",
+       "Jo TestJ",
+       "Xan TestX"
+      ],
+      [
+       "Sol TestS",
+       "Rae TestR",
+       "Yul TestY",
+       "Kai TestK",
+       "Lena TestL"
+      ],
+      [
+       "Val TestV",
+       "Fay TestF",
+       "Zed TestZ",
+       "Oz TestO",
+       "Hana TestH"
+      ],
+      [
+       "Di TestD",
+       "Bo TestB",
+       "Pia TestP",
+       "Wen TestW",
+       "Nia TestN"
+      ],
+      [
+       "Uri TestU",
+       "Quin TestQ",
+       "Mo TestM",
+       "Eli TestE",
+       "Ira TestI"
+      ]
+     ],
+     "floaters": "Floater (not assigned to a group): Tess TestT"
+    },
+    {
+     "groups": [
+      [
+       "Hana TestH",
+       "Kai TestK",
+       "Bo TestB",
+       "Xan TestX",
+       "Quin TestQ"
+      ],
+      [
+       "Sol TestS",
+       "Oz TestO",
+       "Uri TestU",
+       "Gus TestG",
+       "Wen TestW"
+      ],
+      [
+       "Fay TestF",
+       "Jo TestJ",
+       "Pia TestP",
+       "Lena TestL",
+       "Mo TestM"
+      ],
+      [
+       "Zed TestZ",
+       "Nia TestN",
+       "Ira TestI",
+       "Cy TestC",
+       "Yul TestY"
+      ],
+      [
+       "Ada TestA",
+       "Val TestV",
+       "Rae TestR",
+       "Di TestD",
+       "Tess TestT"
+      ]
+     ],
+     "floaters": "Floater (not assigned to a group): Eli TestE"
+    },
+    {
+     "groups": [
+      [
+       "Wen TestW",
+       "Cy TestC",
+       "Rae TestR",
+       "Hana TestH",
+       "Mo TestM"
+      ],
+      [
+       "Oz TestO",
+       "Tess TestT",
+       "Yul TestY",
+       "Quin TestQ",
+       "Pia TestP"
+      ],
+      [
+       "Lena TestL",
+       "Bo TestB",
+       "Val TestV",
+       "Ira TestI",
+       "Gus TestG"
+      ],
+      [
+       "Xan TestX",
+       "Di TestD",
+       "Zed TestZ",
+       "Jo TestJ",
+       "Sol TestS"
+      ],
+      [
+       "Uri TestU",
+       "Ada TestA",
+       "Fay TestF",
+       "Kai TestK",
+       "Nia TestN"
+      ]
+     ],
+     "floaters": "Floater (not assigned to a group): Eli TestE"
+    },
+    {
+     "groups": [
+      [
+       "Xan TestX",
+       "Cy TestC",
+       "Val TestV",
+       "Fay TestF",
+       "Oz TestO"
+      ],
+      [
+       "Eli TestE",
+       "Ada TestA",
+       "Hana TestH",
+       "Yul TestY",
+       "Gus TestG"
+      ],
+      [
+       "Lena TestL",
+       "Nia TestN",
+       "Wen TestW",
+       "Quin TestQ",
+       "Di TestD"
+      ],
+      [
+       "Ira TestI",
+       "Kai TestK",
+       "Sol TestS",
+       "Mo TestM",
+       "Tess TestT"
+      ],
+      [
+       "Pia TestP",
+       "Uri TestU",
+       "Bo TestB",
+       "Zed TestZ",
+       "Rae TestR"
+      ]
+     ],
+     "floaters": "Floater (not assigned to a group): Jo TestJ"
+    }
+   ],
+   "savedSha256": "db825a13618e8b83bd6052d28b7c213e5e07cdd9acf74945108416d52d258fed",
+   "savedLength": 9372
+  },
+  "coverage-24": {
+   "steps": [
+    {
+     "groups": [
+      [
+       "Kai TestK",
+       "Ada TestA",
+       "Lena TestL",
+       "Jo TestJ"
+      ],
+      [
+       "Nia TestN",
+       "Oz TestO",
+       "Sol TestS",
+       "Tess TestT"
+      ],
+      [
+       "Rae TestR",
+       "Di TestD",
+       "Ira TestI",
+       "Bo TestB"
+      ],
+      [
+       "Wen TestW",
+       "Eli TestE",
+       "Mo TestM",
+       "Hana TestH"
+      ],
+      [
+       "Quin TestQ",
+       "Fay TestF",
+       "Xan TestX",
+       "Pia TestP"
+      ],
+      [
+       "Cy TestC",
+       "Uri TestU",
+       "Val TestV",
+       "Gus TestG"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Rae TestR",
+       "Pia TestP",
+       "Val TestV",
+       "Mo TestM"
+      ],
+      [
+       "Di TestD",
+       "Tess TestT",
+       "Eli TestE",
+       "Ada TestA"
+      ],
+      [
+       "Uri TestU",
+       "Fay TestF",
+       "Ira TestI",
+       "Jo TestJ"
+      ],
+      [
+       "Cy TestC",
+       "Nia TestN",
+       "Hana TestH",
+       "Bo TestB"
+      ],
+      [
+       "Wen TestW",
+       "Oz TestO",
+       "Lena TestL",
+       "Quin TestQ"
+      ],
+      [
+       "Kai TestK",
+       "Gus TestG",
+       "Sol TestS",
+       "Xan TestX"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Eli TestE",
+       "Oz TestO",
+       "Kai TestK",
+       "Uri TestU"
+      ],
+      [
+       "Ada TestA",
+       "Rae TestR",
+       "Hana TestH",
+       "Quin TestQ"
+      ],
+      [
+       "Sol TestS",
+       "Jo TestJ",
+       "Bo TestB",
+       "Pia TestP"
+      ],
+      [
+       "Gus TestG",
+       "Fay TestF",
+       "Mo TestM",
+       "Nia TestN"
+      ],
+      [
+       "Wen TestW",
+       "Cy TestC",
+       "Ira TestI",
+       "Tess TestT"
+      ],
+      [
+       "Xan TestX",
+       "Di TestD",
+       "Lena TestL",
+       "Val TestV"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Gus TestG",
+       "Ira TestI",
+       "Quin TestQ",
+       "Bo TestB"
+      ],
+      [
+       "Fay TestF",
+       "Cy TestC",
+       "Eli TestE",
+       "Lena TestL"
+      ],
+      [
+       "Di TestD",
+       "Jo TestJ",
+       "Oz TestO",
+       "Mo TestM"
+      ],
+      [
+       "Sol TestS",
+       "Rae TestR",
+       "Tess TestT",
+       "Nia TestN"
+      ],
+      [
+       "Wen TestW",
+       "Ada TestA",
+       "Val TestV",
+       "Kai TestK"
+      ],
+      [
+       "Uri TestU",
+       "Pia TestP",
+       "Xan TestX",
+       "Hana TestH"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Bo TestB",
+       "Lena TestL",
+       "Rae TestR",
+       "Oz TestO"
+      ],
+      [
+       "Mo TestM",
+       "Quin TestQ",
+       "Kai TestK",
+       "Cy TestC"
+      ],
+      [
+       "Gus TestG",
+       "Sol TestS",
+       "Eli TestE",
+       "Xan TestX"
+      ],
+      [
+       "Tess TestT",
+       "Pia TestP",
+       "Ada TestA",
+       "Di TestD"
+      ],
+      [
+       "Jo TestJ",
+       "Wen TestW",
+       "Uri TestU",
+       "Nia TestN"
+      ],
+      [
+       "Fay TestF",
+       "Hana TestH",
+       "Ira TestI",
+       "Val TestV"
+      ]
+     ],
+     "floaters": ""
+    }
+   ],
+   "savedSha256": "56c58b603ac883d7334c15f601d9887c57f37f4c59448dbab7fa848930e6483e",
+   "savedLength": 7382
+  },
+  "coverage-apart-30": {
+   "steps": [
+    {
+     "groups": [
+      [
+       "Ada TestA",
+       "Oz TestO",
+       "Nia TestN",
+       "Yul TestY",
+       "Lena TestL"
+      ],
+      [
+       "Ira TestI",
+       "Zed TestZ",
+       "Pia TestP",
+       "Di TestD",
+       "Quin TestQ"
+      ],
+      [
+       "Abe TestA",
+       "Kai TestK",
+       "Dot TestD",
+       "Rae TestR",
+       "Wen TestW"
+      ],
+      [
+       "Mo TestM",
+       "Cy TestC",
+       "Sol TestS",
+       "Tess TestT",
+       "Hana TestH"
+      ],
+      [
+       "Xan TestX",
+       "Gus TestG",
+       "Val TestV",
+       "Uri TestU",
+       "Eli TestE"
+      ],
+      [
+       "Bea TestB",
+       "Bo TestB",
+       "Fay TestF",
+       "Jo TestJ",
+       "Cal TestC"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Val TestV",
+       "Bo TestB",
+       "Rae TestR",
+       "Yul TestY",
+       "Hana TestH"
+      ],
+      [
+       "Eli TestE",
+       "Mo TestM",
+       "Zed TestZ",
+       "Ada TestA",
+       "Abe TestA"
+      ],
+      [
+       "Bea TestB",
+       "Nia TestN",
+       "Uri TestU",
+       "Dot TestD",
+       "Quin TestQ"
+      ],
+      [
+       "Fay TestF",
+       "Sol TestS",
+       "Wen TestW",
+       "Pia TestP",
+       "Lena TestL"
+      ],
+      [
+       "Cy TestC",
+       "Oz TestO",
+       "Cal TestC",
+       "Xan TestX",
+       "Ira TestI"
+      ],
+      [
+       "Tess TestT",
+       "Kai TestK",
+       "Jo TestJ",
+       "Di TestD",
+       "Gus TestG"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Val TestV",
+       "Oz TestO",
+       "Mo TestM",
+       "Fay TestF",
+       "Dot TestD"
+      ],
+      [
+       "Abe TestA",
+       "Hana TestH",
+       "Bea TestB",
+       "Lena TestL",
+       "Di TestD"
+      ],
+      [
+       "Uri TestU",
+       "Cy TestC",
+       "Pia TestP",
+       "Jo TestJ",
+       "Yul TestY"
+      ],
+      [
+       "Rae TestR",
+       "Ira TestI",
+       "Eli TestE",
+       "Nia TestN",
+       "Tess TestT"
+      ],
+      [
+       "Gus TestG",
+       "Ada TestA",
+       "Quin TestQ",
+       "Wen TestW",
+       "Cal TestC"
+      ],
+      [
+       "Bo TestB",
+       "Xan TestX",
+       "Kai TestK",
+       "Zed TestZ",
+       "Sol TestS"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Sol TestS",
+       "Bea TestB",
+       "Oz TestO",
+       "Jo TestJ",
+       "Eli TestE"
+      ],
+      [
+       "Pia TestP",
+       "Nia TestN",
+       "Val TestV",
+       "Di TestD",
+       "Ada TestA"
+      ],
+      [
+       "Kai TestK",
+       "Quin TestQ",
+       "Hana TestH",
+       "Fay TestF",
+       "Cy TestC"
+      ],
+      [
+       "Wen TestW",
+       "Tess TestT",
+       "Abe TestA",
+       "Xan TestX",
+       "Yul TestY"
+      ],
+      [
+       "Ira TestI",
+       "Gus TestG",
+       "Mo TestM",
+       "Bo TestB",
+       "Uri TestU"
+      ],
+      [
+       "Zed TestZ",
+       "Cal TestC",
+       "Rae TestR",
+       "Lena TestL",
+       "Dot TestD"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Mo TestM",
+       "Tess TestT",
+       "Pia TestP",
+       "Cal TestC",
+       "Kai TestK"
+      ],
+      [
+       "Lena TestL",
+       "Wen TestW",
+       "Eli TestE",
+       "Bo TestB",
+       "Cy TestC"
+      ],
+      [
+       "Oz TestO",
+       "Yul TestY",
+       "Zed TestZ",
+       "Quin TestQ",
+       "Di TestD"
+      ],
+      [
+       "Ira TestI",
+       "Jo TestJ",
+       "Dot TestD",
+       "Abe TestA",
+       "Ada TestA"
+      ],
+      [
+       "Val TestV",
+       "Rae TestR",
+       "Gus TestG",
+       "Hana TestH",
+       "Sol TestS"
+      ],
+      [
+       "Fay TestF",
+       "Uri TestU",
+       "Xan TestX",
+       "Nia TestN",
+       "Bea TestB"
+      ]
+     ],
+     "floaters": ""
+    }
+   ],
+   "savedSha256": "b0c2030d7f8cb4b11508d24c3ffb88ee4a1a41c4e4138578abf8f6895cdba674",
+   "savedLength": 12130
+  },
+  "absent-locks-22": {
+   "steps": [
+    {
+     "groups": [
+      [
+       "Mo TestM",
+       "Ada TestA",
+       "Uri TestU",
+       "Ira TestI"
+      ],
+      [
+       "Sol TestS",
+       "Cy TestC",
+       "Tess TestT",
+       "Hana TestH"
+      ],
+      [
+       "Lena TestL",
+       "Quin TestQ",
+       "Fay TestF",
+       "Gus TestG"
+      ],
+      [
+       "Nia TestN",
+       "Eli TestE",
+       "Oz TestO",
+       "Val TestV"
+      ],
+      [
+       "Rae TestR",
+       "Bo TestB",
+       "Pia TestP",
+       "Kai TestK"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Fay TestF",
+       "Oz TestO",
+       "Rae TestR",
+       "Cy TestC"
+      ],
+      [
+       "Hana TestH",
+       "Nia TestN",
+       "Kai TestK",
+       "Uri TestU"
+      ],
+      [
+       "Tess TestT",
+       "Gus TestG",
+       "Mo TestM",
+       "Val TestV"
+      ],
+      [
+       "Pia TestP",
+       "Quin TestQ",
+       "Sol TestS",
+       "Ada TestA"
+      ],
+      [
+       "Eli TestE",
+       "Ira TestI",
+       "Lena TestL",
+       "Bo TestB"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Fay TestF",
+       "Oz TestO",
+       "Rae TestR",
+       "Cy TestC"
+      ],
+      [
+       "Hana TestH",
+       "Bo TestB",
+       "Nia TestN",
+       "Ada TestA"
+      ],
+      [
+       "Tess TestT",
+       "Gus TestG",
+       "Mo TestM",
+       "Val TestV"
+      ],
+      [
+       "Quin TestQ",
+       "Uri TestU",
+       "Eli TestE",
+       "Pia TestP"
+      ],
+      [
+       "Ira TestI",
+       "Kai TestK",
+       "Sol TestS",
+       "Lena TestL"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Fay TestF",
+       "Oz TestO",
+       "Rae TestR",
+       "Cy TestC"
+      ],
+      [
+       "Lena TestL",
+       "Quin TestQ",
+       "Pia TestP",
+       "Nia TestN"
+      ],
+      [
+       "Tess TestT",
+       "Gus TestG",
+       "Mo TestM",
+       "Val TestV"
+      ],
+      [
+       "Bo TestB",
+       "Ada TestA",
+       "Uri TestU",
+       "Ira TestI"
+      ],
+      [
+       "Sol TestS",
+       "Hana TestH",
+       "Eli TestE",
+       "Kai TestK"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Fay TestF",
+       "Oz TestO",
+       "Rae TestR",
+       "Cy TestC"
+      ],
+      [
+       "Nia TestN",
+       "Ada TestA",
+       "Ira TestI",
+       "Eli TestE"
+      ],
+      [
+       "Tess TestT",
+       "Gus TestG",
+       "Mo TestM",
+       "Val TestV"
+      ],
+      [
+       "Bo TestB",
+       "Quin TestQ",
+       "Pia TestP",
+       "Sol TestS"
+      ],
+      [
+       "Uri TestU",
+       "Lena TestL",
+       "Kai TestK",
+       "Hana TestH"
+      ]
+     ],
+     "floaters": ""
+    }
+   ],
+   "savedSha256": "883b59c3ec5a9bf745c1de8b4e9ba166af37886cce604a5fdcf5f97073e816af",
+   "savedLength": 4267
+  },
+  "small-8": {
+   "steps": [
+    {
+     "groups": [
+      [
+       "Di TestD",
+       "Fay TestF"
+      ],
+      [
+       "Ada TestA",
+       "Gus TestG"
+      ],
+      [
+       "Cy TestC",
+       "Bo TestB"
+      ],
+      [
+       "Hana TestH",
+       "Eli TestE"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Bo TestB",
+       "Gus TestG"
+      ],
+      [
+       "Cy TestC",
+       "Ada TestA"
+      ],
+      [
+       "Di TestD",
+       "Hana TestH"
+      ],
+      [
+       "Eli TestE",
+       "Fay TestF"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Bo TestB",
+       "Fay TestF"
+      ],
+      [
+       "Eli TestE",
+       "Ada TestA"
+      ],
+      [
+       "Cy TestC",
+       "Di TestD"
+      ],
+      [
+       "Gus TestG",
+       "Hana TestH"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Gus TestG",
+       "Di TestD"
+      ],
+      [
+       "Eli TestE",
+       "Bo TestB"
+      ],
+      [
+       "Hana TestH",
+       "Cy TestC"
+      ],
+      [
+       "Fay TestF",
+       "Ada TestA"
+      ]
+     ],
+     "floaters": ""
+    },
+    {
+     "groups": [
+      [
+       "Di TestD",
+       "Fay TestF"
+      ],
+      [
+       "Bo TestB",
+       "Ada TestA"
+      ],
+      [
+       "Hana TestH",
+       "Eli TestE"
+      ],
+      [
+       "Cy TestC",
+       "Gus TestG"
+      ]
+     ],
+     "floaters": ""
+    }
+   ],
+   "savedSha256": "ee6541bc00ef4e4c61c5ca142bc17fb2bdd7339388d894defef05c4f0e58fe01",
+   "savedLength": 1092
+  }
+ }
+}

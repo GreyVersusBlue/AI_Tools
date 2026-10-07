@@ -5,7 +5,7 @@
 //   node Tools/bracket-tournament-generator/test/smoke-academic.mjs   (port 8512)
 //
 // What's worth holding still:
-//   1. a bracket saved before v277, of each of the five types, loads, shows,
+//   1. a bracket saved before v278, of each of the five types, loads, shows,
 //      prints blank, shares and takes a pick as it did: compared, to the
 //      byte, with hashes taken from the page as it was at v276;
 //   2. opening 020 writes nothing about the bank: not its key, and not the

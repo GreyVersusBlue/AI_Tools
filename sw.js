@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v277';
+const CACHE_VERSION = 'v278';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -115,6 +115,7 @@ const SHELL_URLS = [
   "Tools/command-center/cc-remote.js",
   "Tools/command-center/remote.html",
   "Tools/002-group-team-generator.html",
+  "Tools/group-team-generator/gtg-memory.js",
   "Tools/001-hall-pass-log.html",
   "Tools/name-picker/fonts/bungee-latin-400-normal.woff2",
   "Tools/name-picker/fonts/bungee-latin-ext-400-normal.woff2",
@@ -307,6 +308,7 @@ const PRECACHE_URLS = [
   "Tools/graph-paper-generator/gpg-render.js",
   "Tools/graph-paper-generator/gpg-store.js",
   "Tools/002-group-team-generator.html",
+  "Tools/group-team-generator/gtg-memory.js",
   "Tools/001-hall-pass-log.html",
   "Tools/064-historical-trading-card-maker.html",
   "Tools/historical-trading-card-maker/htcm-store.js",

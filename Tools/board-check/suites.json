@@ -55,6 +55,8 @@
     "Tools/data-chart-builder/test/smoke-xlsx.mjs",
     "Tools/group-team-generator/test/smoke-share.mjs",
     "Tools/group-team-generator/test/smoke-pairing-history.mjs",
+    "Tools/group-team-generator/test/smoke-year-memory-core.mjs",
+    "Tools/group-team-generator/test/smoke-year-memory.mjs",
     "Tools/vocab-flashcard-generator/test/smoke-share.mjs",
     "Tools/vocab-conjugation-drill/test/smoke-share.mjs",
     "Tools/schedule-browser/test/smoke-personal-notes.mjs",
