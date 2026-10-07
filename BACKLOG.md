@@ -87,6 +87,17 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-14 (v274), rank 28 (kept, rewritten), Path 12 P2 increment 3: 030's editor.** The bank tab shows and edits
+  everything a question holds: the add card has a choices editor (add, remove, move up and down, mark the right one,
+  which is the choice whose text is the answer; no new field) and tags as tokens (typed, or picked from the bank's
+  own); a row shows its tags and choices; **Edit** opens a question where it stands in the list (Save keeps its id,
+  place, first date and every field the form does not show; Escape and Cancel store nothing; a seed set's row has no
+  Edit); and a bank file, workbook or CSV is **shown before it is stored** (new, changes and which fields, already
+  there, left out and why; Add stores, by `importQuestions()`). The code is `Tools/review-game-board/rgb-bank-editor.js`;
+  `_shared/question-bank.js` is unchanged. `npm run test:bank-editor` (port 8509) and `test:bank-editor-core`.
+  **Not built: named sets, which have no storage design (question 8 in the Path 12 section), and a tag filter on the
+  list. Left of P2: 018, 019, 020, 062's map questions. Next free suite port: 8512 (8510 and 8511 were handed to
+  AI-31's workers).**
 - **AI-14 (v271), rank 28 (kept, rewritten), Path 12 P2 increment 2: 040's flashcards and the question bank, both
   ways.** 040 has a Question bank card: "Questions from" (the bank and the seed sets, the list 030's chooser shows)
   adds ticked questions to the word list as cards, question on the front and answer on the back, and a question
@@ -451,7 +462,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Left:** 018 and 019 pull station questions from it; 020's academic-tournament mode; 030's editor (choices, tags, edit in place, named sets, a preview before an import); 062's thirty map questions, which are not published (they wait on P4). Seven questions for Devon about 040's reading are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v274): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Left:** 018 and 019 pull station questions from it; 020's academic-tournament mode; 062's thirty map questions, which are not published (they wait on P4); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Eight questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 29 | Path 12 P3 — play modes in 030: every-team-answers, quiz-bowl, wheel, final wager, printed quiz | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -4220,6 +4231,65 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   - *Not verified.* No person used the card. No real teacher's lists were opened before and after (the suite's
     are made up). The chooser was not tried with a bank of thousands of questions (it lists every one in a
     15 rem scroll box). Not run: the full `npm test`.
+  **Increment 3 shipped (AI-14, 2026-10-07, v274): 030's editor. The rest of this bullet is that increment as
+  built; `Tools/review-game-board/rgb-bank-editor.js`'s header says the same and is the reference.**
+  - *What was there (v273).* The add card took six fields (question, answer, points, unit, standard, difficulty). A
+    row showed those and had Delete, or Copy to my bank on a seed set. A question's choices and tags were stored
+    and never shown; nothing could be edited (delete and add again); a file was imported the moment it was chosen,
+    with the outcome on a status line after the fact. A link's questions were already shown before Add (v269).
+  - *Choices, and which is right.* A question has `choices` (texts) and `answer` (a text) and no field saying which
+    choice is right, and none was added: **the right choice is the one whose text is the answer** (letter case and
+    spacing aside). Marking a choice writes its text into the answer field; typing in the marked choice types the
+    answer; an answer that is none of the choices leaves none marked and the form says so (it can still be saved).
+    A choice row has a mark, its text, Up, Down and Remove; a move or a removal is said in a status line and focus
+    stays on the row. A question with no choices is stored with no `choices` field, as before; removing every choice
+    from one that had them takes the field off. The bank cleans the list (no blanks, no repeats).
+  - *Tags.* Tokens with a Remove button each. A tag is added by Enter, a comma or a semicolon, by leaving the
+    field, by the Add tag button, or by picking one from the field's list, which offers the tags the bank already
+    uses less the ones on the question. Backspace in the empty field takes the last one off. What is still typed
+    when Add or Save is pressed is a tag too.
+  - *The list.* A row shows its tags after the four it always showed, and its choices on a line under them with
+    the right one in bold and "(answer)". A question with neither is drawn exactly as it was (pinned, below). So a
+    seed set's tags (062's regions) show now.
+  - *Edit in place.* A row of the teacher's own bank has **Edit**. It replaces that row, where it stands, with a
+    form of the eight fields; the other rows stay. **Save** sends the eight fields and the id to
+    `QuestionBank.saveQuestion()`, so the question keeps its id, its place, `createdAt`, its `media`, `copiedFrom`
+    and any field the page does not know, and gets `updatedAt` as the module stamps it. A Save that changes nothing
+    writes nothing. **Cancel** and **Escape** store nothing. Focus goes back to the row's Edit button, or to the
+    list (with the reason said) when the saved question no longer matches the filters. A question with no question
+    or no answer is refused in the form. What is typed survives the list being drawn again, and the open row stays
+    in the list whatever the filters say. Edit on another row while this one has unsaved changes asks first. One
+    form at a time. **A seed set's row has no Edit**: Copy to my bank, as before.
+  - *A preview before an import.* A bank file, a workbook and a CSV all pass through one function, which now only
+    shows: `ReviewBankEditor.importPlan()` runs the bank's own `merge()` over a copy and marks each question
+    **new**, **changes a question in your bank** (naming the fields), **already in your bank** or **left out**
+    (with the bank's own reason), under the file's row number, with the four counts above the list. **Nothing is
+    stored until Add**, and then by `QuestionBank.importQuestions()` over the same questions; if the bank changed
+    since the list was drawn (another tab), that press stores nothing and draws the list again. With nothing to
+    add there is no Add button and the old status sentence is said at once. Don't import stores nothing. The list
+    shows the first 500 questions of a file and counts the rest. The link route already previewed and is untouched.
+  - *What is stored.* Nothing new: no key, no field, no registry change, **the bank's version is still 1**, and
+    `_shared/question-bank.js` was not edited, so no function of it returns anything different. 040's card and
+    053's hand-off run as they did (`test:vocab-bank`, `test:received-questions`, `test:seed-sets` green; one
+    assertion in each of the last two now expects what a row shows: the tag, and Edit beside Delete).
+  - *A bank from before.* 030's old key alone, and the shared key as v265 to v273 wrote it, each hash the same
+    as the v273 page gave for: storage after the tab opens, every row's body, the filter and source options, the
+    board editor after a pull, the stored board, the played board, an opened clue, and storage at the end
+    (`test:bank-editor`, sixteen pins made with `--print` before the page was edited).
+  - *Text.* Everything is built from elements; the page's inline-sink baseline is still 3. A choice, a tag, a unit
+    and a standard that are markup are text in the add card, the open form, the list and the preview (asserted).
+  - *Question for Devon, not answered and not built.*
+    8. **Named sets** ("my Unit 3 review", a set to hand a colleague). The design names them and does not say how
+       they are stored, and each way changes what a question is: a `sets` list on the question (like tags, nothing
+       new in the envelope, but then a set is only a tag by another name); a `sets` map in the envelope beside
+       `questions` (ordered, can hold a question twice, needs the bank's version to say so and 009's merge to know
+       it); or separate keys, one a set (a registry change). Tags and the Unit filter do part of this today.
+  - *Also left on 030.* The list has no **tag filter** (`QuestionBank.filter()` takes `tag`; no control asks for
+    it). A set cannot be copied whole in one press. The add card and the open form are two copies of six static
+    fields (the choices and tags editors are shared).
+  - *Not verified.* No person used the editor, and no screen reader was run over it (axe, names and keys only). No
+    real teacher's bank was opened before and after (the suite's are made up). The preview was not tried with a
+    file of thousands of questions (it runs `merge()` once a row for the first 500). Not run: the full `npm test`.
 - **P3 — Play modes in 030.** Every-team-answers mode, quiz-bowl, spin-the-wheel,
   the final wager round, and a printed practice quiz/study guide with an answer key
   — all reading the same bank.

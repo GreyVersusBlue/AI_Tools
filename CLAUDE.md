@@ -551,6 +551,11 @@ files must be added there too.
   `QuestionBank.fromLink()` is the only reader of that link and takes no id from it, and 030 stores an arrival
   only when the teacher presses Add; a new sender follows 053's entry, `maxLink` included
   (`npm run test:received-questions`).
+  Since v274 030's bank tab edits everything a question holds (`Tools/review-game-board/rgb-bank-editor.js`): the
+  right choice is the one whose text is the answer, so marking one writes the answer and no field was added; a Save
+  from a form sends only the fields the form shows, with the id, so the rest of the question stays; and **a file is
+  shown before it is stored** (`importPlan()`, the bank's own `merge()` over a copy), which the next import route
+  does too (`npm run test:bank-editor`, `npm run test:bank-editor-core`).
   030's old key (`gvb-review-board-bank:entries`) is read on every load
   and never written or removed: do not delete it or its registry line, which is what keeps an older page and an
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are

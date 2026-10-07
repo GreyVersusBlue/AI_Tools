@@ -9,6 +9,58 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## CI: the test job's timeout is 120 minutes, was 60 (2026-10-07, AI-14, no `CACHE_VERSION`)
+
+Asked for by the Selector during the sprint, as one commit on AI-14's branch. The wave PR's full run (AI_Tools#352) was cancelled at the job's
+`timeout-minutes: 60` after 1h0m15s, in suite 209 of 240 with none failed; the wave before it took 54m12s, so the list had been within six minutes of
+the limit. `.github/workflows/ci.yml` now says 120, with a comment giving the reason. Nothing else in the workflow changed: one job, the same
+concurrency rules. No guard pins the value (`check:docs-commands` and `lint` exit 0 after it). **This buys time and fixes nothing:** the list grows by a
+suite or two a session, and the real fix is to split the suites across jobs, which is not done. Not verified: no CI run has finished under the new limit.
+
+## Path 12 P2, increment 3: 030's question-bank editor (2026-10-07, AI-14, `CACHE_VERSION` v274)
+
+Audit entry AI-14, BACKLOG rank 28 (a 2+ row; it stays, rewritten to what is left). The session was handed one group of P2, "030's editor: choices,
+tags, edit in place, named sets, a preview before an import", in that order, shipping what fit. Three of the four parts shipped whole; named sets were
+not built, on purpose (below). `BACKLOG.md`'s Path 12 P2 bullet has the design as built; this is what happened.
+
+- **What the tab did at v273, checked first.** Six fields on the add card. A row showed them and had Delete (Copy to my bank on a seed set). Choices and
+  tags were stored by the shared bank, carried through every save and file, and shown nowhere on the page that edits the bank. No edit: delete and type
+  again. A file was stored the moment it was chosen. Only a link's questions were shown before being stored (v269).
+- **The editor.** A new per-tool file, `Tools/review-game-board/rgb-bank-editor.js` (`ReviewBankEditor`): a pure half (tags and choices cleaned by the
+  bank's own `normalize()`, which choice is the answer, what a Save sends, what an import would do) and the form's parts built from elements. The add card
+  gained a choices editor and a tags field; a row gained Edit, which opens the same fields where the row stands. `_shared/question-bank.js` was not
+  edited: everything goes through `saveQuestion()`, `merge()` and `importQuestions()` as they were.
+- **The call that mattered: which choice is right.** The shape has `choices` and `answer` and nothing tying them. Adding `correct: 2` would have been a
+  field every reader of the bank (040, 053's link, the files) then had to keep in step with `answer`. Taken instead: the right choice is the one whose
+  text is the answer. Marking writes the answer field; typing in the marked choice types the answer; an answer matching no choice marks none and the form
+  says so without refusing the save (a teacher may want an open answer beside distractors). Cheap to reverse: nothing is stored that says otherwise.
+- **A Save sends eight fields and the id, nothing else.** `upsert()` keeps what a patch does not name, so the question's picture, `copiedFrom`, first date
+  and unknown fields stay, and its place in the list. A Save with nothing changed writes nothing (no `updatedAt` for an edit that was not one).
+- **The preview.** `importPlan()` runs `merge()` once over the whole file for the counts and once a question, each over what the ones before left, for the
+  per-row marks, so a question the file repeats is marked as the import will treat it. The marks and counts make a signature; Add draws the plan again and
+  stores only if the signature is the one that was shown. The status sentence after Add is the one the tab always wrote, so `smoke-bank-file.mjs` needed
+  only to press Add.
+- **Named sets: not built.** The design says the bank has "no named sets" and nothing about how one would be stored. The three ways (a list on the
+  question, a map in the envelope, a key a set) differ in whether a set is ordered, whether the bank's version moves and whether the registry changes.
+  That is a design decision; it is question 8 in the Path 12 section.
+- **Found on the way.** The add card's tag list was filled once, at page load, so a tag that arrived by import was not offered until a reload; a test
+  failed on it and the list is now drawn each time the field is entered. Two assertions in other suites pinned what a row looked like and were changed
+  to what it shows now, not loosened: `smoke-received-questions.mjs` expected exactly four tags on a row and expects the question's own tag after them,
+  and `smoke-seed-sets.mjs` expected a bank row's buttons to be Delete alone and expects Edit and Delete (a seed row is still Copy to my bank alone). `Tools/testing-accommodations-card-generator/test/smoke-rooms.mjs`
+  wrote its `big.pdf` into a worker's scratch folder under the home directory; it uses `fs.mkdtempSync()` and removes the folder now (asked for in this
+  session's brief; `test:accommodations-rooms` 129 green).
+- **Held still.** Sixteen hashes of a pre-v265 bank and a v265-to-v273 bank (storage, rows, options, the pulled board, the played board, a clue), made
+  with `--print` against the v273 page before it was edited. Inline-sink baseline for 030 still 3.
+- **Checks.** `test:bank-editor-core` 78 assertions (pure Node), `test:bank-editor` 124 (port 8509). Deliberate breaks: 36 pure Node
+  (32 caught first time, 2 after an added assertion each, 2 equivalent changes: a copy of an already-fresh list, and `[]` against a missing field after
+  both sides are normalised); 18 in the browser, one suite run each (15 caught by an assertion first time; 3 first stopped the suite with a crash, and are caught by an assertion since those checks were rewritten). Guards and suites: all exit 0: check:social, dedupe, tests, precache (and
+  `-- --base main`), entities, hidden-flex, print-clip, registry, docs-commands, inline-sinks, art, adoption (and `-- --check`; the row did not move),
+  `lint`, `test:select-suites` (92), `test:question-bank` (230), `test:vocab-bank-logic` (63); `run-suites --only` review-game-board (9), question-bank
+  (3), vocab-flashcard-generator (7), share (21), service-worker (3), tool-registry (1), backup-restore (3), theme (3); `test:a11y -- --only 030`.
+- **Not verified.** No person used the editor; no screen reader was run. No real teacher's bank. A file of thousands of questions in the preview. The
+  full `npm test` was not run.
+- **Next free suite port: 8512** (8509 is this suite's; 8510 and 8511 were handed to the AI-31 workers of this batch).
+
 ## 078 Unit Conversion Chart: named saved charts, reordering, and a share link that knows about saves (2026-10-06, AI-31-078, `CACHE_VERSION` v273)
 
 Audit entry AI-31, BACKLOG rank 115 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). The row had three parts; the third
