@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 12 P3, increment 2: the final wager round and quiz-bowl on 030 (2026-10-07, AI-14, `CACHE_VERSION` v283)
+
+BACKLOG rank 29 had three modes left; this session was handed two, the final wager round and then quiz-bowl. The
+wheel is not started and the row says so. The design as built is in BACKLOG's Path 12 section, P3, "Increment 2";
+this is what happened.
+
+**First check.** Neither existed. A board had no final-question field (the session's prompt allowed for one), so the
+final round's question is a new field typed on the board or copied from the bank. The Daily Double's wager is one
+team's and was left alone.
+
+**Before any edit.** Every-team-answers as v281 left it was played through every path it has (tick, mark by key and
+by mouse, score, Undo, close with no marks, Export, Edit and Save, a team removed, the mode off and on, Reset, the
+file imported) and hashed twice: 23 pins, the same both times (`Tools/review-game-board/test/_every-team-game.mjs`).
+They and the 32 one-team pins are green on the finished page.
+
+**Built.** The rules are in `Tools/review-game-board/rgb-play.js` (pure, no DOM): what a team may wager and how a
+typed wager is read, what the round scores, standings and the sentence that names the winner or the tie, the cleaning
+of both fields from a file, the quiz-bowl entry (who may buzz, a wrong buzz, a right one, the bonus), what an entry
+scored, which question is next, the totals and the summary, and what a team leaving does to both. The page draws
+them on one new overlay, built from elements. `_shared/question-bank.js` was not edited; the bank is read with
+`peek` and never written; no new storage key; `inline-sinks-baseline.json` still has 030 at 3.
+
+**Calls made (each is a question for Devon in BACKLOG, 31 to 44).** A team at 0 or below may wager up to 100. Wagers
+are typed by the teacher into password-type boxes. Every team must be marked right or wrong before the final round
+scores. Quiz-bowl is toss-up 10, bonus 10, wrong 0, one bonus question, the source whole and in its stored order,
+points on the board's own scoreboard. A toss-up counts once it is decided; a bonus is used once it is shown. The
+source and the points are locked once a round begins, because what a toss-up scored is worked out from the log and
+not stored: changing the points mid-round would make Undo take off a different number than was put on.
+
+**Found by the suite.** Two of my own expectations were wrong by arithmetic (a wrong buzz's cost left out of a
+round total) and were corrected to what the rule gives. One real trap: an axe scan taken straight after switching
+the theme by hand reported the score on a team's chip as low contrast, because the chip's background fades over
+0.2 s; the unedited page is clean under the same scan once it has settled, and the suite now waits 350 ms after a
+theme switch before it scans.
+
+**Got wrong.** The first run of the pure-Node break driver stopped on a bad pattern of its own with a break still
+applied to `rgb-play.js`; the file was put back by hand and the driver now checks every pattern before it changes
+anything and restores the file on exit.
+
+**Checks.** `test:play-modes-core` 194 (83 before), `test:play-rounds` 173 (new, port 8519). Breaks on purpose: 83 of the rules in pure Node (81 caught by an assertion first time, 1 after an added assertion, 1 an equivalent change); 14 in the page, one suite run a lock (13 caught by an assertion first time; 1 first stopped the suite with a crash and is caught by an assertion since that check was rewritten).
+Every guard exit 0. Not run: the full `npm test`.
+
+**Not verified.** No class played either round; no person used the overlay; no screen reader (axe in both themes,
+roles, names, keys, focus); no password manager against the wager boxes; a bank of thousands as a source; CI on this
+tree.
+
 ## 008 Behavior & Points Tracker: team / house points (2026-10-07, AI-31-008, `CACHE_VERSION` v282; the code commit says v280, which AI-31-012 and then AI-14 passed before the merge)
 
 BACKLOG rank 125 had two parts; this session did the first, team / house points. Longitudinal reports stay on the row, rewritten.
