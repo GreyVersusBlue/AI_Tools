@@ -505,7 +505,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
-| 113 | Room-assignment view — define rooms and proctors, auto-route by accommodation, print proctor lists | 077 | ½ | | [077 Testing Accommodations Reference Card Generator](#077--testing-accommodations-reference-card-generator) |
 | 114 | Multiple named saved prompt sets — a general slip, a lab-day slip and a testing-day slip at once | 076 | ½ | | [076 Sub Note / Feedback Slip Generator](#076--sub-note--feedback-slip-generator) |
 | 115 | Named saves plus reorder and share — group and line reordering and a state-link share URL | 078 | ½ | | [078 Unit Conversion Reference Chart Builder](#078--unit-conversion-reference-chart-builder) |
 | 116 | Irregular verb call-out boxes — three to five common irregulars per tense | 079 | ½ | | [079 Verb Conjugation Reference Poster Generator](#079--verb-conjugation-reference-poster-generator) |
@@ -12087,10 +12086,10 @@ elsewhere in this toolkit.
 - **An expiration/review-date field** per student, since accommodations
   (like IEP/504 plans) are periodically reviewed and a stale card is worse
   than no card if a teacher trusts it without checking.
-- **A room-assignment view**: given a set of testing rooms/proctors, sort
-  students by which room their accommodations route them to (e.g. everyone
-  needing "separate setting" together), turning the card generator into an
-  actual testing-day logistics tool, not just a reference.
+- *(Shipped 2026-10-06, v269, AI-31-077: rooms, proctors, auto-route by
+  accommodation and printed proctor lists. Left: a review-date field, and
+  anything for a testing coordinator across several teachers' rosters. See
+  HISTORY.)*
 
 #### Moonshot / North Star
 
@@ -12108,10 +12107,10 @@ instead of quietly going stale.
   tool's explicitly lightweight, single-teacher, single-testing-day
   framing? A school-wide accommodations system with expiration tracking is
   a meaningfully bigger scope than "print a reference card."
-- Should room-assignment logic live here, or is that different enough in
-  audience (a testing coordinator, not a single classroom teacher) that it
-  deserves its own tool built on top of this one's data model instead of
-  growing this tool's scope?
+- Room-assignment logic lives here (decided 2026-10-06): it reads only this
+  tool's own roster and accommodation list, saved in the same key, for one
+  teacher's own students. A building-wide coordinator view across teachers'
+  rosters is still a different tool and is not started.
 - Next round: sort/filter by accommodation type is the only Quick Win left
   unbuilt — a small addition to the existing grid, not a new data shape,
   so it's probably a quick pickup whenever this tool's turn comes around

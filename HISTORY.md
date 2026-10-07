@@ -9,6 +9,57 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 077 Testing Accommodations: room assignment, proctors and proctor lists (2026-10-06, AI-31-077, `CACHE_VERSION` v269)
+
+Audit entry AI-31, BACKLOG rank 113 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** Two cards under the assignment grid. **Testing rooms**: add rooms with a name, a number of seats, a proctor and a checklist of which of the
+  tool's *own* accommodation types the room provides (no second vocabulary; a renamed type renames in the checklist, a deleted one leaves it). **Route students to
+  rooms**: *Route all students* (asks first if anyone is placed, naming how many it replaces), *Route only students not placed yet* (keeps every placement,
+  hand moves included), *Clear all placements*; a grid of every student who has an accommodation with a room to pick (each room shown with its count), a
+  per-row check ("OK" or a warning), and rooms at a glance (proctor, seats used, over capacity). **Proctor lists**: one sheet per room that has students (or one
+  chosen room), each a `.pk-page` with the proctor, a write-in test and date, a table of student, accommodations, note and a Present box, a total and a tally
+  per accommodation; a student sitting in a room that lacks one of theirs is flagged on that room's list.
+- **Who may go where.** `Tools/testing-accommodations-card-generator/rooms.js` (global `TacgRooms`, pure, a pure-Node suite imports it): a student may go only to a
+  room that provides *every* accommodation ticked for them. The route is deterministic: most accommodations first (hardest to fit), ties in roster order; each
+  takes the eligible room that provides the fewest accommodations they do not need (so "separate setting" only does not take the room that also reads aloud),
+  ties in room order; when that room is full an already-placed student is moved to another eligible room if that makes space (the standard augmenting path), so
+  nobody is left unplaced unless **no arrangement** could seat them (the suite checks the count against a brute-force best on 400 random cases). Anyone left
+  is named with the reason: no room provides X; no single room provides all of X and Y together; the rooms that provide all of them are full: A, B.
+  Students with no accommodation need no room and are not in the grid.
+- **Hand moves.** A student can be moved to any room (or to Not placed) from their row. A move to a room that lacks something is **kept**, because it is the
+  teacher's call, and is said three ways: the status line, the row, and the proctor's list. A move into a full room warns it is over capacity. Focus stays on the
+  select that changed.
+- **Storage.** The tool's own key `tacg_cards_v1`, which has no version field (its version is in the key's name), so there is no migration: two *optional* fields,
+  `rooms` (`{ id, name, capacity, proctor, provides: [type id] }`) and `roomOf` (`{ student name: room id }`). Neither exists until the first room is added: a
+  save from before loads, is not rewritten by loading, and ticking a box does not add either field (the suite checks the stored string byte for byte and the
+  key set). Junk in either field loads as no rooms. A placement into a room that is gone reads as Not placed; deleting a room (after a confirm that names how many
+  it unplaces) removes its placements. `_shared/tool-registry.js` needs nothing: same key, still `student: true`, so the year-end rollover and 009's backup
+  take the rooms with it.
+- **Sharing: nothing new.** The share link carries the accommodation list and nothing else, as before; rooms, proctors and placements are **not** in it. The suite
+  compares the link of a device with rooms, proctors and placements to that of the same device without and they are identical. The `Testing rooms` card says so.
+- **Print and preview.** The lists go through the same `#printArea` and the kit as it is (no edit to `_shared/`). The page has one `PrintKit.preview()` call site
+  (`smoke-preview-adopters.mjs` holds each adopter to one, and to the literal call), so *Preview proctor lists* sets a `sheetMode` and presses the same Preview
+  pages button, the way 018's do; the cost is that Escape returns focus to Preview pages, not to the rooms button. `test:preview-adopters --only 077`: 392 passed, 0
+  failed; the new suite checks the preview's page count against Chromium's PDF for one 46-student room (it runs over several pages, head repeating) and for two
+  rooms, and reads the PDF with pdftotext to prove the small room's page has only its student and no Gym page has the other room's.
+- **Suites.** `smoke-rooms-core.mjs` (`test:accommodations-rooms-core`, pure Node, 75 assertions) and `smoke-rooms.mjs` (`test:accommodations-rooms`, port 8504, 129
+  assertions). Deliberate breaks: **25 on rooms.js** (all caught; two survived the first draft, "no augmenting" and "moved student stays in the old room too", and
+  got the two cases that now catch them, then the random brute-force section) and **31 on the page** (30 caught first time, one, "no add-room alert", survived and got
+  an assertion; the three on the sheet-mode wiring were run after the funnel change). `test:a11y -- --only 077` 4 passed (the sweep has no rooms; the suite runs axe
+  with rooms, light and dark, and checks every room control has a name), `audit-print --check --only 077` OK, `smoke-share-rollout` 1580, `smoke-dark-rollout` 966
+  (the first run died on a closed page at 280 s, the second passed), `smoke-picker-rollout` 332; every `check:*`, `lint`, `check:precache -- --base main`,
+  `check:adoption -- --check` exit 0. Inline-sink baseline for 077 stays 5: everything new is built with the DOM.
+- **Not verified.** Nothing printed on paper; no screen reader (axe and labels only); no real school's accommodation vocabulary beyond the six defaults; the
+  sheet's 11 pt type was not read on a copier. `audit-print` lists *Print proctor lists* under "Print buttons that never printed": its seed (`a11y-sweep/seeds.mjs`)
+  has no rooms and is outside this row's files; the suite measures the sheets in print media itself.
+- **Left.** A review-date field per student; a testing-coordinator view across teachers' rosters (decided to stay a different tool); more than one saved set of rooms
+  (a room plan per test); one proctor for several rooms; per-student seat numbers; a room's start and end times.
+- **Decision (reversible).** Room assignment lives in this tool, as the first Open Question allowed, because it reads only this tool's own roster and key; the second
+  question's coordinator tool is not built.
+
+---
+
 ## 075 Staff Directory: wallet and lanyard cards with a QR per person (2026-10-06, AI-31-075, `CACHE_VERSION` v268)
 
 Audit entry AI-31, BACKLOG rank 112 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
