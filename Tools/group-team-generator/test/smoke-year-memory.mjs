@@ -221,7 +221,7 @@ if (want('2')) {
     const li = await p.locator('#grid-content .never-list li', { hasText: first }).first().textContent();
     const want = never.filter(pr => pr.includes(first)).map(pr => pr[0] === first ? pr[1] : pr[0]);
     ok(want.every(w => li.includes(w)), `${first}'s line names everyone they have not met (${want.join(', ')})`);
-    ok(/has worked with \d of 5/.test(li), 'and says how many of the five they have');
+    ok(li.includes('has worked with ' + (5 - want.length) + ' of 5'), 'and says how many of the five they have');
     await p.keyboard.press('Escape');
     // every pair met → the sentence
     const all = {}; for (let i = 0; i < 6; i++) for (let j = i + 1; j < 6; j++) all[K(ns[i], ns[j])] = { gen: 1, count: 1 };
