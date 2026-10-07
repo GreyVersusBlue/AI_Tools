@@ -134,6 +134,8 @@
     "test:civics-file": "node Tools/civics-role-card-generator/test/smoke-file-transfer.mjs",
     "test:timeline": "node Tools/timeline-builder/test/label-packing.test.mjs && node Tools/timeline-builder/test/smoke-map-print.mjs && node Tools/timeline-builder/test/smoke-story-worksheet.mjs",
     "test:timeline-share": "node Tools/timeline-builder/test/smoke-share.mjs",
+    "test:timeline-blank-order-core": "node Tools/timeline-builder/test/smoke-blank-order-core.mjs",
+    "test:timeline-blank-order": "node Tools/timeline-builder/test/smoke-blank-order.mjs",
     "test:timeline-photos": "node Tools/timeline-builder/test/smoke-photos.mjs",
     "test:changed": "node Tools/board-check/run-suites.mjs --changed",
     "test:sw-update": "node Tools/service-worker/test/smoke-sw-update.mjs",

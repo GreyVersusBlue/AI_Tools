@@ -2507,7 +2507,7 @@
       var item = document.createElement('div');
       item.className = 'ordKeyItem';
       item.appendChild(ordText('span', 'ordKeyNum', k.position + '.'));
-      item.appendChild(document.createTextNode(k.event.title + ' (' + TimelineLayout.formatDateLabel(k.event) + ')' + (k.tied ? ' *' : '') + ' '));
+      item.appendChild(document.createTextNode(' ' + k.event.title + ' (' + TimelineLayout.formatDateLabel(k.event) + ')' + (k.tied ? ' *' : '') + ' '));
       item.appendChild(ordText('span', 'ordKeyCard', '— ' + (settings.kind === 'list' ? 'no. ' : 'card ') + k.label));
       list.appendChild(item);
     });
