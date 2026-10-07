@@ -87,6 +87,36 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-14 (v286; the code commit says v285, which AI-31-015 took), rank 29 (DELETED: Path 12 P3 is whole), Path 12 P3 increment 3: spin-the-wheel on 030.** A board has
+  a **Spin the wheel** tick box, off until ticked. On, a spin (the button, or the S key) chooses the clue: one wedge for
+  every clue not yet played, **each as likely as any other**, plus one each for two extra wedges the teacher may tick
+  (**Lose a turn**, **Double points**: the next clue played is worth twice its points; a Daily Double keeps its wager).
+  **The spin is not chance at play time:** it is worked out from a seed stored on the board and the spin's number, saved
+  before the picture turns, so the same board and seed give the same spins and a reload does not re-roll; Reset game
+  draws a new seed. The picture does not turn under reduced motion and is hidden from a screen reader; the result is
+  one sentence in a status line and the focus on the chosen clue (Enter opens it), marked by a dashed line and an arrow.
+  One field on the board (`wheel`), absent until ticked, cleaned on import. Every older mode is unchanged (32 + 23 pins,
+  and 65 new pins of the final wager round and quiz-bowl taken before the page was edited). Rules in
+  `Tools/review-game-board/rgb-play.js`. `npm run test:play-wheel` (port 8522) and `test:play-modes-core`.
+  **Left of Path 12: P2's 018 and 019 station questions, 062's map questions, named sets and a tag filter on 030 (rank
+  28); P4 media (rank 30). Fourteen more choices that are Devon's are questions 45 to 58 in the Path 12 section. No
+  class has spun it. The rank is left as a gap, as the other rows deleted in this sprint were. Next free suite port: 8523.**
+- **AI-14 (v284; the code commit says v283, which AI-31-016 took), rank 29 (kept, rewritten), Path 12 P3 increment 2: the final wager round and quiz-bowl on 030.**
+  Two more tick boxes in a board's options, both off until ticked, each with its rule in words under it. **Final
+  wager round:** one last question (typed on the board, or copied from the bank or a built-in set); the teacher types
+  each team's wager into a hidden box (0 to its score; **up to 100 for a team at 0 or below**), the question shows only
+  when every wager is in, then the answer, then each team is marked right or wrong (keys 1 to 9, Enter); right adds
+  the wager, wrong takes it off; the result names the winner or the tie; **Take the final round back** restores every
+  score. **Quiz-bowl round:** toss-ups from the chosen source in its order, none twice; the teacher records the buzz
+  (click or the team's number), then R or W; **a wrong answer locks that team out of the question and costs nothing
+  unless the teacher sets a cost**; a right one scores the toss-up and gives that team alone a bonus question; an
+  end-of-round summary; **Undo the last toss-up**. Both play on a new overlay (a dialog), store one field each on the
+  board (`final`, `quizBowl`; question ids, not words, in the quiz-bowl log) and nothing in the bank, and are cleaned on
+  import. A board that never ticked either box is unchanged (the 32 old-game pins, and 23 new pins of
+  every-team-answers taken before the page was edited). Rules in `Tools/review-game-board/rgb-play.js`;
+  `_shared/question-bank.js` is unchanged. `npm run test:play-rounds` (port 8519) and `test:play-modes-core`.
+  **Left of P3: the wheel. Fourteen more choices that are Devon's are questions 31 to 44 in the Path 12 section. No
+  class has played either round. Next free suite port: 8521 (8520 is 016's).**
 - **AI-14 (v281), rank 29 (kept, rewritten), Path 12 P3 increment 1: every-team-answers and the printed quiz and
   study guide on 030.** A board has an **Every team answers** tick box, off until ticked: on, showing a clue's answer
   shows a marking panel (Right, Wrong or No answer for each team; keys 1 to 9 and Enter) where the one-team award
@@ -486,7 +516,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; 062's thirty map questions, which are not published (they wait on P4); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Seventeen questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 29 | Path 12 P3 — play modes in 030. **Increment 1 (AI-14, v281): every-team-answers (a tick box on a board: when the answer is shown each team is marked right, wrong or no answer and one press scores the clue; a right answer scores the clue's points, a wrong answer and no answer nothing; one Undo takes the clue back) and the printed sheets (a practice quiz with room to answer and its answer key starting a new page, and a study guide with each answer beside its question, from a board or from what the bank tab's list shows).** **Left:** quiz-bowl, spin-the-wheel, the final wager round. Thirteen questions for Devon (18 to 30) are in the section | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -567,7 +596,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 127 | Reuse the real timer; period-aware auto-advance | 010 | ½ | | [010 Command Center](#010--command-center) |
 | 128 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
 | 130 | Date-received per student; contract-gate reporting | 013 | ½ | | [013 Lab Safety Contract Tracker](#013--lab-safety-contract-tracker) |
-| 131 | Printed ordering activity; blanking dates, not just titles | 015 | ½ | | [015 Timeline Builder](#015--timeline-builder) |
 | 133 | Peer feedback slips; gallery-walk reactions | 017 | ½ | | [017 Gallery Walk QR Codes](#017--gallery-walk-qr-codes) |
 | 134 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
 | 135 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
@@ -4407,8 +4435,10 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
 - **P3 — Play modes in 030.** Every-team-answers mode, quiz-bowl, spin-the-wheel,
   the final wager round, and a printed practice quiz/study guide with an answer key
   — all reading the same bank.
-  **Increment 1 shipped (AI-14, 2026-10-07, v281; the code commit says v280, which AI-31-012 took): every-team-answers, and the printed quiz and study guide. Left:
-  quiz-bowl, spin-the-wheel and the final wager round. The rest of this bullet is that increment as built;
+  **Increment 1 shipped (AI-14, 2026-10-07, v281; the code commit says v280, which AI-31-012 took): every-team-answers, and the printed quiz and study guide.
+  Increment 2 shipped (AI-14, 2026-10-07, v284; the code commit says v283, which AI-31-016 took): the final wager round and quiz-bowl.
+  Increment 3 shipped (AI-14, 2026-10-07, v286; the code commit says v285, which AI-31-015 took): spin-the-wheel. **P3 is whole and its ranked row is deleted.** The
+  rest of this bullet is increment 1 as built, then increment 2, then increment 3;
   `Tools/review-game-board/rgb-play.js`'s header says the same and is the reference.**
   - *How a board was played, and still is by default.* A clue is opened from the grid, **Show answer** (or Space)
     shows the answer and a row of buttons, one a team (`+200 Otters`), and the teacher presses the ONE team that got
@@ -4483,6 +4513,150 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   - *Not verified.* No class played the mode and no person used the panel; no screen reader was run (axe, names,
     roles, keys and focus only). Nothing was printed on paper: pages are Chromium's PDF read with `pdftotext`. A
     bank of thousands was not printed. Not run: the full `npm test`.
+  - **Increment 2 (v284): the final wager round and quiz-bowl.** Both are a tick box in the board's options, off on
+    every board until ticked, with a setup block under the options while on. Both play on one new overlay
+    (`#roundOverlay`, a `dialog` named by its heading, with a status line and a Close button; Escape closes it and
+    focus returns to the button that opened it). Nothing here is student-facing: the teacher types each wager and
+    records each buzz.
+  - *The final wager round.* The block holds the **final question and its answer** (typed, or copied in from the bank
+    or a built-in set with **Use this question**; the words are copied, the source is not written) and **Start the
+    final wager round**, which can be pressed at any time, not only when the board is finished. *The rule, as the page
+    says it:* each team wagers a whole number from 0 up to its score, **and a team at 0 or below may wager up to
+    100**; a right answer adds the wager and a wrong answer takes it off. Stage one: a box a team, labelled with its
+    score and its bound, typed hidden (a password-type box), each with a note saying "in" or why it is not a wager;
+    the question is not shown until every wager is one, and a press before that names each team and why. Stage two:
+    the question, with the wagers shown. Stage three (Show answer, or Space): the answer and a Right/Wrong group a
+    team, none marked to start; keys **1 to 9** mark that team right, then wrong; **Enter** or the button scores, and
+    refuses by name while a team is unmarked. Stage four: the result, **the winner or the tie in words** ("Otters win
+    with 200 points." / "Otters and Herons tie for first place with 100 points each."), the places, and a line a team
+    for its wager. Nothing is stored and no score moves until the round is scored; closing it before then says so.
+    Once scored the block offers **Show the final result** and **Take the final round back** (every score restored,
+    the question kept).
+  - *Quiz-bowl.* The block holds the source (the teacher's bank or a built-in set; a question with no answer is
+    passed over), three numbers (**toss-up 10, bonus 10, a wrong toss-up costs 0** to start) and **Start the round**.
+    A toss-up shows its question and a button a team with its running score; the teacher presses the team that
+    buzzed first (or its number), then **Right** or **Wrong** (R or W), or "Not that team: back". *The rule, as the
+    page says it:* a wrong answer locks that team out of the question and costs what is set (nothing, unless the
+    teacher changes it); a right one scores the toss-up and earns that team alone a bonus question, which is the next
+    question of the source. When every team is wrong, or the teacher presses **Nobody got it**, the toss-up is dead
+    and its answer is shown. **Questions come in the source's order and none is used twice in a round**, as a toss-up
+    or as a bonus. Points go on the board's own scoreboard, and the running scores are on the overlay between
+    questions. **End the round** (or the source running out) shows the summary: a line a team (toss-ups, bonuses,
+    wrong buzzes, points this round), how many toss-ups went unanswered, the round's winner or tie, and the scores
+    now. Closed part-way, the round is continued from the block; **Undo the last toss-up** takes its points off and
+    lets it be asked again; **Start a new round** empties the log and keeps the points. The source and the three
+    numbers cannot be changed once a round has begun, because what a toss-up scored is worked out from the log.
+  - *What is stored.* On the board, by the way it has always grown fields: `final` (`{ on, question, answer }`, and
+    once scored `wagers`, `marks`, `deltas`, one a team) and `quizBowl` (`{ on, source, tossup, bonus, penalty, log,
+    over }`, the log one entry a toss-up: `{ id, wrong, right, bonusId, bonus }`, **question ids, never words**).
+    **Both absent on a board that never ticked the box.** No new key, no registry change, nothing written to the
+    bank (read with `peek`). A removed team's wager and buzzes leave both; Reset game empties the play and keeps the
+    question and the settings; Edit questions and Save board keep both; Export JSON carries both and Import JSON
+    cleans them (a final round's scores are worked out again from its wagers and marks; a log keeps no question
+    twice, no team that is not there and no bonus without a winner). 030's share link carries questions, never a
+    board, so no link changed.
+  - *A board from before.* The 32 pins of the one-team game are unchanged, and every-team-answers as v281 left it is
+    held by 23 new pins (`Tools/review-game-board/test/_every-team-game.mjs`, taken twice from the page before it was
+    edited). What an old board gains on screen is the two tick boxes.
+  - *Text.* The overlay and both blocks are built from elements; `inline-sinks-baseline.json` has 030 at 3, as
+    before. A question and an answer that are markup are text on the overlay (asserted).
+  - *Not built (increment 2).* A unit filter or a shuffle for quiz-bowl; the board's own clues as its source; a
+    question's choices or picture on the overlay (the words only); the lightning countdown in either round; a
+    three-part bonus; a focus trap on the overlay (Tab reaches the page behind it, as on the clue overlay). The
+    board's **Undo last score change** does not know the two rounds: each has its own take-back button.
+  - *More questions for Devon (each has a default taken, said on the page where it is a rule).*
+    31. **What a team at 0 or below may wager**: up to 100 (taken). Or the board's smallest clue, or nothing.
+    32. **Wagers are typed by the teacher into hidden boxes** (taken). Or the teams write on paper and nothing is
+        typed until the answer is out. The box is password-type: a password manager might offer to save it (not seen
+        in Chromium; no other browser tried).
+    33. **Every team is marked right or wrong** in the final round (taken): a team that wrote nothing is marked
+        wrong and loses its wager. Should there be "no answer, nothing lost"?
+    34. **The final question is words on the board** (taken): one picked from the bank is copied, so a later edit in
+        the bank does not reach it.
+    35. **The final round can be started at any time** (taken), not only once every clue is used.
+    36. **Quiz-bowl points**: toss-up 10, bonus 10, a wrong toss-up 0, each settable and fixed once a round begins
+        (taken). One bonus question, not three parts.
+    37. **Quiz-bowl's source is a whole bank or set in its stored order** (taken): no unit filter, no shuffle, and
+        not the board's own clues.
+    38. **Quiz-bowl points go on the board's scoreboard**, with the clue game's (taken). Or a score of its own?
+    39. **A toss-up counts once it is decided** (taken): a wrong buzz costs nothing if the overlay is closed before
+        the toss-up is won or dead, and that toss-up is asked again.
+    40. **A bonus is used from the moment it is shown** (taken): closed before it is marked, it scores nothing and
+        is not asked again.
+    41. **A new round may repeat questions** (taken): the round's log is the only memory of what was asked.
+    42. **Reset game empties both rounds' play** and keeps the final question and the quiz-bowl settings (taken).
+    43. **"Otters win", not "Otters wins"** (taken): a team's name takes a plural verb in every sentence.
+    44. **When every team has missed a toss-up it is dead** (taken). Or are the locked-out teams let back in for a
+        second try?
+  - *Not verified (increment 2).* No class played either round and no person used the overlay; no screen reader was
+    run (axe in both themes, roles, names, keys and focus only). No password manager was tried against the wager
+    boxes. A bank of thousands as a quiz-bowl source was not tried (each draw of the overlay reads the source once).
+    Not run: the full `npm test`.
+  - **Increment 3 (v286): spin the wheel.** A tick box in the board's options, off on every board until ticked, with
+    a block under the options while on: the rule, two tick boxes for the extra wedges, a picture of the wheel, **Spin
+    the wheel**, a status line, the odds in words, the count of spins and the last one, and a list of what is on the
+    wheel. *The rule, as the page says it:* a spin chooses the clue, not a team; the wheel has one wedge for every clue
+    not yet played, and a spin is as likely to land on one wedge as on any other. The spin lands on **a category and
+    a value** (one clue), never on a category alone. A clue can still be opened by hand.
+  - *The draw.* Chance happens once a game: a 16-hex-digit seed made when the box is first ticked (and again by Reset
+    game) and stored on the board. Spin number n is `wheelDraw(seed, n, wedges)`: a hash of the seed and n, then a
+    whole number below the wedge count with the biased tail thrown away. So the same board, the same seed and the same
+    plays give the same spins, and a reload between spins changes nothing (asserted in pure Node through a JSON round
+    trip, and in the page across two reloads). The spin is recorded and **saved before the picture moves**. Fairness,
+    as tested: over 24,000 fixed seeds each wedge's share is within 1.5 percentage points of 1 in N for 2, 5, 12 and 30
+    wedges, and for 24,000 spins of one seed over 8; over 3,000 seeded games no spin lands on a played clue and every
+    game plays every clue.
+  - *The picture, keys and a screen reader.* The wheel is an SVG built from elements, `aria-hidden`, its wedges
+    numbered as the list beside it is (`L` and `×2` for the extras). With motion allowed it turns for 1.2 seconds and
+    stops with the chosen wedge under the pointer; under `prefers-reduced-motion: reduce` it does not turn and the
+    result is immediate. The result is **one sentence written once** into a `role="status"` line when the wheel stops
+    ("Spin 3: Rivers for 200. Press Enter to open it."), and the chosen clue's cell takes the focus, named
+    "Rivers for 200, chosen by the wheel" and marked by a dashed line and an arrow, not a colour. **S** spins when the
+    board is on the screen, no clue or round is open and nothing is being typed; a press while the wheel turns does
+    nothing. The wheel does not open the clue itself.
+  - *The extra wedges, each off until ticked and stated on the page.* **Lose a turn**: one more wedge; landing on it
+    says "No clue this spin" and chooses nothing (the page keeps no turns, so it skips nobody itself). **Double
+    points**: one more wedge; landing on it makes the next clue played worth twice its points, however it is opened
+    and in either way of scoring (the heading says "(double points)", the award buttons and the every-team panel show
+    the doubled number). The double is spent when that clue is used. **A Daily Double keeps its own wager and the
+    double waits.** Landing on it again while one waits changes nothing.
+  - *What is stored.* One field on the board, `wheel`: `{ on, seed, spins, lose, double, doubleNext, last }`, `last`
+    being `{ n, kind, cat, clue }`. **Absent on a board that never ticked the box.** No new key, no registry change.
+    Export JSON carries it and Import JSON cleans it (only true is on; a last spin that is not the counted spin, or
+    names a clue the board lacks, is dropped; a wheel with no seed is given one). Edit questions and Save board keep
+    the wheel and its count and forget where it last landed. Reset game gives a new seed and no spins and keeps the
+    settings. Unticking drops a waiting double. 030's share link carries no board, so no link changed.
+  - *A board from before.* The 32 one-team pins and the 23 every-team pins are unchanged, and the final wager round
+    and quiz-bowl as v284 left them are held by 65 new pins (`Tools/review-game-board/test/_rounds-game.mjs`, taken
+    twice from the page before it was edited). What an old board gains on screen is one more tick box.
+  - *Text.* The block is built from elements; `inline-sinks-baseline.json` has 030 at 3, as before. A category that
+    is markup is text in the list, the status line and the cell's name (asserted).
+  - *Not built.* A wheel of categories alone. Weighted wedges. A seed the teacher can see or type. Taking a spin
+    back. The wheel on the projector overlay (it is in the board's options block). Sound. Other wedges (bankrupt,
+    steal, free turn).
+  - *More questions for Devon (each has a default taken, said on the page where it is a rule).*
+    45. **The wheel lands on a clue** (a category and a value) (taken). Or on a category, the team then choosing
+        the value.
+    46. **Every wedge is as likely as any other**, and each extra wedge is one more equal wedge (taken). Or a fixed
+        share for the extras, whatever is left on the board.
+    47. **Lose a turn only says so** (taken): the page keeps no turns, so the teacher moves to the next team.
+    48. **Double points doubles the next clue played**, however it is opened, in either way of scoring (taken).
+        Landing on it twice does not quadruple.
+    49. **A Daily Double with a double waiting**: the wager stands and the double waits for the next clue (taken).
+    50. **Reset game draws a new seed** (taken), so a replay is a new order. Or the same order again.
+    51. **A clue can still be opened by hand** with the wheel on (taken). Or the grid is locked to the wheel.
+    52. **A chosen clue closed before it is asked** stays on the wheel and that spin is used (taken).
+    53. **A spin cannot be taken back**, and Undo of a doubled clue takes the points off without bringing the
+        double back (taken).
+    54. **The wheel does not open the clue**: it puts the focus there and Enter opens it (taken).
+    55. **The S key spins** (taken).
+    56. **Edit questions forgets where the wheel last landed** and keeps the count of spins (taken).
+    57. **The seed is not shown and cannot be typed** on the page (taken); it travels in the board file.
+    58. **The picture numbers its wedges** and the names are in the list beside it (taken); it turns for 1.2 s.
+  - *Not verified (increment 3).* No class spun the wheel and no person used it; no screen reader was run (axe in
+    both themes, the status line's role, names, keys and focus only). The turning was checked by its CSS and its
+    end state, not watched. A board of hundreds of clues on the wheel (the labels would overlap). Not run: the full
+    `npm test`.
 - **P4 — Media.** Clue images move to the media store (Path 4) beside the existing
   clue audio; media travels in export as data URLs.
 
@@ -8333,9 +8507,10 @@ open; struck through in session `c1jqjp` after checking each against the
 source. The list was pointing later rounds at finished work.
 
 - ~~**Blank / student-fill version**~~ — **done, 2026-08-14** (SS demo round
-  2: the timeline worksheet print, `tlb-worksheet.js`). Blanks titles only;
-  blanking *dates* instead is still open and is listed under "Where the next
-  round should pick up" for that round.
+  2: the timeline worksheet print, `tlb-worksheet.js`). Blanked titles only
+  until 2026-10-07 (AI-31-015, v285): a worksheet now blanks titles, dates or
+  both, for a random number, every nth event or events picked by hand, with the
+  year scale left off the sheet and kept on the key.
 No Quick Wins remain open. A future round should look to Major Features
 below, or find a genuinely new gap — the label de-overlap fix that session
 `c1jqjp` shipped was one of those, and it came out of the previous round's
@@ -8343,11 +8518,12 @@ notes rather than out of this list.
 
 #### Major Features
 
-- **Printed ordering activity** — *partly done*. The paper half shipped
-  2026-08-14 as the timeline worksheet (numbered blanks, word bank, answer
-  key). What is still unbuilt is the **cut-apart cards** version: ten events
-  on separate cards for students to physically sequence, which is a different
-  print layout from the worksheet's spatial strip.
+- ~~**Printed ordering activity**~~ — **done, 2026-10-07** (AI-31-015, v285): an
+  "Ordering activity" panel prints the titled events with no dates as cut-apart
+  cards or a numbered list, dealt from a seed stored with the timeline (Reshuffle
+  moves it; three or more events are never dealt in order), with an answer key
+  on a page of its own. It prints through the tool's own containers, not the
+  shared print kit (this page never did), landscape on Letter or A4.
 - **Comparative timelines as a first-class teaching device.** Compare mode
   exists; framing it as "what was happening in China while this happened in
   Europe" — with a shipped set of reference timelines for major periods —

@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## 020 Bracket / Tournament Generator: teams with members, and a first-round consolation bracket (2026-10-07, AI-31-020, `CACHE_VERSION` v284)
+## 020 Bracket / Tournament Generator: teams with members, and a first-round consolation bracket (2026-10-07, AI-31-020, `CACHE_VERSION` v287; the code commit says v284, which main passed before the merge)
 
 BACKLOG rank 136, "Team names with members; a loser's-side consolation bracket", both parts, in the tool's own code (`Tools/bracket-tournament-generator/bt-teams.js`, new,
 precached; global `BtTeams`, pure). The academic-tournament mode, `bt-academic.js` and `golden-old-brackets.json` are untouched and their suites pass byte for byte.
@@ -50,6 +50,157 @@ precached; global `BtTeams`, pure). The academic-tournament mode, `bt-academic.j
   Nothing printed on paper, no screen reader, no phone. Not run: the full `npm test`. Left: a full loser's side (Path 13 P4), rematch avoidance across the two brackets,
   hand-picked consolation pairings.
 
+## Path 12 P3, increment 3: spin-the-wheel on 030; P3 is whole (2026-10-07, AI-14, `CACHE_VERSION` v286; the code commit says v285, which AI-31-015 took before the merge)
+
+**What shipped.** The last play mode of BACKLOG rank 29, so the row is deleted. A board has a **Spin the wheel**
+tick box, off until ticked. On, a spin chooses the clue for the team: one wedge for every clue not yet played, each
+as likely as any other, and one more each for two extra wedges a teacher may tick, **Lose a turn** and **Double
+points** (the next clue played is worth twice its points). `BACKLOG.md`'s Path 12 section, "Increment 3", is the
+design as built; `Tools/review-game-board/rgb-play.js`'s header says the same.
+
+**The one idea worth keeping.** The spin is not chance at play time. A seed is made once a game (when the box is
+ticked, and by Reset game) and stored on the board; spin number n is a pure function of the seed, n and the wedges as
+they stand; and the page records and saves the spin before the picture starts to turn. So a reload cannot re-roll, the
+picture cannot disagree with the result, and the whole mode is testable in pure Node: a game is replayed twice and
+once more through a JSON round trip and gives the same sequence.
+
+**First check.** The mode did not exist: no `wheel` anywhere in 030 or `rgb-play.js`. Before any edit, the final
+wager round and quiz-bowl as v284 left them were played through every stage and hashed twice (65 pins,
+`Tools/review-game-board/test/_rounds-game.mjs`); they, the 32 one-team pins and the 23 every-team pins are green on
+the finished page.
+
+**Calls made (each is a question for Devon, 45 to 58 in BACKLOG's Path 12 section).** The wheel lands on a clue,
+not a category. Every wedge is equally likely, the extras included. Lose a turn only says so, because the page keeps
+no turns. Double points doubles the next clue played however it is opened, in both ways of scoring; a Daily Double
+keeps its wager and the double waits. Reset game draws a new seed, so a replay is a new order (the other reading, the
+same order again, is what a teacher would notice as a fault). A clue can still be opened by hand. The wheel does not
+open the clue: the focus lands on it and Enter opens it. S spins.
+
+**What changed in code that was already there.** Five places now read a clue's worth through
+`ReviewBoardPlay.wheelWorth(points, state.wheel)`, which returns `points` itself (the same value, the same type)
+unless a double is waiting: the clue heading, the one-team award buttons, the every-team panel's rule, its scoring
+and its status sentence. `markCurrentClueUsed()` spends the double. `cleanRounds()`, `startBoard()`, Save board and
+Reset game each gained one line for the field. The grid marks the landed cell (a class and an `aria-label`), on a
+board with a wheel only. Nothing else in the page moved; `_shared/question-bank.js` is not edited; inline-sink
+baseline for 030 still 3.
+
+**Tests.** `test:play-modes-core` 273 assertions (194 before, pure Node): the draw (a golden sequence, fairness
+over 24,000 fixed seeds within 1.5 percentage points of 1 in N for 2, 5, 12 and 30 wedges and for 24,000 spins of
+one seed, 3,000 seeded games never landing on a played clue), the wedges, what a spin records, the double, the
+words, a wheel from a file, Reset. New `test:play-wheel` (port 8522), 162 assertions: the 65 pins, off until
+ticked, a whole seeded game by button and by S across two reloads, the status line written once (a
+MutationObserver), focus and the landed cell's name and mark, the turning (1.2 s with motion, 0 s without; the
+spin already stored while it turns; a second press ignored; the wedge under the pointer at rest), both extra wedges,
+the double in both ways of scoring and beside a Daily Double, Export, Import, Edit, Reset, unticking, markup as text,
+axe in both themes.
+
+**Breaks on purpose.** Pure Node, 56: 51 caught by an assertion, 3 stopped the suite with a crash (a guard on a
+missing wheel removed), 2 changed nothing a test can see (`wheelLanded` without its kind test still finds no clue
+for Lose a turn; the draw without its thrown-away tail is biased by under one part in a hundred million).
+In the page, 8 written and **4 run**, one suite run per lock, all 4 caught by an assertion: the double not spent, the
+spin not saved before the picture turns, no focus on the chosen clue, S spinning under an open clue. **Not broken
+on purpose in the page:** the seed given to a file's wheel that has none, the reduced-motion rule, Edit questions
+forgetting the last spin, the guard against a second spin while turning, the landed cell's name and mark, Reset's
+new seed, the extra wedges' tick boxes, the every-team and Daily Double halves of the double.
+
+**Got wrong.** Nine expectations in the first run of the new suite were mine, not the page's: I took the board's
+first open cell to be Rivers 200 when the grid is laid out by row and it is Deltas 100, and I guessed the golden
+game of seed-1 before running it. One golden in the pure suite was guessed too and replaced with what the rule
+gives. The four page breaks were started in one foreground command that outran the tool's ten-minute limit while it
+waited on the suites lock, and finished in the background; nothing was committed while the page was broken.
+
+**Not verified.** No class spun the wheel; no person used it; no screen reader was run. The turning was checked by
+its CSS and where it rests, not watched. Hundreds of clues on one wheel. Not run: the full `npm test`.
+
+**Left of Path 12.** P2's leftovers on rank 28 (018 and 019 station questions, 062's map questions, named sets and
+a tag filter on 030), P4 media on rank 30, and the long-list route.
+## 015 Timeline Builder: a worksheet that blanks dates, and a printed ordering activity (2026-10-07, AI-31-015, `CACHE_VERSION` v285)
+
+BACKLOG rank 131, "Printed ordering activity; blanking dates, not just titles", built whole and the row deleted. The page was checked first. It already blanked titles
+(the worksheet: numbered blanks on the strip, a word bank, an answer key page, a seeded pick of N events per version) and said in its section that dates and cut-apart
+cards were open. It prints through its own containers (`#printArea`, the tiled, map and worksheet pages), not the shared print kit, so the new sheets are a fifth
+container of the same shape, landscape, and use no `_shared/` code.
+
+- **Blanking dates.** The worksheet panel has "What to blank out" (titles, dates, titles and dates) and "Which events" (a number picked at random, every nth along
+  the strip, or the ones I choose from a tick list). A date blank is a ruled space on the strip and, below it, a line of at least 9rem to write on (a title line is
+  14rem); "both" puts the date on its own line under the title. The word bank becomes a date bank, or a Titles list and a Dates list; the date bank is shuffled with a
+  seed of its own, because the title bank's would pair the i-th title with its i-th date. The year scale along the strip's axis is left off a sheet that blanks dates (it
+  answers the blank) and kept on the key; the key underlines what was blanked on the strip and bolds it in the list, and says "Blanked on this sheet: ...". Every nth starts
+  one event later on each version, so n versions blank every event once; a hand pick is the same on every version, and the note says so. A pick of nobody refuses.
+- **Saved and shared.** `kind`, `pick`, `nth` and `hand` (event ids) join `state.worksheet` **only when they differ from titles-at-random**, so an old timeline's
+  saved string is the old five keys and stays so. The share link carries the whole timeline already, so it carries them; `normalizeBlank()` in `tlb-worksheet.js` cleans
+  what a hand-built link puts there (an unknown kind or pick is the old behaviour, `nth` is 1 to 50, `hand` keeps finite numbers once each).
+- **The ordering activity.** An "Ordering activity" panel prints the titled events with no date on them as cut-apart cards (a number and the title; dashed lines between;
+  the grid is the widest of 4, 3, 2 or 1 across that leaves two rows of the tallest card, measured with the page's fonts in an off-screen probe, every card the same size and
+  a `min-height`, so a long title makes cards taller and never cuts one) or as a numbered list with a box beside each, and a key on a page of its own: the right order, each
+  line's date, the number of the card (or list line) that holds it, and a `*` where two events share a year and may go either way round. The deal is a pure function
+  (`TimelineWorksheet.deal(events, seed)`) of the events and `state.ordering.seed`; with three or more events in more than one year a draw that is already in order is redrawn
+  from the same seed, and Reshuffle moves to the next seed whose deal differs from the current one. `ordering` (`kind`, `answerKey`, `nameLine`, `seed`) is written when
+  a choice is made, Reshuffle is pressed or a sheet is printed; opening the panels writes nothing. Everything typed reaches the page as text (built from elements);
+  `inline-sinks-baseline.json` for 015 did not move.
+- **Decisions, reversible.** A date-blank worksheet leaves the year scale off (default: on the key only). Untitled events are never blanked and have no card (as before).
+  Cards are numbered by the order they are dealt, not lettered, so the same number names the card on the paper and on the key. No paper-size choice was added: the tool
+  prints landscape on whatever the printer's page is, so cards are sized for the smaller of Letter and A4 (10in wide, 6.2in of cards).
+- **Tests.** `smoke-blank-order-core.mjs` (`test:timeline-blank-order-core`, pure Node, 59 assertions) and `smoke-blank-order.mjs` (`test:timeline-blank-order`, port 8518,
+  193 assertions; `TLB_GROUPS=2,3` runs groups of it). `golden-old-worksheet.json` was recorded from the page before any edit: five timelines and settings, the worksheet markup
+  with style attributes removed (so a font on another machine cannot fail it) and the saved settings string, which must be unchanged. Printing is read off Chromium's PDF
+  on Letter and A4 (pages equal sheets, no blank page, the 200-character and the 58-character unbroken titles whole in `pdftotext -raw`). Breaks on purpose: 28 in the
+  pure module (23 failed first time, 3 survived and got assertions, 2 are equivalent and unbroken: a count of 0 that the slice handles anyway, and a `forEach` check for a list a
+  JSON link cannot carry other than as an array) and 49 in the page (41 failed first time, one of them by a crash and not a named line; 2 survived, a fixed six-across grid and a
+  reshuffle that adds one to the seed, and got assertions; 5 more, on the date and both-blanked lines and banks, were run again after they were rebuilt from elements to keep the inline-sink count at 17, all caught; 1 is equivalent: reading the hostile `kind` from `state.worksheet` instead of the form, which `persist` has already
+  cleaned by the time the page is built). Not every assertion has its own break. The first run of the page breaks used the environment variable `GROUPS`, which bash owns, and
+  proved nothing; they were re-run with `TLB_GROUPS`.
+- **Not done, not verified.** Nothing printed on paper or cut; no screen reader. A date blank on the strip itself is small (the strip is scaled to a page), so the line below
+  is where a student writes. The cards carry no category colour or photo (a photo would answer nothing, but was not asked for). Choosing a subset of events for the ordering
+  activity (it uses every titled event); a card size choice; a paper-size choice. `audit-print`'s seed does not click either new button, so the suite's PDFs are the print check.
+  `test:a11y` scans the default page only; the suite runs axe on every new panel state. The page's whole-document axe pass on a seeded timeline fails colour contrast on
+  category-coloured date labels on the paper strip: that is the existing screen timeline, not this change, and is not in the allowlist.
+
+## Path 12 P3, increment 2: the final wager round and quiz-bowl on 030 (2026-10-07, AI-14, `CACHE_VERSION` v284; the code commit says v283, which AI-31-016 took before the merge)
+
+BACKLOG rank 29 had three modes left; this session was handed two, the final wager round and then quiz-bowl. The
+wheel is not started and the row says so. The design as built is in BACKLOG's Path 12 section, P3, "Increment 2";
+this is what happened.
+
+**First check.** Neither existed. A board had no final-question field (the session's prompt allowed for one), so the
+final round's question is a new field typed on the board or copied from the bank. The Daily Double's wager is one
+team's and was left alone.
+
+**Before any edit.** Every-team-answers as v281 left it was played through every path it has (tick, mark by key and
+by mouse, score, Undo, close with no marks, Export, Edit and Save, a team removed, the mode off and on, Reset, the
+file imported) and hashed twice: 23 pins, the same both times (`Tools/review-game-board/test/_every-team-game.mjs`).
+They and the 32 one-team pins are green on the finished page.
+
+**Built.** The rules are in `Tools/review-game-board/rgb-play.js` (pure, no DOM): what a team may wager and how a
+typed wager is read, what the round scores, standings and the sentence that names the winner or the tie, the cleaning
+of both fields from a file, the quiz-bowl entry (who may buzz, a wrong buzz, a right one, the bonus), what an entry
+scored, which question is next, the totals and the summary, and what a team leaving does to both. The page draws
+them on one new overlay, built from elements. `_shared/question-bank.js` was not edited; the bank is read with
+`peek` and never written; no new storage key; `inline-sinks-baseline.json` still has 030 at 3.
+
+**Calls made (each is a question for Devon in BACKLOG, 31 to 44).** A team at 0 or below may wager up to 100. Wagers
+are typed by the teacher into password-type boxes. Every team must be marked right or wrong before the final round
+scores. Quiz-bowl is toss-up 10, bonus 10, wrong 0, one bonus question, the source whole and in its stored order,
+points on the board's own scoreboard. A toss-up counts once it is decided; a bonus is used once it is shown. The
+source and the points are locked once a round begins, because what a toss-up scored is worked out from the log and
+not stored: changing the points mid-round would make Undo take off a different number than was put on.
+
+**Found by the suite.** Two of my own expectations were wrong by arithmetic (a wrong buzz's cost left out of a
+round total) and were corrected to what the rule gives. One real trap: an axe scan taken straight after switching
+the theme by hand reported the score on a team's chip as low contrast, because the chip's background fades over
+0.2 s; the unedited page is clean under the same scan once it has settled, and the suite now waits 350 ms after a
+theme switch before it scans.
+
+**Got wrong.** The first run of the pure-Node break driver stopped on a bad pattern of its own with a break still
+applied to `rgb-play.js`; the file was put back by hand and the driver now checks every pattern before it changes
+anything and restores the file on exit.
+
+**Checks.** `test:play-modes-core` 194 (83 before), `test:play-rounds` 173 (new, port 8519). Breaks on purpose: 83 of the rules in pure Node (81 caught by an assertion first time, 1 after an added assertion, 1 an equivalent change); 14 in the page, one suite run a lock (13 caught by an assertion first time; 1 first stopped the suite with a crash and is caught by an assertion since that check was rewritten).
+Every guard exit 0. Not run: the full `npm test`.
+
+**Not verified.** No class played either round; no person used the overlay; no screen reader (axe in both themes,
+roles, names, keys, focus); no password manager against the wager boxes; a bank of thousands as a source; CI on this
+tree.
 ## 016 QR Code Generator: batch codes from a CSV or paste, and the label rule stated (2026-10-07, AI-31-016, `CACHE_VERSION` v283)
 
 BACKLOG rank 132, "A label under each code; batch codes from a spreadsheet". **Half of it was already there.** Found first and not rebuilt: a single code has had a
