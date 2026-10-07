@@ -206,5 +206,180 @@ const hostile = [{ group: X + 'g', prompt: X + 'p', answer: X + 'a', choices: [X
   eq(quizPictures, ['quiz-img'], 'the quiz draws the picture large, under its question');
 }
 
+/* ── who is ahead, in words ─────────────────────────────────────────────── */
+eq(P.standings(['Otters', 'Herons', 'Finches'], [100, 300, 100]).map(r => [r.name, r.score, r.place]),
+  [['Herons', 300, 1], ['Otters', 100, 2], ['Finches', 100, 2]], 'standings run from the highest score, a tie sharing a place, in the scoreboard’s order');
+eq(P.standings(['A', 'B', 'C', 'D'], [5, 5, 3, 1]).map(r => r.place), [1, 1, 3, 4], 'the place after a tie of two is the third');
+eq(P.standings(['A', 'B'], ['7', undefined]).map(r => r.score), [7, 0], 'a score that is not a number counts as 0');
+eq(P.standings([], []), [], 'no team, no standings');
+eq(P.resultSentence(['Otters', 'Herons'], [500, 300]), 'Otters win with 500 points.', 'one winner is named');
+eq(P.resultSentence(['Otters', 'Herons'], [300, 500]), 'Herons win with 500 points.', 'whichever team it is');
+eq(P.resultSentence(['Otters', 'Herons', 'Finches'], [400, 400, 100]), 'Otters and Herons tie for first place with 400 points each.', 'a tie of two is said as a tie');
+eq(P.resultSentence(['Otters', 'Herons', 'Finches'], [0, 0, 0]), 'Otters, Herons and Finches tie for first place with 0 points each.', 'and a tie of all three');
+eq(P.resultSentence(['Otters', 'Herons'], [1, 0]), 'Otters win with 1 point.', 'one point is singular');
+eq(P.resultSentence(['Otters', 'Herons'], [-1, -5]), 'Otters win with -1 point.', 'and so is one below zero');
+eq(P.resultSentence(['Otters'], [40]), 'Otters finish with 40 points.', 'a team alone finishes, it does not win');
+eq(P.resultSentence([], []), '', 'no team, no sentence');
+
+/* ── the final wager round ──────────────────────────────────────────────── */
+eq(P.FINAL_FLOOR, 100, 'a team with nothing may wager up to 100');
+eq([P.wagerMax(300), P.wagerMax(1), P.wagerMax(0), P.wagerMax(-50), P.wagerMax(undefined), P.wagerMax(250.9)], [300, 1, 100, 100, 100, 250], 'the most a team may wager is its score, or 100 at 0 or below');
+eq(P.readWager('200', 300), { ok: true, value: 200, why: '' }, 'a wager within the score is read');
+eq(P.readWager('300', 300), { ok: true, value: 300, why: '' }, 'the whole score may be wagered');
+eq(P.readWager('0', 300), { ok: true, value: 0, why: '' }, 'and so may nothing');
+eq(P.readWager(' 50 ', 300).value, 50, 'spaces round it are ignored');
+eq(P.readWager('301', 300), { ok: false, value: null, why: 'the most this team may wager is 300' }, 'one over the score is refused, with the bound');
+eq(P.readWager('100', -20).ok, true, 'a team below zero may wager 100');
+eq(P.readWager('101', -20), { ok: false, value: null, why: 'the most this team may wager is 100' }, 'and not 101');
+eq(P.readWager('100', 0).ok, true, 'a team at zero may wager 100');
+eq(P.readWager('', 300), { ok: false, value: null, why: 'no wager yet' }, 'an empty box is not a wager of 0');
+eq(P.readWager('   ', 300).why, 'no wager yet', 'nor is a box of spaces');
+for (const bad of ['-5', '2.5', 'ten', '1e2', '+5', '5 0', '0x10', '1234567890']) eq(P.readWager(bad, 300), { ok: false, value: null, why: 'a wager is a whole number, 0 or more' }, `"${bad}" is not a wager`);
+eq(P.finalDeltas([200, 50, 30], ['r', 'w', 'n']), [200, -50, 0], 'right adds the wager, wrong takes it off, a team that did not play is untouched');
+eq(P.finalDeltas([0, 0], ['r', 'w']), [0, 0], 'a wager of nothing moves nothing');
+eq(P.finalDeltas([10], []), [0], 'an unmarked wager moves nothing');
+eq(P.finalDeltas(undefined, ['r']), [], 'no wagers, no change');
+eq(P.finalUnmarked(['r', null, 'w', undefined], 4), [1, 3], 'the teams not yet marked are named by place');
+eq(P.finalUnmarked(['r', 'w'], 2), [], 'none when every team is marked');
+eq(P.finalUnmarked(['r', 'n'], 2), [1], 'no answer is not a mark in the final round');
+eq(P.finalUnmarked(null, 2), [0, 1], 'every team when nothing is marked');
+eq(P.finalLines(['Otters', 'Herons', 'Wrens'], [500, -50, 10], [200, 50, 0], ['r', 'w', 'n']),
+  ['Otters wagered 200 and were right: +200, now 500.', 'Herons wagered 50 and were wrong: −50, now -50.', 'Wrens did not play the final round: 10.'], 'a line a team says the wager, the mark, the change and the score');
+eq(P.cleanFinal(undefined, 3), null, 'a board with no final round has none');
+for (const bad of [null, 'final', 7, ['x'], true]) eq(P.cleanFinal(bad, 3), null, `${JSON.stringify(bad)} is not a final round`);
+eq(P.cleanFinal({ on: true, question: 'Q?', answer: 'A' }, 3), { on: true, question: 'Q?', answer: 'A' }, 'a round not yet played is its switch and its question');
+eq(P.cleanFinal({ on: 'yes', question: 5, answer: null, extra: 1 }, 3), { on: false, question: '', answer: '' }, 'on only when true, texts only when texts, nothing else kept');
+eq(P.cleanFinal({ on: true, question: 'x'.repeat(5000), answer: '' }, 1).question.length, 2000, 'a question is cut at 2,000 characters');
+eq(P.cleanFinal({ on: true, question: 'Q', answer: 'A', wagers: [200, 50], marks: ['r', 'w'], deltas: [999, 999] }, 2),
+  { on: true, question: 'Q', answer: 'A', wagers: [200, 50], marks: ['r', 'w'], deltas: [200, -50] }, 'what a played round scored is worked out again, never read from the file');
+eq(P.cleanFinal({ on: true, question: 'Q', answer: 'A', wagers: [200, -5, 'x', 2.9], marks: ['r', 'w', 'r'], deltas: [] }, 4),
+  { on: true, question: 'Q', answer: 'A', wagers: [200, 0, 0, 2], marks: ['r', 'w', 'r', 'n'], deltas: [200, 0, 0, 0] }, 'a wager that is not a whole number 0 or more is 0, and a missing mark is not played');
+eq('deltas' in P.cleanFinal({ on: true, question: 'Q', answer: 'A', wagers: [200], marks: ['r'] }, 1), false, 'the played half is kept only whole: no deltas, no play');
+eq('wagers' in P.cleanFinal({ on: true, question: 'Q', answer: 'A', wagers: '200', marks: ['r'], deltas: [200] }, 1), false, 'and wagers that are not a list are no play');
+eq([P.finalPlayed({ on: true }), P.finalPlayed({ deltas: [] }), P.finalPlayed(undefined)], [false, true, false], 'a round is played once it has deltas');
+{
+  const f = { on: true, question: 'Q', answer: 'A', wagers: [1], marks: ['r'], deltas: [1] };
+  P.finalClear(f);
+  eq(f, { on: true, question: 'Q', answer: 'A' }, 'clearing a round keeps the switch and the question');
+  P.finalClear(undefined);
+  ok(true, 'and clearing no round is nothing');
+}
+
+/* ── quiz-bowl ──────────────────────────────────────────────────────────── */
+const R = (over = {}) => Object.assign(P.qbNew(), over);
+eq(P.QB_DEFAULTS, { tossup: 10, bonus: 10, penalty: 0 }, 'a toss-up and a bonus are 10 and a wrong buzz costs nothing, to start');
+eq(P.qbNew(), { on: true, source: '', tossup: 10, bonus: 10, penalty: 0, log: [], over: false }, 'a new round');
+eq([P.qbPoints('15', 10), P.qbPoints(0, 10), P.qbPoints('', 10), P.qbPoints('x', 10), P.qbPoints(-1, 10), P.qbPoints(1001, 10), P.qbPoints(2.7, 10), P.qbPoints(1000, 10)],
+  [15, 0, 10, 10, 10, 10, 2, 1000], 'points are a whole number from 0 to 1,000, or the default');
+eq(P.qbStart('q1'), { id: 'q1', wrong: [], right: null, bonusId: null, bonus: null }, 'a toss-up just read');
+eq(P.qbOpen(P.qbStart('q1'), 3), [0, 1, 2], 'every team may buzz at first');
+{
+  let e = P.qbStart('q1');
+  const first = e;
+  e = P.qbBuzz(e, 1, false, 3);
+  eq(e, { id: 'q1', wrong: [1], right: null, bonusId: null, bonus: null }, 'a wrong buzz is recorded');
+  eq(first.wrong, [], 'on a new entry: the one before is not changed');
+  eq(P.qbOpen(e, 3), [0, 2], 'and that team is locked out');
+  ok(P.qbBuzz(e, 1, true, 3) === e, 'a locked-out team cannot buzz again, right or wrong');
+  ok(P.qbBuzz(e, 3, true, 3) === e && P.qbBuzz(e, -1, true, 3) === e, 'nor can a team that is not there');
+  const won = P.qbBuzz(e, 2, true, 3);
+  eq(won, { id: 'q1', wrong: [1], right: 2, bonusId: null, bonus: null }, 'a right buzz wins the toss-up');
+  eq(P.qbOpen(won, 3), [], 'and then nobody may buzz');
+  ok(P.qbBuzz(won, 0, true, 3) === won, 'not even a team that has not buzzed');
+  const dead = P.qbBuzz(P.qbBuzz(e, 0, false, 3), 2, false, 3);
+  eq([dead.wrong, dead.right, P.qbOpen(dead, 3)], [[1, 0, 2], null, []], 'three wrong buzzes leave the toss-up dead');
+  eq(P.qbDeltas(won, R({ penalty: 5 }), 3), [0, -5, 10], 'the winner scores the toss-up and a wrong buzz costs the penalty');
+  eq(P.qbDeltas(won, R(), 3), [0, 0, 10], 'which is nothing unless set');
+  eq(P.qbDeltas(dead, R({ penalty: 5 }), 3), [-5, -5, -5], 'a dead toss-up costs each team that buzzed');
+  const withBonus = P.qbBonus(won, 'q2', null);
+  eq(withBonus, { id: 'q1', wrong: [1], right: 2, bonusId: 'q2', bonus: null }, 'the bonus question shown is recorded before it is marked');
+  eq(P.qbDeltas(withBonus, R({ bonus: 20 }), 3), [0, 0, 10], 'and scores nothing yet');
+  eq(P.qbDeltas(P.qbBonus(withBonus, 'q2', 'r'), R({ bonus: 20 }), 3), [0, 0, 30], 'a right bonus goes to the team that won the toss-up alone');
+  eq(P.qbDeltas(P.qbBonus(withBonus, 'q2', 'w'), R({ bonus: 20, penalty: 5 }), 3), [0, -5, 10], 'a wrong bonus costs nothing');
+  ok(P.qbBonus(e, 'q2', 'r') === e, 'no bonus without a toss-up won');
+  ok(P.qbBonus(won, 'q1', 'r') === won && P.qbBonus(won, '', 'r') === won, 'and a bonus is another question than its toss-up');
+  eq(P.qbBonus(won, 'q2', 'x').bonus, null, 'a mark that is not right or wrong is none');
+  eq(P.qbDeltas(won, R(), 2), [0, 0], 'a team that has left scores nothing');
+  eq(P.qbDeltas(null, R(), 2), [0, 0], 'no entry, no change');
+  eq(P.qbDeltas({ id: 'a', wrong: [5, 0], right: null, bonusId: null, bonus: null }, R({ penalty: 5 }), 2), [-5, 0], 'a wrong buzz by a team that has left costs nobody, and adds no team');
+}
+{
+  const round = R({ penalty: 5, log: [
+    { id: 'a', wrong: [0], right: 1, bonusId: 'b', bonus: 'r' },
+    { id: 'c', wrong: [0, 1], right: null, bonusId: null, bonus: null },
+    { id: 'd', wrong: [], right: 0, bonusId: 'e', bonus: 'w' },
+  ] });
+  const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+  eq(P.qbAsked(round), ['a', 'b', 'c', 'd', 'e'], 'every toss-up and every bonus has been used');
+  eq(P.qbNextId(ids, round), 'f', 'the next question is the first of the source not yet used');
+  eq(P.qbNextId(ids, round, ['f']), 'g', 'the toss-up on the screen is not its own bonus');
+  eq(P.qbNextId(ids, round, ['f', 'g']), '', 'and there is none when the source has run out');
+  eq(P.qbNextId(['b', 'a'], R()), 'b', 'the order is the source’s, not the alphabet’s');
+  eq(P.qbNextId([], R()), '', 'an empty source has no question');
+  eq([P.qbLeft(ids, round), P.qbLeft(ids, round, ['f']), P.qbLeft(ids, R())], [2, 1, 7], 'what is left is counted the same way');
+  eq(P.qbNextId(['toString', 'constructor'], R()), 'toString', 'an id that is a property’s name is still a question');
+  eq(P.qbTotals(round, 2), [{ tossups: 1, bonuses: 0, wrong: 2, points: 0 }, { tossups: 1, bonuses: 1, wrong: 1, points: 15 }], 'the round a team: toss-ups, bonuses, wrong buzzes and points');
+  eq(P.qbSummary(round, ['Otters', 'Herons']), {
+    asked: 3, dead: 1,
+    lines: ['Otters: 1 toss-up, 0 bonuses, 2 wrong buzzes, 0 points this round.', 'Herons: 1 toss-up, 1 bonus, 1 wrong buzz, 15 points this round.'],
+    sentence: '3 toss-ups asked; 1 went unanswered.', roundResult: 'This round: Herons win with 15 points.',
+  }, 'the summary says each team’s round and who won it');
+  eq(P.qbSummary(R({ log: [{ id: 'a', wrong: [], right: 0, bonusId: null, bonus: null }] }), ['Otters', 'Herons']).sentence, '1 toss-up asked; every one was answered.', 'one toss-up is singular');
+  eq(P.qbSummary(R(), ['Otters']), { asked: 0, dead: 0, lines: ['Otters: 0 toss-ups, 0 bonuses, 0 wrong buzzes, 0 points this round.'], sentence: '0 toss-ups asked; every one was answered.', roundResult: '' }, 'a round with nothing asked has no winner');
+}
+eq(P.cleanQuizBowl(undefined, 3), null, 'a board with no quiz-bowl round has none');
+for (const bad of [null, 'qb', 3, [1]]) eq(P.cleanQuizBowl(bad, 3), null, `${JSON.stringify(bad)} is not a round`);
+eq(P.cleanQuizBowl({}, 3), { on: false, source: '', tossup: 10, bonus: 10, penalty: 0, log: [], over: false }, 'an empty one is off, with the defaults');
+eq(P.cleanQuizBowl({ on: true, source: 'cultural-trivia', tossup: 20, bonus: 5, penalty: 5, over: true, log: [], extra: 1 }, 3),
+  { on: true, source: 'cultural-trivia', tossup: 20, bonus: 5, penalty: 5, log: [], over: true }, 'the settings are kept and nothing else');
+eq(P.cleanQuizBowl({ on: 1, source: 9, tossup: -3, bonus: 'x', penalty: 5000, over: 'yes', log: 'none' }, 3),
+  { on: false, source: '', tossup: 10, bonus: 10, penalty: 0, log: [], over: false }, 'and anything of the wrong kind is the default');
+eq(P.cleanQuizBowl({ log: [
+  { id: 'a', wrong: [0, 0, 7, 'x', 1], right: 2, bonusId: 'b', bonus: 'r' },
+  { id: 'a', wrong: [], right: 0 },
+  { id: 'c', wrong: [1], right: 1, bonusId: 'd', bonus: 'r' },
+  { id: 'e', wrong: [], right: null, bonusId: 'f', bonus: 'r' },
+  { id: 'g', wrong: [], right: 0, bonusId: 'b', bonus: 'r' },
+  { id: 'h', wrong: [], right: 0, bonusId: 'h', bonus: 'r' },
+  { id: 'i', wrong: [], right: 0, bonusId: 'j', bonus: 'maybe' },
+  { id: '', right: 0 }, { right: 0 }, null, 'k', { id: 5 },
+] }, 3).log, [
+  { id: 'a', wrong: [0, 1], right: 2, bonusId: 'b', bonus: 'r' },
+  { id: 'c', wrong: [1], right: null, bonusId: null, bonus: null },
+  { id: 'e', wrong: [], right: null, bonusId: null, bonus: null },
+  { id: 'g', wrong: [], right: 0, bonusId: null, bonus: null },
+  { id: 'h', wrong: [], right: 0, bonusId: null, bonus: null },
+  { id: 'i', wrong: [], right: 0, bonusId: 'j', bonus: null },
+], 'a log is cleaned: no question twice, no team that is not there, no team both wrong and right, no bonus without a winner or on a used question');
+eq(P.cleanQuizBowl({ log: [{ id: 'a', wrong: [], right: 2 }] }, 2).log[0].right, null, 'a winner beyond the teams is no winner');
+
+/* ── a team leaves ──────────────────────────────────────────────────────── */
+{
+  const b = {
+    final: { on: true, question: 'Q', answer: 'A', wagers: [10, 20, 30], marks: ['r', 'w', 'r'], deltas: [10, -20, 30] },
+    quizBowl: R({ log: [
+      { id: 'a', wrong: [0, 1], right: 2, bonusId: 'b', bonus: 'r' },
+      { id: 'c', wrong: [2], right: 1, bonusId: 'd', bonus: 'r' },
+      { id: 'e', wrong: [], right: 0, bonusId: null, bonus: null },
+    ] }),
+  };
+  P.dropTeamFromRounds(b, 1);
+  eq([b.final.wagers, b.final.marks, b.final.deltas], [[10, 30], ['r', 'r'], [10, 30]], 'a team that leaves takes its wager, its mark and its change out of the final round');
+  eq(b.quizBowl.log, [
+    { id: 'a', wrong: [0], right: 1, bonusId: 'b', bonus: 'r' },
+    { id: 'c', wrong: [1], right: null, bonusId: null, bonus: null },
+    { id: 'e', wrong: [], right: 0, bonusId: null, bonus: null },
+  ], 'and its buzzes out of the quiz-bowl log, the teams after it moving up a place');
+  const plainBoard = { name: 'x' };
+  P.dropTeamFromRounds(plainBoard, 0);
+  eq(plainBoard, { name: 'x' }, 'a board with neither round gains nothing');
+  const unplayed = { final: { on: true, question: 'Q', answer: 'A' } };
+  P.dropTeamFromRounds(unplayed, 0);
+  eq(unplayed, { final: { on: true, question: 'Q', answer: 'A' } }, 'nor does a final round not yet played');
+  P.dropTeamFromRounds(undefined, 0);
+  P.dropTeamFromRounds(b, -1);
+  eq(b.final.wagers, [10, 30], 'and a place below zero drops nobody');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

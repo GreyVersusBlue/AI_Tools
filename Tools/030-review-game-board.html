@@ -381,6 +381,26 @@
   .eta-team input[type="radio"] { width: 1.1rem; height: 1.1rem; }
   .eta-status { color: #cfd6ea; font-size: .9rem; min-height: 1.3rem; margin: 0; }
   .team-tally { font-size: .78rem; color: var(--muted); }
+
+  /* The final wager round and quiz-bowl (Path 12 P3, increment 2): a setup
+     block a round under the board's options, and one overlay both play on,
+     the projector's navy and white in both themes, as the clue overlay is. */
+  .round-setup { border: 1px solid var(--line-strong); border-radius: 8px; padding: .8rem 1rem; margin: 0 0 .9rem; }
+  .round-setup[hidden], .round-setup button[hidden] { display: none; }
+  .round-setup textarea, .round-setup select { width: 100%; }
+  .round-setup .round-fields { display: flex; gap: .8rem; flex-wrap: wrap; align-items: end; margin-top: .6rem; }
+  .round-setup .round-fields > div { flex: 1 1 12rem; min-width: 0; }
+  .round-setup .round-fields > div.narrow { flex: 0 1 9rem; }
+  .round-setup .round-fields label { margin-bottom: .2rem; }
+  #roundOverlay { justify-content: flex-start; overflow-y: auto; }
+  .round-box { margin: auto; max-width: 60rem; width: 100%; display: flex; flex-direction: column; align-items: center; }
+  .round-box .question-text[hidden] { display: none; }
+  .round-wager { display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; text-align: left; }
+  .round-wager input { width: 9rem; font-family: inherit; font-size: 1rem; padding: .4rem .5rem; border-radius: 6px; border: 1px solid #445; }
+  .round-note { color: #cfd6ea; font-size: .85rem; min-height: 1.2rem; }
+  .round-list { text-align: left; font-size: 1.15rem; margin: 0 0 1rem; padding-left: 1.6rem; }
+  .round-list.round-small { font-size: .95rem; color: #cfd6ea; }
+  #roundOverlay .award-row button:disabled { opacity: .55; cursor: not-allowed; }
   .sheet-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .9rem; }
 
   /* The practice quiz with its key, and the study guide (rgb-play.js). Like
@@ -528,11 +548,55 @@
       <label><input type="checkbox" id="lightningRoundToggle"> Lightning round (visible countdown per question)</label>
       <label for="lightningRoundSeconds">Seconds: <input type="number" id="lightningRoundSeconds" class="seconds-input" min="3" max="120" value="15"></label>
       <label><input type="checkbox" id="everyTeamToggle" aria-describedby="everyTeamRule"> Every team answers (mark each team on every clue)</label>
+      <label><input type="checkbox" id="finalToggle" aria-describedby="finalRule"> Final wager round (one last question, every team wagers)</label>
+      <label><input type="checkbox" id="quizBowlToggle" aria-describedby="quizBowlRule"> Quiz-bowl round (toss-ups and bonus questions)</label>
     </div>
     <p class="hint" id="everyTeamRule" hidden>Every team answers each clue. When the answer is shown, mark each team
       right, wrong or no answer, then press <b>Score this clue</b>. A right answer scores the clue&rsquo;s points; a
       wrong answer or no answer scores nothing. A Daily Double is still one team&rsquo;s wager. While the marks are
       showing: <kbd>1</kbd>-<kbd>9</kbd> change that team&rsquo;s mark &middot; <kbd>Enter</kbd> scores the clue.</p>
+    <div class="round-setup" id="finalSetup" hidden>
+      <p class="hint" id="finalRule">One last question, after the board or whenever you start it. Each team writes down a
+        wager: a whole number from 0 up to its score, and a team at 0 or below may wager up to 100. You type the
+        wagers in, and they stay hidden until all are in. Then the question is shown, then the answer, and you mark
+        each team right or wrong. A right answer adds the wager; a wrong answer takes it off. While the marks are
+        showing: <kbd>1</kbd>-<kbd>9</kbd> change that team&rsquo;s mark &middot; <kbd>Enter</kbd> scores the round.</p>
+      <label for="finalQuestion">Final question</label>
+      <textarea id="finalQuestion" rows="2"></textarea>
+      <label for="finalAnswer">Its answer</label>
+      <textarea id="finalAnswer" rows="2"></textarea>
+      <div class="round-fields">
+        <div><label for="finalSource">Or pick one from</label><select id="finalSource"></select></div>
+        <div><label for="finalPick">Question to use</label><select id="finalPick"></select></div>
+        <button type="button" class="secondary" id="finalUseBtn">Use this question</button>
+      </div>
+      <div class="sheet-row">
+        <button type="button" id="finalStartBtn">Start the final wager round</button>
+        <button type="button" class="secondary" id="finalUndoBtn" hidden>Take the final round back</button>
+      </div>
+      <p class="import-status" id="finalStatus" role="status"></p>
+    </div>
+    <div class="round-setup" id="quizBowlSetup" hidden>
+      <p class="hint" id="quizBowlRule">Toss-up questions are open to every team. You record the buzz: press the team
+        that buzzed first (or its number), then Right or Wrong. A wrong answer locks that team out of the question
+        and costs what is set below (nothing, unless you change it). A right answer scores the toss-up and earns that
+        team alone a bonus question. Questions come from the source in its order, none twice in a round, and the
+        points go on the scoreboard. Keys while a toss-up is open: <kbd>1</kbd>-<kbd>9</kbd> the team that buzzed
+        &middot; <kbd>R</kbd> right &middot; <kbd>W</kbd> wrong &middot; <kbd>Esc</kbd> close.</p>
+      <div class="round-fields">
+        <div><label for="quizBowlSource">Questions from</label><select id="quizBowlSource"></select></div>
+        <div class="narrow"><label for="qbTossup">Toss-up points</label><input type="number" id="qbTossup" min="0" max="1000" step="1"></div>
+        <div class="narrow"><label for="qbBonus">Bonus points</label><input type="number" id="qbBonus" min="0" max="1000" step="1"></div>
+        <div class="narrow"><label for="qbPenalty">A wrong toss-up costs</label><input type="number" id="qbPenalty" min="0" max="1000" step="1"></div>
+      </div>
+      <div class="sheet-row">
+        <button type="button" id="quizBowlStartBtn">Start the round</button>
+        <button type="button" class="secondary" id="quizBowlUndoBtn" hidden>Undo the last toss-up</button>
+        <button type="button" class="secondary" id="quizBowlNewBtn" hidden>Start a new round</button>
+      </div>
+      <p class="hint" id="quizBowlProgress" style="margin-top:.5rem;"></p>
+      <p class="import-status" id="quizBowlStatus" role="status"></p>
+    </div>
     <div class="scoreboard" id="scoreboard"></div>
     <div class="score-toolbar">
       <button type="button" class="secondary small" id="undoScoreBtn" disabled>Undo last score change</button>
@@ -708,6 +772,18 @@
   </div>
 </div>
 
+<div class="overlay" id="roundOverlay" role="dialog" aria-modal="true" aria-labelledby="roundHead">
+  <div class="round-box">
+    <h2 class="cat-points" id="roundHead"></h2>
+    <div class="question-text" id="roundQuestion"></div>
+    <div class="answer-text" id="roundAnswer"></div>
+    <div id="roundBody"></div>
+    <div class="overlay-actions" id="roundActions"></div>
+    <p class="eta-status" id="roundStatus" role="status"></p>
+    <div class="overlay-actions"><button type="button" class="ghost" id="roundCloseBtn">Close</button></div>
+  </div>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -747,7 +823,11 @@
    'bankImportPreview','bankImportSummary','bankImportList','bankImportMore','bankImportAddBtn','bankImportCancelBtn',
    'arrivalCard','arrivalSummary','arrivalList','arrivalAddBtn','arrivalDismissBtn','arrivalStatus',
    'everyTeamToggle','everyTeamRule','boardStatus','etaPanel','etaRule','etaTeams','etaScoreBtn','etaStatus',
-   'printQuizKeyBtn','printGuideBtn','bankPrintQuizBtn','bankPrintGuideBtn','bankPrintStatus'
+   'printQuizKeyBtn','printGuideBtn','bankPrintQuizBtn','bankPrintGuideBtn','bankPrintStatus',
+   'finalToggle','finalSetup','finalQuestion','finalAnswer','finalSource','finalPick','finalUseBtn','finalStartBtn','finalUndoBtn','finalStatus',
+   'quizBowlToggle','quizBowlSetup','quizBowlSource','qbTossup','qbBonus','qbPenalty','quizBowlStartBtn','quizBowlUndoBtn','quizBowlNewBtn',
+   'quizBowlProgress','quizBowlStatus',
+   'roundOverlay','roundHead','roundQuestion','roundAnswer','roundBody','roundActions','roundStatus','roundCloseBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, categories:[{name, clues:[{points,question,answer,used}]}], teams:[{name,score}] }
@@ -1520,7 +1600,7 @@
   }
 
   /* ---------- board lifecycle ---------- */
-  function startBoard(name, categories, teams, dailyDoubleEnabled, lightningRoundEnabled, lightningRoundSeconds, everyTeam) {
+  function startBoard(name, categories, teams, dailyDoubleEnabled, lightningRoundEnabled, lightningRoundSeconds, everyTeam, rounds) {
     state = {
       name: name,
       categories: categories,
@@ -1531,6 +1611,9 @@
     };
     // Only a board that has used every-team-answers carries the field at all.
     if (everyTeam !== undefined) state.everyTeam = !!everyTeam;
+    // And only one that has used the final wager round or quiz-bowl carries those.
+    if (rounds && rounds.final) state.final = rounds.final;
+    if (rounds && rounds.quizBowl) state.quizBowl = rounds.quizBowl;
     ReviewBoardStore.setCurrentName(name);
     assignDailyDouble();
     clearUndoStack();
@@ -1577,6 +1660,15 @@
     return ids;
   }
 
+  /** The final wager round and quiz-bowl of `from`, cleaned, onto `board`;
+      a board without them gains nothing. */
+  function cleanRounds(board, from) {
+    var n = Array.isArray(board.teams) ? board.teams.length : 0;
+    var fin = ReviewBoardPlay.cleanFinal(from.final, n), qb = ReviewBoardPlay.cleanQuizBowl(from.quizBowl, n);
+    if (fin) board.final = fin; else delete board.final;
+    if (qb) board.quizBowl = qb; else delete board.quizBowl;
+  }
+
   function loadBoardByName(name) {
     var loaded = ReviewBoardStore.loadBoard(name);
     if (!loaded) return;
@@ -1584,6 +1676,7 @@
     if (typeof state.dailyDoubleEnabled !== 'boolean') state.dailyDoubleEnabled = false; // boards saved before this field existed
     if (typeof state.lightningRoundEnabled !== 'boolean') state.lightningRoundEnabled = false; // boards saved before this field existed
     if (!state.lightningRoundSeconds) state.lightningRoundSeconds = 15;
+    cleanRounds(state, state);
     ReviewBoardStore.setCurrentName(name);
     refreshSwitcher();
     clearUndoStack();
@@ -1752,6 +1845,7 @@
     };
     // Absent on a file from before the mode, and then absent here too.
     if (typeof loaded.everyTeam === 'boolean') board.everyTeam = loaded.everyTeam;
+    cleanRounds(board, loaded);
     return board;
   }
 
@@ -1951,6 +2045,7 @@
       removeBtn.title = 'Remove team';
       removeBtn.addEventListener('click', function () {
         ReviewBoardPlay.dropTeam(state.categories, i);   // its mark leaves every clue scored for every team
+        ReviewBoardPlay.dropTeamFromRounds(state, i);    // and its wager and its buzzes leave the two rounds
         state.teams.splice(i, 1); clearUndoStack(); renderBoard();
       });
       chip.appendChild(nameInput); chip.appendChild(minus); chip.appendChild(scoreSpan);
@@ -2000,6 +2095,7 @@
       });
     }
     renderUndoButton();
+    renderRounds();
   }
 
   function renderScoreboardOnly() {
@@ -2290,6 +2386,555 @@
       : 'One team answers each clue, as before. The marks already made are kept.';
   });
 
+  /* ---------- the final wager round and quiz-bowl (Path 12 P3, increment 2;
+     the rules are rgb-play.js's) ----------
+     Both are opt-in on a board (`state.final.on`, `state.quizBowl.on`) and a
+     board that never ticked either box has neither field. Both play on their
+     own overlay (#roundOverlay), every text of which is built from elements.
+     Nothing here is student-facing: the TEACHER types each wager and records
+     each buzz. */
+  var roundPlay = null;          // what the round overlay shows: { kind: 'final' | 'qb', stage, ... }
+  var roundReturnFocus = null;
+
+  function teamNames() { return state.teams.map(function (t) { return t.name; }); }
+  function teamScores() { return state.teams.map(function (t) { return t.score; }); }
+  function scoreLine() { return state.teams.map(function (t) { return t.name + ' ' + t.score; }).join(' · '); }
+  function setStatus(node, kind, message) { node.className = 'import-status' + (kind ? ' ' + kind : ''); node.textContent = message; }
+  function playable(q) { return !!q && String(q.prompt || '').trim() !== '' && String(q.answer || '').trim() !== ''; }
+  function roundQuestions(source) { return QuestionBank.questionsOf(source, { peek: true }).filter(playable); }
+  function roundIds(list) { return list.map(function (q) { return q.id; }); }
+  function roundFind(list, id) {
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return { id: id, prompt: '(This question is no longer in the source.)', answer: '' };
+  }
+
+  function populateRoundSource(select, value) {
+    var list = QuestionBank.sources({ peek: true });
+    setOptions(select, list.map(function (s) { return { value: s.id, label: QuestionBank.sourceLabel(s) }; }));
+    select.value = list.some(function (s) { return s.id === value; }) ? value : '';
+  }
+
+  function populateFinalPick() {
+    var list = roundQuestions(els.finalSource.value);
+    setOptions(els.finalPick, list.length
+      ? list.map(function (q) { var t = String(q.prompt).replace(/\s+/g, ' ').trim(); return { value: q.id, label: t.length > 90 ? t.slice(0, 89) + '…' : t }; })
+      : [{ value: '', label: 'No question with an answer here' }]);
+    els.finalUseBtn.disabled = !list.length;
+  }
+
+  function renderRounds() {
+    var P = ReviewBoardPlay, f = state.final, q = state.quizBowl;
+    els.finalToggle.checked = !!(f && f.on);
+    els.finalSetup.hidden = !(f && f.on);
+    if (f && f.on) {
+      var played = P.finalPlayed(f);
+      els.finalQuestion.value = f.question;
+      els.finalAnswer.value = f.answer;
+      els.finalQuestion.readOnly = els.finalAnswer.readOnly = played;
+      els.finalStartBtn.textContent = played ? 'Show the final result' : 'Start the final wager round';
+      els.finalUndoBtn.hidden = !played;
+      populateRoundSource(els.finalSource, els.finalSource.value);
+      populateFinalPick();
+      els.finalUseBtn.disabled = els.finalUseBtn.disabled || played;
+    }
+    els.quizBowlToggle.checked = !!(q && q.on);
+    els.quizBowlSetup.hidden = !(q && q.on);
+    if (q && q.on) {
+      var begun = q.log.length > 0;
+      populateRoundSource(els.quizBowlSource, q.source);
+      els.qbTossup.value = q.tossup; els.qbBonus.value = q.bonus; els.qbPenalty.value = q.penalty;
+      [els.quizBowlSource, els.qbTossup, els.qbBonus, els.qbPenalty].forEach(function (c) { c.disabled = begun; });
+      els.quizBowlStartBtn.textContent = q.over ? 'Show the round summary' : begun ? 'Continue the round' : 'Start the round';
+      els.quizBowlUndoBtn.hidden = !begun;
+      els.quizBowlNewBtn.hidden = !begun;
+      var left = P.qbLeft(roundIds(roundQuestions(q.source)), q);
+      els.quizBowlProgress.textContent = q.log.length + (q.log.length === 1 ? ' toss-up asked' : ' toss-ups asked') + (q.over ? ', and the round is over. ' : '. ') +
+        left + (left === 1 ? ' question is' : ' questions are') + ' left in this source.' +
+        (begun ? ' The source and the points are fixed until a new round.' : '');
+    }
+  }
+
+  els.finalToggle.addEventListener('change', function () {
+    if (!state) return;
+    if (!state.final) state.final = { on: false, question: '', answer: '' };
+    state.final.on = els.finalToggle.checked;
+    save();
+    renderRounds();
+    setStatus(els.boardStatus, '', state.final.on
+      ? 'The final wager round is on. Its rule and its question are under the options above.'
+      : 'The final wager round is off. Its question is kept.');
+  });
+  [['finalQuestion', 'question'], ['finalAnswer', 'answer']].forEach(function (pair) {
+    els[pair[0]].addEventListener('change', function () {
+      if (!state || !state.final || ReviewBoardPlay.finalPlayed(state.final)) return;
+      state.final[pair[1]] = els[pair[0]].value.trim();
+      save();
+    });
+  });
+  els.finalSource.addEventListener('change', populateFinalPick);
+  els.finalUseBtn.addEventListener('click', function () {
+    if (!state || !state.final || ReviewBoardPlay.finalPlayed(state.final)) return;
+    var q = roundFind(roundQuestions(els.finalSource.value), els.finalPick.value);
+    if (!els.finalPick.value || !playable(q)) return;
+    state.final.question = String(q.prompt).trim();
+    state.final.answer = String(q.answer).trim();
+    save();
+    renderRounds();
+    setStatus(els.finalStatus, 'ok', 'That question is the final question now. It was copied: the source is unchanged.');
+  });
+
+  els.finalStartBtn.addEventListener('click', function () {
+    if (!state || !state.final) return;
+    var f = state.final;
+    if (ReviewBoardPlay.finalPlayed(f)) { openRound({ kind: 'final', stage: 'result' }); return; }
+    f.question = els.finalQuestion.value.trim();
+    f.answer = els.finalAnswer.value.trim();
+    save();
+    if (!f.question) {
+      setStatus(els.finalStatus, 'error', 'Type the final question, or pick one, before the round starts.');
+      els.finalQuestion.focus();
+      return;
+    }
+    if (!state.teams.length) { setStatus(els.finalStatus, 'error', 'There is no team to wager. Add a team first.'); return; }
+    setStatus(els.finalStatus, '', '');
+    openRound({ kind: 'final', stage: 'wager', typed: state.teams.map(function () { return ''; }), wagers: null, marks: state.teams.map(function () { return null; }) });
+  });
+
+  els.finalUndoBtn.addEventListener('click', function () {
+    var f = state && state.final;
+    if (!ReviewBoardPlay.finalPlayed(f)) return;
+    f.deltas.forEach(function (d, i) { if (state.teams[i]) state.teams[i].score -= d; });
+    ReviewBoardPlay.finalClear(f);
+    save();
+    renderBoard();
+    setStatus(els.finalStatus, '', 'Took the final round back: every wager is off the scores, and the round can be played again.');
+    els.finalStartBtn.focus();
+  });
+
+  /* ----- the overlay both rounds play on ----- */
+  function roundButton(label, onClick, className, first) {
+    var b = el('button', className || '', label);
+    b.type = 'button';
+    if (first) b.setAttribute('data-first', '');
+    b.addEventListener('click', onClick);
+    return b;
+  }
+  function roundShow(head, question, answer) {
+    els.roundHead.textContent = head;
+    els.roundQuestion.textContent = question || '';
+    els.roundQuestion.hidden = !question;
+    els.roundAnswer.textContent = answer || '';
+    els.roundAnswer.classList.toggle('show', !!answer);
+  }
+  function openRound(play) {
+    roundReturnFocus = document.activeElement;
+    roundPlay = play;
+    els.roundOverlay.classList.add('show');
+    drawRound('');
+  }
+  function drawRound(message, focusSelector) {
+    if (!roundPlay || !state) return;
+    els.roundBody.textContent = '';
+    els.roundActions.textContent = '';
+    if (roundPlay.kind === 'final') drawFinal(roundPlay); else drawQuizBowl(roundPlay);
+    els.roundStatus.textContent = message || '';
+    var target = (focusSelector && els.roundOverlay.querySelector(focusSelector)) ||
+      els.roundOverlay.querySelector('[data-first]') || els.roundCloseBtn;
+    target.focus();
+  }
+  function closeRound() {
+    var p = roundPlay;
+    if (!p) return;
+    roundPlay = null;
+    els.roundOverlay.classList.remove('show');
+    renderBoard();
+    if (p.kind === 'final' && p.stage !== 'result') {
+      setStatus(els.finalStatus, '', 'The final round was closed before it was scored. No wager was stored and no score changed.');
+    } else if (p.kind === 'qb' && p.stage !== 'summary' && !p.committed) {
+      setStatus(els.quizBowlStatus, '', 'The round was closed during a toss-up. That toss-up was not counted and will be asked again.');
+    }
+    if (roundReturnFocus && document.contains(roundReturnFocus)) roundReturnFocus.focus();
+  }
+  els.roundCloseBtn.addEventListener('click', closeRound);
+
+  /* ----- the final wager round ----- */
+  function wagerNotes(p) {
+    var inCount = 0;
+    state.teams.forEach(function (team, i) {
+      var read = ReviewBoardPlay.readWager(p.typed[i], team.score), note = document.getElementById('fwn-' + i);
+      if (read.ok) inCount++;
+      if (note) note.textContent = read.ok ? 'in' : read.why;
+    });
+    return inCount;
+  }
+
+  function drawFinal(p) {
+    var P = ReviewBoardPlay, f = state.final, names = teamNames();
+    if (p.stage === 'wager') {
+      roundShow('Final wager', '', '');
+      els.roundBody.appendChild(el('p', 'eta-rule', 'Each team wagers a whole number from 0 up to its score. A team at 0 or below may wager up to ' +
+        P.FINAL_FLOOR + '. Type each wager in: it stays hidden until all are in.'));
+      var grid = el('div', 'eta-teams');
+      state.teams.forEach(function (team, i) {
+        var box = el('div', 'eta-team round-wager');
+        var label = el('label', '', (i + 1) + '. ' + team.name + ' (score ' + team.score + '): wager 0 to ' + P.wagerMax(team.score));
+        label.htmlFor = 'fw-' + i;
+        var input = el('input');
+        input.type = 'password';
+        input.id = 'fw-' + i;
+        input.setAttribute('inputmode', 'numeric');
+        input.setAttribute('autocomplete', 'off');
+        input.value = p.typed[i];
+        if (i === 0) input.setAttribute('data-first', '');
+        var note = el('span', 'round-note');
+        note.id = 'fwn-' + i;
+        input.setAttribute('aria-describedby', note.id);
+        input.addEventListener('input', function () {
+          p.typed[i] = input.value;
+          var n = wagerNotes(p), line = n + ' of ' + state.teams.length + (n === 1 ? ' wager is in.' : ' wagers are in.');
+          if (els.roundStatus.textContent !== line) els.roundStatus.textContent = line;
+        });
+        input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); finalWagersIn(); } });
+        box.appendChild(label); box.appendChild(input); box.appendChild(note);
+        grid.appendChild(box);
+      });
+      els.roundBody.appendChild(grid);
+      els.roundActions.appendChild(roundButton('All wagers are in: show the question', finalWagersIn));
+      wagerNotes(p);
+    } else if (p.stage === 'question' || p.stage === 'mark') {
+      roundShow('Final question', f.question, p.stage === 'mark' ? (f.answer || '(No answer was given.)') : '');
+      if (p.stage === 'question') {
+        var list = el('ul', 'round-list');
+        names.forEach(function (name, i) { list.appendChild(el('li', '', name + ' wagered ' + p.wagers[i])); });
+        els.roundBody.appendChild(list);
+        els.roundActions.appendChild(roundButton('Show answer', function () { p.stage = 'mark'; drawRound('The answer is shown. Mark each team right or wrong.'); }, '', true));
+      } else {
+        els.roundBody.appendChild(el('p', 'eta-rule', 'Mark each team right or wrong, then score the round. Right adds the wager; wrong takes it off.'));
+        var marks = el('div', 'eta-teams');
+        state.teams.forEach(function (team, i) {
+          var box = el('fieldset', 'eta-team');
+          box.appendChild(el('legend', '', (i + 1) + '. ' + team.name + ', wagered ' + p.wagers[i]));
+          [['r', 'Right'], ['w', 'Wrong']].forEach(function (m, k) {
+            var label = el('label'), radio = el('input');
+            radio.type = 'radio';
+            radio.name = 'fm-' + i;
+            radio.value = m[0];
+            radio.checked = p.marks[i] === m[0];
+            if (i === 0 && k === 0) radio.setAttribute('data-first', '');
+            radio.addEventListener('change', function () { if (radio.checked) p.marks[i] = m[0]; });
+            label.appendChild(radio);
+            label.appendChild(document.createTextNode(m[1]));
+            box.appendChild(label);
+          });
+          marks.appendChild(box);
+        });
+        els.roundBody.appendChild(marks);
+        els.roundActions.appendChild(roundButton('Score the final round', finalScore));
+      }
+    } else {
+      roundShow('Final scores', P.resultSentence(names, teamScores()), '');
+      var places = el('ol', 'round-list');
+      P.standings(names, teamScores()).forEach(function (row) {
+        var li = el('li', '', row.name + ': ' + row.score);
+        li.value = row.place;
+        places.appendChild(li);
+      });
+      els.roundBody.appendChild(places);
+      var lines = el('ul', 'round-list round-small');
+      P.finalLines(names, teamScores(), f.wagers, f.marks).forEach(function (line) { lines.appendChild(el('li', '', line)); });
+      els.roundBody.appendChild(lines);
+    }
+  }
+
+  function finalWagersIn() {
+    var p = roundPlay;
+    if (!p || p.kind !== 'final' || p.stage !== 'wager') return;
+    var reads = state.teams.map(function (team, i) { return ReviewBoardPlay.readWager(p.typed[i], team.score); });
+    var bad = [];
+    reads.forEach(function (r, i) { if (!r.ok) bad.push(i); });
+    if (bad.length) {
+      els.roundStatus.textContent = 'Not every wager is in. ' + bad.map(function (i) { return state.teams[i].name + ': ' + reads[i].why; }).join('; ') + '.';
+      document.getElementById('fw-' + bad[0]).focus();
+      return;
+    }
+    p.wagers = reads.map(function (r) { return r.value; });
+    p.stage = 'question';
+    drawRound('All ' + reads.length + (reads.length === 1 ? ' wager is in.' : ' wagers are in.') + ' The question is shown.');
+  }
+
+  function finalCycleMark(i) {
+    var p = roundPlay;
+    if (!state.teams[i]) return;
+    p.marks[i] = p.marks[i] === 'r' ? 'w' : 'r';
+    var radio = els.roundBody.querySelector('input[name="fm-' + i + '"][value="' + p.marks[i] + '"]');
+    radio.checked = true;
+    radio.focus();
+    els.roundStatus.textContent = state.teams[i].name + ': ' + ReviewBoardPlay.markWord(p.marks[i]) + '.';
+  }
+
+  function finalScore() {
+    var P = ReviewBoardPlay, p = roundPlay, f = state.final;
+    if (!p || p.kind !== 'final' || p.stage !== 'mark') return;
+    var open = P.finalUnmarked(p.marks, state.teams.length);
+    if (open.length) {
+      els.roundStatus.textContent = 'Mark every team right or wrong first. Not marked: ' + open.map(function (i) { return state.teams[i].name; }).join(', ') + '.';
+      els.roundBody.querySelector('input[name="fm-' + open[0] + '"]').focus();
+      return;
+    }
+    var deltas = P.finalDeltas(p.wagers, p.marks);
+    deltas.forEach(function (d, i) { state.teams[i].score += d; });
+    f.wagers = p.wagers.slice();
+    f.marks = p.marks.slice();
+    f.deltas = deltas;
+    save();
+    p.stage = 'result';
+    var sentence = P.resultSentence(teamNames(), teamScores());
+    drawRound('The final round is scored. ' + sentence);
+    setStatus(els.finalStatus, 'ok', 'Final round scored. ' + sentence);
+  }
+
+  /* ----- quiz-bowl ----- */
+  els.quizBowlToggle.addEventListener('change', function () {
+    if (!state) return;
+    if (!state.quizBowl) { state.quizBowl = ReviewBoardPlay.qbNew(); state.quizBowl.on = false; }
+    state.quizBowl.on = els.quizBowlToggle.checked;
+    save();
+    renderRounds();
+    setStatus(els.boardStatus, '', state.quizBowl.on
+      ? 'The quiz-bowl round is on. Its rule and its settings are under the options above.'
+      : 'The quiz-bowl round is off. What was played is kept.');
+  });
+
+  function readQuizBowlSettings() {
+    var P = ReviewBoardPlay, q = state.quizBowl;
+    if (!q || q.log.length) return;
+    q.source = els.quizBowlSource.value;
+    q.tossup = P.qbPoints(els.qbTossup.value, P.QB_DEFAULTS.tossup);
+    q.bonus = P.qbPoints(els.qbBonus.value, P.QB_DEFAULTS.bonus);
+    q.penalty = P.qbPoints(els.qbPenalty.value, P.QB_DEFAULTS.penalty);
+    save();
+    renderRounds();
+  }
+  ['quizBowlSource', 'qbTossup', 'qbBonus', 'qbPenalty'].forEach(function (id) {
+    els[id].addEventListener('change', function () { if (state) readQuizBowlSettings(); });
+  });
+
+  function qbTossUp() {
+    var P = ReviewBoardPlay, q = state.quizBowl;
+    var id = P.qbNextId(roundIds(roundQuestions(q.source)), q);
+    return id ? { kind: 'qb', stage: 'open', entry: P.qbStart(id), buzzed: null, committed: false } : null;
+  }
+
+  els.quizBowlStartBtn.addEventListener('click', function () {
+    if (!state || !state.quizBowl) return;
+    var q = state.quizBowl;
+    if (q.over) { openRound({ kind: 'qb', stage: 'summary', committed: true }); return; }
+    readQuizBowlSettings();
+    if (!state.teams.length) { setStatus(els.quizBowlStatus, 'error', 'There is no team to buzz. Add a team first.'); return; }
+    var play = qbTossUp();
+    if (!play) {
+      setStatus(els.quizBowlStatus, 'error', roundQuestions(q.source).length
+        ? 'Every question of this source has been asked. End the round, or start a new one.'
+        : 'This source has no question with an answer. Choose another, or add questions on the Question Bank tab.');
+      return;
+    }
+    setStatus(els.quizBowlStatus, '', '');
+    openRound(play);
+  });
+
+  els.quizBowlUndoBtn.addEventListener('click', function () {
+    var P = ReviewBoardPlay, q = state && state.quizBowl;
+    if (!q || !q.log.length) return;
+    var number = q.log.length, entry = q.log.pop();
+    P.qbDeltas(entry, q, state.teams.length).forEach(function (d, i) { state.teams[i].score -= d; });
+    q.over = false;
+    save();
+    renderBoard();
+    setStatus(els.quizBowlStatus, '', 'Took back toss-up ' + number + ': its points are off the scores, and it will be asked again.');
+    els.quizBowlStartBtn.focus();
+  });
+
+  els.quizBowlNewBtn.addEventListener('click', function () {
+    var q = state && state.quizBowl;
+    if (!q) return;
+    q.log = [];
+    q.over = false;
+    save();
+    renderBoard();
+    setStatus(els.quizBowlStatus, '', 'A new round. The points already scored stay on the scoreboard, and a question asked before may be asked again.');
+    els.quizBowlStartBtn.focus();
+  });
+
+  function qbReplaceLast(entry) { state.quizBowl.log[state.quizBowl.log.length - 1] = entry; }
+
+  /** The toss-up is decided (won, or dead): it is counted and its points are on. */
+  function qbCommit(p) {
+    var q = state.quizBowl;
+    ReviewBoardPlay.qbDeltas(p.entry, q, state.teams.length).forEach(function (d, i) { state.teams[i].score += d; });
+    q.log.push(p.entry);
+    p.committed = true;
+    save();
+  }
+
+  function qbJudge(right) {
+    var P = ReviewBoardPlay, p = roundPlay, q = state.quizBowl;
+    if (!p || p.kind !== 'qb' || p.stage !== 'judge') return;
+    var team = p.buzzed, name = state.teams[team].name;
+    p.entry = P.qbBuzz(p.entry, team, right, state.teams.length);
+    p.buzzed = null;
+    if (right) {
+      qbCommit(p);
+      p.stage = 'won';
+      drawRound(name + ': right, +' + q.tossup + '.');
+      return;
+    }
+    var cost = q.penalty ? ', −' + q.penalty : '';
+    if (P.qbOpen(p.entry, state.teams.length).length) {
+      p.stage = 'open';
+      drawRound(name + ': wrong, locked out of this question' + cost + '.');
+    } else {
+      qbCommit(p);
+      p.stage = 'dead';
+      drawRound(name + ': wrong' + cost + '. No team got this toss-up.');
+    }
+  }
+
+  function qbBuzzed(team) {
+    var p = roundPlay;
+    if (!p || p.kind !== 'qb' || p.stage !== 'open') return;
+    if (ReviewBoardPlay.qbOpen(p.entry, state.teams.length).indexOf(team) === -1) {
+      if (state.teams[team]) els.roundStatus.textContent = state.teams[team].name + ' are locked out of this question.';
+      return;
+    }
+    p.buzzed = team;
+    p.stage = 'judge';
+    drawRound(state.teams[team].name + ' buzzed. Right or wrong?');
+  }
+
+  function qbBonusMark(mark) {
+    var P = ReviewBoardPlay, p = roundPlay, q = state.quizBowl;
+    if (!p || p.kind !== 'qb' || p.stage !== 'bonusMark') return;
+    var team = state.teams[p.entry.right];
+    p.entry = P.qbBonus(p.entry, p.entry.bonusId, mark);
+    qbReplaceLast(p.entry);
+    if (mark === 'r') team.score += q.bonus;
+    save();
+    p.stage = 'between';
+    drawRound(team.name + ': bonus ' + (mark === 'r' ? 'right, +' + q.bonus : 'wrong, no points') + '.');
+  }
+
+  function qbNext() {
+    var next = qbTossUp();
+    if (next) { roundPlay = next; drawRound(''); return; }
+    qbEnd('Every question of the source has been asked. ');
+  }
+  function qbEnd(lead) {
+    state.quizBowl.over = true;
+    save();
+    roundPlay = { kind: 'qb', stage: 'summary', committed: true };
+    var s = ReviewBoardPlay.qbSummary(state.quizBowl, teamNames());
+    drawRound((typeof lead === 'string' ? lead : '') + 'The round is over. ' + s.sentence);
+    setStatus(els.quizBowlStatus, 'ok', 'Round over. ' + s.sentence + ' ' + s.roundResult);
+  }
+
+  function drawQuizBowl(p) {
+    var P = ReviewBoardPlay, q = state.quizBowl, list = roundQuestions(q.source), n = state.teams.length;
+    if (p.stage === 'summary') {
+      var s = P.qbSummary(q, teamNames());
+      roundShow('Quiz-bowl round', s.roundResult || 'No toss-up was asked.', '');
+      els.roundBody.appendChild(el('p', 'eta-rule', s.sentence));
+      var lines = el('ul', 'round-list');
+      s.lines.forEach(function (line) { lines.appendChild(el('li', '', line)); });
+      els.roundBody.appendChild(lines);
+      els.roundBody.appendChild(el('p', 'eta-rule', 'Scores now: ' + scoreLine() + '.'));
+      return;
+    }
+    var toss = roundFind(list, p.entry.id), number = q.log.length + (p.committed ? 0 : 1);
+    var head = 'Toss-up ' + number + ' · ' + q.tossup + (q.tossup === 1 ? ' point' : ' points');
+    var winner = p.entry.right === null ? null : state.teams[p.entry.right];
+    var nextRow = function () {
+      els.roundBody.appendChild(el('p', 'eta-rule', 'Scores: ' + scoreLine() + '.'));
+      if (P.qbNextId(roundIds(list), q)) els.roundActions.appendChild(roundButton('Next toss-up', qbNext, '', true));
+      else els.roundBody.appendChild(el('p', 'eta-rule', 'No question is left in this source.'));
+      els.roundActions.appendChild(roundButton('End the round', qbEnd, 'ghost', !P.qbNextId(roundIds(list), q)));
+    };
+    if (p.stage === 'open') {
+      roundShow(head, toss.prompt, '');
+      els.roundBody.appendChild(el('p', 'eta-rule', 'Press the team that buzzed first, or its number.'));
+      var row = el('div', 'award-row show'), open = P.qbOpen(p.entry, n);
+      state.teams.forEach(function (team, i) {
+        var can = open.indexOf(i) !== -1;
+        var b = roundButton((i + 1) + '. ' + team.name + ' (' + team.score + ')' + (can ? '' : ', locked out'), function () { qbBuzzed(i); }, '', can && i === open[0]);
+        b.disabled = !can;
+        row.appendChild(b);
+      });
+      els.roundBody.appendChild(row);
+      els.roundActions.appendChild(roundButton('Nobody got it: show the answer', function () {
+        qbCommit(p);
+        p.stage = 'dead';
+        drawRound('No team got this toss-up.');
+      }, 'ghost'));
+    } else if (p.stage === 'judge') {
+      var who = state.teams[p.buzzed].name;
+      roundShow(head, toss.prompt, '');
+      els.roundBody.appendChild(el('p', 'eta-rule', who + ' buzzed. Keys: R right, W wrong.'));
+      els.roundActions.appendChild(roundButton('Right: +' + q.tossup + ' ' + who, function () { qbJudge(true); }, '', true));
+      els.roundActions.appendChild(roundButton('Wrong: ' + (q.penalty ? '−' + q.penalty + ' ' : 'locks out ') + who, function () { qbJudge(false); }));
+      els.roundActions.appendChild(roundButton('Not ' + who + ': back', function () { p.buzzed = null; p.stage = 'open'; drawRound(''); }, 'ghost'));
+    } else if (p.stage === 'dead') {
+      roundShow(head, toss.prompt, toss.answer || '(No answer was given.)');
+      nextRow();
+    } else if (p.stage === 'won') {
+      roundShow(head, toss.prompt, toss.answer || '(No answer was given.)');
+      els.roundBody.appendChild(el('p', 'eta-rule', 'Scores: ' + scoreLine() + '.'));
+      if (P.qbNextId(roundIds(list), q)) {
+        els.roundActions.appendChild(roundButton('Bonus question for ' + winner.name, function () {
+          p.entry = P.qbBonus(p.entry, P.qbNextId(roundIds(list), q), null);
+          qbReplaceLast(p.entry);
+          save();
+          p.stage = 'bonus';
+          drawRound('A bonus question for ' + winner.name + ' alone.');
+        }, '', true));
+      } else {
+        els.roundBody.appendChild(el('p', 'eta-rule', 'No question is left in this source for a bonus.'));
+      }
+      els.roundActions.appendChild(roundButton('End the round', qbEnd, 'ghost', !P.qbNextId(roundIds(list), q)));
+    } else {
+      var bonus = roundFind(list, p.entry.bonusId);
+      roundShow('Bonus for ' + winner.name + ' · ' + q.bonus + (q.bonus === 1 ? ' point' : ' points'), bonus.prompt,
+        p.stage === 'bonus' ? '' : (bonus.answer || '(No answer was given.)'));
+      if (p.stage === 'bonus') {
+        els.roundActions.appendChild(roundButton('Show answer', function () { p.stage = 'bonusMark'; drawRound('The answer is shown. Keys: R right, W wrong.'); }, '', true));
+      } else if (p.stage === 'bonusMark') {
+        els.roundActions.appendChild(roundButton('Right: +' + q.bonus + ' ' + winner.name, function () { qbBonusMark('r'); }, '', true));
+        els.roundActions.appendChild(roundButton('Wrong: no points', function () { qbBonusMark('w'); }));
+      } else {
+        nextRow();
+      }
+    }
+  }
+
+  /* ----- keys, only while a round is on the screen ----- */
+  document.addEventListener('keydown', function (e) {
+    var p = roundPlay;
+    if (!p || !els.roundOverlay.classList.contains('show')) return;
+    var tag = e.target && e.target.tagName, onButton = tag === 'BUTTON';
+    if (e.key === 'Escape') { e.preventDefault(); closeRound(); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (p.kind === 'final') {
+      if (p.stage === 'question' && (e.key === ' ' || e.code === 'Space') && !onButton) { e.preventDefault(); p.stage = 'mark'; drawRound('The answer is shown. Mark each team right or wrong.'); return; }
+      if (p.stage === 'mark') {
+        if (/^[1-9]$/.test(e.key)) { e.preventDefault(); finalCycleMark(Number(e.key) - 1); return; }
+        if (e.key === 'Enter' && !onButton) { e.preventDefault(); finalScore(); }
+      }
+      return;
+    }
+    if (p.stage === 'open' && /^[1-9]$/.test(e.key)) { e.preventDefault(); qbBuzzed(Number(e.key) - 1); return; }
+    if (p.stage === 'judge' && /^[rw]$/i.test(e.key)) { e.preventDefault(); qbJudge(e.key.toLowerCase() === 'r'); return; }
+    if (p.stage === 'bonusMark' && /^[rw]$/i.test(e.key)) { e.preventDefault(); qbBonusMark(e.key.toLowerCase()); return; }
+    if (p.stage === 'bonus' && (e.key === ' ' || e.code === 'Space') && !onButton) { e.preventDefault(); p.stage = 'bonusMark'; drawRound('The answer is shown. Keys: R right, W wrong.'); }
+  });
+
   els.showAnswerBtn.addEventListener('click', revealAnswer);
 
   els.closeNoAskBtn.addEventListener('click', function () {
@@ -2371,7 +3016,7 @@
           });
         });
         startBoard(name, categories, editingBoard.teams, editingBoard.dailyDoubleEnabled,
-          editingBoard.lightningRoundEnabled, editingBoard.lightningRoundSeconds, editingBoard.everyTeam);
+          editingBoard.lightningRoundEnabled, editingBoard.lightningRoundSeconds, editingBoard.everyTeam, editingBoard.rounds);
       } else {
         startBoard(name, categories, takePendingRosterTeams());
       }
@@ -2438,6 +3083,7 @@
     var lightningRoundEnabled = state.lightningRoundEnabled;
     var lightningRoundSeconds = state.lightningRoundSeconds;
     var everyTeam = state.everyTeam;           // undefined on a board that never used the mode
+    var rounds = { final: state.final, quizBowl: state.quizBowl };   // each undefined likewise
     var marksMap = {};
     categories.forEach(function (c) {
       c.clues.forEach(function (cl) { if (Array.isArray(cl.marks)) marksMap[c.name + '||' + cl.question] = cl.marks; });
@@ -2446,7 +3092,7 @@
     editingBoard = {
       name: name, teams: teams, usedMap: usedMap, audioIds: audioIds, dailyDoubleEnabled: dailyDoubleEnabled,
       lightningRoundEnabled: lightningRoundEnabled, lightningRoundSeconds: lightningRoundSeconds,
-      everyTeam: everyTeam, marksMap: marksMap
+      everyTeam: everyTeam, marksMap: marksMap, rounds: rounds
     };
     els.boardName.value = name;
   });
@@ -2457,6 +3103,8 @@
     state.categories.forEach(function (c) { c.clues.forEach(function (cl) { cl.used = false; }); });
     state.teams.forEach(function (t) { t.score = 0; });
     ReviewBoardPlay.clearMarks(state.categories);
+    ReviewBoardPlay.finalClear(state.final);                 // the question stays, the wagers go
+    if (state.quizBowl) { state.quizBowl.log = []; state.quizBowl.over = false; }
     assignDailyDouble();
     clearUndoStack();
     save();

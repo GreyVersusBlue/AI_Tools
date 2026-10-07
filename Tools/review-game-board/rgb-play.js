@@ -1,5 +1,5 @@
 /* Quiz / Review Game Board — play modes and printed sheets (Path 12 P3,
-   increment 1, v281). Publishes window.ReviewBoardPlay. Stores nothing and
+   increments 1 and 2, v281 and v283). Publishes window.ReviewBoardPlay. Stores nothing and
    reads nothing: the page hands in a board or a list of questions and saves
    the board itself, as it always has.
 
@@ -30,6 +30,25 @@
    reads; buildSheet() turns it into elements. EVERY TEXT REACHES THE PAGE
    THROUGH textContent: a question, an answer, a choice, a category and a
    board's name are never parsed as markup.
+
+   THE FINAL WAGER ROUND (increment 2, v283)
+   One last question after the board. `board.final` appears once the tick box
+   has been used: { on, question, answer } and, once the round is scored,
+   { wagers, marks, deltas }, one a team in the scoreboard's order. THE RULE,
+   which the page states: a team wagers a whole number from 0 up to its score;
+   a team at 0 or below may wager up to FINAL_FLOOR (100). Right adds the
+   wager, wrong takes it off. Wagers in progress are never stored.
+
+   QUIZ-BOWL (increment 2, v283)
+   Toss-up questions open to every team; the TEACHER records the buzz. A
+   wrong answer locks that team out of the question and costs `penalty`
+   (0 unless the teacher sets it); a right one scores `tossup` and earns that
+   team alone a bonus question worth `bonus`. `board.quizBowl` appears once
+   the tick box has been used: { on, source, tossup, bonus, penalty, log,
+   over }, the log one entry a toss-up asked: { id, wrong: [team], right:
+   team or null, bonusId, bonus: 'r', 'w' or null }. IDS are stored, never a
+   question's words; what an entry scored is worked out from it (qbDeltas),
+   which is why the page locks the three point values once a round has begun.
 
    Plain global script, as the page's other modules are. */
 (function (global) {
@@ -325,6 +344,274 @@
       : 'Built a practice quiz of ' + n + ', with the answer key on a page of its own.';
   }
 
+  /* ---------- who is ahead, in words ---------- */
+
+  function pointsWord(n) { return n + (n === 1 || n === -1 ? ' point' : ' points'); }
+
+  /** Teams from the highest score down, a tie sharing a place:
+      [{ index, name, score, place }]. Equal scores keep the scoreboard's order. */
+  function standings(teamNames, scores) {
+    var rows = (teamNames || []).map(function (name, i) { return { index: i, name: text(name), score: Number(scores && scores[i]) || 0 }; });
+    rows.sort(function (a, b) { return b.score - a.score || a.index - b.index; });
+    rows.forEach(function (row, i) { row.place = i && rows[i - 1].score === row.score ? rows[i - 1].place : i + 1; });
+    return rows;
+  }
+
+  /** The winner, or the tie, in words:
+      'Otters win with 500 points.'
+      'Otters and Herons tie for first place with 400 points each.' */
+  function resultSentence(teamNames, scores) {
+    var rows = standings(teamNames, scores);
+    if (!rows.length) return '';
+    var first = rows.filter(function (r) { return r.place === 1; });
+    if (rows.length === 1) return first[0].name + ' finish with ' + pointsWord(first[0].score) + '.';
+    if (first.length === 1) return first[0].name + ' win with ' + pointsWord(first[0].score) + '.';
+    return names(first.map(function (r) { return r.name; })) + ' tie for first place with ' + pointsWord(first[0].score) + ' each.';
+  }
+
+  /* ---------- the final wager round ---------- */
+
+  var FINAL_FLOOR = 100;
+  var TEXT_MAX = 2000;
+
+  /** The most a team at `score` may wager: its score, or FINAL_FLOOR when it
+      has nothing to wager. */
+  function wagerMax(score) {
+    var s = Math.floor(Number(score) || 0);
+    return s > 0 ? s : FINAL_FLOOR;
+  }
+
+  /** What a teacher typed as one team's wager: { ok, value, why }. */
+  function readWager(typed, score) {
+    var t = text(typed).trim(), max = wagerMax(score);
+    if (t === '') return { ok: false, value: null, why: 'no wager yet' };
+    if (!/^\d{1,9}$/.test(t)) return { ok: false, value: null, why: 'a wager is a whole number, 0 or more' };
+    if (Number(t) > max) return { ok: false, value: null, why: 'the most this team may wager is ' + max };
+    return { ok: true, value: Number(t), why: '' };
+  }
+
+  /** What the round does to each score: the wager on for right, off for
+      wrong, nothing for a team that did not play ('n'). */
+  function finalDeltas(wagers, marks) {
+    return (wagers || []).map(function (w, i) {
+      var n = Number(w) || 0, m = marks && marks[i];
+      return m === 'r' ? n : m === 'w' ? -n : 0;
+    });
+  }
+
+  /** The teams (by index) not yet marked right or wrong. */
+  function finalUnmarked(marks, teamCount) {
+    var out = [];
+    for (var i = 0; i < teamCount; i++) if (!marks || (marks[i] !== 'r' && marks[i] !== 'w')) out.push(i);
+    return out;
+  }
+
+  /** One line a team for the result screen:
+      'Otters wagered 200 and were right: +200, now 500.' */
+  function finalLines(teamNames, scoresAfter, wagers, marks) {
+    var deltas = finalDeltas(wagers, marks);
+    return (teamNames || []).map(function (name, i) {
+      var m = marks && marks[i];
+      if (m !== 'r' && m !== 'w') return text(name) + ' did not play the final round: ' + (Number(scoresAfter[i]) || 0) + '.';
+      return text(name) + ' wagered ' + (Number(wagers[i]) || 0) + ' and were ' + (m === 'r' ? 'right' : 'wrong') + ': ' +
+        (deltas[i] >= 0 ? '+' : '−') + Math.abs(deltas[i]) + ', now ' + (Number(scoresAfter[i]) || 0) + '.';
+    });
+  }
+
+  function plainObject(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+  function clip(v) { return typeof v === 'string' ? v.slice(0, TEXT_MAX) : ''; }
+
+  /** `board.final` from anywhere (a file): null when it is not one. The
+      played half is kept only whole, and what it scored is worked out again,
+      never taken from the file. */
+  function cleanFinal(raw, teamCount) {
+    if (!plainObject(raw)) return null;
+    var out = { on: raw.on === true, question: clip(raw.question), answer: clip(raw.answer) };
+    var n = Math.max(0, Math.floor(Number(teamCount)) || 0);
+    if (Array.isArray(raw.wagers) && Array.isArray(raw.marks) && Array.isArray(raw.deltas) && n) {
+      var wagers = [], marks = cleanMarks(raw.marks, n);
+      for (var i = 0; i < n; i++) {
+        var w = Math.floor(Number(raw.wagers[i]));
+        wagers.push(w >= 0 && w <= 999999999 ? w : 0);
+      }
+      out.wagers = wagers;
+      out.marks = marks;
+      out.deltas = finalDeltas(wagers, marks);
+    }
+    return out;
+  }
+
+  function finalPlayed(final) { return !!final && Array.isArray(final.deltas); }
+
+  /** Reset game, or the round taken back: the question stays, the play goes. */
+  function finalClear(final) {
+    if (!final) return;
+    delete final.wagers; delete final.marks; delete final.deltas;
+  }
+
+  /* ---------- quiz-bowl ---------- */
+
+  var QB_DEFAULTS = { tossup: 10, bonus: 10, penalty: 0 };
+  var QB_MAX = 1000;
+
+  function qbPoints(v, fallback) {
+    var n = Math.floor(Number(v));
+    return text(v).trim() !== '' && n >= 0 && n <= QB_MAX ? n : fallback;
+  }
+
+  function teamIndex(v, teamCount) {
+    return typeof v === 'number' && Math.floor(v) === v && v >= 0 && v < teamCount ? v : null;
+  }
+
+  function qbNew() {
+    return { on: true, source: '', tossup: QB_DEFAULTS.tossup, bonus: QB_DEFAULTS.bonus, penalty: QB_DEFAULTS.penalty, log: [], over: false };
+  }
+
+  /** A toss-up just read: nobody has buzzed. */
+  function qbStart(id) { return { id: text(id), wrong: [], right: null, bonusId: null, bonus: null }; }
+
+  function qbCleanEntry(raw, teamCount) {
+    if (!plainObject(raw) || typeof raw.id !== 'string' || raw.id === '' || raw.id.length > 200) return null;
+    var out = qbStart(raw.id);
+    (Array.isArray(raw.wrong) ? raw.wrong : []).forEach(function (t) {
+      var i = teamIndex(t, teamCount);
+      if (i !== null && out.wrong.indexOf(i) === -1) out.wrong.push(i);
+    });
+    var right = teamIndex(raw.right, teamCount);
+    if (right !== null && out.wrong.indexOf(right) === -1) out.right = right;
+    if (out.right !== null && typeof raw.bonusId === 'string' && raw.bonusId !== '' && raw.bonusId.length <= 200 && raw.bonusId !== out.id) {
+      out.bonusId = raw.bonusId;
+      if (raw.bonus === 'r' || raw.bonus === 'w') out.bonus = raw.bonus;
+    }
+    return out;
+  }
+
+  /** `board.quizBowl` from anywhere (a file): null when it is not one. No
+      question is in the log twice. */
+  function cleanQuizBowl(raw, teamCount) {
+    if (!plainObject(raw)) return null;
+    var n = Math.max(0, Math.floor(Number(teamCount)) || 0), seen = {}, out = qbNew();
+    out.on = raw.on === true;
+    out.source = typeof raw.source === 'string' ? raw.source.slice(0, 200) : '';
+    out.tossup = qbPoints(raw.tossup, QB_DEFAULTS.tossup);
+    out.bonus = qbPoints(raw.bonus, QB_DEFAULTS.bonus);
+    out.penalty = qbPoints(raw.penalty, QB_DEFAULTS.penalty);
+    out.over = raw.over === true;
+    (Array.isArray(raw.log) ? raw.log : []).slice(0, 2000).forEach(function (e) {
+      var entry = qbCleanEntry(e, n);
+      if (!entry || seen['i:' + entry.id]) return;
+      if (entry.bonusId && seen['i:' + entry.bonusId]) { entry.bonusId = null; entry.bonus = null; }
+      seen['i:' + entry.id] = true;
+      if (entry.bonusId) seen['i:' + entry.bonusId] = true;
+      out.log.push(entry);
+    });
+    return out;
+  }
+
+  /** The teams (by index) that may still buzz on this toss-up. */
+  function qbOpen(entry, teamCount) {
+    var out = [];
+    if (!entry || entry.right !== null) return out;
+    for (var i = 0; i < teamCount; i++) if (entry.wrong.indexOf(i) === -1) out.push(i);
+    return out;
+  }
+
+  /** `team` buzzed and was right or wrong. Returns a new entry; the same one
+      when that team may not buzz (locked out, or the toss-up is won). */
+  function qbBuzz(entry, team, right, teamCount) {
+    if (qbOpen(entry, teamCount).indexOf(team) === -1) return entry;
+    var out = { id: entry.id, wrong: entry.wrong.slice(), right: entry.right, bonusId: entry.bonusId, bonus: entry.bonus };
+    if (right) out.right = team; else out.wrong.push(team);
+    return out;
+  }
+
+  /** The bonus question shown to the team that won the toss-up, and then its
+      mark. Returns a new entry; the same one when there is no winner. */
+  function qbBonus(entry, bonusId, mark) {
+    if (!entry || entry.right === null || !text(bonusId) || text(bonusId) === entry.id) return entry;
+    return { id: entry.id, wrong: entry.wrong.slice(), right: entry.right, bonusId: text(bonusId), bonus: mark === 'r' || mark === 'w' ? mark : null };
+  }
+
+  /** What one toss-up (and its bonus) did to each team's score. */
+  function qbDeltas(entry, round, teamCount) {
+    var out = [];
+    for (var i = 0; i < teamCount; i++) out.push(0);
+    if (!entry || !round) return out;
+    entry.wrong.forEach(function (t) { if (t < teamCount) out[t] -= round.penalty; });
+    if (entry.right !== null && entry.right < teamCount) {
+      out[entry.right] += round.tossup;
+      if (entry.bonus === 'r') out[entry.right] += round.bonus;
+    }
+    return out;
+  }
+
+  /** Every id the round has used, as a toss-up or as a bonus. */
+  function qbAsked(round) {
+    var ids = [];
+    ((round && round.log) || []).forEach(function (e) { ids.push(e.id); if (e.bonusId) ids.push(e.bonusId); });
+    return ids;
+  }
+
+  /** The next question of `ids` (the source's order) not yet used, nor in
+      `alsoUsed` (the toss-up on the screen). '' when the source has run out. */
+  function qbNextId(ids, round, alsoUsed) {
+    var used = {};
+    qbAsked(round).concat(alsoUsed || []).forEach(function (id) { used['i:' + id] = true; });
+    for (var i = 0; i < (ids || []).length; i++) if (!used['i:' + ids[i]]) return text(ids[i]);
+    return '';
+  }
+
+  function qbLeft(ids, round, alsoUsed) {
+    var used = {}, n = 0;
+    qbAsked(round).concat(alsoUsed || []).forEach(function (id) { used['i:' + id] = true; });
+    (ids || []).forEach(function (id) { if (!used['i:' + id]) n++; });
+    return n;
+  }
+
+  /** The round so far, a team: [{ tossups, bonuses, wrong, points }]. */
+  function qbTotals(round, teamCount) {
+    var out = [];
+    for (var i = 0; i < teamCount; i++) out.push({ tossups: 0, bonuses: 0, wrong: 0, points: 0 });
+    ((round && round.log) || []).forEach(function (e) {
+      e.wrong.forEach(function (t) { if (out[t]) out[t].wrong++; });
+      if (e.right !== null && out[e.right]) { out[e.right].tossups++; if (e.bonus === 'r') out[e.right].bonuses++; }
+      qbDeltas(e, round, teamCount).forEach(function (d, t) { out[t].points += d; });
+    });
+    return out;
+  }
+
+  function countWord(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
+  /** The end-of-round summary: { asked, dead, lines: [a team], sentence }. */
+  function qbSummary(round, teamNames) {
+    var log = (round && round.log) || [], totals = qbTotals(round, (teamNames || []).length);
+    var dead = log.filter(function (e) { return e.right === null; }).length;
+    return {
+      asked: log.length, dead: dead,
+      lines: (teamNames || []).map(function (name, i) {
+        var t = totals[i];
+        return text(name) + ': ' + countWord(t.tossups, 'toss-up', 'toss-ups') + ', ' + countWord(t.bonuses, 'bonus', 'bonuses') + ', ' +
+          countWord(t.wrong, 'wrong buzz', 'wrong buzzes') + ', ' + pointsWord(t.points) + ' this round.';
+      }),
+      sentence: countWord(log.length, 'toss-up', 'toss-ups') + ' asked; ' + (dead === 0 ? 'every one was answered.' : dead + ' went unanswered.'),
+      roundResult: log.length ? 'This round: ' + resultSentence(teamNames, totals.map(function (t) { return t.points; })) : ''
+    };
+  }
+
+  /** A team left the scoreboard: the rounds' lists still line up with the
+      teams. Changes `board` in place. */
+  function dropTeamFromRounds(board, index) {
+    if (!board || index < 0) return;
+    var f = board.final;
+    if (finalPlayed(f)) ['wagers', 'marks', 'deltas'].forEach(function (k) { if (index < f[k].length) f[k].splice(index, 1); });
+    var shift = function (t) { return t > index ? t - 1 : t; };
+    ((board.quizBowl && board.quizBowl.log) || []).forEach(function (e) {
+      e.wrong = e.wrong.filter(function (t) { return t !== index; }).map(shift);
+      if (e.right === index) { e.right = null; e.bonusId = null; e.bonus = null; }
+      else if (e.right !== null) e.right = shift(e.right);
+    });
+  }
+
   global.ReviewBoardPlay = {
     MARKS: MARKS,
     cleanMarks: cleanMarks,
@@ -342,6 +629,32 @@
     sheetModel: sheetModel,
     answerText: answerText,
     buildSheet: buildSheet,
-    sheetSentence: sheetSentence
+    sheetSentence: sheetSentence,
+    standings: standings,
+    resultSentence: resultSentence,
+    FINAL_FLOOR: FINAL_FLOOR,
+    wagerMax: wagerMax,
+    readWager: readWager,
+    finalDeltas: finalDeltas,
+    finalUnmarked: finalUnmarked,
+    finalLines: finalLines,
+    cleanFinal: cleanFinal,
+    finalPlayed: finalPlayed,
+    finalClear: finalClear,
+    QB_DEFAULTS: QB_DEFAULTS,
+    qbPoints: qbPoints,
+    qbNew: qbNew,
+    qbStart: qbStart,
+    cleanQuizBowl: cleanQuizBowl,
+    qbOpen: qbOpen,
+    qbBuzz: qbBuzz,
+    qbBonus: qbBonus,
+    qbDeltas: qbDeltas,
+    qbAsked: qbAsked,
+    qbNextId: qbNextId,
+    qbLeft: qbLeft,
+    qbTotals: qbTotals,
+    qbSummary: qbSummary,
+    dropTeamFromRounds: dropTeamFromRounds
   };
 })(window);
