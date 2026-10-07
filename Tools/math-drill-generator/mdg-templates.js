@@ -50,11 +50,27 @@
       operand1: { min: 1, max: 12 }, operand2: { min: 1, max: 12 }
     },
     {
+      key: 'fracmuldiv', label: 'Fraction Multiplication & Division', operation: 'fracmuldiv',
+      operand1: { min: 1, max: 12 }, operand2: { min: 1, max: 12 }
+    },
+    {
       key: 'percent', label: 'Percent of a Number', operation: 'percent',
       operand1: { min: 1, max: 12 }, operand2: { min: 1, max: 12 }
     },
     {
       key: 'ooo', label: 'Order of Operations', operation: 'ooo',
+      operand1: { min: 1, max: 12 }, operand2: { min: 1, max: 12 }
+    },
+    /* Added 2026-10-07. Exponents read the ranges as base (operand 1) and
+       exponent (operand 2); equations as the size of x (operand 1) and of the
+       number in the equation (operand 2); fraction multiply/divide ignores them
+       like the other fraction drill and the page hides the range boxes. */
+    {
+      key: 'exponents', label: 'Exponents', operation: 'exponent',
+      operand1: { min: 2, max: 12 }, operand2: { min: 2, max: 5 }
+    },
+    {
+      key: 'equations', label: 'One-Step Equations', operation: 'equation',
       operand1: { min: 1, max: 12 }, operand2: { min: 1, max: 12 }
     }
   ];

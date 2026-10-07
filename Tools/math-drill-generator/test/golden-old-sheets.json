@@ -1,0 +1,170 @@
+{
+ "recordedFrom": "the page at main 529c79c, before the 2026-10-07 AI-31-026 change",
+ "entries": {
+  "addition/horizontal": {
+   "worksheet": "9db78e570e879a48eaca7b27596ce98492c20794d54ab467471dc212553eb22b",
+   "answers": "948c5edea6343f8e8967535e01d2fb9ce90bc58288f3746f67f4e58f81ca8ab0",
+   "len": 3863
+  },
+  "addition/vertical": {
+   "worksheet": "c6fd828e309732825a9bd2c4e16d4c80d8bb0f579d98bbb8beb57482974b902b",
+   "answers": "948c5edea6343f8e8967535e01d2fb9ce90bc58288f3746f67f4e58f81ca8ab0",
+   "len": 9932
+  },
+  "subtraction/horizontal": {
+   "worksheet": "6f4dad3bb62e8acee523d6f4c726dc5e5c730b1ab68af94be64a98da337fa13b",
+   "answers": "7c0ede85d84d4da1ba9640e8f5c278e3e6bddff41ca9313225044125aefcda59",
+   "len": 3863
+  },
+  "subtraction/vertical": {
+   "worksheet": "1f48ba268c6669b054d5c32f377a3c0f73d4e6e051d17604637f268ac32b1893",
+   "answers": "7c0ede85d84d4da1ba9640e8f5c278e3e6bddff41ca9313225044125aefcda59",
+   "len": 9932
+  },
+  "multiplication/horizontal": {
+   "worksheet": "dd6b917c53db72ffc575ba2d3063f4383760980c92f353603e91bd30c1494d09",
+   "answers": "70153e16189235c2370e796f04f124b54fbccf0776f5f9e46d0abd020fde60d0",
+   "len": 3881
+  },
+  "multiplication/vertical": {
+   "worksheet": "674503aa4e550200fcb0c373113cba83c1b117c0cfd48fcc41bb2aeeb6ef9eb7",
+   "answers": "70153e16189235c2370e796f04f124b54fbccf0776f5f9e46d0abd020fde60d0",
+   "len": 9950
+  },
+  "division/horizontal": {
+   "worksheet": "c076e3802a0e53141df0074b0995a05ac930610850fc09f95a75661c12ac3983",
+   "answers": "88ca9d278f8bcc49f09312d95182a3d2c71ebc7e24604d5a644189a65729a6c0",
+   "len": 3869
+  },
+  "division/vertical": {
+   "worksheet": "7488d30ed8db73e3c98f25e06ebe51c363ae1ea356379c12ed65c52becdd0e52",
+   "answers": "88ca9d278f8bcc49f09312d95182a3d2c71ebc7e24604d5a644189a65729a6c0",
+   "len": 8138
+  },
+  "mixed/horizontal": {
+   "worksheet": "d9b3228f6f58d3acb38aeb6a8a7b16271c501fc60dc535e574c6f71d13df50bd",
+   "answers": "395dfaa0d7716db7b2efea761ae9981841b424680316c115f5f5b47d5c7b2024",
+   "len": 3862
+  },
+  "mixed/vertical": {
+   "worksheet": "53db02e6aea62a931374552f4b3e57f67f9a95a39140ae08deebe6df3ef7099c",
+   "answers": "395dfaa0d7716db7b2efea761ae9981841b424680316c115f5f5b47d5c7b2024",
+   "len": 9391
+  },
+  "integers/horizontal": {
+   "worksheet": "fa71edbd6f041f5951a355147019ad576687c78c18d13419762484af549b99fb",
+   "answers": "12ba095b439ecdbf3baa2140b7d8a900e2f844f02ce646983a1324159d97ef4b",
+   "len": 3959
+  },
+  "integers/vertical": {
+   "worksheet": "dca1b1c2278f99d789984d3e252ae43bbefb99ae8c801abd2c4dc90051c34bf2",
+   "answers": "12ba095b439ecdbf3baa2140b7d8a900e2f844f02ce646983a1324159d97ef4b",
+   "len": 3968
+  },
+  "decimals/horizontal": {
+   "worksheet": "1f5a458df9746a6e213c5274bffa33a94eba310cd007618f50bf015e00b441c5",
+   "answers": "8361c965f64152b28ca270276d54606cbccad8e0507c5da7786e9b28b53c941d",
+   "len": 4006
+  },
+  "decimals/vertical": {
+   "worksheet": "b1b55c84adb253ccfcc6bf0f99ca01d658e29889fe2ac98eb232ad6c1ee785f7",
+   "answers": "8361c965f64152b28ca270276d54606cbccad8e0507c5da7786e9b28b53c941d",
+   "len": 4015
+  },
+  "fractions/horizontal": {
+   "worksheet": "bd646f2cf5819b4435a99d661c789d1b2280deb053040874c130914009be2922",
+   "answers": "51891f8ede42ea89963c8f5c2013e479e6bd40c3825f8cf14e07c7bc4ee5749d",
+   "len": 4083
+  },
+  "fractions/vertical": {
+   "worksheet": "304cee814d55751b7a2d6e5dc57265f3948410e555dc200888d57785e95a454b",
+   "answers": "51891f8ede42ea89963c8f5c2013e479e6bd40c3825f8cf14e07c7bc4ee5749d",
+   "len": 4092
+  },
+  "percent/horizontal": {
+   "worksheet": "b48473d2d462b8e95d96bde0590af211e4997c4a1e6d9d06e66d35cfc106fb5f",
+   "answers": "782e37aa044626fd39f1ff4f79ce21ee442e85c659b8647532649086aadb104e",
+   "len": 4002
+  },
+  "percent/vertical": {
+   "worksheet": "0ec9281253880ddd57310154d19a5cf100d6c8651e99e5537452fad4a748362d",
+   "answers": "782e37aa044626fd39f1ff4f79ce21ee442e85c659b8647532649086aadb104e",
+   "len": 4011
+  },
+  "ooo/horizontal": {
+   "worksheet": "65bc2f39024b8d7fc1300519a3da56996667cd8c37fda8c5c4aa0f041928cfcc",
+   "answers": "2ec5e743998787e652bc4825a8b545bcf671a3b00ab68ceb7785c3610e3a885b",
+   "len": 4009
+  },
+  "ooo/vertical": {
+   "worksheet": "27d52784a8cec0cc0da6c2ecbae9ffff3c5cb08291de9b951c672a5116d3d257",
+   "answers": "2ec5e743998787e652bc4825a8b545bcf671a3b00ab68ceb7785c3610e3a885b",
+   "len": 4018
+  },
+  "mult7/horizontal": {
+   "worksheet": "e0f09380b7d1bcf75c58b74bf8e58a0f77b10bb27f46e187551cf89956b89114",
+   "answers": "f37ac699c86acfba4ac2dad621b5d9837f78421d12243d83103e9b83c204bda9",
+   "len": 3857
+  },
+  "mult7/vertical": {
+   "worksheet": "d42c1261c478c6cf7648d50bead934c13b13007c7b97cb918209ad814c89f729",
+   "answers": "f37ac699c86acfba4ac2dad621b5d9837f78421d12243d83103e9b83c204bda9",
+   "len": 9926
+  },
+  "div4/horizontal": {
+   "worksheet": "6fef926fee5ec9ad06457fc950dd6b918fcd662d7d947942df2d5198f89421c2",
+   "answers": "41bcdb364ab419bcc663dce416a8034d3eaf1ca8a322db8b68642bbd959dd058",
+   "len": 3861
+  },
+  "div4/vertical": {
+   "worksheet": "3c002e76996f82d0ea18cd910089741049a1c0fa74e1164522ffce24a4a0892e",
+   "answers": "41bcdb364ab419bcc663dce416a8034d3eaf1ca8a322db8b68642bbd959dd058",
+   "len": 8130
+  },
+  "addition/paged-key": {
+   "worksheet": "f2cd2067d9c772c4095c0d70fbf94812fdc417094ec55456b21f14ee0b6002e7",
+   "answers": "ef0ae12eb1bf83c35d68a2f620284c3d02fb5151f02121ad370328c7c04ec058",
+   "len": 6293
+  },
+  "fractions/custom-range-small": {
+   "worksheet": "07072a5b53029550a57f9788eb6da4a3d71b3e2f433c2df3d782abf728b180aa",
+   "answers": "6b4ef82a71a3a711285042aaf8b9258b26b74fa5cbfb84205db4ef5282e1446d",
+   "len": 1954
+  },
+  "multiplication/custom-range": {
+   "worksheet": "3d20ef43fad9a75f839c968b60cefd73128f5016b259cdfe736f54d9b4b098b6",
+   "answers": "d3d76c897f377d655e2f96273a3b1ea4217eca9bbb3ef88299cb828f1cf55fdc",
+   "len": 3861
+  },
+  "multiplication/riddle": {
+   "worksheet": "37e1b24d40adbd31a5d43c4636931322c66c42b480a2109783b5a54f09b7f6ec",
+   "answers": "f98034a029041418a2437775e2c8c90d4c2749d26f6fabe5dfd82bb8d75989b6",
+   "len": 9066
+  },
+  "ooo/riddle": {
+   "worksheet": "2d4f59f234a908bd372f4b46c510dea001b666cbce9a18f5c8d4cc891346a079",
+   "answers": "d7294d7de336199af25eb647b61471a02aeffd1dac6b2bd7d9fa5aed260b209e",
+   "len": 9201
+  },
+  "multiplication/colorByAnswer": {
+   "worksheet": "77d8ad58eb37c5bd662568b6d5b4ba3c88d2aec3dbea0d61dd2eddc0dd0ea7b1",
+   "answers": "52eda786c35b4410a446ebc4ac723efa6cdf2eb618614ac57ba6861aeeccefac",
+   "len": 14091
+  },
+  "ooo/colorByAnswer": {
+   "worksheet": "9de50e3da9748d63c5511d73cf989476b907c30f62f691d43ba13bf1387f22f5",
+   "answers": "3aa8d844cd7e8341c611705e4eefea05fc534b6027ae61c37685e2dd55d96de3",
+   "len": 14016
+  },
+  "multiplication/maze": {
+   "worksheet": "43c884c97eb56fa9f295d9f6d22393916c0dddbdba196d633b07823c79dbc1f0",
+   "answers": "a3dc2f103188999c0893e95edfe873ea1c9119363e23162844b7cba7040b46fb",
+   "len": 35482
+  },
+  "ooo/maze": {
+   "worksheet": "4b2554d881207721f8a2a55608fefaa9363fe82e01a0c97f9fc0d4444571ff71",
+   "answers": "5514fdbb2ac4441e85052f96f6b3981e07bb017b4dad22acbd95738f46f4ff26",
+   "len": 35282
+  }
+ }
+}
