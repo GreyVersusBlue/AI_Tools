@@ -389,6 +389,8 @@ if (want('3c')) {
   const p = await open({ seed: 8, storage: { 'gtg:list': JSON.stringify(['Bad Block']), 'gtg:current': 'Bad Block', 'gtg:data:Bad Block': JSON.stringify(bad) } });
   await makeFirst(p); await settle(p, 100);
   ok((await cards(p)).every(c => new Set(c.members.map(m => m.role)).size === 3), 'a damaged role history: the page still hands out three roles to a group of three');
+  const saved = (await readState(p)).roleHistory;
+  ok(Object.values(saved).every(e => Object.values(e.counts).every(n => Number.isFinite(n) && n > 0)), 'a damaged role history: what is saved after a shuffle holds only whole positive counts');
   ok(p.__errs.length === 0, `... with no page errors (${p.__errs.slice(0, 2).join(' | ')})`);
   eq(await p.evaluate(() => ({}).x), undefined, '... and Object.prototype is clean');
   await p.context().close();
