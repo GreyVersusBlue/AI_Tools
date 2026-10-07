@@ -24,8 +24,7 @@ const PORT = 8504;
 const BASE = `http://127.0.0.1:${PORT}`;
 const PAGE = BASE + '/Tools/077-testing-accommodations-card-generator.html';
 const KEY = 'tacg_cards_v1';
-const SCRATCH = path.join(os.homedir(), '.cache', 'selector-scratch', 'AI-31-077');
-fs.mkdirSync(SCRATCH, { recursive: true });
+const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), 'tacg-rooms-'));
 
 let passed = 0, failed = 0;
 const ok = (c, l) => { if (c) { passed++; return true; } failed++; console.log('  FAIL ' + l); return false; };
@@ -427,5 +426,6 @@ for (const dark of [false, true]) {
 
 await browser.close();
 server.close();
+fs.rmSync(SCRATCH, { recursive: true, force: true });
 console.log(failed ? `\n${failed} FAILED, ${passed} passed` : `\n${passed} passed`);
 process.exit(failed ? 1 : 0);
