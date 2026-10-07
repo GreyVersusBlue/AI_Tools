@@ -235,7 +235,7 @@ let list = await rows();
 eq(list.map(r => r.q), ['What is the made-up capital of Madeupia?', 'Solve: 3x + 4 = 19', 'A question of\ntwo lines?', HOSTILE], 'every bank question is listed, in the teacher\'s order');
 eq(list.map(r => r.disabled), [false, false, true, false], 'the one that cannot be a card cannot be ticked');
 eq(list[2].why, 'Cannot be a card. Its question runs over more than one line, and a card is one line of the list.', 'and says why, in words');
-eq(await page.textContent('#bankRefused'), '1 question shown here cannot become a card, and it says why. A card is one line of this list, with a front and a back.', 'with a line under the list saying so');
+eq([await page.isVisible('#bankRefused'), await page.textContent('#bankRefused')], [true, '1 question shown here cannot become a card, and it says why. A card is one line of this list, with a front and a back.'], 'with a line under the list saying so, in sight');
 eq(await page.evaluate(() => [document.querySelectorAll('#bankCard img, #bankCard b').length, window.__xss]), [0, null], 'markup in a question is text in the list, not elements, and nothing ran');
 
 await page.click('#bankAddBtn');

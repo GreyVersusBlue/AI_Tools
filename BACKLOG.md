@@ -87,6 +87,15 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-14 (v271), rank 28 (kept, rewritten), Path 12 P2 increment 2: 040's flashcards and the question bank, both
+  ways.** 040 has a Question bank card: "Questions from" (the bank and the seed sets, the list 030's chooser shows)
+  adds ticked questions to the word list as cards, question on the front and answer on the back, and a question
+  that cannot be a card (no answer, or more than one line) is shown with the reason and cannot be ticked; "Send this
+  list to the question bank" shows what it would add and change and stores only on Add. 040 reads the bank with the
+  new `QuestionBank.peek()`, which writes nothing, so opening the page stores nothing. The mapping is
+  `Tools/vocab-flashcard-generator/vfg-bank.js`. `npm run test:vocab-bank` (port 8506) and `test:vocab-bank-logic`.
+  **Left of P2: 018, 019, 020, 030's editor. Seven questions for Devon are in the Path 12 section. Next free suite
+  port: 8509 (8507 and 8508 were handed to AI-31's workers).**
 - **AI-14 (v269), rank 1, Path 6 P4 is finished and its row is deleted (a gap; ranks not renumbered): 053 sends a
   teacher's own trivia to 030's question bank by link.** The entry is in `_shared/handoffs.js` (a row in 053's
   share sheet); 030 reads `?questions=` through `QuestionBank.fromLink()`, which takes eight fields as bounded text
@@ -104,8 +113,8 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   stored until a teacher presses "Copy to my bank", and the copy is a new question of theirs (`copiedFrom` names
   the seed). 030's bank tab has a "Questions from" chooser; a set is filtered and pulled into a board as the bank
   is. 062's thirty map questions are not published (no reader can draw the map). `npm run test:seed-sets` (port
-  8502) and more of `test:question-bank`. **Left of P2: 040, 018, 019, 020, and 030's editor (choices, tags, edit
-  in place). Rank 1 (053 → 030) shipped next, at v269 (above).**
+  8502) and more of `test:question-bank`. **Left of P2: 018, 019, 020, and 030's editor (choices, tags, edit
+  in place); 040 shipped at v271 (above). Rank 1 (053 → 030) shipped next, at v269 (above).**
 - **AI-14 (v265), old rank 27, Path 12 P1 is finished and its row is deleted (a gap; ranks not renumbered):
   `_shared/question-bank.js` (`QuestionBank`) is the site's one question bank, and 030 is its one adopter.**
   The bank is the key `gvb-question-bank` (a Store envelope, version 1); 030's old key
@@ -286,7 +295,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 38 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `qr-scan.js` 10 · `tool-registry.js` 9 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `question-bank.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 39 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `qr-scan.js` 10 · `tool-registry.js` 9 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 2 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -442,7 +451,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Left:** 040 flashcards ↔ bank; 018 and 019 pull station questions from it; 020's academic-tournament mode; 030's editor (choices, tags, edit in place, named sets, a preview before an import); 062's thirty map questions, which are not published (they wait on P4) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Left:** 018 and 019 pull station questions from it; 020's academic-tournament mode; 030's editor (choices, tags, edit in place, named sets, a preview before an import); 062's thirty map questions, which are not published (they wait on P4). Seven questions for Devon about 040's reading are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 29 | Path 12 P3 — play modes in 030: every-team-answers, quiz-bowl, wheel, final wager, printed quiz | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -4148,12 +4157,71 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
     (hash pinned in `test:question-bank`), and 053's bank list, cards and two printed sheets and 062's bank
     list, cards and three quiz sheets, empty and with custom and hidden questions, hash the same as the v266
     pages gave (`test:seed-sets`, pins made with `--print` against the old pages; map pictures' pixels left out).
-  - *Left of P2.* 040, 018, 019, 020. On 030: a seed's tags and `copiedFrom` are stored and not shown, and
+  - *Left of P2.* 018, 019, 020 (040 is increment 2, below). On 030: a seed's tags and `copiedFrom` are stored and not shown, and
     the editor still shows no choices or tags and cannot edit in place. A set cannot be copied whole in one
     press without ticking every row. **Rank 1 (053 → 030, a teacher's own trivia by link) shipped at v269**
     (Path 6 P4): 030 takes link input now and its inline sinks were read and cut from 10 to 3 first.
   - *Not verified.* No person has used the chooser. A real teacher's 053 or 062 with hidden questions was not
     opened before and after (the suite's states are made up). Not run: the full `npm test`.
+  **Increment 2 shipped (AI-14, 2026-10-06, v271): 040 flashcards ↔ bank. The rest of this bullet is that
+  increment as built; `Tools/vocab-flashcard-generator/vfg-bank.js`'s header says the same and is the reference.**
+  - *What the design asked.* One clause: "040 flashcards ↔ bank (term/definition is a question)". Everything
+    below that clause is this increment's reading of it, taken so that **nothing new is stored without a press
+    and no existing save changes**; the choices that are Devon's are listed at the end, not answered.
+  - *The mapping.* A question's `prompt` is a card's term (the front) and its `answer` the definition (the back).
+    040's three other fields (`example`, `pronunciation`, `partOfSpeech`) are carried on the question under those
+    names, fields the bank does not know and keeps. A card sent to the bank also gets the list's name as `unit`
+    and `sharedFrom: 'vocab-flashcard-generator'`. Nothing else of a question reaches a card: choices, `media`,
+    points, standard, difficulty and tags stay in the bank.
+  - *Bank to 040.* A new **Question bank** card under the print options: **Questions from** (the teacher's bank
+    and the seed sets), **Unit**, a list of the questions with a tick box each, **Tick all shown**, **Add ticked
+    as cards**. A ticked question becomes one more line of the word list, as typing it would: `term: definition
+    | example | pronunciation | part of speech`, or the same fields tab-separated when that line would be read
+    back differently (a colon in the question, a bar in the answer). `VfgBank.lineFor()` reads its own line back
+    with the page's parser and uses it only if all five fields return unchanged. So what is stored is the list,
+    by the save every edit already makes, with no new field; a card keeps no tie to its question.
+  - *What cannot be a card, said on the row and under the list:* a question with no question or no answer (the
+    back would be blank), and one whose question or answer runs over more than one line or holds a tab (a card
+    is one line). Its tick box is disabled. A question with choices or a picture is made a card from its text,
+    and the status line counts those.
+  - *040 to bank.* **Send this list to the question bank…** works out, with the bank's own `merge()`
+    (`VfgBank.plan()`), what sending would do, and shows it: how many would be added, how many sent before would
+    change, how many are there already, how many cards have no definition and are not sent, and the first eight
+    by name. **Nothing is stored until the Add button under that**, and then by `QuestionBank.importQuestions()`;
+    a list edited after the review is refused and must be sent again, so what is stored is what was shown.
+  - *Ids.* `vfg-<hash of the list's name>-<hash of the term>` (letter case and spacing aside; `~2` for a term the
+    list has twice). The same list sent twice adds nothing and writes nothing; a definition changed since changes
+    that question where it stands (same id, same place, first date kept); a new term is a new question. A
+    renamed list has new ids and the bank skips every card whose words it holds, as it does a card that was made
+    from a bank question. **The bank's version is still 1**: nothing about what is stored changed shape.
+  - *A page that only reads.* New on the module: `peek()` (the questions `load()` would give, 030's unmoved old
+    entries among them, with nothing written), `questionsOf(source, { peek })`, `sources({ peek })` and
+    `sourceLabel(src)`. The last two are 030's chooser list and its option wording, moved out of
+    `rgb-bank-store.js` and 030's inline script so the two choosers cannot differ; 030 calls them and shows what
+    it showed. **Opening 040 writes no bank key**, not even the move of 030's old bank, which happens on the
+    first Add. No existing function returns anything different.
+  - *040 itself is unchanged.* What is in storage after a load, the preview and printed sheet of every mode,
+    the share payload and what a `?deck=` link from before opens hash the same as the v270 page gave
+    (`test:vocab-bank`, fifteen pins made with `--print` before the page was touched). The share link carries
+    what it carried. Every text from the bank reaches 040 through `textContent` or a field's value; 040's inline
+    sink baseline is still 10.
+  - *Registry.* 040's row gained `writes: ['gvb-question-bank']` and reads of that key and 030's old one; the
+    key is still owned by 030's row. `check:adoption` counts two adopters of `question-bank.js`.
+  - *Questions for Devon (each has a default taken, said here, and is cheap to reverse).*
+    1. Is the **list's name** the right `unit` for a card in the bank? (Taken: yes. The other readings: blank,
+       or a tag.)
+    2. A deck sent again with a **definition changed**: change the bank's question (taken; shown before the
+       press) or add the new wording beside the old?
+    3. Should a card made from a bank question **keep a tie** to it, so an edit on 030 reaches the deck?
+       (Taken: no. That needs a field in 040's save, which this increment was told not to add.)
+    4. A question that runs over **more than one line**: refused (taken) or joined into one line?
+    5. Should a question's **choices** show on a card? (Taken: no; the count is said.)
+    6. A card with **no definition**: not sent (taken) or sent as a question with a blank answer?
+    7. **Term as the question** (taken, from "term/definition is a question") or the definition as the question
+       and the term as the answer ("which word means...")?
+  - *Not verified.* No person used the card. No real teacher's lists were opened before and after (the suite's
+    are made up). The chooser was not tried with a bank of thousands of questions (it lists every one in a
+    15 rem scroll box). Not run: the full `npm test`.
 - **P3 — Play modes in 030.** Every-team-answers mode, quiz-bowl, spin-the-wheel,
   the final wager round, and a printed practice quiz/study guide with an answer key
   — all reading the same bank.
@@ -9775,6 +9843,10 @@ work, and don't promote one without Devon saying so.
   the pattern `025-writing-prompt-generator.html`'s `wpg-rubric-link.js`
   established. See Open Questions below for exactly what does and doesn't
   make the trip.)*
+  *(Since v271 a list's cards also go to and come from the site's question bank,
+  `_shared/question-bank.js`: the Question bank card on this page. Path 12 P2,
+  increment 2, has it. That is one list feeding 030's boards, not the shared
+  vocabulary store this bullet asks for.)*
 - **Projected whole-class review mode.** Flip through the deck on the board —
   term, pause, definition — with shuffle and a "missed it" pile the teacher
   taps, producing a reteach list at the end. The existing quiz preview is

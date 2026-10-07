@@ -9,6 +9,57 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 12 P2, increment 2: 040's flashcards and the question bank, both ways (2026-10-06, AI-14, `CACHE_VERSION` v271)
+
+Audit entry AI-14, BACKLOG rank 28 (a 2+ row: kept, and rewritten to what is left). One adopter group, "040 flashcards ↔ bank", and nothing else of P2.
+
+- **Was it still open.** Yes: at v270 040 loaded neither `store.js` nor `question-bank.js` and touched no bank key. The design's whole ask of 040 is one clause,
+  "040 flashcards ↔ bank (term/definition is a question)".
+- **What shipped.** A **Question bank** card on 040, under the print options. *Bank to 040:* "Questions from" (the teacher's bank and the two seed sets), a
+  Unit filter, the questions with a tick box each, "Tick all shown" and "Add ticked as cards". A ticked question becomes one more line of the word list, the
+  question as the term and the answer as the definition. *040 to bank:* "Send this list to the question bank…" shows what sending would do (added, changed,
+  already there, not sent for want of a definition; the first eight by name) and stores nothing; the Add button under it stores, with
+  `QuestionBank.importQuestions()`. A list edited after the review is refused and has to be sent again.
+- **The mapping** is `Tools/vocab-flashcard-generator/vfg-bank.js` (`VfgBank`, pure, a new precached file): `prompt` ↔ term, `answer` ↔ definition, and
+  040's `example`, `pronunciation` and `partOfSpeech` carried on the question under those names (fields the bank keeps without knowing). To the bank a card also
+  takes the list's name as `unit` and `sharedFrom: 'vocab-flashcard-generator'`. A card is a *line*, so a question becomes a card by becoming one:
+  `term: definition | …`, or tab-separated when a colon in the question or a bar in the answer would make that line read back differently. `lineFor()` reads its
+  own line back with the page's parser and keeps it only if all five fields return (6,000 random questions in the suite: every card made reads back exactly, and
+  no one-line question is refused).
+- **What cannot be a card, and is said so on its row:** no question; no answer (the back would be blank); a question or answer of more than one line; a tab in
+  either. The tick box is disabled. Choices and pictures do not reach a card; the status line counts the cards whose question had them.
+- **Ids, and why twice is once.** `vfg-<hash of the list's name>-<hash of the term>`, folded for case and spacing, `~2` for a term the list has twice (counted
+  over every card, so giving a card its definition later moves no id). Sent again, every card names the question it made: nothing is added and nothing is
+  written. A definition changed since changes that question in place. A renamed list makes new ids, and the bank's own rule skips each card whose words it
+  already holds; a card made *from* a bank question is skipped the same way, which is what makes bank → 040 → bank add nothing.
+- **Stored.** Bank to 040: the list, by the save every edit already makes; no new field in it and no new key. 040 to bank: questions in `gvb-question-bank`, on
+  Add. **The bank's version is still 1.** 040's registry row gained `writes: ['gvb-question-bank']` and reads of that key and 030's old one.
+- **A page that only reads.** `QuestionBank.list()` writes once, when it moves 030's old bank over. 040 is not the bank's page, so the module has `peek()` (the
+  same questions, nothing written) and `{ peek: true }` on the new `questionsOf()` and `sources()`. Opening 040 on a browser whose old bank was never moved
+  leaves storage byte for byte as it was; the move happens on the first Add. `sources()` and `sourceLabel()` are 030's chooser list and option wording, moved
+  out of `rgb-bank-store.js` and 030's inline script so the two choosers share them; 030 shows what it showed (`test:seed-sets` holds its labels). No existing
+  function returns anything different.
+- **040 unchanged.** Fifteen pins taken with `--print` from the v270 page, before the page was edited, and green on it then: storage after a load and at the
+  end, the preview and the printed sheet of every mode (two lists, one saved before the later fields existed; random modes under a fixed `Math.random`), the
+  share payload, and what a `?deck=` link from before opens. All fifteen hold on the v271 page. Text from the bank reaches the page through `textContent` or a
+  field's value; `inline-sinks-baseline.json` has 040 at 10, as before.
+- **Suites.** New: `bank-logic.test.mjs` (`test:vocab-bank-logic`, pure Node, 63 assertions) and `smoke-bank.mjs` (`test:vocab-bank`, port 8506,
+  94 assertions). `test:question-bank` 212 to 229. Deliberate breaks: **40 of the pure logic**, run on a scratch copy of the tree (37 caught first time; two survived and each got the assertion that catches it now, `appendLines()` with nothing to add and `questionsOf('')` without `peek`; one is an equivalent change, `plan()` not copying a list that `merge()` copies itself); **18 of the page**, one suite run each (17 caught first time; hiding the line that says some questions cannot be cards survived, because the suite read its text and not whether it showed, and is caught now).
+  `run-suites --only` vocab-flashcard-generator (7), question-bank (3), review-game-board (7), tool-registry (1), service-worker (3), backup-restore (3), theme (3) and
+  share (21), all green; `test:a11y -- --only 040` (2 passed) and `--only 030` (4 passed); `audit-print --check --only 040` OK; `test:preview-adopters --only 040`
+  621 passed; `test:select-suites` 92; every `check:*`, `lint`, `check:precache -- --base main` and `check:adoption -- --check` exit 0 (the adoption row moved:
+  `store.js` 39, `question-bank.js` 2). The suites lock was shared with two other workers; the folder runs and the breaks took about an hour, most of it waiting.
+- **What went wrong on the way.** The first capture script timed out on a Back button that the empty list does not have; the tour of modes now runs only on
+  the seeded list. A tab inside a question was first refused with the sentence for "more than one line", which is not what a tab is; it has its own sentence
+  now. Three assertions were added because a break survived or would have (an extra field of two lines; a repeated term whose first card has no definition; a
+  list with the same card twice).
+- **Not verified.** No person used the card. No real teacher's lists were opened before and after. A bank of thousands of questions was not tried in the
+  chooser. Nothing was scanned on a phone (nothing here is a link). Not run: the full `npm test`.
+- **Decisions taken, each Devon's to reverse (the seven questions are in `BACKLOG.md`, Path 12 P2):** the list's name is the unit; a changed definition
+  changes the bank's question; a card keeps no tie to its question; a question of more than one line is refused, not joined; choices are not shown on a card; a
+  card with no definition is not sent; the term is the question.
+- **Left of P2.** 018 and 019 (station questions), 020's academic-tournament mode, 030's editor, 062's map questions (P4). Next free suite port: 8509.
+
 ## 077 Testing Accommodations: room assignment, proctors and proctor lists (2026-10-06, AI-31-077, `CACHE_VERSION` v270)
 
 Audit entry AI-31, BACKLOG rank 113 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
