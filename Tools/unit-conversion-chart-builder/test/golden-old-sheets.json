@@ -1,0 +1,407 @@
+{
+ "fixtures": {
+  "elementary": {
+   "clickPreset": "presetElemBtn"
+  },
+  "middle": {
+   "clickPreset": "presetMiddleBtn"
+  },
+  "rich": {
+   "selected": {
+    "time": true,
+    "length_metric": true,
+    "volume_customary": true,
+    "temperature": false
+   },
+   "hidden": {
+    "time": {
+     "1": true,
+     "5": true
+    },
+    "length_metric": {
+     "0": true
+    }
+   },
+   "custom": {
+    "Time": [
+     {
+      "id": "c1",
+      "text": "1 decade = 10 years"
+     }
+    ],
+    "Sports Day": [
+     {
+      "id": "c2",
+      "text": "1 lap = 400 m &asymp; 0.25 mi"
+     },
+     {
+      "id": "c3",
+      "text": "Coach's mile = 4 laps"
+     }
+    ]
+   },
+   "columns": 3
+  },
+  "oneCol": {
+   "selected": {
+    "weight_metric": true,
+    "length_cross": true
+   },
+   "custom": {},
+   "hidden": {},
+   "columns": 1
+  },
+  "customOnly": {
+   "selected": {},
+   "custom": {
+    "Lab Bench": [
+     {
+      "id": "a",
+      "text": "1 beaker = 250 mL"
+     }
+    ]
+   },
+   "hidden": {},
+   "columns": 2
+  }
+ },
+ "sheets": {
+  "fresh": {
+   "html": "<div class=\"group\"><h3>Length (Customary)</h3><div class=\"item-row\"><span class=\"item-text\">1 foot = 12 inches</span></div><div class=\"item-row\"><span class=\"item-text\">1 yard = 3 feet</span></div><div class=\"item-row\"><span class=\"item-text\">1 yard = 36 inches</span></div><div class=\"item-row\"><span class=\"item-text\">1 mile = 5,280 feet</span></div><div class=\"item-row\"><span class=\"item-text\">1 mile = 1,760 yards</span></div></div><div class=\"group\"><h3>Length (Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 centimeter = 10 millimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 meter = 100 centimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 meter = 1,000 millimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 kilometer = 1,000 meters</span></div></div><div class=\"group\"><h3>Weight / Mass (Customary)</h3><div class=\"item-row\"><span class=\"item-text\">1 pound = 16 ounces</span></div><div class=\"item-row\"><span class=\"item-text\">1 ton = 2,000 pounds</span></div></div><div class=\"group\"><h3>Temperature</h3><div class=\"item-row\"><span class=\"item-text\">°C to °F: (°C × 9/5) + 32</span></div><div class=\"item-row\"><span class=\"item-text\">°F to °C: (°F − 32) × 5/9</span></div><div class=\"item-row\"><span class=\"item-text\">Water freezes: 32°F / 0°C</span></div><div class=\"item-row\"><span class=\"item-text\">Water boils: 212°F / 100°C</span></div><div class=\"item-row\"><span class=\"item-text\">Body temperature: 98.6°F / 37°C</span></div></div>",
+   "cols": "repeat(2, 1fr)",
+   "title": "Unit Conversion Reference Chart",
+   "preview": [
+    [
+     "Length (Customary)",
+     [
+      "1 foot = 12 inches",
+      "1 yard = 3 feet",
+      "1 yard = 36 inches",
+      "1 mile = 5,280 feet",
+      "1 mile = 1,760 yards"
+     ]
+    ],
+    [
+     "Length (Metric)",
+     [
+      "1 centimeter = 10 millimeters",
+      "1 meter = 100 centimeters",
+      "1 meter = 1,000 millimeters",
+      "1 kilometer = 1,000 meters"
+     ]
+    ],
+    [
+     "Weight / Mass (Customary)",
+     [
+      "1 pound = 16 ounces",
+      "1 ton = 2,000 pounds"
+     ]
+    ],
+    [
+     "Temperature",
+     [
+      "°C to °F: (°C × 9/5) + 32",
+      "°F to °C: (°F − 32) × 5/9",
+      "Water freezes: 32°F / 0°C",
+      "Water boils: 212°F / 100°C",
+      "Body temperature: 98.6°F / 37°C"
+     ]
+    ]
+   ],
+   "colSel": "2"
+  },
+  "elementary": {
+   "html": "<div class=\"group\"><h3>Length (Customary)</h3><div class=\"item-row\"><span class=\"item-text\">1 foot = 12 inches</span></div><div class=\"item-row\"><span class=\"item-text\">1 yard = 3 feet</span></div><div class=\"item-row\"><span class=\"item-text\">1 yard = 36 inches</span></div><div class=\"item-row\"><span class=\"item-text\">1 mile = 5,280 feet</span></div><div class=\"item-row\"><span class=\"item-text\">1 mile = 1,760 yards</span></div></div><div class=\"group\"><h3>Length (Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 centimeter = 10 millimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 meter = 100 centimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 meter = 1,000 millimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 kilometer = 1,000 meters</span></div></div><div class=\"group\"><h3>Weight / Mass (Customary)</h3><div class=\"item-row\"><span class=\"item-text\">1 pound = 16 ounces</span></div><div class=\"item-row\"><span class=\"item-text\">1 ton = 2,000 pounds</span></div></div><div class=\"group\"><h3>Weight / Mass (Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 gram = 1,000 milligrams</span></div><div class=\"item-row\"><span class=\"item-text\">1 kilogram = 1,000 grams</span></div><div class=\"item-row\"><span class=\"item-text\">1 metric ton = 1,000 kilograms</span></div></div><div class=\"group\"><h3>Volume / Capacity (Customary)</h3><div class=\"item-row\"><span class=\"item-text\">1 tablespoon = 3 teaspoons</span></div><div class=\"item-row\"><span class=\"item-text\">1 cup = 16 tablespoons</span></div><div class=\"item-row\"><span class=\"item-text\">1 pint = 2 cups</span></div><div class=\"item-row\"><span class=\"item-text\">1 quart = 2 pints</span></div><div class=\"item-row\"><span class=\"item-text\">1 gallon = 4 quarts</span></div></div><div class=\"group\"><h3>Volume / Capacity (Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 liter = 1,000 milliliters</span></div></div><div class=\"group\"><h3>Time</h3><div class=\"item-row\"><span class=\"item-text\">1 minute = 60 seconds</span></div><div class=\"item-row\"><span class=\"item-text\">1 hour = 60 minutes</span></div><div class=\"item-row\"><span class=\"item-text\">1 day = 24 hours</span></div><div class=\"item-row\"><span class=\"item-text\">1 week = 7 days</span></div><div class=\"item-row\"><span class=\"item-text\">1 year = 365 days</span></div><div class=\"item-row\"><span class=\"item-text\">1 year ≈ 52 weeks</span></div></div>",
+   "cols": "repeat(2, 1fr)",
+   "title": "Unit Conversion Reference Chart",
+   "preview": [
+    [
+     "Length (Customary)",
+     [
+      "1 foot = 12 inches",
+      "1 yard = 3 feet",
+      "1 yard = 36 inches",
+      "1 mile = 5,280 feet",
+      "1 mile = 1,760 yards"
+     ]
+    ],
+    [
+     "Length (Metric)",
+     [
+      "1 centimeter = 10 millimeters",
+      "1 meter = 100 centimeters",
+      "1 meter = 1,000 millimeters",
+      "1 kilometer = 1,000 meters"
+     ]
+    ],
+    [
+     "Weight / Mass (Customary)",
+     [
+      "1 pound = 16 ounces",
+      "1 ton = 2,000 pounds"
+     ]
+    ],
+    [
+     "Weight / Mass (Metric)",
+     [
+      "1 gram = 1,000 milligrams",
+      "1 kilogram = 1,000 grams",
+      "1 metric ton = 1,000 kilograms"
+     ]
+    ],
+    [
+     "Volume / Capacity (Customary)",
+     [
+      "1 tablespoon = 3 teaspoons",
+      "1 cup = 16 tablespoons",
+      "1 pint = 2 cups",
+      "1 quart = 2 pints",
+      "1 gallon = 4 quarts"
+     ]
+    ],
+    [
+     "Volume / Capacity (Metric)",
+     [
+      "1 liter = 1,000 milliliters"
+     ]
+    ],
+    [
+     "Time",
+     [
+      "1 minute = 60 seconds",
+      "1 hour = 60 minutes",
+      "1 day = 24 hours",
+      "1 week = 7 days",
+      "1 year = 365 days",
+      "1 year ≈ 52 weeks"
+     ]
+    ]
+   ],
+   "colSel": "2"
+  },
+  "middle": {
+   "html": "<div class=\"group\"><h3>Length (Customary)</h3><div class=\"item-row\"><span class=\"item-text\">1 foot = 12 inches</span></div><div class=\"item-row\"><span class=\"item-text\">1 yard = 3 feet</span></div><div class=\"item-row\"><span class=\"item-text\">1 yard = 36 inches</span></div><div class=\"item-row\"><span class=\"item-text\">1 mile = 5,280 feet</span></div><div class=\"item-row\"><span class=\"item-text\">1 mile = 1,760 yards</span></div></div><div class=\"group\"><h3>Length (Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 centimeter = 10 millimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 meter = 100 centimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 meter = 1,000 millimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 kilometer = 1,000 meters</span></div></div><div class=\"group\"><h3>Length (Customary ↔ Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 inch ≈ 2.54 centimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 foot ≈ 0.305 meters</span></div><div class=\"item-row\"><span class=\"item-text\">1 yard ≈ 0.914 meters</span></div><div class=\"item-row\"><span class=\"item-text\">1 mile ≈ 1.609 kilometers</span></div><div class=\"item-row\"><span class=\"item-text\">1 meter ≈ 3.28 feet</span></div></div><div class=\"group\"><h3>Weight / Mass (Customary)</h3><div class=\"item-row\"><span class=\"item-text\">1 pound = 16 ounces</span></div><div class=\"item-row\"><span class=\"item-text\">1 ton = 2,000 pounds</span></div></div><div class=\"group\"><h3>Weight / Mass (Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 gram = 1,000 milligrams</span></div><div class=\"item-row\"><span class=\"item-text\">1 kilogram = 1,000 grams</span></div><div class=\"item-row\"><span class=\"item-text\">1 metric ton = 1,000 kilograms</span></div></div><div class=\"group\"><h3>Weight / Mass (Customary ↔ Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 ounce ≈ 28.35 grams</span></div><div class=\"item-row\"><span class=\"item-text\">1 pound ≈ 0.454 kilograms</span></div><div class=\"item-row\"><span class=\"item-text\">1 kilogram ≈ 2.2 pounds</span></div></div><div class=\"group\"><h3>Volume / Capacity (Customary)</h3><div class=\"item-row\"><span class=\"item-text\">1 tablespoon = 3 teaspoons</span></div><div class=\"item-row\"><span class=\"item-text\">1 cup = 16 tablespoons</span></div><div class=\"item-row\"><span class=\"item-text\">1 pint = 2 cups</span></div><div class=\"item-row\"><span class=\"item-text\">1 quart = 2 pints</span></div><div class=\"item-row\"><span class=\"item-text\">1 gallon = 4 quarts</span></div></div><div class=\"group\"><h3>Volume / Capacity (Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 liter = 1,000 milliliters</span></div></div><div class=\"group\"><h3>Volume / Capacity (Customary ↔ Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 quart ≈ 0.946 liters</span></div><div class=\"item-row\"><span class=\"item-text\">1 gallon ≈ 3.785 liters</span></div><div class=\"item-row\"><span class=\"item-text\">1 liter ≈ 1.06 quarts</span></div></div><div class=\"group\"><h3>Temperature</h3><div class=\"item-row\"><span class=\"item-text\">°C to °F: (°C × 9/5) + 32</span></div><div class=\"item-row\"><span class=\"item-text\">°F to °C: (°F − 32) × 5/9</span></div><div class=\"item-row\"><span class=\"item-text\">Water freezes: 32°F / 0°C</span></div><div class=\"item-row\"><span class=\"item-text\">Water boils: 212°F / 100°C</span></div><div class=\"item-row\"><span class=\"item-text\">Body temperature: 98.6°F / 37°C</span></div></div><div class=\"group\"><h3>Time</h3><div class=\"item-row\"><span class=\"item-text\">1 minute = 60 seconds</span></div><div class=\"item-row\"><span class=\"item-text\">1 hour = 60 minutes</span></div><div class=\"item-row\"><span class=\"item-text\">1 day = 24 hours</span></div><div class=\"item-row\"><span class=\"item-text\">1 week = 7 days</span></div><div class=\"item-row\"><span class=\"item-text\">1 year = 365 days</span></div><div class=\"item-row\"><span class=\"item-text\">1 year ≈ 52 weeks</span></div></div>",
+   "cols": "repeat(2, 1fr)",
+   "title": "Unit Conversion Reference Chart",
+   "preview": [
+    [
+     "Length (Customary)",
+     [
+      "1 foot = 12 inches",
+      "1 yard = 3 feet",
+      "1 yard = 36 inches",
+      "1 mile = 5,280 feet",
+      "1 mile = 1,760 yards"
+     ]
+    ],
+    [
+     "Length (Metric)",
+     [
+      "1 centimeter = 10 millimeters",
+      "1 meter = 100 centimeters",
+      "1 meter = 1,000 millimeters",
+      "1 kilometer = 1,000 meters"
+     ]
+    ],
+    [
+     "Length (Customary ↔ Metric)",
+     [
+      "1 inch ≈ 2.54 centimeters",
+      "1 foot ≈ 0.305 meters",
+      "1 yard ≈ 0.914 meters",
+      "1 mile ≈ 1.609 kilometers",
+      "1 meter ≈ 3.28 feet"
+     ]
+    ],
+    [
+     "Weight / Mass (Customary)",
+     [
+      "1 pound = 16 ounces",
+      "1 ton = 2,000 pounds"
+     ]
+    ],
+    [
+     "Weight / Mass (Metric)",
+     [
+      "1 gram = 1,000 milligrams",
+      "1 kilogram = 1,000 grams",
+      "1 metric ton = 1,000 kilograms"
+     ]
+    ],
+    [
+     "Weight / Mass (Customary ↔ Metric)",
+     [
+      "1 ounce ≈ 28.35 grams",
+      "1 pound ≈ 0.454 kilograms",
+      "1 kilogram ≈ 2.2 pounds"
+     ]
+    ],
+    [
+     "Volume / Capacity (Customary)",
+     [
+      "1 tablespoon = 3 teaspoons",
+      "1 cup = 16 tablespoons",
+      "1 pint = 2 cups",
+      "1 quart = 2 pints",
+      "1 gallon = 4 quarts"
+     ]
+    ],
+    [
+     "Volume / Capacity (Metric)",
+     [
+      "1 liter = 1,000 milliliters"
+     ]
+    ],
+    [
+     "Volume / Capacity (Customary ↔ Metric)",
+     [
+      "1 quart ≈ 0.946 liters",
+      "1 gallon ≈ 3.785 liters",
+      "1 liter ≈ 1.06 quarts"
+     ]
+    ],
+    [
+     "Temperature",
+     [
+      "°C to °F: (°C × 9/5) + 32",
+      "°F to °C: (°F − 32) × 5/9",
+      "Water freezes: 32°F / 0°C",
+      "Water boils: 212°F / 100°C",
+      "Body temperature: 98.6°F / 37°C"
+     ]
+    ],
+    [
+     "Time",
+     [
+      "1 minute = 60 seconds",
+      "1 hour = 60 minutes",
+      "1 day = 24 hours",
+      "1 week = 7 days",
+      "1 year = 365 days",
+      "1 year ≈ 52 weeks"
+     ]
+    ]
+   ],
+   "colSel": "2"
+  },
+  "rich": {
+   "html": "<div class=\"group\"><h3>Length (Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 meter = 100 centimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 meter = 1,000 millimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 kilometer = 1,000 meters</span></div></div><div class=\"group\"><h3>Volume / Capacity (Customary)</h3><div class=\"item-row\"><span class=\"item-text\">1 tablespoon = 3 teaspoons</span></div><div class=\"item-row\"><span class=\"item-text\">1 cup = 16 tablespoons</span></div><div class=\"item-row\"><span class=\"item-text\">1 pint = 2 cups</span></div><div class=\"item-row\"><span class=\"item-text\">1 quart = 2 pints</span></div><div class=\"item-row\"><span class=\"item-text\">1 gallon = 4 quarts</span></div></div><div class=\"group\"><h3>Time</h3><div class=\"item-row\"><span class=\"item-text\">1 minute = 60 seconds</span></div><div class=\"item-row\"><span class=\"item-text\">1 day = 24 hours</span></div><div class=\"item-row\"><span class=\"item-text\">1 week = 7 days</span></div><div class=\"item-row\"><span class=\"item-text\">1 year = 365 days</span></div><div class=\"item-row\"><span class=\"item-text\">1 decade = 10 years</span></div></div><div class=\"group\"><h3>Sports Day</h3><div class=\"item-row\"><span class=\"item-text\">1 lap = 400 m ≈ 0.25 mi</span></div><div class=\"item-row\"><span class=\"item-text\">Coach's mile = 4 laps</span></div></div>",
+   "cols": "repeat(3, 1fr)",
+   "title": "Unit Conversion Reference Chart",
+   "preview": [
+    [
+     "Length (Metric)",
+     [
+      "1 meter = 100 centimeters",
+      "1 meter = 1,000 millimeters",
+      "1 kilometer = 1,000 meters"
+     ]
+    ],
+    [
+     "Volume / Capacity (Customary)",
+     [
+      "1 tablespoon = 3 teaspoons",
+      "1 cup = 16 tablespoons",
+      "1 pint = 2 cups",
+      "1 quart = 2 pints",
+      "1 gallon = 4 quarts"
+     ]
+    ],
+    [
+     "Time",
+     [
+      "1 minute = 60 seconds",
+      "1 day = 24 hours",
+      "1 week = 7 days",
+      "1 year = 365 days",
+      "1 decade = 10 years"
+     ]
+    ],
+    [
+     "Sports Day",
+     [
+      "1 lap = 400 m ≈ 0.25 mi",
+      "Coach's mile = 4 laps"
+     ]
+    ]
+   ],
+   "colSel": "3"
+  },
+  "oneCol": {
+   "html": "<div class=\"group\"><h3>Length (Customary ↔ Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 inch ≈ 2.54 centimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 foot ≈ 0.305 meters</span></div><div class=\"item-row\"><span class=\"item-text\">1 yard ≈ 0.914 meters</span></div><div class=\"item-row\"><span class=\"item-text\">1 mile ≈ 1.609 kilometers</span></div><div class=\"item-row\"><span class=\"item-text\">1 meter ≈ 3.28 feet</span></div></div><div class=\"group\"><h3>Weight / Mass (Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 gram = 1,000 milligrams</span></div><div class=\"item-row\"><span class=\"item-text\">1 kilogram = 1,000 grams</span></div><div class=\"item-row\"><span class=\"item-text\">1 metric ton = 1,000 kilograms</span></div></div>",
+   "cols": "repeat(1, 1fr)",
+   "title": "Unit Conversion Reference Chart",
+   "preview": [
+    [
+     "Length (Customary ↔ Metric)",
+     [
+      "1 inch ≈ 2.54 centimeters",
+      "1 foot ≈ 0.305 meters",
+      "1 yard ≈ 0.914 meters",
+      "1 mile ≈ 1.609 kilometers",
+      "1 meter ≈ 3.28 feet"
+     ]
+    ],
+    [
+     "Weight / Mass (Metric)",
+     [
+      "1 gram = 1,000 milligrams",
+      "1 kilogram = 1,000 grams",
+      "1 metric ton = 1,000 kilograms"
+     ]
+    ]
+   ],
+   "colSel": "1"
+  },
+  "customOnly": {
+   "html": "<div class=\"group\"><h3>Length (Customary)</h3><div class=\"item-row\"><span class=\"item-text\">1 foot = 12 inches</span></div><div class=\"item-row\"><span class=\"item-text\">1 yard = 3 feet</span></div><div class=\"item-row\"><span class=\"item-text\">1 yard = 36 inches</span></div><div class=\"item-row\"><span class=\"item-text\">1 mile = 5,280 feet</span></div><div class=\"item-row\"><span class=\"item-text\">1 mile = 1,760 yards</span></div></div><div class=\"group\"><h3>Length (Metric)</h3><div class=\"item-row\"><span class=\"item-text\">1 centimeter = 10 millimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 meter = 100 centimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 meter = 1,000 millimeters</span></div><div class=\"item-row\"><span class=\"item-text\">1 kilometer = 1,000 meters</span></div></div><div class=\"group\"><h3>Weight / Mass (Customary)</h3><div class=\"item-row\"><span class=\"item-text\">1 pound = 16 ounces</span></div><div class=\"item-row\"><span class=\"item-text\">1 ton = 2,000 pounds</span></div></div><div class=\"group\"><h3>Temperature</h3><div class=\"item-row\"><span class=\"item-text\">°C to °F: (°C × 9/5) + 32</span></div><div class=\"item-row\"><span class=\"item-text\">°F to °C: (°F − 32) × 5/9</span></div><div class=\"item-row\"><span class=\"item-text\">Water freezes: 32°F / 0°C</span></div><div class=\"item-row\"><span class=\"item-text\">Water boils: 212°F / 100°C</span></div><div class=\"item-row\"><span class=\"item-text\">Body temperature: 98.6°F / 37°C</span></div></div><div class=\"group\"><h3>Lab Bench</h3><div class=\"item-row\"><span class=\"item-text\">1 beaker = 250 mL</span></div></div>",
+   "cols": "repeat(2, 1fr)",
+   "title": "Unit Conversion Reference Chart",
+   "preview": [
+    [
+     "Length (Customary)",
+     [
+      "1 foot = 12 inches",
+      "1 yard = 3 feet",
+      "1 yard = 36 inches",
+      "1 mile = 5,280 feet",
+      "1 mile = 1,760 yards"
+     ]
+    ],
+    [
+     "Length (Metric)",
+     [
+      "1 centimeter = 10 millimeters",
+      "1 meter = 100 centimeters",
+      "1 meter = 1,000 millimeters",
+      "1 kilometer = 1,000 meters"
+     ]
+    ],
+    [
+     "Weight / Mass (Customary)",
+     [
+      "1 pound = 16 ounces",
+      "1 ton = 2,000 pounds"
+     ]
+    ],
+    [
+     "Temperature",
+     [
+      "°C to °F: (°C × 9/5) + 32",
+      "°F to °C: (°F − 32) × 5/9",
+      "Water freezes: 32°F / 0°C",
+      "Water boils: 212°F / 100°C",
+      "Body temperature: 98.6°F / 37°C"
+     ]
+    ],
+    [
+     "Lab Bench",
+     [
+      "1 beaker = 250 mL"
+     ]
+    ]
+   ],
+   "colSel": "2"
+  }
+ }
+}
