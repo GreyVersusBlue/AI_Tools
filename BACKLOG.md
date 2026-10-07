@@ -8970,7 +8970,7 @@ classroom device) over deepening student-device use.
   are the formats teachers actually want. *(Shipped Round 4 as a third
   bracket type using the circle-method scheduling algorithm; pools-into-a-
   bracket and a ladder are still open — see Round 4 update below.)*
-- **Done (AI-31-020, v284) — team names with members.** A "These are teams with
+- **Done (AI-31-020, v287) — team names with members.** A "These are teams with
   members" box on the setup card takes one team a line as `Team name: member, member`;
   the bracket shows the name, the members show as a tooltip, in a spoken label, on a
   visible line on focus or hover and in a printed Teams list. Not done: a roster hand-off
@@ -8978,7 +8978,7 @@ classroom device) over deepening student-device use.
 
 #### Major Features
 
-- **Done — pools and Swiss, and a first-round consolation bracket (AI-31-020, v284).**
+- **Done — pools and Swiss, and a first-round consolation bracket (AI-31-020, v287).**
   **Consolation / everybody-plays formats.** A "loser's side that keeps
   playing", a Swiss format, or guaranteed-three-games pool play. This is the
   difference between a tool used once a year and a tool used every unit.
