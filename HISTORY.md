@@ -9,6 +9,165 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 12 P3, increment 2: the final wager round and quiz-bowl on 030 (2026-10-07, AI-14, `CACHE_VERSION` v284; the code commit says v283, which AI-31-016 took before the merge)
+
+BACKLOG rank 29 had three modes left; this session was handed two, the final wager round and then quiz-bowl. The
+wheel is not started and the row says so. The design as built is in BACKLOG's Path 12 section, P3, "Increment 2";
+this is what happened.
+
+**First check.** Neither existed. A board had no final-question field (the session's prompt allowed for one), so the
+final round's question is a new field typed on the board or copied from the bank. The Daily Double's wager is one
+team's and was left alone.
+
+**Before any edit.** Every-team-answers as v281 left it was played through every path it has (tick, mark by key and
+by mouse, score, Undo, close with no marks, Export, Edit and Save, a team removed, the mode off and on, Reset, the
+file imported) and hashed twice: 23 pins, the same both times (`Tools/review-game-board/test/_every-team-game.mjs`).
+They and the 32 one-team pins are green on the finished page.
+
+**Built.** The rules are in `Tools/review-game-board/rgb-play.js` (pure, no DOM): what a team may wager and how a
+typed wager is read, what the round scores, standings and the sentence that names the winner or the tie, the cleaning
+of both fields from a file, the quiz-bowl entry (who may buzz, a wrong buzz, a right one, the bonus), what an entry
+scored, which question is next, the totals and the summary, and what a team leaving does to both. The page draws
+them on one new overlay, built from elements. `_shared/question-bank.js` was not edited; the bank is read with
+`peek` and never written; no new storage key; `inline-sinks-baseline.json` still has 030 at 3.
+
+**Calls made (each is a question for Devon in BACKLOG, 31 to 44).** A team at 0 or below may wager up to 100. Wagers
+are typed by the teacher into password-type boxes. Every team must be marked right or wrong before the final round
+scores. Quiz-bowl is toss-up 10, bonus 10, wrong 0, one bonus question, the source whole and in its stored order,
+points on the board's own scoreboard. A toss-up counts once it is decided; a bonus is used once it is shown. The
+source and the points are locked once a round begins, because what a toss-up scored is worked out from the log and
+not stored: changing the points mid-round would make Undo take off a different number than was put on.
+
+**Found by the suite.** Two of my own expectations were wrong by arithmetic (a wrong buzz's cost left out of a
+round total) and were corrected to what the rule gives. One real trap: an axe scan taken straight after switching
+the theme by hand reported the score on a team's chip as low contrast, because the chip's background fades over
+0.2 s; the unedited page is clean under the same scan once it has settled, and the suite now waits 350 ms after a
+theme switch before it scans.
+
+**Got wrong.** The first run of the pure-Node break driver stopped on a bad pattern of its own with a break still
+applied to `rgb-play.js`; the file was put back by hand and the driver now checks every pattern before it changes
+anything and restores the file on exit.
+
+**Checks.** `test:play-modes-core` 194 (83 before), `test:play-rounds` 173 (new, port 8519). Breaks on purpose: 83 of the rules in pure Node (81 caught by an assertion first time, 1 after an added assertion, 1 an equivalent change); 14 in the page, one suite run a lock (13 caught by an assertion first time; 1 first stopped the suite with a crash and is caught by an assertion since that check was rewritten).
+Every guard exit 0. Not run: the full `npm test`.
+
+**Not verified.** No class played either round; no person used the overlay; no screen reader (axe in both themes,
+roles, names, keys, focus); no password manager against the wager boxes; a bank of thousands as a source; CI on this
+tree.
+## 016 QR Code Generator: batch codes from a CSV or paste, and the label rule stated (2026-10-07, AI-31-016, `CACHE_VERSION` v283)
+
+BACKLOG rank 132, "A label under each code; batch codes from a spreadsheet". **Half of it was already there.** Found first and not rebuilt: a single code has had a
+caption band since before this row (drawn into the PNG, the SVG and the print), and Bulk mode already took `label, link` lines, comma or tab separated, with the label
+under each code on screen, on plain paper and on Avery 5160/5163 stock. What was missing is what shipped.
+
+- **Check rows and the batch.** `Tools/qr-code-generator/bulk-rows.js` (new, precached; global `QrBulkRows`) reads the paste: a first row of column names (every
+  cell a column name; one cell only for a word that names a link, so a list whose first line is "Station" is not eaten) is skipped; a cell in "double quotes" keeps
+  its comma, through `Roster.splitCells` (already loaded on the page, called as it is; a row with no quoted cell never goes near it, so a list pasted before reads
+  byte for byte as it did: the first delimiter splits, a line with none is its own label and link, a tab beats a comma). A **Check rows** button (and Generate grid,
+  which runs the same check) names every row that will not make a code by its line in what was pasted, header and blank lines counted: empty, too long at the chosen
+  error correction (read off the real encoder: 2953 / 2331 / 1663 / 1273 UTF-8 bytes at L / M / Q / H, one more throws), or the same label **and** link as an
+  earlier row. Two labels on one link are fine (a form for a whole class). Generate makes the rest and says how many were left out. A **spreadsheet saved as CSV**
+  can be chosen (read in the browser, nothing uploaded, over 1 MB refused; added after what is in the box, and a second file's own header row is dropped); a
+  **Columns are** select reads label-then-link (the way the page always read, kept as the default) or link-then-label. The 400-code limit is stated on the page.
+- **The label rule.** A label over 60 characters is shown as its first 59 and an ellipsis, in the grid, on plain paper and on label stock; the code is never
+  shortened. The single caption's rule (60 characters, shrinks to 8 px to fit the code's width, then ends in an ellipsis, below the code's blank border) is now stated
+  under its field. **Decision (reversible):** 60 because the caption field already stopped there; it changes the old page for a label of 61 or more, which used
+  to wrap on screen and, on plain paper, widen the whole grid to the page. `smoke-print.mjs`'s "wide" labels were 150 characters and are now sixty `W`.
+- **Decisions.** Column order stays label-then-link (the row said link first; the old page and every saved paste said label first, so the select offers both). A duplicate is
+  the same label and link, not the same link. A quoted row with more than two cells rejoins the rest with the delimiter and no space. Quoted cells that span lines are not
+  supported (a line is a row). The header skip applies to the first row only. Nothing about this was stored: no new key, no registry row, nothing in a share link.
+- **Tests.** `smoke-bulk-core.mjs` (`test:qr-bulk-core`, pure Node, 99 assertions, the limit read off the vendored encoder) and `smoke-bulk.mjs` (`test:qr-bulk`, port 8520,
+  128 assertions): the quiet zone and the caption's letters read off the canvas's pixels at 200, 400 and 1000 px (the gap to the code is at least four modules, the border
+  under the code blank, the code decoded by the page's own jsQR and bit for bit the same with and without a caption), a 60-character caption inside the code's width, markup in
+  a caption, a label and a row left out as text on screen, on the sheet, in the alt text and in the downloaded SVG, Check rows and Generate on a paste with every kind
+  of bad row, the limit at 400 and 401, a BOM'd CSV with CRLF, a second file, a file over 1 MB, an old-style paste making the codes and labels the old page made, a saved
+  size and level opening as they were, axe with the list showing, Tab order. Lengths are relations, never pixels of text. **Breaks on purpose: 38 against the module** (35
+  caught; 3 equivalent: an `&&` that the fill rule makes redundant, a swap of one cell with itself, and a `\r?` that `trim()` covers) **and 15 against the page**: 14 caught,
+  1 dead code (a BOM strip that `FileReader.readAsText` already does) which was deleted; 14 more written and not run, for time (each run is two minutes behind the lock).
+  Not every assertion has its own break.
+- **Checks.** See the audit entry. `test:a11y -- --only 016`, `audit-print --check --only 016`, `smoke-print` (1617), `test:qr` and every `check:*` and `lint`.
+- **Not verified.** Nothing printed on paper; no phone scanned a printed code; no real spreadsheet export (the files in the suite are written by hand, one with a BOM and CRLF);
+  no screen reader; no sheet of real label stock. The audit's print seed has no batch with a header or a long label, so the print block is measured by `smoke-bulk.mjs`
+  and `smoke-print.mjs`, not by `audit-print`. Left: multi-line quoted cells, a column picker for a CSV with more than two columns, saving a batch.
+
+
+## 008 Behavior & Points Tracker: team / house points (2026-10-07, AI-31-008, `CACHE_VERSION` v282; the code commit says v280, which AI-31-012 and then AI-14 passed before the merge)
+
+BACKLOG rank 125 had two parts; this session did the first, team / house points. Longitudinal reports stay on the row, rewritten.
+
+- **What it is.** A Teams / houses card: two to eight teams per section (a name each, an optional colour from eight, never the only cue), students
+  put on a team by hand (a table of selects behind a `<details>`) or by **Deal evenly**, which is a pure function of the seed box, the team order and the
+  roster (`teams.js`, `BPTeams.deal`: names sorted by code point, a mulberry32 Fisher-Yates shuffle, round robin, so sizes differ by at most one and
+  the order the names arrive in changes nothing; dealing again asks first). Every tap, "Award everyone" and undo counts for the student's team; the log
+  entry carries the team id, so an undo takes the points off the team that got them even if the student has moved since. A team can be given points
+  directly (a form with a reason, or +1 / −1 on its tile; the last five are listed with Undo).
+- **The board.** One tile per team above the student cards, best first: its position in words ("1st", "Tied for 2nd"), the name, the total at 2.2 to
+  4.6 rem, and "Leading" or "Tied for the lead" in words (nobody leads while every total is the same 0). The colour is a swatch and a left stripe and
+  nothing else. It holds no student's name, tally, behaviour or note. "Teams only" hides the student cards (session only, `aria-pressed`); "positives only"
+  floors team totals at 0 as it does students' and ranks on what is shown; a polite live region says when a new team takes the sole lead; focus stays on a
+  tile button after it redraws. The printed end-of-day report gains a Team standings block when there are teams.
+- **Totals.** `teamBank` (before today) plus `teamDay`: Archive Day moves today into the bank, so house points run all term; "Undo the whole day" drops
+  today's share and keeps the bank (exact, not read off the 300-entry log); "Reset team totals" (a confirm) zeroes both and reads or writes no student.
+- **Stored** as optional fields in the same section of the same key (`teams`, `teamOf`, `teamBank`, `teamDay`, `teamLog`, `teamSeed`): no new key, no
+  registry row, nothing in a share link (the page has none). A section that never made a team has none of them, and a log entry only has `team` when its
+  student had one. Load cleans a hand-edited section (duplicate ids, more than eight, an unknown colour, an assignment to a missing team, a fractional bank).
+- **Decisions.** Teams are this tool's own: the row's "from Group/Team Generator" is a cross-tool hand-off and was not started. Team totals can go
+  negative, as students' do (the section's open question about negatives is still Devon's). No per-day team history: only the running total, which is the
+  first thing the longitudinal row will want. A team in the CSV and the student summary was left out so those files stay what they were.
+- **The golden.** `golden-no-teams.json` was recorded from the v279 page before any edit (`_capture-golden-no-teams.mjs`, run once, deterministic: two
+  captures were identical): a fixed walk of every Show and Sort mode, taps, Award everyone / ticked / the rest, undo, both printouts, the CSV, archive and
+  undo-the-day, with every board, feed, table and the **stored string** after each step. Today's page matches it to the byte (`smoke-teams.mjs` section 1).
+- **Tests.** `smoke-teams-core.mjs` (pure Node, 114 assertions) and `smoke-teams.mjs` (port 8516, 219 assertions: the golden, making teams, the deal, points
+  and undo, the board's text and size, direct points, archive / undo-the-day / reset, load, a Class Roster Hub rename carrying the team, axe and names).
+  Breaks on purpose: **64 in the core**, 56 caught first time; 7 survived and got assertions (a stale assignment, a second archive adding to the bank, the
+  limit written as `T.NAME_MAX` against itself, a lone team's lead, a stale team in `counts`, an empty deal that built `{undefined}` and passed as `{}`,
+  a biased shuffle, which now needs a 3,000-seed fairness check); the one left, a tie broken by sort stability, is equivalent. **41 written against the
+  page, 37 run and all caught**: 3 first survived because the test was weak (positives-only mode with no negative team on screen; the key list read after
+  the page had already written its extra key; load cleaning checked only after an Add team that cleans as well) and were fixed; 5 more were first marked
+  "survived" only because the suite had aborted on an earlier break's missing button (the driver now reports ABORTED) and were rerun alone; 2 more first
+  looked like survivors because the driver searched for a label the test had since renamed. Not run: the three whose failure cascades through every total
+  (a board with no position words, a board drawn only from a `renderBoard` that no longer calls it, an archive that resets teams) and the one for the
+  direct-award undo button. Not every assertion has its own break.
+- **Checks.** `test:a11y -- --only 008` and `audit-print --check --only 008` clean; the suites of `behavior-points-tracker`, `roster`, `theme`, `export` and
+  `service-worker` pass; every `check:*`, `lint` and `check:precache -- --base origin/main` exit 0. `audit-print` seeds no teams, so the Team standings
+  rows are asserted in `smoke-teams.mjs` and were not measured in print media.
+- **Not verified.** Nothing projected on a real board; no screen reader; nothing printed on paper; no real second tab; the live region's wording heard by
+  nobody. Not built: team totals per archived day, teams in the CSV or the student summary, a fullscreen stage view, carrying teams across sections.
+
+
+## Path 12 P3, increment 1: every-team-answers and the printed quiz and study guide on 030 (2026-10-07, AI-14, `CACHE_VERSION` v281; the code commit says v280, which AI-31-012 took before the merge)
+
+BACKLOG rank 29 names five things; this session was handed two of them. Quiz-bowl, the wheel and the final wager are
+not started, and the row says so. The design as built is in BACKLOG's Path 12 section, P3; this is what happened.
+
+- **What was there.** The one-team game (show the answer, press the one team that got it) and two printed sheets from
+  a board, an answer key and a practice quiz with no key. So "a printed practice quiz" half-existed, and the session
+  built what did not: the key on a page of its own in the same print, the study guide, and both from the bank.
+- **Every team answers.** An opt-in tick box on a board. On, the answer brings a panel of radio groups (Right, Wrong,
+  No answer, a team) and one Score button; right scores the clue's points, wrong and no answer nothing; the marks stay
+  on the clue and each team shows its count; one Undo takes the clue back. Keys 1 to 9 and Enter. Stored as
+  `everyTeam` on the board and `marks` on a scored clue, both absent on a board that never used the mode.
+- **The sheets.** `rgb-play.js` builds a quiz and its key (the key starts a new page) or a study guide (a table, the
+  answer beside the question) from elements, from a board's clues by category or from the bank tab's list by unit.
+- **A premise that was wrong.** The session's prompt said to print "through the shared print kit as 030 already
+  does". 030 links no print-kit file and never has: it prints `#printArea` under its own `@media print`, with the
+  screen hidden by `visibility`, which leaves the screen's height in the print. Printed from the bank tab, which is
+  tall, a short sheet would have been followed by blank pages. The new sheets are printed with a class on `<body>`
+  that takes the screen out with `display: none`; the two old sheets were left exactly as they were (they are
+  printed from the board, which is short). Moving 030 onto the kit, with a preview, is Path 7 work and is not done.
+- **The old game, held.** `_old-game.mjs` plays one board through every path of the one-team game; its 32 captures
+  were hashed on the v279 page before any edit (twice, the same) and are the same on the new page.
+- **Decisions taken, each a question for Devon in BACKLOG (18 to 30).** A wrong answer scores nothing; the page does
+  not manage secret answers; a Daily Double stays one team's wager; every team starts at No answer; marks go by a
+  team's place; a guide groups by category or unit in first-appearance order; choices print in stored order; the two
+  old print buttons stay.
+- **Tests.** `smoke-play-core.mjs` (pure Node, 83 assertions) and `smoke-play-modes.mjs` (port 8515, 182 assertions).
+  Breaks on purpose: 49 in `rgb-play.js`, in pure Node (47 caught by an assertion, 2 stopped the suite with a crash: a group named `__proto__` with the key prefix taken off, and `innerHTML` in place of `textContent`, which the suite's document refuses). In the page, 24 written and **only 12 run**, one suite run per lock (the lock was shared with two other workers and a run took 3 to 5 minutes), all 12 caught by an assertion. **Not broken on purpose:** Reset game leaving the marks, a removed team's mark staying, Edit questions losing the mode or the marks, the bank print taking ticks the list does not show, the number keys, the starting mark, focus on reveal, a wrong team losing points, a line's height, the empty list, the bank sheet's name.
+- **Got wrong on the way.** The first pure break list had one change that changed nothing (it added a field nobody
+  read) and survived; it was replaced by a real one. The suite first expected an imported clue's marks to be two
+  long when the board had three teams by then: an import fills a short list with No answer, which is right.
+- **Not verified.** No class, no person, no screen reader, no paper. Not run: the full `npm test`.
+ of two to four independent timers (2026-10-07, AI-31-004, `CACHE_VERSION` v279; the code commit says v277, which main passed before the merge)
 ## 012 Graph Paper: polar, log, hexagonal, storyboard and music paper, and seven number-line kinds (2026-10-07, AI-31-012, `CACHE_VERSION` v280)
 
 BACKLOG rank 129, "More grid types; number-line variants", is built whole and the row is deleted. The page was checked first: it already had square, dot, isometric

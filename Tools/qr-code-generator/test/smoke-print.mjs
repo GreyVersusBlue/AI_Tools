@@ -95,7 +95,9 @@ const linesOf = n => entriesOf(n).map(e => e.label + ', ' + e.content).join('\n'
 // with labels that cannot matter in any font: `short`, none wider than the
 // 300 px picture, and `wide`, one far wider than the page (no comma in it:
 // a line is split into label and link at its first).
-const WIDE = 'A label that is a good deal wider than the whole page when it is set on one line in any font at all and so makes the grid as wide as the page lets it be';
+// Sixty W: the longest label the page now shows whole (bulk-rows.js cuts a longer one with an
+// ellipsis), and 600 px or more of type in any font, wider than the page.
+const WIDE = 'W'.repeat(60);
 const plainEntries = s => entriesOf(s.n).map((e, i) => i !== 1 ? e : s.labels === 'short' ? { ...e, label: 'Station 2' } : s.labels === 'wide' ? { ...e, label: WIDE } : e);
 const plainLines = s => plainEntries(s).map(e => e.label + ', ' + e.content).join('\n');
 const inventoryOf = n => Object.fromEntries(Array.from({ length: n }, (_, i) => ['asset-' + (i + 1), {

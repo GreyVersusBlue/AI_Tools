@@ -28,6 +28,7 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/export.js"></script>
+<script src="behavior-points-tracker/teams.js"></script>
 <script type="module">
   /* The shared per-student record Class Roster Hub keeps beside np_rosters:
      preferred name and pronunciation to show, and the stable id that lets this
@@ -63,12 +64,18 @@
     --desk: #eeece3;
     --good-bg: #e4f5ea;
     --cat-academic: #2e6b8f; --cat-social: #7a5aa8; --cat-effort: #b8860b;
+    /* Team / house colours. Only ever a stripe or a swatch beside the team's
+       name and position, never the whole cue. */
+    --tm-red: #c43a2f; --tm-blue: #2a6db0; --tm-green: #2f7d4f; --tm-gold: #a77c0a;
+    --tm-purple: #7a5aa8; --tm-orange: #c2571a; --tm-teal: #1f7a7a; --tm-pink: #b8457a;
   }
   :root[data-theme="dark"]:not(.a11y-filter-dark) {
     --good: #63c08e;
     --desk: #0e1014;
     --good-bg: #173021;
     --cat-academic: #6fa8cd; --cat-social: #b394d8; --cat-effort: #d9a83a;
+    --tm-red: #ef8f84; --tm-blue: #7fb2e5; --tm-green: #63c08e; --tm-gold: #d9a83a;
+    --tm-purple: #b394d8; --tm-orange: #f0a060; --tm-teal: #5cc4c4; --tm-pink: #e88ab4;
   }
   * { box-sizing: border-box; }
   body {
@@ -223,6 +230,43 @@
   .a-time { color: var(--muted); font-size: .72rem; white-space: nowrap; }
   .a-undo { font-size: .72rem; padding: 0; margin-left: .5rem; }
 
+  /* ── Team / house points ──────────────────────────────────────────────── */
+  [hidden] { display: none !important; }
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .team-row { display: flex; align-items: center; gap: .5rem; }
+  .team-row input[type="text"] { flex: 1; min-width: 6rem; margin-bottom: .5rem; }
+  .team-row select { flex: 0 0 auto; width: 7.4rem; margin-bottom: .5rem; }
+  .swatch { display: inline-block; width: .9rem; height: .9rem; border-radius: 3px; border: 1px solid var(--line-strong); background: var(--tm-color, transparent); vertical-align: -.1rem; flex-shrink: 0; }
+  .tm-red { --tm-color: var(--tm-red); } .tm-blue { --tm-color: var(--tm-blue); }
+  .tm-green { --tm-color: var(--tm-green); } .tm-gold { --tm-color: var(--tm-gold); }
+  .tm-purple { --tm-color: var(--tm-purple); } .tm-orange { --tm-color: var(--tm-orange); }
+  .tm-teal { --tm-color: var(--tm-teal); } .tm-pink { --tm-color: var(--tm-pink); }
+  .team-tools { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin: .3rem 0 .8rem; }
+  .team-tools label { margin: 0; }
+  .team-tools input[type="number"] { width: 6rem; margin: 0; }
+  .team-give { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin: .3rem 0; }
+  .team-give select, .team-give input { width: auto; margin: 0; flex: 1 1 7rem; }
+  .team-give input[type="number"] { flex: 0 0 5rem; }
+  .team-assign { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .team-assign td { padding: .15rem .3rem; border-top: 1px dashed var(--line); }
+  .team-assign select { margin: 0; padding: .25rem .4rem; font-size: .82rem; }
+  .team-assign-wrap summary { cursor: pointer; font-size: .82rem; font-weight: 600; margin: .4rem 0; }
+  .team-board { background: var(--card); border: 2px solid var(--line-strong); border-radius: 10px; padding: .8rem 1rem 1rem; margin-bottom: 1.2rem; }
+  .team-board-head { display: flex; justify-content: space-between; align-items: center; gap: .6rem; margin-bottom: .6rem; }
+  .team-board-head h2 { margin: 0; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); }
+  .team-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .7rem; }
+  .team-tile { border: 2px solid var(--line); border-left: 10px solid var(--tm-color, var(--line-strong)); border-radius: 10px; padding: .6rem .9rem .7rem; background: var(--card-2); display: grid; gap: .1rem; }
+  .team-tile.lead-sole, .team-tile.lead-tied { border-color: var(--ink); background: var(--good-bg); }
+  .tile-pos { font-size: clamp(1rem, 2.4vw, 1.5rem); font-weight: 800; color: var(--muted); }
+  .tile-name { font-size: clamp(1.1rem, 2.6vw, 1.7rem); font-weight: 800; overflow-wrap: anywhere; display: flex; align-items: center; gap: .45rem; }
+  .tile-total { font-size: clamp(2.2rem, 6.5vw, 4.6rem); font-weight: 800; font-family: Consolas, monospace; line-height: 1.05; }
+  .tile-lead { font-size: clamp(.9rem, 1.8vw, 1.2rem); font-weight: 800; }
+  .tile-lead:empty { display: none; }
+  .tile-btns { display: flex; gap: .4rem; margin-top: .3rem; }
+  .tile-btns button { padding: .3rem .8rem; font-size: 1rem; }
+  .board-wrap.teams-only > :not(#teamBoard) { display: none; }
+  .team-log-row { display: flex; justify-content: space-between; gap: .6rem; font-size: .8rem; padding: .25rem 0; border-top: 1px dashed var(--line); }
+
   /* ── History ──────────────────────────────────────────────────────── */
   .history-entry { border: 1px solid var(--line); border-radius: 7px; margin-bottom: .5rem; overflow: hidden; }
   .history-entry summary { cursor: pointer; padding: .5rem .7rem; font-size: .83rem; background: var(--card-2); list-style: none; }
@@ -290,6 +334,33 @@
         <div class="hint">Positive point values show green, negative show red. Changing a value here only affects taps from now on &mdash; it doesn&rsquo;t rewrite points already logged today.</div>
       </div>
 
+      <div class="card" id="teamsCard">
+        <div class="card-title"><span>Teams / houses</span><button class="link-btn" id="addTeamBtn" type="button">+ Add team</button></div>
+        <div class="hint">Two to eight teams for this section. Every point a student earns or loses also counts for their team; a team can be given points directly too. Team totals carry across days until you reset them, and resetting them never touches a student&rsquo;s own points.</div>
+        <div id="teamsEditor"></div>
+        <p class="hint" id="teamsNote"></p>
+        <div class="team-tools">
+          <label for="teamSeed">Deal seed</label>
+          <input type="number" id="teamSeed" step="1" value="1">
+          <button class="secondary" id="dealTeamsBtn" type="button">Deal evenly</button>
+        </div>
+        <details class="team-assign-wrap" id="teamAssignWrap">
+          <summary id="teamAssignSummary">Who is on which team</summary>
+          <div id="teamAssign"></div>
+        </details>
+        <div class="card-title" style="margin:.8rem 0 .4rem;"><span>Give a team points</span></div>
+        <div class="team-give">
+          <select id="teamGiveTeam" aria-label="Team to give points to"></select>
+          <input type="number" id="teamGiveAmount" step="1" value="1" aria-label="Points to give (negative takes points off)">
+          <input type="text" id="teamGiveLabel" placeholder="Reason (optional)" maxlength="60" aria-label="Reason (optional)">
+          <button class="secondary" id="teamGiveBtn" type="button">Give</button>
+        </div>
+        <div id="teamLogList"></div>
+        <div class="btn-row">
+          <button class="danger" id="resetTeamsBtn" type="button">Reset team totals</button>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-title"><span>Day</span></div>
         <div class="hint">Archiving saves today&rsquo;s totals below and zeroes every student back to 0. Do this at the end of the day, not between periods, if you want points to carry across periods.</div>
@@ -331,7 +402,15 @@
       <div id="msg"></div>
     </div>
 
-    <div class="board-wrap">
+    <div class="board-wrap" id="boardWrap">
+      <section class="team-board" id="teamBoard" aria-labelledby="teamBoardTitle" hidden>
+        <div class="team-board-head">
+          <h2 id="teamBoardTitle">Team board</h2>
+          <button class="secondary" id="teamOnlyBtn" type="button" aria-pressed="false">Teams only</button>
+        </div>
+        <ol class="team-tiles" id="teamTiles"></ol>
+        <p class="sr-only" id="teamLive" role="status" aria-live="polite"></p>
+      </section>
       <div class="card-title" style="margin-bottom:.7rem;"><span>Tap a behavior, then tap a student</span></div>
       <div class="tag-chips" id="tagChips"></div>
 
@@ -419,7 +498,10 @@
    'clearPickedBtn', 'pickHint', 'noteMode', 'clearDayBtn',
    'layoutMode', 'seatingSectionPick', 'seatingNote',
    'goalStudent', 'goalValue', 'setGoalBtn', 'goalList', 'trendWrap',
-   'summaryStudent', 'printSummaryBtn', 'summaryArea', 'summaryTitle', 'summarySub', 'summaryBody'
+   'summaryStudent', 'printSummaryBtn', 'summaryArea', 'summaryTitle', 'summarySub', 'summaryBody',
+   'teamsCard', 'addTeamBtn', 'teamsEditor', 'teamsNote', 'teamSeed', 'dealTeamsBtn', 'teamAssignWrap',
+   'teamAssignSummary', 'teamAssign', 'teamGiveTeam', 'teamGiveAmount', 'teamGiveLabel', 'teamGiveBtn',
+   'teamLogList', 'resetTeamsBtn', 'boardWrap', 'teamBoard', 'teamOnlyBtn', 'teamTiles', 'teamLive'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var BUILTIN_CHIPS = [
@@ -528,6 +610,9 @@
       if (!Array.isArray(h.rows)) h.rows = [];
       h.rows.forEach(function (r) { if (!Array.isArray(r.notes)) r.notes = []; });
     });
+    /* Team / house points are optional all the way down: a section that never
+       made a team has none of these fields and this does nothing to it. */
+    BPTeams.normalize(s);
     return s;
   }
 
@@ -549,6 +634,7 @@
   }
 
   function applyStateToForm() {
+    lastLead = undefined;
     els.setName.value = state.name;
     els.namesInput.value = state.namesText;
     els.sortMode.value = state.sortMode;
@@ -564,6 +650,7 @@
     renderCumulative();
     renderGoals();
     renderTrends();
+    renderTeams();
   }
 
   /* ── The shared student record ─────────────────────────────────────────────
@@ -645,6 +732,11 @@
       day from `from` to `to`. No-op (returns false) if there is nothing to
       move, or if `to` already has data of its own. */
   function renameStudentData(from, to) {
+    /* A student's team follows the rename too, whether or not they have points. */
+    if (state.teamOf && state.teamOf[from] !== undefined && state.teamOf[to] === undefined) {
+      state.teamOf[to] = state.teamOf[from];
+      delete state.teamOf[from];
+    }
     var hasOld = state.points[from] !== undefined || state.goals[from] !== undefined ||
       state.posCount[from] !== undefined || state.negCount[from] !== undefined ||
       state.log.some(function (ev) { return ev.name === from; }) ||
@@ -757,6 +849,7 @@
   function refreshDependentViews() {
     renderGoals();
     renderTrends();
+    renderTeamAssign();
   }
 
   function updateNameCount() {
@@ -1014,6 +1107,7 @@
   }
 
   function renderBoard() {
+    renderTeamBoard();
     var names = sortedNames();
     if (!names.length) {
       els.studentGrid.innerHTML = '<p class="empty-hint">Add a roster on the left to get started.</p>';
@@ -1143,6 +1237,7 @@
     if (delta > 0) state.posCount[name] = (state.posCount[name] || 0) + 1;
     else state.negCount[name] = (state.negCount[name] || 0) + 1;
 
+    var teamId = BPTeams.award(state, name, delta);
     var entry = {
       id: nextLogId(),
       name: name,
@@ -1152,6 +1247,10 @@
       ts: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
     };
     if (note) entry.note = note.slice(0, 240);
+    /* The team the points went to, stamped on the entry so an undo takes them
+       off the same team even if the student has been moved since. Only a
+       student with a team gets the field. */
+    if (teamId) entry.team = teamId;
     state.log.unshift(entry);
     if (state.log.length > LOG_LIMIT) state.log.length = LOG_LIMIT;
 
@@ -1215,6 +1314,7 @@
     state.points[ev.name] = (state.points[ev.name] || 0) - ev.delta;
     if (ev.delta > 0) state.posCount[ev.name] = Math.max(0, (state.posCount[ev.name] || 0) - 1);
     else state.negCount[ev.name] = Math.max(0, (state.negCount[ev.name] || 0) - 1);
+    BPTeams.unaward(state, ev);
     renderBoard();
     renderActivity();
     save();
@@ -1225,7 +1325,7 @@
     var names = parseNames();
     if (!names.length) { showMsg('Add a roster before archiving a day.', 'error'); return; }
     var totalPts = names.reduce(function (sum, n) { return sum + (state.points[n] || 0); }, 0);
-    if (!state.log.length && totalPts === 0) { showMsg('Nothing logged yet today — nothing to archive.', 'info'); return; }
+    if (!state.log.length && totalPts === 0 && !(state.teamLog && state.teamLog.length)) { showMsg('Nothing logged yet today — nothing to archive.', 'info'); return; }
     if (!confirm('Archive today\u2019s totals to history and reset every student back to 0?')) return;
 
     /* The day's notes go into the archive with it — they are the only thing in
@@ -1255,10 +1355,13 @@
     state.posCount = {};
     state.negCount = {};
     state.log = [];
+    /* House points run all term: today joins the team bank and stays. */
+    BPTeams.archiveDay(state);
 
     picked = {};
     renderBoard();
     renderActivity();
+    renderTeams();
     renderHistory();
     renderCumulative();
     renderTrends();
@@ -1270,14 +1373,15 @@
      handles the period where the board got used as a demo, or a substitute
      tapped through it, and none of it should count. */
   els.clearDayBtn.addEventListener('click', function () {
-    if (!state.log.length && !Object.keys(state.points).length) {
+    if (!state.log.length && !Object.keys(state.points).length && !(state.teamLog && state.teamLog.length)) {
       showMsg('Nothing logged today — there is nothing to undo.', 'info');
       return;
     }
     if (!confirm('Undo everything logged today? Every student goes back to 0 and today\u2019s activity is discarded. Archived days are not touched.')) return;
     state.points = {}; state.posCount = {}; state.negCount = {}; state.log = [];
+    BPTeams.clearDay(state);
     picked = {};
-    renderBoard(); renderActivity(); save();
+    renderBoard(); renderActivity(); renderTeamLog(); save();
     showMsg('Today cleared. Archived days are untouched.', 'info');
   });
 
@@ -1550,10 +1654,261 @@
       var goal = state.goals[n];
       var goalCell = (goal === undefined || goal === null) ? '' : ' <small>(target ' + (goal > 0 ? '+' : '') + goal + (pts >= goal ? ', met' : ', not met') + ')</small>';
       return '<tr><td>' + escapeHtml(n) + goalCell + '</td><td class="pts">' + (pts > 0 ? '+' : '') + pts + '</td><td>' + (state.posCount[n] || 0) + '</td><td>' + (state.negCount[n] || 0) + '</td></tr>';
-    }).join('') + (catRows ? '<tr><td colspan="4" style="padding-top:.8rem;"><b>By category, today</b></td></tr>' + catRows : '');
+    }).join('') + (catRows ? '<tr><td colspan="4" style="padding-top:.8rem;"><b>By category, today</b></td></tr>' + catRows : '') + teamPrintRows();
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     els.printArea.classList.add('active');
     window.print();
+  });
+
+  /* ── Team / house points ──────────────────────────────────────────────────
+     The arithmetic is Tools/behavior-points-tracker/teams.js's (BPTeams, pure
+     Node under smoke-teams-core.mjs). Everything below is the page: the
+     editor, the board and the buttons. Teams are this section's own — they are
+     not read from Group Generator or Class Roster Hub. Nothing here goes in a
+     share link, and the board shows team totals only: no student's name, tally
+     or log entry is on it. ───────────────────────────────────────────────── */
+  var lastLead;   // the sole leader the live region last announced; undefined = nothing yet
+  var teamsOnly = false;
+
+  function fmtTeam(n) { return n < 0 ? '−' + (-n) : String(n); }
+  function teamList() { return state.teams || []; }
+  function colorClass(c) { return c ? ' tm-' + c : ''; }
+
+  function renderTeams() {
+    els.teamSeed.value = state.teamSeed !== undefined ? state.teamSeed : 1;
+    renderTeamEditor();
+    renderTeamAssign();
+    renderTeamGive();
+    renderTeamLog();
+    renderTeamBoard();
+  }
+
+  function renderTeamEditor() {
+    var teams = teamList();
+    var colorOpts = function (cur) {
+      return '<option value=""' + (cur ? '' : ' selected') + '>No colour</option>' + BPTeams.PALETTE.map(function (c) {
+        return '<option value="' + c + '"' + (cur === c ? ' selected' : '') + '>' + BPTeams.COLOR_LABELS[c] + '</option>';
+      }).join('');
+    };
+    els.teamsEditor.innerHTML = teams.map(function (t, i) {
+      return '<div class="team-row" data-id="' + escapeAttr(t.id) + '">' +
+        '<span class="swatch' + colorClass(t.color) + '" aria-hidden="true"></span>' +
+        '<input type="text" class="team-name" value="' + escapeAttr(t.name) + '" maxlength="' + BPTeams.NAME_MAX + '" aria-label="Name of team ' + (i + 1) + '">' +
+        '<select class="team-color" aria-label="Colour for ' + escapeAttr(t.name) + ' (optional)">' + colorOpts(t.color) + '</select>' +
+        '<button type="button" class="remove-row-btn" data-remove-team="' + escapeAttr(t.id) + '" aria-label="Remove ' + escapeAttr(t.name) + '" title="Remove team">&#10005;</button>' +
+        '</div>';
+    }).join('');
+    els.addTeamBtn.disabled = teams.length >= BPTeams.MAX_TEAMS;
+    updateTeamNote();
+  }
+
+  function updateTeamNote() {
+    var teams = teamList();
+    var names = parseNames();
+    var c = BPTeams.counts(state, names);
+    var onTeam = names.length - c.none;
+    if (!teams.length) els.teamsNote.textContent = 'No teams yet. Add at least two to show the team board.';
+    else if (teams.length < BPTeams.MIN_TEAMS) els.teamsNote.textContent = 'Add one more team to show the team board.';
+    else els.teamsNote.textContent = onTeam + ' of ' + names.length + ' student' + (names.length === 1 ? '' : 's') + ' on a team' +
+      (c.none ? '; ' + c.none + ' without one, whose points count for no team' : '') + '.';
+    els.teamAssignSummary.textContent = 'Who is on which team (' + onTeam + ' of ' + names.length + ')';
+  }
+
+  function renderTeamAssign() {
+    var teams = teamList();
+    var names = parseNames().slice().sort(function (a, b) { return a.localeCompare(b); });
+    els.teamAssignWrap.hidden = !teams.length;
+    if (!teams.length || !names.length) { els.teamAssign.innerHTML = names.length ? '' : '<p class="hint">Add a roster first.</p>'; updateTeamNote(); return; }
+    var seen = {};
+    els.teamAssign.innerHTML = '<table class="team-assign"><tbody>' + names.filter(function (n) {
+      if (seen[n]) return false; seen[n] = true; return true;
+    }).map(function (n) {
+      var cur = state.teamOf[n] || '';
+      return '<tr><td>' + escapeHtml(n) + '</td><td><select class="team-pick" data-name="' + escapeAttr(n) + '" aria-label="Team for ' + escapeAttr(n) + '">' +
+        '<option value="">No team</option>' + teams.map(function (t) {
+          return '<option value="' + escapeAttr(t.id) + '"' + (cur === t.id ? ' selected' : '') + '>' + escapeHtml(t.name) + '</option>';
+        }).join('') + '</select></td></tr>';
+    }).join('') + '</tbody></table>';
+    updateTeamNote();
+  }
+
+  function renderTeamGive() {
+    var keep = els.teamGiveTeam.value;
+    els.teamGiveTeam.innerHTML = teamList().map(function (t) {
+      return '<option value="' + escapeAttr(t.id) + '">' + escapeHtml(t.name) + '</option>';
+    }).join('');
+    if (keep && BPTeams.find(state, keep)) els.teamGiveTeam.value = keep;
+    var none = teamList().length < 1;
+    els.teamGiveTeam.disabled = none; els.teamGiveBtn.disabled = none;
+    els.resetTeamsBtn.disabled = none;
+    els.dealTeamsBtn.disabled = teamList().length < BPTeams.MIN_TEAMS;
+  }
+
+  function renderTeamLog() {
+    var log = state.teamLog || [];
+    els.teamLogList.innerHTML = log.slice(0, 5).map(function (e) {
+      var t = BPTeams.find(state, e.team);
+      return '<div class="team-log-row"><span><b>' + escapeHtml(t ? t.name : 'Team') + '</b>' + (e.label ? ' &mdash; ' + escapeHtml(e.label) : '') + '</span>' +
+        '<span><b>' + (e.delta > 0 ? '+' : '') + fmtTeam(e.delta) + '</b> ' + escapeHtml(e.ts) +
+        ' <button type="button" class="link-btn a-undo" data-team-undo="' + escapeAttr(e.id) + '">Undo</button></span></div>';
+    }).join('');
+  }
+
+  function renderTeamBoard() {
+    if (!BPTeams.active(state)) {
+      els.teamBoard.hidden = true;
+      els.teamTiles.innerHTML = '';
+      els.boardWrap.classList.remove('teams-only');
+      return;
+    }
+    var focus = document.activeElement;
+    var refocus = focus && els.teamTiles.contains(focus) && focus.dataset.teamGive
+      ? { id: focus.dataset.teamGive, delta: focus.dataset.delta } : null;
+    var rows = BPTeams.standings(state, { hideNegative: state.displayMode === 'positive' });
+    els.teamBoard.hidden = false;
+    els.boardWrap.classList.toggle('teams-only', teamsOnly);
+    els.teamOnlyBtn.setAttribute('aria-pressed', teamsOnly ? 'true' : 'false');
+    els.teamTiles.innerHTML = rows.map(function (r) {
+      var lead = r.lead === 'sole' ? 'Leading' : (r.lead === 'tied' ? 'Tied for the lead' : '');
+      return '<li class="team-tile' + colorClass(r.color) + (r.lead ? ' lead-' + r.lead : '') + '">' +
+        '<span class="tile-pos">' + escapeHtml(r.cue) + '</span>' +
+        '<span class="tile-name"><span class="swatch" aria-hidden="true"></span><span>' + escapeHtml(r.name) + '</span></span>' +
+        '<span class="tile-total">' + fmtTeam(r.total) + '</span>' +
+        '<span class="tile-lead">' + lead + '</span>' +
+        '<span class="tile-btns">' +
+        '<button type="button" class="secondary" data-team-give="' + escapeAttr(r.id) + '" data-delta="1" aria-label="Give ' + escapeAttr(r.name) + ' 1 point">+1</button>' +
+        '<button type="button" class="secondary" data-team-give="' + escapeAttr(r.id) + '" data-delta="-1" aria-label="Take 1 point off ' + escapeAttr(r.name) + '">−1</button>' +
+        '</span></li>';
+    }).join('');
+    if (refocus) {
+      var again = els.teamTiles.querySelector('[data-team-give="' + cssEscape(refocus.id) + '"][data-delta="' + refocus.delta + '"]');
+      if (again) again.focus();
+    }
+    var sole = rows.filter(function (r) { return r.lead === 'sole'; })[0];
+    var key = sole ? sole.id : '';
+    if (lastLead !== undefined && key && key !== lastLead) {
+      els.teamLive.textContent = sole.name + ' now leads with ' + fmtTeam(sole.total) + (Math.abs(sole.total) === 1 ? ' point.' : ' points.');
+    }
+    lastLead = key;
+  }
+
+  function teamPrintRows() {
+    if (!BPTeams.active(state)) return '';
+    return '<tr><td colspan="4" style="padding-top:.8rem;"><b>Team standings</b></td></tr>' +
+      BPTeams.standings(state).map(function (r) {
+        return '<tr><td>' + escapeHtml(r.cue + ' — ' + r.name) + '</td><td class="pts">' + fmtTeam(r.total) + '</td><td colspan="2"></td></tr>';
+      }).join('');
+  }
+
+  els.addTeamBtn.addEventListener('click', function () {
+    var t = BPTeams.addTeam(state);
+    if (!t) { showMsg('Eight teams is the most.', 'info'); return; }
+    renderTeams();
+    save();
+    var inputs = els.teamsEditor.querySelectorAll('.team-name');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  });
+
+  els.teamsEditor.addEventListener('input', function (e) {
+    if (!e.target.classList.contains('team-name')) return;
+    var t = BPTeams.find(state, e.target.closest('.team-row').dataset.id);
+    if (!t) return;
+    t.name = e.target.value.trim().slice(0, BPTeams.NAME_MAX) || t.name;
+    renderTeamAssign(); renderTeamGive(); renderTeamBoard(); renderTeamLog();
+    save();
+  });
+
+  els.teamsEditor.addEventListener('change', function (e) {
+    if (!e.target.classList.contains('team-color')) return;
+    var row = e.target.closest('.team-row');
+    var t = BPTeams.find(state, row.dataset.id);
+    if (!t) return;
+    t.color = e.target.value;
+    row.querySelector('.swatch').className = 'swatch' + colorClass(t.color);
+    renderTeamBoard();
+    save();
+  });
+
+  els.teamsEditor.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-remove-team]');
+    if (!btn) return;
+    var t = BPTeams.find(state, btn.dataset.removeTeam);
+    if (!t) return;
+    var members = Object.keys(state.teamOf).filter(function (n) { return state.teamOf[n] === t.id; }).length;
+    if (!confirm('Remove "' + t.name + '"? Its ' + members + ' student' + (members === 1 ? '' : 's') + ' go back to no team and its points are dropped. Students’ own points are not touched.')) return;
+    BPTeams.removeTeam(state, t.id);
+    renderTeams();
+    save();
+  });
+
+  els.dealTeamsBtn.addEventListener('click', function () {
+    var ids = teamList().map(function (t) { return t.id; });
+    var names = parseNames();
+    if (ids.length < BPTeams.MIN_TEAMS) { showMsg('Add at least two teams before dealing.', 'error'); return; }
+    if (!names.length) { showMsg('Add a roster before dealing teams.', 'error'); return; }
+    var already = names.filter(function (n) { return state.teamOf[n]; }).length;
+    if (already && !confirm('Deal everyone again? ' + already + ' student' + (already === 1 ? ' is' : 's are') + ' already on a team, and this moves them. Team points are not changed.')) return;
+    var seed = parseInt(els.teamSeed.value, 10);
+    if (isNaN(seed)) seed = 1;
+    state.teamSeed = seed;
+    state.teamOf = BPTeams.deal(names, ids, seed);
+    renderTeamAssign();
+    renderTeamBoard();
+    save();
+    var c = BPTeams.counts(state, names);
+    showMsg('Dealt ' + names.length + ' student' + (names.length === 1 ? '' : 's') + ' across ' + ids.length + ' teams (' +
+      ids.map(function (id) { return c.byTeam[id]; }).join(', ') + ') with seed ' + seed + '. The same seed gives the same teams.', 'info');
+  });
+
+  els.teamAssign.addEventListener('change', function (e) {
+    if (!e.target.classList.contains('team-pick')) return;
+    BPTeams.setTeamOf(state, e.target.dataset.name, e.target.value);
+    updateTeamNote();
+    save();
+  });
+
+  function giveTeamPoints(id, delta, label) {
+    var e = BPTeams.give(state, id, delta, label,
+      new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), nextLogId());
+    if (!e) return false;
+    renderTeamBoard();
+    renderTeamLog();
+    save();
+    return true;
+  }
+
+  els.teamTiles.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-team-give]');
+    if (!btn) return;
+    giveTeamPoints(btn.dataset.teamGive, parseInt(btn.dataset.delta, 10), '');
+  });
+
+  els.teamGiveBtn.addEventListener('click', function () {
+    var amount = parseInt(els.teamGiveAmount.value, 10);
+    if (isNaN(amount) || amount === 0) { showMsg('Enter a whole number of points, not 0 (a negative number takes points off).', 'error'); return; }
+    var id = els.teamGiveTeam.value;
+    if (!giveTeamPoints(id, amount, els.teamGiveLabel.value)) return;
+    els.teamGiveLabel.value = '';
+    showMsg('Gave ' + BPTeams.find(state, id).name + ' ' + (amount > 0 ? '+' : '') + fmtTeam(amount) + '.', 'info');
+  });
+
+  els.teamLogList.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-team-undo]');
+    if (!btn) return;
+    if (BPTeams.undoGive(state, btn.dataset.teamUndo)) { renderTeamBoard(); renderTeamLog(); save(); }
+  });
+
+  els.resetTeamsBtn.addEventListener('click', function () {
+    if (!confirm('Reset every team’s total to 0? Students’ own points, goals, history and reports are not touched, and neither are the teams or who is on them.')) return;
+    BPTeams.resetTotals(state);
+    renderTeamBoard(); renderTeamLog();
+    save();
+    showMsg('Team totals reset to 0. Students’ own points were not touched.', 'info');
+  });
+
+  els.teamOnlyBtn.addEventListener('click', function () {
+    teamsOnly = !teamsOnly;
+    renderTeamBoard();
   });
 
   function showMsg(text, kind) { els.msg.textContent = text; els.msg.className = kind || 'error'; }

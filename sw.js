@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v280';
+const CACHE_VERSION = 'v284';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -105,6 +105,7 @@ const SHELL_URLS = [
   "Tools/044-Sub%20Plan%20Builder.html",
   "Tools/008-behavior-points-tracker.html",
   "Tools/behavior-points-tracker/seating-layout.js",
+  "Tools/behavior-points-tracker/teams.js",
   "Tools/006-class-roster-hub.html",
   "Tools/classroom-timer/ct-app.js",
   "Tools/classroom-timer/ct-board-core.js",
@@ -213,6 +214,7 @@ const PRECACHE_URLS = [
   "Tools/backup-restore/br-transfer.js",
   "Tools/008-behavior-points-tracker.html",
   "Tools/behavior-points-tracker/seating-layout.js",
+  "Tools/behavior-points-tracker/teams.js",
   "Tools/046-blank-map-generator.html",
   "Tools/blank-map-generator/bmg-choropleth.js",
   "Tools/blank-map-generator/bmg-colors.js",
@@ -377,6 +379,7 @@ const PRECACHE_URLS = [
   "Tools/029-prompt-builder.html",
   "Tools/083-propaganda-analysis-worksheet-generator.html",
   "Tools/016-qr-code-generator.html",
+  "Tools/qr-code-generator/bulk-rows.js",
   "Tools/018-qr-scavenger-hunt-builder.html",
   "Tools/030-review-game-board.html",
   "Tools/review-game-board/art/backdrop.webp",
@@ -385,6 +388,7 @@ const PRECACHE_URLS = [
   "Tools/review-game-board/art/header.webp",
   "Tools/review-game-board/rgb-audio-db.js",
   "Tools/review-game-board/rgb-bank-editor.js",
+  "Tools/review-game-board/rgb-play.js",
   "Tools/review-game-board/rgb-bank-store.js",
   "Tools/review-game-board/rgb-image.js",
   "Tools/review-game-board/rgb-store.js",
