@@ -8430,7 +8430,7 @@ source. The list was pointing later rounds at finished work.
 
 - ~~**Blank / student-fill version**~~ — **done, 2026-08-14** (SS demo round
   2: the timeline worksheet print, `tlb-worksheet.js`). Blanked titles only
-  until 2026-10-07 (AI-31-015, v281): a worksheet now blanks titles, dates or
+  until 2026-10-07 (AI-31-015, v285): a worksheet now blanks titles, dates or
   both, for a random number, every nth event or events picked by hand, with the
   year scale left off the sheet and kept on the key.
 No Quick Wins remain open. A future round should look to Major Features
@@ -8440,7 +8440,7 @@ notes rather than out of this list.
 
 #### Major Features
 
-- ~~**Printed ordering activity**~~ — **done, 2026-10-07** (AI-31-015, v281): an
+- ~~**Printed ordering activity**~~ — **done, 2026-10-07** (AI-31-015, v285): an
   "Ordering activity" panel prints the titled events with no dates as cut-apart
   cards or a numbered list, dealt from a seed stored with the timeline (Reshuffle
   moves it; three or more events are never dealt in order), with an answer key

@@ -9,6 +9,48 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 015 Timeline Builder: a worksheet that blanks dates, and a printed ordering activity (2026-10-07, AI-31-015, `CACHE_VERSION` v285)
+
+BACKLOG rank 131, "Printed ordering activity; blanking dates, not just titles", built whole and the row deleted. The page was checked first. It already blanked titles
+(the worksheet: numbered blanks on the strip, a word bank, an answer key page, a seeded pick of N events per version) and said in its section that dates and cut-apart
+cards were open. It prints through its own containers (`#printArea`, the tiled, map and worksheet pages), not the shared print kit, so the new sheets are a fifth
+container of the same shape, landscape, and use no `_shared/` code.
+
+- **Blanking dates.** The worksheet panel has "What to blank out" (titles, dates, titles and dates) and "Which events" (a number picked at random, every nth along
+  the strip, or the ones I choose from a tick list). A date blank is a ruled space on the strip and, below it, a line of at least 9rem to write on (a title line is
+  14rem); "both" puts the date on its own line under the title. The word bank becomes a date bank, or a Titles list and a Dates list; the date bank is shuffled with a
+  seed of its own, because the title bank's would pair the i-th title with its i-th date. The year scale along the strip's axis is left off a sheet that blanks dates (it
+  answers the blank) and kept on the key; the key underlines what was blanked on the strip and bolds it in the list, and says "Blanked on this sheet: ...". Every nth starts
+  one event later on each version, so n versions blank every event once; a hand pick is the same on every version, and the note says so. A pick of nobody refuses.
+- **Saved and shared.** `kind`, `pick`, `nth` and `hand` (event ids) join `state.worksheet` **only when they differ from titles-at-random**, so an old timeline's
+  saved string is the old five keys and stays so. The share link carries the whole timeline already, so it carries them; `normalizeBlank()` in `tlb-worksheet.js` cleans
+  what a hand-built link puts there (an unknown kind or pick is the old behaviour, `nth` is 1 to 50, `hand` keeps finite numbers once each).
+- **The ordering activity.** An "Ordering activity" panel prints the titled events with no date on them as cut-apart cards (a number and the title; dashed lines between;
+  the grid is the widest of 4, 3, 2 or 1 across that leaves two rows of the tallest card, measured with the page's fonts in an off-screen probe, every card the same size and
+  a `min-height`, so a long title makes cards taller and never cuts one) or as a numbered list with a box beside each, and a key on a page of its own: the right order, each
+  line's date, the number of the card (or list line) that holds it, and a `*` where two events share a year and may go either way round. The deal is a pure function
+  (`TimelineWorksheet.deal(events, seed)`) of the events and `state.ordering.seed`; with three or more events in more than one year a draw that is already in order is redrawn
+  from the same seed, and Reshuffle moves to the next seed whose deal differs from the current one. `ordering` (`kind`, `answerKey`, `nameLine`, `seed`) is written when
+  a choice is made, Reshuffle is pressed or a sheet is printed; opening the panels writes nothing. Everything typed reaches the page as text (built from elements);
+  `inline-sinks-baseline.json` for 015 did not move.
+- **Decisions, reversible.** A date-blank worksheet leaves the year scale off (default: on the key only). Untitled events are never blanked and have no card (as before).
+  Cards are numbered by the order they are dealt, not lettered, so the same number names the card on the paper and on the key. No paper-size choice was added: the tool
+  prints landscape on whatever the printer's page is, so cards are sized for the smaller of Letter and A4 (10in wide, 6.2in of cards).
+- **Tests.** `smoke-blank-order-core.mjs` (`test:timeline-blank-order-core`, pure Node, 59 assertions) and `smoke-blank-order.mjs` (`test:timeline-blank-order`, port 8518,
+  191 assertions; `TLB_GROUPS=2,3` runs groups of it). `golden-old-worksheet.json` was recorded from the page before any edit: five timelines and settings, the worksheet markup
+  with style attributes removed (so a font on another machine cannot fail it) and the saved settings string, which must be unchanged. Printing is read off Chromium's PDF
+  on Letter and A4 (pages equal sheets, no blank page, the 200-character and the 58-character unbroken titles whole in `pdftotext -raw`). Breaks on purpose: 28 in the
+  pure module (23 failed first time, 3 survived and got assertions, 2 are equivalent and unbroken: a count of 0 that the slice handles anyway, and a `forEach` check for a list a
+  JSON link cannot carry other than as an array) and 44 in the page (41 failed first time, one of them by a crash and not a named line; 2 survived, a fixed six-across grid and a
+  reshuffle that adds one to the seed, and got assertions; 1 is equivalent: reading the hostile `kind` from `state.worksheet` instead of the form, which `persist` has already
+  cleaned by the time the page is built). Not every assertion has its own break. The first run of the page breaks used the environment variable `GROUPS`, which bash owns, and
+  proved nothing; they were re-run with `TLB_GROUPS`.
+- **Not done, not verified.** Nothing printed on paper or cut; no screen reader. A date blank on the strip itself is small (the strip is scaled to a page), so the line below
+  is where a student writes. The cards carry no category colour or photo (a photo would answer nothing, but was not asked for). Choosing a subset of events for the ordering
+  activity (it uses every titled event); a card size choice; a paper-size choice. `audit-print`'s seed does not click either new button, so the suite's PDFs are the print check.
+  `test:a11y` scans the default page only; the suite runs axe on every new panel state. The page's whole-document axe pass on a seeded timeline fails colour contrast on
+  category-coloured date labels on the paper strip: that is the existing screen timeline, not this change, and is not in the allowlist.
+
 ## Path 12 P3, increment 2: the final wager round and quiz-bowl on 030 (2026-10-07, AI-14, `CACHE_VERSION` v284; the code commit says v283, which AI-31-016 took before the merge)
 
 BACKLOG rank 29 had three modes left; this session was handed two, the final wager round and then quiz-bowl. The
