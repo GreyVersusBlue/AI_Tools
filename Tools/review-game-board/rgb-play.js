@@ -1,5 +1,5 @@
 /* Quiz / Review Game Board — play modes and printed sheets (Path 12 P3,
-   increments 1, 2 and 3, v281, v284 and v285). Publishes window.ReviewBoardPlay. Stores nothing and
+   increments 1, 2 and 3, v281, v284 and v286). Publishes window.ReviewBoardPlay. Stores nothing and
    reads nothing: the page hands in a board or a list of questions and saves
    the board itself, as it always has.
 
@@ -50,7 +50,7 @@
    question's words; what an entry scored is worked out from it (qbDeltas),
    which is why the page locks the three point values once a round has begun.
 
-   SPIN THE WHEEL (increment 3, v285)
+   SPIN THE WHEEL (increment 3, v286)
    Instead of a team choosing a clue, a spin chooses one. THE RULE, which the
    page states: the wheel has one wedge for every clue not yet played, and
    one more for each extra wedge the teacher has turned on (Lose a turn,

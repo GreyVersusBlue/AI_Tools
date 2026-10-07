@@ -335,6 +335,32 @@
   #worksheetPanel .checkRow label { display: flex; align-items: center; gap: .35rem; font-weight: 600; font-size: .82rem; margin: 0; }
   #worksheetPanel .checkRow input[type="checkbox"] { width: auto; margin: 0; }
   #worksheetPages { display: none; }
+  #orderingPages { display: none; }
+  #orderingPanel button { width: auto; display: inline-block; margin: 0 .5rem .3rem 0; }
+  #orderingPanel .checkRow { display: flex; flex-wrap: wrap; gap: .3rem 1.2rem; margin: .8rem 0; }
+  #orderingPanel .checkRow label, #orderingPanel .ordKindSet label { display: flex; align-items: center; gap: .35rem; font-weight: 600; font-size: .82rem; margin: 0; }
+  #orderingPanel input[type="checkbox"], #orderingPanel input[type="radio"] { width: auto; margin: 0; }
+  #orderingPanel .ordKindSet { border: 1px solid var(--line); border-radius: 6px; padding: .4rem .7rem; margin: .6rem 0; display: flex; flex-wrap: wrap; gap: .3rem 1.4rem; }
+  /* The ordering sheets. Sizes are min-height and never a fixed height with
+     overflow hidden: a long title makes its card taller, not shorter. */
+  .ordPage { position: relative; background: #fff; color: #16181d; page-break-after: always; padding: 0; }
+  .ordPage:last-child { page-break-after: auto; }
+  .ordPage h2 { margin: 0 0 .2rem; font-size: 1.1rem; }
+  .ordPage .ordSub { font-size: .82rem; color: #444; margin-bottom: .35rem; display: flex; justify-content: space-between; gap: 1rem; }
+  .ordPage .ordKeyTag { font-size: .8rem; font-weight: 700; color: var(--err); letter-spacing: .04em; }
+  .ordPage .ordGrid { display: grid; border-top: 1px dashed #555; border-left: 1px dashed #555; width: max-content; }
+  .ordPage .ordCard { box-sizing: border-box; border-right: 1px dashed #555; border-bottom: 1px dashed #555; padding: .5rem .7rem .6rem; display: flex; flex-direction: column; overflow: visible; }
+  .ordPage .ordCard .ordLabel { font-size: .72rem; font-weight: 700; color: #555; }
+  .ordPage .ordCard .ordTitle { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 1.15rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+  .ordPage .ordRow { break-inside: avoid; display: flex; align-items: baseline; gap: .6rem; padding: .45rem 0; border-bottom: 1px solid #ddd; font-size: 1.05rem; }
+  .ordPage .ordRow .ordRowNum { font-weight: 700; color: var(--accent); min-width: 2rem; }
+  .ordPage .ordRow .ordRowTitle { flex: 1; overflow-wrap: anywhere; }
+  .ordPage .ordRow .ordPlace { white-space: nowrap; font-size: .85rem; color: #444; }
+  .ordPage .ordRow .ordBox { display: inline-block; width: 2.6rem; height: 1.5rem; border: 1px solid #16181d; vertical-align: middle; }
+  .ordPage .ordKeyList { column-count: 2; column-gap: 1.6rem; font-size: 1rem; margin-top: .4rem; }
+  .ordPage .ordKeyItem { break-inside: avoid; padding: .3rem 0; overflow-wrap: anywhere; }
+  .ordPage .ordKeyItem .ordKeyNum { font-weight: 700; color: var(--accent); margin-right: .3rem; }
+  .ordPage .ordKeyItem .ordKeyCard { color: #555; font-size: .85rem; white-space: nowrap; }
   /* min-height, never a fixed height with overflow hidden: a long word bank or
      a big blank count has to push the page taller rather than being clipped
      off the bottom of the paper where nobody sees it go missing. */
@@ -355,6 +381,15 @@
   .wsPage .wsList .wsNum { font-weight: 700; color: var(--accent); margin-right: .3rem; }
   .wsPage .wsList .wsRule { display: inline-block; border-bottom: 1px solid #999; min-width: 14rem; }
   .wsPage .wsList .wsAnswer { font-weight: 700; }
+  /* A date blank is a ruled space wide enough for "Winter 1777–1778"; the
+     "both" rows put the date on a line of its own under the title. */
+  .wsPage .wsList .wsRuleDate { min-width: 9rem; }
+  .wsPage .wsList .wsDateRow { display: block; margin: .35rem 0 0 1.4rem; }
+  .wsPage .wsBank div { margin: .2rem 0; }
+  #wsHandBox { border: 1px solid var(--line); border-radius: 6px; margin: .6rem 0; padding: .4rem .7rem; }
+  #wsHandList { max-height: 12rem; overflow: auto; }
+  #wsHandList .wsHandItem { display: flex; align-items: center; gap: .35rem; font-weight: 400; font-size: .85rem; margin: .1rem 0; }
+  #wsHandList input[type="checkbox"] { width: auto; margin: 0; }
   .wsPage .wsKeyTag { font-size: .8rem; font-weight: 700; color: var(--err); letter-spacing: .04em; }
   /* The numbered badge on a blanked event, and the rule that replaces its
      title. Same shape as the map print's pin badge — one visual language for
@@ -374,6 +409,10 @@
   .event-label.has-blank-badge.above { bottom: calc(50% + 2.2rem); }
   .event-label.has-blank-badge.below { top: calc(50% + 2.2rem); }
   .event-label .lbl-blank { display: inline-block; min-width: 6rem; border-bottom: 1px solid #666; }
+  /* On an answer key that blanks dates, the revealed answer is underlined so
+     the page shows exactly what a student was asked for. */
+  .event-label .lbl-blank-date { min-width: 8rem; }
+  .event-label .lbl-answer { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 2px; }
 
   @media print {
     body * { visibility: hidden; }
@@ -413,7 +452,7 @@
        nothing but a background: the category dots on the line and in the key,
        the era bands, and the map's pin badges, whose white numbers were left
        on white paper. The property inherits, so the containers carry it. */
-    #printArea, #tiledPrintPages, #mapPrintPages, #worksheetPages { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #printArea, #tiledPrintPages, #mapPrintPages, #worksheetPages, #orderingPages { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
     /* Timeline worksheet — a fourth print container, same shape again. */
     body.worksheet-printing #printArea { display: none !important; }
@@ -422,6 +461,17 @@
     body.worksheet-printing #worksheetPages,
     body.worksheet-printing #worksheetPages * { visibility: visible !important; }
     body.worksheet-printing #worksheetPages {
+      display: block !important; width: 100%; margin: 0; padding: 0;
+    }
+
+    /* The ordering activity — a fifth container, same shape once more. */
+    body.ordering-printing #printArea { display: none !important; }
+    body.ordering-printing #tiledPrintPages { display: none !important; }
+    body.ordering-printing #mapPrintPages { display: none !important; }
+    body.ordering-printing #worksheetPages { display: none !important; }
+    body.ordering-printing #orderingPages,
+    body.ordering-printing #orderingPages * { visibility: visible !important; }
+    body.ordering-printing #orderingPages {
       display: block !important; width: 100%; margin: 0; padding: 0;
     }
   }
@@ -647,6 +697,33 @@
             </select>
           </div>
         </div>
+        <div class="row2">
+          <div>
+            <label for="wsBlankWhat">What to blank out</label>
+            <select id="wsBlankWhat">
+              <option value="title" selected>Titles (dates stay)</option>
+              <option value="date">Dates (titles stay)</option>
+              <option value="both">Titles and dates</option>
+            </select>
+          </div>
+          <div>
+            <label for="wsPick">Which events</label>
+            <select id="wsPick">
+              <option value="random" selected>A number, picked at random</option>
+              <option value="nth">Every nth event</option>
+              <option value="hand">The ones I choose</option>
+            </select>
+          </div>
+        </div>
+        <div id="wsNthRow" hidden>
+          <label for="wsNth">Blank every</label>
+          <input type="number" id="wsNth" min="1" max="50" step="1" value="2" style="width:6rem;">
+          <span class="hint" style="display:inline;">th event along the strip</span>
+        </div>
+        <fieldset id="wsHandBox" hidden>
+          <legend>Events to blank out</legend>
+          <div id="wsHandList"></div>
+        </fieldset>
         <div class="checkRow">
           <label><input type="checkbox" id="wsWordBank" checked> Word bank</label>
           <label><input type="checkbox" id="wsAnswerKey" checked> Answer key page</label>
@@ -656,6 +733,33 @@
         <div>
           <button type="button" id="btnWorksheetGo">Print worksheet</button>
           <button type="button" class="secondary" id="btnWorksheetClose">Close</button>
+        </div>
+      </div>
+
+      <button type="button" class="secondary" id="orderingToggleBtn">Ordering activity&hellip;</button>
+      <div class="card" id="orderingPanel" hidden>
+        <label style="margin-bottom:.4rem;">Ordering activity &amp; answer key</label>
+        <p class="hint">
+          The timeline&rsquo;s events with no dates on them, dealt out of order
+          for students to put back in sequence &mdash; as cards to cut apart, or
+          as a numbered list to write the order against. The dates are on the
+          answer key, on a page of its own.
+        </p>
+        <fieldset class="ordKindSet">
+          <legend>Print as</legend>
+          <label><input type="radio" name="ordKind" id="ordKindCards" value="cards" checked> Cut-apart cards</label>
+          <label><input type="radio" name="ordKind" id="ordKindList" value="list"> Numbered list</label>
+        </fieldset>
+        <div class="checkRow">
+          <label><input type="checkbox" id="ordAnswerKey" checked> Answer key page</label>
+          <label><input type="checkbox" id="ordNameLine" checked> Name / date line</label>
+        </div>
+        <p class="hint" id="ordNote" style="margin-top:0;"></p>
+        <p class="hint" id="ordStatus" role="status" aria-live="polite" style="margin-top:0;"></p>
+        <div>
+          <button type="button" id="btnOrderingGo">Print ordering activity</button>
+          <button type="button" class="secondary" id="btnOrdReshuffle">Reshuffle</button>
+          <button type="button" class="secondary" id="btnOrderingClose">Close</button>
         </div>
       </div>
     </div>
@@ -698,6 +802,7 @@
 <div id="tiledPrintPages" aria-hidden="true"></div>
 <div id="mapPrintPages" aria-hidden="true"></div>
 <div id="worksheetPages" aria-hidden="true"></div>
+<div id="orderingPages" aria-hidden="true"></div>
 
 <!-- Story mode. Hidden until Present is pressed; the teacher drives every
      step, so there is no timer, no autoplay and nothing for a student to
@@ -751,7 +856,8 @@
    'tiledPrintToggleBtn','tiledPrintPanel','tileCols','tileRows','btnTiledPrintGo','btnTiledPrintClose','tiledPrintPages',
    'mapPrintToggleBtn','mapPrintPanel','mapExtent','mapStyle','mapPinCount','btnMapPrintGo','btnMapPrintClose','mapPrintPages',
    'worksheetToggleBtn','worksheetPanel','wsBlankCount','wsVersions','wsWordBank','wsAnswerKey','wsNameLine',
-   'wsCountNote','btnWorksheetGo','btnWorksheetClose','worksheetPages',
+   'wsBlankWhat','wsPick','wsNthRow','wsNth','wsHandBox','wsHandList','wsCountNote','btnWorksheetGo','btnWorksheetClose','worksheetPages',
+   'orderingToggleBtn','orderingPanel','ordAnswerKey','ordNameLine','ordNote','ordStatus','btnOrderingGo','btnOrdReshuffle','btnOrderingClose','orderingPages',
    'presentBtn','storyOverlay','storyTitle','storyCounter','storyExitBtn','storyBody',
    'storyCat','storyDate','storyEventTitle','storyPlace','storyDesc','storyPhoto',
    'storyMap','storyMapLayer','storyNoMapNote','storyStrip','storyPrevBtn','storyNextBtn',
@@ -1164,6 +1270,9 @@
     // turns the same page into the answer key — same numbers, titles shown.
     var blankNumbers = data.blankNumbers || null;
     var blanksRevealed = !!data.blanksRevealed;
+    // What a blank hides: the title (the only thing a worksheet used to hide,
+    // and still the default), the date, or both. Anything else is the title.
+    var blankKind = data.blankKind === 'date' || data.blankKind === 'both' ? data.blankKind : 'title';
     var catColorMap = TimelineLayout.buildCategoryColorMap(data.events);
     var range = TimelineLayout.yearRangeOf(data.events.concat(data.eras));
     var pxPerYear = TimelineLayout.autoPxPerYear(range.min, range.max);
@@ -1219,7 +1328,9 @@
       gridLabel.className = 'grid-label';
       gridLabel.style.left = g.x + 'px';
       gridLabel.textContent = g.label;
-      canvas.appendChild(gridLabel);
+      // The year scale along the axis would answer a blanked date, so a
+      // worksheet that blanks dates leaves it off (the key keeps it).
+      if (!(blankNumbers && !blanksRevealed && blankKind !== 'title')) canvas.appendChild(gridLabel);
     });
 
     // Each track gets its own lane, stacked vertically, sharing the same
@@ -1318,19 +1429,26 @@
           lane.appendChild(blankBadge);
         }
         var blanked = blankNo != null && !blanksRevealed;
+        var blankTitle = blanked && blankKind !== 'date';
+        var blankDate = blanked && blankKind !== 'title';
+        // Only a worksheet that blanks something other than titles marks the
+        // revealed answer on its key; the title key stays as it was.
+        var markAnswer = blankNo != null && blanksRevealed && blankKind !== 'title';
 
         var label = document.createElement('div');
         // The side/offset classes are added after packing, below.
         label.className = 'event-label' + (blankNo != null ? ' has-blank-badge' : '');
         label.style.left = p.x + 'px';
         label.innerHTML =
-          '<div class="lbl-date"' + (catColor ? ' style="color:' + catColor + ';"' : '') + '>' + escapeHtml(p.label) + '</div>' +
-          (blanked
+          '<div class="lbl-date"' + (catColor ? ' style="color:' + catColor + ';"' : '') + '>' +
+            (blankDate ? '<span class="lbl-blank lbl-blank-date">&nbsp;</span>'
+              : (markAnswer && blankKind !== 'title' ? '<span class="lbl-answer">' + escapeHtml(p.label) + '</span>' : escapeHtml(p.label))) + '</div>' +
+          (blankTitle
             ? '<div class="lbl-title"><span class="lbl-blank">&nbsp;</span></div>'
-            : '<div class="lbl-title">' + escapeHtml(p.event.title) + '</div>') +
-          ((photoSrc(p.event) && !blanked) ? '<img src="' + escapeHtml(photoSrc(p.event)) + '" alt="">' : '');
+            : '<div class="lbl-title">' + (markAnswer && blankKind !== 'date' ? '<span class="lbl-answer">' + escapeHtml(p.event.title) + '</span>' : escapeHtml(p.event.title)) + '</div>') +
+          ((photoSrc(p.event) && !blankTitle) ? '<img src="' + escapeHtml(photoSrc(p.event)) + '" alt="">' : '');
         lane.appendChild(label);
-        built.push({ p: p, el: label, blanked: blanked });
+        built.push({ p: p, el: label, blanked: blankTitle });
       });
 
       // Measure, pack, then place. `offsetHeight` is 0 for a page built inside
@@ -1680,10 +1798,13 @@
     var tiled = document.body.classList.contains('tiled-printing');
     var mapped = document.body.classList.contains('map-printing');
     var worksheet = document.body.classList.contains('worksheet-printing');
-    if (!tiled && !mapped && !worksheet) return; // a plain Print needs no teardown
+    var ordering = document.body.classList.contains('ordering-printing');
+    if (!tiled && !mapped && !worksheet && !ordering) return; // a plain Print needs no teardown
     document.body.classList.remove('tiled-printing');
     document.body.classList.remove('map-printing');
     document.body.classList.remove('worksheet-printing');
+    document.body.classList.remove('ordering-printing');
+    els.orderingPages.innerHTML = '';
     els.tiledPrintPages.innerHTML = '';
     els.mapPrintPages.innerHTML = '';
     els.worksheetPages.innerHTML = '';
@@ -1937,33 +2058,82 @@
     var max = worksheetEligible().length;
     var raw = parseInt(els.wsBlankCount.value, 10);
     var count = isNaN(raw) ? Math.min(5, max) : Math.max(1, Math.min(Math.max(1, max), raw));
+    var hand = [];
+    [].forEach.call(els.wsHandList.querySelectorAll('input[type="checkbox"]'), function (box) {
+      if (box.checked) hand.push(Number(box.value));
+    });
+    var nb = TimelineWorksheet.normalizeBlank({
+      kind: els.wsBlankWhat.value, pick: els.wsPick.value, nth: parseInt(els.wsNth.value, 10), hand: hand
+    });
     return {
       count: count,
       versions: parseInt(els.wsVersions.value, 10) || 1,
       wordBank: els.wsWordBank.checked,
       answerKey: els.wsAnswerKey.checked,
-      nameLine: els.wsNameLine.checked
+      nameLine: els.wsNameLine.checked,
+      kind: nb.kind, pick: nb.pick, nth: nb.nth, hand: nb.hand
     };
   }
 
   /** Keeps the settings with the document, like every other per-timeline
       choice here, so reopening a unit's timeline next year reopens the
-      worksheet it was set up for. */
+      worksheet it was set up for. A choice made before dates could be blanked
+      is stored exactly as it was: the new fields are written only when they
+      differ from "titles, picked at random". */
   function persistWorksheetSettings() {
     if (!state) return;
-    state.worksheet = readWorksheetSettings();
+    var r = readWorksheetSettings();
+    var saved = { count: r.count, versions: r.versions, wordBank: r.wordBank, answerKey: r.answerKey, nameLine: r.nameLine };
+    if (r.kind !== 'title') saved.kind = r.kind;
+    if (r.pick !== 'random') saved.pick = r.pick;
+    if (r.pick === 'nth') saved.nth = r.nth;
+    if (r.pick === 'hand') saved.hand = r.hand;
+    state.worksheet = saved;
     save();
+  }
+
+  /** The tick boxes for "the ones I choose": every event with a title, along
+      the strip, each named by its title and its date. Built from elements. */
+  function buildWorksheetHandList(chosen) {
+    var list = els.wsHandList;
+    list.textContent = '';
+    TimelineWorksheet.chooseBlanks(state ? state.events : [], 0, 1, { pick: 'nth', nth: 1 }).forEach(function (ev) {
+      var label = document.createElement('label');
+      label.className = 'wsHandItem';
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.value = String(ev.id);
+      box.checked = chosen.indexOf(ev.id) !== -1;
+      label.appendChild(box);
+      label.appendChild(document.createTextNode(' ' + ev.title + ' (' + TimelineLayout.formatDateLabel(ev) + ')'));
+      list.appendChild(label);
+    });
+  }
+
+  function syncWorksheetPickUI() {
+    var pick = els.wsPick.value;
+    els.wsNthRow.hidden = pick !== 'nth';
+    els.wsHandBox.hidden = pick !== 'hand';
+    els.wsBlankCount.disabled = pick !== 'random';
   }
 
   function applyWorksheetSettingsToForm() {
     var ws = (state && state.worksheet) || {};
     var max = worksheetEligible().length;
+    var nb = TimelineWorksheet.normalizeBlank(ws);
     els.wsBlankCount.value = String(Math.max(1, Math.min(Math.max(1, max), ws.count != null ? ws.count : Math.min(5, max || 1))));
     els.wsVersions.value = String(ws.versions || 1);
     els.wsWordBank.checked = ws.wordBank !== false;
     els.wsAnswerKey.checked = ws.answerKey !== false;
     els.wsNameLine.checked = ws.nameLine !== false;
+    els.wsBlankWhat.value = nb.kind;
+    els.wsPick.value = nb.pick;
+    els.wsNth.value = String(nb.nth);
+    buildWorksheetHandList(nb.hand);
+    syncWorksheetPickUI();
   }
+
+  var WS_KIND_WORDS = { title: 'titles', date: 'dates', both: 'titles and dates' };
 
   function updateWorksheetNote() {
     if (!state) return;
@@ -1975,12 +2145,22 @@
     // Skipped while the timeline is still empty, so opening a fresh tool
     // doesn't quietly rewrite the default 5 down to 1 and leave it there.
     if (max > 0 && String(s.count) !== els.wsBlankCount.value) els.wsBlankCount.value = String(s.count);
-    els.wsCountNote.textContent = max === 0
-      ? 'Add at least one event with a title first — the title is what the blank is asking for.'
-      : s.count + ' of ' + max + ' event' + (max === 1 ? '' : 's') + ' will be blanked out. ' +
+    if (max === 0) {
+      els.wsCountNote.textContent = 'Add at least one event with a title first — the title is what the blank is asking for.';
+    } else if (s.pick === 'random' && s.kind === 'title') {
+      els.wsCountNote.textContent = s.count + ' of ' + max + ' event' + (max === 1 ? '' : 's') + ' will be blanked out. ' +
         (s.versions > 1
           ? 'Each of the ' + s.versions + ' versions blanks a different set, so neighbours get different papers.'
           : 'The rest stay on the strip as clues.');
+    } else {
+      var n = TimelineWorksheet.chooseBlanks(state.events, s.count, 1, s).length;
+      var tail = s.pick === 'hand'
+        ? (s.versions > 1 ? ' Every version blanks the same events; the word bank is shuffled differently on each.' : '')
+        : (s.versions > 1 ? ' Each of the ' + s.versions + ' versions blanks a different set, so neighbours get different papers.' : '');
+      els.wsCountNote.textContent = n + ' of ' + max + ' event' + (max === 1 ? '' : 's') + ' will have ' +
+        (s.kind === 'title' ? 'its title' : s.kind === 'date' ? 'its date' : 'its title and its date') + ' blanked out.' +
+        (s.kind !== 'title' ? ' The year scale along the strip is left off the worksheet and kept on the key.' : '') + tail;
+    }
   }
 
   /** One page. `items` are this version's blanks; `isKey` swaps the blanked
@@ -2006,10 +2186,19 @@
 
     var instructions = document.createElement('div');
     instructions.className = 'wsInstructions';
-    instructions.textContent = isKey
-      ? 'The numbered blanks on this version, in order along the timeline.'
-      : 'Each numbered circle on the timeline is a missing event. Write the event that belongs there on the matching line below.' +
-        (settings.wordBank ? ' Every answer is in the word bank.' : '');
+    var kind = settings.kind || 'title';
+    if (kind === 'title') {
+      instructions.textContent = isKey
+        ? 'The numbered blanks on this version, in order along the timeline.'
+        : 'Each numbered circle on the timeline is a missing event. Write the event that belongs there on the matching line below.' +
+          (settings.wordBank ? ' Every answer is in the word bank.' : '');
+    } else {
+      var what = kind === 'date' ? 'date' : 'title and date';
+      instructions.textContent = isKey
+        ? 'The numbered blanks on this version, in order along the timeline. Blanked on this sheet: ' + (kind === 'date' ? 'dates' : 'titles and dates') + ' (underlined on the strip, bold in the list).'
+        : 'Each numbered circle on the timeline is an event whose ' + what + ' is missing. Write the ' + what + ' on the matching line' + (kind === 'both' ? 's' : '') + ' below.' +
+          (settings.wordBank ? ' Every answer is in the word bank.' : '');
+    }
     page.appendChild(instructions);
 
     var strip = document.createElement('div');
@@ -2017,7 +2206,8 @@
     strip.style.width = WS_PAGE_W_PX + 'px';
     var poster = buildTimelinePoster({
       blankNumbers: TimelineWorksheet.blankNumberMap(items),
-      blanksRevealed: !!isKey
+      blanksRevealed: !!isKey,
+      blankKind: kind
     });
     // The box takes the fitted poster's own height rather than a fixed one.
     // A timeline is wide and short, so the fit is almost always
@@ -2047,15 +2237,55 @@
     if (settings.wordBank && !isKey && items.length) {
       var bank = document.createElement('div');
       bank.className = 'wsBank';
-      bank.innerHTML = '<span class="wsBankLabel">Word bank:</span>' +
-        TimelineWorksheet.wordBank(items, version).map(function (w) {
-          return '<span class="wsBankWord">' + escapeHtml(w) + '</span>';
-        }).join('');
+      var bankWords = function (words) {
+        return words.map(function (w) { return '<span class="wsBankWord">' + escapeHtml(w) + '</span>'; }).join('');
+      };
+      var dateOf = function (ev) { return TimelineLayout.formatDateLabel(ev); };
+      // A bank group built from elements: the date and both-blanked banks are
+      // new, and what they hold is typed text.
+      var bankGroup = function (parent, label, words) {
+        parent.appendChild(ordText('span', 'wsBankLabel', label));
+        words.forEach(function (w) { parent.appendChild(ordText('span', 'wsBankWord', w)); });
+      };
+      if (kind === 'title') {
+        bank.innerHTML = '<span class="wsBankLabel">Word bank:</span>' + bankWords(TimelineWorksheet.wordBank(items, version));
+      } else if (kind === 'date') {
+        bankGroup(bank, 'Date bank:', TimelineWorksheet.dateBank(items, version, dateOf));
+      } else {
+        var titlesRow = document.createElement('div');
+        bankGroup(titlesRow, 'Titles:', TimelineWorksheet.wordBank(items, version));
+        var datesRow = document.createElement('div');
+        bankGroup(datesRow, 'Dates:', TimelineWorksheet.dateBank(items, version, dateOf));
+        bank.appendChild(titlesRow);
+        bank.appendChild(datesRow);
+      }
       page.appendChild(bank);
     }
 
     var list = document.createElement('div');
     list.className = 'wsList';
+    if (kind !== 'title') {
+      items.forEach(function (it) {
+        var when = TimelineLayout.formatDateLabel(it.event);
+        var row = ordText('div', 'wsItem', '');
+        row.appendChild(ordText('span', 'wsNum', it.number + '.'));
+        row.appendChild(document.createTextNode(' '));
+        var rule = function (more) { return ordText('span', 'wsRule' + (more ? ' ' + more : ''), '\u00a0'); };
+        var answer = function (text) { return ordText('span', 'wsAnswer', text); };
+        if (kind === 'date') {
+          row.appendChild(document.createTextNode('(' + it.event.title + ') '));
+          row.appendChild(isKey ? answer(when) : rule('wsRuleDate'));
+        } else {
+          row.appendChild(isKey ? answer(it.event.title) : rule());
+          var dateRow = ordText('span', 'wsDateRow', 'Date: ');
+          dateRow.appendChild(isKey ? answer(when) : rule('wsRuleDate'));
+          row.appendChild(dateRow);
+        }
+        list.appendChild(row);
+      });
+      page.appendChild(list);
+      return page;
+    }
     list.innerHTML = items.map(function (it) {
       var when = escapeHtml(TimelineLayout.formatDateLabel(it.event));
       var answer = isKey
@@ -2081,11 +2311,15 @@
     btn.textContent = 'Building…';
     try {
       var settings = readWorksheetSettings();
+      if (!TimelineWorksheet.chooseBlanks(state.events, settings.count, 1, settings).length) {
+        alert('Choose at least one event to blank out.');
+        return;
+      }
       persistWorksheetSettings();
       var container = els.worksheetPages;
       container.innerHTML = '';
       for (var v = 1; v <= settings.versions; v++) {
-        var items = TimelineWorksheet.buildItems(state.events, settings.count, v);
+        var items = TimelineWorksheet.buildItems(state.events, settings.count, v, settings);
         container.appendChild(buildWorksheetPage(items, settings, v, false));
         if (settings.answerKey) container.appendChild(buildWorksheetPage(items, settings, v, true));
       }
@@ -2115,8 +2349,227 @@
   });
   els.btnWorksheetClose.addEventListener('click', function () { els.worksheetPanel.hidden = true; });
   els.btnWorksheetGo.addEventListener('click', function () { printWorksheet(); });
-  ['wsBlankCount', 'wsVersions', 'wsWordBank', 'wsAnswerKey', 'wsNameLine'].forEach(function (id) {
-    els[id].addEventListener('change', function () { updateWorksheetNote(); persistWorksheetSettings(); });
+  ['wsBlankCount', 'wsVersions', 'wsWordBank', 'wsAnswerKey', 'wsNameLine', 'wsBlankWhat', 'wsPick', 'wsNth'].forEach(function (id) {
+    els[id].addEventListener('change', function () { syncWorksheetPickUI(); updateWorksheetNote(); persistWorksheetSettings(); });
+  });
+  els.wsHandList.addEventListener('change', function () { updateWorksheetNote(); persistWorksheetSettings(); });
+
+  /* ---------- printed ordering activity ----------
+     The timeline's events with their dates left off, dealt out of order, as
+     cards to cut apart or a numbered list to write the order against, with
+     the answer key on a page of its own. The deal is tlb-worksheet.js's
+     TimelineWorksheet.deal(): a pure function of the events and the seed kept
+     on the timeline, so a reprint is the same paper and Reshuffle is a new
+     seed. Landscape like the other prints, built from elements (a title is
+     typed text), and every size is a minimum, so a long title makes its card
+     taller rather than being cut off. */
+  var ORD_AREA_H_PX = 6.2 * CSS_PX_PER_IN; // room for the cards on a page, under the heading (a landscape A4 has 7.4in of it)
+  var ORD_MIN_CARD_H_PX = 1.4 * CSS_PX_PER_IN;
+
+  function orderingEligible() {
+    return state ? state.events.filter(function (e) { return !!(e.title || '').trim(); }) : [];
+  }
+
+  /** What the panel and the timeline say, cleaned: a link or file can carry
+      anything in `ordering`. */
+  function readOrderingSettings() {
+    var o = (state && state.ordering && typeof state.ordering === 'object') ? state.ordering : {};
+    return {
+      kind: o.kind === 'list' ? 'list' : 'cards',
+      answerKey: o.answerKey !== false,
+      nameLine: o.nameLine !== false,
+      seed: TimelineWorksheet.cleanSeed(o.seed)
+    };
+  }
+
+  function writeOrderingSettings(next) {
+    if (!state) return;
+    state.ordering = { kind: next.kind, answerKey: next.answerKey, nameLine: next.nameLine, seed: next.seed };
+    save();
+  }
+
+  function orderingFormSettings() {
+    var cur = readOrderingSettings();
+    return {
+      kind: document.getElementById('ordKindList').checked ? 'list' : 'cards',
+      answerKey: els.ordAnswerKey.checked,
+      nameLine: els.ordNameLine.checked,
+      seed: cur.seed
+    };
+  }
+
+  function applyOrderingSettingsToForm() {
+    var s = readOrderingSettings();
+    document.getElementById(s.kind === 'list' ? 'ordKindList' : 'ordKindCards').checked = true;
+    els.ordAnswerKey.checked = s.answerKey;
+    els.ordNameLine.checked = s.nameLine;
+  }
+
+  function updateOrderingNote() {
+    if (!state) return;
+    var n = orderingEligible().length;
+    var s = readOrderingSettings();
+    els.ordNote.textContent = n < 2
+      ? 'Add at least two events with titles first — one event has nothing to be put in order with.'
+      : n + ' events, dealt with shuffle number ' + s.seed + '. The same timeline and the same shuffle number print the same paper; Reshuffle moves to a new one.';
+  }
+
+  function ordText(tag, cls, text) {
+    var el = document.createElement(tag);
+    if (cls) el.className = cls;
+    el.textContent = text;
+    return el;
+  }
+
+  function ordPageShell(settings, suffix, isKey) {
+    var page = document.createElement('div');
+    page.className = 'ordPage';
+    page.style.width = WS_PAGE_W_PX + 'px';
+    page.appendChild(ordText('h2', '', (state.title || state.name) + ' — ' + suffix));
+    var sub = document.createElement('div');
+    sub.className = 'ordSub';
+    sub.appendChild(isKey ? ordText('span', 'ordKeyTag', 'ANSWER KEY — TEACHER COPY')
+      : ordText('span', '', settings.nameLine ? 'Name ______________________________  Date ______________' : ''));
+    page.appendChild(sub);
+    return page;
+  }
+
+  function ordCardEl(card) {
+    var el = document.createElement('div');
+    el.className = 'ordCard';
+    el.appendChild(ordText('span', 'ordLabel', String(card.label)));
+    el.appendChild(ordText('div', 'ordTitle', card.event.title));
+    return el;
+  }
+
+  /** The widest grid that leaves at least two rows of the tallest card on a
+      page; cards are measured with the page's own fonts, in a probe off to the
+      side, because a title that wraps to five lines is exactly the card that
+      must not be cut off. */
+  function ordLayoutFor(cards) {
+    var chosen = null;
+    var cols = [4, 3, 2, 1];
+    for (var c = 0; c < cols.length; c++) {
+      var colW = Math.floor(WS_PAGE_W_PX / cols[c]) - 1;
+      var probe = document.createElement('div');
+      probe.style.cssText = 'position:absolute; left:-99999px; top:0; width:' + colW + 'px;';
+      var grid = document.createElement('div');
+      grid.className = 'ordPage';
+      probe.appendChild(grid);
+      cards.forEach(function (card) { var el = ordCardEl(card); el.style.width = colW + 'px'; grid.appendChild(el); });
+      document.body.appendChild(probe);
+      var tallest = 0;
+      [].forEach.call(grid.children, function (el) { tallest = Math.max(tallest, el.getBoundingClientRect().height); });
+      document.body.removeChild(probe);
+      var h = Math.ceil(Math.max(ORD_MIN_CARD_H_PX, tallest)) + 2;
+      var rows = Math.floor(ORD_AREA_H_PX / h);
+      chosen = { cols: cols[c], colW: colW, h: h, rows: Math.max(1, rows) };
+      if (rows >= 2) break;
+    }
+    return chosen;
+  }
+
+  function buildOrderingCardPages(deal, settings) {
+    var lay = ordLayoutFor(deal.cards);
+    var perPage = lay.cols * lay.rows;
+    var pages = [];
+    for (var i = 0; i < deal.cards.length; i += perPage) {
+      var page = ordPageShell(settings, 'ordering cards (cut along the dashed lines)', false);
+      var grid = document.createElement('div');
+      grid.className = 'ordGrid';
+      grid.style.gridTemplateColumns = 'repeat(' + lay.cols + ', ' + lay.colW + 'px)';
+      grid.style.gridAutoRows = 'minmax(' + lay.h + 'px, auto)';
+      deal.cards.slice(i, i + perPage).forEach(function (card) {
+        var el = ordCardEl(card);
+        el.style.width = lay.colW + 'px';
+        grid.appendChild(el);
+      });
+      page.appendChild(grid);
+      pages.push(page);
+    }
+    return pages;
+  }
+
+  function buildOrderingListPage(deal, settings) {
+    var page = ordPageShell(settings, 'put these events in order', false);
+    page.appendChild(ordText('div', 'wsInstructions', 'Write 1 next to the event that happened first, 2 next to the one after it, and so on up to ' + deal.cards.length + '.'));
+    deal.cards.forEach(function (card) {
+      var row = document.createElement('div');
+      row.className = 'ordRow';
+      row.appendChild(ordText('span', 'ordRowNum', card.label + '.'));
+      row.appendChild(ordText('span', 'ordRowTitle', card.event.title));
+      var place = document.createElement('span');
+      place.className = 'ordPlace';
+      place.appendChild(document.createTextNode('Order: '));
+      place.appendChild(ordText('span', 'ordBox', ''));
+      row.appendChild(place);
+      page.appendChild(row);
+    });
+    return page;
+  }
+
+  function buildOrderingKeyPage(deal, settings) {
+    var page = ordPageShell(settings, 'ordering answer key', true);
+    var tied = deal.key.some(function (k) { return k.tied; });
+    page.appendChild(ordText('div', 'wsInstructions',
+      'The events in the order they happened, earliest first, with the ' + (settings.kind === 'list' ? 'number' : 'card number') +
+      ' each was dealt as.' + (tied ? ' Events marked * share a year with a neighbour and may go either way round.' : '')));
+    var list = document.createElement('div');
+    list.className = 'ordKeyList';
+    deal.key.forEach(function (k) {
+      var item = document.createElement('div');
+      item.className = 'ordKeyItem';
+      item.appendChild(ordText('span', 'ordKeyNum', k.position + '.'));
+      item.appendChild(document.createTextNode(' ' + k.event.title + ' (' + TimelineLayout.formatDateLabel(k.event) + ')' + (k.tied ? ' *' : '') + ' '));
+      item.appendChild(ordText('span', 'ordKeyCard', '— ' + (settings.kind === 'list' ? 'no. ' : 'card ') + k.label));
+      list.appendChild(item);
+    });
+    page.appendChild(list);
+    return page;
+  }
+
+  function buildOrderingPages(settings) {
+    var deal = TimelineWorksheet.deal(state.events, settings.seed);
+    var pages = settings.kind === 'list' ? [buildOrderingListPage(deal, settings)] : buildOrderingCardPages(deal, settings);
+    if (settings.answerKey) pages.push(buildOrderingKeyPage(deal, settings));
+    return pages;
+  }
+
+  function printOrdering() {
+    if (!state) return;
+    if (orderingEligible().length < 2) {
+      alert('Add at least two events with titles first — there is nothing to put in order with only one.');
+      return;
+    }
+    var settings = orderingFormSettings();
+    writeOrderingSettings(settings);
+    var container = els.orderingPages;
+    container.textContent = '';
+    buildOrderingPages(settings).forEach(function (pg) { container.appendChild(pg); });
+    setTiledPrintPageSize(); // landscape, shared with the other prints
+    els.orderingPanel.hidden = true;
+    document.body.classList.add('ordering-printing');
+    window.print();
+  }
+
+  els.orderingToggleBtn.addEventListener('click', function () {
+    els.orderingPanel.hidden = !els.orderingPanel.hidden;
+    els.ordStatus.textContent = '';
+    if (!els.orderingPanel.hidden) { applyOrderingSettingsToForm(); updateOrderingNote(); }
+  });
+  els.btnOrderingClose.addEventListener('click', function () { els.orderingPanel.hidden = true; });
+  els.btnOrderingGo.addEventListener('click', printOrdering);
+  els.btnOrdReshuffle.addEventListener('click', function () {
+    if (!state) return;
+    var next = orderingFormSettings();
+    next.seed = TimelineWorksheet.nextSeed(state.events, next.seed);
+    writeOrderingSettings(next);
+    updateOrderingNote();
+    els.ordStatus.textContent = 'Reshuffled. Now on shuffle number ' + next.seed + '.';
+  });
+  ['ordKindCards', 'ordKindList', 'ordAnswerKey', 'ordNameLine'].forEach(function (id) {
+    var el = document.getElementById(id);
+    el.addEventListener('change', function () { writeOrderingSettings(orderingFormSettings()); updateOrderingNote(); });
   });
 
   /* ---------- story mode (projector playthrough) ----------

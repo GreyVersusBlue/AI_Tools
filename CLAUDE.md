@@ -568,7 +568,7 @@ files must be added there too.
   and the study guide, from a board or the bank tab's list, built from elements. Since v284 it has the final wager round
   and quiz-bowl too: one field each on the board (`final`, `quizBowl`, the quiz-bowl log holding question ids), the
   bank read with `peek()` and never written, both played on one overlay (`#roundOverlay`) and each with its own
-  take-back button. Since v285 it has spin-the-wheel, the last of the modes: one `wheel` field, and **the
+  take-back button. Since v286 it has spin-the-wheel, the last of the modes: one `wheel` field, and **the
   spin is never chance at play time** (it is worked out from a seed stored on the board and the spin's number, and saved
   before the picture turns; do not call `Math.random` for a spin). A later mode is opt-in the same way, adds its fields only once used, and runs
   `_old-game.mjs`, `_every-team-game.mjs` and `_rounds-game.mjs` unchanged (`npm run test:play-rounds` holds the second, `npm run test:play-wheel` the third). **030

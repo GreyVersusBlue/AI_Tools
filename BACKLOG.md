@@ -87,7 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
-- **AI-14 (v285), rank 29 (DELETED: Path 12 P3 is whole), Path 12 P3 increment 3: spin-the-wheel on 030.** A board has
+- **AI-14 (v286; the code commit says v285, which AI-31-015 took), rank 29 (DELETED: Path 12 P3 is whole), Path 12 P3 increment 3: spin-the-wheel on 030.** A board has
   a **Spin the wheel** tick box, off until ticked. On, a spin (the button, or the S key) chooses the clue: one wedge for
   every clue not yet played, **each as likely as any other**, plus one each for two extra wedges the teacher may tick
   (**Lose a turn**, **Double points**: the next clue played is worth twice its points; a Daily Double keeps its wager).
@@ -596,7 +596,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 127 | Reuse the real timer; period-aware auto-advance | 010 | ½ | | [010 Command Center](#010--command-center) |
 | 128 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
 | 130 | Date-received per student; contract-gate reporting | 013 | ½ | | [013 Lab Safety Contract Tracker](#013--lab-safety-contract-tracker) |
-| 131 | Printed ordering activity; blanking dates, not just titles | 015 | ½ | | [015 Timeline Builder](#015--timeline-builder) |
 | 133 | Peer feedback slips; gallery-walk reactions | 017 | ½ | | [017 Gallery Walk QR Codes](#017--gallery-walk-qr-codes) |
 | 134 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
 | 135 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
@@ -4439,7 +4438,7 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   — all reading the same bank.
   **Increment 1 shipped (AI-14, 2026-10-07, v281; the code commit says v280, which AI-31-012 took): every-team-answers, and the printed quiz and study guide.
   Increment 2 shipped (AI-14, 2026-10-07, v284; the code commit says v283, which AI-31-016 took): the final wager round and quiz-bowl.
-  Increment 3 shipped (AI-14, 2026-10-07, v285): spin-the-wheel. **P3 is whole and its ranked row is deleted.** The
+  Increment 3 shipped (AI-14, 2026-10-07, v286; the code commit says v285, which AI-31-015 took): spin-the-wheel. **P3 is whole and its ranked row is deleted.** The
   rest of this bullet is increment 1 as built, then increment 2, then increment 3;
   `Tools/review-game-board/rgb-play.js`'s header says the same and is the reference.**
   - *How a board was played, and still is by default.* A clue is opened from the grid, **Show answer** (or Space)
@@ -4594,7 +4593,7 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
     run (axe in both themes, roles, names, keys and focus only). No password manager was tried against the wager
     boxes. A bank of thousands as a quiz-bowl source was not tried (each draw of the overlay reads the source once).
     Not run: the full `npm test`.
-  - **Increment 3 (v285): spin the wheel.** A tick box in the board's options, off on every board until ticked, with
+  - **Increment 3 (v286): spin the wheel.** A tick box in the board's options, off on every board until ticked, with
     a block under the options while on: the rule, two tick boxes for the extra wedges, a picture of the wheel, **Spin
     the wheel**, a status line, the odds in words, the count of spins and the last one, and a list of what is on the
     wheel. *The rule, as the page says it:* a spin chooses the clue, not a team; the wheel has one wedge for every clue
@@ -8509,9 +8508,10 @@ open; struck through in session `c1jqjp` after checking each against the
 source. The list was pointing later rounds at finished work.
 
 - ~~**Blank / student-fill version**~~ — **done, 2026-08-14** (SS demo round
-  2: the timeline worksheet print, `tlb-worksheet.js`). Blanks titles only;
-  blanking *dates* instead is still open and is listed under "Where the next
-  round should pick up" for that round.
+  2: the timeline worksheet print, `tlb-worksheet.js`). Blanked titles only
+  until 2026-10-07 (AI-31-015, v285): a worksheet now blanks titles, dates or
+  both, for a random number, every nth event or events picked by hand, with the
+  year scale left off the sheet and kept on the key.
 No Quick Wins remain open. A future round should look to Major Features
 below, or find a genuinely new gap — the label de-overlap fix that session
 `c1jqjp` shipped was one of those, and it came out of the previous round's
@@ -8519,11 +8519,12 @@ notes rather than out of this list.
 
 #### Major Features
 
-- **Printed ordering activity** — *partly done*. The paper half shipped
-  2026-08-14 as the timeline worksheet (numbered blanks, word bank, answer
-  key). What is still unbuilt is the **cut-apart cards** version: ten events
-  on separate cards for students to physically sequence, which is a different
-  print layout from the worksheet's spatial strip.
+- ~~**Printed ordering activity**~~ — **done, 2026-10-07** (AI-31-015, v285): an
+  "Ordering activity" panel prints the titled events with no dates as cut-apart
+  cards or a numbered list, dealt from a seed stored with the timeline (Reshuffle
+  moves it; three or more events are never dealt in order), with an answer key
+  on a page of its own. It prints through the tool's own containers, not the
+  shared print kit (this page never did), landscape on Letter or A4.
 - **Comparative timelines as a first-class teaching device.** Compare mode
   exists; framing it as "what was happening in China while this happened in
   Europe" — with a shipped set of reference timelines for major periods —
