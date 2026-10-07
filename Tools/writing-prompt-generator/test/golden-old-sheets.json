@@ -1,0 +1,96 @@
+{
+  "recordedFrom": "529c79c (the page before sentence starters and stuck lines)",
+  "scenarios": {
+    "fresh": {
+      "prompts": [
+        "Write about a time you had to make a decision with no clearly right answer.",
+        "Write about an experience that made you more aware of privilege, yours or someone else's.",
+        "Should voting be mandatory for all eligible citizens?",
+        "Write about a risk you took that didn't pay off, and what it taught you anyway."
+      ],
+      "stage": "0fafa1b6d55ed49400609a5312589899cf493ad19ece4266718365fea7db5387",
+      "poster": "0d7028ce8dd6e483d5c28b7f95cfd133736d43da0f5d89ec8adffc1ba7f06c99",
+      "handout": "64fc91d097abb2007745accb7362a18191deab0612ea6a83e3a4537830d824f9",
+      "roster": "8598ad529931a8a8c154c3aefc581b4cecb5cb36add1615464271ec79b603cc6",
+      "stored": "1e728a77b51087e647445b3ef3f52326f57d541214701438ad6e9ebba62beaef"
+    },
+    "ms-persuasive": {
+      "prompts": [
+        "Argue for or against year-round school schedules.",
+        "Should homework be optional? Take a side and defend it.",
+        "Should the school day start later in the morning?",
+        "Should grades be replaced with pass/fail for every class?"
+      ],
+      "stage": "e09323c83364b8d7fbf473bab9e8a88bd02fb0a9159428b5f869137aa82c117f",
+      "poster": "6c155dc14392eb19fb53acbe25ff452ee151e94e6387cb01215f33b20f7830b9",
+      "handout": "48b2cc2c2650dacb5405f3984abfd5ec50389733fff9eaa53db2636489a3b1d3",
+      "roster": "48a0e6d2cd31d2894d4dcb96a36f80b73cb9f732b0887a7ec922340c99c92f90",
+      "stored": "c0a304ea1ba182ddc2df4e494ed30c4fe8caa41393f933e197c4b5820fa3fc1a"
+    },
+    "hs-creative-wide": {
+      "prompts": [
+        "Write a story where technology designed to help people ends up controlling them.",
+        "Write about the last person on Earth to remember something everyone else has forgotten.",
+        "Write a story told entirely through text messages or emails.",
+        "Write about a world where everyone can see how much time they have left."
+      ],
+      "stage": "7f6aa190148c66a05b101a902220fa2977faa89ec173f6e0c590d2e1f5a946c4",
+      "poster": "2daa323f0393f3c8879b62f5f146f701bef8bf4338b26c7299eb726952e0eaaa",
+      "handout": "f56bd2a3d4a522b14cc126106f10403a80e6fa406435d25631844476a72c3502",
+      "roster": "a8e9e3104a498226de2fe4f3bee5ef8173c4942e07c5a8af4600b6fb1dd28ed7",
+      "stored": "05920fc6f080c9eb86ed6760bb2afefab0f65d6f908a8133678e6ce1aeaac0fa"
+    },
+    "expository-narrow": {
+      "prompts": [
+        "Explain how a historical figure's reputation has changed over time, and why.",
+        "Explain what you wish more adults understood about being a kid today.",
+        "Explain the process of how a bill becomes law, and where it commonly gets stuck.",
+        "Explain the economic forces behind a current event in the news."
+      ],
+      "stage": "30dbf0b42e88e7b06ef8e5b1178a3aa50c0b5a76b848cab7cc197fc03f12a0dc",
+      "poster": "33a7b263a31ad68b4f9702b53f7c66d46ce781e0e613de2ca6e395dd4cf435bb",
+      "handout": "2407103c7d1873c52993f1dcd36c7c8bd61c42f5685e51238caedb2acadc8592",
+      "roster": "5744972aca9327a45ff1848328ecd0adb8386250ee05a84050d9c3c88efd0780",
+      "stored": "b8103103c5a4080b964d6023a7ff80859bf7ebc5c6d71f92bb7bfb2d8e5fae94"
+    },
+    "descriptive-blank": {
+      "prompts": [
+        "Describe the exact moment a relationship began to change, without naming the emotion directly.",
+        "Describe a stranger you observed closely enough to imagine their whole life.",
+        "Describe a person through the objects they leave behind in a room.",
+        "Describe the sound of a place you know well with your eyes closed."
+      ],
+      "stage": "8262af0fc246262e77f7c5d2b2085f64d331fa46c438ea5154caf399c93001d9",
+      "poster": "520361cb8d19783bbf862262fba35629e4fcc55e0c8589166e763d611430f0e1",
+      "handout": "4c03079135e6bf99e0ae0b543dc10f4f99d2faac784022d09529b41665c4b736",
+      "roster": "3e050335998e7040835a9a3520fb3cdf496fd74998dde471baf251610294ffdc",
+      "stored": "0d91d5af5eb632d86dc1fc1592d72b0751c8e2cada93965399a5a473780565ee"
+    },
+    "custom-prompts": {
+      "prompts": [
+        "Should the class pet be a fish or a hamster? Take a side.",
+        "Tell the story of a time you had to solve a problem on your own.",
+        "Write about a time an adult surprised you by being wrong, or right, about something.",
+        "Write about a memorable trip or vacation you took."
+      ],
+      "stage": "5e695a4dc7bca2ba450bef56b434a3d01d8a54ab9ec7a34bc21944fbde7fe21d",
+      "poster": "2d453b4ff153ac4ae5b6c59e4d3e6965c3b2586fc3c5ba49e8556ca418575e3e",
+      "handout": "7272a5edfd0206f4811c81a6c8d0ebd2b6390793a8cbafc377a857f5676b6896",
+      "roster": "7a3e286e1e0e89b167c01a12dbb244ac37b5a31de56b214d97ba38f148fdf855",
+      "stored": "25e708f23298f62845417fb6f7b380829d7421ce4b9b4b852086b8437dd3db83"
+    },
+    "sequence-set": {
+      "prompts": [
+        "Tell the story of the best day you've had this year.",
+        "Should voting be mandatory for all eligible citizens?",
+        "Write a story that begins: The last thing I expected to find in my locker was...",
+        "Explain how algorithms shape what information people see online."
+      ],
+      "stage": "7f35054966b25a3baf87225e2e108f6728fa0f2ef4cea014b8e9c2a349be21a4",
+      "poster": "7a39bed3c21011ba77ff8885c895c7645d65aa725d54296f2a53874a0737c330",
+      "handout": "191eadc26e1fd3103a0cb6c46eb4698a9f6d8b52f07688b0d379a82b4d8f64bb",
+      "roster": "a08e03bba068ec6d0728456930326361dfa7c45fa0ecb89ec3106a602ec87df1",
+      "stored": "078f09135c05f3a1817a0f3a9a24666b481081f1b43bfbb25e729ae53bf00cea"
+    }
+  }
+}
