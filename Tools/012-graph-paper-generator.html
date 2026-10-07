@@ -94,6 +94,12 @@
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   @media print {
+    /* What visibility hides still takes its height: at a Letter page's 816px the layout is one
+       column, so the hidden editor ran on for a blank second sheet after every sheet printed.
+       Everything but the sheet is taken out of the flow as well. */
+    .app-header, .toolbar, .editor, .preview-note, footer.note { display: none !important; }
+    body { padding: 0; }
+    .preview-wrap { padding: 0; }
     body * { visibility: hidden; }
     #previewArea, #previewArea * { visibility: visible; }
     #previewArea { position: absolute; left: 0; top: 0; margin: 0; box-shadow: none; width: 100%; }
@@ -127,15 +133,19 @@
       </div>
 
       <div class="card">
-        <div class="mode-tabs">
-          <div class="mode-tab active" data-mode="graph">Graph paper</div>
-          <div class="mode-tab" data-mode="numberline">Number line</div>
-          <div class="mode-tab" data-mode="plane">Coordinate plane</div>
-          <div class="mode-tab" data-mode="worksheet">Worksheet</div>
-          <div class="mode-tab" data-mode="isometric">Isometric</div>
-          <div class="mode-tab" data-mode="cornell">Cornell notes</div>
-          <div class="mode-tab" data-mode="handwriting">Handwriting lines</div>
-          <div class="mode-tab" data-mode="calibration">Printer check</div>
+        <div class="mode-tabs" role="group" aria-label="Sheet type">
+          <div class="mode-tab active" data-mode="graph" role="button" tabindex="0" aria-pressed="true">Graph paper</div>
+          <div class="mode-tab" data-mode="numberline" role="button" tabindex="0" aria-pressed="false">Number line</div>
+          <div class="mode-tab" data-mode="plane" role="button" tabindex="0" aria-pressed="false">Coordinate plane</div>
+          <div class="mode-tab" data-mode="worksheet" role="button" tabindex="0" aria-pressed="false">Worksheet</div>
+          <div class="mode-tab" data-mode="isometric" role="button" tabindex="0" aria-pressed="false">Isometric</div>
+          <div class="mode-tab" data-mode="polar" role="button" tabindex="0" aria-pressed="false">Polar</div>
+          <div class="mode-tab" data-mode="log" role="button" tabindex="0" aria-pressed="false">Log / semi-log</div>
+          <div class="mode-tab" data-mode="storyboard" role="button" tabindex="0" aria-pressed="false">Storyboard</div>
+          <div class="mode-tab" data-mode="music" role="button" tabindex="0" aria-pressed="false">Music staff</div>
+          <div class="mode-tab" data-mode="cornell" role="button" tabindex="0" aria-pressed="false">Cornell notes</div>
+          <div class="mode-tab" data-mode="handwriting" role="button" tabindex="0" aria-pressed="false">Handwriting lines</div>
+          <div class="mode-tab" data-mode="calibration" role="button" tabindex="0" aria-pressed="false">Printer check</div>
         </div>
 
         <label for="orientation">Page orientation</label>
@@ -167,6 +177,7 @@
             <option value="square">Square grid</option>
             <option value="dot">Dot grid</option>
             <option value="isometric">Isometric grid</option>
+            <option value="hex">Hexagonal grid</option>
           </select>
 
           <label for="gridSizePreset">Grid size</label>
@@ -174,9 +185,19 @@
             <option value="0.25">1/4 inch squares</option>
             <option value="0.5">1/2 inch squares</option>
             <option value="0.3937">1 cm squares</option>
+            <option value="0.2">1/5 inch squares (engineering, 5 per inch)</option>
             <option value="custom">Custom (squares per inch)</option>
           </select>
           <input type="number" id="gridSizeCustom" min="1" max="20" step="0.5" value="4" style="display:none;" placeholder="Squares per inch">
+
+          <div id="hexFields" style="display:none;">
+            <p class="hint">For hexagons the size above is the length of one side.</p>
+            <label for="hexTop">Hexagons stand</label>
+            <select id="hexTop">
+              <option value="pointy">Point up (vertical sides)</option>
+              <option value="flat">Flat side up</option>
+            </select>
+          </div>
 
           <div class="checkline" id="exactCountLine">
             <input type="checkbox" id="exactCount">
@@ -204,6 +225,93 @@
 
         <!-- ===== Number line panel ===== -->
         <div class="mode-panel" id="panel-numberline">
+          <label for="nlKind">Kind of number line</label>
+          <select id="nlKind">
+            <option value="standard">Standard (min, max, tick interval)</option>
+            <option value="integer">Integers, zero marked (negatives)</option>
+            <option value="decimal">Decimals (tenths or hundredths)</option>
+            <option value="fraction">Fractions and mixed numbers</option>
+            <option value="open">Open (no numbers)</option>
+            <option value="double">Double number line (ratios)</option>
+            <option value="vertical">Vertical (thermometer)</option>
+          </select>
+
+          <div id="nlIntFields" style="display:none;">
+            <div class="row2">
+              <div><label for="nlIntMin">Min</label><input type="number" id="nlIntMin" value="-10" step="1"></div>
+              <div><label for="nlIntMax">Max</label><input type="number" id="nlIntMax" value="10" step="1"></div>
+            </div>
+            <p class="hint">Whole numbers only. Zero gets a longer, heavier mark.</p>
+          </div>
+
+          <div id="nlDecFields" style="display:none;">
+            <div class="row2">
+              <div><label for="nlDecMin">Min</label><input type="number" id="nlDecMin" value="0" step="any"></div>
+              <div><label for="nlDecMax">Max</label><input type="number" id="nlDecMax" value="1" step="any"></div>
+            </div>
+            <label for="nlDecStep">Marks every</label>
+            <select id="nlDecStep">
+              <option value="tenths">0.1 (tenths)</option>
+              <option value="hundredths">0.01 (hundredths)</option>
+            </select>
+            <p class="hint">Whole numbers and tenths are always labelled; the labels thin out to fit the page.</p>
+          </div>
+
+          <div id="nlFracFields" style="display:none;">
+            <div class="row2">
+              <div><label for="nlFracMin">Min (whole number)</label><input type="number" id="nlFracMin" value="0" step="1"></div>
+              <div><label for="nlFracMax">Max (whole number)</label><input type="number" id="nlFracMax" value="2" step="1"></div>
+            </div>
+            <label for="nlFracDen">Denominator (marks per whole)</label>
+            <input type="number" id="nlFracDen" value="4" min="2" max="16" step="1">
+            <label for="nlFracStyle">Label style</label>
+            <select id="nlFracStyle">
+              <option value="mixed">Mixed numbers (1 1/2)</option>
+              <option value="improper">Improper fractions (3/2)</option>
+            </select>
+            <div class="checkline">
+              <input type="checkbox" id="nlFracReduce" checked>
+              <label style="margin:0;" for="nlFracReduce">Labels in lowest terms (2/4 shows as 1/2)</label>
+            </div>
+            <p class="hint">Every mark is a 1/denominator step. Whole numbers are always labelled; &ldquo;Label every Nth mark&rdquo; moves up to a number that divides the denominator.</p>
+          </div>
+
+          <div id="nlOpenFields" style="display:none;">
+            <label for="nlOpenTicks">Marks on each line</label>
+            <input type="number" id="nlOpenTicks" value="10" min="0" max="60" step="1">
+            <p class="hint">Equally spaced, with no numbers. 0 draws the bare line.</p>
+          </div>
+
+          <div id="nlDoubleFields" style="display:none;">
+            <div class="row2">
+              <div><label for="nlDlTopStep">Top line counts by</label><input type="number" id="nlDlTopStep" value="3" min="0.001" step="any"></div>
+              <div><label for="nlDlBottomStep">Bottom line counts by</label><input type="number" id="nlDlBottomStep" value="12" min="0.001" step="any"></div>
+            </div>
+            <label for="nlDlIntervals">Number of steps</label>
+            <input type="number" id="nlDlIntervals" value="6" min="2" max="20" step="1">
+            <div class="row2">
+              <div><label for="nlDlTopName">Top line name</label><input type="text" id="nlDlTopName" maxlength="14" placeholder="e.g. miles"></div>
+              <div><label for="nlDlBottomName">Bottom line name</label><input type="text" id="nlDlBottomName" maxlength="14" placeholder="e.g. minutes"></div>
+            </div>
+            <label for="nlDlBottom">Bottom line numbers</label>
+            <select id="nlDlBottom">
+              <option value="all">Show all</option>
+              <option value="example">0 and the first step only (worked example)</option>
+              <option value="none">0 only (students fill in)</option>
+            </select>
+            <p class="hint">Up to 4 double lines on a page.</p>
+          </div>
+
+          <div id="nlVerticalFields" style="display:none;">
+            <div class="row2">
+              <div><label for="nlVtMin">Min</label><input type="number" id="nlVtMin" value="0" step="any"></div>
+              <div><label for="nlVtMax">Max</label><input type="number" id="nlVtMax" value="100" step="any"></div>
+            </div>
+            <label for="nlVtInterval">Mark every</label>
+            <input type="number" id="nlVtInterval" value="10" min="0.001" step="any">
+            <p class="hint">Up to 6 thermometers side by side.</p>
+          </div>
+
           <div id="nlUniformFields">
             <div class="row2">
               <div><label for="nlMin">Min</label><input type="number" id="nlMin" value="0"></div>
@@ -211,8 +319,10 @@
             </div>
             <div><label for="nlInterval">Tick interval</label><input type="number" id="nlInterval" value="1" min="0.1" step="0.1"></div>
           </div>
-          <label for="nlLabelEvery">Label every Nth tick</label>
-          <input type="number" id="nlLabelEvery" value="1" min="1" step="1">
+          <div id="nlLabelEveryWrap">
+            <label for="nlLabelEvery">Label every Nth tick</label>
+            <input type="number" id="nlLabelEvery" value="1" min="1" step="1">
+          </div>
 
           <label for="nlCopies">Copies on one page</label>
           <p class="hint">For handing out cut-apart strips.</p>
@@ -329,6 +439,94 @@
           <input type="number" id="isoSizeCustom" min="1" max="20" step="0.5" value="2" style="display:none;" placeholder="Triangles per inch">
         </div>
 
+        <!-- ===== Polar panel ===== -->
+        <div class="mode-panel" id="panel-polar">
+          <label for="polarRays">Rays</label>
+          <select id="polarRays">
+            <option value="12">12 rays (every 30&deg;)</option>
+            <option value="16">16 rays (every 22.5&deg;)</option>
+            <option value="24">24 rays (every 15&deg;)</option>
+          </select>
+          <label for="polarRing">Distance between circles</label>
+          <select id="polarRing">
+            <option value="0.25">1/4 inch</option>
+            <option value="0.3937">1 cm</option>
+            <option value="0.5">1/2 inch</option>
+            <option value="1">1 inch</option>
+          </select>
+          <div class="checkline">
+            <input type="checkbox" id="polarLabels" checked>
+            <label style="margin:0;" for="polarLabels">Number the circles and label the rays</label>
+          </div>
+          <p class="hint">The circles are numbered 1, 2, 3&hellip; outward from the center. The two axes are heavier.</p>
+        </div>
+
+        <!-- ===== Log / semi-log panel ===== -->
+        <div class="mode-panel" id="panel-log">
+          <label for="logKind">Paper</label>
+          <select id="logKind">
+            <option value="semilog">Semi-log (log y, even x)</option>
+            <option value="loglog">Log-log (both log)</option>
+          </select>
+          <div class="row2">
+            <div><label for="logDecades">Decades up the page</label><input type="number" id="logDecades" value="3" min="1" max="6" step="1"></div>
+            <div><label for="logStartExp">Bottom is 10 to the</label><input type="number" id="logStartExp" value="0" min="-4" max="4" step="1"></div>
+          </div>
+          <div id="logSemiFields">
+            <label for="logXDivisions">Even x divisions</label>
+            <select id="logXDivisions">
+              <option value="10">10</option>
+              <option value="20">20</option>
+            </select>
+          </div>
+          <div id="logLogFields" style="display:none;">
+            <div class="row2">
+              <div><label for="logXDecades">Decades across the page</label><input type="number" id="logXDecades" value="3" min="1" max="6" step="1"></div>
+              <div><label for="logXStartExp">Left is 10 to the</label><input type="number" id="logXStartExp" value="0" min="-4" max="4" step="1"></div>
+            </div>
+          </div>
+          <p class="hint">Each decade has lines for 2 to 9 spaced by their logarithm, so 2 sits 30% of the way up its decade, not 20%. Decade lines are heavy and the 5 line is a step lighter.</p>
+        </div>
+
+        <!-- ===== Storyboard panel ===== -->
+        <div class="mode-panel" id="panel-storyboard">
+          <label for="sbFrames">Frames on the page</label>
+          <select id="sbFrames">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="12">12</option>
+          </select>
+          <label for="sbAspect">Frame shape</label>
+          <select id="sbAspect">
+            <option value="16:9">16:9 (widescreen)</option>
+            <option value="4:3">4:3 (classic screen)</option>
+            <option value="1:1">1:1 (square)</option>
+            <option value="2.35:1">2.35:1 (cinema)</option>
+          </select>
+          <label for="sbCaption">Caption lines under each frame</label>
+          <input type="number" id="sbCaption" value="2" min="0" max="4" step="1">
+          <p class="hint">Every frame is exactly the shape you pick, as large as the page allows.</p>
+        </div>
+
+        <!-- ===== Music staff panel ===== -->
+        <div class="mode-panel" id="panel-music">
+          <label for="msGap">Staff size</label>
+          <select id="msGap">
+            <option value="0.1">Small (0.10 inch between lines)</option>
+            <option value="0.125">Standard (1/8 inch between lines)</option>
+            <option value="0.16">Large (0.16 inch between lines)</option>
+          </select>
+          <div class="checkline">
+            <input type="checkbox" id="msGrand">
+            <label style="margin:0;" for="msGrand">Grand staff (two staves joined, for piano)</label>
+          </div>
+          <p class="hint">As many staves as fit the page, five lines each.</p>
+        </div>
+
         <!-- ===== Cornell notes panel ===== -->
         <div class="mode-panel" id="panel-cornell">
           <label for="cornellCueWidth">Cue column width (inches)</label>
@@ -395,6 +593,9 @@
   ['toolbar','presetSwitch','newPresetBtn','deletePresetBtn','presetName',
    'orientation','gridStyle','exactCountLine','boldCenterLine','gridSizePreset','gridSizeCustom','exactCount','exactCountFields','exactCols','exactRows','boldCenter',
    'labelAxesLine','labelAxes','labelAxesFields','labelInterval',
+   'nlKind','nlIntFields','nlIntMin','nlIntMax','nlDecFields','nlDecMin','nlDecMax','nlDecStep','nlFracFields','nlFracMin','nlFracMax','nlFracDen','nlFracStyle','nlFracReduce','nlOpenFields','nlOpenTicks','nlDoubleFields','nlDlTopStep','nlDlBottomStep','nlDlIntervals','nlDlTopName','nlDlBottomName','nlDlBottom','nlVerticalFields','nlVtMin','nlVtMax','nlVtInterval','nlLabelEveryWrap','nlIndependentLine',
+   'hexFields','hexTop','sbFrames','sbAspect','sbCaption','msGap','msGrand',
+   'polarRays','polarRing','polarLabels','logKind','logDecades','logStartExp','logSemiFields','logXDivisions','logLogFields','logXDecades','logXStartExp',
    'nlUniformFields','nlMin','nlMax','nlInterval','nlLabelEvery','nlCopies','nlIndependent','nlRowsHint','nlRowsContainer',
    'planeQuadrants','planeXMin','planeXMax','planeYMin','planeYMax','planeInterval','planeLabelEvery','planeCopies',
    'wsCopies','wsType','wsQuadrants','wsXMin','wsXMax','wsYMin','wsYMax','wsInterval','wsLabelEvery',
@@ -423,6 +624,13 @@
       labelAxes: false, labelInterval: 5,
       nlMin: 0, nlMax: 20, nlInterval: 1, nlLabelEvery: 1, nlCopies: 1,
       nlIndependent: false, nlRows: [],
+      nlKind: 'standard', nlIntMin: -10, nlIntMax: 10, nlDecMin: 0, nlDecMax: 1, nlDecStep: 'tenths',
+      nlFracMin: 0, nlFracMax: 2, nlFracDen: 4, nlFracStyle: 'mixed', nlFracReduce: true, nlOpenTicks: 10,
+      nlDlTopStep: 3, nlDlBottomStep: 12, nlDlIntervals: 6, nlDlTopName: '', nlDlBottomName: '', nlDlBottom: 'all',
+      nlVtMin: 0, nlVtMax: 100, nlVtInterval: 10,
+      polarRays: 12, polarRing: '0.5', polarLabels: true,
+      hexTop: 'pointy', sbFrames: 6, sbAspect: '16:9', sbCaption: 2, msGap: '0.125', msGrand: false,
+      logKind: 'semilog', logDecades: 3, logStartExp: 0, logXDivisions: 10, logXDecades: 3, logXStartExp: 0,
       planeQuadrants: 'four', planeXMin: -10, planeXMax: 10, planeYMin: -10, planeYMax: 10,
       planeInterval: 1, planeLabelEvery: 5, planeCopies: 1,
       worksheetCopies: 4, worksheetType: 'linear', worksheetQuadrants: 'four',
@@ -454,9 +662,10 @@
     els.orientation.value = settings.orientation;
     els.gridStyle.value = settings.gridStyle;
     var isSquare = settings.gridStyle === 'square';
+    els.hexFields.style.display = settings.gridStyle === 'hex' ? '' : 'none';
     els.exactCountLine.style.display = isSquare ? '' : 'none';
     els.boldCenterLine.style.display = isSquare ? '' : 'none';
-    var preset = ['0.25', '0.5', '0.3937'].indexOf(String(settings.gridSizePreset)) !== -1 ? String(settings.gridSizePreset) : 'custom';
+    var preset = ['0.25', '0.5', '0.3937', '0.2'].indexOf(String(settings.gridSizePreset)) !== -1 ? String(settings.gridSizePreset) : 'custom';
     els.gridSizePreset.value = preset;
     els.gridSizeCustom.value = settings.gridSizeCustom;
     els.gridSizeCustom.style.display = preset === 'custom' ? '' : 'none';
@@ -480,6 +689,28 @@
     els.nlInterval.value = settings.nlInterval; els.nlLabelEvery.value = settings.nlLabelEvery;
     els.nlCopies.value = settings.nlCopies;
     els.nlIndependent.checked = settings.nlIndependent;
+    els.nlKind.value = settings.nlKind;
+    els.nlIntMin.value = settings.nlIntMin; els.nlIntMax.value = settings.nlIntMax;
+    els.nlDecMin.value = settings.nlDecMin; els.nlDecMax.value = settings.nlDecMax; els.nlDecStep.value = settings.nlDecStep;
+    els.nlFracMin.value = settings.nlFracMin; els.nlFracMax.value = settings.nlFracMax; els.nlFracDen.value = settings.nlFracDen;
+    els.nlFracStyle.value = settings.nlFracStyle; els.nlFracReduce.checked = settings.nlFracReduce;
+    els.nlOpenTicks.value = settings.nlOpenTicks;
+    els.nlDlTopStep.value = settings.nlDlTopStep; els.nlDlBottomStep.value = settings.nlDlBottomStep;
+    els.nlDlIntervals.value = settings.nlDlIntervals;
+    els.nlDlTopName.value = settings.nlDlTopName; els.nlDlBottomName.value = settings.nlDlBottomName;
+    els.nlDlBottom.value = settings.nlDlBottom;
+    els.nlVtMin.value = settings.nlVtMin; els.nlVtMax.value = settings.nlVtMax; els.nlVtInterval.value = settings.nlVtInterval;
+    els.hexTop.value = settings.hexTop;
+    els.sbFrames.value = String(settings.sbFrames); els.sbAspect.value = settings.sbAspect; els.sbCaption.value = settings.sbCaption;
+    els.msGap.value = String(settings.msGap); els.msGrand.checked = settings.msGrand;
+    els.polarRays.value = String(settings.polarRays);
+    els.polarRing.value = String(settings.polarRing);
+    els.polarLabels.checked = settings.polarLabels;
+    els.logKind.value = settings.logKind;
+    els.logDecades.value = settings.logDecades; els.logStartExp.value = settings.logStartExp;
+    els.logXDivisions.value = String(settings.logXDivisions);
+    els.logXDecades.value = settings.logXDecades; els.logXStartExp.value = settings.logXStartExp;
+    toggleLogUI();
     toggleNumberLineRangeUI();
     if (settings.nlIndependent) { ensureRowsLength(); buildRowsUI(); }
     els.planeQuadrants.value = settings.planeQuadrants;
@@ -513,7 +744,7 @@
     els.hwSizeCustom.value = settings.hwSizeCustom;
     els.hwSizeCustom.style.display = hwPreset === 'custom' ? '' : 'none';
 
-    Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (t) { t.classList.toggle('active', t.dataset.mode === settings.mode); });
+    Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (t) { t.classList.toggle('active', t.dataset.mode === settings.mode); t.setAttribute('aria-pressed', t.dataset.mode === settings.mode ? 'true' : 'false'); });
     Array.prototype.slice.call(document.querySelectorAll('.mode-panel')).forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + settings.mode); });
   }
 
@@ -542,6 +773,43 @@
     settings.nlLabelEvery = parseInt(els.nlLabelEvery.value, 10) || 1;
     settings.nlCopies = Math.max(1, Math.min(10, parseInt(els.nlCopies.value, 10) || 1));
     settings.nlIndependent = els.nlIndependent.checked;
+    settings.nlKind = els.nlKind.value;
+    settings.nlIntMin = parseInt(els.nlIntMin.value, 10) || 0;
+    settings.nlIntMax = parseInt(els.nlIntMax.value, 10) || 0;
+    settings.nlDecMin = parseFloat(els.nlDecMin.value) || 0;
+    settings.nlDecMax = parseFloat(els.nlDecMax.value) || 0;
+    settings.nlDecStep = els.nlDecStep.value;
+    settings.nlFracMin = parseInt(els.nlFracMin.value, 10) || 0;
+    settings.nlFracMax = parseInt(els.nlFracMax.value, 10) || 0;
+    settings.nlFracDen = Math.max(2, Math.min(16, parseInt(els.nlFracDen.value, 10) || 4));
+    settings.nlFracStyle = els.nlFracStyle.value;
+    settings.nlFracReduce = els.nlFracReduce.checked;
+    settings.nlOpenTicks = Math.max(0, Math.min(60, isNaN(parseInt(els.nlOpenTicks.value, 10)) ? 10 : parseInt(els.nlOpenTicks.value, 10)));
+    settings.nlDlTopStep = parseFloat(els.nlDlTopStep.value) || 1;
+    settings.nlDlBottomStep = parseFloat(els.nlDlBottomStep.value) || 1;
+    settings.nlDlIntervals = Math.max(2, Math.min(20, parseInt(els.nlDlIntervals.value, 10) || 6));
+    settings.nlDlTopName = els.nlDlTopName.value;
+    settings.nlDlBottomName = els.nlDlBottomName.value;
+    settings.nlDlBottom = els.nlDlBottom.value;
+    settings.nlVtMin = parseFloat(els.nlVtMin.value) || 0;
+    settings.nlVtMax = parseFloat(els.nlVtMax.value) || 0;
+    settings.nlVtInterval = parseFloat(els.nlVtInterval.value) || 1;
+
+    settings.hexTop = els.hexTop.value;
+    settings.sbFrames = parseInt(els.sbFrames.value, 10) || 6;
+    settings.sbAspect = els.sbAspect.value;
+    settings.sbCaption = Math.max(0, Math.min(4, isNaN(parseInt(els.sbCaption.value, 10)) ? 2 : parseInt(els.sbCaption.value, 10)));
+    settings.msGap = els.msGap.value;
+    settings.msGrand = els.msGrand.checked;
+    settings.polarRays = parseInt(els.polarRays.value, 10) || 12;
+    settings.polarRing = els.polarRing.value;
+    settings.polarLabels = els.polarLabels.checked;
+    settings.logKind = els.logKind.value;
+    settings.logDecades = Math.max(1, Math.min(6, parseInt(els.logDecades.value, 10) || 3));
+    settings.logStartExp = Math.max(-4, Math.min(4, parseInt(els.logStartExp.value, 10) || 0));
+    settings.logXDivisions = parseInt(els.logXDivisions.value, 10) === 20 ? 20 : 10;
+    settings.logXDecades = Math.max(1, Math.min(6, parseInt(els.logXDecades.value, 10) || 3));
+    settings.logXStartExp = Math.max(-4, Math.min(4, parseInt(els.logXStartExp.value, 10) || 0));
 
     settings.planeQuadrants = els.planeQuadrants.value;
     settings.planeXMin = parseFloat(els.planeXMin.value) || 0;
@@ -576,9 +844,25 @@
   }
 
   function toggleNumberLineRangeUI() {
-    els.nlUniformFields.style.display = settings.nlIndependent ? 'none' : '';
-    els.nlRowsHint.style.display = settings.nlIndependent ? '' : 'none';
-    els.nlRowsContainer.style.display = settings.nlIndependent ? '' : 'none';
+    var kind = settings.nlKind;
+    var standard = kind === 'standard';
+    els.nlUniformFields.style.display = (standard && !settings.nlIndependent) ? '' : 'none';
+    els.nlIndependentLine.style.display = standard ? '' : 'none';
+    els.nlRowsHint.style.display = (standard && settings.nlIndependent) ? '' : 'none';
+    els.nlRowsContainer.style.display = (standard && settings.nlIndependent) ? '' : 'none';
+    els.nlIntFields.style.display = kind === 'integer' ? '' : 'none';
+    els.nlDecFields.style.display = kind === 'decimal' ? '' : 'none';
+    els.nlFracFields.style.display = kind === 'fraction' ? '' : 'none';
+    els.nlOpenFields.style.display = kind === 'open' ? '' : 'none';
+    els.nlDoubleFields.style.display = kind === 'double' ? '' : 'none';
+    els.nlVerticalFields.style.display = kind === 'vertical' ? '' : 'none';
+    els.nlLabelEveryWrap.style.display = (kind === 'open' || kind === 'double') ? 'none' : '';
+  }
+
+  function toggleLogUI() {
+    var loglog = settings.logKind === 'loglog';
+    els.logSemiFields.style.display = loglog ? 'none' : '';
+    els.logLogFields.style.display = loglog ? '' : 'none';
   }
 
   /** Grow/trim settings.nlRows to match nlCopies, seeding new rows from the shared min/max/interval. */
@@ -669,7 +953,14 @@
     persist();
 
     var result;
-    if (settings.mode === 'graph') {
+    if (settings.mode === 'graph' && settings.gridStyle === 'hex') {
+      result = window.GraphPaperRender.renderHexPaper({
+        orientation: settings.orientation,
+        cellSize: gridSizeInches(), hexTop: settings.hexTop,
+        faded: settings.faded,
+        header: headerOpt()
+      });
+    } else if (settings.mode === 'graph') {
       result = window.GraphPaperRender.renderGraphPaper({
         orientation: settings.orientation,
         style: settings.gridStyle,
@@ -683,6 +974,22 @@
         faded: settings.faded,
         header: headerOpt()
       });
+    } else if (settings.mode === 'numberline' && settings.nlKind !== 'standard') {
+      var nlBase = { orientation: settings.orientation, copies: settings.nlCopies, labelEvery: settings.nlLabelEvery, faded: settings.faded, header: headerOpt() };
+      var G = window.GraphPaperRender;
+      if (settings.nlKind === 'integer') {
+        result = G.renderDecimalLine(Object.assign(nlBase, { min: settings.nlIntMin, max: settings.nlIntMax, step: 'ones' }));
+      } else if (settings.nlKind === 'decimal') {
+        result = G.renderDecimalLine(Object.assign(nlBase, { min: settings.nlDecMin, max: settings.nlDecMax, step: settings.nlDecStep }));
+      } else if (settings.nlKind === 'fraction') {
+        result = G.renderFractionLine(Object.assign(nlBase, { min: settings.nlFracMin, max: settings.nlFracMax, denominator: settings.nlFracDen, labelStyle: settings.nlFracStyle, reduce: settings.nlFracReduce }));
+      } else if (settings.nlKind === 'open') {
+        result = G.renderOpenLine(Object.assign(nlBase, { ticks: settings.nlOpenTicks }));
+      } else if (settings.nlKind === 'double') {
+        result = G.renderDoubleLine(Object.assign(nlBase, { topStep: settings.nlDlTopStep, bottomStep: settings.nlDlBottomStep, intervals: settings.nlDlIntervals, topName: settings.nlDlTopName, bottomName: settings.nlDlBottomName, bottom: settings.nlDlBottom }));
+      } else {
+        result = G.renderVerticalLine(Object.assign(nlBase, { min: settings.nlVtMin, max: settings.nlVtMax, interval: settings.nlVtInterval }));
+      }
     } else if (settings.mode === 'numberline') {
       if (settings.nlIndependent) {
         result = window.GraphPaperRender.renderNumberLine({
@@ -732,6 +1039,36 @@
         style: settings.isoStyle === 'dot' ? 'isometricDot' : 'isometric',
         mode: 'fill',
         cellSize: isoSizeInches(),
+        faded: settings.faded,
+        header: headerOpt()
+      });
+    } else if (settings.mode === 'polar') {
+      result = window.GraphPaperRender.renderPolarPaper({
+        orientation: settings.orientation,
+        rays: settings.polarRays, ringStep: parseFloat(settings.polarRing),
+        labels: settings.polarLabels,
+        faded: settings.faded,
+        header: headerOpt()
+      });
+    } else if (settings.mode === 'log') {
+      result = window.GraphPaperRender.renderLogPaper({
+        orientation: settings.orientation,
+        kind: settings.logKind, decades: settings.logDecades, startExp: settings.logStartExp,
+        xDecades: settings.logXDecades, xStartExp: settings.logXStartExp, xDivisions: settings.logXDivisions,
+        faded: settings.faded,
+        header: headerOpt()
+      });
+    } else if (settings.mode === 'storyboard') {
+      result = window.GraphPaperRender.renderStoryboard({
+        orientation: settings.orientation,
+        frames: settings.sbFrames, aspect: settings.sbAspect, captionLines: settings.sbCaption,
+        faded: settings.faded,
+        header: headerOpt()
+      });
+    } else if (settings.mode === 'music') {
+      result = window.GraphPaperRender.renderMusicStaves({
+        orientation: settings.orientation,
+        lineGap: parseFloat(settings.msGap), grand: settings.msGrand,
         faded: settings.faded,
         header: headerOpt()
       });
@@ -794,6 +1131,9 @@
     if (!settings.worksheetLabelEvery) settings.worksheetLabelEvery = 5;
     if (!settings.worksheetProblems) settings.worksheetProblems = [];
     if (settings.worksheetShowAnswer === undefined) settings.worksheetShowAnswer = false;
+    // A preset saved before the polar, log and number-line kinds existed has none of their fields.
+    var fresh = defaultSettings(name);
+    Object.keys(fresh).forEach(function (key) { if (settings[key] === undefined) settings[key] = fresh[key]; });
     GraphPaperStore.setCurrentName(name);
     applySettingsToForm();
     refreshSwitcher();
@@ -825,10 +1165,14 @@
   });
 
   Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (tab) {
+    tab.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tab.click(); }
+    });
     tab.addEventListener('click', function () {
-      Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (t) { t.classList.remove('active'); });
+      Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (t) { t.classList.remove('active'); t.setAttribute('aria-pressed', 'false'); });
       Array.prototype.slice.call(document.querySelectorAll('.mode-panel')).forEach(function (p) { p.classList.remove('active'); });
       tab.classList.add('active');
+      tab.setAttribute('aria-pressed', 'true');
       settings.mode = tab.dataset.mode;
       document.getElementById('panel-' + settings.mode).classList.add('active');
       render();
@@ -853,12 +1197,21 @@
   });
   els.gridStyle.addEventListener('change', function () {
     var isSquare = els.gridStyle.value === 'square';
+    els.hexFields.style.display = els.gridStyle.value === 'hex' ? '' : 'none';
     els.exactCountLine.style.display = isSquare ? '' : 'none';
     els.boldCenterLine.style.display = isSquare ? '' : 'none';
     els.exactCountFields.style.display = (isSquare && els.exactCount.checked) ? '' : 'none';
     els.labelAxesLine.style.display = isSquare ? '' : 'none';
     els.labelAxesFields.style.display = (isSquare && els.labelAxes.checked) ? '' : 'none';
     render();
+  });
+  els.nlKind.addEventListener('change', function () {
+    settings.nlKind = els.nlKind.value;
+    toggleNumberLineRangeUI();
+  });
+  els.logKind.addEventListener('change', function () {
+    settings.logKind = els.logKind.value;
+    toggleLogUI();
   });
   els.labelAxes.addEventListener('change', function () {
     els.labelAxesFields.style.display = els.labelAxes.checked ? '' : 'none';

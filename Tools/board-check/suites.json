@@ -134,6 +134,8 @@
     "Tools/sub-binder-generator/test/smoke-feedback-page.mjs",
     "Tools/graph-paper-generator/test/smoke-calibration.mjs",
     "Tools/graph-paper-generator/test/smoke-worksheet-mode.mjs",
+    "Tools/graph-paper-generator/test/smoke-grid-types-core.mjs",
+    "Tools/graph-paper-generator/test/smoke-grid-types.mjs",
     "Tools/grade-distribution-visualizer/test/smoke-copy-chart.mjs",
     "Tools/school-calendar/test/smoke-week.mjs",
     "Tools/blank-map-generator/test/smoke-starters.mjs",
