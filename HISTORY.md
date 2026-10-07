@@ -9,6 +9,19 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## CI installs poppler-utils (2026-10-07, AI-14, no `CACHE_VERSION`)
+
+Asked for by the Selector, as one commit on AI-14's branch. The landing's full run on AI_Tools#353 (245 suites, 73.7 minutes) failed on four, for one
+cause: `Tools/staff-directory-builder/test/smoke-wallet-cards.mjs` (through `_old-print.mjs`), `Tools/parent-contact-log/test/smoke-packet.mjs`,
+`Tools/verb-conjugation-poster-generator/test/smoke-callouts.mjs` and `Tools/testing-accommodations-card-generator/test/smoke-rooms.mjs` spawn
+`pdftotext` or `pdfinfo`, which huginn has and the GitHub runner does not. `.github/workflows/ci.yml`'s one job now has a step after the Chromium
+ones, `sudo apt-get update && sudo apt-get install -y poppler-utils`; nothing else in the workflow changed. **The suites depend on poppler-utils, on
+huginn and in CI**; a suite that needs it on a machine without it crashes with no FAIL line. Every other spawn under `Tools/*/test` was read:
+`git ls-files` (theme, and a string in select-suites' own test), `unzip` (export.test.mjs, only when it is there) and `pdftoppm`
+(`smoke-export.mjs`, image-to-pdf's `smoke-impose.mjs`), which both skip their pixel check when it is absent. **So those two checks have never run
+in CI and will for the first time after this**: if one is red on the runner's poppler, that is a new finding, not a regression. 020's new suites spawn
+nothing. Not verified: no CI run has finished with the step.
+
 ## Path 12 P2, increment 4: 020's academic-tournament mode (2026-10-07, AI-14, `CACHE_VERSION` v277)
 
 Audit entry AI-14, BACKLOG rank 28 (a 2+ row; it stays, rewritten to what is left). The session was handed one group of P2, "020's
@@ -19,7 +32,7 @@ script of it named the bank). The design asks one clause of 020, "020 gets an ac
 teacher's bank or a built-in set, listed by the module's `sources()` and `sourceLabel()`), a Unit filter and a number of questions a match; a
 **Questions** button under each match that is ready; a panel that shows the match's questions with each answer hidden until **Show answer**, and a
 **Who got question N?** group (either side, or Neither); and **Print match sheets**, which prints the ready matches for a reader and, on a page of
-its own, the answer key. New file `Tools/bracket-tournament-generator/bt-academic.js` (the pure half and `mount()`); the page gained about ninety
+its own, the answer key. New file `Tools/bracket-tournament-generator/bt-academic.js` (the pure half and `mount()`); the page gained about 160
 lines of hooks, markup and CSS. `_shared/question-bank.js` was not edited.
 
 **How a match is decided.** One point a question to the side that got it. The mode does not decide a match: when the last question is marked it

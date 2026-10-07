@@ -461,7 +461,8 @@ const sheet = await page.evaluate(() => {
     keys: [...s.querySelectorAll('.ms-key .ms-key-match')].map(m => m.querySelector('h2').textContent + ' / ' + m.querySelectorAll('li').length),
     questions: [...s.querySelectorAll('.ms-match .ms-q')].map(e => e.textContent),
     answers: [...s.querySelectorAll('.ms-key .ms-a')].map(e => e.textContent),
-    readerText: [...s.querySelectorAll('.ms-match')].map(m => m.textContent).join('\n'),
+    readerLines: [...s.querySelectorAll('.ms-match *')].filter(e => !e.children.length).map(e => e.textContent.trim()),
+    readerShape: [...new Set([...s.querySelectorAll('.ms-match li')].map(li => [...li.children].map(c => c.className).join('+')))],
     who: s.querySelector('.ms-who').textContent,
     keyLast: s.lastElementChild.className,
     breaks: [getComputedStyle(s.querySelector('.ms-key')).breakBefore, getComputedStyle(s.querySelector('li')).breakInside, getComputedStyle(s.querySelector('h2')).breakAfter],
@@ -473,7 +474,8 @@ eq(new Set(sheet.questions).size, 60, 'sixty different questions: none repeats w
 {
   const set = await page.evaluate(() => QuestionBank.setQuestions('062'));
   eq(sheet.answers, sheet.questions.map(p => set.find(x => x.prompt === p).answer), 'the key\'s answers are the questions\' own, in the same order');
-  eq(sheet.answers.filter(a => a.length > 3 && sheet.readerText.includes('\n' + a + '\n')).length, 0, 'no answer is printed in the reader\'s part as a line of its own');
+  eq(sheet.answers.filter(a => sheet.readerLines.includes(a)).length, 0, 'no answer is printed in the reader\'s part');
+  eq(sheet.readerShape, ['ms-q+ms-who'], 'a question there is its words and the who-got-it line, and nothing else');
 }
 eq(sheet.who, 'Who got it:  Otters Kestrels Neither', 'each question has a box for either side and for neither');
 eq(sheet.keyLast, 'ms-key', 'the key is the last thing on the sheet');
@@ -497,6 +499,13 @@ await page.click('#acPrintBtn');
 await page.click('#bracketView .slot:not(.slot-decided)');
 await settle(page, 200);
 eq(await page.evaluate(() => document.body.classList.contains('printing-sheet')), false, 'and any change to the bracket also puts the bracket back for Ctrl+P');
+await page.click('#acPrintBtn');
+eq(await page.$$eval('#matchSheet .ms-match h2', hs => hs.length + ' / ' + hs[0].textContent), '5 / Round 1, match 2: Herons vs Minnows', 'a match that has its winner is not on the next sheet');
+await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+await page.fill('#acPer', '99');
+await page.press('#acPer', 'Tab');
+await settle(page, 200);
+eq([(await bracket(page, 'League day')).academic.per, await page.inputValue('#acPer')], [20, '20'], 'a number of questions over twenty is twenty, in the field and in the bracket');
 {
   // Nothing to print: an empty bank.
   const empty = await fixedPage({});
