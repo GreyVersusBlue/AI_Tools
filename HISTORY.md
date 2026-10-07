@@ -9,6 +9,50 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 12 P4: a question in the bank can carry a picture, and it travels in the bank file (2026-10-07, AI-14, `CACHE_VERSION` v288)
+
+BACKLOG rank 30, deleted: Path 12 P4 is whole. **The first check found the 030 half already shipped** (#302, Path 4 P4): a clue's picture is
+`idb:<id>` in the shared media store, a board saved before that is moved on load, and Export JSON and Import JSON already carried pictures and
+sounds as data URLs. None of that was rebuilt. What was left was the bank.
+
+- **`media.image`.** A question's picture is one of the two values a clue has always held: `idb:<id>` (a Blob in `gvb-media`, namespace `rgb`)
+  or a `data:image/(png|jpeg|gif|webp);base64,…` URL. `QuestionBank.imageOf()` is the only reader and gives one of those or nothing, so an
+  SVG, a `data:text/html` URL, a web address or a `media` of another shape is carried as it was given and never shown. New, all pure, in
+  `_shared/question-bank.js`: `imageOf`, `withImage`, `imageProblem`, `cleanMedia`, `applyImages`, `leftSentence`, `isImageRef`,
+  `isInlineImage`, `MEDIA_NS`, `IMAGE_MAX`. No existing function changed; the bank's version is still 1; no new key, no registry change.
+  `_shared/media-db.js` was not edited.
+- **The call: the bank's pictures are in 030's namespace.** One record for the same picture on a clue and a question, nothing copied on a
+  pull, and 030's pass at load (the only place a stored picture is deleted) has the bank's references in what it keeps. The cost: a page
+  that someday shows a bank picture reads the store under `rgb`. Reversible by a copy into another namespace.
+- **On 030.** A picture picker on the add card and the edit form; the picture on a row with a tag in words; the picture on a pulled clue;
+  "Save bank file" with each picture as a data URL (a bank with none is written exactly as before); an import that stores the good pictures
+  before the preview and names by row each one left out; Import JSON of a board names the pictures and sounds it left out, which it used
+  to drop without a word. 040, 020 and the bank's sheets show words only and now say so.
+- **A limit that was not there.** A picture in a file over 4,000,000 characters is left out, for a board file too. Before, a board file's
+  picture of any size was taken. 030 has never written one near that size.
+- **Tests.** `test:question-bank-media` (pure Node, 100 assertions) and `test:bank-media` (port 8523, 105: seventeen hashes from the v287
+  page taken twice before any edit, then the new behaviour, with `<svg onload>` and `data:text/html` as a file's picture, a stored bank's
+  and a board file's, none of which reaches the document).
+  Broken on purpose: 30 rules in the module (29 caught by an assertion, 1 an equivalent change) and 6 in the page, one suite run each
+  (the load's pass forgetting the bank, the file not carrying pictures, a raw value in a `src`, a pull without the picture, an import
+  that skips the cleaning, a board import that names nothing), all 6 caught. **Not broken on purpose in the page:** the edit form's
+  picture-only save, Save waiting for a picture, the missing-picture tag, the sound half of the board import's note, the three sentences.
+- **Got wrong.** The add card's slot and its file input were given one id (the first run of the suite found it). Eight expectations in the
+  first run of the new suite were mine and wrong (the page's own favicon is a `data:image/svg+xml` link, which my check for refused
+  pictures matched; a prompt of mine held the text I searched the stored bank for). My prompt asked for a migration of clue images that
+  #302 had already shipped.
+- **Not built, not verified.** In BACKLOG's Path 12 P4 bullet, with questions 59 to 65 for Devon.
+
+## 008's team suite no longer depends on the machine's time zone (2026-10-07, AI-14, tests only)
+
+The landing's CI (AI_Tools#355) failed one suite of 265: `Tools/behavior-points-tracker/test/smoke-teams.mjs`, eight "no teams … is what it
+was" lines against `golden-no-teams.json`. `_golden-run.mjs` pinned the page clock to `new Date('2026-03-04T15:20:00')`, which Node reads
+as local time: 20:20 UTC on huginn, where the golden was recorded, and 15:20 UTC on a runner, so every log id (`'ev' + Date.now()`) differed,
+and the page's own zone decides what a time and an archive date say. Now the clock is an instant (`-05:00`) and the walk sets the page's
+zone to `America/New_York` (CDP `Emulation.setTimezoneOverride`, since the harness makes the context) before the page loads. **The golden
+was not re-recorded**: it passes byte for byte under `TZ=UTC`, `TZ=America/New_York` and `TZ=Asia/Tokyo`. The other goldens added since
+2026-10-06 passed in that CI run under UTC; `grep` for a rendered time in `Tools/*/test/*.json` finds this golden only.
+
 ## 020 Bracket / Tournament Generator: teams with members, and a first-round consolation bracket (2026-10-07, AI-31-020, `CACHE_VERSION` v287; the code commit says v284, which main passed before the merge)
 
 BACKLOG rank 136, "Team names with members; a loser's-side consolation bracket", both parts, in the tool's own code (`Tools/bracket-tournament-generator/bt-teams.js`, new,

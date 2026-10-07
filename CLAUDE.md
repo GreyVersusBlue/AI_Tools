@@ -574,6 +574,13 @@ files must be added there too.
   `_old-game.mjs`, `_every-team-game.mjs` and `_rounds-game.mjs` unchanged (`npm run test:play-rounds` holds the second, `npm run test:play-wheel` the third). **030
   does not print through the print kit**: its sheets go into its own `#printArea`, the new ones with `printing-sheet`
   on `<body>` so the screen is out of the flow (`npm run test:play-modes`, `npm run test:play-modes-core`).
+  Since v288 a question may carry **one picture, in `media.image`** (Path 12 P4): `idb:<id>` in the media store under
+  030's namespace (`QuestionBank.MEDIA_NS`), or a PNG, JPEG, GIF or WebP data URL. **`QuestionBank.imageOf(q)` is the only
+  reader**: do not read `q.media` yourself, and put what it gives into a `src` only through a strict test such as
+  `ReviewBoardImage.url()`. A file's questions go through `cleanMedia()` before they are shown or stored, a file never
+  holds an `idb:` reference, and only 030 deletes a stored picture (its pass at load keeps the bank's). A tool that
+  shows no picture needs no code for it and says so on its card, as 040 and 020 do (`npm run test:bank-media`,
+  `npm run test:question-bank-media`).
   030's old key (`gvb-review-board-bank:entries`) is read on every load
   and never written or removed: do not delete it or its registry line, which is what keeps an older page and an
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are
