@@ -28,6 +28,7 @@ const URL_PAGE = BASE + '/Tools/008-behavior-points-tracker.html';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const GOLDEN = JSON.parse(fs.readFileSync(path.join(here, 'golden-no-teams.json'), 'utf8'));
 
+let noTeamKeys = null;   // the keys a class with no teams leaves in localStorage, read in section 1
 let passed = 0, failed = 0;
 const fails = [];
 const ok = (cond, label) => {
@@ -57,6 +58,7 @@ console.log('Behavior & Points Tracker — team / house points');
   eq(got.printed, GOLDEN.printed, 'no teams: print was asked for the same number of times');
   eq(got.csv, GOLDEN.csv, 'no teams: the history CSV is the same, byte for byte');
   eq(got.dialogs, GOLDEN.dialogs, 'no teams: the same questions were asked');
+  noTeamKeys = await page.evaluate(() => Object.keys(localStorage).sort());
   ok(!/team|tm\d/i.test(got.afterClearDay.stored), 'no teams: no team field was ever written to the saved section');
   ok(!(await page.$eval('#teamBoard', el => !el.hidden)), 'no teams: the team board is not shown');
   ok(await page.$eval('#teamsNote', el => /No teams yet/.test(el.textContent)), 'no teams: the card says there are none');
@@ -207,7 +209,6 @@ const withTeams = sec => {
 const totals = async page => (await tiles(page)).map(t => `${t.pos} ${t.name.trim()} ${t.total}`);
 {
   const page = await open(withTeams);
-  const keysBefore = await page.evaluate(() => Object.keys(localStorage).sort());
   eq(await boardShown(page), true, 'points: a saved section with teams shows the board on load');
   eq(await totals(page), ['Tied for 1st Falcons 0', 'Tied for 1st Herons 0'], 'points: everyone at 0 is a tie');
   eq((await tiles(page)).map(t => t.lead), ['', ''], 'points: and nobody leads');
@@ -256,16 +257,22 @@ const totals = async page => (await tiles(page)).map(t => `${t.pos} ${t.name.tri
   eq(swatchHidden, 'true', 'board: the colour swatch is decoration for a screen reader');
 
   /* hidden and total modes */
-  await page.selectOption('#displayMode', 'positive');
-  await tap(page, 'Dmitri Fox', '2');
-  await page.selectOption('#displayMode', 'full');
+  await page.fill('#teamGiveAmount', '-50'); await page.selectOption('#teamGiveTeam', 'tm2'); await page.click('#teamGiveBtn');
+  const herons = async () => (await tiles(page)).find(t => /Herons/.test(t.name)).total;
+  eq(await herons(), '−43', 'modes: a team can go below 0 and the board says so');
   await page.selectOption('#displayMode', 'positive');
   eq(await boardShown(page), true, 'modes: the board stays in "positives only"');
+  eq(await herons(), '0', 'modes: a negative team shows 0 in "positives only"');
   ok((await tiles(page)).every(t => !t.total.includes('−')), 'modes: negatives are hidden on the board in "positives only"');
+  await page.selectOption('#displayMode', 'full');
+  eq(await herons(), '−43', 'modes: and they come back in "names and points"');
+  await page.selectOption('#displayMode', 'positive');
   await page.selectOption('#displayMode', 'total');
   eq(await boardShown(page), true, 'modes: the board stays in "class total only"');
   ok(!(await page.$eval('#studentGrid', (el, names) => names.some(n => el.textContent.includes(n.split(' ')[0])), NAMES)), 'modes: and the student grid still names nobody');
   await page.selectOption('#displayMode', 'full');
+  await page.click('#teamLogList [data-team-undo]');
+  eq(await herons(), '7', 'modes: undoing the give puts the team back');
 
   /* teams only */
   eq(await page.$eval('#teamOnlyBtn', b => b.getAttribute('aria-pressed')), 'false', 'only: Teams only starts off');
@@ -283,7 +290,7 @@ const totals = async page => (await tiles(page)).map(t => `${t.pos} ${t.name.tri
   ok(/Team standings/.test(printed) && /1st — Herons/.test(printed), 'print: the report lists team standings when there are teams');
   ok(await page.$eval('#printBody', el => !!el.querySelector('tr td.pts') && el.querySelectorAll('tr').length > 6), 'print: after the students\' own rows');
 
-  eq(await page.evaluate(() => Object.keys(localStorage).sort()), keysBefore, 'storage: no new key was written');
+  eq(await page.evaluate(() => Object.keys(localStorage).sort()), noTeamKeys, 'storage: no key was written that a class with no teams does not write');
   eq(await page.evaluate(() => location.hash + location.search), '', 'storage: nothing was put in the address');
   eq(page.__blocked, [], 'storage: nothing left the page');
   eq(page.__errs, [], 'points: no page errors');
@@ -385,6 +392,9 @@ const totals = async page => (await tiles(page)).map(t => `${t.pos} ${t.name.tri
     sec.teamOf['Nobody Here'] = 'tm9';
   });
   eq(await totals(page), ['1st Herons 7', '2nd Falcons 4'], 'load: saved totals come back');
+  const loadedSec = await section(page);
+  ok(!('Nobody Here' in loadedSec.teamOf), 'load: an assignment to a missing team is dropped as soon as the section is saved');
+  eq(loadedSec.teams.map(t => t.id), ['tm1', 'tm2'], 'load: the duplicate id was not kept');
   eq(await page.$eval('#teamsEditor .team-name', el => el.value), 'Falcons', 'load: and the editor');
   await page.click('#addTeamBtn');
   const s = await section(page);
