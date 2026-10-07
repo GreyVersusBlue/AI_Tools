@@ -43,9 +43,9 @@ BACKLOG rank 125 had two parts; this session did the first, team / house points.
   page, 37 run and all caught**: 3 first survived because the test was weak (positives-only mode with no negative team on screen; the key list read after
   the page had already written its extra key; load cleaning checked only after an Add team that cleans as well) and were fixed; 5 more were first marked
   "survived" only because the suite had aborted on an earlier break's missing button (the driver now reports ABORTED) and were rerun alone; 2 more first
-  looked like survivors because the driver searched for a label the test had since renamed. Not run: the four whose failure cascades through every total
-  (the registry's `award` call removed outright, a board with no position words, the board drawn only from `renderBoard`, an archive that resets teams) and
-  the one for the direct-award undo. Not every assertion has its own break.
+  looked like survivors because the driver searched for a label the test had since renamed. Not run: the three whose failure cascades through every total
+  (a board with no position words, a board drawn only from a `renderBoard` that no longer calls it, an archive that resets teams) and the one for the
+  direct-award undo button. Not every assertion has its own break.
 - **Checks.** `test:a11y -- --only 008` and `audit-print --check --only 008` clean; the suites of `behavior-points-tracker`, `roster`, `theme`, `export` and
   `service-worker` pass; every `check:*`, `lint` and `check:precache -- --base origin/main` exit 0. `audit-print` seeds no teams, so the Team standings
   rows are asserted in `smoke-teams.mjs` and were not measured in print media.
