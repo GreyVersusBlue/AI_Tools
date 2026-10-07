@@ -17,10 +17,10 @@ the limit. `.github/workflows/ci.yml` now says 120, with a comment giving the re
 concurrency rules. No guard pins the value (`check:docs-commands` and `lint` exit 0 after it). **This buys time and fixes nothing:** the list grows by a
 suite or two a session, and the real fix is to split the suites across jobs, which is not done. Not verified: no CI run has finished under the new limit.
 
-## Path 12 P2, increment 3: 030's question-bank editor (2026-10-07, AI-14, `CACHE_VERSION` v275)
+## Path 12 P2, increment 3: 030's question-bank editor (2026-10-07, AI-14, `CACHE_VERSION` v276)
 
-Audit entry AI-14, BACKLOG rank 28 (a 2+ row; it stays, rewritten to what is left). The code commit says v274; AI-31-081 reached local `main` with v274 first, so the
-merge of local `main` moved this to v275. The session was handed one group of P2, "030's editor: choices,
+Audit entry AI-14, BACKLOG rank 28 (a 2+ row; it stays, rewritten to what is left). The code commit says v274; AI-31-081 reached local `main` with v274 and AI-31-079
+with v275 first, so two merges of local `main` moved this to v276. The session was handed one group of P2, "030's editor: choices,
 tags, edit in place, named sets, a preview before an import", in that order, shipping what fit. Three of the four parts shipped whole; named sets were
 not built, on purpose (below). `BACKLOG.md`'s Path 12 P2 bullet has the design as built; this is what happened.
 
@@ -61,6 +61,40 @@ not built, on purpose (below). `BACKLOG.md`'s Path 12 P2 bullet has the design a
 - **Not verified.** No person used the editor; no screen reader was run. No real teacher's bank. A file of thousands of questions in the preview. The
   full `npm test` was not run.
 - **Next free suite port: 8512** (8509 is this suite's; 8510 and 8511 were handed to the AI-31 workers of this batch).
+## 079 Verb Conjugation Poster: irregular-verb call-out boxes (2026-10-07, AI-31-079, `CACHE_VERSION` v275)
+
+Audit entry AI-31, BACKLOG rank 116 (½). The row is deleted and the other ranks are not renumbered. Checked first: before this the poster had no call-out;
+its two "Irregulars" starters (ser / estar, avoir / être) were whole posters of irregular panels, which stay. Not the conjugation engine (Path 19 P3):
+nothing here imports, stubs or anticipates one.
+
+- **What it is.** A card "Irregular verb call-out": a checkbox (off), a language, a tense and a list of the offered verbs to tick, five at most. On, the printed
+  poster gets one box under the panels with a row per ticked verb (the data's order) and the six forms under the language's person labels. Six tenses, exactly
+  the ones the page has starters for: Spanish present, preterite, imperfect, future; French present, imperfect. A starter opens the controls on its own tense,
+  off. The Spanish imperfect offers its three irregulars (ser, ir, ver); the French imperfect has one irregular stem (être), so it offers être and five verbs
+  that are irregular in the present and regular here, and prints a one-line note saying so.
+- **Data.** `Tools/verb-conjugation-poster-generator/irregulars.js` (precached, not in `SHELL_URLS`). A poster stores only `callout: { on, lang, tense, verbs: [ids] }`;
+  the forms are never stored or carried by a link, so a link cannot put text in the box. A box that is not usable (unknown tense, unknown ids, more than five,
+  not an object) is cleaned on load and on arrival from a link, in memory only.
+- **Saved, shared, old posters.** Same key `vcp_poster_v1`, no version wrapper (the key never had one); `callout` is written only once a control or a starter has
+  touched it. A poster saved before loads with its stored string untouched, and with the box off prints byte for byte what it did: `golden-old-posters.json`
+  (recorded from the page at 1aaee05 by `_record-golden.mjs`, once) holds the printed HTML and the Chromium PDF page count and text hash of 29 posters. A share link
+  carries `callout`; one made before has none and opens as it did. Print columns still do not travel.
+- **Fit.** The 1-per-row poster fills a whole Letter page on its own (1056 px tall in a 0-margin PDF; it already spills to a second page with the browser's default
+  margins, which this did not change). With a box on, `#printArea.has-callout` tightens the title, panel heading and row padding, so title, three panels and a box of
+  five verbs come to about 930 px, inside a 0.4 in-margin Letter page (981 px). Poster without a box never gets that class.
+- **Suite.** `smoke-callouts.mjs` (`test:verb-poster-callouts`, port 8510): A golden, B data shape, C controls, D saved and link, E fit (six tenses x 1, 2, 3 per row,
+  PDF with and without margins, clipping, every form in the PDF text), F axe light and dark and page errors.
+- **Not done, and not verified.** No language teacher has reviewed the verbs (below). The suite checks the data's shape and that the four verbs the page's own starters also hold
+  (ser, estar, avoir, être, present) agree with it; it cannot check Spanish or French. Nothing printed on paper; no real screen reader; fit measured in Chromium's PDF in
+  the fonts on huginn, not Segoe UI. Other tenses, German and Italian, a box per panel, and a box beside rather than under the panels remain.
+- **For a language teacher to review** (written from the standard textbook paradigms as the author remembered them, checked against nothing in this session; the
+  intended references are the RAE's conjugation tables and Bescherelle's *L'art de conjuguer*): Spanish present: ser, estar, ir, tener, hacer, venir, decir, poder. Preterite:
+  ser, ir, tener, hacer, estar, decir, poder, venir (ser and ir share forms, which is correct). Imperfect: ser, ir, ver. Future: tener, hacer, decir, poder, venir, saber,
+  querer, salir. French present: être, avoir, aller, faire, pouvoir, vouloir, venir, prendre. Imperfect: être, avoir, aller, faire, pouvoir, vouloir. Left out because the
+  author was not certain of every form: none dropped on that ground, but dar, ver and poner (present), and conditional/subjunctive tenses, were not offered at all.
+
+---
+
 ## 081 Word Problem Warm-Up: two-step problems for grades 6–8 (2026-10-07, AI-31-081, `CACHE_VERSION` v274)
 
 Audit entry AI-31, BACKLOG rank 117 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
@@ -109,6 +143,8 @@ Audit entry AI-31, BACKLOG rank 117 (½). The row is deleted and the other ranks
   `check:adoption -- --check` exit 0. The inline-sink baseline for 081 is unchanged: the page still writes the sheet and key with `innerHTML` from its own text, now with a key line that has operator characters and no markup.
 - **Not done / not verified.** Nothing printed on paper or read with a real screen reader. No story read by a teacher: the fifteen templates were read by their author only (the suite proves the arithmetic and the numbers, not that a
   sentence is good wording). No per-problem operation label (the row's Quick Win), no custom templates, no fractions. A teacher cannot pick which kinds a sheet draws. Full `npm test` not run.
+
+---
 
 ## 078 Unit Conversion Chart: named saved charts, reordering, and a share link that knows about saves (2026-10-06, AI-31-078, `CACHE_VERSION` v273)
 

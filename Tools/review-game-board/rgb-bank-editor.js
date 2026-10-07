@@ -1,4 +1,4 @@
-/* Quiz / Review Game Board — the question-bank editor (Path 12 P2, v275).
+/* Quiz / Review Game Board — the question-bank editor (Path 12 P2, v276).
    What the bank tab needs to show and edit EVERYTHING a question in the
    site's shared bank holds (_shared/question-bank.js): its choices and its
    tags beside the six fields the page always had; to edit a question where

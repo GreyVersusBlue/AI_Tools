@@ -87,7 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
-- **AI-14 (v275), rank 28 (kept, rewritten), Path 12 P2 increment 3: 030's editor.** The bank tab shows and edits
+- **AI-14 (v276), rank 28 (kept, rewritten), Path 12 P2 increment 3: 030's editor.** The bank tab shows and edits
   everything a question holds: the add card has a choices editor (add, remove, move up and down, mark the right one,
   which is the choice whose text is the answer; no new field) and tags as tokens (typed, or picked from the bank's
   own); a row shows its tags and choices; **Edit** opens a question where it stands in the list (Save keeps its id,
@@ -462,7 +462,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v275): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Left:** 018 and 019 pull station questions from it; 020's academic-tournament mode; 062's thirty map questions, which are not published (they wait on P4); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Eight questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Left:** 018 and 019 pull station questions from it; 020's academic-tournament mode; 062's thirty map questions, which are not published (they wait on P4); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Eight questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 29 | Path 12 P3 — play modes in 030: every-team-answers, quiz-bowl, wheel, final wager, printed quiz | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -532,7 +532,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
-| 116 | Irregular verb call-out boxes — three to five common irregulars per tense | 079 | ½ | | [079 Verb Conjugation Reference Poster Generator](#079--verb-conjugation-reference-poster-generator) |
 | 118 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
 | 119 | Roles built into a group; project-team mode; a pair-history that spans the year | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
 | 120 | Peer review mode; rubric handoff to the grades tools | 003 | ½ | | [003 Rubric Builder](#003--rubric-builder) |
@@ -4230,7 +4229,7 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   - *Not verified.* No person used the card. No real teacher's lists were opened before and after (the suite's
     are made up). The chooser was not tried with a bank of thousands of questions (it lists every one in a
     15 rem scroll box). Not run: the full `npm test`.
-  **Increment 3 shipped (AI-14, 2026-10-07, v275): 030's editor. The rest of this bullet is that increment as
+  **Increment 3 shipped (AI-14, 2026-10-07, v276): 030's editor. The rest of this bullet is that increment as
   built; `Tools/review-game-board/rgb-bank-editor.js`'s header says the same and is the reference.**
   - *What was there (v273).* The add card took six fields (question, answer, points, unit, standard, difficulty). A
     row showed those and had Delete, or Copy to my bank on a seed set. A question's choices and tags were stored
@@ -12362,9 +12361,13 @@ need rebuilding for sixth-grade customary-to-metric next period.
 
 #### Major Features
 
-- **Irregular verb call-out boxes** — a small side panel per poster
-  listing 3&ndash;5 common irregular verbs in that tense, since regular
-  patterns are only half of what a wall reference needs to be useful.
+- ~~**Irregular verb call-out boxes**~~ — shipped (v275, 2026-10-07, AI-31-079): an
+  optional box under the panels, per poster, listing three to five irregulars in one
+  of six tenses (Spanish present, preterite, imperfect, future; French present,
+  imperfect), chosen by the teacher and saved with the poster. The data is
+  `Tools/verb-conjugation-poster-generator/irregulars.js` and **has not been reviewed
+  by a language teacher** (HISTORY lists every verb). Still open: German and Italian
+  data, other tenses, a box per panel rather than one per poster.
 - **JSON export/import**, for sharing a built poster with another teacher
   on the same team, or backing one up before a school year ends.
 - **A "shrink to fit one page" print mode toggle** — right now font sizes
@@ -12396,9 +12399,9 @@ every year the same unit comes around.
   loaded like any other template) rather than a call-out box grafted onto
   a regular-pattern poster — simpler to build with the existing panel
   model and keeps a teacher's "irregulars" poster separately printable
-  from their "regular pattern" one. The Major Features item calling for a
-  *combined* poster (regular panels + a small irregular-verb side box on
-  the same page) is still open if that's the better pedagogical shape.
+  from their "regular pattern" one. The *combined* poster (regular panels + an
+  irregular-verb box on the same page) shipped as an opt-in box (v275), so both
+  shapes now exist.
 
 #### Platform themes that matter here
 

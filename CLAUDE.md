@@ -551,7 +551,7 @@ files must be added there too.
   `QuestionBank.fromLink()` is the only reader of that link and takes no id from it, and 030 stores an arrival
   only when the teacher presses Add; a new sender follows 053's entry, `maxLink` included
   (`npm run test:received-questions`).
-  Since v275 030's bank tab edits everything a question holds (`Tools/review-game-board/rgb-bank-editor.js`): the
+  Since v276 030's bank tab edits everything a question holds (`Tools/review-game-board/rgb-bank-editor.js`): the
   right choice is the one whose text is the answer, so marking one writes the answer and no field was added; a Save
   from a form sends only the fields the form shows, with the id, so the rest of the question stays; and **a file is
   shown before it is stored** (`importPlan()`, the bank's own `merge()` over a copy), which the next import route

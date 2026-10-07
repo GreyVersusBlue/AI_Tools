@@ -72,7 +72,7 @@ async function importFile(name, mimeType, body) {
   await page.setInputFiles('#bankImportFile', { name, mimeType, buffer: Buffer.isBuffer(body) ? body : Buffer.from(body, 'utf8') });
   await page.waitForFunction(() => { const t = document.getElementById('bankFileStatus').textContent; return t && !/^Reading /.test(t); }, null, { timeout: 15000 });
   await settle(page, 150);
-  // Since v275 a file is shown before it is stored (smoke-bank-editor.mjs
+  // Since v276 a file is shown before it is stored (smoke-bank-editor.mjs
   // holds the preview itself). This suite is about what an import stores, so
   // it presses Add when there is something to add; with nothing to add the
   // status line already says the outcome.
