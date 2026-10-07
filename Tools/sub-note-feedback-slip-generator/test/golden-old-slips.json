@@ -1,0 +1,96 @@
+{
+ "full save": {
+  "ui": {
+   "copyCount": "3",
+   "classPeriod": "4th Period",
+   "urgency": false,
+   "prompts": [
+    "Which table was loudest?",
+    "Did the quiz finish?",
+    ""
+   ]
+  },
+  "diskAfterLoad": true,
+  "sheet": "<section class=\"pk-half pk-sheet pk-sheet-blank pk-cut\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: 4th Period &nbsp; Sub name: __________________</div><p class=\"slip-prompt\">Which table was loudest?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Did the quiz finish?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section><section class=\"pk-half pk-sheet pk-sheet-blank\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: 4th Period &nbsp; Sub name: __________________</div><p class=\"slip-prompt\">Which table was loudest?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Did the quiz finish?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section><section class=\"pk-half pk-sheet pk-sheet-blank pk-cut\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: 4th Period &nbsp; Sub name: __________________</div><p class=\"slip-prompt\">Which table was loudest?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Did the quiz finish?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section>",
+  "share": "{\n  \"aplp\": {\n    \"v\": 1,\n    \"tool\": \"sub-note-feedback-slip\",\n    \"param\": \"slip\",\n    \"exported\": \"2026-10-07T01:17:44.473Z\"\n  },\n  \"state\": {\n    \"copyCount\": 3,\n    \"prompts\": [\n      {\n        \"id\": \"g0\",\n        \"text\": \"Which table was loudest?\"\n      },\n      {\n        \"id\": \"g1\",\n        \"text\": \"Did the quiz finish?\"\n      },\n      {\n        \"id\": \"g2\",\n        \"text\": \"\"\n      }\n    ],\n    \"classPeriod\": \"4th Period\",\n    \"urgencyBox\": false\n  }\n}"
+ },
+ "defaults saved": {
+  "ui": {
+   "copyCount": "2",
+   "classPeriod": "",
+   "urgency": true,
+   "prompts": [
+    "What worked well today?",
+    "What didn’t go as planned?",
+    "Any names or notes I should know for tomorrow?",
+    "Anything else the teacher should know?"
+   ]
+  },
+  "diskAfterLoad": true,
+  "sheet": "<section class=\"pk-half pk-sheet pk-sheet-blank pk-cut\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">What worked well today?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">What didn’t go as planned?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Any names or notes I should know for tomorrow?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Anything else the teacher should know?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section><section class=\"pk-half pk-sheet pk-sheet-blank\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">What worked well today?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">What didn’t go as planned?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Any names or notes I should know for tomorrow?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Anything else the teacher should know?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section>",
+  "share": "{\n  \"aplp\": {\n    \"v\": 1,\n    \"tool\": \"sub-note-feedback-slip\",\n    \"param\": \"slip\",\n    \"exported\": \"2026-10-07T01:17:45.567Z\"\n  },\n  \"state\": {\n    \"copyCount\": 2,\n    \"prompts\": [\n      {\n        \"id\": \"g0\",\n        \"text\": \"What worked well today?\"\n      },\n      {\n        \"id\": \"g1\",\n        \"text\": \"What didn’t go as planned?\"\n      },\n      {\n        \"id\": \"g2\",\n        \"text\": \"Any names or notes I should know for tomorrow?\"\n      },\n      {\n        \"id\": \"g3\",\n        \"text\": \"Anything else the teacher should know?\"\n      }\n    ],\n    \"classPeriod\": \"\",\n    \"urgencyBox\": true\n  }\n}"
+ },
+ "no class period, no urgency field (an older save)": {
+  "ui": {
+   "copyCount": "5",
+   "classPeriod": "",
+   "urgency": true,
+   "prompts": [
+    "Who needs a call home?"
+   ]
+  },
+  "diskAfterLoad": true,
+  "sheet": "<section class=\"pk-half pk-sheet pk-sheet-blank pk-cut\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">Who needs a call home?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section><section class=\"pk-half pk-sheet pk-sheet-blank\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">Who needs a call home?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section><section class=\"pk-half pk-sheet pk-sheet-blank pk-cut\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">Who needs a call home?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section><section class=\"pk-half pk-sheet pk-sheet-blank\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">Who needs a call home?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section><section class=\"pk-half pk-sheet pk-sheet-blank pk-cut\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">Who needs a call home?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section>",
+  "share": "{\n  \"aplp\": {\n    \"v\": 1,\n    \"tool\": \"sub-note-feedback-slip\",\n    \"param\": \"slip\",\n    \"exported\": \"2026-10-07T01:17:46.644Z\"\n  },\n  \"state\": {\n    \"copyCount\": 5,\n    \"prompts\": [\n      {\n        \"id\": \"g0\",\n        \"text\": \"Who needs a call home?\"\n      }\n    ],\n    \"classPeriod\": \"\",\n    \"urgencyBox\": true\n  }\n}"
+ },
+ "six wordy prompts, one-up": {
+  "ui": {
+   "copyCount": "2",
+   "classPeriod": "Team 6 — Blue",
+   "urgency": true,
+   "prompts": [
+    "One?",
+    "Two?",
+    "Three?",
+    "Four?",
+    "Five?",
+    "Six <b>bold</b> & \"quoted\"?"
+   ]
+  },
+  "diskAfterLoad": true,
+  "sheet": "<section class=\"pk-page pk-sheet pk-sheet-blank\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: Team 6 — Blue &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">One?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Two?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Three?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Four?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Five?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Six &lt;b&gt;bold&lt;/b&gt; &amp; \"quoted\"?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section><section class=\"pk-page pk-sheet pk-sheet-blank\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: Team 6 — Blue &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">One?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Two?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Three?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Four?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Five?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Six &lt;b&gt;bold&lt;/b&gt; &amp; \"quoted\"?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section>",
+  "share": "{\n  \"aplp\": {\n    \"v\": 1,\n    \"tool\": \"sub-note-feedback-slip\",\n    \"param\": \"slip\",\n    \"exported\": \"2026-10-07T01:17:47.737Z\"\n  },\n  \"state\": {\n    \"copyCount\": 2,\n    \"prompts\": [\n      {\n        \"id\": \"g0\",\n        \"text\": \"One?\"\n      },\n      {\n        \"id\": \"g1\",\n        \"text\": \"Two?\"\n      },\n      {\n        \"id\": \"g2\",\n        \"text\": \"Three?\"\n      },\n      {\n        \"id\": \"g3\",\n        \"text\": \"Four?\"\n      },\n      {\n        \"id\": \"g4\",\n        \"text\": \"Five?\"\n      },\n      {\n        \"id\": \"g5\",\n        \"text\": \"Six <b>bold</b> & \\\"quoted\\\"?\"\n      }\n    ],\n    \"classPeriod\": \"Team 6 — Blue\",\n    \"urgencyBox\": true\n  }\n}"
+ },
+ "nothing saved": {
+  "ui": {
+   "copyCount": "2",
+   "classPeriod": "",
+   "urgency": true,
+   "prompts": [
+    "What worked well today?",
+    "What didn’t go as planned?",
+    "Any names or notes I should know for tomorrow?",
+    "Anything else the teacher should know?"
+   ]
+  },
+  "diskAfterLoad": true,
+  "sheet": "<section class=\"pk-half pk-sheet pk-sheet-blank pk-cut\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">What worked well today?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">What didn’t go as planned?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Any names or notes I should know for tomorrow?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Anything else the teacher should know?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section><section class=\"pk-half pk-sheet pk-sheet-blank\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">What worked well today?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">What didn’t go as planned?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Any names or notes I should know for tomorrow?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Anything else the teacher should know?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section>",
+  "share": "{\n  \"aplp\": {\n    \"v\": 1,\n    \"tool\": \"sub-note-feedback-slip\",\n    \"param\": \"slip\",\n    \"exported\": \"2026-10-07T01:17:48.806Z\"\n  },\n  \"state\": {\n    \"copyCount\": 2,\n    \"prompts\": [\n      {\n        \"id\": \"pmuxf4hrrkmdt\",\n        \"text\": \"What worked well today?\"\n      },\n      {\n        \"id\": \"pmuxf4hrrxl8f\",\n        \"text\": \"What didn’t go as planned?\"\n      },\n      {\n        \"id\": \"pmuxf4hrr2cax\",\n        \"text\": \"Any names or notes I should know for tomorrow?\"\n      },\n      {\n        \"id\": \"pmuxf4hrrxjuh\",\n        \"text\": \"Anything else the teacher should know?\"\n      }\n    ],\n    \"classPeriod\": \"\",\n    \"urgencyBox\": true\n  }\n}"
+ },
+ "saved with an empty prompt list (reads as nothing saved)": {
+  "ui": {
+   "copyCount": "2",
+   "classPeriod": "",
+   "urgency": true,
+   "prompts": [
+    "What worked well today?",
+    "What didn’t go as planned?",
+    "Any names or notes I should know for tomorrow?",
+    "Anything else the teacher should know?"
+   ]
+  },
+  "diskAfterLoad": true,
+  "sheet": "<section class=\"pk-half pk-sheet pk-sheet-blank pk-cut\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">What worked well today?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">What didn’t go as planned?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Any names or notes I should know for tomorrow?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Anything else the teacher should know?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section><section class=\"pk-half pk-sheet pk-sheet-blank\"><div class=\"slip\"><h2>Sub Note</h2><div class=\"meta-line\">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div><div class=\"slip-urgency\"><span class=\"u-box\"></span><span><b>Call me about this</b> — check this box if something today needs the teacher’s attention first.</span></div><p class=\"slip-prompt\">What worked well today?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">What didn’t go as planned?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Any names or notes I should know for tomorrow?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span><p class=\"slip-prompt\">Anything else the teacher should know?</p><span class=\"slip-line\"></span><span class=\"slip-line\"></span></div></section>",
+  "share": "{\n  \"aplp\": {\n    \"v\": 1,\n    \"tool\": \"sub-note-feedback-slip\",\n    \"param\": \"slip\",\n    \"exported\": \"2026-10-07T01:17:49.888Z\"\n  },\n  \"state\": {\n    \"copyCount\": 2,\n    \"prompts\": [\n      {\n        \"id\": \"pmuxf4ilexfyw\",\n        \"text\": \"What worked well today?\"\n      },\n      {\n        \"id\": \"pmuxf4ilezvup\",\n        \"text\": \"What didn’t go as planned?\"\n      },\n      {\n        \"id\": \"pmuxf4ilerw3u\",\n        \"text\": \"Any names or notes I should know for tomorrow?\"\n      },\n      {\n        \"id\": \"pmuxf4ileriey\",\n        \"text\": \"Anything else the teacher should know?\"\n      }\n    ],\n    \"classPeriod\": \"\",\n    \"urgencyBox\": true\n  }\n}"
+ }
+}
