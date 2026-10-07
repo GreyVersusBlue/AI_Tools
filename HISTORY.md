@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## 030 Quiz / Review Game Board: projector view (2026-10-07, AI-31-030, `CACHE_VERSION` v291)
+## 030 Quiz / Review Game Board: projector view (2026-10-07, AI-31-030, `CACHE_VERSION` v293; the code commit says v291, which AI-31-032 took, and main passed v292 before the merge)
 
 BACKLOG rank 145, one increment: the projector styling is built and the remembering is not (below). Changed: `Tools/030-review-game-board.html`, `Tools/review-game-board/rgb-store.js`
 and the suite folder; nothing in `_shared/`, `sw.js` beyond `CACHE_VERSION`, no guard or workflow. Checked first: the board, the clue overlay, the round overlay and the wheel were
@@ -66,7 +66,88 @@ box ratio 0.37 against 0.33. **Not verified:** nothing was looked at on a real p
 dark) were looked at on huginn only; no screen reader was run over the view; the print path is checked by media emulation (`--u` is not defined in print) and by `audit-print`, not on paper;
 `test:theme`, the share and dark rollouts and the full `npm test` were not run.
 
+## 032 School Calendar Visualizer: A/B badges on the year grid, and a printed page per week (2026-10-07, AI-31-032, `CACHE_VERSION` v292; the code commit says v291, which AI-31-036 took)
+
+BACKLOG rank 146, both parts built, in the tool's own files (`Tools/032-School Calendar Visualizer.html`, `Tools/school-calendar/`). Checked first: the page already had
+the A/B letters on the month grid (since 2026-08) and a **one**-week print (`smoke-week.mjs`); the year grid had no letters and the week print could only be one week. The
+store is untouched (`scv_calendar_v1` is read raw by 010): nothing new is saved, every badge and page is computed.
+
+- **`scv-weeks.js`**, new, pure (no DOM, no storage), precached and in the shell: `abLetters(cal)` is the page's old `buildAbMap()` moved, and **the one place a day's letter is
+  decided**; `yearBadge()`, `mondayOf()`, `weekDates()`, `weekRange()`. All of it walks calendar dates in UTC milliseconds, so a daylight-saving change and the machine's zone cannot
+  move a date. The page's `buildAbMap()` now just calls it. The month grid is byte for byte what it was.
+- **Year-grid badges.** With the cycle on, a school day shows its letter as text in a box (`role="img"`, `aria-label="A day"`), a weekday with no school an en dash on a hatched
+  cell (`aria-label="no school"`), a weekend nothing; a one-line key under the grid says what they mean. 9px bold, black in a black box on paper, a grey cell for the closed day:
+  none of it is colour alone. With the cycle off, the grid is the markup it was (hashes).
+- **Printed weeks.** "Week of" plus "through the week of" (or the button "Every week of the year") prints a page per week, Monday to Friday, in order, each with the day's label,
+  day types in words, paced lesson, lesson note, note, the A/B letter, and the lines for notes; a polite status says "Prints 3 pages, one per week."; sixty at most (said on the page);
+  a week with no day in the calendar is left out, a week that is all break is kept, greyed. A "through" that is blank, earlier or in the same week is the one week, whose markup is
+  unchanged. Page breaks are CSS `break-after` on each week, none after the last.
+- **Decisions.** (1) The week is Monday to Friday and the page has **no setting for the day a week starts**, so none was invented (the month grid starts on Sunday). (2) **No orientation
+  is forced**: the page has always printed with `@page { size: auto }`, a forced landscape would change how a saved calendar prints; the layout holds in both (below), and the controls say
+  nothing about it, so the answer is the print dialog. Reverse either cheaply. (3) The prompt asked for "the cycle's own labels as the teacher named them"; the store has only `A`/`B`
+  (`anchorLetter`), a label field would be a change to the key 010 reads, so badges are A, B and an en dash.
+
+**Found, not fixed (a decision for Devon).** *The anchor date shows the other letter.* The old rule lines the walk up on the calendar's first day from the count of school days strictly between
+it and the anchor. When that first day is itself a school day and the anchor is later, the anchor date gets the **opposite** of the letter the teacher gave it (anchor 2026-09-14 "A" on the seeded
+year shows B; anchored on the first day itself, or before it, it is right). Nothing tested the cycle before this. It is kept exactly (a saved calendar prints by it), pinned by name as
+`ANCHOR_QUIRK` in `smoke-weeks-core.mjs`, and BACKLOG row 146 says what fixing it changes: every letter of such a calendar flips. *The old page's date walk was zone-fragile:* in a zone that
+changes its clocks at midnight (Havana) its `setDate()` walk skipped or repeated a day, and its map was wrong; the new module is not (the suite proves it under Havana and Lord Howe).
+
+**Tests.** `smoke-weeks-core.mjs` (`npm run test:school-calendar-weeks-core`, pure Node, 515 assertions, re-run by itself under `TZ=UTC`, New York, Havana and Auckland; six whole school years
+(a Monday start, a Wednesday start and Thursday end, a leap year with Feb 29 a school day and with it closed, a Saturday start, a closed first day), breaks at different places, nine anchors
+each in A and B, compared with a copy of the old page function (where that was sound), with properties that come from neither (the letters alternate on school days only; a break does not
+advance the cycle), and every date of 2026 to 2028 against integer arithmetic that never calls `Date`, including the six daylight-saving weeks). `smoke-weeks.mjs`
+(`npm run test:school-calendar-weeks`, port 8527, 386 assertions: `golden-old-views.json`, recorded from the page before any edit, holds the month grid, the year grid with the cycle off, seven
+chosen weeks with and without the cycle, and the stored string, in three zones; the year grid's badges against the month grid's and a closed-day list; the range across both
+daylight-saving weeks in five zones; PDFs read with `pdftotext` at Letter, A4, Legal and Tabloid in both orientations, three weeks each, one PDF page per week, in order, none blank, no word past the
+paper's edge, a 20-sentence note whole on its page, and the whole year (41 weeks) on 41 pages; axe on the new controls and the printed range). **Breaks on purpose:** 25 in the module (23 caught; 2 equivalent: a `<=` that
+still gives one week, and an invalid "through" that `mondayOf` already refuses) and 26 on the page (25 caught, each run alone; 1 survived: a forced page break after the
+last week, which Chromium drops, so it adds no blank page there; the rule stays for other browsers).
+
+**Not verified.** Nothing printed on paper or read with a real screen reader. `audit-print` reaches the default state only (its seed does not open the week print), so the PDF assertions are the print
+check. Landscape is not forced; in portrait the five columns are about 1.5 inches wide on Letter. The weeks print the page's own title above them, as the one-week print always did.
+
 ---
+## 036 Final Grade Checker: scenarios (drop, curve, re-weight) beside the real grades (2026-10-07, AI-31-036, `CACHE_VERSION` v291)
+
+BACKLOG rank 149, built on what the tool actually is. **Checked first:** the tool does not grade categories of assignments; it grades **four quarter percentages per
+student** (quality points and percentage average, the higher reported, ten-point scale, exactly .5 rounds up, Grading Settings for strict rounding, precision and
+quarter weights), keeps no gradebook, and by policy stores no names or grades (only the Grading Settings object, and only when "Remember" is ticked). It already
+had a quick class-wide what-if (add points to every quarter; replace each student's lowest quarter with the mean of the others, tested in `smoke-whatif.mjs`) and
+custom quarter weights. So "category" below is the four quarters and "assessment" is a quarter. **A categories-and-assessments gradebook, and a "gradebook saved with
+versioning", do not exist in this tool and were not invented; that is a different tool, and the call is Devon's if he wants it.**
+
+- **New `Tools/final-grade-checker/scenario-math.mjs`** (precached, pure, no DOM) and a Scenarios card on the page, hidden until a class is imported, `no-print`, below the
+  quick what-if (which is untouched and still answers as it did; the card says how the two drops differ). Fixed order, stated on the page: **drop** each student's lowest
+  0 to 3 quarters (one always stays; ties drop the earlier quarter; a quarter with weight 0 is never counted or dropped; dropped quarters are left out of both averages,
+  not replaced), **curve** the kept quarters (add or take off points, 50 at most; or scale so each quarter's own class top becomes 100; every quarter or one; rounded to
+  the hundredth, floor 0, cap 100 or 200 with extra credit; a top of 0 scales nothing), **weight** (each kept quarter counts its weight over the kept total, so weights need
+  not add to 100; 0 leaves a quarter out; negative, non-numeric or all-zero weights are refused and Grading Settings' weights stay). The result is a table, per student:
+  real grade, scenario grade, change (letter and points), quarters left out; with the up/down/unchanged counts and the letter counts before and after. The real grade is
+  `calcFinals()` with the page's own `calcOpts()`. A student missing a quarter that counts has no final, as on the page.
+- **Named scenarios** (name, Save, Use it, Delete behind a confirm, Clear scenario, at most 20, same name any case updates) live in the existing Grading Settings object as
+  `settings.scenarios`, **added only once one is saved and the key removed when the last is deleted**, so the stored string for anyone who never saves one is byte for byte the
+  old one. They are written only when "Remember these settings" is ticked, hold settings and nothing else (asserted: no name or grade in the stored string), and a corrupt entry
+  is cleaned on load. No new key, no registry change, nothing in a link.
+- **The arithmetic is integers** (hundredths of a percent, hundredths of weight, averages in ten-thousandths rounded half up, the county rule's own four decimals), so a
+  boundary student is not a float accident. `scenario-math.test.mjs` (`test:final-grade-scenario-core`, pure Node, 21,182 assertions) checks it against an oracle on BigInt
+  fractions that shares no code with it, over 6,000 seeded books with random scenarios (about 17,000 students; 6 settings; weights with zeros; extra credit; ties; scores on
+  the letter boundaries), plus 60,000 books proving that **no scenario equals `calcFinals()` exactly**, including the strict and rounding settings, plus hand-worked cases. The
+  choices that are rules, not arithmetic, are the same two in module and oracle and are stated in both: a curved score is rounded to the hundredth, and an average is rounded
+  half up to four decimals before a cutoff.
+- **Old behaviour pinned before the change:** `grade-math.mjs` over 4,000 seeded books and 9 option sets hashes the same (`_golden-math.mjs`, recorded from 235dcf3), and
+  `golden-old-page.json` (12 fingerprints of the cards, triage and old what-if for 3 pastes under 4 settings, the 4 old what-if states, and the stored string) was recorded from
+  the page at 235dcf3 and is equal now. `smoke-scenarios.mjs` (`test:final-grade-scenarios`, port 8528) drives the panel on the page: the cards, the paste and all of localStorage
+  are identical after every drop, curve and re-weight action, saved scenarios, the refusals, the order, strict rounding, print (the card does not print) and axe on the card.
+- **Breaks on purpose.** 36 in pure Node, in a mutated copy of the module (SCENARIO_MODULE), all caught after 7 survivors got assertions (one more, "scores mutated in place",
+  is caught only because the test freezes the input and the run crashes). 9 on the page, one suite run each, all caught: saving writing storage without Remember, the last
+  delete leaving an empty list, the scenario editing a real score, the card printing, the results box not keyboard-reachable, the scenario ignoring Grading Settings, the saved
+  list not rebuilt on load, delete without a confirm (a first attempt had a syntax slip in the mutation and proved nothing; redone), same name compared case-sensitively. Not
+  broken: the rules paragraph's wording, Clear resetting the form, the points box hiding, the "toFixed" rounding of the after column (7 more were written, not run: the suites
+  lock was held by other workers for hours). One unfixed oddity found on the way: the existing code shows `toFixed(2)` of a float, so 86.235 reads 86.23 on the old cards; the scenario column is
+  rounded half up exactly (86.24), so a student can look one hundredth different between the two columns at an exact half-hundredth. Not changed.
+- **Not done / not verified:** the before/after is a table and letter counts, not a chart (Path 16 P4, once the shared chart engine exists); no category/assessment model;
+  nothing printed (the card is screen only); no screen reader; the page's older contrast and import-status axe violations after an import are not this row's and were not touched.
 
 ## 026 Math Fact Drill Sheet Generator: fraction multiplication and division, exponents, one-step equations (2026-10-07, AI-31-026, `CACHE_VERSION` v290; the code commit says v288, which AI-31-025 took, and main passed v289 before the merge)
 
