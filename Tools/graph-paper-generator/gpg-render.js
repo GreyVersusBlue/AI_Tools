@@ -885,6 +885,582 @@
     };
   }
 
+  /* ---------- More grid types (AI-31 / BACKLOG 129) ----------
+     Everything below is new; nothing above is changed, so a sheet drawn before
+     these existed comes out byte for byte the same (golden-old-render.json).
+     Positions are computed from whole numbers wherever the maths allows
+     (a tick's index over the span, never a running float sum), so a tick for
+     5/8 or 0.35 sits exactly where the ratio says. */
+  var MID = 0.012;          // a middle weight between THIN and BOLD, never under THIN
+  var TICK_W = THIN * 1.6;  // the existing number line's tick weight
+  var CHAR_W = 0.6;         // monospace advance as a share of font size
+
+  function clampInt(v, lo, hi, dflt) {
+    var n = Math.round(Number(v));
+    if (!isFinite(n)) n = dflt;
+    return Math.max(lo, Math.min(hi, n));
+  }
+
+  function circleEl(cx, cy, r, strokeWidth) {
+    return '<circle cx="' + cx.toFixed(4) + '" cy="' + cy.toFixed(4) + '" r="' + r.toFixed(4) +
+      '" fill="none" stroke="currentColor" stroke-width="' + strokeWidth + '"/>';
+  }
+
+  function gcd(a, b) {
+    a = Math.abs(a); b = Math.abs(b);
+    while (b) { var t = a % b; a = b; b = t; }
+    return a;
+  }
+
+  function arrowedAxis(xA, xB, y) {
+    return lineEl(xA, y, xB, y, BOLD) +
+      '<path d="M ' + xA.toFixed(4) + ' ' + y.toFixed(4) + ' l 0.12 -0.06 l 0 0.12 z" fill="currentColor"/>' +
+      '<path d="M ' + xB.toFixed(4) + ' ' + y.toFixed(4) + ' l -0.12 -0.06 l 0 0.12 z" fill="currentColor"/>';
+  }
+
+  function wrapSheet(page, headerH, opts, parts) {
+    var gridColor = opts.faded ? FADE_COLOR : INK_COLOR;
+    return svgWrap(page.w, page.h, headerSvg(opts.header, page, headerH) + gridGroup(gridColor, parts.join('')));
+  }
+
+  /* ---------- Polar graph paper ---------- */
+  // Rings at equal radius steps out from the centre, rays at equal angles
+  // (12, 16 or 24 of them), the four axes heavier. The outer ring is the last
+  // whole step that fits, so the figure is always a complete circle.
+  // opts: { orientation, rays: 12|16|24, ringStep (inches), labels, faded, header }
+  var POLAR_RAY_CHOICES = [12, 16, 24];
+
+  function polarLayout(opts) {
+    var page = pageSize(opts.orientation);
+    var headerH = headerBlockHeight(opts.header);
+    var labels = opts.labels !== false;
+    var reserve = labels ? 0.3 : 0.02;
+    var usableW = page.w - MARGIN * 2;
+    var usableH = page.h - MARGIN * 2 - headerH;
+    var radiusMax = Math.min(usableW, usableH) / 2 - reserve;
+    var step = Number(opts.ringStep);
+    if (!(step >= 0.1)) step = step > 0 ? 0.1 : 0.5;
+    if (step > radiusMax) step = radiusMax;
+    var rings = Math.max(1, Math.floor(radiusMax / step + 1e-9));
+    var radii = [];
+    for (var k = 1; k <= rings; k++) radii.push(k * step);
+    var rayCount = POLAR_RAY_CHOICES.indexOf(Math.round(opts.rays)) !== -1 ? Math.round(opts.rays) : 12;
+    var angles = [];
+    for (var i = 0; i < rayCount; i++) angles.push(i * 360 / rayCount);
+    return {
+      page: page, headerH: headerH, labels: labels,
+      cx: MARGIN + usableW / 2, cy: MARGIN + headerH + usableH / 2,
+      step: step, radii: radii, outer: rings * step, rays: angles
+    };
+  }
+
+  function renderPolarPaper(opts) {
+    var L = polarLayout(opts);
+    var parts = [];
+    L.rays.forEach(function (deg) {
+      var th = deg * Math.PI / 180;
+      var isAxis = deg % 90 === 0;
+      parts.push(lineEl(L.cx, L.cy, L.cx + L.outer * Math.cos(th), L.cy - L.outer * Math.sin(th), isAxis ? BOLD : THIN));
+    });
+    L.radii.forEach(function (r) { parts.push(circleEl(L.cx, L.cy, r, THIN)); });
+    if (L.labels) {
+      var every = L.radii.length <= 12 ? 1 : 5;
+      L.radii.forEach(function (r, i) {
+        if ((i + 1) % every !== 0) return;
+        parts.push(textEl(L.cx + r - 0.03, L.cy - 0.04, String(i + 1), 'end', 0.09));
+      });
+      L.rays.forEach(function (deg) {
+        var th = deg * Math.PI / 180;
+        var rr = L.outer + 0.17;
+        parts.push(textEl(L.cx + rr * Math.cos(th), L.cy - rr * Math.sin(th) + 0.035, deg + '°', 'middle', 0.1));
+      });
+    }
+    return { svg: wrapSheet(L.page, L.headerH, opts, parts), cx: L.cx, cy: L.cy, radii: L.radii, rays: L.rays, outer: L.outer, ringStep: L.step };
+  }
+
+  /* ---------- Logarithmic and semi-logarithmic paper ---------- */
+  // A log axis runs whole decades; inside decade d the lines for 2..9 sit at
+  // (d + log10(m)) / decades of the axis length, the decade lines (m = 1)
+  // heaviest and the 5 a step lighter. Semi-log keeps the other axis linear;
+  // log-log makes both log.
+  // opts: { orientation, kind: 'semilog'|'loglog', decades (1..6), startExp,
+  //         xDecades, xStartExp (log-log), xDivisions (10|20, semi-log), faded, header }
+  function expLabel(e) {
+    if (e >= 5 || e <= -5) return '10^' + e;
+    if (e >= 0) return '1' + new Array(e + 1).join('0');
+    return '0.' + new Array(-e).join('0') + '1';
+  }
+
+  // Every line of a log axis as a fraction of its length: [{ frac, exp, m }].
+  function logAxisLines(decades, startExp) {
+    var out = [];
+    for (var d = 0; d < decades; d++) {
+      for (var m = 1; m <= 9; m++) out.push({ frac: (d + Math.log(m) / Math.LN10) / decades, exp: startExp + d, m: m });
+    }
+    out.push({ frac: 1, exp: startExp + decades, m: 1 });
+    return out;
+  }
+
+  function logLineWidth(m) { return m === 1 ? BOLD : (m === 5 ? MID : THIN); }
+
+  function renderLogPaper(opts) {
+    var page = pageSize(opts.orientation);
+    var headerH = headerBlockHeight(opts.header);
+    var kind = opts.kind === 'loglog' ? 'loglog' : 'semilog';
+    var yDec = clampInt(opts.decades, 1, 6, 3), yExp = clampInt(opts.startExp, -4, 4, 0);
+    var xDec = clampInt(opts.xDecades, 1, 6, 3), xExp = clampInt(opts.xStartExp, -4, 4, 0);
+    var xDiv = opts.xDivisions === 20 || opts.xDivisions === '20' ? 20 : 10;
+    var x0 = MARGIN + 0.6, x1 = page.w - MARGIN - 0.1;
+    var y0 = MARGIN + headerH + 0.1, y1 = page.h - MARGIN - 0.3;
+    var w = x1 - x0, h = y1 - y0;
+    var parts = [];
+    var yLines = logAxisLines(yDec, yExp);
+    yLines.forEach(function (ln) {
+      var y = y1 - ln.frac * h;
+      parts.push(lineEl(x0, y, x1, y, logLineWidth(ln.m)));
+      if (ln.m === 1) parts.push(textEl(x0 - 0.07, y + 0.035, expLabel(ln.exp), 'end', 0.1));
+    });
+    if (kind === 'loglog') {
+      logAxisLines(xDec, xExp).forEach(function (ln) {
+        var x = x0 + ln.frac * w;
+        parts.push(lineEl(x, y0, x, y1, logLineWidth(ln.m)));
+        if (ln.m === 1) parts.push(textEl(x, y1 + 0.17, expLabel(ln.exp), 'middle', 0.1));
+      });
+    } else {
+      var labelStep = xDiv === 10 ? 1 : 2;
+      for (var i = 0; i <= xDiv; i++) {
+        var xv = x0 + (i / xDiv) * w;
+        var edge = i === 0 || i === xDiv;
+        parts.push(lineEl(xv, y0, xv, y1, edge ? BOLD : (i % 5 === 0 ? MID : THIN)));
+        if (i % labelStep === 0) parts.push(textEl(xv, y1 + 0.17, String(i), 'middle', 0.1));
+      }
+    }
+    return {
+      svg: wrapSheet(page, headerH, opts, parts), kind: kind,
+      plot: { x0: x0, y0: y0, x1: x1, y1: y1 }, decades: yDec, startExp: yExp, xDecades: xDec, xStartExp: xExp, xDivisions: xDiv
+    };
+  }
+
+  /* ---------- Number-line variants ---------- */
+  // One frame for every horizontal variant: `copies` rows down the page, the
+  // scale itself inset 0.35in from each end of the arrowed line so the first and
+  // last marks and their labels never touch an arrowhead.
+  function rowFrame(opts, copies) {
+    var page = pageSize(opts.orientation);
+    var headerH = headerBlockHeight(opts.header);
+    var usableW = page.w - MARGIN * 2;
+    var usableH = page.h - MARGIN * 2 - headerH;
+    var n = clampInt(copies, 1, 10, 1);
+    var spacing = usableH / n;
+    return {
+      page: page, headerH: headerH, copies: n, spacing: spacing,
+      xA: MARGIN, xB: MARGIN + usableW, tA: MARGIN + 0.35, tB: MARGIN + usableW - 0.35,
+      yc: function (i) { return MARGIN + headerH + spacing * i + spacing / 2; }
+    };
+  }
+
+  // The smallest divisor of n that is at least `want`: labels then land on
+  // whole numbers, because a whole number is a multiple of n ticks.
+  function labelEveryFor(user, n, need) {
+    var want = Math.max(1, clampInt(user, 1, 100000, 1), need);
+    for (var v = want; v <= n; v++) if (n % v === 0) return v;
+    return n;
+  }
+
+  // k/d as a label: { neg, whole, num, den }. Mixed: |k|/d = whole + num/den;
+  // improper: whole is 0 and num/den is the whole fraction. A multiple of d is a
+  // plain whole number (num 0). reduce divides num and den by their gcd.
+  function fractionLabelParts(k, d, style, reduce) {
+    var a = Math.abs(k), neg = k < 0;
+    var whole = Math.floor(a / d), rem = a % d;
+    if (rem === 0) return { neg: neg, whole: whole, num: 0, den: 1 };
+    var num = rem, den = d;
+    if (style === 'improper') { whole = 0; num = a; }
+    if (reduce) { var g = gcd(num, den); num = num / g; den = den / g; }
+    return { neg: neg, whole: whole, num: num, den: den };
+  }
+
+  function fractionWholeText(p) {
+    if (p.num === 0) return (p.neg ? '-' : '') + p.whole;
+    return (p.neg ? '-' : '') + (p.whole > 0 ? String(p.whole) : '');
+  }
+
+  function fractionLabelWidth(p) {
+    var wt = fractionWholeText(p);
+    var ww = wt.length ? wt.length * CHAR_W * 0.14 + 0.03 : 0;
+    var fw = p.num > 0 ? Math.max(String(p.num).length, String(p.den).length) * CHAR_W * 0.11 + 0.05 : 0;
+    return ww + fw;
+  }
+
+  // The label centred under x: the whole part, then numerator over a bar over denominator.
+  function fractionLabelSvg(p, x, y) {
+    var wt = fractionWholeText(p);
+    if (p.num === 0) return textEl(x, y + 0.12, wt, 'middle', 0.14);
+    var ww = wt.length ? wt.length * CHAR_W * 0.14 + 0.03 : 0;
+    var fw = Math.max(String(p.num).length, String(p.den).length) * CHAR_W * 0.11 + 0.05;
+    var xs = x - (ww + fw) / 2;
+    var out = '';
+    if (wt.length) out += textEl(xs, y + 0.12, wt, 'start', 0.14);
+    var xc = xs + ww + fw / 2;
+    out += textEl(xc, y + 0.03, String(p.num), 'middle', 0.11);
+    out += lineEl(xc - fw / 2, y + 0.06, xc + fw / 2, y + 0.06, THIN);
+    out += textEl(xc, y + 0.17, String(p.den), 'middle', 0.11);
+    return out;
+  }
+
+  // opts: { orientation, min, max (whole numbers), denominator (2..16), labelStyle:
+  //         'mixed'|'improper', reduce, labelEvery, copies, faded, header }
+  function renderFractionLine(opts) {
+    var fr = rowFrame(opts, opts.copies);
+    var d = clampInt(opts.denominator, 2, 16, 4);
+    var min = Math.round(Number(opts.min));
+    if (!isFinite(min)) min = 0;
+    var max = Math.round(Number(opts.max));
+    if (!(max > min)) max = min + 1;
+    var maxSpan = Math.floor(400 / d);
+    if (max - min > maxSpan) max = min + maxSpan;
+    var lo = min * d, hi = max * d;
+    var style = opts.labelStyle === 'improper' ? 'improper' : 'mixed';
+    var reduce = opts.reduce !== false;
+    var gap = (fr.tB - fr.tA) / (hi - lo);
+    var widest = 0, k;
+    for (k = lo; k <= hi; k++) widest = Math.max(widest, fractionLabelWidth(fractionLabelParts(k, d, style, reduce)));
+    var every = labelEveryFor(opts.labelEvery, d, Math.ceil((widest + 0.06) / gap));
+    var parts = [], ticks = [];
+    for (var r = 0; r < fr.copies; r++) {
+      var y = fr.yc(r);
+      parts.push(arrowedAxis(fr.xA, fr.xB, y));
+      for (k = lo; k <= hi; k++) {
+        var x = fr.tA + ((k - lo) / (hi - lo)) * (fr.tB - fr.tA);
+        var whole = k % d === 0;
+        var len = whole ? 0.14 : 0.08;
+        parts.push(lineEl(x, y - len, x, y + len, TICK_W));
+        if (r === 0) ticks.push({ k: k, x: x });
+        if (k % every === 0) parts.push(fractionLabelSvg(fractionLabelParts(k, d, style, reduce), x, y + 0.22));
+      }
+    }
+    return { svg: wrapSheet(fr.page, fr.headerH, opts, parts), ticks: ticks, denominator: d, min: min, max: max, labelEvery: every, rows: fr.copies };
+  }
+
+  // Decimal and integer lines: ticks every 1, 0.1 or 0.01, found from the whole
+  // number n = value x scale, so 0.35 is tick 35 and never 0.30000000000000004.
+  var DECIMAL_SCALES = { ones: 1, tenths: 10, hundredths: 100 };
+
+  function decimalLabel(n, scale) {
+    var a = Math.abs(n), sign = n < 0 ? '-' : '';
+    if (scale === 1) return sign + a;
+    var digits = String(scale).length - 1;
+    var frac = String(a % scale);
+    while (frac.length < digits) frac = '0' + frac;
+    return sign + Math.floor(a / scale) + '.' + frac;
+  }
+
+  // opts: { orientation, min, max, step: 'ones'|'tenths'|'hundredths', labelEvery, copies, faded, header }
+  function renderDecimalLine(opts) {
+    var fr = rowFrame(opts, opts.copies);
+    var stepName = DECIMAL_SCALES[opts.step] ? opts.step : 'tenths';
+    var scale = DECIMAL_SCALES[stepName];
+    var lo = Math.round(Number(opts.min) * scale);
+    if (!isFinite(lo)) lo = 0;
+    var hi = Math.round(Number(opts.max) * scale);
+    if (!(hi > lo)) hi = lo + 1;
+    if (hi - lo > 1000) hi = lo + 1000;
+    var gap = (fr.tB - fr.tA) / (hi - lo);
+    var widest = 0, n;
+    for (n = lo; n <= hi; n++) widest = Math.max(widest, decimalLabel(n, scale).length);
+    var need = Math.ceil((widest * CHAR_W * 0.14 + 0.08) / gap);
+    var every = scale === 1 ? Math.max(1, clampInt(opts.labelEvery, 1, 100000, 1), need) : labelEveryFor(opts.labelEvery, scale, need);
+    var parts = [], ticks = [];
+    for (var r = 0; r < fr.copies; r++) {
+      var y = fr.yc(r);
+      parts.push(arrowedAxis(fr.xA, fr.xB, y));
+      for (n = lo; n <= hi; n++) {
+        var x = fr.tA + ((n - lo) / (hi - lo)) * (fr.tB - fr.tA);
+        var major = scale === 1 || n % scale === 0;
+        var half = scale > 1 && n % (scale / 2) === 0;
+        var len = n === 0 ? 0.17 : (major ? 0.14 : (half ? 0.1 : 0.07));
+        parts.push(lineEl(x, y - len, x, y + len, n === 0 ? BOLD : TICK_W));
+        if (r === 0) ticks.push({ n: n, x: x });
+        if (n % every === 0) parts.push(textEl(x, y + 0.34, decimalLabel(n, scale), 'middle'));
+      }
+    }
+    return { svg: wrapSheet(fr.page, fr.headerH, opts, parts), ticks: ticks, scale: scale, lo: lo, hi: hi, labelEvery: every, rows: fr.copies };
+  }
+
+  // Open number line: the arrowed line and equally spaced marks, no numbers.
+  // opts: { orientation, ticks (0..60), copies, faded, header }
+  function renderOpenLine(opts) {
+    var fr = rowFrame(opts, opts.copies);
+    var count = clampInt(opts.ticks, 0, 60, 10);
+    var parts = [], xs = [];
+    for (var r = 0; r < fr.copies; r++) {
+      var y = fr.yc(r);
+      parts.push(arrowedAxis(fr.xA, fr.xB, y));
+      for (var i = 1; i <= count; i++) {
+        var x = fr.xA + (i / (count + 1)) * (fr.xB - fr.xA);
+        parts.push(lineEl(x, y - 0.1, x, y + 0.1, TICK_W));
+        if (r === 0) xs.push(x);
+      }
+    }
+    return { svg: wrapSheet(fr.page, fr.headerH, opts, parts), ticks: count, xs: xs, rows: fr.copies };
+  }
+
+  // Double number line for ratios: two lines whose marks share x positions,
+  // joined by a faint dashed rule, the top counting by topStep and the bottom by
+  // bottomStep. bottom: 'all' shows every bottom number; 'example' shows 0 and the
+  // first; 'none' shows only 0, for students to fill in.
+  // opts: { orientation, topStep, bottomStep, intervals (2..20), topName, bottomName,
+  //         bottom, copies (1..4), faded, header }
+  function renderDoubleLine(opts) {
+    var copiesIn = clampInt(opts.copies, 1, 4, 1);
+    var fr = rowFrame(opts, copiesIn);
+    var n = clampInt(opts.intervals, 2, 20, 6);
+    var topStep = Number(opts.topStep), botStep = Number(opts.bottomStep);
+    if (!(topStep > 0)) topStep = 1;
+    if (!(botStep > 0)) botStep = 1;
+    var topName = String(opts.topName || '').slice(0, 14), botName = String(opts.bottomName || '').slice(0, 14);
+    var nameW = (topName || botName) ? Math.max(topName.length, botName.length) * CHAR_W * 0.14 + 0.2 : 0;
+    var xA = fr.xA + nameW, xB = fr.xB;
+    var tA = xA + 0.35, tB = xB - 0.35;
+    var mode = opts.bottom === 'example' || opts.bottom === 'none' ? opts.bottom : 'all';
+    var parts = [], xs = [];
+    for (var r = 0; r < fr.copies; r++) {
+      var yc = fr.yc(r);
+      var yT = yc - 0.45, yB = yc + 0.45;
+      parts.push(arrowedAxis(xA, xB, yT), arrowedAxis(xA, xB, yB));
+      if (topName) parts.push(textEl(fr.xA, yT + 0.05, escapeXml(topName), 'start'));
+      if (botName) parts.push(textEl(fr.xA, yB + 0.05, escapeXml(botName), 'start'));
+      for (var i = 0; i <= n; i++) {
+        var x = tA + (i / n) * (tB - tA);
+        if (r === 0) xs.push(x);
+        parts.push(lineEl(x, yT - 0.09, x, yT + 0.09, TICK_W), lineEl(x, yB - 0.09, x, yB + 0.09, TICK_W));
+        parts.push(dashedLineEl(x, yT + 0.09, x, yB - 0.09, THIN));
+        parts.push(textEl(x, yT - 0.16, formatNum(i * topStep), 'middle'));
+        var showBottom = mode === 'all' || i === 0 || (mode === 'example' && i === 1);
+        if (showBottom) parts.push(textEl(x, yB + 0.3, formatNum(i * botStep), 'middle'));
+      }
+    }
+    return { svg: wrapSheet(fr.page, fr.headerH, opts, parts), xs: xs, intervals: n, rows: fr.copies, topY: fr.yc(0) - 0.45, bottomY: fr.yc(0) + 0.45 };
+  }
+
+  // Vertical number line drawn as a thermometer: a tube with a bulb, marks and
+  // numbers on its right, `copies` of them side by side. Ticks come from the
+  // whole number n = value x scale, scale being 10^(most decimals typed).
+  // opts: { orientation, min, max, interval, labelEvery, copies (1..6), faded, header }
+  function decimalsOf(v) {
+    var s = Number(v).toFixed(6).replace(/0+$/, '');
+    var i = s.indexOf('.');
+    return i === -1 ? 0 : s.length - i - 1;
+  }
+
+  function renderVerticalLine(opts) {
+    var page = pageSize(opts.orientation);
+    var headerH = headerBlockHeight(opts.header);
+    var copies = clampInt(opts.copies, 1, 6, 1);
+    var interval = Math.abs(Number(opts.interval)) || 1;
+    var minV = Number(opts.min), maxV = Number(opts.max);
+    if (!isFinite(minV)) minV = 0;
+    if (!(maxV > minV)) maxV = minV + interval;
+    var dec = Math.min(3, Math.max(decimalsOf(minV), decimalsOf(maxV), decimalsOf(interval)));
+    var scale = Math.pow(10, dec);
+    var stepN = Math.max(1, Math.round(interval * scale));
+    var lo = Math.round(minV * scale), hi = Math.round(maxV * scale);
+    if (hi <= lo) hi = lo + stepN;
+    var count = Math.min(400, Math.floor((hi - lo) / stepN));
+    hi = lo + count * stepN;
+    if (count < 1) { count = 1; hi = lo + stepN; }
+    var bulbR = 0.28, tubeW = 0.3, capR = tubeW / 2;
+    var bulbCy = page.h - MARGIN - bulbR;
+    var yMin = bulbCy - 0.1;
+    var yMax = MARGIN + headerH + 0.45;
+    var gapIn = (yMin - yMax) / count;
+    var every = Math.max(1, clampInt(opts.labelEvery, 1, 100000, 1), Math.ceil(0.2 / gapIn));
+    var slotW = (page.w - MARGIN * 2) / copies;
+    var parts = [], ticks = [];
+    for (var c = 0; c < copies; c++) {
+      var xl = MARGIN + slotW * c + 0.15, xr = xl + tubeW;
+      var yTop = yMax - 0.2;
+      var bx = Math.sqrt(bulbR * bulbR - Math.pow(tubeW / 2, 2));
+      parts.push('<path d="M ' + xl.toFixed(4) + ' ' + (bulbCy - bx).toFixed(4) + ' L ' + xl.toFixed(4) + ' ' + (yTop + capR).toFixed(4) +
+        ' A ' + capR.toFixed(4) + ' ' + capR.toFixed(4) + ' 0 0 1 ' + xr.toFixed(4) + ' ' + (yTop + capR).toFixed(4) +
+        ' L ' + xr.toFixed(4) + ' ' + (bulbCy - bx).toFixed(4) +
+        ' A ' + bulbR + ' ' + bulbR + ' 0 1 1 ' + xl.toFixed(4) + ' ' + (bulbCy - bx).toFixed(4) +
+        '" fill="none" stroke="currentColor" stroke-width="' + BOLD + '"/>');
+      for (var i = 0; i <= count; i++) {
+        var nv = lo + i * stepN;
+        var y = yMin - (i / count) * (yMin - yMax);
+        var major = i % every === 0;
+        var len = major ? 0.2 : 0.12;
+        parts.push(lineEl(xr, y, xr + len, y, TICK_W));
+        if (c === 0) ticks.push({ n: nv, y: y });
+        if (major) parts.push(textEl(xr + len + 0.05, y + 0.045, decimalLabel(nv, scale), 'start'));
+      }
+    }
+    return { svg: wrapSheet(page, headerH, opts, parts), ticks: ticks, scale: scale, labelEvery: every, rows: copies, yMin: yMin, yMax: yMax };
+  }
+
+  /* ---------- Hexagonal paper, storyboard frames and music staves ---------- */
+  function rectEl(x, y, w, h, strokeWidth) {
+    return '<rect x="' + x.toFixed(4) + '" y="' + y.toFixed(4) + '" width="' + w.toFixed(4) + '" height="' + h.toFixed(4) +
+      '" fill="none" stroke="currentColor" stroke-width="' + strokeWidth + '"/>';
+  }
+
+  // Regular hexagons of side `side` tiling the page edge to edge, drawn as shared
+  // edges (each edge once). Pointy-top: vertical sides, centres sqrt(3) x side apart in
+  // a row, rows 1.5 x side apart and every other row shifted half a hexagon. Flat-top is
+  // the same lattice turned a quarter turn. Only whole hexagons inside the area are drawn.
+  // opts: { orientation, cellSize (side, inches), hexTop: 'pointy'|'flat', faded, header }
+  function hexLayout(opts) {
+    var page = pageSize(opts.orientation);
+    var headerH = headerBlockHeight(opts.header);
+    var usableW = page.w - MARGIN * 2, usableH = page.h - MARGIN * 2 - headerH;
+    var s = Math.max(0.1, Number(opts.cellSize) || 0.25);
+    var flat = opts.hexTop === 'flat';
+    // work in a frame where hexagons are pointy-top, swapping the axes for flat-top
+    var W = flat ? usableH : usableW, H = flat ? usableW : usableH;
+    var hexW = Math.sqrt(3) * s;
+    var rows = H >= 2 * s ? Math.floor((H - 2 * s) / (1.5 * s)) + 1 : 0;
+    var centres = [];
+    for (var r = 0; r < rows; r++) {
+      var shift = r % 2 === 1 ? hexW / 2 : 0;
+      var cols = Math.floor((W - shift) / hexW);
+      if (cols < 1) continue;
+      for (var c = 0; c < cols; c++) centres.push({ u: shift + hexW / 2 + c * hexW, v: s + r * 1.5 * s });
+    }
+    if (!centres.length) return { page: page, headerH: headerH, side: s, flat: flat, centres: [], edges: [] };
+    var uMin = Math.min.apply(null, centres.map(function (p) { return p.u - hexW / 2; }));
+    var uMax = Math.max.apply(null, centres.map(function (p) { return p.u + hexW / 2; }));
+    var vMax = Math.max.apply(null, centres.map(function (p) { return p.v + s; }));
+    var offU = (W - (uMax - uMin)) / 2 - uMin, offV = (H - vMax) / 2;
+    var ox = MARGIN, oy = MARGIN + headerH;
+    function toPage(u, v) { return flat ? [ox + v, oy + u] : [ox + u, oy + v]; }
+    // A corner shared by three hexagons is reached from three centres by three different sums,
+    // so two floats a hair apart are one corner: matched within 1e-3in, not by a rounded string.
+    var cornerCells = {}, corners = [];
+    function cornerId(x, y) {
+      var cx = Math.floor(x / 0.01), cy = Math.floor(y / 0.01);
+      for (var i = -1; i <= 1; i++) for (var j = -1; j <= 1; j++) {
+        var cell = cornerCells[(cx + i) + ',' + (cy + j)] || [];
+        for (var q = 0; q < cell.length; q++) if (Math.abs(corners[cell[q]][0] - x) < 1e-3 && Math.abs(corners[cell[q]][1] - y) < 1e-3) return cell[q];
+      }
+      var id = corners.length;
+      corners.push([x, y]);
+      (cornerCells[cx + ',' + cy] = cornerCells[cx + ',' + cy] || []).push(id);
+      return id;
+    }
+    var seen = {}, edges = [], placed = [];
+    centres.forEach(function (p) {
+      var cu = p.u + offU, cv = p.v + offV;
+      placed.push(toPage(cu, cv));
+      var verts = [];
+      for (var k = 0; k < 6; k++) {
+        var ang = (60 * k + 30) * Math.PI / 180; // pointy-top: first vertex at 30 degrees from the u axis
+        verts.push([cu + s * Math.cos(ang), cv + s * Math.sin(ang)]);
+      }
+      for (var e = 0; e < 6; e++) {
+        var a = toPage(verts[e][0], verts[e][1]), b = toPage(verts[(e + 1) % 6][0], verts[(e + 1) % 6][1]);
+        var ka = cornerId(a[0], a[1]), kb = cornerId(b[0], b[1]);
+        var key = ka < kb ? ka + '|' + kb : kb + '|' + ka;
+        if (seen[key]) continue;
+        seen[key] = true;
+        edges.push([a[0], a[1], b[0], b[1]]);
+      }
+    });
+    return { page: page, headerH: headerH, side: s, flat: flat, centres: placed, edges: edges };
+  }
+
+  function renderHexPaper(opts) {
+    var L = hexLayout(opts);
+    var parts = L.edges.map(function (e) { return lineEl(e[0], e[1], e[2], e[3], THIN); });
+    return { svg: wrapSheet(L.page, L.headerH, opts, parts), side: L.side, flat: L.flat, centres: L.centres, hexagons: L.centres.length };
+  }
+
+  // Storyboard: `frames` boxes of one exact aspect ratio in a grid, each with ruled
+  // caption lines beneath.
+  // opts: { orientation, frames (2|3|4|6|8|9|12), aspect: '16:9'|'4:3'|'1:1'|'2.35:1', captionLines (0..4), faded, header }
+  var STORY_ASPECTS = { '16:9': 16 / 9, '4:3': 4 / 3, '1:1': 1, '2.35:1': 2.35 };
+  var STORY_GRIDS = {
+    portrait: { 2: [1, 2], 3: [1, 3], 4: [2, 2], 6: [2, 3], 8: [2, 4], 9: [3, 3], 12: [3, 4] },
+    landscape: { 2: [2, 1], 3: [3, 1], 4: [2, 2], 6: [3, 2], 8: [4, 2], 9: [3, 3], 12: [4, 3] }
+  };
+  var STORY_GUTTER = 0.3, CAPTION_GAP = 0.28;
+
+  function storyboardLayout(opts) {
+    var page = pageSize(opts.orientation);
+    var orient = opts.orientation === 'landscape' ? 'landscape' : 'portrait';
+    var headerH = headerBlockHeight(opts.header);
+    var usableW = page.w - MARGIN * 2, usableH = page.h - MARGIN * 2 - headerH;
+    var frames = STORY_GRIDS[orient][opts.frames] ? Math.round(opts.frames) : 6;
+    var grid = STORY_GRIDS[orient][frames], cols = grid[0], rows = grid[1];
+    var aspectName = STORY_ASPECTS[opts.aspect] ? opts.aspect : '16:9', aspect = STORY_ASPECTS[aspectName];
+    var lines = clampInt(opts.captionLines, 0, 4, 2);
+    var captionH = lines ? 0.1 + lines * CAPTION_GAP : 0;
+    var cellW = (usableW - (cols - 1) * STORY_GUTTER) / cols;
+    var cellH = (usableH - (rows - 1) * STORY_GUTTER) / rows;
+    var frameW = Math.min(cellW, (cellH - captionH) * aspect);
+    var frameH = frameW / aspect;
+    var blockW = cols * frameW + (cols - 1) * STORY_GUTTER;
+    var blockH = rows * (frameH + captionH) + (rows - 1) * STORY_GUTTER;
+    var x0 = MARGIN + (usableW - blockW) / 2, y0 = MARGIN + headerH + (usableH - blockH) / 2;
+    var boxes = [];
+    for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) {
+      boxes.push({ x: x0 + c * (frameW + STORY_GUTTER), y: y0 + r * (frameH + captionH + STORY_GUTTER), w: frameW, h: frameH });
+    }
+    return { page: page, headerH: headerH, frames: frames, cols: cols, rows: rows, aspect: aspectName, lines: lines, frameW: frameW, frameH: frameH, captionH: captionH, boxes: boxes };
+  }
+
+  function renderStoryboard(opts) {
+    var L = storyboardLayout(opts);
+    var parts = [];
+    L.boxes.forEach(function (b) {
+      parts.push(rectEl(b.x, b.y, b.w, b.h, BOLD));
+      for (var i = 1; i <= L.lines; i++) {
+        var y = b.y + b.h + 0.1 + i * CAPTION_GAP - 0.04;
+        parts.push(lineEl(b.x, y, b.x + b.w, y, THIN));
+      }
+    });
+    return { svg: wrapSheet(L.page, L.headerH, opts, parts), frames: L.frames, cols: L.cols, rows: L.rows, aspect: L.aspect, frameW: L.frameW, frameH: L.frameH, boxes: L.boxes, captionLines: L.lines };
+  }
+
+  // Music manuscript paper: five-line staves with equal gaps, stacked at a fixed pitch,
+  // as many as fit. A grand staff is two staves close together joined by a bar at the left,
+  // pairs stacked below one another.
+  // opts: { orientation, lineGap (inches between staff lines), grand, faded, header }
+  function musicLayout(opts) {
+    var page = pageSize(opts.orientation);
+    var headerH = headerBlockHeight(opts.header);
+    var usableW = page.w - MARGIN * 2, usableH = page.h - MARGIN * 2 - headerH;
+    var g = Number(opts.lineGap);
+    if (!(g >= 0.05)) g = g > 0 ? 0.05 : 0.125;
+    var grand = !!opts.grand;
+    var staffH = 4 * g;
+    var unitH = grand ? staffH + 3 * g + staffH : staffH;   // one system
+    var pitch = grand ? unitH + 5 * g : unitH + 4.5 * g;      // from one system to the next
+    var count = usableH >= unitH ? Math.floor((usableH - unitH) / pitch + 1e-9) + 1 : 0;
+    var blockH = count ? (count - 1) * pitch + unitH : 0;
+    var top = MARGIN + headerH + (usableH - blockH) / 2;
+    var systems = [];
+    for (var i = 0; i < count; i++) {
+      var y = top + i * pitch;
+      systems.push(grand ? [y, y + staffH + 3 * g] : [y]);
+    }
+    return { page: page, headerH: headerH, gap: g, grand: grand, staffH: staffH, unitH: unitH, pitch: pitch, systems: systems, x0: MARGIN, x1: MARGIN + usableW };
+  }
+
+  function renderMusicStaves(opts) {
+    var L = musicLayout(opts);
+    var parts = [];
+    L.systems.forEach(function (staffTops) {
+      staffTops.forEach(function (yt) {
+        for (var k = 0; k < 5; k++) parts.push(lineEl(L.x0, yt + k * L.gap, L.x1, yt + k * L.gap, TICK_W));
+        parts.push(lineEl(L.x0, yt, L.x0, yt + L.staffH, TICK_W));
+        parts.push(lineEl(L.x1, yt, L.x1, yt + L.staffH, TICK_W));
+      });
+      if (staffTops.length === 2) parts.push(lineEl(L.x0, staffTops[0], L.x0, staffTops[1] + L.staffH, BOLD));
+    });
+    return { svg: wrapSheet(L.page, L.headerH, opts, parts), gap: L.gap, grand: L.grand, systems: L.systems, staves: L.systems.reduce(function (n, s) { return n + s.length; }, 0), pitch: L.pitch, staffH: L.staffH };
+  }
+
   global.GraphPaperRender = {
     renderGraphPaper: renderGraphPaper,
     renderNumberLine: renderNumberLine,
@@ -892,6 +1468,20 @@
     renderCornellNotes: renderCornellNotes,
     renderHandwritingLines: renderHandwritingLines,
     renderCalibration: renderCalibration,
+    renderPolarPaper: renderPolarPaper,
+    renderHexPaper: renderHexPaper,
+    renderStoryboard: renderStoryboard,
+    renderMusicStaves: renderMusicStaves,
+    renderLogPaper: renderLogPaper,
+    renderFractionLine: renderFractionLine,
+    renderDecimalLine: renderDecimalLine,
+    renderOpenLine: renderOpenLine,
+    renderDoubleLine: renderDoubleLine,
+    renderVerticalLine: renderVerticalLine,
+    fractionLabelParts: fractionLabelParts,
+    decimalLabel: decimalLabel,
+    logAxisLines: logAxisLines,
+    expLabel: expLabel,
     renderWorksheet: renderWorksheet,
     tokenizeGraphExpr: tokenizeGraphExpr,
     parseGraphExpression: parseGraphExpression,
