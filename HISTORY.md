@@ -43,8 +43,9 @@ advance the cycle), and every date of 2026 to 2028 against integer arithmetic th
 (`npm run test:school-calendar-weeks`, port 8527, 386 assertions: `golden-old-views.json`, recorded from the page before any edit, holds the month grid, the year grid with the cycle off, seven
 chosen weeks with and without the cycle, and the stored string, in three zones; the year grid's badges against the month grid's and a closed-day list; the range across both
 daylight-saving weeks in five zones; PDFs read with `pdftotext` at Letter, A4, Legal and Tabloid in both orientations, three weeks each, one PDF page per week, in order, none blank, no word past the
-paper's edge, a 20-sentence note whole on its page, and the whole year (41 weeks) on 41 pages; axe on the new controls and the printed range). **Breaks on purpose:** see the note below the
-table; the counts are in the audit line.
+paper's edge, a 20-sentence note whole on its page, and the whole year (41 weeks) on 41 pages; axe on the new controls and the printed range). **Breaks on purpose:** 25 in the module (23 caught; 2 equivalent: a `<=` that
+still gives one week, and an invalid "through" that `mondayOf` already refuses) and 26 on the page (25 caught, each run alone; 1 survived: a forced page break after the
+last week, which Chromium drops, so it adds no blank page there; the rule stays for other browsers).
 
 **Not verified.** Nothing printed on paper or read with a real screen reader. `audit-print` reaches the default state only (its seed does not open the week print), so the PDF assertions are the print
 check. Landscape is not forced; in portrait the five columns are about 1.5 inches wide on Letter. The weeks print the page's own title above them, as the one-week print always did.
