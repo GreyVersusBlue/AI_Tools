@@ -910,7 +910,16 @@
         { p: 'gvb-vocab-flashcards:', legacy: true },
         { p: 'gvb-vocab-flashcards:data:' },
       ],
+      /* The site's question bank (Path 12 P2): 040 lists it, through
+         _shared/question-bank.js's peek(), which writes nothing, and adds a
+         list's cards to it only when the teacher presses Add in the Send
+         review. The bank is OWNED by Review Game Board's row. */
+      writes: [
+        'gvb-question-bank',
+      ],
       reads: [
+        'gvb-question-bank',
+        'gvb-review-board-bank:entries',
         'gvb-vocab-conj:list',
       ],
       readPrefixes: [

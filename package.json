@@ -168,6 +168,8 @@
     "test:classroom-label-print": "node Tools/classroom-label-maker/test/smoke-print.mjs",
     "test:vocab-print": "node Tools/vocab-flashcard-generator/test/smoke-print.mjs",
     "test:vocab-imposition": "node Tools/vocab-flashcard-generator/test/smoke-imposition.mjs",
+    "test:vocab-bank-logic": "node Tools/vocab-flashcard-generator/test/bank-logic.test.mjs",
+    "test:vocab-bank": "node Tools/vocab-flashcard-generator/test/smoke-bank.mjs",
     "test:trading-card-print": "node Tools/historical-trading-card-maker/test/smoke-print.mjs",
     "test:scavenger-hunt-print": "node Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs",
     "test:gallery-walk-print": "node Tools/gallery-walk-qr/test/smoke-print.mjs",

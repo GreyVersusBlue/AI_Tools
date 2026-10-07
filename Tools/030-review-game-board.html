@@ -2241,9 +2241,7 @@
     list.forEach(function (src) {
       var opt = document.createElement('option');
       opt.value = src.id;
-      opt.textContent = src.readOnly
-        ? src.title + ' (built in, ' + countOf(src.count, 'question') + ', read-only)'
-        : src.title + ' (' + countOf(src.count, 'question') + ')';
+      opt.textContent = QuestionBank.sourceLabel(src);          // one wording, 040's chooser has it too
       els.bankSource.appendChild(opt);
     });
     els.bankSource.value = list.some(function (src) { return src.id === current; }) ? current : '';
