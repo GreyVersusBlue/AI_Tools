@@ -40,8 +40,12 @@ versioning", do not exist in this tool and were not invented; that is a differen
   `golden-old-page.json` (12 fingerprints of the cards, triage and old what-if for 3 pastes under 4 settings, the 4 old what-if states, and the stored string) was recorded from
   the page at 235dcf3 and is equal now. `smoke-scenarios.mjs` (`test:final-grade-scenarios`, port 8528) drives the panel on the page: the cards, the paste and all of localStorage
   are identical after every drop, curve and re-weight action, saved scenarios, the refusals, the order, strict rounding, print (the card does not print) and axe on the card.
-- **Breaks on purpose.** 36 in pure Node, in a mutated copy of the module (SCENARIO_MODULE), all caught after 7 survivors got assertions; the page suite's breaks are listed in
-  the audit note. One unfixed oddity found on the way: the existing code shows `toFixed(2)` of a float, so 86.235 reads 86.23 on the old cards; the scenario column is
+- **Breaks on purpose.** 36 in pure Node, in a mutated copy of the module (SCENARIO_MODULE), all caught after 7 survivors got assertions (one more, "scores mutated in place",
+  is caught only because the test freezes the input and the run crashes). 9 on the page, one suite run each, all caught: saving writing storage without Remember, the last
+  delete leaving an empty list, the scenario editing a real score, the card printing, the results box not keyboard-reachable, the scenario ignoring Grading Settings, the saved
+  list not rebuilt on load, delete without a confirm (a first attempt had a syntax slip in the mutation and proved nothing; redone), same name compared case-sensitively. Not
+  broken: the rules paragraph's wording, Clear resetting the form, the points box hiding, the "toFixed" rounding of the after column (7 more were written, not run: the suites
+  lock was held by other workers for hours). One unfixed oddity found on the way: the existing code shows `toFixed(2)` of a float, so 86.235 reads 86.23 on the old cards; the scenario column is
   rounded half up exactly (86.24), so a student can look one hundredth different between the two columns at an exact half-hundredth. Not changed.
 - **Not done / not verified:** the before/after is a table and letter counts, not a chart (Path 16 P4, once the shared chart engine exists); no category/assessment model;
   nothing printed (the card is screen only); no screen reader; the page's older contrast and import-status axe violations after an import are not this row's and were not touched.
