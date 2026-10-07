@@ -94,6 +94,10 @@
   .symbol-btn.selected { border-color: var(--accent); background: var(--card-2); }
   .symbol-btn svg { width: 28px; height: 28px; }
   .symbol-btn span { font-size: .68rem; text-align: center; }
+  .symbol-btn:disabled { opacity: .45; cursor: not-allowed; }
+  .symbol-btn .no-sym { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--muted); }
+  h3.picker-title { font-size: .88rem; margin: .2rem 0 .1rem; }
+  .picker-hint { font-size: .78rem; color: var(--muted); margin: 0 0 .5rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
@@ -111,6 +115,7 @@
   .queue-row { display: flex; align-items: center; gap: .6rem; padding: .4rem 0; border-bottom: 1px dashed var(--line); }
   .queue-row:last-child { border-bottom: none; }
   .queue-row svg { width: 24px; height: 24px; flex-shrink: 0; }
+  .queue-row .qsyms { display: flex; gap: .2rem; flex-shrink: 0; }
   .queue-row .qtext { flex: 1; font-size: .88rem; }
   .queue-row .qty { color: var(--muted); font-size: .8rem; }
 
@@ -129,6 +134,13 @@
   .label-card svg { width: 44px; height: 44px; margin-bottom: .1in; flex-shrink: 0; }
   .size-large .label-card svg { width: 60px; height: 60px; }
   .label-card .ltext { font-weight: 700; font-size: .95rem; }
+  /* Two symbols sit side by side in one row the height of one symbol, so a
+     two-symbol label is the same size as a one-symbol label with the same
+     text and a sheet takes the same pages. The row wraps rather than clip, and
+     is only there when a label has a second symbol: a one-symbol label is the
+     svg and the text, exactly as before. */
+  .label-card .lsyms { display: flex; flex-wrap: wrap; justify-content: center; gap: .1in; margin-bottom: .1in; }
+  .label-card .lsyms svg { margin-bottom: 0; }
 
 </style>
 </head>
@@ -148,14 +160,19 @@
         <option value="large">Large (2/row)</option>
       </select>
       <button type="button" class="secondary" id="shareBtn">&#128279; Share labels&hellip;</button>
+      <button type="button" class="secondary" id="previewBtn">Preview pages</button>
       <button class="secondary" id="printBtn">Print labels</button>
     </div>
   </div>
   <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
+  <p id="dupNote" class="share-note" style="display:none;" role="status"></p>
 
   <div class="card">
     <h2>Choose a symbol</h2>
-    <div class="symbol-picker" id="symbolPicker"></div>
+    <div class="symbol-picker" id="symbolPicker" role="group" aria-label="First symbol"></div>
+    <h3 class="picker-title" id="picker2Title">Second symbol (optional)</h3>
+    <p class="picker-hint" id="picker2Hint">A label can carry two hazard symbols side by side, for a bottle that is both flammable and toxic.</p>
+    <div class="symbol-picker" id="symbolPicker2" role="group" aria-labelledby="picker2Title" aria-describedby="picker2Hint"></div>
     <p class="editing-note" id="editingNote" style="display:none;">Editing a queued label &mdash; make changes then click "Save changes", or <a href="#" id="cancelEditLink">cancel</a>.</p>
     <div class="add-grid" id="addGrid">
       <div><label for="labelText">Label text</label><input type="text" id="labelText" placeholder="e.g. Acids Only"></div>
@@ -191,12 +208,13 @@
   ];
 
   var els = {};
-  ['symbolPicker', 'labelText', 'labelQty', 'addLabelBtn', 'queueWrap', 'queueCount', 'printBtn', 'printArea', 'sizeSelect', 'editingNote', 'addGrid', 'cancelEditLink',
+  ['symbolPicker', 'symbolPicker2', 'dupNote', 'labelText', 'labelQty', 'addLabelBtn', 'queueWrap', 'queueCount', 'printBtn', 'previewBtn', 'printArea', 'sizeSelect', 'editingNote', 'addGrid', 'cancelEditLink',
    'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
   var selectedSymbol = SYMBOLS[0].key;
+  var selectedSymbol2 = '';
   var queue = [];
   var labelSize = 'medium';
   var editingId = null;
@@ -208,6 +226,26 @@
     });
   }
   function symbolByKey(key) { return SYMBOLS.find(function (s) { return s.key === key; }); }
+  /** The second symbol a label really has, as a key, or ''. A label saved
+      before two symbols existed has no `symbol2` and has none. One this build
+      cannot honour (a key it does not know, the equipment box, the same
+      symbol twice, or any second symbol on a label that is the equipment box)
+      has none either, rather than printing an odd card. */
+  function secondKey(item) {
+    var first = symbolByKey(item.symbol) ? item.symbol : 'none';
+    var second = item.symbol2;
+    if (first === 'none' || second === 'none' || second === first || !symbolByKey(second)) return '';
+    return second;
+  }
+  /** What counts as the same label: the same text (case and outer spaces
+      ignored: "Acids only" and " acids only") with the same symbols in the
+      same order. The order is part of it because the label prints in that
+      order, so flammable-then-toxic and toxic-then-flammable are two labels,
+      and a one-symbol label is never the same as one that carries a second.
+      Copies are not part of it: they are how many of that label to print. */
+  function labelKey(item) {
+    return [String(item.text || '').trim().toLowerCase(), symbolByKey(item.symbol) ? item.symbol : 'none', secondKey(item)].join('\u0001');
+  }
   function svgFor(sym) { return '<svg viewBox="0 0 32 32" style="color:' + sym.color + '">' + sym.path + '</svg>'; }
   /** The same symbol as a node, for the printed label. Both halves of the
       string are constants from SYMBOLS above; nothing a teacher typed or a
@@ -234,15 +272,57 @@
 
   function renderPicker() {
     els.symbolPicker.innerHTML = SYMBOLS.map(function (sym) {
-      return '<button type="button" class="symbol-btn' + (sym.key === selectedSymbol ? ' selected' : '') + '" data-symbol="' + sym.key + '">' +
+      return '<button type="button" class="symbol-btn' + (sym.key === selectedSymbol ? ' selected' : '') + '" data-symbol="' + sym.key + '" aria-pressed="' + (sym.key === selectedSymbol) + '">' +
         svgFor(sym) + '<span>' + escapeHtml(sym.name) + '</span></button>';
     }).join('');
+    renderPicker2();
+  }
+  /** The second picker is built from elements, not a string: this page takes
+      link input, and every markup sink in it is counted. A button for each
+      hazard symbol except the equipment box, and one for no second symbol;
+      the symbol already chosen as the first is not offered again, and an
+      equipment label has no second symbol to offer. */
+  function renderPicker2() {
+    var none = selectedSymbol === 'none';
+    if (none) selectedSymbol2 = '';
+    if (selectedSymbol2 === selectedSymbol) selectedSymbol2 = '';
+    var buttons = [{ key: '', name: 'No second symbol' }].concat(SYMBOLS.filter(function (sym) { return sym.key !== 'none'; }));
+    els.symbolPicker2.replaceChildren.apply(els.symbolPicker2, buttons.map(function (sym) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'symbol-btn' + (sym.key === selectedSymbol2 ? ' selected' : '');
+      btn.setAttribute('data-symbol2', sym.key);
+      btn.setAttribute('aria-pressed', String(sym.key === selectedSymbol2));
+      if (sym.key && (none || sym.key === selectedSymbol)) btn.disabled = true;
+      if (sym.path) btn.appendChild(svgNode(sym));
+      else {
+        var blank = document.createElement('div');
+        blank.className = 'no-sym';
+        blank.setAttribute('aria-hidden', 'true');
+        blank.textContent = '\u2014';
+        btn.appendChild(blank);
+      }
+      var name = document.createElement('span');
+      name.textContent = sym.name;
+      btn.appendChild(name);
+      return btn;
+    }));
   }
   els.symbolPicker.addEventListener('click', function (ev) {
     var btn = ev.target.closest('.symbol-btn');
     if (!btn) return;
     selectedSymbol = btn.getAttribute('data-symbol');
     renderPicker();
+    var again = els.symbolPicker.querySelector('[data-symbol="' + selectedSymbol + '"]');
+    if (again) again.focus();
+  });
+  els.symbolPicker2.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('.symbol-btn');
+    if (!btn || btn.disabled) return;
+    selectedSymbol2 = btn.getAttribute('data-symbol2');
+    renderPicker2();
+    var again = els.symbolPicker2.querySelector('[data-symbol2="' + selectedSymbol2 + '"]');
+    if (again) again.focus();
   });
 
   function setEditing(id) {
@@ -257,16 +337,31 @@
     var text = els.labelText.value.trim();
     if (!text) { alert('Add label text first.'); return; }
     var qty = Math.max(1, Math.min(30, parseInt(els.labelQty.value, 10) || 1));
+    var wasEditing = !!editingId;
+    var made = { id: editingId || uid(), symbol: selectedSymbol, text: text, qty: qty };
+    if (selectedSymbol2) made.symbol2 = selectedSymbol2;
+    var twin = queue.find(function (q) { return q.id !== made.id && labelKey(q) === labelKey(made); });
     if (editingId) {
       var item = queue.find(function (q) { return q.id === editingId; });
-      if (item) { item.symbol = selectedSymbol; item.text = text; item.qty = qty; }
+      if (item) {
+        item.symbol = made.symbol; item.text = made.text; item.qty = made.qty;
+        if (made.symbol2) item.symbol2 = made.symbol2; else delete item.symbol2;
+      }
       setEditing(null);
     } else {
-      queue.push({ id: uid(), symbol: selectedSymbol, text: text, qty: qty });
+      queue.push(made);
     }
+    var same = twin ? '\u201c' + text + '\u201d is already on the sheet with the same ' + (secondKey(made) ? 'two symbols in this order' : 'symbol') +
+      ' (' + twin.qty + ' ' + (twin.qty === 1 ? 'copy' : 'copies') + '). ' : '';
+    setDupNote(same ? same + (wasEditing ? 'Both rows are kept.' : 'It was added again; raise the copies on the first one instead if you meant more of the same.') : '');
     save(); renderQueue();
     els.labelText.value = ''; els.labelQty.value = 1;
   });
+
+  function setDupNote(text) {
+    els.dupNote.textContent = text || '';
+    els.dupNote.style.display = text ? '' : 'none';
+  }
 
   els.cancelEditLink.addEventListener('click', function (ev) {
     ev.preventDefault();
@@ -284,8 +379,9 @@
     var last = queue.length - 1;
     els.queueWrap.innerHTML = queue.map(function (item, i) {
       var sym = symbolByKey(item.symbol) || SYMBOLS[SYMBOLS.length - 1];
-      return '<div class="queue-row">' + svgFor(sym) +
-        '<span class="qtext">' + escapeHtml(item.text) + ' &mdash; <em>' + escapeHtml(sym.name) + '</em></span>' +
+      var sym2 = symbolByKey(secondKey(item));
+      return '<div class="queue-row">' + (sym2 ? '<span class="qsyms">' + svgFor(sym) + svgFor(sym2) + '</span>' : svgFor(sym)) +
+        '<span class="qtext">' + escapeHtml(item.text) + ' &mdash; <em>' + escapeHtml(sym.name + (sym2 ? ' + ' + sym2.name : '')) + '</em></span>' +
         '<span class="qty">&times;' + item.qty + '</span>' +
         '<button type="button" class="secondary small" data-move-up="' + item.id + '"' + (i === 0 ? ' disabled' : '') + ' title="Move up">&uarr;</button>' +
         '<button type="button" class="secondary small" data-move-down="' + item.id + '"' + (i === last ? ' disabled' : '') + ' title="Move down">&darr;</button>' +
@@ -314,6 +410,7 @@
       var item = queue.find(function (q) { return q.id === editId; });
       if (!item) return;
       selectedSymbol = item.symbol;
+      selectedSymbol2 = secondKey(item);
       els.labelText.value = item.text;
       els.labelQty.value = item.qty;
       renderPicker();
@@ -324,7 +421,10 @@
     if (dupId) {
       var src = queue.find(function (q) { return q.id === dupId; });
       if (!src) return;
-      queue.push({ id: uid(), symbol: src.symbol, text: src.text, qty: src.qty });
+      var copy = { id: uid(), symbol: src.symbol, text: src.text, qty: src.qty };
+      if (secondKey(src)) copy.symbol2 = src.symbol2;
+      queue.push(copy);
+      setDupNote('');
       save(); renderQueue();
       return;
     }
@@ -338,7 +438,17 @@
   function buildLabel(item) {
     var card = document.createElement('div');
     card.className = 'label-card';
-    card.appendChild(svgNode(symbolByKey(item.symbol) || SYMBOLS[SYMBOLS.length - 1]));
+    var first = svgNode(symbolByKey(item.symbol) || SYMBOLS[SYMBOLS.length - 1]);
+    var second = symbolByKey(secondKey(item));
+    if (second) {
+      var row = document.createElement('div');
+      row.className = 'lsyms';
+      row.appendChild(first);
+      row.appendChild(svgNode(second));
+      card.appendChild(row);
+    } else {
+      card.appendChild(first);
+    }
     var text = document.createElement('div');
     text.className = 'ltext';
     text.textContent = item.text;
@@ -364,10 +474,19 @@
   // Ctrl+P prints the sheet too; it used to print an empty page.
   window.addEventListener('beforeprint', renderSheet);
 
-  els.printBtn.addEventListener('click', function () {
+  function printSheet() {
     if (!queue.length) { alert('Add at least one label first.'); return; }
     renderSheet();
     window.print();
+  }
+  els.printBtn.addEventListener('click', printSheet);
+
+  // The same sheet, cut into the pages it will print on (PrintKit.preview,
+  // Path 7 P5). It opens no print dialog; its own Print button does.
+  els.previewBtn.addEventListener('click', function () {
+    if (!queue.length) { alert('Add at least one label first.'); return; }
+    renderSheet();
+    PrintKit.preview({ trigger: els.previewBtn, onPrint: printSheet });
   });
 
   /* ---------- share a label sheet: _shared/share.js (Path 6 P3) ----------
@@ -378,9 +497,12 @@
      way to pass that sheet on was to print it and photocopy it.
 
      The symbols themselves do not travel: each label carries its symbol KEY
-     and the receiving page draws its own SVG for it, so a sheet shared from a
-     build with a symbol this one does not have still prints, with those
-     labels falling back to the plain equipment box rather than vanishing.
+     (and, when it has one, its second symbol's) and the receiving page draws
+     its own SVG for it, so a sheet shared from a build with a symbol this one
+     does not have still prints, with those labels falling back to the plain
+     equipment box rather than vanishing. A second symbol this build does not
+     have is left off, and an older page that never heard of two symbols
+     prints the first.
 
      This tool keeps ONE sheet, so an arriving link has nowhere to land except
      on top of what is here; it asks first, and only when `load()` found
@@ -400,7 +522,7 @@
     title: 'Share these labels',
     noun: 'this label sheet',
     filename: 'safety labels',
-    note: 'Every queued label travels — its text, its hazard symbol, how many copies of it to print and the printed label size — in the order they are stacked in. Opening it replaces the sheet on the receiving device, which is asked first.',
+    note: 'Every queued label travels — its text, its hazard symbol or two, how many copies of it to print and the printed label size — in the order they are stacked in. Opening it replaces the sheet on the receiving device, which is asked first.',
     successMessage: 'Link copied. Opening it on another device offers this whole label sheet in place of whatever is there.',
     onMessage: function (text, isError) { setShareNote(text, isError); }
   });
@@ -421,12 +543,14 @@
       queue: obj.queue.map(function (item) {
         item = item || {};
         var qty = parseInt(item.qty, 10);
-        return {
+        var out = {
           id: uid(),
           symbol: symbolByKey(item.symbol) ? item.symbol : 'none',
           text: String(item.text || ''),
           qty: (isFinite(qty) && qty >= 1) ? Math.min(qty, 30) : 1
         };
+        if (secondKey(item)) out.symbol2 = item.symbol2;
+        return out;
       }).filter(function (item) { return item.text.trim(); })
     };
   }

@@ -36,6 +36,7 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/print-kit.js"></script>
+<script src="testing-accommodations-card-generator/rooms.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -95,6 +96,38 @@
      of the printable page, as a min-height: a student with a long list of
      accommodations makes the row taller, and nothing is cut off) and keeping
      a card on one page are print-kit.css's (.pk-cards, .pk-card, .pk-page). */
+  /* Rooms: the editor, the placement grid and the proctor list on paper. */
+  input[type="number"] {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+  .room-row { border: 1px solid var(--line); border-radius: 8px; padding: .7rem .8rem .5rem; margin-bottom: .7rem; }
+  .room-fields { display: grid; grid-template-columns: 2fr 1fr 2fr auto; gap: .2rem .7rem; align-items: end; }
+  .room-fields .field { min-width: 0; }
+  .room-row fieldset.provides { border: 0; padding: 0; margin: .2rem 0 .3rem; display: flex; flex-wrap: wrap; gap: .25rem 1rem; }
+  .room-row fieldset.provides legend { font-weight: 600; font-size: .82rem; padding: 0; margin-bottom: .2rem; }
+  .room-row fieldset.provides label { display: flex; align-items: center; gap: .3rem; font-weight: 400; margin: 0; font-size: .84rem; }
+  .route-status { font-size: .86rem; margin: .6rem 0; }
+  .route-status ul { margin: .3rem 0 0; padding-left: 1.2rem; }
+  .route-status .warn, .room-warn { color: var(--err); font-weight: 600; }
+  .room-glance { margin: .2rem 0 .8rem; padding-left: 1.2rem; font-size: .86rem; }
+  table.grid-table td.left { text-align: left; font-weight: 400; }
+  table.grid-table select.room-select { width: auto; max-width: 16rem; font-family: inherit; font-size: .84rem; padding: .25rem .35rem; border: 1px solid var(--line-strong); border-radius: 6px; margin: 0; }
+  @media (max-width: 640px) { .room-fields { grid-template-columns: 1fr 1fr; } }
+
+  /* A proctor list is only ever seen on paper, in #printArea, one room to a
+     page (.pk-page) and as many pages as its students need; the table head
+     repeats on each and a row is never split (the kit's .pk-keep). Black on white from either theme. */
+  .proctor-sheet { color: #000; font-size: 11pt; }
+  .proctor-sheet h2 { margin: 0 0 .15rem; font-size: 1.3rem; }
+  .proctor-sheet .meta { margin: 0 0 .5rem; font-size: .95rem; }
+  .proctor-sheet table { width: 100%; border-collapse: collapse; }
+  .proctor-sheet th, .proctor-sheet td { border: 1px solid #000; padding: .3rem .4rem; text-align: left; vertical-align: top; }
+  .proctor-sheet th { font-size: .8rem; }
+  .proctor-sheet td.present { width: 3.2rem; }
+  .proctor-sheet .flag { font-weight: 700; }
+  .proctor-sheet .tally { margin: .5rem 0 0; font-size: .9rem; }
   .accom-card { border: 1.5px solid #333; border-radius: 8px; padding: .6rem .7rem; }
   .accom-card h3 { margin: 0 0 .3rem; font-size: 1.05rem; border-bottom: 1px solid #999; padding-bottom: .2rem; }
   .accom-card ul { margin: 0; padding-left: 1.1rem; font-size: .82rem; }
@@ -113,6 +146,7 @@
     </div>
     <div class="btnrow">
       <button type="button" class="secondary" id="shareBtn">&#128279; Share accommodation list&hellip;</button>
+      <button type="button" class="secondary" id="previewBtn">Preview pages</button>
       <button class="secondary" id="printBtn">Print cards</button>
     </div>
   </div>
@@ -162,6 +196,36 @@
       <table class="grid-table" id="assignTable"></table>
     </div>
   </div>
+
+  <div class="card">
+    <h2>Testing rooms</h2>
+    <p class="hint">Define the rooms you can test in, a proctor for each, and which of the accommodations above each room provides. A student may go only to a room that provides every accommodation ticked for them. Rooms, proctors and placements are saved on this device with the students and never go in a share link.</p>
+    <div id="roomsWrap"></div>
+    <button class="secondary small" id="addRoomBtn" type="button">+ Add room</button>
+  </div>
+
+  <div class="card">
+    <h2>Route students to rooms</h2>
+    <p class="summary-line" id="routeSummary"></p>
+    <div class="btnrow">
+      <button type="button" id="routeAllBtn">Route all students</button>
+      <button type="button" class="secondary" id="routeRestBtn">Route only students not placed yet</button>
+      <button type="button" class="secondary" id="clearRoomsBtn">Clear all placements</button>
+    </div>
+    <div class="route-status" id="routeStatus" role="status"></div>
+    <ul class="room-glance" id="roomGlance" aria-label="Rooms at a glance"></ul>
+    <div style="overflow-x:auto;">
+      <table class="grid-table" id="roomTable"></table>
+    </div>
+    <div class="print-controls" style="margin-top:.8rem;">
+      <div>
+        <label for="printRoomSelect" style="margin-bottom:.2rem;">Proctor list for</label>
+        <select id="printRoomSelect"><option value="">Every room with students</option></select>
+      </div>
+      <button type="button" class="secondary" id="previewRoomsBtn">Preview proctor lists</button>
+      <button type="button" class="secondary" id="printRoomsBtn">Print proctor lists</button>
+    </div>
+  </div>
 </div>
 
 <div id="printArea" class="pk-ink-safe"></div>
@@ -174,8 +238,10 @@
   var DEFAULT_TYPES = ['Extended time', 'Separate setting', 'Read-aloud', 'Breaks as needed', 'Use of calculator', 'Preferential seating'];
 
   var els = {};
-  ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'typesWrap', 'addTypeBtn', 'assignTable', 'printBtn', 'printArea',
-   'summaryLine', 'printWhoSelect', 'printColsSelect', 'filterSelect', 'shareBtn', 'shareNote'].forEach(function (id) {
+  ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'typesWrap', 'addTypeBtn', 'assignTable', 'printBtn', 'previewBtn', 'printArea',
+   'summaryLine', 'printWhoSelect', 'printColsSelect', 'filterSelect', 'shareBtn', 'shareNote',
+   'roomsWrap', 'addRoomBtn', 'routeSummary', 'routeAllBtn', 'routeRestBtn', 'clearRoomsBtn', 'routeStatus', 'roomGlance', 'roomTable',
+   'printRoomSelect', 'previewRoomsBtn', 'printRoomsBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -204,6 +270,15 @@
     if (!state.types || !state.types.length) state.types = DEFAULT_TYPES.map(function (t) { return { id: uid(), name: t }; });
     if (!state.assignments) state.assignments = {};
     if (!state.notes) state.notes = {};
+    /* Rooms are optional: a save from before this view has neither field, and
+       none is added here, so it is written back exactly as it was read until
+       the teacher adds a room. */
+    if (state.rooms !== undefined) {
+      state.rooms = Array.isArray(state.rooms) ? state.rooms.filter(function (r) {
+        return r && typeof r === 'object' && typeof r.id === 'string' && r.id;
+      }) : [];
+    }
+    if (state.roomOf !== undefined && (!state.roomOf || typeof state.roomOf !== 'object' || Array.isArray(state.roomOf))) state.roomOf = {};
     return had;
   }
   function save() {
@@ -225,17 +300,17 @@
     if (!id) return;
     var t = state.types.find(function (x) { return x.id === id; });
     if (t) t.name = ev.target.value;
-    save(); renderTable();
+    save(); renderTable(); refreshRoomTypeLabels(); renderRouting();
   });
   els.typesWrap.addEventListener('click', function (ev) {
     var id = ev.target.getAttribute('data-del-type');
     if (!id) return;
     state.types = state.types.filter(function (t) { return t.id !== id; });
-    save(); renderTypes(); renderTable();
+    save(); renderTypes(); renderTable(); renderRooms(); renderRouting();
   });
   els.addTypeBtn.addEventListener('click', function () {
     state.types.push({ id: uid(), name: 'New accommodation' });
-    save(); renderTypes(); renderTable();
+    save(); renderTypes(); renderTable(); renderRooms(); renderRouting();
   });
 
   /* "Load from a saved roster" — _shared/roster.js's picker, the site's one
@@ -257,7 +332,7 @@
     var seen = {}; var unique = [];
     names.forEach(function (n) { if (!seen[n]) { seen[n] = true; unique.push(n); } });
     state.roster = unique;
-    save(); renderTable();
+    save(); renderTable(); renderRouting();
   });
 
   function hasAnyAccommodation(name) {
@@ -375,6 +450,7 @@
       state.assignments[assignKey(student, typeId)] = ev.target.checked;
       save();
       renderSummary();
+      renderRouting();
       /* Unticking the very box a filter is standing on should not pull the row
          out from under the click — that loses the keyboard focus and makes the
          grid feel like it is fighting back. The row stays, greyed and labelled
@@ -433,15 +509,396 @@
   // US Letter with half-inch margins, which is what print-kit.css's card rows divide.
   PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
 
-  els.printBtn.addEventListener('click', function () {
-    if (!state.roster.length) { alert('Save a roster first.'); return; }
+  /* What Print and Preview build: the cards (the header buttons) or the proctor
+     lists (the buttons on the rooms card). One sheet area, one preview call
+     site: the rooms buttons set this and press the same Preview / Print the
+     header has, the way 018's do, so the two cannot disagree about the sheet. */
+  var sheetMode = 'cards';
+
+  /** Builds the sheet. False, with the reason said, when there is nobody to print. */
+  function renderSheet() {
+    if (sheetMode === 'rooms') return renderProctorSheets();
+    if (!state.roster.length) { alert('Save a roster first.'); return false; }
     var who = els.printWhoSelect.value;
     var names = who ? [who] : visibleRoster();
-    if (!names.length) { alert('Nothing to print — no students match the current Show filter.'); return; }
+    if (!names.length) { alert('Nothing to print — no students match the current Show filter.'); return false; }
     // Three rows to a page at every width: the kit's 2x3, 3x3 and 4x3 presets.
     var preset = CARD_PRESETS[els.printColsSelect.value] || CARD_PRESETS['3'];
     PrintKit.renderCards(els.printArea, names, preset, buildCard);
-    window.print();
+    return true;
+  }
+  function printSheet() {
+    if (renderSheet()) window.print();
+  }
+  els.printBtn.addEventListener('click', function () { sheetMode = 'cards'; printSheet(); });
+
+  // The same sheet, cut into the pages it will print on (PrintKit.preview,
+  // Path 7 P5). It opens no print dialog; its own Print button does.
+  var roomsAsked = false;
+  els.previewBtn.addEventListener('click', function () {
+    sheetMode = roomsAsked ? 'rooms' : 'cards';
+    if (renderSheet()) PrintKit.preview({ trigger: els.previewBtn, onPrint: printSheet });
+  });
+
+  /* ── Testing rooms (the room-assignment view) ─────────────────────────────
+     `state.rooms` is a list of { id, name, capacity, proctor, provides: [type
+     id] } and `state.roomOf` maps a student's name to a room id. Both live in
+     this tool's own key beside the roster, and neither is created until the
+     first room is added, so a save from before the view is written back exactly
+     as it was read. The accommodations a room "provides" are this tool's own
+     types, by id, never a second vocabulary; a type that is deleted simply
+     stops counting. The share link carries the accommodation list and nothing
+     else (see getState below): no room, proctor or placement ever leaves the
+     device, because a placement is a child's accommodation again.
+
+     Every decision about who may go where is rooms.js's (TacgRooms), which a
+     pure-Node suite pins. This block draws the editor and the grid, and keeps
+     the saved state honest. Everything is built with the DOM, never markup. */
+  function roomList() { return Array.isArray(state.rooms) ? state.rooms : []; }
+  function typeIds() { return state.types.map(function (t) { return t.id; }); }
+  function typeName(id) {
+    var t = state.types.filter(function (x) { return x.id === id; })[0];
+    return t ? t.name : '';
+  }
+  function namesOf(ids) { return ids.map(typeName).filter(Boolean); }
+  function listText(items) {
+    if (items.length <= 1) return items.join('');
+    return items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
+  }
+  function roomLabel(r) { return String(r.name || '').trim() || 'Unnamed room'; }
+  function roomById(id) { return roomList().filter(function (r) { return r.id === id; })[0]; }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
+  /** The routable students (anyone with a ticked accommodation), roster order. */
+  function routeStudents() {
+    return TacgRooms.routable(state).map(function (n) { return { name: n, needs: TacgRooms.needsOf(state, n) }; });
+  }
+  /** Where each routable student is now: { name: roomId }, rooms that exist only. */
+  function placedNow() {
+    var out = {};
+    var of = state.roomOf || {};
+    routeStudents().forEach(function (s) {
+      if (Object.prototype.hasOwnProperty.call(of, s.name) && roomById(of[s.name])) out[s.name] = of[s.name];
+    });
+    return out;
+  }
+  function setPlacement(map) {
+    state.roomOf = state.roomOf && typeof state.roomOf === 'object' ? state.roomOf : {};
+    routeStudents().forEach(function (s) { delete state.roomOf[s.name]; });
+    Object.keys(map).forEach(function (n) { state.roomOf[n] = map[n]; });
+  }
+
+  function field(labelText, input, id) {
+    var wrap = el('div', 'field');
+    var lab = el('label', '', labelText);
+    lab.setAttribute('for', id);
+    input.id = id;
+    wrap.appendChild(lab);
+    wrap.appendChild(input);
+    return wrap;
+  }
+
+  function roomRow(r) {
+    var box = el('div', 'room-row');
+    box.setAttribute('data-room', r.id);
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-labelledby', 'room-' + r.id + '-name');
+    var fields = el('div', 'room-fields');
+    var name = el('input'); name.type = 'text'; name.value = r.name || ''; name.setAttribute('data-room-field', 'name');
+    var cap = el('input'); cap.type = 'number'; cap.min = '0'; cap.step = '1'; cap.value = r.capacity == null ? '' : String(r.capacity); cap.setAttribute('data-room-field', 'capacity');
+    var proc = el('input'); proc.type = 'text'; proc.value = r.proctor || ''; proc.setAttribute('data-room-field', 'proctor');
+    fields.appendChild(field('Room name', name, 'room-' + r.id + '-name'));
+    fields.appendChild(field('Seats', cap, 'room-' + r.id + '-cap'));
+    fields.appendChild(field('Proctor', proc, 'room-' + r.id + '-proc'));
+    var del = el('button', 'danger small', 'Delete room');
+    del.type = 'button'; del.setAttribute('data-del-room', r.id); del.style.marginBottom = '.6rem';
+    fields.appendChild(del);
+    box.appendChild(fields);
+    var fs = el('fieldset', 'provides');
+    fs.appendChild(el('legend', '', 'This room provides'));
+    var have = TacgRooms.providesOf(r, typeIds());
+    state.types.forEach(function (t) {
+      var lab = el('label');
+      var cb = el('input'); cb.type = 'checkbox';
+      cb.setAttribute('data-room-type', t.id);
+      cb.checked = have.indexOf(t.id) !== -1;
+      var span = el('span', '', t.name);
+      span.setAttribute('data-room-type-label', t.id);
+      lab.appendChild(cb); lab.appendChild(span);
+      fs.appendChild(lab);
+    });
+    box.appendChild(fs);
+    return box;
+  }
+
+  function renderRooms() {
+    els.roomsWrap.textContent = '';
+    if (!roomList().length) {
+      els.roomsWrap.appendChild(el('p', 'hint', 'No rooms yet. Add one for each place students will test.'));
+      return;
+    }
+    roomList().forEach(function (r) { els.roomsWrap.appendChild(roomRow(r)); });
+  }
+  /** The type names in each room's checklist follow a rename without rebuilding the rows (and losing focus). */
+  function refreshRoomTypeLabels() {
+    Array.prototype.forEach.call(els.roomsWrap.querySelectorAll('[data-room-type-label]'), function (span) {
+      span.textContent = typeName(span.getAttribute('data-room-type-label'));
+    });
+  }
+
+  els.addRoomBtn.addEventListener('click', function () {
+    if (!Array.isArray(state.rooms)) state.rooms = [];
+    var n = state.rooms.length + 1;
+    var r = { id: 'r' + uid().slice(1), name: 'Room ' + n, capacity: 10, proctor: '', provides: [] };
+    state.rooms.push(r);
+    save(); renderRooms(); renderRouting();
+    var input = els.roomsWrap.querySelector('[data-room="' + r.id + '"] input[data-room-field="name"]');
+    if (input) { input.focus(); input.select(); }
+  });
+  els.roomsWrap.addEventListener('input', function (ev) {
+    var fieldName = ev.target.getAttribute('data-room-field');
+    var row = ev.target.closest('[data-room]');
+    if (!fieldName || !row) return;
+    var r = roomById(row.getAttribute('data-room'));
+    if (!r) return;
+    if (fieldName === 'capacity') {
+      var n = Math.floor(Number(ev.target.value));
+      r.capacity = ev.target.value !== '' && isFinite(n) && n >= 0 ? n : 0;
+    } else r[fieldName] = ev.target.value;
+    save(); renderRouting();
+  });
+  els.roomsWrap.addEventListener('change', function (ev) {
+    var typeId = ev.target.getAttribute('data-room-type');
+    var row = ev.target.closest('[data-room]');
+    if (!typeId || !row) return;
+    var r = roomById(row.getAttribute('data-room'));
+    if (!r) return;
+    var list = (r.provides || []).filter(function (id) { return id !== typeId; });
+    if (ev.target.checked) list.push(typeId);
+    r.provides = list;
+    save(); renderRouting();
+  });
+  els.roomsWrap.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del-room');
+    if (!id) return;
+    var r = roomById(id);
+    if (!r) return;
+    var held = Object.keys(placedNow()).filter(function (n) { return placedNow()[n] === id; }).length;
+    if (held && !window.confirm('Delete ' + roomLabel(r) + '? The ' + plural(held, 'student', 'students') + ' placed there will be unplaced.')) return;
+    state.rooms = state.rooms.filter(function (x) { return x.id !== id; });
+    if (state.roomOf) Object.keys(state.roomOf).forEach(function (n) { if (state.roomOf[n] === id) delete state.roomOf[n]; });
+    save(); renderRooms(); renderRouting();
+    els.addRoomBtn.focus();
+  });
+
+  /** Why a student cannot be seated, as a sentence for the person routing. */
+  function reasonText(reason) {
+    if (reason.kind === 'missing') return 'no room provides ' + listText(namesOf(reason.missing)) + '.';
+    if (reason.kind === 'combo') return 'no single room provides all of ' + listText(namesOf(reason.needs)) + ' together.';
+    return 'the rooms that provide all of them are full: ' + listText(reason.rooms.map(function (id) { return roomLabel(roomById(id)); })) + '.';
+  }
+
+  function setStatus(text, unplaced) {
+    els.routeStatus.textContent = '';
+    if (text) els.routeStatus.appendChild(el('div', '', text));
+    if (unplaced && unplaced.length) {
+      els.routeStatus.appendChild(el('div', 'warn', plural(unplaced.length, 'student was', 'students were') + ' not placed:'));
+      var ul = el('ul');
+      unplaced.forEach(function (u) {
+        ul.appendChild(el('li', '', u.name + ' (' + listText(namesOf(u.needs)) + '): ' + reasonText(u.reason)));
+      });
+      els.routeStatus.appendChild(ul);
+    }
+  }
+
+  function runRoute(onlyUnplaced) {
+    var students = routeStudents();
+    if (!roomList().length) { setStatus('Add a room first.'); return; }
+    if (!students.length) { setStatus('No student has an accommodation ticked yet, so nobody needs a room.'); return; }
+    var current = placedNow();
+    var held = Object.keys(current).length;
+    if (!onlyUnplaced && held && !window.confirm('Route everyone again? This replaces the ' + plural(held, 'placement', 'placements') + ' you have now, including any you moved by hand.')) return;
+    var result = TacgRooms.route({ students: students, rooms: roomList(), typeIds: typeIds(), keep: onlyUnplaced ? current : {} });
+    setPlacement(result.placed);
+    save(); renderRouting();
+    setStatus('Placed ' + Object.keys(result.placed).length + ' of ' + students.length + ' students who have accommodations.', result.unplaced);
+  }
+  els.routeAllBtn.addEventListener('click', function () { runRoute(false); });
+  els.routeRestBtn.addEventListener('click', function () { runRoute(true); });
+  els.clearRoomsBtn.addEventListener('click', function () {
+    var held = Object.keys(placedNow()).length;
+    if (!held) { setStatus('Nobody is placed in a room.'); return; }
+    if (!window.confirm('Clear all ' + plural(held, 'placement', 'placements') + '?')) return;
+    setPlacement({});
+    save(); renderRouting();
+    setStatus('Cleared ' + plural(held, 'placement', 'placements') + '.');
+  });
+
+  /** What is wrong with where a student sits now, or ''. */
+  function problemFor(s, r) {
+    if (!r) return '';
+    var missing = TacgRooms.missingFor(s.needs, r, typeIds());
+    return missing.length ? roomLabel(r) + ' does not provide ' + listText(namesOf(missing)) + '.' : '';
+  }
+
+  function renderRouting() {
+    var students = routeStudents();
+    var placed = placedNow();
+    var load = TacgRooms.loads(roomList(), placed);
+    var rooms = roomList();
+
+    // Print picker: a room, or every room that has students.
+    var keep = els.printRoomSelect.value;
+    els.printRoomSelect.textContent = '';
+    var all = el('option', '', 'Every room with students'); all.value = '';
+    els.printRoomSelect.appendChild(all);
+    rooms.forEach(function (r) { var o = el('option', '', roomLabel(r)); o.value = r.id; els.printRoomSelect.appendChild(o); });
+    els.printRoomSelect.value = roomById(keep) ? keep : '';
+
+    // Summary and rooms at a glance.
+    var placedCount = Object.keys(placed).length;
+    els.routeSummary.textContent = !state.roster.length ? '' : !students.length
+      ? 'No student has an accommodation ticked yet, so nobody needs a room.'
+      : placedCount + ' of ' + students.length + ' students who have accommodations are in a room.';
+    els.roomGlance.textContent = '';
+    rooms.forEach(function (r) {
+      var cap = TacgRooms.capacityOf(r);
+      var text = roomLabel(r) + (r.proctor ? ' — proctor ' + r.proctor : ' — no proctor yet') + ' — ' + load[r.id] + ' of ' + plural(cap, 'seat', 'seats');
+      var li = el('li', '', text);
+      if (load[r.id] > cap) li.appendChild(el('span', 'room-warn', ' — over capacity by ' + (load[r.id] - cap)));
+      els.roomGlance.appendChild(li);
+    });
+
+    // The grid: one row per student who has an accommodation, a room to pick.
+    els.roomTable.textContent = '';
+    if (!state.roster.length) { setRoomMessage('Save a roster above first.'); return; }
+    if (!students.length) { setRoomMessage('Tick an accommodation for a student above and they will appear here.'); return; }
+    var head = el('tr');
+    ['Student', 'Accommodations', 'Room', 'Check'].forEach(function (h) { var th = el('th', '', h); th.scope = 'col'; head.appendChild(th); });
+    els.roomTable.appendChild(head);
+    var offered = {};
+    rooms.forEach(function (r) { TacgRooms.providesOf(r, typeIds()).forEach(function (id) { offered[id] = true; }); });
+    students.forEach(function (s) {
+      var tr = el('tr'); tr.setAttribute('data-room-student', s.name);
+      tr.appendChild(el('td', '', s.name));
+      tr.appendChild(el('td', 'left', listText(namesOf(s.needs))));
+      var td = el('td');
+      var sel = el('select', 'room-select');
+      sel.setAttribute('aria-label', 'Room for ' + s.name);
+      sel.setAttribute('data-room-pick', s.name);
+      var none = el('option', '', 'Not placed'); none.value = ''; sel.appendChild(none);
+      rooms.forEach(function (r) {
+        var o = el('option', '', roomLabel(r) + ' (' + load[r.id] + ' of ' + TacgRooms.capacityOf(r) + ')');
+        o.value = r.id; sel.appendChild(o);
+      });
+      sel.value = placed[s.name] || '';
+      td.appendChild(sel);
+      tr.appendChild(td);
+      var check = el('td', 'left');
+      var problem = problemFor(s, roomById(placed[s.name]));
+      if (problem) { check.appendChild(el('span', 'room-warn', 'Warning: ' + problem)); }
+      else if (!placed[s.name]) {
+        var why = TacgRooms.route({ students: [s], rooms: rooms, typeIds: typeIds() }).unplaced[0];
+        var missing = s.needs.filter(function (id) { return !offered[id]; });
+        check.textContent = rooms.length && missing.length ? 'Not placed: no room provides ' + listText(namesOf(missing)) + '.'
+          : rooms.length && why && why.reason.kind === 'combo' ? 'Not placed: no single room provides all of them.' : 'Not placed yet.';
+      } else check.textContent = 'OK';
+      tr.appendChild(check);
+      els.roomTable.appendChild(tr);
+    });
+  }
+  function setRoomMessage(text) {
+    var tr = el('tr'); var td = el('td', 'hint', text); td.style.textAlign = 'left'; tr.appendChild(td); els.roomTable.appendChild(tr);
+  }
+
+  /* A hand move is the teacher's call: it is kept even when the room does not
+     provide something the student has, and the row, the status line and the
+     proctor's list all say so. */
+  els.roomTable.addEventListener('change', function (ev) {
+    var student = ev.target.getAttribute('data-room-pick');
+    if (!student) return;
+    var map = placedNow();
+    var rid = ev.target.value;
+    if (rid) map[student] = rid; else delete map[student];
+    setPlacement(map);
+    save();
+    var s = routeStudents().filter(function (x) { return x.name === student; })[0];
+    var r = roomById(rid);
+    var bits = [];
+    if (r && s) {
+      var problem = problemFor(s, r);
+      if (problem) bits.push('Warning: ' + student + ' is now in ' + roomLabel(r) + ', which does not provide ' + listText(namesOf(TacgRooms.missingFor(s.needs, r, typeIds()))) + '.');
+      var count = Object.keys(map).filter(function (n) { return map[n] === rid; }).length;
+      if (count > TacgRooms.capacityOf(r)) bits.push('Warning: ' + roomLabel(r) + ' is over capacity (' + count + ' students, ' + plural(TacgRooms.capacityOf(r), 'seat', 'seats') + ').');
+    }
+    renderRouting();
+    setStatus(r ? (bits.length ? '' : student + ' moved to ' + roomLabel(r) + '.') : student + ' is not placed.');
+    bits.forEach(function (b) { els.routeStatus.appendChild(el('div', 'warn', b)); });
+    var again = els.roomTable.querySelector('select[data-room-pick="' + student.replace(/(["\\])/g, '\\$1') + '"]');
+    if (again) again.focus();
+  });
+
+  /* ── The proctor lists ────────────────────────────────────────────────────
+     One sheet per room, in #printArea, each a `.pk-page`: the kit's page break
+     between rooms and a table that carries on over as many pages as the room's
+     students need, its head repeating. A room's sheet holds that room's students
+     and nobody else's. A student who sits in a room that lacks something they
+     have is shown with that flagged, so the proctor is not told it is covered. */
+  function buildProctorSheet(r, placed) {
+    var students = routeStudents().filter(function (s) { return placed[s.name] === r.id; });
+    var sheet = el('div', 'proctor-sheet pk-page');
+    sheet.appendChild(el('h2', '', 'Proctor list — ' + roomLabel(r)));
+    sheet.appendChild(el('p', 'meta', 'Proctor: ' + (r.proctor ? r.proctor : '________________') +
+      '   Test / date: ________________   Students: ' + students.length + ' of ' + plural(TacgRooms.capacityOf(r), 'seat', 'seats')));
+    var table = el('table');
+    var thead = el('thead'); var hr = el('tr');
+    ['Student', 'Accommodations', 'Note', 'Present'].forEach(function (h) { var th = el('th', '', h); th.scope = 'col'; hr.appendChild(th); });
+    thead.appendChild(hr); table.appendChild(thead);
+    var tbody = el('tbody');
+    var tally = {};
+    students.forEach(function (s) {
+      var tr = el('tr', 'pk-keep');
+      tr.appendChild(el('td', '', s.name));
+      var td = el('td');
+      td.appendChild(document.createTextNode(listText(namesOf(s.needs))));
+      var missing = TacgRooms.missingFor(s.needs, r, typeIds());
+      if (missing.length) {
+        td.appendChild(document.createElement('br'));
+        td.appendChild(el('span', 'flag', 'Not provided in this room: ' + listText(namesOf(missing))));
+      }
+      tr.appendChild(td);
+      tr.appendChild(el('td', '', state.notes[s.name] || ''));
+      tr.appendChild(el('td', 'present', ''));
+      tbody.appendChild(tr);
+      s.needs.forEach(function (id) { tally[id] = (tally[id] || 0) + 1; });
+    });
+    table.appendChild(tbody);
+    sheet.appendChild(table);
+    var counts = state.types.filter(function (t) { return tally[t.id]; }).map(function (t) { return t.name + ' × ' + tally[t.id]; });
+    sheet.appendChild(el('p', 'tally', 'Total: ' + plural(students.length, 'student', 'students') + (counts.length ? '. ' + counts.join(', ') + '.' : '.')));
+    return sheet;
+  }
+
+  /** Builds the proctor lists. False, with the reason said, when there is nothing to print. */
+  function renderProctorSheets() {
+    var placed = placedNow();
+    var picked = els.printRoomSelect.value;
+    var chosen = roomList().filter(function (r) {
+      return picked ? r.id === picked : Object.keys(placed).some(function (n) { return placed[n] === r.id; });
+    });
+    if (!roomList().length) { alert('Add a room first.'); return false; }
+    if (!chosen.length || !chosen.some(function (r) { return Object.keys(placed).some(function (n) { return placed[n] === r.id; }); })) {
+      alert(picked ? 'Nothing to print — no student is placed in that room yet.' : 'Nothing to print — no student is placed in a room yet.');
+      return false;
+    }
+    els.printArea.textContent = '';
+    chosen.forEach(function (r) { els.printArea.appendChild(buildProctorSheet(r, placed)); });
+    return true;
+  }
+  els.printRoomsBtn.addEventListener('click', function () { sheetMode = 'rooms'; printSheet(); });
+  els.previewRoomsBtn.addEventListener('click', function () {
+    roomsAsked = true;
+    try { els.previewBtn.click(); } finally { roomsAsked = false; }
   });
 
   /* ---------- share the accommodation list: _shared/share.js (Path 6 P3) ----------
@@ -546,6 +1003,8 @@
   els.rosterInput.value = state.roster.join('\n');
   renderTypes();
   renderTable();
+  renderRooms();
+  renderRouting();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

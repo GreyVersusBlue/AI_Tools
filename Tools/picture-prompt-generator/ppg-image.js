@@ -100,6 +100,17 @@
     return changed;
   }
 
+  /** Delete the stored pictures behind `refs` now (a picture set was deleted
+      and no other set names them). The caller has already worked out which
+      references nothing else uses. Resolves to how many records went; a
+      value that is not a reference, or one with no record, is skipped. */
+  function discard(refs) {
+    var store = global.MediaDB.store({ ns: images.NS });
+    return Promise.all((refs || []).filter(images.isRef).map(function (ref) {
+      return store.remove(ref.slice(4)).then(function () { return 1; }, function () { return 0; });
+    })).then(function (done) { return done.reduce(function (a, b) { return a + b; }, 0); });
+  }
+
   global.PicturePromptImage = {
     NS: images.NS,
     MAX_DIM: MAX_DIM,
@@ -113,6 +124,7 @@
     store: images.store,
     inline: images.inline,
     gc: images.gc,
+    discard: discard,
     valuesIn: valuesIn,
     apply: apply
   };

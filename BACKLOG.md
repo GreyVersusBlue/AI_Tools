@@ -87,11 +87,85 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-14 (v278), rank 28 (kept, rewritten), Path 12 P2 increment 4: 020's academic-tournament mode.** A bracket
+  of any of the five types has an **Academic tournament** card, off until ticked. On, every match that is ready gets a
+  Questions button: the teacher picks a source (their bank or a built-in set, the module's chooser, with a Unit filter)
+  and how many a match gets; a match shows its questions with each answer hidden until revealed, the teacher marks who
+  got each, and when every one is marked the two totals go into the match's score boxes and the page decides it as it
+  always has from two scores (a tie decides nothing: a tiebreak question, or a pick by name). **Print match sheets**
+  prints the ready matches for a reader, the answers on a page of their own. Stored on the bracket, as one `academic`
+  field (a seed, the settings, question ids and marks); **nothing in the bank, which 020 reads with `peek()` and never
+  writes**; a bracket that never had it on is byte for byte what it was (39 pins from the v276 page). The code is
+  `Tools/bracket-tournament-generator/bt-academic.js`; `_shared/question-bank.js` is unchanged. `npm run
+  test:bracket-academic` (port 8512) and `test:bracket-academic-core`. **Nine choices that are Devon's are questions 9
+  to 17 in the Path 12 section. Left of P2: 018 and 019 station questions, 062's map questions, named sets. Next free
+  suite port: 8515 (8513 and 8514 were handed to AI-31's workers).**
+- **AI-14 (v276), rank 28 (kept, rewritten), Path 12 P2 increment 3: 030's editor.** The bank tab shows and edits
+  everything a question holds: the add card has a choices editor (add, remove, move up and down, mark the right one,
+  which is the choice whose text is the answer; no new field) and tags as tokens (typed, or picked from the bank's
+  own); a row shows its tags and choices; **Edit** opens a question where it stands in the list (Save keeps its id,
+  place, first date and every field the form does not show; Escape and Cancel store nothing; a seed set's row has no
+  Edit); and a bank file, workbook or CSV is **shown before it is stored** (new, changes and which fields, already
+  there, left out and why; Add stores, by `importQuestions()`). The code is `Tools/review-game-board/rgb-bank-editor.js`;
+  `_shared/question-bank.js` is unchanged. `npm run test:bank-editor` (port 8509) and `test:bank-editor-core`.
+  **Not built: named sets, which have no storage design (question 8 in the Path 12 section), and a tag filter on the
+  list. Left of P2: 018, 019, 020, 062's map questions. Next free suite port: 8512 (8510 and 8511 were handed to
+  AI-31's workers).**
+- **AI-14 (v271), rank 28 (kept, rewritten), Path 12 P2 increment 2: 040's flashcards and the question bank, both
+  ways.** 040 has a Question bank card: "Questions from" (the bank and the seed sets, the list 030's chooser shows)
+  adds ticked questions to the word list as cards, question on the front and answer on the back, and a question
+  that cannot be a card (no answer, or more than one line) is shown with the reason and cannot be ticked; "Send this
+  list to the question bank" shows what it would add and change and stores only on Add. 040 reads the bank with the
+  new `QuestionBank.peek()`, which writes nothing, so opening the page stores nothing. The mapping is
+  `Tools/vocab-flashcard-generator/vfg-bank.js`. `npm run test:vocab-bank` (port 8506) and `test:vocab-bank-logic`.
+  **Left of P2: 018, 019, 020, 030's editor. Seven questions for Devon are in the Path 12 section. Next free suite
+  port: 8509 (8507 and 8508 were handed to AI-31's workers).**
+- **AI-14 (v269), rank 1, Path 6 P4 is finished and its row is deleted (a gap; ranks not renumbered): 053 sends a
+  teacher's own trivia to 030's question bank by link.** The entry is in `_shared/handoffs.js` (a row in 053's
+  share sheet); 030 reads `?questions=` through `QuestionBank.fromLink()`, which takes eight fields as bounded text
+  and never an id, shows what arrived, and stores it only on "Add to my bank" (the same link twice adds nothing).
+  030 takes link input now: its dynamic markup sinks went from 10 to 3, all escaped (`check:inline-sinks` holds it),
+  and a clue's points and a team's score are escaped too. `npm run test:received-questions` (port 8503).
+  **A link past 7,500 characters is refused in the sheet (about fifty short questions fit); a longer list has no
+  route yet (rank 94). The bound is not measured against the live host. The next free suite port is 8506** (075's
+  `smoke-wallet-cards.mjs` moved from 8501, which 074 had, to 8505).
+- **AI-14 (v267), rank 28, Path 12 P2, increment 1 of a 2+ row (the row stays, rewritten): 053's and 062's
+  built-in questions are read-only seed sets in the question bank, and 030 plays from them.** Each tool's list
+  moved, word for word, from its inline script to a data file (`Tools/cultural-trivia-card-generator/ctcg-bank.js`,
+  `Tools/geography-bee-quiz-generator/gbq-bank.js`) that the tool reads its list from and that registers the set
+  with `QuestionBank.registerSet()` on a page that has the module (030). A set is in memory only: nothing is
+  stored until a teacher presses "Copy to my bank", and the copy is a new question of theirs (`copiedFrom` names
+  the seed). 030's bank tab has a "Questions from" chooser; a set is filtered and pulled into a board as the bank
+  is. 062's thirty map questions are not published (no reader can draw the map). `npm run test:seed-sets` (port
+  8502) and more of `test:question-bank`. **Left of P2: 018, 019, 020, and 030's editor (choices, tags, edit
+  in place); 040 shipped at v271 (above). Rank 1 (053 → 030) shipped next, at v269 (above).**
+- **AI-14 (v265), old rank 27, Path 12 P1 is finished and its row is deleted (a gap; ranks not renumbered):
+  `_shared/question-bank.js` (`QuestionBank`) is the site's one question bank, and 030 is its one adopter.**
+  The bank is the key `gvb-question-bank` (a Store envelope, version 1); 030's old key
+  `gvb-review-board-bank:entries` is read on every load and never written or removed, so an older page and a
+  backup from before v265 both still work. 030's bank tab reads and writes through the module and has a
+  "Share the bank" card (a JSON bank file, a workbook, an import that only ever adds). `npm run
+  test:question-bank` (pure Node) and `smoke-bank-file.mjs` (port 8498, in `test:review-board`). **Rank 1 (053 →
+  030) shipped at v269. Left of Path 12: P2 to P4 (ranks 28 to 30). Nothing was opened in Excel or Sheets.**
+- **AI-13 (v263), Path 7 P5 is finished, Path 7 with it, and rank 7 is deleted (a gap; ranks not renumbered):
+  all thirteen print-kit pages have the print preview.** 070, 023, 040, 018, 017 and 016 got it; on the three
+  that keep several sheets in one `#printArea` the Preview button presses its Print button with `previewFor` set,
+  and `PrintKit.preview()`'s new `onClose` puts the at-rest sheet back. 043's Ctrl+P prints the slips now (it
+  printed whichever sheet was built last). `npm run test:preview-adopters` covers all twelve after 074. **Nothing
+  of Path 7 was ever printed on paper: the list is in Path 7's Verification. The next free suite port is 8498.**
+- **AI-13 (v259), rank 7, Path 7 P5 increment 2: seven pages have the print preview now** (074, and 076, 077,
+  051, 042, 064 and 043), and the several-buttons question is settled: a Preview button in front of each Print
+  button (043 is the example; Path 7 P5, "Point 4"). The kit did not change. `npm run test:preview-adopters`
+  (port 8495). Superseded by v263 above.
+- **AI-13 (v258), rank 7, Path 7 P5 increment 1: the kit has a print preview, `PrintKit.preview()`, and 074
+  is its one adopter** ("Preview pages": the sheet cut into the pages it will print on, in a dialog, no print
+  dialog). The breaks are the browser's own, in an iframe; the count equals Chromium's PDF. `npm run
+  test:safety-label-preview` (port 8492). Finished at v263, above.
 - **AI-13 (v255), Path 7 P4 is finished and rank 6 is deleted (a gap; ranks not renumbered): every page that
   saves a CSV or a workbook does it through `ExportKit`.** v249: 003, 008, 018, 033, 068 and 075's CSV. v252: 001
   and 006 (CSV and workbook), 030 and 036 (workbook) and 060's CSV. v255: 035's `groups-template.csv`, the last.
   `npm run test:csv-adopters` (port 8486), `npm run test:sheet-adopters` (port 8489). Also v255: 063's old bank
-  key is `legacy` in the registry, so `check:registry` prints no STALE. **Left of Path 7: P5 only (rank 7). No
+  key is `legacy` in the registry, so `check:registry` prints no STALE. **P5, the last of Path 7, finished at v263. No
   file was opened in a spreadsheet program.**
 - **AI-13 (v248), rank 6, Path 7 P4 increment 4: 011 makes booklets and several pages to a sheet on `ExportKit`
   (Path 17 P4's controls, built), and 064's zip and PNG downloads are the file helpers' first adopter.** 011's
@@ -214,7 +288,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 - **Path 22 P1–P5 are done.** His later asks are ranks 160–168 (P6–P14), unranked by him.
 
 **Start here.** Path 21 is finished (046's relief was its last row, AI-03), so no row needs Blender.
-- Rank 1 (Path 6 P4) is blocked on rank 27, so take **rank 2**, the rest of Path 4 P5: per-tool restore
+- Rank 1 (Path 6 P4, 053 → 030) shipped at v269 (AI-14) and its row is gone. Start at **rank 2**, the rest of Path 4 P5: per-tool restore
   as a shared control any tool can host (½). It needs 009's `recordDiff`/merge logic moved out of 009's
   inline script into `_shared/`, and `ToolRegistry` to pick one tool's keys. Pair it with another ½ or two
   ¼ rows. A new suite takes port **8481** (8480 is the export kit's `smoke-export.mjs`, 8479 is 016's `smoke-print.mjs`, 8478 is 017's, 8477 is 018's, 8476 is 064's, 8475 is 040's, 8474 is 051's, 8473 is 074's, 8472 is 042's, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
@@ -238,14 +312,14 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 
 | Fact | Value |
 |---|---|
-| `CACHE_VERSION` | `v255` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
-| Precache entries | **315** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
-| Suites | **218** in `Tools/board-check/suites.json`; `expectedFailures` empty |
+| `CACHE_VERSION` | `v265` on local `main` (origin was at v240 when fetched on 2026-10-05, with #349's v241 waiting on CI) — `check:precache -- --base origin/main` is the thing to trust |
+| Precache entries | **316** in `PRECACHE_URLS`, **96** in `SHELL_URLS`. Bytes summed on huginn 2026-10-03 (v222): **12,727,631 B (12.73 MB) / 2,996,269 B (3.00 MB)** shell, up from 11.21 / 2.52 MB after #267. Path 21's budget is 2 MB, ≤ 250 KB of it shell; **492,651 B** ledgered, **140,806 B** of it shell (`check:art` enforces both) |
+| Suites | **229** in `Tools/board-check/suites.json`; `expectedFailures` empty |
 | Read-only guards | **13**: `dedupe`, `tests`, `social`, `precache`, `entities`, `hidden-flex`, `print-clip`, `registry`, `lint`, `docs-commands`, `adoption`, `inline-sinks`, `art`. All run in CI |
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
-| Tool registry | 89 rows, **221 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 54 · `state-link.js` 54 · `store.js` 37 · `roster.js` 33 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `qr-scan.js` 10 · `stage.js` 10 · `tool-registry.js` 8 · `webrtc-pair.js` 8 · `handoffs.js` 6 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `qr-scan.js` 10 · `tool-registry.js` 9 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -378,12 +452,10 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 1 | Path 6 P4 rollout. The mechanism shipped in #242 (v174: `_shared/handoffs.js`, `share.param` on the registry, the sheet's Send row, 052 → 040). **Increment 1 (#257, v182):** 046 → 015, 056 → 028 (`sheet: false`) and 039 → 040 are entries; **003 → 037 is a documented exception** (student scores never ride a link); `share.js` gained `sendState(entry)` and `sheet: false`. **Increment 2 (#259, v183), the roster chain:** **002 → 022** is a sheet row and **022 → 005** a `sheet: false` entry from 022's "Seat these groups" button; **006/007 → 002 is not a link** (the roster already reaches 002 through `roster.js`). **Left: only 053 → 030, which is blocked on rank 27** (Path 12 P1, the question bank with 030 as the front door). Do not start this row until rank 27 has shipped; then it is one entry plus a row in `smoke-send-to.mjs` | site | ¼ | | [Path 6](#path-6--share-everywhere) |
 | 2 | Path 4 P5 (rest) — per-tool restore as a shared control any tool can host | 009 | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
-| 7 | Path 7 P5 — a print preview in the page, and all that is left of Path 7 (P1 to P4 are finished; P4's row, rank 6, was deleted at v255). One shared Preview control in `_shared/print-kit.js` and `.css` that lays the sheet in `#printArea` out as pages at the size `PrintKit.setPage()` set, so a teacher sees the page breaks and the page count before the print dialog; done when the preview's page count equals Chromium's `page.pdf()` count on each of the thirteen print-kit pages, its adopters. Not designed and not started; the Tier 2 section lists the four things a design has to settle first (where the breaks come from, applying `@media print` rules on screen, QR canvases, where the control goes) | `_shared/` | 1 | | [Path 7](#path-7--print-and-export-kit) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -401,10 +473,9 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 22 | Path 11 P2 — extract the pure engines; target the HTML under ~300 KB. **Designed 2026-10-05 (AI-20), not built: the P2 bullet has the whole design, a measured ladder of eleven increments (the page is 968 KB; the engines alone leave it at about 620 KB, the full ladder at about 270 KB), and five questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 23 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 27 | Path 12 P1 — `_shared/question-bank.js` with 030 as the front door | `_shared/` | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 28 | Path 12 P2 — read-side adopters: 053, 062, 040, 018, 019, 020 | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; 062's thirty map questions, which are not published (they wait on P4); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Seventeen questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 29 | Path 12 P3 — play modes in 030: every-team-answers, quiz-bowl, wheel, final wager, printed quiz | 030 | 1 | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -425,23 +496,23 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 46 | Path 16 P4 — 036 modelling: term count, scenario modelling, grading window, roster join | 036 | 2+ | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 47 | Path 16 P5 — 038 for science: regression, log axes, annotation layer, handoffs to 065 and 073 | 038 | 1 | | [Path 16](#path-16--the-grades-trio-and-a-shared-chart-engine) |
 | 48 | Path 17 P1 — thumbnail-grid reordering, crop/straighten, real-photo validation of the retry presets | 011 | 1 | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 49 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
+| 49 | Path 17 P2 — scanner mode: quadrilateral detection, perspective warp, adaptive threshold. **Designed, not built (AI-25, 2026-10-06): the design is under the P2 bullet; P1 is not built and the design says what P2 needs from it** | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 50 | Path 17 P3 — PDF in: vendor `pdf.js`, merge/insert/extract/rotate existing PDFs | 011 | 2+ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 51 | Path 17 P4 — imposition. **Built (AI-13, v248, under Path 7 P4): 011 has booklet, 2/4/6/9 pages to a side with cut marks, either flip edge, creep.** Left: print and fold a 16-page booklet once and record it; then, only if asked for, a preset for a one-sided printer (fronts, then backs) and signatures for a thick booklet, both already in `ExportKit` | 011 | ¼ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
 | 52 | Path 17 P5 — OCR, decision first: a vendored Tesseract build against the offline promise | 011 | ½ | | [Path 17](#path-17--image--pdf-as-a-document-scanner-a-local-pdf-layer) |
-| 53 | Path 18 P1 — one station/room/hunt schema both 018 and 019 can read, with stable station ids | `_shared/` | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
+| 53 | Path 18 P1 — one station/room/hunt schema both 018 and 019 can read, with stable station ids (**designed 2026-10-06, not built**: the design and seven questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 54 | Path 18 P2 — both tools on the schema, plus the payload budget and a printed short-code fallback | 018 | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 55 | Path 18 P3 — feature parity between 018 and 019; questions from the bank | 019 | 2+ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 56 | Path 18 P4 — the debrief print: per-team path, time per station, misses, reflection page | 019 | 1 | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 57 | Path 18 P5 — decide the product: two entry points on one engine, or one tool with a mode switch | 018 | ¼ | | [Path 18](#path-18--escape-room-and-scavenger-hunt-convergence) |
 | 58 | Path 19 P1 — `_shared/word-list.js`, owned by a Word Lists hub inside 040 | `_shared/` | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 59 | Path 19 P2 — adopters: 040, 039, 014, 027, 051, 052; delete `vfg-conjdrill-link.js` | site | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
-| 60 | Path 19 P3 — conjugation pattern engine for Spanish and French, with irregular overrides | 039 | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
+| 60 | Path 19 P3 — conjugation pattern engine for Spanish and French, with irregular overrides. **Designed, not built (AI-27, 2026-10-06): the design is in the P3 bullet**; the engine can be built before P1 and P2, its storage on the word record cannot | 039 | 2+ | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 61 | Path 19 P4 — printables: Frayer page, spaced repetition, fill-in-the-blank, word wall as a system | 040 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 62 | Path 19 P5 — audio: TTS on study mode, teacher-recorded pronunciations into the media store | 051 | 1 | | [Path 19](#path-19--vocabulary-hub-and-conjugation-engine) |
 | 63 | Path 20 P1 — `_shared/geo-project.js` + `traceFeature`, hit-test and the curriculum gazetteer | `_shared/` | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 64 | Path 20 P2 — dropped GeoJSON/TopoJSON as a base map | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
-| 65 | Path 20 P3 — live vector viewer, keeping the raster path for poster export | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
+| 65 | Path 20 P3 — live vector viewer, keeping the raster path for poster export (**designed 2026-10-06, not built**: the design, its measurements and six questions for Devon are under the P3 bullet; P1 and P2 are not built and the design does not wait for them) | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 66 | Path 20 P4 — time slices for annotations; two-way selective handoff with 015 | 046 | 2+ | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 67 | Path 20 P5 — quiz memory across sessions; decide the Wikimedia network question | 046 | 1 | | [Path 20](#path-20--blank-map-live-vectors-dropped-geojson-shared-geometry) |
 | 68 | Track B1 — brand engine in `a11y.js`: school accent and logo, pre-paint, with an opt-out flag | `_shared/` | 1 | | [Track B](#track-b--custom-theme--branding-pass) |
@@ -470,28 +541,14 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 91 | Spreadsheet book-list import via the shared SheetJS build, with a genre-balance warning | 049 | ½ | | [049 Book Tasting Menu Generator](#049--book-tasting-menu-generator) |
 | 92 | Teacher-recorded audio fallback via MediaRecorder, so labels work with no target-language voice | 051 | ½ | | [051 Classroom Label Maker (Target Language)](#051--classroom-label-maker-target-language) |
 | 93 | Practice worksheet variants — matching, fill-in-the-blank and "trap or true cognate" with answer keys | 052 | ½ | | [052 Cognates & False Friends Reference List Builder](#052--cognates--false-friends-reference-list-builder) |
-| 94 | Export into Review Game Board — emit the question set in the board’s category/points format | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
+| 94 | Export into Review Game Board — emit the question set in the board’s category/points format. **Since v269 the sheet’s “Send to Quiz / Review Game Board” row puts a teacher’s own questions in 030’s bank by link (Path 6 P4), up to about fifty: a link past 7,500 characters is refused. Left: a route for a longer list (a file 030’s bank import reads, or a choice of which questions to send), and a board built straight from the questions with categories and points** | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
-| 103 | Bulk import a custom bank — paste problem/work/fix/explain rows for a whole unit | 066 | ½ | | [066 Math "Find the Mistake" Warm-Up Generator](#066--math-find-the-mistake-warm-up-generator) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
-| 105 | Conference print packet — one student’s full contact history plus a blank note area | 068 | ½ | | [068 Parent/Guardian Contact Log](#068--parentguardian-contact-log) |
-| 106 | Live circuit rotation timer — a projector mode that counts down each station and signals the rotation | 069 | ½ | | [069 PE Warm-Up Circuit Card Generator](#069--pe-warm-up-circuit-card-generator) |
-| 107 | Roster-driven pre-named half-sheets — read `np_rosters` and print one per student | 070 | ½ | | [070 Peer Feedback / Editing Checklist Generator](#070--peer-feedback--editing-checklist-generator) |
-| 108 | Multiple named saved image sets, so two vocabulary libraries coexist without re-uploading | 071 | ½ | | [071 Picture-Prompt Speaking/Writing Task Generator](#071--picture-prompt-speakingwriting-task-generator) |
-| 109 | Share a diagram by link, so the same novel’s diagram moves between class periods | 072 | ½ | | [072 Story Elements / Plot Diagram Builder](#072--story-elements--plot-diagram-builder) |
-| 110 | Multiple named saved trackers — one per class period’s science-fair cohort | 073 | ½ | | [073 Science Fair Project Tracker](#073--science-fair-project-tracker) |
-| 111 | Two symbols per label — across the edit form, duplicate logic and the printed card | 074 | ½ | | [074 Science Safety Symbol & Equipment Label Maker](#074--science-safety-symbol--equipment-label-maker) |
-| 112 | Wallet-card layout with QR — a lanyard insert with a phone or email link per entry | 075 | ½ | | [075 Staff Directory / Quick-Reference Builder](#075--staff-directory--quick-reference-builder) |
-| 113 | Room-assignment view — define rooms and proctors, auto-route by accommodation, print proctor lists | 077 | ½ | | [077 Testing Accommodations Reference Card Generator](#077--testing-accommodations-reference-card-generator) |
-| 114 | Multiple named saved prompt sets — a general slip, a lab-day slip and a testing-day slip at once | 076 | ½ | | [076 Sub Note / Feedback Slip Generator](#076--sub-note--feedback-slip-generator) |
-| 115 | Named saves plus reorder and share — group and line reordering and a state-link share URL | 078 | ½ | | [078 Unit Conversion Reference Chart Builder](#078--unit-conversion-reference-chart-builder) |
-| 116 | Irregular verb call-out boxes — three to five common irregulars per tense | 079 | ½ | | [079 Verb Conjugation Reference Poster Generator](#079--verb-conjugation-reference-poster-generator) |
-| 117 | Two-step word problems — chained-operation templates for the upper grade band | 081 | ½ | | [081 Word Problem Warm-Up Generator](#081--word-problem-warm-up-generator) |
 | 118 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
-| 119 | Roles built into a group; project-team mode; a pair-history that spans the year | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
+| 119 | Project-team mode: longer-lived named teams, a shared task list, a printable team contract (roles and the year-long pair memory shipped, v277; this part waits on the questions in 002's section) | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
 | 120 | Peer review mode; rubric handoff to the grades tools | 003 | ½ | | [003 Rubric Builder](#003--rubric-builder) |
-| 121 | Bell-schedule awareness; a multi-timer board; a reconnecting mirror | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
+| 121 | Bell-schedule awareness (reads 032's `scv_calendar_v1`; needs a registry and cross-tool decision); a reconnecting mirror (`_shared/webrtc-pair.js`, a platform edit). The multi-timer board shipped v279 | 004 | ½ | | [004 Classroom Timer](#004--classroom-timer) |
 | 122 | A constraint solver worth the name; the room, not the grid | 005 | ½ | | [005 Seating Chart Generator](#005--seating-chart-generator) |
 | 123 | Bulk operations across rosters | 006 | ½ | | [006 Class Roster Hub](#006--class-roster-hub) |
 | 124 | `prefers-reduced-motion` respect; equity across weeks and periods | 007 | ½ | | [007 Name Picker](#007--name-picker) |
@@ -515,7 +572,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 142 | Fraction multiply/divide, exponents and one-step equations | 026 | ½ | | [026 Math Fact Drill Sheet Generator](#026--math-fact-drill-sheet-generator) |
 | 143 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 144 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
-| 145 | Projector styling; the site-wide question bank | 030 | ½ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
+| 145 | Projector styling (the site-wide question bank shipped as Path 12 P1, v265; its other formats are Path 12 P2 and P3) | 030 | ½ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
 | 146 | Week-at-a-glance print; year-grid A/B badges | 032 | ½ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
 | 147 | "Where is this student right now?"; the published pathfinder | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
 | 148 | Split the file; accessibility routing | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
@@ -1870,7 +1927,16 @@ download-as-file as the third option.
   002 already shares; 022 files it as a new lab class through `?labgroups=` and hands out roles);
   022 → 005 is `sheet: false`, from 022's "Seat these groups" button (a new section, one pod per
   group); **006/007 → 002 is not a link**, because 002 already reads the saved roster through
-  `roster.js` on the same device. Left: trivia → review board (053 → 030), after Path 12 P1.
+  `roster.js` on the same device. Left: trivia → review board (053 → 030), which waited on Path 12 P1 (shipped, v265).
+  **Rollout increment 3 (AI-14, v269), the last: 053 → 030, and P4 is finished.** A sheet row on 053 sends the
+  teacher's own questions (what its sheet already shares; the built-in thirty are on 030 as a seed set) in the
+  bank's link shape, `{ v, from, name, questions: [{ prompt, answer, unit }] }`. 030 declares `share: { param:
+  'questions' }` and is the first receiver that **asks**: the others file an arrival under a new name, but the
+  bank is one list every board draws on, so 030 shows the questions (each marked when the bank has it) and
+  stores them on "Add to my bank" only. `QuestionBank.fromLink()` is the one reader of the link and the header of
+  `_shared/question-bank.js` (LINKS) has its rules: no id is taken, so a link cannot write over a question.
+  An entry may now set `maxLink` and `tooLong(built)`; only this one does (7,500 characters), because a teacher's
+  list has no upper size. **Not verified:** that bound against the live host; a real phone or a second computer.
 
 **Model.** Opus.
 
@@ -2497,19 +2563,145 @@ localStorage with no file export.
 - **P5 — A real print preview.** A shared "Preview" mode that renders the print
   DOM into an in-page paged view (CSS `@page` size emulation) so a teacher sees
   page breaks before the dialog, instead of after.
-  **Not designed, not started (AI-13, 2026-10-05). What it is, and what a design has to settle first.** One
-  control, in `_shared/print-kit.js` and `.css` since that is where the page size already lives
-  (`PrintKit.setPage()` writes paper, orientation and margin), that shows the sheet in `#printArea` cut into pages
-  at that size, with a page count, without opening the print dialog. Its adopters are the thirteen pages that
-  print through the kit; a page with a print block of its own gets it when it adopts the kit. Open, in the order
-  they block: (1) where the breaks come from. The browser does not report them, so the preview either measures
-  (`.pk-page` and `.pk-sheet` are whole pages already; a flowing grid such as 074's or 016's has to be cut by
-  height, honouring `break-inside: avoid`) or renders print media in an iframe; the measure of success is that the
-  preview's page count equals Chromium's `page.pdf()` count, which every adopter's `smoke-print.mjs` already
-  reads. (2) The print rules are in `@media print`, so a preview on screen has to apply them: a class the kit's
-  print rules are also written for, or the iframe. (3) QR canvases (051, 018, 017) do not survive `cloneNode`;
-  preview the live sheet, not a copy. (4) Where the control goes on a page with several print buttons (018, 017,
-  016, 043). None of this was tried; it is a reading of the kit, not a result.
+  **Designed and first built (AI-13, 2026-10-06, v258): `PrintKit.preview()`, with 074 as its one adopter.**
+  The four open points of 2026-10-05 are settled below, the first two by experiment.
+  **The experiment (points 1 and 2).** Two ways of finding the breaks were built in a scratch folder and run
+  beside Chromium's `page.pdf({ preferCSSPageSize: true })` for the same state, on four adopters: 074 (one
+  flowing grid), 043 (whole pages and half sheets, four buttons), 051 (a flowing grid of labels with QR
+  canvases, then a reference table) and 042 (a `100vw x 100vh` sheet, one or two to a page). Every state but
+  042's was run on five papers (the tool's own, A4, Legal, A5, Letter landscape, through `PrintKit.setPage()`),
+  and the whole run twice, in huginn's Noto Sans and with fontconfig holding only DejaVu Sans, CI's font. Both
+  ways apply the print rules the same way (an iframe, below), so what differs is only who finds the breaks:
+  *measure*, a walk over the laid-out boxes that cuts by height (forced breaks, `break-inside: avoid`,
+  replaced elements and grid rows kept whole); or *columns*, the browser's own fragmentation, by making the
+  frame's `<body>` a multi-column box whose column is the printable page. "Breaks" below means the same number
+  of text characters on every page as `pdftotext` reads off the PDF's.
+
+  | Tool | States | PDF pages | Columns: count | Columns: breaks | Measure: count | Measure: breaks |
+  |---|---|---|---|---|---|---|
+  | 074, Noto | 120 | 349 | 120 of 120 | 120 of 120 | 120 | 118 |
+  | 043, Noto | 60 | 160 | 60 of 60 | 60 of 60 | 60 | 55 |
+  | 051, Noto | 25 | 127 | 25 of 25 | 21 of 25 | 22 | 12 |
+  | 042, Noto | 12 | 36 | 12 of 12 | 12 of 12 | 6 | 6 |
+  | 074, DejaVu | 120 | 351 | 120 of 120 | 120 of 120 | 120 | 118 |
+  | 043, DejaVu | 60 | 169 | 60 of 60 | 60 of 60 | 60 | 54 |
+  | 051, DejaVu | 25 | 135 | 25 of 25 | 21 of 25 | 22 | 13 |
+  | 042, DejaVu | 12 | 36 | 12 of 12 | 12 of 12 | 6 | 6 |
+
+  The Columns figures are `PrintKit.preview()` as shipped; the Measure figures are the scratch prototype's,
+  which is not in the tree. **Columns is the choice.** Its count is the PDF's in every state measured.
+  Measure miscounts where the engine does something a measurement cannot see: it drops a margin or a grid gap
+  that meets a break (so a row the PDF keeps on a page is pushed off it), and it has to guess at what is
+  unbreakable (042's two half-page slots, 051's sliced label). What the first pass of Columns got wrong, and
+  what fixed it, both in the kit now: 042 at two to a page was 3 pages for the PDF's 2 (4 of 12 states wrong)
+  while the frame was `748.8px` tall and its `100vh` rounded up past the column, so the frame is a whole number
+  of px, rounded down; and 051's table lost 17 characters a page, the `<thead>` print repeats on every page and
+  columns do not, so the frame repeats it by hand. Its breaks are the PDF's in 426 of 434 runs; the eight are 051 on A5, four states in each font, where a label is taller than the page: both slice it, at a different line of its text.
+  **The surface.** `PrintKit.preview({ area, trigger, onPrint, title })` returns a promise of `{ dialog, frame,
+  pages, page, go(n), close() }`. It opens a modal `<dialog class="pk-preview pk-no-print">`: a heading
+  ("Print preview", `opts.title`), a `role="status"` line that reads "Page 2 of 5", Previous page, Next page
+  (`aria-disabled` at the ends, so the focus is never dropped), Print… when `opts.onPrint` is a function
+  (it closes the preview and calls it) and Close; under them one page of paper at the size `setPage()` last
+  wrote, scaled down to fit and never up. Left and Right arrows, Page Up and Down, Home and End turn pages;
+  Escape closes; the focus goes back to `opts.trigger` (default: what had it). It never calls `print()`.
+  `area` defaults to `#printArea`, and the sheet must already be built: **the adopter adds a button and three
+  lines**, `render the sheet; PrintKit.preview({ trigger: button, onPrint: the tool's print })`. The pure parts,
+  which the Node suite tests: `pageBox(opts)` (paper, margins and printable box in px), `flipMedia(text)`,
+  `pageOf(left, pitch)`, `countPages(lefts, pitch)`, `fitScale(w, h, roomW, roomH)`. CSS: `.pk-preview`,
+  `-bar`, `-title`, `-status`, `-nav`, `-stage`, `-fit`, `-sheet`, `-frame`, on `ink-paper.css`'s tokens with
+  system colours behind them; the paper's size and its white are set by the script, so `print-kit.css` still
+  holds no fixed height and no colour literal of its own.
+  **The algorithm.** (a) An `<iframe srcdoc>` (standards mode, a `<base>` for relative URLs), a whole number of
+  px inside the paper's margins. (b) Every style sheet of the page goes into it in order: a `<link>` is linked
+  again, a `<style>` copied; then every media query in the frame's copy is rewritten by `flipMedia` (`print`
+  reads `all`, a `screen` query never matches, `not screen` matches, a query with no media type is left to the
+  frame's own width). That is point 2: nothing is rewritten in the page, and no kit rule had to be written a
+  second time for the screen. (c) `<html>`'s attributes (theme, `--pk-*`) and `<body>`'s class are copied, and
+  the sheet is `importNode`d, which is point 3: **a copy, not the live sheet**, with each `<canvas>` redrawn
+  from the live one by `drawImage`; previewing the live sheet would have meant flipping the page's own media
+  rules under the teacher. (d) The frame's own last rule makes `<body>` the multi-column box (no margin, the
+  printable width and height, a 400 px gap) and the sheet `position: static`. (e) After the sheets, images and
+  fonts have loaded: a computed `break-after` or `break-before` that forces a page becomes `column`,
+  `break-inside: avoid-page` becomes `avoid`, a `<thead>` is cloned (`aria-hidden`) before the first row of each
+  later column its table reaches. (f) The count is the column of the right-most box's left edge, plus one; the
+  page shown is a `translateX` on `<body>`.
+  **Edge cases, each a difference from paper that is known and left.** A fill is shown that the print dialog
+  drops unless "background graphics" is ticked. A box taller than a page is sliced in both, but not at the same
+  line of text (051's long label on A5: same count, the text divided differently). The page previewed is the
+  last one `setPage()` wrote, or Letter: a page that writes its own `@page` is not read. A rule put in by
+  `insertRule()` and an adopted style sheet are not copied (no page on the site has one). The paper, scale and
+  margins a teacher picks in the print dialog itself are unknowable. A page still on a11y.css's invert filter
+  was not looked at. **Only Chromium was measured**; whether Firefox and Safari break a grid across columns as
+  they do across pages is not known. Nothing was printed on paper.
+  **Left out, on purpose:** thumbnails of every page at once, zoom, a live preview beside the editor,
+  choosing the paper in the preview.
+  **Increment 2 (AI-13, 2026-10-06, v259): six more adopters, seven of thirteen.** 076, 077, 051, 042 and 064
+  (one print button each) got 074's button, "Preview pages", in front of the print button, and 043 got four.
+  The kit did not change: nothing an adopter did showed a defect in `preview()`. The count equals Chromium's
+  PDF in every state each tool's `smoke-print.mjs` prints, light and dark (200 state-and-button runs), held by
+  `Tools/print-kit/test/smoke-preview-adopters.mjs` (`npm run test:preview-adopters`, port 8495), one table for
+  all six and not a suite in each tool's folder, as `_csv-adopters.mjs` is for the CSV pages. What an adopter
+  does: split "build the sheet" from "print it" (`renderSheet()` or the tool's `buildPrintArea()`; it returns
+  false, having said why, when there is nothing to print), and call `PrintKit.preview({ trigger, onPrint })`
+  after the build. 064 waits for its photos first, as its Print does. 051's and 042's QR canvases need nothing:
+  the kit redraws each from the live one, and the suite compares the pixels.
+  **Point 4, settled: one Preview button in front of each Print button, not one preview with a "which sheet"
+  choice.** Read off the four pages: their print buttons are not together. 043's are in three cards, 017's in
+  four, 018's in two, 016's on three tabs; each sits under the controls that shape its sheet, has its own
+  `disabled` rule and its own refusal, and a chooser in the dialog would have to know all of that and rebuild
+  the sheet from inside the kit. So: (a) every Print button gets a Preview button immediately before it in the
+  markup, `class="secondary"`, with the Print button's id and label and "preview" for "print" (`printMissingListBtn`
+  "Print missing list" has `previewMissingListBtn` "Preview missing list"); a button that says only "Print" gets
+  "Preview pages", as on the one-button pages; (b) a Print button that prints one of several layouts by a
+  choice made elsewhere (043's one / class set / blank, 040's seven faces) has one Preview, which reads the same
+  choice; (c) Preview is `disabled` whenever its Print is, and refuses in the same words; (d) it builds its
+  sheet exactly as its Print button does, then calls `preview()` with itself as `trigger` and an `onPrint` that
+  presses its Print button, so what is printed is what was looked at; (e) on a page that keeps several areas
+  inside one `#printArea` (018, 017, 016) the build step also shows the asked-for area (`.active`,
+  `.sheet-asked`, the body class) before `preview()`, because the preview copies the whole `#printArea` with
+  its classes, and puts the at-rest state back when the preview closes, as that page's `afterprint` does, so
+  Ctrl+P prints what it printed before. (e) is written from the source and **not tried**: 043, where the rule
+  was applied, renders each sheet into `#printArea` whole and has no areas. 043's wiring is one helper,
+  `wirePreview(previewBtn, build, printBtn)`, four calls.
+  **Increment 3 (AI-13, 2026-10-06, v263): the last six adopters, and P5 is finished.** 070 (two buttons now:
+  blanks, and AI-31's one per student), 023 (handout or class set, and the reteach list) and 040 (Print and the
+  alignment test) each split "build" from "print" as 043 did. 040's preview Print prints the sheet that was
+  looked at without building it again, because a word search, a crossword and a bingo set are drawn at random.
+  **Rule (e), tried and kept, with one change to the kit.** On 018, 017 and 016 the Preview button does not
+  build anything itself: it sets `previewFor` and presses its Print button, whose handler runs as it always did
+  (the same refusals, the same build, the same area shown) until the one place that called `window.print()`,
+  which calls `PrintKit.preview()` when `previewFor` is set. A `MutationObserver` on the Print button's
+  `disabled` keeps the Preview button off whenever it is. Putting the at-rest sheet back needed a hook the kit
+  did not have: the copy into the frame is made after the frame and its style sheets load, so the page cannot
+  restore straight after calling `preview()`, and the dialog's `close` event comes after the preview's own Print
+  has already pressed the Print button. So `preview()` takes `onClose`, called on every way out (Escape, Close,
+  Print) and before `onPrint`. 023's reteach list uses it too (the handout goes back). 016 needed no area logic:
+  its tab already decides which sheet prints, so `onClose` only takes the button's body class off.
+  **043, checked as asked.** The preview had no defect. The page had one, older than the preview: with no
+  `beforeprint`, the browser's own Print printed whichever sheet a button (or, since v259, a preview) built
+  last, and an empty page on a visit with nothing pressed. `beforeprint` builds the permission slips now unless
+  a Print button has just built its own sheet (`sheetAsked`); the slips have no canvas, so they can be built
+  there.
+  **Held by** `smoke-preview-adopters.mjs`: for each state and button, light and dark, the count, every piece on
+  a page of it, canvases copied, the paper, the at-rest sheet back after Escape and after Close, then the
+  preview opened again, its Print pressed and Chromium's PDF of that print counted. The six new pages run a part
+  of their `smoke-print.mjs` states, chosen to cover each button, grid and paper, not all of them.
+  **A known difference, measured and left: the preview and the PDF can disagree by a page where the two set
+  text in different faces.** With fontconfig holding only DejaVu Sans (no italic face), 017's feedback slips,
+  stars style, six to a page, with the long entry: the two rows of the first page are 480.3 px each, 968.7 px
+  with the gap, on a 960 px page, in the preview's frame and in the page under `emulateMedia('print')` alike.
+  The preview moves the second row on and says 6 pages. Chromium's PDF says 5, with all six slips on page one
+  and room under them: in the PDF the slip's italic prompt is set in a monospaced oblique face, and its rows
+  are shorter. So the PDF is not laid out from the same text metrics as any layout a page can measure, and
+  the preview cannot see that. In huginn's Noto Sans the same state is 5 and 5. Why the two paths pick
+  different faces was not found (adding DejaVu Serif changed nothing); whether CI's fonts do it is not known.
+  The suite's 017 state with the long entry prints its slips two to a page for this reason, and says so.
+  Every other state in the suite, all twelve pages, has the PDF's count in both font setups.
+  **Found, not fixed.** 023's reteach tab, seeded, has a serious `color-contrast` finding with no preview open
+  (the a11y sweep's seed does not reach it); the suite's axe check compares with the page before the preview
+  for that reason. On 017 a code that fails its test-scan asks "Print anyway?" before the preview and again at
+  the preview's Print. 074's queue row is 26 px wider than a 375 px phone. A 064 deck with photos was not
+  previewed. Only Chromium ran any of it; no screen reader.
 
 **Model.** Opus, except P4's imposition math.
 
@@ -2517,6 +2709,17 @@ localStorage with no file export.
 tool's test folder; one physical print run on the school's black-and-white copier
 recorded here (the notes say real paper has never been validated for Avery stock,
 6-per-page cards, or the calibration page).
+**Path 7 is finished in code (P1 to P5, v221 to v263) and none of it has been on paper.** What every phase
+left to the one physical print run, which is a person's job and is not ranked: (1) any sheet at all on the
+school copier, for the half-inch margins the kit assumes and the black ink `.pk-paper` and `.pk-ink-safe`
+promise; (2) label stock: 016's Avery 5160 and 5163 at the die cut, 074's and 051's labels; (3) cut lines on
+half and quarter sheets (076, 070, 023, 043) under a guillotine, and 070's cut-stack order; (4) duplex: 040's
+and 064's backs behind their fronts, 040's alignment test, 011's booklet folded and its N-up turned on each
+edge; (5) 042 on certificate stock with its inset; (6) a phone scanning a printed QR code from 016, 017, 018,
+051 and 043; (7) the preview beside the paper it describes, in a browser other than Chromium and with the
+print dialog's "background graphics" both ways; (8) a CSV or workbook from `ExportKit` opened in a
+spreadsheet program. The per-adopter screenshots this paragraph asks for were not made: each adopter has a
+suite that reads Chromium's PDF instead.
 
 ---
 
@@ -3510,6 +3713,343 @@ a real pathfinder that the published browser never exposes.
 - **P5 — Master-schedule assistance.** Constraint checks (a teacher with three
   rooms in three consecutive periods, a room double-booked), congestion as a printed
   argument (top-ten pinch points with what-if deltas), multi-year comparison.
+  **P5 is designed, not built (AI-20, 2026-10-06, a design pass: no code, no suite, no browser).** It sits on the
+  P1 and P2 designs above and changes neither: every function it names from them is taken at the surface P2 wrote.
+  Read from the code at v61 (`TOOL_VERSION`; site `CACHE_VERSION` v261): the schedules tab (`computeScheduleConflicts`,
+  `renderConflictBanner`, `getConflictGroupIds`, the group cards, the bulk editor), the what-if lab (`wiComputeMetrics`,
+  `wiComputeDiff`, `wiRenderConflicts`, the override store), the room properties panel, `rebuildRoomRegistry`,
+  `brDeriveScheduleData`, the project file, the registry row, the Northwind fixture and its README; and the two
+  designs written the day before for the site's other constraint problems, Path 13 P1 (grouping) and Path 14 P3
+  (seating). Figures marked *measured* came from two pure-Node probes over the fixture and over an invented building,
+  kept in a scratch folder and not committed. Every name in an example is made up. Questions that are Devon's are at
+  the end and are not answered.
+  **What the bullet above gets wrong, first.** 035 has no teachers. A teacher is a string on a classroom tile
+  (`tile.teacher`, optional), a room has at most one, and a group's day is a list of room numbers by mod; so "a
+  teacher with three rooms in three consecutive periods" can only mean one name written on three tiles, and a
+  teacher's day has to be *derived*: they teach in a mod when any of their rooms holds a group in it, and the rest is
+  planning (which is exactly how the publisher builds the `Planning` slots). There are no students either: a group
+  is a cohort with a `size`, the registry row marks nothing `student: true`, and P5 adds nothing that would (a
+  "student in two sections" cannot be stated in this model and is out). And the tool already has one check, room
+  double-booking, in **three** copies that must agree: `computeScheduleConflicts` (the banner), pass 5 of
+  `wiComputeMetrics` (the lab), and the by-hand walk in `brDeriveScheduleData` that drops the second group without a
+  word (P1 question 5). P2 names the first two as `scheduleConflicts` and `whatIfMetrics`; P5 makes both call one
+  function and gives the publisher's silence a number.
+  - *What is there today, as read.* **The model.** `settings`: `modCount`, `modLabel` style, `bellSchedule { A, B }`
+    (`[{ start, end } | null]` per mod, B null meaning "as A"), `defaultGroupSize`, `subjects`, the walk and stair
+    seconds. A classroom tile: `roomNumber`, `teacher`, `dept`, `wing`, `excludeFromConflict` ("multiple groups can
+    share this room"), `groupId` for a multi-cell room, `classroomDoorEdges`. **No capacity anywhere** (searched:
+    the word does not occur in the page). A group: `{ id, name, grade, color, size, modsA, modsB, mods }`, `size`
+    optional; `modsB` empty means "as A" for paths and "no B day" for the publisher (P2's two `dayMods` rules). The
+    registry (`roomRegistryOf`) is one record per room with its teacher, dept, floor and anchor cell. **The one
+    check**: `mod-room` keyed over a day's slots, blank and excluded rooms skipped, two or more groups is a
+    conflict, sorted by mod; shown as an amber banner above the group list ("Room conflicts detected", a count, a
+    collapsed table of mod, room, groups) and as an amber left border and icon on each group card in it; the lab
+    shows the same list as New, Resolved and "N pre-existing double-bookings unaffected", plus one line for routing
+    issues (`Mod not assigned`, `Room not found in blueprint`, unreachable, no path: counted, not named). **The lab**
+    is the suggestion surface that already exists: overrides `{ [groupId]: { [modIdx]: room } }` in `stviz_whatif`,
+    sandboxed until "Apply Scenario to Schedule", with before/after travel per group, a congestion delta map, and
+    the conflict diff. *Measured, on Northwind (the invented fixture: 11 rooms, 10 teachers with one room each, 4
+    groups of 24 to 27, 4 blocks, two floors, a bell for A only):* no double-booking on either day; every teacher has
+    at least one planning block on both days (the README's "a teacher with a planning block on only one of the two
+    days" is not so in the committed fixture); two teachers teach nothing all A day and two others nothing all B day;
+    the longest run is 2; the Library has no teacher and no dept; no group has a blank slot. So the fixture is
+    clean under every check below but `teacher-idle` and `room-no-dept`, and the suite needs built cases for the rest.
+  - *The rule the design is held to.* **The engine returns codes, ids and numbers; the page writes the sentence**
+    (Path 13 P1's rule, kept by Path 14 P3, kept here). A check never changes the schedule, a suggestion never
+    touches the live schedule (it becomes a what-if override, and the lab's existing Apply is the only way it
+    lands), and no finding is stored: the schedule is the record and findings are derived from it on every change.
+    `computeScheduleConflicts(day)` keeps its name, shape and the banner's rows (the suites read them), and is the
+    `room-double` findings re-shaped; `whatIfMetrics().conflicts` likewise. Nothing is random: every search below
+    is over a set the design can enumerate, so there is no seed and no "try another".
+  - *The surface: `Tools/schedule-visualizer/sv-check.js`,* a pure ES module in P2's shape (`window.SVCheck`, a
+    `BRIDGE` wrapper per page name), importing `dayMods`, `roomRegistryOf`, `groupWeight`, `modLabels` and
+    `bellDay` from `sv-model.js` and nothing from the page.
+    - `checkSchedule(groups, { registry, settings, days })` → `{ findings: [finding], summary: { error, warn, note },
+      teachers: { [name]: { rooms: [rn], days: { A: [slot], B: [slot] } } }, rooms: { [rn]: { used: { A: [mods], B:
+      [mods] } } }, dropped: [{ path, reason }] }`. `days` defaults to `['A', 'B']` when any group has a non-empty
+      `modsB`, else `['A']`. A **finding** is `{ id, kind, severity, day, mod, mods, room, rooms, teacher, groups:
+      [{ id, name }], n, limit, sec, window, where: [{ groupId, day, modIdx }], ack: false }`, every field but
+      `id`, `kind`, `severity` and `where` present only when the kind has it. `id` is the fingerprint: the kind, the
+      day, the mod, and the room, teacher or group *names* involved, sorted and joined (never a group `id`: the
+      project import mints new ids). `where` is the cells of the bulk editor the finding is about, which is how the
+      page points at it. `dropped` names a group with no `name`, a `size` that is not a number, a slot that is not
+      a string, a `capacity` below 1: each is read as blank and listed, never thrown.
+    - `teacherDays(groups, registry, settings)` → the `teachers` map above, exported on its own because the
+      publisher's `Planning` slots are this same derivation; `sv-browser.js`'s `deriveScheduleData` calls it in
+      P5's second increment and its `EXPECTED` on Northwind does not move (the suite holds it).
+    - `conflictsOf(findings, day)` → today's `[{ mod, modLabel, room, groupNames }]`, the `room-double` findings
+      in the banner's shape; `scheduleConflicts` becomes this, and `whatIfMetrics` pass 5 as well.
+    - `fingerprint(finding)`; `applyAcks(findings, acks)` marks `ack: true` where `acks[id]` exists; `summary()`
+      counts only un-acked findings.
+    - `sentence(finding, { labels, modStyle })` → the English line for each kind, **exported from the module so the
+      banner, the lab, the printed report and the suite print one text**; it is the one place the design bends the
+      "page writes the sentence" rule, because four surfaces write it, and it is still not the engine (it is a
+      formatter over the finding, with the forms listed below).
+    `Tools/schedule-visualizer/sv-suggest.js` (increment 3): `suggestFor(finding, { groups, registry, settings,
+    graph, pairs, pathCache, max, kinds })` → `{ candidates: [candidate], tried, stoppedBy }`, below.
+  - *The checks, each with its code, severity and sentence.* Severity: **error** means the schedule cannot run as
+    written (two groups in one room, one teacher in two rooms at once); **warn** means it runs and somebody pays;
+    **note** is a fact the counsellor may want. A room with `excludeFromConflict` is never a `room-double` and
+    still has every other check (that is what the flag has always meant). A blank slot is never counted as a
+    room. The `ack` state hides a finding from the counts and the banner, not from the table or the report (it
+    is listed under "Accepted" with its note).
+
+    | Code | Severity | When | The sentence the page writes (labels from `modLabels`, day named only when two days exist) |
+    |---|---|---|---|
+    | `room-double` | error | two or more groups name one room in one mod | "Room 204 has two groups in Block 2 on A days: 7-1 and 7-3. One of them needs another room or another block." |
+    | `teacher-double` | error | a teacher's rooms hold groups in two of them in one mod | "Ms. Okafor is in 204 with 7-1 and in 118 with 7-4 in Block 3 on B days. She can only be in one." |
+    | `over-capacity` | warn | the heads in a room in a mod (sizes, default for a blank, summed over sharers) exceed its `capacity` | "Room 118 holds 31 in Block 1 (7-4, 27 and 6-2's overflow) and seats 28." / "7-2 (30) is in 204, which seats 28, in Block 5." |
+    | `teacher-no-planning` | warn | a teacher teaches in every mod of a day | "Mr. Lindqvist has no planning block on A days." |
+    | `teacher-run` | warn | more than `maxRun` consecutive teaching mods | "Ms. Okafor teaches five blocks in a row on B days, Blocks 1 to 5." |
+    | `teacher-moves` | warn | a teacher's room changes between consecutive mods, and either the passing window is unknown or the walk (`resolveRoomPath`, `walkSec` per hallway cell plus `stairSec` per teleport, no congestion) exceeds it less `passingMarginSec` | "Mr. Lindqvist moves from 116 to 204 between Blocks 2 and 3 on A days: a 3-minute walk in a 4-minute passing time." (or ", and no bell times are set") |
+    | `passing-too-short` | warn | a group's segment `travelSec + delaySec` (from `whatIfMetrics`) exceeds the bell gap between the two mods | "7-1 has 5 minutes 10 seconds of walking between Blocks 3 and 4 on A days (Library to 201, with the crowd) in a 4-minute passing time." |
+    | `room-unknown` | warn | a slot names a room not in the registry | "7-3 is in 'Rm 207' in Block 6, and the blueprint has no room 'Rm 207'." |
+    | `group-gap` | note | a slot is blank | "7-2 has nothing in Block 4 on B days." |
+    | `teacher-rooms` | note | one teacher name on two or more tiles | "Ms. Okafor is written on two rooms, 204 and 118." (the fact behind `teacher-double` and `teacher-moves`, and P1 question 5's second half) |
+    | `teacher-idle` | note | a teacher's rooms hold no group all day | "Ms. Dunmore's room 104 has no group on A days." |
+    | `room-idle` | note | a room holds no group all day (teacherless rooms included) | "The Library has no group on B days." |
+    | `room-no-dept` | note | a room with a teacher and no `dept` | "Room 110 (Mr. Hartwell) has no department, so the published browser colours it as ELA." (P2's doubtful rule, reported, not changed) |
+    | `room-no-teacher` | note | a room with groups and no teacher | "The Library has groups in Blocks 1 and 4 and no teacher named." |
+
+    `passing-too-short` and the walk half of `teacher-moves` need the graph and are the only checks that are not
+    O(slots): `checkSchedule` takes an optional `{ travel }` from `whatIfMetrics(groups, day, null, …)` and emits
+    them only when it is given (the banner passes it; the bulk editor's keystroke path does not and shows the
+    others at once). Both are silent with no bell times, except that `teacher-moves` still notes the move. The
+    limits are settings: `settings.checks = { maxRun: 4, passingMarginSec: 0, off: [] }`, filled by
+    `normalizeSettings`, with `off` a list of kinds the counsellor has switched off for this school (a
+    `teacher-no-planning` warning is noise in a building whose teachers plan before first bell; question 3). The
+    defaults are assumptions (question 2).
+  - *The algorithm, with its edge cases.* One pass builds `byRoom` from the registry (a room number on two
+    registry records is `dropped` with both floors named; the first wins, which is P2's `roomToKey` rule) and
+    `teacherRooms` (`tile.teacher` trimmed, compared **case-sensitively** as the publisher does: "Ms. Okafor" and
+    "Ms Okafor" are two teachers, and the design does not guess otherwise; `teacher-rooms` is where the counsellor
+    sees the typo). Then per day: for each group, `dayMods(group, day)` padded to `modCount` (a slot past
+    `modCount` is `dropped`), each slot into `occ[mod|room]` with the group and its `groupWeight`; `room-unknown`
+    and `group-gap` fall out of this walk. Then per `occ` key: `room-double` when two or more and not excluded;
+    `over-capacity` when the room has a `capacity` and the weights sum above it (an excluded room with two groups
+    gets this and not the other, which is the shared-arts-room case the flag was made for). Then per teacher: the
+    slots `[[rn]]` of their rooms that are occupied in each mod; two or more is `teacher-double`; none all day
+    `teacher-idle`; all occupied `teacher-no-planning`; a run above `maxRun` is one `teacher-run` finding per
+    run (not one per mod), with its first and last mod; a change of single room between mods `i − 1` and `i` is
+    `teacher-moves`, with the walk when a graph was given. Then per room: `room-idle`, `room-no-teacher`,
+    `room-no-dept`. Sorting: severity, then day, then mod, then room, then teacher: stable and total, so the banner
+    does not shuffle under the mouse. A group with `modsB` empty on day B is read by P2's path rule (as A): the
+    checks describe the days a group actually travels, and the publisher's "no B day" rule is the publisher's.
+    `modCount` lowered after groups were typed: slots past it are dropped and listed, never checked. A `size` of
+    `0` is a blank (today's `groupWeight`). A `capacity` is an integer 1 to 999 or absent.
+  - *Measured, on an invented building (90 rooms on two floors, 72 teachers, six of them on two rooms, 60 groups,
+    8 mods, both days, slots filled at random so almost everything conflicts).* One `checkSchedule` of every kind
+    but the two travel ones: **0.92 ms** (mean of 1,000, Node 22, huginn), 960 slot reads, 599 findings. So the
+    checks run on every bulk-editor keystroke with no debounce, and the design asks for none. The two travel
+    checks cost what the lab's baseline costs today (`whatIfMetrics` is `groups × (modCount − 1)` calls of
+    `resolveRoomPath`, 420 for this building), **not measured**: the page has no timing of A* (P2 says so) and
+    this design adds none; it reuses the number the lab already computes on the same data and caches nothing new
+    for it.
+  - *Check, or suggest, and how a suggestion is found and bounded.* Both, in that order, as separate increments,
+    and the second stays small because the model knows less than a counsellor does. **A room in this model is
+    also a teacher and a subject**: moving 7-1 from 204 to 118 in Block 3 does not just change a room, it makes
+    Mr. Lindqvist teach 7-1 that block, and nothing in the data says whether he teaches their subject. So the
+    moves the engine may propose are the ones that change no teacher's class list, plus one that does and says so:
+    - **M1, reorder the group's day:** swap two of the group's slots (`modsX[i] ↔ modsX[j]`). Same rooms, same
+      teachers, same subjects, a different order. Up to `modCount × (modCount − 1) / 2` candidates (28 at 8
+      mods), each involving the group's finding slot.
+    - **M2, the same teacher's other room, or a room with no teacher:** `modsX[i] := rn` where `rn` is another
+      room of the teacher of the current room, or a room with no `teacher` (Library, gym, cafeteria) free in that
+      mod. At most the registry's size.
+    - **M3, another teacher's room, free that mod, same `dept`:** off by default (`kinds: ['M1', 'M2']`); when on,
+      every candidate from it carries `changesTeacher: { from, to }` and its sentence says "…and Mr. Lindqvist
+      would teach 7-1 that block" (question 5).
+    - **Not a move:** anything touching two groups at once (a swap of two groups' rooms is M3 twice), moving a
+      teacher between rooms (that is the blueprint, not the schedule), adding a room, changing a `size`.
+    A candidate is `{ move: 'M1' | 'M2' | 'M3', groupId, day, changes: [{ modIdx, from, to }], before: summary,
+    after: summary, fixes: [findingId], breaks: [findingId], travelDeltaSec, delayDeltaSec, changesTeacher }`.
+    Found in two stages so the graph is touched little: **stage 1** applies each candidate to a copy of the group's
+    day and re-runs `checkSchedule` without `travel` (under a millisecond each, above); a candidate that does not
+    remove the finding it was asked about is discarded, the rest are ordered by `[after.error, after.warn,
+    after.note, changes.length]` with M1 before M2 before M3 among equals; **stage 2** takes the first `max`
+    (default 5) and runs `whatIfMetrics` on each with the candidate as an override, through a `pathCache`
+    (`Map` from `from|to` room pair to `resolveRoomPath`'s answer: a path depends on the two rooms and the graph
+    only, and across five candidates on one building almost every pair repeats; the cache is the caller's and
+    is cleared with `SVGraph.invalidate()`), then re-orders the five by `[errors, warns, notes, travel + delay
+    delta]`, adding `passing-too-short` to the counts now that it is known. `tried` is the stage-1 count and
+    `stoppedBy` is `'all'`, `'max'` or `'time'` (a 500 ms emergency stop around stage 2 only; stage 1 cannot
+    take long). The result never says "best": the sentence is "Three changes would clear this. The smallest:
+    swap 7-1's Blocks 2 and 3 (same rooms, same teachers): no other finding changes, and 7-1 walks 40 seconds
+    less." **Nothing is applied by the engine.** The page's "Try in What-If" writes the candidate's `changes`
+    as overrides through the lab's own `wiSetOverride` and switches to the lab, where before/after is already
+    drawn and "Apply Scenario to Schedule" is the one commit. Why no solver over the whole schedule: a schedule
+    is rooms × mods × groups with the content constraint unstated, and a search that fills it is the
+    master-schedule *builder* of 035's section, which Devon's open question there ("who is the intended user")
+    has not settled; P5 points at one cell and offers the smallest honest move.
+  - *How results show without burying the map.* **The Schedules tab's banner becomes the checks banner** in the
+    same place and the same collapsed shape: a line "3 problems, 4 warnings" (notes are not in the line), the chevron
+    opens the table, now with four columns (what, where, the sentence, an action), and a "Show" on a row
+    highlights its `where` cells in the bulk editor and, when the editor is closed, scrolls the group card into view
+    and flashes its mod chip; the amber card border and icon widen to any error or warn on the group, red for an
+    error. A row's second action is "Fix…" (increment 3), which lists up to five candidates with their sentences
+    and a "Try in What-If" each. A note-level finding is shown in the table under a "Notes" fold, counted nowhere
+    else. A finding's third action is "Accept" with a one-line note ("the Library is meant to hold two groups"),
+    which writes the ack and moves the row to the "Accepted" fold. **The bulk editor** cell with a finding gets
+    the same amber or red left border and a `title` with the sentence (the cells are `<input>`s today; the check
+    runs on `input` with no debounce, the measurement above being why). **The room panel** (Blueprint tab) gains a
+    `Capacity (seats, optional)` field under Department, and under it a two-line "This room" list of the room's
+    findings for the active day. **The lab's "Constraint Checks" panel** shows the full diff by kind: New,
+    Resolved, Unchanged counts per severity with the sentences under New and Resolved, in place of today's
+    double-bookings-only list and the routing-issues count (`passing-too-short` is where the routing count goes).
+    **The map is not touched**: no overlay, no badge on a room tile; the Visualize tab does not change. **The
+    publish dialog** says "This schedule has 3 problems the published browser will hide: a room with two groups
+    shows one of them, a teacher on two rooms shows one room" with Review (opens the banner) and Publish anyway,
+    which is the hook for P1 question 5 and chooses nothing (assumed: warn and go on).
+  - *The printed report, through the kit (Path 7).* "Print checks" beside the banner renders one `#printArea`
+    sheet (`class="pk-paper"`, `print-area.css`, PrintKit's one-area form, with a Preview button in front of it
+    as Path 7 P5 asks): a header with the school, the tool's version and the date; the summary line; a table per
+    severity (what, where, the sentence) with Accepted last; and then **the teacher day grid**, teachers down and
+    mods across, a cell per slot showing the room and group or "—" for planning, with the finding cells tinted,
+    one grid per day, which is the page a counsellor actually takes to the meeting. `min-height`, nothing fixed,
+    nothing clipped; `check:print-clip`, `check:hidden-flex`, `test:print-tail` as for every sheet since v229;
+    `audit-print --only 035` and its baseline. **The congestion report** is the bullet's "congestion as a
+    printed argument", a second sheet from the lab: for the day and transition filter shown, the ten cells with
+    the highest baseline load from `whatIfMetrics().congPerT` (or `congAll`), each named by its corridor label
+    when `corridorLabelCells` gives one, else "Floor 2, by room 204" (the nearest room anchor by Manhattan
+    distance on that floor), with its load in students (or groups when `weighted` is false, as the lab already
+    distinguishes), the groups contributing (`contributors` from `congestionData`), and the scenario's delta
+    from `wiComputeDiff().deltas` when there are overrides; then the worst three transitions by total load; then
+    the scenario's changes as chips. Both reports read the engines' output and compute nothing of their own.
+  - *Multi-year and multi-scenario comparison, bounded to what the lab can hold.* A second project file is not a
+    set of overrides: its groups have new ids and may have other names. The design is **compare by group name
+    on one blueprint**: "Compare with a project file…" in the lab reads a full-project file (`applyFullProject`'s
+    validation, nothing applied), requires its blueprint's room set to equal this one's (else "The two files
+    describe different buildings: N rooms differ. Comparison needs one building.", with the room numbers), turns
+    its groups into overrides by name for every slot that differs, lists groups only in one file under "Added"
+    and "Removed" (an added group's slots cannot be overrides and are shown as a list; a removed group is
+    shown and its travel is in "before" only), and then the lab is the comparison: the override chips are the
+    diff, the cards the totals, the checks panel the findings diff, the congestion report the argument. It is a
+    way of loading the lab, not a fourth engine; `whatIfDiff` gains nothing. What it cannot do is compare two
+    buildings or two bell schedules, and the design says so on the page (question 7).
+  - *Storage and migrations.* **Two additions, no new key, no version change.** (1) `tile.capacity`, optional
+    integer, on a classroom tile in `stviz_blueprint` (version 5 stays: the field is additive and absent means
+    "unknown"; `serializeBlueprint` writes it when present, `validateBlueprint` accepts an integer 1 to 999 or
+    absence, `blueprintFromData` carries it, `roomRegistryOf` exposes it as `capacity`); the project file carries
+    it inside its blueprint and `schemaVersion` stays 31; **the published data does not carry it** (nothing in
+    034 reads a capacity; adding it later is a field, and by P1's rule a field does not raise `FORMAT`). (2)
+    `settings.checks` as above in `stviz_settings`, filled by `normalizeSettings`, with the project file's
+    `settings` copy. **Acks** are the one thing that is neither a setting nor a group: `{ [fingerprint]: { note,
+    on: 'YYYY-MM-DD' } }`. They go in a new key, **`stviz_checks`** (`{ v: 1, acks }`), a registry row entry
+    beside `stviz_whatif` (`check:registry` fails otherwise; the `stviz_` legacy prefix already sweeps it into a
+    backup), and in the project file as `checks: { v: 1, acks }` so an accepted finding travels with the schedule;
+    an ack whose fingerprint matches nothing is kept for 30 days from `on` and then dropped on save, so a
+    schedule that changed under it does not keep a stale acceptance for ever (the one piece of time in the
+    design; question 4). A finding is never stored. The recovery ring (`sv-recovery.js`) snapshots the three
+    keys it snapshots today and gains `stviz_checks`.
+  - *What each tool changes.* **035 only**, in four increments, each a PR with `CACHE_VERSION` bumped and the
+    new files in `PRECACHE_URLS` (never `SHELL_URLS`): **(1)** `sv-check.js`, the `capacity` field and panel,
+    `settings.checks`, `stviz_checks`, the banner, the cards, the bulk editor cells, the lab's panel, the publish
+    dialog's line; `computeScheduleConflicts` and `whatIfMetrics` pass 5 become `conflictsOf(checkSchedule(…))`
+    and their suites do not change. **(2)** `teacherDays` into `deriveScheduleData`, P1's baseline regenerated and
+    **unchanged**, which is the proof the derivation is the same. **(3)** `sv-suggest.js`, the Fix… list, "Try in
+    What-If", the `pathCache`. **(4)** the two printed sheets and the comparison loader. **034 does not change.**
+    No `_shared/` file changes: PrintKit and ExportKit are used as they are. `check-publisher.mjs`'s `sources`
+    (P2 increment 2) sees `sv-check.js` through `sv-browser.js`'s import in increment 2 here, and FREE is what
+    fails if `teacherDays` is reached and not published: the publisher must publish `teacherDays`'s *result*, as
+    it does today, not the function.
+  - *What P5 shares with Path 13 P1 and Path 14 P3, and what it must not.* **Shared, the vocabulary:** codes and
+    ids out, sentences written by the tool; `dropped` for malformed input, never a throw; a severity order
+    compared left to right with the hard things first; a search that names `stoppedBy`; a result that never
+    says "best". **Shared, one pattern:** Path 14 P3's `feasibility()` and `blame()` name the impossibility
+    before the search and the reason after it; `checkSchedule` is both of those for a schedule, and `suggestFor`'s
+    `breaks` is `blame` for a move. **Not shared, the engine:** grouping assigns people to unordered sets,
+    seating assigns them to a geometry, and this assigns cohorts to time × room with a teacher implied by the
+    room; none of the three can call another's solver and the design imports neither `grouping.js` nor
+    `seating-solve.mjs`. **Not shared, on purpose: identity, students, randomness and memory.** 035 has no roster
+    and no student, so there is no id space to reconcile (Path 3) and nothing for the rollover to clear; the
+    candidate set is enumerable, so there is no seed (P1's and P3's mulberry32 is not copied here) and no golden
+    draws; and there is no history, because a schedule is not a sequence of events. **One thing the three could
+    share later and P5 does not build:** a `_shared/findings.js` with the finding shape, the severity order and
+    the ack store, since all three now carry `{ id, kind, severity, where }` lists; it is noted, not proposed,
+    because two of the three are unbuilt.
+  - *The tests that would prove it.* **`Tools/schedule-visualizer/test/check.test.mjs`** (pure Node, a
+    `test:schedule-check` shortcut and a `suites.json` line), on built schedules with made-up names (Ms. Okafor in
+    204 and 118, Mr. Lindqvist in 116, groups 7-1 to 7-4, 8 mods, a bell with 4-minute passing): one case per
+    kind, each seen absent and present by one slot's change; `room-double` on an excluded room is absent and
+    `over-capacity` on it present when the sizes sum past `capacity`; a blank `size` weighs `defaultGroupSize`
+    and a `0` is blank; `teacher-run` once per run with the right first and last mod at `maxRun` 4 and 2; a
+    teacher on one room never gets `teacher-moves`; `teacher-moves` with no bell is a note-worded warn and with
+    a bell is silent when the walk fits (`travel` handed in); a trimmed and a case-different teacher name are two
+    teachers (named in the test as the rule, so changing it is a decision); `room-unknown` and `group-gap` from
+    one walk; `modsB` empty reads as A and `days` is `['A']`; a slot past `modCount`, a nameless group, a string
+    `size`, a `capacity` of 0 each in `dropped` and nothing thrown; `conflictsOf` equals today's
+    `computeScheduleConflicts` output on 300 random schedules (the function copied into `_legacy.mjs` as the
+    export suite keeps `duplex-print.js`'s); `teacherDays` equals the `A`/`B` slots of P1's `EXPECTED` on
+    Northwind; `fingerprint` is stable across a group id change and changes when a name does; `applyAcks` and the
+    30-day drop; the sort is total (two findings never tie); the sentence for every kind against the text in the
+    table above, and `check:entities` on every one; **the probe's building** (rebuilt in the test from the same
+    seed) under 5 ms per call, printed, not asserted. **`suggest.test.mjs`**: M1 on a `room-double` finds the
+    swap that clears it and nothing else; M2 finds the Library and the teacher's second room and ranks the
+    reorder first among equals; M3 is absent until `kinds` names it and then carries `changesTeacher`; a finding
+    nothing can fix returns `candidates: []` and `tried` above 0; `max` holds and `stoppedBy` says so; the
+    `pathCache` is hit on the second candidate (a counting stub for `resolveRoomPath`); a candidate that fixes
+    one finding and breaks another lists both. **`smoke-checks.mjs`** (browser, the next free port when built;
+    8498 is the header's figure at v261): import Northwind, see no error line and the Notes fold with `teacher-idle`
+    and `room-no-dept`; put 7-3 into 204 in Block 2 through the bulk editor and see the banner's line, the red
+    card, the cell's title; Show scrolls and flashes; Fix… lists candidates and "Try in What-If" lands as one
+    override chip in the lab with the checks panel saying Resolved; Accept with a note hides it from the line and
+    shows it in the fold, through a reload and through export and import of the project; set a capacity of 20 on
+    204 and see `over-capacity`; the publish dialog's line with one error and none with zero; the two printed
+    sheets through the kit (`PrintKit.preview` count equals Chromium's PDF, a row in `smoke-preview-adopters.mjs`'s
+    `TOOLS`), Accepted last on the paper, the teacher grid's tinted cells; the comparison loader on Northwind
+    against a copy with one slot changed (one chip) and against a copy with a room renamed (refused, with the
+    number). **Breaks on purpose**, each seen failing once: a kind's sentence changed by a word; `conflictsOf`
+    reordering; a finding sorted by insertion; a stored finding (grep the key for `kind`); `capacity` dropped by
+    `serializeBlueprint`; `teacherDays` differing from the publisher's slots; the registry row without
+    `stviz_checks` (`check:registry`); a `<` in a sentence reaching `innerHTML` (`check:inline-sinks`, 035 has no
+    baseline line because it takes no link input, so the banner must be built with `textContent`).
+  - *The build's bookkeeping.* `sv-check.js`, `sv-suggest.js` and the suites in `PRECACHE_URLS` with a
+    `CACHE_VERSION` bump each increment; `stviz_checks` in the registry row; `SVCheck` and `SVSuggest` are page
+    namespaces, not `_shared/` globals, so `eslint.config.js` does not change; `check:entities` on the sentences;
+    `test:a11y` on the new controls (035 is on the allowlist for unlabeled inputs today and the new field and
+    buttons come in labelled); `check:print-clip` and `test:print-tail` on the two sheets; `audit-print --only
+    035` and its baseline lowered if the sheets fix anything there.
+  - *Deliberately left out.* A solver that fills a schedule (035's "auto-placing sections against constraints":
+    the content constraint is unstated and the user is undecided). Any student-level check (no students). A
+    subject or course on a group (the one field that would make M3 honest; a row of its own, question 6). Teacher
+    preferences, certifications, part-time days, duty periods, lunch (none is in the model; `off` and acks are
+    how a counsellor quiets what the model cannot know). Room features (lab, sink, projector). Comparing two
+    buildings or two bells. Changing the heat-exclude or `ELA` rules (P2 question 3; P5 reports the second as
+    `room-no-dept` and touches neither). Publishing findings into 034 or the published file. Any change to the
+    Visualize tab or the map. A worker. `_shared/findings.js`.
+  - *Not verified.* Nothing ran in a browser and no module exists. The 0.92 ms is one machine on a random
+    schedule and is not the two travel checks, which were not timed. The sentences were not read by a counsellor;
+    "problems" and "warnings" are this session's words. Whether the lab's `wiSetOverride` path accepts a
+    programmatic override for a group not selected in its dropdown was read off the code, not tried. The
+    corridor-label naming of a congestion cell assumes `corridorLabelCells` is saved per floor, which was not
+    checked. P1's `EXPECTED` was not opened; the claim that `teacherDays` reproduces the publisher's slots is
+    read from `brDeriveScheduleData`'s loop, which the design copies rule for rule.
+  - **Questions for Devon. None is answered here; each says what the design assumes until he does.**
+    1. *Who reads this.* The checks and the report are written for a counsellor or an administrator building the
+       master schedule, which 035's own open question ("Devon, or an administrator?") never settled. If the
+       answer is Devon alone, increments 3 and 4 (suggestions, the reports and the comparison) are a quarter of
+       the value for three quarters of the work. Assumed: the counsellor is in scope, all four increments.
+    2. *The limits.* Is four consecutive teaching mods the right default for `teacher-run`, and is "no planning"
+       a warning in this building (some schools plan before first bell)? Assumed: `maxRun` 4, `passingMarginSec`
+       0, every kind on.
+    3. *Which checks are noise here.* `teacher-idle`, `room-idle` and `room-no-dept` are notes that a real
+       building may produce by the dozen (a resource room, a teacher on leave). Should notes exist at all, or
+       only the two severities? Assumed: notes exist, folded, uncounted.
+    4. *Acks.* Should an accepted finding be remembered at all (it is the one stored thing), and if so for how
+       long once the schedule no longer produces it? Assumed: remembered in `stviz_checks`, dropped 30 days after
+       it stops matching.
+    5. *The honest move.* May the tool ever propose a room whose teacher would then teach a group they do not
+       teach today (M3)? Assumed: no; M3 exists behind a switch that is off.
+    6. *A subject on a group.* The one field that would let a suggestion say "another science room" is a
+       subject or course on each group's slot. Is that wanted, and is it a `dept` code or free text? Assumed:
+       not in P5; a row of its own.
+    7. *Comparison.* Is "this year against next year's proposal" a comparison of two schedules on one building
+       (what P5 builds), or of two buildings (a new wing), which it cannot do? Assumed: one building.
+    8. *The publish hook.* When Publish finds an error (P1 question 5): refuse, warn and go on, or publish both
+       groups? Assumed: warn and go on, with the count.
+    9. *Names.* A teacher is a string on a tile, matched exactly; "Ms. Okafor" and "Ms Okafor" are two people
+       and P5 reports the pair as two `teacher-rooms` notes rather than merging them. Right, or should the check
+       fold case and punctuation? Assumed: exact, reported.
 - **P6 — Published browser.** Runtime-swappable `PUBLISHED_DATA` (one browser file,
   many buildings), expose the pathfinder as "how do I get from here to there", and
   sub coverage marked and returned by link (Path 6).
@@ -3538,10 +4078,325 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   standard, difficulty, tags}`), keep 030's editor and importer as its UI, register
   the keys (Path 4), and give it export/import so a bank can be a department
   resource.
+  **Shipped (AI-14, 2026-10-06, v265). The rest of this bullet is the design as built; the module's header says
+  the same and is the reference.**
+  - *What was there.* 030's bank was one key, `gvb-review-board-bank:entries`: a bare list of `{ id, question,
+    answer, points, unit, standard, difficulty, createdAt }`, written by `rgb-bank-store.js`. It has had that one
+    shape since the commit that made it (`7219207`); the store had no `migrate` and no version. The bank had no
+    import and no export: 030's XLSX importer and template build a *board*, and still do, unchanged.
+  - *The surface* (`window.QuestionBank`; a classic script, as `store.js` is, and it needs `store.js` for
+    storage only). Pure: `normalize(q)`, `validate(q)` (a list of sentences: "no question", "no answer"),
+    `makeId()`, `upsert(list, q)`, `remove(list, id)`, `filter(list, { unit, standard, difficulty, tag, query })`,
+    `distinct(list, field)`, `merge(list, incoming)`, `fromLegacy(entry)`, `toLegacy(q)`, `adopt(bank, oldList)`,
+    and the files: `toJSON(list, meta)`, `parse(text)` (the JSON file, a bare JSON list, or CSV), `toRows(list)`
+    and `fromRows(rows)` (a header row and a row a question, for `ExportKit.toCsv`/`toXlsx` and SheetJS),
+    `parseCsv(text)`. Stored: `list()`, `load()`, `read()`, `saveQuestion(q)`, `deleteQuestion(id)`,
+    `importQuestions(incoming)`, `onChange(fn)`. Nothing throws on data.
+  - *A question.* `{ id, prompt, answer, choices?, media?, unit, standard, difficulty, tags, points, createdAt,
+    updatedAt? }`. `points` and `createdAt` are 030's and were kept, because every existing entry has them.
+    `difficulty` is `''`, `Easy`, `Medium` or `Hard` (030's three). `tags` is a list with no blanks or repeats.
+    `media` is carried as given and never read: P4 gives it a meaning. **A field the module does not know is
+    kept** through a read, a save and the JSON file, so a later phase can add one without a version.
+  - *What is stored.* Key `gvb-question-bank`, a Store envelope `{ v: 1, data: { schema: 1, questions: [...],
+    legacy: { 'gvb-review-board-bank:entries': [ids] } } }`. The key carries no version (`store.js`'s rule 5).
+    A stored `schema` above 1 is read, and every write into it is refused with `{ ok: false, newer: true }`.
+  - *The migration.* The old key is **read on every load and never written or removed**. Each old entry whose
+    id is not in `legacy` is added after what the bank holds, in the old order, `question` as `prompt`, its id
+    kept, and the id recorded. So the first load moves the old bank whole. **An older 030 page** (a tab left
+    open, a worker not yet updated) keeps reading and writing the old key and is not broken: what it adds
+    arrives in the shared bank on the next load; what it deletes stays in the shared bank; what is done on the
+    new page it does not see. **A 009 backup from before v265** holds only the old key: restored with "replace"
+    the new key is gone and the next load migrates the backup whole; restored with "merge", entries not seen
+    before are added and one deleted since stays deleted. The same key with a new shape was rejected: an old
+    page reads anything that is not a list as an empty bank, and its next Add would have written a one-entry
+    list over the whole bank.
+  - *Ids.* Made once, `q-<time in base 36>-<random>`, never changed; an old entry keeps its `bank-…` id. A file
+    carries ids. On import, a question whose id the bank has replaces it where it stands, changing only the
+    fields the file names (a spreadsheet has no `media`, so it stays); one with no id, or an unseen id, is
+    added, unless its prompt and answer already match a question in the bank (case and spacing aside), when it
+    is skipped. The same file imported twice changes nothing. An import never deletes.
+  - *Files.* The bank file is JSON, `{ format: 'aplp-question-bank', version: 1, questions }`, everything. The
+    workbook and CSV are nine columns (Question, Answer, Points, Unit, Standard, Difficulty, Tags, Choices, ID)
+    written by `ExportKit`, used as it is: every cell but Points is a string cell, no cell is a formula, and in
+    CSV `toCsv`'s apostrophe guards a formula and `fromRows` takes it off. A header may be in any order and
+    case, with other columns beside it; every cell is read as text (`raw: false`), so `007` stays `007`.
+  - *030.* `rgb-bank-store.js` is the page's view of the shared bank with the surface it had
+    (`ReviewBankStore`), so the editor, the filters and "pull into board" are the code they were. New on the
+    bank tab: a "Share the bank" card (Save bank file, Save as spreadsheet, an import picker and a status line).
+    The bank list's checkboxes had no accessible name; they have one now.
+  - *Left to P2 to P4, and not done here.* P2: no other tool reads the bank; 030's editor shows no choices or
+    tags and cannot edit a question in place (delete and add again); there is one bank, with no named sets, and
+    no preview before an import. P3: nothing. P4: `media` has no meaning and no picture travels in the file
+    beyond the reference a question already holds. Rank 1 (053 → 030) shipped at v269 (Path 6 P4 has it).
+  - *Not verified.* No file was opened in Excel, Sheets or Numbers; a CSV saved from one was not imported (the
+    suites read the files with SheetJS and a reader of their own). No real bank from a teacher's browser was
+    migrated: the old banks in the suites were written by the old store's own code. A browser with storage
+    full or blocked was not tried on the import.
 - **P2 — Read-side adopters.** 053 and 062 publish their built-in banks into the
   shared shape (read-only seed sets); 040 flashcards ↔ bank (term/definition is a
   question); 018 and 019 pull station questions from the bank; 020 gets an
   academic-tournament mode fed by it.
+  **Increment 1 shipped (AI-14, 2026-10-06, v267): the seed sets, with 030 as their reader. The rest of this
+  bullet is that increment as built; the module's header and the two data files' headers say the same.**
+  - *A seed set.* A tool's built-in questions in the bank's shape, registered by the tool's own data file with
+    `QuestionBank.registerSet({ id, title, source, note, questions })`. New on the module: `registerSet`,
+    `sets()`, `setQuestions(id)`, `findSeed(id)`, `copyFromSet(ids)`, `isSeedId`, `seedId`, `seedSetOf`,
+    `detach`. **A set is in memory only. Nothing of it is stored under any key until a teacher copies a
+    question**, and then what is stored is one more question in `gvb-question-bank`, the key the registry
+    already has. No new key, no registry change, no migration, and the bank's version is still 1.
+  - *Ids.* `seed:<set>:<the tool's own id>`: `seed:053:b3`, `seed:062:bi12`. The tools' ids (`b<N>`, `bi<N>`)
+    are the row's place in the list and are what a teacher's hidden list already holds, so both lists are
+    append-only (the data files say so). Loading the data again, twice or in another order, gives the same ids.
+  - *Read-only.* The module hands out copies of a set's questions, never the set. `upsert()` and `merge()`
+    take a question arriving with a seed id as a **new** question of the teacher's (`detach()`: a new id, new
+    dates, the seed's id in `copiedFrom`), so no save, import or bank file can write over a seed or store one
+    under a seed id. A copy is the teacher's: it can be deleted, and a later copy of the same seed is skipped
+    while the wording still matches and added beside it once the teacher has changed theirs.
+  - *The data files.* `Tools/cultural-trivia-card-generator/ctcg-bank.js` (`CulturalTriviaBank`) and
+    `Tools/geography-bee-quiz-generator/gbq-bank.js` (`GeographyBeeBank`), classic scripts. Each tool's rows
+    moved there from its inline script word for word, and the tool reads `items()`, the list its script built
+    before. 053 and 062 do **not** load `question-bank.js`; the file registers its set only on a page that has
+    the module. So there is one copy of each list, and `check:adoption` still counts one adopter (030).
+  - *053's mapping.* `id` → `seed:053:<id>`; `q` → `prompt`; `a` → `answer`; `category` → `unit` as its label
+    ("Hispanic World") and the key kept in `category`, a field the bank carries without knowing; `custom:
+    false` → nothing (a seed is a built-in). Blank: standard, difficulty, tags, choices, media, points 0, no date.
+  - *062's mapping.* As 053's, and `area` → `tags` as its label (`['Africa']`; none for `global`) with the key
+    kept in `area`. **The thirty map questions (`bi90` to `bi119`) are not in the set**: "Which country is
+    highlighted on the map?" is not a question without the map, and only 062 can draw it. `toQuestion()` maps
+    one with its `map` kept; `questions()` leaves them out. They wait on P4. The page's multiple-choice options
+    are drawn when a quiz is built and are not data, so no seed has `choices`.
+  - *Not in either set:* a teacher's own questions on 053 or 062, and which built-ins they have hidden there
+    (a hidden built-in is still in the set).
+  - *030.* The bank tab's list card has **Questions from**: "My question bank (N)", "Cultural Trivia (built
+    in, 30 questions, read-only)", "Geography Bee (built in, 90 questions, read-only)". A set is listed,
+    filtered (its categories are the Units) and pulled into a board as the bank is, so a board is played from
+    a set with nothing copied; a seed has no points, so its pulled clues get 100, 200, ... on from the rows
+    already in the category. A set's rows have **Copy to my bank** where the bank's have Delete, and there is
+    a **Copy selected to my bank** button. A selection does not cross from one source to another.
+  - *The tools are unchanged.* `JSON.stringify` of each tool's list is byte for byte what the v266 page built
+    (hash pinned in `test:question-bank`), and 053's bank list, cards and two printed sheets and 062's bank
+    list, cards and three quiz sheets, empty and with custom and hidden questions, hash the same as the v266
+    pages gave (`test:seed-sets`, pins made with `--print` against the old pages; map pictures' pixels left out).
+  - *Left of P2.* 018, 019, 020 (040 is increment 2, below). On 030: a seed's tags and `copiedFrom` are stored and not shown, and
+    the editor still shows no choices or tags and cannot edit in place. A set cannot be copied whole in one
+    press without ticking every row. **Rank 1 (053 → 030, a teacher's own trivia by link) shipped at v269**
+    (Path 6 P4): 030 takes link input now and its inline sinks were read and cut from 10 to 3 first.
+  - *Not verified.* No person has used the chooser. A real teacher's 053 or 062 with hidden questions was not
+    opened before and after (the suite's states are made up). Not run: the full `npm test`.
+  **Increment 2 shipped (AI-14, 2026-10-06, v271): 040 flashcards ↔ bank. The rest of this bullet is that
+  increment as built; `Tools/vocab-flashcard-generator/vfg-bank.js`'s header says the same and is the reference.**
+  - *What the design asked.* One clause: "040 flashcards ↔ bank (term/definition is a question)". Everything
+    below that clause is this increment's reading of it, taken so that **nothing new is stored without a press
+    and no existing save changes**; the choices that are Devon's are listed at the end, not answered.
+  - *The mapping.* A question's `prompt` is a card's term (the front) and its `answer` the definition (the back).
+    040's three other fields (`example`, `pronunciation`, `partOfSpeech`) are carried on the question under those
+    names, fields the bank does not know and keeps. A card sent to the bank also gets the list's name as `unit`
+    and `sharedFrom: 'vocab-flashcard-generator'`. Nothing else of a question reaches a card: choices, `media`,
+    points, standard, difficulty and tags stay in the bank.
+  - *Bank to 040.* A new **Question bank** card under the print options: **Questions from** (the teacher's bank
+    and the seed sets), **Unit**, a list of the questions with a tick box each, **Tick all shown**, **Add ticked
+    as cards**. A ticked question becomes one more line of the word list, as typing it would: `term: definition
+    | example | pronunciation | part of speech`, or the same fields tab-separated when that line would be read
+    back differently (a colon in the question, a bar in the answer). `VfgBank.lineFor()` reads its own line back
+    with the page's parser and uses it only if all five fields return unchanged. So what is stored is the list,
+    by the save every edit already makes, with no new field; a card keeps no tie to its question.
+  - *What cannot be a card, said on the row and under the list:* a question with no question or no answer (the
+    back would be blank), and one whose question or answer runs over more than one line or holds a tab (a card
+    is one line). Its tick box is disabled. A question with choices or a picture is made a card from its text,
+    and the status line counts those.
+  - *040 to bank.* **Send this list to the question bank…** works out, with the bank's own `merge()`
+    (`VfgBank.plan()`), what sending would do, and shows it: how many would be added, how many sent before would
+    change, how many are there already, how many cards have no definition and are not sent, and the first eight
+    by name. **Nothing is stored until the Add button under that**, and then by `QuestionBank.importQuestions()`;
+    a list edited after the review is refused and must be sent again, so what is stored is what was shown.
+  - *Ids.* `vfg-<hash of the list's name>-<hash of the term>` (letter case and spacing aside; `~2` for a term the
+    list has twice). The same list sent twice adds nothing and writes nothing; a definition changed since changes
+    that question where it stands (same id, same place, first date kept); a new term is a new question. A
+    renamed list has new ids and the bank skips every card whose words it holds, as it does a card that was made
+    from a bank question. **The bank's version is still 1**: nothing about what is stored changed shape.
+  - *A page that only reads.* New on the module: `peek()` (the questions `load()` would give, 030's unmoved old
+    entries among them, with nothing written), `questionsOf(source, { peek })`, `sources({ peek })` and
+    `sourceLabel(src)`. The last two are 030's chooser list and its option wording, moved out of
+    `rgb-bank-store.js` and 030's inline script so the two choosers cannot differ; 030 calls them and shows what
+    it showed. **Opening 040 writes no bank key**, not even the move of 030's old bank, which happens on the
+    first Add. No existing function returns anything different.
+  - *040 itself is unchanged.* What is in storage after a load, the preview and printed sheet of every mode,
+    the share payload and what a `?deck=` link from before opens hash the same as the v270 page gave
+    (`test:vocab-bank`, fifteen pins made with `--print` before the page was touched). The share link carries
+    what it carried. Every text from the bank reaches 040 through `textContent` or a field's value; 040's inline
+    sink baseline is still 10.
+  - *Registry.* 040's row gained `writes: ['gvb-question-bank']` and reads of that key and 030's old one; the
+    key is still owned by 030's row. `check:adoption` counts two adopters of `question-bank.js`.
+  - *Questions for Devon (each has a default taken, said here, and is cheap to reverse).*
+    1. Is the **list's name** the right `unit` for a card in the bank? (Taken: yes. The other readings: blank,
+       or a tag.)
+    2. A deck sent again with a **definition changed**: change the bank's question (taken; shown before the
+       press) or add the new wording beside the old?
+    3. Should a card made from a bank question **keep a tie** to it, so an edit on 030 reaches the deck?
+       (Taken: no. That needs a field in 040's save, which this increment was told not to add.)
+    4. A question that runs over **more than one line**: refused (taken) or joined into one line?
+    5. Should a question's **choices** show on a card? (Taken: no; the count is said.)
+    6. A card with **no definition**: not sent (taken) or sent as a question with a blank answer?
+    7. **Term as the question** (taken, from "term/definition is a question") or the definition as the question
+       and the term as the answer ("which word means...")?
+  - *Not verified.* No person used the card. No real teacher's lists were opened before and after (the suite's
+    are made up). The chooser was not tried with a bank of thousands of questions (it lists every one in a
+    15 rem scroll box). Not run: the full `npm test`.
+  **Increment 3 shipped (AI-14, 2026-10-07, v276): 030's editor. The rest of this bullet is that increment as
+  built; `Tools/review-game-board/rgb-bank-editor.js`'s header says the same and is the reference.**
+  - *What was there (v273).* The add card took six fields (question, answer, points, unit, standard, difficulty). A
+    row showed those and had Delete, or Copy to my bank on a seed set. A question's choices and tags were stored
+    and never shown; nothing could be edited (delete and add again); a file was imported the moment it was chosen,
+    with the outcome on a status line after the fact. A link's questions were already shown before Add (v269).
+  - *Choices, and which is right.* A question has `choices` (texts) and `answer` (a text) and no field saying which
+    choice is right, and none was added: **the right choice is the one whose text is the answer** (letter case and
+    spacing aside). Marking a choice writes its text into the answer field; typing in the marked choice types the
+    answer; an answer that is none of the choices leaves none marked and the form says so (it can still be saved).
+    A choice row has a mark, its text, Up, Down and Remove; a move or a removal is said in a status line and focus
+    stays on the row. A question with no choices is stored with no `choices` field, as before; removing every choice
+    from one that had them takes the field off. The bank cleans the list (no blanks, no repeats).
+  - *Tags.* Tokens with a Remove button each. A tag is added by Enter, a comma or a semicolon, by leaving the
+    field, by the Add tag button, or by picking one from the field's list, which offers the tags the bank already
+    uses less the ones on the question. Backspace in the empty field takes the last one off. What is still typed
+    when Add or Save is pressed is a tag too.
+  - *The list.* A row shows its tags after the four it always showed, and its choices on a line under them with
+    the right one in bold and "(answer)". A question with neither is drawn exactly as it was (pinned, below). So a
+    seed set's tags (062's regions) show now.
+  - *Edit in place.* A row of the teacher's own bank has **Edit**. It replaces that row, where it stands, with a
+    form of the eight fields; the other rows stay. **Save** sends the eight fields and the id to
+    `QuestionBank.saveQuestion()`, so the question keeps its id, its place, `createdAt`, its `media`, `copiedFrom`
+    and any field the page does not know, and gets `updatedAt` as the module stamps it. A Save that changes nothing
+    writes nothing. **Cancel** and **Escape** store nothing. Focus goes back to the row's Edit button, or to the
+    list (with the reason said) when the saved question no longer matches the filters. A question with no question
+    or no answer is refused in the form. What is typed survives the list being drawn again, and the open row stays
+    in the list whatever the filters say. Edit on another row while this one has unsaved changes asks first. One
+    form at a time. **A seed set's row has no Edit**: Copy to my bank, as before.
+  - *A preview before an import.* A bank file, a workbook and a CSV all pass through one function, which now only
+    shows: `ReviewBankEditor.importPlan()` runs the bank's own `merge()` over a copy and marks each question
+    **new**, **changes a question in your bank** (naming the fields), **already in your bank** or **left out**
+    (with the bank's own reason), under the file's row number, with the four counts above the list. **Nothing is
+    stored until Add**, and then by `QuestionBank.importQuestions()` over the same questions; if the bank changed
+    since the list was drawn (another tab), that press stores nothing and draws the list again. With nothing to
+    add there is no Add button and the old status sentence is said at once. Don't import stores nothing. The list
+    shows the first 500 questions of a file and counts the rest. The link route already previewed and is untouched.
+  - *What is stored.* Nothing new: no key, no field, no registry change, **the bank's version is still 1**, and
+    `_shared/question-bank.js` was not edited, so no function of it returns anything different. 040's card and
+    053's hand-off run as they did (`test:vocab-bank`, `test:received-questions`, `test:seed-sets` green; one
+    assertion in each of the last two now expects what a row shows: the tag, and Edit beside Delete).
+  - *A bank from before.* 030's old key alone, and the shared key as v265 to v273 wrote it, each hash the same
+    as the v273 page gave for: storage after the tab opens, every row's body, the filter and source options, the
+    board editor after a pull, the stored board, the played board, an opened clue, and storage at the end
+    (`test:bank-editor`, sixteen pins made with `--print` before the page was edited).
+  - *Text.* Everything is built from elements; the page's inline-sink baseline is still 3. A choice, a tag, a unit
+    and a standard that are markup are text in the add card, the open form, the list and the preview (asserted).
+  - *Question for Devon, not answered and not built.*
+    8. **Named sets** ("my Unit 3 review", a set to hand a colleague). The design names them and does not say how
+       they are stored, and each way changes what a question is: a `sets` list on the question (like tags, nothing
+       new in the envelope, but then a set is only a tag by another name); a `sets` map in the envelope beside
+       `questions` (ordered, can hold a question twice, needs the bank's version to say so and 009's merge to know
+       it); or separate keys, one a set (a registry change). Tags and the Unit filter do part of this today.
+  - *Also left on 030.* The list has no **tag filter** (`QuestionBank.filter()` takes `tag`; no control asks for
+    it). A set cannot be copied whole in one press. The add card and the open form are two copies of six static
+    fields (the choices and tags editors are shared).
+  - *Not verified.* No person used the editor, and no screen reader was run over it (axe, names and keys only). No
+    real teacher's bank was opened before and after (the suite's are made up). The preview was not tried with a
+    file of thousands of questions (it runs `merge()` once a row for the first 500). Not run: the full `npm test`.
+  **Increment 4 shipped (AI-14, 2026-10-07, v278; the code commit says v277, which AI-31-002 took): 020's academic-tournament mode. The rest of this bullet is that
+  increment as built; `Tools/bracket-tournament-generator/bt-academic.js`'s header says the same and is the reference.**
+  - *What the design asked.* One clause: "020 gets an academic-tournament mode fed by it", and under Why, "Bracket
+    (academic tournament)" as one of four tools that need questions and cannot get them. So: a bracket whose matches
+    are decided by questions from the bank. How a match is scored, how many questions it gets, whether one may repeat
+    and what a tie does are not in the design. Each was taken the way that **stores nothing in the bank, changes no
+    bracket that does not use the mode, and is the shortest to say to a teacher**, and is a question at the end.
+  - *Where it is.* Under the bracket, an **Academic tournament** card with one tick box, on every bracket of all five
+    types (single and double elimination, round robin, pools, Swiss). Off, the page is what it was. On: **Questions
+    from** (the bank and the built-in sets, `sources({ peek: true })` and `sourceLabel()`, so the wording is 030's and
+    040's), **Unit**, **Questions a match** (1 to 20, three to start), a line saying how many matches the source
+    covers before a question repeats, the rule, and **Print match sheets**. 020 loads 053's and 062's data files, as
+    040 does, so both sets are there.
+  - *A match.* Every match the page draws score boxes for, with both sides known, gets a **Questions** button under
+    them (it reads "Questions: 2–1" once marks are made). It opens a panel under the bracket, one match at a time: the
+    questions, each with **Show answer** (hidden every time the panel opens, so the panel can be on the projector)
+    and a **Who got question N?** group: either side, or Neither. The panel shows in Present mode; the card does not.
+  - *The rule, as the page says it.* "Each question is one point to the side that got it. When every question is
+    marked, the side with more points wins the match. A tie decides nothing: add a tiebreak question, or pick the
+    winner by name." The mode does not decide a match itself: when the last question is marked it writes the two
+    totals into the match's score boxes and the page's own score rule runs (two scores that differ decide; the same
+    code path as typing them, Undo included). So standings, PF/PA and every bracket type work with no second rule.
+  - *The override.* A name can be clicked at any time, as always, and the panel has **Pick A as the winner** and
+    **Pick B** while the match has no winner. A winner already recorded is taken back with **Undo last pick**, which
+    is the page's only way to undo any pick and reaches one step back; the marks stay, and the panel says who is
+    ahead and that no winner is recorded. When the recorded winner is not the side the questions favour, the panel
+    says the winner was picked by name.
+  - *The deal.* The bracket holds a seed, made once when the mode is turned on. The source's usable questions (a
+    question and an answer both; the chosen unit) are ordered by a hash of the seed and the question's id, so the
+    order does not depend on the source's own order and a question added later slots in without moving the rest.
+    A match is dealt, the first time it is opened or printed, the first N of that order that no match of the bracket
+    holds, and the ids are stored. **So the same bracket shows the same questions every time; which match gets which
+    follows from the order the matches are opened in** (printing deals every ready match in page order). When every
+    question is held the deal goes round again, never the same question twice in one match, and the panel says how
+    many of a match's questions are also in another match; a source with fewer than N gives what it has, and the card
+    and the panel say so; an empty source deals nothing, stores nothing and says so. A changed source, unit or number
+    applies to matches dealt from then on.
+  - *What is stored.* On the bracket, in its own key, one more field: `academic: { on, seed, source, unit, per,
+    drawn: { match key: [question ids] }, marks: { match key: { question id: 'a' | 'b' | 'n' } } }`. Questions are
+    ids, not words: the words are read from the source each time. No new key; the registry row gained two **reads**
+    (the bank's key and 030's old one) and no write. **The bank's version is still 1, `_shared/question-bank.js` was
+    not edited, and 020 never writes the bank**: it reads with `peek()`, so opening 020, playing a match and printing
+    write no bank key, not even the move of 030's old bank (asserted with only the old key present). Turning the mode
+    off keeps the field with `on: false`. Reset picks keeps the seed and settings and clears the deal and the marks,
+    so the deal starts again from the top (the same questions in the same opening order).
+  - *The share link.* It carried the whole bracket and still does, so the field rides it. On arrival nothing of the
+    link's `academic` is kept but those seven fields, of their types and within limits (`BtAcademic.clean()`: a match
+    key must be one of the page's own score keys, so not `__proto__`; at most 40 ids a match and 600 matches). A
+    built-in set's questions show on any device; the sender's own bank's show only where that bank is, and elsewhere
+    each says it is no longer in its source and can still be marked. `inline-sinks-baseline.json` has 020 at 2, as
+    before: everything is built from elements, and a prompt, an answer, a unit, a source id and a team name that are
+    markup are text on the page and on the sheet (asserted, a crafted link among them).
+  - *The printed sheet.* **Print match sheets** builds, for every match that is ready and has no winner, a section
+    for the reader (the questions, a box for either side and for neither, a line for the points and the winner) and,
+    starting a new page, an **answer key** with the same sections. It prints alone (`body.printing-sheet`, taken off
+    on `afterprint` and by any change to the bracket, so Ctrl+P and the Print button print the bracket as before).
+    Nothing has a fixed height; a question is not split across pages; sixty questions and their key ran to several
+    pages in Chromium's PDF with nothing clipped. The card and the panel never print. `audit-print --check --only 020`
+    is clean, with a seed in `Tools/a11y-sweep/seeds.mjs` that turns the mode on so the audit reaches the sheet.
+  - *A bracket from before.* One of each type, built on the v276 page with a pick, a score and a schedule, hashes the
+    same as that page gave for: storage after the page opens, the bracket card, the champion banner, the blank
+    printed sheet, the printed bracket, the share link, the card and the stored bracket after one more pick, and an
+    old link opened on an empty device (`test:bracket-academic`, 39 pins and the brackets themselves in
+    `golden-old-brackets.json`, made with `--print` before the page was edited). What an old bracket gains on screen
+    is the card with its tick box, outside the bracket card.
+  - *Found by the tests.* A match key from a link was first checked against "letters, digits and underscores", which
+    `__proto__` passes: it became the prototype of the cleaned list. The pattern is now the page's seven key shapes.
+    The panel stayed open across Reset picks (and dealt again by itself) and across a switch to another bracket
+    (showing that bracket's match of the same key); it now closes on both.
+  - *Questions for Devon (each has a default taken, said here, and is cheap to reverse).*
+    9. **How a match is scored**: one point a question (taken), or the question's own `points` from the bank?
+    10. **How many questions a match gets**: three to start, the teacher's choice from 1 to 20 (taken). Another
+        number to start from? A different number for a final?
+    11. **May a question repeat across matches?** Taken: not until the source runs out, then yes, said in the panel.
+        The other readings: refuse to deal a match the source cannot cover, or never repeat and deal short.
+    12. **What a tie does.** Taken: nothing; the teacher adds a tiebreak question or picks by name. The others:
+        sudden death dealt by itself, or the higher seed goes through.
+    13. **Who can get a question**: one side or neither (taken). Should both sides be able to (written answers)?
+    14. **The winner is recorded the moment the last question is marked** (taken; Undo last pick takes it back), or
+        only on a press?
+    15. **Reset picks deals the same questions again** (taken: same seed). Should it, or a button beside it, deal
+        new ones (a new seed)? There is no such button today.
+    16. **Questions are kept by id and read from the source each time** (taken), so an edit on 030 changes a match
+        already dealt and a link opened where the bank is not shows no words. The other reading copies the words
+        into the bracket: a bigger save and link, and bank text stored outside the bank.
+    17. **A match is dealt when it is opened or printed** (taken), so which match gets which questions follows the
+        order they are opened in. The other reading deals every match when the mode is turned on, which Swiss and
+        pools cannot do (their later matches do not exist yet).
+  - *Not built.* A way to change a winner already recorded other than the page's one-step Undo; a "deal new
+    questions" button; a question's choices or picture in the panel (the text only); a print preview for the sheet
+    (020 does not print through the print kit); the sheet for matches not yet ready (a later round is not known).
+    A Questions button pressed straight after typing in **Questions a match** may need a second press (the field's
+    change redraws the bracket; the page's score boxes have always done the same).
+  - *Not verified.* No person used the mode, and no class played a match. No screen reader was run (axe, names, keys
+    and focus only). Nothing was printed on paper: the page count is Chromium's PDF. A bank of thousands in the
+    chooser was not tried (every render reads the source once). Not run: the full `npm test`.
 - **P3 — Play modes in 030.** Every-team-answers mode, quiz-bowl, spin-the-wheel,
   the final wager round, and a printed practice quiz/study guide with an answer key
   — all reading the same bank.
@@ -3551,7 +4406,8 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
 **Model.** Opus.
 
 **Verification.** `test:review-board` green; a bank round-trips 030 → export → 018
-→ 019 with ids preserved.
+→ 019 with ids preserved. (P1's half, at v265: `test:question-bank` and `smoke-bank-file.mjs` round-trip a bank
+030 → file → 030 with ids preserved. 018 and 019 are P2.)
 
 ---
 
@@ -3560,8 +4416,10 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
 **Why.** Group formation exists four times (002, 022, 027, Name Picker's Groups
 mode); role rotation with recency memory twice; the bracket algorithm is
 "line-for-line the same" in 020 and 021; the station-rotation timer exists in 004's
-round-robin mode, 021, 017 and 069. 002's `pairHistory` keeps two generations, so
-"everyone has worked with everyone this year" is unanswerable. 020 still lacks
+round-robin mode, 021, 017 and 069. ~~002's `pairHistory` keeps two generations, so
+"everyone has worked with everyone this year" is unanswerable.~~ (Stale since 2026-08-13: 002 keeps every pair's
+count for the year, and since v277 has an opt-in long memory and a who-has-not-met list; what no tool has is
+one history for all of them.) 020 still lacks
 double elimination, pools and Swiss scheduling, tie handling and re-deciding a
 match; 021 silently overwrites a saved unit on a name collision (a real bug).
 
@@ -4329,6 +5187,8 @@ perspective correction, thresholding — all canvas math, no library. PDF in / P
 a complete local document-assembly story. Print-shop presets (booklet imposition,
 N-up with cut marks) are something teachers need that no free local tool does well.
 
+**Status.** P4's controls are built (AI-13, v248, under Path 7 P4); the paper check is what is left of it. P2 is designed, not built (AI-25, 2026-10-06): the design is in its bullet. P1, P3 and P5 not started.
+
 **Phases.**
 
 - **P1 — Reorder and crop.** Thumbnail-grid reordering (the list is unusable at 40
@@ -4339,6 +5199,218 @@ N-up with cut marks) are something teachers need that no free local tool does we
   on a downscaled canvas), draggable corner handles, perspective warp, adaptive
   threshold / grayscale / color modes, per-page and batch. *Fable for the CV math
   and its failure handling on low-contrast phone photos.*
+  **Designed, not built (AI-25, 2026-10-06; a design pass, no code, no `CACHE_VERSION`). The row stays.** What
+  follows is the whole of P2 as it would be built, written against 011 as it is on `main` at v255 (the enhance pass,
+  the portfolios, the target-size ladder and, since AI-13's v248, booklets and pages per sheet on `ExportKit`, which
+  is this path's P4). Nothing here ran in a browser; the only thing measured is the arithmetic, in Node, below.
+  **What it is.** A "Scan" step on a queued photo: find the four corners of the sheet in the photo, let the teacher
+  move them, pull the sheet flat and upright at a page's size, clean it (even out the light, take out the shadow,
+  then colour, grey or black-and-white for a copier), and hand that page to the pipeline in place of the photo. Per
+  page from a dialog, or for the whole queue with a review of the ones it was not sure of. Crop, deskew and
+  perspective are one operation here, the warp from the quadrilateral to the rectangle, so there is no separate
+  crop box or straighten slider (and P1 should not build ones that P2 then throws away; see P1 below).
+  **Where it lives.** `Tools/image-to-pdf/scan.js`, a plain global script publishing `window.Scan`, pure functions
+  over typed arrays with no DOM of their own (a caller hands in `ImageData` and gets `ImageData` back), so
+  `scan.test.mjs` can load it with `vm.runInContext` exactly as `export.test.mjs` loads `export.js`; and
+  `Tools/image-to-pdf/scan-worker.js`, a Worker (the first on the site) that imports `scan.js` with
+  `importScripts` and runs the batch so a 30-page stack does not freeze the page. Both go in `PRECACHE_URLS`, not
+  `SHELL_URLS`. A tool module, not `_shared/`: one adopter (the one-adopter rule), though 056, 028 and 019 take
+  photographs of documents too and would want the same dialog; moving it is a rename when one of them asks (a
+  question for Devon, below). No library. Everything is about 700 lines of typed-array arithmetic: a box
+  downscale, Sobel, a Hough transform, an 8 x 8 solve, bilinear sampling, an integral image. Considered and not
+  wanted: OpenCV.js (about 8 MB of wasm, Apache-2.0, the whole reason this path says "no library"), jscanify (MIT,
+  but it is a wrapper on OpenCV.js), `perspective-transform` (MIT, 40 lines, the homography only, which is written
+  here anyway). If the detector below is judged not good enough on real photos after it is built, an on-demand
+  OpenCV.js download in the pattern Devon allowed for Tesseract is the fallback, and that is his call, not assumed.
+  **The surface.** Points are `[x, y]` in source pixels of the photo as the browser shows it (EXIF applied, which is
+  what `drawImage` of a File gives; the quad is never in raw-sensor coordinates). A quad is `[TL, TR, BR, BL]`.
+  - `Scan.toGray(imageData) → Uint8Array` (Rec. 601 weights, integer).
+  - `Scan.downscale(imageData, longEdge) → { gray, w, h, scale }`: a box filter by an integer factor (not
+    `drawImage`, so Node and the page produce the same bytes), long edge about `longEdge` (480 for detection).
+  - `Scan.detect(imageData, { longEdge = 480, inset = 0.04 }) → { quad, confidence, method, lines }`: the four
+    corners in source px, `confidence` 0 to 1, `method` `'edges'` or `'fallback'`, and `lines` (the four `{ theta,
+    rho, support }` it chose) for the tests and the review strip. Never throws on a picture: a frame with no sheet in
+    it gives the frame inset 4% at confidence 0 and `method: 'fallback'`, so the handles still appear and the
+    teacher drags them.
+  - `Scan.refine(imageData, quad, { longEdge = 1024, band = 12 }) → quad`: the four lines fitted again on a larger
+    grey, each within `band` px of the coarse line, least squares on the per-row (per-column) gradient maximum, and
+    the corners taken from the refined intersections. Sub-pixel; the coarse step alone is only good to the
+    downscale factor (8 px on a 4032 photo).
+  - `Scan.homography(srcQuad, dstQuad) → Float64Array(9)` (Gaussian elimination with pivoting on the 8 x 8 system;
+    throws `'Those corners do not make a page'` when three are collinear or the quad is not convex) and
+    `Scan.apply(H, [x, y]) → [x, y]`.
+  - `Scan.outputSize(quad, { maxDim }) → { w, h }`: the rectified page's size in px, the longer of the two
+    opposite sides each way (the near side of a keystoned sheet is the one that was not foreshortened), then the
+    long edge capped at `maxDim` (the quality preset's: 1600 standard, 2400 high, 4000 for "original", 1100 and
+    850 for the ladder's lower tiers).
+  - `Scan.rectify(imageData, quad, { w, h }) → ImageData`: inverse mapping, destination to source through the
+    homography, bilinear, white outside the source. Typed arrays, not Canvas 2D, which has no perspective, and
+    not WebGL, which a `getImageData`-based pipeline would then have to read back from anyway.
+  - `Scan.flatten(imageData, preset) → ImageData`: today's `enhanceCanvas()` moved here unchanged in its arithmetic
+    (the 1/24 illumination map, the local maximum, one grey target for the three channels, the percentile white
+    point, `ENHANCE_PRESETS`), on `ImageData` instead of a canvas. The page's dropdown keeps calling it through a
+    four-line canvas wrapper, and `smoke-enhance.mjs` is the guard that the move changed no pixel. This is the
+    shadow removal: a soft shadow is the illumination map's business, and the map is estimated on the rectified
+    page, so the desk never pulls it.
+  - `Scan.threshold(imageData, { window, k = 0.2, R = 128, despeckle = true }) → ImageData`: Sauvola's adaptive
+    threshold from an integral image of sums (`Uint32Array`, which 255 x 4 Mpx fits) and of squares
+    (`Float64Array`; the squares do not fit 32 bits), `window` defaulting to the long edge / 110 rounded to odd (15
+    px at 1700), then a despeckle pass that whitens a black pixel with no black 8-neighbour and keeps every
+    2-px stroke. Output is three equal channels of 0 or 255, so the embed step can choose PNG.
+  - `Scan.clean(imageData, mode) → ImageData`, `mode` `'color'` (flatten, the `worksheet` preset), `'gray'`
+    (flatten, then grey into three channels) or `'bw'` (flatten, then threshold). The order is fixed: warp,
+    flatten, threshold. Flatten before threshold because Sauvola's window is small and a slow gradient across the
+    sheet moves its mean; warp before both so the window and the map are in page pixels and the desk is gone.
+  - `Scan.process(imageData, { quad, mode, maxDim }) → { imageData, w, h }`: the three in order, the Worker's one
+    message. The Worker takes `{ id, buffer, w, h, quad, mode, maxDim }` with the buffer transferred and answers
+    `{ id, buffer, w, h }` or `{ id, error }`, one job at a time, so a cancelled batch is one message not sent.
+  **The detector, and what it does when it is wrong.** On the 480-px grey: a 3 x 3 box blur, Sobel magnitude and
+  direction, non-maximum suppression along the gradient, a threshold at the 90th percentile of the magnitude
+  histogram (not a fixed level: a sheet on a light desk has weak edges everywhere, and a percentile adapts). Then a
+  Hough transform at 1 degree by 1 px (180 x about 1,200 bins, a few hundred kilobytes) over the surviving edge
+  pixels, each voting with its magnitude. Peaks are split into two clusters, within 35 degrees of vertical and
+  within 35 degrees of horizontal; in each cluster the two strongest peaks at least 25% of the frame apart are
+  the sides, and a peak is only a candidate when its `support` (edge pixels within 1 px of the line) spans at
+  least 40% of the frame, which is what keeps a line of handwriting or a ruled line from being taken for an edge
+  (they are short and they are many). When a cluster has three or more candidates the pair is chosen by edge
+  support times enclosed area, so the sheet wins over the text block inside it and over a desk seam outside it
+  only when the seam is weaker; a patterned placemat is a known hard case. Four intersections, ordered by angle
+  around their centroid with TL the one nearest the frame's top left, then validated: convex, area between 15% and
+  98% of the frame, every interior angle between 55 and 125 degrees, and the rectified aspect ratio between 0.45
+  and 2.2 (A4 to a wide landscape sheet; a strip of tape is not a page). `confidence` is the mean of the four
+  sides' normalised support, times 0.5 if any side was taken from the frame edge. Edge cases, each with its
+  behaviour: a sheet larger than the frame (a cluster finds one line, the other side is the frame edge, confidence
+  halves, the review strip flags it); a dark sheet on a light desk (edges are edges, nothing assumes white); a
+  hand or a pen across one edge (the Hough line survives a gap, which is why Hough and not a contour trace, whose
+  outline would follow the hand); a sheet turned 90 degrees (the quad is found the same way and the page comes out
+  landscape, and the existing rotate button turns it); two sheets side by side (one quad, the stronger pair, the
+  other sheet is cropped away, and this is listed as out of scope below); the phone's own shadow across the sheet
+  (a soft edge, usually under the 90th percentile; when it is not, it is the failure the handles exist for). A
+  threshold or a weight in this paragraph is a starting value for the fixtures below to tune, not a result.
+  **The dialog.** A `<dialog>` (087 has the site's one precedent) opened from a Scan button on the queue row (or on
+  P1's tile), full screen under 600 px wide. The photo at most 1000 px on its long edge, a polygon drawn over it,
+  and four handles that are `<button>`s (44 x 44 px targets, `aria-label` "Top left corner", moved with pointer
+  events and with the arrow keys, 1 px a press, 10 with Shift, the polygon redrawn on every move), a loupe while a
+  handle is held (a 3x crop of the 60 px round the corner, so a thumb does not hide the edge it is placing), a
+  Mode select (Color, Grey, Black and white), Detect again, Reset (back to what Detect found), Apply, and a live
+  "after" at 360 px wide debounced 150 ms through `Scan.process` on the main thread (a 360 x 466 warp and clean is
+  a few milliseconds). Hand-set corners are never overwritten by a later "Scan all". **Scan all** runs `detect` on
+  every photo in the queue not yet scanned, in the Worker, with the page's progress bar and a Cancel, then shows a
+  review strip of thumbnails with the found quad drawn on each and a "Check the corners" badge on any under
+  confidence 0.6, each thumbnail opening the dialog. The enhance dropdown stays for the photos that are not scanned
+  (a whiteboard has no corners to find); a scanned page ignores it, because its own mode was chosen with the
+  corners in view.
+  **What is stored, and undo.** Nothing new on disk by default. A queue entry gains `scan: { quad, auto, mode,
+  confidence, history, processed }`: `quad` the corners in use, `auto` the corners Detect found (Reset's target),
+  `history` the last 20 quads before a drag (per-page undo, Ctrl+Z inside the dialog), `processed` a JPEG or PNG
+  Blob of the finished page with its `w` and `h`, or null when stale. The File is the original and is never
+  changed; the processed page is derived and recomputable, so undo is "drop `processed`, restore a quad". The
+  queue itself is not saved between visits today (the page's own comment), so neither is a scan; whether it should
+  be is Devon's question below, and if it is, the place is `MediaDB.images({ ns: 'image-to-pdf' })` for the
+  processed Blobs with the quads in the saved queue, a note on the registry's `gvb-media` row, and `student: true`
+  on the new key, since a scan of a worksheet is a student's work. `image-to-pdf-settings` gains `scan: { mode }`,
+  the habit, and never whether scanning is on, by the rule 011 already holds for the layout and the portfolio
+  toggle: an option that changes what comes out is not found still on next week.
+  **What changes in the page.** `processRaster(file, ext, qualityMode)` takes the entry: with `scan.processed` it
+  decodes that Blob instead of the File, skips `enhanceCanvas` (already applied) and keeps the preset's `maxDim`
+  and JPEG quality; a `'bw'` page is returned as `format: 'PNG'` (two-level pixels as JPEG ring, and the PNG is
+  smaller), which means the target-size ladder can only lower `maxDim` on it, not quality. `rotateForEmbed`,
+  captions, contact sheets, the title page, portfolios and the imposition all take the same `dataURL` as before and
+  do not change; a scanned page goes through `toPdf` into its booklet slot like any other, which is what P4 being
+  built already changes for P2: there is no imposition left to design, only the guard that a scanned page lands in
+  its slot. "Match image size" with a scan uses the rectified page's aspect ratio through `clampPageDimsMm`, as it
+  does for a photo. The queue row gets the Scan button beside Rotate and a "Scanned" badge; the Clear button drops
+  the Blobs. The Worker's file is a new `sw.js` line, and `CACHE_VERSION` bumps.
+  **Budgets, measured and guessed.** A pure-Node probe (not kept) of the arithmetic on huginn's Ryzen 5 PRO 2400GE,
+  one thread, V8 (Chromium's engine), synthetic 4032 x 3024 RGBA (12.2 Mpx, 47 MB): box downscale to 504 px 65 to 90
+  ms, Sobel on it 11 to 15 ms, grey of the full frame 68 ms, the warp to 1700 x 2200 (Letter at 200 dpi) 190 to 400
+  ms, Sauvola with a 31-px window on that 210 to 320 ms; to 1275 x 1650 (150 dpi) the warp is 140 to 150 ms and the
+  threshold 90 to 120 ms. The first run of each is the slow end (JIT warm-up). Not measured: the browser's decode
+  of a 12 Mpx JPEG and `getImageData` (typically 100 to 300 ms), the flatten pass (today's, on a 1600-px page) and
+  the JPEG encode (tens of ms). So about 0.8 to 1.3 s a page on huginn and 25 to 40 s for 30 pages in the Worker;
+  a phone or the classroom laptop is a guess at three to five times that, 1.5 to 3 minutes for 30, which is why the
+  batch has a progress bar and a Cancel and never runs on the main thread. Memory, per page in flight: the source
+  RGBA 47 MB, its grey 12 MB, the output 15 MB, the integral images 15 + 30 MB, about 120 MB, and the rule that
+  keeps a 30-page stack from crashing a phone is that **a finished page is a Blob, never a canvas or an `ImageData`
+  kept alive**: 30 canvases of 1700 x 2200 are 450 MB, and iOS Safari refuses new canvases well before that. One
+  source decoded at a time, `ImageBitmap.close()` after `drawImage`, the Worker's buffers transferred both ways. How
+  to measure: `scan.test.mjs --bench` prints each step's ms on the synthetic 12 Mpx frame (the probe, kept);
+  `smoke-scan.mjs` reads `window.__imgToPdfScanTiming` (per-page ms and the peak `performance.memory` where
+  Chromium offers it) after a six-page Scan all and fails over 3 s a page on CI's machine; a real phone once,
+  recorded in Verification below as a parked check, is the only measurement of the guess.
+  **Tests, without a camera.** `Tools/image-to-pdf/test/make-scan-fixtures.mjs` extends `make-fixtures.mjs` with
+  `warpedPage({ w, h, quad, paper, desk, gradient, noise, shadow, seed })`: a synthetic sheet (ruled lines every 40
+  px, "text" as rows of dark rectangles, a thick frame line) forward-mapped through the homography onto a desk of
+  the given luminance, with a left-to-right lighting gradient, Gaussian noise of the given sigma from the xorshift
+  generator already there, and an optional soft shadow band, written as PNG with its true corners returned. Named
+  fixtures: `centred`, `offCentre`, `rot15`, `rot40`, `rot90`, `keystone` (the far side 60% of the near), `nearFull`
+  (96% of the frame), `small` (25%), `oneEdgeOut`, `darkOnLight` (paper 70, desk 200), `lowContrast` (paper 235,
+  desk 205), `noisy` (sigma 12), `shadowBand`, `noPage` (desk and noise only), each at 1600 x 1200 for speed and the
+  `centred` and `keystone` ones also at 4032 x 3024. `scan.test.mjs` (pure Node; it and the browser suite share one
+  `test:image-to-pdf-scan` shortcut): (1) `detect` on every fixture but `noPage` and `oneEdgeOut` puts each corner within 1.5%
+  of the long edge of the truth, and `refine` within 0.5% (20 px on 4032, a millimetre on the printed page), with
+  `method: 'edges'` and confidence over 0.6 for all but `lowContrast` and `shadowBand`, which may be under; (2)
+  `noPage` is `fallback` at confidence 0 with the inset frame, and `oneEdgeOut` puts that side on the frame edge
+  with confidence under 0.6; (3) `homography` round-trips 200 random convex quads through the unit square to 1e-9
+  and throws on three collinear points; (4) `rectify` of each fixture with the true quad against the un-warped
+  sheet: mean absolute difference under 12 levels and every ruled line within 2 px of where it belongs; with the
+  detected quad, under 18; (5) `threshold` on the rectified gradient sheet: 99.5% of paper pixels white and 95% of
+  stroke pixels black in the dim and the bright corner alike, the despeckle whitening single noise pixels and
+  keeping a 2-px rule; `gray` three equal channels; `flatten` the same bytes as a recorded table from today's
+  `enhanceCanvas` on `smoke-enhance.mjs`'s board; (6) corners in any order come out TL, TR, BR, BL; (7) `--bench`.
+  `smoke-scan.mjs` (browser, port 8492, the next free): the fixtures loaded through the file input; Scan opens the
+  dialog with four handles within 1.5% of the truth on the displayed scale; a 40-px pointer drag of one handle
+  moves the polygon and changes the live preview's pixels; the arrow keys move the focused handle 1 px and 10 with
+  Shift; Apply puts the badge on the row and a `history` entry behind Reset; Generate's PDF read as `smoke-impose`
+  reads it (`pdftoppm` where huginn has it, structure alone where not): the page's image is the rectified sheet
+  (a sampled ruled line is level to 2 px) and a `bw` page's stream is `FlateDecode` not `DCTDecode`; Scan all on
+  six fixtures shows progress, flags `lowContrast` and finishes with `noPage` on fallback; Cancel after the second
+  page leaves two done; a scanned page in a 4-up two-sided layout lands in its slot, the one case borrowed from
+  `smoke-impose`; portfolio mode puts the scanned page in its student's file; `a11yScan` of the open dialog is
+  clean; a 375-px pass finds the dialog full screen and every handle 44 px; no console errors, nothing leaves the
+  site. `smoke-enhance.mjs` keeps passing untouched. New suites go in `suites.json` with `test:image-to-pdf-scan`
+  (`check:tests`), the Worker in `PRECACHE_URLS` (`check:precache`), and the dialog's markup is static so
+  `check:inline-sinks` is not reached. **Not provable without a camera:** that the thresholds hold on a real
+  phone's noise, lens blur and colour; the fixture P1 asks for (a real photo of a blank sheet) is the first manual
+  check and belongs under `Tools/image-to-pdf/test/fixtures/`, which the offline zip drops.
+  **What P2 needs from P1, which is not built.** (1) Per-entry geometry stored as this `quad`, with P1's crop a
+  quad whose corners are held to a rectangle and P1's straighten the quad's rotation, so P2 only lets the corners
+  go free and no second cropper exists; if P1 is built first with a crop box and a slider, P2 deletes them. If P2
+  is built first, P1's crop/straighten is done (drag the corners) and P1's row shrinks to the thumbnail grid and
+  the real-photo validation. (2) The thumbnail grid is where the Scan button, the Scanned badge and the review
+  strip's thumbnails naturally live; without it they go on the list rows and work. (3) P1's real-photo fixture
+  (Devon's phone photo of a blank worksheet he makes, nothing of a student's, committed under `test/fixtures/`)
+  is the one photograph P2's suite can open. (4) P1's validation of the `compact` and `min` presets on a real
+  photo decides whether a scanned `bw` page at `maxDim` 850 is still legible, which bounds the target-size ladder.
+  **Deliberately left out.** Inferring the sheet's physical size (nothing in the frame says how big it is; the
+  paper setting decides, aspect kept and letterboxed as today); two sheets in one photo; a curved page (a book's
+  gutter needs a cylinder model, not a homography); live camera capture with a corner overlay (a file input with
+  `capture="environment"` opens the phone's camera for one shot without a permission prompt, and that is proposed,
+  but it is Devon's question); auto-rotation by the text's direction (needs a text detector or P5); colour
+  correction past the flatten's white balance; HEIC (the page's own rejection message covers it); undo across
+  pages; OCR (P5).
+  **Decided here, cheap to reverse.** A tool module, not `_shared/`. Hough lines, not a contour trace. A Worker
+  for the batch and the main thread for the live preview. Flatten before threshold, both after the warp.
+  Sauvola, not Otsu (one global level fails on any shaded sheet) and not a local mean minus a constant (Sauvola's
+  deviation term leaves blank paper blank). `bw` as PNG. Hand-set corners never overwritten. Scans not saved
+  between visits. The mode saved, the on/off not. Confidence 0.6 as the flag line. Output size from the longer
+  opposite sides, capped by the quality preset.
+  **Left to Devon, listed and not answered.** (1) Should a scanned queue survive a reload (P1's queue persistence
+  plus `MediaDB`, a registry note, and a `student: true` key)? (2) Phone capture: the file input's `capture`
+  attribute, or an in-page `getUserMedia` view with a live corner overlay (the real scanner-app feel, more code, a
+  camera permission)? (3) The default mode for a scanned page, black-and-white as a copier or grey; and whether a
+  dropped photo that looks like a sheet is detected at once with a badge, or only when Scan is pressed. (4) If the
+  hand-written detector is not good enough on real photos, is an on-demand OpenCV.js download acceptable on the
+  terms he gave Tesseract? (5) Who photographs the blank-sheet fixture, and may a megabyte of JPEG be committed
+  under `test/`? (6) Does the module start in `_shared/` because 056, 028 and 019 would take the same dialog, against
+  the one-adopter rule? (7) `bw` pages as PNG, with the size ladder then only shrinking them: acceptable for the
+  "under 5 MB for Schoology" case? (8) The output resolution cap for "original" quality (4000 px proposed; a 12 Mpx
+  photo can give more). (9) Whether P1 should be built first at all, or P2 take its crop and straighten.
+  **Not verified.** No detector exists; the thresholds in it are starting values and the error bounds in the tests
+  are targets, not results. The probe measured arithmetic on synthetic data, one thread, one machine; the phone
+  figure is a guess, marked as one. No real photograph was opened; the fixtures do not yet exist. Nothing about
+  `<dialog>` on iOS Safari, pointer events on a handle under a thumb, or the Worker in the service worker's
+  precache has been tried on this site.
 - **P3 — PDF in.** Accept PDFs as input (render pages via a vendored `pdf.js` —
   a new `_shared/vendor/` entry with the README, SHA and precache bookkeeping;
   weigh its size against the precache in Path 1), so merge/insert/extract/rotate
@@ -4382,6 +5454,336 @@ images; the picture prints on the card), so a code's size no longer grows with t
   tool's current shape and explicit, stable station ids that survive reordering so
   a reprint doesn't invalidate codes already taped to the wall. *Fable for merging
   two divergent models without losing either tool's behavior.*
+  **Designed, not built (AI-26, 2026-10-06, a design pass: no code, nothing run in a browser). Everything from
+  here to P2 is the design.** Read from the tree at v255: 018's and 019's pages whole, `escape-room-builder/lock.html`,
+  `monitor.html`, `er-match.js` and `er-image.js`, `_shared/share.js`, `state-link.js`, `store.js` and `qr-draw.js`,
+  the registry rows, the 018 seed in `Tools/a11y-sweep/seeds.mjs`, `HISTORY.md`'s #282 and #320, and the six suites
+  behind `test:escape-room`, `test:escape-room-images`, `test:escape-room-station-qr`, `test:scavenger-hunt` and
+  `test:scavenger-hunt-print`. Figures marked *measured* came from one pure-Node probe (019's `stationPayloadFor` and
+  the base64 step copied out, invented stations); it was not kept. Questions that are Devon's are listed at the end
+  and not answered. No real student appears anywhere in this; the fixture names are invented.
+  - *What is there today, as read.* **018** keeps a library of hunts under `qr-scavenger-hunt-sets` as a bare
+    `{ current, sets }` keyed by name (no `Store` envelope; the older single blob `qr-scavenger-hunt-settings` is
+    carried over once as "My Hunt" and deleted). A hunt is `{ name, stations, cardsPerPage ('1' '2' '4' '6' '9'),
+    ecLevel, showNumber, run }`; a station is `{ label, content, note, qType ('text' 'choice' 'numeric' 'photo'),
+    choices (2 to 6), correctChoice, numericAnswer (a string), tolerance (a string), hint, hintPenalty (a string,
+    minutes), codeWord }`. **Its printed station code is the content itself** — a URL (given `https://` when it looks
+    like one) or the clue text — not a link to any page; the team card's code is `HUNT-TEAM:<4 chars>`; the paper mode
+    puts a word from a list of 30 on the clue card. Nothing is checked on a student device: the teacher checks a team
+    in by code, picks the letter or types the number for a choice or numeric station, and marks a text or photo
+    station reached. `run` is `{ teams [{ name, code, marks, attempts, hintsUsed, penaltyMs }], timerRunning,
+    timerStartedAt, timerElapsedMs, raceStartAt, checkinStation, stagger }`, **every map keyed by the station's index
+    in `validStations()`**, the list with the blank rows filtered out. A team's route is derived from its position
+    (`round(i × stations / teams)`), never stored. The share link (`?hunt=`) carries the authored fields and not the
+    run; an arrival is filed under a free name. **019** keeps rooms under `escape-room-builder:rooms` through `Store`
+    (envelope v1; a bare pre-Store blob reads as v0 through `migrateStore`). A room is `{ name, roomId (10 chars,
+    random), stations, cardsPerPage ('1' '2' '4' '6' '8'), ecLevel, showNumber, randomizeStart, countdownEnabled,
+    countdownMinutes, storyIntro, packetCardsPerPage }`; a station is `{ clue, answers (one comma-separated string),
+    hint, next (null, a 0-based index into the raw list, or 'end'), image ('' | 'idb:<id>' | a data URL), type
+    ('text' 'digits' 'cipher'), hintCost (points), awardLetter, cipherPlain, cipherShift, maxAttempts, numericTolerance
+    (null or a number) }`. What a student plays is a second shape, built by `buildRoomPayload` from the valid stations
+    only, with every index remapped: `{ id, title, stations [{ clue, answers (an array), hint, next (index or null),
+    image?, type?, cipherShift?, hintCost?, awardLetter?, maxAttempts?, numericTolerance? }], timerMinutes? }`,
+    base64(encodeURIComponent(JSON)) in `lock.html?r=…`; a printed station code adds `&s=<index>` (and `&start=1` when
+    the room randomises its entry) and, since #320, carries that station's own entry minus its image plus a stub per
+    other station (`hintCost`, `awardLetter: '?'`). The player link in the box carries the whole room, images included.
+    `lock.html` keeps progress in `escape-room-progress:<roomId>` as `{ current (index or 'done'), misses, solved,
+    hintsUsed, letters, lockUntil, startedAt }`, every map keyed by index, and tells `monitor.html` `{ station, total,
+    done, score }` over WebRTC. Answers are checked on the student's device by `er-match.js`, which the builder's test
+    run shares: digit and cipher answers compare exactly after case and whitespace; text answers lose accents,
+    apostrophes and punctuation and may match a number within `numericTolerance`. The share link (`?room=`) carries the
+    authored room; the arrival gets a **new** `roomId` (so a phone that played the sender's room does not resume the
+    receiver's copy) and drops any `idb:` reference. **Neither tool has a station id.** 018's codes have no
+    page to open and no identity at all; 019's `next` and `s=` are positions, so moving a station up changes which
+    station every printed code below it means.
+  - *Found while reading, each worth knowing before the build.* (1) **"End here (finish room)" is not honoured by the
+    player.** `buildRoomPayload` turns `next: 'end'` into `null`, the same value as "auto", and `lock.html` and the
+    test run both read `null` as "the next in order". The answer key and the packet key print "Finish" for it. Only a
+    station that is already last ends the room. (2) **018's marks shift when the stations do.** They are keyed by the
+    index in the filtered list, so removing a station, moving one, or blanking one's content during a live run moves
+    every team's check-ins onto other stations; a mark past the end stays in the object and still counts on the
+    leaderboard's "n / total". (3) `cipherShift` missing and `cipherShift` 0 are different stations: `clampShift`
+    turns `undefined` into 3 and 0 into 13, so a migration that normalises either loses the difference. (4) A
+    cipher station keeps the hidden `answers` string the teacher typed before switching type, and shows it again on
+    switching back; `cipherPlain` is likewise kept on a text station. (5) `normalizeTextAnswer` deletes a point or
+    comma between two digits, so "3.14" and "314" are one answer and "1,000" is "1000"; it is in the matcher's own
+    comment as intended for the second case and is simply what the first case does. (6) The two pages' "codes per
+    page" values differ: 018 offers 9 and 019 offers 8, and 018's grid table falls back to 4 for a value it has no
+    row for. (7) 019 `normalizeRoom` maps an unknown `type` to `'text'` on arrival, but a saved room keeps it, and
+    `er-match` checks an unknown type **exactly** (it is `!== 'text'`), so the two paths disagree on a type neither
+    knows. (8) `tool-registry.js` declares `escape-room-progress:` under `keys`, while `lock.html` writes it as a
+    prefix (`+ roomId`); `check:registry` passes today, so the resolver is content, but the row reads as a key.
+    (9) The 019 Tier 2 section still lists "Station numbering that survives reordering" as a quick win; it is this
+    phase. (10) `Store.get` hands a newer envelope's data back as it is (only an older one is migrated), so a page from
+    an older cache reads a key a newer page wrote; what it does with unfamiliar field names is the page's own business,
+    and both pages keep a loaded object whole and save it back whole, so unknown fields survive a round trip through
+    an older page. Only the two share-arrival normalisers rebuild field by field.
+  - *Measured.* A printed 019 code is a link into `lock.html`; the probe built the same payload the page does and
+    counted the characters of the whole link. The station-qr suite's four-station room: 364 characters for station 1
+    today; 404 with `v: 2` and a fixed-width string of four-character station ids on the room; 432 with an id inside
+    every stub. Thirty stations of ordinary length: 416 today, 596 with the ids string, 868 with an id per stub. At
+    error correction Q the vendored encoder puts 416 bytes in version 19 (93 modules, 5.9 px a module on the 600 px
+    printed canvas) and 596 bytes in version 23 (109 modules, 5.1 px); 1,663 bytes is the ceiling. The ids string
+    costs about six characters a station on the code; the per-stub form costs fifteen. A hunt's code is unaffected: it
+    is the content, 32 characters for a short URL, and carries no id at all.
+  - *The rule the design is held to.* After P1 and P2 every hunt and every room a teacher has saved does, in its own
+    page, what it does today: the same cards, keys, links and codes, byte for byte where a code is involved; the same
+    marks on the same stations; the same answers accepted and refused. The one named exception is (1) above: a
+    station set to "End here" ends the room in the new player, as the key already says it does. Everything else that
+    is better than today is an option an adopter turns on in P3, in a commit of its own.
+  - *The shape: the canonical record, and where every field of each tool lands.* `Stations.read(obj)` returns this
+    from either tool's saved object, share payload or file, and `Stations.write(set)` returns the owning tool's own
+    shape again. **The canonical record lives in memory. On disk, each tool's blob keeps its own shape and field
+    names and gains ids** (the reasons are under "decided here"; the whole-blob survival in (10) is what makes this
+    safe on an older cache).
+
+        set = {
+          v: 2, kind: 'hunt' | 'room',
+          id,                 // 019's roomId, kept as it is; a hunt gets one at first read. New on a share
+                              // arrival (019's rule, now both tools'); never changed by an edit or a reprint.
+          title, intro,       // the name; 019's storyIntro ('' on a hunt)
+          stations: [station],            // authored order; play order is this with the blank rows left out
+          entry: 'first' | 'any',         // 019's randomizeStart (a hunt: 'first')
+          countdown: { enabled, minutes },// 019's two fields, both kept (a hunt: { enabled: false, minutes: 20 })
+          print: { cardsPerPage, ecLevel, showNumber, packetCardsPerPage },  // strings, exactly as saved
+          run: null | { teams: [{ name, code, marks: { [stationId]: { at, correct, attempts } },
+                                   attempts: { [stationId]: n }, hintsUsed: { [stationId]: { at, penaltyMin } },
+                                   penaltyMs }],
+                        timer: { running, startedAt, elapsedMs, raceStartAt },
+                        checkinStation: stationId | null, stagger }   // 018's live run; never in a share link
+        }
+        station = {
+          id,                 // 4 characters of [a-z0-9], unique in its set, drawn once, never reassigned
+          label,              // 018's ('' on a room)
+          prompt,             // 018's content or 019's clue, verbatim, untrimmed
+          encode: 'prompt' | 'player',    // what this station's printed code holds: the prompt as text or URL
+                                          // (018, normalised at print time as today) or the player link (019)
+          note, codeWord,     // 018's ('' on a room until a page assigns a word)
+          image,              // 019's '' | 'idb:<id>' | data URL ('' on a hunt)
+          letter,             // 019's awardLetter, raw
+          answer: { type, accepted: [string], choices: [string], correct: n, tolerance: null | n,
+                    cipher: { plain, shift: null | n }, maxAttempts: n },
+          hint: { text, minutes: n, points: n },
+          next: null | 'end' | stationId
+        }
+
+    `answer.type` is one of 018's four under new names — `'none'` (018 "Open-ended": reached, nothing checked),
+    `'photo'`, `'choice'`, `'number'` (018 "Numeric": `accepted[0]` is the typed target, still a string, `tolerance`
+    the parsed number) — or 019's three under their own: `'text'` (`accepted` is `splitAnswers(answers)`, `tolerance`
+    is `numericTolerance`), `'digits'`, `'cipher'` (`accepted` is still the split hidden `answers`; `cipher.plain` is
+    `cipherPlain` and `cipher.shift` is `cipherShift` with `undefined` kept as `null` and 0 as 0, per (3) and (4)).
+    An unknown 019 type is kept verbatim and `check()` treats it as `er-match` does. `hint.minutes` is 018's
+    `hintPenalty` parsed (`'0'` and `''` are 0), `hint.points` is 019's `hintCost`; a station carries both numbers and
+    one of them is 0, until P3 decides otherwise. `next` is 019's with the raw-list index turned into the id of the
+    station at that index at read time; an index past the end becomes `null`, which is what the payload made of it.
+    018's `choices`, `correctChoice`, `numericAnswer` and `tolerance` keep their defaults from `ensureStationDefaults`.
+    Nothing is trimmed, uppercased or clamped at read time; `validStations()` does that at play time in each page as
+    today, and `Stations.playable(set)` is that function, once, for both.
+  - *Ids.* A station id is four characters of `[a-z0-9]` (1.68 million), drawn against the set's ids in use, so a
+    collision with a station that was deleted is possible and accepted (one in 1.68 million a draw; the deleted
+    station's codes already gate forever). It is assigned the first time a page reads the station and saved then, the
+    way `ensureStationCodeWords()` saves a new word before any edit, so a reload prints the same id. It is **never**
+    rewritten: not by a move, a type change, a rename of the set, a share arrival (the set's id changes there, the
+    stations' do not) or a reprint. It is what `run.*` and the new player's progress key on. The set's `id` is
+    019's `roomId` unchanged, and a hunt gets the same ten-character kind.
+  - *The module: `_shared/stations.js`, new, a classic script publishing `window.Stations`* (not a per-tool
+    `lib/`: three pages in two folders load it, and `lock.html` on a phone is one of them). Pure, no storage, no
+    DOM, no dependency; `er-match.js` is folded into it in P2 (the two normalisers and `checkAnswer`, to the letter,
+    with its suite moved) and until then `check()` calls `window.EscapeRoomMatch` when present. The surface:
+    - `read(obj) → set | null` — a saved hunt or room (either tool's object out of its `sets` map), a `?hunt=` or
+      `?room=` payload, or a `.json` file's `state`; `detect(obj) → 'hunt' | 'room' | null` decides by shape (`qType`
+      or `content` on a station, or `cardsPerPage` '9' → hunt; `clue` or `roomId` → room; a record carrying `kind`
+      says so itself) and `null` is "not a set". Ids missing on the object are drawn here; `read()` reports them on
+      `set._drew` so the caller knows a save is due.
+    - `write(set, kind?) → object` — the owning tool's own shape (default `set.kind`): 018's hunt with its field
+      names plus `id` on the hunt and on each station, `run` keyed by id; 019's room with `roomId` and `id` on each
+      station. Canonical fields the target page has no name for (a room's `letter` on a hunt, a hunt's `codeWord` on
+      a room) are written under their canonical names, so a cross-kind round trip loses nothing.
+    - `ensureIds(obj) → boolean` — the one thing P1's build puts into both pages: draw the missing ids on the loaded
+      blob in place and say whether anything changed, so the page saves. (P2 moves the pages onto `read`/`write`.)
+    - `newId(used) → string`, `newSetId() → string`.
+    - `playable(set) → [station]` — the valid stations in play order with `_index`, the two pages' `validStations()`
+      in one place (018: content non-empty after normalising; 019: clue and at least one accepted answer).
+    - `playPayload(set, { station: n | null }) → object` — the `r=` object: today's `buildRoomPayload` then
+      `stationPayloadFor`, to the letter, **plus** `v: 2`, `ids` (the playable stations' ids as one fixed-width string
+      in play order) and `next: 'end'` kept where today's drops it to `null`. For a hunt it is the same shape with
+      `prompt` as `clue` and `accepted` as `answers`, which is what P3's player page for a hunt opens.
+    - `playUrl(set, n | null, { start, base }) → string` — `lock.html?r=…&s=<n>[&start=1]`, as today.
+    - `playRead(obj) → room | null` — the player's reader: a v1 payload (a whole room from before #320, or a #320
+      station code) or a v2 one, with `ids` as an array or `null`, so `lock.html` has one entry point for every code
+      ever printed.
+    - `codeText(station) → string` — what a printed code holds: `normalizeContent(prompt)` for `encode: 'prompt'`,
+      else `playUrl`; `teamCodeText(team) → 'HUNT-TEAM:' + code`.
+    - `check(station, given) → { correct, nearMiss, reached }` — `er-match`'s verdict for `'text'`, `'digits'`,
+      `'cipher'` and an unknown type; `given === correct` for `'choice'` (an index); 018's `parseFloat` rule for
+      `'number'` (`|given − accepted[0]| ≤ tolerance`, `NaN` never correct); `{ reached: true }` for `'none'` and
+      `'photo'`, which have nothing to check.
+    - `nextOf(set, station) → stationId | 'end' | null` and `reachable(set) → [stationId]` — the chain walk the test
+      run and the packet warning do, by id (P3's `branches` plug in here).
+    - `remapRun(run, idsByIndex) → run` — 018's index-keyed run to an id-keyed one; `upgradeProgress(progress, ids) →
+      progress` — `lock.html`'s index-keyed progress to id-keyed when the code carries `ids`, unchanged otherwise.
+    - `budget(set, { ecLevel }) → [{ id, bytes, version, modules }]` — one row per playable station, through
+      `qr-draw.js`'s encoder when it is on the page; P2's payload budget reads this. Name reserved, body in P2.
+    - Constants: `KINDS`, `ANSWER_TYPES`, `ID_LENGTH` (4), `CODE_WORDS` (018's 30, moved).
+  - *Storage keys and migrations, case by case, with the fixture that proves each.* **No key is renamed, added or
+    deleted, and no envelope version changes in P1.** The registry rows stay as they are. The fixtures are JSON under
+    `Tools/stations/test/fixtures/`, each the exact string the key holds today.
+    - **H1 `hunt-v1-legacy-settings`** — the single `qr-scavenger-hunt-settings` blob. Untouched: 018's
+      `migrateLegacySettings()` runs first as today and `read()` sees a hunt. **H2 `hunt-v1-rock-cycle`** — the
+      `seeds.mjs` hunt, three types, three teams: every station maps as the table above says; `run` keyed by id;
+      `cardsPerPage '4'` kept as a string. **H3 `hunt-v1-live-run-shifted`** — a run whose marks were keyed before a
+      station was removed: index `i` is the `i`th *valid* station at read time (the same list the page used to write
+      it); a mark whose index is past the valid count is dropped and the drop counted on `set._dropped`, which is the
+      one deliberate change to run state (finding (2): it inflated "n / total"). **H4 `hunt-v1-sparse`** — a blank
+      starter row between two real stations: the blank gets an id too, is not playable, and the marks map by the valid
+      list. **H5 `hunt-v1-old-station`** — a station saved before hints and code words existed (no `hint`,
+      `hintPenalty`, `codeWord`): defaults as `ensureStationDefaults` gives them. **H6** `checkinStation` out of range
+      → `null` (the page falls back to the first, as today).
+    - **R1 `room-v0-bare`** — a pre-`Store` `{ current, sets }`: 019's `migrateStore` runs as today, then `read()`.
+      **R2 `room-v1-crypt`** — the station-qr suite's room: `roomId` kept as `id`; `next: 3` on station 2 becomes the
+      id of the raw list's fourth station; `hintCost` → `hint.points`; `awardLetter` → `letter`. **R3
+      `room-v1-dangling-next`** — `next` past the end → `null`. **R4 `room-v1-end-here`** — `next: 'end'` kept; after
+      P2 the player ends there (the exception). **R5 `room-v1-cipher-hidden`** — a cipher station with a typed
+      `answers` string and a text station with a leftover `cipherPlain`: both kept, both come back on `write`. **R6
+      `room-v1-shift-zero`** — `cipherShift` 0, `undefined` and 7 on three stations: `null`, 0 and 7, and `clampShift`
+      at play time gives 13, 3 and 7 as today. **R7 `room-v1-tolerance-on-digits`** — `numericTolerance` 0.5 on a
+      digits station: kept on the record, left out of the payload, as today. **R8 `room-v1-images`** — an `idb:`
+      reference, a data URL and `''`: all three verbatim (`er-image.js` moves the data URL at boot as today).
+      **R9 `room-v1-unknown-type`** — `type: 'maze'`: verbatim, `check()` exact. **R10 `room-v1-no-roomid`** — a room
+      saved before `roomId`: a new id, as `loadSetByName` gives one today.
+    - **S1 `share-hunt-v1`, S2 `share-room-v1`** — today's `?hunt=` and `?room=` payloads (no ids): `read()` then the
+      page's own normaliser; the set's id is new on arrival for both kinds. **S3 `file-room-v1`** — a `.json` in the
+      `{ aplp, state }` envelope: `share.js` unwraps, then S2. **S4** — a payload that carries ids (sent from a P2
+      page): the station ids are kept and the set id is new.
+    - **C1 `code-room-v1-whole`** — a whole-room code from before #320 (the station-qr suite's "Old Crypt"), **C2
+      `code-room-v1-station`** — a #320 stub code: `playRead()` returns them with `ids: null`; the player keys by
+      index for both, as today. **C3 `code-room-v2`** — `v: 2` with `ids`: keyed by id.
+    - **G1 `progress-v1`** — `escape-room-progress:<id>` with a numeric `current` and index-keyed maps, opened by a v2
+      code: `upgradeProgress` turns the index at each key into the id at that position of `ids`, `'done'` stays
+      `'done'`, `startedAt` stays; opened by a v1 code, nothing changes. **G2** — a progress already keyed by id
+      opened by a v1 code (a code printed before P2, taped up next to new ones): a v1 code has no `ids`, so the
+      player cannot tell which index the id in `current` is; it gates with the generic sentence ("your next clue is
+      at another station") and does not advance. That is the one case mixed prints cannot resolve, and the HISTORY
+      entry for P2 says so.
+    - The phone's key is never migrated by the builder: it is on another device. `monitor.html` reads no storage.
+  - *What stays stable in a printed code and a share link, exactly.* A 018 station code is the content string;
+    `normalizeContent` and `buildQR` are unchanged, so the bytes are the bytes. A 018 team code is `HUNT-TEAM:<code>`.
+    A 019 code's URL is `escape-room-builder/lock.html` with `r=` (base64 of `encodeURIComponent` of JSON, the
+    `btoa(unescape(…))` step), `s=` an index into the payload's `stations` in play order, `start=1` when present;
+    the payload keeps `id`, `title`, `timerMinutes`, and on the played station `clue`, `answers` **as an array**,
+    `hint`, `next` **as an index** (or `'end'`), `type`, `cipherShift`, `hintCost`, `awardLetter`, `maxAttempts`,
+    `numericTolerance`, `imageOnCard`, and on a stub `hintCost` and `awardLetter: '?'`; it adds `v: 2` and `ids`, and
+    nothing else, so a phone holding a `lock.html` cached before P2 plays a P2 code exactly as it plays a #320 code
+    (it reads none of the new fields and `typeof 'end' !== 'number'` is today's fall-through). A code printed before
+    P2 opens in the P2 player through `playRead()` with `ids: null`, which is the index mode it has now, picture and
+    all for a pre-#320 whole-room code. The `?hunt=` and `?room=` payloads stay each tool's own shape plus ids: a
+    page cached before P2 files them as it files today's (it never reads `id`), and a P2 page reads ids off them.
+    The player link in 019's box is `playUrl(set, null)` and still carries the whole room and its images.
+  - *Answer checking and what a student's device holds.* Today a 019 code or link carries, in base64 with no secret,
+    every accepted answer, hint, hint cost, letter, attempt cap, tolerance and shift of the station it opens, and a
+    student with a QR reader and a base64 decoder can read the key off the wall; the page's own footer says the
+    key travels inside the link. The design changes none of that: checking stays on the device, by the same matcher,
+    on the same fields, and the only new bytes a student's phone sees are `v` and a string of opaque four-character
+    ids. Nothing leaves the phone but the WebRTC message to `monitor.html`, which gains the current station's `id`
+    beside its index. A 018 station puts nothing on a student device at all (`encode: 'prompt'`), and the record
+    keeps it that way until P3 and Devon say otherwise. **Where the student-facing line falls, for Devon:**
+    `lock.html` and `monitor.html` exist and are played by students by design (the 019 Tier 2 note); P1 adds no
+    screen, field, or behaviour to either. Three later steps would move the line and are listed in the questions: a
+    hunt station printed as a player link, a typed short code into `lock.html` (P2's bullet), and any new thing a
+    student sees in P3's parity.
+  - *What each adopting tool changes.* **In P1's build, only this:** both pages call `Stations.ensureIds()` on
+    the loaded blob and save when it drew one, so ids exist on disk from P1 on; nothing else in either page, the
+    player or the monitor changes, and `CACHE_VERSION` bumps for the new `_shared/` file and the two pages. **P2's
+    work, written here so P1 can be checked against it:** 018 keeps `state` as the canonical record, with `save()`
+    through `write()`, `validStations()` through `playable()`, the check-in's three rules through `check()`, `marks`
+    and the rest keyed by id (`remapRun` at load, once, saved), `checkinStation` an id, the CSV's columns unchanged,
+    the share `getState` through `write()` minus `run`; 019 the same with `buildRoomPayload` and `stationPayloadFor`
+    deleted for `playPayload`, `validStations` for `playable`, `unreachableStations` for `reachable`, `next` an id in
+    the `<select>` (the option values are ids, the labels stay "Jump to Station n"); `lock.html` loads
+    `../../_shared/stations.js`, decodes through `playRead`, keys progress by id when the code has `ids` and by index
+    when it has not, upgrades a numeric progress once, honours `'end'`, and keeps the whole-room and stub cases of
+    the station-qr suite green; `monitor.html` passes `id` through. The two share-arrival normalisers become
+    `read()` plus the page's own name-uniquing. `er-match.js` folds in, and `test:escape-room`'s matcher cases move
+    with it. The registry rows do not change (no key moves); `sw.js` gains the module and the suite folder's
+    fixtures are not precached (a `test/` path is dropped from the offline copy anyway).
+  - *What P2 to P4 need from the record, reserved by name and not built.* **P2:** `budget()` for the payload budget;
+    `codeWord` on a room's stations for the printed short code (the list of 30 is already in the record's
+    constants) — whether the typed code is the word or the id is P2's call and Devon's question 6. **P3:** on a
+    station, `branches: { byAnswer: { [accepted]: stationId } }` beside `next` (a `nextOf(set, station, given)`
+    overload); on a set, `flow: 'chain' | 'free'` with `required: [stationId]` for "a required set in any order"
+    (018 is `'free'` today, 019 `'chain'`; `read()` sets it from `kind` and nothing reads it yet); `image` and
+    `encode: 'player'` on a hunt station; `run` on a room; `bankId` on a station for Path 12. **P4:** on the phone's
+    progress, `solved[id] = { at }` and a `path: [{ id, at }]`, and on a run, `marks[id].at` (there) and
+    `hintsUsed[id].at` (there) — so a per-team path with times is already in a hunt's record and a room's player
+    needs two timestamps added in P3 or P4. None of these names is written by P1.
+  - *What P5 keeps open.* `kind` is on every record and is how `write()` picks a shape, so two entry points over one
+    engine is the record as it stands; one tool with a mode switch is a page that reads both kinds and shows `kind`
+    as the switch, and needs no new field. Neither needs a key to move: a merged tool would read both keys and
+    write back to the one each set came from, by `kind`.
+  - *The tests, by name and case.* **`Tools/stations/test/stations.test.mjs`** (pure Node, the `test:stations`
+    shortcut, in `suites.json`; the module is loaded with `vm` the way a classic script is, as the export suite
+    loads its own): for every fixture, `read()` returns the fields the case above says and `write(read(f))` is `f`
+    plus ids and nothing else (deep-equal after the ids are removed; the on-disk promise); `read(write(read(f)))` is
+    `read(f)`; `read(write(read(room), 'hunt'))` and back equals `read(room)` with the same ids (the Verification
+    line, in Node); ids are four `[a-z0-9]`, unique, kept across a second `read`, drawn only where missing, and a
+    hand-made duplicate is redrawn for the later station; `playPayload` equals today's `stationPayloadFor` output
+    plus `v`, `ids` and `'end'` for all four stations of R2 and for a 30-station set — today's two functions copied
+    into the suite from the page, as the export suite keeps the old `duplex-print.js` pair; `playUrl` round-trips
+    through `StateLink.decodeState` with `s` and `start` where expected; `playRead` on C1, C2 and C3; `check()`
+    parity on a table of forty (station, given) pairs against `er-match`'s `checkAnswer` (loaded from its file,
+    not retyped) and against 018's choice and number rules copied line for line, including `NaN`, `''`, `'5.0'`
+    against `5`, `3.14` against `314`, curly quotes and an unknown type; `remapRun` on H3 and H4 with the dropped
+    mark counted; `upgradeProgress` on G1 and its no-op on a v1 code; `nextOf` and `reachable` on R2 (station 3
+    unreachable) and R4. **`Tools/stations/test/smoke-ids.mjs`** (browser, port of its own, P1): open 018 and 019
+    seeded with H2 and R2, read the keys back: every station has an id, a reload keeps it, moving a station keeps
+    it, deleting and re-adding draws a new one, the share links carry them, and the share arrival of each keeps
+    the station ids and changes the set id; no console errors; axe clean. **P2's, named now:**
+    `smoke-cross-open.mjs` (a room built in 019, shared into 018, shared back, every field and id intact; a hunt
+    the other way), `smoke-legacy-codes.mjs` (the pre-P2 `lock.html` taken from `git show v255:…` and served
+    beside the new one: a P2 code on the old player, a #320 code and a whole-room code on the new one, mixed prints
+    per G2 above), and `smoke-station-qr.mjs` gaining `'end'` and an id-keyed progress. **Must stay green, and
+    why:** `test:escape-room` (the matcher and the test run read the same record), `test:escape-room-images`
+    (`image` verbatim, `idb:` never in a link), `test:escape-room-station-qr` (the bytes of a code), the two
+    `test:scavenger-hunt` suites (routes derived, code words stable) and `test:scavenger-hunt-print` (every sheet
+    reads the same fields). `check:registry` must still resolve both keys to their rows; `check:precache` sees the
+    new file.
+  - *Deliberately left out.* Any change to a page's screen, sheet or sentence; any new key, renamed key, or
+    `Store` version bump (018 does not adopt `Store` here; P2 may); hashing or hiding the answers in a code; a
+    hunt's codes becoming player links; per-answer branching, a free-order required set, teams on a room, a room's
+    timer on a hunt (all P3); the debrief's timestamps (P4); the bank id (Path 12); merging or renaming the tools
+    (P5); the code-word list growing past 30; `er-match.js` moving (P2); touching `monitor.html` beyond the id.
+  - *Decided here, cheap to reverse.* **Canonical in memory, each tool's shape on disk.** The other way — one v2
+    shape under both keys with a `Store` bump — is the same `read()` with a different `write()`; it was not taken
+    because a page from an older cache reads a v2 envelope's data as it is (finding (10)) and would then meet field
+    names it has no code for, where today's names plus an `id` cost it nothing. To reverse: make `write()` emit the
+    canonical record, bump both envelopes, keep `read()`. **`ids` as one fixed-width string on the played payload,
+    not an id per stub** (measured: six characters a station against fifteen). **`'end'` honoured** (finding (1)):
+    the key prints "Finish", the test run says "the chain ends here", and the teacher chose it; the change is in
+    the P2 player, named in its HISTORY entry. **A hunt's set id is new on share arrival**, 019's rule, for the same
+    reason it has there. **An orphan mark is dropped** at `remapRun` (finding (2)). **`cipher.shift` keeps `null`
+    against 0.** **`_shared/stations.js`**, not `Tools/_engines/`, the call AI-21 made for `grouping.js`.
+  - *Questions that are Devon's, listed and not answered.* (1) **The student-facing line.** `lock.html` is played
+    on student devices today. Three things in this path would deepen that: a hunt station printed as a player
+    link (`encode: 'player'`, P3), a short code typed into `lock.html` (P2's bullet), and anything new a student
+    sees in P3. The 019 Tier 2 note says new work should favour the paper packet and a typed code on one shared
+    classroom device; the record supports either. Which of the three, if any, may a session build? (2) **The key
+    in the clear.** Every accepted answer rides inside a code and a link, readable by anyone who decodes the QR,
+    and the page says so. Keep that, or hash the answers in P2 (the matcher would compare hashes of its normalised
+    forms, and a near miss could no longer be reported)? (3) **One tool or two** is P5's and not decided here; the
+    record carries `kind` so either reading works. (4) **Two text types or one.** 018's "Open-ended" checks nothing
+    and 019's "Text answer" checks a list. Stay two (`'none'`, `'text'`) or become one type with an optional key?
+    (5) **Minutes or points.** A hint costs minutes on a hunt and points in a room; a station holds both numbers.
+    When a room gains teams and a leaderboard (P3), which does its leaderboard dock? (6) **One code or two per
+    station.** The paper code word (MAPLE) proves a team stood at a station; P2's typed short code opens a station
+    on a device. The same word, or the id, or two codes on the card? (7) **Resume or restart.** A phone keys its
+    progress on the set's id, so a room edited and reprinted next week resumes where that phone left off; a
+    print number in the code would start it over. Which is wanted?
+  - *Not verified.* No module exists and nothing ran in a browser; `lock.html` and `monitor.html` were read, not
+    opened. The payload sizes are from a probe that reimplements `stationPayloadFor` and the base64 step, not from
+    the page, and the module counts are the encoder's byte-mode table, not a drawn code. The parity claims rest on
+    reading; the build copies today's functions from the files into the suite, not from this text. Finding (1) is
+    read off `buildRoomPayload` and `renderClue`, not reproduced in a player. The older-cache cases were read, not
+    reproduced, and `smoke-legacy-codes.mjs` is the first thing that would.
 - **P2 — Both tools on the schema**, plus the payload budget from Path 6 (Share
   sheet) on each station's own code (one station per code since #320) and a printed
   short-code fallback typed into `lock.html`.
@@ -4410,6 +5812,10 @@ dropped) with no write-back; 014's scenario vocabulary and 027's vocabulary log 
 unbridged; 051 and 052 hold word lists in their own shapes. Regular Spanish/French
 conjugation is entirely mechanical and 039 makes teachers type every form.
 
+**Status.** Nothing built. P3 is designed, not built (AI-27, 2026-10-06): the design is in its bullet,
+with twelve questions for Devon at its end. P1, P2, P4 and P5 not started; P3's engine depends on
+neither P1 nor P2, its storage does.
+
 **Phases.**
 
 - **P1 — `_shared/word-list.js`.** Versioned store of named lists of
@@ -4424,6 +5830,252 @@ conjugation is entirely mechanical and 039 makes teachers type every form.
   the full regular table for Spanish and French (present, preterite/passé composé,
   imperfect, future, conditional, subjunctive present), with irregular overrides
   stored on the word record; 079's posters and 039's drills both consume it.
+  **Designed, not built (AI-27, 2026-10-06). Nothing below exists; the row (rank 60, 2+) stays.** The
+  design follows P4's form above. It was written from 039's page (its `conjugations[]` entries, the
+  `answerMatch` quiz check, its person presets and accent sets), 079's page (eight hand-typed templates,
+  108 forms), `vfg-conjdrill-link.js`, `_shared/handoffs.js`'s 039 → 040 entry, the registry rows and the
+  two tools' suites. **Where a verb is conjugated today:** nowhere. 039 makes the teacher type every form
+  into six boxes; 079 ships eight templates typed by hand (hablar, comer, vivir in four Spanish tenses,
+  ser and estar; parler, finir, vendre in two French tenses, avoir and être); no other page has a verb
+  form in it. A pure-Node probe (not kept) ran a 40-line regular-ending table against 079's 108 forms:
+  **108 of 108 equal**, so the regular classes are already pinned by data in the repo.
+  **What it is.** `_shared/conjugate.js`, a plain classic script publishing `window.Conjugate`: pure
+  functions over data, no DOM, no storage, no `fetch` (the offline copy runs from `file://`, where a
+  sibling JSON is blocked, which is why `tool-registry.js` inlines its data too). The engine is
+  language-neutral; **each language is a pack**, `_shared/conjugate-es.js` and `_shared/conjugate-fr.js`,
+  a data object handed to `Conjugate.register(pack)`. A page loads the engine and the packs it wants. A
+  third language is one new file and three bookkeeping lines (`PRECACHE_URLS`, the `Conjugate` global in
+  `eslint.config.js`'s `SITE_GLOBALS` once, a `suites.json` case). Not in `SHELL_URLS`: neither 039 nor 079
+  is a front-of-room tool.
+  **The surface.**
+  - `Conjugate.languages()` → `[{ id: 'es', name, persons: [6 labels], tenses: [{ id, name, mood }],
+    classes: [{ id, name, example }] }]`, read off the registered packs; a tool builds its selects from it.
+  - `Conjugate.classify(lang, infinitive)` → `{ class, stem, reflexive, base }` or `null` when the ending is
+    not a class the pack declares (a noun typed in the verb box). `levantarse` → `{ class: 'ar', stem:
+    'levant', reflexive: true, base: 'levantar' }`; `se lever` → `{ class: 'er', reflexive: true, base:
+    'lever' }`; French `-ir` is `finir`'s `-iss-` class unless the record says `ir2` (dormir, partir,
+    sortir, servir, sentir: a shortened singular stem) or `ir-er` (ouvrir, offrir, couvrir, souffrir,
+    conjugated like `-er`).
+  - `Conjugate.lookup(lang, infinitive)` → the pack's record for the verb, or the record of the longest
+    known base it ends in with the prefix glued on and a note `as: 'tener'` (mantener, suponer,
+    convenir; comprendre, revenir, défaire), or `null`. The pack lists the exceptions to prefix
+    derivation (bendecir: participle `bendecido`; a tú command gains an accent when the base was a
+    monosyllable: `ten` but `mantén`, `pon` but `supón`).
+  - `Conjugate.conjugate(lang, verb, tenseId, opts)` → `{ forms: [6], notes: [{ slot, kind, from }],
+    complete }`. `verb` is an infinitive string or a verb record (below); a string goes through `lookup`
+    then `classify`. `notes[].kind` is one of `regular`, `stem`, `spelling`, `irregular`, `defective`,
+    `derived`, `teacher`, `agreement`, `assumed` (an infinitive in no pack, conjugated as regular), so 039
+    can mark a cell and 079 colour one. `opts.pronouns: true` prefixes the subject (and the reflexive
+    pronoun) with French elision (`j'habite`, `je me lave`, `je m'appelle`, `tu t'appelles`); the pack
+    lists its aspirate-h verbs (haïr) so `je hais` is not elided. `opts.slots` picks a subset.
+  - `Conjugate.table(lang, verb, tenseIds)` → `{ tenses: [{ id, forms, notes }], participle, gerund }`.
+  - `Conjugate.match(typed, expected, opts)` → `{ verdict: 'correct' | 'close' | 'wrong', reason }`, the
+    answer check, with 039's three verdict names so its quiz adopts it as a drop-in. `reason` on `close`
+    is `accent`, `pronoun` (the reflexive or subject pronoun typed or left off) or `elision`
+    (`je habite` for `j'habite`).
+  - `Conjugate.merge(record, teacherRecord)` → one record, the teacher's value winning per field and
+    `forms` merging per cell, each merged cell noted `teacher`. `Conjugate.validate(record)` → a list of
+    problems in words (a seventh form, an unknown tense id, a stem change on a vowel the class cannot
+    change, a `stems` entry for a tense the pack does not declare).
+  - `Conjugate.register(pack)`; `Conjugate.normalize(s)` (the comparison key `match` uses, exported so a
+    suite can pin it).
+  **The verb record, and the pack is the same shape.** `{ infinitive, class, stemChange, stems, forms,
+  participle, gerund, auxiliary, reflexive, defective, gloss }`. `class` is found by `classify` unless
+  given. `stemChange` is one token: Spanish `e>ie`, `o>ue`, `e>i`, `u>ue` (jugar); French `e>è`
+  (acheter, lever, mener), `é>è` (préférer, espérer, répéter), `l>ll` (appeler), `t>tt` (jeter), `y>i`
+  (payer, employer, envoyer). `stems` replaces the regular stem for a whole tense (`{ future: 'tendr',
+  conditional: 'tendr', preterite: 'tuv' }`); a Spanish `stems.preterite` takes the strong endings
+  (`-e -iste -o -imos -isteis -ieron`, `-eron` after `j`: dijeron, condujeron). `forms` is sparse, per
+  tense, per slot, and is the last word (`{ present: { 0: 'tengo' } }`). `participle` and `gerund` are
+  strings when irregular (abierto, dicho, escrito, hecho, muerto, puesto, roto, visto, vuelto; French
+  été, eu, fait, pris, mis, dit, vu, bu, lu, écrit, venu, voulu, pu, su, dû). `auxiliary: 'être'` for the
+  French verbs that take it (aller, venir, arriver, partir, entrer, sortir, monter, descendre, rester,
+  tomber, naître, mourir, retourner, passer, devenir, revenir, rentrer); every reflexive takes it without
+  being told. `defective` names the slots or tenses the verb has (llover and nevar slot 2 only; falloir
+  `il` only; soler no future or conditional). Orthographic changes are **derived, never declared**: a
+  rule reads the stem's last letters and the ending's first vowel (`c>qu`, `g>gu`, `z>c` before e;
+  `g>j`, `gu>g`, `c>z` before a or o; `i>y` between vowels, leyó, construyó, with the `-uir` verbs taking
+  `y` before every vowel but i; French `c>ç` and `g>ge` before a or o, `y>i` before a mute e, `-ayer`
+  optional). A pack field `spelling: false` switches one off for one verb if a case ever needs it.
+  **The algorithm: one cell, in order.** (1) `forms[tense][slot]` → that, noted `teacher` or
+  `irregular`; (2) `defective` excludes the cell → empty, noted `defective`; (3) a compound tense →
+  the auxiliary's cell in its own tense plus the participle, noted `agreement` on an être verb (the
+  engine emits the masculine singular; what is printed is Devon's question 4); (4) `stems[tense]` →
+  that stem with the tense's endings (strong endings for a Spanish preterite stem); (5) a derived
+  tense builds from another: Spanish imperfect subjunctive from slot 5 of the preterite minus `-ron`
+  plus `-ra -ras -ra -´ramos -rais -ran` (tuvieron → tuviera, fueron → fuera, the accent landing on
+  the vowel before `-ramos`); present subjunctive from the `yo` stem when the present's slot 0 is
+  irregular (tengo → tenga, conozco → conozca, digo → diga) and from the regular stem otherwise, with
+  the stem change in the boot and the `e>i`/`o>u` change in slots 3 and 4 (pidamos, durmamos); the
+  French subjonctif from the `ils` stem for slots 0 1 2 5 and the `nous` stem for 3 4 (boive /
+  buvions), the imparfait from the `nous` present stem (finiss-, buv-, with `avoir` and `être` as
+  overrides), the futur and conditionnel from the infinitive minus a final `e` (vendr-, prendr-) with
+  `stems.future` for aller (ir-), faire (fer-), être (ser-), avoir (aur-), venir (viendr-), voir (verr-),
+  envoyer (enverr-), pouvoir (pourr-), vouloir (voudr-), devoir (devr-), savoir (saur-), falloir
+  (faudr-), the conditionnel always the futur's stem; Spanish commands: `usted`, `ustedes`, `nosotros`
+  and every negative are the subjunctive, `tú` affirmative is the present's slot 2 with the pack's eight
+  overrides (di, haz, ve, pon, sal, sé, ten, ven), `vosotros` the infinitive with `-r` → `-d`; French
+  impératif from the present's slots 1 3 4 with the `-er` (and `aller`) `tu` form losing its `s`;
+  (6) `stemChange` in the boot (slots 0 1 2 5 of the present indicative and present subjunctive; `e>i`
+  verbs also in the preterite's slots 2 and 5, the gerund and the subjunctive's 3 4; `o>ue` verbs
+  dormir and morir take `u` there); (7) the regular stem and the tense's ending for the class; (8)
+  the orthographic rule at the junction; (9) the Spanish accent rule for a vowel stem: `-er`/`-ir`
+  verbs whose stem ends in a vowel take `í` in the imperfect, the preterite's slots 0 1 3 4 and the
+  participle (leía, leí, leíste, leído, oído, creído) and `y` in the preterite's slots 2 5. Every form
+  is returned lowercase and NFC; a Spanish or French verb form is never capitalised, and a tool that
+  starts a sentence with one does so itself. Steps 1 and 2 happen before anything else so a teacher's
+  override of a derived form sticks.
+  **Tenses, as data.** Each pack's `tenses` list declares a tense as `{ id, name, mood, endings: { ar,
+  er, ir } }` (present, preterite, imperfect; présent, imparfait), `{ stemFrom: 'infinitive', endings }`
+  (future, conditional; futur, conditionnel), `{ derivedFrom: 'preterite', slot: 5, strip: 'ron',
+  endings }` (imperfect subjunctive), `{ subjunctive: true, endings }` (the yo-stem rule above),
+  `{ compound: { auxiliary: 'haber', tense: 'present' } }` (present perfect; passé composé with
+  `auxiliary: 'avoir'` and the record's `être`), `{ imperative: true, from: … }` (commands). The engine
+  knows these six shapes and nothing about any one tense; **which tenses a pack declares is the
+  curriculum decision** (Devon's question 2). The first packs declare the bullet's six for Spanish
+  (present, preterite, imperfect, future, conditional, present subjunctive) and six for French (présent,
+  passé composé, imparfait, futur simple, conditionnel présent, subjonctif présent), and the derivable
+  ones above cost one data entry each. **Persons are six fixed slots** in the order 039 and 079 both
+  already use (yo tú él nosotros vosotros ellos; je tu il nous vous ils); a tool that hides vosotros
+  hides slot 4 and the engine does not know. 039 keeps its editable labels and gains `personSlots`
+  (default `[0,1,2,3,4,5]`) so a set whose rows were cut to five maps `[0,1,2,3,5]` and a fill lands in
+  the right rows; a preset button resets both.
+  **Accents and capitals in answers.** `normalize` trims, lowercases, collapses spaces, turns the
+  typographic apostrophe into `'`, and NFC-composes. `match`: equal → `correct`; equal after removing
+  combining marks **from vowels only** → `close`, reason `accent`; equal after removing the subject or
+  reflexive pronoun from either side → `close`, `pronoun`; equal after undoing elision → `close`,
+  `elision`; otherwise `wrong`. **ñ and ç are letters, not accents, and are `wrong`**, which 039's
+  `stripDiacritics` gets wrong today: measured in the probe, its NFD strip makes `año` and `ano` one
+  answer, `ñ` → `n`, `ç` → `c`, while `ß` and `œ` do not decompose and were never affected. `ü` stays
+  `close` (question 12). A blank answer is `wrong`, as 039 has it.
+  **Teacher additions and corrections, and where they live.** Two layers. The packs are built in,
+  read-only, precached. A teacher's verb, or a correction to a built-in one, is a verb record in the
+  same shape, merged over `lookup`'s with `Conjugate.merge`, so a correction is one cell and a new
+  regular verb is `{ infinitive }`. **The record lives on the word** (P1's `word-list.js` record gains a
+  `verb` sub-record, the list a `lang`), which is what the bullet's "stored on the word record" means:
+  it travels with the list's share link and export, and 009 backs it up through the registry's existing
+  row, with no new key. **Until P1 and P2 exist, 039 stores the same record on its own conjugation
+  entry** (`entry.verb` inside `gvb-vocab-conj:data:<name>`, a key that already holds arbitrary state,
+  so no registry row and no `Store` version moves); P2's 039 adoption moves `entry.verb` on to the word
+  and deletes the field. Nothing site-wide: a correction applies to the list it is on (question 8).
+  **What P3 needs from P1 and P2, neither built.** From P1: the record shape allows a namespaced
+  sub-record a tool owns (`verb`), a `lang` on the list, `partOfSpeech: 'verb'` as a value, and an
+  update of one word's fields in place. From P2: 039 reading the full record (it reads two fields
+  today) so `verb` reaches it. The engine and its Node suite depend on neither and can be built first;
+  039's fill button can ship on `entry.verb` first; 079 needs nothing from either.
+  **What each adopting tool changes.** **039:** each conjugation entry gets a language and tense select
+  built from `languages()` beside its free-text tense label (the label stays editable, so "any language"
+  still works: question 9) and a **Fill from pattern** button that calls `conjugate` and writes the six
+  boxes through `personSlots`; a cell with a note other than `regular` gets a mark and a title saying
+  which rule, and the entry's `irregular` checkbox is set when any cell is (the teacher can still clear
+  it); editing a filled cell writes `entry.verb.forms[tense][slot]` and marks the cell `teacher`; the
+  quiz's `answerMatch` becomes `Conjugate.match` and its "close" message names the reason; the accent
+  helper, print, share and the 040 bridge are untouched. The share payload carries `entry.verb` as it
+  carries every field. **079:** `TEMPLATES` become `{ lang, tense, verbs: ['hablar', 'comer', 'vivir'] }`
+  and the panels are computed at load, so rank 116's irregular call-outs and its "conditional,
+  German, Italian templates" quick win become a line of data each; an "Add a verb" box conjugates on
+  the fly into a new panel; the poster still saves its forms as text, so a saved poster needs no
+  engine to print. **040, 014, 027, 051, 052:** nothing in P3; a conjugation face on a 040 card is P4's.
+  **The built-in inventory the first packs hold.** Spanish, by kind: irregular records (`forms` or
+  `stems`) ser, estar, ir, haber, tener, hacer, poder, poner, decir, venir, querer, saber, dar, ver,
+  salir, traer, caer, oír, conocer and the `-cer`/`-cir` `-zco` group, conducir and the `-ducir` group,
+  andar, caber, valer, reír, sonreír, oler, enviar, continuar (the accented `í`/`ú`), and the eight
+  irregular tú commands; stem-changers (one field) pensar, cerrar, empezar, comenzar, entender,
+  perder, volver, poder, contar, encontrar, recordar, almorzar, costar, mostrar, jugar, pedir, servir,
+  repetir, vestir, seguir, dormir, morir, sentir, preferir, mentir; spelling-changers (no field,
+  derived) buscar, sacar, tocar, llegar, pagar, cruzar, escoger, recoger, dirigir, leer, creer,
+  construir, huir, incluir; defective llover, nevar, soler; participles as listed. French: être, avoir,
+  aller, faire, dire, venir, tenir, prendre, mettre, pouvoir, vouloir, devoir, savoir, voir, croire,
+  boire, lire, écrire, connaître, paraître, recevoir, courir, mourir, rire, suivre, vivre, naître,
+  conduire, plaire, pleuvoir, falloir, valoir; the `ir2` class partir, sortir, dormir, servir, sentir;
+  the `ir-er` class ouvrir, offrir, couvrir, souffrir; stem-changers acheter, lever, mener, préférer,
+  espérer, répéter, appeler, jeter, payer, essayer, employer, envoyer; spelling-changers commencer,
+  manger; the être list; s'asseoir left out (two accepted paradigms, question 6). About 60 records a
+  pack, the rest of the language regular.
+  **Size, measured.** The probe encoded one verb: every form spelled out for six tenses by six persons
+  is 546 bytes; tener as `stems` and sparse `forms` is 288; a regular record is 38. So a pack of 60
+  records is about 10 KB sparse (33 KB if every form were spelled out, which is the encoding to
+  avoid), plus tense tables and the participle list, about 12 KB for Spanish and 10 KB for French; the
+  engine about 12 to 15 KB. **About 35 KB in three precache lines**, against `export.js`'s 41 KB. Small
+  enough; nothing is lazy-loaded.
+  **The tests.** `Tools/conjugate/test/conjugate.test.mjs` (pure Node, the engine and packs loaded in a
+  `vm` context the way `export.test.mjs` loads `export.js`), with a `test:conjugate` script and a `suites.json` line;
+  and `smoke-conjugate.mjs` (the next free port when built; 8495 at the time of writing). Cases, named:
+  (1) *079 parity*: the 108 forms 079 hardcodes today, read off the page, equal the engine's, and
+  after 079 adopts, its templates are the engine's. (2) *Regular paradigms*: hablar, comer, vivir,
+  parler, finir, vendre in every declared tense. (3) *Stem changes*: pensar (pienso … pensamos …
+  piensan), volver, pedir (pidió, pidieron, pidiendo, pidamos), dormir (durmió, durmiendo, durmamos),
+  jugar (juego, jugué), sentir (sintió); acheter (achète, achetons, achèterai), préférer (préfère,
+  préférons, préférerai), appeler (appelle, appelons, appellerai), payer (both), envoyer (enverrai).
+  (4) *Spelling*: buscar (busqué, busque), llegar (llegué), empezar (empecé, empiece, both rules in
+  one verb), escoger (escojo), seguir (sigo, siga), conocer (conozco), leer (leyó, leía, leído),
+  construir (construyo, construyó), commencer (commençons), manger (mangeons, mangeais). (5)
+  *Irregulars*: the full table in every first-pack tense for ser, estar, ir, haber, tener, hacer, poder,
+  poner, decir, venir, querer, saber, dar, ver; être, avoir, aller, faire, pouvoir, vouloir, devoir,
+  savoir, venir, prendre, mettre, voir, dire; with the pins ir and ser share a preterite (fui), dar and
+  ver take no accent (di, dio, vi, vio), haber's present (he, has, ha, hemos, habéis, han), aller's
+  future (irai), faire's (ferai), être's subjunctive (sois, soyons), avoir's (aie, ayons). (6) *Derived
+  tenses*: tuvieron → tuviera, fueron → fuera, habláramos; commands ten, mantén, di, haz, ve, pon,
+  sal, sé, ven, hablad, no tengas, no habléis; parle, va, finis, allons; he abierto, hemos dicho; je
+  suis allé, nous sommes partis is **not** emitted (masculine singular only), je me suis levé. (7)
+  *Defective*: llover has slot 2 and five empty cells with notes, falloir il faut, il fallait, il
+  faudra. (8) *Prefixes*: mantener, suponer, convenir as their bases with the accent on mantén and
+  supón; comprendre, revenir, défaire; bendecir's participle. (9) *Reflexives and elision*: levantarse
+  (me levanto … se levantan), se laver (je me lave, nous nous lavons), s'appeler (je m'appelle, tu
+  t'appelles), habiter (j'habite), aimer (j'aime), haïr (je hais, no elision). (10) *classify*: hablar,
+  levantarse, se lever, finir, dormir (ir2 by record, an unknown French `-ir` noted `assumed` as
+  finir's class), table → null. (11) *match*, a table of pairs: hablo/hablo correct, Hablo/hablo
+  correct, `hablo ` correct, hable/hablé close accent, ano/año **wrong**, garcon/garçon **wrong**,
+  pinguino/pingüino close, j’habite/j'habite correct, je habite/j'habite close elision,
+  levanto/me levanto close pronoun, blank wrong. (12) *Teacher overlay*: `merge` puts the teacher's
+  cell first and notes it; `validate` names a seventh form, an unknown tense, an impossible stem
+  change. (13) *Pack integrity*: every record classifies, every `forms` and `stems` key is a declared
+  tense and a slot 0 to 5, no two records share an infinitive, every irregular has a participle where a
+  compound tense is declared, each pack under 24 KB. (14) *Purity*: same input same output, and the
+  module writes nothing on `window` but `Conjugate`. (15) *Two rules agree*: for every pack verb, the
+  present subjunctive from the yo stem equals the one from `forms` where a record spells it out; the
+  conditional's stem equals the future's; the French imparfait stem equals the present `nous` stem;
+  the subjonctif's `ils` stem equals the present's — a form two rules disagree on fails the suite and
+  is a review item, not a guess. The browser suite drives 039: fill tener present, six cells, slot 0
+  marked, the quiz takes `tengo`, calls `ano` wrong and `tenia` close; the entry survives reload and a
+  share link carries `verb`; 079 loads a template and its panels equal `conjugate`'s; 039's
+  `smoke-share.mjs` and 079's `smoke-panel-colors.mjs` keep passing. **How correctness is established
+  without copying a table:** the regular paradigms and 079's forms are in the repo; each irregular's
+  expected forms are typed into the suite from the rules by the session, then held by case 15 against
+  a second derivation; and a small script in `Tools/conjugate/` (`print-corpus.mjs`) writes a check sheet, one page a
+  verb, for a teacher to read (who signs it off is question 5). The facts of how tener conjugates are
+  nobody's property; a published table's selection and layout are, and none is copied.
+  **Deliberately left out.** Tenses beyond the two six-packs and the derivable ones above (passé
+  simple, pluperfect, future perfect, past subjunctive compounds); voseo; participle agreement with a
+  preceding object; negative and interrogative frames; the accent on a command or gerund with a
+  pronoun attached (dámelo, levantándose); German, Italian, Latin and Portuguese packs (the pack shape
+  is for Romance stem-and-ending verbs; German's separable prefixes and Latin's principal parts need a
+  record kind the engine does not have, and that is said here so nobody tries to fit them in `stems`);
+  guessing a language from an infinitive (the teacher picks); the English gloss (typed, as today);
+  audio (P5); a conjugation face on a 040 card (P4); a site-wide "my corrections" store.
+  **Decided here, cheap to reverse.** A classic script in `_shared/`, one engine and a pack a
+  language, not one file; record shape equals pack shape; orthographic rules derived, not declared;
+  six fixed slots and `personSlots` in 039; ñ and ç are letters; the masculine singular for agreement;
+  the overlay on the word record, with `entry.verb` in 039 until P2; 079's templates computed from the
+  engine; prefixed verbs derived with an exception list; `match` keeps 039's three verdict names.
+  **Devon's questions, listed and not answered.** (1) **Which languages first.** The bullet says
+  Spanish and French; the code today has person presets and accent sets for Spanish, French, German and
+  Latin (039), twenty `speechSynthesis` languages (039), templates for Spanish and French only (079),
+  and 079's quick win asks for German and Italian. (2) **Which tenses** East Middle's courses reach: the
+  six in the bullet, or also commands, the imperfect subjunctive and the present perfect, each one data
+  entry. (3) **vosotros** shown by default (both tools show it today) or hidden. (4) **Agreement in the
+  passé composé** on paper: `allé`, `allé(e)(s)`, or all four. (5) **Who proofreads the corpus** from
+  the check sheet and signs it off. (6) **1990 French rectifications** (`-eler`/`-eter` verbs other than
+  appeler and jeter) and **s'asseoir**: pre-1990 only, or both accepted. (7) **payer**: `paie` or `paye`
+  printed. (8) A teacher's correction **per list or site-wide**. (9) Whether 039 **keeps the free-text
+  tense label** beside the select. (10) **The student-facing line**: 039's quiz is on the teacher's
+  screen today; a link that opens a self-check on a student's device stays out unless Devon says. (11)
+  An infinitive in no pack: **fill as regular and note it, or ask first**. (12) `ü` counted as an
+  accent (`close`) or a letter (`wrong`).
+  **Not verified.** No module exists and nothing ran in a browser. The inventories and every form named
+  above were written from the session's knowledge of the two languages and checked against nothing;
+  that is what question 5 and case 15 are for. The size figures come from one representative encoding,
+  not a built pack. 039's `stripDiacritics` finding was reproduced in Node, not on the page.
 - **P4 — Printables.** Frayer model page; spaced-repetition scheduling for printed
   drills (which list, which day); fill-in-the-blank sentence mode; a word wall as a
   system (cards by unit, printable index, retire a unit).
@@ -4464,6 +6116,262 @@ runtime, the one content fetch that leaves the browser.
   viewer (SVG or canvas re-render on zoom) so zoom is sharp, keeping the raster
   path for poster export and the print pipeline. *Fable for keeping hit-testing,
   labels and the tiled poster print consistent between the two render paths.*
+  **Designed, not built (AI-28, 2026-10-06, a design pass: no code, nothing run in a browser). Everything from
+  here to P4 is the design.** Read from the tree at v258: 046's page whole (the stage markup, `displayMap()`,
+  `drawMapContent()`, `renderMapCanvas()`, `printMap()`, `savePdf()`, `printTiledPages()`, the worksheet and
+  series renderers, the share mount and `init()`), every `bmg-*.js` module, `data/README.md`, the relief entry in
+  `Tools/blender-art/renders.json`, the 046 registry row and a11y seed, the six `test:blank-map` suites, and the
+  two readers of `bmg-vector.js` outside 046 (`Tools/timeline-builder/tlb-places.js`, which calls
+  `renderBaseMapCanvas` and downscales; `Tools/geography-bee-quiz-generator/gbq-map.js`, which reads the data and
+  draws its own). Figures marked *measured* came from one pure-Node probe over the four vendored files (counting,
+  bounding-box crop tests against the nine presets, a Visvalingam pass, and the time to unwrap, project and
+  write every vertex as a path string); it was not kept. P1 and P2 are not built; this design does not wait for
+  either, and says what each may take from it. Nothing here fetches from the network. Questions that are Devon's
+  are listed at the end and not answered.
+  - *What is there today, as read.* The base map on screen is one `<img id="mapImg">` inside `#stage`, which the
+    viewer (`bmg-viewer.js`) moves with a CSS `translate()`/`scale()`; `minScale` 0.05, `maxScale` 12; the wheel
+    zooms by 1.12, the buttons by 1.25, and `fit()` leaves a 4% margin. The image is the PNG that
+    `renderBaseMapCanvas()` drew once at a 4000 px long side and that `bmg-map-cache.js` keeps in IndexedDB
+    (`bmg-maps`/`images`, keyed by the `vector:<preset>:<n,s,w,e>:<style>[+borders][+relief][:choro:<hash>]` id).
+    **Every coordinate the project stores is a pixel of that 4000 px raster:** label and marker `x`/`y`, region
+    rings (rounded to whole pixels by `compactRings`), line points, `project.view`, and the measure tool; the
+    calibration is the preset's bounds and `toLatLon`/`fromLatLon` take the raster size. The grid (`#gridLayer`
+    divs), regions (`#regionSvg`), lines and measure (`#lineSvg`, `#measureSvg`) sit inside the stage and scale
+    with it; labels (`.bmg-label`), markers, chips, legend, compass, scale bar and locator sit outside it in
+    viewport space and are moved on every `onChange` by `stageToScreen()`. Nothing is drawn on a canvas on screen.
+    **Every export redraws the layers from project data onto a canvas** in `drawMapContent(ctx, cssW, cssH, opts)`,
+    which starts with `ctx.drawImage(mapImg, -x/scale, -y/scale, cssW/scale, cssH/scale, 0, 0, cssW, cssH)` and
+    then draws grid, regions, lines, markers and labels through the same `viewer.stageToScreen()`; `renderMapCanvas`
+    adds legend, compass, locator, scale bar and credit. Its callers: Download PNG (at `devicePixelRatio`, capped
+    at 2), Print Map and Ctrl+P (`buildExportCanvas(PRINT_DPI = 200)`, the canvas becomes an `<img>` in
+    `#printExportStage` and `window.print()` runs with `body.printing-map-export`), Save PDF (the same canvas as a
+    JPEG in jsPDF), the worksheet (which temporarily `setView()`s the viewer to fit the map in its box), and the
+    tiled poster (`setView()` to a virtual window of `cols × 1200` by `rows × 1550` at the current scale, one
+    `drawMapContent` on that canvas, then slices). Only the time-slice series sheet re-renders vectors, through
+    `renderBaseMapCanvas(…, { longSide })`. The locator inset shows the same raster blob at 150 px. The zoom
+    readout is `scale × 100 %`, so "100%" is the raster at 1:1 and a fitted world map reads about 25%.
+    **The screen and the paper agree today because both read the same raster through the same `stageToScreen`
+    arithmetic**, with the page's colours as literals (`#eef0ec` mat, `#fff` label boxes, `#1f3550` ink), and
+    the page's head comment says so. Keyboard: Esc, Enter, Ctrl+P, undo/redo, and arrows nudging the *selected*
+    label or marker; **no key pans or zooms**, `#viewport` has no `tabindex`, role or name, and nothing announces
+    the view. The hit test (`bmg-hittest.js`) projects the divided file once into raster pixels and tests clicks
+    converted by `screenToStage()`. 015 and 062 import `bmg-vector.js` only for `renderBaseMapCanvas` and
+    `BASE_MAP_PRESETS`; 062 draws its own thumbnails from the data.
+  - *Measured.* The four files are 86, 191, 154 and 255 KB and parse in 3 to 5 ms. `world-land`: 125 rings, 5,127
+    vertices; `world-countries`: 177 features, 285 rings, 10,583 vertices, largest ring 554; `us-nation`: 250
+    rings, 8,826 vertices; `us-states`: 56 features, 304 rings, 14,446 vertices, largest ring 2,023 (Alaska). Three
+    world rings cross ±180 and one (Antarctica) encircles; no US ring does. Cropped to a preset by ring bounding
+    box, the divided layer is 696 vertices (Oceania) to 13,848 (all 50 states), the whole layer 973 to 8,228.
+    Visvalingam at half a screen pixel keeps 86% of the world's vertices at fit on a 1,000 px stage and 96% at 4×;
+    the 50-state crop keeps 42% at fit (the Aleutians) and 94% at 4×; every other crop keeps over 95% at fit.
+    **Simplification buys nothing the eye would notice above fit and is not in the design.** Unwrapping,
+    projecting and writing every vertex of `us-states` to a path string is 5.1 ms in Node (3.6 ms for the world);
+    the path string is 194 KB. The raster the page holds today is 7.1 to 15.8 megapixels a preset, 27 to 60 MiB
+    decoded, twice (the image and the locator share a blob but not a bitmap), plus the 4000 px canvas while it is
+    being drawn. The poster path's largest canvas is 4,800 × 6,200 (4 × 4 tiles), 30 megapixels, under Chromium's
+    canvas area limit.
+  - *What P3 is for, in one sentence.* Past 100% on the readout the raster is upsampled: at 12× a border is a 12 px
+    smear, and the same smear is on every poster tile and on a print of a zoomed view. With the data this small
+    the map can be drawn from the vectors at whatever the view is, in the time one frame allows, with a hairline
+    that stays a hairline.
+  - *The rule the design is held to.* **The stage unit does not change: one unit is one pixel of the 4000 px
+    plate carrée raster that `pixelSizeFor(preset.bounds)` describes**, whether or not a raster exists. Every
+    saved label, marker, region, line, view and calibration therefore opens where it was, `bmg-hittest.js` is
+    untouched, `toLatLon`/`fromLatLon` are untouched, and a project saved before P3 is a valid project after it with
+    no `__v` bump and no migration. The second rule: **what the teacher sees is what the paper gets**, held by one
+    draw function with two callers, not by two renderers kept alike by hand.
+  - *Canvas, not SVG, and why.* An SVG base map would make the browser do the zoom transform and keep text crisp;
+    neither is needed (labels are DOM already) and both exports would still need a canvas, so SVG would be a
+    second renderer of the same data, which is the drift this design exists to prevent. The relief is a multiply
+    composite clipped to land, which canvas does in three lines and SVG does with filters. The choropleth and the
+    hit test already live in raster pixels. So: **one function, `drawBaseMap(ctx, source, view, w, h, opts)`,
+    draws the base map for a view; the screen calls it on a viewport-sized canvas and every export calls it in
+    place of today's `drawImage(mapImg, …)`.** The raster path stays for maps that are pictures (Wikimedia,
+    uploads): a project whose id is not `vector:` behaves exactly as today, the two paths coexist in the page and
+    the id's prefix chooses.
+  - *The module's whole surface: `Tools/blank-map-generator/bmg-live.js` (the viewer's renderer), ES module, DOM-free
+    but for the canvas it is handed.*
+    - `parseBaseMapId(id)` → `{ preset, bounds, style, borders, relief, choroKey } | null`: the inverse of
+      `baseMapId()`, from the id string alone (today only `presetFromBaseMapId` exists, which drops everything but
+      the preset). `null` for a Commons or upload id. Round-trips every id `baseMapId()` can produce, including a
+      preset whose bounds a future P2 writes into the id.
+    - `loadSource(spec, { fills })` → `Promise<source>`: loads the whole and divided files (through `bmg-vector.js`'s
+      in-memory `geoCache`), unwraps and shifts every ring once with `drawableRings`, projects it once into stage
+      pixels with `projectPoint(bounds, width, height, …)`, and builds **four cached `Path2D`s in stage units**:
+      `landFill` (the whole layer, closed through the pole), `landStroke` (the whole layer, open at the pole),
+      `borderStroke` (the divided layer) and, per shaded feature, its own `evenodd` path (so a country's holes
+      cancel only against its own rings, as `paintChoropleth` does today). Returns `{ spec, width, height, paths,
+      fills, relief: HTMLImageElement | null, calibration }`. The relief image is loaded here when the spec asks and
+      no fills are set, exactly `renderBaseMapCanvas`'s rule. `source.width/height` are `pixelSizeFor(bounds)`.
+    - `drawBaseMap(ctx, source, view, cssW, cssH, { dpr = 1, strokePx })`: paints the mat and ocean, then
+      `ctx.setTransform(dpr·scale, 0, 0, dpr·scale, dpr·x, dpr·y)` and fills `landFill`, multiplies the relief
+      clipped to it, fills each shaded path, then strokes borders or coastline with `ctx.lineWidth = strokePx /
+      scale`, so the line is `strokePx` *screen* pixels at any zoom. The default `strokePx` is what the raster
+      shows at fit today, 1 px (the raster's stroke is `max(1, round(4000/1600)) = 3` raster px, which a fitted
+      world shows at 0.75 px and 12× shows at 36 px). The function never reads the DOM and never allocates: a frame
+      is four path operations on cached paths plus one `drawImage`. Returns nothing. Colours are
+      `bmg-vector.js`'s `STYLE_PAINT` (exported), the same literals the raster used.
+    - `drawExtent(source, view, cssW, cssH)` → `{ west, east, south, north }`: the lat/long rectangle the view
+      shows, for the live region and the suite.
+    - `createLiveBase(viewport, viewer, { getSource })`: the screen half. Puts a `<canvas id="baseCanvas">` as the
+      first child of `#viewport` (position absolute, inset 0, under `#stage`; `aria-hidden="true"`), sizes it to
+      the viewport at `devicePixelRatio` on `ResizeObserver`, and redraws **on the next animation frame after any
+      view change, coalescing** (a wheel burst of 20 events is one draw). `show(source)`, `hide()`, `redraw()`,
+      `toCanvas()` (the current frame, for the suite and the locator). The viewer's `onChange` gains one call.
+  - *What `bmg-vector.js` changes (P1 may move it; P3 does not wait).* `renderBaseMapCanvas()` becomes a wrapper:
+    `loadSource` then `drawBaseMap` at the identity view onto a `width × height` canvas with `strokePx` set to
+    today's raster stroke (`max(1, round(longSide/1600))`), so **its output is pixel-identical to today's** for
+    015's map panel, 046's series sheet and the cache records — the suite holds it to that. `STYLE_PAINT` is
+    exported. `buildBaseMapRecord()` is kept for the series and for 015 and is no longer called by the picker.
+    Nothing moves to `_shared/` in P3; if P1 lands first, `bmg-live.js` imports `projectPoint`/`drawableRings`
+    from `_shared/geo-project.js` instead, and nothing else in this design changes.
+  - *What the page changes.*
+    - `useBuiltInBaseMap()`: builds the spec and `fills` as today, computes the same id, and instead of
+      `buildBaseMapRecord`/`putCachedMap`/`displayMap(record)` calls `displayLive(id, spec, fills)`: `loadSource`,
+      `liveBase.show(source)`, `mapImg` hidden, `currentSize` = `source.width/height`, `project.mapId = id`, the
+      calibration from the source, then the same `isSameMap`/`keepAnnotations` branch, layer `setSize`s,
+      `renderGrid()` and `fit()`/`setView()` as `displayMap()` runs now (the shared tail is one function both call).
+      **No IndexedDB write for a `vector:` id any more.** Records already in `bmg-maps` are left alone: the "Recently
+      used" card still lists them, and clicking one whose id parses goes through `displayLive`, ignoring the blob.
+    - `loadActiveProjectIntoUI()`: a `vector:` `project.mapId` is drawn live, cached record or none, **so the
+      "This project's map isn't cached in this browser anymore" state no longer happens for a built-in map, and a
+      shared project (`?map=`) opens on the receiving machine with its map drawn.** Today it arrives map-less and the
+      share note says a built-in map "is picked again there"; the note's sentence changes to say that a built-in map
+      travels and a Wikimedia or uploaded one does not. The fills for a shaded map are recomputed from
+      `project.choropleth.text` through `buildActiveChoropleth` on load, as the shading panel does on Apply, and
+      `legendRows` are kept as stored (they are the key to the same fills).
+    - `drawMapContent()`: the first line becomes `if (liveSource) drawBaseMap(ctx, liveSource, viewer.getView(),
+      cssW, cssH, { strokePx: 1 }) else ctx.drawImage(mapImg, …)`. Every caller (PNG, print, PDF, worksheet, poster)
+      gets vectors through that one line and nothing else in them changes. The export canvas is drawn at `dpr`, so
+      a 200 dpi print of a 12× view has a crisp border; the poster's `cols × 1200` canvas is drawn once at its own
+      size, as today.
+    - The locator inset: `locator.setImage()` takes `liveBase.toCanvas()` drawn at a fit view onto a 150 px canvas
+      (one `drawBaseMap` call), instead of the raster blob URL.
+    - `updateZoomReadout`: unchanged numerically (100% is still the 4000 px unit at 1:1), so saved views and the
+      suites' expectations hold; a `title` on the readout says what 100% means.
+    - Keyboard and screen reader (none of this exists today): `#viewport` gets `tabindex="0"`, `role="group"`,
+      `aria-roledescription="map"` and an `aria-label` from the map title; with focus on the viewport and no label
+      or marker selected, arrows pan by a tenth of the viewport (half with Shift), `+`/`=`/`-` zoom by 1.25 about
+      the centre, `0` fits, `Home` fits, and the existing nudge keys keep precedence when a label is selected.
+      A visually hidden `#viewerStatus` (`aria-live="polite"`) says, 500 ms after the last change, "Zoom 240%,
+      showing 25°W to 45°E and 34°N to 72°N" from `drawExtent`; for a raster map without calibration it says the
+      zoom only. Pinch and wheel are untouched.
+    - Dark theme: `#baseCanvas` is inside `.paper-sheet`, so it keeps its light literals as `mapImg` does; the
+      page's head comment gains one sentence. Nothing prints in dark ink.
+    - Reduced motion: no animation is added, so nothing to honour.
+  - *The algorithm and its edge cases.*
+    - Antimeridian: `drawableRings` emits Fiji and Chukotka twice, shifted 360°, into the cached paths, so both
+      halves are in the path at the right edge and the hit test and the picture agree as they do now. Antarctica's
+      polar closure is in `landFill` and not in `landStroke`.
+    - Holes: `landFill` is the whole layer with `evenodd`, so lakes in it stay holes; a shaded feature is its own
+      path. The border stroke is one path over the divided layer, so a shared border is stroked twice at the same
+      place, as the raster does.
+    - Off-screen work: the paths are whole; the canvas clips. At 12× on a 1,000 px viewport the visible rectangle
+      is 83 stage px wide and the stroke of 14,446 vertices still costs one path op; measured in Node at 5 ms for
+      the projection, which the cache does once, and the per-frame op is the browser's own rasteriser. A frame
+      budget of 8 ms on a 2019 Chromebook is the target; the suite measures Chromium on the build machine and
+      records, not asserts, the time (the number a teacher's machine gives is not known).
+    - Stroke under zoom: constant screen width (decided here; Devon's question 1 below is whether it should scale
+      on paper). The raster's stroke scaled, which is why 12× looked fat and fit looked thin.
+    - `maxScale` stays 12 and `minScale` 0.05: raising the ceiling is now free, but the overlays' SVG stroke
+      widths (region 2.5, line 3.5 stage px) and the grid's 1 px are stage-scaled and would thin to nothing or
+      thicken to bars; they are P3's known limit, not its work, and a `vector-effect: non-scaling-stroke` on those
+      SVGs is the one-line follow-up listed under "left out".
+    - Relief: drawn by `drawImage` of the 2048 px WebP into the land clip at the view's scale; its ceiling shows past
+      about 2× on the world preset (2048 px over 4000 stage units), which the Path 21 entry accepted. The multiply
+      composite is bounded by the clip, so sea stays the ocean colour, as `smoke-relief` checks.
+    - A `fills` entry naming a feature not on this crop is ignored (the path is empty); `choroKey` in the id is
+      computed exactly as today, so a shaded map's id is byte-identical before and after P3.
+    - Resize: `applyViewportSize()` already refits on resize; the canvas resizes with it and redraws once.
+    - A `vector:` id with a preset key the page no longer has (`findPreset` returns null): the empty state with
+      today's "isn't cached" sentence, and the raster record, if there is one, is used instead — the only case
+      the raster path serves a `vector:` id.
+    - Memory: one parsed file pair (under 1 MB of objects), four `Path2D`s, a viewport canvas (a 1,000 × 750
+      viewport at `dpr` 2 is 12 MiB) and the 150 px locator canvas, in place of two decoded rasters of 27 to 60 MiB
+      each. The 4000 px canvas exists only while an export or the series sheet draws it, as it does today for the
+      poster.
+  - *What P2 (dropped GeoJSON) may take from this, and what the viewer must tolerate from it.* `loadSource` takes a
+    `spec` with `bounds` and either a dataset name or a `{ whole, divided }` pair of parsed FeatureCollections, so a
+    dropped file is a source like any other once P2 has calibrated it. The viewer tolerates: a `Feature` or bare
+    geometry as well as a collection; `Polygon` and `MultiPolygon` drawn, `LineString`/`MultiLineString` stroked
+    as borders, `Point`s ignored (P2 may turn them into markers); a third coordinate dropped; an unclosed ring
+    closed; a ring under four positions dropped; longitudes outside ±180 unwrapped as now; and a file over a
+    **vertex budget of 250,000** (about 17 times `us-states`) refused by P2 with a message, not simplified by the
+    viewer. A missing `name` means no hit test and no shading for that feature, nothing else. None of this is
+    built in P3; the viewer's input shape is written so P2 does not need to change it.
+  - *What P4 and P5 get, and what stays theirs.* A per-slice annotation store (P4) changes nothing here: the base
+    map is drawn once per view whatever slice is shown, and a small-multiple sheet calls `drawBaseMap` once per
+    panel at that panel's size instead of rendering a 4000 px raster per panel and downscaling. Quiz memory (P5) does
+    not touch the renderer. The Wikimedia search, fetch, cache and "Recently used" card are untouched by P3 and the
+    network question stays P5's.
+  - *The tests that would prove it.* All in `Tools/blank-map-generator/test/`, each a `test:<name>` and a
+    `suites.json` line; the five existing `test:blank-map` suites and `test:timeline` and `test:geo-bee` must stay
+    green unchanged.
+    - `live-base.test.mjs` (pure Node, no port): `parseBaseMapId` round-trips every id `baseMapId` makes over the
+      nine presets × two styles × borders × relief × a `choroKey`, and returns `null` for `upload:` and Commons
+      ids; `drawExtent` at a fit view on each preset returns the preset's bounds and at 4× about the centre
+      returns a quarter of each span; `loadSource` against the vendored files (with a `Path2D` stub recording
+      calls) produces one `landFill` with the polar closure and one `landStroke` without, and the twice-emitted
+      Fiji and Chukotka rings.
+    - `smoke-live-parity.mjs` (port 8252): the heart. For each of the nine presets, outline and land, borders on
+      and off, relief on for the world: **(a) raster parity** — `renderBaseMapCanvas()` before and after P3 at
+      4000 px, pixel-identical (the suite keeps a copy of today's `renderBaseMapCanvas` body, as `export.test.mjs`
+      kept `duplex-print.js`'s functions); **(b) screen-to-paper parity** — at a fit view, a 3× view and a 12×
+      view each about a chosen stage point, the bytes of `liveBase.toCanvas()` equal the bytes of a canvas drawn by
+      `drawMapContent` at `dpr` 1 with every overlay empty, and at `PRINT_DPI` the export's pixel at each of six
+      probe points (ocean, land, a border, a shaded state, Fiji's far half, Antarctica's cap) has the colour the
+      screen pixel at the mapped position has; **(c) sharpness** — at 12× the border's cross-section is under 3 px
+      wide in the print canvas where the raster's was over 20; **(d) the id** of a shaded map is the string the
+      old path produced.
+    - `smoke-live-viewer.mjs` (port 8253): a saved project from the seed with a label, a marker, a region and a
+      line at stage coordinates opens on the live base at the same `stageToScreen` positions as under the raster
+      (the suite computes them from `project.view`); a share link of a shaded world project opens in a fresh
+      context with the map drawn and the legend's rows, with no IndexedDB record present and no request off-site;
+      a `vector:` project whose `bmg-maps` record was deleted opens drawn; the "isn't cached" sentence still
+      appears for a Commons id with no record; click-to-shade on the live map shades Texas as `smoke-hittest` does;
+      20 wheel events in one task produce one draw (a counter on `drawBaseMap`); no console errors; `a11yScan`
+      serious/critical clean with the viewport focused.
+    - `smoke-live-keys.mjs` (port 8254): Tab reaches the viewport; arrows pan by a tenth, Shift-arrows by half;
+      `+`/`-`/`0` zoom and fit; with a label selected the arrows nudge it and do not pan; the live region's text
+      after a pan and after a zoom matches `drawExtent` and says the zoom; the relief toggle and the readout are
+      unchanged.
+    - `smoke-live-print.mjs` (port 8255): Print Map at a 6× view through Chromium's PDF (`pdftoppm` where huginn
+      has it, structure only where not): the page has one image the size `getPhysicalPageInches` gave, and the
+      PDF's raster at the six probe points matches the screen's within JPEG tolerance; the 2 × 2 poster's tiles
+      from `printTiledPages` at that view join (the overlap strips are pixel-equal) and the border is crisp on
+      each; the worksheet's map panel through the live path equals the panel through the old path at its box
+      size within the raster's own downscale (the panel was already a resample).
+    - A row in `Tools/a11y-sweep/seeds.mjs` for a `vector:` project with annotations, so the a11y sweep's seeded
+      pass and `path7:next` reach the live map, and a `print-audit-prep.mjs` entry if the seed is not enough.
+    - Timing is logged by the parity suite (`performance.now()` around `drawBaseMap` at the three views, median of
+      30) and asserted only as a floor of 40 ms on the build machine.
+  - *Known limits and what is deliberately left out.* No simplification (measured as not worth having).
+    `maxScale` is not raised and the overlay SVG strokes are not made non-scaling. Labels are not re-tidied on
+    zoom, and `tidyOverlaps` still measures at the current zoom. No screen-reader list of the labels (the labels
+    are DOM already; a list is an a11y row of its own). No Wikimedia map gets a vector path. The raster records
+    already on teachers' disks are not deleted. `renderBaseMapCanvas`'s 4000 px default for 015 and the series
+    stays. No WebGL, no OffscreenCanvas, no worker: the counts do not need them. The locator is a canvas, not an
+    `<img>`, which `drawPngLocator` must read with `drawImage` of the canvas rather than `#locatorImg`.
+  - *Decided here, cheap to reverse.* Canvas over SVG. Constant screen stroke, 1 px on screen and in the export
+    (one option in `drawBaseMap` flips it to scaled). Live draw for any `vector:` id, cache record or none, and no
+    new records written. The viewer's own module `bmg-live.js` beside `bmg-vector.js`, not inside it. The readout's
+    100% unchanged. `role="group"` with `aria-roledescription` rather than `role="application"`, so a screen
+    reader keeps its own keys.
+  - *Left to Devon, listed and not answered.* (1) On paper, should a border be a constant hairline at every zoom
+    (what the screen will show) or thicken with zoom as the raster's did, which some teachers may read as "the
+    map I printed before"? (2) Should label and marker text grow with zoom now that the map under it is sharp at
+    12×, or stay fixed-size as today? (3) Past about 2× on the world preset the relief is visibly soft under crisp
+    borders: hide it above a zoom, keep it as accepted in Path 21, or render a larger relief on the Windows
+    machine? (4) Should the "Clear cached maps" button say that built-in maps no longer need the cache, and offer
+    to drop only the `vector:` records (a teacher's own uploads untouched)? (5) Keyboard panning makes the map
+    focusable for the first time: is a projected map ever driven by a student at the keyboard, which would make the
+    viewer student-facing and its promotion Devon's call? (6) The P5 network question stands exactly as before:
+    nothing in P3 fetches, and the Wikimedia path is neither improved nor removed by it.
+  - *Not verified.* No module exists and nothing ran in a browser; the frame cost is Node's projection time, not
+    Chromium's rasteriser, and no Chromebook was measured. The pixel-identity of the wrapped `renderBaseMapCanvas`
+    is a claim about drawing the same paths with the same state in the same order; the build proves it with (a).
+    The share-arrival finding (a `vector:` project arrives map-less) was read off `init()` and the share note, not
+    reproduced. The page's `?map=` payload was not measured.
 - **P4 — Time slices for annotations.** Per-slice labels/lines/regions with a
   scrubber; small-multiple print; a two-way, selective handoff with 015 (send
   selected labels *and* markers; come back from a timeline into a map project).
@@ -5530,19 +7438,30 @@ room and what was happening in class at the time.
 
 #### Major Features
 
-- **Roles built in** (P7). `022-lab-group-role-randomizer.html` assigns roles with
-  a recency memory; `027-novel-study-circles-manager.html` does the same for
-  reading circles. Three tools implement group-formation and two implement
-  role rotation. One engine should serve all of them. **Skip (2026-08-10)** —
-  explicitly out of scope for this round per the cross-tool consolidation
-  note; still open for a dedicated round.
-- **Group history across the year.** "Everyone has worked with everyone at
-  least once" is a real goal and the pair history already tracks the data
-  needed to visualize and drive it. **Skip (2026-08-10)** — out of scope for
-  this round; note that `pairHistory` currently only retains
-  `PAIR_MEMORY_WINDOW` (2) generations, so a real "across the year" view
-  would need a retention-policy decision first.
-- **Seating-aware grouping** (P7). Groups that are physically possible given
+- **Roles built in** (P7). **Done in this tool's own code (v277, AI-31-002).** Section 6 on the page takes a
+  list of roles, one per line (twelve at most); every Make Groups and Reshuffle then gives each group its
+  roles so that nobody holds a role again before the others in their group have had a turn (the cheapest
+  whole assignment, the Hungarian method, on the marginal cost of a student's count for a role, then the
+  role held longest ago, ties by chance; "no role", for a student past the end of the list, counts as a
+  turn too). The history is `roleHistory` in the class's own `gtg:data:<class>` (written only once roles are
+  used), undone by Undo, pruned to the roster, carried across a roster rename, and has its own Reset role
+  history (asks first). It shows on the cards, the table tents, the group sheets and Copy as Text. A
+  locked group keeps its students and rotates its roles. The pure half is `Tools/group-team-generator/gtg-memory.js`
+  (`GtgMemory`). **What is not done:** it does not import 022's or 027's role history, and neither reads
+  this one; "one engine for 022, 027 and 002" is still Path 13 P1/P2's, and P1's `rotateRoles` and
+  `history.*` will have to take `gtg-memory.js`'s shape (above) as the second implementation to port, not
+  a clean slate. 022's roles are still its own page's.
+- **Group history across the year.** **Done (v277, AI-31-002).** The retention-policy question this bullet
+  names was answered on 2026-08-13: `pairHistory` has kept every pair's count for the whole year since
+  then (bounded by C(roster, 2), cut when a name leaves), and the Pairing Grid shows it; this row's text
+  was stale. What was missing, and is now built: an opt-in **long memory** checkbox (card 2, saved as
+  `longMemory: true` only when ticked) that, after the page's own repair, swaps students between unlocked
+  groups so pairs who have worked together least get a turn (the sum over same-group pairs of count
+  squared, lowered while no keep-apart or keep-together rule is made worse, no recent repeat is made worse
+  unless that mends a broken rule, and no locked group moves); the explanation line says how many pairings
+  in the grouping are new; and the grid has a plain **Who has not yet worked together** list (per student,
+  how many classmates they have met and who they have not). Off, the page is byte for byte what it was.
+- - **Seating-aware grouping** (P7). Groups that are physically possible given
   the seating chart — four students who sit near each other — versus groups
   that require a room reshuffle. **Skip (2026-08-10)** — depends on Seating
   Chart Generator's data, out of scope for this round.
@@ -5550,6 +7469,9 @@ room and what was happening in class at the time.
   and a printable team contract, rather than a one-period grouping. **Skip
   (2026-08-10)** — out of scope for this round; a persistent multi-day team
   is a different data model than this tool's per-period generate/print flow.
+  **Not built in v277 (AI-31-002): the section does not say enough to build it
+  without a decision that is Devon's.** The questions, under Open Questions
+  below, come first.
 
 #### Moonshot / North Star
 
@@ -5566,7 +7488,28 @@ every tool on the site that forms groups, using the same memory.
   by the four tools that need it, or should one of them become the canonical
   tool and the others link to it?
 - Where should skill values live — here, or on the shared student record (P2)?
-  They're arguably the most sensitive thing the site would store.
+  They're arguably the most sensitive thing the site would store. (Path 3 P4
+  answered it: 002's skill ratings and pairing memory stay in 002's own
+  storage.)
+- **Project-team mode, for Devon (asked 2026-10-07, none answered):**
+  1. *Which project is it?* A team that lasts a few weeks, kept as named teams with the same students
+     until the teacher dissolves them: stored in this class's `gtg:data:<class>` (no new key), or in a key of
+     its own with a registry row and per-key student data flags?
+  2. *Who sees the task list?* A list the teacher prints and keeps, or one students tick off? The second is
+     student-facing, and nothing is student-facing right now, so the default is the first, and this question
+     is only whether the first is what is wanted.
+  3. *What does the contract say?* A teacher-written text with blanks, fixed clauses, or a template the teacher
+     edits (and does it save)? A signature line on paper only, or a record of who signed (that is student data
+     with its own key and backup)?
+  4. *Does a project team count in the pair memory?* A month of the same four is four hundred pair-sessions
+     if it is recorded per day, and one if it is recorded once. The default if no answer comes: once, when the
+     team is made.
+  5. *Is this Path 13 P2's "project teams" (the platform worker's, in `_shared/grouping.js`) or this tool's
+     alone?* 027 (reading circles) and 073 (science-fair trackers) already keep long-lived groups of their own.
+     One home for "a team that lasts" is a platform decision, and building a third here first would be the
+     fourth copy of the thing Path 13 exists to stop.
+  6. *Changes mid-project:* a student joins, leaves or is absent for a week: moved by hand, or by the
+     generator?
 
 #### Platform themes that matter here
 
@@ -5669,9 +7612,14 @@ work, and don't promote one without Devon saying so.
   (`scv_calendar_v1`) and/or a stored bell schedule so the timer can offer
   "rest of this period" as a one-click duration and know that today is a half
   day. See P7.
-- **Multi-timer board.** Two to four independent timers side by side on one
-  projected page — for stations, for differentiated group work, or for a lab
-  with staggered steps.
+- **Done (2026-10-07, v279) — Multi-timer board.** A header button, "Timer board",
+  swaps the single timer for two to four independent timers (label, length,
+  start / pause / resume / reset, finished state each), saved as `board` inside
+  `ct_prefs` and restored after a reload from wall-clock end times. The
+  single-timer view is the default and is pinned to the v276 page by a golden.
+  Not done: the mirror, the ambient strip and the phone remote still show and
+  drive the single timer only; there is no share link on this page; board timers
+  stop at zero (no overtime) and have no sounds of their own.
 - **Sound design that survives a school laptop.** Ship several vendored
   alert sounds (not just three tones), allow a locally-chosen audio file, and
   fall back to Web Audio synthesis when a file won't play.
@@ -7395,6 +9343,8 @@ work, and don't promote one without Devon saying so.
 - Should the question bank become its own tool (or a shared store) that this
   board, the escape room, the scavenger hunt, and the flashcard generator all
   read? That's the architectural version of the moonshot above.
+  **Decided and built (AI-14, v265): a shared store, `_shared/question-bank.js`, with this page as its
+  editor and no new tool.** The other tools reading it is Path 12 P2.
 
 #### Platform themes that matter here
 
@@ -8110,6 +10060,10 @@ work, and don't promote one without Devon saying so.
   the pattern `025-writing-prompt-generator.html`'s `wpg-rubric-link.js`
   established. See Open Questions below for exactly what does and doesn't
   make the trip.)*
+  *(Since v271 a list's cards also go to and come from the site's question bank,
+  `_shared/question-bank.js`: the Question bank card on this page. Path 12 P2,
+  increment 2, has it. That is one list feeding 030's boards, not the shared
+  vocabulary store this bullet asks for.)*
 - **Projected whole-class review mode.** Flip through the deck on the board —
   term, pause, definition — with shuffle and a "missed it" pile the teacher
   taps, producing a reteach list at the end. The existing quiz preview is
@@ -9797,10 +11751,6 @@ mean updating two different tools.
 
 #### Major Features
 
-- **Bulk import a custom bank** from a pasted list (problem | work | fix |
-  explain, tab- or `|`-separated), matching the bulk-import pattern already
-  proven in Staff Directory Builder and Review Game Board — typing one
-  problem at a time in the Add form doesn't scale past a handful.
 - **Fraction/decimal/percent overlap with the sibling backlog idea**:
   this backlog separately lists a Fraction&ndash;Decimal&ndash;Percent
   Conversion Drill Generator (building next in this round). Some of this
@@ -9823,9 +11773,9 @@ pull exactly the error type their class is struggling with, in the format
 that gets students actively hunting for the error rather than passively
 reading the reveal.** Category filters get the right problem in front of
 the right class; an interactive "click the wrong step" mode turns a
-one-click reveal into real error-analysis practice; and bulk import means
-a teacher's own hand-written trick questions can join the bank in minutes,
-not one form submission at a time.
+one-click reveal into real error-analysis practice; and bulk import (shipped,
+v257) means a teacher's own hand-written trick questions can join the bank in
+minutes, not one form submission at a time.
 
 #### Open Questions
 
@@ -9841,9 +11791,9 @@ not one form submission at a time.
 
 #### Platform themes that matter here
 
-- **P7 (cross-tool)** — bulk import (Staff Directory Builder, Review Game
-  Board) and the fraction/decimal/percent overlap with this round's next
-  tool are both direct opportunities.
+- **P7 (cross-tool)** — bulk import has shipped (v257: a paste box with a
+  preview, append or replace); the fraction/decimal/percent overlap with this
+  round's next tool is still an opportunity.
 - **P3 (share links)** — the "click the wrong step" interactive mode is
   this toolkit's on-screen-practice pattern applied to error analysis.
 - **P15 (first run)** — category filters and grade-band scoping both
@@ -9928,10 +11878,6 @@ an instructor physically present.
 - **Year-end archive/rollover**: snapshot the year's log into a dated export
   and start fresh, mirroring the archive pattern already built for Hall Pass
   Log and Behavior & Points Tracker's daily history.
-- **A real conference print packet**: one student's contact history plus a
-  blank note-taking area, formatted for handing to an admin or printing right
-  before a parent walks in — the actual "quick reference before a
-  conference" the backlog idea named.
 
 #### Moonshot / North Star
 
@@ -9960,9 +11906,9 @@ change?").
 - **P7 (cross-tool)** — shares roster storage with Name Picker/Class Roster
   Hub already; multiple sections would make it a first-class citizen of that
   shared-roster ecosystem instead of a one-off reader.
-- **P6 (print quality)** — the conference packet above is the whole point of
-  this tool's existence per the backlog description; it's currently just a
-  plain table.
+- **P6 (print quality)** — the conference packet shipped (v256): oldest first,
+  a summary line, the name on every sheet, a ruled notes area. It has not been
+  printed on paper.
 - **P15 (first run)** — outcome templates would remove almost all the typing
   from the first time someone uses this mid-class-period.
 
@@ -9972,11 +11918,15 @@ change?").
 
 #### Major Features
 
-- **A "run the circuit" live projector/timer mode**, following the
-  pattern already proven in Gallery Walk QR Codes: a rotation timer that
-  counts down per station and signals when it's time to rotate, so this
-  tool could drive the actual circuit live in addition to printing the
-  station signage beforehand.
+- **Done (v261) — "Run the circuit"**, a projector view: the station card large,
+  a countdown for work and rest, which station each group goes to next, Space / →
+  / R / M / F from the keyboard, a full-screen colour change at each rotation
+  (one fade, none under reduced motion, nothing flashes) and an optional Web Audio
+  beep that is off until turned on. Work, rest and group count are per circuit
+  (`run` in the saved circuit, written only once edited) and ride share links.
+  Left: the beep has not been heard on a speaker; times are one pair for the whole
+  circuit (no per-station times, so "10 reps" stations run the same clock); no
+  remote control from a phone as 021 has.
 - **Difficulty tiers per station** (e.g. beginner/standard/advanced rep
   counts for the same exercise) so one circuit card set serves a mixed-
   ability class without printing three separate circuits.
@@ -10054,10 +12004,11 @@ long" without a teacher needing to track it by hand.
   checklists can't both be kept ready at once.
 - **JSON export/import** for sharing a built checklist between teachers or
   across the same PLC/grade-level team.
-- **Roster-driven half-sheets**: pull a class roster (Name Picker/Class
-  Roster Hub's shared storage) and pre-fill the Author name on each
-  half-sheet instead of leaving it blank for hand-writing — saves a step for
-  every single student, every single time.
+- **Done (v260) — Roster-driven half-sheets**: a "Print for a class" card reads a saved
+  roster (`Roster.getRoster`, at print time, nothing stored) and prints one half sheet per
+  student with the author's name on it, in cut-stack order, with an optional reviewer (the
+  next name on the list). Blank copies print as before. Not done: choosing the reviewer by
+  hand (pairs), and keeping the chosen roster between visits.
 - **Digital fill-in mode** via a share link (this toolkit's P3 pattern) —
   peer feedback collected on a device instead of paper, useful for a 1:1
   classroom.
@@ -10078,10 +12029,9 @@ on screen is exactly what comes out of the printer.
   fits" (dynamically shrink font/spacing) or should the tool warn/refuse
   past some category+item count instead? The former is more robust; the
   latter is simpler to implement correctly.
-- Is roster-driven pre-fill worth the complexity of pairing students (who's
-  the author vs. the reviewer for each half-sheet), or is a blank
-  hand-written name line — which supports any pairing arrangement a teacher
-  chooses live — actually the more flexible default to keep?
+- *(Decided 2026-10-06, v260.)* Blank stays the default: "Print checklists" is unchanged.
+  The roster print names the author, and fills the reviewer only if asked, as the next name
+  round the list. Any other pairing is still written by hand on the blank sheet.
 
 #### Platform themes that matter here
 
@@ -10098,10 +12048,6 @@ on screen is exactly what comes out of the printer.
 
 #### Major Features
 
-- **Multiple named saved image sets**, matching the multi-save convention
-  used by most builder tools in this round — one flat image library per
-  browser right now, so a "family vocabulary" set and a "school vocabulary"
-  set can't coexist.
 - **A student-facing timer/response mode** via a share link (this
   toolkit's P3 pattern) — students see the image and prompt on their own
   device with a countdown, for a timed speaking-prep or writing-sprint
@@ -10209,9 +12155,7 @@ worth of novel studies stays organized instead of overwriting itself.
 
 #### Major Features
 
-- **Multiple named saved trackers** (e.g. separate science-fair cohorts
-  per class period), matching the multi-save convention used by most
-  builder/tracker tools in this round — right now one tracker per browser.
+- *(Shipped: multiple named saved trackers, v262 — see `HISTORY.md`.)*
 - **Student self-check-in via a share link** (this toolkit's P3 pattern):
   students mark their own milestones complete from their own device,
   instead of a teacher manually checking every box for every student.
@@ -10233,10 +12177,9 @@ turns a teacher-maintained spreadsheet into a shared, live status board.
   their own milestone done, but a teacher must confirm before it counts),
   or is trusting student self-report sufficient for a formative tracking
   tool like this?
-- Next round could pick up any of the Major Features above — multiple
-  named trackers and per-milestone notes are the two that don't require
-  new toolkit-wide infrastructure (P3 share-link plumbing, ICS export) and
-  so are probably the next-cheapest wins.
+- Next round could pick up any of the Major Features above. Multiple named
+  trackers and per-milestone notes are both shipped; the other two need
+  new toolkit-wide infrastructure (P3 share-link plumbing, ICS export).
 
 #### Platform themes that matter here
 
@@ -10297,12 +12240,11 @@ tools.
   else) or to a teacher-authored local page/note per hazard (simpler,
   fully local, but less authoritative)?
 - ~~Still open from the Quick Wins list: **reordering the queue**~~ —
-  **done, 2026-08-12** (see Status). Still open: **combining two symbols
-  on one label**, which
-  would need the queue item shape to hold an array of symbols instead of
-  one and touches the print-card rendering, the edit form, and the
-  duplicate logic all at once — sizeable enough to deserve its own round
-  rather than being folded in here.
+  **done, 2026-08-12** (see Status). ~~**Combining two symbols on one label**~~ —
+  **done, 2026-10-06 (v266, AI-31-074).** A label may carry an optional second
+  symbol, `symbol2`, beside the first: an optional field rather than an array, so a
+  saved sheet from before reads as it was. See `HISTORY.md`. Three or more symbols on
+  one label were not built and nobody has asked.
 
 #### Platform themes that matter here
 
@@ -10330,13 +12272,19 @@ tools.
   vs "Front Office"), the way Formula Sheet Builder and Rubric Builder
   support multiple named saves — right now it's a single flat list for the
   whole building.
-- **QR code per entry linking to an extension-dial or email**, printed next
-  to the row, for a phone-mounted or wall-mounted quick-reference version —
-  a natural pairing with this site's existing QR Code Generator/Gallery
-  Walk QR patterns.
-- **Wallet-card / lanyard-insert print layout** as an alternate to the
-  full-page table, for a personal quick-reference card instead of a
-  workroom wall poster.
+- **QR code per row on the full-page directory table**, for a wall-mounted
+  quick-reference version. (The wallet and lanyard cards below shipped with
+  a QR per person; the wall table still has none.)
+- **Shipped (2026-10-06, v267): wallet and lanyard cards.** A "Wallet cards &
+  lanyard cards" panel prints one CR80 card (3.375 × 2.125 in) per person,
+  on its side (wallet, 8 to a Letter page) or upright (lanyard, 9 to a page),
+  with dashed cut lines, name, role, room, extension and a QR that opens a
+  `tel:` or `mailto:` link. New optional `email` and `qr` fields per person
+  (absent until used); the sheet's rule and each person's own pick which link;
+  the editor says why a person has no code. Left: photo on the card, a vCard
+  QR (a contact card rather than a call or an email), business-card and 4 × 3
+  in badge-insert sizes, email in the CSV file, department grouping on the
+  cards.
 - **Import from the shared roster system** other tools use (Class Roster
   Hub's storage), if staff lists ever get maintained there — though staff
   and student rosters are different enough this may not be worth forcing
@@ -10365,12 +12313,12 @@ retyping into three different formats every August.
 
 #### Platform themes that matter here
 
-- **P6 (print quality)** — the wallet-card and department-grouped layouts
-  are print-format work on top of an already-functional table.
+- **P6 (print quality)** — the department-grouped layout and the wallet
+  cards (shipped) are print-format work on top of an already-functional table.
 - **P15 (first run)** — the bulk-paste importer already lowers first-run
   friction a lot; export/import would close the loop for reuse next year.
-- **P7 (cross-tool)** — QR-per-entry connects naturally to QR Code
-  Generator/Gallery Walk QR's existing batch-QR code.
+- **P7 (cross-tool)** — the wallet cards draw their QR through the shared
+  `qr-draw.js`; a QR per row on the wall table would use it the same way.
 
 ### 076 — Sub Note / Feedback Slip Generator
 
@@ -10378,10 +12326,11 @@ retyping into three different formats every August.
 
 #### Quick Wins
 
-- **Multiple named saved prompt sets** — a general sub note and a
-  specialized one (e.g. for a lab day, or a day with a fire drill scheduled)
-  could both be worth keeping ready, matching the multi-save convention
-  used elsewhere in this toolkit.
+- *(Shipped 2026-10-06, v272, AI-31-076: named saved slips: a Saved slip
+  chooser with + New (from a General, Lab day, Testing day or one-empty-prompt
+  starter), Duplicate, Rename and Delete, each slip holding its own prompts,
+  copy count, class or period and "call me" box. Nothing left from the row. See
+  HISTORY.)*
 
 #### Major Features
 
@@ -10443,10 +12392,10 @@ elsewhere in this toolkit.
 - **An expiration/review-date field** per student, since accommodations
   (like IEP/504 plans) are periodically reviewed and a stale card is worse
   than no card if a teacher trusts it without checking.
-- **A room-assignment view**: given a set of testing rooms/proctors, sort
-  students by which room their accommodations route them to (e.g. everyone
-  needing "separate setting" together), turning the card generator into an
-  actual testing-day logistics tool, not just a reference.
+- *(Shipped 2026-10-06, v270, AI-31-077: rooms, proctors, auto-route by
+  accommodation and printed proctor lists. Left: a review-date field, and
+  anything for a testing coordinator across several teachers' rosters. See
+  HISTORY.)*
 
 #### Moonshot / North Star
 
@@ -10464,10 +12413,10 @@ instead of quietly going stale.
   tool's explicitly lightweight, single-teacher, single-testing-day
   framing? A school-wide accommodations system with expiration tracking is
   a meaningfully bigger scope than "print a reference card."
-- Should room-assignment logic live here, or is that different enough in
-  audience (a testing coordinator, not a single classroom teacher) that it
-  deserves its own tool built on top of this one's data model instead of
-  growing this tool's scope?
+- Room-assignment logic lives here (decided 2026-10-06): it reads only this
+  tool's own roster and accommodation list, saved in the same key, for one
+  teacher's own students. A building-wide coordinator view across teachers'
+  rosters is still a different tool and is not started.
 - Next round: sort/filter by accommodation type is the only Quick Win left
   unbuilt — a small addition to the existing grid, not a new data shape,
   so it's probably a quick pickup whenever this tool's turn comes around
@@ -10492,15 +12441,19 @@ instead of quietly going stale.
 
 #### Quick Wins
 
-- **Multiple named saved charts**, matching Formula Sheet Builder's pattern
-  — right now there's exactly one chart per browser, so a "Grade 5 metric
-  only" chart and a "full reference" chart can't coexist.
-- **Reorder groups and lines** (up/down buttons, matching Formula Sheet
-  Builder's item reordering) — right now group and line order is fixed by
-  template/insertion order.
-- **JSON export/import**, the same convention Formula Sheet Builder and
-  Rubric Builder use, so a chart can be shared between two teachers' Ideas
-  Backlog-graduated setups.
+- **Shipped (v273, AI-31-078):** named saved charts (a chooser with + New,
+  Duplicate, Rename and Delete in the old `ucb_chart_v1` key, Store envelope at
+  version 2; the one old chart is the first save, "My chart"; the last chart
+  cannot be deleted); Up/Down buttons for groups and for lines inside a group,
+  announced in a live region, focus staying on the moved item, the printed
+  sheet following the order; and the share link, which now carries the open
+  chart only (its name and order too) and asks before it replaces the open
+  chart or, on Cancel, offers to add it as a new save. The link itself was
+  already there from #239 (Path 6 P3). Suite `test:unit-chart-saves`.
+- **Open a chart from a downloaded .json.** The share sheet's Download file row
+  writes one, and `Share.receiveFile()` reads one back; this page has no
+  "Open a chart file" button wired to it yet (015 and 039 are the examples).
+  Not built, and the rest of the row did not depend on it.
 
 #### Major Features
 
@@ -10559,9 +12512,13 @@ need rebuilding for sixth-grade customary-to-metric next period.
 
 #### Major Features
 
-- **Irregular verb call-out boxes** — a small side panel per poster
-  listing 3&ndash;5 common irregular verbs in that tense, since regular
-  patterns are only half of what a wall reference needs to be useful.
+- ~~**Irregular verb call-out boxes**~~ — shipped (v275, 2026-10-07, AI-31-079): an
+  optional box under the panels, per poster, listing three to five irregulars in one
+  of six tenses (Spanish present, preterite, imperfect, future; French present,
+  imperfect), chosen by the teacher and saved with the poster. The data is
+  `Tools/verb-conjugation-poster-generator/irregulars.js` and **has not been reviewed
+  by a language teacher** (HISTORY lists every verb). Still open: German and Italian
+  data, other tenses, a box per panel rather than one per poster.
 - **JSON export/import**, for sharing a built poster with another teacher
   on the same team, or backing one up before a school year ends.
 - **A "shrink to fit one page" print mode toggle** — right now font sizes
@@ -10593,9 +12550,9 @@ every year the same unit comes around.
   loaded like any other template) rather than a call-out box grafted onto
   a regular-pattern poster — simpler to build with the existing panel
   model and keeps a teacher's "irregulars" poster separately printable
-  from their "regular pattern" one. The Major Features item calling for a
-  *combined* poster (regular panels + a small irregular-verb side box on
-  the same page) is still open if that's the better pedagogical shape.
+  from their "regular pattern" one. The *combined* poster (regular panels + an
+  irregular-verb box on the same page) shipped as an opt-in box (v275), so both
+  shapes now exist.
 
 #### Platform themes that matter here
 
@@ -10679,12 +12636,10 @@ instead of just displaying icons that represent it.
 
 #### Major Features
 
-- **Two-step word problems** for the upper grade band — the backlog and
-  README both call this a grades 6&ndash;8 tool, and real 6&ndash;8 word
-  problems are frequently two operations chained together
-  ("buys 3 packs of 8, then gives away 5 — how many are left"). This is the
-  biggest gap between what's shipped and what a middle-school teacher will
-  actually want.
+- *(Shipped, v274: Problem type — One-step, Two-step or Mixed — with fifteen
+  chained-operation kinds for grades 6&ndash;8, `Tools/word-problem-warmup-generator/wp-twostep.js`.
+  What it does not do: grades 3&ndash;5 have no two-step problems, and a
+  teacher cannot choose which kinds a sheet draws from.)*
 - **Fractions/decimals/percents templates**, sharing the operand-generation
   approach this backlog separately lists for a
   fraction-decimal-percent drill generator — this tool's template structure
@@ -10707,10 +12662,10 @@ a make-up quiz is the exact same sheet as the one the rest of the class took.
 
 #### Open Questions
 
-- Should two-step problems be a separate operation category ("two-step") or
-  a flag any operation template can opt into? A separate category is
-  simpler to build; a flag reuses the existing per-operation number-range
-  logic more cleanly.
+- *(Decided 2026-10-07 and shipped: two-step is a Problem type next to the
+  operation boxes, not a flag on them. A two-step problem picks its own
+  operations, so the boxes apply to one-step problems only, and Mixed draws about
+  half of each. `HISTORY.md` has the reasoning.)*
 - Is the generic name/item pool (Maya, Ethan, stickers, marbles, &hellip;)
   worth making editable, or does a custom-template editor make that
   unnecessary since a teacher could just write items into their own

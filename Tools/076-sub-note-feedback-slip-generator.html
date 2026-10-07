@@ -67,6 +67,13 @@
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
 
+  .ws-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+  .ws-row label { margin: 0; }
+  .ws-row select {
+    font-family: inherit; font-size: .9rem; color: var(--ink); background: var(--card);
+    border: 1px solid var(--line-strong); border-radius: 6px; padding: .4rem .5rem; min-width: 12rem;
+  }
+  .save-msg { font-size: .82rem; color: var(--muted); margin: .5rem 0 0; min-height: 1.1em; }
   .prompt-row { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; }
   .prompt-row input { margin-bottom: 0; }
 
@@ -99,10 +106,28 @@
     </div>
     <div class="btnrow">
       <button type="button" class="secondary" id="shareBtn">&#128279; Share slip&hellip;</button>
+      <button type="button" class="secondary" id="previewBtn">Preview pages</button>
       <button class="secondary" id="printBtn">Print slips</button>
     </div>
   </div>
   <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
+
+  <div class="card">
+    <div class="ws-row">
+      <label for="setSelect">Saved slip</label>
+      <select id="setSelect"></select>
+      <button type="button" class="secondary" id="newSetBtn">+ New</button>
+      <button type="button" class="secondary" id="dupSetBtn">Duplicate</button>
+      <button type="button" class="secondary" id="renameSetBtn">Rename</button>
+      <button type="button" class="danger" id="deleteSetBtn">Delete</button>
+    </div>
+    <div class="ws-row" style="margin-top:.5rem;">
+      <label for="starterSelect">Start a new slip from</label>
+      <select id="starterSelect"></select>
+    </div>
+    <p class="hint" style="margin:.5rem 0 0;">Each saved slip keeps its own prompts, copy count, class or period and &ldquo;call me&rdquo; box, so a general slip, a lab-day slip and a testing-day slip can all be ready at once. + New uses the starter above; Duplicate copies the slip on screen.</p>
+    <p class="save-msg" id="setMsg" role="status" aria-live="polite"></p>
+  </div>
 
   <div class="card">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;max-width:24rem;">
@@ -139,31 +164,236 @@
   ];
 
   var els = {};
-  ['copyCount', 'classPeriod', 'promptsWrap', 'addPromptBtn', 'printBtn', 'printArea', 'urgencyToggle',
-   'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
+  ['copyCount', 'classPeriod', 'promptsWrap', 'addPromptBtn', 'printBtn', 'previewBtn', 'printArea', 'urgencyToggle',
+   'shareBtn', 'shareNote', 'setSelect', 'newSetBtn', 'dupSetBtn', 'renameSetBtn', 'deleteSetBtn', 'starterSelect', 'setMsg'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var FIRST_NAME = 'My slip';
+  var STARTERS = [
+    { id: 'general', name: 'General', prompts: DEFAULT_PROMPTS },
+    { id: 'lab', name: 'Lab day', prompts: [
+      'Did every group finish the lab, and where did groups get stuck?',
+      'Were there any safety concerns or spills?',
+      'Was all equipment returned and the stations cleaned up?',
+      'Any names or notes I should know for tomorrow?'
+    ] },
+    { id: 'testing', name: 'Testing day', prompts: [
+      'Did everyone finish the test in the time given?',
+      'Did anyone need an accommodation, a break or a different seat?',
+      'Any concerns about how the test went?',
+      'Any names or notes I should know for tomorrow?'
+    ] },
+    { id: 'blank', name: 'One empty prompt', prompts: [''] }
+  ];
 
   var state = { copyCount: 2, prompts: [], classPeriod: '', urgencyBox: true };
 
   function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
+  /* ---------- saved slips ----------
+     Several named slips, each holding everything one slip is made of: its
+     prompts, the copy count, the pre-filled class or period and the "call me"
+     box. The key is the one this tool has always used and is not renamed, so
+     Backup & Restore and the registry see nothing new.
+
+     On disk: { v: 2, sets: [{id, name, copyCount, classPeriod, urgencyBox,
+     prompts}], currentId, copyCount, classPeriod, urgencyBox, prompts }. The
+     last four are a copy of the slip on screen, written for a page from before
+     saved slips: it reads `prompts` at the top level, so it still opens the
+     slip a teacher was last using. It cannot know about the others; if an old
+     cached page is edited and saves, it writes the old shape over the key and
+     the other slips are gone, so reload a page that was open before this one.
+
+     Before saved slips the key held the bare {copyCount, classPeriod,
+     urgencyBox, prompts}. That becomes one slip called "My slip". An untouched
+     page writes nothing: until the first edit the slip on screen is a draft
+     that is not in the list. */
+  var DOC_VERSION = 2;
+  var doc = { list: [], currentId: null };
+  var draft = null;   // the slip on screen while nothing is saved yet
+
+  function makeSet(name, parts) {
+    parts = parts || {};
+    return {
+      id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: name,
+      copyCount: parts.copyCount,
+      classPeriod: parts.classPeriod,
+      urgencyBox: parts.urgencyBox,
+      prompts: parts.prompts
+    };
+  }
+  /** Fill in what an older or hand-made save lacks, the way the one-slip page did. */
+  function cleanParts(e) {
+    var count = parseInt(e.copyCount, 10);
+    return {
+      copyCount: isFinite(count) && count >= 1 ? count : 2,
+      classPeriod: e.classPeriod == null ? '' : String(e.classPeriod),
+      urgencyBox: typeof e.urgencyBox === 'boolean' ? e.urgencyBox : true, // added 2026-08; on for pre-existing saves
+      prompts: Array.isArray(e.prompts) ? e.prompts.filter(function (p) { return p && typeof p === 'object'; })
+        .map(function (p) { return { id: String(p.id || uid()), text: String(p.text == null ? '' : p.text) }; }) : []
+    };
+  }
+  function starterPrompts(starter) {
+    return starter.prompts.map(function (t) { return { id: uid(), text: t }; });
+  }
+  function readDoc(raw) {
+    var saved;
+    try { saved = JSON.parse(raw || 'null'); } catch (e) { return null; }
+    if (!saved || typeof saved !== 'object') return null;
+    if (saved.v >= DOC_VERSION && Array.isArray(saved.sets)) {
+      var seen = {};
+      var list = [];
+      saved.sets.forEach(function (e) {
+        if (!e || typeof e !== 'object' || typeof e.id !== 'string' || !e.id || seen[e.id]) return;
+        seen[e.id] = true;
+        var t = makeSet((typeof e.name === 'string' && e.name.trim()) ? e.name : FIRST_NAME, cleanParts(e));
+        t.id = e.id;
+        list.push(t);
+      });
+      if (!list.length) return null;
+      return { list: list, currentId: typeof saved.currentId === 'string' && seen[saved.currentId] ? saved.currentId : list[0].id };
+    }
+    if (Array.isArray(saved.prompts) && saved.prompts.length) {
+      var first = makeSet(FIRST_NAME, cleanParts(saved));
+      return { list: [first], currentId: first.id };
+    }
+    return null;
+  }
+
+  function currentSet() {
+    for (var i = 0; i < doc.list.length; i++) if (doc.list[i].id === doc.currentId) return doc.list[i];
+    return null;
+  }
+  function visibleSets() { return doc.list.length ? doc.list : (draft ? [draft] : []); }
+
   /** True when there was a saved slip here — which is what tells an arriving
       share link whether it is about to replace somebody's wording or the four
       default prompts every empty install shows. */
   function load() {
-    var had = false;
-    try {
-      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.prompts) && saved.prompts.length) { state = saved; had = true; }
-    } catch (e) { /* ignore */ }
-    if (!state.prompts.length) state.prompts = DEFAULT_PROMPTS.map(function (t) { return { id: uid(), text: t }; });
-    if (state.classPeriod == null) state.classPeriod = '';
-    if (typeof state.urgencyBox !== 'boolean') state.urgencyBox = true; // added 2026-08; on for pre-existing saves
-    return had;
+    var raw = null;
+    try { raw = localStorage.getItem(STORE_KEY); } catch (e) { /* blocked */ }
+    doc = readDoc(raw) || { list: [], currentId: null };
+    draft = null;
+    selectState();
+    return !!currentSet();
   }
+  /** Point `state` at the slip on screen, or at a fresh unsaved draft. */
+  function selectState() {
+    var cur = currentSet();
+    if (!cur) {
+      if (!draft) draft = makeSet(FIRST_NAME, { copyCount: 2, classPeriod: '', urgencyBox: true, prompts: starterPrompts(STARTERS[0]) });
+      cur = draft;
+    }
+    state = cur;
+  }
+  function write() {
+    var cur = currentSet() || state;
+    var out = {
+      v: DOC_VERSION, sets: doc.list, currentId: doc.currentId,
+      copyCount: cur.copyCount, classPeriod: cur.classPeriod, urgencyBox: cur.urgencyBox,
+      prompts: cur.prompts
+    };
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(out)); } catch (e) { /* storage full/blocked */ }
+  }
+  /** Writing is what turns a draft into the first saved slip. */
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+    if (state === draft && draft) {
+      doc.list.push(draft);
+      doc.currentId = draft.id;
+      draft = null;
+      renderSetSelect();
+    }
+    write();
   }
+
+  function say(text) { els.setMsg.textContent = text; }
+
+  function renderSetSelect() {
+    /* Built with the DOM, not markup: a slip's name is typed text. */
+    var sel = els.setSelect;
+    while (sel.firstChild) sel.removeChild(sel.firstChild);
+    visibleSets().forEach(function (e) {
+      var o = document.createElement('option');
+      o.value = e.id;
+      o.textContent = e.name;
+      o.selected = e === state;
+      sel.appendChild(o);
+    });
+    els.deleteSetBtn.disabled = visibleSets().length < 2;
+  }
+  function renderStarters() {
+    STARTERS.forEach(function (st) {
+      var o = document.createElement('option');
+      o.value = st.id;
+      o.textContent = st.name;
+      els.starterSelect.appendChild(o);
+    });
+  }
+  function showCurrent() {
+    selectState();
+    els.copyCount.value = state.copyCount;
+    els.classPeriod.value = state.classPeriod;
+    els.urgencyToggle.checked = state.urgencyBox;
+    renderSetSelect();
+    renderPrompts();
+  }
+  function switchTo(id) {
+    if (!doc.list.some(function (e) { return e.id === id; })) return;
+    doc.currentId = id;
+    write();
+    showCurrent();
+    say('Opened “' + state.name + '”.');
+  }
+  els.setSelect.addEventListener('change', function () { switchTo(els.setSelect.value); });
+
+  els.newSetBtn.addEventListener('click', function () {
+    var starter = STARTERS.filter(function (st) { return st.id === els.starterSelect.value; })[0] || STARTERS[0];
+    var suggested = starter.id === 'blank' ? 'New slip' : starter.name;
+    var name = window.prompt('Name for the new slip:', suggested);
+    if (name === null) return;
+    save();   // a draft on screen is filed first, so it is not lost
+    var e = makeSet(name.trim() || suggested, { copyCount: 2, classPeriod: '', urgencyBox: true, prompts: starterPrompts(starter) });
+    doc.list.push(e);
+    doc.currentId = e.id;
+    write();
+    showCurrent();
+    say('Started “' + e.name + '” from ' + starter.name.toLowerCase() + '.');
+  });
+  els.dupSetBtn.addEventListener('click', function () {
+    var name = window.prompt('Name for the duplicate:', state.name + ' (copy)');
+    if (name === null) return;
+    save();
+    var cur = currentSet();
+    var copy = makeSet(name.trim() || (cur.name + ' (copy)'), {
+      copyCount: cur.copyCount, classPeriod: cur.classPeriod, urgencyBox: cur.urgencyBox,
+      prompts: cur.prompts.map(function (p) { return { id: uid(), text: p.text }; })
+    });
+    doc.list.push(copy);
+    doc.currentId = copy.id;
+    write();
+    showCurrent();
+    say('Duplicated as “' + copy.name + '”.');
+  });
+  els.renameSetBtn.addEventListener('click', function () {
+    var name = window.prompt('Rename this slip:', state.name);
+    if (name === null) return;
+    state.name = name.trim() || state.name;
+    save();
+    renderSetSelect();
+    say('Renamed to “' + state.name + '”.');
+  });
+  els.deleteSetBtn.addEventListener('click', function () {
+    var cur = currentSet();
+    if (!cur || doc.list.length < 2) return;
+    if (!window.confirm('Delete “' + cur.name + '”, with its prompts and settings? This cannot be undone.')) return;
+    var idx = doc.list.indexOf(cur);
+    doc.list.splice(idx, 1);
+    doc.currentId = doc.list[Math.max(0, idx - 1)].id;
+    write();
+    showCurrent();
+    say('Deleted “' + cur.name + '”.');
+  });
 
   function renderPrompts() {
     els.promptsWrap.innerHTML = state.prompts.map(function (p) {
@@ -228,7 +458,7 @@
   // US Letter with half-inch margins, which is what print-kit.css's half sheet divides.
   PrintKit.setPage({ paper: 'letter', orientation: 'portrait', margin: '0.5in' });
 
-  els.printBtn.addEventListener('click', function () {
+  function renderSheet() {
     var count = Math.max(1, Math.min(20, state.copyCount || 2));
     var filledPrompts = state.prompts.filter(function (p) { return p.text.trim(); });
     // Two half-sheets per page fits comfortably up to ~5 short prompts; beyond that,
@@ -239,7 +469,18 @@
       // cut: the line goes under the upper slip of each pair, not along the foot of
       // the page. The kit draws it for half sheets only, so a one-up slip has none.
       { mode: 'blank', count: count, sheet: oneUp ? 'page' : 'half', cut: true, header: false, footer: false });
+  }
+  function printSheet() {
+    renderSheet();
     window.print();
+  }
+  els.printBtn.addEventListener('click', printSheet);
+
+  // The same sheet, cut into the pages it will print on (PrintKit.preview,
+  // Path 7 P5). It opens no print dialog; its own Print button does.
+  els.previewBtn.addEventListener('click', function () {
+    renderSheet();
+    PrintKit.preview({ trigger: els.previewBtn, onPrint: printSheet });
   });
 
   /* ---------- share a slip: _shared/share.js (Path 6 P3) ----------
@@ -250,10 +491,11 @@
      re-worded by the teacher who receives it. A department that agrees on
      one set of prompts is the case this is for.
 
-     This tool keeps ONE slip, so an arriving link has nowhere to land except
-     on top of what is here; it asks first, and only when `load()` found
-     something saved — the four default prompts an empty install shows are
-     not somebody's work. */
+     A link carries the slip on screen and only that one. It lands in the open
+     slip, on top of what is there, keeping that slip's name; it asks first,
+     naming the slip, and only when `load()` found something saved — the four
+     default prompts an empty install shows are not somebody's work. A link
+     made before saved slips opens exactly as it did. */
   var SHARE_PARAM = 'slip';
 
   function setShareNote(text, isError) {
@@ -263,13 +505,16 @@
   }
 
   Share.mount(els.shareBtn, {
-    getState: function () { return state; },
+    /* The slip on screen, in the shape a link has always carried: no id, no name. */
+    getState: function () {
+      return { copyCount: state.copyCount, prompts: state.prompts, classPeriod: state.classPeriod, urgencyBox: state.urgencyBox };
+    },
     param: SHARE_PARAM,
     tool: 'sub-note-feedback-slip',
     title: 'Share this slip',
     noun: 'this slip',
     filename: function () { return state.classPeriod ? 'sub note slip ' + state.classPeriod : 'sub note slip'; },
-    note: 'Every prompt travels, with the copies-to-print count, the pre-filled class or period and whether the “call me about this” box is on. Opening it replaces the slip on the receiving device, which is asked first.',
+    note: 'Only the slip on screen travels: every prompt, with the copies-to-print count, the pre-filled class or period and whether the “call me about this” box is on. Opening it replaces the open slip on the receiving device, which is asked first.',
     successMessage: 'Link copied. Opening it on another device offers this whole slip — every prompt, in this order — in place of whatever is there.',
     onMessage: function (text, isError) { setShareNote(text, isError); }
   });
@@ -300,11 +545,15 @@
       onError: function (message) { setShareNote(message, true); },
       onState: function (decoded) {
         var incoming = normalizeSlip(decoded);
-        if (hadSaved && !confirm('Replace the slip saved here with the shared one (' + incoming.prompts.length + ' prompts)?')) {
+        if (hadSaved && !confirm('Replace the slip saved here' + (doc.list.length > 1 ? ' (\u201c' + state.name + '\u201d)' : '') +
+            ' with the shared one (' + incoming.prompts.length + ' prompts)?')) {
           setShareNote('Kept the slip already on this device. The shared one was not loaded.');
           return false;
         }
-        state = incoming;
+        state.copyCount = incoming.copyCount;
+        state.classPeriod = incoming.classPeriod;
+        state.urgencyBox = incoming.urgencyBox;
+        state.prompts = incoming.prompts;
         save();
         setShareNote('Loaded a shared slip, ' + state.prompts.length + ' prompts' +
           (state.classPeriod ? ' for ' + state.classPeriod : '') + '.');
@@ -315,11 +564,9 @@
 
   /* ---------- boot ---------- */
   var hadSaved = load();
+  renderStarters();
   importSharedSlip(hadSaved);
-  els.copyCount.value = state.copyCount;
-  els.classPeriod.value = state.classPeriod;
-  els.urgencyToggle.checked = state.urgencyBox;
-  renderPrompts();
+  showCurrent();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

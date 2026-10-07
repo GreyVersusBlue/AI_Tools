@@ -32,7 +32,15 @@
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/export.js"></script>
 <script src="review-game-board/rgb-store.js"></script>
+<script src="../_shared/question-bank.js"></script>
+<!-- Questions another tool sends by link (Path 6 P4): share.js reads `?questions=`. -->
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/share.js"></script>
+<!-- Read-only seed sets for the bank (Path 12 P2): two tools' built-in questions, as data. -->
+<script src="cultural-trivia-card-generator/ctcg-bank.js"></script>
+<script src="geography-bee-quiz-generator/gbq-bank.js"></script>
 <script src="review-game-board/rgb-bank-store.js"></script>
+<script src="review-game-board/rgb-bank-editor.js"></script>
 <script src="../_shared/media-db.js"></script>
 <script src="review-game-board/rgb-image.js"></script>
 <script type="module">
@@ -156,6 +164,59 @@
   .bank-empty { padding: 1.2rem; color: var(--muted); text-align: center; font-size: .9rem; }
   .bank-pull-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .9rem; }
   .bank-pull-row input[type="text"] { width: 14rem; }
+  .bank-source-row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-bottom: .5rem; }
+  .bank-source-row label { margin: 0; }
+  .bank-copy-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .6rem; }
+  .bank-copy-row[hidden] { display: none; }
+  .arrival-card { border-color: var(--accent); }
+  .arrival-card[hidden] { display: none; }
+  .arrival-list {
+    list-style: none; margin: .6rem 0 0; padding: 0; max-height: 18rem; overflow: auto;
+    border: 1px solid var(--line-strong); border-radius: 8px; background: var(--card-2);
+  }
+  .arrival-list li { padding: .55rem .8rem; border-bottom: 1px solid var(--line); }
+  .arrival-list li:last-child { border-bottom: none; }
+  .arrival-list .bank-q { font-weight: 600; margin: 0 0 .2rem; }
+  .arrival-list .bank-a { color: var(--muted); margin: 0 0 .3rem; font-size: .88rem; }
+  .arrival-list li.have .bank-q { font-weight: 400; }
+  .arrival-actions { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-top: .9rem; }
+  .arrival-actions button[hidden] { display: none; }
+  /* ---- the bank's editor: choices, tags, a question open in the list, an import's preview ---- */
+  .bank-row-actions { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
+  .bank-entry.editing { grid-template-columns: 1fr; background: var(--card-2); }
+  .bank-choices { margin: .3rem 0 0; font-size: .85rem; color: var(--muted); }
+  .bank-choices b { color: var(--ink); }
+  .bank-tag.is-tag { border-style: dashed; }
+  .bank-tag.is-status { color: var(--ink); border-color: var(--accent); }
+  .bank-choices-field { border: 1px solid var(--line-strong); border-radius: 8px; padding: .6rem .8rem; margin: .8rem 0; min-width: 0; }
+  .bank-choices-field legend { font-weight: 600; font-size: .9rem; padding: 0 .3rem; }
+  .bank-choice-list { list-style: none; margin: .4rem 0; padding: 0; display: grid; gap: .4rem; }
+  .bank-choice-list[hidden] { display: none; }
+  .bank-choice-row { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+  .bank-choice-row input[type="radio"] { width: auto; margin: 0; }
+  .bank-choice-row input[type="text"] { flex: 1 1 12rem; min-width: 8rem; width: auto; }
+  .bank-tags-field { margin: .8rem 0; }
+  .bank-token-list { list-style: none; margin: .3rem 0; padding: 0; display: flex; gap: .35rem; flex-wrap: wrap; }
+  .bank-token-list[hidden] { display: none; }
+  .bank-token {
+    display: inline-flex; align-items: center; gap: .3rem; font-size: .82rem; font-weight: 600;
+    padding: .1rem .2rem .1rem .6rem; border-radius: 999px; background: var(--card); border: 1px solid var(--line-strong); color: var(--ink);
+  }
+  .bank-token-remove {
+    background: transparent; color: var(--ink); border: none; padding: 0 .35rem; min-width: 1.5rem; min-height: 1.5rem;
+    font-size: 1rem; line-height: 1; border-radius: 999px; cursor: pointer;
+  }
+  .bank-tag-entry { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+  .bank-tag-entry input[type="text"] { width: 14rem; }
+  .bank-edit-field { margin-bottom: .5rem; }
+  .bank-edit-field label { display: block; margin-bottom: .2rem; }
+  .bank-edit .import-row input[type="number"] { width: 6rem; }
+  .bank-edit .import-row input[type="text"] { width: 10rem; }
+  .bank-import-preview { margin-top: .8rem; border-top: 1px solid var(--line); padding-top: .8rem; }
+  .bank-import-preview[hidden] { display: none; }
+  .bank-import-preview h3 { margin: 0 0 .3rem; font-size: 1rem; }
+  .bank-import-more { color: var(--muted); font-size: .85rem; margin: .4rem 0 0; }
+  .bank-import-more[hidden] { display: none; }
 
   .category-block { border: 1px solid var(--line-strong); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .9rem; background: var(--card-2); }
   .category-block .cat-name { font-weight: 700; margin-bottom: .5rem; }
@@ -329,6 +390,17 @@
     </div>
   </div>
 
+  <div class="card arrival-card" id="arrivalCard" hidden>
+    <h2 id="arrivalTitle">Questions sent to you</h2>
+    <p class="hint" id="arrivalSummary"></p>
+    <ul class="arrival-list" id="arrivalList" tabindex="0" aria-labelledby="arrivalTitle"></ul>
+    <div class="arrival-actions">
+      <button type="button" id="arrivalAddBtn">Add to my bank</button>
+      <button type="button" class="secondary" id="arrivalDismissBtn">Don’t add</button>
+    </div>
+  </div>
+  <p class="import-status" id="arrivalStatus" role="status"></p>
+
   <div class="top-tabs" id="topTabs">
     <button type="button" class="top-tab-btn active" data-top="boards">Game Boards</button>
     <button type="button" class="top-tab-btn" data-top="bank">Question Bank</button>
@@ -451,8 +523,10 @@
           </select>
         </div>
       </div>
+      <div id="bankAddChoices"></div>
+      <div id="bankAddTags"></div>
       <button type="button" id="bankAddBtn">+ Add to bank</button>
-      <p class="import-status" id="bankAddStatus"></p>
+      <p class="import-status" id="bankAddStatus" role="status"></p>
     </div>
 
     <div class="card">
@@ -462,6 +536,11 @@
         into a board <b>copies</b> it in; editing or deleting it here afterward doesn't change a board that
         already pulled it.
       </p>
+      <div class="bank-source-row">
+        <label for="bankSource">Questions from</label>
+        <select id="bankSource"></select>
+      </div>
+      <p class="hint" id="bankSourceNote" hidden></p>
       <div class="bank-filter-row">
         <div class="field">
           <label for="bankFilterUnit">Unit</label>
@@ -486,13 +565,46 @@
         </div>
         <button type="button" class="secondary" id="bankClearFiltersBtn">Clear filters</button>
       </div>
-      <div class="bank-list" id="bankList"></div>
+      <div class="bank-list" id="bankList" tabindex="-1"></div>
+      <p class="import-status" id="bankListStatus" role="status"></p>
       <div class="bank-pull-row">
         <label for="bankPullCategory" style="margin:0;">Pull into category:</label>
         <input type="text" id="bankPullCategory" placeholder="e.g. Vocabulary" list="bankCategoryOptions">
         <datalist id="bankCategoryOptions"></datalist>
         <button type="button" id="bankPullBtn">Pull selected into board</button>
         <span class="import-status" id="bankPullStatus"></span>
+      </div>
+      <div class="bank-copy-row" id="bankCopyRow" hidden>
+        <button type="button" class="secondary" id="bankCopyBtn">Copy selected to my bank</button>
+        <span class="import-status" id="bankCopyStatus" role="status"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Share the bank</h2>
+      <p class="hint">
+        Save the whole bank as a file for a colleague or another computer, and bring one in. The bank file
+        keeps everything; the spreadsheet is for reading and editing in Excel or Sheets. A file you choose is
+        <b>shown first</b>: what it would add, what it would change and what it would leave out, and nothing is
+        stored until you press Add. Importing <b>adds to</b> this bank and never deletes from it: a question
+        already here is updated or skipped, so the same file can be imported twice.
+      </p>
+      <div class="import-row">
+        <button type="button" class="secondary" id="bankExportBtn">Save bank file</button>
+        <button type="button" class="secondary" id="bankExportSheetBtn">Save as spreadsheet</button>
+        <label for="bankImportFile" style="margin:0;">Import a bank file or spreadsheet:</label>
+        <input type="file" id="bankImportFile" accept=".json,.csv,.xlsx,.xls,application/json,text/csv">
+      </div>
+      <p class="import-status" id="bankFileStatus" role="status"></p>
+      <div class="bank-import-preview" id="bankImportPreview" hidden>
+        <h3 id="bankImportTitle">Check this import</h3>
+        <p class="hint" id="bankImportSummary"></p>
+        <ul class="arrival-list" id="bankImportList" tabindex="0" aria-labelledby="bankImportTitle"></ul>
+        <p class="bank-import-more" id="bankImportMore" hidden></p>
+        <div class="arrival-actions">
+          <button type="button" id="bankImportAddBtn">Add to my bank</button>
+          <button type="button" class="secondary" id="bankImportCancelBtn">Don’t import</button>
+        </div>
       </div>
     </div>
   </div>
@@ -561,7 +673,12 @@
    'boardsSection','bankSection',
    'bankQuestion','bankAnswer','bankPoints','bankUnit','bankStandard','bankDifficulty','bankAddBtn','bankAddStatus',
    'bankFilterUnit','bankFilterStandard','bankFilterDifficulty','bankFilterQuery','bankClearFiltersBtn','bankList',
-   'bankPullCategory','bankCategoryOptions','bankPullBtn','bankPullStatus'
+   'bankPullCategory','bankCategoryOptions','bankPullBtn','bankPullStatus',
+   'bankSource','bankSourceNote','bankCopyRow','bankCopyBtn','bankCopyStatus',
+   'bankExportBtn','bankExportSheetBtn','bankImportFile','bankFileStatus',
+   'bankAddChoices','bankAddTags','bankListStatus',
+   'bankImportPreview','bankImportSummary','bankImportList','bankImportMore','bankImportAddBtn','bankImportCancelBtn',
+   'arrivalCard','arrivalSummary','arrivalList','arrivalAddBtn','arrivalDismissBtn','arrivalStatus'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, categories:[{name, clues:[{points,question,answer,used}]}], teams:[{name,score}] }
@@ -714,6 +831,63 @@
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
+  }
+
+  /* Text a teacher did not type reaches this page since v269 (questions sent
+     by link, below), so what shows a question, a unit or a name is built from
+     elements with textContent, never from a string of markup. The three
+     places that still write markup (a clue's editor row and the two printed
+     sheets) put every value through escapeHtml(), the numbers included, and
+     `npm run check:inline-sinks` holds the page to that count. */
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  /** Replaces `select`'s (or a datalist's) options. An item is a text, which
+      is its value and its label, or { value, label }. */
+  function setOptions(select, items) {
+    select.textContent = '';
+    items.forEach(function (item) {
+      var opt = document.createElement('option');
+      var isText = typeof item === 'string';
+      opt.value = isText ? item : item.value;
+      if (isText || item.label) opt.textContent = isText ? item : item.label;
+      select.appendChild(opt);
+    });
+  }
+
+  /** A question as the bank list and the arrival list show it: the question,
+      the answer under it, and a row of tags (blank ones left out). */
+  function questionBody(into, question, answer, tags) {
+    into.appendChild(el('p', 'bank-q', question));
+    into.appendChild(el('p', 'bank-a', answer));
+    var row = el('div', 'bank-tags');
+    tags.forEach(function (t) { if (t) row.appendChild(el('span', 'bank-tag', t)); });
+    into.appendChild(row);
+    return into;
+  }
+
+  /** What a question holds beyond the bank list's four tags, added to a
+      body questionBody() made: each of its tags, after the ones there, and
+      its choices on a line under them with the right one marked. A question
+      with neither gets nothing added, so it is shown as it always was. */
+  function appendQuestionExtras(body, q) {
+    var row = body.querySelector('.bank-tags');
+    (q.tags || []).forEach(function (t) { row.appendChild(el('span', 'bank-tag is-tag', t)); });
+    var line = ReviewBankEditor.choicesLine(q);
+    if (line) body.appendChild(line);
+    return body;
+  }
+
+  /** The overlay's heading for a Daily Double: the banner, then `line`. */
+  function setDailyDoubleLine(line) {
+    els.overlayCatPoints.textContent = '';
+    els.overlayCatPoints.appendChild(document.createTextNode('🌟 DAILY DOUBLE! 🌟'));
+    els.overlayCatPoints.appendChild(document.createElement('br'));
+    els.overlayCatPoints.appendChild(document.createTextNode(line));
   }
 
   /* ---------- an image inside a clue -------------------------------------
@@ -1029,7 +1203,7 @@
     var row = document.createElement('div');
     row.className = 'clue-row';
     row.innerHTML =
-      '<input type="number" class="clue-points" placeholder="Pts" value="' + (points != null ? points : '') + '">' +
+      '<input type="number" class="clue-points" placeholder="Pts" value="' + escapeHtml(points != null ? points : '') + '">' +
       '<textarea class="clue-question" placeholder="Question">' + escapeHtml(question) + '</textarea>' +
       '<textarea class="clue-answer" placeholder="Answer">' + escapeHtml(answer) + '</textarea>' +
       '<button type="button" class="secondary small remove-clue">&times;</button>';
@@ -1351,7 +1525,7 @@
         // Audio can't print — flag that one exists so a teacher scanning a
         // paper answer key knows to play it from the device instead.
         var keyAudioNote = cl.audioId ? ' <em>(has an audio clip — play from the device)</em>' : '';
-        rows.push('<tr><td>' + escapeHtml(cat.name) + '</td><td>' + (cl.dailyDouble ? '★ ' : '') + cl.points +
+        rows.push('<tr><td>' + escapeHtml(cat.name) + '</td><td>' + (cl.dailyDouble ? '★ ' : '') + escapeHtml(cl.points) +
           '</td><td>' + escapeHtml(cl.question) + keyImg + keyAudioNote + '</td><td>' + escapeHtml(cl.answer) + '</td></tr>');
       });
     });
@@ -1395,7 +1569,7 @@
         var quizImg = quizSrc ? '<img class="quiz-img" src="' + escapeHtml(quizSrc) + '" alt="">' : '';
         var quizAudioNote = cl.audioId ? ' <em>(🔊 audio clip — play from the device)</em>' : '';
         items.push(
-          '<div class="quiz-item"><p class="quiz-q"><b>' + n + '.</b> [' + escapeHtml(cat.name) + ' &mdash; ' + cl.points + ' pts] ' +
+          '<div class="quiz-item"><p class="quiz-q"><b>' + n + '.</b> [' + escapeHtml(cat.name) + ' &mdash; ' + escapeHtml(cl.points) + ' pts] ' +
           escapeHtml(cl.question) + quizAudioNote + '</p>' + quizImg + '<div class="quiz-lines"><div class="quiz-line"></div><div class="quiz-line"></div></div></div>'
         );
       });
@@ -1769,20 +1943,20 @@
     els.overlay.classList.add('show');
 
     if (clue.dailyDouble) {
-      els.overlayCatPoints.innerHTML = '🌟 DAILY DOUBLE! 🌟<br>' + escapeHtml(cat.name);
+      setDailyDoubleLine(cat.name);
       els.overlayQuestion.style.display = 'none';
       // The picture is half the question — it stays hidden behind the wager
       // panel too, or the room reads the clue before anyone has bet on it.
       els.overlayImage.classList.remove('show');
       els.showAnswerBtn.style.display = 'none';
       els.closeNoAskBtn.style.display = '';
-      els.wagerTeamSelect.innerHTML = state.teams.map(function (t, i) {
-        return '<option value="' + i + '">' + escapeHtml(t.name) + ' (score: ' + t.score + ')</option>';
-      }).join('');
+      setOptions(els.wagerTeamSelect, state.teams.map(function (t, i) {
+        return { value: i, label: t.name + ' (score: ' + t.score + ')' };
+      }));
       els.wagerAmount.value = Math.max(clue.points * 2, 0);
       els.wagerPanel.style.display = '';
     } else {
-      els.overlayCatPoints.textContent = escapeHtml(cat.name) + ' — ' + clue.points;
+      els.overlayCatPoints.textContent = cat.name + ' — ' + clue.points;
       els.showAnswerBtn.style.display = '';
       els.closeNoAskBtn.style.display = '';
       showOverlayAudioFor(clue, overlayAudioToken);
@@ -1796,7 +1970,7 @@
     if (isNaN(amount) || amount < 0) amount = 0;
     dailyDoubleWager = { teamIndex: teamIdx, amount: amount };
     var team = state.teams[teamIdx];
-    els.overlayCatPoints.innerHTML = '🌟 DAILY DOUBLE! 🌟<br>' + escapeHtml(team.name) + ' wagers ' + amount;
+    setDailyDoubleLine(team.name + ' wagers ' + amount);
     els.wagerPanel.style.display = 'none';
     els.overlayQuestion.style.display = '';
     if (currentClue) {
@@ -2115,14 +2289,43 @@
      with the file it read. ---------------------------------------------- */
   var bankSelected = {}; // entry id -> true, while checked in the list below
 
+  /* ---------- seed sets (Path 12 P2) ----------
+     "Questions from" chooses what the list below shows: the teacher's own
+     bank, or a SEED SET, another tool's built-in questions published
+     read-only through QuestionBank.registerSet() (053's trivia and 062's
+     geography so far). A set is filtered and pulled into a board exactly as
+     the bank is, so a board can be played from one with nothing copied. It
+     has no Delete: its rows carry "Copy to my bank", which stores that one
+     question in the teacher's bank as their own. Until then nothing of a set
+     is in this browser's storage. */
+  function bankSource() { return els.bankSource.value; }
+
+  function populateBankSourceOptions() {
+    var current = els.bankSource.value, list = ReviewBankStore.sources();
+    els.bankSource.textContent = '';
+    list.forEach(function (src) {
+      var opt = document.createElement('option');
+      opt.value = src.id;
+      opt.textContent = QuestionBank.sourceLabel(src);          // one wording, 040's chooser has it too
+      els.bankSource.appendChild(opt);
+    });
+    els.bankSource.value = list.some(function (src) { return src.id === current; }) ? current : '';
+    var chosen = list.filter(function (src) { return src.id === els.bankSource.value; })[0];
+    var seed = !!chosen && chosen.readOnly;
+    els.bankSourceNote.hidden = !seed;
+    els.bankSourceNote.textContent = seed
+      ? 'These come with ' + chosen.source + ' and cannot be changed or deleted here. ' + chosen.note +
+        ' Pull them into a board as they are, or copy the ones you want into your own bank.'
+      : '';
+    els.bankCopyRow.hidden = !seed;
+  }
+
   function populateBankFilterOptions() {
-    var units = ReviewBankStore.distinctValues('unit');
-    var standards = ReviewBankStore.distinctValues('standard');
+    var units = ReviewBankStore.distinctValues('unit', bankSource());
+    var standards = ReviewBankStore.distinctValues('standard', bankSource());
     var uVal = els.bankFilterUnit.value, sVal = els.bankFilterStandard.value;
-    els.bankFilterUnit.innerHTML = '<option value="">All units</option>' +
-      units.map(function (u) { return '<option value="' + escapeHtml(u) + '">' + escapeHtml(u) + '</option>'; }).join('');
-    els.bankFilterStandard.innerHTML = '<option value="">All standards</option>' +
-      standards.map(function (s) { return '<option value="' + escapeHtml(s) + '">' + escapeHtml(s) + '</option>'; }).join('');
+    setOptions(els.bankFilterUnit, [{ value: '', label: 'All units' }].concat(units));
+    setOptions(els.bankFilterStandard, [{ value: '', label: 'All standards' }].concat(standards));
     els.bankFilterUnit.value = units.indexOf(uVal) !== -1 ? uVal : '';
     els.bankFilterStandard.value = standards.indexOf(sVal) !== -1 ? sVal : '';
   }
@@ -2132,7 +2335,7 @@
   function populateBankCategoryOptions() {
     var names = Array.prototype.slice.call(els.categoriesEditor.querySelectorAll('.cat-name-input'))
       .map(function (i) { return i.value.trim(); }).filter(Boolean);
-    els.bankCategoryOptions.innerHTML = names.map(function (n) { return '<option value="' + escapeHtml(n) + '">'; }).join('');
+    setOptions(els.bankCategoryOptions, names.map(function (n) { return { value: n, label: '' }; }));
   }
 
   function currentBankFilters() {
@@ -2144,16 +2347,85 @@
     };
   }
 
+  /* ---------- the editor (Path 12 P2, v276; rgb-bank-editor.js) ----------
+     A question holds more than this page showed until v273: choices and
+     tags. The add card takes both now, a row shows them, and a row of the
+     teacher's own bank has Edit, which opens the question WHERE IT STANDS
+     in the list. Save keeps the question's id, its place and its first
+     date and changes only the eight fields the form shows (the bank stamps
+     `updatedAt`); a Save that changes nothing writes nothing. A seed set's
+     row has no Edit: it is read-only, and Copy to my bank is how one of its
+     questions becomes the teacher's. */
+  var bankEdit = null;   // { id, form } while a question is open in the list
+  var addChoices = ReviewBankEditor.choicesField({ idBase: 'bankAdd', answer: els.bankAnswer });
+  var addTags = ReviewBankEditor.tagsField({ idBase: 'bankAdd', suggestions: bankTagsInUse });
+  els.bankAddChoices.appendChild(addChoices.node);
+  els.bankAddTags.appendChild(addTags.node);
+
+  function bankTagsInUse() { return QuestionBank.distinct(QuestionBank.list(), 'tags'); }
+
+  function bankListStatus(kind, message) {
+    els.bankListStatus.className = 'import-status' + (kind ? ' ' + kind : '');
+    els.bankListStatus.textContent = message;
+  }
+
+  /** Puts focus back on a row's Edit button after its form closes, or on
+      the list when the row is no longer in it. */
+  function focusBankRow(id) {
+    var rows = els.bankList.querySelectorAll('.bank-entry'), target = null;
+    Array.prototype.forEach.call(rows, function (row) {
+      if (row.getAttribute('data-id') === id) target = row.querySelector('.bank-edit-open');
+    });
+    (target || els.bankList).focus();
+  }
+
+  function closeBankEdit(message, kind) {
+    var id = bankEdit && bankEdit.id;
+    bankEdit = null;
+    renderBankList();
+    bankListStatus(kind || '', message || '');
+    if (id) focusBankRow(id);
+  }
+
+  function saveBankEdit(draft) {
+    if (!bankEdit) return;
+    var id = bankEdit.id, problems = ReviewBankEditor.problems(draft);
+    if (problems.length) { bankEdit.form.say('error', problems[0]); return; }
+    var original = QuestionBank.list().filter(function (q) { return q.id === id; })[0];
+    if (!original) { closeBankEdit('That question is no longer in your bank, so nothing was saved.', 'error'); return; }
+    if (!ReviewBankEditor.changed(original, draft)) { closeBankEdit('Nothing was changed.'); return; }
+    var res = QuestionBank.saveQuestion(ReviewBankEditor.questionOf(draft, id));
+    if (res.newer) { bankEdit.form.say('error', 'Your bank was saved by a newer version of this page. Reload the page, then edit again.'); return; }
+    if (!res.ok) { bankEdit.form.say('error', 'Your bank could not be saved, so the question is unchanged.'); return; }
+    closeBankEdit('Saved the question.', 'ok');
+    if (document.activeElement === els.bankList) {
+      bankListStatus('ok', 'Saved the question. It no longer matches the filters above, so it is not in this list.');
+    }
+  }
+
   function renderBankList() {
+    // A form that is open keeps what is typed in it through a re-render.
+    var draft = bankEdit ? bankEdit.form.read() : null;
+    populateBankSourceOptions();
     populateBankFilterOptions();
     populateBankCategoryOptions();
-    var entries = ReviewBankStore.filterEntries(currentBankFilters());
+    var source = bankSource(), isSeed = !!source;
+    if (isSeed) bankEdit = null;
+    var full = {};
+    QuestionBank.questionsOf(source).forEach(function (q) { full[q.id] = q; });
+    var all = ReviewBankStore.listEntries(source);
+    var entries = ReviewBankStore.filterEntries(currentBankFilters(), source);
+    if (bankEdit && !full[bankEdit.id]) bankEdit = null;      // deleted in another tab
+    if (bankEdit && !entries.some(function (e) { return e.id === bankEdit.id; })) {
+      // The open question stays in the list, where it stands, whatever the filters say.
+      entries = all.filter(function (e) { return e.id === bankEdit.id || entries.some(function (x) { return x.id === e.id; }); });
+    }
     els.bankList.innerHTML = '';
     if (!entries.length) {
       var empty = document.createElement('div');
       empty.className = 'bank-empty';
-      empty.textContent = ReviewBankStore.listEntries().length
-        ? 'No bank questions match these filters.'
+      empty.textContent = all.length
+        ? (isSeed ? 'No questions in this set match these filters.' : 'No bank questions match these filters.')
         : 'The bank is empty — add a question above to get started.';
       els.bankList.appendChild(empty);
       return;
@@ -2161,37 +2433,112 @@
     entries.forEach(function (entry) {
       var row = document.createElement('div');
       row.className = 'bank-entry';
+      row.setAttribute('data-id', entry.id);
+      var q = full[entry.id] || {};
+      if (bankEdit && bankEdit.id === entry.id) {
+        row.className = 'bank-entry editing';
+        bankEdit.form = ReviewBankEditor.editForm({
+          idBase: 'bankEdit', draft: draft || ReviewBankEditor.draftOf(q), title: entry.question,
+          suggestions: bankTagsInUse, onSave: saveBankEdit,
+          onCancel: function () { closeBankEdit('Nothing was changed.'); }
+        });
+        row.appendChild(bankEdit.form.node);
+        els.bankList.appendChild(row);
+        return;
+      }
       var checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = !!bankSelected[entry.id];
+      checkbox.setAttribute('aria-label', 'Select: ' + entry.question);
       checkbox.addEventListener('change', function () {
         if (checkbox.checked) bankSelected[entry.id] = true; else delete bankSelected[entry.id];
       });
-      var body = document.createElement('div');
-      var tags = [];
-      if (entry.unit) tags.push('<span class="bank-tag">' + escapeHtml(entry.unit) + '</span>');
-      if (entry.standard) tags.push('<span class="bank-tag">' + escapeHtml(entry.standard) + '</span>');
-      if (entry.difficulty) tags.push('<span class="bank-tag">' + escapeHtml(entry.difficulty) + '</span>');
-      tags.push('<span class="bank-tag">' + entry.points + ' pts</span>');
-      body.innerHTML =
-        '<p class="bank-q">' + escapeHtml(entry.question) + '</p>' +
-        '<p class="bank-a">' + escapeHtml(entry.answer) + '</p>' +
-        '<div class="bank-tags">' + tags.join('') + '</div>';
+      var tags = [entry.unit, entry.standard, entry.difficulty];
+      // A seed has no points of its own; "0 pts" on every row would be noise.
+      if (!isSeed || entry.points) tags.push(entry.points + ' pts');
+      var body = questionBody(document.createElement('div'), entry.question, entry.answer, tags);
+      appendQuestionExtras(body, q);
+      var actions = el('div', 'bank-row-actions');
       var del = document.createElement('button');
-      del.type = 'button'; del.className = 'danger small';
-      del.textContent = 'Delete';
-      del.addEventListener('click', function () {
-        if (!confirm('Delete this bank question? This can’t be undone.')) return;
-        ReviewBankStore.deleteEntry(entry.id);
-        delete bankSelected[entry.id];
-        renderBankList();
-      });
+      del.type = 'button';
+      if (isSeed) {
+        del.className = 'secondary small';
+        del.textContent = 'Copy to my bank';
+        del.setAttribute('aria-label', 'Copy to my bank: ' + entry.question);
+        del.addEventListener('click', function () { copySeedsToBank([entry.id]); });
+      } else {
+        var edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'secondary small bank-edit-open';
+        edit.textContent = 'Edit';
+        edit.setAttribute('aria-label', 'Edit: ' + entry.question);
+        edit.addEventListener('click', function () {
+          if (bankEdit) {
+            // Another question is open: its typed changes are not dropped without a word.
+            var openId = bankEdit.id, typed = bankEdit.form.read();
+            var open = QuestionBank.list().filter(function (x) { return x.id === openId; })[0];
+            if (open && typed && ReviewBankEditor.changed(open, typed) &&
+                !confirm('Another question is open with changes that are not saved. Leave it without saving?')) return;
+          }
+          bankEdit = { id: entry.id, form: { read: function () { return null; } } };
+          bankListStatus('', '');
+          renderBankList();
+          if (bankEdit) bankEdit.form.focus();
+        });
+        actions.appendChild(edit);
+        del.className = 'danger small';
+        del.textContent = 'Delete';
+        del.setAttribute('aria-label', 'Delete: ' + entry.question);
+        del.addEventListener('click', function () {
+          if (!confirm('Delete this bank question? This can’t be undone.')) return;
+          ReviewBankStore.deleteEntry(entry.id);
+          delete bankSelected[entry.id];
+          renderBankList();
+        });
+      }
+      actions.appendChild(del);
       row.appendChild(checkbox);
       row.appendChild(body);
-      row.appendChild(del);
+      row.appendChild(actions);
       els.bankList.appendChild(row);
     });
   }
+
+  /** Copies seed questions into the teacher's own bank and says what
+      happened. The list stays on the set, so several can be copied in a row. */
+  function copySeedsToBank(ids) {
+    var res = ReviewBankStore.copyToBank(ids), kind = 'ok', message;
+    if (res.newer) { kind = 'error'; message = 'Your bank was saved by a newer version of this page. Reload the page, then copy again.'; }
+    else if (!res.ok) { kind = 'error'; message = 'Your bank could not be saved, so nothing was copied.'; }
+    else {
+      var parts = [];
+      if (res.added) parts.push('Copied ' + countOf(res.added, 'question') + ' into your bank');
+      if (res.skipped + res.same) parts.push((res.added ? '' : 'Nothing copied: ') + countOf(res.skipped + res.same, 'question') + ' already in your bank');
+      message = (parts.join('; ') || 'Nothing was copied') + '.';
+      if (res.added) message += ' Choose "My question bank" above to see ' + (res.added === 1 ? 'it' : 'them') + '.';
+    }
+    bankSelected = {};
+    renderBankList();
+    els.bankCopyStatus.className = 'import-status ' + kind;
+    els.bankCopyStatus.textContent = message;
+  }
+
+  els.bankCopyBtn.addEventListener('click', function () {
+    var ids = Object.keys(bankSelected);
+    if (!ids.length) {
+      els.bankCopyStatus.className = 'import-status error';
+      els.bankCopyStatus.textContent = 'Select at least one question first.';
+      return;
+    }
+    copySeedsToBank(ids);
+  });
+
+  els.bankSource.addEventListener('change', function () {
+    bankSelected = {};                       // a selection never crosses from one source to another
+    els.bankCopyStatus.textContent = '';
+    els.bankPullStatus.textContent = '';
+    renderBankList();
+  });
 
   els.bankAddBtn.addEventListener('click', function () {
     var question = els.bankQuestion.value.trim();
@@ -2201,13 +2548,27 @@
       els.bankAddStatus.textContent = 'Add both a question and an answer.';
       return;
     }
-    ReviewBankStore.saveEntry({
-      question: question, answer: answer,
-      points: parseInt(els.bankPoints.value, 10) || 0,
-      unit: els.bankUnit.value.trim(), standard: els.bankStandard.value.trim(), difficulty: els.bankDifficulty.value
+    // The eight fields the form shows, and no id: the bank gives a new
+    // question its own. With no choices and no tags this stores exactly
+    // what the six-field form stored before v276.
+    var fresh = ReviewBankEditor.questionOf({
+      prompt: question, answer: answer, points: els.bankPoints.value,
+      unit: els.bankUnit.value, standard: els.bankStandard.value, difficulty: els.bankDifficulty.value,
+      tags: addTags.get(), choices: addChoices.raw()
     });
+    if (!fresh.choices.length) delete fresh.choices;
+    var added = QuestionBank.saveQuestion(fresh);
+    if (!added.ok) {
+      els.bankAddStatus.className = 'import-status error';
+      els.bankAddStatus.textContent = added.newer
+        ? 'Your bank was saved by a newer version of this page. Reload the page, then add again.'
+        : 'Your bank could not be saved, so the question was not added.';
+      return;
+    }
     els.bankQuestion.value = '';
     els.bankAnswer.value = '';
+    addChoices.set([]);
+    addTags.set([]);
     els.bankAddStatus.className = 'import-status ok';
     els.bankAddStatus.textContent = 'Added to the bank.';
     // Unit/standard/difficulty/points are left as-is on purpose — adding a
@@ -2257,8 +2618,9 @@
       els.bankPullStatus.textContent = 'Name the category to pull these into.';
       return;
     }
-    var all = ReviewBankStore.listEntries();
-    var entries = ids.map(function (id) { return all.filter(function (e) { return e.id === id; })[0]; }).filter(Boolean);
+    // From whichever source is showing: a seed set's question is pulled as
+    // it is, with nothing copied into the bank on the way.
+    var entries = ids.map(ReviewBankStore.findEntry).filter(Boolean);
 
     ensureBoardEditorOpen();
     Array.prototype.slice.call(document.querySelectorAll('.tab-btn')).forEach(function (b) { b.classList.remove('active'); });
@@ -2281,8 +2643,13 @@
     // A COPY, not a live reference: these become plain clue rows with no
     // trace of the bank entry they came from, so later editing or deleting
     // that bank entry can't change a board that already pulled it.
-    entries.forEach(function (entry) {
-      clueList.appendChild(newClueRow(entry.points, entry.question, entry.answer));
+    // A seed has no points of its own, and a column of 0s is not a board:
+    // its clues are given 100, 200, ... on from the rows already there. A
+    // question from the teacher's bank keeps the points it was given.
+    var rowsBefore = clueList.querySelectorAll('.clue-row').length;
+    entries.forEach(function (entry, i) {
+      var pts = QuestionBank.isSeedId(entry.id) && !entry.points ? (rowsBefore + i + 1) * 100 : entry.points;
+      clueList.appendChild(newClueRow(pts, entry.question, entry.answer));
     });
 
     bankSelected = {};
@@ -2291,6 +2658,152 @@
       ' into "' + category + '". Remember to click Save board.';
     showTopSection('boards');
     renderBankList();
+  });
+
+  /* ---------- the bank as a file (Path 12 P1) ----------
+     The bank is the site's shared one (_shared/question-bank.js); these three
+     controls save all of it and merge a file into it. The JSON file is
+     everything; the workbook is the columns a spreadsheet can show, written
+     by ExportKit, so text stays text and no cell is a formula. An import
+     never deletes: QuestionBank.importQuestions() says what it did. */
+  function bankFileStatus(kind, message) {
+    els.bankFileStatus.className = 'import-status' + (kind ? ' ' + kind : '');
+    els.bankFileStatus.textContent = message;
+  }
+  function countOf(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+  els.bankExportBtn.addEventListener('click', function () {
+    var all = QuestionBank.list();
+    if (!all.length) { bankFileStatus('error', 'The bank is empty, so there is nothing to save yet.'); return; }
+    ExportKit.download(QuestionBank.toJSON(all, { title: 'Question bank' }), 'question-bank.json', 'application/json');
+    bankFileStatus('ok', 'Saved ' + countOf(all.length, 'question') + ' as question-bank.json.');
+  });
+
+  els.bankExportSheetBtn.addEventListener('click', function () {
+    var all = QuestionBank.list();
+    if (!all.length) { bankFileStatus('error', 'The bank is empty, so there is nothing to save yet.'); return; }
+    loadXlsx().then(function () {
+      ExportKit.toXlsx({ name: 'Questions', rows: QuestionBank.toRows(all), widths: [48, 32, 8, 14, 14, 11, 20, 30, 24] }, { filename: 'question-bank.xlsx' });
+      bankFileStatus('ok', 'Saved ' + countOf(all.length, 'question') + ' as question-bank.xlsx. Pictures and sounds are only in the bank file.');
+    }).catch(function (err) { bankFileStatus('error', err.message); });
+  });
+
+  /* ---------- a preview before an import (Path 12 P2, v276) ----------
+     A file is SHOWN before it is stored: ReviewBankEditor.importPlan() runs
+     the bank's own merge() over a copy and says, question by question, what
+     Add would do: new, changes a question already here (and which fields),
+     already here, or left out and why. Nothing is stored until Add, and
+     then by QuestionBank.importQuestions(), the same rules over the same
+     questions; if the bank has changed since the preview was drawn (another
+     tab), Add draws it again and stores nothing that press. */
+  var pendingImport = null;   // { parsed, name, signature } while the preview is up
+
+  function closeImportPreview() {
+    pendingImport = null;
+    els.bankImportPreview.hidden = true;
+    els.bankImportList.textContent = '';
+  }
+
+  function renderImportPreview() {
+    var plan = ReviewBankEditor.importPlan(QuestionBank.list(), pendingImport.parsed);
+    pendingImport.signature = plan.signature;
+    els.bankImportList.textContent = '';
+    plan.rows.forEach(function (row) {
+      var q = row.question, tags = [q.unit, q.standard, q.difficulty];
+      if (q.points) tags.push(q.points + ' pts');
+      var item = el('li', row.status === 'new' || row.status === 'change' ? '' : 'have');
+      questionBody(item, q.prompt || '(no question)', q.answer || '(no answer)', tags);
+      appendQuestionExtras(item, q);
+      item.querySelector('.bank-tags').appendChild(el('span', 'bank-tag is-status', 'row ' + row.row + ': ' + ReviewBankEditor.statusLabel(row)));
+      els.bankImportList.appendChild(item);
+    });
+    els.bankImportMore.hidden = !plan.more;
+    els.bankImportMore.textContent = plan.more ? 'And ' + countOf(plan.more, 'more question') + ', counted above and not listed here.' : '';
+    els.bankImportSummary.textContent = ReviewBankEditor.planSentence(plan, pendingImport.name);
+    var will = plan.added + plan.updated;
+    els.bankImportAddBtn.hidden = !will;
+    els.bankImportAddBtn.textContent = plan.updated
+      ? 'Add ' + plan.added + ' and change ' + plan.updated + ' in my bank'
+      : 'Add ' + countOf(plan.added, 'question') + ' to my bank';
+    els.bankImportCancelBtn.textContent = will ? 'Don’t import' : 'Close';
+    els.bankImportPreview.hidden = false;
+    return plan;
+  }
+
+  /** What an import did, as the status line has always said it. */
+  function importResultMessage(res, rows) {
+    var parts = [countOf(res.added, 'question') + ' added'];
+    if (res.updated) parts.push(res.updated + ' updated');
+    if (res.same + res.skipped) parts.push((res.same + res.skipped) + ' already in the bank');
+    var message = parts.join(', ') + '.';
+    if (res.invalid.length) {
+      var where = res.invalid.slice(0, 8).map(function (bad) { return 'row ' + rows[bad.row - 1] + ' (' + bad.errors.join(', ') + ')'; });
+      message += ' Left out: ' + where.join('; ') + (res.invalid.length > 8 ? '; and ' + (res.invalid.length - 8) + ' more' : '') + '.';
+    }
+    return message;
+  }
+
+  /** A file that was read: refused in words, or shown. Stores nothing. */
+  function importBankQuestions(parsed, name) {
+    closeImportPreview();
+    if (parsed.error) { bankFileStatus('error', parsed.error); return; }
+    pendingImport = { parsed: parsed, name: name || 'That file', signature: '' };
+    var plan = renderImportPreview();
+    if (plan.added + plan.updated) {
+      bankFileStatus('', 'Read ' + pendingImport.name + '. Nothing is stored yet: check the list below, then press Add.');
+    } else {
+      // Nothing to store, so this is already the whole outcome.
+      var none = QuestionBank.merge(QuestionBank.list(), parsed.questions);
+      bankFileStatus(none.invalid.length ? 'error' : 'ok', importResultMessage(none, parsed.rows));
+    }
+  }
+
+  els.bankImportAddBtn.addEventListener('click', function () {
+    if (!pendingImport) return;
+    var shown = pendingImport.signature, parsed = pendingImport.parsed;
+    if (renderImportPreview().signature !== shown) {
+      bankFileStatus('error', 'Your bank has changed since this list was drawn, so nothing was stored. Check the list again, then press Add.');
+      return;
+    }
+    var res = QuestionBank.importQuestions(parsed.questions);
+    if (res.newer) { bankFileStatus('error', 'This bank was saved by a newer version of this page. Reload the page, then import again.'); return; }
+    if (!res.ok) { bankFileStatus('error', 'The bank could not be saved, so nothing was imported.'); return; }
+    closeImportPreview();
+    bankFileStatus(res.added || res.updated || !res.invalid.length ? 'ok' : 'error', importResultMessage(res, parsed.rows));
+    renderBankList();
+    els.bankImportFile.focus();
+  });
+
+  els.bankImportCancelBtn.addEventListener('click', function () {
+    var had = pendingImport && els.bankImportAddBtn.hidden === false;
+    closeImportPreview();
+    if (had) bankFileStatus('', 'Nothing was imported.');
+    els.bankImportFile.focus();
+  });
+
+  els.bankImportFile.addEventListener('change', function () {
+    var file = els.bankImportFile.files[0];
+    if (!file) return;
+    els.bankImportFile.value = '';
+    bankFileStatus('', 'Reading ' + file.name + '…');
+    var reader = new FileReader();
+    reader.onerror = function () { bankFileStatus('error', 'That file could not be read.'); };
+    if (/\.xlsx?$/i.test(file.name)) {
+      loadXlsx().then(function () {
+        reader.onload = function () {
+          try {
+            var wb = XLSX.read(new Uint8Array(reader.result), { type: 'array' });
+            // raw: false reads each cell as the text the spreadsheet shows.
+            var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+            importBankQuestions(QuestionBank.fromRows(rows), file.name);
+          } catch (err) { bankFileStatus('error', 'That spreadsheet could not be read.'); }
+        };
+        reader.readAsArrayBuffer(file);
+      }).catch(function (err) { bankFileStatus('error', err.message); });
+    } else {
+      reader.onload = function () { importBankQuestions(QuestionBank.parse(String(reader.result)), file.name); };
+      reader.readAsText(file);
+    }
   });
 
   /* ---------- clue images: IndexedDB behind every saved board (Path 4 P4) ----------
@@ -2378,6 +2891,96 @@
       .then(function () { imagesSettled = true; renderStorageLine(); });
   }
 
+  /* ---------- questions sent by link (Path 6 P4, 053 to 030) ----------
+     Another tool sends its teacher's questions here in a share link
+     (_shared/handoffs.js; `?questions=`, the shape under LINKS in
+     _shared/question-bank.js). QuestionBank.fromLink() is the only reader of
+     the link: it keeps eight fields as bounded text and drops everything
+     else, an id included, so a link cannot name or write over a question in
+     the bank. What arrived is SHOWN first, each question marked when the
+     bank already has it, and NOTHING IS STORED until "Add to my bank"; then
+     importQuestions() adds the new ones and skips the rest, so the same link
+     opened twice adds nothing the second time. Share.receive() clears the
+     parameter before any of this, so a reload does not ask again. */
+  var SHARE_PARAM = 'questions';
+  var SENDERS = { 'cultural-trivia-card-generator': 'the Cultural Trivia Card Generator' };
+  var arrival = null;   // fromLink()'s result, while the card is up
+
+  function arrivalStatus(kind, message) {
+    els.arrivalStatus.className = 'import-status' + (kind ? ' ' + kind : '');
+    els.arrivalStatus.textContent = message;
+  }
+
+  function closeArrival() {
+    arrival = null;
+    els.arrivalCard.hidden = true;
+    els.arrivalList.textContent = '';
+  }
+
+  function renderArrival() {
+    var bank = QuestionBank.list(), fresh = 0;
+    els.arrivalList.textContent = '';
+    arrival.questions.forEach(function (q) {
+      // One at a time, so a question the link itself repeats is marked too.
+      var step = QuestionBank.merge(bank, [q]);
+      var isNew = step.added === 1;
+      bank = step.questions;
+      if (isNew) fresh++;
+      var tags = [q.unit, q.standard, q.difficulty].concat(q.tags);
+      if (q.choices) tags.push(countOf(q.choices.length, 'choice'));
+      if (q.points) tags.push(q.points + ' pts');
+      if (!isNew) tags.push('already in your bank');
+      els.arrivalList.appendChild(questionBody(el('li', isNew ? '' : 'have'), q.prompt, q.answer, tags));
+    });
+    var total = arrival.questions.length, have = total - fresh;
+    var parts = [countOf(total, 'question') + ' arrived from ' + (SENDERS[arrival.from] || 'a shared link') + '.'];
+    if (!fresh) parts.push(total === 1 ? 'It is already in your bank, so there is nothing to add.' : 'All of them are already in your bank, so there is nothing to add.');
+    else if (have) parts.push(have + (have === 1 ? ' is' : ' are') + ' already in your bank and will be skipped.');
+    if (arrival.dropped) parts.push(countOf(arrival.dropped, 'row') + ' with no question or no answer ' + (arrival.dropped === 1 ? 'was' : 'were') + ' left out.');
+    if (arrival.over) parts.push('The link held ' + arrival.over + ' more than the ' + QuestionBank.LINK.questions + ' a link may bring; those were not read.');
+    if (fresh) parts.push('Nothing is added until you press the button.');
+    els.arrivalSummary.textContent = parts.join(' ');
+    els.arrivalAddBtn.hidden = !fresh;
+    els.arrivalAddBtn.textContent = 'Add ' + countOf(fresh, 'question') + ' to my bank';
+    els.arrivalDismissBtn.textContent = fresh ? 'Don’t add' : 'Close';
+    els.arrivalCard.hidden = false;
+  }
+
+  els.arrivalAddBtn.addEventListener('click', function () {
+    if (!arrival) return;
+    var res = QuestionBank.importQuestions(arrival.questions);
+    if (res.newer) { arrivalStatus('error', 'Your bank was saved by a newer version of this page. Reload the page, then open the link again.'); return; }
+    if (!res.ok) { arrivalStatus('error', 'Your bank could not be saved, so nothing was added.'); return; }
+    var message = 'Added ' + countOf(res.added, 'question') + ' to your bank';
+    if (res.skipped + res.same) message += '; ' + (res.skipped + res.same) + ' already there';
+    closeArrival();
+    arrivalStatus('ok', message + '. They are in the list below.');
+    showTopSection('bank');
+  });
+
+  els.arrivalDismissBtn.addEventListener('click', function () {
+    closeArrival();
+    arrivalStatus('', 'Nothing was added to your bank.');
+  });
+
+  function receiveSharedQuestions() {
+    return Share.receive({
+      param: SHARE_PARAM,
+      validate: QuestionBank.isLink,
+      onError: function (message) { arrivalStatus('error', message); },
+      onState: function (decoded) {
+        var got = QuestionBank.fromLink(decoded);
+        if (!got.questions.length) {
+          arrivalStatus('error', 'That link carried no questions.');
+          return false;
+        }
+        arrival = got;
+        renderArrival();
+        return true;
+      }
+    });
+  }
+
   /* ---------- boot ---------- */
   var current = ReviewBoardStore.getCurrentName();
   if (current && ReviewBoardStore.loadBoard(current)) {
@@ -2386,6 +2989,7 @@
     showSetup();
   }
   renderStorageLine();
+  receiveSharedQuestions();
   settleImages().then(function () { window.__clueImagesSettled = true; });
 })();
 </script>

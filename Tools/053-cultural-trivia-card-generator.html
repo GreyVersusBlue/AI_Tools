@@ -26,6 +26,11 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<!-- Path 6 P4: the sheet's "Send to Quiz / Review Game Board" row. handoffs.js
+     declares it; tool-registry.js is where it finds the receiver's page. -->
+<script src="../_shared/tool-registry.js"></script>
+<script src="../_shared/handoffs.js"></script>
+<script src="cultural-trivia-card-generator/ctcg-bank.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -222,40 +227,12 @@
   var CUSTOM_KEY = 'ctcg_custom_v1';
   var HIDDEN_KEY = 'ctcg_hidden_v1';
   var SETTINGS_KEY = 'ctcg_settings_v1';
-  var CAT_LABELS = { hispanic: 'Hispanic World', francophone: 'Francophone World', global: 'Global Culture' };
+  /* The built-in trivia is data in cultural-trivia-card-generator/ctcg-bank.js
+     (since v267), which also publishes it to the site's question bank as a
+     read-only set. items() is the list this script built itself before. */
+  var CAT_LABELS = window.CulturalTriviaBank.CAT_LABELS;
 
-  var BUILTIN = [
-    ['hispanic', 'What is the traditional Mexican celebration honoring deceased loved ones called?', 'Día de los Muertos'],
-    ['hispanic', 'What popular dance originated in Argentina?', 'Tango'],
-    ['hispanic', 'What is the most widely spoken language in Spain besides Spanish, spoken in Barcelona?', 'Catalan'],
-    ['hispanic', 'What ancient civilization built Machu Picchu?', 'The Inca'],
-    ['hispanic', 'What is a popular Spanish tradition where people eat 12 grapes at midnight on New Year’s Eve?', 'Las doce uvas de la suerte'],
-    ['hispanic', 'What is the name of the vibrant, multi-day festival held in Rio de Janeiro before Lent (in Brazil, Portuguese-speaking but culturally linked)?', 'Carnival (Carnaval)'],
-    ['hispanic', 'What staple food, made from corn, is common across Latin America and used for tacos, arepas, or tamales?', 'Corn/maize (masa)'],
-    ['hispanic', 'What is the name of Spain’s famous running-of-the-bulls festival city?', 'Pamplona'],
-    ['hispanic', 'What Caribbean country is known as the birthplace of salsa music?', 'Cuba'],
-    ['hispanic', 'What is the currency used in most of Spain and much of the EU?', 'The euro'],
-    ['francophone', 'What French holiday celebrates the storming of the Bastille?', 'Bastille Day (July 14th)'],
-    ['francophone', 'What famous art museum in Paris houses the Mona Lisa?', 'The Louvre'],
-    ['francophone', 'What African country was formerly called the Ivory Coast in English?', 'Côte d’Ivoire'],
-    ['francophone', 'What is the traditional French pastry shaped like a crescent?', 'Croissant'],
-    ['francophone', 'What Canadian province is predominantly French-speaking?', 'Quebec'],
-    ['francophone', 'What French-speaking Caribbean country shares an island with the Dominican Republic?', 'Haiti'],
-    ['francophone', 'What is the name of the famous cycling race held annually in France?', 'The Tour de France'],
-    ['francophone', 'What sweet, thin pancake is a popular French dessert?', 'Crêpe'],
-    ['francophone', 'What is the name of France’s national motto?', 'Liberté, égalité, fraternité'],
-    ['francophone', 'What African country has French and Kinyarwanda as official languages, known for its "thousand hills"?', 'Rwanda'],
-    ['global', 'What is the largest continent by land area?', 'Asia'],
-    ['global', 'What is the most widely spoken native language in the world?', 'Mandarin Chinese'],
-    ['global', 'What festival of lights is celebrated by Hindus, Sikhs, and Jains?', 'Diwali'],
-    ['global', 'What is the name of the Japanese art of paper folding?', 'Origami'],
-    ['global', 'What South Korean pop music genre became a global phenomenon?', 'K-pop'],
-    ['global', 'What is the name of the month-long fasting observance in Islam?', 'Ramadan'],
-    ['global', 'What country is credited with inventing pizza in its modern form?', 'Italy'],
-    ['global', 'What is the traditional Japanese tea ceremony called?', 'Chanoyu (or sadō)'],
-    ['global', 'What African nation is home to the ancient pyramids of Giza?', 'Egypt'],
-    ['global', 'What is the world’s most widely celebrated New Year based on the lunar calendar, especially in China?', 'Lunar New Year (Chinese New Year)']
-  ].map(function (row, i) { return { category: row[0], q: row[1], a: row[2], custom: false, id: 'b' + i }; });
+  var BUILTIN = window.CulturalTriviaBank.items();
 
   var els = {};
   ['categoryFilter', 'applyFilterBtn', 'displayNum', 'displayCat', 'displayQ', 'displayA', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',

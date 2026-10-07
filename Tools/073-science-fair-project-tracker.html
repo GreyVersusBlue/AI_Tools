@@ -65,6 +65,11 @@
   button.danger:hover { background: var(--err); color: var(--accent-ink); }
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .ws-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+  .ws-row label { margin: 0; }
+  .ws-row select { width: auto; flex: 1 1 14rem; min-width: 10rem; margin-bottom: 0; }
+  .ws-row button { padding: .4rem .75rem; font-size: .84rem; }
+  .save-msg { font-size: .8rem; color: var(--muted); min-height: 1.2em; margin: .5rem 0 0; }
 
   .milestone-row { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; }
   .milestone-row input[type="text"] { flex: 1; margin-bottom: 0; }
@@ -115,6 +120,19 @@
   <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="card">
+    <div class="ws-row">
+      <label for="trackerSelect">Saved tracker</label>
+      <select id="trackerSelect"></select>
+      <button type="button" class="secondary" id="newTrackerBtn">+ New</button>
+      <button type="button" class="secondary" id="dupTrackerBtn">Duplicate</button>
+      <button type="button" class="secondary" id="renameTrackerBtn">Rename</button>
+      <button type="button" class="danger" id="deleteTrackerBtn">Delete</button>
+    </div>
+    <p class="hint" style="margin:.5rem 0 0;">Each saved tracker keeps its own students, milestones, ticks and notes together, so one class period&rsquo;s science-fair cohort stays apart from the next.</p>
+    <p class="save-msg" id="trackerMsg" role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="card">
     <h2>Students</h2>
     <label for="rosterHubSelect">Load from a saved roster</label>
     <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.7rem;">
@@ -151,16 +169,18 @@
 (function () {
   'use strict';
   var STORE_KEY = 'sfpt_tracker_v1';
+  Store.configure({ toolName: 'Science Fair Project Tracker' });
 
   var DEFAULT_MILESTONES = ['Question & Hypothesis', 'Background Research', 'Materials & Procedure', 'Data Collection', 'Board Complete', 'Presentation Ready'];
 
   var els = {};
   ['rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'milestonesWrap', 'addMilestoneBtn', 'progressTable', 'printBtn', 'printArea', 'summaryBar', 'sortLeastComplete',
-   'shareBtn', 'shareNote'].forEach(function (id) {
+   'shareBtn', 'shareNote', 'trackerSelect', 'newTrackerBtn', 'dupTrackerBtn', 'renameTrackerBtn', 'deleteTrackerBtn', 'trackerMsg'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
   var state = { roster: [], milestones: [], done: {}, notes: {} };
+  var FIRST_NAME = 'My tracker';
   var sortLeastComplete = false;
 
   function todayIso() {
@@ -184,24 +204,192 @@
     return parts[1] + '/' + parts[2] + '/' + parts[0];
   }
 
+  /* ---------- saved trackers ----------
+     Several named trackers, each holding a whole cohort (students, milestones,
+     ticks, notes). The shape is the toolkit's multi-save one (041, 048, 063): a
+     list, a current pick and a name per entry, with Duplicate, Rename and
+     Delete beside a chooser. It lives in the key this tool has always used, in
+     Store's envelope at version 2: {list: [{id, name, roster, milestones, done,
+     notes}], currentId}. No new key, so Backup & Restore and the registry see
+     nothing new.
+
+     Version 0 is what this tool wrote before saves: the bare {roster,
+     milestones, done, notes} object. It becomes one tracker called "My
+     tracker", so what a teacher had comes back as the first save with nothing
+     lost. An untouched page writes nothing: until the first edit the tracker on
+     screen is a draft that is not in the list. An empty list is a real state,
+     and is what Delete leaves. */
+  var DOC_VERSION = 2;
+  var doc = { list: [], currentId: null };
+  var draft = null;   // the tracker on screen while nothing is saved yet
+
+  function defaultMilestones() {
+    return DEFAULT_MILESTONES.map(function (name) { return { id: uid(), name: name, due: '' }; });
+  }
+  function makeTracker(name, parts) {
+    parts = parts || {};
+    return {
+      id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: name,
+      roster: parts.roster || [],
+      milestones: parts.milestones && parts.milestones.length ? parts.milestones : defaultMilestones(),
+      done: parts.done || {},
+      notes: parts.notes || {}
+    };
+  }
+  function cleanParts(e) {
+    return {
+      roster: Array.isArray(e.roster) ? e.roster.filter(function (n) { return typeof n === 'string'; }) : [],
+      milestones: Array.isArray(e.milestones) ? e.milestones.filter(function (m) { return m && typeof m === 'object' && typeof m.id === 'string'; })
+        .map(function (m) { return { id: m.id, name: String(m.name == null ? '' : m.name), due: String(m.due || '') }; }) : [],
+      done: e.done && typeof e.done === 'object' ? e.done : {},
+      notes: e.notes && typeof e.notes === 'object' ? e.notes : {}
+    };
+  }
+  function normalizeDoc(d) {
+    if (!d || typeof d !== 'object' || !Array.isArray(d.list)) return null;
+    var seen = {};
+    var list = [];
+    d.list.forEach(function (e) {
+      if (!e || typeof e !== 'object' || typeof e.id !== 'string' || !e.id || seen[e.id]) return;
+      seen[e.id] = true;
+      var t = makeTracker((typeof e.name === 'string' && e.name.trim()) ? e.name : FIRST_NAME, cleanParts(e));
+      t.id = e.id;
+      list.push(t);
+    });
+    var cur = typeof d.currentId === 'string' && seen[d.currentId] ? d.currentId : (list.length ? list[0].id : null);
+    return { list: list, currentId: cur };
+  }
+  function migrateDoc(fromVersion, data) {
+    if (fromVersion >= DOC_VERSION) return normalizeDoc(data);
+    if (data && typeof data === 'object' && Array.isArray(data.roster)) {
+      var first = makeTracker(FIRST_NAME, cleanParts(data));
+      return { list: [first], currentId: first.id };
+    }
+    return null;
+  }
+
+  function currentTracker() {
+    for (var i = 0; i < doc.list.length; i++) if (doc.list[i].id === doc.currentId) return doc.list[i];
+    return null;
+  }
+
   /** True when there was a saved tracker here — which is what tells an
       arriving share link whether it is about to replace somebody's work. */
   function load() {
-    var had = false;
-    try {
-      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.roster)) { state = saved; had = true; }
-    } catch (e) { /* ignore */ }
-    if (!state.milestones || !state.milestones.length) {
-      state.milestones = DEFAULT_MILESTONES.map(function (name) { return { id: uid(), name: name, due: '' }; });
+    var d = Store.get(STORE_KEY, { version: DOC_VERSION, migrate: migrateDoc, 'default': null });
+    doc = normalizeDoc(d) || { list: [], currentId: null };
+    draft = null;
+    selectState();
+    return !!currentTracker();
+  }
+  /** Point `state` at the tracker on screen, or at a fresh unsaved draft. */
+  function selectState() {
+    var cur = currentTracker();
+    if (!cur) {
+      if (!draft) draft = makeTracker(FIRST_NAME);
+      cur = draft;
     }
-    if (!state.done) state.done = {};
-    if (!state.notes) state.notes = {}; // added 2026-08: per student-milestone status notes
-    return had;
+    state = cur;
   }
+  /** Writing is what turns a draft into the first saved tracker. */
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+    if (state === draft && draft) {
+      doc.list.push(draft);
+      doc.currentId = draft.id;
+      draft = null;
+      renderTrackerSelect();
+    }
+    Store.set(STORE_KEY, doc, { version: DOC_VERSION });
   }
+
+  function say(text) { els.trackerMsg.textContent = text; }
+
+  function renderTrackerSelect() {
+    /* Built with the DOM, not markup: a tracker's name is typed text. */
+    var sel = els.trackerSelect;
+    while (sel.firstChild) sel.removeChild(sel.firstChild);
+    if (!doc.list.length) {
+      var empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = 'No saved trackers yet \u2014 edit below to start one';
+      sel.appendChild(empty);
+    } else {
+      doc.list.forEach(function (e) {
+        var o = document.createElement('option');
+        o.value = e.id;
+        o.textContent = e.name;
+        o.selected = e.id === doc.currentId;
+        sel.appendChild(o);
+      });
+    }
+    var none = !doc.list.length;
+    els.trackerSelect.disabled = none;
+    els.dupTrackerBtn.disabled = none;
+    els.renameTrackerBtn.disabled = none;
+    els.deleteTrackerBtn.disabled = none;
+  }
+  function showCurrent() {
+    selectState();
+    els.rosterInput.value = state.roster.join('\n');
+    renderTrackerSelect();
+    renderMilestones();
+    renderTable();
+  }
+  function switchTo(id) {
+    if (!doc.list.some(function (e) { return e.id === id; })) return;
+    doc.currentId = id;
+    Store.set(STORE_KEY, doc, { version: DOC_VERSION });
+    showCurrent();
+    say('Opened “' + currentTracker().name + '”.');
+  }
+  els.trackerSelect.addEventListener('change', function () { switchTo(els.trackerSelect.value); });
+
+  els.newTrackerBtn.addEventListener('click', function () {
+    var name = window.prompt('Name for the new tracker:', 'New tracker');
+    if (name === null) return;
+    var e = makeTracker(name.trim() || 'New tracker');
+    doc.list.push(e);
+    doc.currentId = e.id;
+    Store.set(STORE_KEY, doc, { version: DOC_VERSION });
+    showCurrent();
+    say('Started “' + e.name + '”, empty.');
+  });
+  els.dupTrackerBtn.addEventListener('click', function () {
+    var cur = currentTracker();
+    if (!cur) return;
+    var name = window.prompt('Name for the duplicate:', cur.name + ' (copy)');
+    if (name === null) return;
+    var copy = JSON.parse(JSON.stringify(cur));
+    copy.id = makeTracker('').id;
+    copy.name = name.trim() || (cur.name + ' (copy)');
+    doc.list.push(copy);
+    doc.currentId = copy.id;
+    Store.set(STORE_KEY, doc, { version: DOC_VERSION });
+    showCurrent();
+    say('Duplicated as “' + copy.name + '”.');
+  });
+  els.renameTrackerBtn.addEventListener('click', function () {
+    var cur = currentTracker();
+    if (!cur) return;
+    var name = window.prompt('Rename this tracker:', cur.name);
+    if (name === null) return;
+    cur.name = name.trim() || cur.name;
+    Store.set(STORE_KEY, doc, { version: DOC_VERSION });
+    renderTrackerSelect();
+    say('Renamed to “' + cur.name + '”.');
+  });
+  els.deleteTrackerBtn.addEventListener('click', function () {
+    var cur = currentTracker();
+    if (!cur) return;
+    if (!window.confirm('Delete “' + cur.name + '”, with its students, milestones, ticks and notes? This cannot be undone.')) return;
+    var idx = doc.list.indexOf(cur);
+    doc.list.splice(idx, 1);
+    doc.currentId = doc.list.length ? doc.list[Math.max(0, idx - 1)].id : null;
+    Store.set(STORE_KEY, doc, { version: DOC_VERSION });
+    showCurrent();
+    say('Deleted “' + cur.name + '”.' + (doc.list.length ? '' : ' Nothing is saved now; edit to start a new tracker.'));
+  });
 
   function doneKey(name, milestoneId) { return name + '|' + milestoneId; }
 
@@ -366,7 +554,7 @@
         (missing.length ? listed : 'everyone done') + '</p>';
     }).join('');
     els.printArea.innerHTML = '<h1 class="print-title">Science Fair Progress Report</h1>' +
-      '<p class="print-sub">Printed ' + new Date().toLocaleDateString() + '</p>' +
+      '<p class="print-sub">' + (doc.list.length ? escapeHtml(state.name) + ' &middot; ' : '') + 'Printed ' + new Date().toLocaleDateString() + '</p>' +
       '<table class="print-table">' + head + rows + '</table>' +
       '<div class="missing-list"><h3>Still missing, by milestone</h3>' + missingHtml + '</div>';
     window.print();
@@ -442,7 +630,7 @@
       onError: function (message) { setShareNote(message, true); },
       onState: function (decoded) {
         var merged = mergeMilestoneIds(decoded.milestones);
-        if (hadSaved && !confirm('Replace the milestone list here with the shared one (' + merged.milestones.length +
+        if (hadSaved && !confirm('Replace the milestone list in \u201c' + state.name + '\u201d with the shared one (' + merged.milestones.length +
               ' milestones)? Your students and their ticks stay; ticks on milestones the shared list does not have will no longer show.')) {
           setShareNote('Kept the milestone list already on this device. The shared one was not loaded.');
           return false;
@@ -459,9 +647,7 @@
   /* ---------- boot ---------- */
   var hadSaved = load();
   importSharedMilestones(hadSaved);
-  els.rosterInput.value = state.roster.join('\n');
-  renderMilestones();
-  renderTable();
+  showCurrent();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

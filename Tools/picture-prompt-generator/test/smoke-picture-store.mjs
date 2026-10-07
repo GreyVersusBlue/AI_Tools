@@ -73,7 +73,13 @@ const browser = await launch();
 const page = await prepPage(browser, BASE, { width: 1280, height: 900 });
 page.on('dialog', d => d.accept().catch(() => {}));
 
-const list = p => p.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), KEY);
+/* The key is { v: 2, activeId, sets } since the picture sets; a list the
+   page has not rewritten yet is still the bare array. Either way: the active
+   set's pictures. */
+const list = p => p.evaluate(k => {
+  const v = JSON.parse(localStorage.getItem(k) || 'null');
+  return (Array.isArray(v) || v == null) ? v : (v.sets.find(s => s.id === v.activeId) || v.sets[0]).images;
+}, KEY);
 const rawList = p => p.evaluate(k => localStorage.getItem(k), KEY);
 const everyKey = p => p.evaluate(() => Object.keys(localStorage).filter(k => /^ppg_/.test(k)).map(k => localStorage.getItem(k)).join('\n'));
 const records = p => p.evaluate(() => window.MediaDB.store({ ns: 'ppg' }).list());
@@ -215,10 +221,11 @@ eq(await page.evaluate(() => window.__printLoaded), true, 'and every one had loa
 
 /* ── 5. a crafted src never reaches markup ────────────────────────────── */
 await page.evaluate(k => {
-  const l = JSON.parse(localStorage.getItem(k));
+  const d = JSON.parse(localStorage.getItem(k));
+  const l = Array.isArray(d) ? d : (d.sets.find(s => s.id === d.activeId) || d.sets[0]).images;
   l.push({ id: 'x" onmouseover="window.__pwned=3', src: 'data:image/png;base64,AAAA" onerror="window.__pwned=1', pinnedPrompts: {} });
   l.push({ id: 'iJs', src: 'javascript:window.__pwned=2', pinnedPrompts: {} });
-  localStorage.setItem(k, JSON.stringify(l));
+  localStorage.setItem(k, JSON.stringify(d));
 }, KEY);
 await load(page);
 eq(await page.evaluate(() => window.__pwned), undefined, 'a crafted src or id never ran');
@@ -282,9 +289,10 @@ ok([redRef, blueRef, smallRef].every(r => after6.includes(r.slice(4))), 'and eve
 
 /* ── 7. a picture with nothing behind it ──────────────────────────────── */
 await page.evaluate(([k, gone]) => {
-  const l = JSON.parse(localStorage.getItem(k));
+  const d = JSON.parse(localStorage.getItem(k));
+  const l = Array.isArray(d) ? d : (d.sets.find(s => s.id === d.activeId) || d.sets[0]).images;
   l[1].src = gone;
-  localStorage.setItem(k, JSON.stringify(l));
+  localStorage.setItem(k, JSON.stringify(d));
 }, [KEY, GONE]);
 await load(page);
 eq((await list(page))[1].src, GONE, 'the dangling reference is left in place (the picture might come back in a restore)');
@@ -315,9 +323,10 @@ await page.evaluate(() => document.documentElement.removeAttribute('data-theme')
 
 /* Every picture gone: the stage says why rather than asking for an upload. */
 await page.evaluate(([k, gone]) => {
-  const l = JSON.parse(localStorage.getItem(k));
+  const d = JSON.parse(localStorage.getItem(k));
+  const l = Array.isArray(d) ? d : (d.sets.find(s => s.id === d.activeId) || d.sets[0]).images;
   l.forEach(i => { i.src = gone; });
-  localStorage.setItem(k, JSON.stringify(l));
+  localStorage.setItem(k, JSON.stringify(d));
 }, [KEY, GONE]);
 await load(page);
 await page.click('#newImageBtn');

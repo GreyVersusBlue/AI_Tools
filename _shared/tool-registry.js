@@ -142,6 +142,10 @@
       writes: [
         'np_rosters',
         'crh_students_v1',
+        /* _shared/question-bank.js writes the site's question bank. It is
+           OWNED by Review Game Board's row, the page a teacher edits it on,
+           which is where a backup labels it. */
+        'gvb-question-bank',
       ],
     },
     {
@@ -554,7 +558,13 @@
         { p: 'gvb-bracket:', student: true, legacy: true },
         { p: 'gvb-bracket:data:', student: true },
       ],
+      /* The site's question bank (Path 12 P2): 020's academic-tournament
+         mode lists it and reads a match's questions from it, through
+         _shared/question-bank.js's peek(), which writes nothing. 020 never
+         writes the bank. The bank is OWNED by Review Game Board's row. */
       reads: [
+        'gvb-question-bank',
+        'gvb-review-board-bank:entries',
         'np_rosters',
       ],
     },
@@ -569,8 +579,19 @@
          content (maps, cartoons, primary sources), not student data. Pictures
          no saved board points at are deleted when the tool next loads. Clue
          audio is separate, in `rgb-audio` below; the bank holds no pictures. */
+      /* The question bank is the site's shared one since v265 (Path 12 P1):
+         `gvb-question-bank`, written by _shared/question-bank.js and edited
+         here. Teacher content, not student data. The bank's old key is read
+         by that module on every load and never written or removed, so a
+         backup made before v265 still restores. */
+      /* The page RECEIVES a link and makes none: `?questions=` carries
+         questions another tool sends for the bank (053's, through
+         _shared/handoffs.js). They are shown, and stored in the bank only
+         when the teacher says so; no key is written until then. */
+      share: { param: 'questions' },
       keys: [
-        { k: 'gvb-review-board-bank:entries' },
+        { k: 'gvb-question-bank' },
+        { k: 'gvb-review-board-bank:entries', legacy: true },
         { k: 'gvb-review-board:__probe' },
         { k: 'gvb-review-board:current' },
         { k: 'gvb-review-board:list' },
@@ -895,7 +916,16 @@
         { p: 'gvb-vocab-flashcards:', legacy: true },
         { p: 'gvb-vocab-flashcards:data:' },
       ],
+      /* The site's question bank (Path 12 P2): 040 lists it, through
+         _shared/question-bank.js's peek(), which writes nothing, and adds a
+         list's cards to it only when the teacher presses Add in the Send
+         review. The bank is OWNED by Review Game Board's row. */
+      writes: [
+        'gvb-question-bank',
+      ],
       reads: [
+        'gvb-question-bank',
+        'gvb-review-board-bank:entries',
         'gvb-vocab-conj:list',
       ],
       readPrefixes: [

@@ -35,6 +35,15 @@
 <script src="vocab-flashcard-generator/vfg-printables.js"></script>
 <script src="vocab-flashcard-generator/vfg-store.js"></script>
 <script src="vocab-flashcard-generator/vfg-conjdrill-link.js"></script>
+<!-- The site's question bank (Path 12 P2): a question is a card. This page reads
+     it with QuestionBank.peek(), which writes nothing, and stores a question
+     only from the Send review's Add button. The two data files are the
+     read-only seed sets, as on 030. vfg-bank.js is the mapping, both ways. -->
+<script src="vocab-flashcard-generator/vfg-bank.js"></script>
+<script src="../_shared/store.js"></script>
+<script src="../_shared/question-bank.js"></script>
+<script src="cultural-trivia-card-generator/ctcg-bank.js"></script>
+<script src="geography-bee-quiz-generator/gbq-bank.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -81,6 +90,21 @@
   .import-bridge { border-top: 1px dashed var(--line); margin-top: .8rem; padding-top: .7rem; }
 
   .share-note { margin: -.4rem 0 .9rem; }
+
+  /* The question bank card. Its rows are built from elements, text as text. */
+  .bank-list { max-height: 15rem; overflow: auto; border: 1px solid var(--line); border-radius: 6px; padding: .3rem .5rem; margin-bottom: .6rem; }
+  .bank-row { display: flex; align-items: flex-start; gap: .5rem; font-weight: 400; font-size: .85rem; margin: 0; padding: .25rem 0; cursor: pointer; }
+  .bank-row input { width: auto; margin: .2rem 0 0; flex: none; }
+  .bank-row .bank-a, .bank-row .bank-why { display: block; font-size: .8rem; }
+  .bank-row .bank-a { color: var(--muted); }
+  .bank-row .bank-why { color: var(--err); }
+  .bank-row.refused { cursor: default; }
+  .bank-empty { color: var(--muted); font-size: .85rem; margin: .4rem 0; }
+  .bank-status { font-size: .82rem; margin: .2rem 0 .6rem; }
+  .bank-status.error { color: var(--err); }
+  .bank-review { font-size: .85rem; }
+  .bank-review ul { margin: .3rem 0 .7rem; padding-left: 1.2rem; }
+  .bank-review li { margin-bottom: .2rem; overflow-wrap: anywhere; }
 
   .mode-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .9rem; }
   .mode-tab { flex: 1 1 30%; min-width: 6.2rem; text-align: center; padding: .5rem; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--card); cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--muted); }
@@ -314,6 +338,7 @@
             <option value="duplex">Double-sided (front page, then back page mirrored)</option>
             <option value="fold">Single-sided fold-over (no duplex printer needed)</option>
           </select>
+          <button type="button" class="secondary" id="previewAlignTestBtn" style="margin-top:.5rem;">Preview alignment test page</button>
           <button type="button" class="secondary" id="alignTestBtn" style="margin-top:.5rem;">Print alignment test page</button>
           <p class="hint" id="alignTestHint" style="margin:.3rem 0 0;">Prints one numbered front page and one numbered back page — no
             real cards yet — so you can check your printer's duplex settings before committing a whole class set.</p>
@@ -374,7 +399,37 @@
             and a separate answer key.</p>
         </div>
 
+        <button type="button" class="secondary" id="previewBtn">Preview pages</button>
         <button type="button" id="printBtn">Print</button>
+      </div>
+
+      <div class="card" id="bankCard">
+        <h2>Question bank</h2>
+        <p class="hint" style="margin-top:0;">The site&rsquo;s shared question bank is kept on <a href="030-review-game-board.html">Quiz / Review Game Board</a>. A question is a card: the question on the front, its answer on the back. Nothing is added to this list or to the bank until you press a button.</p>
+        <label for="bankSource">Questions from</label>
+        <select id="bankSource"></select>
+        <p class="hint" id="bankSourceNote" hidden></p>
+        <label for="bankUnit">Unit</label>
+        <select id="bankUnit"></select>
+        <div class="bank-list" id="bankList" role="group" aria-label="Questions to add as cards"></div>
+        <p class="hint" id="bankRefused" hidden></p>
+        <div class="row2">
+          <button type="button" class="secondary" id="bankAllBtn">Tick all shown</button>
+          <button type="button" id="bankAddBtn">Add ticked as cards</button>
+        </div>
+        <p class="bank-status" id="bankStatus" role="status"></p>
+        <div class="import-bridge">
+          <button type="button" class="secondary" id="bankSendBtn">Send this list to the question bank&hellip;</button>
+          <div class="bank-review" id="bankReview" hidden>
+            <p id="bankReviewText" style="margin:.2rem 0;"></p>
+            <ul id="bankReviewList"></ul>
+            <div class="row2">
+              <button type="button" id="bankConfirmBtn">Add to the bank</button>
+              <button type="button" class="secondary" id="bankCancelBtn">Cancel</button>
+            </div>
+          </div>
+          <p class="bank-status" id="bankSendStatus" role="status"></p>
+        </div>
       </div>
     </div>
 
@@ -404,8 +459,10 @@
    'flashOptions','wallOptions','quizOptions','wsOptions','cwOptions','bingoOptions','matchOptions',
    'flashCols','flashRows','cardSizePreset','flashLayout','wallPerPage','wallShowDef',
    'sortOrder','shuffleOrder','showGuides','bingoCount','bingoField',
-   'printBtn','alignTestBtn','alignTestHint','previewArea','previewNote','printNote','sheetView','printArea',
-   'shareBtn','shareNote'
+   'printBtn','previewBtn','alignTestBtn','previewAlignTestBtn','alignTestHint','previewArea','previewNote','printNote','sheetView','printArea',
+   'shareBtn','shareNote',
+   'bankCard','bankSource','bankSourceNote','bankUnit','bankList','bankRefused','bankAllBtn','bankAddBtn','bankStatus',
+   'bankSendBtn','bankReview','bankReviewText','bankReviewList','bankConfirmBtn','bankCancelBtn','bankSendStatus'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state: { name, words: "raw textarea text", mode, flashCols, flashRows, wallPerPage, wallShowDef,
@@ -1142,7 +1199,7 @@
     var panels = { flashcards: els.flashOptions, wordwall: els.wallOptions, quiz: els.quizOptions,
       wordsearch: els.wsOptions, crossword: els.cwOptions, bingo: els.bingoOptions, matching: els.matchOptions };
     Object.keys(panels).forEach(function (m) { panels[m].style.display = state.mode === m ? '' : 'none'; });
-    els.printBtn.style.display = state.mode === 'quiz' ? 'none' : '';
+    els.printBtn.style.display = els.previewBtn.style.display = state.mode === 'quiz' ? 'none' : '';
     syncAlignTestVisibility();
   }
 
@@ -1401,25 +1458,215 @@
   });
 
   var PRINTABLE_MODES = ['wordsearch', 'crossword', 'bingo', 'matching'];
-  els.printBtn.addEventListener('click', function () {
+  /** Builds the current mode's sheet; false, having said why, when there is
+      nothing to print. */
+  function renderSheet() {
     if (PRINTABLE_MODES.indexOf(state.mode) !== -1) {
       var res = generatePrintable(state.mode, currentItems());
-      if (!res.ok) { alert(printableFailureMessage(state.mode, res)); return; }
+      if (!res.ok) { alert(printableFailureMessage(state.mode, res)); return false; }
     } else if (!currentItems().length) {
       // Flashcards and word wall build no page from an empty list, and printing
       // an empty #printArea is a blank sheet of paper.
       alert('Add some words before printing. The list is empty.');
-      return;
+      return false;
     }
     buildPrintArea();
-    sheetBuilt = true;
-    window.print();
-  });
-  els.alignTestBtn.addEventListener('click', function () {
+    return true;
+  }
+  function renderAlignTest() {
     renderCardPages(els.printArea, alignSpec());
+    return true;
+  }
+  /** Prints the sheet that is in #printArea now, without building it again. */
+  function printBuilt() {
     sheetBuilt = true;
     window.print();
-  });
+  }
+  /* A Print button builds its sheet and prints it. The Preview button in front
+     of it builds the same sheet and shows it cut into its pages
+     (PrintKit.preview, Path 7 P5), opening no print dialog. The preview's own
+     Print prints the sheet that was looked at and does not build it again: a
+     word search, a crossword or a bingo set is drawn at random each time. */
+  function wirePreview(previewBtn, build, printBtn) {
+    printBtn.addEventListener('click', function () { if (build()) printBuilt(); });
+    previewBtn.addEventListener('click', function () {
+      if (build()) PrintKit.preview({ trigger: previewBtn, onPrint: printBuilt });
+    });
+  }
+  wirePreview(els.previewBtn, renderSheet, els.printBtn);
+  wirePreview(els.previewAlignTestBtn, renderAlignTest, els.alignTestBtn);
+
+  /* ---------- the site's question bank (Path 12 P2) ----------------------------
+     A question is a card and a card is a question; vfg-bank.js has the mapping
+     and its header says what cannot cross and why. Two directions, two buttons:
+
+     BANK TO THIS LIST. "Questions from" lists the teacher's bank and the
+     read-only seed sets (QuestionBank.sources(), the list 030's chooser shows,
+     worded by the same sourceLabel()). Ticked questions are added to the word
+     list as lines, exactly as typing them would, so the only thing stored is
+     this list, by the save every edit already makes. The bank is read with
+     peek(), which writes nothing, and a card keeps no tie to its question.
+
+     THIS LIST TO THE BANK. Send works out what it would do (VfgBank.plan(), the
+     bank's own merge()) and shows it; nothing is stored until Add, and then by
+     QuestionBank.importQuestions(). A card's id comes from the list's name and
+     its term, so the same list sent twice adds nothing.
+
+     Every text below reaches the page through textContent or a field's value;
+     a question is somebody's typing, possibly from a file or a link. */
+  var QB = window.QuestionBank;
+  var bankReady = !!QB && !!window.VfgBank && !!window.Store;
+  var bankTicked = {};            // question id -> true, in the source that is showing
+  var pendingSend = null;         // what the review showed: { name, words, questions }
+
+  function countOf(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+  function setBankStatus(node, text, isError) {
+    node.textContent = text || '';
+    node.classList.toggle('error', !!isError);
+  }
+  function setOptionList(select, options, keep) {
+    select.textContent = '';
+    options.forEach(function (o) {
+      var opt = document.createElement('option');
+      opt.value = o.value; opt.textContent = o.label;
+      select.appendChild(opt);
+    });
+    select.value = options.some(function (o) { return o.value === keep; }) ? keep : '';
+  }
+  function bankShown() {
+    return QB.filter(QB.questionsOf(els.bankSource.value, { peek: true }), { unit: els.bankUnit.value });
+  }
+
+  function renderBank() {
+    if (!bankReady) { els.bankCard.style.display = 'none'; return; }
+    var list = QB.sources({ peek: true });
+    setOptionList(els.bankSource, list.map(function (src) { return { value: src.id, label: QB.sourceLabel(src) }; }), els.bankSource.value);
+    var chosen = list.filter(function (src) { return src.id === els.bankSource.value; })[0];
+    var seed = !!chosen && chosen.readOnly;
+    els.bankSourceNote.hidden = !seed;
+    els.bankSourceNote.textContent = seed ? 'These come with ' + chosen.source + ' and are read-only. ' + chosen.note : '';
+
+    var all = QB.questionsOf(els.bankSource.value, { peek: true });
+    setOptionList(els.bankUnit, [{ value: '', label: 'All units' }].concat(QB.distinct(all, 'unit').map(function (u) { return { value: u, label: u }; })), els.bankUnit.value);
+
+    var shown = bankShown(), refused = 0;
+    els.bankList.textContent = '';
+    if (!shown.length) {
+      els.bankList.appendChild(el('p', 'bank-empty', all.length ? 'No questions in this unit.'
+        : (seed ? 'This set has no questions.' : 'Your question bank is empty. Add questions on Quiz / Review Game Board, or choose a built-in set above.')));
+    }
+    shown.forEach(function (q) {
+      var card = VfgBank.toCard(q);
+      var row = el('label', 'bank-row' + (card.ok ? '' : ' refused'));
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.disabled = !card.ok;
+      box.checked = card.ok && !!bankTicked[q.id];
+      box.addEventListener('change', function () { if (box.checked) bankTicked[q.id] = true; else delete bankTicked[q.id]; });
+      var words = el('span');
+      words.appendChild(el('span', 'bank-q', q.prompt || '(no question)'));
+      words.appendChild(el('span', 'bank-a', q.answer || '(no answer)'));
+      if (!card.ok) { refused++; words.appendChild(el('span', 'bank-why', 'Cannot be a card. ' + card.why)); }
+      row.appendChild(box);
+      row.appendChild(words);
+      els.bankList.appendChild(row);
+    });
+    els.bankRefused.hidden = !refused;
+    els.bankRefused.textContent = refused
+      ? countOf(refused, 'question') + ' shown here cannot become a card, and ' + (refused === 1 ? 'it says' : 'each says') + ' why. A card is one line of this list, with a front and a back.'
+      : '';
+  }
+
+  function cancelSend() {
+    pendingSend = null;
+    if (els.bankReview) els.bankReview.hidden = true;
+  }
+
+  if (bankReady) {
+    els.bankSource.addEventListener('change', function () { bankTicked = {}; els.bankUnit.value = ''; setBankStatus(els.bankStatus, ''); renderBank(); });
+    els.bankUnit.addEventListener('change', renderBank);
+    els.bankAllBtn.addEventListener('click', function () {
+      bankShown().forEach(function (q) { if (VfgBank.toCard(q).ok) bankTicked[q.id] = true; });
+      renderBank();
+    });
+    els.bankAddBtn.addEventListener('click', function () {
+      if (!state) return;
+      var picked = bankShown().filter(function (q) { return bankTicked[q.id]; });
+      if (!picked.length) { setBankStatus(els.bankStatus, 'Tick the questions to add first.', true); return; }
+      var made = VfgBank.cardsFrom(picked);
+      els.wordInput.value = VfgBank.appendLines(els.wordInput.value, made.cards.map(function (c) { return c.line; }));
+      bankTicked = {};
+      cancelSend();
+      renderPreview();
+      renderBank();
+      setBankStatus(els.bankStatus, 'Added ' + countOf(made.cards.length, 'card') + ' to “' + state.name + '”: the question on the front, the answer on the back.' +
+        (made.withChoices ? ' ' + countOf(made.withChoices, 'question') + ' had answer choices in the bank, which a card does not show.' : '') +
+        (made.withPicture ? ' ' + countOf(made.withPicture, 'question') + ' had a picture or sound in the bank, which did not come along.' : '') +
+        ' The bank itself was not changed.');
+    });
+
+    els.bankSendBtn.addEventListener('click', function () {
+      if (!state) return;
+      readFormIntoState();
+      cancelSend();
+      var items = VocabLayout.parseWordList(state.words);
+      var made = VfgBank.toQuestions(state.name, items);
+      if (!items.length) { setBankStatus(els.bankSendStatus, 'This list has no words yet, so there is nothing to send.', true); return; }
+      if (!made.questions.length) { setBankStatus(els.bankSendStatus, 'None of these cards has a definition, so there is no question to send.', true); return; }
+      var steps = VfgBank.plan(QB, QB.peek(), made.questions);
+      var by = { 'new': [], changed: [], same: [], there: [] };
+      steps.forEach(function (s) { by[s.what].push(s.question); });
+      var kept = by.same.length + by.there.length, writes = by['new'].length + by.changed.length;
+      var text = '“' + state.name + '” has ' + countOf(items.length, 'card') + '. ';
+      text += writes
+        ? 'Sending it would add ' + countOf(by['new'].length, 'question') + ' to your question bank: the term as the question, the definition as the answer, and “' + state.name + '” as the unit.'
+        : 'Every card with a definition is already in your question bank, so there is nothing to add.';
+      if (by.changed.length) text += ' ' + countOf(by.changed.length, 'question') + ' sent from this list before would be changed to the wording here.';
+      if (kept && writes) text += ' ' + countOf(kept, 'card') + (kept === 1 ? ' is' : ' are') + ' already there and would be left alone.';
+      if (made.skipped.length) text += ' ' + countOf(made.skipped.length, 'card') + ' with no definition would not be sent.';
+      if (writes) text += ' Nothing is stored until you press the button below.';
+      els.bankReviewText.textContent = text;
+      els.bankReviewList.textContent = '';
+      var lines = by['new'].map(function (q) { return q.prompt + ' — ' + q.answer; })
+        .concat(by.changed.map(function (q) { return q.prompt + ' — ' + q.answer + ' (changes the bank’s copy)'; }))
+        .concat(made.skipped.map(function (c) { return c.term + ' (not sent: no definition)'; }));
+      lines.slice(0, 8).forEach(function (line) { els.bankReviewList.appendChild(el('li', '', line)); });
+      if (lines.length > 8) els.bankReviewList.appendChild(el('li', '', 'and ' + (lines.length - 8) + ' more'));
+      els.bankConfirmBtn.style.display = writes ? '' : 'none';
+      els.bankConfirmBtn.textContent = by.changed.length
+        ? (by['new'].length ? 'Add ' + by['new'].length + ' and change ' + by.changed.length + ' in the bank' : 'Change ' + by.changed.length + ' in the bank')
+        : 'Add ' + countOf(by['new'].length, 'question') + ' to the bank';
+      els.bankCancelBtn.textContent = writes ? 'Cancel' : 'Close';
+      els.bankReview.hidden = false;
+      setBankStatus(els.bankSendStatus, '');
+      if (writes) pendingSend = { name: state.name, words: state.words, questions: made.questions };
+    });
+    els.bankCancelBtn.addEventListener('click', function () { cancelSend(); setBankStatus(els.bankSendStatus, ''); });
+    els.bankConfirmBtn.addEventListener('click', function () {
+      var send = pendingSend;
+      if (!send || !state) return;
+      cancelSend();
+      // What is stored is what was shown: a list edited since is sent again.
+      if (send.name !== state.name || send.words !== els.wordInput.value) {
+        setBankStatus(els.bankSendStatus, 'The list changed after that was worked out, so nothing was added. Press Send again.', true);
+        return;
+      }
+      var res = QB.importQuestions(send.questions);
+      if (!res.ok) {
+        setBankStatus(els.bankSendStatus, res.newer
+          ? 'The question bank on this device was saved by a newer version of this site, so nothing was added. Reload this page to update it, then send again.'
+          : (res.quota ? 'This browser’s storage is full, so nothing was added.' : 'This browser would not store the questions, so nothing was added.'), true);
+        return;
+      }
+      setBankStatus(els.bankSendStatus, 'Added ' + countOf(res.added, 'question') + ' to your question bank' +
+        (res.updated ? ' and changed ' + res.updated : '') + '. They are on Quiz / Review Game Board under the unit “' + send.name + '”.');
+      renderBank();
+    });
+    // Another tab changed the bank (030 is where it is edited).
+    window.addEventListener('storage', function (e) {
+      if (e.key === null || e.key === QB.KEY || e.key === QB.LEGACY_KEY) renderBank();
+    });
+  }
 
   /* ---------- boot ---------- */
   // A shared link wins over whatever list was last open: following one is an
@@ -1433,6 +1680,7 @@
       newList('New List');
     }
   }
+  renderBank();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

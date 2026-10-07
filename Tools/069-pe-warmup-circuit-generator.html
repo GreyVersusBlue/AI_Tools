@@ -26,6 +26,8 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="../_shared/stage.js"></script>
+<script src="pe-warmup-circuit-generator/circuit-run.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -108,6 +110,65 @@
   .card-preview .cp-name { font-weight: 700; font-size: 1.05rem; text-align: center; margin-bottom: .2rem; }
   .card-preview .cp-duration { text-align: center; font-size: .82rem; color: var(--accent-2); font-weight: 700; margin-bottom: .4rem; }
   .card-preview .cp-instructions { font-size: .78rem; color: var(--muted); text-align: center; }
+
+
+  /* [hidden] must win over the display the run stage and its parts set. */
+  [hidden] { display: none !important; }
+
+  input[type="number"] {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .7rem; }
+  .run-summary { font-size: .82rem; color: var(--muted); margin: 0 0 .6rem; }
+
+  /* ---------- Run the circuit: the projector view ----------
+     It is a projector, not a page, so its colours are its own and the same in
+     both themes: a dark field with white type for work, a bright field with
+     black type for the move, a second dark field on alternate rounds so a
+     circuit with no rest still changes the whole screen at every rotation.
+     The change is one fade per phase, never repeated, and none at all under
+     prefers-reduced-motion — nothing on this view flashes. */
+  :root {
+    --run-work-a: #0b4a2c; --run-work-b: #0b3f66; --run-move: #ffd54a;
+    --run-done: #1f3550; --run-text: #ffffff; --run-text-move: #161616;
+  }
+  .run-stage {
+    display: flex; flex-direction: column; min-height: 100vh; padding: 2vmin 3vmin;
+    background: var(--run-work-a); color: var(--run-text);
+    font-family: "Segoe UI", system-ui, sans-serif; transition: background-color .6s ease;
+  }
+  .run-stage[data-phase="work"][data-parity="odd"] { background: var(--run-work-b); }
+  .run-stage[data-phase="rest"] { background: var(--run-move); color: var(--run-text-move); }
+  .run-stage[data-phase="done"] { background: var(--run-done); }
+  .run-stage.is-fullscreen { height: 100vh; height: 100dvh; overflow: hidden; }
+  @media (prefers-reduced-motion: reduce) { .run-stage { transition: none; } }
+  .run-top { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-size: clamp(1rem, 2.6vmin, 2rem); font-weight: 600; }
+  .run-phase { text-align: center; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: clamp(1.6rem, 7vmin, 5rem); margin: 1vmin 0 0; }
+  .run-time { text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; font-size: clamp(5rem, 26vmin, 22rem); line-height: 1; margin: 0; }
+  .run-tiles { display: flex; flex-wrap: wrap; gap: 1.6vmin; justify-content: center; align-items: stretch; flex: 1 1 auto; min-height: 0; overflow: hidden; margin: 2vmin 0; }
+  .run-tile { flex: 1 1 18vmin; max-width: 100%; background: rgba(255,255,255,.14); border-radius: 2vmin; padding: 1.6vmin 2vmin; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+  .run-stage[data-phase="rest"] .run-tile { background: rgba(0,0,0,.1); }
+  .run-tile .rt-group { font-weight: 800; font-size: clamp(1.1rem, 3.4vmin, 3rem); }
+  .run-tile .rt-num { font-size: clamp(.9rem, 2.2vmin, 1.6rem); opacity: .85; text-transform: uppercase; letter-spacing: .06em; }
+  .run-tile .rt-emoji { font-size: clamp(2rem, 8vmin, 6rem); line-height: 1.1; }
+  .run-tile .rt-name { font-weight: 800; font-size: clamp(1.4rem, 5vmin, 4rem); line-height: 1.15; }
+  .run-tile .rt-dur { font-weight: 700; font-size: clamp(1.1rem, 3.4vmin, 2.6rem); }
+  .run-tile .rt-how { font-size: clamp(.95rem, 2.6vmin, 2rem); margin-top: .6vmin; }
+  .run-tiles:not(.solo) .rt-how { display: none; }
+  .run-tiles.solo .run-tile { flex-basis: 70vmin; max-width: 90vmin; }
+  .run-tiles.solo .rt-name { font-size: clamp(2rem, 8vmin, 6rem); }
+  .run-tiles.solo .rt-emoji { font-size: clamp(3rem, 12vmin, 9rem); }
+  .run-tiles.solo .rt-how { font-size: clamp(1.1rem, 3.2vmin, 2.4rem); }
+  .run-next { text-align: center; font-size: clamp(1rem, 2.8vmin, 2.2rem); font-weight: 600; min-height: 1.4em; margin: 0 0 1vmin; }
+  .run-controls { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; align-items: center; }
+  .run-controls button { font-size: clamp(1rem, 2.2vmin, 1.4rem); padding: .6rem 1.2rem; background: #fff; color: #161616; border: 2px solid #161616; }
+  .run-controls button:hover { background: #e9edf2; color: #161616; border-color: #161616; }
+  .run-controls button[aria-pressed="true"] { background: #161616; color: #fff; }
+  .run-hint { text-align: center; font-size: clamp(.8rem, 1.8vmin, 1.1rem); opacity: .85; margin: 1vmin 0 0; }
+  .run-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  @media print { .run-stage { display: none !important; } }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -197,6 +258,30 @@
       </div>
 
       <div class="card">
+        <h2>Run the circuit</h2>
+        <p class="hint">Put the circuit on the projector: a countdown for each station, the station card large, and where each group goes next. Times apply to every station.</p>
+        <div class="row3">
+          <div>
+            <label for="runWork">Work (seconds)</label>
+            <input type="number" id="runWork" min="5" max="600" step="1" inputmode="numeric">
+          </div>
+          <div>
+            <label for="runRest">Rest / move (seconds)</label>
+            <input type="number" id="runRest" min="0" max="300" step="1" inputmode="numeric">
+          </div>
+          <div>
+            <label for="runGroups">Groups</label>
+            <input type="number" id="runGroups" min="1" max="26" step="1" inputmode="numeric">
+          </div>
+        </div>
+        <p class="run-summary" id="runSummary" aria-live="polite"></p>
+        <div class="btn-row">
+          <button id="runBtn" type="button" disabled>&#9654; Run the circuit</button>
+        </div>
+        <p class="hint" style="margin-top:.5rem;">Keys on the projector view: Space start / pause, &rarr; or N skip, R reset, M beep on / off, F or Esc leave. With one group the whole class does each station in turn; with more, group A starts at station 1, B further round, and every group moves down one station each round.</p>
+      </div>
+
+      <div class="card">
         <h2>Print layout</h2>
         <label for="cardsPerPage">Cards per printed page</label>
         <select id="cardsPerPage">
@@ -222,6 +307,23 @@
   </footer>
 </div>
 
+<div class="run-stage" id="runStage" role="dialog" aria-modal="true" aria-label="Circuit timer" data-phase="ready" hidden>
+  <div class="run-top"><span id="runTitle"></span><span id="runRound"></span></div>
+  <p class="run-phase" id="runPhase"></p>
+  <p class="run-time" id="runTime" role="timer" aria-live="off">0:00</p>
+  <div class="run-tiles" id="runTiles"></div>
+  <p class="run-next" id="runNext"></p>
+  <div class="run-controls">
+    <button type="button" id="runToggle">Start</button>
+    <button type="button" id="runSkip">Skip &rarr;</button>
+    <button type="button" id="runReset">Reset</button>
+    <button type="button" id="runSound" aria-pressed="false">Beep: off</button>
+    <button type="button" id="runClose">Exit (Esc)</button>
+  </div>
+  <p class="run-hint">Space start / pause &middot; &rarr; or N skip &middot; R reset &middot; M beep &middot; F or Esc exit</p>
+  <p class="run-live" id="runLive" role="status" aria-live="polite"></p>
+</div>
+
 <div class="print-only" id="printArea">
   <h1 id="printHeaderTitle"></h1>
   <div class="print-card-grid" id="printCardGrid"></div>
@@ -243,7 +345,10 @@
    'cardsPerPage', 'printBtn', 'previewGrid', 'previewNote',
    'printArea', 'printHeaderTitle', 'printCardGrid',
    'circuitSwitch', 'circuitName', 'newCircuitBtn', 'duplicateCircuitBtn', 'deleteCircuitBtn',
-   'shareBtn', 'shareNote'
+   'shareBtn', 'shareNote',
+   'runWork', 'runRest', 'runGroups', 'runSummary', 'runBtn',
+   'runStage', 'runTitle', 'runRound', 'runPhase', 'runTime', 'runTiles', 'runNext',
+   'runToggle', 'runSkip', 'runReset', 'runSound', 'runClose', 'runLive'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var DEFAULT_STATIONS = [
@@ -305,6 +410,9 @@
     if (typeof data.title === 'string') c.title = data.title;
     if (Array.isArray(data.stations)) c.stations = data.stations;
     if (data.cardsPerPage) c.cardsPerPage = String(data.cardsPerPage);
+    /* The run settings are written only once a teacher has set them, so a
+       circuit saved before this existed loads and saves back byte for byte. */
+    if (data.run && typeof data.run === 'object' && !Array.isArray(data.run)) c.run = CircuitRun.clean(data.run);
     return c;
   }
 
@@ -346,6 +454,7 @@
     els.circuitName.value = state.name;
     els.circuitTitle.value = state.title;
     els.cardsPerPage.value = state.cardsPerPage;
+    fillRunInputs();
     renderStations();
     render();
   }
@@ -557,6 +666,8 @@
       els.previewGrid.innerHTML = '<p class="empty-hint">Add at least one station to see a card preview.</p>';
       els.previewNote.textContent = 'Live preview.';
       els.printBtn.disabled = true;
+      els.runBtn.disabled = true;
+      renderRunSummary();
       return;
     }
     els.previewGrid.innerHTML = valid.map(function (s) {
@@ -570,6 +681,8 @@
     }).join('');
     els.previewNote.textContent = valid.length + ' station card' + (valid.length === 1 ? '' : 's') + ' ready.';
     els.printBtn.disabled = false;
+    els.runBtn.disabled = false;
+    renderRunSummary();
   }
 
   els.printBtn.addEventListener('click', function () {
@@ -590,6 +703,255 @@
     window.print();
     els.printArea.classList.remove('active');
   });
+
+
+  /* ---------- Run the circuit: a projector view with a clock behind it ----------
+     The timeline, the rotation and the beep schedule are in
+     pe-warmup-circuit-generator/circuit-run.js; this part is the picture, the
+     keys and the sound. Time is read from performance.now() every time the
+     view is drawn, so a tab the browser throttles or freezes shows the right
+     second when it wakes — the 100 ms timer only decides how often to look.
+     The view is _shared/stage.js's stage: real fullscreen where the browser
+     allows it, a fixed overlay where it does not, Esc and F to leave.
+
+     Every string reaches the view through textContent. A station's icon may be
+     an HTML entity (the default circuit stores them), so it is decoded by
+     DOMParser, which runs nothing, and set as text. */
+  var run = { ctl: null, timer: null, lastKey: '', sound: false, audio: null, stage: null, opener: null };
+
+  function runSettings() { return CircuitRun.clean(state.run); }
+
+  function fillRunInputs() {
+    var c = runSettings();
+    els.runWork.value = c.workSecs;
+    els.runRest.value = c.restSecs;
+    els.runGroups.value = c.groups;
+  }
+
+  function renderRunSummary() {
+    var n = validStations().length;
+    var p = CircuitRun.plan(n, state.run);
+    if (!p) { els.runSummary.textContent = ''; return; }
+    var c = runSettings();
+    els.runSummary.textContent = n + ' station' + (n === 1 ? '' : 's') + ': ' + c.workSecs + ' s work' +
+      (c.restSecs ? ' + ' + c.restSecs + ' s rest' : '') + ' each, ' + CircuitRun.fmt(p.totalMs) + ' in all' +
+      (p.groups > 1 ? ', ' + p.groups + ' groups' : '') + (c.groups > n ? ' (groups limited to the ' + n + ' stations)' : '') + '.';
+  }
+
+  function onRunInput() {
+    state.run = CircuitRun.clean({ workSecs: els.runWork.value, restSecs: els.runRest.value, groups: els.runGroups.value });
+    save();
+    renderRunSummary();
+  }
+  [els.runWork, els.runRest, els.runGroups].forEach(function (input) {
+    input.addEventListener('input', onRunInput);
+    input.addEventListener('change', function () { onRunInput(); fillRunInputs(); });
+  });
+
+  function plainIcon(raw) {
+    var t = String(raw == null ? '' : raw);
+    if (t.indexOf('&') === -1) return t;
+    return (new DOMParser().parseFromString(t, 'text/html').body.textContent) || '';
+  }
+
+  function tag(name, cls, text) {
+    var e = document.createElement(name);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function stationLabel(st) { return 'Station ' + (st.idx + 1) + ' ' + st.name; }
+
+  function tileFor(st, groupLetter) {
+    var t = tag('div', 'run-tile');
+    if (groupLetter) t.appendChild(tag('div', 'rt-group', 'Group ' + groupLetter));
+    t.appendChild(tag('div', 'rt-num', 'Station ' + (st.idx + 1)));
+    var icon = plainIcon(st.emoji);
+    if (icon) t.appendChild(tag('div', 'rt-emoji', icon));
+    t.appendChild(tag('div', 'rt-name', st.name));
+    if (st.duration) t.appendChild(tag('div', 'rt-dur', st.duration));
+    if (st.instructions) t.appendChild(tag('div', 'rt-how', st.instructions));
+    return t;
+  }
+
+  function nextText(p, stations, view, lead) {
+    if (view + 1 >= p.stations) return 'Last station';
+    return lead + CircuitRun.assign(view + 1, p).map(function (a) {
+      return (p.groups > 1 ? 'Group ' + a.group + ' → ' : '') + stationLabel(stations[a.station]);
+    }).join('  ·  ');
+  }
+
+  /* The label above the clock, and whether the rotation banner is up. With a
+     rest the move is its own phase; with none, the first seconds of each round
+     after the first say ROTATE so the screen colour is not the only cue. */
+  var BANNER_MS = 4000;
+  function phaseLabel(s, p, elapsed) {
+    if (s.phase === 'done') return 'Circuit complete';
+    if (s.phase === 'rest') return 'Rotate — move now';
+    if (s.round > 0 && p.restMs === 0 && elapsed - s.phaseStartMs < BANNER_MS) return 'Rotate — new station';
+    return 'Work';
+  }
+
+  var drawn = { key: '', time: '', label: '' };
+  function draw() {
+    var stations = run.stations;
+    var p = run.ctl.plan;
+    var elapsed = run.ctl.elapsed();
+    var s = CircuitRun.at(elapsed, p);
+    var label = phaseLabel(s, p, elapsed);
+    var time = CircuitRun.fmt(s.remainingMs);
+    var stage = els.runStage;
+    stage.setAttribute('data-phase', s.phase);
+    stage.setAttribute('data-parity', s.round % 2 ? 'odd' : 'even');
+    if (drawn.label !== label) { els.runPhase.textContent = label; drawn.label = label; }
+    if (drawn.time !== time) { els.runTime.textContent = time; drawn.time = time; }
+    if (drawn.key !== s.key + ':' + p.groups) {
+      drawn.key = s.key + ':' + p.groups;
+      els.runRound.textContent = s.phase === 'done' ? p.stations + ' of ' + p.stations + ' rounds' : 'Round ' + (s.view + 1) + ' of ' + p.stations;
+      els.runTiles.textContent = '';
+      els.runTiles.className = 'run-tiles' + (p.groups === 1 ? ' solo' : '');
+      if (s.phase !== 'done') {
+        CircuitRun.assign(s.view, p).forEach(function (a) {
+          els.runTiles.appendChild(tileFor(stations[a.station], p.groups > 1 ? a.group : ''));
+        });
+      }
+      els.runNext.textContent = s.phase === 'done' ? '' : nextText(p, stations, s.view, s.phase === 'rest' ? 'Then: ' : 'Next: ');
+    }
+    els.runToggle.textContent = run.ctl.running() ? 'Pause' : (s.phase === 'done' ? 'Start again' : (elapsed > 0 ? 'Resume' : 'Start'));
+    return s;
+  }
+
+  function announce(s, p, stations) {
+    var what;
+    if (s.phase === 'done') what = 'Circuit complete.';
+    else {
+      var asg = CircuitRun.assign(s.view, p).map(function (a) {
+        return (p.groups > 1 ? 'Group ' + a.group + ': ' : '') + stationLabel(stations[a.station]);
+      }).join('. ');
+      what = (s.phase === 'rest' ? 'Rotate. Move to ' : 'Work. Round ' + (s.round + 1) + ' of ' + p.stations + '. ') + asg + '.';
+    }
+    els.runLive.textContent = what;
+  }
+
+  /* Web Audio, only once the sound has been turned on. The tones are
+     CircuitRun.beeps(kind), scheduled on the audio clock from the moment of the
+     signal. A signal noticed more than 1.5 s late (a tab that was frozen) is not
+     sounded: a beep for a rotation that is long past is worse than none. */
+  function playBeeps(kind) {
+    if (!run.sound) return;
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    try {
+      if (!run.audio) run.audio = new Ctx();
+      if (run.audio.state === 'suspended' && run.audio.resume) run.audio.resume();
+      var t0 = run.audio.currentTime;
+      CircuitRun.beeps(kind).forEach(function (b) {
+        var osc = run.audio.createOscillator();
+        var gain = run.audio.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = b.freq;
+        gain.gain.value = 0.35;
+        osc.connect(gain);
+        gain.connect(run.audio.destination);
+        osc.start(t0 + b.at);
+        osc.stop(t0 + b.at + b.dur);
+      });
+    } catch (e) { /* no audio device: the picture still works */ }
+  }
+
+  var LATE_MS = 1500;
+  function sync(announceChange) {
+    if (!run.ctl) return;
+    var s = draw();
+    var key = s.key;
+    if (key !== run.lastKey) {
+      run.lastKey = key;
+      if (announceChange) {
+        announce(s, run.ctl.plan, run.stations);
+        var late = s.phase === 'done' ? run.ctl.overrunMs() : run.ctl.elapsed() - s.phaseStartMs;
+        if (late <= LATE_MS) playBeeps(s.phase === 'done' ? 'done' : (s.phase === 'rest' ? 'rest' : 'work'));
+      }
+    }
+    if (!run.ctl.running()) stopTicking();
+  }
+
+  function startTicking() { if (run.timer === null) run.timer = setInterval(function () { sync(true); }, 100); }
+  function stopTicking() { if (run.timer !== null) { clearInterval(run.timer); run.timer = null; } }
+
+  function runStart() {
+    if (!run.ctl) return;
+    if (run.ctl.state().phase === 'done') runReset();
+    if (run.ctl.elapsed() === 0) run.lastKey = '';   // the first phase is a signal too
+    if (!run.ctl.start()) return;
+    startTicking();
+    sync(true);
+  }
+  function runPause() { if (!run.ctl) return; run.ctl.pause(); stopTicking(); sync(false); }
+  function runToggle() { if (run.ctl && run.ctl.running()) runPause(); else runStart(); }
+  function runSkip() {
+    if (!run.ctl) return;
+    run.ctl.skip();
+    sync(true);
+    if (run.ctl.running()) startTicking();
+  }
+  function runReset() {
+    if (!run.ctl) return;
+    run.ctl.reset();
+    stopTicking();
+    run.lastKey = '';
+    drawn = { key: '', time: '', label: '' };
+    els.runLive.textContent = '';
+    sync(false);
+  }
+  function runSound() {
+    run.sound = !run.sound;
+    els.runSound.setAttribute('aria-pressed', run.sound ? 'true' : 'false');
+    els.runSound.textContent = 'Beep: ' + (run.sound ? 'on' : 'off');
+    if (run.sound) playBeeps('test');
+  }
+
+  function openRun() {
+    var stations = validStations();
+    var p = CircuitRun.plan(stations.length, state.run);
+    if (!p) return;
+    run.stations = stations;
+    run.ctl = CircuitRun.createRun(p, function () { return performance.now(); });
+    run.lastKey = '';
+    drawn = { key: '', time: '', label: '' };
+    els.runTitle.textContent = state.title.trim() || state.name;
+    els.runLive.textContent = '';
+    run.opener = document.activeElement;
+    els.runStage.hidden = false;
+    document.querySelector('.wrap').inert = true;
+    sync(false);
+    run.stage.enter();
+    els.runToggle.focus();
+  }
+
+  run.stage = Stage.mount(els.runStage, {
+    button: els.runClose,
+    labels: { enter: 'Exit (Esc)', exit: 'Exit (Esc)' },
+    hotkeysWhenActive: true,
+    hotkeys: {
+      ' ': runToggle, ArrowRight: runSkip, n: runSkip, r: runReset, m: runSound
+    },
+    onChange: function (active) {
+      if (active) return;
+      runPause();
+      stopTicking();
+      els.runStage.hidden = true;
+      document.querySelector('.wrap').inert = false;
+      run.ctl = null;
+      if (run.opener && run.opener.focus) run.opener.focus();
+    }
+  });
+
+  els.runBtn.addEventListener('click', openRun);
+  els.runToggle.addEventListener('click', runToggle);
+  els.runSkip.addEventListener('click', runSkip);
+  els.runReset.addEventListener('click', runReset);
+  els.runSound.addEventListener('click', runSound);
 
   /* ---------- share a circuit: _shared/share.js (Path 6 P3) ----------
      This tool keeps a NAMED LIBRARY (a list of names plus a blob per name),
@@ -632,7 +994,7 @@
       the shape it already applies to a stored blob, then the stations coerced
       to the four fields a card prints, each with a local id. */
   function normalizeSharedCircuit(obj, name) {
-    var out = normalizeCircuit({ name: name, title: obj.title, cardsPerPage: obj.cardsPerPage }, name);
+    var out = normalizeCircuit({ name: name, title: obj.title, cardsPerPage: obj.cardsPerPage, run: obj.run }, name);
     out.stations = obj.stations.map(function (st) {
       return {
         id: uid(),

@@ -28,6 +28,11 @@
 //   7. the roster chain: 002's sheet sends its grouping to 022, which files
 //      it as a new lab class with roles (and survives a hostile link); 022's
 //      "Seat these groups" button seats them in 005 as a new section.
+//   8. trivia to the question bank: 053's sheet sends the teacher's own
+//      questions to 030, which shows them and adds them only when asked; a
+//      list too long for one link is refused in the sheet and opens no tab;
+//      a ?trivia= link made before this row existed still opens in 053.
+//      (030's side in full is review-game-board/test/smoke-received-questions.mjs.)
 //
 // Exits 1 on any failure. Every name here is invented.
 
@@ -332,6 +337,76 @@ console.log('\n002 → 022 → 005 — the roster chain');
   ok(arrivedClass.lastGroups.every((g, i) => arrivedClass.lastGroups.every((h, j) => i === j ||
     g.members.every(m => h.members.every(o => Math.hypot(deskOf[m.name].x - deskOf[o.name].x, deskOf[m.name].y - deskOf[o.name].y) > 10)))),
     'and no two students share a desk position');
+}
+
+/* ── 8. trivia to the question bank: 053 -> 030 (2026-10-06) ─────────────── */
+console.log('\n053 → 030 — a teacher\'s own trivia to the question bank');
+{
+  const CUSTOM = [
+    { id: 'c-1', category: 'hispanic', q: 'What is a quinceañera?', a: 'A 15th birthday celebration' },
+    { id: 'c-2', category: 'francophone', q: 'Capital of Senegal?', a: 'Dakar' },
+    { id: 'c-3', category: 'global', q: '<img src=x onerror="window.__pwned=1"> a tag in a question?', a: 'It is text' },
+  ];
+  const trivia = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['053', trivia]);
+  const open053 = async (custom, tail = '') => {
+    await trivia.goto(BASE + '/Tools/053-cultural-trivia-card-generator.html', { waitUntil: 'load' });
+    await trivia.evaluate(c => { localStorage.clear(); localStorage.setItem('ctcg_custom_v1', JSON.stringify(c)); }, custom);
+    await trivia.goto(BASE + '/Tools/053-cultural-trivia-card-generator.html' + tail, { waitUntil: 'load' });
+    await settle(trivia, 500);
+    await trivia.click('.tab-btn[data-stage="bank"]');
+    await settle(trivia, 200);
+  };
+  await open053(CUSTOM);
+  const rows053 = await openRows(trivia);
+  eq(JSON.stringify(rows053.slice(0, 3)), JSON.stringify(['copy', 'qr', 'download']), '053\'s sheet still starts with the rows it had');
+  ok(rows053.includes('send:review-game-board'), 'and has a Send to Quiz / Review Game Board row: ' + JSON.stringify(rows053));
+  const sent053 = await clickSend(trivia, 'review-game-board');
+  eq(sent053.opened.length, 1, 'clicking it opens one tab');
+  const tUrl = sent053.opened[0] && sent053.opened[0].u;
+  ok(tUrl && tUrl.indexOf(BASE + '/Tools/030-review-game-board.html?questions=') === 0, 'at 030 with 030\'s parameter: ' + JSON.stringify(tUrl && tUrl.slice(0, 80)));
+  ok(!sent053.error && /asks before adding anything/.test(sent053.status), 'and says the board will ask first: ' + JSON.stringify(sent053.status));
+  const tPayload = await trivia.evaluate(u => window.StateLink.decodeState(new URL(u).searchParams.get('questions')), tUrl);
+  eq(JSON.stringify(tPayload), JSON.stringify({ v: 1, from: 'cultural-trivia-card-generator', name: 'Custom trivia', questions: [
+    { prompt: 'What is a quinceañera?', answer: 'A 15th birthday celebration', unit: 'Hispanic World' },
+    { prompt: 'Capital of Senegal?', answer: 'Dakar', unit: 'Francophone World' },
+    { prompt: '<img src=x onerror="window.__pwned=1"> a tag in a question?', answer: 'It is text', unit: 'Global Culture' },
+  ] }), 'carrying the three questions in the bank\'s shape, with no id and none of the built-in thirty');
+  eq(await trivia.evaluate(() => localStorage.getItem('ctcg_custom_v1')), JSON.stringify(CUSTOM), '053\'s own list is untouched by sending');
+
+  const board = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  pages.push(['030', board]);
+  await board.goto(BASE + '/Tools/030-review-game-board.html', { waitUntil: 'load' });
+  await board.evaluate(() => { localStorage.clear(); window.QuestionBank.saveQuestion({ prompt: 'capital of senegal?', answer: 'DAKAR' }); });
+  await board.goto(tUrl, { waitUntil: 'load' });
+  await settle(board, 500);
+  eq(await board.$eval('#arrivalCard', c => c.getClientRects().length > 0), true, '030 opens the link and shows what arrived');
+  eq(await board.$eval('#arrivalSummary', n => n.textContent), '3 questions arrived from the Cultural Trivia Card Generator. 1 is already in your bank and will be skipped. Nothing is added until you press the button.', 'saying where from and what the bank already has');
+  eq(await board.evaluate(() => window.QuestionBank.list().length), 1, 'and nothing is in the bank yet');
+  await board.click('#arrivalAddBtn');
+  await settle(board, 300);
+  eq(JSON.stringify(await board.evaluate(() => window.QuestionBank.list().map(q => [q.prompt, q.unit, /^q-/.test(q.id)]))), JSON.stringify([
+    ['capital of senegal?', '', true], ['What is a quinceañera?', 'Hispanic World', true], ['<img src=x onerror="window.__pwned=1"> a tag in a question?', 'Global Culture', true],
+  ]), 'Add puts the two new ones in the bank, as text, each with an id of the bank\'s');
+  eq(await board.evaluate(() => [window.__pwned === undefined, document.querySelectorAll('img[src="x"]').length]).then(JSON.stringify), '[true,0]', 'and the tag in the question ran nothing');
+  await board.goto(tUrl, { waitUntil: 'load' });
+  await settle(board, 500);
+  eq(await board.$eval('#arrivalAddBtn', b => b.getClientRects().length > 0), false, 'the same link a second time has nothing to add');
+  eq(await board.evaluate(() => window.QuestionBank.list().length), 3, 'and the bank is the same three');
+
+  /* too long for one link */
+  await open053(Array.from({ length: 150 }, (_, i) => ({ id: 'c-' + i, category: 'global', q: 'Made-up question number ' + (i + 1) + '?', a: 'Answer ' + (i + 1) })));
+  await openRows(trivia);
+  const tooLong = await clickSend(trivia, 'review-game-board');
+  eq(tooLong.opened.length, 0, 'a list of 150 questions opens no tab');
+  ok(tooLong.error && /^Your 150 questions make a link of [\d,]+ characters, and a link longer than about 7,500 may not open\. Nothing was sent\./.test(tooLong.status), 'and the sheet says why, as an error: ' + JSON.stringify(tooLong.status));
+
+  /* a ?trivia= link from before this row */
+  const oldLink = '?trivia=' + await trivia.evaluate(() => window.StateLink.encodeState({ questions: [{ category: 'hispanic', q: 'From an older link?', a: 'Yes' }] }));
+  await open053(CUSTOM, oldLink);
+  eq(JSON.stringify(await trivia.evaluate(() => JSON.parse(localStorage.getItem('ctcg_custom_v1')).map(c => c.q))), JSON.stringify(CUSTOM.map(c => c.q).concat(['From an older link?'])),
+    'a ?trivia= link still adds its questions to 053\'s own list, as it did');
+  ok(/Added 1 from a shared trivia bank/.test(await trivia.$eval('#shareNote', n => n.textContent)), 'with the sentence it always gave');
 }
 
 /* ── 5. no console noise, nowhere ───────────────────────────────────────── */

@@ -24,6 +24,7 @@
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
+<script src="word-problem-warmup-generator/wp-twostep.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -121,6 +122,14 @@
           <option value="middle" selected>Grades 6&ndash;8 (larger numbers)</option>
         </select>
       </div>
+      <div class="field">
+        <label for="stepMode">Problem type</label>
+        <select id="stepMode" aria-describedby="stepHint">
+          <option value="one" selected>One-step</option>
+          <option value="two">Two-step</option>
+          <option value="mixed">Mixed (some of each)</option>
+        </select>
+      </div>
       <div class="field" style="min-width:16rem;">
         <label>Operations</label>
         <div style="display:flex;gap:.9rem;flex-wrap:wrap;">
@@ -138,6 +147,7 @@
         <button id="generateBtn">Generate</button>
       </div>
     </div>
+    <p class="copy-note" id="stepHint" style="margin:0 0 .8rem;"></p>
     <div class="controls" style="margin-bottom:0;">
       <div class="field" style="min-width:10rem;">
         <label for="seedDisplay">Sheet seed</label>
@@ -276,7 +286,7 @@
   var els = {};
   ['gradeBand', 'problemCount', 'generateBtn', 'displayNum', 'displayText', 'displayAnswer',
    'prevBtn', 'revealBtn', 'nextBtn', 'printBtn', 'sheetProblems', 'sheetKey',
-   'seedDisplay', 'lockSeed', 'copyBtn', 'copyNote',
+   'seedDisplay', 'lockSeed', 'copyBtn', 'copyNote', 'stepMode', 'stepHint',
    'shareBtn', 'shareNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
@@ -302,6 +312,7 @@
         });
       }
       if (saved.problemCount) els.problemCount.value = saved.problemCount;
+      els.stepMode.value = (saved.mode === 'two' || saved.mode === 'mixed') ? saved.mode : 'one';
       els.lockSeed.checked = !!saved.lockSeed;
       settings.lockSeed = !!saved.lockSeed;
       settings.seed = (typeof saved.seed === 'number') ? saved.seed : null;
@@ -313,6 +324,10 @@
     settings.ops = ops;
     settings.problemCount = count;
     settings.lockSeed = els.lockSeed.checked;
+    /* Written only when it is not the old behaviour, so a teacher who never
+       touches Problem type saves exactly what the page always saved. */
+    if (els.stepMode.value === 'two' || els.stepMode.value === 'mixed') settings.mode = els.stepMode.value;
+    else delete settings.mode;
     try { localStorage.setItem(STORE_KEY, JSON.stringify(settings)); } catch (e) { /* storage full/blocked */ }
   }
 
@@ -326,15 +341,20 @@
       caller omits it and gets nextSeed()'s usual answer. */
   function generate(forcedSeed) {
     var ops = selectedOps();
-    if (!ops.length) { alert('Pick at least one operation.'); return; }
     var count = Math.max(1, Math.min(20, parseInt(els.problemCount.value, 10) || 6));
     var band = els.gradeBand.value;
+    var mode = WpTwoStep.effectiveMode(band, els.stepMode.value);
+    if (mode !== 'two' && !ops.length) { alert('Pick at least one operation.'); return; }
     settings.seed = (typeof forcedSeed === 'number') ? forcedSeed : nextSeed();
     saveSettings(ops, band, count);
     var rng = makeRng(settings.seed);
     problems = [];
     for (var i = 0; i < count; i++) {
-      problems.push(makeProblem(pick(rng, ops), band, rng));
+      /* One-step takes exactly the draws it always did, so an old seed makes
+         the old sheet; a mixed sheet takes one more draw per problem first. */
+      var coin = mode === 'mixed' ? rng() : 1;
+      if (WpTwoStep.isTwoStep(mode, coin)) problems.push(WpTwoStep.makeProblem(rng));
+      else problems.push(makeProblem(pick(rng, ops), band, rng));
     }
     idx = 0;
     els.seedDisplay.value = settings.seed;
@@ -342,11 +362,16 @@
     renderSheet();
   }
 
+  /* A two-step key shows both steps; a one-step key is the bare number, as it was. */
+  function answerText(p) {
+    return p.work ? p.answer + ' (' + p.work + ')' : String(p.answer);
+  }
+
   function renderDisplay() {
     if (!problems.length) return;
     els.displayNum.textContent = 'Problem ' + (idx + 1) + ' of ' + problems.length;
     els.displayText.textContent = problems[idx].text;
-    els.displayAnswer.textContent = 'Answer: ' + problems[idx].answer;
+    els.displayAnswer.textContent = 'Answer: ' + answerText(problems[idx]);
     els.displayAnswer.classList.remove('shown');
   }
 
@@ -356,9 +381,25 @@
         ' <span class="answer-line">&nbsp;</span></div>';
     }).join('');
     els.sheetKey.innerHTML = problems.map(function (p, i) {
-      return '<li>' + (i + 1) + '. ' + p.answer + '</li>';
+      return '<li>' + (i + 1) + '. ' + answerText(p) + '</li>';
     }).join('');
   }
+
+  /* Two-step problems are the upper band's: grades 3-5 stay one-step, and the
+     select says so rather than quietly ignoring the choice. */
+  function updateStepHint() {
+    var elementary = els.gradeBand.value !== 'middle';
+    els.stepMode.disabled = elementary;
+    var mode = els.stepMode.value;
+    els.stepHint.textContent = elementary
+      ? 'Two-step problems are for grades 6\u20138; this band makes one-step problems.'
+      : mode === 'two' ? 'Two-step problems choose their own operations; the operation boxes apply to one-step problems.'
+      : mode === 'mixed' ? 'About half the problems are two-step; the operation boxes choose the one-step half.'
+      : '';
+    els.stepHint.style.display = els.stepHint.textContent ? '' : 'none';
+  }
+  els.gradeBand.addEventListener('change', updateStepHint);
+  els.stepMode.addEventListener('change', updateStepHint);
 
   els.generateBtn.addEventListener('click', function () { generate(); });
   els.lockSeed.addEventListener('change', function () { settings.lockSeed = els.lockSeed.checked; });
@@ -390,7 +431,7 @@
   els.copyBtn.addEventListener('click', function () {
     if (!problems.length) { setCopyNote('Generate a set first.'); return; }
     var p = problems[idx];
-    var text = p.text + '\n\nAnswer: ' + p.answer;
+    var text = p.text + '\n\nAnswer: ' + answerText(p);
     var copy = (navigator.clipboard && navigator.clipboard.writeText)
       ? navigator.clipboard.writeText(text) : Promise.reject();
     copy.then(
@@ -442,12 +483,15 @@
   Share.mount(els.shareBtn, {
     getState: function () {
       if (settings.seed == null) return null;
-      return {
+      var state = {
         seed: settings.seed,
         gradeBand: els.gradeBand.value,
         ops: selectedOps(),
         problemCount: Math.max(1, Math.min(20, parseInt(els.problemCount.value, 10) || 6))
       };
+      /* Only when it is not one-step, so a one-step link is the link it always was. */
+      if (els.stepMode.value === 'two' || els.stepMode.value === 'mixed') state.mode = els.stepMode.value;
+      return state;
     },
     param: SHARE_PARAM,
     tool: 'word-problem-warmup-generator',
@@ -469,7 +513,9 @@
     if (!obj || typeof obj !== 'object' || typeof obj.seed !== 'number' || !Array.isArray(obj.ops)) return false;
     var known = Array.prototype.slice.call(document.querySelectorAll('[data-op]'))
       .map(function (cb) { return cb.getAttribute('data-op'); });
-    return obj.ops.some(function (op) { return known.indexOf(op) >= 0; });
+    if (obj.ops.some(function (op) { return known.indexOf(op) >= 0; })) return true;
+    /* A two-step sheet needs no operation boxes, but only grades 6-8 make one. */
+    return obj.mode === 'two' && obj.gradeBand === 'middle';
   }
 
   function importSharedWarmup() {
@@ -482,6 +528,10 @@
         document.querySelectorAll('[data-op]').forEach(function (cb) {
           cb.checked = decoded.ops.indexOf(cb.getAttribute('data-op')) >= 0;
         });
+        /* A link with no mode is an old one-step link: set one-step, so this
+           device's own Problem type cannot change what the link makes. */
+        els.stepMode.value = (decoded.mode === 'two' || decoded.mode === 'mixed') ? decoded.mode : 'one';
+        updateStepHint();
         var count = parseInt(decoded.problemCount, 10);
         els.problemCount.value = String(count >= 1 && count <= 20 ? count : 6);
         generate(decoded.seed);
@@ -493,6 +543,7 @@
 
   /* ---------- boot ---------- */
   loadSettings();
+  updateStepHint();
   if (!importSharedWarmup()) generate();
 })();
 </script>

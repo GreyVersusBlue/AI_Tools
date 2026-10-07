@@ -27,6 +27,7 @@
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
 <script src="../_shared/export.js"></script>
+<script src="staff-directory-builder/wallet-card.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -62,7 +63,7 @@
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
 
   .toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1rem; }
-  .toolbar input[type="text"] { width: auto; min-width: 12rem; }
+  .toolbar input[type="text"] { width: auto; min-width: 17rem; }
   .toolbar .spacer { flex: 1; }
   .toolbar select { width: auto; }
 
@@ -89,6 +90,56 @@
   details.bulk summary { cursor: pointer; font-size: .85rem; color: var(--accent-2); }
   .import-msg { font-size: .8rem; color: var(--accent-2); margin: .4rem 0 0; }
 
+  /* Email and QR columns. The table is wider than it was, so the inputs give a
+     little ground; the QR column's select and its status sentence stack. */
+  table.dir td.qr-cell { min-width: 11rem; }
+  table.dir td.qr-cell select { font-size: .82rem; padding: .3rem .35rem; }
+  .qr-status { font-size: .74rem; color: var(--muted); margin-top: .25rem; overflow-wrap: anywhere; }
+
+  /* Wallet and lanyard cards. The controls are ordinary page chrome; #cardSheet
+     is paper (class paper-sheet keeps it white with black ink in dark mode) and
+     is drawn at the real size, 96 CSS px to the inch, so what is on the screen
+     is the card. It is the same element that prints: see the print rules below. */
+  .cards-controls { display: grid; grid-template-columns: 1.4fr 1.4fr auto; gap: .6rem; align-items: end; margin-bottom: .6rem; }
+  .cards-controls select { margin: 0; }
+  .cards-note { font-size: .84rem; margin: .2rem 0 .7rem; }
+  .cards-preview-box { display: flex; align-items: center; gap: .4rem; font-size: .85rem; font-weight: 600; margin: 0 0 .6rem; }
+  .cards-preview-box input { width: auto; margin: 0; }
+  #cardSheet.is-off { display: none; }
+  #cardSheet { overflow-x: auto; background: #fff; color: #000; padding: .25in; border: 1px solid var(--line-strong); border-radius: 6px; }
+  #cardSheet .wc-page {
+    display: grid;
+    grid-template-columns: repeat(var(--wc-cols), calc(var(--wc-w) - 1px));
+    grid-auto-rows: calc(var(--wc-h) - 1px);
+    width: calc(var(--wc-cols) * (var(--wc-w) - 1px) + 1px);
+    margin: 0 auto .25in;
+  }
+  #cardSheet .wc-page:last-child { margin-bottom: 0; }
+  /* The cut line is the card's own dashed edge, and neighbours share it: each
+     card is its full size and the tracks are 1 px short of it (above), so the
+     right and bottom edges of one lie on the left and top edges of the next
+     and two cards side by side show one line, not two. */
+  #cardSheet .wc-card {
+    box-sizing: border-box; width: var(--wc-w); height: var(--wc-h);
+    border: 1px dashed #888; padding: .125in; display: flex; gap: .125in;
+    overflow: visible; background: #fff; color: #000; font-family: "Segoe UI", Arial, sans-serif; line-height: 1.2;
+  }
+  #cardSheet .wc-card.wc-wallet { flex-direction: row; }
+  #cardSheet .wc-card.wc-lanyard { flex-direction: column; align-items: center; }
+  #cardSheet .wc-text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; overflow-wrap: anywhere; }
+  #cardSheet .wc-lanyard .wc-text { flex: 1 1 auto; width: 100%; text-align: center; justify-content: flex-start; }
+  #cardSheet .wc-name { font-weight: 700; font-size: 16pt; }
+  #cardSheet .wc-name.wc-n1 { font-size: 13pt; }
+  #cardSheet .wc-name.wc-n2 { font-size: 11pt; }
+  #cardSheet .wc-lanyard .wc-name { font-size: 14pt; }
+  #cardSheet .wc-lanyard .wc-name.wc-n1 { font-size: 12pt; }
+  #cardSheet .wc-lanyard .wc-name.wc-n2 { font-size: 10pt; }
+  #cardSheet .wc-role { font-size: 10pt; color: #222; margin-top: .04in; }
+  #cardSheet .wc-where { font-size: 9.5pt; color: #222; margin-top: .06in; }
+  #cardSheet .wc-qr { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #cardSheet .wc-qr canvas { display: block; }
+  #cardSheet .wc-cap { font-size: 7.5pt; color: #222; text-align: center; margin-top: .03in; }
+
   #printArea { display: none; }
   @media print {
     body * { visibility: hidden; }
@@ -109,6 +160,30 @@
     /* Never leave a department heading stranded at the foot of a page. */
     .print-table tr.dept-head { page-break-after: avoid; break-after: avoid; }
     .print-table tr { page-break-inside: avoid; break-inside: avoid; }
+  }
+
+  /* The cards print from their own named page, so the directory's page above
+     keeps the browser's default margins and this one is the cards' alone. The
+     class is on the body only while Print cards is printing (set by the
+     button, taken off by afterprint). Everything but #cardSheet is taken out of
+     the flow rather than hidden, so no blank page follows the last card. */
+  @page cards { size: auto; margin: .375in; }
+  @media print {
+    /* Out of the flow for every other print (Print directory, Ctrl+P): hidden
+       by `body *` above it would still take its height, and that is blank paper
+       after the directory (audit-print's TAIL). */
+    body:not(.print-cards) #cardsPanel { display: none; }
+    body.print-cards { padding: 0; background: #fff; }
+    body.print-cards #printArea { display: none; }
+    body.print-cards .wrap > :not(#cardsPanel) { display: none; }
+    body.print-cards #cardsPanel { border: 0; box-shadow: none; background: none; padding: 0; margin: 0; }
+    body.print-cards #cardsPanel > :not(#cardSheet) { display: none; }
+    body.print-cards #cardSheet, body.print-cards #cardSheet * { visibility: visible; }
+    body.print-cards #cardSheet { display: block; page: cards; border: 0; padding: 0; overflow: visible; border-radius: 0; }
+    body.print-cards #cardSheet.is-off { display: block; }
+    #cardSheet .wc-page { margin: 0; break-after: page; }
+    #cardSheet .wc-page:last-child { break-after: auto; }
+    #cardSheet .wc-card { break-inside: avoid; }
   }
 </style>
 </head>
@@ -134,23 +209,24 @@
 
   <div class="card">
     <h2>Add staff member</h2>
-    <div style="display:grid;grid-template-columns:1.3fr .8fr .8fr 1fr auto;gap:.6rem;align-items:end;">
+    <div style="display:grid;grid-template-columns:1.3fr .8fr .8fr 1fr 1.2fr auto;gap:.6rem;align-items:end;">
       <div><label for="newName">Name</label><input type="text" id="newName" placeholder="Full name"></div>
       <div><label for="newRoom">Room</label><input type="text" id="newRoom" placeholder="e.g. 214"></div>
       <div><label for="newExt">Extension</label><input type="text" id="newExt" placeholder="e.g. 4214"></div>
       <div><label for="newSubject">Subject / Dept</label><input type="text" id="newSubject" placeholder="e.g. Math"></div>
+      <div><label for="newEmail">Email (optional)</label><input type="text" id="newEmail" placeholder="e.g. arivera@example.org"></div>
       <div><button id="addRowBtn">Add</button></div>
     </div>
     <details class="bulk">
       <summary>Or paste a whole list at once (from a spreadsheet)</summary>
-      <p class="hint">One person per line, columns separated by tabs or commas: <code>Name, Room, Extension, Subject</code></p>
+      <p class="hint">One person per line, columns separated by tabs or commas: <code>Name, Room, Extension, Subject, Email</code> (the email is optional)</p>
       <label for="rosterHubSelect">Or load names from a saved roster</label>
       <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.7rem;">
         <select id="rosterHubSelect" style="flex:1 1 auto;margin:0;"></select>
         <button type="button" class="secondary small" id="rosterHubLoadBtn" style="flex:0 0 auto;">Load</button>
       </div>
       <p class="hint">Saved rosters are shared with the rest of the toolkit and are usually classes, not staff &mdash; save a staff list under a name starting with &ldquo;Staff &mdash; &rdquo; so it is easy to tell apart. Loading fills the box below with names only; add rooms and extensions before pressing Add pasted rows.</p>
-      <textarea id="bulkInput" placeholder="Alex Rivera, 214, 4214, Math&#10;Bailey Chen, 118, 4118, Science"></textarea>
+      <textarea id="bulkInput" placeholder="Alex Rivera, 214, 4214, Math, arivera@example.org&#10;Bailey Chen, 118, 4118, Science"></textarea>
       <button class="secondary small" id="bulkAddBtn">Add pasted rows</button>
       <p class="import-msg" id="bulkMsg" style="display:none;"></p>
     </details>
@@ -160,7 +236,7 @@
     <div class="toolbar">
       <h2 style="margin:0;">Directory</h2>
       <div class="spacer"></div>
-      <input type="text" id="searchInput" placeholder="Search name, room, subject&hellip;">
+      <input type="text" id="searchInput" placeholder="Search name, room, subject, email&hellip;">
       <label class="group-toggle" for="groupByDeptBox"><input type="checkbox" id="groupByDeptBox"> Group by department</label>
       <button class="secondary small" id="clearAllBtn">Clear all</button>
     </div>
@@ -171,12 +247,27 @@
           <th data-sort="room">Room <span class="arrow"></span></th>
           <th data-sort="ext">Ext. <span class="arrow"></span></th>
           <th data-sort="subject">Subject / Dept <span class="arrow"></span></th>
+          <th data-sort="email">Email <span class="arrow"></span></th>
+          <th>Card QR</th>
           <th></th>
         </tr>
       </thead>
       <tbody id="dirRows"></tbody>
     </table>
     <p class="empty-state" id="emptyMsg" style="display:none;">No staff added yet — use the form above.</p>
+  </div>
+
+  <div class="card" id="cardsPanel">
+    <h2>Wallet cards &amp; lanyard cards</h2>
+    <p class="hint">One card per person in the directory above (the same people, in the same order, as Print directory): name, role, room and extension, and a QR code that opens a phone call or an email on the phone that scans it. Both sizes are the ID-card size (3.375 &times; 2.125 in) that lanyard holders and wallet pouches are made for, with a dashed line to cut along.</p>
+    <div class="cards-controls">
+      <div><label for="cardSize">Card size</label><select id="cardSize"></select></div>
+      <div><label for="cardQrMode">QR code opens</label><select id="cardQrMode"></select></div>
+      <div><button type="button" id="printCardsBtn">Print cards</button></div>
+    </div>
+    <p class="cards-note" id="cardsNote" role="status" aria-live="polite"></p>
+    <label class="cards-preview-box" for="cardPreviewBox"><input type="checkbox" id="cardPreviewBox"> Show the cards here, at their printed size</label>
+    <div id="cardSheet" class="paper-sheet is-off" role="group" aria-label="Card preview"></div>
   </div>
 </div>
 
@@ -191,10 +282,11 @@
   'use strict';
   var STORE_KEY = 'sdb_directory_v1';
   var els = {};
-  ['newName','newRoom','newExt','newSubject','addRowBtn','rosterHubSelect','rosterHubLoadBtn','bulkInput','bulkAddBtn','bulkMsg',
+  ['newName','newRoom','newExt','newSubject','newEmail','addRowBtn','rosterHubSelect','rosterHubLoadBtn','bulkInput','bulkAddBtn','bulkMsg',
    'searchInput','clearAllBtn','dirRows','emptyMsg','printBtn','printSub','printTable','groupByDeptBox',
    'exportCsvBtn','exportJsonBtn','importBtn','importFile','importMsg',
-   'shareBtn','shareNote'].forEach(function (id) {
+   'shareBtn','shareNote',
+   'cardSize','cardQrMode','printCardsBtn','cardsNote','cardPreviewBox','cardSheet'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -208,14 +300,26 @@
      have broken every file a teacher has already exported. */
   var PREFS_KEY = 'sdb_prefs_v1';
   var groupByDept = false;
+  /* The wallet-card settings ride in the same preferences object, under `card`,
+     and only once they differ from the defaults: a device that never touches
+     them keeps exactly the { groupByDept } it has always had. */
+  var CARD_DEFAULTS = { size: 'wallet', qr: 'mail-else-tel' };
+  var cardPrefs = { size: CARD_DEFAULTS.size, qr: CARD_DEFAULTS.qr };
   function loadPrefs() {
     try {
       var p = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
       groupByDept = !!(p && p.groupByDept);
-    } catch (e) { groupByDept = false; }
+      var c = (p && p.card) || {};
+      cardPrefs.size = StaffCards.SIZES[c.size] ? c.size : CARD_DEFAULTS.size;
+      cardPrefs.qr = StaffCards.validSheetMode(c.qr);
+    } catch (e) { groupByDept = false; cardPrefs = { size: CARD_DEFAULTS.size, qr: CARD_DEFAULTS.qr }; }
   }
   function savePrefs() {
-    try { localStorage.setItem(PREFS_KEY, JSON.stringify({ groupByDept: groupByDept })); } catch (e) { /* storage full/blocked */ }
+    var out = { groupByDept: groupByDept };
+    if (cardPrefs.size !== CARD_DEFAULTS.size || cardPrefs.qr !== CARD_DEFAULTS.qr) {
+      out.card = { size: cardPrefs.size, qr: cardPrefs.qr };
+    }
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(out)); } catch (e) { /* storage full/blocked */ }
   }
 
   function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -237,7 +341,7 @@
     var q = els.searchInput.value.trim().toLowerCase();
     var list = people.filter(function (p) {
       if (!q) return true;
-      return (p.name + ' ' + p.room + ' ' + p.ext + ' ' + p.subject).toLowerCase().indexOf(q) !== -1;
+      return (p.name + ' ' + p.room + ' ' + p.ext + ' ' + p.subject + ' ' + (p.email || '')).toLowerCase().indexOf(q) !== -1;
     });
     list.sort(function (a, b) {
       var av = (a[sortKey] || '').toString().toLowerCase();
@@ -330,7 +434,7 @@
       var tr = document.createElement('tr');
       if (p.rows) {   // a department block, not a person
         tr.className = 'dept-head';
-        tr.innerHTML = '<td colspan="5">' + escapeHtml(p.label) +
+        tr.innerHTML = '<td colspan="7">' + escapeHtml(p.label) +
           '<span class="dept-count">' + p.rows.length + ' staff</span></td>';
         els.dirRows.appendChild(tr);
         return;
@@ -351,6 +455,10 @@
         cell('room', 'Room', p.room) +
         cell('ext', 'Extension', p.ext) +
         cell('subject', 'Subject or department', p.subject) +
+        cell('email', 'Email', p.email || '') +
+        '<td class="qr-cell"><select data-field="qr" data-id="' + p.id + '" aria-label="' +
+          escapeHtml('Card QR \u2014 ' + who) + '">' + qrOptions(p.qr) + '</select>' +
+          '<div class="qr-status" data-qr-status="' + p.id + '">' + escapeHtml(qrFor(p).note) + '</div></td>' +
         '<td><div class="row-actions"><button type="button" class="danger small" data-delete="' + p.id +
         '" aria-label="' + escapeHtml('Delete ' + who) + '">Delete</button></div></td>';
       els.dirRows.appendChild(tr);
@@ -359,6 +467,7 @@
       var arrow = th.querySelector('.arrow');
       arrow.textContent = th.getAttribute('data-sort') === sortKey ? (sortDir === 1 ? '↑' : '↓') : '';
     });
+    cardsChanged();
   }
 
   function isDuplicate(name, room) {
@@ -371,19 +480,26 @@
     name = (name || '').trim();
     if (!name) return 'skipped-empty';
     if (opts && opts.skipDuplicates && isDuplicate(name, room)) return 'duplicate';
-    people.push({ id: uid(), name: name, room: (room || '').trim(), ext: (ext || '').trim(), subject: (subject || '').trim() });
+    var person = { id: uid(), name: name, room: (room || '').trim(), ext: (ext || '').trim(), subject: (subject || '').trim() };
+    /* The two card fields are only written when there is something in them, so
+       a person added the old way is the same five-field object it always was. */
+    var email = opts && typeof opts.email === 'string' ? opts.email.trim() : '';
+    if (email) person.email = email;
+    var qr = opts ? StaffCards.validPersonMode(opts.qr) : '';
+    if (qr) person.qr = qr;
+    people.push(person);
     return 'added';
   }
 
   els.addRowBtn.addEventListener('click', function () {
     if (!els.newName.value.trim()) { els.newName.focus(); return; }
-    addPerson(els.newName.value, els.newRoom.value, els.newExt.value, els.newSubject.value);
-    els.newName.value = ''; els.newRoom.value = ''; els.newExt.value = ''; els.newSubject.value = '';
+    addPerson(els.newName.value, els.newRoom.value, els.newExt.value, els.newSubject.value, { email: els.newEmail.value });
+    els.newName.value = ''; els.newRoom.value = ''; els.newExt.value = ''; els.newSubject.value = ''; els.newEmail.value = '';
     save(); render();
     els.newName.focus();
   });
 
-  [els.newName, els.newRoom, els.newExt, els.newSubject].forEach(function (input) {
+  [els.newName, els.newRoom, els.newExt, els.newSubject, els.newEmail].forEach(function (input) {
     input.addEventListener('keydown', function (ev) {
       if (ev.key === 'Enter') { ev.preventDefault(); els.addRowBtn.click(); }
     });
@@ -409,7 +525,7 @@
     lines.forEach(function (line) {
       var parts = line.indexOf('\t') !== -1 ? line.split('\t') : line.split(',');
       parts = parts.map(function (p) { return p.trim(); });
-      var result = addPerson(parts[0], parts[1], parts[2], parts[3], { skipDuplicates: true });
+      var result = addPerson(parts[0], parts[1], parts[2], parts[3], { skipDuplicates: true, email: parts[4] });
       if (result === 'added') added++;
       else if (result === 'duplicate') skipped++;
     });
@@ -425,8 +541,15 @@
     if (!field || !id) return;
     var p = people.find(function (x) { return x.id === id; });
     if (!p) return;
-    p[field] = ev.target.value;
+    if (field === 'email' || field === 'qr') {
+      /* Absent when empty, so clearing a box takes the person back to the
+         shape they had before it was ever filled in. */
+      if (ev.target.value) p[field] = ev.target.value; else delete p[field];
+    } else {
+      p[field] = ev.target.value;
+    }
     save();
+    cardsChanged(p.id);
   });
 
   els.dirRows.addEventListener('click', function (ev) {
@@ -516,7 +639,7 @@
           var data = Share.unwrap(JSON.parse(text));
           if (!Array.isArray(data)) throw new Error('not an array');
           data.forEach(function (p) {
-            var result = addPerson(p.name, p.room, p.ext, p.subject, { skipDuplicates: true });
+            var result = addPerson(p.name, p.room, p.ext, p.subject, { skipDuplicates: true, email: p.email, qr: p.qr });
             if (result === 'added') added++; else if (result === 'duplicate') skipped++;
           });
         } else {
@@ -610,7 +733,7 @@
     title: 'Share this directory',
     noun: 'this directory',
     filename: 'staff directory',
-    note: 'Every row travels — name, room, extension and subject. Opening it ADDS these people to the directory on the receiving device and skips anyone already listed; nothing there is replaced.',
+    note: 'Every row travels — name, room, extension, subject, and the email and card QR choice where there are any. Opening it ADDS these people to the directory on the receiving device and skips anyone already listed; nothing there is replaced.',
     successMessage: 'Link copied. Opening it on another device adds these people to whatever directory is already there, skipping duplicates.',
     emptyMessage: 'Add at least one person before sharing this directory.',
     onMessage: function (text, isError) { setShareNote(text, isError); }
@@ -628,7 +751,7 @@
       onState: function (list) {
         var added = 0, skipped = 0;
         list.forEach(function (p) {
-          var result = addPerson(p.name, p.room, p.ext, p.subject, { skipDuplicates: true });
+          var result = addPerson(p.name, p.room, p.ext, p.subject, { skipDuplicates: true, email: p.email, qr: p.qr });
           if (result === 'added') added++; else if (result === 'duplicate') skipped++;
         });
         save();
@@ -639,10 +762,172 @@
     });
   }
 
+  /* ---------- wallet cards and lanyard cards ----------
+     One card per person, in the order Print directory uses. StaffCards
+     (wallet-card.js) decides the link each card's QR opens and says why a
+     person has none; _shared/qr-draw.js draws it, at a whole number of pixels
+     per module, never under its own 4 px floor. The same #cardSheet is the
+     on-screen preview and the printed sheet. Every string reaches the page
+     through textContent. */
+  function cardSize() { return StaffCards.SIZES[cardPrefs.size]; }
+
+  function qrOptions(selected) {
+    return Object.keys(StaffCards.PERSON_MODES).map(function (k) {
+      return '<option value="' + k + '"' + (k === (selected || '') ? ' selected' : '') + '>' +
+        StaffCards.PERSON_MODES[k] + '</option>';
+    }).join('');
+  }
+
+  /* The link a person's card carries, and the sentence the editor shows. A
+     link that would need a code smaller than qr-draw's floor on this card size
+     is refused here, in the editor, rather than drawn too small to scan. */
+  function qrFor(p) {
+    var r = StaffCards.resolve(p, cardPrefs.qr);
+    if (!r.kind) return r;
+    var plan = QrDraw.plan(r.uri, { maxPx: cardSize().qrPx });
+    if (!plan.ok) {
+      return { kind: null, uri: '', why: 'too long', plan: plan,
+        note: 'No QR: ' + r.uri.length + ' characters is too long to scan on a ' + cardSize().short + ' card.' };
+    }
+    r.plan = plan;
+    return r;
+  }
+
+  function cardOrder() {
+    var list = visibleRows();
+    if (groupByDept) list = groupByDepartment(list).reduce(function (acc, b) { return acc.concat(b.rows); }, []);
+    return list;
+  }
+
+  function mk(tag, cls, txt) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+
+  function buildCard(p, size) {
+    var q = qrFor(p);
+    var card = mk('div', 'wc-card wc-' + size.key);
+    var qrBox = null;
+    if (q.kind) {
+      var canvas = document.createElement('canvas');
+      var drawn = QrDraw.draw(canvas, q.uri, { maxPx: size.qrPx, fg: '#000000', bg: '#ffffff' });
+      if (drawn.ok) {
+        canvas.setAttribute('role', 'img');
+        canvas.setAttribute('aria-label', 'QR code: ' + q.uri);
+        canvas.setAttribute('data-qr-uri', q.uri);
+        qrBox = mk('div', 'wc-qr');
+        qrBox.appendChild(canvas);
+        qrBox.appendChild(mk('div', 'wc-cap', StaffCards.caption(q.kind, p)));
+      }
+    }
+    var text = mk('div', 'wc-text');
+    text.appendChild(mk('div', 'wc-name wc-n' + StaffCards.nameStep(p.name), (p.name || '').trim()));
+    var role = (p.subject || '').trim();
+    if (role) text.appendChild(mk('div', 'wc-role', role));
+    var room = (p.room || '').trim();
+    var ext = (p.ext || '').trim().replace(/^(ext\.?|x)\s*/i, '');
+    var where = [];
+    if (room) where.push(/^\d/.test(room) ? 'Room ' + room : room);
+    if (ext) where.push('Ext. ' + ext);
+    if (where.length) text.appendChild(mk('div', 'wc-where', where.join(' · ')));
+    if (size.key === 'lanyard') {
+      if (qrBox) card.appendChild(qrBox);
+      card.appendChild(text);
+    } else {
+      card.appendChild(text);
+      if (qrBox) card.appendChild(qrBox);
+    }
+    return card;
+  }
+
+  function buildCardSheet() {
+    var size = cardSize();
+    var list = cardOrder();
+    var sheet = els.cardSheet;
+    sheet.textContent = '';
+    sheet.style.setProperty('--wc-w', size.w + 'in');
+    sheet.style.setProperty('--wc-h', size.h + 'in');
+    sheet.style.setProperty('--wc-cols', String(size.cols));
+    StaffCards.pages(list, size.perPage).forEach(function (group) {
+      var page = mk('div', 'wc-page wc-page-' + size.key);
+      group.forEach(function (p) { page.appendChild(buildCard(p, size)); });
+      sheet.appendChild(page);
+    });
+    return list;
+  }
+
+  function refreshQrStatus(id) {
+    els.dirRows.querySelectorAll('[data-qr-status]').forEach(function (node) {
+      var who = node.getAttribute('data-qr-status');
+      if (id && who !== id) return;
+      var p = people.find(function (x) { return x.id === who; });
+      if (p) node.textContent = qrFor(p).note;
+    });
+  }
+
+  function refreshCardsNote() {
+    var list = cardOrder();
+    var size = cardSize();
+    if (!list.length) { els.cardsNote.textContent = 'No cards yet — add staff above.'; return; }
+    var pages = Math.ceil(list.length / size.perPage);
+    var none = list.filter(function (p) { return !qrFor(p).kind; }).length;
+    els.cardsNote.textContent = list.length + ' card' + (list.length === 1 ? '' : 's') + ' on ' + pages + ' page' +
+      (pages === 1 ? '' : 's') + ' (' + size.perPage + ' to a page)' +
+      (none ? ', ' + none + ' without a QR code — the Card QR column beside each name says why' : ', every card with a QR code') + '.';
+  }
+
+  var cardTimer = null;
+  function cardsChanged(id) {
+    refreshQrStatus(id);
+    refreshCardsNote();
+    if (els.cardPreviewBox.checked) {
+      clearTimeout(cardTimer);
+      cardTimer = setTimeout(buildCardSheet, 200);
+    }
+  }
+
+  function fillCardControls() {
+    Object.keys(StaffCards.SIZES).forEach(function (k) {
+      els.cardSize.appendChild(new Option(StaffCards.SIZES[k].label, k));
+    });
+    Object.keys(StaffCards.SHEET_MODES).forEach(function (k) {
+      els.cardQrMode.appendChild(new Option(StaffCards.SHEET_MODES[k], k));
+    });
+    els.cardSize.value = cardPrefs.size;
+    els.cardQrMode.value = cardPrefs.qr;
+  }
+
+  function cardSettingsChanged() {
+    cardPrefs.size = els.cardSize.value;
+    cardPrefs.qr = els.cardQrMode.value;
+    savePrefs();
+    cardsChanged();
+  }
+  els.cardSize.addEventListener('change', cardSettingsChanged);
+  els.cardQrMode.addEventListener('change', cardSettingsChanged);
+
+  els.cardPreviewBox.addEventListener('change', function () {
+    els.cardSheet.classList.toggle('is-off', !els.cardPreviewBox.checked);
+    if (els.cardPreviewBox.checked) buildCardSheet();
+  });
+
+  /* The class that takes the editor out of the printed page is on the body
+     only from the button to afterprint, so Ctrl+P on the page, and Print
+     directory, print exactly what they always did. */
+  els.printCardsBtn.addEventListener('click', function () {
+    if (!buildCardSheet().length) { els.cardsNote.textContent = 'Nothing to print yet — add staff above.'; return; }
+    document.body.classList.add('print-cards');
+    window.print();
+  });
+  window.addEventListener('afterprint', function () { document.body.classList.remove('print-cards'); });
+
   /* ---------- boot ---------- */
   load();
   importSharedDirectory();
   loadPrefs();
+  fillCardControls();
   els.groupByDeptBox.checked = groupByDept;
   render();
 })();

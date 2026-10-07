@@ -1,0 +1,754 @@
+// question-bank.test.mjs — pure-logic tests for _shared/question-bank.js
+// (Path 12 P1): the schema, validation, ids, the migration from 030's old
+// bank key, 030's view of the bank held to the store it replaced, and the
+// file formats read back through the real ExportKit and the vendored SheetJS;
+// and (Path 12 P2) the read-only seed sets, with 053's and 062's built-in
+// lists held to what their pages built before the data moved to a file.
+//
+//   node Tools/question-bank/test/question-bank.test.mjs   (or: npm run test:question-bank)
+//
+// question-bank.js is a classic script that publishes window.QuestionBank and
+// hard-depends on _shared/store.js, so both run here in a vm context with a
+// fake localStorage, as roster.test.mjs runs roster.js. The old-against-new
+// half needs the store 030 had before v265: _rgb-bank-store-v264.js is that
+// file, word for word, and is loaded only here. Banks are built by that old
+// store's own saveEntry(), so what the migration reads is what 030 really
+// wrote. The random banks take a seeded generator. Every name and question in
+// this file is made up. The browser half is 030's smoke-bank-file.mjs.
+// Exits 1 on any failure.
+
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+import crypto from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const site = path.join(here, '..', '..', '..');
+const src = f => fs.readFileSync(path.join(site, f), 'utf8');
+const STORE_SRC = src('_shared/store.js');
+const QB_SRC = src('_shared/question-bank.js');
+const EXPORT_SRC = src('_shared/export.js');
+const OLD_SRC = fs.readFileSync(path.join(here, '_rgb-bank-store-v264.js'), 'utf8');
+const NEW_SRC = src('Tools/review-game-board/rgb-bank-store.js');
+const CTCG_SRC = src('Tools/cultural-trivia-card-generator/ctcg-bank.js');
+const GBQ_SRC = src('Tools/geography-bee-quiz-generator/gbq-bank.js');
+
+let passed = 0, failed = 0;
+const ok = (cond, label) => { if (cond) { passed++; return true; } failed++; console.log('  FAIL ' + label); return false; };
+// Values made inside a vm context have that realm's prototypes; a JSON pass
+// brings both sides into this one before they are compared.
+const plain = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+const eq = (a, b, label) => ok(isDeepStrictEqual(plain(a), plain(b)), `${label} (got ${JSON.stringify(a)}, want ${JSON.stringify(b)})`);
+
+function fakeStorage(seed = {}) {
+  const map = new Map(Object.entries(seed));
+  return {
+    writes: [],
+    get length() { return map.size; },
+    key: i => [...map.keys()][i] ?? null,
+    getItem: k => (map.has(k) ? map.get(k) : null),
+    // store.js's write probe is not a write of anything; it is left out.
+    setItem(k, v) { if (k !== '__gvb_store_probe__') this.writes.push(k); map.set(k, String(v)); },
+    removeItem(k) { map.delete(k); },
+    dump: () => Object.fromEntries(map),
+  };
+}
+
+/* A page: store.js, then whatever `scripts` names, over `storage`. Two pages
+   over one storage are two tabs, or an old page and a new one. */
+function page(storage, scripts, { noStore = false } = {}) {
+  const handlers = {};
+  const win = {
+    localStorage: storage, navigator: {}, console: { error() {} },
+    addEventListener(type, fn) { (handlers[type] ||= []).push(fn); },
+    dispatchEvent(e) { (handlers[e.type] || []).forEach(fn => fn(e)); return true; },
+    CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
+    document: { body: { appendChild() {} }, createElement: () => ({ style: { cssText: '' }, setAttribute() {}, textContent: '' }) },
+    Blob, setTimeout, clearTimeout,
+  };
+  win.window = win;
+  const ctx = vm.createContext(win);
+  if (!noStore) vm.runInContext(STORE_SRC, ctx, { filename: '_shared/store.js' });
+  for (const s of scripts) vm.runInContext(s, ctx);
+  return win;
+}
+const oldPage = storage => page(storage, [OLD_SRC]).ReviewBankStore;
+const newPage = storage => page(storage, [QB_SRC, NEW_SRC]);
+
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+const QB = page(fakeStorage(), [QB_SRC]).QuestionBank;
+const OLD_KEY = 'gvb-review-board-bank:entries', KEY = 'gvb-question-bank';
+
+// ---- the schema ----------------------------------------------------------------
+console.log('QuestionBank — schema, validation and ids');
+eq([QB.KEY, QB.LEGACY_KEY, QB.VERSION], [KEY, OLD_KEY, 1], 'the key, the old key and the version are the documented ones');
+eq(QB.normalize({ id: ' a1 ', prompt: '  7 × 8?  ', answer: ' 56 ', unit: ' Unit 2 ', standard: ' 6.NS.1 ', difficulty: 'hard', tags: 'facts, Facts; times ,', points: '200', createdAt: '2026-01-05T10:00:00.000Z' }),
+  { id: 'a1', prompt: '7 × 8?', answer: '56', unit: 'Unit 2', standard: '6.NS.1', difficulty: 'Hard', tags: ['facts', 'times'], points: 200, createdAt: '2026-01-05T10:00:00.000Z' },
+  'normalize trims text, cases the difficulty, splits and de-duplicates tags and reads points as a number');
+eq(Object.keys(QB.normalize({})), ['id', 'prompt', 'answer', 'unit', 'standard', 'difficulty', 'tags', 'points', 'createdAt'], 'a blank question has every required field, and no choices or media');
+eq(QB.normalize(null), QB.normalize({}), 'something that is not a record is a blank question');
+eq(QB.normalize({ question: 'Old name', answer: 'a' }).prompt, 'Old name', "030's old `question` is read as `prompt`");
+ok(!('question' in QB.normalize({ question: 'Old name', answer: 'a' })), 'and is not kept beside it');
+eq(QB.normalize({ prompt: 'p', answer: 'a', choices: [' a ', '', 'b', 'A'] }).choices, ['a', 'b'], 'choices lose blanks and repeats');
+ok(!('choices' in QB.normalize({ prompt: 'p', answer: 'a', choices: [] })), 'an empty list of choices is left off');
+const media = { kind: 'image', ref: 'idb:rgb/abc', alt: 'A map', nested: [1, { two: 2 }] };
+eq(QB.normalize({ prompt: 'p', answer: 'a', media }).media, media, 'media is carried exactly as given');
+eq(QB.normalize({ prompt: 'p', answer: 'a', media: 'data:image/png;base64,AAAA' }).media, 'data:image/png;base64,AAAA', 'whatever it is');
+eq(QB.normalize({ prompt: 'p', answer: 'a', hint: 'think', weight: 3 }).hint, 'think', 'a field this version does not know is kept');
+eq(QB.normalize({ prompt: 'p', answer: 'a', difficulty: 'Impossible' }).difficulty, '', 'an unknown difficulty is blank');
+eq([QB.normalize({ points: 'lots' }).points, QB.normalize({ points: Infinity }).points, QB.normalize({ points: '1,000' }).points, QB.normalize({ points: -50 }).points], [0, 0, 1000, -50], 'points that are not a number are 0');
+eq(QB.normalize({ prompt: 7, answer: true }).prompt + '/' + QB.normalize({ prompt: 7, answer: true }).answer, '7/TRUE', 'a number or a boolean handed in as text is its text');
+{
+  const hostile = JSON.parse('{"prompt":"p","answer":"a","__proto__":{"polluted":1},"constructor":"x"}');
+  const n = QB.normalize(hostile);
+  ok(n.polluted === undefined && ({}).polluted === undefined && typeof n.constructor === 'function', 'a field named __proto__ or constructor changes nothing');
+}
+eq([QB.validate({ prompt: 'p', answer: 'a' }), QB.validate({ prompt: ' ', answer: 'a' }), QB.validate({ prompt: 'p' }), QB.validate(null)],
+  [[], ['no question'], ['no answer'], ['no question', 'no answer']], 'validate names a missing question and a missing answer');
+ok(/^q-[0-9a-z]+-[0-9a-z]+$/.test(QB.makeId()), 'an id is q-<time>-<random>');
+eq(QB.makeId(36 * 36, () => 0.5), 'q-100-i', 'made from the clock and the generator it is given');
+{
+  const ids = new Set();
+  for (let i = 0; i < 5000; i++) ids.add(QB.makeId());
+  eq(ids.size, 5000, '5,000 ids made in one tick are all different');
+  // A generator that always answers the same still cannot make two alike.
+  let list = [];
+  for (let i = 0; i < 5; i++) list = QB.upsert(list, { prompt: 'p' + i, answer: 'a' }, { nowMs: 1, random: () => 0.25 }).questions;
+  eq(new Set(list.map(q => q.id)).size, 5, 'and a stuck generator still gives five different ids');
+}
+
+// ---- upsert, remove, filter, distinct ------------------------------------------
+console.log('QuestionBank — the list');
+{
+  const t = { now: '2026-02-01T00:00:00.000Z' };
+  let list = [];
+  let r = QB.upsert(list, { prompt: 'First', answer: '1', unit: 'U1', tags: ['a'] }, t); list = r.questions;
+  const firstId = r.question.id;
+  r = QB.upsert(list, { prompt: 'Second', answer: '2', unit: 'U2', difficulty: 'Easy', media, choices: ['2', '3'], hint: 'h' }, t); list = r.questions;
+  const secondId = r.question.id;
+  r = QB.upsert(list, { prompt: 'Third', answer: '3', unit: 'U1', standard: 'S', tags: ['b', 'a'] }, t); list = r.questions;
+  eq(list.map(q => q.prompt), ['First', 'Second', 'Third'], 'new questions go on the end');
+  eq(list[0].createdAt, t.now, 'and are stamped when made');
+  const frozen = JSON.stringify(list);
+  r = QB.upsert(list, { id: secondId, prompt: 'Second, edited', answer: '2', unit: 'U2', points: 300 }, { now: '2026-03-01T00:00:00.000Z' });
+  eq(JSON.stringify(list), frozen, 'upsert does not change the list it is given');
+  eq(r.questions.map(q => q.id), [firstId, secondId, list[2].id], 'an edit keeps the question where it was');
+  eq([r.question.prompt, r.question.points, r.question.media, r.question.choices, r.question.hint, r.question.difficulty, r.question.createdAt, r.question.updatedAt],
+    ['Second, edited', 300, media, ['2', '3'], 'h', 'Easy', t.now, '2026-03-01T00:00:00.000Z'],
+    'and keeps the fields the edit did not name: media, choices, an unknown field, the day it was made');
+  eq(QB.upsert(list, { id: secondId, choices: [] }, t).question.choices, undefined, 'an edit can take the choices away');
+  eq(QB.upsert(list, { id: 'from-elsewhere', prompt: 'x', answer: 'y' }, t).question.id, 'from-elsewhere', 'a question arriving with an id the bank has not seen keeps it');
+  eq(QB.remove(list, firstId).map(q => q.prompt), ['Second', 'Third'], 'remove takes one out');
+  eq(QB.remove(list, 'nobody').length, 3, 'and nothing for an id that is not there');
+  eq(QB.filter(list, { unit: 'U1' }).map(q => q.prompt), ['First', 'Third'], 'filter by unit');
+  eq(QB.filter(list, { unit: 'U1', standard: 'S' }).map(q => q.prompt), ['Third'], 'filters are ANDed');
+  eq(QB.filter(list, { difficulty: 'Easy' }).map(q => q.prompt), ['Second'], 'filter by difficulty');
+  eq(QB.filter(list, { tag: 'a' }).map(q => q.prompt), ['First', 'Third'], 'filter by tag');
+  eq(QB.filter(list, { query: ' SECOND ' }).map(q => q.prompt), ['Second'], 'the query is case-blind and trimmed');
+  eq(QB.filter(list, {}).length, 3, 'no filter is everything');
+  eq([QB.distinct(list, 'unit'), QB.distinct(list, 'tags'), QB.distinct(list, 'standard')], [['U1', 'U2'], ['a', 'b'], ['S']], 'distinct lists the values in use, sorted, tags one by one');
+}
+
+// ---- the migration --------------------------------------------------------------
+console.log('QuestionBank — the migration from 030\'s old key');
+const SAMPLE = [
+  { question: 'What is the capital of Peru?', answer: 'Lima', points: 100, unit: 'Unit 1', standard: '6.G.1', difficulty: 'Easy' },
+  { question: 'Who wrote "The Giver"?', answer: 'Lois Lowry', points: 200, unit: 'Unit 1', standard: 'RL.7.2', difficulty: 'Medium' },
+  { question: 'Solve: 3x + 4 = 19', answer: 'x = 5', points: 300, unit: 'Unit 2', standard: '7.EE.B.4', difficulty: 'Hard' },
+  { question: '¿Cómo se dice "library"?', answer: 'la biblioteca', points: 100, unit: 'Unidad 3', standard: '', difficulty: '' },
+  { question: 'Line one\nline two, with a comma', answer: '=SUM(A1:A9)', points: 0, unit: '', standard: '', difficulty: 'Easy' },
+  { question: '🧪 Which is a base? “NaOH” or HCl', answer: 'NaOH', points: 500, unit: 'Unit 10', standard: 'MS-PS1-2', difficulty: 'Hard' },
+];
+/** A storage holding a bank the OLD store wrote, one saveEntry() at a time. */
+function oldBank(entries) {
+  const storage = fakeStorage();
+  const old = oldPage(storage);
+  entries.forEach(e => old.saveEntry(e));
+  storage.writes.length = 0;
+  return storage;
+}
+{
+  const storage = oldBank(SAMPLE);
+  const before = storage.getItem(OLD_KEY);
+  const oldView = oldPage(storage).listEntries();
+  eq(oldView.length, 6, 'the old store holds the six sample entries');
+  const win = newPage(storage);
+  const bank = win.QuestionBank.load();
+  eq(bank.questions.map(q => q.id), oldView.map(e => e.id), 'every old entry is in the shared bank, with its id, in its order');
+  eq(bank.questions.map(win.QuestionBank.toLegacy), oldView, 'and reads back, field for field, as the entry it was');
+  eq(storage.getItem(OLD_KEY), before, 'the old key is left byte for byte as it was');
+  const stored = JSON.parse(storage.getItem(KEY));
+  eq([stored.v, stored.data.schema, stored.data.questions.length, stored.data.legacy[OLD_KEY]], [1, 1, 6, oldView.map(e => e.id)],
+    'the new key is a Store envelope at version 1 that records the ids it took');
+  eq(storage.writes, [KEY], 'the migration is one write, to the new key');
+  win.QuestionBank.load(); newPage(storage).QuestionBank.list();
+  eq(storage.writes, [KEY], 'loading again, in this page or a fresh one, writes nothing');
+
+  // An older 030 page is still open on the old key.
+  const stale = oldPage(storage);
+  eq(stale.listEntries(), oldView, 'an older page still reads its bank, whole');
+  const added = stale.saveEntry({ question: 'Added on the old page', answer: 'late', points: 100, unit: 'Unit 9' });
+  stale.deleteEntry(oldView[1].id);
+  const after = win.QuestionBank.list();
+  eq(after.length, 7, 'what the old page adds arrives on the next load');
+  eq(after[6].id + '|' + after[6].prompt, added.id + '|Added on the old page', 'at the end, with its id');
+  ok(after.some(q => q.id === oldView[1].id), 'what the old page deletes stays in the shared bank');
+  win.QuestionBank.deleteQuestion(oldView[0].id);
+  win.QuestionBank.deleteQuestion(added.id);
+  eq(newPage(storage).QuestionBank.list().map(q => q.id), [oldView[1].id, oldView[2].id, oldView[3].id, oldView[4].id, oldView[5].id],
+    'a question deleted here does not come back from the old key');
+  ok(oldPage(storage).listEntries().some(e => e.id === oldView[0].id), 'and the old key still has it');
+
+  // A 009 backup made before v265 holds only the old key.
+  const backup = { [OLD_KEY]: before };
+  const replaced = fakeStorage(backup);
+  eq(newPage(replaced).ReviewBankStore.listEntries(), oldView, 'a backup from before v265, restored over an empty browser, comes back whole');
+  storage.setItem(OLD_KEY, before);       // the same backup merged over this browser
+  eq(newPage(storage).QuestionBank.list().map(q => q.id), [oldView[1].id, oldView[2].id, oldView[3].id, oldView[4].id, oldView[5].id],
+    'merged over a browser that has the shared bank, it brings back nothing that was deleted since');
+}
+{
+  // adopt() by itself, and old lists 030 never wrote.
+  const bank = { schema: 1, questions: [], legacy: {} };
+  ok(QB.adopt(bank, [{ id: 'bank-1', question: 'q', answer: 'a', points: 5 }]) === true, 'adopt says when it took something');
+  ok(QB.adopt(bank, [{ id: 'bank-1', question: 'q', answer: 'a', points: 5 }]) === false, 'and when it did not');
+  const odd = { schema: 1, questions: [], legacy: {} };
+  QB.adopt(odd, [null, 'text', 7, [], { id: 'd', question: 'one', answer: 'a' }, { id: 'd', question: 'two', answer: 'b' }, { question: 'no id', answer: 'c' }, { question: 'no id either', answer: 'd' }, { id: '__proto__', question: 'proto', answer: 'e' }]);
+  eq(odd.questions.map(q => q.id + ':' + q.prompt), ['d:one', 'd~2:two', 'bank-legacy:no id', 'bank-legacy~2:no id either', '__proto__:proto'],
+    'entries that are not records are passed over; a repeated or missing id is kept under a made one, not dropped');
+  ok(({}).prompt === undefined, 'and an id of __proto__ pollutes nothing');
+  const again = JSON.stringify(odd);
+  QB.adopt(odd, [{ id: 'd', question: 'one', answer: 'a' }, { id: 'd', question: 'two', answer: 'b' }, { question: 'no id', answer: 'c' }]);
+  eq(JSON.stringify(odd), again, 'a second pass over the same odd list adds nothing');
+}
+for (const [label, raw] of [['not JSON', '{oops'], ['a string', '"hello"'], ['a number', '42'], ['null', 'null'], ['an object', '{"a":1}'], ['an empty list', '[]']]) {
+  const storage = fakeStorage({ [OLD_KEY]: raw });
+  let list = null, threw = '';
+  try { list = newPage(storage).ReviewBankStore.listEntries(); } catch (e) { threw = String(e); }
+  eq([threw, list], ['', []], `an old key holding ${label} is an empty bank, not a crash`);
+  eq(storage.getItem(OLD_KEY), raw, 'and is left as it is');
+}
+
+// ---- old against new: 030's view of the bank ------------------------------------
+console.log('QuestionBank — 030 reads what it read before');
+const WORDS = ['fraction', 'Lima', 'volcano', 'verb', 'treaty', 'cell', 'ratio', 'β-decay', 'naïve', '"quoted"', "it's", '<b>bold</b>', '=1+1', '-5', '+7', '@home', '007', '1/2', '  spaced  ', 'línea\nnueva', '🧪', 'ＦＵＬＬ', 'x'.repeat(300)];
+const UNITS = ['', 'Unit 1', 'Unit 2', 'unit 2', 'Unit 10', 'Ünit', ' Unit 1 '];
+const STANDARDS = ['', '6.G.1', '7.EE.B.4', 'RL.7.2', 'MS-PS1-2'];
+const DIFFS = ['', 'Easy', 'Medium', 'Hard', 'easy', 'Impossible', null, undefined];
+const POINTS = [0, 100, 200, 300, 400, 500, -100, 12.5, '250', '', null, undefined, 'lots', NaN];
+function randomEntries(rand, n) {
+  const pick = a => a[Math.floor(rand() * a.length)];
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const e = { question: pick(WORDS) + ' ' + pick(WORDS) + ' #' + i, answer: pick(WORDS), points: pick(POINTS), unit: pick(UNITS), standard: pick(STANDARDS), difficulty: pick(DIFFS) };
+    if (rand() < 0.1) delete e.unit;
+    if (rand() < 0.05) e.answer = '';
+    if (rand() < 0.05) e.question = 42;
+    out.push(e);
+  }
+  return out;
+}
+const FILTERS = [{}, { unit: 'Unit 1' }, { unit: 'Unit 2', difficulty: 'Hard' }, { standard: '6.G.1' }, { difficulty: 'Easy' }, { query: 'LIMA' }, { query: '  verb ' }, { unit: 'Unit 10', standard: 'MS-PS1-2', difficulty: 'Medium', query: 'cell' }, { unit: 'nowhere' }, { query: '=1+1' }];
+{
+  const rand = rng(20261006);
+  let banks = 0, entries = 0, mismatches = 0;
+  for (let b = 0; b < 300; b++) {
+    const n = b < 3 ? [0, 1, 2][b] : 1 + Math.floor(rand() * 60);
+    const storage = oldBank(randomEntries(rand, n));
+    // The old store deletes a few before the new page ever loads.
+    const oldA = oldPage(storage);
+    oldA.listEntries().forEach(e => { if (rand() < 0.1) oldA.deleteEntry(e.id); });
+    const old = oldPage(storage), neu = newPage(storage).ReviewBankStore;
+    const same = (a, c) => { if (!isDeepStrictEqual(plain(a), plain(c))) mismatches++; };
+    same(neu.listEntries(), old.listEntries());
+    same(neu.distinctValues('unit'), old.distinctValues('unit'));
+    same(neu.distinctValues('standard'), old.distinctValues('standard'));
+    FILTERS.forEach(f => same(neu.filterEntries(f), old.filterEntries(f)));
+    same(neu.DIFFICULTIES, old.DIFFICULTIES);
+    banks++; entries += old.listEntries().length;
+  }
+  eq(mismatches, 0, `over ${banks} random banks (${entries} entries) the list, both dropdowns and ten filters are what the old store gave`);
+  console.log(`  (measured: ${banks} random banks, ${entries} entries)`);
+}
+{
+  // The same clicks on an old page and a new one, each over its own copy of
+  // one bank: add, delete, add again. Ids and stamps of entries made after
+  // the split differ by construction, so they are compared without them.
+  const rand = rng(77);
+  let diff = 0;
+  for (let b = 0; b < 60; b++) {
+    const seedEntries = randomEntries(rand, 12);
+    const sOld = oldBank(seedEntries);
+    const sNew = fakeStorage({ [OLD_KEY]: sOld.getItem(OLD_KEY) });
+    const old = oldPage(sOld), neu = newPage(sNew).ReviewBankStore;
+    const lateIds = new Set();
+    for (let step = 0; step < 15; step++) {
+      if (rand() < 0.6) {
+        const e = randomEntries(rand, 1)[0];
+        const a = old.saveEntry(e), c = neu.saveEntry(e);
+        lateIds.add(a.id); lateIds.add(c.id);
+        if (!isDeepStrictEqual(plain({ ...a, id: '', createdAt: '' }), plain({ ...c, id: '', createdAt: '' }))) diff++;
+      } else {
+        const at = Math.floor(rand() * old.listEntries().length);
+        const a = old.listEntries()[at], c = neu.listEntries()[at];
+        if (a) { old.deleteEntry(a.id); neu.deleteEntry(c.id); }
+      }
+      const strip = list => list.map(e => (lateIds.has(e.id) ? { ...e, id: '', createdAt: '' } : e));
+      if (!isDeepStrictEqual(plain(strip(old.listEntries())), plain(strip(neu.listEntries())))) diff++;
+    }
+  }
+  eq(diff, 0, 'and 900 adds and deletes on an old page and a new one leave the same bank, in the same order');
+}
+{
+  // What 030's Add button hands over, and what it gets back.
+  const storage = fakeStorage();
+  const win = newPage(storage);
+  const e = win.ReviewBankStore.saveEntry({ question: '  Capital of France?  ', answer: ' Paris ', points: 100, unit: 'Unit 1', standard: '6.G.1', difficulty: 'Easy' });
+  eq(Object.keys(e), ['id', 'question', 'answer', 'points', 'unit', 'standard', 'difficulty', 'createdAt'], "saveEntry answers in the page's eight fields");
+  eq([e.question, e.answer, /^q-/.test(e.id), !isNaN(Date.parse(e.createdAt))], ['Capital of France?', 'Paris', true, true], 'trimmed, with a new id and a stamp');
+  ok(storage.getItem(OLD_KEY) === null, 'a new bank never writes the old key');
+  // A question another tool gave choices, tags and media; 030 edits its text.
+  win.QuestionBank.saveQuestion({ id: e.id, choices: ['Paris', 'Lyon'], tags: ['capitals'], media, hint: 'north' });
+  win.ReviewBankStore.saveEntry({ id: e.id, question: 'Capital of France (edited)?', answer: 'Paris', points: 200, unit: 'Unit 1', standard: '6.G.1', difficulty: 'Easy', createdAt: e.createdAt });
+  const q = win.QuestionBank.list()[0];
+  eq([q.prompt, q.points, q.choices, q.tags, q.media, q.hint, q.createdAt], ['Capital of France (edited)?', 200, ['Paris', 'Lyon'], ['capitals'], media, 'north', e.createdAt],
+    "a save from 030 keeps the fields 030 does not show");
+  win.ReviewBankStore.deleteEntry(e.id);
+  eq(win.ReviewBankStore.listEntries(), [], 'and its delete deletes');
+}
+
+// ---- what is stored: odd and newer payloads -------------------------------------
+console.log('QuestionBank — the stored bank');
+for (const [label, raw] of [['not JSON', '{oops'], ['a bare list', '[{"id":"a","prompt":"p","answer":"a"}]'], ['an envelope of a string', '{"v":1,"data":"x"}'], ['an envelope with no list', '{"v":1,"data":{"schema":1,"questions":"many"}}']]) {
+  const storage = fakeStorage({ [KEY]: raw });
+  let list = null, threw = '';
+  try { list = newPage(storage).QuestionBank.list(); } catch (e) { threw = String(e); }
+  eq([threw, list], ['', []], `a new key holding ${label} reads as an empty bank, not a crash`);
+  eq(storage.getItem(KEY), raw, 'and a read alone does not overwrite it');
+}
+{
+  const stored = { v: 1, data: { schema: 1, questions: [{ id: 'a', prompt: 'p', answer: 'x' }, null, 'junk', { id: 'a', prompt: 'twin', answer: 'y' }, { prompt: 'no id', answer: 'z' }], legacy: { [OLD_KEY]: ['gone'] } } };
+  const storage = fakeStorage({ [KEY]: JSON.stringify(stored), [OLD_KEY]: JSON.stringify([{ id: 'gone', question: 'deleted long ago', answer: 'x' }]) });
+  eq(newPage(storage).QuestionBank.list().map(q => q.id + ':' + q.prompt), ['a:p', 'q-noid-4:no id'], 'stored junk is passed over, and an id in `legacy` is not taken again');
+}
+{
+  const future = JSON.stringify({ v: 2, data: { schema: 2, questions: [{ id: 'f1', prompt: 'From a newer page', answer: 'a', rubric: { rows: 3 } }], legacy: {}, somethingNew: true } });
+  const storage = fakeStorage({ [KEY]: future, [OLD_KEY]: JSON.stringify([{ id: 'bank-old', question: 'old', answer: 'a' }]) });
+  const win = newPage(storage);
+  eq(win.QuestionBank.list().map(q => q.prompt), ['From a newer page'], "a newer page's bank is read");
+  const res = win.QuestionBank.saveQuestion({ prompt: 'p', answer: 'a' });
+  eq([res.ok, res.newer], [false, true], 'and a save into it is refused, saying why');
+  eq([win.QuestionBank.deleteQuestion('f1').ok, win.QuestionBank.importQuestions([{ prompt: 'x', answer: 'y' }]).ok], [false, false], 'as are a delete and an import');
+  eq(storage.getItem(KEY), future, 'so the newer bank is byte for byte what it was');
+}
+{
+  let threw = '';
+  try { page(fakeStorage(), [QB_SRC], { noStore: true }).QuestionBank.list(); } catch (e) { threw = e.message; }
+  ok(/store\.js must be loaded first/.test(threw), 'with no store.js on the page, storage says so');
+  const storage = fakeStorage();
+  const win = newPage(storage);
+  const heard = [];
+  const off = win.QuestionBank.onChange(list => heard.push(list.length));
+  win.QuestionBank.saveQuestion({ prompt: 'p', answer: 'a' });
+  win.QuestionBank.saveQuestion({ prompt: 'p2', answer: 'a' });
+  off();
+  win.QuestionBank.saveQuestion({ prompt: 'p3', answer: 'a' });
+  eq(heard, [1, 2], 'onChange hears each write in its own tab, until it is unsubscribed');
+}
+
+// ---- merge and the files --------------------------------------------------------
+console.log('QuestionBank — import and export');
+const T = { now: '2026-04-01T00:00:00.000Z' };
+function bankOf(entries) {
+  let list = [];
+  entries.forEach((e, i) => { list = QB.upsert(list, { ...e, id: e.id || 'id-' + i, createdAt: '2026-01-0' + (1 + i % 9) + 'T00:00:00.000Z' }, T).questions; });
+  return list;
+}
+const TRICKY = bankOf([
+  { prompt: 'Plain question?', answer: 'Plain answer', points: 100, unit: 'Unit 1', standard: '6.G.1', difficulty: 'Easy', tags: ['review', 'map skills'] },
+  { prompt: 'A comma, a "quote" and\na line break', answer: 'semi;colon\ttab', points: 200, unit: 'Unit, with comma', difficulty: 'Medium' },
+  { prompt: '=HYPERLINK("http://example.invalid","click")', answer: '=1+1', points: 300, tags: ['+plus', '-minus', '@at'] },
+  { prompt: '+1 for effort?', answer: '-5', points: 0 },
+  { prompt: '@mention', answer: '007', points: 50, standard: '1.2' },
+  { prompt: 'Half?', answer: '1/2', choices: ['1/2', '2/4 | or so', '0.5'], points: 100 },
+  { prompt: 'Which year?', answer: '1776', choices: ['1492', '1776', '1812'], difficulty: 'Hard', points: 400 },
+  { prompt: "'=apostrophe first", answer: "'quoted'", points: 100 },
+  { prompt: '¿Dónde está 東京? 🗼', answer: 'Japón', unit: 'Unidad 3', points: 100, media, hint: 'Asia' },
+  { prompt: '   Spaces kept   inside', answer: 'TRUE', points: 12.5 },
+]);
+{
+  // JSON: everything, exactly.
+  const file = QB.toJSON(TRICKY, { title: 'Grade 7 review', exported: '2026-04-02T00:00:00.000Z' });
+  const head = JSON.parse(file);
+  eq([head.format, head.version, head.title, head.questions.length], ['aplp-question-bank', 1, 'Grade 7 review', 10], 'the JSON file names its format and version');
+  const back = QB.parse(file);
+  eq([back.error, back.questions.length], ['', 10], 'and parses back');
+  const fresh = QB.merge([], back.questions, T);
+  eq([fresh.added, fresh.updated, fresh.skipped, fresh.invalid], [10, 0, 0, []], 'into an empty bank it adds all ten');
+  eq(fresh.questions, TRICKY, 'and the bank is the one exported, field for field: ids, media, choices, tags, the unknown field, the order');
+  const twice = QB.merge(fresh.questions, back.questions, T);
+  eq([twice.added, twice.updated, twice.same, twice.skipped], [0, 0, 10, 0], 'importing the same file again changes nothing');
+  eq(twice.questions, TRICKY, 'not one field');
+  eq(QB.parse('\uFEFF' + file).questions.length, 10, 'a byte order mark in front of the JSON is ignored');
+  eq(QB.parse(JSON.stringify({ format: 'aplp-question-bank', version: 2, questions: [{ prompt: 'p', answer: 'a' }] })).error.slice(0, 44), 'That bank was saved by a newer version of th', 'a file from a newer version is refused in words');
+  eq([QB.parse('{broken').error, QB.parse('{"a":1}').error], ['That file is not readable JSON.', 'That file has no list of questions in it.'], 'as are broken JSON and JSON with no questions');
+  // 030's old key, pasted into a file, is a bank too.
+  const oldFile = oldBank(SAMPLE).getItem(OLD_KEY);
+  const fromOld = QB.merge([], QB.parse(oldFile).questions, T);
+  eq([fromOld.added, fromOld.questions.map(q => q.prompt)], [6, SAMPLE.map(e => e.question)], "a file of 030's old entries imports as questions");
+}
+{
+  // Merge rules.
+  const base = bankOf([{ id: 'k1', prompt: 'Capital of Peru?', answer: 'Lima', unit: 'Unit 1', points: 100, media, tags: ['geo'], choices: ['Lima', 'Quito'] }, { id: 'k2', prompt: 'Two?', answer: '2', points: 100 }]);
+  const frozen = JSON.stringify(base);
+  const res = QB.merge(base, [
+    { id: 'k1', prompt: 'Capital of Peru?', answer: 'Lima', unit: 'Unit 5' },                // same id: an update that names four fields
+    { prompt: '  capital of  PERU? ', answer: 'lima' },                                       // no id, same words: skipped
+    { prompt: 'Brand new?', answer: 'Yes' },                                                  // no id, new words: added
+    { prompt: 'Brand new?', answer: 'Yes' },                                                  // twice in one file: once
+    { id: 'k9', prompt: 'With a foreign id', answer: 'ok' },                                  // unseen id: added, id kept
+    { prompt: '', answer: 'orphan' }, { prompt: 'No answer' }, null,                          // refused
+  ], T);
+  eq(JSON.stringify(base), frozen, 'merge does not change the list it is given');
+  eq([res.added, res.updated, res.same, res.skipped, res.invalid], [2, 1, 0, 2, [{ row: 6, errors: ['no question'] }, { row: 7, errors: ['no answer'] }, { row: 8, errors: ['no question', 'no answer'] }]],
+    'same id updates, same words are skipped, the rest are added, and a row with no question or answer is refused by its number');
+  eq(res.questions.map(q => q.id.replace(/^q-.*/, 'q-new')), ['k1', 'k2', 'q-new', 'k9'], 'updates stay in place, additions follow in file order, a foreign id is kept');
+  const k1 = res.questions[0];
+  eq([k1.unit, k1.points, k1.media, k1.tags, k1.choices, k1.createdAt, k1.updatedAt], ['Unit 5', 100, media, ['geo'], ['Lima', 'Quito'], base[0].createdAt, T.now],
+    'an update changes what the file names and keeps what it does not: points, media, tags, choices, the day it was made');
+  eq(QB.merge(base, [{ id: 'k1', prompt: 'Capital of Peru?', answer: 'Lima', choices: [], tags: [] }], T).questions[0].choices, undefined, 'a file that names empty choices takes them away');
+  eq(QB.merge(base, 'not a list', T).questions.length, 2, 'something that is not a list merges nothing');
+}
+{
+  // Rows: through the real ExportKit.toCsv and back.
+  const g = page(fakeStorage(), [EXPORT_SRC, QB_SRC]);
+  const rows = g.QuestionBank.toRows(TRICKY);
+  eq(rows[0], ['Question', 'Answer', 'Points', 'Unit', 'Standard', 'Difficulty', 'Tags', 'Choices', 'ID (leave as it is)'], 'the sheet has nine named columns');
+  eq([rows.length, typeof rows[1][2], rows.slice(1).every(r => r.every((c, i) => i === 2 || typeof c === 'string'))], [11, 'number', true], 'one row a question; points is a number and every other cell is text');
+  const csv = g.ExportKit.toCsv(rows);
+  ok(csv.includes("'=HYPERLINK") && csv.includes("'=1+1") && csv.includes("'+1 for effort?") && csv.includes("'-5") && csv.includes("'@mention"), 'in the CSV, ExportKit guards every cell a spreadsheet would run as a formula');
+  ok(!/(^|,|\n)[=+\-@]/.test(csv.replace(/^\uFEFF/, '').replace(/"(?:[^"]|"")*"/g, m => (/^"[=+\-@]/.test(m) ? m.slice(1) : 'x'))), 'and no cell at all starts with = + - or @');
+  const parsed = g.QuestionBank.parse(csv);
+  eq([parsed.error, parsed.questions.length, parsed.rows], ['', 10, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]], 'the CSV parses back to ten questions, each with its sheet row');
+  const merged = g.QuestionBank.merge([], parsed.questions, T);
+  const carried = q => ({ id: q.id, prompt: q.prompt, answer: q.answer, points: q.points, unit: q.unit, standard: q.standard, difficulty: q.difficulty, tags: q.tags, choices: q.choices });
+  eq(merged.questions.map(carried), TRICKY.map(carried), 'and every column comes back as it went: the guard off again, 007 and 1/2 and 1776 still text, commas, quotes, line breaks, the bar in a choice');
+  eq(merged.questions.map(q => typeof q.answer), TRICKY.map(() => 'string'), 'every answer is text');
+  const over = g.QuestionBank.merge(TRICKY, parsed.questions, T);
+  eq([over.added, over.updated, over.same, over.questions[8].media, over.questions[8].hint], [0, 0, 10, media, 'Asia'], 'imported over the bank it came from, the sheet changes nothing and the media it cannot carry stays');
+  // Semicolons, tabs, a header in another order and case, extra columns, blank lines, a title line.
+  const hand = 'Grade 7 review;;\r\nANSWER;notes;Question ;Level;points\r\nLima;x;Capital of Peru?;hard;1,000\r\n;;;;\r\n"semi;colon";;"Says ""hi""";;\r\n;;No answer here;;\r\n';
+  const h = g.QuestionBank.parse(hand);
+  eq([h.error, h.questions, h.rows], ['', [{ answer: 'Lima', prompt: 'Capital of Peru?', difficulty: 'hard', points: '1,000' }, { answer: 'semi;colon', prompt: 'Says "hi"', difficulty: '', points: '' }, { answer: '', prompt: 'No answer here', difficulty: '', points: '' }], [3, 5, 6]],
+    'a hand-made sheet: semicolons, a title line, columns in another order and case, an unknown column, a blank row');
+  const hm = g.QuestionBank.merge([], h.questions, T);
+  eq([hm.added, hm.invalid, hm.questions[0].difficulty, hm.questions[0].points], [2, [{ row: 3, errors: ['no answer'] }], 'Hard', 1000], 'merges with the bad row named and the difficulty and points read');
+  eq(g.QuestionBank.parse('Term\tDefinition\nphotosynthesis\thow a plant makes food\n').questions, [{ prompt: 'photosynthesis', answer: 'how a plant makes food' }], 'tabs, and "term" and "definition" as the two headers');
+  eq(g.QuestionBank.parse('name,age\nA,12\n').error, 'No header row with a "Question" and an "Answer" column was found.', 'a sheet with no question and answer header is refused in words');
+  eq(g.QuestionBank.parse('').error, 'No header row with a "Question" and an "Answer" column was found.', 'as is an empty file');
+  eq(g.QuestionBank.fromRows([['Question', 'Answer', 'Points'], [42, true, 7], [new Date(Date.UTC(2026, 0, 5)), 1.5, null]]).questions,
+    [{ prompt: '42', answer: 'TRUE', points: '7' }, { prompt: '2026-01-05', answer: '1.5', points: '' }], 'cells that arrive as numbers, booleans or dates are read as their text');
+  eq(g.QuestionBank.parseCsv('\uFEFFQuestion,Answer\r\n')[0], ['Question', 'Answer'], 'parseCsv drops a byte order mark by itself');
+  eq(g.QuestionBank.parseCsv('a,b\r\n"1\n2",""""\r\n\r\nlast'), [['a', 'b'], ['1\n2', '"'], [''], ['last']], 'parseCsv reads quoted line breaks, doubled quotes, an empty line and a last line with no break');
+}
+{
+  // XLSX: through ExportKit.toXlsx on the vendored SheetJS, and read back as a page reads it.
+  const g = page(fakeStorage(), [src('_shared/vendor/xlsx/xlsx.full.min.js'), EXPORT_SRC, QB_SRC]);
+  const blob = g.ExportKit.toXlsx({ name: 'Questions', rows: g.QuestionBank.toRows(TRICKY) });
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const wb = g.XLSX.read(vm.runInContext('(b) => new Uint8Array(b)', g)(bytes), { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const cells = Object.keys(ws).filter(k => k[0] !== '!');
+  eq(cells.filter(k => ws[k].f).length, 0, 'the workbook has no formula cell');
+  eq([ws.A4.t, ws.A4.v, ws.B4.v, ws.B6.t, ws.B6.v, ws.B7.t, ws.B7.v, ws.B8.t, ws.C2.t], ['s', '=HYPERLINK("http://example.invalid","click")', '=1+1', 's', '007', 's', '1/2', 's', 'n'],
+    'a formula, 007, 1/2 and 1776 are string cells as typed; points is a number cell');
+  const rows = g.XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+  const merged = g.QuestionBank.merge([], g.QuestionBank.fromRows(rows).questions, T);
+  const carried = q => ({ id: q.id, prompt: q.prompt, answer: q.answer, points: q.points, unit: q.unit, standard: q.standard, difficulty: q.difficulty, tags: q.tags, choices: q.choices });
+  eq(merged.questions.map(carried), TRICKY.map(carried), 'read back the way 030 reads a workbook, every column is what was exported');
+  // A sheet a colleague typed numbers into: 7 and 1776 as number cells.
+  const typed = g.XLSX.utils.aoa_to_sheet([['Question', 'Answer', 'Points'], ['Lucky number?', 7, 100], ['Year?', 1776, 200], ['Half?', 0.5, 300]]);
+  const tq = g.QuestionBank.fromRows(g.XLSX.utils.sheet_to_json(typed, { header: 1, raw: false, defval: '' })).questions;
+  eq(tq.map(q => q.answer), ['7', '1776', '0.5'], 'a number typed into an answer cell arrives as its text');
+}
+
+// ---- seed sets (Path 12 P2) ------------------------------------------------------
+console.log('QuestionBank — seed sets: read-only, in memory, copied on request');
+const sha = t => crypto.createHash('sha256').update(t).digest('hex');
+const seedPage = (storage, scripts = [QB_SRC, CTCG_SRC, GBQ_SRC, NEW_SRC]) => page(storage, scripts);
+{
+  const q = page(fakeStorage(), [QB_SRC]).QuestionBank;
+  eq(q.sets(), [], 'with no data file loaded there are no sets');
+  eq([q.seedId('053', 'b3'), q.seedId('a:b', 'x'), q.isSeedId('seed:053:b3'), q.isSeedId(' seed:x:y'), q.isSeedId('q-abc'), q.isSeedId(''), q.isSeedId(null), q.isSeedId(7)],
+    ['seed:053:b3', 'seed:a-b:x', true, true, false, false, false, false], 'a seed id is seed:<set>:<the tool\'s id>, and only that is one');
+  eq([q.seedSetOf('seed:053:b3'), q.seedSetOf('seed:062:bi1:2'), q.seedSetOf('seed:nocolon'), q.seedSetOf('q-1')], ['053', '062', '', ''], 'the set is read back off the id');
+  eq(q.registerSet(null), { ok: false, id: '', count: 0, dropped: 0 }, 'a set with no id is refused');
+  eq(q.registerSet({ id: 't', title: 'Test set', source: '999 Made-up Tool', questions: [
+    { id: 'a', prompt: ' One? ', answer: '1', unit: 'U' }, { id: 'a', prompt: 'Twin?', answer: '2' }, { prompt: 'No id?', answer: '3' },
+    { id: 'c', prompt: '', answer: '4' }, { id: 'd', prompt: 'No answer?' }, 'junk', null, { id: 'e', question: 'Old name?', answer: '5', extra: { deep: [1] } },
+  ] }), { ok: true, id: 't', count: 2, dropped: 6 }, 'a question with no id, a repeated id, no prompt or no answer is left out and counted');
+  eq(q.sets(), [{ id: 't', title: 'Test set', source: '999 Made-up Tool', note: '', count: 2 }], 'sets() names the set and its size');
+  eq(q.setQuestions('t').map(x => [x.id, x.prompt, x.answer, x.unit, x.points, x.createdAt]), [['seed:t:a', 'One?', '1', 'U', 0, ''], ['seed:t:e', 'Old name?', '5', '', 0, '']], 'its questions are full questions with seed ids, in order');
+  eq(q.setQuestions('nope'), [], 'no such set is an empty list');
+  // read-only: nothing a caller does to what it was handed reaches the set
+  const before = JSON.stringify(q.setQuestions('t'));
+  const handed = q.setQuestions('t'); handed[0].prompt = 'CHANGED'; handed[1].extra.deep.push(2); handed.push({ id: 'x' }); handed[0].tags.push('t');
+  const one = q.findSeed('seed:t:e'); one.answer = 'CHANGED'; one.extra.deep.length = 0;
+  eq(JSON.stringify(q.setQuestions('t')), before, 'changing a question it handed out, or the list, changes nothing in the set');
+  eq([q.findSeed('seed:t:a').prompt, q.findSeed('seed:t:zz'), q.findSeed('seed:other:a'), q.findSeed('a'), q.findSeed(null)], ['One?', null, null, null, null], 'findSeed gives a seed by its id and null for anything else');
+  // registering again replaces in place and changes nothing when the data is the same
+  q.registerSet({ id: 'u', questions: [{ id: 'z', prompt: 'Zed?', answer: 'z' }] });
+  q.registerSet({ id: 't', title: 'Test set', source: '999 Made-up Tool', questions: q.setQuestions('t') });
+  eq([q.sets().map(x => x.id), JSON.stringify(q.setQuestions('t'))], [['t', 'u'], before], 'a set registered again, even from its own output, stands where it stood with the same ids');
+  // detach
+  eq(q.detach({ id: 'seed:t:a', prompt: 'One?', answer: '1', createdAt: 'x', updatedAt: 'y', unit: 'U' }), { prompt: 'One?', answer: '1', unit: 'U', copiedFrom: 'seed:t:a' }, 'detach() takes the seed id and dates off and records where it came from');
+  eq(q.detach({ id: 'q-1', prompt: 'p', answer: 'a' }), { id: 'q-1', prompt: 'p', answer: 'a' }, 'and leaves a question of the teacher\'s as it is');
+  // the pure list functions never keep a seed id
+  const up = q.upsert([], q.findSeed('seed:t:a'), { now: 'T', nowMs: 5, random: () => 0.5 });
+  eq([q.isSeedId(up.question.id), up.question.copiedFrom, up.question.createdAt, up.question.prompt], [false, 'seed:t:a', 'T', 'One?'], 'upsert() of a seed stores a new question with its own id and date');
+  const m1 = q.merge([], q.setQuestions('t'), { now: 'T' });
+  eq([m1.added, m1.questions.some(x => q.isSeedId(x.id)), m1.questions.map(x => x.copiedFrom)], [2, false, ['seed:t:a', 'seed:t:e']], 'merge() of a whole set adds copies, none under a seed id');
+  const m2 = q.merge(m1.questions, q.setQuestions('t'), { now: 'T2' });
+  eq([m2.added, m2.updated, m2.skipped, JSON.stringify(m2.questions) === JSON.stringify(m1.questions)], [0, 0, 2, true], 'merged a second time, every one is skipped and the bank is the same');
+  // a list that somehow holds a seed id is still not written over by one arriving
+  const odd = [{ ...q.findSeed('seed:t:a'), prompt: 'Hand-made', answer: 'row' }];
+  const m3 = q.merge(odd, [q.findSeed('seed:t:a')], { now: 'T' });
+  eq([m3.updated, m3.added, m3.questions[0].prompt, m3.questions.length], [0, 1, 'Hand-made', 2], 'a seed arriving never replaces a stored question, whatever its id');
+}
+{
+  // the stored half: nothing is written until a copy, and a copy is the teacher's
+  const storage = fakeStorage();
+  const w = seedPage(storage), q = w.QuestionBank, view = w.ReviewBankStore;
+  eq(q.sets().map(x => [x.id, x.title, x.count]), [['053', 'Cultural Trivia', 30], ['062', 'Geography Bee', 90]], '053 and 062 register their sets when their data files load after the module');
+  eq(view.sources().map(x => [x.id, x.count, x.readOnly]), [['', 0, false], ['053', 30, true], ['062', 90, true]], '030\'s view lists the teacher\'s bank first, then the sets, read-only');
+  view.listEntries('053'); view.filterEntries({ unit: 'Capitals' }, '062'); view.distinctValues('unit', '062'); view.findEntry('seed:053:b0'); q.setQuestions('062'); q.findSeed('seed:062:bi5');
+  eq([storage.writes, Object.keys(storage.dump())], [[], []], 'listing, filtering and finding in a set writes nothing: no key exists');
+  eq(view.distinctValues('unit', '062'), ['Capitals', 'Landmarks', 'Map Skills'], 'a set\'s units are its categories');
+  eq(view.distinctValues('unit', '053'), ['Francophone World', 'Global Culture', 'Hispanic World'], 'and 053\'s are its three');
+  eq([view.filterEntries({ unit: 'Capitals' }, '062').length, view.filterEntries({ query: 'machu' }, '053').map(e => e.answer), view.filterEntries({ query: 'machu' }).length], [30, ['The Inca'], 0], 'a set filters as the bank does, and the bank\'s own list does not see it');
+  eq(view.findEntry('seed:053:b3'), { id: 'seed:053:b3', question: 'What ancient civilization built Machu Picchu?', answer: 'The Inca', points: 0, unit: 'Hispanic World', standard: '', difficulty: '', createdAt: '' }, 'the page reads a seed in the eight fields it reads any entry in');
+  // the old surface, with no source, is what it was
+  eq([view.listEntries(), view.filterEntries({}), view.distinctValues('unit')], [[], [], []], 'with no source the view is the teacher\'s bank, as before');
+
+  const res = view.copyToBank(['seed:053:b3', 'seed:062:bi12', 'seed:062:nope']);
+  eq([res.ok, res.added, res.skipped, res.missing], [true, 2, 0, ['seed:062:nope']], 'copying two seeds adds two and names an id that is no seed');
+  eq(storage.writes, [KEY], 'and that is one write, to the bank\'s own key');
+  const mine = q.list();
+  eq(mine.map(x => [x.prompt, x.answer, x.unit, x.tags, x.copiedFrom, x.category, x.area]), [
+    ['What ancient civilization built Machu Picchu?', 'The Inca', 'Hispanic World', [], 'seed:053:b3', 'hispanic', undefined],
+    ['In which country would you find Machu Picchu?', 'Peru', 'Landmarks', ['South America'], 'seed:062:bi12', 'landmarks', 'south-america'],
+  ], 'the copies carry every mapped field and where they came from');
+  ok(mine.every(x => /^q-/.test(x.id) && !q.isSeedId(x.id) && x.createdAt), 'each copy has an id and a date of its own');
+  ok(!JSON.parse(storage.getItem(KEY)).data.questions.some(x => q.isSeedId(x.id)), 'no seed id is in storage');
+  const again = view.copyToBank(['seed:053:b3', 'seed:062:bi12']);
+  eq([again.added, again.skipped, storage.writes.length, q.list().length], [0, 2, 1, 2], 'copied a second time, both are skipped and nothing is written');
+  // a copy is the teacher's: editing and deleting it leaves the seed alone
+  q.saveQuestion({ id: mine[0].id, prompt: 'Who built Machu Picchu?' });
+  eq([q.list()[0].prompt, q.findSeed('seed:053:b3').prompt], ['Who built Machu Picchu?', 'What ancient civilization built Machu Picchu?'], 'editing the copy does not edit the seed');
+  const third = view.copyToBank(['seed:053:b3']);
+  eq([third.added, q.list().length, q.list()[0].prompt], [1, 3, 'Who built Machu Picchu?'], 'copying it again after an edit adds the seed\'s wording and leaves the edited copy');
+  q.deleteQuestion('seed:053:b3'); view.deleteEntry('seed:062:bi12');
+  eq([q.sets().map(x => x.count), q.list().length], [[30, 90], 3], 'deleting by a seed id deletes nothing, in the set or the bank');
+  const sv = view.saveEntry({ id: 'seed:053:b0', question: 'Rewritten?', answer: 'No' });
+  eq([q.isSeedId(sv.id), q.findSeed('seed:053:b0').prompt, q.list().length], [false, 'What is the traditional Mexican celebration honoring deceased loved ones called?', 4], 'saving over a seed id makes a new question of the teacher\'s; the seed is as it was');
+  // the bank file carries copies as ordinary questions, and a file that names a seed id cannot plant one
+  const file = q.toJSON(q.list(), { exported: 'x' });
+  const other = fakeStorage(), w2 = seedPage(other).QuestionBank;
+  const imp = w2.importQuestions(w2.parse(file).questions);
+  eq([imp.added, w2.list().map(x => x.copiedFrom)], [4, q.list().map(x => x.copiedFrom)], 'a bank file takes the copies to another browser with their `copiedFrom`');
+  const planted = w2.importQuestions([{ id: 'seed:053:b9', prompt: 'Planted?', answer: 'x' }]);
+  eq([planted.added, w2.list().some(x => w2.isSeedId(x.id)), w2.findSeed('seed:053:b9').answer], [1, false, "The euro"], 'a file naming a seed id adds a question of its own and the seed is untouched');
+  // a page from before sets (no data files): the stored copies read as ordinary questions
+  const plainPage = page(storage, [QB_SRC, NEW_SRC]);
+  eq([plainPage.QuestionBank.sets(), plainPage.ReviewBankStore.listEntries().length, plainPage.ReviewBankStore.sources().length], [[], 4, 1], 'on a page with no data files there are no sets and the bank reads whole');
+}
+{
+  // the two mappings, field by field, and the tools' own lists held to what they were
+  const w = seedPage(fakeStorage()), q = w.QuestionBank, C = w.CulturalTriviaBank, G = w.GeographyBeeBank;
+  // Pinned from the pages as they were at v266 (the inline lists, run as written): JSON.stringify of the list.
+  eq([JSON.stringify(C.items()).length, sha(JSON.stringify(C.items()))], [4337, '626a72191d91bcfd3b911e784bc89d2606341f30d48b749beab0fc57bff70a0b'], '053\'s built-in list is byte for byte the list its page built before v267');
+  eq([JSON.stringify(G.items()).length, sha(JSON.stringify(G.items()))], [18623, '211aff0dd5cf32beb84b1519281b410b71c10b5493c93abb19ae30da410eab10'], '062\'s built-in list is byte for byte the list its page built before v267');
+  eq(sha(JSON.stringify(C.CAT_LABELS)), 'e847d900598c17938da48fa136e126a2044c9368cbf636e1e8a63b41d958b6e9', '053\'s category labels are what they were');
+  eq(sha(JSON.stringify([G.CAT_LABELS, G.AREA_LABELS, G.AREA_ORDER, G.mapQuestionText('us'), G.mapQuestionText('world')])), 'b4bcda70236dcdae120f8183b3404848c8a3158c3d39c46da145d5315b134ab1', '062\'s labels, region order and map prompts are what they were');
+  const ci = C.items(); ci[0].q = 'CHANGED'; ci.pop();
+  const gi = G.items(); gi[100].map.region = 'CHANGED'; gi[0].a = 'CHANGED';
+  eq([C.items()[0].q !== 'CHANGED', C.items().length, G.items()[100].map.region, G.items()[0].a], [true, 30, 'Ohio', 'Paris'], 'items() is a new list each call: a page changing its own does not change the data');
+
+  // 053: every field of the old shape lands somewhere, or is named as having no home
+  const cq = q.setQuestions('053'), cItems = C.items();
+  eq(cq.length, 30, '053 publishes all thirty');
+  let landed = true;
+  cItems.forEach((it, i) => {
+    const s = cq[i];
+    if (s.id !== 'seed:053:' + it.id || s.prompt !== it.q || s.answer !== it.a || s.unit !== C.CAT_LABELS[it.category] || s.category !== it.category) landed = false;
+    if (s.standard !== '' || s.difficulty !== '' || s.points !== 0 || s.createdAt !== '' || s.tags.length || 'choices' in s || 'media' in s || 'custom' in s || 'q' in s || 'a' in s) landed = false;
+  });
+  ok(landed, '053: id, q, a and category land in id, prompt, answer, unit and `category`; `custom` has no home; the rest is blank');
+  eq(Object.keys(cItems[0]).sort(), ['a', 'category', 'custom', 'id', 'q'], 'and those five are every field 053\'s shape has');
+  eq(cItems.map(it => it.id), Array.from({ length: 30 }, (_, i) => 'b' + i), '053\'s ids are b0 to b29, as a hidden list holds them');
+
+  // 062
+  const gq = q.setQuestions('062'), gItems = G.items();
+  eq([gItems.length, gItems.filter(it => it.map).length, gq.length], [120, 30, 90], '062 has 120 built-ins; the 30 map questions are not published and the other 90 are');
+  eq(gItems.map(it => it.id), Array.from({ length: 120 }, (_, i) => 'bi' + i), '062\'s ids are bi0 to bi119, as a switched-off list holds them');
+  eq([...new Set(gItems.flatMap(it => Object.keys(it)))].sort(), ['a', 'area', 'category', 'custom', 'id', 'map', 'q'], 'and these seven are every field 062\'s shape has');
+  landed = true;
+  gItems.filter(it => !it.map).forEach((it, i) => {
+    const s = gq[i], tag = it.area === 'global' ? [] : [G.AREA_LABELS[it.area]];
+    if (s.id !== 'seed:062:' + it.id || s.prompt !== it.q || s.answer !== it.a || s.unit !== G.CAT_LABELS[it.category] || s.category !== it.category || s.area !== it.area) landed = false;
+    if (JSON.stringify(s.tags) !== JSON.stringify(tag) || !tag.every(Boolean)) landed = false;
+    if (s.standard !== '' || s.difficulty !== '' || s.points !== 0 || s.createdAt !== '' || 'choices' in s || 'media' in s || 'custom' in s || 'map' in s) landed = false;
+  });
+  ok(landed, '062: id, q, a, category and area land in id, prompt, answer, unit, `category`, tags and `area`; `custom` has no home; the rest is blank');
+  ok(!gq.some(s => /highlighted on the map/.test(s.prompt)), 'no published question asks about a map that is not there');
+  const mq = G.toQuestion(gItems[119]);
+  eq([mq.id, mq.map, mq.unit, mq.tags, mq.area], ['bi119', { dataset: 'world', region: 'Russia', context: 'world' }, 'Map Questions', ['Europe'], 'europe'], 'toQuestion() maps a map question too, with its `map` kept, for a reader that can draw one');
+  const viaBank = q.normalize(mq);
+  eq(viaBank.map, { dataset: 'world', region: 'Russia', context: 'world' }, 'and the bank carries `map` as a field it does not know');
+
+  // stable ids: the data read again, in either order, on another page
+  const w2 = seedPage(fakeStorage(), [QB_SRC, GBQ_SRC, CTCG_SRC, GBQ_SRC, CTCG_SRC]).QuestionBank;
+  eq([w2.sets().map(x => [x.id, x.count]), JSON.stringify(w2.setQuestions('053')) === JSON.stringify(cq), JSON.stringify(w2.setQuestions('062')) === JSON.stringify(gq)], [[['062', 90], ['053', 30]], true, true], 'the data files loaded again, twice and in another order, give the same sets with the same ids');
+  const all = cq.concat(gq);
+  eq(new Set(all.map(x => x.id)).size, 120, 'every seed id is its own');
+  ok(all.every(x => q.validate(x).length === 0), 'and every seed is a question the bank would take');
+  // each data file alone, with no module: the tool still has its list
+  const alone = page(fakeStorage(), [CTCG_SRC, GBQ_SRC], { noStore: true });
+  eq([alone.QuestionBank, alone.CulturalTriviaBank.items().length, alone.GeographyBeeBank.items().length], [undefined, 30, 120], 'a data file on a page without the module (053, 062) registers nothing and still hands its tool the list');
+  // the workbook and CSV rows of a copied seed
+  const rows = q.toRows(q.merge([], [cq[0], gq[12]], { now: 'T', nowMs: 1, random: () => 0.25 }).questions);
+  eq([rows[1].slice(0, 8), rows[2].slice(0, 8)], [
+    ['What is the traditional Mexican celebration honoring deceased loved ones called?', 'Día de los Muertos', 0, 'Hispanic World', '', '', '', ''],
+    ['In which country would you find Machu Picchu?', 'Peru', 0, 'Landmarks', '', '', 'South America', ''],
+  ], 'a copied seed saves to the spreadsheet as any question does');
+}
+
+console.log('QuestionBank — a link: eight fields as bounded text, and nothing else');
+{
+  const storage = fakeStorage();
+  const q = page(storage, [QB_SRC]).QuestionBank;
+  const HOSTILE = '<img src=x onerror="window.__pwned=1">';
+  eq([q.isLink(null), q.isLink([]), q.isLink({}), q.isLink({ questions: 'x' }), q.isLink({ questions: [] })],
+    [false, false, false, false, true], 'a link payload is a record with a list of questions');
+  eq(q.fromLink('nope'), { ok: false, name: '', from: '', questions: [], dropped: 0, over: 0 }, 'anything else is read as nothing');
+
+  // an own key named __proto__, as JSON.parse makes it (a literal would set the prototype)
+  const sneaky = JSON.parse('{"prompt":"P","answer":"A","__proto__":{"polluted":true},"constructor":"x"}');
+  const got = q.fromLink({
+    v: 1, from: 'cultural-trivia-card-generator', name: '  A set  ',
+    questions: [
+      { id: 'q-victim', prompt: ' Capital of Peru? ', answer: ' Lima ', unit: 'Hispanic World', standard: 'S1', difficulty: 'hard',
+        tags: ['a', 'A', ' b '], choices: ['Lima', 'Quito'], points: '200', media: { src: 'javascript:alert(1)' },
+        createdAt: '2020', updatedAt: '2021', copiedFrom: 'seed:053:b1', sharedFrom: 'evil', extra: HOSTILE },
+      { question: 'Old name?', answer: 'Yes' },
+      { prompt: '', answer: 'no prompt' }, { prompt: 'no answer' }, null, 'text', 7,
+      sneaky,
+    ],
+  });
+  eq(got.questions[0], { prompt: 'Capital of Peru?', answer: 'Lima', choices: ['Lima', 'Quito'], unit: 'Hispanic World', standard: 'S1',
+    difficulty: 'Hard', tags: ['a', 'b'], points: 200, sharedFrom: 'cultural-trivia-card-generator' },
+    'the eight fields arrive, trimmed and typed; the id, media, dates, copiedFrom, a forged sharedFrom and an unknown field do not');
+  eq(Object.keys(got.questions[0]).sort(), ['answer', 'choices', 'difficulty', 'points', 'prompt', 'sharedFrom', 'standard', 'tags', 'unit'], 'and those are all its keys');
+  eq(got.questions[1].prompt, 'Old name?', '030\'s old name for the prompt is read');
+  eq([got.ok, got.name, got.from, got.questions.length, got.dropped, got.over], [true, 'A set', 'cultural-trivia-card-generator', 3, 5, 0],
+    'rows with no prompt or no answer, and rows that are not records, are left out and counted');
+  eq([Object.keys(got.questions[2]).includes('__proto__'), got.questions[2].polluted, ({}).polluted, Object.keys(got.questions[2]).includes('constructor')],
+    [false, undefined, undefined, false], 'a __proto__ or constructor key in a link reaches nothing');
+
+  // the sender's name: a slug or nothing
+  for (const bad of ['<b>x</b>', 'Has Space', 'UPPER', 'a--b', '-a', 'a'.repeat(81), 7, null, { toString: () => 'x' }]) {
+    const r = q.fromLink({ from: bad, questions: [{ prompt: 'P', answer: 'A' }] });
+    eq([r.from, 'sharedFrom' in r.questions[0]], ['', false], 'a sender that is not a slug is dropped: ' + JSON.stringify(bad));
+  }
+
+  // bounds
+  const L = q.LINK, long = 'x'.repeat(5000);
+  const big = q.fromLink({ name: long, questions: [{ prompt: long, answer: long, unit: long, standard: long,
+    tags: Array.from({ length: 40 }, (_, i) => i + long), choices: Array.from({ length: 40 }, (_, i) => i + long), points: 1e300 }] });
+  const b = big.questions[0];
+  eq([big.name.length, b.prompt.length, b.answer.length, b.unit.length, b.standard.length, b.tags.length, Math.max(...b.tags.map(t => t.length)),
+    b.choices.length, Math.max(...b.choices.map(t => t.length)), b.points],
+    [L.name, L.prompt, L.answer, L.unit, L.standard, L.tags, L.tag, L.choices, L.choice, 1000000], 'every text and list is cut to its bound, and points to a million');
+  eq(q.fromLink({ questions: [{ prompt: 'P', answer: 'A', points: 'lots' }, { prompt: 'Q', answer: 'A', points: -5e9 }, { prompt: 'R', answer: 'A', points: 12.6 }] })
+    .questions.map(x => x.points), [0, -1000000, 13], 'points that are not a number are 0; a number is whole and bounded');
+  const many = q.fromLink({ questions: Array.from({ length: L.questions + 25 }, (_, i) => ({ prompt: 'Q' + i, answer: 'A' })) });
+  eq([many.questions.length, many.over, many.questions[L.questions - 1].prompt], [L.questions, 25, 'Q' + (L.questions - 1)], 'a link brings at most LINK.questions; the rest are counted and not read');
+  eq(q.fromLink({ questions: [{ prompt: 'P', answer: 'A', unit: { toString: () => HOSTILE }, tags: [{ a: 1 }, ['x']], choices: [[HOSTILE]] }] }).questions[0],
+    { prompt: 'P', answer: 'A', unit: '', standard: '', difficulty: '', tags: [], points: 0 }, 'a field that is not text is blank, never an object\'s own string');
+  eq(q.fromLink({ questions: [{ prompt: HOSTILE, answer: 'javascript:alert(1)', unit: HOSTILE, tags: [HOSTILE], choices: [HOSTILE, 'b'] }] }).questions[0],
+    { prompt: HOSTILE, answer: 'javascript:alert(1)', choices: [HOSTILE, 'b'], unit: HOSTILE, standard: '', difficulty: '', tags: [HOSTILE], points: 0 },
+    'markup in a text is kept as the text it is (the page shows it as text)');
+  eq(storage.writes, [], 'fromLink() stores nothing');
+
+  // a link cannot write over a question, and twice is once
+  q.saveQuestion({ id: 'q-victim', prompt: 'Mine', answer: 'Kept' }, { now: 'T0' });
+  const first = q.importQuestions(got.questions, { now: 'T1', nowMs: 5, random: () => 0.5 });
+  eq([first.added, first.updated, first.same, first.skipped], [3, 0, 0, 0], 'what a link brings is added as new questions');
+  eq(plain(q.list()[0]).prompt + '/' + plain(q.list()[0]).answer, 'Mine/Kept', 'the question whose id the link named is untouched');
+  const ids = q.list().map(x => x.id);
+  eq([new Set(ids).size, ids.filter(i => i === 'q-victim').length, ids.slice(1).every(i => /^q-/.test(i))], [4, 1, true], 'each arrival has an id the bank made');
+  const second = q.importQuestions(q.fromLink({ from: 'cultural-trivia-card-generator', questions: [
+    { prompt: 'capital of  peru?', answer: 'LIMA' }, { prompt: 'Old name?', answer: 'Yes' }, { prompt: 'P', answer: 'A' }] }).questions, { now: 'T2' });
+  eq([second.added, second.skipped, q.list().map(x => x.id)], [0, 3, ids], 'the same link again adds nothing (letter case and spacing aside), and no id moves');
+  const edited = plain(q.list()[1]); edited.prompt = 'Capital city of Peru?';
+  q.saveQuestion(edited, { now: 'T3' });
+  const third = q.importQuestions(got.questions, { now: 'T4', nowMs: 9, random: () => 0.75 });
+  eq([third.added, plain(q.list()[1]).prompt, q.list().length], [1, 'Capital city of Peru?', 5], 'a question the teacher has since reworded is theirs: the link\'s wording is added beside it, not over it');
+}
+
+// ---- a page that only reads (Path 12 P2, 040) ------------------------------------
+console.log('QuestionBank — a page that only reads: peek(), sources(), sourceLabel()');
+{
+  // an old bank nobody has moved yet: peek() shows it and writes nothing
+  const storage = oldBank(SAMPLE);
+  const before = JSON.stringify(storage.dump());
+  const q = page(storage, [QB_SRC]).QuestionBank;
+  const peeked = q.peek();
+  eq(peeked.map(x => x.prompt), SAMPLE.map(x => x.question), 'peek() gives 030\'s old entries as questions, in order');
+  eq([storage.writes, JSON.stringify(storage.dump())], [[], before], 'and writes nothing: no key, and storage is byte for byte what it was');
+  eq(q.sources({ peek: true })[0], { id: '', title: 'My question bank', source: '', note: '', count: 6, readOnly: false }, 'sources({ peek }) counts the bank the same way');
+  eq(q.questionsOf('', { peek: true }).length, 6, 'questionsOf(\'\', { peek }) is the bank, unwritten');
+  eq(storage.writes, [], 'still nothing written');
+  eq([q.questionsOf('').length, storage.writes], [6, [KEY]], 'without { peek }, questionsOf(\'\') loads the bank as list() does, which is what moves it');
+  const loaded = q.list();
+  eq(plain(peeked), plain(loaded), 'peek() is exactly what load() then gives');
+  eq(storage.writes, [KEY], 'and the move is written once');
+  eq(plain(q.peek()), plain(loaded), 'after the move, peek() reads the stored bank');
+  // an old page adds one more entry after the move: peek() sees it, unwritten
+  oldPage(storage).saveEntry({ question: 'Late arrival?', answer: 'Yes', points: 100 });
+  storage.writes.length = 0;
+  eq([q.peek().length, q.peek()[6].prompt, storage.writes], [7, 'Late arrival?', []], 'an entry an older page adds later is in peek() too, with nothing written');
+}
+{
+  const storage = fakeStorage();
+  const q = page(storage, [QB_SRC]).QuestionBank;
+  eq([q.peek(), storage.writes], [[], []], 'an empty browser: peek() is an empty list and writes nothing');
+  // a newer page's bank is read, never adopted into
+  const newer = fakeStorage({ [KEY]: JSON.stringify({ v: 1, data: { schema: 2, questions: [{ id: 'q-n', prompt: 'New?', answer: 'Y' }], legacy: {} } }), [OLD_KEY]: JSON.stringify([{ id: 'bank-1', question: 'Old?', answer: 'N' }]) });
+  const qn = page(newer, [QB_SRC]).QuestionBank;
+  eq([qn.peek().map(x => x.id), plain(qn.list()).map(x => x.id)], [['q-n'], ['q-n']], 'a newer bank is read as load() reads it: nothing adopted into it');
+}
+{
+  const win = seedPage(fakeStorage());
+  const q = win.QuestionBank;
+  q.saveQuestion({ prompt: 'Mine?', answer: 'Yes' }, { now: 'T0' });
+  eq(q.sources(), win.ReviewBankStore.sources(), '030\'s sources() is the module\'s');
+  eq(q.sources().map(x => [x.id, x.count, x.readOnly]), [['', 1, false], ['053', 30, true], ['062', 90, true]], 'the bank first, then each seed set in the order registered');
+  eq(q.sources().map(q.sourceLabel), ['My question bank (1 question)', 'Cultural Trivia (built in, 30 questions, read-only)', 'Geography Bee (built in, 90 questions, read-only)'],
+    'sourceLabel() is the wording 030\'s chooser has had since v267');
+  eq([q.sourceLabel({ title: 'T', count: 0 }), q.sourceLabel({ title: ' T ', count: 2, readOnly: true }), q.sourceLabel(null), q.sourceLabel({ title: 'T', count: 'x' })],
+    ['T (0 questions)', 'T (built in, 2 questions, read-only)', ' (0 questions)', 'T (0 questions)'], 'and never throws on what it is handed');
+  eq([q.questionsOf('053').length, q.questionsOf('062', { peek: true }).length, q.questionsOf('nope').length, q.questionsOf('').length, q.questionsOf().length], [30, 90, 0, 1, 1],
+    'questionsOf() is a set\'s questions for its id and the bank\'s for none');
+  q.questionsOf('053')[0].prompt = 'changed';
+  ok(q.questionsOf('053')[0].prompt !== 'changed', 'what questionsOf() hands out of a set is a copy');
+}
+
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);

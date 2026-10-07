@@ -21,6 +21,7 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/state-link.js"></script>
+<script src="../_shared/store.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
 <script src="../_shared/share.js"></script>
@@ -69,6 +70,15 @@
 
   .group { margin-bottom: 1.1rem; }
   .group h3 { font-size: .95rem; margin: 0 0 .4rem; border-bottom: 2px solid var(--accent); padding-bottom: .2rem; }
+  .group-head { display: flex; align-items: center; gap: .25rem; margin: 0 0 .4rem; border-bottom: 2px solid var(--accent); padding-bottom: .2rem; }
+  .group-head h3 { flex: 1; margin: 0; border: 0; padding: 0; }
+  button[aria-disabled="true"] { opacity: .45; cursor: default; }
+  [hidden] { display: none !important; }
+  .ws-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+  .ws-row label { margin: 0; }
+  .ws-row select { width: auto; flex: 1 1 12rem; min-width: 9rem; margin-bottom: 0; }
+  .ws-row button { padding: .4rem .75rem; font-size: .84rem; }
+  .save-msg { font-size: .8rem; color: var(--muted); min-height: 1.2em; margin: .5rem 0 0; }
   .item-row { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; border-bottom: 1px dashed var(--line); font-size: .9rem; }
   .item-row:last-child { border-bottom: none; }
   .item-row .item-text { flex: 1; }
@@ -109,9 +119,22 @@
     </div>
   </div>
   <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
+  <p class="btnrow" id="addSharedRow" hidden style="margin:-.4rem 0 .8rem;"><button type="button" class="secondary small" id="addSharedBtn">Add the shared chart as a new saved chart</button></p>
 
   <div class="layout">
     <div>
+      <div class="card">
+        <div class="ws-row">
+          <label for="chartSelect">Saved chart</label>
+          <select id="chartSelect"></select>
+          <button type="button" class="secondary" id="newChartBtn">+ New</button>
+          <button type="button" class="secondary" id="dupChartBtn">Duplicate</button>
+          <button type="button" class="secondary" id="renameChartBtn">Rename</button>
+          <button type="button" class="danger" id="deleteChartBtn">Delete</button>
+        </div>
+        <p class="hint" style="margin:.5rem 0 0;">Each saved chart keeps its own unit sets, lines, order and column count, so a &ldquo;Grade 5 metric only&rdquo; chart and a full reference can sit side by side. One chart is always kept.</p>
+        <p class="save-msg" id="chartMsg" role="status" aria-live="polite"></p>
+      </div>
       <div class="card">
         <h2>Unit sets to include</h2>
         <div class="btnrow" style="margin-bottom:.5rem;">
@@ -136,6 +159,8 @@
     <div>
       <div class="card" id="chartCard">
         <h2>Chart preview</h2>
+        <p class="hint">Use the up and down buttons to put groups, and the lines inside a group, in the order you want printed.</p>
+        <p class="save-msg" id="moveMsg" role="status" aria-live="polite"></p>
         <div id="chartGroups"></div>
         <p class="hint" id="noGroupsMsg" style="display:none;">Check a unit set on the left to build your chart.</p>
 
@@ -232,46 +257,225 @@
   ['templatePicker', 'chartGroups', 'noGroupsMsg', 'customGroup', 'customLine', 'addCustomBtn',
    'printBtn', 'printGroups', 'printTitle', 'colCount',
    'presetElemBtn', 'presetMiddleBtn',
-   'shareBtn', 'shareNote'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'shareBtn', 'shareNote', 'addSharedRow', 'addSharedBtn', 'moveMsg',
+   'chartSelect', 'newChartBtn', 'dupChartBtn', 'renameChartBtn', 'deleteChartBtn', 'chartMsg'].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = { selected: {}, custom: {}, hidden: {}, columns: 2 };
+  var FIRST_NAME = 'My chart';
+  var state = null;   // the chart on screen: an entry of doc.list
 
   function uid() { return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  /* ---------- saved charts ----------
+     Several named charts in the key this tool has always used, in Store's
+     envelope at version 2: {list: [{id, name, selected, custom, hidden,
+     columns, groupOrder?, lineOrder?}], currentId}. No new key, so Backup &
+     Restore and the registry see nothing new.
+
+     Version 0 is what this tool wrote before saves: the one bare {selected,
+     custom, hidden, columns} object. It becomes the first chart, "My chart",
+     and is not rewritten until the first edit; it prints the sheet it always
+     did. `groupOrder` (group names) and `lineOrder` (group name -> line ids)
+     are written only once a teacher moves something, and a group or line they
+     do not list keeps its place after the ones they do, so a chart with no
+     order is laid out as it always was. */
+  var DOC_VERSION = 2;
+  var doc = { list: [], currentId: null };
+  var seedable = false;   // a brand-new or version-0 chart with no ticks gets the starter sets
+
+  Store.configure({ toolName: 'Unit Conversion Reference Chart Builder' });
 
   /* The four sets an empty install ticks for itself, below. They are written
      to storage the first time this page is opened, which is what makes
      "is there a saved chart here?" the wrong question to ask before replacing
      one: a teacher who has only ever looked at this tool has a saved chart.
      `load()` therefore reports whether what it read is somebody's WORK — a
-     custom line, a removed line, a column count or a set list that is not the
-     seed — rather than whether the key exists. */
+     custom line, a removed line, a column count, a moved group or a set list
+     that is not the seed — rather than whether the key exists. */
   var SEED_SETS = ['length_customary', 'length_metric', 'weight_customary', 'temperature'];
+
+  function ownKeys(o) { return o && typeof o === 'object' ? Object.keys(o) : []; }
+  function hasOrder(c) {
+    return !!((c.groupOrder && c.groupOrder.length) || ownKeys(c.lineOrder).length);
+  }
 
   function isStarterChart(saved) {
     if (!saved || typeof saved !== 'object') return true;
-    if (saved.custom && Object.keys(saved.custom).length) return false;
-    if (saved.hidden && Object.keys(saved.hidden).length) return false;
+    if (ownKeys(saved.custom).length) return false;
+    if (ownKeys(saved.hidden).length) return false;
     if (saved.columns && saved.columns !== 2) return false;
-    var on = Object.keys(saved.selected || {}).filter(function (k) { return saved.selected[k]; });
+    if (hasOrder(saved)) return false;
+    var on = ownKeys(saved.selected).filter(function (k) { return saved.selected[k]; });
+    if (!on.length) return true;   // nothing ticked, nothing typed: nothing to lose
     return on.length === SEED_SETS.length && SEED_SETS.every(function (k) { return on.indexOf(k) !== -1; });
   }
 
-  function load() {
-    var had = false;
-    try {
-      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && typeof saved === 'object') { state = saved; had = !isStarterChart(saved); }
-    } catch (e) { /* ignore */ }
-    if (!state.selected) state.selected = {};
-    if (!state.custom) state.custom = {};
-    if (!state.hidden) state.hidden = {};
-    if (!state.columns) state.columns = 2;
-    return had;
+  function chartId() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function strList(a) {
+    return Array.isArray(a) ? a.filter(function (x) { return typeof x === 'string' && x !== '__proto__'; }).slice(0, 500) : [];
   }
-  function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  /** One chart, coerced to the shape the page reads. `keepIds` is true for
+      what this device wrote itself and false for an arrival, whose custom
+      lines get local ids (nothing refers to one from outside its own chart
+      except `lineOrder`, which is rewritten to match). */
+  function cleanChart(obj, keepIds) {
+    var selected = {}, hidden = {}, custom = {}, lineOrder = {}, idMap = {};
+    ownKeys(obj.selected).forEach(function (k) {
+      if (TEMPLATES[k] && obj.selected[k]) selected[k] = true;
+    });
+    ownKeys(obj.hidden).forEach(function (k) {
+      if (!TEMPLATES[k]) return;
+      var lines = {};
+      ownKeys(obj.hidden[k]).forEach(function (i) { if (obj.hidden[k][i]) lines[i] = true; });
+      if (Object.keys(lines).length) hidden[k] = lines;
+    });
+    ownKeys(obj.custom).forEach(function (group) {
+      if (group === '__proto__') return;
+      var rows = Array.isArray(obj.custom[group]) ? obj.custom[group] : [];
+      var kept = rows.filter(function (c) { return c && String(c.text || '').trim(); })
+        .map(function (c) {
+          var id = keepIds && typeof c.id === 'string' && c.id ? c.id : uid();
+          if (typeof c.id === 'string') idMap[c.id] = id;
+          return { id: id, text: String(c.text) };
+        });
+      if (kept.length) custom[String(group)] = kept;
+    });
+    ownKeys(obj.lineOrder).forEach(function (group) {
+      if (group === '__proto__') return;
+      var ids = strList(obj.lineOrder[group]).map(function (id) {
+        return id.indexOf('c:') === 0 ? 'c:' + (idMap[id.slice(2)] || id.slice(2)) : id;
+      });
+      if (ids.length) lineOrder[group] = ids;
+    });
+    var columns = parseInt(obj.columns, 10);
+    var chart = { selected: selected, custom: custom, hidden: hidden,
+                  columns: (columns >= 1 && columns <= 3) ? columns : 2 };
+    var groupOrder = strList(obj.groupOrder);
+    if (groupOrder.length) chart.groupOrder = groupOrder;
+    if (ownKeys(lineOrder).length) chart.lineOrder = lineOrder;
+    return chart;
+  }
+  function makeChart(name, parts) {
+    var chart = parts ? cleanChart(parts, true) : { selected: {}, custom: {}, hidden: {}, columns: 2 };
+    chart.id = chartId();
+    chart.name = name;
+    return chart;
+  }
+  function normalizeDoc(d) {
+    if (!d || typeof d !== 'object' || !Array.isArray(d.list)) return null;
+    var seen = {}, list = [];
+    d.list.forEach(function (e) {
+      if (!e || typeof e !== 'object' || typeof e.id !== 'string' || !e.id || seen[e.id]) return;
+      seen[e.id] = true;
+      var chart = makeChart((typeof e.name === 'string' && e.name.trim()) ? e.name : FIRST_NAME, e);
+      chart.id = e.id;
+      list.push(chart);
+    });
+    var cur = typeof d.currentId === 'string' && seen[d.currentId] ? d.currentId : (list.length ? list[0].id : null);
+    return { list: list, currentId: cur };
+  }
+  function migrateDoc(fromVersion, data) {
+    if (fromVersion >= DOC_VERSION) return normalizeDoc(data);
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      seedable = true;
+      var first = makeChart(FIRST_NAME, data);
+      return { list: [first], currentId: first.id };
+    }
+    return null;
+  }
+  function currentChart() {
+    for (var i = 0; i < doc.list.length; i++) if (doc.list[i].id === doc.currentId) return doc.list[i];
+    return null;
   }
 
+  /** True when what is saved here is somebody's work — which is what tells an
+      arriving share link whether it is about to replace something. */
+  function load() {
+    var d = Store.get(STORE_KEY, { version: DOC_VERSION, migrate: migrateDoc, 'default': null });
+    doc = normalizeDoc(d) || { list: [], currentId: null };
+    if (!doc.list.length) {
+      var first = makeChart(FIRST_NAME);
+      doc = { list: [first], currentId: first.id };
+      seedable = true;
+    }
+    state = currentChart();
+    return !isStarterChart(state);
+  }
+  function save() { Store.set(STORE_KEY, doc, { version: DOC_VERSION }); }
+
+  function say(text) { els.chartMsg.textContent = text; }
+
+  function renderChartSelect() {
+    /* Built with the DOM, not markup: a chart's name is typed text. */
+    var sel = els.chartSelect;
+    while (sel.firstChild) sel.removeChild(sel.firstChild);
+    doc.list.forEach(function (e) {
+      var o = document.createElement('option');
+      o.value = e.id;
+      o.textContent = e.name;
+      o.selected = e.id === doc.currentId;
+      sel.appendChild(o);
+    });
+    els.deleteChartBtn.disabled = doc.list.length < 2;
+    els.deleteChartBtn.title = doc.list.length < 2 ? 'One saved chart is always kept' : '';
+  }
+  /** Everything that shows the chart on screen, after the chart changes. */
+  function showCurrent() {
+    state = currentChart();
+    renderChartSelect();
+    buildTemplatePicker();
+    els.colCount.value = String(state.columns);
+    els.moveMsg.textContent = '';
+    renderChart();
+  }
+  els.chartSelect.addEventListener('change', function () {
+    var id = els.chartSelect.value;
+    if (!doc.list.some(function (e) { return e.id === id; })) return;
+    doc.currentId = id;
+    save();
+    showCurrent();
+    say('Opened “' + state.name + '”.');
+  });
+  els.newChartBtn.addEventListener('click', function () {
+    var name = window.prompt('Name for the new chart:', 'New chart');
+    if (name === null) return;
+    var c = makeChart(name.trim() || 'New chart');
+    doc.list.push(c);
+    doc.currentId = c.id;
+    save();
+    showCurrent();
+    say('Started “' + c.name + '”, empty. Check a unit set to build it.');
+  });
+  els.dupChartBtn.addEventListener('click', function () {
+    var name = window.prompt('Name for the duplicate:', state.name + ' (copy)');
+    if (name === null) return;
+    var copy = makeChart(name.trim() || (state.name + ' (copy)'), state);
+    doc.list.push(copy);
+    doc.currentId = copy.id;
+    save();
+    showCurrent();
+    say('Duplicated as “' + copy.name + '”.');
+  });
+  els.renameChartBtn.addEventListener('click', function () {
+    var name = window.prompt('Rename this chart:', state.name);
+    if (name === null) return;
+    state.name = name.trim() || state.name;
+    save();
+    renderChartSelect();
+    say('Renamed to “' + state.name + '”.');
+  });
+  els.deleteChartBtn.addEventListener('click', function () {
+    if (doc.list.length < 2) { say('One saved chart is always kept.'); return; }
+    if (!window.confirm('Delete “' + state.name + '”, with its unit sets, custom lines and order? This cannot be undone.')) return;
+    var gone = state.name;
+    var idx = doc.list.indexOf(state);
+    doc.list.splice(idx, 1);
+    doc.currentId = doc.list[Math.max(0, idx - 1)].id;
+    save();
+    showCurrent();
+    say('Deleted “' + gone + '”. Now on “' + state.name + '”.');
+  });
+
+  /* ---------- the chart ---------- */
   function buildTemplatePicker() {
     els.templatePicker.innerHTML = Object.keys(TEMPLATES).map(function (key) {
       var t = TEMPLATES[key];
@@ -283,41 +487,150 @@
     }).join('');
   }
 
+  /* A built-in group and line are this page's own markup (they carry entities
+     such as &asymp;). A teacher's typed group name or line, and anything that
+     came in on a link, is text: `<` and `>` are escaped so it cannot make a
+     tag, and `&` is left alone so an entity typed before this still reads as
+     the character it always did. */
+  function esc(s) { return String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function escapeAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function plain(html) {
+    return new DOMParser().parseFromString('<!doctype html><body>' + html, 'text/html').body.textContent;
+  }
+
+  function lineId(item) {
+    return item.source === 'custom' ? 'c:' + item.id : 't:' + item.source + ':' + item.idx;
+  }
+  /** Items first in the order the teacher saved, then any the order does not
+      list, in the order they would have had without one. */
+  function applyOrder(items, ids, idOf) {
+    if (!ids || !ids.length) return items;
+    var out = [], left = items.slice();
+    ids.forEach(function (id) {
+      for (var i = 0; i < left.length; i++) {
+        if (idOf(left[i]) === id) { out.push(left.splice(i, 1)[0]); return; }
+      }
+    });
+    return out.concat(left);
+  }
+
+  /** The groups that print, in order: [{name, tpl, items: [{text, source, idx|id}]}].
+      With no saved order this is what the page always showed: the ticked
+      built-in sets in table order, then custom groups in the order they were
+      started, a custom line joining a built-in group of the same name. */
   function activeGroups() {
-    var groups = {}; // groupName -> array of {text, source, id}
+    var groups = [], byName = {};
+    function group(name, tpl) {
+      if (!Object.prototype.hasOwnProperty.call(byName, name)) {
+        byName[name] = { name: name, tpl: tpl, items: [] };
+        groups.push(byName[name]);
+      }
+      return byName[name];
+    }
     Object.keys(TEMPLATES).forEach(function (key) {
       if (!state.selected[key]) return;
       var t = TEMPLATES[key];
-      groups[t.group] = groups[t.group] || [];
+      var g = group(t.group, true);
       t.lines.forEach(function (line, i) {
         if (state.hidden[key] && state.hidden[key][i]) return;
-        groups[t.group].push({ text: line, source: key, idx: i });
+        g.items.push({ text: line, source: key, idx: i });
       });
     });
     Object.keys(state.custom).forEach(function (groupName) {
-      groups[groupName] = groups[groupName] || [];
+      var g = group(groupName, false);
       state.custom[groupName].forEach(function (c) {
-        groups[groupName].push({ text: c.text, source: 'custom', id: c.id });
+        g.items.push({ text: c.text, source: 'custom', id: c.id });
       });
+    });
+    groups = applyOrder(groups, state.groupOrder, function (g) { return g.name; });
+    groups.forEach(function (g) {
+      g.items = applyOrder(g.items, state.lineOrder && state.lineOrder[g.name], lineId);
     });
     return groups;
   }
+  function groupHtml(g) { return g.tpl ? g.name : esc(g.name); }
+  function itemHtml(item) { return item.source === 'custom' ? esc(item.text) : item.text; }
 
-  function escapeAttr(s) { return String(s).replace(/"/g, '&quot;'); }
+  function moveButtons(kind, id, groupName, label, atStart, atEnd) {
+    function one(dir, arrow, off) {
+      return '<button type="button" class="secondary small" data-move-' + kind + '="' + escapeAttr(id) + '" data-dir="' + dir + '"' +
+        (kind === 'line' ? ' data-in-group="' + escapeAttr(groupName) + '"' : '') +
+        ' aria-label="' + escapeAttr('Move ' + label + ' ' + dir) + '"' + (off ? ' aria-disabled="true"' : '') + '>' + arrow + '</button>';
+    }
+    return one('up', '&uarr;', atStart) + one('down', '&darr;', atEnd);
+  }
 
   function renderChart() {
     var groups = activeGroups();
-    var names = Object.keys(groups);
-    els.noGroupsMsg.style.display = names.length ? 'none' : 'block';
-    els.chartGroups.innerHTML = names.map(function (name) {
-      var rows = groups[name].map(function (item) {
+    els.noGroupsMsg.style.display = groups.length ? 'none' : 'block';
+    els.chartGroups.innerHTML = groups.map(function (g, gi) {
+      var gLabel = 'group “' + plain(groupHtml(g)) + '”';
+      var gBtns = '<span class="btns">' + moveButtons('group', g.name, null, gLabel, gi === 0, gi === groups.length - 1) + '</span>';
+      var rows = g.items.map(function (item, ii) {
+        var lLabel = 'line “' + plain(itemHtml(item)) + '”';
+        var delLabel = ' aria-label="' + escapeAttr('Remove ' + lLabel) + '"';
         var delBtn = item.source === 'custom'
-          ? '<button type="button" class="danger small" data-del-custom="' + escapeAttr(name) + '|' + item.id + '">&times;</button>'
-          : '<button type="button" class="danger small" data-hide-line="' + escapeAttr(item.source) + '|' + item.idx + '" title="Remove just this line">&times;</button>';
-        return '<div class="item-row"><span class="item-text">' + item.text + '</span><span class="btns">' + delBtn + '</span></div>';
+          ? '<button type="button" class="danger small" data-del-custom="' + escapeAttr(item.id) + '"' + delLabel + '>&times;</button>'
+          : '<button type="button" class="danger small" data-hide-line="' + escapeAttr(item.source) + '|' + item.idx + '" title="Remove just this line"' + delLabel + '>&times;</button>';
+        return '<div class="item-row"><span class="item-text">' + itemHtml(item) + '</span><span class="btns">' +
+          moveButtons('line', lineId(item), g.name, lLabel, ii === 0, ii === g.items.length - 1) + delBtn + '</span></div>';
       }).join('');
-      return '<div class="group"><h3>' + name + '</h3>' + rows + '</div>';
+      return '<div class="group"><div class="group-head"><h3>' + groupHtml(g) + '</h3>' + gBtns + '</div>' + rows + '</div>';
     }).join('');
+  }
+
+  /* ---------- reordering ----------
+     Plain buttons, so the keyboard reaches them and a screen reader says what
+     they do. A button at the end of its list is aria-disabled rather than
+     disabled so focus never falls off it; the moved item's button of the same
+     direction is focused again after the redraw, so pressing it again keeps
+     moving the same item. The result is said in a polite live region. */
+  function focusMove(kind, id, groupName, dir) {
+    var btns = els.chartGroups.querySelectorAll('[data-move-' + kind + ']');
+    for (var i = 0; i < btns.length; i++) {
+      var b = btns[i];
+      if (b.getAttribute('data-move-' + kind) === id && b.getAttribute('data-dir') === dir &&
+          (kind === 'group' || b.getAttribute('data-in-group') === groupName)) { b.focus(); return; }
+    }
+  }
+  function moveGroup(name, dir) {
+    var groups = activeGroups();
+    var from = groups.map(function (g) { return g.name; }).indexOf(name);
+    if (from === -1) return;
+    var shown = plain(groupHtml(groups[from]));
+    var to = from + (dir === 'up' ? -1 : 1);
+    if (to < 0 || to >= groups.length) {
+      els.moveMsg.textContent = 'Group “' + shown + '” is already ' + (dir === 'up' ? 'first' : 'last') + '.';
+      return;
+    }
+    var g = groups.splice(from, 1)[0];
+    groups.splice(to, 0, g);
+    state.groupOrder = groups.map(function (x) { return x.name; });
+    save();
+    renderChart();
+    focusMove('group', name, null, dir);
+    els.moveMsg.textContent = 'Moved group “' + shown + '” ' + dir + '. It is now group ' + (to + 1) + ' of ' + groups.length + '.';
+  }
+  function moveLine(groupName, id, dir) {
+    var g = activeGroups().filter(function (x) { return x.name === groupName; })[0];
+    if (!g) return;
+    var ids = g.items.map(lineId);
+    var from = ids.indexOf(id);
+    if (from === -1) return;
+    var to = from + (dir === 'up' ? -1 : 1);
+    var shown = plain(itemHtml(g.items[from]));
+    var inGroup = plain(groupHtml(g));
+    if (to < 0 || to >= ids.length) {
+      els.moveMsg.textContent = 'Line “' + shown + '” is already ' + (dir === 'up' ? 'first' : 'last') + ' in “' + inGroup + '”.';
+      return;
+    }
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    if (!state.lineOrder) state.lineOrder = {};
+    state.lineOrder[groupName] = ids;
+    save();
+    renderChart();
+    focusMove('line', id, groupName, dir);
+    els.moveMsg.textContent = 'Moved line “' + shown + '” ' + dir + '. It is now line ' + (to + 1) + ' of ' + ids.length + ' in “' + inGroup + '”.';
   }
 
   function applyPreset(name) {
@@ -343,19 +656,21 @@
   });
 
   els.chartGroups.addEventListener('click', function (ev) {
-    var customRef = ev.target.getAttribute('data-del-custom');
-    if (customRef) {
-      var parts = customRef.split('|');
-      var groupName = parts[0], id = parts[1];
-      if (state.custom[groupName]) {
-        state.custom[groupName] = state.custom[groupName].filter(function (c) { return c.id !== id; });
+    var btn = ev.target.closest ? ev.target.closest('button') : null;
+    if (!btn) return;
+    if (btn.hasAttribute('data-move-group')) { moveGroup(btn.getAttribute('data-move-group'), btn.getAttribute('data-dir')); return; }
+    if (btn.hasAttribute('data-move-line')) { moveLine(btn.getAttribute('data-in-group'), btn.getAttribute('data-move-line'), btn.getAttribute('data-dir')); return; }
+    var customId = btn.getAttribute('data-del-custom');
+    if (customId) {
+      Object.keys(state.custom).forEach(function (groupName) {
+        state.custom[groupName] = state.custom[groupName].filter(function (c) { return c.id !== customId; });
         if (!state.custom[groupName].length) delete state.custom[groupName];
-      }
+      });
       save();
       renderChart();
       return;
     }
-    var hideRef = ev.target.getAttribute('data-hide-line');
+    var hideRef = btn.getAttribute('data-hide-line');
     if (hideRef) {
       var hParts = hideRef.split('|');
       var tplKey = hParts[0], idx = hParts[1];
@@ -375,6 +690,7 @@
     var groupName = els.customGroup.value.trim();
     var line = els.customLine.value.trim();
     if (!groupName || !line) { alert('Fill in both a group name and a conversion line.'); return; }
+    if (groupName === '__proto__') { alert('Choose a different group name.'); return; }
     state.custom[groupName] = state.custom[groupName] || [];
     state.custom[groupName].push({ id: uid(), text: line });
     els.customLine.value = '';
@@ -384,11 +700,10 @@
 
   els.printBtn.addEventListener('click', function () {
     var groups = activeGroups();
-    var names = Object.keys(groups);
-    if (!names.length) { alert('Check at least one unit set first.'); return; }
-    els.printGroups.innerHTML = names.map(function (name) {
-      var rows = groups[name].map(function (item) { return '<div class="item-row"><span class="item-text">' + item.text + '</span></div>'; }).join('');
-      return '<div class="group"><h3>' + name + '</h3>' + rows + '</div>';
+    if (!groups.length) { alert('Check at least one unit set first.'); return; }
+    els.printGroups.innerHTML = groups.map(function (g) {
+      var rows = g.items.map(function (item) { return '<div class="item-row"><span class="item-text">' + itemHtml(item) + '</span></div>'; }).join('');
+      return '<div class="group"><h3>' + groupHtml(g) + '</h3>' + rows + '</div>';
     }).join('');
     els.printGroups.style.gridTemplateColumns = 'repeat(' + state.columns + ', 1fr)';
     window.print();
@@ -401,15 +716,19 @@
      one reference chart had no way to hand it over but the printed page,
      which cannot be edited for next year.
 
-     What travels is the whole recipe rather than the rendered lines: which
+     What travels is the chart on screen and no other saved chart: which
      built-in sets are ticked, which of their lines were removed, every custom
-     line, and the column count. The built-in tables themselves are in this
-     page, so a receiving device with an older or newer build renders its own
-     copy of them — the same reason 081 shares a seed rather than problems.
+     line, the order of the groups and lines, the column count and the chart's
+     name. The built-in tables themselves are in this page, so a receiving
+     device with an older or newer build renders its own copy of them — the
+     same reason 081 shares a seed rather than problems.
 
-     This tool keeps ONE chart, so an arriving link asks before replacing it,
-     and only when `load()` found real work: see `isStarterChart()` above. */
+     An arriving link asks before it touches the receiver's saves. A chart that
+     is only the starter sets (see `isStarterChart()`) is replaced without
+     asking; otherwise the question is whether to replace the open chart, and
+     answering no keeps it and offers the shared one as a new saved chart. */
   var SHARE_PARAM = 'chart';
+  var pendingShared = null;
 
   function setShareNote(text, isError) {
     els.shareNote.textContent = text || '';
@@ -424,15 +743,23 @@
       (custom ? ' and ' + custom + ' custom line' + (custom === 1 ? '' : 's') : '');
   }
 
+  /** The chart on screen, without its local id. */
+  function exportChart(c) {
+    var out = { name: c.name, selected: c.selected, hidden: c.hidden, custom: c.custom, columns: c.columns };
+    if (c.groupOrder && c.groupOrder.length) out.groupOrder = c.groupOrder;
+    if (c.lineOrder && ownKeys(c.lineOrder).length) out.lineOrder = c.lineOrder;
+    return out;
+  }
+
   Share.mount(els.shareBtn, {
-    getState: function () { return state; },
+    getState: function () { return exportChart(state); },
     param: SHARE_PARAM,
     tool: 'unit-conversion-chart-builder',
     title: 'Share this chart',
     noun: 'this chart',
     filename: 'unit conversion chart',
-    note: 'The ticked unit sets, any lines removed from them, every custom line and the column count travel. The built-in conversion tables are in the page itself, so the receiving device prints them from its own copy.',
-    successMessage: 'Link copied. Opening it on another device offers this whole chart in place of whatever is there.',
+    note: 'The open chart travels: its ticked unit sets, any lines removed from them, every custom line, the order of groups and lines, the column count and its name. Your other saved charts stay here. The built-in conversion tables are in the page itself, so the receiving device prints them from its own copy.',
+    successMessage: 'Link copied. Opening it on another device offers this chart and asks before it replaces or adds to anything saved there.',
     onMessage: function (text, isError) { setShareNote(text, isError); }
   });
 
@@ -444,65 +771,69 @@
   }
 
   /** Normalises an arrival. A template key this build does not have is
-      dropped rather than kept as a tick nothing renders; a custom line keeps
-      its text and gets a local id, because nothing refers to one from
-      outside its own group. */
+      dropped rather than kept as a tick nothing renders. */
   function normalizeChart(obj) {
-    var selected = {}, hidden = {}, custom = {};
-    Object.keys(obj.selected || {}).forEach(function (k) {
-      if (TEMPLATES[k] && obj.selected[k]) selected[k] = true;
-    });
-    Object.keys(obj.hidden || {}).forEach(function (k) {
-      if (!TEMPLATES[k]) return;
-      var lines = {};
-      Object.keys(obj.hidden[k] || {}).forEach(function (i) { if (obj.hidden[k][i]) lines[i] = true; });
-      if (Object.keys(lines).length) hidden[k] = lines;
-    });
-    Object.keys(obj.custom || {}).forEach(function (group) {
-      var rows = Array.isArray(obj.custom[group]) ? obj.custom[group] : [];
-      var kept = rows.filter(function (c) { return c && String(c.text || '').trim(); })
-        .map(function (c) { return { id: uid(), text: String(c.text) }; });
-      if (kept.length) custom[String(group)] = kept;
-    });
-    var columns = parseInt(obj.columns, 10);
-    return { selected: selected, custom: custom, hidden: hidden,
-             columns: (columns >= 1 && columns <= 3) ? columns : 2 };
+    var chart = cleanChart(obj, false);
+    chart.name = (typeof obj.name === 'string' && obj.name.trim()) ? obj.name.trim().slice(0, 80) : '';
+    return chart;
   }
 
-  function importSharedChart(hadSaved) {
+  function replaceOpenChart(incoming) {
+    var name = isStarterChart(state) && incoming.name ? incoming.name : state.name;
+    ['selected', 'custom', 'hidden', 'columns'].forEach(function (k) { state[k] = incoming[k]; });
+    delete state.groupOrder; delete state.lineOrder;
+    if (incoming.groupOrder) state.groupOrder = incoming.groupOrder;
+    if (incoming.lineOrder) state.lineOrder = incoming.lineOrder;
+    state.name = name;
+    save();
+  }
+
+  function importSharedChart() {
     return Share.receive({
       param: SHARE_PARAM,
       validate: isPlausibleChart,
       onError: function (message) { setShareNote(message, true); },
       onState: function (decoded) {
         var incoming = normalizeChart(decoded);
-        if (hadSaved && !confirm('Replace the chart saved here with the shared one (' + chartSize(incoming) + ')?')) {
-          setShareNote('Kept the chart already on this device. The shared one was not loaded.');
+        if (!isStarterChart(state) &&
+            !confirm('Replace the chart “' + state.name + '” saved here with the shared one (' + chartSize(incoming) + ')? ' +
+                     'Cancel keeps it, and you can then add the shared chart as a new saved chart instead.')) {
+          pendingShared = incoming;
+          els.addSharedRow.hidden = false;
+          setShareNote('Kept the chart “' + state.name + '” already on this device. The shared one was not loaded.');
           return false;
         }
-        state = incoming;
-        save();
+        replaceOpenChart(incoming);
         setShareNote('Loaded a shared chart — ' + chartSize(state) + '.');
         return true;
       }
     });
   }
+  els.addSharedBtn.addEventListener('click', function () {
+    if (!pendingShared) return;
+    var c = makeChart(pendingShared.name || 'Shared chart', pendingShared);
+    doc.list.push(c);
+    doc.currentId = c.id;
+    pendingShared = null;
+    els.addSharedRow.hidden = true;
+    save();
+    showCurrent();
+    setShareNote('Added “' + c.name + '” as a new saved chart — ' + chartSize(c) + '. Your other charts are untouched.');
+    say('Added “' + c.name + '” and opened it.');
+  });
 
   /* ---------- boot ---------- */
-  var hadSaved = load();
+  load();
   /* The import runs BEFORE the starter sets are seeded, and the seeding is
      skipped when it filed something: a shared chart of nothing but custom
      lines would otherwise arrive with four unit sets nobody asked for
      stapled to it. 069 had the same branch for the same reason. */
-  var imported = importSharedChart(hadSaved);
-  buildTemplatePicker();
-  if (!imported && !Object.keys(state.selected).length) {
+  var imported = importSharedChart();
+  if (!imported && seedable && !Object.keys(state.selected).length) {
     SEED_SETS.forEach(function (k) { state.selected[k] = true; });
     save();
-    buildTemplatePicker();
   }
-  els.colCount.value = String(state.columns);
-  renderChart();
+  showCurrent();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

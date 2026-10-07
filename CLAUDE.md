@@ -469,6 +469,22 @@ files must be added there too.
   writing another `@media print` block. It sizes with `min-height` and never clips. 076 and 070 (half sheets, `renderSet` with `cut: true`), 077
   (a card grid: `PrintKit.renderCards` with a preset), 043 (a class set with the footer), 023 (half and quarter sheets), 042 (a fixed-size certificate: `setPage()`, `.pk-page` and `.pk-paper` only), 074 (labels with a height of their own: `PrintKit.renderCards(..., { cols }, ...)`, which 077 also calls, with a preset name), 051 (the same, with a reference sheet after the grid and a QR canvas on each label, so its sheet is kept current and not drawn on `beforeprint`) and 040 (exact-size cards on a grid of its own, `{ cols, perPage }`, with the tool's page frame put round each grid after `renderCards()`, and the preview drawn by the same call) and 064 (an exact-size trading card that keeps its own `height` and clipping; fronts and mirrored backs in one `renderCards()` call, each card the shared renderer's string parsed in a `<template>`) and 018 (six print buttons as six areas inside one `#printArea`, the shown one `.active`; cards a share of the width and as tall as their content; the station sheet, which has QR canvases, kept current for Ctrl+P) and 017 (five print buttons the same way, with no area `.active` at rest: `#printArea:not(.sheet-asked)` shows the QR codes for Ctrl+P; packets as `.pk-page`s) and 016 (three sheets as areas chosen by the tab that is showing; label stock as `{ cols, perPage }` with exact labels and `setPage({ margin: 'top side' })`, two lengths, since v242) print through it, each with `print-area.css` to hide the editor and, since v233, `class="pk-paper"` on `#printArea` for a white sheet and black text from either theme; `BACKLOG.md`'s Path 7 P3 has the recipe the next one follows. Its suites
   are `npm run test:print-kit`; nothing in it has been checked on paper.
+  Since v258 the kit has the print preview, `PrintKit.preview({ trigger, onPrint })` (Path 7 P5): a modal dialog
+  showing the built sheet in `#printArea` one page at a time, at the page `setPage()` wrote, without calling
+  `print()`. It finds the breaks by copying the sheet into an iframe whose body is a multi-column box the size
+  of the printable page, with the page's own print rules applied there (`flipMedia`), so the page itself is
+  never changed. Do not write a second preview and do not measure breaks by height (that was tried and
+  miscounts). 074 was the first adopter (`npm run test:safety-label-preview`, which pins the dialog itself); since v259 076, 077,
+  051, 042, 064 and 043 have it too, and since v263 070, 023, 040, 018, 017 and 016: every page that prints through the kit.
+  The next adopter adds a "Preview pages" button in front of its print button,
+  renders its sheet, calls `preview()`, and gets an entry in `Tools/print-kit/test/smoke-preview-adopters.mjs`'s `TOOLS`
+  (`npm run test:preview-adopters`), which holds the preview's count to Chromium's PDF in every state. A page with
+  several print buttons gets a Preview button in front of each (043; `BACKLOG.md`, Path 7 P5, "Point 4"). A page that
+  keeps several sheets inside one `#printArea` shows the asked-for one before `preview()` and passes `onClose` to put
+  the at-rest one back (018 is the example: the Preview button presses its Print button with `previewFor` set, so the
+  refusals and the sheet cannot differ). A Print button builds its sheet and prints; Ctrl+P presses none, so a page
+  whose `#printArea` is filled only by buttons builds its main sheet on `beforeprint` unless a button just built one
+  (043 and 040; not a sheet with a canvas on it, which is kept current, as on 051).
   `_shared/export.js` (Path 7 P4, v243) is `ExportKit`, the export layer: booklet, N-up and duplex imposition for
   either edge the paper turns on, sheet geometry, flow pagination, and `toPdf(pages, opts)` on the vendored jsPDF
   for pages a tool draws (a canvas, an image, a draw function; not a DOM element). A tool that needs a card's back
@@ -512,6 +528,45 @@ files must be added there too.
   made an earlier hand-derived figure about 3× too high), which pages load no
   `a11y.js` at all, and whether each still hand-rolls fullscreen instead of
   linking `_shared/stage.js`.
+- **Questions live in one bank, `_shared/question-bank.js`** (`QuestionBank`, Path 12 P1, v265): the key
+  `gvb-question-bank`, a versioned list of `{ id, prompt, answer, choices?, media?, unit, standard, difficulty,
+  tags, points }`, with 030 as the page a teacher edits it on and, so far, its only reader. A tool that needs
+  questions reads `QuestionBank.list()` and does not keep a bank of its own; one that brings questions in calls
+  `importQuestions()`, which adds and updates and never deletes. A field the module does not know is kept, so
+  add one without changing the version. Since v267 a tool's **built-in** questions are a read-only *seed set*:
+  its data file (`Tools/cultural-trivia-card-generator/ctcg-bank.js`, `Tools/geography-bee-quiz-generator/gbq-bank.js`)
+  holds the one copy of the list, the tool reads `items()` from it, and it calls `QuestionBank.registerSet()` on a
+  page that has the module. A set is in memory only, its ids are `seed:<set>:<the tool's id>`, and nothing stores
+  a seed id: a copy into the bank is a new question with `copiedFrom`. The next tool with built-in questions does
+  the same and does not load the module itself (`npm run test:seed-sets`; `BACKLOG.md`, Path 12 P2).
+  Since v271 040 is the second page with the module, and the model for **a page that reads the bank and is not its
+  editor**: it reads with `QuestionBank.peek()`, which writes nothing (`list()` moves 030's old bank on first load),
+  lists what a teacher can choose from with `sources({ peek: true })` and `sourceLabel()` (030's chooser calls the same
+  two; do not write a third wording), and stores only through `importQuestions()` after showing what it would do.
+  Its mapping is `Tools/vocab-flashcard-generator/vfg-bank.js`; the next tool that turns its own records into
+  questions gives them ids made from its own stable names, as that file does, so sending twice adds nothing
+  (`npm run test:vocab-bank`, `npm run test:vocab-bank-logic`).
+  Since v269 a tool **sends** a teacher's questions to the bank by link: an entry in `_shared/handoffs.js` whose
+  transform returns `{ v, from, name, questions }`, opened by 030 at `?questions=` (053 is the one sender).
+  `QuestionBank.fromLink()` is the only reader of that link and takes no id from it, and 030 stores an arrival
+  only when the teacher presses Add; a new sender follows 053's entry, `maxLink` included
+  (`npm run test:received-questions`).
+  Since v276 030's bank tab edits everything a question holds (`Tools/review-game-board/rgb-bank-editor.js`): the
+  right choice is the one whose text is the answer, so marking one writes the answer and no field was added; a Save
+  from a form sends only the fields the form shows, with the id, so the rest of the question stays; and **a file is
+  shown before it is stored** (`importPlan()`, the bank's own `merge()` over a copy), which the next import route
+  does too (`npm run test:bank-editor`, `npm run test:bank-editor-core`).
+  Since v278 020 is the third page with the module, and the model for **a tool that plays from the bank and keeps
+  no question**: its academic-tournament mode (`Tools/bracket-tournament-generator/bt-academic.js`) reads with
+  `peek()` and never writes the bank, stores question **ids** on its own record (a seed, the settings, ids and marks in
+  one `academic` field of the bracket), reads the words from the source each time, and cleans that field when it
+  arrives by link. It decides a match by filling the page's own score boxes, so it added no second rule. A bracket
+  without the field is unchanged (`npm run test:bracket-academic`, `npm run test:bracket-academic-core`).
+  030's old key (`gvb-review-board-bank:entries`) is read on every load
+  and never written or removed: do not delete it or its registry line, which is what keeps an older page and an
+  older backup working. The module's header has the migration, the ids and the file formats. Its suites are
+  `npm run test:question-bank` (pure Node) and `smoke-bank-file.mjs` in `npm run test:review-board`; no file it
+  writes has been opened in a spreadsheet.
 - **A WebRTC pairing code is drawn with `QrDraw.fit(canvas, text)`** (`_shared/qr-draw.js`,
   AI-10, v223), which takes the size from the room the canvas's parent has, draws whole px per
   module and never under 4, and puts a note on the page when there is not room. Do not write

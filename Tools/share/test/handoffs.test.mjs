@@ -248,6 +248,57 @@ console.log('\nhandoffs — groups to lab roles, lab groups to a seating chart')
     '005\'s page and ?section= come off the registry');
 }
 
+/* ── 3b. trivia to the question bank ─────────────────────────────────────── */
+console.log('\nhandoffs — custom trivia to the question bank');
+{
+  const win = make();
+  vm.runInContext(read('Tools/cultural-trivia-card-generator/ctcg-bank.js'), win, { filename: 'ctcg-bank.js' });
+  const H = win.Handoffs;
+  const trivia = H.all.filter(h => h.from === 'cultural-trivia-card-generator' && h.to === 'review-game-board');
+  eq(trivia.length, 1, '053 -> 030 is declared once');
+  ok(trivia[0].sheet !== false, 'as a row in 053\'s sheet');
+  const state = { questions: [
+    { category: 'hispanic', q: '  What is a quinceañera? ', a: ' A 15th birthday ' },
+    { category: 'francophone', q: 'Capital of Senegal?', a: 'Dakar' },
+    { category: 'constructor', q: 'Unknown category?', a: 'Kept, with no unit' },
+    { category: 'global', q: '', a: 'no question' }, { category: 'global', q: 'no answer', a: '   ' }, null,
+    { id: 'c9', category: 'global', q: 'Has a local id?', a: 'It does not travel' },
+  ] };
+  const built = H.url(trivia[0], state, { base: 'https://aspermylessonplan.com/Tools/053-cultural-trivia-card-generator.html' });
+  const u = new URL(built.url);
+  eq(u.pathname, '/Tools/030-review-game-board.html', '030\'s page comes off the registry');
+  eq([...u.searchParams.keys()], ['questions'], 'and so does its parameter, ?questions=');
+  const payload = win.StateLink.decodeState(u.searchParams.get('questions'));
+  eq(payload, { v: 1, from: 'cultural-trivia-card-generator', name: 'Custom trivia', questions: [
+    { prompt: 'What is a quinceañera?', answer: 'A 15th birthday', unit: 'Hispanic World' },
+    { prompt: 'Capital of Senegal?', answer: 'Dakar', unit: 'Francophone World' },
+    { prompt: 'Unknown category?', answer: 'Kept, with no unit', unit: '' },
+    { prompt: 'Has a local id?', answer: 'It does not travel', unit: 'Global Culture' },
+  ] }, 'q and a become prompt and answer, the category its label as the unit; blanks are skipped and no id travels');
+  eq(H.url(trivia[0], null, { base: u.href }).payload.questions, [], 'no state is an empty list, not a throw');
+  eq(H.url(trivia[0], { questions: 'x' }, { base: u.href }).payload.questions, [], 'and so is a state of the wrong shape');
+  const long = H.url(trivia[0], { questions: [{ category: 'global', q: 'x'.repeat(9000), a: 'y'.repeat(9000) }] }, { base: u.href }).payload.questions[0];
+  eq([long.prompt.length, long.answer.length], [2000, 2000], 'a text is cut to the bank\'s link bound before it is sent');
+
+  /* A list too long for one link is refused in words, and no tab opens. */
+  const listOf = n => ({ questions: Array.from({ length: n }, (_, i) => ({ category: 'global', q: 'Made-up question number ' + (i + 1) + '?', a: 'Answer ' + (i + 1) })) });
+  eq(trivia[0].maxLink, 7500, 'the entry bounds its link at 7,500 characters');
+  const fits = H.open(trivia[0], listOf(40));
+  eq([fits.ok, win.__opened.length, win.__opened[0].length < 7500], [true, 1, true], 'forty short questions fit and are sent');
+  const over = H.open(trivia[0], listOf(150));
+  eq([over.ok, over.tooLong, over.url, win.__opened.length], [false, true, null, 1], 'a hundred and fifty do not: open() refuses and no second tab is opened');
+  ok(/^Your 150 questions make a link of [\d,]+ characters, and a link longer than about 7,500 may not open\. Nothing was sent\./.test(over.message), 'and says so with the numbers: ' + JSON.stringify(over.message));
+  const others = H.all.filter(h => h !== trivia[0]);
+  ok(others.every(h => h.maxLink === undefined), 'no other entry has a bound, so none of them changed');
+
+  /* What 053 sends is what the bank's own reader takes, whole. */
+  vm.runInContext(read('_shared/question-bank.js'), win, { filename: 'question-bank.js' });
+  const got = win.QuestionBank.fromLink(payload);
+  eq([got.ok, got.from, got.questions.length, got.dropped, got.over], [true, 'cultural-trivia-card-generator', 4, 0, 0], 'QuestionBank.fromLink() reads every question 053 sent');
+  eq(got.questions.map(x => [x.prompt, x.answer, x.unit]), payload.questions.map(x => [x.prompt, x.answer, x.unit]), 'word for word');
+  eq([win.QuestionBank.LINK.prompt, win.QuestionBank.LINK.answer], [2000, 2000], 'and the sender\'s cut is the reader\'s bound');
+}
+
 /* ── 4. refusals ────────────────────────────────────────────────────────── */
 console.log('\nhandoffs — refusals');
 {

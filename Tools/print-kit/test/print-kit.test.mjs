@@ -117,6 +117,60 @@ eq(PK.setHeader({ date: '2026-10-03' }), { class: 'Period 3', date: '2026-10-03'
 eq(PK.setHeader({ class: '' }).class, '', 'an empty string clears a field');
 eq(PK.setHeader().title, 'Exit ticket', 'setHeader() with nothing changes nothing');
 
+// ---- preview (Path 7 P5): the pure parts ------------------------------------------
+const near = (a, b, label) => ok(Math.abs(a - b) < 1e-6, `${label} (got ${a}, want ${b})`);
+const letter = PK.pageBox({});
+eq([letter.paper, letter.orientation, letter.w, letter.h, letter.top, letter.side, letter.areaW, letter.areaH],
+   ['letter', 'portrait', 816, 1056, 48, 48, 720, 960], 'pageBox: Letter with half-inch margins is 720 x 960 px of 816 x 1056');
+const wide = PK.pageBox({ orientation: 'landscape', margin: '0.35in' });
+near(wide.w, 1056, 'pageBox: landscape swaps the paper');
+near(wide.areaH, 816 - 2 * 0.35 * 96, 'pageBox: and the printable height is the short side less the margins (042: 748.8 px, not a whole number)');
+const a4 = PK.pageBox({ paper: 'a4', margin: '10mm' });
+near(a4.w, 210 * 96 / 25.4, 'pageBox: A4 is 210 mm wide');
+near(a4.areaH, 277 * 96 / 25.4, 'pageBox: millimetre margins come off in millimetres');
+const avery = PK.pageBox({ margin: '0.5in 0.1875in' });
+eq([avery.top, avery.side, avery.areaW, avery.areaH], [48, 18, 780, 960], 'pageBox: two lengths are top, then sides (016\'s label stock)');
+near(PK.pageBox({ margin: '36pt' }).top, 48, 'pageBox: points');
+near(PK.pageBox({ margin: '1.27cm' }).top, 48, 'pageBox: centimetres');
+eq(PK.pageBox({ margin: '20in' }).areaW, 1, 'pageBox: a margin wider than the paper leaves a box, not a negative one');
+eq(PK.pageBox({ paper: 'tabloid', margin: 'calc(1in)' }).areaW, 720, 'pageBox: what pageCss() refuses is the default here too');
+
+eq(PK.flipMedia('print'), 'all', 'flipMedia: a print rule applies in the preview');
+eq(PK.flipMedia('only print and (orientation: landscape)'), 'all and (orientation: landscape)', 'flipMedia: and keeps its conditions');
+eq(PK.flipMedia('screen'), 'not all', 'flipMedia: a screen rule never does');
+eq(PK.flipMedia('only screen and (max-width: 600px)'), 'not all', 'flipMedia: with or without conditions');
+eq(PK.flipMedia('screen, print'), 'all', 'flipMedia: a list keeps the queries that match on paper');
+eq(PK.flipMedia('SCREEN and (min-width: 40em), PRINT and (min-width: 5in)'), 'all and (min-width: 5in)', 'flipMedia: whatever the case');
+eq(PK.flipMedia('not print'), 'not all', 'flipMedia: "not print" is a screen rule');
+eq(PK.flipMedia('not screen'), 'all', 'flipMedia: "not screen" matches on paper');
+eq(PK.flipMedia('not screen and (min-width: 9000px)'), 'all', 'flipMedia: a negated screen query matches on paper whatever it tests');
+eq(PK.flipMedia('all'), 'all', 'flipMedia: all is all');
+eq(PK.flipMedia('(max-width: 700px)'), '(max-width: 700px)', 'flipMedia: a query with no media type is left to the frame\'s own width');
+eq(PK.flipMedia('(prefers-color-scheme: dark), screen'), '(prefers-color-scheme: dark)', 'flipMedia: mixed lists');
+eq([PK.flipMedia(''), PK.flipMedia(null), PK.flipMedia(undefined)], ['all', 'all', 'all'], 'flipMedia: no media attribute is all');
+eq(PK.flipMedia('printer'), 'printer', 'flipMedia: only the word print, not a word that starts with it');
+eq(PK.flipMedia('screenshot'), 'screenshot', 'flipMedia: nor one that starts with screen');
+
+const pitch = 720 + 400;
+eq([0, 0.4, 719, 1119.4, 1119.6, 1120, 2239.7, 3360].map(x => PK.pageOf(x, pitch)), [0, 0, 0, 0, 1, 1, 2, 3], 'pageOf: a box belongs to the column its left edge is in, to half a pixel');
+eq(PK.pageOf(-30, pitch), 0, 'pageOf: a box hanging off the left of the first page is on the first page');
+eq(PK.pageOf(700 + 380, pitch), 0, 'pageOf: a box that overflows its page sideways by less than the gap is still on that page');
+eq(PK.countPages([], pitch), 1, 'countPages: an empty sheet is one page');
+eq(PK.countPages([0, 240, 480], pitch), 1, 'countPages: one column is one page');
+eq(PK.countPages([0, 1120, 2240, 2480], pitch), 3, 'countPages: the last column decides');
+eq(PK.countPages([0, 3360], pitch), 4, 'countPages: a page with nothing on it between two that have still counts');
+near(PK.pageOf(463.359375 * 5 + 400 * 5 - 0.2, 463.359375 + 400), 5, 'pageOf: a fractional page width (A5) does not drift over five pages');
+
+eq(PK.fitScale(816, 1056, 1632, 2112), 1, 'fitScale: never enlarged');
+near(PK.fitScale(816, 1056, 408, 2000), 0.5, 'fitScale: the width can decide');
+near(PK.fitScale(816, 1056, 2000, 264), 0.25, 'fitScale: or the height');
+eq(PK.fitScale(816, 1056, 0, 0), 0.1, 'fitScale: no room at all is a tenth, not zero');
+eq(PK.fitScale(816, 1056, -50, 400), 0.1, 'fitScale: nor negative');
+
+ok(!/\bprint\s*\(\s*\)/.test(src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '').replace(/opts\.onPrint\(\)/g, '')), 'print-kit.js never calls print() itself');
+ok(/dialog\.showModal\(\)/.test(src) && /frame\.setAttribute\('tabindex', '-1'\)/.test(src), 'the preview is a modal dialog, and its frame is not a tab stop');
+ok(/\.pk-preview\s*\{/.test(css) && /class(Name)?[^;]*pk-no-print|'pk-preview pk-no-print'/.test(src), 'the dialog carries .pk-no-print, so an open preview is not on the paper');
+
 // ---- the stylesheet's own rules ---------------------------------------------------
 const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
 ok(!/overflow(-[xy])?\s*:\s*(hidden|clip)/.test(bare), 'print-kit.css never clips: no overflow hidden or clip');

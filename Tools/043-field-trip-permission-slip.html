@@ -390,6 +390,7 @@
           <input type="number" id="blankCount" min="1" max="60" value="5">
         </div>
 
+        <button type="button" class="secondary full" id="previewBtn">Preview pages</button>
         <button type="button" id="printBtn" class="full">Print</button>
       </div>
 
@@ -407,7 +408,9 @@
           <div class="scan-status" id="scanStatus" role="status" aria-live="polite"></div>
         </div>
         <div class="print-actions">
+          <button type="button" class="secondary" id="previewMissingListBtn">Preview missing list</button>
           <button type="button" class="secondary" id="printMissingListBtn">Print missing list</button>
+          <button type="button" class="secondary" id="previewReminderSlipsBtn">Preview reminder slips</button>
           <button type="button" class="secondary" id="printReminderSlipsBtn">Print reminder slips</button>
         </div>
       </div>
@@ -422,6 +425,7 @@
         <label style="margin-top:.9rem;">Chaperone group assignments</label>
         <p class="hint">Uses the same student list as the batch/collection tracker above.</p>
         <div id="chaperoneAssignWrap"></div>
+        <button type="button" class="secondary full" id="previewChaperoneBtn">Preview chaperone groups</button>
         <button type="button" class="secondary full" id="printChaperoneBtn">Print chaperone groups</button>
       </div>
     </div>
@@ -506,10 +510,10 @@
     'chaperoneName', 'chaperonePhone', 'emergencyInstructions', 'dueDate', 'downloadIcsBtn',
     'singleFields', 'batchFields', 'blankFields',
     'studentName', 'rosterSelect', 'loadRosterBtn', 'batchNames', 'batchNameCount', 'blankCount',
-    'printBtn', 'previewArea', 'previewNote', 'deadlineLine', 'collectionWrap',
-    'printMissingListBtn', 'printReminderSlipsBtn',
+    'printBtn', 'previewBtn', 'previewArea', 'previewNote', 'deadlineLine', 'collectionWrap',
+    'printMissingListBtn', 'printReminderSlipsBtn', 'previewMissingListBtn', 'previewReminderSlipsBtn',
     'scanSlipBtn', 'scanStatus', 'scanCamOverlay', 'scanCamVideo', 'scanCamStatus', 'scanCamClose', 'scanCamCancel',
-    'chaperoneRows', 'addChaperoneBtn', 'chaperoneAssignWrap', 'printChaperoneBtn',
+    'chaperoneRows', 'addChaperoneBtn', 'chaperoneAssignWrap', 'printChaperoneBtn', 'previewChaperoneBtn',
     'secondLang', 'langLayout', 'langOptions', 'untranslatedHint',
     'purposeAlt', 'whatToBringAlt', 'emergencyInstructionsAlt'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -1414,20 +1418,51 @@
       { mode: 'one', name: state.name, sheet: 'page', header: !!(head.title || head.class || head.date), footer: false });
   }
 
+  /* A button builds its sheet and prints it. Ctrl+P presses no button, so
+     `beforeprint` builds the permission slips then: it used to print whichever
+     sheet a button or a preview had built last, and an empty page on a visit
+     with no button pressed. `sheetAsked` keeps it from replacing a sheet a
+     button has just built. The slips carry no canvas (the QR code is an
+     <img>), so they can be built inside the event. */
+  var sheetAsked = false;
+  function printBuilt() {
+    sheetAsked = true;
+    window.print();
+  }
+  window.addEventListener('beforeprint', function () { if (!sheetAsked && state) buildPrintArea(); });
+  window.addEventListener('afterprint', function () { sheetAsked = false; });
+
   els.printChaperoneBtn.addEventListener('click', function () {
     buildChaperonePrintArea();
-    window.print();
+    printBuilt();
   });
 
   els.printMissingListBtn.addEventListener('click', function () {
     buildMissingListPrintArea();
-    window.print();
+    printBuilt();
   });
 
   els.printReminderSlipsBtn.addEventListener('click', function () {
     buildReminderPrintArea();
-    window.print();
+    printBuilt();
   });
+
+  /* The print preview (PrintKit.preview, Path 7 P5). This page prints four
+     sheets from four buttons, each beside the controls that shape its sheet,
+     so each has a Preview button of its own in front of it: it builds that
+     sheet as the Print button does, shows it cut into its pages, and opens no
+     print dialog. The preview's own Print presses the Print button it stands
+     beside, so the sheet printed is the one that was looked at. */
+  function wirePreview(previewBtn, build, printBtn) {
+    previewBtn.addEventListener('click', function () {
+      build();
+      PrintKit.preview({ trigger: previewBtn, onPrint: function () { printBtn.click(); } });
+    });
+  }
+  wirePreview(els.previewChaperoneBtn, buildChaperonePrintArea, els.printChaperoneBtn);
+  wirePreview(els.previewMissingListBtn, buildMissingListPrintArea, els.printMissingListBtn);
+  wirePreview(els.previewReminderSlipsBtn, buildReminderPrintArea, els.printReminderSlipsBtn);
+  wirePreview(els.previewBtn, function () { buildPrintArea(); }, els.printBtn);
 
   /* ---------- form <-> state wiring ---------- */
   function bindTextField(id, key) {
@@ -1498,7 +1533,7 @@
 
   els.printBtn.addEventListener('click', function () {
     buildPrintArea();
-    window.print();
+    printBuilt();
   });
 
   els.downloadIcsBtn.addEventListener('click', function () {
