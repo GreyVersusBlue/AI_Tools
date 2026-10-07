@@ -32,7 +32,7 @@ under each code on screen, on plain paper and on Avery 5160/5163 stock. What was
   the same label and link, not the same link. A quoted row with more than two cells rejoins the rest with the delimiter and no space. Quoted cells that span lines are not
   supported (a line is a row). The header skip applies to the first row only. Nothing about this was stored: no new key, no registry row, nothing in a share link.
 - **Tests.** `smoke-bulk-core.mjs` (`test:qr-bulk-core`, pure Node, 99 assertions, the limit read off the vendored encoder) and `smoke-bulk.mjs` (`test:qr-bulk`, port 8520,
-  127 assertions): the quiet zone and the caption's letters read off the canvas's pixels at 200, 400 and 1000 px (the gap to the code is at least four modules, the border
+  128 assertions): the quiet zone and the caption's letters read off the canvas's pixels at 200, 400 and 1000 px (the gap to the code is at least four modules, the border
   under the code blank, the code decoded by the page's own jsQR and bit for bit the same with and without a caption), a 60-character caption inside the code's width, markup in
   a caption, a label and a row left out as text on screen, on the sheet, in the alt text and in the downloaded SVG, Check rows and Generate on a paste with every kind
   of bad row, the limit at 400 and 401, a BOM'd CSV with CRLF, a second file, a file over 1 MB, an old-style paste making the codes and labels the old page made, a saved
