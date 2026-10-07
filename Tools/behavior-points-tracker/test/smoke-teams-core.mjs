@@ -44,7 +44,8 @@ eq(b.name, 'Herons', 'a name is trimmed');
 eq(T.active(s), true, 'two teams make a board');
 ok(a.color && b.color && a.color !== b.color, 'each new team takes a colour no team has');
 const long = T.addTeam(s, 'X'.repeat(60));
-eq(long.name.length, T.NAME_MAX, 'a long name is cut to the limit');
+eq(long.name.length, 24, 'a long name is cut to 24 letters');
+eq(T.NAME_MAX, 24, 'the limit is 24');
 eq(T.addTeam(s, '').name, 'Team 4', 'an empty name gets a numbered default');
 for (let i = 0; i < 4; i++) T.addTeam(s, 'T' + i);
 eq(s.teams.length, 8, 'eight teams');
@@ -75,6 +76,9 @@ eq(T.unaward(g, { team: 'gone', delta: 2 }), false, 'an entry for a removed team
 eq(T.setTeamOf(g, 'Dee', 'gone'), false, 'a student cannot be put on a team that is not there');
 T.setTeamOf(g, 'Ann Lee', '');
 ok(!('Ann Lee' in g.teamOf), 'an empty team takes a student off');
+g.teamOf.Zed = 'gone';                       // a stale assignment that never went through normalize
+eq(T.award(g, 'Zed', 4), null, 'a tap for a student whose team is gone counts for nobody');
+ok(!('gone' in g.teamDay), 'and invents no total for it');
 
 /* 4. Direct points, undo of a direct award, the log. */
 const d = { name: 'P3' };
@@ -106,6 +110,10 @@ eq(T.totalOf(h, 'tm1'), 4, 'archive keeps red total');
 eq(T.totalOf(h, 'tm2'), 3, 'archive keeps blue total');
 eq(h.teamLog.length, 0, 'archive files the direct log');
 eq(h.teamDay.tm1, 0, 'today starts again at 0');
+T.award(h, 'Ann', 1); T.archiveDay(h);
+eq(T.totalOf(h, 'tm1'), 5, 'a second archive adds to the bank, it does not replace it');
+T.award(h, 'Ann', -1); T.archiveDay(h);
+eq(T.totalOf(h, 'tm1'), 4, 'and a third takes a bad day off it');
 T.award(h, 'Ann', 2); T.give(h, 'tm2', 1, '', '', 'g2');
 eq(T.totalOf(h, 'tm1'), 6, 'today adds to the bank');
 T.clearDay(h);
@@ -153,6 +161,9 @@ T.addTeam(allNeg, 'A'); T.addTeam(allNeg, 'B');
 T.give(allNeg, 'tm1', -1, '', '', 'a');
 same(T.standings(allNeg).map(r => r.lead), ['sole', ''], 'a team ahead of a worse total leads even below 0');
 same(T.standings(allNeg, { hideNegative: true }).map(r => r.lead), ['', ''], 'but nobody leads while every shown total is 0');
+const lone = { name: 'P3' };
+T.addTeam(lone, 'Solo'); T.give(lone, 'tm1', 5, '', '', 'a');
+same(T.standings(lone).map(r => r.lead), [''], 'a lone team has nothing to lead');
 eq(T.ordinal(1), '1st', 'ordinal 1'); eq(T.ordinal(2), '2nd', 'ordinal 2'); eq(T.ordinal(3), '3rd', 'ordinal 3');
 eq(T.ordinal(4), '4th', 'ordinal 4'); eq(T.ordinal(11), '11th', 'ordinal 11'); eq(T.ordinal(12), '12th', 'ordinal 12');
 eq(T.ordinal(13), '13th', 'ordinal 13'); eq(T.ordinal(21), '21st', 'ordinal 21'); eq(T.ordinal(22), '22nd', 'ordinal 22');
@@ -171,14 +182,26 @@ ok(JSON.stringify(T.deal(names, ids, 8)) !== JSON.stringify(dl), 'another seed g
 ok(JSON.stringify(T.deal(names, ids, 9)) !== JSON.stringify(T.deal(names, ids, 8)), 'and another');
 same(T.deal(['Ann', 'Ann', 'Bo'], ['tm1', 'tm2'], 1), T.deal(['Ann', 'Bo'], ['tm1', 'tm2'], 1), 'a name twice on the roster is dealt once');
 same(T.deal([], ids, 1), {}, 'nobody to deal');
-same(T.deal(names, [], 1), {}, 'no teams to deal to');
+eq(Object.keys(T.deal(names, [], 1)).length, 0, 'no teams to deal to');
 eq(Object.keys(T.deal(['Solo'], ids, 1)).length, 1, 'one student is dealt');
 same(T.deal(names, ['tm1', 'tm2'], 3), T.deal(names, ['tm1', 'tm2'], 3), 'two teams, repeatable');
+/* Fair: over many seeds a student is as likely to land on either of two teams,
+   and two students share a team a third of the time (4 names, 2 teams). */
+const four = ['A', 'B', 'C', 'D'];
+let aOnOne = 0, abTogether = 0;
+const RUNS = 3000;
+for (let sd = 1; sd <= RUNS; sd++) {
+  const x = T.deal(four, ['tm1', 'tm2'], sd);
+  if (x.A === 'tm1') aOnOne++;
+  if (x.A === x.B) abTogether++;
+}
+ok(aOnOne / RUNS > 0.45 && aOnOne / RUNS < 0.55, `a student lands on either team about half the time (${(aOnOne / RUNS).toFixed(3)})`);
+ok(abTogether / RUNS > 0.29 && abTogether / RUNS < 0.37, `two students share a team about a third of the time (${(abTogether / RUNS).toFixed(3)})`);
 const seen = new Set();
 for (let sd = 1; sd <= 30; sd++) seen.add(JSON.stringify(T.deal(names, ids, sd)));
 ok(seen.size >= 25, `thirty seeds give at least 25 different deals (${seen.size})`);
-const counts = T.counts({ teams: [{ id: 'tm1' }, { id: 'tm2' }], teamOf: { Ann: 'tm1', Bo: 'tm1', Cy: 'tm2', Old: 'tm9' } }, ['Ann', 'Bo', 'Cy', 'Dee']);
-same(counts, { none: 1, byTeam: { tm1: 2, tm2: 1 } }, 'counts: two, one, and one with no team');
+const counts = T.counts({ teams: [{ id: 'tm1' }, { id: 'tm2' }], teamOf: { Ann: 'tm1', Bo: 'tm1', Cy: 'tm2', Old: 'tm9' } }, ['Ann', 'Bo', 'Cy', 'Dee', 'Old']);
+same(counts, { none: 2, byTeam: { tm1: 2, tm2: 1 } }, 'counts: two, one, and two with no team (one on a team that is gone)');
 
 /* 8. normalize cleans a hand-edited section. */
 const dirty = {

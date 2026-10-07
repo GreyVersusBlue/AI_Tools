@@ -347,6 +347,10 @@ const totals = async page => (await tiles(page)).map(t => `${t.pos} ${t.name.tri
   await page.click('#clearDayBtn');
   eq(await totals(page), ['1st Falcons 7', '2nd Herons 2'], 'day: undo the day works when only direct points were given');
 
+  await page.fill('#teamGiveAmount', '4'); await page.selectOption('#teamGiveTeam', 'tm2'); await page.click('#teamGiveBtn');
+  await page.click('#archiveBtn');
+  ok(!/Nothing logged/.test(await page.$eval('#msg', el => el.textContent)), 'day: a day with only direct points is archived, not refused');
+  eq(await totals(page), ['1st Falcons 7', '2nd Herons 6'], 'day: and its points are in the bank');
   const kept = studentSide(await section(page));
   await tap(page, 'Aiden Whitfield');
   const withTap = studentSide(await section(page));
@@ -389,6 +393,38 @@ const totals = async page => (await tiles(page)).map(t => `${t.pos} ${t.name.tri
   eq(await boardShown(page), false, 'sections: a new section has no teams');
   eq(await page.$eval('#teamsNote', el => el.textContent), 'No teams yet. Add at least two to show the team board.', 'sections: and says so');
   eq(page.__errs, [], 'load: no page errors');
+  await page.context().close();
+}
+
+/* ── 7b. A rename in Class Roster Hub carries the student's team ──────────── */
+{
+  const ROSTER = 'Period 3 — Earth Science';
+  const ids = ['stu-a', 'stu-b', 'stu-c', 'stu-d', 'stu-e', 'stu-f'];
+  const renamed = NAMES.map((n, i) => (i === 0 ? 'Whitfield, Aiden J' : n));
+  const page = await open(sec => {
+    withTeams(sec);
+    sec.rosterName = ROSTER;
+    sec.idNames = Object.fromEntries(ids.map((id, i) => [id, NAMES[i]]));
+    sec.teamBank = { tm1: 3, tm2: 1 };
+  });
+  await page.evaluate(([roster, list, idList]) => {
+    localStorage.setItem('np_rosters', JSON.stringify({ [roster]: list }));
+    localStorage.setItem('crh_students_v1', JSON.stringify({
+      version: 1,
+      rosters: { [roster]: { meta: { period: '3' }, students: list.map((name, i) => ({ id: idList[i], name, preferred: '', say: '' })), orphans: [] } },
+    }));
+  }, [ROSTER, renamed, ids]);
+  await page.reload(); await page.waitForTimeout(400);
+  await page.selectOption('#rosterSelect', ROSTER);
+  await page.click('#loadRosterBtn');
+  await page.waitForTimeout(500);
+  const s = await section(page);
+  eq(s.teamOf['Whitfield, Aiden J'], 'tm1', 'rename: the student keeps their team under the new name');
+  ok(!('Aiden Whitfield' in s.teamOf), 'rename: and nothing is left under the old one');
+  eq(await totals(page), ['1st Falcons 3', '2nd Herons 1'], 'rename: team totals are what they were');
+  await tap(page, 'Whitfield, Aiden J');
+  eq(await totals(page), ['1st Falcons 4', '2nd Herons 1'], 'rename: and a tap on the renamed student counts for the team');
+  eq(page.__errs, [], 'rename: no page errors');
   await page.context().close();
 }
 
