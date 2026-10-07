@@ -2347,7 +2347,7 @@
     };
   }
 
-  /* ---------- the editor (Path 12 P2, v274; rgb-bank-editor.js) ----------
+  /* ---------- the editor (Path 12 P2, v275; rgb-bank-editor.js) ----------
      A question holds more than this page showed until v273: choices and
      tags. The add card takes both now, a row shows them, and a row of the
      teacher's own bank has Edit, which opens the question WHERE IT STANDS
@@ -2550,7 +2550,7 @@
     }
     // The eight fields the form shows, and no id: the bank gives a new
     // question its own. With no choices and no tags this stores exactly
-    // what the six-field form stored before v274.
+    // what the six-field form stored before v275.
     var fresh = ReviewBankEditor.questionOf({
       prompt: question, answer: answer, points: els.bankPoints.value,
       unit: els.bankUnit.value, standard: els.bankStandard.value, difficulty: els.bankDifficulty.value,
@@ -2688,7 +2688,7 @@
     }).catch(function (err) { bankFileStatus('error', err.message); });
   });
 
-  /* ---------- a preview before an import (Path 12 P2, v274) ----------
+  /* ---------- a preview before an import (Path 12 P2, v275) ----------
      A file is SHOWN before it is stored: ReviewBankEditor.importPlan() runs
      the bank's own merge() over a copy and says, question by question, what
      Add would do: new, changes a question already here (and which fields),

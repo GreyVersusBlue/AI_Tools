@@ -119,7 +119,7 @@ const emptied = QB.upsert(BANK, E.questionOf({ ...E.draftOf(STORED), choices: []
 eq(['choices' in emptied, emptied.tags, emptied.media], [false, [], STORED.media], 'a Save with every choice removed stores no `choices` field, and with every tag removed an empty list');
 
 /* The add card: with no choices and no tags, what is stored is what the
-   six-field form stored before v274. */
+   six-field form stored before v275. */
 const SIX = { prompt: 'Longest river?', answer: 'The Nile', points: 400, unit: 'Unit 2', standard: '', difficulty: 'Hard' };
 const fresh = E.questionOf({ ...SIX, points: '400', tags: [], choices: [] });
 delete fresh.choices;

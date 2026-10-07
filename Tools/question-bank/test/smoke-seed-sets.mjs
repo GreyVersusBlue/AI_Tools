@@ -292,7 +292,7 @@ eq([stored.length, stored.some(q => /^seed:/.test(q.id))], [3, false], 'storage 
 
 await choose('');
 eq(await rows(), ['What ancient civilization built Machu Picchu? / The Inca', 'What is a popular Spanish tradition where people eat 12 grapes at midnight on New Year’s Eve? / Las doce uvas de la suerte', 'What is the name of the vibrant, multi-day festival held in Rio de Janeiro before Lent (in Brazil, Portuguese-speaking but culturally linked)? / Carnival (Carnaval)'], 'My question bank lists the copies');
-// Since v274 a row of the teacher's own bank has Edit as well; a seed's row, above, still has neither.
+// Since v275 a row of the teacher's own bank has Edit as well; a seed's row, above, still has neither.
 eq(await buttons(), ['Edit', 'Delete'], 'where they have Edit and Delete, as any question of the teacher\'s');
 await page.click('#bankList .bank-entry button.danger');
 await settle(page, 200);

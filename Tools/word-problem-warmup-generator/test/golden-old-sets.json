@@ -1,0 +1,1601 @@
+{
+ "recordedFrom": "1aaee05, before two-step",
+ "cases": [
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 1,
+   "count": 6,
+   "n": 6,
+   "seedShown": "1",
+   "sha256": "83d7b9d55bf7947e81a2dde688c839148bba79808acd89900d52ecd597eac4ff",
+   "storedSha256": "d7af4611b52ec8f9320ba35daebc319c394f96586b0ecb77830f9412db8148e4",
+   "firstProblem": "1.There are 15 tables, and each table has 15 stamps on it. How many stamps are there in total?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 1,
+   "count": 20,
+   "n": 20,
+   "seedShown": "1",
+   "sha256": "a5fff1593402ed5e9204a82d14697df2240273dc062d5b968b5ad751ec600fe4",
+   "storedSha256": "bb13023803e807f36e025a7a27ef83ee5d00aff22f288b28b670176f73f02834",
+   "firstProblem": "1.There are 15 tables, and each table has 15 stamps on it. How many stamps are there in total?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 7,
+   "count": 6,
+   "n": 6,
+   "seedShown": "7",
+   "sha256": "05cfed30d4201cd2a47fd41a214235352d5683148950a86e8a46c2e7d1933001",
+   "storedSha256": "edfcc5e1ea05c204473de26f4f281c1441ad4f1e50a2fed9d1fb3e16b822c7f2",
+   "firstProblem": "1.A box has 284 granola bars in it. Someone adds another 126 granola bars to the box. How many granola bars are in the box now?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 7,
+   "count": 20,
+   "n": 20,
+   "seedShown": "7",
+   "sha256": "25a20c86f070ca23b302fce547a01cda4e7d43dbbbee2e086da868afac6f3449",
+   "storedSha256": "ba2d4fe355d0e22122da989dd409e90eab615ed85333cf977fee21fbb833455e",
+   "firstProblem": "1.A box has 284 granola bars in it. Someone adds another 126 granola bars to the box. How many granola bars are in the box now?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 42,
+   "count": 6,
+   "n": 6,
+   "seedShown": "42",
+   "sha256": "1d1d1fa8654d74fd85e312011e95a9d646754bc5ffb4294a27e194ef06313b4f",
+   "storedSha256": "8bc74eeaa9270233e2fc8294896e8f3a5f02b66d6999bf11786c28aeb1aba021",
+   "firstProblem": "1.Each student needs 7 seashells for an activity, and there are 12 students. How many seashells are needed in total?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 42,
+   "count": 20,
+   "n": 20,
+   "seedShown": "42",
+   "sha256": "dfb158a00f4697487108f31e6820eb77a3d053d4fb592024efe47b484624ede4",
+   "storedSha256": "adb347ba3b65f3131f60e77af2d038004ac620f7fa3e260abfa8c1c8933391c2",
+   "firstProblem": "1.Each student needs 7 seashells for an activity, and there are 12 students. How many seashells are needed in total?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 20260812,
+   "count": 6,
+   "n": 6,
+   "seedShown": "20260812",
+   "sha256": "0051c7a5c48ba4ab11fb5cd2a421006e8f9f8af11522d47a3e4eb22229c1a53c",
+   "storedSha256": "61a89e58254baa180f3b29b79b6a85a437e0f0efc7ba1de987bfc60a98155870",
+   "firstProblem": "1.Owen has 715 pencils and wants to split them evenly into 11 groups. How many pencils will be in each group?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 20260812,
+   "count": 20,
+   "n": 20,
+   "seedShown": "20260812",
+   "sha256": "39b27258e13a557bae438dbc43908630792905f96adfa625cc127ddcca3edb64",
+   "storedSha256": "79a0842a75c59caf6306fcc8f97a41e62e6e191ac76572478164f9adfdcde5b7",
+   "firstProblem": "1.Owen has 715 pencils and wants to split them evenly into 11 groups. How many pencils will be in each group?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 305419896,
+   "count": 6,
+   "n": 6,
+   "seedShown": "305419896",
+   "sha256": "ac12feb5fe9b5c7b7faf8311c73a80c24f6a492beab71f405329e59741fde898",
+   "storedSha256": "ed33f25f51d6464deca81548ff1bc75ce26ec9fba5c596057d455741a00ce2fb",
+   "firstProblem": "1.Two friends are collecting granola bars. Kenji has 105 and a friend has 78. How many granola bars do they have combined?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 305419896,
+   "count": 20,
+   "n": 20,
+   "seedShown": "305419896",
+   "sha256": "d9785cc3f0bbc7ec458be45a44ca00e9450811af4fc28401e74ce8387561722d",
+   "storedSha256": "6b3191a965aff408306aca274dbbe62ee784f820911d83e38cf7aed13fdd9dec",
+   "firstProblem": "1.Two friends are collecting granola bars. Kenji has 105 and a friend has 78. How many granola bars do they have combined?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 3735928559,
+   "count": 6,
+   "n": 6,
+   "seedShown": "3735928559",
+   "sha256": "9bbe73d0c2083004db46fe4f83553708ed1852653bd8e23fc07145d81a2a0356",
+   "storedSha256": "8d6e3f9a73457453d402adb9df6f28623ce101184417b7d013c167431caec14c",
+   "firstProblem": "1.441 comic books will be divided evenly among 9 classrooms. How many comic books will each classroom get?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 3735928559,
+   "count": 20,
+   "n": 20,
+   "seedShown": "3735928559",
+   "sha256": "420690ed2e75cd55a0b5f256a3848b99126974e8dabb9c412abadf96cc4446b9",
+   "storedSha256": "c23ba46cdef4d86fa8d71dc1ae430bf0883384eae5156cd5153c6d61cec1e3d3",
+   "firstProblem": "1.441 comic books will be divided evenly among 9 classrooms. How many comic books will each classroom get?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 4294967295,
+   "count": 6,
+   "n": 6,
+   "seedShown": "4294967295",
+   "sha256": "7eebb1856a1959877d204fd5048122b66294b62c9a5a2bfbf79b51f1c9f7b6ca",
+   "storedSha256": "205d81c7e28d788d3ddf77781203525bfc82c40e579824c15d0d5cc9b149252d",
+   "firstProblem": "1.Jaden organizes 765 comic books into bags with 15 in each bag. How many bags does Jaden need?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 4294967295,
+   "count": 20,
+   "n": 20,
+   "seedShown": "4294967295",
+   "sha256": "af824b7c8c6312a7f780898a108de93ba04d0aa91ad6675c53ceccd309a569a2",
+   "storedSha256": "f259ba4dedc49b08a973c128f4df703bdedf07571320e3883a1e7bd888518f8e",
+   "firstProblem": "1.Jaden organizes 765 comic books into bags with 15 in each bag. How many bags does Jaden need?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 1,
+   "count": 6,
+   "n": 6,
+   "seedShown": "1",
+   "sha256": "7f481a1b9c1a60f2c2374ad6c8c086b2a31e2a0e3d0a15375efc5edb4cfefeb2",
+   "storedSha256": "fe45e007b50b0db2195e7f1ffe234b6996f6e98e2e63640040f407cb01550060",
+   "firstProblem": "1.On Monday, Maya collected 393 stamps. On Tuesday, Maya collected 305 more stamps. How many stamps has Maya collected in total?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 1,
+   "count": 20,
+   "n": 20,
+   "seedShown": "1",
+   "sha256": "9011a6e97082605381dd38d6b46721d3c24e167a6064ad1d5ad89beb7ff0f225",
+   "storedSha256": "8f4c46441792aade1a3178854e035e8f5c618c9f887e753e2ac357c56500e6ba",
+   "firstProblem": "1.On Monday, Maya collected 393 stamps. On Tuesday, Maya collected 305 more stamps. How many stamps has Maya collected in total?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 7,
+   "count": 6,
+   "n": 6,
+   "seedShown": "7",
+   "sha256": "1db435b7d1c7347898e62dd2be4b47f8e010164b9be371a077cc3e86e76c5229",
+   "storedSha256": "fb8737f70e53672652dbc59a6a3f6c8ecb8f90bb586442258363643630ed1719",
+   "firstProblem": "1.A box has 284 granola bars in it. Someone adds another 126 granola bars to the box. How many granola bars are in the box now?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 7,
+   "count": 20,
+   "n": 20,
+   "seedShown": "7",
+   "sha256": "fa8ed5e95cd878a309c804bfa3463a7a9135c9da58af26e4bcdcde4af3c87e3e",
+   "storedSha256": "d3e1cdeb411f5d118421ca7f752b9265b87e7935a67c3d7dd4bb482feaa9d2d6",
+   "firstProblem": "1.A box has 284 granola bars in it. Someone adds another 126 granola bars to the box. How many granola bars are in the box now?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 42,
+   "count": 6,
+   "n": 6,
+   "seedShown": "42",
+   "sha256": "04da331bd6c6df8f4d0bc38458aff2e9de7bfc419ae570ae741a2ec992c19c9e",
+   "storedSha256": "3b1f0d789a5267629a85079c08a73de0727893968ec7ce71895313dcf6404ddd",
+   "firstProblem": "1.Owen had 273 seashells in one bag and 50 seashells in another bag. If Owen combines both bags, how many seashells are there altogether?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 42,
+   "count": 20,
+   "n": 20,
+   "seedShown": "42",
+   "sha256": "dff2e79bdc623a21e7548b9a50d3a95f37bd6eae66faf1f34617ca1abca0c97e",
+   "storedSha256": "01e6fcf819bc785aae4f967743560dd1532e1a6b5a5b894a5a9512928d3a1a45",
+   "firstProblem": "1.Owen had 273 seashells in one bag and 50 seashells in another bag. If Owen combines both bags, how many seashells are there altogether?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 20260812,
+   "count": 6,
+   "n": 6,
+   "seedShown": "20260812",
+   "sha256": "facc31011e5d4372817ee8cf7328626df2acc5e2dc054bcf1f5cb9e1dcd466f1",
+   "storedSha256": "bffceade45edf5d845d5ce6fa13a41e353ef3ca8bf039405505dba0c7f5014f6",
+   "firstProblem": "1.Owen has 213 pencils. Then Owen gets 139 more. How many pencils does Owen have now?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 20260812,
+   "count": 20,
+   "n": 20,
+   "seedShown": "20260812",
+   "sha256": "c1bfd6e722088a3c0ec5d75e6d3f12889e4b2ba0c44d779e2e06f43ead755e5a",
+   "storedSha256": "c268f13c1a83b7632bec0ca3785dd9dde53c36dfe3cfcaac7f55a95793efe147",
+   "firstProblem": "1.Owen has 213 pencils. Then Owen gets 139 more. How many pencils does Owen have now?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 305419896,
+   "count": 6,
+   "n": 6,
+   "seedShown": "305419896",
+   "sha256": "eaa7c883e30a33b9453f006c53cefcb90012659239b4f0e6e2973357db7904d2",
+   "storedSha256": "3031680eaf1f04ed8f4554c7abbb166f533677448b1c8525258c27fc8e72eec2",
+   "firstProblem": "1.Two friends are collecting granola bars. Kenji has 105 and a friend has 78. How many granola bars do they have combined?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 305419896,
+   "count": 20,
+   "n": 20,
+   "seedShown": "305419896",
+   "sha256": "2f78bff32fbea360b815823d7a93e5d5ddc1927074f34ef6be82b39c498e631d",
+   "storedSha256": "74537f851f4ab667f1f62edd88fbc924a26b41b39592833a722f0b0f4b96d42f",
+   "firstProblem": "1.Two friends are collecting granola bars. Kenji has 105 and a friend has 78. How many granola bars do they have combined?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 3735928559,
+   "count": 6,
+   "n": 6,
+   "seedShown": "3735928559",
+   "sha256": "f36fd71f7cb4b1542aeaac359b086384a2b50478b3e33a50dc39ec21d4ce6c58",
+   "storedSha256": "2955bd313af20956ecbb066f65d4b7ea0b01a9bb8631bbd555ca033444b92f40",
+   "firstProblem": "1.Sofia started with 153 comic books and earned 66 more for doing chores. How many comic books does Sofia have now?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 3735928559,
+   "count": 20,
+   "n": 20,
+   "seedShown": "3735928559",
+   "sha256": "c77580ba6a12ec23fe4ecea3852f5aa7d3f9a35cdfd0ed9db4513e8386862b1f",
+   "storedSha256": "f3bf1fa22f1a10bed23a9e3f2786dbc330e56147783c0f8b8ddc4e43cf54cefc",
+   "firstProblem": "1.Sofia started with 153 comic books and earned 66 more for doing chores. How many comic books does Sofia have now?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 4294967295,
+   "count": 6,
+   "n": 6,
+   "seedShown": "4294967295",
+   "sha256": "b321abca873c9e1f5538d3acae745563c752f026a648a6d4ceaa22af61c2d7a4",
+   "storedSha256": "159e423323ff2ace3c851608ec05f852b0c5e921977eeb01b25fe4eb0b6460ac",
+   "firstProblem": "1.Jaden had 379 comic books in one bag and 259 comic books in another bag. If Jaden combines both bags, how many comic books are there altogether?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "addition"
+   ],
+   "seed": 4294967295,
+   "count": 20,
+   "n": 20,
+   "seedShown": "4294967295",
+   "sha256": "ccb37b8d738492b662f9b13be231b2b8619b6a8d911c704b3242861991a81e4c",
+   "storedSha256": "2cc6f6e0d7ab8386aa75fdea1b0769ad2c3213b7d8ebf2d70f002104a2ec6ef4",
+   "firstProblem": "1.Jaden had 379 comic books in one bag and 259 comic books in another bag. If Jaden combines both bags, how many comic books are there altogether?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 1,
+   "count": 6,
+   "n": 6,
+   "seedShown": "1",
+   "sha256": "b2fbe21911695409638cb364cd88286930f7c1e246a66f82d3cc9cff17565fd4",
+   "storedSha256": "0ca23d9aba9850e83ecdafa77aba41c78e0b3c4c7215072488c32fd584035e61",
+   "firstProblem": "1.A total of 885 stamps need to be shared equally among 15 students. How many stamps does each student get?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 1,
+   "count": 20,
+   "n": 20,
+   "seedShown": "1",
+   "sha256": "55b3f07e42e617d83de2f71d558fe556a058d54ec08bc6ed99d7ae964a20e981",
+   "storedSha256": "84bbebc9ef8321448bbd303ae58f0c975f5b661a846c369216dc5c8b53a87fe7",
+   "firstProblem": "1.A total of 885 stamps need to be shared equally among 15 students. How many stamps does each student get?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 7,
+   "count": 6,
+   "n": 6,
+   "seedShown": "7",
+   "sha256": "db30754f8a08b2c2a82e3ee5abfee4136cf82bd89ec5d8a047f20d37371ebb47",
+   "storedSha256": "e4868614043783476d9adfb05aa42f5092a06ba9b3f6197d772f185f1b750686",
+   "firstProblem": "1.Maya wants 284 granola bars for a collection and already has 126. How many more granola bars does Maya need?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 7,
+   "count": 20,
+   "n": 20,
+   "seedShown": "7",
+   "sha256": "f00597db080eba1e1b29b0bb448b8e1a869a6712de83cd40b51ce381dd45ae5b",
+   "storedSha256": "904ee700bce4fab859311a5bff292b8af4ae1971b746f03c39e97d68f19410f7",
+   "firstProblem": "1.Maya wants 284 granola bars for a collection and already has 126. How many more granola bars does Maya need?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 42,
+   "count": 6,
+   "n": 6,
+   "seedShown": "42",
+   "sha256": "efe3ad9050c2429fcf0f754f9e5f07959d61b3f00bbb62a926602a8c287074a7",
+   "storedSha256": "dabb720434e9d5116a02b0adc51f04a372e4cba84c6ab221b15f8603b5725165",
+   "firstProblem": "1.Owen organizes 168 seashells into bags with 12 in each bag. How many bags does Owen need?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 42,
+   "count": 20,
+   "n": 20,
+   "seedShown": "42",
+   "sha256": "ac99937c16031c013ebc7164252c80bde644d284bd71537dd6f8151a3182fdf3",
+   "storedSha256": "45ff4a92ba9e84a4edec4350510ced73b9aa97cd29ed0a02619ba22b79da4e26",
+   "firstProblem": "1.Owen organizes 168 seashells into bags with 12 in each bag. How many bags does Owen need?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 20260812,
+   "count": 6,
+   "n": 6,
+   "seedShown": "20260812",
+   "sha256": "b21b95d9f3cf4cfad489a4fa60ae275cf94651dc9cf09d8b76c36a36b732f348",
+   "storedSha256": "e3cb30cf2f0b4e074dc775cde3d68c99bb84b5040109a6048543b3840b12e04a",
+   "firstProblem": "1.Owen has 715 pencils and wants to split them evenly into 11 groups. How many pencils will be in each group?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 20260812,
+   "count": 20,
+   "n": 20,
+   "seedShown": "20260812",
+   "sha256": "4737396a377654965f7c8902cd4902dcb2f611e46bb389aa52f5c2ab14fbc2f7",
+   "storedSha256": "76ac6df52d35acd65f11629753fe2641a281c97332914a8029b7d74c58a0bf31",
+   "firstProblem": "1.Owen has 715 pencils and wants to split them evenly into 11 groups. How many pencils will be in each group?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 305419896,
+   "count": 6,
+   "n": 6,
+   "seedShown": "305419896",
+   "sha256": "0ac36375058babfd7b7027384127879ff97d08347941a77e28436101f7645e58",
+   "storedSha256": "2ae51d74110873fb9e548c37bbd0b0f4086506b1c1b53db1ce26999e77dd8905",
+   "firstProblem": "1.A store had 105 granola bars in stock. Customers bought 78 granola bars during the day. How many granola bars remain in stock?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 305419896,
+   "count": 20,
+   "n": 20,
+   "seedShown": "305419896",
+   "sha256": "b04e53793866877e572ed8d3c0abbb91b6b6b3d618769674d620f1a4f8218b82",
+   "storedSha256": "340dbb7133033662f84ae0f0d07ae5ac94b460f3f7fb15e3c540c0e270415a61",
+   "firstProblem": "1.A store had 105 granola bars in stock. Customers bought 78 granola bars during the day. How many granola bars remain in stock?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 3735928559,
+   "count": 6,
+   "n": 6,
+   "seedShown": "3735928559",
+   "sha256": "91b615c9aa08d602d10e7d32cba95b72c77ba6463e2d771eef2c38798842a788",
+   "storedSha256": "2d57b882f1b732db27e0a98b72d26bcf298e0a3e17ec20beb5ce95e17f808614",
+   "firstProblem": "1.441 comic books will be divided evenly among 9 classrooms. How many comic books will each classroom get?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 3735928559,
+   "count": 20,
+   "n": 20,
+   "seedShown": "3735928559",
+   "sha256": "e99f0bcd33986be77ea712c43dd00905894c22385d658b3e69cbc0af9f2d2606",
+   "storedSha256": "86782adda4e0a0c1b577d4cbeda0529188eb64bca8d1d093caa8abf7bc60e020",
+   "firstProblem": "1.441 comic books will be divided evenly among 9 classrooms. How many comic books will each classroom get?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 4294967295,
+   "count": 6,
+   "n": 6,
+   "seedShown": "4294967295",
+   "sha256": "9c99cce78f3d4f66354765a5cf8b38a0902b1d0e31642d3f1a3d9b003b446939",
+   "storedSha256": "d9a82fd0fe97eeb50ede94037ab4d0e0f453b509456996261299a0521456036f",
+   "firstProblem": "1.Jaden organizes 765 comic books into bags with 15 in each bag. How many bags does Jaden need?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 4294967295,
+   "count": 20,
+   "n": 20,
+   "seedShown": "4294967295",
+   "sha256": "b0eead35adf65c689a68624d1f622a24bcc97cfedb2f8f37b0e3bedb32f267e5",
+   "storedSha256": "4c625a077ec403eef030d05874eabf17265952c74390c76581a5d08639bfe8bf",
+   "firstProblem": "1.Jaden organizes 765 comic books into bags with 15 in each bag. How many bags does Jaden need?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 1,
+   "count": 6,
+   "n": 6,
+   "seedShown": "1",
+   "sha256": "f4a5d2e5405b2d4c69a706749bab496b39eb4320c09d9285ffef1c55bc4e3a12",
+   "storedSha256": "4cfbb1e8b97cc3a672f2cd97f1f479a1660b9828111508325032933816b3b827",
+   "firstProblem": "1.A total of 885 stamps need to be shared equally among 15 students. How many stamps does each student get?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 1,
+   "count": 20,
+   "n": 20,
+   "seedShown": "1",
+   "sha256": "76255c292a88d9c33d1b4d97825e5621c242b14f9c290cee07251a58750d408c",
+   "storedSha256": "744bfd5b57ab993e3bfe08b00f7c3947c024c31155d1b203bc29bc8cb3b2e824",
+   "firstProblem": "1.A total of 885 stamps need to be shared equally among 15 students. How many stamps does each student get?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 7,
+   "count": 6,
+   "n": 6,
+   "seedShown": "7",
+   "sha256": "843d2034cfafa7bc6df453190a41a5a0ef3a7690db784f820a3fa4cfcee3ab8f",
+   "storedSha256": "902ca45545f57dc496ce47794c0cd67747149428eadcf5bd800595e7d634a55a",
+   "firstProblem": "1.Maya buys 12 packs of granola bars. Each pack has 11 in it. How many granola bars did Maya buy altogether?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 7,
+   "count": 20,
+   "n": 20,
+   "seedShown": "7",
+   "sha256": "fbcb06d34dab10dfaed9ab4916e7da22d762e910ebcb2a070eefc215186c1f58",
+   "storedSha256": "12ba62c1f1fc8a25900609befe86219c5309521ab833cf203f18602e76fa5c82",
+   "firstProblem": "1.Maya buys 12 packs of granola bars. Each pack has 11 in it. How many granola bars did Maya buy altogether?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 42,
+   "count": 6,
+   "n": 6,
+   "seedShown": "42",
+   "sha256": "1f8d9856bda2a055c875a0ae73c432e2572f9ec2acfe16f17175c0f1a8c03f34",
+   "storedSha256": "1c0a544f8d0b624792a5eaac02a4e7c193d66f4de3c054a0efadad38c436e175",
+   "firstProblem": "1.Owen organizes 168 seashells into bags with 12 in each bag. How many bags does Owen need?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 42,
+   "count": 20,
+   "n": 20,
+   "seedShown": "42",
+   "sha256": "3a8d1fb5824502255c9fc5bee311472490561ea4a0094df3d61b5c593eebd1b1",
+   "storedSha256": "90a2903dc7089b36da068669e1e862d20c335257dfe4a925144857d1766d54fd",
+   "firstProblem": "1.Owen organizes 168 seashells into bags with 12 in each bag. How many bags does Owen need?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 20260812,
+   "count": 6,
+   "n": 6,
+   "seedShown": "20260812",
+   "sha256": "43b63bb442488a0db503991324531234eebd3793f0c87f3e258b41b37a79c77e",
+   "storedSha256": "7af03d5d93712cb5e00cd16e1111bf8c98c0e8ce7f7a197adfe555e296dbe95e",
+   "firstProblem": "1.Owen has 715 pencils and wants to split them evenly into 11 groups. How many pencils will be in each group?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 20260812,
+   "count": 20,
+   "n": 20,
+   "seedShown": "20260812",
+   "sha256": "ee33f6b957df49f2c35f73a6d14109ea1fd4553ba286796f9f6b57d288a00f40",
+   "storedSha256": "4bcfed179f33b0197a991686564ab0fa475cafb2ab3d3273c206b180e4c955d9",
+   "firstProblem": "1.Owen has 715 pencils and wants to split them evenly into 11 groups. How many pencils will be in each group?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 305419896,
+   "count": 6,
+   "n": 6,
+   "seedShown": "305419896",
+   "sha256": "37a45efc488779e69f4378412362854599148e3be2a2821092a42e3b33ca7bb3",
+   "storedSha256": "b6785b069e6c9bfab60374370721cc35bd67c9cab915a742bd129e196b7acc66",
+   "firstProblem": "1.Kenji arranges granola bars into 8 rows of 15 each. How many granola bars are there in all?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 305419896,
+   "count": 20,
+   "n": 20,
+   "seedShown": "305419896",
+   "sha256": "efec8cd72e211865d9257e7a45b84c3770075b74cfe5f6ad1a56a633133ceacd",
+   "storedSha256": "cb60758aae98dc74b8bc4b029fed7d1269100466cb862ec8de9526509434e5c0",
+   "firstProblem": "1.Kenji arranges granola bars into 8 rows of 15 each. How many granola bars are there in all?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 3735928559,
+   "count": 6,
+   "n": 6,
+   "seedShown": "3735928559",
+   "sha256": "500c1894a59b2a7b88d2a76afa2627d2c4dedf7a8e1caf78d5e75488c2488eea",
+   "storedSha256": "533bd72c65f60f1b2d9935f64d85f643d719ee14d6da1d3d4ccc80e256c71859",
+   "firstProblem": "1.441 comic books will be divided evenly among 9 classrooms. How many comic books will each classroom get?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 3735928559,
+   "count": 20,
+   "n": 20,
+   "seedShown": "3735928559",
+   "sha256": "d568acad1c4e97fd00b3a48eda69943ac14279e101987e0a39c63eec84a603d4",
+   "storedSha256": "ce130b2f310c0142ab81ca96f58f07c2b08b2a08aeb3134ab50ea3d4799a0b60",
+   "firstProblem": "1.441 comic books will be divided evenly among 9 classrooms. How many comic books will each classroom get?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 4294967295,
+   "count": 6,
+   "n": 6,
+   "seedShown": "4294967295",
+   "sha256": "d5dae441ac4f603356f52f82ebc735b344d3139bbf77f20552f85a48e74d473f",
+   "storedSha256": "6c004e0ba44a3fed447559a66537666d6fcebd9c6950b3d6948f6bf4f34a6ce0",
+   "firstProblem": "1.Jaden organizes 765 comic books into bags with 15 in each bag. How many bags does Jaden need?  "
+  },
+  {
+   "band": "middle",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 4294967295,
+   "count": 20,
+   "n": 20,
+   "seedShown": "4294967295",
+   "sha256": "79b64ad676af6e9a5ec8a96c12cf572b8da9c023f4bd1f18947eac3713a92763",
+   "storedSha256": "1ad3f28e43c3bf609e193351baea477b62b736598f02dfa860a2c2af1bca5af0",
+   "firstProblem": "1.Jaden organizes 765 comic books into bags with 15 in each bag. How many bags does Jaden need?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 1,
+   "count": 6,
+   "n": 6,
+   "seedShown": "1",
+   "sha256": "21a53cb67817920edb424fa32ae48717ca432dfab90ccc06cd24ec4dc7711ff6",
+   "storedSha256": "6d371182680eb092c0d933c2dcb7bf43d509d9f24c1e336127baef4e238dcd53",
+   "firstProblem": "1.There are 9 tables, and each table has 9 stamps on it. How many stamps are there in total?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 1,
+   "count": 20,
+   "n": 20,
+   "seedShown": "1",
+   "sha256": "e4b535f393c32b644ed15be9cae132d58b913f21277137baa40ae397d63c987b",
+   "storedSha256": "afb5a5b6100838caf40d112662164192b2b90fb5f16909f881c8a305bdf2ac7b",
+   "firstProblem": "1.There are 9 tables, and each table has 9 stamps on it. How many stamps are there in total?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 7,
+   "count": 6,
+   "n": 6,
+   "seedShown": "7",
+   "sha256": "3ad6af8f7a7ea6d681801aed1c76d3e60df26cbc6eaf0749ce92ecc65f154cb6",
+   "storedSha256": "01685a00bef8a8c58c366542805d7544b7334537e453026014089ebd1e9f9c7d",
+   "firstProblem": "1.A box has 44 granola bars in it. Someone adds another 21 granola bars to the box. How many granola bars are in the box now?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 7,
+   "count": 20,
+   "n": 20,
+   "seedShown": "7",
+   "sha256": "e55cdd2de64319bc787931bf20db1585aad6b87629f359597e5ee7d0c268d910",
+   "storedSha256": "c88bbef1723f0bb758390b534d4569b222396b707bfb21c8f58f2763478d203f",
+   "firstProblem": "1.A box has 44 granola bars in it. Someone adds another 21 granola bars to the box. How many granola bars are in the box now?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 42,
+   "count": 6,
+   "n": 6,
+   "seedShown": "42",
+   "sha256": "6a9462d40db58a82e44a12260da809b9aa4f77821da59f0ba72327e4c487592f",
+   "storedSha256": "0fa0e4ede38cf5abf4113f747bd9bb4866ea592bcc10e9ab049ce3907bb570b0",
+   "firstProblem": "1.Each student needs 3 seashells for an activity, and there are 7 students. How many seashells are needed in total?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 42,
+   "count": 20,
+   "n": 20,
+   "seedShown": "42",
+   "sha256": "73e56da9ad08f8943e273f6f1829d688b0b96e3de29e6260d0d29ec633ce96fb",
+   "storedSha256": "7852914655c92c504971a0778ace93f0fa566ee25f17a91ebd2e0d46c53868ad",
+   "firstProblem": "1.Each student needs 3 seashells for an activity, and there are 7 students. How many seashells are needed in total?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 20260812,
+   "count": 6,
+   "n": 6,
+   "seedShown": "20260812",
+   "sha256": "61caa77cae52319876219551706d9a9295a8b056b4591cd31b7b4d9a30c4b720",
+   "storedSha256": "542de5e12296f64b1b4c7ae4b0b832bdcb95825bf7f437dde8335646630472a6",
+   "firstProblem": "1.Owen has 78 pencils and wants to split them evenly into 6 groups. How many pencils will be in each group?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 20260812,
+   "count": 20,
+   "n": 20,
+   "seedShown": "20260812",
+   "sha256": "4fa25cd4a7449a3d2b0aecd5a1ef47c24062e167e0f0e90fc10e3e59d3974a06",
+   "storedSha256": "7d0105a090cb1f768f7839230281aa5e3bf76484e5ef5f4fd8b88333e6346941",
+   "firstProblem": "1.Owen has 78 pencils and wants to split them evenly into 6 groups. How many pencils will be in each group?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 305419896,
+   "count": 6,
+   "n": 6,
+   "seedShown": "305419896",
+   "sha256": "2a52d5d70b02107085a53ccd886717b7fb20dba3b210c02b9eae60c07fe5909c",
+   "storedSha256": "ae35af344fe8211f254e3d9801d66fb9e81ac206c06f8775dbcfbcbae36edb1c",
+   "firstProblem": "1.Two friends are collecting granola bars. Kenji has 18 and a friend has 14. How many granola bars do they have combined?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 305419896,
+   "count": 20,
+   "n": 20,
+   "seedShown": "305419896",
+   "sha256": "ef99c5ae29ce8ffeb1cfc21ec9c0a53d8be585223f4acf5563d98264336785da",
+   "storedSha256": "335b891b466251e0d86249fd220daf96f0d8116e28c9a1ba55cc8ad853ce477e",
+   "firstProblem": "1.Two friends are collecting granola bars. Kenji has 18 and a friend has 14. How many granola bars do they have combined?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 3735928559,
+   "count": 6,
+   "n": 6,
+   "seedShown": "3735928559",
+   "sha256": "eda24aa0176c6aa6f4d218ea0f22a78909a8fe5b0edc0e88f945fd0673db1484",
+   "storedSha256": "5e2079159be84f85e7ecba0e587874f78da14a04a5a6a3fbe0e5fd94cdd5ff82",
+   "firstProblem": "1.44 comic books will be divided evenly among 4 classrooms. How many comic books will each classroom get?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 3735928559,
+   "count": 20,
+   "n": 20,
+   "seedShown": "3735928559",
+   "sha256": "3c538414c06e86758a95dda445583969e1e58fd9dc0d3d089d61b331acb531a8",
+   "storedSha256": "c6742f1d03c7ecfb202ad8d6ee15650443200afff6b2f677d3e338744c37cc81",
+   "firstProblem": "1.44 comic books will be divided evenly among 4 classrooms. How many comic books will each classroom get?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 4294967295,
+   "count": 6,
+   "n": 6,
+   "seedShown": "4294967295",
+   "sha256": "ddc2457bc2bd2e6c54d22a74e86e99346d468571bea15c91e2c7e74ee4826df7",
+   "storedSha256": "dd1f28481b896d475ccb4bd31ed276263d930d0a71933fab69625f30ab85e0d1",
+   "firstProblem": "1.Jaden organizes 81 comic books into bags with 9 in each bag. How many bags does Jaden need?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division"
+   ],
+   "seed": 4294967295,
+   "count": 20,
+   "n": 20,
+   "seedShown": "4294967295",
+   "sha256": "120494c40c9a491ed774d77628f2ea476ee390e1f846e8c68ca77f183d34c160",
+   "storedSha256": "6a2e05e8ee5c3bbd70aeba62ba219c35e3a5e551b15338e676bb15cd55ddf324",
+   "firstProblem": "1.Jaden organizes 81 comic books into bags with 9 in each bag. How many bags does Jaden need?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 1,
+   "count": 6,
+   "n": 6,
+   "seedShown": "1",
+   "sha256": "5c93e972571d10340bb44f30ddbc7639db86010ba7c14787e20d1304fc59bd38",
+   "storedSha256": "aebfa56bbc5d29ba9f47773b46e3e084636eeb7ccca6bb99e7ea2f2210c3ccaf",
+   "firstProblem": "1.On Monday, Maya collected 59 stamps. On Tuesday, Maya collected 46 more stamps. How many stamps has Maya collected in total?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 1,
+   "count": 20,
+   "n": 20,
+   "seedShown": "1",
+   "sha256": "93239300b9f7218e77cab17852337aceb4397ae983350b51abe3d180dd8056a9",
+   "storedSha256": "00f22413c3792e3c34290b139084007c08d1add8d9a8113b4a43b23b6f1a3c10",
+   "firstProblem": "1.On Monday, Maya collected 59 stamps. On Tuesday, Maya collected 46 more stamps. How many stamps has Maya collected in total?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 7,
+   "count": 6,
+   "n": 6,
+   "seedShown": "7",
+   "sha256": "35838258f92b861b852b700501848f4ad80650c22d749c7ce1844e6e0fee7b26",
+   "storedSha256": "526028c2e498254114eca598006345526f0bf2fabc805af7391335d5f98f29c0",
+   "firstProblem": "1.A box has 44 granola bars in it. Someone adds another 21 granola bars to the box. How many granola bars are in the box now?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 7,
+   "count": 20,
+   "n": 20,
+   "seedShown": "7",
+   "sha256": "0b1d6181ffdae1754a6790aa23f643d49db8b42d8b677a57cb64f485e9a8cb04",
+   "storedSha256": "7e769be18493f5f3ecc0b0e186330909f0db93dda61da214088c0f63183dae71",
+   "firstProblem": "1.A box has 44 granola bars in it. Someone adds another 21 granola bars to the box. How many granola bars are in the box now?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 42,
+   "count": 6,
+   "n": 6,
+   "seedShown": "42",
+   "sha256": "df4a4a7d70aeb06452f0a2e9f8646bab24fa189d979748cf0fa5125ee1d7c041",
+   "storedSha256": "0fbf0ea0c36aa79347a6b2df7cfb5f154199ec0b4b90a557c878805a2b17653e",
+   "firstProblem": "1.Owen had 42 seashells in one bag and 10 seashells in another bag. If Owen combines both bags, how many seashells are there altogether?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 42,
+   "count": 20,
+   "n": 20,
+   "seedShown": "42",
+   "sha256": "f052a862dccb712f2ac1b2cfd81b4fc0c5a280373a8b3cb0df4d171109792638",
+   "storedSha256": "b037ddf2801326ab9364233f1b38c78bf14949830f3d91939dc40405ae1755a2",
+   "firstProblem": "1.Owen had 42 seashells in one bag and 10 seashells in another bag. If Owen combines both bags, how many seashells are there altogether?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 20260812,
+   "count": 6,
+   "n": 6,
+   "seedShown": "20260812",
+   "sha256": "eb44752b52556dbc8e2cb8193862794f455dc13015e1c8cbb3a416a3e6d046db",
+   "storedSha256": "63fa327a5b73698b87439c69b36cffbe5d4c5650d8f7d9b88f19600d6ede929f",
+   "firstProblem": "1.Owen has 33 pencils. Then Owen gets 22 more. How many pencils does Owen have now?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 20260812,
+   "count": 20,
+   "n": 20,
+   "seedShown": "20260812",
+   "sha256": "80b14324eaefdfb26443e151db408bbb05274d90540ad4a3a9caf8ad168ce3c1",
+   "storedSha256": "51227a545afcd8f82e34675bc56a0e7c1c457d0bd9214aa45b70057b4d2e0a20",
+   "firstProblem": "1.Owen has 33 pencils. Then Owen gets 22 more. How many pencils does Owen have now?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 305419896,
+   "count": 6,
+   "n": 6,
+   "seedShown": "305419896",
+   "sha256": "5fd8cc8d8e78e055fee32b693b4059679f72353fed70798837bda83034b27610",
+   "storedSha256": "6f7420168d913d644f0cb49ae0c99cbfcbebc6e3af108e9a828ac85f59dc568c",
+   "firstProblem": "1.Two friends are collecting granola bars. Kenji has 18 and a friend has 14. How many granola bars do they have combined?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 305419896,
+   "count": 20,
+   "n": 20,
+   "seedShown": "305419896",
+   "sha256": "c3964f0f7c42d80cc70ac90b7713be4504220fc46ab2a22475dd3246582f7489",
+   "storedSha256": "e6539a913614d21a0c8a29c26610ee0e45d8d7098f0ac2f5721f62eced7b2d62",
+   "firstProblem": "1.Two friends are collecting granola bars. Kenji has 18 and a friend has 14. How many granola bars do they have combined?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 3735928559,
+   "count": 6,
+   "n": 6,
+   "seedShown": "3735928559",
+   "sha256": "4c3b072ffe65ff0bd789e893ff233dd33b2da6245aea55ab880e2fde1d07ee0e",
+   "storedSha256": "466c1027fb9e21c8794402654b5950b7171c79d5fdbff1d5fea88efa1da69220",
+   "firstProblem": "1.Sofia started with 25 comic books and earned 12 more for doing chores. How many comic books does Sofia have now?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 3735928559,
+   "count": 20,
+   "n": 20,
+   "seedShown": "3735928559",
+   "sha256": "1d41fa0035de0cb444c9a72b613d5a989bc5cf9d3c144833fbf465f7054d2673",
+   "storedSha256": "77ffb6f462d296fdba2f7c974e73ca2e6e588c75c4b5c59684208134ab831703",
+   "firstProblem": "1.Sofia started with 25 comic books and earned 12 more for doing chores. How many comic books does Sofia have now?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 4294967295,
+   "count": 6,
+   "n": 6,
+   "seedShown": "4294967295",
+   "sha256": "3045b7f8637a9ddd40b32c021bd828ac8e91be8ac4b7a3bb553ee01c44b3df60",
+   "storedSha256": "4b48185bf333d0694577b682abf91195897e59d90724948f51b7e0f3f92bcf04",
+   "firstProblem": "1.Jaden had 57 comic books in one bag and 39 comic books in another bag. If Jaden combines both bags, how many comic books are there altogether?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "addition"
+   ],
+   "seed": 4294967295,
+   "count": 20,
+   "n": 20,
+   "seedShown": "4294967295",
+   "sha256": "8b8c5dd0e3412ea32d0b07a89fc56de9906c632f6637e6af238f673aa4c4453e",
+   "storedSha256": "ea39b861e3bbd4bcc2700ca7eceb9438756be5e987f01c1d9b3e4bee5c81caf4",
+   "firstProblem": "1.Jaden had 57 comic books in one bag and 39 comic books in another bag. If Jaden combines both bags, how many comic books are there altogether?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 1,
+   "count": 6,
+   "n": 6,
+   "seedShown": "1",
+   "sha256": "e43f09cb0cd87732ce5cae958e204ca190753c5f39dba3da6c31b6f80f492cad",
+   "storedSha256": "2e255e4a1f2a925515950759be12336995180e64e7bb732d02d85b999ee50225",
+   "firstProblem": "1.A total of 90 stamps need to be shared equally among 9 students. How many stamps does each student get?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 1,
+   "count": 20,
+   "n": 20,
+   "seedShown": "1",
+   "sha256": "60241c0f87c3996d9268acb566244ae09592f771ac61cbf985ce10956f2cdb1b",
+   "storedSha256": "329f390d863a3a734d82e0e6531d32560fd8e6fb45a3a3e6b8cebe776f14cd2f",
+   "firstProblem": "1.A total of 90 stamps need to be shared equally among 9 students. How many stamps does each student get?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 7,
+   "count": 6,
+   "n": 6,
+   "seedShown": "7",
+   "sha256": "ac6359ab001f4b9014292cfce691b01971d0c19f2db2708eb7488236d5737b2d",
+   "storedSha256": "affa288955d49038a5406d6ed57b3ba5d3d115aebaf1c122f88654754e535782",
+   "firstProblem": "1.Maya wants 44 granola bars for a collection and already has 21. How many more granola bars does Maya need?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 7,
+   "count": 20,
+   "n": 20,
+   "seedShown": "7",
+   "sha256": "c0ae27e77be9bc047cb9f38aa082fef9bb3f765064035f94442fd3b053c86f81",
+   "storedSha256": "4fc76405448ef6e4d9971807d7bc179e02ee1c6c8c2d823305abe5c34edc5fb2",
+   "firstProblem": "1.Maya wants 44 granola bars for a collection and already has 21. How many more granola bars does Maya need?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 42,
+   "count": 6,
+   "n": 6,
+   "seedShown": "42",
+   "sha256": "ce22b7b63931870417ed6adf7713145a8d13670b1f5c89c6787539d09cc876ef",
+   "storedSha256": "4544ad7d98706f29e7eed7f94de8b9389660f7cc3b9fb4ff177673ae7c3aa108",
+   "firstProblem": "1.Owen organizes 21 seashells into bags with 7 in each bag. How many bags does Owen need?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 42,
+   "count": 20,
+   "n": 20,
+   "seedShown": "42",
+   "sha256": "eacb2d74ba1eb6d6e15d2a7f0403fe93623808a568587bb53aa54a6a8f979ce8",
+   "storedSha256": "cd005b1bdf7d4db643816a5bac7a3e78ee6711eda985ab404b718592cf23393c",
+   "firstProblem": "1.Owen organizes 21 seashells into bags with 7 in each bag. How many bags does Owen need?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 20260812,
+   "count": 6,
+   "n": 6,
+   "seedShown": "20260812",
+   "sha256": "cca0ab7ee18f1f93b7a98deb13e431a51b1767ba5210d56e5c21e60f1d168e49",
+   "storedSha256": "9144b065fdea7fb3921d262b8c3105d79f02553c470774ceb493e85b13749cb8",
+   "firstProblem": "1.Owen has 78 pencils and wants to split them evenly into 6 groups. How many pencils will be in each group?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 20260812,
+   "count": 20,
+   "n": 20,
+   "seedShown": "20260812",
+   "sha256": "81a2a76100b41e7af0b13b73136581b4affd94ab504f7d210a964e232b39fec2",
+   "storedSha256": "373aaeba0483e08a3f45296b2cbbc0dccf13c7c3d7fe4a7f0d916d0fafd2b2c1",
+   "firstProblem": "1.Owen has 78 pencils and wants to split them evenly into 6 groups. How many pencils will be in each group?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 305419896,
+   "count": 6,
+   "n": 6,
+   "seedShown": "305419896",
+   "sha256": "8aee97d94c1d9c10a3b22697fd1c1b9a34a50024c4e0b2699cc851e55de5dd98",
+   "storedSha256": "d4d519aef643a27b163cfaf3fc5b12e2b06bb9f7061f7a5d13acdc1fc86b47eb",
+   "firstProblem": "1.A store had 18 granola bars in stock. Customers bought 14 granola bars during the day. How many granola bars remain in stock?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 305419896,
+   "count": 20,
+   "n": 20,
+   "seedShown": "305419896",
+   "sha256": "e25e6e462bdfaeef6ad0491b13e1ee34decfbc572be142e86db25a0b2732f642",
+   "storedSha256": "b711f1598d4ec262b24b16ae34e74a3a26014ebb8c1053f292e27d360cdb08f4",
+   "firstProblem": "1.A store had 18 granola bars in stock. Customers bought 14 granola bars during the day. How many granola bars remain in stock?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 3735928559,
+   "count": 6,
+   "n": 6,
+   "seedShown": "3735928559",
+   "sha256": "24d6c9c153b5dcc2ab6c2a8eccf45df571b2c000df8a4542fe18223212d7b09e",
+   "storedSha256": "bf8bf804cc6195a73fdcb3de96a582ccdaeae2a49ba25341af7ec282778ec379",
+   "firstProblem": "1.44 comic books will be divided evenly among 4 classrooms. How many comic books will each classroom get?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 3735928559,
+   "count": 20,
+   "n": 20,
+   "seedShown": "3735928559",
+   "sha256": "a5238674f58c7c05459040a76f604ee2d20c9011037102cc2974cd0c8e01cab3",
+   "storedSha256": "92097a7a2299b632dbe94cab1fbcc5d1cf6ac34e0f9d0675c3c63a543ffde420",
+   "firstProblem": "1.44 comic books will be divided evenly among 4 classrooms. How many comic books will each classroom get?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 4294967295,
+   "count": 6,
+   "n": 6,
+   "seedShown": "4294967295",
+   "sha256": "a8fc4385f4256710cd72444065ae498e8a8dc39755b35525b17ad1b265f5d043",
+   "storedSha256": "fbaddefda7427996bd8d9a80cbdc9e661365d881a091c4331d677960d1d0aa66",
+   "firstProblem": "1.Jaden organizes 81 comic books into bags with 9 in each bag. How many bags does Jaden need?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "subtraction",
+    "division"
+   ],
+   "seed": 4294967295,
+   "count": 20,
+   "n": 20,
+   "seedShown": "4294967295",
+   "sha256": "0eef40a22696057f9d93c6d61a7f63206212ca415d3494ef50c035846ecdc6e3",
+   "storedSha256": "0ec698beada0895d35bbca246e4e723d29ce3704956a5b91ae3c7de3c7cd1a4a",
+   "firstProblem": "1.Jaden organizes 81 comic books into bags with 9 in each bag. How many bags does Jaden need?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 1,
+   "count": 6,
+   "n": 6,
+   "seedShown": "1",
+   "sha256": "ef4b26545d9d72d6b3c58bb2f8ca3825968a5f37e7c9fde9d8a3c87bac757cc7",
+   "storedSha256": "6be003d1d446b61acca9d388a868f171915d47795ff1c4e1bc3bee4fdbef5c7b",
+   "firstProblem": "1.A total of 90 stamps need to be shared equally among 9 students. How many stamps does each student get?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 1,
+   "count": 20,
+   "n": 20,
+   "seedShown": "1",
+   "sha256": "00171a8afe1d763c006b05d8abeaf082da9282cae5e7c2e78684da0e776106d5",
+   "storedSha256": "894db5211b77a87659b237c85a914ac1895614fa2125b90581f372a623ff2d87",
+   "firstProblem": "1.A total of 90 stamps need to be shared equally among 9 students. How many stamps does each student get?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 7,
+   "count": 6,
+   "n": 6,
+   "seedShown": "7",
+   "sha256": "43c93e571c3d1536e6d95ad733c362e92cffbedaac7d9e9df91b96c4d876e18c",
+   "storedSha256": "22cfc12dccf531bc612545ad764566408261f370401cd439d6d9df09719168d5",
+   "firstProblem": "1.Maya buys 7 packs of granola bars. Each pack has 6 in it. How many granola bars did Maya buy altogether?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 7,
+   "count": 20,
+   "n": 20,
+   "seedShown": "7",
+   "sha256": "da088c10878829ad91b2fdcdc68cec564e38e9839d3d79160a574d1c2e7b5e88",
+   "storedSha256": "9e54eacbac9612c02af650f76c7522a51c8c0dfd4f370df6d45b14e510d5b6a9",
+   "firstProblem": "1.Maya buys 7 packs of granola bars. Each pack has 6 in it. How many granola bars did Maya buy altogether?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 42,
+   "count": 6,
+   "n": 6,
+   "seedShown": "42",
+   "sha256": "744da5edc44174558ddac3c8fc888b54437253e48294dbce6cfa5f9c42fb5f92",
+   "storedSha256": "7d90c34e49dee842d461e8e2ef5e24733642b7a047f1eb93f5e342f4962c01c1",
+   "firstProblem": "1.Owen organizes 21 seashells into bags with 7 in each bag. How many bags does Owen need?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 42,
+   "count": 20,
+   "n": 20,
+   "seedShown": "42",
+   "sha256": "96158e655239276ec095bba253d0de4f4a89dd9b5d3f21a460c940603572ac9d",
+   "storedSha256": "b902744edfdb3ecb577a8d21afe494713fdc31a4884b760e7bebabfefd346243",
+   "firstProblem": "1.Owen organizes 21 seashells into bags with 7 in each bag. How many bags does Owen need?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 20260812,
+   "count": 6,
+   "n": 6,
+   "seedShown": "20260812",
+   "sha256": "93802250c4e7abbbcd84c5d3b16f7a2f41bf7624d33a146a7f7f98417f62a04d",
+   "storedSha256": "d4886c00b04a3fdbef9756147fe5aefba65ce043109bc0c05d30e04da6c598d1",
+   "firstProblem": "1.Owen has 78 pencils and wants to split them evenly into 6 groups. How many pencils will be in each group?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 20260812,
+   "count": 20,
+   "n": 20,
+   "seedShown": "20260812",
+   "sha256": "956f9e7ea729ce15e455bfe19961bae033cb2e0558a9475406d6fd3113aef981",
+   "storedSha256": "385e6fa55f349a88cc072f256812f41e56fd89cf4b13899abdbf969c02845303",
+   "firstProblem": "1.Owen has 78 pencils and wants to split them evenly into 6 groups. How many pencils will be in each group?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 305419896,
+   "count": 6,
+   "n": 6,
+   "seedShown": "305419896",
+   "sha256": "b3f9e8cb3be7214221dd01379d61f12048ff2cc767831d2d7c06910f33edf27e",
+   "storedSha256": "7a068b75205eeecc06e7238c81045fac0c38e3d5c67e154772763020a9847fc3",
+   "firstProblem": "1.Kenji arranges granola bars into 3 rows of 9 each. How many granola bars are there in all?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 305419896,
+   "count": 20,
+   "n": 20,
+   "seedShown": "305419896",
+   "sha256": "163236baee407106b06a2b1d93c29ccc5030a8ff6f5342683bcfc0e43cb5f70f",
+   "storedSha256": "948c8cbb876e7164d60f80bdcf32fd4f89e4b0ae76f513f777d9b860cd95043d",
+   "firstProblem": "1.Kenji arranges granola bars into 3 rows of 9 each. How many granola bars are there in all?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 3735928559,
+   "count": 6,
+   "n": 6,
+   "seedShown": "3735928559",
+   "sha256": "44d02a673a73fac1ee0facc081eef456d620ea3bbbd8d6ad23722270d9974dc4",
+   "storedSha256": "cfdbeede76d59e9b48a7a90785882263e273922dfd9a8e14699fe0d202b45bde",
+   "firstProblem": "1.44 comic books will be divided evenly among 4 classrooms. How many comic books will each classroom get?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 3735928559,
+   "count": 20,
+   "n": 20,
+   "seedShown": "3735928559",
+   "sha256": "11da966694f1e6d4f4ebf521e7b1b1bd6c4174b4a8ad18ee509ba8c1ae9cfe8d",
+   "storedSha256": "be00554f48b96db8411bc0e082a5ef5e98f67f43755a594579dbfb2302eb40cd",
+   "firstProblem": "1.44 comic books will be divided evenly among 4 classrooms. How many comic books will each classroom get?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 4294967295,
+   "count": 6,
+   "n": 6,
+   "seedShown": "4294967295",
+   "sha256": "75e3b2394b8e90bd5f99a23b2e6d52b619648b1022e2ce19ca1ed2cbc1e4dc5f",
+   "storedSha256": "e4c1c7a390fea819d20ed24160321ed695dd314907b174eef3b056ca103d8e1f",
+   "firstProblem": "1.Jaden organizes 81 comic books into bags with 9 in each bag. How many bags does Jaden need?  "
+  },
+  {
+   "band": "elementary",
+   "ops": [
+    "multiplication",
+    "division"
+   ],
+   "seed": 4294967295,
+   "count": 20,
+   "n": 20,
+   "seedShown": "4294967295",
+   "sha256": "5f5a7823ff587c44b0c07beb659000bbadffe3bb145d3f72803d6200f4097d49",
+   "storedSha256": "0f6c825a3311e73c570c2a6d332ec661edc3769e777b404f127705d60a8ef35f",
+   "firstProblem": "1.Jaden organizes 81 comic books into bags with 9 in each bag. How many bags does Jaden need?  "
+  }
+ ]
+}

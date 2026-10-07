@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v274';
+const CACHE_VERSION = 'v275';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -444,6 +444,7 @@ const PRECACHE_URLS = [
   "Tools/class-screen/cs-remote.js",
   "Tools/class-screen/remote.html",
   "Tools/081-word-problem-warmup-generator.html",
+  "Tools/word-problem-warmup-generator/wp-twostep.js",
   "Tools/025-writing-prompt-generator.html",
   "Tools/writing-prompt-generator/wpg-prompts.js",
   "Tools/writing-prompt-generator/wpg-rubric-link.js",
