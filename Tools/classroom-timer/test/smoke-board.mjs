@@ -357,6 +357,12 @@ console.log('Classroom Timer — timer board');
 {
   const page = await fresh();
   await openBoard(page);
+  await page.selectOption('#boardCount', '4');
+  await page.evaluate(() => document.activeElement && document.activeElement.blur());
+  await page.keyboard.press('4');
+  eq(await stateOf(page, 3), 'running', '4 starts timer 4 when there are four');
+  await page.keyboard.press('Digit4');
+  await page.click(sel(3, '.bt-reset'));
   await page.selectOption('#boardCount', '3');
   await page.evaluate(() => document.activeElement && document.activeElement.blur());
   await page.keyboard.press('2');

@@ -71,7 +71,7 @@ export function defaultTimers() {
 export function fromSaved(saved, now) {
   const t = sanitizeTimer(saved);
   const r = window.Countdown.restore({ totalMs: totalMsOf(t), endAt: t.endAt, leftMs: t.leftMs }, now);
-  return { entry: { label: t.label, minutes: t.minutes, seconds: t.seconds, paused: t.paused && !r.expired, c: r.c }, expired: r.expired };
+  return { entry: { label: t.label, minutes: t.minutes, seconds: t.seconds, paused: t.paused, c: r.c }, expired: r.expired };
 }
 
 export function toSaved(entry) {
@@ -82,7 +82,7 @@ export function toSaved(entry) {
     seconds: entry.seconds,
     endAt: window.Countdown.isRunning(c) ? c.endAt : 0,
     leftMs: window.Countdown.isRunning(c) ? 0 : c.leftMs,
-    paused: !!entry.paused && !window.Countdown.isRunning(c) && c.leftMs > 0
+    paused: !!entry.paused
   };
 }
 
@@ -116,7 +116,6 @@ export function setDuration(entry, minutes, seconds) {
   if (s === 'running' || s === 'paused') return false;
   entry.minutes = Math.floor(clamp(minutes, 0, 180, 0));
   entry.seconds = Math.floor(clamp(seconds, 0, 59, 0));
-  entry.paused = false;
   window.Countdown.setTotal(entry.c, totalMsOf(entry));
   return true;
 }
@@ -150,7 +149,7 @@ export function anyRunning(entries, count) {
 /** Same thresholds the single timer's Display card sets, as a fraction left. */
 export function urgencyOf(fraction, amberPct, redPct) {
   const red = Math.max(0, (redPct || 0) / 100);
-  const amber = Math.max(red, (amberPct || 0) / 100);
+  const amber = (amberPct || 0) / 100;
   if (fraction <= red) return 'critical';
   if (fraction <= amber) return 'warn';
   return 'good';
