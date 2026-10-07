@@ -558,7 +558,13 @@
         { p: 'gvb-bracket:', student: true, legacy: true },
         { p: 'gvb-bracket:data:', student: true },
       ],
+      /* The site's question bank (Path 12 P2): 020's academic-tournament
+         mode lists it and reads a match's questions from it, through
+         _shared/question-bank.js's peek(), which writes nothing. 020 never
+         writes the bank. The bank is OWNED by Review Game Board's row. */
       reads: [
+        'gvb-question-bank',
+        'gvb-review-board-bank:entries',
         'np_rosters',
       ],
     },

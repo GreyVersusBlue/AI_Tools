@@ -180,6 +180,23 @@ export const PAGE_SEEDS = {
   },
 
   // 023 — a custom prompt long enough to wrap, QR on, and eight students triaged (023's applySavedSettings, loadTriage).
+  // 020 — a round robin with the academic-tournament mode on and a built-in
+  // set as its source (shape: bt-academic.js's header and buildRoundRobin()),
+  // so the Questions buttons are scanned and the print audit reaches the
+  // match sheet behind "Print match sheets".
+  '020': () => {
+    const m = (a, b) => ({ a, b, winner: null });
+    return {
+      'gvb-bracket:list': j(['Quiz League']),
+      'gvb-bracket:current': 'Quiz League',
+      'gvb-bracket:data:Quiz League': j({
+        name: 'Quiz League', type: 'roundrobin', players: ['Otters', 'Herons', 'Minnows', 'Kestrels'],
+        rounds: [[m('Otters', 'Kestrels'), m('Herons', 'Minnows')], [m('Otters', 'Minnows'), m('Kestrels', 'Herons')], [m('Otters', 'Herons'), m('Minnows', 'Kestrels')]],
+        scores: {}, seedMode: 'asEntered',
+        academic: { on: true, seed: 20261007, source: '053', unit: '', per: 3, drawn: {}, marks: {} },
+      }),
+    };
+  },
   '023': () => ({
     'gvb-exit-ticket:settings': j({
       category: 'mine',

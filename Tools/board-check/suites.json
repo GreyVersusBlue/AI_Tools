@@ -237,6 +237,8 @@
     "Tools/vocab-flashcard-generator/test/smoke-imposition.mjs",
     "Tools/vocab-flashcard-generator/test/bank-logic.test.mjs",
     "Tools/vocab-flashcard-generator/test/smoke-bank.mjs",
+    "Tools/bracket-tournament-generator/test/smoke-academic-core.mjs",
+    "Tools/bracket-tournament-generator/test/smoke-academic.mjs",
     "Tools/historical-trading-card-maker/test/smoke-print.mjs",
     "Tools/qr-scavenger-hunt-builder/test/smoke-print.mjs",
     "Tools/gallery-walk-qr/test/smoke-print.mjs",

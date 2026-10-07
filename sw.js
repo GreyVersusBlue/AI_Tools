@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v276';
+const CACHE_VERSION = 'v277';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -236,6 +236,7 @@ const PRECACHE_URLS = [
   "Tools/049-book-tasting-menu-generator.html",
   "Tools/020-bracket-tournament-generator.html",
   "Tools/bracket-tournament-generator/bt-store.js",
+  "Tools/bracket-tournament-generator/bt-academic.js",
   "Tools/042-certificate-award-maker.html",
   "Tools/certificate-award-maker/art/ribbon-blue.webp",
   "Tools/certificate-award-maker/art/ribbon-gold.webp",
