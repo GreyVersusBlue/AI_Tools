@@ -154,6 +154,7 @@
     "test:csv-adopters": "node Tools/export/test/smoke-csv-adopters.mjs",
     "test:sheet-adopters": "node Tools/export/test/smoke-sheet-adopters.mjs",
     "test:sub-note-print": "node Tools/sub-note-feedback-slip-generator/test/smoke-print.mjs",
+    "test:sub-note-saves": "node Tools/sub-note-feedback-slip-generator/test/smoke-saves.mjs",
     "test:peer-feedback-print": "node Tools/peer-feedback-checklist-generator/test/smoke-print.mjs",
     "test:peer-feedback-roster": "node Tools/peer-feedback-checklist-generator/test/smoke-roster-sheets.mjs",
     "test:accommodations-print": "node Tools/testing-accommodations-card-generator/test/smoke-print.mjs",

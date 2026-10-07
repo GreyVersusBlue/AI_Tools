@@ -9,7 +9,7 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## 078 Unit Conversion Chart: named saved charts, reordering, and a share link that knows about saves (2026-10-06, AI-31-078, `CACHE_VERSION` v272)
+## 078 Unit Conversion Chart: named saved charts, reordering, and a share link that knows about saves (2026-10-06, AI-31-078, `CACHE_VERSION` v273)
 
 Audit entry AI-31, BACKLOG rank 115 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). The row had three parts; the third
 was found already half there (see "Share" below) and was finished rather than built.
@@ -113,6 +113,53 @@ Audit entry AI-14, BACKLOG rank 28 (a 2+ row: kept, and rewritten to what is lef
   changes the bank's question; a card keeps no tie to its question; a question of more than one line is refused, not joined; choices are not shown on a card; a
   card with no definition is not sent; the term is the question.
 - **Left of P2.** 018 and 019 (station questions), 020's academic-tournament mode, 030's editor, 062's map questions (P4). Next free suite port: 8509.
+
+## 076 Sub Note / Feedback Slip: named saved slips (2026-10-06, AI-31-076, `CACHE_VERSION` v272)
+
+Audit entry AI-31, BACKLOG rank 114 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What shipped.** A *Saved slip* card above the settings, built the way 063, 071 and 073 are: a chooser, **+ New**, **Duplicate**, **Rename** and **Delete**
+  (behind a confirm that names the slip; off while only one slip exists, and a click that gets through anyway removes nothing). Each slip holds everything one slip is
+  made of: its prompts, the copies-to-print count, the pre-filled class or period and the "call me about this" box. Nothing is shared between slips (new prompt ids on
+  Duplicate, a new slip starts from default settings, not from the open slip's). Names are written with `textContent`, never markup. The open slip is remembered across
+  reloads. Messages go to a `role="status"` line.
+- **Starters.** *Start a new slip from* is a select beside the chooser: General (the four default prompts), Lab day, Testing day, One empty prompt. + New uses the one
+  selected and offers its name as the default; a blank name takes that default. Nothing is created unasked: a page that loads makes no slip but the one that was
+  there. The Lab day and Testing day wording is mine (four prompts each, for a teacher to edit); nothing in it is student-facing, since the slip is filled by a sub.
+- **Storage, same key.** `snfs_slip_v1` stays the only key (registry and 009's backup unchanged; a backup of the key carries every slip). The key had no version
+  field, so the new shape carries `v: 2`: `{ v, sets: [{ id, name, copyCount, classPeriod, urgencyBox, prompts }], currentId }` **plus** `copyCount`, `classPeriod`,
+  `urgencyBox` and `prompts` at the top level, a copy of the open slip. The old save (a bare `{ copyCount, prompts, classPeriod, urgencyBox }`) is read as one slip called
+  "My slip"; **loading rewrites nothing**, and the first edit writes the new shape. A fresh install's draft is not stored until the first edit (or a + New, Duplicate or
+  Rename, which file it first as "My slip").
+- **An older cached page.** The top-level copy is why a page from before this one that is still open in another tab (or served from an old cache) opens the slip that
+  was last open, not the defaults. It cannot be made to keep the others: that page saves by writing the old bare shape over the whole key, so **if an old page is
+  edited after this one has made a second slip, the other slips are lost** (the open one survives). There is no way around that inside one key and the brief did not
+  allow a new one; reload an old tab after updating. Not tested against a real old cached tab, only by reading the top level the way the old `load()` does.
+- **Share.** The link carries the open slip only, in the shape it always had (`copyCount`, `prompts`, `classPeriod`, `urgencyBox`; no id, no name, no other slip,
+  checked by key order and by searching the payload for another slip's text). A link from before opens exactly as before: on an untouched device it loads with no question
+  and "Loaded a shared slip"; with one slip saved the question is the old sentence word for word; with several the question adds the open slip's name, and accepting
+  replaces the open slip's content only (its name, the other slips and the mirror stay or follow). Declining keeps everything. The sheet's note says only the slip on
+  screen travels.
+- **Pinned against the old page.** `golden-old-slips.json` was recorded from the one-slip page (commit 4a13d48) for six saves (a full one, the defaults saved, an older
+  one with no class period or call-me field, six wordy prompts with markup, nothing saved, and an empty prompt list): the loaded fields, whether loading left the disk
+  string untouched, the printed sheet's HTML and the share payload (with prompt ids and the export time normalised, since the page makes those on the day). The new page
+  matches on all four for every save. `smoke-print` (the print counts, in light and dark) and `smoke-preview-adopters --only 076` are unchanged and pass: the print kit is
+  called as it was, and the page still has the one `PrintKit.preview()` call.
+- **Suite.** `Tools/sub-note-feedback-slip-generator/test/smoke-saves.mjs` (`test:sub-note-saves`, port 8507, 250 assertions in sixteen sections: the golden, an
+  untouched page, the old save as "My slip", the top-level copy read the way the old page read it, starters, + New on a draft, isolation between slips, the open slip
+  remembered, Duplicate, Rename, Delete, share, backup/restore, five kinds of damaged save, the keyboard and the preview). 29 breaks on purpose, each run on its own against the page: 27 failed the suite on a named assertion or threw on one, 3 survived the first run
+  and got assertions (Delete opening the first slip instead of the neighbour, one word of the Lab day starter changed, a stored copy count that is not a number), and
+  one is equivalent and unbroken (the `doc.list.length < 2` guard inside Delete's click handler: the disabled button never dispatches a click, so the guard cannot
+  be reached; section 11 clicks the disabled button through `element.click()` and sees nothing happen). One break's anchor was wrong in round one and was re-run in round two.
+- **Checks.** `smoke-saves` 250 and `smoke-print` 342 pass; `smoke-preview-adopters --only 076` 264 pass; `test:a11y -- --only 076` and `audit-print --check --only 076` clean;
+  `smoke-share-rollout` 1580, `smoke-dark-rollout` 966 and `run-suites --only service-worker` (3 suites) and `--only sub-note-feedback-slip-generator` (2 suites) pass; every
+  `check:*`, `lint`, `check:precache -- --base origin/main` and `check:adoption -- --check` exit 0 (`check:inline-sinks` unchanged at 076's baseline of 1: the chooser and
+  its options are built with the DOM).
+- **Not done.** Pairing with Sub Plan Builder / Sub Binder Generator and a digital archive are still the section's Major Features. `audit-print`'s seed has only the
+  default slip, so it does not see a second saved slip (the saves are the same print path, and `smoke-saves` section 7 prints the open one). Nothing printed on paper, no
+  screen reader run, no real old cached tab. Not run: full `npm test`.
+- **What went wrong on the way.** The suite's first run had two bugs of mine, not the page's (a section that never chose the Lab day starter before reading its prompts,
+  and the share-link helper I wrote first was a stub), and a blank name for + New first fell back to "New slip" instead of the starter's name; the suite caught that one.
 
 ## 077 Testing Accommodations: room assignment, proctors and proctor lists (2026-10-06, AI-31-077, `CACHE_VERSION` v270)
 
