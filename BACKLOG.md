@@ -512,7 +512,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
-| 114 | Multiple named saved prompt sets — a general slip, a lab-day slip and a testing-day slip at once | 076 | ½ | | [076 Sub Note / Feedback Slip Generator](#076--sub-note--feedback-slip-generator) |
 | 115 | Named saves plus reorder and share — group and line reordering and a state-link share URL | 078 | ½ | | [078 Unit Conversion Reference Chart Builder](#078--unit-conversion-reference-chart-builder) |
 | 116 | Irregular verb call-out boxes — three to five common irregulars per tense | 079 | ½ | | [079 Verb Conjugation Reference Poster Generator](#079--verb-conjugation-reference-poster-generator) |
 | 117 | Two-step word problems — chained-operation templates for the upper grade band | 081 | ½ | | [081 Word Problem Warm-Up Generator](#081--word-problem-warm-up-generator) |
@@ -12037,10 +12036,11 @@ retyping into three different formats every August.
 
 #### Quick Wins
 
-- **Multiple named saved prompt sets** — a general sub note and a
-  specialized one (e.g. for a lab day, or a day with a fire drill scheduled)
-  could both be worth keeping ready, matching the multi-save convention
-  used elsewhere in this toolkit.
+- *(Shipped 2026-10-06, v271, AI-31-076: named saved slips: a Saved slip
+  chooser with + New (from a General, Lab day, Testing day or one-empty-prompt
+  starter), Duplicate, Rename and Delete, each slip holding its own prompts,
+  copy count, class or period and "call me" box. Nothing left from the row. See
+  HISTORY.)*
 
 #### Major Features
 
