@@ -9,6 +9,65 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 030 Quiz / Review Game Board: projector view (2026-10-07, AI-31-030, `CACHE_VERSION` v291)
+
+BACKLOG rank 145, one increment: the projector styling is built and the remembering is not (below). Changed: `Tools/030-review-game-board.html`, `Tools/review-game-board/rgb-store.js`
+and the suite folder; nothing in `_shared/`, `sw.js` beyond `CACHE_VERSION`, no guard or workflow. Checked first: the board, the clue overlay, the round overlay and the wheel were
+already navy and gold in both themes (the board art, `--board-*`); the page already had the shared theme and `a11y.js`, so the backlog's "neither fullscreen nor the shared theme"
+was stale, and fullscreen is not what the row asks for. What was wrong on a projector at 1280x720 was size and room: the board started below the fold behind a toolbar and
+two rows of tick boxes, categories were 13.6 px, point values 20.8 px, a long team name was cut off inside its input, the overlay was 95% opaque so the board showed
+through behind the buttons, and a long clue made an overlay that could not scroll.
+
+- **Projector view** (toolbar button, key **P**; a button "Leave projector view" in the teacher's row while it is on): a class on `<body>`, and every rule under `body.projector` inside
+  `@media screen`, so nothing prints differently and with the view off no rule matches. One unit, `--u` = min(1vw, 1.7778vh) (12.8 px at 1280x720, 19.2 px at 1920x1080).
+  **Floors, held by assertions on computed font size at both sizes:** category 24 / 36 px, point value 38 / 57, team score 48 / 72, team name 25 / 38, a clue 46 / 69 or, over 120
+  characters (or an answer over 90), 33 / 49, an answer 35 / 53 or 28 / 42 when long, award and mark buttons 19 / 28, wager and marking labels 19 / 28, round headings 24 / 36.
+  Thinner tile borders (0.7u) put a 5 by 5 board with four teams in one 1280x720 screen once it is scrolled to (asserted at both sizes).
+- **The teacher's controls are not hidden.** The tick boxes, the round setups, undo and the key hints keep their usual small type and move *after* the board with flex `order`; their
+  Tab order is still the document's, so Tab visits them before the board while the eye sees them after it (asserted: on screen, in the Tab order, after the grid, 17 px or smaller, and
+  reachable by Tab in 120 presses). That mismatch is a known cost of not changing the markup; the other way round (reordering the markup) would have changed the page with the view off.
+- **A team's name is an input and cannot wrap**: while the view is on its width is set to the name's length (`fitTeamName`, an inline `style` that is removed again when the view is
+  left, so on-then-off is byte for byte the page it was; asserted). A category longer than its column wraps and, for one unbroken word, breaks inside it (`overflow-wrap: anywhere`).
+- **The overlays**: opaque in the view, scrollable, `justify-content: safe center` (a clue taller than the screen starts at the top and scrolls instead of being cut off at both ends),
+  a picture capped at 34% of the height, 24% beside a long clue, `width/height: auto` so its box keeps its shape (tall, wide and square pictures asserted at both sizes), the every-team
+  panel and the round box as wide as the type (`calc(var(--u) * 80)`, not a fixed rem). **No overlay scrolls in any state the suite plays** (long clue, answer, award row for six teams,
+  Daily Double wager, every-team marking with six teams, final wagers, quiz-bowl toss-up and buzz, the wheel). **It does scroll** for a 300-character clue *and* six teams *and*
+  every-team marking at once (about 130 px past a 720p screen), which the suite does not play, and for a long clue with a tall picture it does not (the 24% cap exists for that).
+- **Focus**: a two-colour ring, 4 px at 1280x720 and 6 px at 1920x1080 (dark inside, white outside, so it shows on the navy and on the paper), with the grid's padding made wide
+  enough that the first tile's ring is not cut off by the grid's `overflow-x: auto`.
+- **Not by colour alone**: a played tile is struck through as well as dim, and its number is now `#b4bddf` on `#0a1436` (it was `#3a4470`, about 1.9:1; asserted at 4.5:1 in both themes,
+  separately, because it is a disabled control and the sweep skips those); a score below zero keeps its minus; the wheel's tile has a dashed outline and an arrow (the focus ring
+  replaces the dashes when the tile has focus, which is why the arrow is there); a lightning countdown that is running low is underlined as well as red.
+- **Contrast** is computed in the suite from computed colours: every text on the play screen and in each overlay against what is drawn under it, 4.5:1 for all sizes (stricter than AA's 3:1
+  for large text), light and dark. For a tile with art under it the background is the tile's flat middle colour from the art ledger (`#13245e`, `#1a2d6e`, `#24398a`), not a
+  sampled pixel; `check:art` is what holds the gold to 4.5:1 on that middle. Disabled controls and `aria-hidden` pictures are skipped (the undo button, the wheel's drawing).
+- **Remembering: NOT built, and why.** The row says "remembered per device, in the tool's existing preference storage". This tool has no preference storage: its keys are the board
+  list, the current board, one key per board and the shared bank. A new `localStorage` key must have a row in `_shared/tool-registry.js` or `check:registry` fails (it did: `UNREGISTERED
+  gvb-review-board:projector`, the legacy `gvb-review-board:` prefix does not cover a live write), and `_shared/` is off limits to this row. So the view is kept in **`sessionStorage`**,
+  under the same key name: it survives a reload and is per tab, and a closed tab forgets it. The follow-up is three edits and is rank 145 (`BACKLOG.md`). Storing it in a board
+  (per board, and then in every export) would have worked without that edit and was not done: it is not per device, and it puts a display preference in a teacher's file.
+- **Not changed**: how the game plays, scores, saves and prints; the board JSON; the print sheets; `_shared/theme.css`. The three old pins (`_old-game.mjs`, `_every-team-game.mjs`,
+  `_rounds-game.mjs`, in `smoke-play-modes.mjs`, `smoke-play-rounds.mjs` and `smoke-play-wheel.mjs`) pass unchanged. `check:inline-sinks` for 030 stays at its baseline (the new markup is
+  built with `el()`), and no inline sink was added.
+
+New suite `Tools/review-game-board/test/smoke-projector.mjs` (`test:projector-view`, port 8526, 244 assertions; fixtures in `_projector-fixtures.mjs`, the toggle-off recorder
+`_projector-off.mjs`, pins made with `--print` against the v290 page before the page was edited). Section 1 pins 18 captures of the play screen with the view off (loaded, clue, answer,
+every-team, final, quiz-bowl, buzz, wheel, spun: markup of the board card and both overlays, classes, stored keys, computed type); section 2 the button, P, Leave, the tab memory and
+on-then-off; 3 to 5 the board and every mode at 1280x720 and 1920x1080 in both themes; 6 focus; 7 teacher controls; 8 colour alone; 9 pictures; 10 play, print and axe.
+**Breaks on purpose:** 44 runs, one break each, sections run alone: 43 failed a named assertion the first time (one of them, "not kept for the tab", failed two and then threw on a missing button, the same catch); 1 survived, a
+mutation put in `setProjector` that runs at boot before a board is loaded, and was re-broken in `openClue`, where it was caught. **Not broken on purpose:** the two axe scans, "a Leave button is in the
+teacher's row", "a board file is the same file with the view on", the minus sign and the radio-label assertions, "another profile starts with it off", the Tab-moves-the-ring assertion, and "no page
+errors". The suite also passes under `TZ=UTC` (it shows no time).
+
+What did not work, in order: the first overlay screenshot showed the board through the overlay (it is 95% opaque; the view makes it opaque); `overflow-wrap: break-word` on a flex header
+does not shrink its min-content, so a 30-character word still spilled (`anywhere` does); the score's `line-height: 1` clipped the glyph by 3 px in the monospace face; the picture test first
+clicked a tile that `:not(.used)` had renumbered and then read a picture the page had not finished moving to the media store (`window.__clueImagesSettled`); a picture's padding made its
+box ratio 0.37 against 0.33. **Not verified:** nothing was looked at on a real projector or a real screen from the back of a room; two 1920x1080 captures (the board in light, a clue in
+dark) were looked at on huginn only; no screen reader was run over the view; the print path is checked by media emulation (`--u` is not defined in print) and by `audit-print`, not on paper;
+`test:theme`, the share and dark rollouts and the full `npm test` were not run.
+
+---
+
 ## 026 Math Fact Drill Sheet Generator: fraction multiplication and division, exponents, one-step equations (2026-10-07, AI-31-026, `CACHE_VERSION` v290; the code commit says v288, which AI-31-025 took, and main passed v289 before the merge)
 
 BACKLOG rank 142, built whole, in the tool's own files (`Tools/026-math-drill-generator.html`, `Tools/math-drill-generator/`). Checked first: the tool had the four

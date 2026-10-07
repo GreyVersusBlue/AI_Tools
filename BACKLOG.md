@@ -615,7 +615,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 140 | Draw on a strategy card; a shared stage | 024 | ½ | | [024 Number Talks / Mental Math Routine Board](#024--number-talks--mental-math-routine-board) |
 | 143 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 144 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
-| 145 | Projector styling (the site-wide question bank shipped as Path 12 P1, v265; its other formats are Path 12 P2 and P3) | 030 | ½ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
+| 145 | 030 projector view: remember it across visits. The view shipped at v291 (AI-31-030) and is kept for the browser tab only, in `sessionStorage`, because a `localStorage` key `gvb-review-board:projector` needs a row in `_shared/tool-registry.js` (`check:registry` fails without it) and a per-tool worker may not edit that file. The fix is three small edits: add `{ k: 'gvb-review-board:projector' }` to 030's `keys`, change `sessionStorage` to `localStorage` in `getProjector`/`setProjector` (`rgb-store.js`), and in `smoke-projector.mjs` section 2, `openStress`, `turnOnForTab` and section 10 (the key moves from `sessionStorage` to `localStorage`; `openWith` can seed it) | 030 | ¼ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
 | 146 | Week-at-a-glance print; year-grid A/B badges | 032 | ½ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
 | 147 | "Where is this student right now?"; the published pathfinder | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
 | 148 | Split the file; accessibility routing | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
@@ -9641,8 +9641,23 @@ browser.
 
 #### Quick Wins
 
-- **Projector styling** (P1). This is a projector-first tool with neither
-  fullscreen nor the shared theme.
+- **Done — 2026-10-07 (AI-31-030, v291). Projector styling.** A "Projector view" button in the board toolbar (and
+  the **P** key) turns on a presentation of the play screen only: off by default, kept for the browser tab under
+  `gvb-review-board:projector` in `sessionStorage` (written only while on; not in a board, an export or any link;
+  **not yet remembered across visits**: that is a `localStorage` key and needs a registry row in `_shared/`, which this
+  row could not edit, so rank 145 is what is left). Type is sized from one
+  unit, `--u` (1% of the width or 1.7778% of the height, whichever is smaller): categories 24 / 36 px, point values
+  38 / 58, team scores 48 / 73, team names 25 / 38, a clue 46 / 69 (33 / 50 when it is over 120 characters), an
+  answer 35 / 53, at 1280x720 / 1920x1080. The teacher's tick boxes, round setups and buttons are not hidden: they sit
+  after the board in their usual small type, in the Tab order. A two-colour focus ring (4 px, 6 px at 1080p), a played
+  tile struck through as well as dim, a team name shown whole (its input is as wide as the name), the overlay opaque,
+  scrollable and top-aligned when a clue is longer than the screen, a picture capped at a third of the height (a
+  quarter beside a long clue) with its shape kept. Nothing in `_shared/` changed; the rules are page-local under
+  `body.projector` in `@media screen`. Suite `smoke-projector.mjs` (`test:projector-view`, port 8526). **Not
+  done / not known:** nobody looked at it on a real projector (two 1920x1080 captures were looked at on huginn);
+  a 300-character clue with six teams on every-team marking runs about 130 px past a 720p screen and the overlay
+  scrolls instead of clipping; a category word longer than a column breaks mid-word; the page's own chrome (title,
+  tabs, toolbar) is not restyled, the board is scrolled to when the view is turned on.
 
 #### Major Features
 
