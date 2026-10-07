@@ -42,6 +42,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+/* global TimelineWorksheet -- the page's own global, read inside page.evaluate() */
 import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
 import { riverTimeline, smallTimeline, mk, seed } from './_fixtures.mjs';
 
@@ -635,7 +636,7 @@ if (group('7. keyboard and screen reader')) {
   const page = await open(riverTimeline());
   // every new control has a name
   await page.click('#worksheetToggleBtn');
-  for (const [sel, name] of [['#wsBlankWhat', 'What to blank out'], ['#wsPick', 'Which events']]) {
+  for (const name of ['What to blank out', 'Which events']) {
     ok(await page.getByLabel(name, { exact: true }).count() === 1, `"${name}" names its control`);
   }
   await page.selectOption('#wsPick', 'nth');

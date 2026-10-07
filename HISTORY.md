@@ -37,12 +37,12 @@ container of the same shape, landscape, and use no `_shared/` code.
   Cards are numbered by the order they are dealt, not lettered, so the same number names the card on the paper and on the key. No paper-size choice was added: the tool
   prints landscape on whatever the printer's page is, so cards are sized for the smaller of Letter and A4 (10in wide, 6.2in of cards).
 - **Tests.** `smoke-blank-order-core.mjs` (`test:timeline-blank-order-core`, pure Node, 59 assertions) and `smoke-blank-order.mjs` (`test:timeline-blank-order`, port 8518,
-  191 assertions; `TLB_GROUPS=2,3` runs groups of it). `golden-old-worksheet.json` was recorded from the page before any edit: five timelines and settings, the worksheet markup
+  193 assertions; `TLB_GROUPS=2,3` runs groups of it). `golden-old-worksheet.json` was recorded from the page before any edit: five timelines and settings, the worksheet markup
   with style attributes removed (so a font on another machine cannot fail it) and the saved settings string, which must be unchanged. Printing is read off Chromium's PDF
   on Letter and A4 (pages equal sheets, no blank page, the 200-character and the 58-character unbroken titles whole in `pdftotext -raw`). Breaks on purpose: 28 in the
   pure module (23 failed first time, 3 survived and got assertions, 2 are equivalent and unbroken: a count of 0 that the slice handles anyway, and a `forEach` check for a list a
-  JSON link cannot carry other than as an array) and 44 in the page (41 failed first time, one of them by a crash and not a named line; 2 survived, a fixed six-across grid and a
-  reshuffle that adds one to the seed, and got assertions; 1 is equivalent: reading the hostile `kind` from `state.worksheet` instead of the form, which `persist` has already
+  JSON link cannot carry other than as an array) and 49 in the page (41 failed first time, one of them by a crash and not a named line; 2 survived, a fixed six-across grid and a
+  reshuffle that adds one to the seed, and got assertions; 5 more, on the date and both-blanked lines and banks, were run again after they were rebuilt from elements to keep the inline-sink count at 17, all caught; 1 is equivalent: reading the hostile `kind` from `state.worksheet` instead of the form, which `persist` has already
   cleaned by the time the page is built). Not every assertion has its own break. The first run of the page breaks used the environment variable `GROUPS`, which bash owns, and
   proved nothing; they were re-run with `TLB_GROUPS`.
 - **Not done, not verified.** Nothing printed on paper or cut; no screen reader. A date blank on the strip itself is small (the strip is scaled to a page), so the line below

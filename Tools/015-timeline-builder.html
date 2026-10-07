@@ -2241,13 +2241,23 @@
         return words.map(function (w) { return '<span class="wsBankWord">' + escapeHtml(w) + '</span>'; }).join('');
       };
       var dateOf = function (ev) { return TimelineLayout.formatDateLabel(ev); };
+      // A bank group built from elements: the date and both-blanked banks are
+      // new, and what they hold is typed text.
+      var bankGroup = function (parent, label, words) {
+        parent.appendChild(ordText('span', 'wsBankLabel', label));
+        words.forEach(function (w) { parent.appendChild(ordText('span', 'wsBankWord', w)); });
+      };
       if (kind === 'title') {
         bank.innerHTML = '<span class="wsBankLabel">Word bank:</span>' + bankWords(TimelineWorksheet.wordBank(items, version));
       } else if (kind === 'date') {
-        bank.innerHTML = '<span class="wsBankLabel">Date bank:</span>' + bankWords(TimelineWorksheet.dateBank(items, version, dateOf));
+        bankGroup(bank, 'Date bank:', TimelineWorksheet.dateBank(items, version, dateOf));
       } else {
-        bank.innerHTML = '<div><span class="wsBankLabel">Titles:</span>' + bankWords(TimelineWorksheet.wordBank(items, version)) + '</div>' +
-          '<div><span class="wsBankLabel">Dates:</span>' + bankWords(TimelineWorksheet.dateBank(items, version, dateOf)) + '</div>';
+        var titlesRow = document.createElement('div');
+        bankGroup(titlesRow, 'Titles:', TimelineWorksheet.wordBank(items, version));
+        var datesRow = document.createElement('div');
+        bankGroup(datesRow, 'Dates:', TimelineWorksheet.dateBank(items, version, dateOf));
+        bank.appendChild(titlesRow);
+        bank.appendChild(datesRow);
       }
       page.appendChild(bank);
     }
@@ -2255,21 +2265,24 @@
     var list = document.createElement('div');
     list.className = 'wsList';
     if (kind !== 'title') {
-      list.innerHTML = items.map(function (it) {
-        var when = escapeHtml(TimelineLayout.formatDateLabel(it.event));
-        var title = escapeHtml(it.event.title);
-        var blank = '<span class="wsRule">&nbsp;</span>';
-        var dateBlank = '<span class="wsRule wsRuleDate">&nbsp;</span>';
-        var row;
+      items.forEach(function (it) {
+        var when = TimelineLayout.formatDateLabel(it.event);
+        var row = ordText('div', 'wsItem', '');
+        row.appendChild(ordText('span', 'wsNum', it.number + '.'));
+        row.appendChild(document.createTextNode(' '));
+        var rule = function (more) { return ordText('span', 'wsRule' + (more ? ' ' + more : ''), '\u00a0'); };
+        var answer = function (text) { return ordText('span', 'wsAnswer', text); };
         if (kind === 'date') {
-          row = '(' + title + ') ' + (isKey ? '<span class="wsAnswer">' + when + '</span>' : dateBlank);
-        } else if (isKey) {
-          row = '<span class="wsAnswer">' + title + '</span><span class="wsDateRow">Date: <span class="wsAnswer">' + when + '</span></span>';
+          row.appendChild(document.createTextNode('(' + it.event.title + ') '));
+          row.appendChild(isKey ? answer(when) : rule('wsRuleDate'));
         } else {
-          row = blank + '<span class="wsDateRow">Date: ' + dateBlank + '</span>';
+          row.appendChild(isKey ? answer(it.event.title) : rule());
+          var dateRow = ordText('span', 'wsDateRow', 'Date: ');
+          dateRow.appendChild(isKey ? answer(when) : rule('wsRuleDate'));
+          row.appendChild(dateRow);
         }
-        return '<div class="wsItem"><span class="wsNum">' + it.number + '.</span> ' + row + '</div>';
-      }).join('');
+        list.appendChild(row);
+      });
       page.appendChild(list);
       return page;
     }
