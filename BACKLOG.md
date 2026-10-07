@@ -522,7 +522,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 116 | Irregular verb call-out boxes — three to five common irregulars per tense | 079 | ½ | | [079 Verb Conjugation Reference Poster Generator](#079--verb-conjugation-reference-poster-generator) |
-| 117 | Two-step word problems — chained-operation templates for the upper grade band | 081 | ½ | | [081 Word Problem Warm-Up Generator](#081--word-problem-warm-up-generator) |
 | 118 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
 | 119 | Roles built into a group; project-team mode; a pair-history that spans the year | 002 | ½ | | [002 Group / Team Generator](#002--group--team-generator) |
 | 120 | Peer review mode; rubric handoff to the grades tools | 003 | ½ | | [003 Rubric Builder](#003--rubric-builder) |
@@ -12413,12 +12412,10 @@ instead of just displaying icons that represent it.
 
 #### Major Features
 
-- **Two-step word problems** for the upper grade band — the backlog and
-  README both call this a grades 6&ndash;8 tool, and real 6&ndash;8 word
-  problems are frequently two operations chained together
-  ("buys 3 packs of 8, then gives away 5 — how many are left"). This is the
-  biggest gap between what's shipped and what a middle-school teacher will
-  actually want.
+- *(Shipped, v274: Problem type — One-step, Two-step or Mixed — with fifteen
+  chained-operation kinds for grades 6&ndash;8, `Tools/word-problem-warmup-generator/wp-twostep.js`.
+  What it does not do: grades 3&ndash;5 have no two-step problems, and a
+  teacher cannot choose which kinds a sheet draws from.)*
 - **Fractions/decimals/percents templates**, sharing the operand-generation
   approach this backlog separately lists for a
   fraction-decimal-percent drill generator — this tool's template structure
@@ -12441,10 +12438,10 @@ a make-up quiz is the exact same sheet as the one the rest of the class took.
 
 #### Open Questions
 
-- Should two-step problems be a separate operation category ("two-step") or
-  a flag any operation template can opt into? A separate category is
-  simpler to build; a flag reuses the existing per-operation number-range
-  logic more cleanly.
+- *(Decided 2026-10-07 and shipped: two-step is a Problem type next to the
+  operation boxes, not a flag on them. A two-step problem picks its own
+  operations, so the boxes apply to one-step problems only, and Mixed draws about
+  half of each. `HISTORY.md` has the reasoning.)*
 - Is the generic name/item pool (Maya, Ethan, stickers, marbles, &hellip;)
   worth making editable, or does a custom-template editor make that
   unnecessary since a teacher could just write items into their own

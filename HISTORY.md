@@ -9,6 +9,55 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 081 Word Problem Warm-Up: two-step problems for grades 6–8 (2026-10-07, AI-31-081, `CACHE_VERSION` v274)
+
+Audit entry AI-31, BACKLOG rank 117 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
+
+- **What it is.** A **Problem type** select beside Grade band: One-step (the default, and exactly the tool as it was), Two-step, or Mixed (some of each).
+  A two-step problem is one of fifteen kinds in the new `Tools/word-problem-warmup-generator/wp-twostep.js` (precached; a plain script that publishes `WpTwoStep`
+  and is imported by the pure-Node suite): multiply then add, multiply then subtract, add then multiply (as points, so a total stays a size a story can have),
+  subtract then multiply, divide then add, subtract or multiply, multiply then divide, add then subtract, four comparisons ("has 8 times as many as", "has 62 fewer
+  than", then a total or "how many more"), and the two remainder kinds a teacher expects (divide and keep only the full boxes, then multiply; divide, then add the leftover
+  to a number and say how big the last group is). The key line is the answer and both steps: `18 (30 − 27 = 3, then 3 × 6 = 18)`, with `R` for a remainder.
+  One-step keys are still the bare number. Two names in a comparison are different people and no story uses a pronoun, so no story needs a guess about anyone.
+- **Old sets are the same sets.** One-step takes exactly the rng draws it always did (a mixed sheet takes one more per problem, before the problem; two-step
+  never touches the one-step templates). `golden-old-sets.json` holds 112 cases recorded from the page at `1aaee05`, before the change (`record-golden.mjs` makes
+  it again): both bands, four operation sets, seven seeds including 0xFFFFFFFF, 6 and 20 problems, each a sha-256 of the sheet, key, projector text and answer and a second one
+  of the saved string. The suite loads each through a saved, locked setting and all 112 match, the stored string byte for byte included.
+- **Saving and sharing.** `mode` (`two` or `mixed`) is an optional field in the same key `wpwg_settings_v1`, written only when it is not one-step, so a teacher who never touches
+  it saves the five fields the page always saved; going back to One-step removes it. A saved mode that is anything else loads as One-step. The share link carries `mode` the same
+  way (only when not one-step). **A link with no mode, or a mode this build does not know, opens as one-step and sets the select to One-step**, so a device whose own saved choice
+  is Two-step cannot change what an old link makes. The validator now also takes a two-step link for grades 6–8 that names no operation (a two-step sheet needs none) and still refuses a
+  link that names no usable operation with no mode, a two-step link for grades 3–5, and a mixed link (its one-step half would have no operation). A link made by an older page for a
+  two-step sheet cannot exist; a new two-step link opened on an older page makes a one-step sheet of the same seed. That is a limit of cached pages, not something to build around.
+- **Decisions taken (all reversible).** (1) Two-step is a **Problem type**, not a flag on the operation boxes (the row's open question); a two-step problem picks its own
+  operations, so the boxes apply to one-step problems only, and the page says so under the select. (2) **Grades 3–5 stay one-step**: the select is disabled with the reason, a saved or
+  linked Two-step is kept (and comes back when the band is 6–8) but makes a one-step sheet. The row says "upper grade band"; an elementary two-step would need its own ranges, which is
+  Devon's to size. (3) Mixed is a coin per problem at one half, not a fixed split. (4) A story never gives the number 1 (every given number is at least 6), so no noun is singular.
+  (5) Every number the story gives sits inside the grades 6–8 range for what it is (add 15–400, factor 6–15, divisor 6–15, dividend up to 900); several kinds use a narrower sub-range so a
+  total does not read as nonsense, never a wider one.
+- **The test, which is the heart of the row.** `smoke-two-step-core.mjs` (`test:word-problem-two-step-core`, pure Node, about 1.6 million assertions in a second) draws 48,000 problems from
+  4,000 seeds and **does not trust the generator's answer**: it reads the numbers back out of the story's text and recomputes the answer from them with a formula written per kind;
+  redoes both steps; checks the second uses the first's result, the key line is the steps written out, no step comes to less than 1, no division leaves a remainder except in the two
+  remainder kinds (where it always does), every number is inside its range and none is 1, no digit in a text is anything but a given number, no pronoun, one name (two in a comparison, different),
+  no leftover placeholder, every kind turns up, the same seed makes the same twenty problems, `Math.random` is never called, and the mode rules. **35 breaks on purpose, all caught** (a subtraction that
+  goes negative, a result of 0, a remainder of 0 in a remainder kind, a range one step too wide or too low, a wrong operation, a text that names the wrong number, a pronoun, a literal 1, two people with one
+  name, `Math.random`, a counter that makes a seed drift, a dropped kind, a lost remainder flag, grades 3–5 getting two-step, mixed thresholds, a wrong declared operation, an unnamed story, and others).
+  Three of the first run's failures were the suite being right: it found "them" and "they" in the first wording and a story with no name, and the templates were rewritten.
+  The first version of the suite also never ran its checks (`ok()` returned nothing, and a guard read that as false): found by seeing a count that did not look like 48,000 problems' worth, fixed, rerun.
+- **The page suite.** `smoke-two-step.mjs` (`test:word-problem-two-step`, port 8511, 613 assertions): the 112 old sets; old links (and junk modes: `x`, `__proto__`, `TWO`, a number, `null`, a list) as one-step
+  on a device saved as Two-step; two-step sheets for four seeds equal the module's sheet computed in the suite (the key, the projector answer, Reveal, Next and Copy all carry both steps); no operation box needed for
+  two-step, still needed for one-step and mixed; mixed is the same sheet for a seed, some of each, and about half over 25 sheets; what is saved and when; grades 3–5; links both ways for all three modes; and axe,
+  label, description and keyboard. **31 breaks on purpose, all caught** (mode ignored, an extra draw on the one-step path, grades 3–5 getting two-step, the save always writing `mode`, the saved mode not loading or
+  loading anything, the link always or never carrying it, an old link keeping the device's mode or accepting a junk one, each validator rule flipped, the operation requirement always or never asked, each of the four places the
+  key could drop the second step, a one-step key wrapped in parentheses, the band change, boot and arrival leaving the select or hint stale, the select losing its label or its description, mixed all one way, the module not loaded,
+  a new `innerHTML` sink, the hint hidden). 66 breaks across the two suites; not every assertion has a break of its own.
+- **Checks.** `test:a11y -- --only 081`, `audit-print --check --only 081` (both load the default state; the two-step sheet's PDF was read with `pdftotext` once by hand: 20 problems and the key are 3 pages, the same as a one-step
+  sheet of 20, the key's three columns wrap a long line inside its own entry), `test:share-rollout` 1580, the `service-worker` suites, every `check:*`, `lint`, `check:precache -- --base origin/main` and
+  `check:adoption -- --check` exit 0. The inline-sink baseline for 081 is unchanged: the page still writes the sheet and key with `innerHTML` from its own text, now with a key line that has operator characters and no markup.
+- **Not done / not verified.** Nothing printed on paper or read with a real screen reader. No story read by a teacher: the fifteen templates were read by their author only (the suite proves the arithmetic and the numbers, not that a
+  sentence is good wording). No per-problem operation label (the row's Quick Win), no custom templates, no fractions. A teacher cannot pick which kinds a sheet draws. Full `npm test` not run.
+
 ## 078 Unit Conversion Chart: named saved charts, reordering, and a share link that knows about saves (2026-10-06, AI-31-078, `CACHE_VERSION` v273)
 
 Audit entry AI-31, BACKLOG rank 115 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). The row had three parts; the third
