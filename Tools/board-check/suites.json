@@ -43,6 +43,8 @@
     "Tools/behavior-points-tracker/test/smoke-shared-record.mjs",
     "Tools/behavior-points-tracker/test/smoke-seating-layout.mjs",
     "Tools/behavior-points-tracker/test/smoke-seating-board.mjs",
+    "Tools/behavior-points-tracker/test/smoke-teams-core.mjs",
+    "Tools/behavior-points-tracker/test/smoke-teams.mjs",
     "Tools/seating-chart/test/smoke-sub-packet.mjs",
     "Tools/seating-chart/test/smoke-zoom-pan.mjs",
     "Tools/name-picker/test/drive-weighting.mjs",
