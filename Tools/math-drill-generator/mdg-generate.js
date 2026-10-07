@@ -270,7 +270,7 @@
     return {
       a: x.n / x.d, b: y.n / y.d, op: op, symbol: SYMBOL[op], answer: num / den,
       aText: x.text, bText: y.text, answerText: fractionText(num, den),
-      vertical: false
+      vertical: false, wrap: true
     };
   }
 
@@ -330,7 +330,7 @@
     return {
       a: b, b: e, op: 'exponent', symbol: '^', answer: answer,
       expr: b + '^' + e, html: b + '<sup>' + e + '</sup>', speak: powerSpeech(b, e),
-      answerText: String(answer), vertical: false
+      answerText: String(answer), vertical: false, wrap: true
     };
   }
 
@@ -383,7 +383,7 @@
     return {
       a: a, b: b, op: 'equation', form: form, symbol: '', answer: x,
       expr: expr, line: expr + '  x = _____',
-      answerText: answerText, keyText: 'x = ' + answerText, vertical: false
+      answerText: answerText, keyText: 'x = ' + answerText, vertical: false, wrap: true
     };
   }
 

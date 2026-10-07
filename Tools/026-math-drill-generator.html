@@ -89,6 +89,8 @@
   .problems.fs-sm { font-size: .82rem; }
   .problems.fs-lg { font-size: 1.3rem; }
   .problems .p { break-inside: avoid; margin-bottom: .85rem; white-space: nowrap; }
+  /* the longer problems of the fraction, exponent and equation types may break at a space rather than run into the next column */
+  .problems .p.wrap { white-space: normal; }
   .problems .p .num { color: var(--muted); font-size: .78em; margin-right: .35rem; }
 
   .problems.vertical { column-count: initial !important; display: grid; grid-template-columns: repeat(var(--vcols, 3), max-content); gap: 1.6rem 2.4rem; }
@@ -550,7 +552,7 @@
     var body = (settings.format === 'vertical' && p.vertical !== false)
       ? verticalProblemHtml(p)
       : problemText(p);
-    return '<div class="p"><span class="num">' + num + '.</span>' + body + '</div>';
+    return '<div class="p' + (p.wrap ? ' wrap' : '') + '"><span class="num">' + num + '.</span>' + body + '</div>';
   }
 
   /** Compact corner answer key for one page's worth of problems (self-checking

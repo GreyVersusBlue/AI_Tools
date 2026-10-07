@@ -9,6 +9,42 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 026 Math Fact Drill Sheet Generator: fraction multiplication and division, exponents, one-step equations (2026-10-07, AI-31-026, `CACHE_VERSION` v288)
+
+BACKLOG rank 142, built whole, in the tool's own files (`Tools/026-math-drill-generator.html`, `Tools/math-drill-generator/`). Checked first: the tool had the four
+fact drills, mixed, integers, decimals, fraction add/subtract, percent and order of operations (a template is a data row in `mdg-templates.js`; `makeProblem` dispatches on
+its `operation`; a seed gives `mulberry32`; problems carry `aText`/`bText`/`expr`/`answerText`), so only the three types were missing. Three new templates and three new
+generator cases; every older case is untouched and draws the same numbers from the same seed.
+
+- **Fraction multiplication and division** (`fracmuldiv`): proper fractions in lowest terms from the tool's own denominator pool; options Multiply and divide / only one,
+  mixed numbers (whole part 1 to 3), a whole-number factor (2 to 9, never both operands). Held as exact integer pairs; the answer is written by the same `fractionText`
+  the addition drill uses (reduced, improper as a mixed number, whole plain). The operand range boxes are hidden for it (they never applied to fractions).
+- **Exponents** (`exponents`): operand 1 range is the base, operand 2 the exponent; presets squares, cubes, powers of ten; zero and first powers only by an option
+  (otherwise every exponent is 2 or more); **no answer above 1,000,000** (stated on the page). Bounds that cannot fit under the cap lose the exponents that do not fit,
+  and if none fit the base comes down rather than the answer going over. Printed as a real `<sup>`; a screen reader gets a hidden sentence ("4 cubed equals blank")
+  and the visible expression is `aria-hidden`.
+- **One-step equations** (`equations`): x + a, x − a, ax, x ÷ a built from the answer up, whole-number positive answers by default; options for the kinds, for negative
+  answers and for fraction answers in ax = b (a does not divide b; reduced, mixed). x is never 0, a is at least 2 for ax and x ÷ a, and x − a = b keeps b positive
+  without negatives. The key says `x = 5`; the worksheet line ends `x = _____`. Operand 1 range is x (for x ÷ a, the right-hand number), operand 2 the number a.
+- Options are saved with the settings in the same key (`gvb-math-drill:settings`) and ride Export / Import settings (this page has no share link); a save or file without
+  them, or with junk in them, loads to the defaults. No registry line changed. The longer problems carry `wrap: true` and may break at a space (`.p.wrap`) instead of
+  running into the next column; the older types are unchanged. Avoid-trivial also drops 1 to a power and exponents 0 and 1.
+- **Decisions.** (1) Fractions are typeset across as text like the existing fraction drill (`3/4 × 1/2`), not stacked: this page never stacked fractions. (2) Equation answerText
+  is the bare number (so the riddle, colour grid and maze keep working) and `keyText` is `x = 5`. (3) Negative numbers print with a hyphen, as the integer drill does.
+  (4) The cap is 1,000,000. All are one line to change.
+
+**Tests.** `drill-frac-exp-eq.test.mjs` (`npm run test:math-drill-frac-exp-eq-core`, pure Node, 43 assertions over about 108,000 fraction problems, 138,000 exponent
+problems and 2,000-odd equation sheets; the oracle `_oracle.mjs` re-reads the printed numbers and does BigInt rational arithmetic, never the generator's gcd; also puts each
+equation's printed answer back into its equation) and `smoke-frac-exp-eq.mjs` (`npm run test:math-drill-frac-exp-eq`, port 8525: 33 saved settings pinned by
+`golden-old-sheets.json` and 320 sheets by `golden-old-problems.json`, both recorded before the change; every row of every option combination on the page checked key against
+sheet, accessibility tree, export/import, leveled sets, riddle/maze/corner key, PDFs by `pdftotext`, axe in light and dark, keyboard). **Breaks on purpose:** 57 in the
+generator, each failing the pure suite (4 first survived or missed their anchor: the cap-squeeze needed "100 cubed is drawn", `mul` and `x ÷ a` lost their negative sign
+unseen until each form was asked for separately, and two anchors were mistyped); 15 in the page, each failing the page suite (1 first survived: the clipped hidden span).
+**Left / not verified:** nothing printed on paper; no screen reader (the accessibility tree is Playwright's, `ariaSnapshot`); the spoken sentence reads "equals blank"; fits at
+6 narrow columns use wrapping where older types overlap, which costs a page at 100 problems (the suite allows one page, two with mixed numbers); a key sheet is exactly 11 in
+tall so any type can print a blank last page in Chromium (the suite counts pages with ink); full `npm test` not run; audit-print's seed loads only the default template, so the
+new templates' print is covered by the PDFs in the suite.
+
 ## 020 Bracket / Tournament Generator: teams with members, and a first-round consolation bracket (2026-10-07, AI-31-020, `CACHE_VERSION` v287; the code commit says v284, which main passed before the merge)
 
 BACKLOG rank 136, "Team names with members; a loser's-side consolation bracket", both parts, in the tool's own code (`Tools/bracket-tournament-generator/bt-teams.js`, new,

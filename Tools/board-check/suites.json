@@ -172,6 +172,8 @@
     "Tools/field-trip-permission-slip/test/smoke-bilingual.mjs",
     "Tools/math-drill-generator/test/drill-math.test.mjs",
     "Tools/math-drill-generator/test/smoke-new-types.mjs",
+    "Tools/math-drill-generator/test/drill-frac-exp-eq.test.mjs",
+    "Tools/math-drill-generator/test/smoke-frac-exp-eq.mjs",
     "Tools/docx-merger/test/smoke-per-file-options.mjs",
     "Tools/image-to-pdf/test/smoke-enhance.mjs",
     "Tools/image-to-pdf/test/smoke-portfolio.mjs",

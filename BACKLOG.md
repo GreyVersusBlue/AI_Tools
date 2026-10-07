@@ -604,7 +604,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 139 | Name and date lines on the slips; response collection questions | 023 | ½ | | [023 Exit Ticket / Bell Ringer Generator](#023--exit-ticket--bell-ringer-generator) |
 | 140 | Draw on a strategy card; a shared stage | 024 | ½ | | [024 Number Talks / Mental Math Routine Board](#024--number-talks--mental-math-routine-board) |
 | 141 | Sentence starters and an "if you’re stuck" line | 025 | ½ | | [025 Writing Prompt Generator](#025--writing-prompt-generator) |
-| 142 | Fraction multiply/divide, exponents and one-step equations | 026 | ½ | | [026 Math Fact Drill Sheet Generator](#026--math-fact-drill-sheet-generator) |
 | 143 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 144 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
 | 145 | Projector styling (the site-wide question bank shipped as Path 12 P1, v265; its other formats are Path 12 P2 and P3) | 030 | ½ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
@@ -9335,12 +9334,16 @@ work, and don't promote one without Devon saying so.
 
 #### Quick Wins
 
-- **Mostly done — More operation types** (2026-08-12): fractions
-  (add/subtract), decimals, percents, integers with negatives, and order of
-  operations all shipped. Fraction multiply/divide, exponents and one-step
-  equations are still open, and now need only a generator case each.
-  Originally worded as: this backlog lists a
-  fraction–decimal–percent drill as a separate tool; it belongs here.
+- **Done — More operation types** (2026-08-12; the last three 2026-10-07, v288):
+  fractions (add/subtract), decimals, percents, integers with negatives and order
+  of operations shipped first; fraction multiplication and division (proper
+  fractions in lowest terms, options for mixed numbers and a whole-number factor),
+  exponents (base and exponent from the two ranges, squares / cubes / powers of ten
+  presets, zero and first powers by an option, no answer above 1,000,000) and
+  one-step equations (x + a, x − a, ax, x ÷ a; whole-number answers, options for
+  negatives and for fraction answers in ax = b) followed. Originally worded as:
+  this backlog lists a fraction–decimal–percent drill as a separate tool; it
+  belongs here.
 
 #### Major Features
 

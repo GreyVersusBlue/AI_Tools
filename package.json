@@ -103,6 +103,8 @@
     "test:lab-groups": "node Tools/lab-group-role-randomizer/test/smoke-equipment-mode.mjs && node Tools/lab-group-role-randomizer/test/smoke-safety-gate.mjs",
     "test:permission-slip": "node Tools/field-trip-permission-slip/test/smoke-bilingual.mjs && node Tools/field-trip-permission-slip/test/smoke-scan-tracker.mjs",
     "test:math-drill": "node Tools/math-drill-generator/test/drill-math.test.mjs && node Tools/math-drill-generator/test/smoke-new-types.mjs",
+    "test:math-drill-frac-exp-eq-core": "node Tools/math-drill-generator/test/drill-frac-exp-eq.test.mjs",
+    "test:math-drill-frac-exp-eq": "node Tools/math-drill-generator/test/smoke-frac-exp-eq.mjs",
     "test:docx-merger": "node Tools/docx-merger/test/smoke-per-file-options.mjs",
     "test:roleplay": "node Tools/roleplay-scenario-generator/test/smoke-success-criteria.mjs",
     "test:novel-study": "node Tools/novel-study-circles-manager/test/smoke-multi-book-unit.mjs",
