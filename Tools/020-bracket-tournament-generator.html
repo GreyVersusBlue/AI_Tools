@@ -25,6 +25,7 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="bracket-tournament-generator/bt-store.js"></script>
+<script src="bracket-tournament-generator/bt-teams.js"></script>
 <script src="../_shared/question-bank.js"></script>
 <script src="cultural-trivia-card-generator/ctcg-bank.js"></script>
 <script src="geography-bee-quiz-generator/gbq-bank.js"></script>
@@ -264,7 +265,20 @@
   #matchSheet .ms-total { margin: 6pt 0 0; break-inside: avoid; }
   #matchSheet .ms-key { break-before: page; }
 
+  /* Teams with members (bt-teams.js) and the first-round consolation bracket. */
+  .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .team-info { min-height: 1.4em; margin: -.45rem 0 .7rem; font-size: .88rem; color: var(--muted); }
+  .slot[data-team]:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+  .team-list { margin-top: 1.4rem; }
+  .team-list ul { margin: .2rem 0 0; padding-left: 1.1rem; columns: 2 16rem; }
+  .team-list li { break-inside: avoid; margin-bottom: .3rem; font-size: .9rem; }
+  .consolation-section { margin-top: 1.6rem; }
+  .consolation-section .bracket + .bracket { margin-top: 1rem; }
+  .cons-places { font-weight: 700; margin: .9rem 0 0; }
+
   @media print {
+    .team-info, .vh { display: none !important; }
+    .consolation-section { break-before: page; }
     #academicCard, #academicPanel, .match-q-btn { display: none !important; }
     body.printing-sheet .wrap > *:not(#matchSheet) { display: none !important; }
     body.printing-sheet #matchSheet { display: block; }
@@ -331,6 +345,8 @@
           <button type="button" class="secondary" id="loadRosterBtn">Load</button>
         </div>
         <textarea id="contestants" placeholder="Team A&#10;Team B&#10;Team C&#10;Team D"></textarea>
+        <label class="checkline" for="teamMode"><input type="checkbox" id="teamMode"> These are teams with members</label>
+        <p class="hint">Type one team a line as <em>Team name: member, member, member</em>. The bracket shows the team name; the members show when you point at or focus a team, and print as a team list under the bracket. A line with no colon is a team with no members.</p>
       </div>
     </div>
 
@@ -345,6 +361,13 @@
           <option value="pools">Pools into a bracket</option>
           <option value="swiss">Swiss (everybody keeps playing)</option>
         </select>
+      </div>
+    </div>
+
+    <div class="row" id="consolationFields">
+      <div>
+        <label class="checkline" for="consolationOn"><input type="checkbox" id="consolationOn"> Add a first-round consolation bracket</label>
+        <p class="hint">Single elimination only, and it needs at least 3 entrants. The teams that lose their first game play on in a second bracket after the main one, and the two semifinal losers play for third place. This is first-round consolation, not double elimination: a team that loses again in it is out, and a team that had a bye in round 1 is not in it. Choose Double elimination if a team should not be out until it has lost twice.</p>
       </div>
     </div>
 
@@ -415,6 +438,7 @@
 
   <div class="champion-banner" id="championBanner"></div>
 
+  <p class="vh" id="placesNote" role="status" aria-live="polite"></p>
   <div id="bracketCard" class="card" style="display:none;">
     <p class="bracket-title" id="bracketTitle"></p>
     <div id="presentBar"><span class="present-label" id="presentLabel"></span><span id="presentText"></span></div>
@@ -478,6 +502,10 @@
     rosterSelect: document.getElementById('rosterSelect'),
     loadRosterBtn: document.getElementById('loadRosterBtn'),
     bracketType: document.getElementById('bracketType'),
+    teamMode: document.getElementById('teamMode'),
+    consolationFields: document.getElementById('consolationFields'),
+    consolationOn: document.getElementById('consolationOn'),
+    placesNote: document.getElementById('placesNote'),
     poolsFields: document.getElementById('poolsFields'),
     poolCount: document.getElementById('poolCount'),
     poolAdvance: document.getElementById('poolAdvance'),
@@ -532,6 +560,7 @@
 
   function matchPlayable(key, a, b) {
     if (typeof a !== 'string' || typeof b !== 'string') return false;      // a side still TBD
+    if (typeof key === 'string' && key.charAt(0) === 'c') return false;    // the consolation bracket and third place are not academic matches
     if (key === 'g0' || key === 'g1') {
       var gf = state.grandFinal;
       return !!gf && gf.p[0] !== false && gf.p[1] !== false && (key === 'g0' || !!gf.needsReset);
@@ -1600,21 +1629,25 @@
     else if (state.type === 'pools') renderPools();
     else if (state.type === 'swiss') renderSwiss();
     else renderSingle();
+    if (!state.consolation) setPlaces('');
+    decorateTeams();
     academic.sync();
   }
 
   function renderBlank() {
     if (!state) return;
-    if (state.type === 'double') { renderBlankDouble(); return; }
-    if (state.type === 'roundrobin') { renderBlankRoundRobin(); return; }
-    if (state.type === 'pools') { renderBlankPools(); return; }
-    if (state.type === 'swiss') { renderBlankSwiss(); return; }
-    renderBlankSingle();
+    if (state.type === 'double') renderBlankDouble();
+    else if (state.type === 'roundrobin') renderBlankRoundRobin();
+    else if (state.type === 'pools') renderBlankPools();
+    else if (state.type === 'swiss') renderBlankSwiss();
+    else renderBlankSingle();
+    decorateTeams();
   }
 
   function renderSingle() {
     if (!state) return;
     autoAdvance(state);
+    if (state.consolation) BtTeams.sync(state, autoAdvance);
     save();
     refreshSwitcher();
 
@@ -1720,6 +1753,7 @@
     standingsHeading.textContent = 'Standings';
     els.bracketView.appendChild(standingsHeading);
     els.bracketView.appendChild(eliminationStandingsTable(state));
+    if (state.consolation) appendConsolation(false);
 
     var champion = state.slots[totalRounds - 1][0];
     if (champion) {
@@ -1790,9 +1824,218 @@
     els.bracketView.appendChild(bracketBox);
 
     if (state.schedule) renderScheduleTable(els.bracketView, state, true);
+    if (state.consolation) appendConsolation(true);
 
     els.championBanner.classList.remove('show');
   }
+
+  /* ---------- the first-round consolation bracket (bt-teams.js) ----------
+     A second `.bracket` after the main one, in its own section so it prints on
+     its own page. Its slots are the main bracket's shape, so the main
+     bracket's autoAdvance settles its byes; a team is clicked or scored to
+     advance exactly as in the main bracket (scores under 'c<r>_<m>'). The
+     third-place game is between the semifinal losers. `blank` draws the same
+     structure with nothing filled in, for the blank print. */
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function setPlaces(text) {
+    if (els.placesNote.textContent !== text) els.placesNote.textContent = text;
+  }
+
+  function appendConsolation(blank) {
+    var c = blank ? BtTeams.fresh(state) : state.consolation;
+    var losers = BtTeams.firstRound(state).length;
+    var sec = el('section', 'consolation-section');
+    sec.setAttribute('aria-labelledby', 'consHeading');
+    var head = el('p', 'bracket-subtitle', 'Consolation bracket');
+    head.id = 'consHeading';
+    head.setAttribute('role', 'heading');
+    head.setAttribute('aria-level', '2');
+    sec.appendChild(head);
+    sec.appendChild(el('p', 'hint', 'First-round consolation, not double elimination: the teams that lost their first game play on here, and a team that loses here is out. A team that had a bye in round 1 is not in it.' +
+      (losers === 1 ? ' Only one team lost a first-round game, so there is no consolation game: that team is the consolation winner.' : '')));
+
+    var box = el('div', 'bracket');
+    var total = c.slots.length;
+    c.slots.forEach(function (round, r) {
+      var col = el('div', 'round');
+      col.appendChild(el('div', 'round-label', (r === total - 1) ? 'Consolation winner' : 'Round ' + (r + 1)));
+      if (r === total - 1) {
+        var champ = blank ? false : round[0];
+        var wrapChamp = el('div', 'match');
+        wrapChamp.appendChild(el('div', 'slot ' + (champ ? 'slot-winner' : 'slot-empty'), champ || 'TBD'));
+        col.appendChild(wrapChamp);
+      } else {
+        var next = c.slots[r + 1];
+        for (var m = 0; m < next.length; m++) {
+          var matchWrap = el('div', 'match');
+          [0, 1].forEach(function (side) {
+            var idx = m * 2 + side;
+            var contestant = (blank && r > 0) ? false : round[idx];
+            var decided = blank ? false : next[m];
+            var slotEl;
+            if (contestant === null) {
+              slotEl = el('div', 'slot slot-bye', 'BYE');
+            } else if (contestant === false) {
+              slotEl = el('div', 'slot slot-empty', 'TBD');
+            } else if (decided !== false) {
+              slotEl = el('div', 'slot slot-decided' + (c.winnerSide[(r + 1) + '_' + m] === idx ? ' slot-winner' : ''), contestant);
+            } else {
+              slotEl = el('div', 'slot', contestant);
+              if (!blank) {
+                slotEl.addEventListener('click', (function (roundIdx, matchIdx, name, sourceIdx) {
+                  return function () {
+                    captureUndoSnapshot();
+                    c.slots[roundIdx + 1][matchIdx] = name;
+                    c.winnerSide[(roundIdx + 1) + '_' + matchIdx] = sourceIdx;
+                    render();
+                  };
+                })(r, m, contestant, idx));
+              }
+            }
+            matchWrap.appendChild(slotEl);
+          });
+          var a0 = round[m * 2], b0 = round[m * 2 + 1];
+          if (!blank && a0 !== null && b0 !== null) {
+            var decideFn = (next[m] === false) ? (function (roundIdx, matchIdx, aName, bName) {
+              return function (aNum, bNum) {
+                if (c.slots[roundIdx + 1][matchIdx] !== false) return;
+                captureUndoSnapshot();
+                var aWins = aNum > bNum;
+                c.slots[roundIdx + 1][matchIdx] = aWins ? aName : bName;
+                c.winnerSide[(roundIdx + 1) + '_' + matchIdx] = aWins ? matchIdx * 2 : matchIdx * 2 + 1;
+              };
+            })(r, m, a0, b0) : null;
+            matchWrap.appendChild(buildScoreInputs('c' + r + '_' + m, decideFn, a0, b0));
+          }
+          col.appendChild(matchWrap);
+        }
+      }
+      box.appendChild(col);
+    });
+    sec.appendChild(box);
+
+    var tp = BtTeams.thirdPlace(state);
+    if (tp.game) {
+      var tbox = el('div', 'bracket');
+      var tcol = el('div', 'round');
+      tcol.appendChild(el('div', 'round-label', 'Third place'));
+      var tmatch = el('div', 'match');
+      [0, 1].forEach(function (side) {
+        var who = blank ? false : tp.players[side];
+        var won = !blank && c.third === side;
+        var slotEl;
+        if (who === false) slotEl = el('div', 'slot slot-empty', 'TBD');
+        else if (c.third !== null) slotEl = el('div', 'slot slot-decided' + (won ? ' slot-winner' : ''), who);
+        else {
+          slotEl = el('div', 'slot', who);
+          slotEl.addEventListener('click', function () {
+            captureUndoSnapshot();
+            c.third = side;
+            render();
+          });
+        }
+        tmatch.appendChild(slotEl);
+      });
+      if (!blank && typeof tp.players[0] === 'string' && typeof tp.players[1] === 'string') {
+        var tDecide = (c.third === null) ? function (aNum, bNum) {
+          if (c.third !== null) return;
+          captureUndoSnapshot();
+          c.third = aNum > bNum ? 0 : 1;
+        } : null;
+        tmatch.appendChild(buildScoreInputs('cthird', tDecide, tp.players[0], tp.players[1]));
+      }
+      tcol.appendChild(tmatch);
+      tbox.appendChild(tcol);
+      sec.appendChild(tbox);
+    } else {
+      sec.appendChild(el('p', 'hint', 'No third-place game: only one semifinal had two teams in it, so the team that lost it is third.'));
+    }
+
+    var third = blank ? null : tp.place, winner = blank ? null : BtTeams.consolationWinner(state);
+    var line = 'Third place: ' + (third || 'not decided yet') + '. Consolation winner: ' + (winner || 'not decided yet') + '.';
+    sec.appendChild(el('p', 'cons-places', line));
+    if (!blank) setPlaces(line);
+    els.bracketView.appendChild(sec);
+  }
+
+  /* ---------- teams with members (bt-teams.js) ----------
+     A team is its name everywhere in the bracket; its members are one more
+     map on the bracket. After every render the slots that hold a team with
+     members get a native tooltip, a tab stop and a spoken label, and the
+     names are listed under the bracket (the list that prints). */
+  function membersOf(name) {
+    var m = state && state.members;
+    return (m && Object.prototype.hasOwnProperty.call(m, name)) ? m[name] : null;
+  }
+
+  function decorateTeams() {
+    var old = document.getElementById('teamList');
+    if (old) old.remove();
+    var info = document.getElementById('teamInfo');
+    var has = !!(state && BtTeams.hasMembers(state.members));
+    if (!has) { if (info) info.remove(); return; }          // an old bracket's card is byte for byte what it was
+    if (!info) {
+      info = el('p', 'team-info');
+      info.id = 'teamInfo';
+      info.setAttribute('aria-hidden', 'true');
+      els.bracketTitle.parentNode.insertBefore(info, els.bracketTitle.nextSibling);
+    }
+    info.textContent = '';
+    Array.prototype.forEach.call(els.bracketView.querySelectorAll('.slot'), function (slot) {
+      var list = membersOf(slot.textContent);
+      if (!list) return;
+      var text = list.join(', ');
+      slot.setAttribute('data-team', text);
+      slot.title = 'Members: ' + text;
+      slot.tabIndex = 0;
+      slot.setAttribute('role', slot.className === 'slot' ? 'button' : 'group');
+      slot.setAttribute('aria-label', slot.textContent + ', members: ' + text);
+    });
+    var shown = BtTeams.entrantNames(state).filter(membersOf);
+    var box = el('section', 'team-list');
+    box.id = 'teamList';
+    box.setAttribute('aria-labelledby', 'teamListHead');
+    var head = el('p', 'bracket-subtitle', 'Teams');
+    head.id = 'teamListHead';
+    head.setAttribute('role', 'heading');
+    head.setAttribute('aria-level', '2');
+    box.appendChild(head);
+    var ul = el('ul');
+    shown.forEach(function (n) {
+      var li = el('li');
+      li.appendChild(el('strong', null, n));
+      li.appendChild(document.createTextNode(': ' + membersOf(n).join(', ')));
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+    els.bracketView.appendChild(box);
+  }
+
+  function teamInfoShow(e) {
+    var t = e.target.closest ? e.target.closest('.slot[data-team]') : null;
+    var info = document.getElementById('teamInfo');
+    if (t && info) info.textContent = t.textContent + ': ' + t.getAttribute('data-team');
+  }
+  function teamInfoHide() {
+    var info = document.getElementById('teamInfo');
+    if (info) info.textContent = '';
+  }
+  els.bracketView.addEventListener('focusin', teamInfoShow);
+  els.bracketView.addEventListener('mouseover', teamInfoShow);
+  els.bracketView.addEventListener('focusout', teamInfoHide);
+  els.bracketView.addEventListener('mouseout', teamInfoHide);
+  els.bracketView.addEventListener('keydown', function (e) {
+    var t = e.target.closest ? e.target.closest('.slot[data-team]') : null;
+    if (!t) return;
+    if (e.key === 'Escape') teamInfoHide();
+    else if ((e.key === 'Enter' || e.key === ' ') && t.getAttribute('role') === 'button') { e.preventDefault(); t.click(); }
+  });
 
   /* ---------- double-elimination rendering ----------
      Same match/slot classes and click-to-advance convention as the
@@ -3127,6 +3370,14 @@
       var mode = BtAcademic.clean(state.academic);
       if (mode) state.academic = mode; else delete state.academic;
     }
+    if (state.members !== undefined) {                         // only a bracket that has teams with members
+      var kept = BtTeams.cleanMembers(state.members, BtTeams.entrantNames(state));
+      if (kept) state.members = kept; else delete state.members;
+    }
+    if (state.consolation !== undefined) {                     // only a bracket that has had one
+      var cons = BtTeams.restore(state.consolation, state);
+      if (cons) state.consolation = cons; else delete state.consolation;
+    }
     BracketStore.setCurrentName(name);
     refreshSwitcher();
     render();
@@ -3164,11 +3415,13 @@
     var type = els.bracketType.value;
     els.poolsFields.style.display = (type === 'pools') ? '' : 'none';
     els.swissFields.style.display = (type === 'swiss') ? '' : 'none';
+    els.consolationFields.style.display = (type === 'single') ? '' : 'none';
   }
   els.bracketType.addEventListener('change', updateFormatFields);
 
   els.generateBtn.addEventListener('click', function () {
-    var names = parseNames(els.contestants.value);
+    var teamed = els.teamMode.checked ? BtTeams.parseTeams(els.contestants.value) : null;
+    var names = teamed ? teamed.names : parseNames(els.contestants.value);
     if (names.length < 2) {
       alert('Enter at least two names or teams.');
       return;
@@ -3186,6 +3439,8 @@
     } else {
       state = buildForType(type, name, names, els.seedMode.value);
     }
+    if (teamed && teamed.members) state.members = teamed.members;
+    if (type === 'single' && els.consolationOn.checked && names.length >= 3) state.consolation = BtTeams.fresh(state);
     undoSnapshot = null;
     BracketStore.setCurrentName(name);
     refreshSwitcher();
@@ -3208,6 +3463,7 @@
     // Academic mode: the settings and the seed stay, the questions dealt and
     // the marks go with the picks, so the deal starts over from the top.
     var mode = state.academic;
+    var members = state.members, hadConsolation = !!state.consolation;
     if (state.type === 'roundrobin') {
       var schedule = state.schedule;
       var seeds = state.seeds;
@@ -3237,6 +3493,8 @@
       if (state.schedule) rebuilt.schedule = state.schedule;
       state = rebuilt;
     }
+    if (members) state.members = members;
+    if (hadConsolation && (!state.type || state.type === 'single')) state.consolation = BtTeams.fresh(state);
     if (mode) state.academic = { on: mode.on, seed: mode.seed, source: mode.source, unit: mode.unit, per: mode.per, drawn: {}, marks: {} };
     render();
   });
@@ -3301,7 +3559,7 @@
     title: 'Share this bracket',
     noun: 'this bracket',
     filename: function () { return (state && state.name) || 'bracket'; },
-    note: 'The whole bracket travels — players, seeds, every pick made so far and any station schedule. It is a copy: picks made on the other device never come back here.',
+    note: 'The whole bracket travels — players, seeds, team members, the consolation bracket, every pick made so far and any station schedule. It is a copy: picks made on the other device never come back here.',
     successMessage: 'Link copied. Opening it anywhere saves this bracket there as a new bracket — it never overwrites one already on that device.',
     emptyMessage: 'Generate a bracket first, then there is something to share.',
     onMessage: function (text, isError) { setShareNote(text, isError); }
@@ -3375,6 +3633,12 @@
     // Academic mode travels as its seven fields and nothing else of what the
     // link says (BtAcademic.clean). The questions are ids: a built-in set's
     // show on any device, the sender's own bank's only where that bank is.
+    var sharedMembers = BtTeams.cleanMembers(decoded.members, BtTeams.entrantNames(state));
+    if (sharedMembers) state.members = sharedMembers;
+    if (decoded.consolation !== undefined) {
+      var sharedCons = BtTeams.restore(decoded.consolation, state);
+      if (sharedCons) state.consolation = sharedCons;
+    }
     var sharedMode = BtAcademic.clean(decoded.academic);
     if (sharedMode) state.academic = sharedMode;
     BracketStore.saveBracket(name, state);

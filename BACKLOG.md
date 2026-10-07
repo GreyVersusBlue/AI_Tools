@@ -571,7 +571,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 133 | Peer feedback slips; gallery-walk reactions | 017 | ½ | | [017 Gallery Walk QR Codes](#017--gallery-walk-qr-codes) |
 | 134 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
 | 135 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
-| 136 | Team names with members; a loser’s-side consolation bracket | 020 | ½ | | [020 Bracket / Tournament Generator](#020--bracket--tournament-generator) |
 | 137 | Uneven groups and stations; a shared rotation engine | 021 | ½ | | [021 Tournament Bracket & Station Rotation (PE)](#021--tournament-bracket--station-rotation-pe) |
 | 138 | Lock a group or a role and reshuffle the rest | 022 | ½ | | [022 Lab Group & Role Randomizer](#022--lab-group--role-randomizer) |
 | 139 | Name and date lines on the slips; response collection questions | 023 | ½ | | [023 Exit Ticket / Bell Ringer Generator](#023--exit-ticket--bell-ringer-generator) |
@@ -8795,19 +8794,25 @@ classroom device) over deepening student-device use.
   are the formats teachers actually want. *(Shipped Round 4 as a third
   bracket type using the circle-method scheduling algorithm; pools-into-a-
   bracket and a ladder are still open — see Round 4 update below.)*
-- **Team names with members**, so a bracket of six four-person teams prints a
-  roster alongside.
+- **Done (AI-31-020, v284) — team names with members.** A "These are teams with
+  members" box on the setup card takes one team a line as `Team name: member, member`;
+  the bracket shows the name, the members show as a tooltip, in a spoken label, on a
+  visible line on focus or hover and in a printed Teams list. Not done: a roster hand-off
+  (a cross-tool decision), a member count per team on the bracket.
 
 #### Major Features
 
-- **Done — pools and Swiss; a loser's-side consolation bracket is still open.**
+- **Done — pools and Swiss, and a first-round consolation bracket (AI-31-020, v284).**
   **Consolation / everybody-plays formats.** A "loser's side that keeps
   playing", a Swiss format, or guaranteed-three-games pool play. This is the
   difference between a tool used once a year and a tool used every unit.
   *(Pools-into-a-bracket and Swiss shipped Round 6 — see below. A true
   double-elimination-style "loser's side keeps playing" consolation bracket
   for the single-elimination format specifically is not the same thing as
-  double elimination, which already exists, and remains open.)*
+  double elimination, which already exists, shipped as first-round
+  consolation: an option on single elimination, fed by first-round losers
+  only, with a third-place game between the semifinal losers. A team that
+  loses again in it is out; it is not a full loser's side.)*
 - **Academic tournament mode.** Bracketed review — pairs of students compete
   on questions drawn from `030-review-game-board.html`'s question bank, with the
   bracket advancing on answers rather than clicks.

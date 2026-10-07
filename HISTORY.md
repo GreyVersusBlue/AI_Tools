@@ -9,6 +9,47 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 020 Bracket / Tournament Generator: teams with members, and a first-round consolation bracket (2026-10-07, AI-31-020, `CACHE_VERSION` v284)
+
+BACKLOG rank 136, "Team names with members; a loser's-side consolation bracket", both parts, in the tool's own code (`Tools/bracket-tournament-generator/bt-teams.js`, new,
+precached; global `BtTeams`, pure). The academic-tournament mode, `bt-academic.js` and `golden-old-brackets.json` are untouched and their suites pass byte for byte.
+
+- **Teams with members.** A "These are teams with members" box on the setup card: one team a line as `Team name: member, member`, split at the first colon, members on
+  commas or semicolons, repeats dropped, 40 a team and 60 characters a member. With the box off (the default) the text is read exactly as before. The bracket shows the
+  team name only; members are stored as one optional map `members` (teams that have some) in the key the bracket already has. They show as a tooltip, in the slot's
+  spoken label (`Name, members: ...`), on a visible line under the bracket title when a team is focused or pointed at (Escape puts it away; the line is `aria-hidden`
+  because the label already says it), and in a "Teams" list after the bracket that prints. A slot with members is a tab stop, a `button` while it can be picked (Enter and
+  Space pick it) and a labelled `group` once decided; one without members is today's slot. All of it is added in one pass after each render, so every bracket type
+  shows it. **The share link carries members because it carries the whole bracket** (names included); there is no length limit in the link itself, and the share sheet
+  already greys out the QR with its reason when the code would be too dense, so nothing was left out of the link. A link's or a stored bracket's `members` is cleaned: only
+  teams in the bracket, strings only, cut to length, a field of the wrong kind dropped. Reset picks keeps them. Not done: a roster hand-off (a cross-tool decision).
+- **First-round consolation bracket.** A box on the setup card, single elimination only, 3 or more entrants (it is ignored for a double-elimination bracket even if left
+  ticked). Stated on the page: this is first-round consolation, not double elimination. The L first-round losers (real games only; a team with a bye is never in it)
+  are placed in the order their games are listed and paired the way the main bracket pairs "as entered": the next power of 2 at or above L, the first size - L matches
+  get a bye, so there are L - 1 games and the winner of the last is the consolation winner. The main bracket's own `autoAdvance` settles its byes. Results are entered as
+  in the main bracket (a click or the two score boxes; scores sit under `c<round>_<match>`), undo works, Reset picks keeps it and empties it. A **third-place game**
+  between the two semifinal losers is drawn under it (with 3 entrants one semifinal is a bye, so its one loser is third with no game, and the page says so); the page
+  names "Third place" and "Consolation winner" in the section and in a visually hidden `role="status"` line. It prints as its own section with `break-before: page`
+  after the main bracket and its standings; the blank print draws it empty. Saved as an optional `consolation: { slots, winnerSide, third }` in the same key; a stored or
+  linked one of the wrong shape is replaced by an empty one rebuilt from the main bracket's results. Consolation games are not academic matches (`matchPlayable` refuses a
+  key starting `c`), and they are not counted in the main bracket's Standings table. The bracket has no version number of its own, so "saved through the existing
+  versioning" is the two optional fields and nothing else: a bracket that uses neither stores, shows, prints and shares as before (checked by the golden pins).
+- **Duplication.** The consolation renderer is a compact second copy of the main bracket's slot loop (about 90 lines in the page); Path 13 P3's bracket extraction should
+  replace both. `_shared/` was not touched.
+- **Tests.** `smoke-teams-core.mjs` (`test:bracket-teams-core`, pure Node, 7,523 assertions): for every count from 3 to 32, both placements and four random plays each,
+  with its own bracket as oracle: L = n - size/2, each loser once and in game order, nobody who had a bye, nobody plays themselves, L - 1 games, third place, plus the
+  parsing and cleaning cases. `smoke-teams.mjs` (`test:bracket-teams`, port 8521, 978 assertions): the real page, 3 to 32 entrants played through its own clicks,
+  scores, undo, reset, reload, share and bad links, the printed PDF (the consolation not on page one, the team list on paper, no blank page), the blank print, keyboard
+  and axe (light and dark). **Breaks on purpose: 33 against the module** (2 survived at first and got a test) **and 31 against the page**: 27 caught first time, 3
+  survived and got assertions (Reset dropping members; the academic mode's Questions button, whose test never turned a button on; the third-place winner side), 1 is
+  equivalent (a `r > 0` guard in the blank renderer, which already draws a fresh structure). Not every assertion has its own break.
+- **A trap.** The first draft put the info line and the announcement inside `#bracketCard`; the golden pins hash that element, so every old bracket's card changed. The
+  announcement now sits outside the card and the info line is created only for a bracket with members.
+- **Left, and not verified.** The page's older slot style dims a decided slot with `opacity: .5`, which fails axe's contrast rule (it did before; the new suite scans
+  states with no decided slot and says so). `audit-print`'s seed has no teams and no consolation, so the print check for the new parts is the suite's PDF reading.
+  Nothing printed on paper, no screen reader, no phone. Not run: the full `npm test`. Left: a full loser's side (Path 13 P4), rematch avoidance across the two brackets,
+  hand-picked consolation pairings.
+
 ## 016 QR Code Generator: batch codes from a CSV or paste, and the label rule stated (2026-10-07, AI-31-016, `CACHE_VERSION` v283)
 
 BACKLOG rank 132, "A label under each code; batch codes from a spreadsheet". **Half of it was already there.** Found first and not rebuilt: a single code has had a
