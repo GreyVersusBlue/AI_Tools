@@ -19,7 +19,7 @@
 // page; the breaks-on-purpose runs use it.
 
 import fs from 'node:fs';
-import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
+import { serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
 
 const PORT = 8508;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -46,7 +46,7 @@ const browser = await launch();
 /** A page. `seed` is written to the chart key once, before the page's script;
     `answers` queue the answer to each dialog in turn (a prompt takes a string
     or null to cancel, a confirm takes true or false). */
-async function open(seed, { url = PAGE, answers = [] } = {}) {
+async function open(seed, { url = PAGE, answers = [], theme = null } = {}) {
   const page = await prepPage(browser, BASE, { width: 1200, height: 900 });
   page.__answers = answers.slice();
   page.__dialogs = [];
@@ -60,6 +60,7 @@ async function open(seed, { url = PAGE, answers = [] } = {}) {
     window.__pwned = 0;
     if (v !== null && localStorage.getItem(k) === null) localStorage.setItem(k, v);
   }, [KEY, seed === undefined ? null : (typeof seed === 'string' ? seed : JSON.stringify(seed))]);
+  if (theme) await page.addInitScript(t => { localStorage.setItem('gvb-a11y-prefs', JSON.stringify({ theme: t, textScale: 100, dyslexic: false })); }, theme);
   await page.goto(url, { waitUntil: 'networkidle' });
   await settle(page, 250);
   return page;
@@ -92,6 +93,7 @@ const focusMove = (page, kind, id, dir, inGroup) => page.evaluate(([kind, id, di
   const b = Array.from(document.querySelectorAll('[data-move-' + kind + ']')).find(x =>
     x.getAttribute('data-move-' + kind) === id && x.getAttribute('data-dir') === dir &&
     (kind === 'group' || x.getAttribute('data-in-group') === inGroup));
+  if (!b) return false;
   b.focus();
   return document.activeElement === b;
 }, [kind, id, dir, inGroup]);
@@ -243,7 +245,7 @@ console.log('\nB. reordering');
   eq(await groupsOf(page), want, 'a reload keeps the order');
   const d = await docOf(page);
   eq(d.list[0].groupOrder, ['Length (Metric)', 'Time', 'Sports Day'], 'it is stored with the chart as groupOrder');
-  eq(d.list[0].lineOrder['Sports Day'], ['c:b2', 'c:a1'], 'and the lines as lineOrder, by id');
+  eq((d.list[0].lineOrder || {})['Sports Day'], ['c:b2', 'c:a1'], 'and the lines as lineOrder, by id');
   await page.close();
 }
 {
@@ -434,7 +436,7 @@ console.log('\nD. named saved charts');
   eq(await page.isDisabled('#deleteChartBtn'), false, 'Delete is on with two charts');
   const before = page.__dialogs.length;
   await page.click('#deleteChartBtn');
-  const q = page.__dialogs[before];
+  const q = page.__dialogs[before] || { type: 'none', message: '' };
   eq(q.type, 'confirm', 'Delete asks first');
   has(q.message, /Delete “Renamed one”/, 'naming the chart');
   eq(await chartNames(page), ['My chart', 'Renamed one'], 'and Cancel deletes nothing');
@@ -600,6 +602,33 @@ console.log('\nF. presets, columns, removing a line');
   eq((await docOf(page)).list[0].columns, 2, 'the column count is saved with the chart');
   await page.close();
 }
+}
+
+/* ═══ G. axe, with the new controls on screen ══════════════════════════════ */
+if (want('G')) {
+  console.log('\nG. accessibility, light and dark');
+  const docSeed = { v: 2, data: { currentId: 'b', list: [
+    { id: 'a', name: 'Everything', columns: 2, selected: { weight_cross: true }, hidden: {}, custom: {} },
+    { id: 'b', name: 'Field day', columns: 3, selected: { time: true }, hidden: {},
+      custom: { 'Sports Day': [{ id: 'p', text: '1 lap = 400 m' }] }, groupOrder: ['Sports Day', 'Time'] }] } };
+  for (const theme of ['light', 'dark']) {
+    const page = await open(docSeed, { theme });
+    eq((await page.evaluate(() => document.documentElement.getAttribute('data-theme'))) === 'dark', theme === 'dark', `${theme}: the page is in the theme asked for`);
+    await page.click('[data-move-line="t:time:2"][data-dir="up"]');
+    const moved = await a11yScan(page, { impact: 'serious' });
+    eq(moved.map(v => v.id + ' ' + v.nodes.join(',')), [], `${theme}: axe finds nothing serious with several charts and a moved line`);
+    eq(await page.$$eval('button[aria-disabled="true"]', b => b.every(x => !!x.getAttribute('aria-label'))), true, `${theme}: every aria-disabled move button still has its name`);
+    await page.close();
+    /* the Add-as-new button and the share note on screen */
+    const sender = await open(docSeed);
+    const link = await shareLink(sender);
+    await sender.close();
+    const recv = await open({ selected: { time: true }, hidden: {}, custom: { Own: [{ id: 'o', text: 'x' }] }, columns: 2 }, { url: link, answers: [false], theme });
+    ok(await recv.isVisible('#addSharedBtn'), `${theme}: the Add button is on screen to scan`);
+    const scan2 = await a11yScan(recv, { impact: 'serious' });
+    eq(scan2.map(v => v.id), [], `${theme}: axe finds nothing serious on a page reached by a link`);
+    await recv.close();
+  }
 }
 
 await browser.close();

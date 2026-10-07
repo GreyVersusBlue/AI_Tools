@@ -60,6 +60,7 @@
     "test:mad-libs": "node Tools/grammar-mad-libs/test/smoke-storage.mjs",
     "test:mad-libs-saves": "node Tools/grammar-mad-libs/test/smoke-saves.mjs",
     "test:science-fair-saves": "node Tools/science-fair-project-tracker/test/smoke-saves.mjs",
+    "test:unit-chart-saves": "node Tools/unit-conversion-chart-builder/test/smoke-chart-saves.mjs",
     "test:parent-log": "node Tools/parent-contact-log/test/smoke-reasons.mjs",
     "test:parent-log-packet": "node Tools/parent-contact-log/test/smoke-packet.mjs",
     "test:rubric": "node Tools/rubric-builder/test/smoke-peer-form.mjs && node Tools/rubric-builder/test/smoke-gdv-handoff.mjs && node Tools/rubric-builder/test/smoke-share.mjs",

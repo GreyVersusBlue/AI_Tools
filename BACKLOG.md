@@ -286,7 +286,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 38 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `qr-scan.js` 10 · `tool-registry.js` 9 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `question-bank.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 39 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `qr-scan.js` 10 · `tool-registry.js` 9 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `gvb-save.js` 1 (+1 via a module) · `question-bank.js` 1 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **168**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -513,7 +513,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
 | 114 | Multiple named saved prompt sets — a general slip, a lab-day slip and a testing-day slip at once | 076 | ½ | | [076 Sub Note / Feedback Slip Generator](#076--sub-note--feedback-slip-generator) |
-| 115 | Named saves plus reorder and share — group and line reordering and a state-link share URL | 078 | ½ | | [078 Unit Conversion Reference Chart Builder](#078--unit-conversion-reference-chart-builder) |
 | 116 | Irregular verb call-out boxes — three to five common irregulars per tense | 079 | ½ | | [079 Verb Conjugation Reference Poster Generator](#079--verb-conjugation-reference-poster-generator) |
 | 117 | Two-step word problems — chained-operation templates for the upper grade band | 081 | ½ | | [081 Word Problem Warm-Up Generator](#081--word-problem-warm-up-generator) |
 | 118 | Correlate hall-pass trips with the schedule; a student-initiated request flow | 001 | ½ | | [001 Digital Hall Pass / Sign-Out Log](#001--digital-hall-pass--sign-out-log) |
@@ -12151,15 +12150,19 @@ instead of quietly going stale.
 
 #### Quick Wins
 
-- **Multiple named saved charts**, matching Formula Sheet Builder's pattern
-  — right now there's exactly one chart per browser, so a "Grade 5 metric
-  only" chart and a "full reference" chart can't coexist.
-- **Reorder groups and lines** (up/down buttons, matching Formula Sheet
-  Builder's item reordering) — right now group and line order is fixed by
-  template/insertion order.
-- **JSON export/import**, the same convention Formula Sheet Builder and
-  Rubric Builder use, so a chart can be shared between two teachers' Ideas
-  Backlog-graduated setups.
+- **Shipped (v271, AI-31-078):** named saved charts (a chooser with + New,
+  Duplicate, Rename and Delete in the old `ucb_chart_v1` key, Store envelope at
+  version 2; the one old chart is the first save, "My chart"; the last chart
+  cannot be deleted); Up/Down buttons for groups and for lines inside a group,
+  announced in a live region, focus staying on the moved item, the printed
+  sheet following the order; and the share link, which now carries the open
+  chart only (its name and order too) and asks before it replaces the open
+  chart or, on Cancel, offers to add it as a new save. The link itself was
+  already there from #239 (Path 6 P3). Suite `test:unit-chart-saves`.
+- **Open a chart from a downloaded .json.** The share sheet's Download file row
+  writes one, and `Share.receiveFile()` reads one back; this page has no
+  "Open a chart file" button wired to it yet (015 and 039 are the examples).
+  Not built, and the rest of the row did not depend on it.
 
 #### Major Features
 

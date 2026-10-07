@@ -118,6 +118,7 @@
     "Tools/grammar-mad-libs/test/smoke-storage.mjs",
     "Tools/grammar-mad-libs/test/smoke-saves.mjs",
     "Tools/science-fair-project-tracker/test/smoke-saves.mjs",
+    "Tools/unit-conversion-chart-builder/test/smoke-chart-saves.mjs",
     "Tools/parent-contact-log/test/smoke-reasons.mjs",
     "Tools/parent-contact-log/test/smoke-packet.mjs",
     "Tools/rubric-builder/test/smoke-peer-form.mjs",

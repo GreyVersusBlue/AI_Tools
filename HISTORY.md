@@ -9,6 +9,61 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 078 Unit Conversion Chart: named saved charts, reordering, and a share link that knows about saves (2026-10-06, AI-31-078, `CACHE_VERSION` v271)
+
+Audit entry AI-31, BACKLOG rank 115 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule). The row had three parts; the third
+was found already half there (see "Share" below) and was finished rather than built.
+
+- **Reordering.** Every group in the preview has an Up and a Down button, and so does every line inside a group, as real `<button>`s with labels that name their
+  target in plain text ("Move line “1 day = 24 hours” up"; HTML entities decoded, so a screen reader hears ≈ and not `&asymp;`). A move is said in a polite
+  `role="status"` region ("Moved line “…” up. It is now line 2 of 6 in “Time”."), focus stays on the moved item's button of the same direction so pressing it
+  again keeps moving it, and a button at the end of its list is `aria-disabled`, not `disabled`, so focus is never dropped on it; pressing it says "already first / last".
+  The printed sheet follows the same order, from the same function. Stored as optional `groupOrder` (group names) and `lineOrder` (group name → line ids: `t:<set>:<index>`
+  for a built-in line, `c:<id>` for a custom one), written only on the first move. A group or line the order does not list keeps its natural place after the listed
+  ones, and an id that no longer exists is skipped, so unticking a set, ticking it again, adding a custom line or an older build with fewer sets all behave. Hiding a
+  built-in line is by its table index as before and does not move when other lines do.
+- **Named saved charts.** A chooser with + New (empty), Duplicate, Rename and Delete (behind a confirm that names the chart) above the unit sets, in the key the tool has always
+  used (`ucb_chart_v1`), in Store's envelope at version 2: `{ list: [{ id, name, selected, custom, hidden, columns, groupOrder?, lineOrder? }], currentId }`. No new key, so the
+  registry and 009's backup see nothing new. The old bare object is version 0: it comes back as the first chart, **"My chart"**, and is not rewritten until the first
+  edit (checked: opening the page leaves the stored string byte for byte). **The last chart cannot be deleted** — Delete is disabled with one left, with a title that says why
+  (Devon's instruction for this row; 063 and 073 leave an empty tool instead). The rule that a version-0 chart with no ticks gets the four starter sets survives, and
+  applies only to version 0 and a brand-new install, so a chart a teacher made with + New stays empty on reload.
+- **Old sheets, pinned.** `Tools/unit-conversion-chart-builder/test/golden-old-sheets.json` was recorded from the page at `4a13d48`, before this change, from six saved
+  states (fresh install, both presets, a rich chart with hidden lines, two custom groups and a custom line added to a built-in group, 1 column, custom-only). The suite
+  compares the printed sheet's HTML, its column style, its title and the preview's lines with it: all six identical. The preview has the new buttons, so only its
+  `.item-text` contents are compared, not its markup.
+- **Share.** `Share.mount` and `Share.receive` were already on this page (#239, Path 6 P3), carrying the whole recipe of the one chart. What this increment did is
+  the part that only mattered once there were several: the link carries **the open chart and no other** (its name and its order too; the suite searches the payload for the
+  other chart's text and for a list or pointer and finds none, and checks the link after switching charts is the other chart's). An arriving link into a chart that is
+  only the starter sets, or nothing ticked and nothing typed, replaces it without asking (as before); into a chart with work it asks once, naming the chart and what is
+  coming, and **Cancel keeps the chart and offers an "Add the shared chart as a new saved chart" button** that adds it beside the others and opens it. The question stays
+  a `confirm()` with the word "Replace" and the note starts "Kept the", which is what the shared `smoke-share-rollout` suite (which I may not edit) asserts for 078, and
+  it seeds the old bare shape: it still passes (1580). A link too long for a QR code is the share sheet's business (it says "too dense to scan" and the file download
+  remains; the suite checks both for a 260-line chart and that the link still carries every line). `_shared/` was not touched; the registry's `share: { param: 'chart' }`
+  line for 078 was already right.
+- **Text is text.** The old page wrote a teacher's group name and line into `innerHTML` unescaped, and an arriving link made that a path from someone else's text to
+  the page. Custom text now has `<` and `>` escaped (and `&` left alone, so an entity typed before this, such as `&deg;`, reads as it always did); built-in text is the
+  page's own markup and is not. Everything dynamic in an attribute goes through `escapeAttr`; chart names are put in with `textContent`; the plain-text labels come from
+  `DOMParser` (inert), not an element. The inline-sink baseline for 078 stays at 3 (the three `innerHTML` assignments were already there). The suite adds a group
+  and a line holding `<img src=x onerror=…>` by hand, and again by a link that also puts one in the chart name, the group, the line and both orders: no element, nothing ran.
+  Two more fixes of the same kind: a custom line is deleted by its id, not by `group|id` split on a bar (a group name with a bar in it never deleted), and a custom group
+  called `__proto__` is refused (it would have set the object's prototype instead of a key).
+- **Behaviour that moved, on purpose.** Groups are an array, not an object, so a custom group named like an integer ("2024") no longer jumps to the front of the chart; the
+  chart's *saved* tick, hidden and custom shapes are unchanged. `Store` is now loaded on this page (`store.js` adoption 38 → 39 in BACKLOG's header).
+- **Suite.** `Tools/unit-conversion-chart-builder/test/smoke-chart-saves.mjs` (`test:unit-chart-saves`, port 8508, 218 assertions in seven sections, A to G). Deliberate breaks:
+  **41 breaks on purpose**, each a mutated copy of the page run through the suite (several with independent code were run together and each checked for its own
+  assertion): all 41 are caught, 26 of them failing the assertion written for them the first time; the others were caught by a crash, which is not a catch, so the test
+  was changed to fail on an assertion and the break re-run (11, 16, 37), or sat behind another break's crash and were run alone (30, 38). Two first draft breaks were
+  wrong: one was a syntax error in the page (counted for nothing; redone as 41), one landed on an assertion that is not the one that checks it (24, caught by "in storage
+  too"). Not every assertion has its own break: section F (presets, columns and removing a line, which this change did not touch) and G (axe) have none, and the guards
+  in `deleteChartBtn`'s handler and in `moveLine`'s unknown-id branch cannot be reached through the UI (a disabled button sends no click), so they are unbroken.
+  `SECTIONS=BC node …` runs some sections, which is what the breaks used so each run stayed short; `PAGE_FILE=` points at a mutated copy.
+- **Not verified.** Nothing printed on paper; no screen reader (the labels, roles and focus are asserted, and axe is clean, but nobody listened); the Add-as-new button's
+  position under the share note was not looked at on a phone; a real browser near its storage quota; an older cached copy of the page in another tab would read the v2
+  envelope as an empty chart (the same trade 063, 071 and 073 took).
+- **Left.** Opening a chart from a downloaded `.json` (`Share.receiveFile()` is there; 015 and 039 are the examples) — the share sheet writes the file but this page has no
+  button to read one back; area and speed sets, the quick-calc, a half-sheet print, and the two Open Questions, untouched.
+
 ## 077 Testing Accommodations: room assignment, proctors and proctor lists (2026-10-06, AI-31-077, `CACHE_VERSION` v270)
 
 Audit entry AI-31, BACKLOG rank 113 (½). The row is deleted and the other ranks are not renumbered (a gap, by the sprint's rule).
