@@ -603,7 +603,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 138 | Lock a group or a role and reshuffle the rest | 022 | ½ | | [022 Lab Group & Role Randomizer](#022--lab-group--role-randomizer) |
 | 139 | Name and date lines on the slips; response collection questions | 023 | ½ | | [023 Exit Ticket / Bell Ringer Generator](#023--exit-ticket--bell-ringer-generator) |
 | 140 | Draw on a strategy card; a shared stage | 024 | ½ | | [024 Number Talks / Mental Math Routine Board](#024--number-talks--mental-math-routine-board) |
-| 141 | Sentence starters and an "if you’re stuck" line | 025 | ½ | | [025 Writing Prompt Generator](#025--writing-prompt-generator) |
 | 142 | Fraction multiply/divide, exponents and one-step equations | 026 | ½ | | [026 Math Fact Drill Sheet Generator](#026--math-fact-drill-sheet-generator) |
 | 143 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 144 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
@@ -9276,8 +9275,10 @@ well but doesn't have a math coach.
 
 #### Quick Wins
 
-- **Sentence starters and a "if you're stuck" line** with each prompt, which
-  is what the students who need the prompt most actually need.
+- ~~Sentence starters and a "if you're stuck" line~~ — **done 2026-10-07**
+  (v288, `wpg-scaffolds.js`; `HISTORY.md` lists every line for a teacher to read, and
+  they are unreviewed). Not done: help on the roster assignment sheet; a share link
+  for a random draw's own choice.
 - **Tag prompts by purpose** (quick write, journal, on-demand assessment,
   creative) as well as genre.
 - **Import a prompt list** from a paste (P13) instead of one at a time.

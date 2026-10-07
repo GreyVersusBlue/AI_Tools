@@ -1,8 +1,8 @@
-// record-golden.mjs — writes golden-old-sheets.json from the page as it is
+// _record-golden.mjs — writes golden-old-sheets.json from the page as it is
 // NOW. Run once on the page as it was before scaffolds (commit 529c79c); the
 // suite then compares every later page with scaffolds off to it.
 //
-//   node Tools/writing-prompt-generator/test/record-golden.mjs
+//   node Tools/writing-prompt-generator/test/_record-golden.mjs
 import fs from 'node:fs';
 import { serve, launch, prepPage } from '../../board-check/harness.mjs';
 import { SCENARIOS, captureScenario } from './_capture.mjs';
