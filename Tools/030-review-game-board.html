@@ -219,6 +219,12 @@
   .bank-import-preview h3 { margin: 0 0 .3rem; font-size: 1rem; }
   .bank-import-more { color: var(--muted); font-size: .85rem; margin: .4rem 0 0; }
   .bank-import-more[hidden] { display: none; }
+  /* a picture on a bank question (Path 12 P4) */
+  .bank-picture-field { margin: .8rem 0; }
+  .bank-picture-field [hidden] { display: none; }
+  .bank-picture-preview { max-width: 12rem; max-height: 8rem; margin: .4rem 0; border: 1px solid var(--line-strong); border-radius: 6px; }
+  .bank-pic { max-width: 9rem; max-height: 6rem; margin-top: .35rem; border: 1px solid var(--line-strong); border-radius: 6px; }
+  #importNote[hidden] { display: none; }
 
   .category-block { border: 1px solid var(--line-strong); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .9rem; background: var(--card-2); }
   .category-block .cat-name { font-weight: 700; margin-bottom: .5rem; }
@@ -509,6 +515,7 @@
     <button class="danger" id="deleteBoardBtn">Delete</button>
   </div>
   <p class="import-status error" id="imageNote" role="status" hidden></p>
+  <p class="import-status error" id="importNote" role="status" hidden></p>
 
   <div class="card" id="setupCard">
     <label for="boardName">Board name</label>
@@ -685,6 +692,7 @@
       </div>
       <div id="bankAddChoices"></div>
       <div id="bankAddTags"></div>
+      <div id="bankAddPictureSlot"></div>
       <button type="button" id="bankAddBtn">+ Add to bank</button>
       <p class="import-status" id="bankAddStatus" role="status"></p>
     </div>
@@ -742,7 +750,7 @@
       </div>
       <p class="hint" id="bankPrintHint" style="margin-top:.4rem;">Prints the ticked questions, or every question the list shows when none is
         ticked, grouped by unit. The quiz has room to answer and its answer key starts a new page; the study guide
-        has each answer beside its question.</p>
+        has each answer beside its question. A question’s picture is not printed on these sheets: they have its words only.</p>
       <div class="bank-copy-row" id="bankCopyRow" hidden>
         <button type="button" class="secondary" id="bankCopyBtn">Copy selected to my bank</button>
         <span class="import-status" id="bankCopyStatus" role="status"></span>
@@ -753,7 +761,7 @@
       <h2>Share the bank</h2>
       <p class="hint">
         Save the whole bank as a file for a colleague or another computer, and bring one in. The bank file
-        keeps everything; the spreadsheet is for reading and editing in Excel or Sheets. A file you choose is
+        keeps everything, each question’s picture included; the spreadsheet is for reading and editing in Excel or Sheets. A file you choose is
         <b>shown first</b>: what it would add, what it would change and what it would leave out, and nothing is
         stored until you press Add. Importing <b>adds to</b> this bank and never deletes from it: a question
         already here is updated or skipped, so the same file can be imported twice.
@@ -863,7 +871,7 @@
    'bankPullCategory','bankCategoryOptions','bankPullBtn','bankPullStatus',
    'bankSource','bankSourceNote','bankCopyRow','bankCopyBtn','bankCopyStatus',
    'bankExportBtn','bankExportSheetBtn','bankImportFile','bankFileStatus',
-   'bankAddChoices','bankAddTags','bankListStatus',
+   'bankAddChoices','bankAddTags','bankAddPictureSlot','bankListStatus','importNote',
    'bankImportPreview','bankImportSummary','bankImportList','bankImportMore','bankImportAddBtn','bankImportCancelBtn',
    'arrivalCard','arrivalSummary','arrivalList','arrivalAddBtn','arrivalDismissBtn','arrivalStatus',
    'everyTeamToggle','everyTeamRule','boardStatus','etaPanel','etaRule','etaTeams','etaScoreBtn','etaStatus',
@@ -1080,6 +1088,20 @@
     (q.tags || []).forEach(function (t) { row.appendChild(el('span', 'bank-tag is-tag', t)); });
     var line = ReviewBankEditor.choicesLine(q);
     if (line) body.appendChild(line);
+    // Its picture (Path 12 P4). imageOf() gives a stored picture's reference
+    // or a well-formed data URL and nothing else, and ReviewBoardImage.url()
+    // is the only way either reaches a src.
+    var pic = QuestionBank.imageOf(q);
+    if (pic) {
+      var src = ReviewBoardImage.url(pic);
+      row.appendChild(el('span', 'bank-tag is-status', src ? 'has a picture' : 'picture missing from this browser'));
+      if (src) {
+        var img = el('img', 'bank-pic');
+        img.alt = 'Picture for: ' + (q.prompt || 'this question');
+        img.src = src;
+        body.appendChild(img);
+      }
+    }
     return body;
   }
 
@@ -1862,7 +1884,7 @@
 
   /** Defensively rebuilds a board object loaded from anywhere (a JSON
       import) so type mismatches or missing fields can't corrupt state. */
-  function normalizeBoard(loaded, name) {
+  function normalizeBoard(loaded, name, left) {
     var teamCount = Array.isArray(loaded.teams) && loaded.teams.length ? loaded.teams.length : 2;
     var categories = (Array.isArray(loaded.categories) ? loaded.categories : []).map(function (c) {
       var clues = (Array.isArray(c && c.clues) ? c.clues : []).map(function (cl) {
@@ -1877,7 +1899,13 @@
         // test) — an `idb:` reference names a picture in the browser that
         // exported the file, and anything else (a remote URL, a script-ish
         // string) is dropped rather than put into an <img src>.
-        if (ReviewBoardImage.isInline(cl && cl.image)) out.image = cl.image;
+        // What is dropped is named in `left`, when the caller hands one in:
+        // the same rule a bank file's pictures go through.
+        if (cl && cl.image !== undefined && cl.image !== null && cl.image !== '') {
+          var why = QuestionBank.imageProblem(cl.image);
+          if (!why && ReviewBoardImage.isInline(cl.image)) out.image = cl.image;
+          else if (left) left.push({ what: 'picture', clue: out.question || out.answer || 'a clue', why: why || 'it is not a picture' });
+        }
         // By the time normalizeBoard() sees it, an imported audioId has
         // already been through materializeImportedAudio() (a freshly stored
         // local IndexedDB clip) or been stripped — never a raw pointer from
@@ -1965,13 +1993,26 @@
 
   els.importBoardBtn.addEventListener('click', function () { els.importBoardFile.click(); });
 
+  /** Says which pictures and sounds an imported board file held that were
+      not taken, by clue, or clears the line. The clues themselves import. */
+  function sayImportLeft(name, left) {
+    els.importNote.hidden = !left.length;
+    if (!left.length) { els.importNote.textContent = ''; return; }
+    var said = left.slice(0, 8).map(function (x) { return 'the ' + x.what + ' on \u201c' + x.clue + '\u201d (' + x.why + ')'; });
+    els.importNote.textContent = 'Imported \u201c' + name + '\u201d with every clue. Left out: ' + said.join('; ') +
+      (left.length > 8 ? '; and ' + (left.length - 8) + ' more' : '') + '.';
+  }
+
   /** Walks a raw, untrusted decoded board and turns any inline `audio` data
       URL (the shape the export above writes) into a freshly stored local
       IndexedDB clip, rewriting the field to `audioId`. Any `audioId` already
       on the incoming object is dropped first — it would be a pointer into
       whatever browser exported the file, and means nothing on this one. */
-  function materializeImportedAudio(loaded) {
+  function materializeImportedAudio(loaded, left) {
     if (!Array.isArray(loaded.categories)) return Promise.resolve();
+    function leftOut(cl, why) {
+      if (left) left.push({ what: 'sound', clue: String(cl.question || cl.answer || 'a clue'), why: why });
+    }
     var jobs = [];
     loaded.categories.forEach(function (c) {
       if (!c || !Array.isArray(c.clues)) return;
@@ -1985,8 +2026,10 @@
             dataUrlToBlob(audio)
               .then(function (blob) { return window.RGBAudioDB.putClip(window.RGBAudioDB.genId(), blob); })
               .then(function (record) { cl.audioId = record.id; })
-              .catch(function () { /* a corrupt clip just imports without audio */ })
+              .catch(function () { leftOut(cl, 'its data is damaged'); /* a corrupt clip just imports without audio */ })
           );
+        } else if (typeof audio === 'string' && audio) {
+          leftOut(cl, /^data:audio\//.test(audio) ? 'this browser cannot store sounds' : 'it is not a sound');
         }
       });
     });
@@ -2012,9 +2055,11 @@
         alert('That board has no categories/clues to import.');
         return;
       }
-      materializeImportedAudio(decoded).then(function () {
+      var left = [];
+      sayImportLeft('', left);
+      materializeImportedAudio(decoded, left).then(function () {
         var name = uniqueBoardName(decoded.name || 'Imported Board');
-        var arrived = normalizeBoard(decoded, name);
+        var arrived = normalizeBoard(decoded, name, left);
         /* normalizeBoard() kept only real inline pictures. They are stored
            before the board is saved, so their bytes never land in
            localStorage; a picture the store refuses stays inline, still saved. */
@@ -2034,6 +2079,7 @@
         els.toolbar.style.display = '';
         renderBoard();
         sayMissingImages();
+        sayImportLeft(name, left);
       });
     };
     reader.onerror = function () { alert('Couldn’t read that file.'); };
@@ -3286,7 +3332,7 @@
 
   els.downloadTemplateBtn.addEventListener('click', downloadTemplate);
 
-  els.boardSwitch.addEventListener('change', function () { loadBoardByName(els.boardSwitch.value); });
+  els.boardSwitch.addEventListener('change', function () { sayImportLeft('', []); loadBoardByName(els.boardSwitch.value); });
   els.newBoardBtn.addEventListener('click', function () { showSetup(); });
 
   els.editBoardBtn.addEventListener('click', function () {
@@ -3463,8 +3509,10 @@
   var bankEdit = null;   // { id, form } while a question is open in the list
   var addChoices = ReviewBankEditor.choicesField({ idBase: 'bankAdd', answer: els.bankAnswer });
   var addTags = ReviewBankEditor.tagsField({ idBase: 'bankAdd', suggestions: bankTagsInUse });
+  var addPicture = ReviewBankEditor.pictureField({ idBase: 'bankAdd', images: ReviewBoardImage });
   els.bankAddChoices.appendChild(addChoices.node);
   els.bankAddTags.appendChild(addTags.node);
+  els.bankAddPictureSlot.appendChild(addPicture.node);
 
   function bankTagsInUse() { return QuestionBank.distinct(QuestionBank.list(), 'tags'); }
 
@@ -3497,8 +3545,14 @@
     if (problems.length) { bankEdit.form.say('error', problems[0]); return; }
     var original = QuestionBank.list().filter(function (q) { return q.id === id; })[0];
     if (!original) { closeBankEdit('That question is no longer in your bank, so nothing was saved.', 'error'); return; }
-    if (!ReviewBankEditor.changed(original, draft)) { closeBankEdit('Nothing was changed.'); return; }
-    var res = QuestionBank.saveQuestion(ReviewBankEditor.questionOf(draft, id));
+    // The picture is the ninth thing the form shows. It is written only when
+    // it changed: `media` with the new picture, or null to take `media` off.
+    var hasPicture = Object.prototype.hasOwnProperty.call(draft, 'image');
+    var pictureChanged = hasPicture && (draft.image || '') !== QuestionBank.imageOf(original);
+    if (!ReviewBankEditor.changed(original, draft) && !pictureChanged) { closeBankEdit('Nothing was changed.'); return; }
+    var toSave = ReviewBankEditor.questionOf(draft, id);
+    if (pictureChanged) toSave.media = QuestionBank.withImage(original, draft.image).media || null;
+    var res = QuestionBank.saveQuestion(toSave);
     if (res.newer) { bankEdit.form.say('error', 'Your bank was saved by a newer version of this page. Reload the page, then edit again.'); return; }
     if (!res.ok) { bankEdit.form.say('error', 'Your bank could not be saved, so the question is unchanged.'); return; }
     closeBankEdit('Saved the question.', 'ok');
@@ -3544,6 +3598,7 @@
         bankEdit.form = ReviewBankEditor.editForm({
           idBase: 'bankEdit', draft: draft || ReviewBankEditor.draftOf(q), title: entry.question,
           suggestions: bankTagsInUse, onSave: saveBankEdit,
+          images: ReviewBoardImage, image: QuestionBank.imageOf(q),
           onCancel: function () { closeBankEdit('Nothing was changed.'); }
         });
         row.appendChild(bankEdit.form.node);
@@ -3581,7 +3636,7 @@
             // Another question is open: its typed changes are not dropped without a word.
             var openId = bankEdit.id, typed = bankEdit.form.read();
             var open = QuestionBank.list().filter(function (x) { return x.id === openId; })[0];
-            if (open && typed && ReviewBankEditor.changed(open, typed) &&
+            if (open && typed && (ReviewBankEditor.changed(open, typed) || (typed.image || '') !== QuestionBank.imageOf(open)) &&
                 !confirm('Another question is open with changes that are not saved. Leave it without saving?')) return;
           }
           bankEdit = { id: entry.id, form: { read: function () { return null; } } };
@@ -3645,6 +3700,11 @@
   });
 
   els.bankAddBtn.addEventListener('click', function () {
+    // A picture still being read is waited for, so Add never leaves it behind.
+    var job = addPicture.pending();
+    if (job) job.then(addBankQuestion); else addBankQuestion();
+  });
+  function addBankQuestion() {
     var question = els.bankQuestion.value.trim();
     var answer = els.bankAnswer.value.trim();
     if (!question || !answer) {
@@ -3661,6 +3721,7 @@
       tags: addTags.get(), choices: addChoices.raw()
     });
     if (!fresh.choices.length) delete fresh.choices;
+    if (addPicture.get()) fresh.media = { image: addPicture.get() };
     var added = QuestionBank.saveQuestion(fresh);
     if (!added.ok) {
       els.bankAddStatus.className = 'import-status error';
@@ -3673,12 +3734,13 @@
     els.bankAnswer.value = '';
     addChoices.set([]);
     addTags.set([]);
+    addPicture.set('');
     els.bankAddStatus.className = 'import-status ok';
     els.bankAddStatus.textContent = 'Added to the bank.';
     // Unit/standard/difficulty/points are left as-is on purpose — adding a
     // run of questions for the same unit is the common case.
     renderBankList();
-  });
+  }
 
   [els.bankFilterUnit, els.bankFilterStandard, els.bankFilterDifficulty].forEach(function (el) {
     el.addEventListener('change', renderBankList);
@@ -3754,6 +3816,8 @@
     // From whichever source is showing: a seed set's question is pulled as
     // it is, with nothing copied into the bank on the way.
     var entries = ids.map(ReviewBankStore.findEntry).filter(Boolean);
+    var pulledFrom = {};
+    QuestionBank.questionsOf(bankSource()).forEach(function (q) { pulledFrom[q.id] = q; });
 
     ensureBoardEditorOpen();
     Array.prototype.slice.call(document.querySelectorAll('.tab-btn')).forEach(function (b) { b.classList.remove('active'); });
@@ -3782,7 +3846,10 @@
     var rowsBefore = clueList.querySelectorAll('.clue-row').length;
     entries.forEach(function (entry, i) {
       var pts = QuestionBank.isSeedId(entry.id) && !entry.points ? (rowsBefore + i + 1) * 100 : entry.points;
-      clueList.appendChild(newClueRow(pts, entry.question, entry.answer));
+      // Its picture goes with it, as the value itself: a clue and a bank
+      // question keep pictures in the one store, so nothing is copied.
+      var picture = QuestionBank.imageOf(pulledFrom[entry.id]);
+      clueList.appendChild(picture ? newClueRow(pts, entry.question, entry.answer, picture) : newClueRow(pts, entry.question, entry.answer));
     });
 
     bankSelected = {};
@@ -3808,8 +3875,27 @@
   els.bankExportBtn.addEventListener('click', function () {
     var all = QuestionBank.list();
     if (!all.length) { bankFileStatus('error', 'The bank is empty, so there is nothing to save yet.'); return; }
-    ExportKit.download(QuestionBank.toJSON(all, { title: 'Question bank' }), 'question-bank.json', 'application/json');
-    bankFileStatus('ok', 'Saved ' + countOf(all.length, 'question') + ' as question-bank.json.');
+    function write(list, pictures, gone) {
+      ExportKit.download(QuestionBank.toJSON(list, { title: 'Question bank' }), 'question-bank.json', 'application/json');
+      bankFileStatus('ok', 'Saved ' + countOf(all.length, 'question') + ' as question-bank.json' +
+        (pictures ? ', with ' + countOf(pictures, 'picture') + ' in the file' : '') + '.' +
+        (gone ? ' ' + countOf(gone, 'picture') + ' missing from this browser’s storage ' + (gone === 1 ? 'is' : 'are') + ' not in it.' : ''));
+    }
+    // A file never holds an `idb:` reference: each stored picture is read
+    // back and put in as a data URL, and one that is gone is left off. A
+    // bank with no picture is written at once, exactly as before.
+    if (!all.some(QuestionBank.imageOf)) { write(all, 0, 0); return; }
+    var pictures = 0, gone = 0;
+    Promise.all(all.map(function (q) {
+      var v = QuestionBank.imageOf(q);
+      if (!v) return q;
+      return ReviewBoardImage.inline(v).then(function (dataUrl) {
+        if (ReviewBoardImage.isInline(dataUrl)) pictures++; else { dataUrl = ''; gone++; }
+        return QuestionBank.withImage(q, dataUrl);
+      });
+    })).then(function (list) { write(list, pictures, gone); })['catch'](function () {
+      bankFileStatus('error', 'The bank’s pictures could not be read, so no file was saved.');
+    });
   });
 
   els.bankExportSheetBtn.addEventListener('click', function () {
@@ -3880,20 +3966,36 @@
   function importBankQuestions(parsed, name) {
     closeImportPreview();
     if (parsed.error) { bankFileStatus('error', parsed.error); return; }
-    pendingImport = { parsed: parsed, name: name || 'That file', signature: '' };
-    var plan = renderImportPreview();
-    if (plan.added + plan.updated) {
-      bankFileStatus('', 'Read ' + pendingImport.name + '. Nothing is stored yet: check the list below, then press Add.');
-    } else {
-      // Nothing to store, so this is already the whole outcome.
-      var none = QuestionBank.merge(QuestionBank.list(), parsed.questions);
-      bankFileStatus(none.invalid.length ? 'error' : 'ok', importResultMessage(none, parsed.rows));
+    /* Pictures first (Path 12 P4). cleanMedia() takes off every picture a
+       file may not carry and names it; the ones that stay are data URLs, and
+       they go into the media store BEFORE the list is drawn, so the preview
+       compares references with references (the same picture is the same id,
+       and a file imported twice changes nothing) and no picture's bytes land
+       in localStorage. One the store refuses stays a data URL. A picture of a
+       file that is then not imported is deleted by the next load's pass. A
+       file with no picture goes straight on, as it always did. */
+    var cleaned = QuestionBank.cleanMedia(parsed.questions, parsed.rows);
+    var note = QuestionBank.leftSentence(cleaned.left);
+    function show(questions) {
+      pendingImport = { parsed: { questions: questions, rows: parsed.rows, error: '' }, name: name || 'That file', signature: '', note: note };
+      var plan = renderImportPreview();
+      if (plan.added + plan.updated) {
+        bankFileStatus(note ? 'error' : '', 'Read ' + pendingImport.name + '. Nothing is stored yet: check the list below, then press Add.' + (note ? ' ' + note : ''));
+      } else {
+        // Nothing to store, so this is already the whole outcome.
+        var none = QuestionBank.merge(QuestionBank.list(), questions);
+        bankFileStatus(none.invalid.length || note ? 'error' : 'ok', importResultMessage(none, parsed.rows) + (note ? ' ' + note : ''));
+      }
     }
+    if (!cleaned.images.length) { show(cleaned.questions); return; }
+    ReviewBoardImage.store(cleaned.images).then(function (map) {
+      show(QuestionBank.applyImages(cleaned.questions, map));
+    }, function () { show(cleaned.questions); });
   }
 
   els.bankImportAddBtn.addEventListener('click', function () {
     if (!pendingImport) return;
-    var shown = pendingImport.signature, parsed = pendingImport.parsed;
+    var shown = pendingImport.signature, parsed = pendingImport.parsed, note = pendingImport.note || '';
     if (renderImportPreview().signature !== shown) {
       bankFileStatus('error', 'Your bank has changed since this list was drawn, so nothing was stored. Check the list again, then press Add.');
       return;
@@ -3902,7 +4004,7 @@
     if (res.newer) { bankFileStatus('error', 'This bank was saved by a newer version of this page. Reload the page, then import again.'); return; }
     if (!res.ok) { bankFileStatus('error', 'The bank could not be saved, so nothing was imported.'); return; }
     closeImportPreview();
-    bankFileStatus(res.added || res.updated || !res.invalid.length ? 'ok' : 'error', importResultMessage(res, parsed.rows));
+    bankFileStatus(!note && (res.added || res.updated || !res.invalid.length) ? 'ok' : 'error', importResultMessage(res, parsed.rows) + (note ? ' ' + note : ''));
     renderBankList();
     els.bankImportFile.focus();
   });
@@ -3949,8 +4051,9 @@
      then — at boot only, with media-db.js's ten-minute grace — delete stored
      pictures no saved board points at. Deleting a board, removing a picture
      or saving an edited board under a new name deletes nothing at that
-     moment; this pass does, next time. The question bank carries no
-     pictures, so it adds nothing to the keep-set. Switching boards hydrates
+     moment; this pass does, next time. Since Path 12 P4 a question in the
+     bank may carry a picture in this same store (bankImages() below), and
+     those references are in the keep-set too. Switching boards hydrates
      the one opened (loadBoardByName). __clueImagesSettled is for the suite. */
 
   /** [{ name, board }] for the open board and every other saved one, read fresh. */
@@ -4011,6 +4114,15 @@
     });
   }
 
+  /** Every picture value the question bank holds (Path 12 P4), read without
+      writing. They are in the same store as the clues', so they are in what
+      the pass below keeps, and they are given object URLs with the board's.
+      An inline one stays inline: this pass moves the boards' only. */
+  function bankImages() {
+    try { return QuestionBank.peek().map(QuestionBank.imageOf).filter(Boolean); }
+    catch (e) { return null; }                       // unreadable: nothing is deleted this load
+  }
+
   var imagesSettled = false;   // until then, the boot pass hydrates the open board
   function settleImages() {
     return ReviewBoardImage.store(everyImage())
@@ -4019,7 +4131,16 @@
         return showImages();
       })
       .then(function () {
-        return ReviewBoardImage.gc(everyImage().filter(ReviewBoardImage.isRef));
+        var held = bankImages() || [];
+        if (!held.length) return null;
+        return ReviewBoardImage.hydrate(held).then(function () {
+          if (els.bankSection.classList.contains('active')) renderBankList();   // already showing (a link's arrival)
+        });
+      })
+      .then(function () {
+        var held = bankImages();
+        if (held === null) return 0;
+        return ReviewBoardImage.gc(everyImage().concat(held).filter(ReviewBoardImage.isRef));
       })['catch'](function () { /* reads never block the page */ })
       .then(function () { imagesSettled = true; renderStorageLine(); });
   }
