@@ -403,6 +403,27 @@
   #roundOverlay .award-row button:disabled { opacity: .55; cursor: not-allowed; }
   .sheet-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .9rem; }
 
+  /* Spin the wheel (Path 12 P3, increment 3). The wheel is a picture of a
+     draw already made (rgb-play.js): it turns, or under reduced motion it
+     does not, and the result is the words beside it and the focus on the
+     chosen clue. The landed cell is marked by a dashed line and an arrow,
+     not by a colour. */
+  .wheel-row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start; margin-top: .7rem; }
+  .wheel-picture { flex: 0 0 11rem; width: 11rem; max-width: 100%; }
+  .wheel-picture svg { display: block; width: 100%; height: auto; }
+  .wheel-side { flex: 1 1 16rem; min-width: 0; }
+  .wheel-side .hint { margin: .4rem 0 0; }
+  .wheel-side ol { margin: .4rem 0 0; padding-left: 1.8rem; font-size: .85rem; }
+  .wheel-disc { transition: transform 1.2s cubic-bezier(.2, .8, .2, 1); }
+  .wheel-wedge { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
+  .wheel-wedge.alt { fill: var(--line); }
+  .wheel-wedge.extra { fill: var(--paper); stroke-dasharray: 3 2; }
+  .wheel-label { fill: var(--ink); font: 700 11px Consolas, monospace; text-anchor: middle; dominant-baseline: central; }
+  .wheel-pointer { fill: var(--ink); }
+  .cell.wheel-landed { outline: 3px dashed #fff; outline-offset: -7px; }
+  .cell.wheel-landed::before { content: "\25B6\00A0"; }
+  @media (prefers-reduced-motion: reduce) { .wheel-disc { transition: none; } }
+
   /* The practice quiz with its key, and the study guide (rgb-play.js). Like
      the two sheets above these are drawn only in #printArea, so the greys
      are print values. No box has a fixed height: a long question grows. */
@@ -550,6 +571,7 @@
       <label><input type="checkbox" id="everyTeamToggle" aria-describedby="everyTeamRule"> Every team answers (mark each team on every clue)</label>
       <label><input type="checkbox" id="finalToggle" aria-describedby="finalRule"> Final wager round (one last question, every team wagers)</label>
       <label><input type="checkbox" id="quizBowlToggle" aria-describedby="quizBowlRule"> Quiz-bowl round (toss-ups and bonus questions)</label>
+      <label><input type="checkbox" id="wheelToggle" aria-describedby="wheelRule"> Spin the wheel (a spin chooses the clue)</label>
     </div>
     <p class="hint" id="everyTeamRule" hidden>Every team answers each clue. When the answer is shown, mark each team
       right, wrong or no answer, then press <b>Score this clue</b>. A right answer scores the clue&rsquo;s points; a
@@ -596,6 +618,28 @@
       </div>
       <p class="hint" id="quizBowlProgress" style="margin-top:.5rem;"></p>
       <p class="import-status" id="quizBowlStatus" role="status"></p>
+    </div>
+    <div class="round-setup" id="wheelSetup" hidden>
+      <p class="hint" id="wheelRule">A spin chooses the clue, not a team. The wheel has one wedge for every clue not yet
+        played, and a spin is as likely to land on one wedge as on any other. Press <b>Spin the wheel</b> (or the
+        <kbd>S</kbd> key): the result is written under the button, and the chosen clue takes the focus on the board, so
+        <kbd>Enter</kbd> opens it. A clue can still be opened by hand. The spins of a game are worked out from a number
+        kept with the board, so reloading the page does not change the next spin; Reset game starts a new sequence.
+        Two extra wedges are off unless you tick them, and each is one more wedge, as likely as any other:</p>
+      <div class="board-options">
+        <label><input type="checkbox" id="wheelLoseToggle"> Lose a turn (no clue that spin)</label>
+        <label><input type="checkbox" id="wheelDoubleToggle"> Double points (the next clue played is worth twice its points; a Daily Double keeps its own wager, and the double waits)</label>
+      </div>
+      <div class="wheel-row">
+        <div class="wheel-picture" id="wheelPicture" aria-hidden="true"></div>
+        <div class="wheel-side">
+          <button type="button" id="wheelSpinBtn">Spin the wheel</button>
+          <p class="import-status" id="wheelStatus" role="status"></p>
+          <p class="hint" id="wheelOdds"></p>
+          <p class="hint" id="wheelProgress"></p>
+          <details id="wheelDetails"><summary id="wheelSummary">What is on the wheel</summary><ol id="wheelList"></ol></details>
+        </div>
+      </div>
     </div>
     <div class="scoreboard" id="scoreboard"></div>
     <div class="score-toolbar">
@@ -827,6 +871,8 @@
    'finalToggle','finalSetup','finalQuestion','finalAnswer','finalSource','finalPick','finalUseBtn','finalStartBtn','finalUndoBtn','finalStatus',
    'quizBowlToggle','quizBowlSetup','quizBowlSource','qbTossup','qbBonus','qbPenalty','quizBowlStartBtn','quizBowlUndoBtn','quizBowlNewBtn',
    'quizBowlProgress','quizBowlStatus',
+   'wheelToggle','wheelSetup','wheelLoseToggle','wheelDoubleToggle','wheelPicture','wheelSpinBtn','wheelStatus','wheelOdds','wheelProgress',
+   'wheelDetails','wheelSummary','wheelList',
    'roundOverlay','roundHead','roundQuestion','roundAnswer','roundBody','roundActions','roundStatus','roundCloseBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -1614,6 +1660,7 @@
     // And only one that has used the final wager round or quiz-bowl carries those.
     if (rounds && rounds.final) state.final = rounds.final;
     if (rounds && rounds.quizBowl) state.quizBowl = rounds.quizBowl;
+    if (rounds && rounds.wheel) state.wheel = rounds.wheel;   // and the wheel
     ReviewBoardStore.setCurrentName(name);
     assignDailyDouble();
     clearUndoStack();
@@ -1667,6 +1714,17 @@
     var fin = ReviewBoardPlay.cleanFinal(from.final, n), qb = ReviewBoardPlay.cleanQuizBowl(from.quizBowl, n);
     if (fin) board.final = fin; else delete board.final;
     if (qb) board.quizBowl = qb; else delete board.quizBowl;
+    var wh = ReviewBoardPlay.cleanWheel(from.wheel, board.categories);
+    if (wh && !wh.seed) wh.seed = newWheelSeed();
+    if (wh) board.wheel = wh; else delete board.wheel;
+  }
+
+  /** The number a game's spins are worked out from. Chance happens here,
+      once a game, and nowhere else in the wheel. */
+  function newWheelSeed() {
+    var words = [Math.floor(Math.random() * 4294967296), Math.floor(Math.random() * 4294967296)];
+    try { if (window.crypto && window.crypto.getRandomValues) words = Array.prototype.slice.call(window.crypto.getRandomValues(new Uint32Array(2))); } catch (e) { /* the two above */ }
+    return words.map(function (n) { return ('0000000' + n.toString(16)).slice(-8); }).join('');
   }
 
   function loadBoardByName(name) {
@@ -2073,6 +2131,7 @@
       header.style.gridRow = 1;
       els.boardCols.appendChild(header);
     });
+    var landed = ReviewBoardPlay.wheelLanded(state.categories, state.wheel);   // null on a board without the wheel
     for (var r = 0; r < maxClues; r++) {
       state.categories.forEach(function (cat, ci) {
         var clue = cat.clues[r];
@@ -2089,6 +2148,10 @@
           btn.addEventListener('click', (function (catIdx, clueIdx) {
             return function () { openClue(catIdx, clueIdx); };
           })(ci, r));
+          if (landed && landed.cat === ci && landed.clue === r) {
+            btn.classList.add('wheel-landed');
+            btn.setAttribute('aria-label', cat.name + ' for ' + clue.points + ', chosen by the wheel');
+          }
         }
         btn.style.gridRow = r + 2;
         els.boardCols.appendChild(btn);
@@ -2169,7 +2232,8 @@
       els.wagerAmount.value = Math.max(clue.points * 2, 0);
       els.wagerPanel.style.display = '';
     } else {
-      els.overlayCatPoints.textContent = cat.name + ' — ' + clue.points;
+      var worth = ReviewBoardPlay.wheelWorth(clue.points, state.wheel);   // clue.points itself unless the wheel doubled it
+      els.overlayCatPoints.textContent = cat.name + ' — ' + worth + (worth === clue.points ? '' : ' (double points)');
       els.showAnswerBtn.style.display = '';
       els.closeNoAskBtn.style.display = '';
       showOverlayAudioFor(clue, overlayAudioToken);
@@ -2199,6 +2263,9 @@
   function markCurrentClueUsed() {
     if (!currentClue) return;
     state.categories[currentClue.catIdx].clues[currentClue.clueIdx].used = true;
+    // The wheel's double is spent on the clue it doubled. A Daily Double is
+    // its own wager and was not doubled, so the double waits.
+    if (state.wheel && state.wheel.doubleNext && !dailyDoubleWager) state.wheel.doubleNext = false;
   }
 
   function closeOverlay() {
@@ -2272,12 +2339,13 @@
       els.awardRow.appendChild(correctBtn);
       els.awardRow.appendChild(incorrectBtn);
     } else {
+      var worth = ReviewBoardPlay.wheelWorth(clue.points, state.wheel);
       state.teams.forEach(function (team, ti) {
         var b = document.createElement('button');
-        b.textContent = '+' + clue.points + ' ' + team.name;
+        b.textContent = '+' + worth + ' ' + team.name;
         b.addEventListener('click', function () {
-          team.score += clue.points;
-          pushScoreUndo(ti, clue.points, savedClue.catIdx, savedClue.clueIdx);
+          team.score += worth;
+          pushScoreUndo(ti, worth, savedClue.catIdx, savedClue.clueIdx);
           markCurrentClueUsed();
           closeOverlay();
           renderBoard();
@@ -2307,7 +2375,7 @@
 
   function showEveryTeamPanel(clue, at) {
     everyTeamClue = at;
-    els.etaRule.textContent = 'Mark every team, then score the clue. Right scores ' + (Number(clue.points) || 0) +
+    els.etaRule.textContent = 'Mark every team, then score the clue. Right scores ' + (Number(ReviewBoardPlay.wheelWorth(clue.points, state.wheel)) || 0) +
       '; wrong and no answer score nothing.';
     els.etaStatus.textContent = '';
     els.etaTeams.textContent = '';
@@ -2347,8 +2415,9 @@
   els.etaScoreBtn.addEventListener('click', function () {
     if (!state || !everyTeamClue || !currentClue) return;
     var at = everyTeamClue, cat = state.categories[at.catIdx], clue = cat.clues[at.clueIdx];
-    var marks = everyTeamMarks(), deltas = ReviewBoardPlay.score(clue.points, marks);
-    var label = cat.name + ' ' + clue.points;
+    var worth = ReviewBoardPlay.wheelWorth(clue.points, state.wheel);
+    var marks = everyTeamMarks(), deltas = ReviewBoardPlay.score(worth, marks);
+    var label = cat.name + ' ' + clue.points + (worth === clue.points ? '' : ' (double points)');
     deltas.forEach(function (d, i) { state.teams[i].score += d; });
     clue.marks = marks;
     undoStack.push({ group: deltas, label: label, catIdx: at.catIdx, clueIdx: at.clueIdx });
@@ -2359,7 +2428,7 @@
     renderBoard();
     deltas.forEach(function (d, i) { if (d) flashTeamScore(i, d > 0); });
     els.boardStatus.className = 'import-status ok';
-    els.boardStatus.textContent = ReviewBoardPlay.summary(label, clue.points,
+    els.boardStatus.textContent = ReviewBoardPlay.summary(label, worth,
       state.teams.map(function (t) { return t.name; }), marks);
     var next = els.boardCols.querySelector('.cell:not(.used):not(.blank)');
     (next || els.undoScoreBtn).focus();
@@ -2422,7 +2491,159 @@
     els.finalUseBtn.disabled = !list.length;
   }
 
+  /* ---------- spin the wheel (Path 12 P3, increment 3; the rules are
+     rgb-play.js's) ----------
+     Opt-in on a board (`state.wheel.on`); a board that never ticked the box
+     has no such field. A spin is worked out from the board's stored seed and
+     the spin's number, recorded and saved BEFORE the picture turns, so the
+     picture is never the draw. Nothing is conveyed by the turning or by a
+     colour: the result is the sentence in #wheelStatus (written once, when
+     the wheel stops) and the focus on the chosen clue. */
+  var WHEEL_NS = 'http://www.w3.org/2000/svg';
+  var WHEEL_TURN_MS = 1250;
+  var wheelTimer = null;
+
+  function svgEl(tag, className) {
+    var node = document.createElementNS(WHEEL_NS, tag);
+    if (className) node.setAttribute('class', className);
+    return node;
+  }
+  function wheelPoint(radius, degrees) {
+    var a = degrees * Math.PI / 180;
+    return (radius * Math.sin(a)).toFixed(2) + ' ' + (-radius * Math.cos(a)).toFixed(2);
+  }
+  function wheelStill() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  function wheelLastLabel(w) {
+    var last = w.last;
+    if (!last) return '';
+    if (last.kind === 'lose') return 'Lose a turn';
+    if (last.kind === 'double') return 'Double points';
+    var c = state.categories[last.cat], cl = c && c.clues[last.clue];
+    return cl ? c.name + ' for ' + cl.points : '';
+  }
+
+  /** The picture: a wedge a clue not yet played (numbered as the list beside
+      it is) and one an extra wedge, under a pointer at the top. `at` is the
+      wedge the pointer rests on, or -1. */
+  function drawWheel(wedges, at) {
+    els.wheelPicture.textContent = '';
+    var svg = svgEl('svg'), disc = svgEl('g', 'wheel-disc'), step = wedges.length ? 360 / wedges.length : 360;
+    svg.setAttribute('viewBox', '-112 -122 224 234');
+    svg.setAttribute('focusable', 'false');
+    disc.id = 'wheelDisc';
+    wedges.forEach(function (wedge, i) {
+      var shape;
+      if (wedges.length === 1) {
+        shape = svgEl('circle');
+        shape.setAttribute('r', '100');
+      } else {
+        shape = svgEl('path');
+        shape.setAttribute('d', 'M0 0 L' + wheelPoint(100, i * step) + ' A100 100 0 ' + (step > 180 ? 1 : 0) + ' 1 ' + wheelPoint(100, (i + 1) * step) + ' Z');
+      }
+      shape.setAttribute('class', 'wheel-wedge' + (wedge.kind !== 'clue' ? ' extra' : i % 2 ? ' alt' : ''));
+      disc.appendChild(shape);
+      var label = svgEl('text', 'wheel-label'), mid = wheelPoint(wedges.length === 1 ? 0 : 74, (i + 0.5) * step).split(' ');
+      label.setAttribute('x', mid[0]);
+      label.setAttribute('y', mid[1]);
+      label.textContent = wedge.kind === 'lose' ? 'L' : wedge.kind === 'double' ? '×2' : String(i + 1);
+      disc.appendChild(label);
+    });
+    if (!wedges.length) { var rim = svgEl('circle', 'wheel-wedge extra'); rim.setAttribute('r', '100'); disc.appendChild(rim); }
+    disc.style.transform = 'rotate(' + (at >= 0 ? -(at + 0.5) * step : 0) + 'deg)';
+    svg.appendChild(disc);
+    var pointer = svgEl('path', 'wheel-pointer');
+    pointer.setAttribute('d', 'M-9 -121 L9 -121 L0 -99 Z');
+    svg.appendChild(pointer);
+    els.wheelPicture.appendChild(svg);
+  }
+
+  function renderWheel() {
+    var P = ReviewBoardPlay, w = state.wheel, on = !!(w && w.on);
+    els.wheelToggle.checked = on;
+    els.wheelSetup.hidden = !on;
+    if (!on) return;
+    els.wheelLoseToggle.checked = !!w.lose;
+    els.wheelDoubleToggle.checked = !!w.double;
+    var wedges = P.wheelWedges(state.categories, w), at = -1, last = w.last;
+    wedges.forEach(function (wedge, i) {
+      if (last && wedge.kind === last.kind && (last.kind !== 'clue' || (wedge.cat === last.cat && wedge.clue === last.clue))) at = i;
+    });
+    drawWheel(wedges, at);
+    els.wheelOdds.textContent = P.wheelOdds(state.categories, w);
+    var lastLabel = wheelLastLabel(w);
+    els.wheelProgress.textContent = (w.spins ? 'Spins so far: ' + w.spins + '.' + (lastLabel ? ' Last: ' + lastLabel + '.' : '') : 'No spin yet.') +
+      (w.doubleNext ? ' A double is waiting: the next clue played is worth twice its points.' : '');
+    els.wheelSummary.textContent = 'What is on the wheel (' + wedges.length + (wedges.length === 1 ? ' wedge)' : ' wedges)');
+    els.wheelList.textContent = '';
+    wedges.forEach(function (wedge) { els.wheelList.appendChild(el('li', '', wedge.label)); });
+  }
+
+  /** The wheel has stopped: say where, once, and put the focus there. */
+  function wheelLand(sentence, onClue) {
+    wheelTimer = null;
+    renderBoard();
+    setStatus(els.wheelStatus, '', sentence);
+    var cell = onClue ? els.boardCols.querySelector('.cell.wheel-landed') : null;
+    (cell || els.wheelSpinBtn).focus();
+  }
+
+  function spinWheel() {
+    var P = ReviewBoardPlay, w = state && state.wheel;
+    if (!w || !w.on || wheelTimer) return;
+    var spin = P.wheelSpin(state.categories, w);
+    if (!spin) { setStatus(els.wheelStatus, '', P.wheelSentence(null, w)); els.wheelSpinBtn.focus(); return; }
+    var doubled = !!w.doubleNext;
+    P.wheelApply(w, spin);
+    save();                                    // the spin is the board's before the picture moves
+    var sentence = P.wheelSentence(spin, { doubleNext: doubled }), onClue = spin.wedge.kind === 'clue';
+    if (wheelStill()) { wheelLand(sentence, onClue); return; }
+    setStatus(els.wheelStatus, '', '');
+    var disc = document.getElementById('wheelDisc'), step = 360 / spin.count;
+    var now = parseFloat((/rotate\((-?[\d.]+)deg\)/.exec(disc.style.transform) || [0, 0])[1]) || 0;
+    var target = Math.ceil(now / 360) * 360 + 1080 - (spin.index + 0.5) * step;
+    void disc.getBoundingClientRect();
+    disc.style.transform = 'rotate(' + target + 'deg)';
+    wheelTimer = setTimeout(function () { wheelLand(sentence, onClue); }, WHEEL_TURN_MS);
+  }
+
+  els.wheelToggle.addEventListener('change', function () {
+    if (!state) return;
+    if (!state.wheel) { state.wheel = ReviewBoardPlay.wheelNew(newWheelSeed()); state.wheel.on = false; }
+    state.wheel.on = els.wheelToggle.checked;
+    if (!state.wheel.on) state.wheel.doubleNext = false;
+    save();
+    renderBoard();
+    setStatus(els.wheelStatus, '', '');
+    setStatus(els.boardStatus, '', state.wheel.on
+      ? 'Spin the wheel is on. Its rule and its button are under the options above.'
+      : 'Spin the wheel is off. A clue is chosen by hand, as before.');
+  });
+  [['wheelLoseToggle', 'lose', 'Lose a turn'], ['wheelDoubleToggle', 'double', 'Double points']].forEach(function (t) {
+    els[t[0]].addEventListener('change', function () {
+      if (!state || !state.wheel) return;
+      state.wheel[t[1]] = els[t[0]].checked;
+      save();
+      renderBoard();
+      setStatus(els.wheelStatus, '', t[2] + (state.wheel[t[1]] ? ' is now a wedge on the wheel. ' : ' is off the wheel. ') + ReviewBoardPlay.wheelOdds(state.categories, state.wheel));
+    });
+  });
+  els.wheelSpinBtn.addEventListener('click', spinWheel);
+  /* S spins, when the board is what is on the screen and nothing is being typed. */
+  document.addEventListener('keydown', function (e) {
+    if (!/^s$/i.test(e.key) || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    if (!state || !state.wheel || !state.wheel.on) return;
+    if (els.overlay.classList.contains('show') || els.roundOverlay.classList.contains('show')) return;
+    if (els.boardCard.style.display === 'none' || !els.boardsSection.classList.contains('active')) return;
+    var t = e.target, tag = t && t.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+    e.preventDefault();
+    spinWheel();
+  });
+
   function renderRounds() {
+    renderWheel();
     var P = ReviewBoardPlay, f = state.final, q = state.quizBowl;
     els.finalToggle.checked = !!(f && f.on);
     els.finalSetup.hidden = !(f && f.on);
@@ -3015,6 +3236,8 @@
             if (cl.used && Object.prototype.hasOwnProperty.call(editingBoard.marksMap, key)) cl.marks = editingBoard.marksMap[key];
           });
         });
+        // The clues may have moved: the wheel keeps its count and forgets where it last landed.
+        if (editingBoard.rounds.wheel) editingBoard.rounds.wheel.last = null;
         startBoard(name, categories, editingBoard.teams, editingBoard.dailyDoubleEnabled,
           editingBoard.lightningRoundEnabled, editingBoard.lightningRoundSeconds, editingBoard.everyTeam, editingBoard.rounds);
       } else {
@@ -3083,7 +3306,7 @@
     var lightningRoundEnabled = state.lightningRoundEnabled;
     var lightningRoundSeconds = state.lightningRoundSeconds;
     var everyTeam = state.everyTeam;           // undefined on a board that never used the mode
-    var rounds = { final: state.final, quizBowl: state.quizBowl };   // each undefined likewise
+    var rounds = { final: state.final, quizBowl: state.quizBowl, wheel: state.wheel };   // each undefined likewise
     var marksMap = {};
     categories.forEach(function (c) {
       c.clues.forEach(function (cl) { if (Array.isArray(cl.marks)) marksMap[c.name + '||' + cl.question] = cl.marks; });
@@ -3105,6 +3328,7 @@
     ReviewBoardPlay.clearMarks(state.categories);
     ReviewBoardPlay.finalClear(state.final);                 // the question stays, the wagers go
     if (state.quizBowl) { state.quizBowl.log = []; state.quizBowl.over = false; }
+    ReviewBoardPlay.wheelReset(state.wheel, newWheelSeed());   // a new game: a new sequence of spins
     assignDailyDouble();
     clearUndoStack();
     save();

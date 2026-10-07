@@ -164,6 +164,7 @@
     "test:play-modes-core": "node Tools/review-game-board/test/smoke-play-core.mjs",
     "test:play-modes": "node Tools/review-game-board/test/smoke-play-modes.mjs",
     "test:play-rounds": "node Tools/review-game-board/test/smoke-play-rounds.mjs",
+    "test:play-wheel": "node Tools/review-game-board/test/smoke-play-wheel.mjs",
     "test:export": "node Tools/export/test/export.test.mjs && node Tools/export/test/smoke-export.mjs",
     "test:trading-card-pdf": "node Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs",
     "test:image-to-pdf-impose": "node Tools/image-to-pdf/test/smoke-impose.mjs",

@@ -381,5 +381,177 @@ eq(P.cleanQuizBowl({ log: [{ id: 'a', wrong: [], right: 2 }] }, 2).log[0].right,
   eq(b.final.wagers, [10, 30], 'and a place below zero drops nobody');
 }
 
+/* ── spin the wheel ─────────────────────────────────────────────────────── */
+{
+  const clue = (points, used) => ({ points, question: 'Q' + points, answer: 'A', used: !!used });
+  const cats = () => [
+    { name: 'Rivers', clues: [clue(100, true), clue(200), clue(300)] },
+    { name: 'Deltas', clues: [clue(100), clue(200)] },
+  ];
+  eq(P.wheelNew('abc'), { on: true, seed: 'abc', spins: 0, lose: false, double: false, doubleNext: false, last: null }, 'a new wheel: no spin made, both extra wedges off');
+  eq(P.wheelNew('x'.repeat(200)).seed.length, 64, 'a seed is cut to 64 characters');
+
+  /* the wedges */
+  const w = P.wheelNew('seed-1');
+  eq(P.wheelWedges(cats(), w), [
+    { kind: 'clue', cat: 0, clue: 1, label: 'Rivers for 200' }, { kind: 'clue', cat: 0, clue: 2, label: 'Rivers for 300' },
+    { kind: 'clue', cat: 1, clue: 0, label: 'Deltas for 100' }, { kind: 'clue', cat: 1, clue: 1, label: 'Deltas for 200' },
+  ], 'one wedge for every clue not yet played, category by category, and none for a played clue');
+  eq(P.wheelWedges(cats(), Object.assign({}, w, { lose: true })).map(x => x.label).slice(4), ['Lose a turn'], 'Lose a turn is one more wedge when it is turned on');
+  eq(P.wheelWedges(cats(), Object.assign({}, w, { double: true })).map(x => x.label).slice(4), ['Double points'], 'and so is Double points');
+  eq(P.wheelWedges(cats(), Object.assign({}, w, { lose: true, double: true })).map(x => x.kind), ['clue', 'clue', 'clue', 'clue', 'lose', 'double'], 'both on: the clues, then Lose a turn, then Double points');
+  const allUsed = [{ name: 'Rivers', clues: [clue(100, true)] }];
+  eq(P.wheelWedges(allUsed, Object.assign({}, w, { lose: true, double: true })), [], 'with every clue played there is no wheel, extra wedges or not');
+  eq([P.wheelWedges(undefined, w), P.wheelWedges([{ name: 'x' }, null], w)], [[], []], 'and none for a board with no clue at all');
+
+  /* the draw */
+  eq([P.wheelDraw('s', 1, 0), P.wheelDraw('s', 1, -3), P.wheelDraw('s', 1, 'x')], [-1, -1, -1], 'no wedge, no draw');
+  eq([P.wheelDraw('s', 1, 1), P.wheelDraw('s', 99, 1)], [0, 0], 'one wedge: the spin lands on it');
+  eq([1, 2, 3, 4, 5, 6, 7, 8].map(n => P.wheelDraw('seed-1', n, 6)), [1, 2, 3, 4, 5, 6, 7, 8].map(n => P.wheelDraw('seed-1', n, 6)), 'the same seed, spin and wedge count give the same wedge');
+  eq([1, 2, 3, 4, 5, 6, 7, 8].map(n => P.wheelDraw('seed-1', n, 6)), [1, 2, 3, 3, 1, 5, 1, 2], 'spins 1 to 8 of seed-1 over six wedges are these, and stay these');
+  ok([1, 2, 3, 4, 5, 6, 7, 8].map(n => P.wheelDraw('seed-2', n, 6)).join() !== [1, 2, 3, 4, 5, 6, 7, 8].map(n => P.wheelDraw('seed-1', n, 6)).join(), 'another seed gives another sequence');
+  {
+    /* Fairness, stated: over 24,000 seeds, the first spin over 12 wedges lands
+       on each wedge within 1.5 percentage points of 1 in 12 (8.33%), and the
+       same holds for spin 7 and for 5 and 30 wedges at their own share. The
+       seeds are fixed, so this is one sum, not a chance. */
+    const SEEDS = 24000;
+    for (const [count, n] of [[12, 1], [12, 7], [5, 1], [30, 3], [2, 1]]) {
+      const hits = new Array(count).fill(0);
+      let outside = 0;
+      for (let i = 0; i < SEEDS; i++) { const d = P.wheelDraw('game-' + i, n, count); if (d >= 0 && d < count && Math.floor(d) === d) hits[d]++; else outside++; }
+      const worst = Math.max(...hits.map(h => Math.abs(h / SEEDS - 1 / count)));
+      eq(outside, 0, `spin ${n} over ${count} wedges is always a wedge of the wheel`);
+      ok(worst <= 0.015, `spin ${n} over ${count} wedges: each wedge's share over ${SEEDS} seeds is within 1.5 points of 1 in ${count} (worst ${(worst * 100).toFixed(2)})`);
+      ok(Math.min(...hits) > 0, `and every one of the ${count} wedges is landed on`);
+    }
+    /* one seed, many spins: the sequence of one game is fair too */
+    const hits = new Array(8).fill(0);
+    for (let n = 1; n <= 24000; n++) hits[P.wheelDraw('one-game', n, 8)]++;
+    ok(Math.max(...hits.map(h => Math.abs(h / 24000 - 1 / 8))) <= 0.015, 'and 24,000 spins of one seed over 8 wedges are within 1.5 points of 1 in 8 each');
+  }
+
+  /* a spin, and what it records */
+  const spin = P.wheelSpin(cats(), w);
+  eq(spin, { n: 1, index: P.wheelDraw('seed-1', 1, 4), count: 4, wedge: P.wheelWedges(cats(), w)[P.wheelDraw('seed-1', 1, 4)] }, 'a spin is the draw for the next number over the wedges as they stand');
+  eq(w, P.wheelNew('seed-1'), 'and working it out records nothing');
+  eq(P.wheelSpin(cats(), w), spin, 'so asked again before it is recorded, it is the same spin (a reload does not re-roll)');
+  P.wheelApply(w, spin);
+  eq([w.spins, w.last], [1, { n: 1, kind: 'clue', cat: spin.wedge.cat, clue: spin.wedge.clue }], 'recording it counts it and keeps where it landed');
+  eq(P.wheelSpin(cats(), w).n, 2, 'the next spin is number 2');
+  eq(P.wheelSpin(allUsed, w), null, 'no unplayed clue, no spin');
+  eq(P.wheelSpin(cats(), null), null, 'and none without a wheel');
+  {
+    /* a whole game, twice, and once more through JSON half-way (a reload):
+       the same sequence, every clue once, never a played one */
+    const play = reloadAt => {
+      let c = cats(), wh = P.wheelNew('game-7');
+      wh.lose = true; wh.double = true;
+      const seq = [];
+      for (let i = 0; i < 200; i++) {
+        if (i === reloadAt) { c = JSON.parse(JSON.stringify(c)); wh = P.cleanWheel(JSON.parse(JSON.stringify(wh)), c); }
+        const s = P.wheelSpin(c, wh);
+        if (!s) break;
+        if (s.wedge.kind === 'clue') { if (c[s.wedge.cat].clues[s.wedge.clue].used) seq.push('PLAYED'); c[s.wedge.cat].clues[s.wedge.clue].used = true; wh.doubleNext = false; }
+        P.wheelApply(wh, s);
+        seq.push(s.wedge.label);
+      }
+      return seq;
+    };
+    const a = play(-1);
+    eq(play(-1), a, 'the same board and seed played twice give the same sequence of spins');
+    eq(play(3), a, 'and the same again when the game is saved and read back after the third spin');
+    eq(a.filter(l => /for \d/.test(l)).sort(), ['Deltas for 100', 'Deltas for 200', 'Rivers for 200', 'Rivers for 300'], 'every unplayed clue is landed on once');
+    ok(!a.includes('PLAYED') && !a.includes('Rivers for 100'), 'and a clue already played is never chosen');
+    ok(a.length < 200, 'the game ends when the clues do');
+  }
+  {
+    /* never a played clue, over many seeds and boards */
+    let bad = 0, spins = 0;
+    for (let i = 0; i < 3000; i++) {
+      const c = cats(), wh = P.wheelNew('n-' + i);
+      wh.lose = i % 2 === 0; wh.double = i % 3 === 0;
+      c[i % 2].clues[i % 2].used = true;
+      for (let k = 0; k < 40; k++) {
+        const s = P.wheelSpin(c, wh);
+        if (!s) break;
+        spins++;
+        if (s.index < 0 || s.index >= s.count || !s.wedge) { bad++; break; }
+        if (s.wedge.kind === 'clue') { if (c[s.wedge.cat].clues[s.wedge.clue].used) bad++; c[s.wedge.cat].clues[s.wedge.clue].used = true; }
+        P.wheelApply(wh, s);
+      }
+      if (P.wheelWedges(c, wh).length) bad++;
+    }
+    eq(bad, 0, `over 3,000 seeded games (${spins} spins) no spin lands on a played clue, and every game plays every clue`);
+  }
+
+  /* the extra wedges */
+  {
+    const wh = Object.assign(P.wheelNew('s'), { lose: true, double: true });
+    P.wheelApply(wh, { n: 1, index: 4, count: 6, wedge: { kind: 'lose', label: 'Lose a turn' } });
+    eq([wh.spins, wh.last, wh.doubleNext], [1, { n: 1, kind: 'lose' }, false], 'Lose a turn is counted and doubles nothing');
+    P.wheelApply(wh, { n: 2, index: 5, count: 6, wedge: { kind: 'double', label: 'Double points' } });
+    eq([wh.spins, wh.last, wh.doubleNext], [2, { n: 2, kind: 'double' }, true], 'Double points is counted and waits for the next clue');
+    eq([P.wheelWorth(200, wh), P.wheelWorth(0, wh)], [400, 0], 'a clue is then worth twice its points');
+    wh.doubleNext = false;
+    eq(P.wheelWorth(200, wh), 200, 'and its own points once the double is spent');
+    eq([P.wheelWorth(200, undefined), P.wheelWorth(200, null), P.wheelWorth('200', undefined)], [200, 200, '200'], 'a board with no wheel: a clue is worth exactly what it holds');
+    eq(P.wheelWorth(200, Object.assign(P.wheelNew('s'), { on: false, doubleNext: true })), 200, 'a wheel turned off doubles nothing');
+    eq(P.wheelWorth(200, Object.assign(P.wheelNew('s'), { doubleNext: 'yes' })), 200, 'and only a true double doubles');
+  }
+
+  /* where it landed, and the words */
+  {
+    const c = cats(), wh = P.wheelNew('s');
+    eq(P.wheelLanded(c, wh), null, 'before a spin the wheel has landed nowhere');
+    wh.spins = 1; wh.last = { n: 1, kind: 'clue', cat: 1, clue: 0 };
+    eq(P.wheelLanded(c, wh), { cat: 1, clue: 0 }, 'after one it is on that clue');
+    c[1].clues[0].used = true;
+    eq(P.wheelLanded(c, wh), null, 'until the clue is played');
+    c[1].clues[0].used = false;
+    eq(P.wheelLanded(c, Object.assign({}, wh, { on: false })), null, 'a wheel turned off marks no clue');
+    eq(P.wheelLanded(c, Object.assign({}, wh, { last: { n: 1, kind: 'lose' } })), null, 'nor does Lose a turn');
+    eq(P.wheelLanded(c, Object.assign({}, wh, { last: { n: 1, kind: 'clue', cat: 9, clue: 0 } })), null, 'nor a clue the board does not have');
+    const s = { n: 3, index: 0, count: 4, wedge: { kind: 'clue', cat: 0, clue: 1, label: 'Rivers for 200' } };
+    eq(P.wheelSentence(s, wh), 'Spin 3: Rivers for 200. Press Enter to open it.', 'a spin on a clue, in words');
+    eq(P.wheelSentence(s, Object.assign({}, wh, { doubleNext: true })), 'Spin 3: Rivers for 200. Double points: it is worth twice that. Press Enter to open it.', 'with a double waiting, the words say so');
+    eq(P.wheelSentence({ n: 4, wedge: { kind: 'lose', label: 'Lose a turn' } }, wh), 'Spin 4: Lose a turn. No clue this spin.', 'Lose a turn, in words');
+    eq(P.wheelSentence({ n: 5, wedge: { kind: 'double', label: 'Double points' } }, wh), 'Spin 5: Double points. The next clue played is worth double.', 'Double points, in words');
+    eq(P.wheelSentence(null, wh), 'Every clue has been played: there is nothing left to spin for.', 'and no spin left, in words');
+    eq(P.wheelOdds(cats(), wh), '4 clues not yet played: the wheel has 4 wedges, and a spin is as likely to land on one as on any other (1 in 4).', 'the odds are said from the wedges as they stand');
+    eq(P.wheelOdds(cats(), Object.assign({}, wh, { lose: true, double: true })), '4 clues not yet played and 2 extra wedges: the wheel has 6 wedges, and a spin is as likely to land on one as on any other (1 in 6).', 'the extra wedges are counted in the odds');
+    eq(P.wheelOdds(cats(), Object.assign({}, wh, { lose: true })), '4 clues not yet played and 1 extra wedge: the wheel has 5 wedges, and a spin is as likely to land on one as on any other (1 in 5).', 'one extra wedge is "wedge"');
+    eq(P.wheelOdds([{ name: 'R', clues: [clue(100)] }], wh), '1 clue not yet played: the wheel has one wedge, so the spin lands on it.', 'one clue left is said plainly');
+    eq(P.wheelOdds(allUsed, wh), 'Every clue has been played, so there is nothing to spin for.', 'and none left too');
+  }
+
+  /* a wheel from a file */
+  {
+    const c = cats();
+    eq([P.cleanWheel(undefined, c), P.cleanWheel('wheel', c), P.cleanWheel([1], c), P.cleanWheel(null, c)], [null, null, null, null], 'what is not a wheel is none');
+    eq(P.cleanWheel({}, c), { on: false, seed: '', spins: 0, lose: false, double: false, doubleNext: false, last: null }, 'an empty one is a wheel that is off');
+    const good = { on: true, seed: 'abc', spins: 4, lose: true, double: true, doubleNext: true, last: { n: 4, kind: 'clue', cat: 1, clue: 1 } };
+    eq(P.cleanWheel(good, c), good, 'a whole wheel is kept as it is');
+    eq(P.cleanWheel(Object.assign({}, good, { extra: '<img>', on: 'yes', lose: 1, double: 'true', doubleNext: 1 }), c), Object.assign({}, good, { on: false, lose: false, double: false, doubleNext: false }), 'only true is on, and nothing else is kept');
+    eq(P.cleanWheel(Object.assign({}, good, { seed: 7 }), c).seed, '', 'a seed that is not text is none');
+    eq([-1, 2.7, 'x', 100001].map(v => P.cleanWheel(Object.assign({}, good, { spins: v, last: null }), c).spins), [0, 2, 0, 0], 'the count of spins is a whole number from 0 to 100,000');
+    eq(P.cleanWheel(Object.assign({}, good, { last: { n: 3, kind: 'clue', cat: 1, clue: 1 } }), c).last, null, 'a last spin that is not the spin the count says is dropped');
+    eq(P.cleanWheel(Object.assign({}, good, { last: { n: 4, kind: 'clue', cat: 5, clue: 0 } }), c).last, null, 'so is one on a clue the board does not have');
+    eq(P.cleanWheel(Object.assign({}, good, { last: { n: 4, kind: 'clue', cat: '1', clue: '1' } }), c).last, null, 'and one whose place is not a number');
+    eq(P.cleanWheel(Object.assign({}, good, { last: { n: 4, kind: 'jackpot' } }), c).last, null, 'and a wedge the wheel does not have');
+    eq(P.cleanWheel(Object.assign({}, good, { last: { n: 4, kind: 'lose', cat: 1, x: 2 } }), c).last, { n: 4, kind: 'lose' }, 'Lose a turn is kept, with nothing else on it');
+    eq(P.cleanWheel(Object.assign({}, good, { spins: 0, last: { n: 0, kind: 'double' } }), c).last, null, 'and no last spin before the first');
+  }
+
+  /* reset */
+  {
+    const wh = { on: true, seed: 'old', spins: 9, lose: true, double: true, doubleNext: true, last: { n: 9, kind: 'lose' } };
+    P.wheelReset(wh, 'new');
+    eq(wh, { on: true, seed: 'new', spins: 0, lose: true, double: true, doubleNext: false, last: null }, 'Reset game: a new seed, no spin made, no double waiting, the settings kept');
+    P.wheelReset(undefined, 'x');
+    ok(true, 'and a board with no wheel is left alone');
+  }
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

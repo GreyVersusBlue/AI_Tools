@@ -1,5 +1,5 @@
 /* Quiz / Review Game Board — play modes and printed sheets (Path 12 P3,
-   increments 1 and 2, v281 and v284). Publishes window.ReviewBoardPlay. Stores nothing and
+   increments 1, 2 and 3, v281, v284 and v285). Publishes window.ReviewBoardPlay. Stores nothing and
    reads nothing: the page hands in a board or a list of questions and saves
    the board itself, as it always has.
 
@@ -49,6 +49,22 @@
    team or null, bonusId, bonus: 'r', 'w' or null }. IDS are stored, never a
    question's words; what an entry scored is worked out from it (qbDeltas),
    which is why the page locks the three point values once a round has begun.
+
+   SPIN THE WHEEL (increment 3, v285)
+   Instead of a team choosing a clue, a spin chooses one. THE RULE, which the
+   page states: the wheel has one wedge for every clue not yet played, and
+   one more for each extra wedge the teacher has turned on (Lose a turn,
+   Double points; both off to start); every wedge is as likely as any other.
+   `board.wheel` appears once the tick box has been used: { on, seed, spins,
+   lose, double, doubleNext, last }. THE DRAW IS NOT CHANCE AT PLAY TIME: spin
+   number n of a game is worked out from the stored seed and n alone
+   (wheelDraw), so the same board with the same seed gives the same sequence
+   of spins, and a reload between spins changes nothing. `spins` is how many
+   have been made; `last` is the last one ({ n, kind: 'clue' | 'lose' |
+   'double', cat, clue }, the two indexes on a clue only); `doubleNext` is
+   true from a Double points spin until the next clue is played, and that
+   clue is worth twice its points (wheelWorth). The wheel on the page is only
+   a picture of the draw.
 
    Plain global script, as the page's other modules are. */
 (function (global) {
@@ -612,6 +628,144 @@
     });
   }
 
+  /* ---------- spin the wheel ---------- */
+
+  var WHEEL_SEED_MAX = 64;
+  var WHEEL_SPINS_MAX = 100000;
+
+  function hash32(str) {
+    var h = 2166136261;
+    for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    h ^= h >>> 16; h = Math.imul(h, 2246822507);
+    h ^= h >>> 13; h = Math.imul(h, 3266489909);
+    return (h ^ (h >>> 16)) >>> 0;
+  }
+
+  /** Spin `n` (1, 2, 3...) of the game with this seed, over `count` wedges:
+      a whole number from 0 to count - 1, each as likely as any other (a draw
+      that would favour the low wedges is thrown away and drawn again). The
+      same seed, n and count always give the same wedge. -1 when there is no
+      wedge. */
+  function wheelDraw(seed, n, count) {
+    count = Math.floor(Number(count)) || 0;
+    if (count < 1) return -1;
+    var a = hash32(text(seed) + '\n' + (Math.floor(Number(n)) || 0)), limit = Math.floor(4294967296 / count) * count, v = 0;
+    for (var i = 0; i < 64; i++) {
+      a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      v = (t ^ (t >>> 14)) >>> 0;
+      if (v < limit) break;
+    }
+    return v % count;
+  }
+
+  function wheelNew(seed) {
+    return { on: true, seed: text(seed).slice(0, WHEEL_SEED_MAX), spins: 0, lose: false, double: false, doubleNext: false, last: null };
+  }
+
+  /** The wedges, in the order they sit on the wheel: every clue not yet
+      played, category by category, then Lose a turn and Double points when
+      the teacher has turned them on. No unplayed clue, no wheel: []. */
+  function wheelWedges(categories, wheel) {
+    var out = [];
+    (categories || []).forEach(function (c, ci) {
+      ((c && c.clues) || []).forEach(function (cl, ki) {
+        if (cl && !cl.used) out.push({ kind: 'clue', cat: ci, clue: ki, label: text(c.name) + ' for ' + (Number(cl.points) || 0) });
+      });
+    });
+    if (!out.length) return out;
+    if (wheel && wheel.lose) out.push({ kind: 'lose', label: 'Lose a turn' });
+    if (wheel && wheel.double) out.push({ kind: 'double', label: 'Double points' });
+    return out;
+  }
+
+  /** The next spin of this board, not yet recorded: { n, index, count,
+      wedge }. Null when every clue has been played. */
+  function wheelSpin(categories, wheel) {
+    var wedges = wheelWedges(categories, wheel);
+    if (!wheel || !wedges.length) return null;
+    var n = (Math.floor(Number(wheel.spins)) || 0) + 1, index = wheelDraw(wheel.seed, n, wedges.length);
+    return { n: n, index: index, count: wedges.length, wedge: wedges[index] };
+  }
+
+  /** Records a spin on the wheel. Changes `wheel` in place. */
+  function wheelApply(wheel, spin) {
+    if (!wheel || !spin) return;
+    wheel.spins = spin.n;
+    wheel.last = spin.wedge.kind === 'clue'
+      ? { n: spin.n, kind: 'clue', cat: spin.wedge.cat, clue: spin.wedge.clue }
+      : { n: spin.n, kind: spin.wedge.kind };
+    if (spin.wedge.kind === 'double') wheel.doubleNext = true;
+  }
+
+  /** What a clue of `points` is worth now: twice as much while a Double
+      points spin is waiting, and exactly `points` otherwise. */
+  function wheelWorth(points, wheel) {
+    return wheel && wheel.on && wheel.doubleNext === true ? (Number(points) || 0) * 2 : points;
+  }
+
+  /** The clue the last spin landed on, while it is still unplayed:
+      { cat, clue }, or null. */
+  function wheelLanded(categories, wheel) {
+    var last = wheel && wheel.on && wheel.last;
+    if (!last || last.kind !== 'clue') return null;
+    var c = (categories || [])[last.cat], cl = c && c.clues && c.clues[last.clue];
+    return cl && !cl.used ? { cat: last.cat, clue: last.clue } : null;
+  }
+
+  /** A spin, in words, for the status line and a screen reader:
+      'Spin 3: Rivers for 200. Press Enter to open it.' */
+  function wheelSentence(spin, wheel) {
+    if (!spin) return 'Every clue has been played: there is nothing left to spin for.';
+    var head = 'Spin ' + spin.n + ': ' + spin.wedge.label + '.';
+    if (spin.wedge.kind === 'lose') return head + ' No clue this spin.';
+    if (spin.wedge.kind === 'double') return head + ' The next clue played is worth double.';
+    return head + (wheel && wheel.doubleNext ? ' Double points: it is worth twice that.' : '') + ' Press Enter to open it.';
+  }
+
+  /** The odds, in words, as the wheel now stands. */
+  function wheelOdds(categories, wheel) {
+    var wedges = wheelWedges(categories, wheel), n = wedges.length;
+    if (!n) return 'Every clue has been played, so there is nothing to spin for.';
+    var clues = wedges.filter(function (w) { return w.kind === 'clue'; }).length, extra = n - clues;
+    return countWord(clues, 'clue', 'clues') + ' not yet played' + (extra ? ' and ' + countWord(extra, 'extra wedge', 'extra wedges') : '') + ': ' +
+      (n === 1 ? 'the wheel has one wedge, so the spin lands on it.' : 'the wheel has ' + n + ' wedges, and a spin is as likely to land on one as on any other (1 in ' + n + ').');
+  }
+
+  /** `board.wheel` from anywhere (a file): null when it is not one. The last
+      spin is kept only when it is the spin the count says and, for a clue,
+      names a clue the board has. */
+  function cleanWheel(raw, categories) {
+    if (!plainObject(raw)) return null;
+    var out = wheelNew(typeof raw.seed === 'string' ? raw.seed : '');
+    var spins = Math.floor(Number(raw.spins));
+    out.on = raw.on === true;
+    out.spins = spins >= 0 && spins <= WHEEL_SPINS_MAX ? spins : 0;
+    out.lose = raw.lose === true;
+    out.double = raw.double === true;
+    out.doubleNext = raw.doubleNext === true;
+    var last = raw.last;
+    if (plainObject(last) && last.n === out.spins && out.spins > 0) {
+      if (last.kind === 'lose' || last.kind === 'double') out.last = { n: last.n, kind: last.kind };
+      else if (last.kind === 'clue') {
+        var c = (categories || [])[last.cat], cl = c && Array.isArray(c.clues) ? c.clues[last.clue] : null;
+        if (cl && typeof last.cat === 'number' && typeof last.clue === 'number') out.last = { n: last.n, kind: 'clue', cat: last.cat, clue: last.clue };
+      }
+    }
+    return out;
+  }
+
+  /** Reset game: a new game on the same settings, with the seed the page
+      hands in. Changes `wheel` in place. */
+  function wheelReset(wheel, seed) {
+    if (!wheel) return;
+    wheel.seed = text(seed).slice(0, WHEEL_SEED_MAX);
+    wheel.spins = 0;
+    wheel.doubleNext = false;
+    wheel.last = null;
+  }
+
   global.ReviewBoardPlay = {
     MARKS: MARKS,
     cleanMarks: cleanMarks,
@@ -655,6 +809,17 @@
     qbLeft: qbLeft,
     qbTotals: qbTotals,
     qbSummary: qbSummary,
-    dropTeamFromRounds: dropTeamFromRounds
+    dropTeamFromRounds: dropTeamFromRounds,
+    wheelDraw: wheelDraw,
+    wheelNew: wheelNew,
+    wheelWedges: wheelWedges,
+    wheelSpin: wheelSpin,
+    wheelApply: wheelApply,
+    wheelWorth: wheelWorth,
+    wheelLanded: wheelLanded,
+    wheelSentence: wheelSentence,
+    wheelOdds: wheelOdds,
+    cleanWheel: cleanWheel,
+    wheelReset: wheelReset
   };
 })(window);
