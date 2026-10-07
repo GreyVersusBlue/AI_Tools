@@ -9,6 +9,43 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 012 Graph Paper: polar, log, hexagonal, storyboard and music paper, and seven number-line kinds (2026-10-07, AI-31-012, `CACHE_VERSION` v280)
+
+BACKLOG rank 129, "More grid types; number-line variants", is built whole and the row is deleted. The page was checked first: it already had square, dot, isometric
+line and dot (the Isometric tab), a first-quadrant and a four-quadrant plane with a chosen scale and labelled axes, Cornell notes, handwriting lines and a printer
+check, and a number line with a min, max and interval (negatives by typing a negative min). Those were not rebuilt. Engineering paper existed only as "Custom, 5
+squares per inch", so it is now a named size.
+
+- **New paper.** Polar (12, 16 or 24 rays, circles at a chosen step, the four axes heavier, degree labels, ring numbers); semi-log and log-log (1 to 6 decades, any
+  start power of ten from -4 to 4, lines at log10 of 2 to 9, decade lines heavy and the 5 line a step lighter, 10 or 20 even divisions on a semi-log x); hexagonal (side =
+  the grid size, point up or flat side up, shared edges drawn once); storyboard (2 to 12 frames at 16:9, 4:3, 1:1 or 2.35:1, 0 to 4 caption lines under each); music
+  staves (three sizes, single or grand staff, as many as fit).
+- **New number lines**, in a "Kind of number line" select on the Number line tab; "Standard" is the old line and the default. Integers with zero marked; decimals by
+  tenths or hundredths; fractions and mixed numbers at a denominator of 2 to 16 (mixed or improper, in lowest terms or not, stacked numerator over denominator);
+  open (no numbers, 0 to 60 marks); double (two lines whose marks share x, a dashed rule between, names, and the bottom line all / worked example / 0 only);
+  vertical thermometer (1 to 6 side by side). Ticks come from whole numbers (`n = value x scale`, `k/d`), never a running float sum. Labels thin out to fit, and for
+  fractions and decimals they move to a divisor of the denominator or scale, so whole numbers (and tenths) are always labelled.
+- **Settings.** Thirty-six new fields on the preset, all added on load to a preset that lacks them; nothing is rewritten until an edit. Every old sheet and 14 saved
+  presets are pinned by `golden-old-render.json`, recorded from the v279 page before any edit: 98 SVGs from `gpg-render.js` and, for each of 14 presets, the hash of
+  `#previewArea` and of the string the page stores back (with the new keys taken away). All byte for byte. This tool has no share link, so none carries the new settings.
+- **A bug found by the print check, fixed.** Every sheet this page printed ran on to a blank second page in Chromium's PDF (graph, number line, plane, isometric: 2
+  pages; only the printer check and a few short panels printed 1). `body * { visibility: hidden }` leaves the hidden editor's height, and at a Letter page's 816px the
+  layout is one column, so the editor sat above the sheet. The print block now also takes the editor, header, toolbar and notes out of the flow. `audit-print` reports TAIL 0 for
+  this page; I did not find out why (a wider viewport than a Letter page is the likely reason), and the suite measures the PDF instead.
+- **The sheet-type buttons were `div`s a keyboard could not reach.** All twelve are now `role="button"` with `tabindex="0"`, `aria-pressed`, and Enter / Space.
+- **Tests.** `smoke-grid-types-core.mjs` (pure Node, 52,353 assertions: each sheet's geometry read off its SVG over every orientation, header, size and option, plus 1000
+  random option sets including invalid ones) and `smoke-grid-types.mjs` (port 8517, 397 assertions: the preview is exactly the renderer's sheet for what was typed, the
+  old presets, saving and reloading, keyboard tabs, and one Letter page for 8 old and 16 new sheets in each orientation). Breaks on purpose: 79 in the renderer, all
+  caught (55 for polar, log, number lines and the old isometric and golden, 24 for hex, storyboard and music; two of the first set first survived: a degree label that
+  rounds, and a zero step that was only checked loosely, and got assertions), and 28 in the page. The page breaks were first run 14 at a time in one suite run, which
+  proved nothing for the nine that were not reported: one failing early assertion (a tab that would not open a panel) stopped the run before the rest. They were re-run in
+  groups of breaks that cannot derail each other; one of those, "old presets not given their new defaults", was first reported uncaught because the assertion I named
+  for it was the wrong one (the golden preview is the one that fails); all 28 are caught. Not every assertion has its own break.
+- **Not done, not verified.** Engineering paper has no border or title block; the staves have no clef or key signature; polar has no radian labels. Nothing printed on
+  paper, no hexagon or staff measured with a ruler, no screen reader. `audit-print`'s seed is the default graph sheet, so it does not reach the new tabs; the suite
+  measures their PDFs itself. The hexagon corners were found by tolerance: two floats a hair apart are one corner, which is what the renderer does and the test checks
+  independently.
+
 ## 004 Classroom Timer: a timer board of two to four independent timers (2026-10-07, AI-31-004, `CACHE_VERSION` v279; the code commit says v277, which main passed before the merge)
 
 BACKLOG rank 121 had three parts; this session did one, the multi-timer board. Bell-schedule awareness (needs 032's key in the registry) and the

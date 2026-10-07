@@ -556,7 +556,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 126 | Per-record conflict resolution ("keep the newer of each"; needs per-record timestamps) | 009 | ½ | | [009 Backup & Restore](#009--backup--restore) |
 | 127 | Reuse the real timer; period-aware auto-advance | 010 | ½ | | [010 Command Center](#010--command-center) |
 | 128 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
-| 129 | More grid types; number-line variants | 012 | ½ | | [012 Graph Paper & Number Line Generator](#012--graph-paper--number-line-generator) |
 | 130 | Date-received per student; contract-gate reporting | 013 | ½ | | [013 Lab Safety Contract Tracker](#013--lab-safety-contract-tracker) |
 | 131 | Printed ordering activity; blanking dates, not just titles | 015 | ½ | | [015 Timeline Builder](#015--timeline-builder) |
 | 132 | A label under each code; batch codes from a spreadsheet | 016 | ½ | | [016 QR Code Generator](#016--qr-code-generator) |
@@ -8049,17 +8048,21 @@ optionally imposed as a booklet — without any of it touching a cloud service.
 
 #### Quick Wins
 
-- **More grid types**: hexagonal, polar, log/semi-log, engineering (5 squares
-  per inch), Cornell-notes ruling, handwriting lines with a dashed midline,
-  storyboard boxes, music staff.
+None open. The grid types the row asked for are all there (hexagonal, polar, log and
+semi-log, engineering at 5 squares per inch, Cornell notes, handwriting lines,
+storyboard frames, music staves), and so are the number-line kinds (integers with zero
+marked, decimals, fractions and mixed numbers, open, double, thermometer). Not built:
+engineering paper's title block or border, a clef or key signature on the staves, and
+polar paper in radians.
 
 #### Major Features
 
 - **Pre-plotted content** (outside worksheet mode, on the plain coordinate
   plane / graph paper modes) is still open. Worksheet mode (below) shipped
   its own copy of the expression parser scoped to that mode's problems only.
-- **Isometric and dot paper for other subjects** — technical drawing, 3D
-  volume nets, perspective grids for art.
+- **Subject templates on the paper that exists** — isometric and dot paper are
+  there; what is not is technical-drawing frames, 3D volume nets and perspective
+  grids for art.
 - **Graph paper with a data table beside it**, for science labs — the exact
   page a lab handout needs and nobody generates.
 - **A grid the student can also use on screen** via a share link (P3) — plot
