@@ -6,9 +6,18 @@
 //
 // Every name is invented. The page clock is pinned, so the log ids
 // ('ev' + Date.now() + counter), the times and the archive date repeat.
+//
+// Pinned on EVERY machine, not only the one that recorded the golden: CLOCK
+// is an instant (it carries its offset), and the page's time zone is set to
+// ZONE before it loads. The golden was recorded on a machine in
+// America/New_York from '2026-03-04T15:20:00' with no offset, which Node read
+// as local time; on a runner in UTC the same text was another instant, so the
+// ids differed, and the page's own zone decides what '3:20 PM' and 'Mar 4'
+// say. Both are now what the recording machine had, whatever TZ is.
 
 export const KEY = 'behavior-points-tracker-sections';
-export const CLOCK = '2026-03-04T15:20:00';
+export const CLOCK = '2026-03-04T15:20:00-05:00';
+export const ZONE = 'America/New_York';
 
 const NAMES = ['Aiden Whitfield', 'Brooklyn Bell', 'Camila Duarte', 'Dmitri Fox', 'Esi Mensah', 'Farid Noor'];
 const TAGS = [
@@ -62,6 +71,8 @@ export async function walk(page, url, { before } = {}) {
   const dialogs = [];
   page.on('dialog', async d => { dialogs.push(d.type() + ':' + d.message()); await d.accept(''); });
   await page.clock.setFixedTime(new Date(CLOCK));
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTimezoneOverride', { timezoneId: ZONE });
   await page.addInitScript(([key, seed]) => {
     if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(seed));
     window.print = () => { window.__printed = (window.__printed || 0) + 1; };

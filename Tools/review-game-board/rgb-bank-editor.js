@@ -26,6 +26,18 @@
    markup from a string: every node is made with createElement and filled
    with textContent or a field's value.
 
+   A PICTURE (Path 12 P4)
+   pictureField() is the one control that puts a picture on a question: a
+   file picker, the picture as it will be shown, and Remove. It holds a
+   VALUE ('idb:<id>' or a data URL, see PICTURES in question-bank.js) and
+   stores nothing in the bank: the page writes `media.image` when the
+   question is saved. The picture itself is stored when it is chosen, by the
+   page's own ReviewBoardImage.fromFile(), which is handed in as
+   `opts.images`, so a clue's picture and a question's are made and kept
+   the same way. A draft read from a form that has the field carries
+   `image`; draftOf(), questionOf() and changed() do not know it, so the
+   eight fields they compare are the eight they always were.
+
    The first half is pure (no document) and is what
    Tools/review-game-board/test/smoke-bank-editor-core.mjs runs in Node.
    Plain global script, as rgb-bank-store.js is. */
@@ -451,6 +463,76 @@
     };
   }
 
+  /** The picture on a question: choose one, see it, remove it. `opts` is
+      { idBase, images }, `images` being the page's ReviewBoardImage (url,
+      fromFile, isValue, isMissing). Returns { node, get(), set(value),
+      pending() }: pending() is the promise of a picture still being read
+      and stored, or null. */
+  function pictureField(opts) {
+    var base = opts.idBase, images = opts.images, value = '', pending = null;
+    var node = el('div', 'bank-picture-field');
+    var label = el('label', '', 'Picture (optional)');
+    label.htmlFor = base + 'Picture';
+    var input = el('input');
+    input.type = 'file';
+    input.id = base + 'Picture';
+    input.accept = 'image/png,image/jpeg,image/gif,image/webp';
+    input.setAttribute('aria-describedby', base + 'PictureHint');
+    var hint = el('p', 'hint', 'A map, a diagram or a source that goes with the question. It is shown on a clue when the ' +
+      'question is pulled into a board. Flashcards, a bracket’s matches, quiz-bowl, the final round and the sheets ' +
+      'printed from this bank use the words only.');
+    hint.id = base + 'PictureHint';
+    var shown = el('img', 'bank-picture-preview');
+    shown.alt = 'The picture on this question';
+    var remove = button('danger small bank-picture-remove', 'Remove picture');
+    var status = el('p', 'import-status bank-picture-status');
+    status.setAttribute('role', 'status');
+    [label, input, hint, shown, remove, status].forEach(function (part) { node.appendChild(part); });
+
+    function say(kind, text) {
+      status.className = 'import-status bank-picture-status' + (kind ? ' ' + kind : '');
+      status.textContent = text;
+    }
+    function render() {
+      var src = value ? images.url(value) : '';
+      shown.hidden = !src;
+      if (src) shown.src = src; else shown.removeAttribute('src');
+      remove.hidden = !value;
+      if (value && !src && images.isMissing(value)) {
+        say('error', 'This question’s picture is missing from this browser’s storage. Choose it again, or remove it.');
+      }
+    }
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      input.value = '';
+      if (!file) return;
+      say('', 'Reading the picture…');
+      var job = images.fromFile(file).then(function (v) {
+        if (pending === job) pending = null;
+        value = v;
+        render();
+        say('ok', 'Picture added. It is kept with the question when you save it.');
+      }, function (e) {
+        if (pending === job) pending = null;
+        say('error', (e && e.message) || 'That file could not be read as a picture.');
+      });
+      pending = job;
+    });
+    remove.addEventListener('click', function () {
+      value = '';
+      render();
+      say('', 'Picture removed. The question is changed when you save it.');
+      input.focus();
+    });
+    render();
+    return {
+      node: node,
+      get: function () { return value; },
+      set: function (v) { value = images.isValue(v) ? v : ''; say('', ''); render(); },
+      pending: function () { return pending; }
+    };
+  }
+
   function labelled(text, control, id) {
     var wrap = el('div', 'bank-edit-field'), label = el('label', '', text);
     control.id = id;
@@ -462,7 +544,10 @@
 
   /** The form a question opens into where it stands in the list: every
       field the bank's shape holds that a teacher types. `opts` is
-      { idBase, draft, title, suggestions(), onSave(draft), onCancel() }.
+      { idBase, draft, title, suggestions(), onSave(draft), onCancel() }
+      and, for the picture, { images, image }: the page's ReviewBoardImage
+      and the question's stored picture (`draft.image` wins when the draft
+      has one, which is how a picture just chosen survives a re-render).
       Escape anywhere in it cancels. Returns { node, read(), focus(),
       say(kind, text) }. */
   function editForm(opts) {
@@ -496,6 +581,11 @@
     var tags = tagsField({ idBase: base, suggestions: opts.suggestions });
     tags.set(d.tags);
     node.appendChild(tags.node);
+    var picture = opts.images ? pictureField({ idBase: base, images: opts.images }) : null;
+    if (picture) {
+      picture.set(Object.prototype.hasOwnProperty.call(d, 'image') ? d.image : opts.image);
+      node.appendChild(picture.node);
+    }
     var actions = el('div', 'arrival-actions');
     var save = button('bank-edit-save', 'Save');
     var cancel = button('secondary bank-edit-cancel', 'Cancel');
@@ -507,13 +597,20 @@
     node.appendChild(status);
 
     function read() {
-      return {
+      var draft = {
         prompt: prompt.value, answer: answer.value, points: points.value, unit: unit.value,
         standard: standard.value, difficulty: difficulty.value,
         tags: tags.get(), choices: choices.raw()
       };
+      if (picture) draft.image = picture.get();
+      return draft;
     }
-    save.addEventListener('click', function () { opts.onSave(read()); });
+    save.addEventListener('click', function () {
+      // A picture still being read is waited for, so Save never leaves it behind.
+      var job = picture && picture.pending();
+      if (job) job.then(function () { opts.onSave(read()); });
+      else opts.onSave(read());
+    });
     cancel.addEventListener('click', function () { opts.onCancel(); });
     node.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); opts.onCancel(); }
@@ -549,6 +646,7 @@
     choicesLine: choicesLine,
     choicesField: choicesField,
     tagsField: tagsField,
+    pictureField: pictureField,
     editForm: editForm
   };
 })(window);

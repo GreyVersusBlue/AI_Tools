@@ -29,8 +29,11 @@
    ten-minute grace. The two travel out the same way: both are inlined into
    Export JSON (`image` as a data URL here, `audio` by the page).
 
-   The question bank (rgb-bank-store.js) carries no pictures; a pulled entry
-   is text only. If it ever does, its values belong in the page's GC keep-set.
+   Since Path 12 P4 a question in the bank (_shared/question-bank.js) may
+   carry a picture too, in `media.image`, as one of the same two values and
+   in this same namespace: the same picture on a clue and on a question is
+   one record, a pulled question's clue takes the value itself, and the
+   page's GC keep-set holds the bank's references beside the boards'.
 
    Needs window.MediaDB, so _shared/media-db.js is linked before this file.
    The round trip is Tools/review-game-board/test/smoke-clue-image-store.mjs. */

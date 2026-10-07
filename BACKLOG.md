@@ -87,6 +87,17 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-14 (v289; the code commit says v288, which AI-31-025 took), rank 30 (DELETED: Path 12 P4 is whole), Path 12 P4: a question in the bank can carry a picture, and it travels in the bank file.**
+  First check: the 030 half had shipped in #302 (a clue's picture is `idb:<id>` in the media store, moved on load, in
+  Export JSON as a data URL and stored again on import), so none of that was rebuilt. What was left and is built: `media.image` on a
+  question (the same two values a clue holds, in the same store and namespace, so a picture on a clue and on a question is one
+  record); a picture picker on 030's add card and edit form; the picture on a pulled clue; "Save bank file" with each picture as a
+  data URL and an import that stores them first (same bytes, same id) and names by row any picture it leaves out (not one of four
+  types, damaged, over 4,000,000 characters, another browser's reference); a board import that names what it left out too. An SVG
+  or a `data:text/html` URL is never a picture (`QuestionBank.imageOf()` is the one reader). 040, 020 and the printed sheets show
+  words only, and say so. **Not built: a sound on a bank question; a picture on the quiz-bowl and final-round overlay or the bank's
+  printed sheets; a bank picture kept inline (no IndexedDB) is not moved later.** Seven choices that are Devon's are questions 59 to
+  65 in the Path 12 section. Left of Path 12: rank 28's leftovers and rank 94. Next free suite port: 8526.
 - **AI-14 (v286; the code commit says v285, which AI-31-015 took), rank 29 (DELETED: Path 12 P3 is whole), Path 12 P3 increment 3: spin-the-wheel on 030.** A board has
   a **Spin the wheel** tick box, off until ticked. On, a spin (the button, or the S key) chooses the clue: one wedge for
   every clue not yet played, **each as likely as any other**, plus one each for two extra wedges the teacher may tick
@@ -515,8 +526,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; 062's thirty map questions, which are not published (they wait on P4); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Seventeen questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
-| 30 | Path 12 P4 — clue images into the media store; media travels in export | 030 | ½ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; 062's thirty map questions, which are not published (P4 shipped at v289, so a question can carry a picture now and these no longer wait on it); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Seventeen questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -603,7 +613,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 138 | Lock a group or a role and reshuffle the rest | 022 | ½ | | [022 Lab Group & Role Randomizer](#022--lab-group--role-randomizer) |
 | 139 | Name and date lines on the slips; response collection questions | 023 | ½ | | [023 Exit Ticket / Bell Ringer Generator](#023--exit-ticket--bell-ringer-generator) |
 | 140 | Draw on a strategy card; a shared stage | 024 | ½ | | [024 Number Talks / Mental Math Routine Board](#024--number-talks--mental-math-routine-board) |
-| 141 | Sentence starters and an "if you’re stuck" line | 025 | ½ | | [025 Writing Prompt Generator](#025--writing-prompt-generator) |
 | 143 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 144 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
 | 145 | Projector styling (the site-wide question bank shipped as Path 12 P1, v265; its other formats are Path 12 P2 and P3) | 030 | ½ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
@@ -4658,6 +4667,52 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
     `npm test`.
 - **P4 — Media.** Clue images move to the media store (Path 4) beside the existing
   clue audio; media travels in export as data URLs.
+  **Shipped whole (AI-14, 2026-10-07, v289; the code commit says v288, which AI-31-025 took); its ranked row is deleted. The rest of this bullet is what was built.**
+  - *What was there (the first check).* The 030 half shipped in #302 (Path 4 P4): a clue's `image` is `idb:<id>` in
+    `gvb-media` under the namespace `rgb` (`Tools/review-game-board/rgb-image.js`), a board saved before that is moved
+    on load, Export JSON carries each picture and each sound as a data URL, and Import JSON stores them again (a
+    picture by its content hash, so one already there is not stored twice; a sound as a new clip, since a clip belongs
+    to one board). None of that was rebuilt. The bank's `media` was carried and read by nothing, the bank file held
+    whatever `media` was, and an import that dropped a picture said nothing.
+  - *A question's picture.* `media.image`, one of the two values a clue holds: `idb:<id>`, or a
+    `data:image/(png|jpeg|gif|webp);base64,…` URL (no IndexedDB, or a file). `QuestionBank.imageOf(q)` is the only
+    reader and gives one of those or `''`; `withImage()`, `imageProblem()`, `cleanMedia()`, `applyImages()` and
+    `leftSentence()` are the rest, all pure. The module has no MediaDB in it. **The bank's pictures are in 030's
+    namespace on purpose** (`QuestionBank.MEDIA_NS`): the same picture on a clue and a question is one record, a
+    pulled clue takes the value itself, and 030's pass at load, the one place a stored picture is deleted, keeps what
+    the bank points at. A `media` of any other shape is carried as given, as before, and is never shown.
+  - *On 030.* A picture picker on the add card and in the edit form (`ReviewBankEditor.pictureField()`; the picture is
+    made by the page's own `fromFile()`, 1000 px JPEG, as a clue's is). A Save writes `media` only when the picture
+    changed; Save and Add wait for a picture still being read. A row shows the picture and a tag in words ("has a
+    picture", or "picture missing from this browser"). Pull puts the picture on the clue. "Save bank file" reads each
+    stored picture back as a data URL (no `idb:` reaches a file; a missing one is left off and counted); a bank with
+    no picture is written exactly as before. An import cleans the file's pictures, stores the good ones BEFORE the
+    preview is drawn (so the same file twice changes nothing), and names by row and reason each one left out, before
+    and after Add; the question itself still imports, and a question the bank has keeps the picture it had. Import
+    JSON of a board names the pictures and sounds it left out, by clue, in a new line under the toolbar.
+  - *Where a picture is not shown, and says so on the page.* 040's cards, 020's matches and their sheet, the sheets
+    printed from the bank tab, quiz-bowl and the final round. None of them calls `imageOf()`.
+  - *Held still.* Seventeen hashes from the v287 page (`golden-before-media.json`: a bank with no picture listed,
+    saved, an old bank file previewed and stored, a question pulled; a board with pictures stored, exported, an old
+    board file imported, the store's records).
+  - *Not built.* A sound on a bank question (a clip belongs to one board, so the bank needs an owner rule first). A
+    picture on the quiz-bowl and final-round overlay, or on the bank's printed sheets. A bank picture kept inline is
+    not moved into the store later. No limit on a sound's size in a board file. 062's map questions are still
+    not published (rank 28).
+  - *Not verified.* No person used the picker; no screen reader (axe on the bank tab in the light theme only, names
+    and alts); no file from a real teacher; a bank of hundreds of pictures in one file (it is one JSON text in
+    memory); nothing on a phone; the full `npm test` was not run.
+  - *More questions for Devon (each has a default taken).*
+    59. **A question's picture is in 030's part of the media store** (taken). Or a part of its own, with a copy made
+        when a question is pulled into a board.
+    60. **A picture in a file may be up to 4,000,000 characters** (about 3 MB) (taken). 030 itself never makes one
+        over a few hundred thousand.
+    61. **A refused picture leaves the question in, without it** (taken). Or the whole question is left out.
+    62. **A file's good pictures are stored before the preview** (taken), so a file looked at and not imported leaves
+        pictures that the next load deletes after ten minutes. Or nothing is stored until Add.
+    63. **Flashcards, bracket matches, quiz-bowl, the final round and the bank's sheets show words only** (taken).
+    64. **One picture a question** (taken), and no sound.
+    65. **The spreadsheet has no picture column** (taken): only the bank file carries pictures.
 
 **Model.** Opus.
 
@@ -9275,8 +9330,10 @@ well but doesn't have a math coach.
 
 #### Quick Wins
 
-- **Sentence starters and a "if you're stuck" line** with each prompt, which
-  is what the students who need the prompt most actually need.
+- ~~Sentence starters and a "if you're stuck" line~~ — **done 2026-10-07**
+  (v288, `wpg-scaffolds.js`; `HISTORY.md` lists every line for a teacher to read, and
+  they are unreviewed). Not done: help on the roster assignment sheet; a share link
+  for a random draw's own choice.
 - **Tag prompts by purpose** (quick write, journal, on-demand assessment,
   creative) as well as genre.
 - **Import a prompt list** from a paste (P13) instead of one at a time.
@@ -9334,7 +9391,7 @@ work, and don't promote one without Devon saying so.
 
 #### Quick Wins
 
-- **Done — More operation types** (2026-08-12; the last three 2026-10-07, v288):
+- **Done — More operation types** (2026-08-12; the last three 2026-10-07, v290):
   fractions (add/subtract), decimals, percents, integers with negatives and order
   of operations shipped first; fraction multiplication and division (proper
   fractions in lowest terms, options for mixed numbers and a whole-number factor),
