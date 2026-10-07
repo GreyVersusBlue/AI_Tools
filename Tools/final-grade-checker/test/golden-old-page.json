@@ -1,0 +1,135 @@
+{
+ "grid": [
+  {
+   "s": 0,
+   "p": 0,
+   "cards": "47c4ed27b61a3c4fa27498af261039f21af47cec09f8f17739a379487aa7716f",
+   "triage": "f9fb371b54c04888efd91af140b211fd6ddd535e69edf46f90cd9f86ea598525",
+   "whatif": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "n": 60259
+  },
+  {
+   "s": 0,
+   "p": 1,
+   "cards": "037245e1263c7cdcd2dd1d32dbc7d4fd5fc371f6a9a854cce7f246ec46621c7d",
+   "triage": "91d4b7f46ef49ebf8794933a1fd6c3f19890b5a019bca2f9e46063b097adec81",
+   "whatif": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "n": 99654
+  },
+  {
+   "s": 0,
+   "p": 2,
+   "cards": "32e1964081c6282d673408d176baf484ffc93b6b5e0973dd18ed73301f0819bc",
+   "triage": "0b82160ca793ad758fe3ea81a6a4110d29542b492d290534fef5bc28ca06b3d0",
+   "whatif": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "n": 28026
+  },
+  {
+   "s": 1,
+   "p": 0,
+   "cards": "1e12c70aaf7c1a77151b811f6f1622481974659be369cc25dc8e0a6964a0f635",
+   "triage": "a4c5ced9b7a9be3add6ceb7aa33d8c27127050b76be473467f34d412f6c7d30a",
+   "whatif": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "n": 60783
+  },
+  {
+   "s": 1,
+   "p": 1,
+   "cards": "e70a16c650efdb3419383d28488624b37e275cf658ffd918ac217d58f20bbcb9",
+   "triage": "e3b8afd6db4ff688494581b1137e3f312dc2a8319d02af6507eb0994ac6d43c0",
+   "whatif": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "n": 99859
+  },
+  {
+   "s": 1,
+   "p": 2,
+   "cards": "12e7a656aa599ab5a6ddbd91cf5124a30f6e1677bfd6b99791f3545b58341574",
+   "triage": "a1aebb41b21162c33e39fd92ba689e9dee7f731b0455b865fd711c0d4ae3d2ce",
+   "whatif": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "n": 28223
+  },
+  {
+   "s": 2,
+   "p": 0,
+   "cards": "e992331cfac041373577d7545a8724c7abf9c1d7d66b8142992d783ec231d267",
+   "triage": "bb7ba5ef3bb38c432b6d629fc0e463940b4c05e6e6816123c87d3dde2a2ca320",
+   "whatif": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "n": 61075
+  },
+  {
+   "s": 2,
+   "p": 1,
+   "cards": "5633db88165ac3f9285576c68ca342362eb08edd1797fdfc2cd6164ce8481c0c",
+   "triage": "50049e6f43cd3dae766f96140a9554301a4cd73f427ec14a6a865e24cae9069b",
+   "whatif": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "n": 100633
+  },
+  {
+   "s": 2,
+   "p": 2,
+   "cards": "fb2c08c350e1c770619c0b97a2bf79774f3283473899229302d7b9dabf3a745a",
+   "triage": "233007141ef0a29571fa2ab107f8ddccb184d8a4182ee58f7b0f03a405791799",
+   "whatif": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "n": 28596
+  },
+  {
+   "s": 3,
+   "p": 0,
+   "cards": "577b7b023b9c49697ebc1cc6dc9396a89745f04eeef52aa2cab29a9324610b9e",
+   "triage": "0836e81baa1e6898e81d6e166ef2b6e039db1d255b6623630034e107d8c377d7",
+   "whatif": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "n": 61143
+  },
+  {
+   "s": 3,
+   "p": 1,
+   "cards": "42571fa649cbf2bcea128b61f88cbc658bc8cd5569d5c7c6624da5a1b2658a6a",
+   "triage": "3f74f5be7abd3bbbf377fb7bddd9c9919d1f20f90cb489c56fb109329d3f8225",
+   "whatif": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "n": 101385
+  },
+  {
+   "s": 3,
+   "p": 2,
+   "cards": "517d9515d23f4a102f358e805cae5ac2c4ee4121dd48bfcbf2c9fc4208123826",
+   "triage": "8dc3f3d0476114a89b43b5334dc55d9dd27e2e4203998e3aeba58a5366772472",
+   "whatif": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "n": 28338
+  }
+ ],
+ "whatif": [
+  {
+   "plus": 2,
+   "drop": false,
+   "cards": "6034b514be6fe34f829b90b4249f40884180a48b55c56455935730c202447923",
+   "triage": "3f74f5be7abd3bbbf377fb7bddd9c9919d1f20f90cb489c56fb109329d3f8225",
+   "whatif": "8c11987f414e4c948e48ef2709820f854cc82b32d752ce0c6dbc7d486679dff5",
+   "n": 110026
+  },
+  {
+   "plus": 0,
+   "drop": true,
+   "cards": "15df20d7cdbc38cd3395da4ad5c962f1500425c0058edead4e1c1c46cadbab9d",
+   "triage": "3f74f5be7abd3bbbf377fb7bddd9c9919d1f20f90cb489c56fb109329d3f8225",
+   "whatif": "20e04436b4c551686e9ec91e71d34f95d92d3d5e30fdf3137811cc616a46fca8",
+   "n": 110028
+  },
+  {
+   "plus": 1.5,
+   "drop": true,
+   "cards": "6adb1815470cbaf0ab46042033f8bd40b79c3a7c6f0b853fcb712d3580a2ec7d",
+   "triage": "3f74f5be7abd3bbbf377fb7bddd9c9919d1f20f90cb489c56fb109329d3f8225",
+   "whatif": "8a69dedd8bc79708a12a0ef99d7682cd0609489aae5ea14bc2d43bf797c07630",
+   "n": 110016
+  },
+  {
+   "plus": -3,
+   "drop": false,
+   "cards": "d599e7814f54f3c8d169e23b0050eed5c9948bc3dc74240943f35eb211f4cd89",
+   "triage": "3f74f5be7abd3bbbf377fb7bddd9c9919d1f20f90cb489c56fb109329d3f8225",
+   "whatif": "ad7fb1f0fce4e0ede1067e26c2bd13a82de3ff2de25fd7c83fb4de5f9e417daa",
+   "n": 110048
+  }
+ ],
+ "stored": "{\"boundary\":\"half\",\"precision\":\"whole\",\"weightsEnabled\":true,\"weights\":[10,20,30,40],\"showWork\":false,\"persist\":true}"
+}

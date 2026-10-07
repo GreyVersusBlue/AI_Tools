@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v290';
+const CACHE_VERSION = 'v291';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -298,6 +298,7 @@ const PRECACHE_URLS = [
   "Tools/059-experiment-design-planner.html",
   "Tools/043-field-trip-permission-slip.html",
   "Tools/final-grade-checker/grade-math.mjs",
+  "Tools/final-grade-checker/scenario-math.mjs",
   "Tools/036-final_grade_checker.html",
   "Tools/060-fitness-skill-assessment-tracker.html",
   "Tools/061-fraction-decimal-percent-drill-generator.html",
