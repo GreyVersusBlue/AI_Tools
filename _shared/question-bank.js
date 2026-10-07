@@ -101,6 +101,16 @@
    fromLink() stores nothing. The page shows what arrived and stores it, with
    importQuestions(), only when the teacher says so.
 
+   A PAGE THAT ONLY READS (Path 12 P2, 040)
+   load() writes once, when it takes 030's old entries. A page that is not
+   the bank's own must not write anything a teacher did not ask for, so it
+   reads with peek(): the same questions load() would give, with nothing
+   written. Its first real write (importQuestions(), on a press) does the
+   move. sources() is what a "Questions from" chooser lists, the teacher's
+   bank first and then every seed set, and sourceLabel() is the one wording
+   of an option in it, so 030's chooser and 040's cannot come to differ;
+   questionsOf(source) is that source's questions. Each takes { peek: true }.
+
    Plain global script, not an ES module, for store.js's reason. */
 (function (global) {
   'use strict';
@@ -691,6 +701,41 @@
   /** Every question, in the teacher's order. */
   function list() { return load().questions; }
 
+  /** The questions load() would give, with NOTHING written: 030's old
+      entries the bank has not taken yet are among them, in memory only. For
+      a page that reads the bank and is not its editor. */
+  function peek() {
+    var bank = read();
+    if (bank.schema === VERSION) adopt(bank, readLegacy());
+    return bank.questions;
+  }
+
+  /** The questions of `source`: the teacher's bank for '' (or nothing), a
+      seed set's for its id. `opts.peek` reads the bank without writing. */
+  function questionsOf(source, opts) {
+    if (source) return setQuestions(source);
+    return opts && opts.peek ? peek() : list();
+  }
+
+  /** What a page can list questions from: the teacher's bank first, then
+      every seed set. [{ id, title, source, note, count, readOnly }], `id`
+      being '' for the bank. `opts.peek` counts the bank without writing. */
+  function sources(opts) {
+    return [{ id: '', title: 'My question bank', source: '', note: '', count: questionsOf('', opts).length, readOnly: false }]
+      .concat(sets().map(function (s) {
+        return { id: s.id, title: s.title, source: s.source, note: s.note, count: s.count, readOnly: true };
+      }));
+  }
+
+  /** One of sources() as a chooser's option says it:
+      'My question bank (3 questions)',
+      'Cultural Trivia (built in, 30 questions, read-only)'. */
+  function sourceLabel(src) {
+    src = isRecord(src) ? src : {};
+    var n = Number(src.count) || 0, count = n + ' question' + (n === 1 ? '' : 's');
+    return text(src.title) + (src.readOnly ? ' (built in, ' + count + ', read-only)' : ' (' + count + ')');
+  }
+
   /** Stores one question (see upsert). Returns { ok, question } and Store's
       own flags; a question with no prompt or answer is still the caller's to
       refuse. */
@@ -783,6 +828,10 @@
     read: read,
     load: load,
     list: list,
+    peek: peek,
+    questionsOf: questionsOf,
+    sources: sources,
+    sourceLabel: sourceLabel,
     saveQuestion: saveQuestion,
     deleteQuestion: deleteQuestion,
     importQuestions: importQuestions,
