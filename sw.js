@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v279';
+const CACHE_VERSION = 'v290';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -105,6 +105,7 @@ const SHELL_URLS = [
   "Tools/044-Sub%20Plan%20Builder.html",
   "Tools/008-behavior-points-tracker.html",
   "Tools/behavior-points-tracker/seating-layout.js",
+  "Tools/behavior-points-tracker/teams.js",
   "Tools/006-class-roster-hub.html",
   "Tools/classroom-timer/ct-app.js",
   "Tools/classroom-timer/ct-board-core.js",
@@ -213,6 +214,7 @@ const PRECACHE_URLS = [
   "Tools/backup-restore/br-transfer.js",
   "Tools/008-behavior-points-tracker.html",
   "Tools/behavior-points-tracker/seating-layout.js",
+  "Tools/behavior-points-tracker/teams.js",
   "Tools/046-blank-map-generator.html",
   "Tools/blank-map-generator/bmg-choropleth.js",
   "Tools/blank-map-generator/bmg-colors.js",
@@ -239,6 +241,7 @@ const PRECACHE_URLS = [
   "Tools/049-book-tasting-menu-generator.html",
   "Tools/020-bracket-tournament-generator.html",
   "Tools/bracket-tournament-generator/bt-store.js",
+  "Tools/bracket-tournament-generator/bt-teams.js",
   "Tools/bracket-tournament-generator/bt-academic.js",
   "Tools/042-certificate-award-maker.html",
   "Tools/certificate-award-maker/art/ribbon-blue.webp",
@@ -377,6 +380,7 @@ const PRECACHE_URLS = [
   "Tools/029-prompt-builder.html",
   "Tools/083-propaganda-analysis-worksheet-generator.html",
   "Tools/016-qr-code-generator.html",
+  "Tools/qr-code-generator/bulk-rows.js",
   "Tools/018-qr-scavenger-hunt-builder.html",
   "Tools/030-review-game-board.html",
   "Tools/review-game-board/art/backdrop.webp",
@@ -385,6 +389,7 @@ const PRECACHE_URLS = [
   "Tools/review-game-board/art/header.webp",
   "Tools/review-game-board/rgb-audio-db.js",
   "Tools/review-game-board/rgb-bank-editor.js",
+  "Tools/review-game-board/rgb-play.js",
   "Tools/review-game-board/rgb-bank-store.js",
   "Tools/review-game-board/rgb-image.js",
   "Tools/review-game-board/rgb-store.js",
@@ -456,6 +461,8 @@ const PRECACHE_URLS = [
   "Tools/025-writing-prompt-generator.html",
   "Tools/writing-prompt-generator/wpg-prompts.js",
   "Tools/writing-prompt-generator/wpg-rubric-link.js",
+  "Tools/writing-prompt-generator/wpg-scaffold-data.js",
+  "Tools/writing-prompt-generator/wpg-scaffolds.js",
   "Tools/writing-prompt-generator/wpg-store.js",
   "_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css",
   "_shared/a11y.css",

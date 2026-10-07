@@ -38,6 +38,7 @@
 <link rel="stylesheet" href="../_shared/print-area.css">
 <link rel="stylesheet" href="../_shared/print-kit.css">
 <script src="../_shared/print-kit.js"></script>
+<script src="qr-code-generator/bulk-rows.js"></script>
 <style>
   /* On _shared/ink-paper.css's tokens since AI-35, so the page follows the
      teacher's theme like the rest of the site; it used to be dark-only, on
@@ -703,6 +704,24 @@
           <label for="bulk-text">One code per line</label>
           <textarea id="bulk-text" spellcheck="false" style="min-height: 160px;" placeholder="Station 1, https://example.com/station1&#10;Station 2, https://example.com/station2&#10;Station 3, https://example.com/station3"></textarea>
           <div class="hint" id="bulk-hint">Each line becomes one code: <strong>label, link or text</strong> (comma- or tab-separated, matching how a spreadsheet column pastes in). No delimiter on a line? The whole line is used as both the label and the QR content.</div>
+          <div class="hint" id="bulk-rule">A header row (Label, URL&hellip;) is skipped. A cell in &ldquo;double quotes&rdquo; keeps its comma. Up to 400 codes at a time. A label over 60 characters is shown shortened and ends in &hellip; (the code itself is never shortened). Nothing is uploaded or opened: a code is only drawn.</div>
+        </div>
+        <div class="control-row">
+          <div class="control-group">
+            <label for="bulk-file">Or choose a spreadsheet saved as CSV</label>
+            <input type="file" id="bulk-file" accept=".csv,.tsv,.txt,text/csv,text/plain">
+          </div>
+          <div class="control-group">
+            <label for="bulk-order">Columns are</label>
+            <select id="bulk-order">
+              <option value="label-first">Label, then link or text</option>
+              <option value="link-first">Link or text, then label</option>
+            </select>
+          </div>
+        </div>
+        <div class="control-group">
+          <button class="btn-secondary" type="button" id="btn-bulk-check">Check rows</button>
+          <div id="bulk-check" class="hint" role="status" aria-live="polite"></div>
         </div>
         <div class="control-group">
           <label for="bulk-sheet">Print layout</label>
@@ -784,7 +803,7 @@
       <div class="control-group single-only">
         <label for="caption-text">Caption under code (optional)</label>
         <input type="text" id="caption-text" maxlength="60" placeholder="e.g. Rm 214 Wi-Fi, or Ms. Rivera's Form">
-        <div class="hint">Printed under the code in every download and printout — a plain-language fallback for anyone whose camera can't scan it, or a place to spell out a Wi-Fi password beside the code.</div>
+        <div class="hint">Printed under the code in every download and printout — a plain-language fallback for anyone whose camera can't scan it, or a place to spell out a Wi-Fi password beside the code. Up to 60 characters; a long one shrinks to fit the code&rsquo;s width, then ends in &hellip;. It sits below the code&rsquo;s blank border, never inside it.</div>
       </div>
 
       <div class="control-group">
@@ -1002,6 +1021,10 @@
     bulkRosterLinkGroup: document.getElementById('bulk-roster-link-group'),
     bulkRosterLink: document.getElementById('bulk-roster-link'),
     bulkRosterMsg: document.getElementById('bulk-roster-msg'),
+    bulkFile: document.getElementById('bulk-file'),
+    bulkOrder: document.getElementById('bulk-order'),
+    btnBulkCheck: document.getElementById('btn-bulk-check'),
+    bulkCheck: document.getElementById('bulk-check'),
     btnBulkRoster: document.getElementById('btn-bulk-roster'),
     bulkCols: document.getElementById('bulk-cols'),
     bulkColsRow: document.getElementById('bulk-cols-row'),
@@ -1747,6 +1770,7 @@
   var BULK_QR_PX = 300; // fixed print-friendly resolution, independent of the single-mode size slider
   var bulkScratch = document.createElement('canvas');
   var bulkRunToken = 0; // bumped on every new run so a stale chunked loop bails out
+  var bulkSkipped = 0; // rows the last Generate grid left out, each named by Check rows
   var lastBulkPreset = null; // the sheet preset actually used by the last "Generate grid" run
 
   // Avery-style label sheet presets, in inches, for a US Letter page.
@@ -1930,12 +1954,84 @@
     return { label: label, content: content };
   }
 
-  function parseBulkLines(raw) {
-    return raw.split(/\r?\n/)
-      .map(function (line) { return line.trim(); })
-      .filter(function (line) { return line.length > 0; })
-      .map(splitBulkLine);
+  // The rows, read by bulk-rows.js: a header row skipped, quoted cells kept
+  // whole (Roster.splitCells), and every row that will not make a code named.
+  function readBulk() {
+    return window.QrBulkRows.parse(els.bulkText.value, {
+      splitCells: window.Roster && window.Roster.splitCells,
+      order: els.bulkOrder.value,
+      ec: effectiveEcLevel()
+    });
   }
+
+  // What Check rows (and Generate grid) say about the paste, built from
+  // elements: a label is whatever the teacher typed and is only ever text.
+  function renderBulkCheck(res) {
+    var box = els.bulkCheck;
+    box.textContent = '';
+    var p = document.createElement('p');
+    p.style.margin = '0.4rem 0 0';
+    var n = res.rows.length;
+    var msg = n + ' row' + (n === 1 ? '' : 's') + ' will make a code';
+    if (res.header) msg += '; the first row (column names) is skipped';
+    if (res.shortened) msg += '; ' + res.shortened + ' label' + (res.shortened === 1 ? ' is' : 's are') + ' shown shortened';
+    if (n > BULK_MAX) msg += '. That is over the ' + BULK_MAX + ' limit: trim the list';
+    p.textContent = msg + '.';
+    box.appendChild(p);
+    if (res.problems.length) {
+      var h = document.createElement('p');
+      h.style.margin = '0.4rem 0 0';
+      h.textContent = res.problems.length + ' row' + (res.problems.length === 1 ? '' : 's') + ' will not make a code:';
+      box.appendChild(h);
+      var ul = document.createElement('ul');
+      ul.id = 'bulk-problems';
+      ul.style.margin = '0.2rem 0 0';
+      res.problems.forEach(function (pr) {
+        var li = document.createElement('li');
+        li.textContent = 'Line ' + pr.line + ' (' + pr.text + '): ' + pr.reason;
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+    }
+  }
+
+  els.btnBulkCheck.addEventListener('click', function () {
+    var res = readBulk();
+    if (!res.rows.length && !res.problems.length) {
+      els.bulkCheck.textContent = 'Paste at least one line first, or choose a CSV file.';
+      return;
+    }
+    renderBulkCheck(res);
+  });
+
+  var BULK_FILE_MAX = 1024 * 1024;
+  els.bulkFile.addEventListener('change', function () {
+    var f = els.bulkFile.files && els.bulkFile.files[0];
+    if (!f) return;
+    if (f.size > BULK_FILE_MAX) {
+      els.bulkCheck.textContent = f.name + ' is over 1 MB. A grid holds at most ' + BULK_MAX + ' codes, so trim the file first.';
+      els.bulkFile.value = '';
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      var text = String(reader.result || ''); // readAsText has already dropped a byte order mark
+      var existing = els.bulkText.value.replace(/\s+$/, '');
+      if (existing) { // a second file's column names are not a row to make a code of
+        var nl = text.search(/\r?\n/);
+        var first = nl === -1 ? text : text.slice(0, nl);
+        if (first.trim() && window.QrBulkRows.isHeader(window.QrBulkRows.splitLine(first.trim(), window.Roster && window.Roster.splitCells).cells)) {
+          text = nl === -1 ? '' : text.slice(nl + 1);
+        }
+      }
+      els.bulkText.value = (existing ? existing + '\n' : '') + text.replace(/\s+$/, '') + '\n';
+      els.bulkFile.value = '';
+      renderBulkCheck(readBulk());
+    };
+    reader.onerror = function () { els.bulkCheck.textContent = 'That file could not be read.'; };
+    reader.readAsText(f);
+  });
+  els.bulkOrder.addEventListener('change', function () { els.bulkCheck.textContent = ''; });
 
   function bulkItemEl(label, dataURL, isError, errMessage, verified) {
     var div = document.createElement('div');
@@ -2032,6 +2128,7 @@
   function finishBulk(total, errors, unverified, preset) {
     var ok = total - errors;
     var msg = ok + ' code' + (ok === 1 ? '' : 's') + ' generated';
+    if (bulkSkipped) msg += ', ' + bulkSkipped + ' row' + (bulkSkipped === 1 ? '' : 's') + ' left out (listed under Check rows)';
     if (errors) msg += ', ' + errors + ' failed (shown in red below)';
     if (unverified) msg += ', ' + unverified + ' could not be confirmed scannable (marked with a caution note below — try more contrast, a bigger label, or simpler content for those)';
     if (preset) {
@@ -2048,7 +2145,10 @@
   function showBulkMsg(text) { els.bulkStatus.textContent = text; }
 
   function generateBulkGrid() {
-    var entries = parseBulkLines(els.bulkText.value);
+    var res = readBulk();
+    var entries = res.rows;
+    renderBulkCheck(res);
+    bulkSkipped = res.problems.length;
     if (!entries.length) { showBulkMsg('Paste at least one line first — one label and link/text per line.'); return; }
     if (entries.length > BULK_MAX) {
       showBulkMsg('That’s ' + entries.length + ' lines — bulk mode supports up to ' + BULK_MAX + ' at a time. Trim the list and try again.');
@@ -2102,11 +2202,11 @@
           var verified = verifyBulkCanvas(bulkScratch, entry.content);
           if (!verified) unverified++;
           var dataURL = bulkScratch.toDataURL('image/png');
-          screenFrag.appendChild(bulkItemEl(entry.label, dataURL, false, null, verified));
-          printItems.push({ label: entry.label, dataURL: dataURL });
+          screenFrag.appendChild(bulkItemEl(entry.shown, dataURL, false, null, verified));
+          printItems.push({ label: entry.shown, dataURL: dataURL });
         } catch (err) {
           errors++;
-          screenFrag.appendChild(bulkItemEl(entry.label, null, true, err.message));
+          screenFrag.appendChild(bulkItemEl(entry.shown, null, true, err.message));
         }
       }
       els.bulkGrid.appendChild(screenFrag);

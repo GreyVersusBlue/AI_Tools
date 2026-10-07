@@ -8,8 +8,8 @@
      { id, prompt, answer, choices?, media?, unit, standard, difficulty, tags,
        points, createdAt, updatedAt? }
    `prompt` and `answer` are text, trimmed. `choices` is a list of texts and is
-   left off when there are none. `media` is carried exactly as given and never
-   read here (Path 12 P4 gives it a meaning). `unit` and `standard` are free
+   left off when there are none. `media` is carried exactly as given; its one
+   meaning is `media.image`, a picture (see PICTURES below). `unit` and `standard` are free
    text; `difficulty` is '', 'Easy', 'Medium' or 'Hard'; `tags` is a list of
    texts with no blanks and no repeats; `points` is a number (030's value of a
    clue; 0 when there is none). A field this file does not know is kept on the
@@ -110,6 +110,33 @@
    bank first and then every seed set, and sourceLabel() is the one wording
    of an option in it, so 030's chooser and 040's cannot come to differ;
    questionsOf(source) is that source's questions. Each takes { peek: true }.
+
+   PICTURES (Path 12 P4)
+   A question may carry one picture, in `media.image`. The value is one of
+   two strings, the two a clue on 030's board has always held:
+     - 'idb:<id>': a Blob in the shared media store (_shared/media-db.js,
+       database 'gvb-media') under the namespace MEDIA_NS, 'rgb'. That is
+       030's namespace, on purpose: 030 is the page the bank is edited on,
+       its ids are the picture's content hash, so the same map on a clue
+       and on a bank question is ONE record, and its pass at load is the one
+       that deletes pictures nothing points at, with the bank's references
+       in what it keeps. A page that only reads the bank deletes nothing.
+     - 'data:image/(png|jpeg|gif|webp);base64,…': the picture itself, in a
+       browser with no IndexedDB, or in a FILE. A bank file never holds an
+       'idb:' reference (it names a picture in the browser that wrote it):
+       the page that saves the file puts each picture in as a data URL, and
+       the page that reads one stores it and keeps the reference.
+   imageOf(q) is the only reader: it gives one of those two, or ''. Anything
+   else in `media` (an SVG, a 'data:text/html' URL, a web address, a `media`
+   of another shape) is NOT a picture: it is carried as it was given and
+   never shown. So a page that shows no pictures (040's cards, 020's
+   matches, the printed sheets) needs no code to be safe: it never calls
+   imageOf(). cleanMedia() is what a file's questions go through before they
+   are shown or stored: a picture that is not one of the four types, is
+   damaged, is over IMAGE_MAX characters or is another browser's reference
+   is taken off that question (its words still import, and a question
+   already in the bank keeps the picture it has) and named, by row. This
+   file stores no picture and reads none: it has no MediaDB in it.
 
    Plain global script, not an ES module, for store.js's reason. */
 (function (global) {
@@ -426,6 +453,99 @@
     var list = setQuestions(seedSetOf(id));
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
     return null;
+  }
+
+  /* ---- pictures (see PICTURES above) ----------------------------------- */
+
+  var MEDIA_NS = 'rgb';
+  var IMAGE_REF_RE = /^idb:[A-Za-z0-9_-]{1,40}$/;              // media-db.js's own test of a reference
+  var IMAGE_TYPE_RE = /^data:image\/(?:png|jpeg|gif|webp);base64,/;
+  var IMAGE_INLINE_RE = /^data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+=*$/;   // rgb-image.js's own test
+  /* The most characters a picture in a file may be: about 3 MB of image.
+     030 stores a picture at 1000 px, JPEG at 0.72, which is a few hundred
+     thousand; this only stops a file made by hand from filling storage. */
+  var IMAGE_MAX = 4000000;
+
+  function isImageRef(v) { return typeof v === 'string' && IMAGE_REF_RE.test(v); }
+  function isInlineImage(v) { return typeof v === 'string' && IMAGE_INLINE_RE.test(v); }
+
+  /** Why `v`, a picture value in a FILE, cannot be taken: a phrase that
+      finishes "left out: …", or '' when it is a picture a file may carry. */
+  function imageProblem(v) {
+    if (typeof v !== 'string' || !v) return 'it is not a picture';
+    if (isImageRef(v)) return 'it names a picture kept in another browser';
+    if (!IMAGE_TYPE_RE.test(v.slice(0, 40))) return 'it is not a PNG, JPEG, GIF or WebP picture';
+    if (v.length > IMAGE_MAX) return 'it is larger than ' + Math.round(IMAGE_MAX * 3 / 4 / 1000000) + ' MB';
+    if (!IMAGE_INLINE_RE.test(v)) return 'its data is damaged';
+    return '';
+  }
+
+  /** The question's picture: 'idb:<id>', a data URL of one of the four
+      types, or '' for none and for anything else `media` holds. */
+  function imageOf(q) {
+    var m = isRecord(q) ? q.media : null;
+    if (!isRecord(m) || !own(m, 'image')) return '';
+    return isImageRef(m.image) || isInlineImage(m.image) ? m.image : '';
+  }
+
+  /** A copy of `q` with `value` as its picture, or with no picture when
+      `value` is not one. Whatever else `media` holds is kept; a `media` left
+      with nothing in it is taken off. */
+  function withImage(q, value) {
+    var out = {}, k, m = {};
+    for (k in q) if (own(q, k) && !UNSAFE[k]) out[k] = q[k];
+    var keep = isImageRef(value) || isInlineImage(value);
+    if (!isRecord(out.media)) {
+      if (keep) out.media = { image: value };
+      return out;
+    }
+    for (k in out.media) if (own(out.media, k) && !UNSAFE[k] && k !== 'image') m[k] = out.media[k];
+    if (keep) m.image = value;
+    if (Object.keys(m).length) out.media = m; else delete out.media;
+    return out;
+  }
+
+  /** A file's questions with every picture a file may not carry taken off
+      (see PICTURES). `rows[i]` is the file's row for questions[i], as
+      parse() gives it. Returns { questions, images, left }: the questions in
+      the same order (a changed one is a copy, WITHOUT its `media`, so a
+      question the bank already has keeps its own); `images`, each data URL
+      that stays, once; `left`, [{ row, why }]. Pure. */
+  function cleanMedia(questions, rows) {
+    var res = { questions: [], images: [], left: [] }, seen = {};
+    (Array.isArray(questions) ? questions : []).forEach(function (q, i) {
+      if (!isRecord(q) || !isRecord(q.media) || !own(q.media, 'image')) { res.questions.push(q); return; }
+      var why = imageProblem(q.media.image);
+      if (!why) {
+        if (!own(seen, q.media.image)) { seen[q.media.image] = true; res.images.push(q.media.image); }
+        res.questions.push(q);
+        return;
+      }
+      var copy = {}, k;
+      for (k in q) if (own(q, k) && !UNSAFE[k] && k !== 'media') copy[k] = q[k];
+      res.questions.push(copy);
+      res.left.push({ row: (Array.isArray(rows) && rows[i]) || i + 1, why: why });
+    });
+    return res;
+  }
+
+  /** `questions` with each picture `map` names (data URL to reference)
+      replaced; copies where one changed. */
+  function applyImages(questions, map) {
+    return questions.map(function (q) {
+      var v = imageOf(q);
+      return v && own(map, v) ? withImage(q, map[v]) : q;
+    });
+  }
+
+  /** What cleanMedia() left out, as a sentence, or '' for nothing. */
+  function leftSentence(left) {
+    left = Array.isArray(left) ? left : [];
+    if (!left.length) return '';
+    var said = left.slice(0, 8).map(function (x) { return 'row ' + x.row + ' (' + x.why + ')'; });
+    return (left.length === 1 ? 'A picture was' : left.length + ' pictures were') + ' left out, and the question' +
+      (left.length === 1 ? ' is' : 's are') + ' here without ' + (left.length === 1 ? 'it' : 'them') + ': ' + said.join('; ') +
+      (left.length > 8 ? '; and ' + (left.length - 8) + ' more' : '') + '.';
   }
 
   /* ---- links ----------------------------------------------------------- */
@@ -820,6 +940,16 @@
     LINK: LINK,
     isLink: isLink,
     fromLink: fromLink,
+    MEDIA_NS: MEDIA_NS,
+    IMAGE_MAX: IMAGE_MAX,
+    isImageRef: isImageRef,
+    isInlineImage: isInlineImage,
+    imageProblem: imageProblem,
+    imageOf: imageOf,
+    withImage: withImage,
+    cleanMedia: cleanMedia,
+    applyImages: applyImages,
+    leftSentence: leftSentence,
     toJSON: toJSON,
     toRows: toRows,
     fromRows: fromRows,

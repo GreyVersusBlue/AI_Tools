@@ -562,6 +562,25 @@ files must be added there too.
   one `academic` field of the bracket), reads the words from the source each time, and cleans that field when it
   arrives by link. It decides a match by filling the page's own score boxes, so it added no second rule. A bracket
   without the field is unchanged (`npm run test:bracket-academic`, `npm run test:bracket-academic-core`).
+  Since v281 030 has its first two **play modes** (Path 12 P3; `Tools/review-game-board/rgb-play.js`): every-team-answers,
+  an opt-in field on a board (`everyTeam`, and `marks` on a clue scored in it; a board without them is the one-team
+  game, held by 32 hashes in `Tools/review-game-board/test/_old-game.mjs`), and the printed practice quiz with its key
+  and the study guide, from a board or the bank tab's list, built from elements. Since v284 it has the final wager round
+  and quiz-bowl too: one field each on the board (`final`, `quizBowl`, the quiz-bowl log holding question ids), the
+  bank read with `peek()` and never written, both played on one overlay (`#roundOverlay`) and each with its own
+  take-back button. Since v286 it has spin-the-wheel, the last of the modes: one `wheel` field, and **the
+  spin is never chance at play time** (it is worked out from a seed stored on the board and the spin's number, and saved
+  before the picture turns; do not call `Math.random` for a spin). A later mode is opt-in the same way, adds its fields only once used, and runs
+  `_old-game.mjs`, `_every-team-game.mjs` and `_rounds-game.mjs` unchanged (`npm run test:play-rounds` holds the second, `npm run test:play-wheel` the third). **030
+  does not print through the print kit**: its sheets go into its own `#printArea`, the new ones with `printing-sheet`
+  on `<body>` so the screen is out of the flow (`npm run test:play-modes`, `npm run test:play-modes-core`).
+  Since v289 a question may carry **one picture, in `media.image`** (Path 12 P4): `idb:<id>` in the media store under
+  030's namespace (`QuestionBank.MEDIA_NS`), or a PNG, JPEG, GIF or WebP data URL. **`QuestionBank.imageOf(q)` is the only
+  reader**: do not read `q.media` yourself, and put what it gives into a `src` only through a strict test such as
+  `ReviewBoardImage.url()`. A file's questions go through `cleanMedia()` before they are shown or stored, a file never
+  holds an `idb:` reference, and only 030 deletes a stored picture (its pass at load keeps the bank's). A tool that
+  shows no picture needs no code for it and says so on its card, as 040 and 020 do (`npm run test:bank-media`,
+  `npm run test:question-bank-media`).
   030's old key (`gvb-review-board-bank:entries`) is read on every load
   and never written or removed: do not delete it or its registry line, which is what keeps an older page and an
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are

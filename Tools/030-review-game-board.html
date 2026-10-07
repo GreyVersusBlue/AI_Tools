@@ -32,6 +32,8 @@
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/export.js"></script>
 <script src="review-game-board/rgb-store.js"></script>
+<!-- Every-team-answers and the printed quiz and study guide (Path 12 P3). -->
+<script src="review-game-board/rgb-play.js"></script>
 <script src="../_shared/question-bank.js"></script>
 <!-- Questions another tool sends by link (Path 6 P4): share.js reads `?questions=`. -->
 <script src="../_shared/state-link.js"></script>
@@ -217,6 +219,12 @@
   .bank-import-preview h3 { margin: 0 0 .3rem; font-size: 1rem; }
   .bank-import-more { color: var(--muted); font-size: .85rem; margin: .4rem 0 0; }
   .bank-import-more[hidden] { display: none; }
+  /* a picture on a bank question (Path 12 P4) */
+  .bank-picture-field { margin: .8rem 0; }
+  .bank-picture-field [hidden] { display: none; }
+  .bank-picture-preview { max-width: 12rem; max-height: 8rem; margin: .4rem 0; border: 1px solid var(--line-strong); border-radius: 6px; }
+  .bank-pic { max-width: 9rem; max-height: 6rem; margin-top: .35rem; border: 1px solid var(--line-strong); border-radius: 6px; }
+  #importNote[hidden] { display: none; }
 
   .category-block { border: 1px solid var(--line-strong); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .9rem; background: var(--card-2); }
   .category-block .cat-name { font-weight: 700; margin-bottom: .5rem; }
@@ -366,6 +374,81 @@
   .key-img { display: block; max-width: 1.4in; max-height: 1in; object-fit: contain; margin-top: .25rem; }
   .quiz-lines .quiz-line { border-bottom: 1px solid #999; height: 1.3rem; margin-bottom: .2rem; }
 
+  /* Every team answers (Path 12 P3, rgb-play.js): the marking panel sits on
+     the overlay where the award buttons are in the one-team game, so it is
+     the projector's navy and white in both themes, as they are. */
+  .eta-panel { display: none; max-width: 56rem; }
+  .eta-panel.show { display: block; }
+  .eta-rule { color: #cfd6ea; font-size: .95rem; margin: 0 0 .9rem; }
+  .eta-teams { display: flex; flex-wrap: wrap; gap: .7rem; justify-content: center; margin-bottom: 1rem; }
+  .eta-team { border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: .5rem .8rem .6rem; margin: 0; min-width: 0; }
+  .eta-team legend { color: #fff; font-weight: 700; padding: 0 .4rem; }
+  .eta-team label { display: inline-flex; align-items: center; gap: .3rem; color: #fff; font-size: .95rem; margin: 0 .5rem 0 0; }
+  .eta-team input[type="radio"] { width: 1.1rem; height: 1.1rem; }
+  .eta-status { color: #cfd6ea; font-size: .9rem; min-height: 1.3rem; margin: 0; }
+  .team-tally { font-size: .78rem; color: var(--muted); }
+
+  /* The final wager round and quiz-bowl (Path 12 P3, increment 2): a setup
+     block a round under the board's options, and one overlay both play on,
+     the projector's navy and white in both themes, as the clue overlay is. */
+  .round-setup { border: 1px solid var(--line-strong); border-radius: 8px; padding: .8rem 1rem; margin: 0 0 .9rem; }
+  .round-setup[hidden], .round-setup button[hidden] { display: none; }
+  .round-setup textarea, .round-setup select { width: 100%; }
+  .round-setup .round-fields { display: flex; gap: .8rem; flex-wrap: wrap; align-items: end; margin-top: .6rem; }
+  .round-setup .round-fields > div { flex: 1 1 12rem; min-width: 0; }
+  .round-setup .round-fields > div.narrow { flex: 0 1 9rem; }
+  .round-setup .round-fields label { margin-bottom: .2rem; }
+  #roundOverlay { justify-content: flex-start; overflow-y: auto; }
+  .round-box { margin: auto; max-width: 60rem; width: 100%; display: flex; flex-direction: column; align-items: center; }
+  .round-box .question-text[hidden] { display: none; }
+  .round-wager { display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; text-align: left; }
+  .round-wager input { width: 9rem; font-family: inherit; font-size: 1rem; padding: .4rem .5rem; border-radius: 6px; border: 1px solid #445; }
+  .round-note { color: #cfd6ea; font-size: .85rem; min-height: 1.2rem; }
+  .round-list { text-align: left; font-size: 1.15rem; margin: 0 0 1rem; padding-left: 1.6rem; }
+  .round-list.round-small { font-size: .95rem; color: #cfd6ea; }
+  #roundOverlay .award-row button:disabled { opacity: .55; cursor: not-allowed; }
+  .sheet-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .9rem; }
+
+  /* Spin the wheel (Path 12 P3, increment 3). The wheel is a picture of a
+     draw already made (rgb-play.js): it turns, or under reduced motion it
+     does not, and the result is the words beside it and the focus on the
+     chosen clue. The landed cell is marked by a dashed line and an arrow,
+     not by a colour. */
+  .wheel-row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start; margin-top: .7rem; }
+  .wheel-picture { flex: 0 0 11rem; width: 11rem; max-width: 100%; }
+  .wheel-picture svg { display: block; width: 100%; height: auto; }
+  .wheel-side { flex: 1 1 16rem; min-width: 0; }
+  .wheel-side .hint { margin: .4rem 0 0; }
+  .wheel-side ol { margin: .4rem 0 0; padding-left: 1.8rem; font-size: .85rem; }
+  .wheel-disc { transition: transform 1.2s cubic-bezier(.2, .8, .2, 1); }
+  .wheel-wedge { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
+  .wheel-wedge.alt { fill: var(--line); }
+  .wheel-wedge.extra { fill: var(--paper); stroke-dasharray: 3 2; }
+  .wheel-label { fill: var(--ink); font: 700 11px Consolas, monospace; text-anchor: middle; dominant-baseline: central; }
+  .wheel-pointer { fill: var(--ink); }
+  .cell.wheel-landed { outline: 3px dashed #fff; outline-offset: -7px; }
+  .cell.wheel-landed::before { content: "\25B6\00A0"; }
+  @media (prefers-reduced-motion: reduce) { .wheel-disc { transition: none; } }
+
+  /* The practice quiz with its key, and the study guide (rgb-play.js). Like
+     the two sheets above these are drawn only in #printArea, so the greys
+     are print values. No box has a fixed height: a long question grows. */
+  .pq-sheet h2 { margin: 0 0 .5rem; font-size: 1.25rem; }
+  .pq-sub { font-size: .9rem; color: #444; margin: 0 0 1rem; white-space: pre-wrap; }
+  .pq-group { font-size: 1rem; margin: 1rem 0 .45rem; padding-bottom: .15rem; border-bottom: 1px solid #999; break-after: avoid; }
+  .pq-item { break-inside: avoid; margin-bottom: 1rem; }
+  .pq-q { margin: 0 0 .35rem; font-size: .95rem; overflow-wrap: anywhere; }
+  .pq-choices { margin: .2rem 0 .4rem 1.6rem; padding: 0; font-size: .95rem; overflow-wrap: anywhere; }
+  .pq-line { border-bottom: 1px solid #999; min-height: 1.3rem; margin-bottom: .2rem; }
+  .pq-key { break-before: page; }
+  .pq-key-row { margin: 0 0 .3rem; font-size: .95rem; break-inside: avoid; overflow-wrap: anywhere; }
+  .pq-guide-table { width: 100%; border-collapse: collapse; font-size: .9rem; table-layout: fixed; }
+  .pq-guide-table th, .pq-guide-table td { border: 1px solid #999; padding: 5px 8px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+  .pq-guide-table th { background: #eee; }
+  .pq-guide-table tr { break-inside: avoid; }
+  .pq-guide-table .pq-q { margin: 0; }
+  .pq-guide-a { width: 38%; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   .print-only { display: none; }
@@ -377,6 +460,14 @@
     #printArea, #printArea * { visibility: visible; }
     #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0.4in; color: #000; background: #fff; }
     @page { size: letter portrait; margin: 0.4in; }
+    /* The quiz-with-key and the study guide run over several pages and may
+       be printed from the bank tab, which is tall: the screen is taken out
+       of the flow, not only hidden, so no blank page follows the sheet, and
+       the sheet is in the flow, so its key can start a new page. The two
+       older sheets print as they did (the class is off for them). */
+    body.printing-sheet { padding: 0; }
+    body.printing-sheet > *:not(#printArea) { display: none !important; }
+    body.printing-sheet #printArea { position: static; padding: 0; }
   }
 </style>
 </head>
@@ -416,12 +507,15 @@
     <button class="secondary" id="resetGameBtn">Reset game</button>
     <button class="secondary" id="printAnswerKeyBtn">Print answer key</button>
     <button class="secondary" id="printQuizBtn">Print practice quiz</button>
+    <button class="secondary" id="printQuizKeyBtn">Print quiz with answer key</button>
+    <button class="secondary" id="printGuideBtn">Print study guide</button>
     <button class="secondary" id="exportBoardBtn">Export JSON</button>
     <button class="secondary" id="importBoardBtn">Import JSON</button>
     <input type="file" id="importBoardFile" accept="application/json,.json" style="display:none;">
     <button class="danger" id="deleteBoardBtn">Delete</button>
   </div>
   <p class="import-status error" id="imageNote" role="status" hidden></p>
+  <p class="import-status error" id="importNote" role="status" hidden></p>
 
   <div class="card" id="setupCard">
     <label for="boardName">Board name</label>
@@ -481,12 +575,85 @@
       <button type="button" class="secondary small" id="redrawDailyDoubleBtn">Redraw Daily Double</button>
       <label><input type="checkbox" id="lightningRoundToggle"> Lightning round (visible countdown per question)</label>
       <label for="lightningRoundSeconds">Seconds: <input type="number" id="lightningRoundSeconds" class="seconds-input" min="3" max="120" value="15"></label>
+      <label><input type="checkbox" id="everyTeamToggle" aria-describedby="everyTeamRule"> Every team answers (mark each team on every clue)</label>
+      <label><input type="checkbox" id="finalToggle" aria-describedby="finalRule"> Final wager round (one last question, every team wagers)</label>
+      <label><input type="checkbox" id="quizBowlToggle" aria-describedby="quizBowlRule"> Quiz-bowl round (toss-ups and bonus questions)</label>
+      <label><input type="checkbox" id="wheelToggle" aria-describedby="wheelRule"> Spin the wheel (a spin chooses the clue)</label>
+    </div>
+    <p class="hint" id="everyTeamRule" hidden>Every team answers each clue. When the answer is shown, mark each team
+      right, wrong or no answer, then press <b>Score this clue</b>. A right answer scores the clue&rsquo;s points; a
+      wrong answer or no answer scores nothing. A Daily Double is still one team&rsquo;s wager. While the marks are
+      showing: <kbd>1</kbd>-<kbd>9</kbd> change that team&rsquo;s mark &middot; <kbd>Enter</kbd> scores the clue.</p>
+    <div class="round-setup" id="finalSetup" hidden>
+      <p class="hint" id="finalRule">One last question, after the board or whenever you start it. Each team writes down a
+        wager: a whole number from 0 up to its score, and a team at 0 or below may wager up to 100. You type the
+        wagers in, and they stay hidden until all are in. Then the question is shown, then the answer, and you mark
+        each team right or wrong. A right answer adds the wager; a wrong answer takes it off. While the marks are
+        showing: <kbd>1</kbd>-<kbd>9</kbd> change that team&rsquo;s mark &middot; <kbd>Enter</kbd> scores the round.</p>
+      <label for="finalQuestion">Final question</label>
+      <textarea id="finalQuestion" rows="2"></textarea>
+      <label for="finalAnswer">Its answer</label>
+      <textarea id="finalAnswer" rows="2"></textarea>
+      <div class="round-fields">
+        <div><label for="finalSource">Or pick one from</label><select id="finalSource"></select></div>
+        <div><label for="finalPick">Question to use</label><select id="finalPick"></select></div>
+        <button type="button" class="secondary" id="finalUseBtn">Use this question</button>
+      </div>
+      <div class="sheet-row">
+        <button type="button" id="finalStartBtn">Start the final wager round</button>
+        <button type="button" class="secondary" id="finalUndoBtn" hidden>Take the final round back</button>
+      </div>
+      <p class="import-status" id="finalStatus" role="status"></p>
+    </div>
+    <div class="round-setup" id="quizBowlSetup" hidden>
+      <p class="hint" id="quizBowlRule">Toss-up questions are open to every team. You record the buzz: press the team
+        that buzzed first (or its number), then Right or Wrong. A wrong answer locks that team out of the question
+        and costs what is set below (nothing, unless you change it). A right answer scores the toss-up and earns that
+        team alone a bonus question. Questions come from the source in its order, none twice in a round, and the
+        points go on the scoreboard. Keys while a toss-up is open: <kbd>1</kbd>-<kbd>9</kbd> the team that buzzed
+        &middot; <kbd>R</kbd> right &middot; <kbd>W</kbd> wrong &middot; <kbd>Esc</kbd> close.</p>
+      <div class="round-fields">
+        <div><label for="quizBowlSource">Questions from</label><select id="quizBowlSource"></select></div>
+        <div class="narrow"><label for="qbTossup">Toss-up points</label><input type="number" id="qbTossup" min="0" max="1000" step="1"></div>
+        <div class="narrow"><label for="qbBonus">Bonus points</label><input type="number" id="qbBonus" min="0" max="1000" step="1"></div>
+        <div class="narrow"><label for="qbPenalty">A wrong toss-up costs</label><input type="number" id="qbPenalty" min="0" max="1000" step="1"></div>
+      </div>
+      <div class="sheet-row">
+        <button type="button" id="quizBowlStartBtn">Start the round</button>
+        <button type="button" class="secondary" id="quizBowlUndoBtn" hidden>Undo the last toss-up</button>
+        <button type="button" class="secondary" id="quizBowlNewBtn" hidden>Start a new round</button>
+      </div>
+      <p class="hint" id="quizBowlProgress" style="margin-top:.5rem;"></p>
+      <p class="import-status" id="quizBowlStatus" role="status"></p>
+    </div>
+    <div class="round-setup" id="wheelSetup" hidden>
+      <p class="hint" id="wheelRule">A spin chooses the clue, not a team. The wheel has one wedge for every clue not yet
+        played, and a spin is as likely to land on one wedge as on any other. Press <b>Spin the wheel</b> (or the
+        <kbd>S</kbd> key): the result is written under the button, and the chosen clue takes the focus on the board, so
+        <kbd>Enter</kbd> opens it. A clue can still be opened by hand. The spins of a game are worked out from a number
+        kept with the board, so reloading the page does not change the next spin; Reset game starts a new sequence.
+        Two extra wedges are off unless you tick them, and each is one more wedge, as likely as any other:</p>
+      <div class="board-options">
+        <label><input type="checkbox" id="wheelLoseToggle"> Lose a turn (no clue that spin)</label>
+        <label><input type="checkbox" id="wheelDoubleToggle"> Double points (the next clue played is worth twice its points; a Daily Double keeps its own wager, and the double waits)</label>
+      </div>
+      <div class="wheel-row">
+        <div class="wheel-picture" id="wheelPicture" aria-hidden="true"></div>
+        <div class="wheel-side">
+          <button type="button" id="wheelSpinBtn">Spin the wheel</button>
+          <p class="import-status" id="wheelStatus" role="status"></p>
+          <p class="hint" id="wheelOdds"></p>
+          <p class="hint" id="wheelProgress"></p>
+          <details id="wheelDetails"><summary id="wheelSummary">What is on the wheel</summary><ol id="wheelList"></ol></details>
+        </div>
+      </div>
     </div>
     <div class="scoreboard" id="scoreboard"></div>
     <div class="score-toolbar">
       <button type="button" class="secondary small" id="undoScoreBtn" disabled>Undo last score change</button>
       <span class="kbd-hint">While a clue is open: <kbd>Space</kbd> reveal &middot; <kbd>1</kbd>-<kbd>9</kbd> award &middot; <kbd>Esc</kbd> close</span>
     </div>
+    <p class="import-status" id="boardStatus" role="status"></p>
     <div class="board-grid">
       <div class="board-cols" id="boardCols"></div>
     </div>
@@ -525,6 +692,7 @@
       </div>
       <div id="bankAddChoices"></div>
       <div id="bankAddTags"></div>
+      <div id="bankAddPictureSlot"></div>
       <button type="button" id="bankAddBtn">+ Add to bank</button>
       <p class="import-status" id="bankAddStatus" role="status"></p>
     </div>
@@ -574,6 +742,15 @@
         <button type="button" id="bankPullBtn">Pull selected into board</button>
         <span class="import-status" id="bankPullStatus"></span>
       </div>
+      <div class="sheet-row">
+        <span id="bankPrintLabel">Print these questions:</span>
+        <button type="button" class="secondary" id="bankPrintQuizBtn" aria-describedby="bankPrintHint">Practice quiz with answer key</button>
+        <button type="button" class="secondary" id="bankPrintGuideBtn" aria-describedby="bankPrintHint">Study guide</button>
+        <span class="import-status" id="bankPrintStatus" role="status"></span>
+      </div>
+      <p class="hint" id="bankPrintHint" style="margin-top:.4rem;">Prints the ticked questions, or every question the list shows when none is
+        ticked, grouped by unit. The quiz has room to answer and its answer key starts a new page; the study guide
+        has each answer beside its question. A question’s picture is not printed on these sheets: they have its words only.</p>
       <div class="bank-copy-row" id="bankCopyRow" hidden>
         <button type="button" class="secondary" id="bankCopyBtn">Copy selected to my bank</button>
         <span class="import-status" id="bankCopyStatus" role="status"></span>
@@ -584,7 +761,7 @@
       <h2>Share the bank</h2>
       <p class="hint">
         Save the whole bank as a file for a colleague or another computer, and bring one in. The bank file
-        keeps everything; the spreadsheet is for reading and editing in Excel or Sheets. A file you choose is
+        keeps everything, each question’s picture included; the spreadsheet is for reading and editing in Excel or Sheets. A file you choose is
         <b>shown first</b>: what it would add, what it would change and what it would leave out, and nothing is
         stored until you press Add. Importing <b>adds to</b> this bank and never deletes from it: a question
         already here is updated or skipped, so the same file can be imported twice.
@@ -636,8 +813,26 @@
     <button class="ghost" id="closeNoAskBtn">Close (didn't ask this one)</button>
   </div>
   <div class="award-row" id="awardRow"></div>
+  <div class="eta-panel" id="etaPanel">
+    <p class="eta-rule" id="etaRule"></p>
+    <div class="eta-teams" id="etaTeams"></div>
+    <div class="overlay-actions"><button type="button" id="etaScoreBtn">Score this clue</button></div>
+    <p class="eta-status" id="etaStatus" role="status"></p>
+  </div>
   <div class="overlay-actions" id="closeUsedRow" style="display:none;">
     <button class="ghost" id="closeUsedBtn">Mark used &amp; close (no points awarded)</button>
+  </div>
+</div>
+
+<div class="overlay" id="roundOverlay" role="dialog" aria-modal="true" aria-labelledby="roundHead">
+  <div class="round-box">
+    <h2 class="cat-points" id="roundHead"></h2>
+    <div class="question-text" id="roundQuestion"></div>
+    <div class="answer-text" id="roundAnswer"></div>
+    <div id="roundBody"></div>
+    <div class="overlay-actions" id="roundActions"></div>
+    <p class="eta-status" id="roundStatus" role="status"></p>
+    <div class="overlay-actions"><button type="button" class="ghost" id="roundCloseBtn">Close</button></div>
   </div>
 </div>
 
@@ -676,9 +871,17 @@
    'bankPullCategory','bankCategoryOptions','bankPullBtn','bankPullStatus',
    'bankSource','bankSourceNote','bankCopyRow','bankCopyBtn','bankCopyStatus',
    'bankExportBtn','bankExportSheetBtn','bankImportFile','bankFileStatus',
-   'bankAddChoices','bankAddTags','bankListStatus',
+   'bankAddChoices','bankAddTags','bankAddPictureSlot','bankListStatus','importNote',
    'bankImportPreview','bankImportSummary','bankImportList','bankImportMore','bankImportAddBtn','bankImportCancelBtn',
-   'arrivalCard','arrivalSummary','arrivalList','arrivalAddBtn','arrivalDismissBtn','arrivalStatus'
+   'arrivalCard','arrivalSummary','arrivalList','arrivalAddBtn','arrivalDismissBtn','arrivalStatus',
+   'everyTeamToggle','everyTeamRule','boardStatus','etaPanel','etaRule','etaTeams','etaScoreBtn','etaStatus',
+   'printQuizKeyBtn','printGuideBtn','bankPrintQuizBtn','bankPrintGuideBtn','bankPrintStatus',
+   'finalToggle','finalSetup','finalQuestion','finalAnswer','finalSource','finalPick','finalUseBtn','finalStartBtn','finalUndoBtn','finalStatus',
+   'quizBowlToggle','quizBowlSetup','quizBowlSource','qbTossup','qbBonus','qbPenalty','quizBowlStartBtn','quizBowlUndoBtn','quizBowlNewBtn',
+   'quizBowlProgress','quizBowlStatus',
+   'wheelToggle','wheelSetup','wheelLoseToggle','wheelDoubleToggle','wheelPicture','wheelSpinBtn','wheelStatus','wheelOdds','wheelProgress',
+   'wheelDetails','wheelSummary','wheelList',
+   'roundOverlay','roundHead','roundQuestion','roundAnswer','roundBody','roundActions','roundStatus','roundCloseBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, categories:[{name, clues:[{points,question,answer,used}]}], teams:[{name,score}] }
@@ -715,6 +918,11 @@
   function renderUndoButton() {
     if (!els.undoScoreBtn) return;
     var entry = undoStack[undoStack.length - 1];
+    if (entry && entry.group && state) {            // a clue scored for every team: one press takes it all back
+      els.undoScoreBtn.disabled = false;
+      els.undoScoreBtn.textContent = 'Undo: ' + entry.label + ' (every team)';
+      return;
+    }
     if (!entry || !state || !state.teams[entry.teamIndex]) {
       els.undoScoreBtn.disabled = true;
       els.undoScoreBtn.textContent = 'Undo last score change';
@@ -729,6 +937,7 @@
       var entry = undoStack.pop();
       renderUndoButton();
       if (!entry || !state) return;
+      if (entry.group) { undoEveryTeam(entry); return; }
       var team = state.teams[entry.teamIndex];
       if (team) team.score -= entry.delta;
       if (entry.catIdx != null && entry.clueIdx != null) {
@@ -879,6 +1088,20 @@
     (q.tags || []).forEach(function (t) { row.appendChild(el('span', 'bank-tag is-tag', t)); });
     var line = ReviewBankEditor.choicesLine(q);
     if (line) body.appendChild(line);
+    // Its picture (Path 12 P4). imageOf() gives a stored picture's reference
+    // or a well-formed data URL and nothing else, and ReviewBoardImage.url()
+    // is the only way either reaches a src.
+    var pic = QuestionBank.imageOf(q);
+    if (pic) {
+      var src = ReviewBoardImage.url(pic);
+      row.appendChild(el('span', 'bank-tag is-status', src ? 'has a picture' : 'picture missing from this browser'));
+      if (src) {
+        var img = el('img', 'bank-pic');
+        img.alt = 'Picture for: ' + (q.prompt || 'this question');
+        img.src = src;
+        body.appendChild(img);
+      }
+    }
     return body;
   }
 
@@ -1445,7 +1668,7 @@
   }
 
   /* ---------- board lifecycle ---------- */
-  function startBoard(name, categories, teams, dailyDoubleEnabled, lightningRoundEnabled, lightningRoundSeconds) {
+  function startBoard(name, categories, teams, dailyDoubleEnabled, lightningRoundEnabled, lightningRoundSeconds, everyTeam, rounds) {
     state = {
       name: name,
       categories: categories,
@@ -1454,6 +1677,12 @@
       lightningRoundEnabled: !!lightningRoundEnabled,
       lightningRoundSeconds: lightningRoundSeconds || 15
     };
+    // Only a board that has used every-team-answers carries the field at all.
+    if (everyTeam !== undefined) state.everyTeam = !!everyTeam;
+    // And only one that has used the final wager round or quiz-bowl carries those.
+    if (rounds && rounds.final) state.final = rounds.final;
+    if (rounds && rounds.quizBowl) state.quizBowl = rounds.quizBowl;
+    if (rounds && rounds.wheel) state.wheel = rounds.wheel;   // and the wheel
     ReviewBoardStore.setCurrentName(name);
     assignDailyDouble();
     clearUndoStack();
@@ -1500,6 +1729,26 @@
     return ids;
   }
 
+  /** The final wager round and quiz-bowl of `from`, cleaned, onto `board`;
+      a board without them gains nothing. */
+  function cleanRounds(board, from) {
+    var n = Array.isArray(board.teams) ? board.teams.length : 0;
+    var fin = ReviewBoardPlay.cleanFinal(from.final, n), qb = ReviewBoardPlay.cleanQuizBowl(from.quizBowl, n);
+    if (fin) board.final = fin; else delete board.final;
+    if (qb) board.quizBowl = qb; else delete board.quizBowl;
+    var wh = ReviewBoardPlay.cleanWheel(from.wheel, board.categories);
+    if (wh && !wh.seed) wh.seed = newWheelSeed();
+    if (wh) board.wheel = wh; else delete board.wheel;
+  }
+
+  /** The number a game's spins are worked out from. Chance happens here,
+      once a game, and nowhere else in the wheel. */
+  function newWheelSeed() {
+    var words = [Math.floor(Math.random() * 4294967296), Math.floor(Math.random() * 4294967296)];
+    try { if (window.crypto && window.crypto.getRandomValues) words = Array.prototype.slice.call(window.crypto.getRandomValues(new Uint32Array(2))); } catch (e) { /* the two above */ }
+    return words.map(function (n) { return ('0000000' + n.toString(16)).slice(-8); }).join('');
+  }
+
   function loadBoardByName(name) {
     var loaded = ReviewBoardStore.loadBoard(name);
     if (!loaded) return;
@@ -1507,6 +1756,7 @@
     if (typeof state.dailyDoubleEnabled !== 'boolean') state.dailyDoubleEnabled = false; // boards saved before this field existed
     if (typeof state.lightningRoundEnabled !== 'boolean') state.lightningRoundEnabled = false; // boards saved before this field existed
     if (!state.lightningRoundSeconds) state.lightningRoundSeconds = 15;
+    cleanRounds(state, state);
     ReviewBoardStore.setCurrentName(name);
     refreshSwitcher();
     clearUndoStack();
@@ -1536,6 +1786,7 @@
 
   els.printAnswerKeyBtn.addEventListener('click', function () {
     if (!state) return;
+    document.body.classList.remove('printing-sheet');
     els.printArea.innerHTML = answerKeyHtml();
     waitForImages(els.printArea).then(function () { window.print(); });
   });
@@ -1581,9 +1832,35 @@
 
   els.printQuizBtn.addEventListener('click', function () {
     if (!state) return;
+    document.body.classList.remove('printing-sheet');
     els.printArea.innerHTML = studentQuizHtml();
     waitForImages(els.printArea).then(function () { window.print(); });
   });
+
+  /* ---------- the quiz with its key, and the study guide (Path 12 P3) ----------
+     rgb-play.js builds both from elements: the practice quiz with room to
+     answer and, starting a new page, its answer key; and the study guide,
+     each question with its answer beside it. From this board (grouped by
+     category) with the two buttons in the toolbar, or from whatever the
+     Question Bank tab's list shows (grouped by unit) with the two under it.
+     `printing-sheet` stays on <body> while one of them is in #printArea, so
+     Ctrl+P prints it again the same way; the two older buttons take it off. */
+  function printSheet(kind, title, items) {
+    var model = ReviewBoardPlay.sheetModel(kind, title, items);
+    els.printArea.textContent = '';
+    els.printArea.appendChild(ReviewBoardPlay.buildSheet(document, model));
+    document.body.classList.add('printing-sheet');
+    waitForImages(els.printArea).then(function () { window.print(); });
+    return model;
+  }
+  function printBoardSheet(kind) {
+    if (!state) return;
+    var model = printSheet(kind, state.name, ReviewBoardPlay.itemsFromBoard(state, ReviewBoardImage.url));
+    els.boardStatus.className = 'import-status ok';
+    els.boardStatus.textContent = ReviewBoardPlay.sheetSentence(model);
+  }
+  els.printQuizKeyBtn.addEventListener('click', function () { printBoardSheet('quiz'); });
+  els.printGuideBtn.addEventListener('click', function () { printBoardSheet('guide'); });
 
   /* ---------- JSON export / import ---------- */
   function sanitizeFilename(s) {
@@ -1607,7 +1884,8 @@
 
   /** Defensively rebuilds a board object loaded from anywhere (a JSON
       import) so type mismatches or missing fields can't corrupt state. */
-  function normalizeBoard(loaded, name) {
+  function normalizeBoard(loaded, name, left) {
+    var teamCount = Array.isArray(loaded.teams) && loaded.teams.length ? loaded.teams.length : 2;
     var categories = (Array.isArray(loaded.categories) ? loaded.categories : []).map(function (c) {
       var clues = (Array.isArray(c && c.clues) ? c.clues : []).map(function (cl) {
         var out = {
@@ -1621,12 +1899,21 @@
         // test) — an `idb:` reference names a picture in the browser that
         // exported the file, and anything else (a remote URL, a script-ish
         // string) is dropped rather than put into an <img src>.
-        if (ReviewBoardImage.isInline(cl && cl.image)) out.image = cl.image;
+        // What is dropped is named in `left`, when the caller hands one in:
+        // the same rule a bank file's pictures go through.
+        if (cl && cl.image !== undefined && cl.image !== null && cl.image !== '') {
+          var why = QuestionBank.imageProblem(cl.image);
+          if (!why && ReviewBoardImage.isInline(cl.image)) out.image = cl.image;
+          else if (left) left.push({ what: 'picture', clue: out.question || out.answer || 'a clue', why: why || 'it is not a picture' });
+        }
         // By the time normalizeBoard() sees it, an imported audioId has
         // already been through materializeImportedAudio() (a freshly stored
         // local IndexedDB clip) or been stripped — never a raw pointer from
         // whatever browser exported the file.
         if (typeof (cl && cl.audioId) === 'string' && cl.audioId) out.audioId = cl.audioId;
+        // A clue scored with every team answering keeps its marks, cleaned.
+        var marks = out.used ? ReviewBoardPlay.cleanMarks(cl && cl.marks, teamCount) : null;
+        if (marks) out.marks = marks;
         return out;
       }).filter(function (cl) { return cl.question || cl.answer || cl.image || cl.audioId; });
       return { name: String((c && c.name) || ''), clues: clues };
@@ -1634,7 +1921,7 @@
     var teams = (Array.isArray(loaded.teams) ? loaded.teams : []).map(function (t) {
       return { name: String((t && t.name) || 'Team'), score: Number(t && t.score) || 0 };
     });
-    return {
+    var board = {
       name: name,
       categories: categories,
       teams: teams.length ? teams : [{ name: 'Team 1', score: 0 }, { name: 'Team 2', score: 0 }],
@@ -1642,6 +1929,10 @@
       lightningRoundEnabled: !!loaded.lightningRoundEnabled,
       lightningRoundSeconds: Number(loaded.lightningRoundSeconds) || 15
     };
+    // Absent on a file from before the mode, and then absent here too.
+    if (typeof loaded.everyTeam === 'boolean') board.everyTeam = loaded.everyTeam;
+    cleanRounds(board, loaded);
+    return board;
   }
 
   /** A clip's blob, base64-encoded as a data: URL — the same shape an
@@ -1702,13 +1993,26 @@
 
   els.importBoardBtn.addEventListener('click', function () { els.importBoardFile.click(); });
 
+  /** Says which pictures and sounds an imported board file held that were
+      not taken, by clue, or clears the line. The clues themselves import. */
+  function sayImportLeft(name, left) {
+    els.importNote.hidden = !left.length;
+    if (!left.length) { els.importNote.textContent = ''; return; }
+    var said = left.slice(0, 8).map(function (x) { return 'the ' + x.what + ' on \u201c' + x.clue + '\u201d (' + x.why + ')'; });
+    els.importNote.textContent = 'Imported \u201c' + name + '\u201d with every clue. Left out: ' + said.join('; ') +
+      (left.length > 8 ? '; and ' + (left.length - 8) + ' more' : '') + '.';
+  }
+
   /** Walks a raw, untrusted decoded board and turns any inline `audio` data
       URL (the shape the export above writes) into a freshly stored local
       IndexedDB clip, rewriting the field to `audioId`. Any `audioId` already
       on the incoming object is dropped first — it would be a pointer into
       whatever browser exported the file, and means nothing on this one. */
-  function materializeImportedAudio(loaded) {
+  function materializeImportedAudio(loaded, left) {
     if (!Array.isArray(loaded.categories)) return Promise.resolve();
+    function leftOut(cl, why) {
+      if (left) left.push({ what: 'sound', clue: String(cl.question || cl.answer || 'a clue'), why: why });
+    }
     var jobs = [];
     loaded.categories.forEach(function (c) {
       if (!c || !Array.isArray(c.clues)) return;
@@ -1722,8 +2026,10 @@
             dataUrlToBlob(audio)
               .then(function (blob) { return window.RGBAudioDB.putClip(window.RGBAudioDB.genId(), blob); })
               .then(function (record) { cl.audioId = record.id; })
-              .catch(function () { /* a corrupt clip just imports without audio */ })
+              .catch(function () { leftOut(cl, 'its data is damaged'); /* a corrupt clip just imports without audio */ })
           );
+        } else if (typeof audio === 'string' && audio) {
+          leftOut(cl, /^data:audio\//.test(audio) ? 'this browser cannot store sounds' : 'it is not a sound');
         }
       });
     });
@@ -1749,9 +2055,11 @@
         alert('That board has no categories/clues to import.');
         return;
       }
-      materializeImportedAudio(decoded).then(function () {
+      var left = [];
+      sayImportLeft('', left);
+      materializeImportedAudio(decoded, left).then(function () {
         var name = uniqueBoardName(decoded.name || 'Imported Board');
-        var arrived = normalizeBoard(decoded, name);
+        var arrived = normalizeBoard(decoded, name, left);
         /* normalizeBoard() kept only real inline pictures. They are stored
            before the board is saved, so their bytes never land in
            localStorage; a picture the store refuses stays inline, still saved. */
@@ -1771,6 +2079,7 @@
         els.toolbar.style.display = '';
         renderBoard();
         sayMissingImages();
+        sayImportLeft(name, left);
       });
     };
     reader.onerror = function () { alert('Couldn’t read that file.'); };
@@ -1812,6 +2121,9 @@
     els.redrawDailyDoubleBtn.disabled = !state.dailyDoubleEnabled;
     els.lightningRoundToggle.checked = !!state.lightningRoundEnabled;
     els.lightningRoundSeconds.value = state.lightningRoundSeconds;
+    els.everyTeamToggle.checked = !!state.everyTeam;
+    els.everyTeamRule.hidden = !state.everyTeam;
+    var teamTally = state.everyTeam ? ReviewBoardPlay.tally(state.categories, state.teams.length) : null;
 
     // scoreboard
     els.scoreboard.innerHTML = '';
@@ -1836,10 +2148,13 @@
       removeBtn.className = 'small danger'; removeBtn.textContent = '×';
       removeBtn.title = 'Remove team';
       removeBtn.addEventListener('click', function () {
+        ReviewBoardPlay.dropTeam(state.categories, i);   // its mark leaves every clue scored for every team
+        ReviewBoardPlay.dropTeamFromRounds(state, i);    // and its wager and its buzzes leave the two rounds
         state.teams.splice(i, 1); clearUndoStack(); renderBoard();
       });
       chip.appendChild(nameInput); chip.appendChild(minus); chip.appendChild(scoreSpan);
       chip.appendChild(plus); chip.appendChild(removeBtn);
+      if (teamTally) chip.appendChild(el('span', 'team-tally', ReviewBoardPlay.tallyLine(teamTally[i])));
       els.scoreboard.appendChild(chip);
     });
     var addTeamBtn = document.createElement('button');
@@ -1862,6 +2177,7 @@
       header.style.gridRow = 1;
       els.boardCols.appendChild(header);
     });
+    var landed = ReviewBoardPlay.wheelLanded(state.categories, state.wheel);   // null on a board without the wheel
     for (var r = 0; r < maxClues; r++) {
       state.categories.forEach(function (cat, ci) {
         var clue = cat.clues[r];
@@ -1878,12 +2194,17 @@
           btn.addEventListener('click', (function (catIdx, clueIdx) {
             return function () { openClue(catIdx, clueIdx); };
           })(ci, r));
+          if (landed && landed.cat === ci && landed.clue === r) {
+            btn.classList.add('wheel-landed');
+            btn.setAttribute('aria-label', cat.name + ' for ' + clue.points + ', chosen by the wheel');
+          }
         }
         btn.style.gridRow = r + 2;
         els.boardCols.appendChild(btn);
       });
     }
     renderUndoButton();
+    renderRounds();
   }
 
   function renderScoreboardOnly() {
@@ -1937,6 +2258,7 @@
     els.overlayAnswer.textContent = clue.answer;
     els.overlayAnswer.classList.remove('show');
     els.awardRow.classList.remove('show');
+    els.etaPanel.classList.remove('show');
     els.closeUsedRow.style.display = 'none';
     els.wagerPanel.style.display = 'none';
     els.overlayQuestion.style.display = '';
@@ -1956,7 +2278,8 @@
       els.wagerAmount.value = Math.max(clue.points * 2, 0);
       els.wagerPanel.style.display = '';
     } else {
-      els.overlayCatPoints.textContent = cat.name + ' — ' + clue.points;
+      var worth = ReviewBoardPlay.wheelWorth(clue.points, state.wheel);   // clue.points itself unless the wheel doubled it
+      els.overlayCatPoints.textContent = cat.name + ' — ' + worth + (worth === clue.points ? '' : ' (double points)');
       els.showAnswerBtn.style.display = '';
       els.closeNoAskBtn.style.display = '';
       showOverlayAudioFor(clue, overlayAudioToken);
@@ -1986,6 +2309,9 @@
   function markCurrentClueUsed() {
     if (!currentClue) return;
     state.categories[currentClue.catIdx].clues[currentClue.clueIdx].used = true;
+    // The wheel's double is spent on the clue it doubled. A Daily Double is
+    // its own wager and was not doubled, so the double waits.
+    if (state.wheel && state.wheel.doubleNext && !dailyDoubleWager) state.wheel.doubleNext = false;
   }
 
   function closeOverlay() {
@@ -1993,6 +2319,7 @@
     overlayAudioToken++; // invalidate any still-in-flight IndexedDB fetch for the clue we're leaving
     hideOverlayAudio();
     els.overlay.classList.remove('show');
+    els.etaPanel.classList.remove('show');
     currentClue = null;
   }
 
@@ -2032,6 +2359,10 @@
     var savedClue = currentClue; // closeOverlay() clears currentClue, so capture indices for the undo entry now
     var clue = state.categories[currentClue.catIdx].clues[currentClue.clueIdx];
 
+    // Every team answers: the marking panel, not one team's button. A Daily
+    // Double stays one team's wager, so it takes the branch it always took.
+    if (state.everyTeam && !dailyDoubleWager) { showEveryTeamPanel(clue, savedClue); return; }
+
     if (dailyDoubleWager) {
       var wTeam = state.teams[dailyDoubleWager.teamIndex];
       var correctBtn = document.createElement('button');
@@ -2054,12 +2385,13 @@
       els.awardRow.appendChild(correctBtn);
       els.awardRow.appendChild(incorrectBtn);
     } else {
+      var worth = ReviewBoardPlay.wheelWorth(clue.points, state.wheel);
       state.teams.forEach(function (team, ti) {
         var b = document.createElement('button');
-        b.textContent = '+' + clue.points + ' ' + team.name;
+        b.textContent = '+' + worth + ' ' + team.name;
         b.addEventListener('click', function () {
-          team.score += clue.points;
-          pushScoreUndo(ti, clue.points, savedClue.catIdx, savedClue.clueIdx);
+          team.score += worth;
+          pushScoreUndo(ti, worth, savedClue.catIdx, savedClue.clueIdx);
           markCurrentClueUsed();
           closeOverlay();
           renderBoard();
@@ -2070,6 +2402,805 @@
     }
     els.awardRow.classList.add('show');
   }
+
+  /* ---------- every team answers (Path 12 P3, rgb-play.js) ----------
+     Opt-in on a board (`state.everyTeam`). Once the answer is shown, each team
+     has a group of three radio buttons (Right, Wrong, No answer; No answer to
+     start), and Score this clue gives the clue's points to every team marked
+     right, keeps the marks on the clue and closes it. One Undo takes the
+     whole clue back. A board that never turned the mode on has neither field
+     and none of this runs. */
+  var everyTeamClue = null;   // { catIdx, clueIdx } while the marks are showing
+
+  function everyTeamMarks() {
+    return state.teams.map(function (team, i) {
+      var picked = els.etaTeams.querySelector('input[name="eta-team-' + i + '"]:checked');
+      return picked ? picked.value : 'n';
+    });
+  }
+
+  function showEveryTeamPanel(clue, at) {
+    everyTeamClue = at;
+    els.etaRule.textContent = 'Mark every team, then score the clue. Right scores ' + (Number(ReviewBoardPlay.wheelWorth(clue.points, state.wheel)) || 0) +
+      '; wrong and no answer score nothing.';
+    els.etaStatus.textContent = '';
+    els.etaTeams.textContent = '';
+    state.teams.forEach(function (team, i) {
+      var box = el('fieldset', 'eta-team');
+      box.appendChild(el('legend', '', (i + 1) + '. ' + team.name));
+      ReviewBoardPlay.MARKS.forEach(function (mark) {
+        var label = el('label'), radio = el('input');
+        radio.type = 'radio';
+        radio.name = 'eta-team-' + i;
+        radio.value = mark;
+        radio.checked = mark === 'n';
+        label.appendChild(radio);
+        var word = ReviewBoardPlay.markWord(mark);
+        label.appendChild(document.createTextNode(word.charAt(0).toUpperCase() + word.slice(1)));
+        box.appendChild(label);
+      });
+      els.etaTeams.appendChild(box);
+    });
+    els.etaPanel.classList.add('show');
+    var first = els.etaTeams.querySelector('input:checked');
+    (first || els.etaScoreBtn).focus();
+  }
+
+  /** A number key: that team's mark moves on (no answer, right, wrong). */
+  function cycleEveryTeamMark(i) {
+    var team = state.teams[i];
+    if (!team) return;
+    var next = ReviewBoardPlay.nextMark(everyTeamMarks()[i]);
+    var radio = els.etaTeams.querySelector('input[name="eta-team-' + i + '"][value="' + next + '"]');
+    if (!radio) return;
+    radio.checked = true;
+    radio.focus();
+    els.etaStatus.textContent = team.name + ': ' + ReviewBoardPlay.markWord(next) + '.';
+  }
+
+  els.etaScoreBtn.addEventListener('click', function () {
+    if (!state || !everyTeamClue || !currentClue) return;
+    var at = everyTeamClue, cat = state.categories[at.catIdx], clue = cat.clues[at.clueIdx];
+    var worth = ReviewBoardPlay.wheelWorth(clue.points, state.wheel);
+    var marks = everyTeamMarks(), deltas = ReviewBoardPlay.score(worth, marks);
+    var label = cat.name + ' ' + clue.points + (worth === clue.points ? '' : ' (double points)');
+    deltas.forEach(function (d, i) { state.teams[i].score += d; });
+    clue.marks = marks;
+    undoStack.push({ group: deltas, label: label, catIdx: at.catIdx, clueIdx: at.clueIdx });
+    if (undoStack.length > UNDO_MAX) undoStack.shift();
+    everyTeamClue = null;
+    markCurrentClueUsed();
+    closeOverlay();
+    renderBoard();
+    deltas.forEach(function (d, i) { if (d) flashTeamScore(i, d > 0); });
+    els.boardStatus.className = 'import-status ok';
+    els.boardStatus.textContent = ReviewBoardPlay.summary(label, worth,
+      state.teams.map(function (t) { return t.name; }), marks);
+    var next = els.boardCols.querySelector('.cell:not(.used):not(.blank)');
+    (next || els.undoScoreBtn).focus();
+  });
+
+  function undoEveryTeam(entry) {
+    entry.group.forEach(function (d, i) { if (state.teams[i]) state.teams[i].score -= d; });
+    var cat = state.categories[entry.catIdx], clue = cat && cat.clues[entry.clueIdx];
+    if (clue) { clue.used = false; delete clue.marks; }
+    save();
+    renderBoard();
+    els.boardStatus.className = 'import-status';
+    els.boardStatus.textContent = 'Took back ' + entry.label + ': its points are off every team and it can be asked again.';
+  }
+
+  els.everyTeamToggle.addEventListener('change', function () {
+    if (!state) return;
+    state.everyTeam = els.everyTeamToggle.checked;
+    save();
+    renderBoard();
+    els.boardStatus.className = 'import-status';
+    els.boardStatus.textContent = state.everyTeam
+      ? 'Every team answers each clue from now on. The rule is under the options above.'
+      : 'One team answers each clue, as before. The marks already made are kept.';
+  });
+
+  /* ---------- the final wager round and quiz-bowl (Path 12 P3, increment 2;
+     the rules are rgb-play.js's) ----------
+     Both are opt-in on a board (`state.final.on`, `state.quizBowl.on`) and a
+     board that never ticked either box has neither field. Both play on their
+     own overlay (#roundOverlay), every text of which is built from elements.
+     Nothing here is student-facing: the TEACHER types each wager and records
+     each buzz. */
+  var roundPlay = null;          // what the round overlay shows: { kind: 'final' | 'qb', stage, ... }
+  var roundReturnFocus = null;
+
+  function teamNames() { return state.teams.map(function (t) { return t.name; }); }
+  function teamScores() { return state.teams.map(function (t) { return t.score; }); }
+  function scoreLine() { return state.teams.map(function (t) { return t.name + ' ' + t.score; }).join(' · '); }
+  function setStatus(node, kind, message) { node.className = 'import-status' + (kind ? ' ' + kind : ''); node.textContent = message; }
+  function playable(q) { return !!q && String(q.prompt || '').trim() !== '' && String(q.answer || '').trim() !== ''; }
+  function roundQuestions(source) { return QuestionBank.questionsOf(source, { peek: true }).filter(playable); }
+  function roundIds(list) { return list.map(function (q) { return q.id; }); }
+  function roundFind(list, id) {
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return { id: id, prompt: '(This question is no longer in the source.)', answer: '' };
+  }
+
+  function populateRoundSource(select, value) {
+    var list = QuestionBank.sources({ peek: true });
+    setOptions(select, list.map(function (s) { return { value: s.id, label: QuestionBank.sourceLabel(s) }; }));
+    select.value = list.some(function (s) { return s.id === value; }) ? value : '';
+  }
+
+  function populateFinalPick() {
+    var list = roundQuestions(els.finalSource.value);
+    setOptions(els.finalPick, list.length
+      ? list.map(function (q) { var t = String(q.prompt).replace(/\s+/g, ' ').trim(); return { value: q.id, label: t.length > 90 ? t.slice(0, 89) + '…' : t }; })
+      : [{ value: '', label: 'No question with an answer here' }]);
+    els.finalUseBtn.disabled = !list.length;
+  }
+
+  /* ---------- spin the wheel (Path 12 P3, increment 3; the rules are
+     rgb-play.js's) ----------
+     Opt-in on a board (`state.wheel.on`); a board that never ticked the box
+     has no such field. A spin is worked out from the board's stored seed and
+     the spin's number, recorded and saved BEFORE the picture turns, so the
+     picture is never the draw. Nothing is conveyed by the turning or by a
+     colour: the result is the sentence in #wheelStatus (written once, when
+     the wheel stops) and the focus on the chosen clue. */
+  var WHEEL_NS = 'http://www.w3.org/2000/svg';
+  var WHEEL_TURN_MS = 1250;
+  var wheelTimer = null;
+
+  function svgEl(tag, className) {
+    var node = document.createElementNS(WHEEL_NS, tag);
+    if (className) node.setAttribute('class', className);
+    return node;
+  }
+  function wheelPoint(radius, degrees) {
+    var a = degrees * Math.PI / 180;
+    return (radius * Math.sin(a)).toFixed(2) + ' ' + (-radius * Math.cos(a)).toFixed(2);
+  }
+  function wheelStill() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  function wheelLastLabel(w) {
+    var last = w.last;
+    if (!last) return '';
+    if (last.kind === 'lose') return 'Lose a turn';
+    if (last.kind === 'double') return 'Double points';
+    var c = state.categories[last.cat], cl = c && c.clues[last.clue];
+    return cl ? c.name + ' for ' + cl.points : '';
+  }
+
+  /** The picture: a wedge a clue not yet played (numbered as the list beside
+      it is) and one an extra wedge, under a pointer at the top. `at` is the
+      wedge the pointer rests on, or -1. */
+  function drawWheel(wedges, at) {
+    els.wheelPicture.textContent = '';
+    var svg = svgEl('svg'), disc = svgEl('g', 'wheel-disc'), step = wedges.length ? 360 / wedges.length : 360;
+    svg.setAttribute('viewBox', '-112 -122 224 234');
+    svg.setAttribute('focusable', 'false');
+    disc.id = 'wheelDisc';
+    wedges.forEach(function (wedge, i) {
+      var shape;
+      if (wedges.length === 1) {
+        shape = svgEl('circle');
+        shape.setAttribute('r', '100');
+      } else {
+        shape = svgEl('path');
+        shape.setAttribute('d', 'M0 0 L' + wheelPoint(100, i * step) + ' A100 100 0 ' + (step > 180 ? 1 : 0) + ' 1 ' + wheelPoint(100, (i + 1) * step) + ' Z');
+      }
+      shape.setAttribute('class', 'wheel-wedge' + (wedge.kind !== 'clue' ? ' extra' : i % 2 ? ' alt' : ''));
+      disc.appendChild(shape);
+      var label = svgEl('text', 'wheel-label'), mid = wheelPoint(wedges.length === 1 ? 0 : 74, (i + 0.5) * step).split(' ');
+      label.setAttribute('x', mid[0]);
+      label.setAttribute('y', mid[1]);
+      label.textContent = wedge.kind === 'lose' ? 'L' : wedge.kind === 'double' ? '×2' : String(i + 1);
+      disc.appendChild(label);
+    });
+    if (!wedges.length) { var rim = svgEl('circle', 'wheel-wedge extra'); rim.setAttribute('r', '100'); disc.appendChild(rim); }
+    disc.style.transform = 'rotate(' + (at >= 0 ? -(at + 0.5) * step : 0) + 'deg)';
+    svg.appendChild(disc);
+    var pointer = svgEl('path', 'wheel-pointer');
+    pointer.setAttribute('d', 'M-9 -121 L9 -121 L0 -99 Z');
+    svg.appendChild(pointer);
+    els.wheelPicture.appendChild(svg);
+  }
+
+  function renderWheel() {
+    var P = ReviewBoardPlay, w = state.wheel, on = !!(w && w.on);
+    els.wheelToggle.checked = on;
+    els.wheelSetup.hidden = !on;
+    if (!on) return;
+    els.wheelLoseToggle.checked = !!w.lose;
+    els.wheelDoubleToggle.checked = !!w.double;
+    var wedges = P.wheelWedges(state.categories, w), at = -1, last = w.last;
+    wedges.forEach(function (wedge, i) {
+      if (last && wedge.kind === last.kind && (last.kind !== 'clue' || (wedge.cat === last.cat && wedge.clue === last.clue))) at = i;
+    });
+    drawWheel(wedges, at);
+    els.wheelOdds.textContent = P.wheelOdds(state.categories, w);
+    var lastLabel = wheelLastLabel(w);
+    els.wheelProgress.textContent = (w.spins ? 'Spins so far: ' + w.spins + '.' + (lastLabel ? ' Last: ' + lastLabel + '.' : '') : 'No spin yet.') +
+      (w.doubleNext ? ' A double is waiting: the next clue played is worth twice its points.' : '');
+    els.wheelSummary.textContent = 'What is on the wheel (' + wedges.length + (wedges.length === 1 ? ' wedge)' : ' wedges)');
+    els.wheelList.textContent = '';
+    wedges.forEach(function (wedge) { els.wheelList.appendChild(el('li', '', wedge.label)); });
+  }
+
+  /** The wheel has stopped: say where, once, and put the focus there. */
+  function wheelLand(sentence, onClue) {
+    wheelTimer = null;
+    renderBoard();
+    setStatus(els.wheelStatus, '', sentence);
+    var cell = onClue ? els.boardCols.querySelector('.cell.wheel-landed') : null;
+    (cell || els.wheelSpinBtn).focus();
+  }
+
+  function spinWheel() {
+    var P = ReviewBoardPlay, w = state && state.wheel;
+    if (!w || !w.on || wheelTimer) return;
+    var spin = P.wheelSpin(state.categories, w);
+    if (!spin) { setStatus(els.wheelStatus, '', P.wheelSentence(null, w)); els.wheelSpinBtn.focus(); return; }
+    var doubled = !!w.doubleNext;
+    P.wheelApply(w, spin);
+    save();                                    // the spin is the board's before the picture moves
+    var sentence = P.wheelSentence(spin, { doubleNext: doubled }), onClue = spin.wedge.kind === 'clue';
+    if (wheelStill()) { wheelLand(sentence, onClue); return; }
+    setStatus(els.wheelStatus, '', '');
+    var disc = document.getElementById('wheelDisc'), step = 360 / spin.count;
+    var now = parseFloat((/rotate\((-?[\d.]+)deg\)/.exec(disc.style.transform) || [0, 0])[1]) || 0;
+    var target = Math.ceil(now / 360) * 360 + 1080 - (spin.index + 0.5) * step;
+    void disc.getBoundingClientRect();
+    disc.style.transform = 'rotate(' + target + 'deg)';
+    wheelTimer = setTimeout(function () { wheelLand(sentence, onClue); }, WHEEL_TURN_MS);
+  }
+
+  els.wheelToggle.addEventListener('change', function () {
+    if (!state) return;
+    if (!state.wheel) { state.wheel = ReviewBoardPlay.wheelNew(newWheelSeed()); state.wheel.on = false; }
+    state.wheel.on = els.wheelToggle.checked;
+    if (!state.wheel.on) state.wheel.doubleNext = false;
+    save();
+    renderBoard();
+    setStatus(els.wheelStatus, '', '');
+    setStatus(els.boardStatus, '', state.wheel.on
+      ? 'Spin the wheel is on. Its rule and its button are under the options above.'
+      : 'Spin the wheel is off. A clue is chosen by hand, as before.');
+  });
+  [['wheelLoseToggle', 'lose', 'Lose a turn'], ['wheelDoubleToggle', 'double', 'Double points']].forEach(function (t) {
+    els[t[0]].addEventListener('change', function () {
+      if (!state || !state.wheel) return;
+      state.wheel[t[1]] = els[t[0]].checked;
+      save();
+      renderBoard();
+      setStatus(els.wheelStatus, '', t[2] + (state.wheel[t[1]] ? ' is now a wedge on the wheel. ' : ' is off the wheel. ') + ReviewBoardPlay.wheelOdds(state.categories, state.wheel));
+    });
+  });
+  els.wheelSpinBtn.addEventListener('click', spinWheel);
+  /* S spins, when the board is what is on the screen and nothing is being typed. */
+  document.addEventListener('keydown', function (e) {
+    if (!/^s$/i.test(e.key) || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    if (!state || !state.wheel || !state.wheel.on) return;
+    if (els.overlay.classList.contains('show') || els.roundOverlay.classList.contains('show')) return;
+    if (els.boardCard.style.display === 'none' || !els.boardsSection.classList.contains('active')) return;
+    var t = e.target, tag = t && t.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+    e.preventDefault();
+    spinWheel();
+  });
+
+  function renderRounds() {
+    renderWheel();
+    var P = ReviewBoardPlay, f = state.final, q = state.quizBowl;
+    els.finalToggle.checked = !!(f && f.on);
+    els.finalSetup.hidden = !(f && f.on);
+    if (f && f.on) {
+      var played = P.finalPlayed(f);
+      els.finalQuestion.value = f.question;
+      els.finalAnswer.value = f.answer;
+      els.finalQuestion.readOnly = els.finalAnswer.readOnly = played;
+      els.finalStartBtn.textContent = played ? 'Show the final result' : 'Start the final wager round';
+      els.finalUndoBtn.hidden = !played;
+      populateRoundSource(els.finalSource, els.finalSource.value);
+      populateFinalPick();
+      els.finalUseBtn.disabled = els.finalUseBtn.disabled || played;
+    }
+    els.quizBowlToggle.checked = !!(q && q.on);
+    els.quizBowlSetup.hidden = !(q && q.on);
+    if (q && q.on) {
+      var begun = q.log.length > 0;
+      populateRoundSource(els.quizBowlSource, q.source);
+      els.qbTossup.value = q.tossup; els.qbBonus.value = q.bonus; els.qbPenalty.value = q.penalty;
+      [els.quizBowlSource, els.qbTossup, els.qbBonus, els.qbPenalty].forEach(function (c) { c.disabled = begun; });
+      els.quizBowlStartBtn.textContent = q.over ? 'Show the round summary' : begun ? 'Continue the round' : 'Start the round';
+      els.quizBowlUndoBtn.hidden = !begun;
+      els.quizBowlNewBtn.hidden = !begun;
+      var left = P.qbLeft(roundIds(roundQuestions(q.source)), q);
+      els.quizBowlProgress.textContent = q.log.length + (q.log.length === 1 ? ' toss-up asked' : ' toss-ups asked') + (q.over ? ', and the round is over. ' : '. ') +
+        left + (left === 1 ? ' question is' : ' questions are') + ' left in this source.' +
+        (begun ? ' The source and the points are fixed until a new round.' : '');
+    }
+  }
+
+  els.finalToggle.addEventListener('change', function () {
+    if (!state) return;
+    if (!state.final) state.final = { on: false, question: '', answer: '' };
+    state.final.on = els.finalToggle.checked;
+    save();
+    renderRounds();
+    setStatus(els.boardStatus, '', state.final.on
+      ? 'The final wager round is on. Its rule and its question are under the options above.'
+      : 'The final wager round is off. Its question is kept.');
+  });
+  [['finalQuestion', 'question'], ['finalAnswer', 'answer']].forEach(function (pair) {
+    els[pair[0]].addEventListener('change', function () {
+      if (!state || !state.final || ReviewBoardPlay.finalPlayed(state.final)) return;
+      state.final[pair[1]] = els[pair[0]].value.trim();
+      save();
+    });
+  });
+  els.finalSource.addEventListener('change', populateFinalPick);
+  els.finalUseBtn.addEventListener('click', function () {
+    if (!state || !state.final || ReviewBoardPlay.finalPlayed(state.final)) return;
+    var q = roundFind(roundQuestions(els.finalSource.value), els.finalPick.value);
+    if (!els.finalPick.value || !playable(q)) return;
+    state.final.question = String(q.prompt).trim();
+    state.final.answer = String(q.answer).trim();
+    save();
+    renderRounds();
+    setStatus(els.finalStatus, 'ok', 'That question is the final question now. It was copied: the source is unchanged.');
+  });
+
+  els.finalStartBtn.addEventListener('click', function () {
+    if (!state || !state.final) return;
+    var f = state.final;
+    if (ReviewBoardPlay.finalPlayed(f)) { openRound({ kind: 'final', stage: 'result' }); return; }
+    f.question = els.finalQuestion.value.trim();
+    f.answer = els.finalAnswer.value.trim();
+    save();
+    if (!f.question) {
+      setStatus(els.finalStatus, 'error', 'Type the final question, or pick one, before the round starts.');
+      els.finalQuestion.focus();
+      return;
+    }
+    if (!state.teams.length) { setStatus(els.finalStatus, 'error', 'There is no team to wager. Add a team first.'); return; }
+    setStatus(els.finalStatus, '', '');
+    openRound({ kind: 'final', stage: 'wager', typed: state.teams.map(function () { return ''; }), wagers: null, marks: state.teams.map(function () { return null; }) });
+  });
+
+  els.finalUndoBtn.addEventListener('click', function () {
+    var f = state && state.final;
+    if (!ReviewBoardPlay.finalPlayed(f)) return;
+    f.deltas.forEach(function (d, i) { if (state.teams[i]) state.teams[i].score -= d; });
+    ReviewBoardPlay.finalClear(f);
+    save();
+    renderBoard();
+    setStatus(els.finalStatus, '', 'Took the final round back: every wager is off the scores, and the round can be played again.');
+    els.finalStartBtn.focus();
+  });
+
+  /* ----- the overlay both rounds play on ----- */
+  function roundButton(label, onClick, className, first) {
+    var b = el('button', className || '', label);
+    b.type = 'button';
+    if (first) b.setAttribute('data-first', '');
+    b.addEventListener('click', onClick);
+    return b;
+  }
+  function roundShow(head, question, answer) {
+    els.roundHead.textContent = head;
+    els.roundQuestion.textContent = question || '';
+    els.roundQuestion.hidden = !question;
+    els.roundAnswer.textContent = answer || '';
+    els.roundAnswer.classList.toggle('show', !!answer);
+  }
+  function openRound(play) {
+    roundReturnFocus = document.activeElement;
+    roundPlay = play;
+    els.roundOverlay.classList.add('show');
+    drawRound('');
+  }
+  function drawRound(message, focusSelector) {
+    if (!roundPlay || !state) return;
+    els.roundBody.textContent = '';
+    els.roundActions.textContent = '';
+    if (roundPlay.kind === 'final') drawFinal(roundPlay); else drawQuizBowl(roundPlay);
+    els.roundStatus.textContent = message || '';
+    var target = (focusSelector && els.roundOverlay.querySelector(focusSelector)) ||
+      els.roundOverlay.querySelector('[data-first]') || els.roundCloseBtn;
+    target.focus();
+  }
+  function closeRound() {
+    var p = roundPlay;
+    if (!p) return;
+    roundPlay = null;
+    els.roundOverlay.classList.remove('show');
+    renderBoard();
+    if (p.kind === 'final' && p.stage !== 'result') {
+      setStatus(els.finalStatus, '', 'The final round was closed before it was scored. No wager was stored and no score changed.');
+    } else if (p.kind === 'qb' && p.stage !== 'summary' && !p.committed) {
+      setStatus(els.quizBowlStatus, '', 'The round was closed during a toss-up. That toss-up was not counted and will be asked again.');
+    }
+    if (roundReturnFocus && document.contains(roundReturnFocus)) roundReturnFocus.focus();
+  }
+  els.roundCloseBtn.addEventListener('click', closeRound);
+
+  /* ----- the final wager round ----- */
+  function wagerNotes(p) {
+    var inCount = 0;
+    state.teams.forEach(function (team, i) {
+      var read = ReviewBoardPlay.readWager(p.typed[i], team.score), note = document.getElementById('fwn-' + i);
+      if (read.ok) inCount++;
+      if (note) note.textContent = read.ok ? 'in' : read.why;
+    });
+    return inCount;
+  }
+
+  function drawFinal(p) {
+    var P = ReviewBoardPlay, f = state.final, names = teamNames();
+    if (p.stage === 'wager') {
+      roundShow('Final wager', '', '');
+      els.roundBody.appendChild(el('p', 'eta-rule', 'Each team wagers a whole number from 0 up to its score. A team at 0 or below may wager up to ' +
+        P.FINAL_FLOOR + '. Type each wager in: it stays hidden until all are in.'));
+      var grid = el('div', 'eta-teams');
+      state.teams.forEach(function (team, i) {
+        var box = el('div', 'eta-team round-wager');
+        var label = el('label', '', (i + 1) + '. ' + team.name + ' (score ' + team.score + '): wager 0 to ' + P.wagerMax(team.score));
+        label.htmlFor = 'fw-' + i;
+        var input = el('input');
+        input.type = 'password';
+        input.id = 'fw-' + i;
+        input.setAttribute('inputmode', 'numeric');
+        input.setAttribute('autocomplete', 'off');
+        input.value = p.typed[i];
+        if (i === 0) input.setAttribute('data-first', '');
+        var note = el('span', 'round-note');
+        note.id = 'fwn-' + i;
+        input.setAttribute('aria-describedby', note.id);
+        input.addEventListener('input', function () {
+          p.typed[i] = input.value;
+          var n = wagerNotes(p), line = n + ' of ' + state.teams.length + (n === 1 ? ' wager is in.' : ' wagers are in.');
+          if (els.roundStatus.textContent !== line) els.roundStatus.textContent = line;
+        });
+        input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); finalWagersIn(); } });
+        box.appendChild(label); box.appendChild(input); box.appendChild(note);
+        grid.appendChild(box);
+      });
+      els.roundBody.appendChild(grid);
+      els.roundActions.appendChild(roundButton('All wagers are in: show the question', finalWagersIn));
+      wagerNotes(p);
+    } else if (p.stage === 'question' || p.stage === 'mark') {
+      roundShow('Final question', f.question, p.stage === 'mark' ? (f.answer || '(No answer was given.)') : '');
+      if (p.stage === 'question') {
+        var list = el('ul', 'round-list');
+        names.forEach(function (name, i) { list.appendChild(el('li', '', name + ' wagered ' + p.wagers[i])); });
+        els.roundBody.appendChild(list);
+        els.roundActions.appendChild(roundButton('Show answer', function () { p.stage = 'mark'; drawRound('The answer is shown. Mark each team right or wrong.'); }, '', true));
+      } else {
+        els.roundBody.appendChild(el('p', 'eta-rule', 'Mark each team right or wrong, then score the round. Right adds the wager; wrong takes it off.'));
+        var marks = el('div', 'eta-teams');
+        state.teams.forEach(function (team, i) {
+          var box = el('fieldset', 'eta-team');
+          box.appendChild(el('legend', '', (i + 1) + '. ' + team.name + ', wagered ' + p.wagers[i]));
+          [['r', 'Right'], ['w', 'Wrong']].forEach(function (m, k) {
+            var label = el('label'), radio = el('input');
+            radio.type = 'radio';
+            radio.name = 'fm-' + i;
+            radio.value = m[0];
+            radio.checked = p.marks[i] === m[0];
+            if (i === 0 && k === 0) radio.setAttribute('data-first', '');
+            radio.addEventListener('change', function () { if (radio.checked) p.marks[i] = m[0]; });
+            label.appendChild(radio);
+            label.appendChild(document.createTextNode(m[1]));
+            box.appendChild(label);
+          });
+          marks.appendChild(box);
+        });
+        els.roundBody.appendChild(marks);
+        els.roundActions.appendChild(roundButton('Score the final round', finalScore));
+      }
+    } else {
+      roundShow('Final scores', P.resultSentence(names, teamScores()), '');
+      var places = el('ol', 'round-list');
+      P.standings(names, teamScores()).forEach(function (row) {
+        var li = el('li', '', row.name + ': ' + row.score);
+        li.value = row.place;
+        places.appendChild(li);
+      });
+      els.roundBody.appendChild(places);
+      var lines = el('ul', 'round-list round-small');
+      P.finalLines(names, teamScores(), f.wagers, f.marks).forEach(function (line) { lines.appendChild(el('li', '', line)); });
+      els.roundBody.appendChild(lines);
+    }
+  }
+
+  function finalWagersIn() {
+    var p = roundPlay;
+    if (!p || p.kind !== 'final' || p.stage !== 'wager') return;
+    var reads = state.teams.map(function (team, i) { return ReviewBoardPlay.readWager(p.typed[i], team.score); });
+    var bad = [];
+    reads.forEach(function (r, i) { if (!r.ok) bad.push(i); });
+    if (bad.length) {
+      els.roundStatus.textContent = 'Not every wager is in. ' + bad.map(function (i) { return state.teams[i].name + ': ' + reads[i].why; }).join('; ') + '.';
+      document.getElementById('fw-' + bad[0]).focus();
+      return;
+    }
+    p.wagers = reads.map(function (r) { return r.value; });
+    p.stage = 'question';
+    drawRound('All ' + reads.length + (reads.length === 1 ? ' wager is in.' : ' wagers are in.') + ' The question is shown.');
+  }
+
+  function finalCycleMark(i) {
+    var p = roundPlay;
+    if (!state.teams[i]) return;
+    p.marks[i] = p.marks[i] === 'r' ? 'w' : 'r';
+    var radio = els.roundBody.querySelector('input[name="fm-' + i + '"][value="' + p.marks[i] + '"]');
+    radio.checked = true;
+    radio.focus();
+    els.roundStatus.textContent = state.teams[i].name + ': ' + ReviewBoardPlay.markWord(p.marks[i]) + '.';
+  }
+
+  function finalScore() {
+    var P = ReviewBoardPlay, p = roundPlay, f = state.final;
+    if (!p || p.kind !== 'final' || p.stage !== 'mark') return;
+    var open = P.finalUnmarked(p.marks, state.teams.length);
+    if (open.length) {
+      els.roundStatus.textContent = 'Mark every team right or wrong first. Not marked: ' + open.map(function (i) { return state.teams[i].name; }).join(', ') + '.';
+      els.roundBody.querySelector('input[name="fm-' + open[0] + '"]').focus();
+      return;
+    }
+    var deltas = P.finalDeltas(p.wagers, p.marks);
+    deltas.forEach(function (d, i) { state.teams[i].score += d; });
+    f.wagers = p.wagers.slice();
+    f.marks = p.marks.slice();
+    f.deltas = deltas;
+    save();
+    p.stage = 'result';
+    var sentence = P.resultSentence(teamNames(), teamScores());
+    drawRound('The final round is scored. ' + sentence);
+    setStatus(els.finalStatus, 'ok', 'Final round scored. ' + sentence);
+  }
+
+  /* ----- quiz-bowl ----- */
+  els.quizBowlToggle.addEventListener('change', function () {
+    if (!state) return;
+    if (!state.quizBowl) { state.quizBowl = ReviewBoardPlay.qbNew(); state.quizBowl.on = false; }
+    state.quizBowl.on = els.quizBowlToggle.checked;
+    save();
+    renderRounds();
+    setStatus(els.boardStatus, '', state.quizBowl.on
+      ? 'The quiz-bowl round is on. Its rule and its settings are under the options above.'
+      : 'The quiz-bowl round is off. What was played is kept.');
+  });
+
+  function readQuizBowlSettings() {
+    var P = ReviewBoardPlay, q = state.quizBowl;
+    if (!q || q.log.length) return;
+    q.source = els.quizBowlSource.value;
+    q.tossup = P.qbPoints(els.qbTossup.value, P.QB_DEFAULTS.tossup);
+    q.bonus = P.qbPoints(els.qbBonus.value, P.QB_DEFAULTS.bonus);
+    q.penalty = P.qbPoints(els.qbPenalty.value, P.QB_DEFAULTS.penalty);
+    save();
+    renderRounds();
+  }
+  ['quizBowlSource', 'qbTossup', 'qbBonus', 'qbPenalty'].forEach(function (id) {
+    els[id].addEventListener('change', function () { if (state) readQuizBowlSettings(); });
+  });
+
+  function qbTossUp() {
+    var P = ReviewBoardPlay, q = state.quizBowl;
+    var id = P.qbNextId(roundIds(roundQuestions(q.source)), q);
+    return id ? { kind: 'qb', stage: 'open', entry: P.qbStart(id), buzzed: null, committed: false } : null;
+  }
+
+  els.quizBowlStartBtn.addEventListener('click', function () {
+    if (!state || !state.quizBowl) return;
+    var q = state.quizBowl;
+    if (q.over) { openRound({ kind: 'qb', stage: 'summary', committed: true }); return; }
+    readQuizBowlSettings();
+    if (!state.teams.length) { setStatus(els.quizBowlStatus, 'error', 'There is no team to buzz. Add a team first.'); return; }
+    var play = qbTossUp();
+    if (!play) {
+      setStatus(els.quizBowlStatus, 'error', roundQuestions(q.source).length
+        ? 'Every question of this source has been asked. End the round, or start a new one.'
+        : 'This source has no question with an answer. Choose another, or add questions on the Question Bank tab.');
+      return;
+    }
+    setStatus(els.quizBowlStatus, '', '');
+    openRound(play);
+  });
+
+  els.quizBowlUndoBtn.addEventListener('click', function () {
+    var P = ReviewBoardPlay, q = state && state.quizBowl;
+    if (!q || !q.log.length) return;
+    var number = q.log.length, entry = q.log.pop();
+    P.qbDeltas(entry, q, state.teams.length).forEach(function (d, i) { state.teams[i].score -= d; });
+    q.over = false;
+    save();
+    renderBoard();
+    setStatus(els.quizBowlStatus, '', 'Took back toss-up ' + number + ': its points are off the scores, and it will be asked again.');
+    els.quizBowlStartBtn.focus();
+  });
+
+  els.quizBowlNewBtn.addEventListener('click', function () {
+    var q = state && state.quizBowl;
+    if (!q) return;
+    q.log = [];
+    q.over = false;
+    save();
+    renderBoard();
+    setStatus(els.quizBowlStatus, '', 'A new round. The points already scored stay on the scoreboard, and a question asked before may be asked again.');
+    els.quizBowlStartBtn.focus();
+  });
+
+  function qbReplaceLast(entry) { state.quizBowl.log[state.quizBowl.log.length - 1] = entry; }
+
+  /** The toss-up is decided (won, or dead): it is counted and its points are on. */
+  function qbCommit(p) {
+    var q = state.quizBowl;
+    ReviewBoardPlay.qbDeltas(p.entry, q, state.teams.length).forEach(function (d, i) { state.teams[i].score += d; });
+    q.log.push(p.entry);
+    p.committed = true;
+    save();
+  }
+
+  function qbJudge(right) {
+    var P = ReviewBoardPlay, p = roundPlay, q = state.quizBowl;
+    if (!p || p.kind !== 'qb' || p.stage !== 'judge') return;
+    var team = p.buzzed, name = state.teams[team].name;
+    p.entry = P.qbBuzz(p.entry, team, right, state.teams.length);
+    p.buzzed = null;
+    if (right) {
+      qbCommit(p);
+      p.stage = 'won';
+      drawRound(name + ': right, +' + q.tossup + '.');
+      return;
+    }
+    var cost = q.penalty ? ', −' + q.penalty : '';
+    if (P.qbOpen(p.entry, state.teams.length).length) {
+      p.stage = 'open';
+      drawRound(name + ': wrong, locked out of this question' + cost + '.');
+    } else {
+      qbCommit(p);
+      p.stage = 'dead';
+      drawRound(name + ': wrong' + cost + '. No team got this toss-up.');
+    }
+  }
+
+  function qbBuzzed(team) {
+    var p = roundPlay;
+    if (!p || p.kind !== 'qb' || p.stage !== 'open') return;
+    if (ReviewBoardPlay.qbOpen(p.entry, state.teams.length).indexOf(team) === -1) {
+      if (state.teams[team]) els.roundStatus.textContent = state.teams[team].name + ' are locked out of this question.';
+      return;
+    }
+    p.buzzed = team;
+    p.stage = 'judge';
+    drawRound(state.teams[team].name + ' buzzed. Right or wrong?');
+  }
+
+  function qbBonusMark(mark) {
+    var P = ReviewBoardPlay, p = roundPlay, q = state.quizBowl;
+    if (!p || p.kind !== 'qb' || p.stage !== 'bonusMark') return;
+    var team = state.teams[p.entry.right];
+    p.entry = P.qbBonus(p.entry, p.entry.bonusId, mark);
+    qbReplaceLast(p.entry);
+    if (mark === 'r') team.score += q.bonus;
+    save();
+    p.stage = 'between';
+    drawRound(team.name + ': bonus ' + (mark === 'r' ? 'right, +' + q.bonus : 'wrong, no points') + '.');
+  }
+
+  function qbNext() {
+    var next = qbTossUp();
+    if (next) { roundPlay = next; drawRound(''); return; }
+    qbEnd('Every question of the source has been asked. ');
+  }
+  function qbEnd(lead) {
+    state.quizBowl.over = true;
+    save();
+    roundPlay = { kind: 'qb', stage: 'summary', committed: true };
+    var s = ReviewBoardPlay.qbSummary(state.quizBowl, teamNames());
+    drawRound((typeof lead === 'string' ? lead : '') + 'The round is over. ' + s.sentence);
+    setStatus(els.quizBowlStatus, 'ok', 'Round over. ' + s.sentence + ' ' + s.roundResult);
+  }
+
+  function drawQuizBowl(p) {
+    var P = ReviewBoardPlay, q = state.quizBowl, list = roundQuestions(q.source), n = state.teams.length;
+    if (p.stage === 'summary') {
+      var s = P.qbSummary(q, teamNames());
+      roundShow('Quiz-bowl round', s.roundResult || 'No toss-up was asked.', '');
+      els.roundBody.appendChild(el('p', 'eta-rule', s.sentence));
+      var lines = el('ul', 'round-list');
+      s.lines.forEach(function (line) { lines.appendChild(el('li', '', line)); });
+      els.roundBody.appendChild(lines);
+      els.roundBody.appendChild(el('p', 'eta-rule', 'Scores now: ' + scoreLine() + '.'));
+      return;
+    }
+    var toss = roundFind(list, p.entry.id), number = q.log.length + (p.committed ? 0 : 1);
+    var head = 'Toss-up ' + number + ' · ' + q.tossup + (q.tossup === 1 ? ' point' : ' points');
+    var winner = p.entry.right === null ? null : state.teams[p.entry.right];
+    var nextRow = function () {
+      els.roundBody.appendChild(el('p', 'eta-rule', 'Scores: ' + scoreLine() + '.'));
+      if (P.qbNextId(roundIds(list), q)) els.roundActions.appendChild(roundButton('Next toss-up', qbNext, '', true));
+      else els.roundBody.appendChild(el('p', 'eta-rule', 'No question is left in this source.'));
+      els.roundActions.appendChild(roundButton('End the round', qbEnd, 'ghost', !P.qbNextId(roundIds(list), q)));
+    };
+    if (p.stage === 'open') {
+      roundShow(head, toss.prompt, '');
+      els.roundBody.appendChild(el('p', 'eta-rule', 'Press the team that buzzed first, or its number.'));
+      var row = el('div', 'award-row show'), open = P.qbOpen(p.entry, n);
+      state.teams.forEach(function (team, i) {
+        var can = open.indexOf(i) !== -1;
+        var b = roundButton((i + 1) + '. ' + team.name + ' (' + team.score + ')' + (can ? '' : ', locked out'), function () { qbBuzzed(i); }, '', can && i === open[0]);
+        b.disabled = !can;
+        row.appendChild(b);
+      });
+      els.roundBody.appendChild(row);
+      els.roundActions.appendChild(roundButton('Nobody got it: show the answer', function () {
+        qbCommit(p);
+        p.stage = 'dead';
+        drawRound('No team got this toss-up.');
+      }, 'ghost'));
+    } else if (p.stage === 'judge') {
+      var who = state.teams[p.buzzed].name;
+      roundShow(head, toss.prompt, '');
+      els.roundBody.appendChild(el('p', 'eta-rule', who + ' buzzed. Keys: R right, W wrong.'));
+      els.roundActions.appendChild(roundButton('Right: +' + q.tossup + ' ' + who, function () { qbJudge(true); }, '', true));
+      els.roundActions.appendChild(roundButton('Wrong: ' + (q.penalty ? '−' + q.penalty + ' ' : 'locks out ') + who, function () { qbJudge(false); }));
+      els.roundActions.appendChild(roundButton('Not ' + who + ': back', function () { p.buzzed = null; p.stage = 'open'; drawRound(''); }, 'ghost'));
+    } else if (p.stage === 'dead') {
+      roundShow(head, toss.prompt, toss.answer || '(No answer was given.)');
+      nextRow();
+    } else if (p.stage === 'won') {
+      roundShow(head, toss.prompt, toss.answer || '(No answer was given.)');
+      els.roundBody.appendChild(el('p', 'eta-rule', 'Scores: ' + scoreLine() + '.'));
+      if (P.qbNextId(roundIds(list), q)) {
+        els.roundActions.appendChild(roundButton('Bonus question for ' + winner.name, function () {
+          p.entry = P.qbBonus(p.entry, P.qbNextId(roundIds(list), q), null);
+          qbReplaceLast(p.entry);
+          save();
+          p.stage = 'bonus';
+          drawRound('A bonus question for ' + winner.name + ' alone.');
+        }, '', true));
+      } else {
+        els.roundBody.appendChild(el('p', 'eta-rule', 'No question is left in this source for a bonus.'));
+      }
+      els.roundActions.appendChild(roundButton('End the round', qbEnd, 'ghost', !P.qbNextId(roundIds(list), q)));
+    } else {
+      var bonus = roundFind(list, p.entry.bonusId);
+      roundShow('Bonus for ' + winner.name + ' · ' + q.bonus + (q.bonus === 1 ? ' point' : ' points'), bonus.prompt,
+        p.stage === 'bonus' ? '' : (bonus.answer || '(No answer was given.)'));
+      if (p.stage === 'bonus') {
+        els.roundActions.appendChild(roundButton('Show answer', function () { p.stage = 'bonusMark'; drawRound('The answer is shown. Keys: R right, W wrong.'); }, '', true));
+      } else if (p.stage === 'bonusMark') {
+        els.roundActions.appendChild(roundButton('Right: +' + q.bonus + ' ' + winner.name, function () { qbBonusMark('r'); }, '', true));
+        els.roundActions.appendChild(roundButton('Wrong: no points', function () { qbBonusMark('w'); }));
+      } else {
+        nextRow();
+      }
+    }
+  }
+
+  /* ----- keys, only while a round is on the screen ----- */
+  document.addEventListener('keydown', function (e) {
+    var p = roundPlay;
+    if (!p || !els.roundOverlay.classList.contains('show')) return;
+    var tag = e.target && e.target.tagName, onButton = tag === 'BUTTON';
+    if (e.key === 'Escape') { e.preventDefault(); closeRound(); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (p.kind === 'final') {
+      if (p.stage === 'question' && (e.key === ' ' || e.code === 'Space') && !onButton) { e.preventDefault(); p.stage = 'mark'; drawRound('The answer is shown. Mark each team right or wrong.'); return; }
+      if (p.stage === 'mark') {
+        if (/^[1-9]$/.test(e.key)) { e.preventDefault(); finalCycleMark(Number(e.key) - 1); return; }
+        if (e.key === 'Enter' && !onButton) { e.preventDefault(); finalScore(); }
+      }
+      return;
+    }
+    if (p.stage === 'open' && /^[1-9]$/.test(e.key)) { e.preventDefault(); qbBuzzed(Number(e.key) - 1); return; }
+    if (p.stage === 'judge' && /^[rw]$/i.test(e.key)) { e.preventDefault(); qbJudge(e.key.toLowerCase() === 'r'); return; }
+    if (p.stage === 'bonusMark' && /^[rw]$/i.test(e.key)) { e.preventDefault(); qbBonusMark(e.key.toLowerCase()); return; }
+    if (p.stage === 'bonus' && (e.key === ' ' || e.code === 'Space') && !onButton) { e.preventDefault(); p.stage = 'bonusMark'; drawRound('The answer is shown. Keys: R right, W wrong.'); }
+  });
 
   els.showAnswerBtn.addEventListener('click', revealAnswer);
 
@@ -2095,6 +3226,11 @@
       e.preventDefault();
       if (els.closeUsedRow.style.display !== 'none') els.closeUsedBtn.click();
       else if (els.closeNoAskBtn.style.display !== 'none') els.closeNoAskBtn.click();
+      return;
+    }
+    if (els.etaPanel.classList.contains('show')) {
+      if (/^[1-9]$/.test(e.key)) { e.preventDefault(); cycleEveryTeamMark(Number(e.key) - 1); return; }
+      if (e.key === 'Enter' && !(e.target && e.target.tagName === 'BUTTON')) { e.preventDefault(); els.etaScoreBtn.click(); }
       return;
     }
     if (/^[1-9]$/.test(e.key) && els.awardRow.classList.contains('show')) {
@@ -2143,10 +3279,13 @@
           c.clues.forEach(function (cl) {
             var key = c.name + '||' + cl.question;
             if (Object.prototype.hasOwnProperty.call(editingBoard.usedMap, key)) cl.used = editingBoard.usedMap[key];
+            if (cl.used && Object.prototype.hasOwnProperty.call(editingBoard.marksMap, key)) cl.marks = editingBoard.marksMap[key];
           });
         });
+        // The clues may have moved: the wheel keeps its count and forgets where it last landed.
+        if (editingBoard.rounds.wheel) editingBoard.rounds.wheel.last = null;
         startBoard(name, categories, editingBoard.teams, editingBoard.dailyDoubleEnabled,
-          editingBoard.lightningRoundEnabled, editingBoard.lightningRoundSeconds);
+          editingBoard.lightningRoundEnabled, editingBoard.lightningRoundSeconds, editingBoard.everyTeam, editingBoard.rounds);
       } else {
         startBoard(name, categories, takePendingRosterTeams());
       }
@@ -2193,7 +3332,7 @@
 
   els.downloadTemplateBtn.addEventListener('click', downloadTemplate);
 
-  els.boardSwitch.addEventListener('change', function () { loadBoardByName(els.boardSwitch.value); });
+  els.boardSwitch.addEventListener('change', function () { sayImportLeft('', []); loadBoardByName(els.boardSwitch.value); });
   els.newBoardBtn.addEventListener('click', function () { showSetup(); });
 
   els.editBoardBtn.addEventListener('click', function () {
@@ -2212,10 +3351,17 @@
     var dailyDoubleEnabled = state.dailyDoubleEnabled;
     var lightningRoundEnabled = state.lightningRoundEnabled;
     var lightningRoundSeconds = state.lightningRoundSeconds;
+    var everyTeam = state.everyTeam;           // undefined on a board that never used the mode
+    var rounds = { final: state.final, quizBowl: state.quizBowl, wheel: state.wheel };   // each undefined likewise
+    var marksMap = {};
+    categories.forEach(function (c) {
+      c.clues.forEach(function (cl) { if (Array.isArray(cl.marks)) marksMap[c.name + '||' + cl.question] = cl.marks; });
+    });
     showSetup(categories);
     editingBoard = {
       name: name, teams: teams, usedMap: usedMap, audioIds: audioIds, dailyDoubleEnabled: dailyDoubleEnabled,
-      lightningRoundEnabled: lightningRoundEnabled, lightningRoundSeconds: lightningRoundSeconds
+      lightningRoundEnabled: lightningRoundEnabled, lightningRoundSeconds: lightningRoundSeconds,
+      everyTeam: everyTeam, marksMap: marksMap, rounds: rounds
     };
     els.boardName.value = name;
   });
@@ -2225,6 +3371,10 @@
     if (!confirm('Clear all used questions and reset scores to 0 in "' + state.name + '"? Questions themselves are kept.')) return;
     state.categories.forEach(function (c) { c.clues.forEach(function (cl) { cl.used = false; }); });
     state.teams.forEach(function (t) { t.score = 0; });
+    ReviewBoardPlay.clearMarks(state.categories);
+    ReviewBoardPlay.finalClear(state.final);                 // the question stays, the wagers go
+    if (state.quizBowl) { state.quizBowl.log = []; state.quizBowl.over = false; }
+    ReviewBoardPlay.wheelReset(state.wheel, newWheelSeed());   // a new game: a new sequence of spins
     assignDailyDouble();
     clearUndoStack();
     save();
@@ -2359,8 +3509,10 @@
   var bankEdit = null;   // { id, form } while a question is open in the list
   var addChoices = ReviewBankEditor.choicesField({ idBase: 'bankAdd', answer: els.bankAnswer });
   var addTags = ReviewBankEditor.tagsField({ idBase: 'bankAdd', suggestions: bankTagsInUse });
+  var addPicture = ReviewBankEditor.pictureField({ idBase: 'bankAdd', images: ReviewBoardImage });
   els.bankAddChoices.appendChild(addChoices.node);
   els.bankAddTags.appendChild(addTags.node);
+  els.bankAddPictureSlot.appendChild(addPicture.node);
 
   function bankTagsInUse() { return QuestionBank.distinct(QuestionBank.list(), 'tags'); }
 
@@ -2393,8 +3545,14 @@
     if (problems.length) { bankEdit.form.say('error', problems[0]); return; }
     var original = QuestionBank.list().filter(function (q) { return q.id === id; })[0];
     if (!original) { closeBankEdit('That question is no longer in your bank, so nothing was saved.', 'error'); return; }
-    if (!ReviewBankEditor.changed(original, draft)) { closeBankEdit('Nothing was changed.'); return; }
-    var res = QuestionBank.saveQuestion(ReviewBankEditor.questionOf(draft, id));
+    // The picture is the ninth thing the form shows. It is written only when
+    // it changed: `media` with the new picture, or null to take `media` off.
+    var hasPicture = Object.prototype.hasOwnProperty.call(draft, 'image');
+    var pictureChanged = hasPicture && (draft.image || '') !== QuestionBank.imageOf(original);
+    if (!ReviewBankEditor.changed(original, draft) && !pictureChanged) { closeBankEdit('Nothing was changed.'); return; }
+    var toSave = ReviewBankEditor.questionOf(draft, id);
+    if (pictureChanged) toSave.media = QuestionBank.withImage(original, draft.image).media || null;
+    var res = QuestionBank.saveQuestion(toSave);
     if (res.newer) { bankEdit.form.say('error', 'Your bank was saved by a newer version of this page. Reload the page, then edit again.'); return; }
     if (!res.ok) { bankEdit.form.say('error', 'Your bank could not be saved, so the question is unchanged.'); return; }
     closeBankEdit('Saved the question.', 'ok');
@@ -2440,6 +3598,7 @@
         bankEdit.form = ReviewBankEditor.editForm({
           idBase: 'bankEdit', draft: draft || ReviewBankEditor.draftOf(q), title: entry.question,
           suggestions: bankTagsInUse, onSave: saveBankEdit,
+          images: ReviewBoardImage, image: QuestionBank.imageOf(q),
           onCancel: function () { closeBankEdit('Nothing was changed.'); }
         });
         row.appendChild(bankEdit.form.node);
@@ -2477,7 +3636,7 @@
             // Another question is open: its typed changes are not dropped without a word.
             var openId = bankEdit.id, typed = bankEdit.form.read();
             var open = QuestionBank.list().filter(function (x) { return x.id === openId; })[0];
-            if (open && typed && ReviewBankEditor.changed(open, typed) &&
+            if (open && typed && (ReviewBankEditor.changed(open, typed) || (typed.image || '') !== QuestionBank.imageOf(open)) &&
                 !confirm('Another question is open with changes that are not saved. Leave it without saving?')) return;
           }
           bankEdit = { id: entry.id, form: { read: function () { return null; } } };
@@ -2541,6 +3700,11 @@
   });
 
   els.bankAddBtn.addEventListener('click', function () {
+    // A picture still being read is waited for, so Add never leaves it behind.
+    var job = addPicture.pending();
+    if (job) job.then(addBankQuestion); else addBankQuestion();
+  });
+  function addBankQuestion() {
     var question = els.bankQuestion.value.trim();
     var answer = els.bankAnswer.value.trim();
     if (!question || !answer) {
@@ -2557,6 +3721,7 @@
       tags: addTags.get(), choices: addChoices.raw()
     });
     if (!fresh.choices.length) delete fresh.choices;
+    if (addPicture.get()) fresh.media = { image: addPicture.get() };
     var added = QuestionBank.saveQuestion(fresh);
     if (!added.ok) {
       els.bankAddStatus.className = 'import-status error';
@@ -2569,12 +3734,13 @@
     els.bankAnswer.value = '';
     addChoices.set([]);
     addTags.set([]);
+    addPicture.set('');
     els.bankAddStatus.className = 'import-status ok';
     els.bankAddStatus.textContent = 'Added to the bank.';
     // Unit/standard/difficulty/points are left as-is on purpose — adding a
     // run of questions for the same unit is the common case.
     renderBankList();
-  });
+  }
 
   [els.bankFilterUnit, els.bankFilterStandard, els.bankFilterDifficulty].forEach(function (el) {
     el.addEventListener('change', renderBankList);
@@ -2585,6 +3751,35 @@
     els.bankFilterDifficulty.value = ''; els.bankFilterQuery.value = '';
     renderBankList();
   });
+
+  /* The printed quiz and study guide from the bank (Path 12 P3): the ticked
+     questions, or every question the list shows when none is ticked, from
+     whichever source is chosen. Nothing is stored and nothing is copied. */
+  function bankPrintQuestions() {
+    var source = bankSource();
+    var shown = QuestionBank.filter(QuestionBank.questionsOf(source), currentBankFilters());
+    var ticked = shown.filter(function (q) { return bankSelected[q.id]; });
+    return ticked.length ? ticked : shown;
+  }
+  function bankPrintTitle() {
+    if (els.bankFilterUnit.value) return els.bankFilterUnit.value;
+    var source = bankSource();
+    var chosen = ReviewBankStore.sources().filter(function (src) { return src.id === source; })[0];
+    return chosen ? chosen.title : 'Questions';
+  }
+  function printBankSheet(kind) {
+    var items = ReviewBoardPlay.itemsFromQuestions(bankPrintQuestions());
+    if (!items.length) {
+      els.bankPrintStatus.className = 'import-status error';
+      els.bankPrintStatus.textContent = 'There is no question to print: the list is empty.';
+      return;
+    }
+    var model = printSheet(kind, bankPrintTitle(), items);
+    els.bankPrintStatus.className = 'import-status ok';
+    els.bankPrintStatus.textContent = ReviewBoardPlay.sheetSentence(model);
+  }
+  els.bankPrintQuizBtn.addEventListener('click', function () { printBankSheet('quiz'); });
+  els.bankPrintGuideBtn.addEventListener('click', function () { printBankSheet('guide'); });
 
   /** Opens the board editor on whatever board is "current" if it isn't
       already open, so "pull into board" always has somewhere to land — the
@@ -2621,6 +3816,8 @@
     // From whichever source is showing: a seed set's question is pulled as
     // it is, with nothing copied into the bank on the way.
     var entries = ids.map(ReviewBankStore.findEntry).filter(Boolean);
+    var pulledFrom = {};
+    QuestionBank.questionsOf(bankSource()).forEach(function (q) { pulledFrom[q.id] = q; });
 
     ensureBoardEditorOpen();
     Array.prototype.slice.call(document.querySelectorAll('.tab-btn')).forEach(function (b) { b.classList.remove('active'); });
@@ -2649,7 +3846,10 @@
     var rowsBefore = clueList.querySelectorAll('.clue-row').length;
     entries.forEach(function (entry, i) {
       var pts = QuestionBank.isSeedId(entry.id) && !entry.points ? (rowsBefore + i + 1) * 100 : entry.points;
-      clueList.appendChild(newClueRow(pts, entry.question, entry.answer));
+      // Its picture goes with it, as the value itself: a clue and a bank
+      // question keep pictures in the one store, so nothing is copied.
+      var picture = QuestionBank.imageOf(pulledFrom[entry.id]);
+      clueList.appendChild(picture ? newClueRow(pts, entry.question, entry.answer, picture) : newClueRow(pts, entry.question, entry.answer));
     });
 
     bankSelected = {};
@@ -2675,8 +3875,27 @@
   els.bankExportBtn.addEventListener('click', function () {
     var all = QuestionBank.list();
     if (!all.length) { bankFileStatus('error', 'The bank is empty, so there is nothing to save yet.'); return; }
-    ExportKit.download(QuestionBank.toJSON(all, { title: 'Question bank' }), 'question-bank.json', 'application/json');
-    bankFileStatus('ok', 'Saved ' + countOf(all.length, 'question') + ' as question-bank.json.');
+    function write(list, pictures, gone) {
+      ExportKit.download(QuestionBank.toJSON(list, { title: 'Question bank' }), 'question-bank.json', 'application/json');
+      bankFileStatus('ok', 'Saved ' + countOf(all.length, 'question') + ' as question-bank.json' +
+        (pictures ? ', with ' + countOf(pictures, 'picture') + ' in the file' : '') + '.' +
+        (gone ? ' ' + countOf(gone, 'picture') + ' missing from this browser’s storage ' + (gone === 1 ? 'is' : 'are') + ' not in it.' : ''));
+    }
+    // A file never holds an `idb:` reference: each stored picture is read
+    // back and put in as a data URL, and one that is gone is left off. A
+    // bank with no picture is written at once, exactly as before.
+    if (!all.some(QuestionBank.imageOf)) { write(all, 0, 0); return; }
+    var pictures = 0, gone = 0;
+    Promise.all(all.map(function (q) {
+      var v = QuestionBank.imageOf(q);
+      if (!v) return q;
+      return ReviewBoardImage.inline(v).then(function (dataUrl) {
+        if (ReviewBoardImage.isInline(dataUrl)) pictures++; else { dataUrl = ''; gone++; }
+        return QuestionBank.withImage(q, dataUrl);
+      });
+    })).then(function (list) { write(list, pictures, gone); })['catch'](function () {
+      bankFileStatus('error', 'The bank’s pictures could not be read, so no file was saved.');
+    });
   });
 
   els.bankExportSheetBtn.addEventListener('click', function () {
@@ -2747,20 +3966,36 @@
   function importBankQuestions(parsed, name) {
     closeImportPreview();
     if (parsed.error) { bankFileStatus('error', parsed.error); return; }
-    pendingImport = { parsed: parsed, name: name || 'That file', signature: '' };
-    var plan = renderImportPreview();
-    if (plan.added + plan.updated) {
-      bankFileStatus('', 'Read ' + pendingImport.name + '. Nothing is stored yet: check the list below, then press Add.');
-    } else {
-      // Nothing to store, so this is already the whole outcome.
-      var none = QuestionBank.merge(QuestionBank.list(), parsed.questions);
-      bankFileStatus(none.invalid.length ? 'error' : 'ok', importResultMessage(none, parsed.rows));
+    /* Pictures first (Path 12 P4). cleanMedia() takes off every picture a
+       file may not carry and names it; the ones that stay are data URLs, and
+       they go into the media store BEFORE the list is drawn, so the preview
+       compares references with references (the same picture is the same id,
+       and a file imported twice changes nothing) and no picture's bytes land
+       in localStorage. One the store refuses stays a data URL. A picture of a
+       file that is then not imported is deleted by the next load's pass. A
+       file with no picture goes straight on, as it always did. */
+    var cleaned = QuestionBank.cleanMedia(parsed.questions, parsed.rows);
+    var note = QuestionBank.leftSentence(cleaned.left);
+    function show(questions) {
+      pendingImport = { parsed: { questions: questions, rows: parsed.rows, error: '' }, name: name || 'That file', signature: '', note: note };
+      var plan = renderImportPreview();
+      if (plan.added + plan.updated) {
+        bankFileStatus(note ? 'error' : '', 'Read ' + pendingImport.name + '. Nothing is stored yet: check the list below, then press Add.' + (note ? ' ' + note : ''));
+      } else {
+        // Nothing to store, so this is already the whole outcome.
+        var none = QuestionBank.merge(QuestionBank.list(), questions);
+        bankFileStatus(none.invalid.length || note ? 'error' : 'ok', importResultMessage(none, parsed.rows) + (note ? ' ' + note : ''));
+      }
     }
+    if (!cleaned.images.length) { show(cleaned.questions); return; }
+    ReviewBoardImage.store(cleaned.images).then(function (map) {
+      show(QuestionBank.applyImages(cleaned.questions, map));
+    }, function () { show(cleaned.questions); });
   }
 
   els.bankImportAddBtn.addEventListener('click', function () {
     if (!pendingImport) return;
-    var shown = pendingImport.signature, parsed = pendingImport.parsed;
+    var shown = pendingImport.signature, parsed = pendingImport.parsed, note = pendingImport.note || '';
     if (renderImportPreview().signature !== shown) {
       bankFileStatus('error', 'Your bank has changed since this list was drawn, so nothing was stored. Check the list again, then press Add.');
       return;
@@ -2769,7 +4004,7 @@
     if (res.newer) { bankFileStatus('error', 'This bank was saved by a newer version of this page. Reload the page, then import again.'); return; }
     if (!res.ok) { bankFileStatus('error', 'The bank could not be saved, so nothing was imported.'); return; }
     closeImportPreview();
-    bankFileStatus(res.added || res.updated || !res.invalid.length ? 'ok' : 'error', importResultMessage(res, parsed.rows));
+    bankFileStatus(!note && (res.added || res.updated || !res.invalid.length) ? 'ok' : 'error', importResultMessage(res, parsed.rows) + (note ? ' ' + note : ''));
     renderBankList();
     els.bankImportFile.focus();
   });
@@ -2816,8 +4051,9 @@
      then — at boot only, with media-db.js's ten-minute grace — delete stored
      pictures no saved board points at. Deleting a board, removing a picture
      or saving an edited board under a new name deletes nothing at that
-     moment; this pass does, next time. The question bank carries no
-     pictures, so it adds nothing to the keep-set. Switching boards hydrates
+     moment; this pass does, next time. Since Path 12 P4 a question in the
+     bank may carry a picture in this same store (bankImages() below), and
+     those references are in the keep-set too. Switching boards hydrates
      the one opened (loadBoardByName). __clueImagesSettled is for the suite. */
 
   /** [{ name, board }] for the open board and every other saved one, read fresh. */
@@ -2878,6 +4114,15 @@
     });
   }
 
+  /** Every picture value the question bank holds (Path 12 P4), read without
+      writing. They are in the same store as the clues', so they are in what
+      the pass below keeps, and they are given object URLs with the board's.
+      An inline one stays inline: this pass moves the boards' only. */
+  function bankImages() {
+    try { return QuestionBank.peek().map(QuestionBank.imageOf).filter(Boolean); }
+    catch (e) { return null; }                       // unreadable: nothing is deleted this load
+  }
+
   var imagesSettled = false;   // until then, the boot pass hydrates the open board
   function settleImages() {
     return ReviewBoardImage.store(everyImage())
@@ -2886,7 +4131,16 @@
         return showImages();
       })
       .then(function () {
-        return ReviewBoardImage.gc(everyImage().filter(ReviewBoardImage.isRef));
+        var held = bankImages() || [];
+        if (!held.length) return null;
+        return ReviewBoardImage.hydrate(held).then(function () {
+          if (els.bankSection.classList.contains('active')) renderBankList();   // already showing (a link's arrival)
+        });
+      })
+      .then(function () {
+        var held = bankImages();
+        if (held === null) return 0;
+        return ReviewBoardImage.gc(everyImage().concat(held).filter(ReviewBoardImage.isRef));
       })['catch'](function () { /* reads never block the page */ })
       .then(function () { imagesSettled = true; renderStorageLine(); });
   }

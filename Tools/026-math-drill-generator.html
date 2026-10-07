@@ -89,6 +89,8 @@
   .problems.fs-sm { font-size: .82rem; }
   .problems.fs-lg { font-size: 1.3rem; }
   .problems .p { break-inside: avoid; margin-bottom: .85rem; white-space: nowrap; }
+  /* the longer problems of the fraction, exponent and equation types may break at a space rather than run into the next column */
+  .problems .p.wrap { white-space: normal; }
   .problems .p .num { color: var(--muted); font-size: .78em; margin-right: .35rem; }
 
   .problems.vertical { column-count: initial !important; display: grid; grid-template-columns: repeat(var(--vcols, 3), max-content); gap: 1.6rem 2.4rem; }
@@ -111,6 +113,15 @@
   .answers .a .num { color: var(--muted); font-size: .78em; margin-right: .35rem; }
 
   .page-label { color: var(--muted); font-size: .7em; font-weight: 400; }
+
+  /* Exponent problems print a real superscript; the screen-reader sentence is the
+     second span, kept in the page but off the paper. */
+  .problems .mdg-expr sup { font-size: .7em; line-height: 0; }
+  .mdg-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .type-options { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .7rem .2rem; margin: 0 0 .8rem; }
+  .type-options h2 { font-size: .9rem; margin: 0 0 .5rem; }
+  .type-options label.check { display: flex; align-items: center; gap: .4rem; font-weight: 600; font-size: .85rem; }
+  .type-options label.check input { width: auto; margin: 0; }
 
   .same-sheet-key {
     border: 1px solid var(--line-strong); border-radius: 6px; background: #fbfbf8;
@@ -194,6 +205,7 @@
         <label for="templateKey">Template</label>
         <select id="templateKey"></select>
 
+        <div id="rangeBlock">
         <div class="row2">
           <div>
             <label for="operand1Min">Operand 1 range</label>
@@ -211,6 +223,46 @@
           </div>
         </div>
         <button type="button" class="secondary" id="resetRangeBtn" style="margin-bottom:.8rem;">Reset range to template default</button>
+        </div>
+
+        <div class="type-options" id="fracOptions" role="group" aria-labelledby="fracOptionsTitle" style="display:none;">
+          <h2 id="fracOptionsTitle">Fraction options</h2>
+          <label for="fracOp">Which operations</label>
+          <select id="fracOp">
+            <option value="both" selected>Multiply and divide</option>
+            <option value="multiply">Multiply only</option>
+            <option value="divide">Divide only</option>
+          </select>
+          <label class="check"><input type="checkbox" id="fracMixed"> Include mixed numbers (1 1/2)</label>
+          <label class="check"><input type="checkbox" id="fracWhole"> Include a whole-number factor (3 &times; 2/5)</label>
+          <p class="hint">Proper fractions in lowest terms. Every answer is reduced; an answer above 1 is written as a mixed number. The operand ranges do not apply.</p>
+        </div>
+
+        <div class="type-options" id="expOptions" role="group" aria-labelledby="expOptionsTitle" style="display:none;">
+          <h2 id="expOptionsTitle">Exponent options</h2>
+          <label for="expPreset">Preset</label>
+          <select id="expPreset">
+            <option value="custom" selected>Use the ranges below</option>
+            <option value="squares">Squares (exponent 2)</option>
+            <option value="cubes">Cubes (exponent 3)</option>
+            <option value="tens">Powers of ten (base 10)</option>
+          </select>
+          <label class="check"><input type="checkbox" id="expAllowLow"> Include zero and first powers (n<sup>0</sup>, n<sup>1</sup>)</label>
+          <p class="hint">Operand 1 range is the base and operand 2 range is the exponent. A preset sets one of them. Without the box ticked every exponent is 2 or more. No answer is larger than 1,000,000: a base or exponent that would go past it is left out.</p>
+        </div>
+
+        <div class="type-options" id="eqOptions" role="group" aria-labelledby="eqOptionsTitle" style="display:none;">
+          <h2 id="eqOptionsTitle">Equation options</h2>
+          <label for="eqForms">Kinds of equation</label>
+          <select id="eqForms">
+            <option value="all" selected>All four: x + a, x &minus; a, ax, x &divide; a</option>
+            <option value="addsub">Add and subtract only</option>
+            <option value="muldiv">Multiply and divide only</option>
+          </select>
+          <label class="check"><input type="checkbox" id="eqNegatives"> Allow negative answers</label>
+          <label class="check"><input type="checkbox" id="eqFractions"> Allow fraction answers in ax = b</label>
+          <p class="hint">One step each, and every answer is a whole number unless you tick the fraction box. Operand 1 range is the size of x (for x &divide; a, the number on the right); operand 2 range is the number a, at least 2 for ax and x &divide; a. Without negatives, x &minus; a = b keeps b positive.</p>
+        </div>
 
         <label for="sheetTitle">Sheet title (optional)</label>
         <input type="text" id="sheetTitle" placeholder="e.g. Multiplication Facts — Period 3">
@@ -253,7 +305,7 @@
         <p class="hint" id="selfCheckHint">Adds a self-checking puzzle built from this same problem set. Riddle and colour-by-answer add a section after the plain worksheet; maze replaces the problem list with a generated maze whose junctions are gated by a few of the problems &mdash; any leftover problems print afterward as bonus practice. All three ignore "problems per page" and print as one page, and include their own answer key.</p>
 
         <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
-          <input type="checkbox" id="avoidTrivial" style="width:auto;margin:0;"> Avoid trivial facts (&times;0, &times;1, &divide;1, +0)
+          <input type="checkbox" id="avoidTrivial" style="width:auto;margin:0;"> Avoid trivial facts (&times;0, &times;1, &divide;1, +0, powers of 1 or with exponent 0 or 1)
         </label>
 
         <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
@@ -336,13 +388,17 @@
    'operand1Min','operand1Max','operand2Min','operand2Max','resetRangeBtn',
    'timedFluency','fluencyTargetRow','fluencyTargetSeconds',
    'format','fontSize','perPage','seedDisplay','avoidTrivial','lockSeed','lockSeedHint',
-   'sameSheetKey','sameSheetKeyModeRow','sameSheetKeyMode','reorderedVersions','selfCheck'
+   'sameSheetKey','sameSheetKeyModeRow','sameSheetKeyMode','reorderedVersions','selfCheck',
+   'rangeBlock','fracOptions','expOptions','eqOptions','fracOp','fracMixed','fracWhole','expPreset','expAllowLow',
+   'eqForms','eqNegatives','eqFractions'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var settings = { templateKey: 'addition', sheetTitle: '', problemCount: 30, columns: 3, versions: 1, rangesByTemplate: {},
     timedFluency: false, fluencyTargetSeconds: '',
     format: 'horizontal', fontSize: 'md', perPage: '', avoidTrivial: false, lockSeed: false, seed: null,
-    sameSheetKey: false, sameSheetKeyMode: 'both', reorderedVersions: false, selfCheck: 'none' };
+    sameSheetKey: false, sameSheetKeyMode: 'both', reorderedVersions: false, selfCheck: 'none',
+    fracOp: 'both', fracMixed: false, fracWhole: false, expPreset: 'custom', expAllowLow: false,
+    eqForms: 'all', eqNegatives: false, eqFractions: false };
   var problemSets = []; // [{ label: 'Version A'|null, problems: [...] }, ...]
   var currentVersionIndex = 0;
   var isLeveledSet = false; // true when problemSets came from "Generate Leveled Set" — just changes preview/print copy
@@ -455,6 +511,10 @@
       `number symbol number`; the four fact drills fall through to the
       operands themselves, exactly as before. */
   function problemText(p) {
+    if (p.line) return p.line;
+    /* An exponent is a real superscript on paper; the sentence a screen reader
+       gets is the hidden span, and the visible one is hidden from it. */
+    if (p.html) return '<span class="mdg-expr" aria-hidden="true">' + p.html + ' = _____</span><span class="mdg-sr">' + p.speak + ' equals blank</span>';
     if (p.expr) return p.expr + ' = _____';
     var a = p.aText != null ? p.aText : p.a;
     var b = p.bText != null ? p.bText : p.b;
@@ -462,6 +522,28 @@
   }
 
   function answerText(p) { return p.answerText != null ? p.answerText : p.answer; }
+  /** What the answer key prints: an equation's key says "x = 5"; everything else is the answer. */
+  function keyLine(p) { return p.keyText != null ? p.keyText : answerText(p); }
+
+  /** Options the fraction, exponent and equation types read; checked again in the generator. */
+  function typeOptionsFrom(s) {
+    return {
+      fracOp: s.fracOp, fracMixed: s.fracMixed === true, fracWhole: s.fracWhole === true,
+      expPreset: s.expPreset, expAllowLow: s.expAllowLow === true,
+      eqForms: s.eqForms, eqNegatives: s.eqNegatives === true, eqFractions: s.eqFractions === true
+    };
+  }
+  var FRAC_OPS = ['both', 'multiply', 'divide'], EXP_PRESETS = ['custom', 'squares', 'cubes', 'tens'], EQ_FORMS = ['all', 'addsub', 'muldiv'];
+  function oneOf(list, v) { return list.indexOf(v) >= 0 ? v : list[0]; }
+
+  /** Show the options (and the range boxes) the chosen template uses. */
+  function showTypeOptions() {
+    var op = MathDrillTemplates.byKey(els.templateKey.value).operation;
+    els.fracOptions.style.display = op === 'fracmuldiv' ? '' : 'none';
+    els.expOptions.style.display = op === 'exponent' ? '' : 'none';
+    els.eqOptions.style.display = op === 'equation' ? '' : 'none';
+    els.rangeBlock.style.display = op === 'fracmuldiv' ? 'none' : '';
+  }
 
   function problemItemHtml(p, num) {
     /* Stacked column layout is a whole-number convention — there is no
@@ -470,7 +552,7 @@
     var body = (settings.format === 'vertical' && p.vertical !== false)
       ? verticalProblemHtml(p)
       : problemText(p);
-    return '<div class="p"><span class="num">' + num + '.</span>' + body + '</div>';
+    return '<div class="p' + (p.wrap ? ' wrap' : '') + '"><span class="num">' + num + '.</span>' + body + '</div>';
   }
 
   /** Compact corner answer key for one page's worth of problems (self-checking
@@ -480,7 +562,7 @@
   function sameSheetKeyHtml(pageProblems, startNum) {
     if (!settings.sameSheetKey) return '';
     var items = pageProblems.map(function (p, i) {
-      return '<span><span class="num">' + (startNum + i) + '.</span>' + answerText(p) + '</span>';
+      return '<span><span class="num">' + (startNum + i) + '.</span>' + keyLine(p) + '</span>';
     }).join('');
     return '<div class="same-sheet-key"><div class="ssk-title">Answer key</div><div class="ssk-grid">' + items + '</div></div>';
   }
@@ -694,7 +776,7 @@
     var cols = settings.columns + 1;
     var fsClass = settings.fontSize === 'md' ? '' : ' fs-' + settings.fontSize;
     var items = set.problems.map(function (p, i) {
-      return '<div class="a"><span class="num">' + (i + 1) + '.</span>' + answerText(p) + '</div>';
+      return '<div class="a"><span class="num">' + (i + 1) + '.</span>' + keyLine(p) + '</div>';
     }).join('');
     var extra = settings.selfCheck === 'riddle' ? riddleAnswerHtml(set)
       : settings.selfCheck === 'colorByAnswer' ? colorGridHtml(set, true) : '';
@@ -773,6 +855,14 @@
     settings.sameSheetKeyMode = els.sameSheetKeyMode.value === 'replace' ? 'replace' : 'both';
     settings.reorderedVersions = els.reorderedVersions.checked;
     settings.selfCheck = ['none', 'riddle', 'colorByAnswer', 'maze'].indexOf(els.selfCheck.value) >= 0 ? els.selfCheck.value : 'none';
+    settings.fracOp = oneOf(FRAC_OPS, els.fracOp.value);
+    settings.fracMixed = els.fracMixed.checked;
+    settings.fracWhole = els.fracWhole.checked;
+    settings.expPreset = oneOf(EXP_PRESETS, els.expPreset.value);
+    settings.expAllowLow = els.expAllowLow.checked;
+    settings.eqForms = oneOf(EQ_FORMS, els.eqForms.value);
+    settings.eqNegatives = els.eqNegatives.checked;
+    settings.eqFractions = els.eqFractions.checked;
   }
 
   /** Fresh 32-bit seed unless the sheet is locked, in which case the last
@@ -796,7 +886,7 @@
       // positions, so grading stays uniform but neighbors can't just copy
       // "#1, #2, #3...".
       var baseProblems = MathDrillGenerate.generateProblems(template, settings.problemCount, {
-        seed: settings.seed, avoidTrivial: settings.avoidTrivial
+        seed: settings.seed, avoidTrivial: settings.avoidTrivial, typeOptions: typeOptionsFrom(settings)
       });
       var reordered = MathDrillGenerate.reorderVersions(baseProblems, settings.versions, settings.seed + 1);
       problemSets = reordered.map(function (probs, i) {
@@ -807,7 +897,7 @@
         problemSets.push({
           label: settings.versions > 1 ? 'Version ' + String.fromCharCode(65 + i) : null,
           problems: MathDrillGenerate.generateProblems(template, settings.problemCount, {
-            seed: settings.seed + i, avoidTrivial: settings.avoidTrivial
+            seed: settings.seed + i, avoidTrivial: settings.avoidTrivial, typeOptions: typeOptionsFrom(settings)
           })
         });
       }
@@ -829,7 +919,7 @@
       return {
         label: pair[0],
         problems: MathDrillGenerate.generateProblems(t, settings.problemCount, {
-          seed: settings.seed + i, avoidTrivial: settings.avoidTrivial
+          seed: settings.seed + i, avoidTrivial: settings.avoidTrivial, typeOptions: typeOptionsFrom(settings)
         })
       };
     });
@@ -869,6 +959,18 @@
     URL.revokeObjectURL(url);
   }
 
+  /** Put the three types' options on the form; a file or save from before them has none, which is the default. */
+  function applyTypeOptions(o) {
+    els.fracOp.value = oneOf(FRAC_OPS, o.fracOp);
+    els.fracMixed.checked = o.fracMixed === true;
+    els.fracWhole.checked = o.fracWhole === true;
+    els.expPreset.value = oneOf(EXP_PRESETS, o.expPreset);
+    els.expAllowLow.checked = o.expAllowLow === true;
+    els.eqForms.value = oneOf(EQ_FORMS, o.eqForms);
+    els.eqNegatives.checked = o.eqNegatives === true;
+    els.eqFractions.checked = o.eqFractions === true;
+  }
+
   function applyImportedSettings(obj) {
     els.templateKey.value = MathDrillTemplates.byKey(obj.templateKey).key;
     els.sheetTitle.value = typeof obj.sheetTitle === 'string' ? obj.sheetTitle : '';
@@ -890,6 +992,8 @@
     els.sameSheetKeyModeRow.style.display = els.sameSheetKey.checked ? '' : 'none';
     els.reorderedVersions.checked = !!obj.reorderedVersions;
     els.selfCheck.value = ['none', 'riddle', 'colorByAnswer', 'maze'].indexOf(obj.selfCheck) >= 0 ? obj.selfCheck : 'none';
+    applyTypeOptions(obj);
+    showTypeOptions();
     settings.seed = (typeof obj.seed === 'number') ? obj.seed : null;
     loadRangeInputs();
     generate();
@@ -917,7 +1021,10 @@
   /* ---------- wiring ---------- */
   els.generateBtn.addEventListener('click', generate);
   els.generateLeveledBtn.addEventListener('click', generateLeveledSet);
-  els.templateKey.addEventListener('change', function () { loadRangeInputs(); generate(); });
+  els.templateKey.addEventListener('change', function () { loadRangeInputs(); showTypeOptions(); generate(); });
+  ['fracOp','fracMixed','fracWhole','expPreset','expAllowLow','eqForms','eqNegatives','eqFractions'].forEach(function (id) {
+    els[id].addEventListener('change', generate);
+  });
   els.sheetTitle.addEventListener('input', function () { readFormIntoSettings(); persist(); renderPreview(); });
   els.problemCount.addEventListener('change', generate);
   els.columns.addEventListener('change', function () { readFormIntoSettings(); persist(); renderPreview(); });
@@ -1003,7 +1110,9 @@
   els.sameSheetKeyModeRow.style.display = els.sameSheetKey.checked ? '' : 'none';
   els.reorderedVersions.checked = !!settings.reorderedVersions;
   els.selfCheck.value = ['none', 'riddle', 'colorByAnswer', 'maze'].indexOf(settings.selfCheck) >= 0 ? settings.selfCheck : 'none';
+  applyTypeOptions(settings);
   loadRangeInputs();
+  showTypeOptions();
   generate();
 })();
 </script>

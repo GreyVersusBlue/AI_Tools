@@ -9,6 +9,482 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 026 Math Fact Drill Sheet Generator: fraction multiplication and division, exponents, one-step equations (2026-10-07, AI-31-026, `CACHE_VERSION` v290; the code commit says v288, which AI-31-025 took, and main passed v289 before the merge)
+
+BACKLOG rank 142, built whole, in the tool's own files (`Tools/026-math-drill-generator.html`, `Tools/math-drill-generator/`). Checked first: the tool had the four
+fact drills, mixed, integers, decimals, fraction add/subtract, percent and order of operations (a template is a data row in `mdg-templates.js`; `makeProblem` dispatches on
+its `operation`; a seed gives `mulberry32`; problems carry `aText`/`bText`/`expr`/`answerText`), so only the three types were missing. Three new templates and three new
+generator cases; every older case is untouched and draws the same numbers from the same seed.
+
+- **Fraction multiplication and division** (`fracmuldiv`): proper fractions in lowest terms from the tool's own denominator pool; options Multiply and divide / only one,
+  mixed numbers (whole part 1 to 3), a whole-number factor (2 to 9, never both operands). Held as exact integer pairs; the answer is written by the same `fractionText`
+  the addition drill uses (reduced, improper as a mixed number, whole plain). The operand range boxes are hidden for it (they never applied to fractions).
+- **Exponents** (`exponents`): operand 1 range is the base, operand 2 the exponent; presets squares, cubes, powers of ten; zero and first powers only by an option
+  (otherwise every exponent is 2 or more); **no answer above 1,000,000** (stated on the page). Bounds that cannot fit under the cap lose the exponents that do not fit,
+  and if none fit the base comes down rather than the answer going over. Printed as a real `<sup>`; a screen reader gets a hidden sentence ("4 cubed equals blank")
+  and the visible expression is `aria-hidden`.
+- **One-step equations** (`equations`): x + a, x − a, ax, x ÷ a built from the answer up, whole-number positive answers by default; options for the kinds, for negative
+  answers and for fraction answers in ax = b (a does not divide b; reduced, mixed). x is never 0, a is at least 2 for ax and x ÷ a, and x − a = b keeps b positive
+  without negatives. The key says `x = 5`; the worksheet line ends `x = _____`. Operand 1 range is x (for x ÷ a, the right-hand number), operand 2 the number a.
+- Options are saved with the settings in the same key (`gvb-math-drill:settings`) and ride Export / Import settings (this page has no share link); a save or file without
+  them, or with junk in them, loads to the defaults. No registry line changed. The longer problems carry `wrap: true` and may break at a space (`.p.wrap`) instead of
+  running into the next column; the older types are unchanged. Avoid-trivial also drops 1 to a power and exponents 0 and 1.
+- **Decisions.** (1) Fractions are typeset across as text like the existing fraction drill (`3/4 × 1/2`), not stacked: this page never stacked fractions. (2) Equation answerText
+  is the bare number (so the riddle, colour grid and maze keep working) and `keyText` is `x = 5`. (3) Negative numbers print with a hyphen, as the integer drill does.
+  (4) The cap is 1,000,000. All are one line to change.
+
+**Tests.** `drill-frac-exp-eq.test.mjs` (`npm run test:math-drill-frac-exp-eq-core`, pure Node, 43 assertions over about 108,000 fraction problems, 138,000 exponent
+problems and 2,000-odd equation sheets; the oracle `_oracle.mjs` re-reads the printed numbers and does BigInt rational arithmetic, never the generator's gcd; also puts each
+equation's printed answer back into its equation) and `smoke-frac-exp-eq.mjs` (`npm run test:math-drill-frac-exp-eq`, port 8525: 33 saved settings pinned by
+`golden-old-sheets.json` and 320 sheets by `golden-old-problems.json`, both recorded before the change; every row of every option combination on the page checked key against
+sheet, accessibility tree, export/import, leveled sets, riddle/maze/corner key, PDFs by `pdftotext`, axe in light and dark, keyboard). **Breaks on purpose:** 57 in the
+generator, each failing the pure suite (4 first survived or missed their anchor: the cap-squeeze needed "100 cubed is drawn", `mul` and `x ÷ a` lost their negative sign
+unseen until each form was asked for separately, and two anchors were mistyped); 15 in the page, each failing the page suite (1 first survived: the clipped hidden span).
+**Left / not verified:** nothing printed on paper; no screen reader (the accessibility tree is Playwright's, `ariaSnapshot`); the spoken sentence reads "equals blank"; fits at
+6 narrow columns use wrapping where older types overlap, which costs a page at 100 problems (the suite allows one page, two with mixed numbers); a key sheet is exactly 11 in
+tall so any type can print a blank last page in Chromium (the suite counts pages with ink); full `npm test` not run; audit-print's seed loads only the default template, so the
+new templates' print is covered by the PDFs in the suite.
+
+## Path 12 P4: a question in the bank can carry a picture, and it travels in the bank file (2026-10-07, AI-14, `CACHE_VERSION` v289; the code commit says v288, which AI-31-025 took)
+
+BACKLOG rank 30, deleted: Path 12 P4 is whole. **The first check found the 030 half already shipped** (#302, Path 4 P4): a clue's picture is
+`idb:<id>` in the shared media store, a board saved before that is moved on load, and Export JSON and Import JSON already carried pictures and
+sounds as data URLs. None of that was rebuilt. What was left was the bank.
+
+- **`media.image`.** A question's picture is one of the two values a clue has always held: `idb:<id>` (a Blob in `gvb-media`, namespace `rgb`)
+  or a `data:image/(png|jpeg|gif|webp);base64,…` URL. `QuestionBank.imageOf()` is the only reader and gives one of those or nothing, so an
+  SVG, a `data:text/html` URL, a web address or a `media` of another shape is carried as it was given and never shown. New, all pure, in
+  `_shared/question-bank.js`: `imageOf`, `withImage`, `imageProblem`, `cleanMedia`, `applyImages`, `leftSentence`, `isImageRef`,
+  `isInlineImage`, `MEDIA_NS`, `IMAGE_MAX`. No existing function changed; the bank's version is still 1; no new key, no registry change.
+  `_shared/media-db.js` was not edited.
+- **The call: the bank's pictures are in 030's namespace.** One record for the same picture on a clue and a question, nothing copied on a
+  pull, and 030's pass at load (the only place a stored picture is deleted) has the bank's references in what it keeps. The cost: a page
+  that someday shows a bank picture reads the store under `rgb`. Reversible by a copy into another namespace.
+- **On 030.** A picture picker on the add card and the edit form; the picture on a row with a tag in words; the picture on a pulled clue;
+  "Save bank file" with each picture as a data URL (a bank with none is written exactly as before); an import that stores the good pictures
+  before the preview and names by row each one left out; Import JSON of a board names the pictures and sounds it left out, which it used
+  to drop without a word. 040, 020 and the bank's sheets show words only and now say so.
+- **A limit that was not there.** A picture in a file over 4,000,000 characters is left out, for a board file too. Before, a board file's
+  picture of any size was taken. 030 has never written one near that size.
+- **Tests.** `test:question-bank-media` (pure Node, 100 assertions) and `test:bank-media` (port 8523, 105: seventeen hashes from the v287
+  page taken twice before any edit, then the new behaviour, with `<svg onload>` and `data:text/html` as a file's picture, a stored bank's
+  and a board file's, none of which reaches the document).
+  Broken on purpose: 30 rules in the module (29 caught by an assertion, 1 an equivalent change) and 6 in the page, one suite run each
+  (the load's pass forgetting the bank, the file not carrying pictures, a raw value in a `src`, a pull without the picture, an import
+  that skips the cleaning, a board import that names nothing), all 6 caught. **Not broken on purpose in the page:** the edit form's
+  picture-only save, Save waiting for a picture, the missing-picture tag, the sound half of the board import's note, the three sentences.
+- **Got wrong.** The add card's slot and its file input were given one id (the first run of the suite found it). Eight expectations in the
+  first run of the new suite were mine and wrong (the page's own favicon is a `data:image/svg+xml` link, which my check for refused
+  pictures matched; a prompt of mine held the text I searched the stored bank for). My prompt asked for a migration of clue images that
+  #302 had already shipped.
+- **Not built, not verified.** In BACKLOG's Path 12 P4 bullet, with questions 59 to 65 for Devon.
+
+## 008's team suite no longer depends on the machine's time zone (2026-10-07, AI-14, tests only)
+
+The landing's CI (AI_Tools#355) failed one suite of 265: `Tools/behavior-points-tracker/test/smoke-teams.mjs`, eight "no teams … is what it
+was" lines against `golden-no-teams.json`. `_golden-run.mjs` pinned the page clock to `new Date('2026-03-04T15:20:00')`, which Node reads
+as local time: 20:20 UTC on huginn, where the golden was recorded, and 15:20 UTC on a runner, so every log id (`'ev' + Date.now()`) differed,
+and the page's own zone decides what a time and an archive date say. Now the clock is an instant (`-05:00`) and the walk sets the page's
+zone to `America/New_York` (CDP `Emulation.setTimezoneOverride`, since the harness makes the context) before the page loads. **The golden
+was not re-recorded**: it passes byte for byte under `TZ=UTC`, `TZ=America/New_York` and `TZ=Asia/Tokyo`. The other goldens added since
+2026-10-06 passed in that CI run under UTC; `grep` for a rendered time in `Tools/*/test/*.json` finds this golden only.
+## 025 Writing Prompt Generator: sentence starters and an "if you’re stuck" line (2026-10-07, AI-31-025, `CACHE_VERSION` v288)
+
+BACKLOG rank 141, whole, in the tool's own page and folder. **Checked first:** neither part existed (a grep of the page and its modules for starter, stuck, scaffold found only the bank's one prompt that says "gets stuck").
+
+- **What a teacher gets.** A "Help under each prompt" row under the half-sheet options: *Sentence starters* (None, 2, 3 or 4 per prompt) and an *"if you’re stuck" line* box. Off by default. On, the help sits right under the prompt on the stage, the wall poster and both half-sheets (the half-sheet's ruled lines are cut to make room; the poster's prompt drops from 60pt to 40pt so the longest prompt and the help share one page). The roster assignment sheet is a teacher's list and carries none. Starters are a real list; the stuck line is labelled.
+- **Which lines.** `wpg-scaffold-data.js` is only words (the lines below); `wpg-scaffolds.js` chooses. A prompt gets lines by its grade band, its genre and a *task* read off its own words: persuasive prompts that start "Convince" get audience frames, the rest claim-and-reason frames that take no side; "Explain how to / the steps / the process of how" get step frames; a creative prompt that "begins:" or "starts in the middle" gets continuation frames instead of openers (the opener would contradict it). The choice is a pure function of band, genre, text and an optional seed (a hash of the text; the page uses seed 0), so the same prompt has the same lines on every sheet and copy. **Choosing never calls `Math.random`**, so turning help on cannot change which prompt is drawn.
+- **Saved and shared.** A random draw keeps its choice in the settings blob as `scaffold: { starters, stuck }`, written only when on (off deletes the key, so the blob returns to exactly its old bytes). **A prompt set keeps its own choice** (`set.scaffold`, same rule); in sequence mode the row edits the set and says so, in draw mode it edits the draw choice. The share link carries each set's choice and arrival keeps it; an old link, and a saved blob or set with junk in the field (starters 9, `stuck: "yes"`, a string), arrives off. **The draw's own choice does not travel**: a link carries custom prompts and sets only, and a draw has nothing to share. Decided here, easy to reverse (one more field in `getState`).
+- **Old sheets unchanged.** `golden-old-sheets.json` was recorded from the page at 529c79c (commit 3110eec) with a seeded `Math.random`: 7 saved states (fresh, ms persuasive, hs creative with wide rules and a word goal, expository narrow, descriptive blank, custom prompts, a sequence set), four prompts each, and the stage, poster, half-sheet, roster sheet and stored strings compared by hash. The suite reproduces all of it with scaffolds off. `_record-golden.mjs` re-records it, but only the page at 529c79c can honestly do so.
+- **Tests.** `smoke-scaffolds-core.mjs` (`test:writing-prompt-scaffolds-core`, pure Node, 23,552 assertions): every list present with at least four starters / three stuck lines; every line against rules a machine can state (ends "...", no sentence before the end, 2 to 11 words, at most 58 characters, plain ASCII, no emotion name, no stance word in persuasive lines, never opens like a prompt, stuck lines one sentence of 30 to 105 characters); then every starter paired with every prompt it can appear with (the bank's 200 and nine teacher-style prompts, both bands, all genres, counts 2 to 4, five seeds): the right list for the task, no repeat within a sheet, the same lines twice, the stuck line never also a starter, no line unreachable, seeds move the choice, the bank's prompts spread over the lines, and `Math.random` never called. `smoke-scaffolds.mjs` (`test:writing-prompt-scaffolds`, port 8524, 136 assertions): the golden; the lines on the stage, poster and both half-sheets and no history written; persistence and reload; markup in a custom prompt inert; **every one of the 200 prompts with four starters and the stuck line, in 8 ruling and name-line combinations, measured in print media at the printable 7.5in width: nothing past the sheet, at least three ruled lines left, the poster at most 10in**; Chromium's PDF of the longest ms and hs prompt is one page for the poster and for the two half-sheets (read with `pdftotext`); set choices, share link round trip, an old link, junk; keyboard (Tab, Space), labels, a polite status, axe in light and dark. **Breaks on purpose: 24 against the core (21 caught first time; one had a bad anchor and one, "too few starters", survived because the break did not go below the limit, and both were rewritten and caught; one more was added for the stuck lines) and 17 against the page (15 caught the first time; one, a stuck line shown with its box off, survived and got an assertion; one had a bad anchor and was re-run; all caught; the group-label break is caught by a crash rather than a named assertion).**
+- **Trap found.** The screen CSS for the starters (a box with padding) also applied on paper and cost a line's height; print resets it. The first line-count estimate was 0.3in short; it is now generous (0.09in a character, 0.3in between starters) and costs a ruled line.
+- **Not done / not verified.** **Nobody has read these lines for sense; a teacher should before a class does.** Only the rules above were checked. Prompts a teacher types longer than the bank's longest (136 characters) were not measured. Nothing was printed on paper, no screen reader was used, and the audit-print seed does not turn help on, so the print check is the suite's measurements and PDFs. No student sees any of it (everything is teacher-facing). Custom prompts get the lines of the genre the teacher gave them.
+
+### The lines (for a teacher to read; change them in `wpg-scaffold-data.js`, no code needed)
+
+**Middle school sentence starters**
+
+- narrative / any: "It all started when..."; "I still remember the moment..."; "At first, I thought..."; "The first thing I noticed was..."; "Looking back now, I..."; "Everything changed when..."; "I will never forget how..."; "The hardest part was..."
+- persuasive / position: "I think this because..."; "My main reason is..."; "Some people believe the opposite, but..."; "One fact that supports my side is..."; "The strongest example I can give is..."; "Someone on the other side might say..."; "The most important thing to think about is..."; "This matters because..."
+- persuasive / audience: "Here is the first thing I want you to think about..."; "You might be wondering why..."; "Imagine what it would be like if..."; "I understand you may be worried that..."; "My strongest reason is..."; "Please think about this..."; "Let me tell you why..."
+- descriptive / any: "The first thing I notice is..."; "It looks, sounds, and feels like..."; "What stands out most is..."; "If I close my eyes, I can..."; "Everything about it makes me think of..."; "The best way I can show it is..."; "A small detail most people miss is..."; "It reminds me of..."
+- expository / any: "One important thing to know is..."; "To understand this, it helps to know..."; "A good example of this is..."; "This matters because..."; "The main idea is..."; "One detail that explains it is..."; "People often miss that..."; "The simplest way to say it is..."
+- expository / steps: "The first step is..."; "Start by..."; "The first thing to do is..."; "The most important tip is..."; "A common mistake to avoid is..."; "To get started, think about..."; "The key to doing this well is..."
+- creative / any: "Nobody noticed at first, but..."; "The strangest part was..."; "Everything changed when..."; "It was the kind of day when..."; "Without warning,..."; "The first sign that something was wrong was..."; "Then, out of nowhere..."; "Just when things seemed normal..."
+- creative / opening: "Before anyone could say another word..."; "Nobody expected what happened next..."; "Everything went quiet when..."; "To understand how it got this far, you have to know..."; "The next thing that happened was..."; "The reason this was happening was..."
+
+**Middle school "if you’re stuck" lines**
+
+- narrative: Picture the exact moment, then write down what you could see and hear. / Ask yourself: what happened right before it, and who was there? / Begin with the first thing someone said or thought, in quotation marks. / Pick the one part you remember best and write only that part first. / Ask yourself: how did I feel when it was over, and what made me feel that way?
+- persuasive: Jot down one reason for each side, then circle the one you can explain best. / Ask yourself: who would be affected by this, and how? / Think of a real time this came up for you and use it as your example. / Ask yourself what the other side would say, and write down one answer to it. / Say your opinion out loud in one sentence, then write that sentence down.
+- descriptive: Close your eyes and name one thing you can see, one you can hear, and one you can smell. / Pick the smallest detail you can think of and describe only that. / Ask yourself what you would notice first if you were seeing this for the first time. / Think of something it looks or sounds like, and write that comparison. / Jot down five words that belong to it, then use the best two in a sentence.
+- expository: Jot down the three most important things a beginner would need to know. / Ask yourself what someone who knows nothing about this would ask first, then answer it. / Think of one example you have seen or lived and use it to explain. / List the main points on scrap paper, then number them in the order you will explain them. / Say it out loud in your own words first, then write down what you said.
+- creative: Ask yourself: what does the main character want most, and what is in the way? / Picture where the story happens and write down three things you can see there. / Jot down the strangest thing that could happen next, then decide how a character would react. / Decide who is in the story and what each one wants, then begin with the one who wants it most. / Choose a first sentence that shows a character doing something, not just thinking.
+
+**High school sentence starters**
+
+- narrative / any: "Looking back, the moment that mattered most was..."; "I did not know it yet, but..."; "What I remember most clearly is..."; "It began with something small..."; "At the time, I believed..."; "The part I rarely say out loud is..."; "Before that day, I had always..."; "What I understand now is..."
+- persuasive / position: "The central issue is..."; "The strongest evidence for my position is..."; "Critics of my position would say..."; "A real-world example of this is..."; "This matters beyond the classroom because..."; "The most important thing to weigh is..."; "My position rests on..."; "What this debate often overlooks is..."; "If we look at the long-term effects..."
+- persuasive / audience: "The first thing I ask you to consider is..."; "You may be skeptical because..."; "Consider what is at stake if..."; "I understand the concern that..."; "The strongest reason to act is..."; "Think about who this affects..."
+- descriptive / any: "What strikes me first is..."; "The detail I keep returning to is..."; "If I had to pick one image, it would be..."; "Underneath the obvious details..."; "A sound, smell, or texture that stays with me is..."; "Up close, it is..."; "If I stay with it long enough, I notice..."
+- expository / any: "To understand this, it helps to start with..."; "The central idea is..."; "One key factor is..."; "A clear example of this is..."; "What makes this important is..."; "This is often misunderstood because..."; "At its core, this is about..."; "One way to look at it is..."
+- expository / steps: "The first step is..."; "Before starting, it helps to know..."; "The most important thing to get right is..."; "A common mistake is..."; "To begin with..."; "The process starts with..."
+- creative / any: "By the time anyone noticed..."; "The first sign that something was wrong was..."; "It would have been easy to miss..."; "What no one knew was..."; "In the quiet before everything changed..."; "Nothing about that morning suggested..."; "The truth only came out when..."; "Had anyone been watching..."
+- creative / opening: "To understand how it got this far..."; "Before anyone could speak again..."; "What had led here was..."; "The silence that followed..."; "No one in the room knew that..."; "Everything about this moment pointed to..."
+
+**High school "if you’re stuck" lines**
+
+- narrative: Picture the exact moment and write down one detail only you would remember. / Ask yourself: what did I believe before this, and what did I believe after? / Start with the line of dialogue or the thought that you can still hear. / Pick the turning point first and write it alone, then add what came before and after. / Ask yourself what you would tell your younger self about it, then write what led to that.
+- persuasive: Put your claim in one sentence, then list the two strongest reasons behind it. / Ask yourself what the strongest objection to your claim is, then answer it. / Find one concrete example, a number, a story, or a rule, that would convince a skeptic. / Ask yourself who gains and who loses if you are right, and write down both. / Say your position out loud in one sentence, then write that sentence down.
+- descriptive: Pick the one sense you have used least so far and write one detail for it. / Choose a single object, sound, or gesture that stands for the whole and describe it closely. / Ask yourself what is missing or out of place, and what that says about the whole. / Jot down a comparison that surprises you, then test whether it holds. / Look at it first from far away, then from as close as you can get.
+- expository: Put the one-sentence answer first, then list what a reader needs to follow it. / Ask yourself what a reader who knows nothing about this would ask first, then answer it. / Find one specific example, a date, a name, or a number, to anchor your explanation. / List the causes or parts on scrap paper, then rank them by how much they matter. / Ask yourself what is most often misunderstood about this, and start by correcting it.
+- creative: Ask yourself: what does the main character want most, and what stands in the way? / Think of the most surprising thing a character could do next, then decide what it costs them. / Picture the setting at one exact moment and write three details a reader could not guess. / Choose the moment the story could not go back from, and write that scene first. / Decide what your main character is hiding, then let one detail hint at it.
+
+---
+
+## 020 Bracket / Tournament Generator: teams with members, and a first-round consolation bracket (2026-10-07, AI-31-020, `CACHE_VERSION` v287; the code commit says v284, which main passed before the merge)
+
+BACKLOG rank 136, "Team names with members; a loser's-side consolation bracket", both parts, in the tool's own code (`Tools/bracket-tournament-generator/bt-teams.js`, new,
+precached; global `BtTeams`, pure). The academic-tournament mode, `bt-academic.js` and `golden-old-brackets.json` are untouched and their suites pass byte for byte.
+
+- **Teams with members.** A "These are teams with members" box on the setup card: one team a line as `Team name: member, member`, split at the first colon, members on
+  commas or semicolons, repeats dropped, 40 a team and 60 characters a member. With the box off (the default) the text is read exactly as before. The bracket shows the
+  team name only; members are stored as one optional map `members` (teams that have some) in the key the bracket already has. They show as a tooltip, in the slot's
+  spoken label (`Name, members: ...`), on a visible line under the bracket title when a team is focused or pointed at (Escape puts it away; the line is `aria-hidden`
+  because the label already says it), and in a "Teams" list after the bracket that prints. A slot with members is a tab stop, a `button` while it can be picked (Enter and
+  Space pick it) and a labelled `group` once decided; one without members is today's slot. All of it is added in one pass after each render, so every bracket type
+  shows it. **The share link carries members because it carries the whole bracket** (names included); there is no length limit in the link itself, and the share sheet
+  already greys out the QR with its reason when the code would be too dense, so nothing was left out of the link. A link's or a stored bracket's `members` is cleaned: only
+  teams in the bracket, strings only, cut to length, a field of the wrong kind dropped. Reset picks keeps them. Not done: a roster hand-off (a cross-tool decision).
+- **First-round consolation bracket.** A box on the setup card, single elimination only, 3 or more entrants (it is ignored for a double-elimination bracket even if left
+  ticked). Stated on the page: this is first-round consolation, not double elimination. The L first-round losers (real games only; a team with a bye is never in it)
+  are placed in the order their games are listed and paired the way the main bracket pairs "as entered": the next power of 2 at or above L, the first size - L matches
+  get a bye, so there are L - 1 games and the winner of the last is the consolation winner. The main bracket's own `autoAdvance` settles its byes. Results are entered as
+  in the main bracket (a click or the two score boxes; scores sit under `c<round>_<match>`), undo works, Reset picks keeps it and empties it. A **third-place game**
+  between the two semifinal losers is drawn under it (with 3 entrants one semifinal is a bye, so its one loser is third with no game, and the page says so); the page
+  names "Third place" and "Consolation winner" in the section and in a visually hidden `role="status"` line. It prints as its own section with `break-before: page`
+  after the main bracket and its standings; the blank print draws it empty. Saved as an optional `consolation: { slots, winnerSide, third }` in the same key; a stored or
+  linked one of the wrong shape is replaced by an empty one rebuilt from the main bracket's results. Consolation games are not academic matches (`matchPlayable` refuses a
+  key starting `c`), and they are not counted in the main bracket's Standings table. The bracket has no version number of its own, so "saved through the existing
+  versioning" is the two optional fields and nothing else: a bracket that uses neither stores, shows, prints and shares as before (checked by the golden pins).
+- **Duplication.** The consolation renderer is a compact second copy of the main bracket's slot loop (about 90 lines in the page); Path 13 P3's bracket extraction should
+  replace both. `_shared/` was not touched.
+- **Tests.** `smoke-teams-core.mjs` (`test:bracket-teams-core`, pure Node, 7,523 assertions): for every count from 3 to 32, both placements and four random plays each,
+  with its own bracket as oracle: L = n - size/2, each loser once and in game order, nobody who had a bye, nobody plays themselves, L - 1 games, third place, plus the
+  parsing and cleaning cases. `smoke-teams.mjs` (`test:bracket-teams`, port 8521, 978 assertions): the real page, 3 to 32 entrants played through its own clicks,
+  scores, undo, reset, reload, share and bad links, the printed PDF (the consolation not on page one, the team list on paper, no blank page), the blank print, keyboard
+  and axe (light and dark). **Breaks on purpose: 33 against the module** (2 survived at first and got a test) **and 31 against the page**: 27 caught first time, 3
+  survived and got assertions (Reset dropping members; the academic mode's Questions button, whose test never turned a button on; the third-place winner side), 1 is
+  equivalent (a `r > 0` guard in the blank renderer, which already draws a fresh structure). Not every assertion has its own break.
+- **A trap.** The first draft put the info line and the announcement inside `#bracketCard`; the golden pins hash that element, so every old bracket's card changed. The
+  announcement now sits outside the card and the info line is created only for a bracket with members.
+- **Left, and not verified.** The page's older slot style dims a decided slot with `opacity: .5`, which fails axe's contrast rule (it did before; the new suite scans
+  states with no decided slot and says so). `audit-print`'s seed has no teams and no consolation, so the print check for the new parts is the suite's PDF reading.
+  Nothing printed on paper, no screen reader, no phone. Not run: the full `npm test`. Left: a full loser's side (Path 13 P4), rematch avoidance across the two brackets,
+  hand-picked consolation pairings.
+
+## Path 12 P3, increment 3: spin-the-wheel on 030; P3 is whole (2026-10-07, AI-14, `CACHE_VERSION` v286; the code commit says v285, which AI-31-015 took before the merge)
+
+**What shipped.** The last play mode of BACKLOG rank 29, so the row is deleted. A board has a **Spin the wheel**
+tick box, off until ticked. On, a spin chooses the clue for the team: one wedge for every clue not yet played, each
+as likely as any other, and one more each for two extra wedges a teacher may tick, **Lose a turn** and **Double
+points** (the next clue played is worth twice its points). `BACKLOG.md`'s Path 12 section, "Increment 3", is the
+design as built; `Tools/review-game-board/rgb-play.js`'s header says the same.
+
+**The one idea worth keeping.** The spin is not chance at play time. A seed is made once a game (when the box is
+ticked, and by Reset game) and stored on the board; spin number n is a pure function of the seed, n and the wedges as
+they stand; and the page records and saves the spin before the picture starts to turn. So a reload cannot re-roll, the
+picture cannot disagree with the result, and the whole mode is testable in pure Node: a game is replayed twice and
+once more through a JSON round trip and gives the same sequence.
+
+**First check.** The mode did not exist: no `wheel` anywhere in 030 or `rgb-play.js`. Before any edit, the final
+wager round and quiz-bowl as v284 left them were played through every stage and hashed twice (65 pins,
+`Tools/review-game-board/test/_rounds-game.mjs`); they, the 32 one-team pins and the 23 every-team pins are green on
+the finished page.
+
+**Calls made (each is a question for Devon, 45 to 58 in BACKLOG's Path 12 section).** The wheel lands on a clue,
+not a category. Every wedge is equally likely, the extras included. Lose a turn only says so, because the page keeps
+no turns. Double points doubles the next clue played however it is opened, in both ways of scoring; a Daily Double
+keeps its wager and the double waits. Reset game draws a new seed, so a replay is a new order (the other reading, the
+same order again, is what a teacher would notice as a fault). A clue can still be opened by hand. The wheel does not
+open the clue: the focus lands on it and Enter opens it. S spins.
+
+**What changed in code that was already there.** Five places now read a clue's worth through
+`ReviewBoardPlay.wheelWorth(points, state.wheel)`, which returns `points` itself (the same value, the same type)
+unless a double is waiting: the clue heading, the one-team award buttons, the every-team panel's rule, its scoring
+and its status sentence. `markCurrentClueUsed()` spends the double. `cleanRounds()`, `startBoard()`, Save board and
+Reset game each gained one line for the field. The grid marks the landed cell (a class and an `aria-label`), on a
+board with a wheel only. Nothing else in the page moved; `_shared/question-bank.js` is not edited; inline-sink
+baseline for 030 still 3.
+
+**Tests.** `test:play-modes-core` 273 assertions (194 before, pure Node): the draw (a golden sequence, fairness
+over 24,000 fixed seeds within 1.5 percentage points of 1 in N for 2, 5, 12 and 30 wedges and for 24,000 spins of
+one seed, 3,000 seeded games never landing on a played clue), the wedges, what a spin records, the double, the
+words, a wheel from a file, Reset. New `test:play-wheel` (port 8522), 162 assertions: the 65 pins, off until
+ticked, a whole seeded game by button and by S across two reloads, the status line written once (a
+MutationObserver), focus and the landed cell's name and mark, the turning (1.2 s with motion, 0 s without; the
+spin already stored while it turns; a second press ignored; the wedge under the pointer at rest), both extra wedges,
+the double in both ways of scoring and beside a Daily Double, Export, Import, Edit, Reset, unticking, markup as text,
+axe in both themes.
+
+**Breaks on purpose.** Pure Node, 56: 51 caught by an assertion, 3 stopped the suite with a crash (a guard on a
+missing wheel removed), 2 changed nothing a test can see (`wheelLanded` without its kind test still finds no clue
+for Lose a turn; the draw without its thrown-away tail is biased by under one part in a hundred million).
+In the page, 8 written and **4 run**, one suite run per lock, all 4 caught by an assertion: the double not spent, the
+spin not saved before the picture turns, no focus on the chosen clue, S spinning under an open clue. **Not broken
+on purpose in the page:** the seed given to a file's wheel that has none, the reduced-motion rule, Edit questions
+forgetting the last spin, the guard against a second spin while turning, the landed cell's name and mark, Reset's
+new seed, the extra wedges' tick boxes, the every-team and Daily Double halves of the double.
+
+**Got wrong.** Nine expectations in the first run of the new suite were mine, not the page's: I took the board's
+first open cell to be Rivers 200 when the grid is laid out by row and it is Deltas 100, and I guessed the golden
+game of seed-1 before running it. One golden in the pure suite was guessed too and replaced with what the rule
+gives. The four page breaks were started in one foreground command that outran the tool's ten-minute limit while it
+waited on the suites lock, and finished in the background; nothing was committed while the page was broken.
+
+**Not verified.** No class spun the wheel; no person used it; no screen reader was run. The turning was checked by
+its CSS and where it rests, not watched. Hundreds of clues on one wheel. Not run: the full `npm test`.
+
+**Left of Path 12.** P2's leftovers on rank 28 (018 and 019 station questions, 062's map questions, named sets and
+a tag filter on 030), P4 media on rank 30, and the long-list route.
+## 015 Timeline Builder: a worksheet that blanks dates, and a printed ordering activity (2026-10-07, AI-31-015, `CACHE_VERSION` v285)
+
+BACKLOG rank 131, "Printed ordering activity; blanking dates, not just titles", built whole and the row deleted. The page was checked first. It already blanked titles
+(the worksheet: numbered blanks on the strip, a word bank, an answer key page, a seeded pick of N events per version) and said in its section that dates and cut-apart
+cards were open. It prints through its own containers (`#printArea`, the tiled, map and worksheet pages), not the shared print kit, so the new sheets are a fifth
+container of the same shape, landscape, and use no `_shared/` code.
+
+- **Blanking dates.** The worksheet panel has "What to blank out" (titles, dates, titles and dates) and "Which events" (a number picked at random, every nth along
+  the strip, or the ones I choose from a tick list). A date blank is a ruled space on the strip and, below it, a line of at least 9rem to write on (a title line is
+  14rem); "both" puts the date on its own line under the title. The word bank becomes a date bank, or a Titles list and a Dates list; the date bank is shuffled with a
+  seed of its own, because the title bank's would pair the i-th title with its i-th date. The year scale along the strip's axis is left off a sheet that blanks dates (it
+  answers the blank) and kept on the key; the key underlines what was blanked on the strip and bolds it in the list, and says "Blanked on this sheet: ...". Every nth starts
+  one event later on each version, so n versions blank every event once; a hand pick is the same on every version, and the note says so. A pick of nobody refuses.
+- **Saved and shared.** `kind`, `pick`, `nth` and `hand` (event ids) join `state.worksheet` **only when they differ from titles-at-random**, so an old timeline's
+  saved string is the old five keys and stays so. The share link carries the whole timeline already, so it carries them; `normalizeBlank()` in `tlb-worksheet.js` cleans
+  what a hand-built link puts there (an unknown kind or pick is the old behaviour, `nth` is 1 to 50, `hand` keeps finite numbers once each).
+- **The ordering activity.** An "Ordering activity" panel prints the titled events with no date on them as cut-apart cards (a number and the title; dashed lines between;
+  the grid is the widest of 4, 3, 2 or 1 across that leaves two rows of the tallest card, measured with the page's fonts in an off-screen probe, every card the same size and
+  a `min-height`, so a long title makes cards taller and never cuts one) or as a numbered list with a box beside each, and a key on a page of its own: the right order, each
+  line's date, the number of the card (or list line) that holds it, and a `*` where two events share a year and may go either way round. The deal is a pure function
+  (`TimelineWorksheet.deal(events, seed)`) of the events and `state.ordering.seed`; with three or more events in more than one year a draw that is already in order is redrawn
+  from the same seed, and Reshuffle moves to the next seed whose deal differs from the current one. `ordering` (`kind`, `answerKey`, `nameLine`, `seed`) is written when
+  a choice is made, Reshuffle is pressed or a sheet is printed; opening the panels writes nothing. Everything typed reaches the page as text (built from elements);
+  `inline-sinks-baseline.json` for 015 did not move.
+- **Decisions, reversible.** A date-blank worksheet leaves the year scale off (default: on the key only). Untitled events are never blanked and have no card (as before).
+  Cards are numbered by the order they are dealt, not lettered, so the same number names the card on the paper and on the key. No paper-size choice was added: the tool
+  prints landscape on whatever the printer's page is, so cards are sized for the smaller of Letter and A4 (10in wide, 6.2in of cards).
+- **Tests.** `smoke-blank-order-core.mjs` (`test:timeline-blank-order-core`, pure Node, 59 assertions) and `smoke-blank-order.mjs` (`test:timeline-blank-order`, port 8518,
+  193 assertions; `TLB_GROUPS=2,3` runs groups of it). `golden-old-worksheet.json` was recorded from the page before any edit: five timelines and settings, the worksheet markup
+  with style attributes removed (so a font on another machine cannot fail it) and the saved settings string, which must be unchanged. Printing is read off Chromium's PDF
+  on Letter and A4 (pages equal sheets, no blank page, the 200-character and the 58-character unbroken titles whole in `pdftotext -raw`). Breaks on purpose: 28 in the
+  pure module (23 failed first time, 3 survived and got assertions, 2 are equivalent and unbroken: a count of 0 that the slice handles anyway, and a `forEach` check for a list a
+  JSON link cannot carry other than as an array) and 49 in the page (41 failed first time, one of them by a crash and not a named line; 2 survived, a fixed six-across grid and a
+  reshuffle that adds one to the seed, and got assertions; 5 more, on the date and both-blanked lines and banks, were run again after they were rebuilt from elements to keep the inline-sink count at 17, all caught; 1 is equivalent: reading the hostile `kind` from `state.worksheet` instead of the form, which `persist` has already
+  cleaned by the time the page is built). Not every assertion has its own break. The first run of the page breaks used the environment variable `GROUPS`, which bash owns, and
+  proved nothing; they were re-run with `TLB_GROUPS`.
+- **Not done, not verified.** Nothing printed on paper or cut; no screen reader. A date blank on the strip itself is small (the strip is scaled to a page), so the line below
+  is where a student writes. The cards carry no category colour or photo (a photo would answer nothing, but was not asked for). Choosing a subset of events for the ordering
+  activity (it uses every titled event); a card size choice; a paper-size choice. `audit-print`'s seed does not click either new button, so the suite's PDFs are the print check.
+  `test:a11y` scans the default page only; the suite runs axe on every new panel state. The page's whole-document axe pass on a seeded timeline fails colour contrast on
+  category-coloured date labels on the paper strip: that is the existing screen timeline, not this change, and is not in the allowlist.
+
+## Path 12 P3, increment 2: the final wager round and quiz-bowl on 030 (2026-10-07, AI-14, `CACHE_VERSION` v284; the code commit says v283, which AI-31-016 took before the merge)
+
+BACKLOG rank 29 had three modes left; this session was handed two, the final wager round and then quiz-bowl. The
+wheel is not started and the row says so. The design as built is in BACKLOG's Path 12 section, P3, "Increment 2";
+this is what happened.
+
+**First check.** Neither existed. A board had no final-question field (the session's prompt allowed for one), so the
+final round's question is a new field typed on the board or copied from the bank. The Daily Double's wager is one
+team's and was left alone.
+
+**Before any edit.** Every-team-answers as v281 left it was played through every path it has (tick, mark by key and
+by mouse, score, Undo, close with no marks, Export, Edit and Save, a team removed, the mode off and on, Reset, the
+file imported) and hashed twice: 23 pins, the same both times (`Tools/review-game-board/test/_every-team-game.mjs`).
+They and the 32 one-team pins are green on the finished page.
+
+**Built.** The rules are in `Tools/review-game-board/rgb-play.js` (pure, no DOM): what a team may wager and how a
+typed wager is read, what the round scores, standings and the sentence that names the winner or the tie, the cleaning
+of both fields from a file, the quiz-bowl entry (who may buzz, a wrong buzz, a right one, the bonus), what an entry
+scored, which question is next, the totals and the summary, and what a team leaving does to both. The page draws
+them on one new overlay, built from elements. `_shared/question-bank.js` was not edited; the bank is read with
+`peek` and never written; no new storage key; `inline-sinks-baseline.json` still has 030 at 3.
+
+**Calls made (each is a question for Devon in BACKLOG, 31 to 44).** A team at 0 or below may wager up to 100. Wagers
+are typed by the teacher into password-type boxes. Every team must be marked right or wrong before the final round
+scores. Quiz-bowl is toss-up 10, bonus 10, wrong 0, one bonus question, the source whole and in its stored order,
+points on the board's own scoreboard. A toss-up counts once it is decided; a bonus is used once it is shown. The
+source and the points are locked once a round begins, because what a toss-up scored is worked out from the log and
+not stored: changing the points mid-round would make Undo take off a different number than was put on.
+
+**Found by the suite.** Two of my own expectations were wrong by arithmetic (a wrong buzz's cost left out of a
+round total) and were corrected to what the rule gives. One real trap: an axe scan taken straight after switching
+the theme by hand reported the score on a team's chip as low contrast, because the chip's background fades over
+0.2 s; the unedited page is clean under the same scan once it has settled, and the suite now waits 350 ms after a
+theme switch before it scans.
+
+**Got wrong.** The first run of the pure-Node break driver stopped on a bad pattern of its own with a break still
+applied to `rgb-play.js`; the file was put back by hand and the driver now checks every pattern before it changes
+anything and restores the file on exit.
+
+**Checks.** `test:play-modes-core` 194 (83 before), `test:play-rounds` 173 (new, port 8519). Breaks on purpose: 83 of the rules in pure Node (81 caught by an assertion first time, 1 after an added assertion, 1 an equivalent change); 14 in the page, one suite run a lock (13 caught by an assertion first time; 1 first stopped the suite with a crash and is caught by an assertion since that check was rewritten).
+Every guard exit 0. Not run: the full `npm test`.
+
+**Not verified.** No class played either round; no person used the overlay; no screen reader (axe in both themes,
+roles, names, keys, focus); no password manager against the wager boxes; a bank of thousands as a source; CI on this
+tree.
+## 016 QR Code Generator: batch codes from a CSV or paste, and the label rule stated (2026-10-07, AI-31-016, `CACHE_VERSION` v283)
+
+BACKLOG rank 132, "A label under each code; batch codes from a spreadsheet". **Half of it was already there.** Found first and not rebuilt: a single code has had a
+caption band since before this row (drawn into the PNG, the SVG and the print), and Bulk mode already took `label, link` lines, comma or tab separated, with the label
+under each code on screen, on plain paper and on Avery 5160/5163 stock. What was missing is what shipped.
+
+- **Check rows and the batch.** `Tools/qr-code-generator/bulk-rows.js` (new, precached; global `QrBulkRows`) reads the paste: a first row of column names (every
+  cell a column name; one cell only for a word that names a link, so a list whose first line is "Station" is not eaten) is skipped; a cell in "double quotes" keeps
+  its comma, through `Roster.splitCells` (already loaded on the page, called as it is; a row with no quoted cell never goes near it, so a list pasted before reads
+  byte for byte as it did: the first delimiter splits, a line with none is its own label and link, a tab beats a comma). A **Check rows** button (and Generate grid,
+  which runs the same check) names every row that will not make a code by its line in what was pasted, header and blank lines counted: empty, too long at the chosen
+  error correction (read off the real encoder: 2953 / 2331 / 1663 / 1273 UTF-8 bytes at L / M / Q / H, one more throws), or the same label **and** link as an
+  earlier row. Two labels on one link are fine (a form for a whole class). Generate makes the rest and says how many were left out. A **spreadsheet saved as CSV**
+  can be chosen (read in the browser, nothing uploaded, over 1 MB refused; added after what is in the box, and a second file's own header row is dropped); a
+  **Columns are** select reads label-then-link (the way the page always read, kept as the default) or link-then-label. The 400-code limit is stated on the page.
+- **The label rule.** A label over 60 characters is shown as its first 59 and an ellipsis, in the grid, on plain paper and on label stock; the code is never
+  shortened. The single caption's rule (60 characters, shrinks to 8 px to fit the code's width, then ends in an ellipsis, below the code's blank border) is now stated
+  under its field. **Decision (reversible):** 60 because the caption field already stopped there; it changes the old page for a label of 61 or more, which used
+  to wrap on screen and, on plain paper, widen the whole grid to the page. `smoke-print.mjs`'s "wide" labels were 150 characters and are now sixty `W`.
+- **Decisions.** Column order stays label-then-link (the row said link first; the old page and every saved paste said label first, so the select offers both). A duplicate is
+  the same label and link, not the same link. A quoted row with more than two cells rejoins the rest with the delimiter and no space. Quoted cells that span lines are not
+  supported (a line is a row). The header skip applies to the first row only. Nothing about this was stored: no new key, no registry row, nothing in a share link.
+- **Tests.** `smoke-bulk-core.mjs` (`test:qr-bulk-core`, pure Node, 99 assertions, the limit read off the vendored encoder) and `smoke-bulk.mjs` (`test:qr-bulk`, port 8520,
+  128 assertions): the quiet zone and the caption's letters read off the canvas's pixels at 200, 400 and 1000 px (the gap to the code is at least four modules, the border
+  under the code blank, the code decoded by the page's own jsQR and bit for bit the same with and without a caption), a 60-character caption inside the code's width, markup in
+  a caption, a label and a row left out as text on screen, on the sheet, in the alt text and in the downloaded SVG, Check rows and Generate on a paste with every kind
+  of bad row, the limit at 400 and 401, a BOM'd CSV with CRLF, a second file, a file over 1 MB, an old-style paste making the codes and labels the old page made, a saved
+  size and level opening as they were, axe with the list showing, Tab order. Lengths are relations, never pixels of text. **Breaks on purpose: 38 against the module** (35
+  caught; 3 equivalent: an `&&` that the fill rule makes redundant, a swap of one cell with itself, and a `\r?` that `trim()` covers) **and 15 against the page**: 14 caught,
+  1 dead code (a BOM strip that `FileReader.readAsText` already does) which was deleted; 14 more written and not run, for time (each run is two minutes behind the lock).
+  Not every assertion has its own break.
+- **Checks.** See the audit entry. `test:a11y -- --only 016`, `audit-print --check --only 016`, `smoke-print` (1617), `test:qr` and every `check:*` and `lint`.
+- **Not verified.** Nothing printed on paper; no phone scanned a printed code; no real spreadsheet export (the files in the suite are written by hand, one with a BOM and CRLF);
+  no screen reader; no sheet of real label stock. The audit's print seed has no batch with a header or a long label, so the print block is measured by `smoke-bulk.mjs`
+  and `smoke-print.mjs`, not by `audit-print`. Left: multi-line quoted cells, a column picker for a CSV with more than two columns, saving a batch.
+
+
+## 008 Behavior & Points Tracker: team / house points (2026-10-07, AI-31-008, `CACHE_VERSION` v282; the code commit says v280, which AI-31-012 and then AI-14 passed before the merge)
+
+BACKLOG rank 125 had two parts; this session did the first, team / house points. Longitudinal reports stay on the row, rewritten.
+
+- **What it is.** A Teams / houses card: two to eight teams per section (a name each, an optional colour from eight, never the only cue), students
+  put on a team by hand (a table of selects behind a `<details>`) or by **Deal evenly**, which is a pure function of the seed box, the team order and the
+  roster (`teams.js`, `BPTeams.deal`: names sorted by code point, a mulberry32 Fisher-Yates shuffle, round robin, so sizes differ by at most one and
+  the order the names arrive in changes nothing; dealing again asks first). Every tap, "Award everyone" and undo counts for the student's team; the log
+  entry carries the team id, so an undo takes the points off the team that got them even if the student has moved since. A team can be given points
+  directly (a form with a reason, or +1 / −1 on its tile; the last five are listed with Undo).
+- **The board.** One tile per team above the student cards, best first: its position in words ("1st", "Tied for 2nd"), the name, the total at 2.2 to
+  4.6 rem, and "Leading" or "Tied for the lead" in words (nobody leads while every total is the same 0). The colour is a swatch and a left stripe and
+  nothing else. It holds no student's name, tally, behaviour or note. "Teams only" hides the student cards (session only, `aria-pressed`); "positives only"
+  floors team totals at 0 as it does students' and ranks on what is shown; a polite live region says when a new team takes the sole lead; focus stays on a
+  tile button after it redraws. The printed end-of-day report gains a Team standings block when there are teams.
+- **Totals.** `teamBank` (before today) plus `teamDay`: Archive Day moves today into the bank, so house points run all term; "Undo the whole day" drops
+  today's share and keeps the bank (exact, not read off the 300-entry log); "Reset team totals" (a confirm) zeroes both and reads or writes no student.
+- **Stored** as optional fields in the same section of the same key (`teams`, `teamOf`, `teamBank`, `teamDay`, `teamLog`, `teamSeed`): no new key, no
+  registry row, nothing in a share link (the page has none). A section that never made a team has none of them, and a log entry only has `team` when its
+  student had one. Load cleans a hand-edited section (duplicate ids, more than eight, an unknown colour, an assignment to a missing team, a fractional bank).
+- **Decisions.** Teams are this tool's own: the row's "from Group/Team Generator" is a cross-tool hand-off and was not started. Team totals can go
+  negative, as students' do (the section's open question about negatives is still Devon's). No per-day team history: only the running total, which is the
+  first thing the longitudinal row will want. A team in the CSV and the student summary was left out so those files stay what they were.
+- **The golden.** `golden-no-teams.json` was recorded from the v279 page before any edit (`_capture-golden-no-teams.mjs`, run once, deterministic: two
+  captures were identical): a fixed walk of every Show and Sort mode, taps, Award everyone / ticked / the rest, undo, both printouts, the CSV, archive and
+  undo-the-day, with every board, feed, table and the **stored string** after each step. Today's page matches it to the byte (`smoke-teams.mjs` section 1).
+- **Tests.** `smoke-teams-core.mjs` (pure Node, 114 assertions) and `smoke-teams.mjs` (port 8516, 219 assertions: the golden, making teams, the deal, points
+  and undo, the board's text and size, direct points, archive / undo-the-day / reset, load, a Class Roster Hub rename carrying the team, axe and names).
+  Breaks on purpose: **64 in the core**, 56 caught first time; 7 survived and got assertions (a stale assignment, a second archive adding to the bank, the
+  limit written as `T.NAME_MAX` against itself, a lone team's lead, a stale team in `counts`, an empty deal that built `{undefined}` and passed as `{}`,
+  a biased shuffle, which now needs a 3,000-seed fairness check); the one left, a tie broken by sort stability, is equivalent. **41 written against the
+  page, 37 run and all caught**: 3 first survived because the test was weak (positives-only mode with no negative team on screen; the key list read after
+  the page had already written its extra key; load cleaning checked only after an Add team that cleans as well) and were fixed; 5 more were first marked
+  "survived" only because the suite had aborted on an earlier break's missing button (the driver now reports ABORTED) and were rerun alone; 2 more first
+  looked like survivors because the driver searched for a label the test had since renamed. Not run: the three whose failure cascades through every total
+  (a board with no position words, a board drawn only from a `renderBoard` that no longer calls it, an archive that resets teams) and the one for the
+  direct-award undo button. Not every assertion has its own break.
+- **Checks.** `test:a11y -- --only 008` and `audit-print --check --only 008` clean; the suites of `behavior-points-tracker`, `roster`, `theme`, `export` and
+  `service-worker` pass; every `check:*`, `lint` and `check:precache -- --base origin/main` exit 0. `audit-print` seeds no teams, so the Team standings
+  rows are asserted in `smoke-teams.mjs` and were not measured in print media.
+- **Not verified.** Nothing projected on a real board; no screen reader; nothing printed on paper; no real second tab; the live region's wording heard by
+  nobody. Not built: team totals per archived day, teams in the CSV or the student summary, a fullscreen stage view, carrying teams across sections.
+
+
+## Path 12 P3, increment 1: every-team-answers and the printed quiz and study guide on 030 (2026-10-07, AI-14, `CACHE_VERSION` v281; the code commit says v280, which AI-31-012 took before the merge)
+
+BACKLOG rank 29 names five things; this session was handed two of them. Quiz-bowl, the wheel and the final wager are
+not started, and the row says so. The design as built is in BACKLOG's Path 12 section, P3; this is what happened.
+
+- **What was there.** The one-team game (show the answer, press the one team that got it) and two printed sheets from
+  a board, an answer key and a practice quiz with no key. So "a printed practice quiz" half-existed, and the session
+  built what did not: the key on a page of its own in the same print, the study guide, and both from the bank.
+- **Every team answers.** An opt-in tick box on a board. On, the answer brings a panel of radio groups (Right, Wrong,
+  No answer, a team) and one Score button; right scores the clue's points, wrong and no answer nothing; the marks stay
+  on the clue and each team shows its count; one Undo takes the clue back. Keys 1 to 9 and Enter. Stored as
+  `everyTeam` on the board and `marks` on a scored clue, both absent on a board that never used the mode.
+- **The sheets.** `rgb-play.js` builds a quiz and its key (the key starts a new page) or a study guide (a table, the
+  answer beside the question) from elements, from a board's clues by category or from the bank tab's list by unit.
+- **A premise that was wrong.** The session's prompt said to print "through the shared print kit as 030 already
+  does". 030 links no print-kit file and never has: it prints `#printArea` under its own `@media print`, with the
+  screen hidden by `visibility`, which leaves the screen's height in the print. Printed from the bank tab, which is
+  tall, a short sheet would have been followed by blank pages. The new sheets are printed with a class on `<body>`
+  that takes the screen out with `display: none`; the two old sheets were left exactly as they were (they are
+  printed from the board, which is short). Moving 030 onto the kit, with a preview, is Path 7 work and is not done.
+- **The old game, held.** `_old-game.mjs` plays one board through every path of the one-team game; its 32 captures
+  were hashed on the v279 page before any edit (twice, the same) and are the same on the new page.
+- **Decisions taken, each a question for Devon in BACKLOG (18 to 30).** A wrong answer scores nothing; the page does
+  not manage secret answers; a Daily Double stays one team's wager; every team starts at No answer; marks go by a
+  team's place; a guide groups by category or unit in first-appearance order; choices print in stored order; the two
+  old print buttons stay.
+- **Tests.** `smoke-play-core.mjs` (pure Node, 83 assertions) and `smoke-play-modes.mjs` (port 8515, 182 assertions).
+  Breaks on purpose: 49 in `rgb-play.js`, in pure Node (47 caught by an assertion, 2 stopped the suite with a crash: a group named `__proto__` with the key prefix taken off, and `innerHTML` in place of `textContent`, which the suite's document refuses). In the page, 24 written and **only 12 run**, one suite run per lock (the lock was shared with two other workers and a run took 3 to 5 minutes), all 12 caught by an assertion. **Not broken on purpose:** Reset game leaving the marks, a removed team's mark staying, Edit questions losing the mode or the marks, the bank print taking ticks the list does not show, the number keys, the starting mark, focus on reveal, a wrong team losing points, a line's height, the empty list, the bank sheet's name.
+- **Got wrong on the way.** The first pure break list had one change that changed nothing (it added a field nobody
+  read) and survived; it was replaced by a real one. The suite first expected an imported clue's marks to be two
+  long when the board had three teams by then: an import fills a short list with No answer, which is right.
+- **Not verified.** No class, no person, no screen reader, no paper. Not run: the full `npm test`.
+ of two to four independent timers (2026-10-07, AI-31-004, `CACHE_VERSION` v279; the code commit says v277, which main passed before the merge)
+## 012 Graph Paper: polar, log, hexagonal, storyboard and music paper, and seven number-line kinds (2026-10-07, AI-31-012, `CACHE_VERSION` v280)
+
+BACKLOG rank 129, "More grid types; number-line variants", is built whole and the row is deleted. The page was checked first: it already had square, dot, isometric
+line and dot (the Isometric tab), a first-quadrant and a four-quadrant plane with a chosen scale and labelled axes, Cornell notes, handwriting lines and a printer
+check, and a number line with a min, max and interval (negatives by typing a negative min). Those were not rebuilt. Engineering paper existed only as "Custom, 5
+squares per inch", so it is now a named size.
+
+- **New paper.** Polar (12, 16 or 24 rays, circles at a chosen step, the four axes heavier, degree labels, ring numbers); semi-log and log-log (1 to 6 decades, any
+  start power of ten from -4 to 4, lines at log10 of 2 to 9, decade lines heavy and the 5 line a step lighter, 10 or 20 even divisions on a semi-log x); hexagonal (side =
+  the grid size, point up or flat side up, shared edges drawn once); storyboard (2 to 12 frames at 16:9, 4:3, 1:1 or 2.35:1, 0 to 4 caption lines under each); music
+  staves (three sizes, single or grand staff, as many as fit).
+- **New number lines**, in a "Kind of number line" select on the Number line tab; "Standard" is the old line and the default. Integers with zero marked; decimals by
+  tenths or hundredths; fractions and mixed numbers at a denominator of 2 to 16 (mixed or improper, in lowest terms or not, stacked numerator over denominator);
+  open (no numbers, 0 to 60 marks); double (two lines whose marks share x, a dashed rule between, names, and the bottom line all / worked example / 0 only);
+  vertical thermometer (1 to 6 side by side). Ticks come from whole numbers (`n = value x scale`, `k/d`), never a running float sum. Labels thin out to fit, and for
+  fractions and decimals they move to a divisor of the denominator or scale, so whole numbers (and tenths) are always labelled.
+- **Settings.** Thirty-six new fields on the preset, all added on load to a preset that lacks them; nothing is rewritten until an edit. Every old sheet and 14 saved
+  presets are pinned by `golden-old-render.json`, recorded from the v279 page before any edit: 98 SVGs from `gpg-render.js` and, for each of 14 presets, the hash of
+  `#previewArea` and of the string the page stores back (with the new keys taken away). All byte for byte. This tool has no share link, so none carries the new settings.
+- **A bug found by the print check, fixed.** Every sheet this page printed ran on to a blank second page in Chromium's PDF (graph, number line, plane, isometric: 2
+  pages; only the printer check and a few short panels printed 1). `body * { visibility: hidden }` leaves the hidden editor's height, and at a Letter page's 816px the
+  layout is one column, so the editor sat above the sheet. The print block now also takes the editor, header, toolbar and notes out of the flow. `audit-print` reports TAIL 0 for
+  this page; I did not find out why (a wider viewport than a Letter page is the likely reason), and the suite measures the PDF instead.
+- **The sheet-type buttons were `div`s a keyboard could not reach.** All twelve are now `role="button"` with `tabindex="0"`, `aria-pressed`, and Enter / Space.
+- **Tests.** `smoke-grid-types-core.mjs` (pure Node, 52,353 assertions: each sheet's geometry read off its SVG over every orientation, header, size and option, plus 1000
+  random option sets including invalid ones) and `smoke-grid-types.mjs` (port 8517, 413 assertions: the preview is exactly the renderer's sheet for what was typed, the
+  old presets, saving and reloading, keyboard tabs, one Letter page for 8 old and 16 new sheets in each orientation, and axe over every new panel). Breaks on purpose: 79 in the renderer, all
+  caught (55 for polar, log, number lines and the old isometric and golden, 24 for hex, storyboard and music; two of the first set first survived: a degree label that
+  rounds, and a zero step that was only checked loosely, and got assertions), and 30 in the page (two of them, a label pointing nowhere and a select with none, caught by the axe pass). The page breaks were first run 14 at a time in one suite run, which
+  proved nothing for the nine that were not reported: one failing early assertion (a tab that would not open a panel) stopped the run before the rest. They were re-run in
+  groups of breaks that cannot derail each other; one of those, "old presets not given their new defaults", was first reported uncaught because the assertion I named
+  for it was the wrong one (the golden preview is the one that fails); all 30 are caught. Not every assertion has its own break.
+- **Not done, not verified.** Engineering paper has no border or title block; the staves have no clef or key signature; polar has no radian labels. Nothing printed on
+  paper, no hexagon or staff measured with a ruler, no screen reader. `audit-print`'s seed is the default graph sheet, so it does not reach the new tabs; the suite
+  measures their PDFs itself. The hexagon corners were found by tolerance: two floats a hair apart are one corner, which is what the renderer does and the test checks
+  independently.
+
 ## 004 Classroom Timer: a timer board of two to four independent timers (2026-10-07, AI-31-004, `CACHE_VERSION` v279; the code commit says v277, which main passed before the merge)
 
 BACKLOG rank 121 had three parts; this session did one, the multi-timer board. Bell-schedule awareness (needs 032's key in the registry) and the
