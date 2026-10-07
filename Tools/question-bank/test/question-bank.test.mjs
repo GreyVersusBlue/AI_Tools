@@ -702,5 +702,53 @@ console.log('QuestionBank — a link: eight fields as bounded text, and nothing 
   eq([third.added, plain(q.list()[1]).prompt, q.list().length], [1, 'Capital city of Peru?', 5], 'a question the teacher has since reworded is theirs: the link\'s wording is added beside it, not over it');
 }
 
+// ---- a page that only reads (Path 12 P2, 040) ------------------------------------
+console.log('QuestionBank — a page that only reads: peek(), sources(), sourceLabel()');
+{
+  // an old bank nobody has moved yet: peek() shows it and writes nothing
+  const storage = oldBank(SAMPLE);
+  const before = JSON.stringify(storage.dump());
+  const q = page(storage, [QB_SRC]).QuestionBank;
+  const peeked = q.peek();
+  eq(peeked.map(x => x.prompt), SAMPLE.map(x => x.question), 'peek() gives 030\'s old entries as questions, in order');
+  eq([storage.writes, JSON.stringify(storage.dump())], [[], before], 'and writes nothing: no key, and storage is byte for byte what it was');
+  eq(q.sources({ peek: true })[0], { id: '', title: 'My question bank', source: '', note: '', count: 6, readOnly: false }, 'sources({ peek }) counts the bank the same way');
+  eq(q.questionsOf('', { peek: true }).length, 6, 'questionsOf(\'\', { peek }) is the bank, unwritten');
+  eq(storage.writes, [], 'still nothing written');
+  eq([q.questionsOf('').length, storage.writes], [6, [KEY]], 'without { peek }, questionsOf(\'\') loads the bank as list() does, which is what moves it');
+  const loaded = q.list();
+  eq(plain(peeked), plain(loaded), 'peek() is exactly what load() then gives');
+  eq(storage.writes, [KEY], 'and the move is written once');
+  eq(plain(q.peek()), plain(loaded), 'after the move, peek() reads the stored bank');
+  // an old page adds one more entry after the move: peek() sees it, unwritten
+  oldPage(storage).saveEntry({ question: 'Late arrival?', answer: 'Yes', points: 100 });
+  storage.writes.length = 0;
+  eq([q.peek().length, q.peek()[6].prompt, storage.writes], [7, 'Late arrival?', []], 'an entry an older page adds later is in peek() too, with nothing written');
+}
+{
+  const storage = fakeStorage();
+  const q = page(storage, [QB_SRC]).QuestionBank;
+  eq([q.peek(), storage.writes], [[], []], 'an empty browser: peek() is an empty list and writes nothing');
+  // a newer page's bank is read, never adopted into
+  const newer = fakeStorage({ [KEY]: JSON.stringify({ v: 1, data: { schema: 2, questions: [{ id: 'q-n', prompt: 'New?', answer: 'Y' }], legacy: {} } }), [OLD_KEY]: JSON.stringify([{ id: 'bank-1', question: 'Old?', answer: 'N' }]) });
+  const qn = page(newer, [QB_SRC]).QuestionBank;
+  eq([qn.peek().map(x => x.id), plain(qn.list()).map(x => x.id)], [['q-n'], ['q-n']], 'a newer bank is read as load() reads it: nothing adopted into it');
+}
+{
+  const win = seedPage(fakeStorage());
+  const q = win.QuestionBank;
+  q.saveQuestion({ prompt: 'Mine?', answer: 'Yes' }, { now: 'T0' });
+  eq(q.sources(), win.ReviewBankStore.sources(), '030\'s sources() is the module\'s');
+  eq(q.sources().map(x => [x.id, x.count, x.readOnly]), [['', 1, false], ['053', 30, true], ['062', 90, true]], 'the bank first, then each seed set in the order registered');
+  eq(q.sources().map(q.sourceLabel), ['My question bank (1 question)', 'Cultural Trivia (built in, 30 questions, read-only)', 'Geography Bee (built in, 90 questions, read-only)'],
+    'sourceLabel() is the wording 030\'s chooser has had since v267');
+  eq([q.sourceLabel({ title: 'T', count: 0 }), q.sourceLabel({ title: ' T ', count: 2, readOnly: true }), q.sourceLabel(null), q.sourceLabel({ title: 'T', count: 'x' })],
+    ['T (0 questions)', 'T (built in, 2 questions, read-only)', ' (0 questions)', 'T (0 questions)'], 'and never throws on what it is handed');
+  eq([q.questionsOf('053').length, q.questionsOf('062', { peek: true }).length, q.questionsOf('nope').length, q.questionsOf('').length, q.questionsOf().length], [30, 90, 0, 1, 1],
+    'questionsOf() is a set\'s questions for its id and the bank\'s for none');
+  q.questionsOf('053')[0].prompt = 'changed';
+  ok(q.questionsOf('053')[0].prompt !== 'changed', 'what questionsOf() hands out of a set is a copy');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

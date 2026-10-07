@@ -25,9 +25,9 @@
   var QB = global.QuestionBank;
 
   /** The questions of `source`: the teacher's bank for '' (or nothing), a
-      seed set's for its id. */
+      seed set's for its id. The shared module's, since 040 lists them too. */
   function questionsOf(source) {
-    return source ? QB.setQuestions(source) : QB.list();
+    return QB.questionsOf(source);
   }
 
   function listEntries(source) {
@@ -37,10 +37,7 @@
   /** What the page can list: the teacher's bank first, then every seed set.
       [{ id, title, source, note, count, readOnly }] */
   function sources() {
-    return [{ id: '', title: 'My question bank', source: '', note: '', count: QB.list().length, readOnly: false }]
-      .concat(QB.sets().map(function (s) {
-        return { id: s.id, title: s.title, source: s.source, note: s.note, count: s.count, readOnly: true };
-      }));
+    return QB.sources();
   }
 
   /** Any entry the page can show, by id: a seed's or the bank's. */
