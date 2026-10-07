@@ -87,7 +87,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
-- **AI-14 (v288), rank 30 (DELETED: Path 12 P4 is whole), Path 12 P4: a question in the bank can carry a picture, and it travels in the bank file.**
+- **AI-14 (v289; the code commit says v288, which AI-31-025 took), rank 30 (DELETED: Path 12 P4 is whole), Path 12 P4: a question in the bank can carry a picture, and it travels in the bank file.**
   First check: the 030 half had shipped in #302 (a clue's picture is `idb:<id>` in the media store, moved on load, in
   Export JSON as a data URL and stored again on import), so none of that was rebuilt. What was left and is built: `media.image` on a
   question (the same two values a clue holds, in the same store and namespace, so a picture on a clue and on a question is one
@@ -526,7 +526,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; 062's thirty map questions, which are not published (P4 shipped at v288, so a question can carry a picture now and these no longer wait on it); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Seventeen questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; 062's thirty map questions, which are not published (P4 shipped at v289, so a question can carry a picture now and these no longer wait on it); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Seventeen questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -613,7 +613,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 138 | Lock a group or a role and reshuffle the rest | 022 | ½ | | [022 Lab Group & Role Randomizer](#022--lab-group--role-randomizer) |
 | 139 | Name and date lines on the slips; response collection questions | 023 | ½ | | [023 Exit Ticket / Bell Ringer Generator](#023--exit-ticket--bell-ringer-generator) |
 | 140 | Draw on a strategy card; a shared stage | 024 | ½ | | [024 Number Talks / Mental Math Routine Board](#024--number-talks--mental-math-routine-board) |
-| 141 | Sentence starters and an "if you’re stuck" line | 025 | ½ | | [025 Writing Prompt Generator](#025--writing-prompt-generator) |
 | 142 | Fraction multiply/divide, exponents and one-step equations | 026 | ½ | | [026 Math Fact Drill Sheet Generator](#026--math-fact-drill-sheet-generator) |
 | 143 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 144 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
@@ -4669,7 +4668,7 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
     `npm test`.
 - **P4 — Media.** Clue images move to the media store (Path 4) beside the existing
   clue audio; media travels in export as data URLs.
-  **Shipped whole (AI-14, 2026-10-07, v288); its ranked row is deleted. The rest of this bullet is what was built.**
+  **Shipped whole (AI-14, 2026-10-07, v289; the code commit says v288, which AI-31-025 took); its ranked row is deleted. The rest of this bullet is what was built.**
   - *What was there (the first check).* The 030 half shipped in #302 (Path 4 P4): a clue's `image` is `idb:<id>` in
     `gvb-media` under the namespace `rgb` (`Tools/review-game-board/rgb-image.js`), a board saved before that is moved
     on load, Export JSON carries each picture and each sound as a data URL, and Import JSON stores them again (a
@@ -9332,8 +9331,10 @@ well but doesn't have a math coach.
 
 #### Quick Wins
 
-- **Sentence starters and a "if you're stuck" line** with each prompt, which
-  is what the students who need the prompt most actually need.
+- ~~Sentence starters and a "if you're stuck" line~~ — **done 2026-10-07**
+  (v288, `wpg-scaffolds.js`; `HISTORY.md` lists every line for a teacher to read, and
+  they are unreviewed). Not done: help on the roster assignment sheet; a share link
+  for a random draw's own choice.
 - **Tag prompts by purpose** (quick write, journal, on-demand assessment,
   creative) as well as genre.
 - **Import a prompt list** from a paste (P13) instead of one at a time.

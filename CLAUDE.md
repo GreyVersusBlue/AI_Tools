@@ -574,7 +574,7 @@ files must be added there too.
   `_old-game.mjs`, `_every-team-game.mjs` and `_rounds-game.mjs` unchanged (`npm run test:play-rounds` holds the second, `npm run test:play-wheel` the third). **030
   does not print through the print kit**: its sheets go into its own `#printArea`, the new ones with `printing-sheet`
   on `<body>` so the screen is out of the flow (`npm run test:play-modes`, `npm run test:play-modes-core`).
-  Since v288 a question may carry **one picture, in `media.image`** (Path 12 P4): `idb:<id>` in the media store under
+  Since v289 a question may carry **one picture, in `media.image`** (Path 12 P4): `idb:<id>` in the media store under
   030's namespace (`QuestionBank.MEDIA_NS`), or a PNG, JPEG, GIF or WebP data URL. **`QuestionBank.imageOf(q)` is the only
   reader**: do not read `q.media` yourself, and put what it gives into a `src` only through a strict test such as
   `ReviewBoardImage.url()`. A file's questions go through `cleanMedia()` before they are shown or stored, a file never

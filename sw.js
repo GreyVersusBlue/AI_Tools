@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v288';
+const CACHE_VERSION = 'v289';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -461,6 +461,8 @@ const PRECACHE_URLS = [
   "Tools/025-writing-prompt-generator.html",
   "Tools/writing-prompt-generator/wpg-prompts.js",
   "Tools/writing-prompt-generator/wpg-rubric-link.js",
+  "Tools/writing-prompt-generator/wpg-scaffold-data.js",
+  "Tools/writing-prompt-generator/wpg-scaffolds.js",
   "Tools/writing-prompt-generator/wpg-store.js",
   "_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css",
   "_shared/a11y.css",

@@ -119,6 +119,8 @@
     "Tools/exit-ticket-generator/test/smoke-prompt-sets.mjs",
     "Tools/writing-prompt-generator/test/smoke-half-sheet.mjs",
     "Tools/writing-prompt-generator/test/smoke-writing-record.mjs",
+    "Tools/writing-prompt-generator/test/smoke-scaffolds-core.mjs",
+    "Tools/writing-prompt-generator/test/smoke-scaffolds.mjs",
     "Tools/number-talks-board/test/smoke-session-record.mjs",
     "Tools/number-talks-board/test/smoke-strategy-library.mjs",
     "Tools/escape-room-builder/test/smoke-test-run.mjs",
