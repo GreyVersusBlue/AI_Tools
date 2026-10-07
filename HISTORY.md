@@ -9,6 +9,48 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 032 School Calendar Visualizer: A/B badges on the year grid, and a printed page per week (2026-10-07, AI-31-032, `CACHE_VERSION` v291)
+
+BACKLOG rank 146, both parts built, in the tool's own files (`Tools/032-School Calendar Visualizer.html`, `Tools/school-calendar/`). Checked first: the page already had
+the A/B letters on the month grid (since 2026-08) and a **one**-week print (`smoke-week.mjs`); the year grid had no letters and the week print could only be one week. The
+store is untouched (`scv_calendar_v1` is read raw by 010): nothing new is saved, every badge and page is computed.
+
+- **`scv-weeks.js`**, new, pure (no DOM, no storage), precached and in the shell: `abLetters(cal)` is the page's old `buildAbMap()` moved, and **the one place a day's letter is
+  decided**; `yearBadge()`, `mondayOf()`, `weekDates()`, `weekRange()`. All of it walks calendar dates in UTC milliseconds, so a daylight-saving change and the machine's zone cannot
+  move a date. The page's `buildAbMap()` now just calls it. The month grid is byte for byte what it was.
+- **Year-grid badges.** With the cycle on, a school day shows its letter as text in a box (`role="img"`, `aria-label="A day"`), a weekday with no school an en dash on a hatched
+  cell (`aria-label="no school"`), a weekend nothing; a one-line key under the grid says what they mean. 9px bold, black in a black box on paper, a grey cell for the closed day:
+  none of it is colour alone. With the cycle off, the grid is the markup it was (hashes).
+- **Printed weeks.** "Week of" plus "through the week of" (or the button "Every week of the year") prints a page per week, Monday to Friday, in order, each with the day's label,
+  day types in words, paced lesson, lesson note, note, the A/B letter, and the lines for notes; a polite status says "Prints 3 pages, one per week."; sixty at most (said on the page);
+  a week with no day in the calendar is left out, a week that is all break is kept, greyed. A "through" that is blank, earlier or in the same week is the one week, whose markup is
+  unchanged. Page breaks are CSS `break-after` on each week, none after the last.
+- **Decisions.** (1) The week is Monday to Friday and the page has **no setting for the day a week starts**, so none was invented (the month grid starts on Sunday). (2) **No orientation
+  is forced**: the page has always printed with `@page { size: auto }`, a forced landscape would change how a saved calendar prints; the layout holds in both (below), and the controls say
+  nothing about it, so the answer is the print dialog. Reverse either cheaply. (3) The prompt asked for "the cycle's own labels as the teacher named them"; the store has only `A`/`B`
+  (`anchorLetter`), a label field would be a change to the key 010 reads, so badges are A, B and an en dash.
+
+**Found, not fixed (a decision for Devon).** *The anchor date shows the other letter.* The old rule lines the walk up on the calendar's first day from the count of school days strictly between
+it and the anchor. When that first day is itself a school day and the anchor is later, the anchor date gets the **opposite** of the letter the teacher gave it (anchor 2026-09-14 "A" on the seeded
+year shows B; anchored on the first day itself, or before it, it is right). Nothing tested the cycle before this. It is kept exactly (a saved calendar prints by it), pinned by name as
+`ANCHOR_QUIRK` in `smoke-weeks-core.mjs`, and BACKLOG row 146 says what fixing it changes: every letter of such a calendar flips. *The old page's date walk was zone-fragile:* in a zone that
+changes its clocks at midnight (Havana) its `setDate()` walk skipped or repeated a day, and its map was wrong; the new module is not (the suite proves it under Havana and Lord Howe).
+
+**Tests.** `smoke-weeks-core.mjs` (`npm run test:school-calendar-weeks-core`, pure Node, 515 assertions, re-run by itself under `TZ=UTC`, New York, Havana and Auckland; six whole school years
+(a Monday start, a Wednesday start and Thursday end, a leap year with Feb 29 a school day and with it closed, a Saturday start, a closed first day), breaks at different places, nine anchors
+each in A and B, compared with a copy of the old page function (where that was sound), with properties that come from neither (the letters alternate on school days only; a break does not
+advance the cycle), and every date of 2026 to 2028 against integer arithmetic that never calls `Date`, including the six daylight-saving weeks). `smoke-weeks.mjs`
+(`npm run test:school-calendar-weeks`, port 8527, 386 assertions: `golden-old-views.json`, recorded from the page before any edit, holds the month grid, the year grid with the cycle off, seven
+chosen weeks with and without the cycle, and the stored string, in three zones; the year grid's badges against the month grid's and a closed-day list; the range across both
+daylight-saving weeks in five zones; PDFs read with `pdftotext` at Letter, A4, Legal and Tabloid in both orientations, three weeks each, one PDF page per week, in order, none blank, no word past the
+paper's edge, a 20-sentence note whole on its page, and the whole year (41 weeks) on 41 pages; axe on the new controls and the printed range). **Breaks on purpose:** see the note below the
+table; the counts are in the audit line.
+
+**Not verified.** Nothing printed on paper or read with a real screen reader. `audit-print` reaches the default state only (its seed does not open the week print), so the PDF assertions are the print
+check. Landscape is not forced; in portrait the five columns are about 1.5 inches wide on Letter. The weeks print the page's own title above them, as the one-week print always did.
+
+---
+
 ## 026 Math Fact Drill Sheet Generator: fraction multiplication and division, exponents, one-step equations (2026-10-07, AI-31-026, `CACHE_VERSION` v290; the code commit says v288, which AI-31-025 took, and main passed v289 before the merge)
 
 BACKLOG rank 142, built whole, in the tool's own files (`Tools/026-math-drill-generator.html`, `Tools/math-drill-generator/`). Checked first: the tool had the four

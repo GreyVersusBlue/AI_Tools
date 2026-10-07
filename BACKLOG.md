@@ -616,7 +616,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 143 | Discussion assessment; role recency across a book | 027 | ½ | | [027 Novel Study / Reading Circles Manager](#027--novel-study--reading-circles-manager) |
 | 144 | More frameworks; a shipped starter source collection | 028 | ½ | | [028 Primary Source Analysis Worksheet Generator](#028--primary-source-analysis-worksheet-generator) |
 | 145 | Projector styling (the site-wide question bank shipped as Path 12 P1, v265; its other formats are Path 12 P2 and P3) | 030 | ½ | | [030 Quiz / Review Game Board](#030--quiz--review-game-board) |
-| 146 | Week-at-a-glance print; year-grid A/B badges | 032 | ½ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
+| 146 | The A/B cycle's anchor date shows the other letter when the anchor is a school day after the calendar's first school day (`scv-weeks.js`, `ANCHOR_QUIRK`; fixing it flips every letter of such a saved calendar, so it is a decision, not a quiet fix); cycle labels beyond A and B (needs a field in `scv_calendar_v1`, which 010 reads raw); a "week starts on" setting (none exists; the week print is Monday to Friday). Year-grid badges and the page-per-week print shipped v291 | 032 | ¼ | | [032 School Calendar Visualizer](#032--school-calendar-visualizer) |
 | 147 | "Where is this student right now?"; the published pathfinder | 034 | ½ | | [034 East Middle Schedule Browser](#034--east-middle-schedule-browser) |
 | 148 | Split the file; accessibility routing | 035 | ½ | | [035 School Layout Visualizer](#035--school-layout-visualizer) |
 | 149 | Scenario modelling — drop lowest, curve, re-weight | 036 | ½ | | [036 Final Grade Checker](#036--final-grade-checker) |
@@ -9779,8 +9779,19 @@ written.
   Visualizer) is built around A/B days; this calendar doesn't know about them,
   so it can't answer "is the Monday after break an A day?" — which is the
   single most-asked calendar question in a block-schedule school. *(Month
-  view only — year-grid badges are still open.)*
-- **Week-at-a-glance print** in addition to the month/year views.
+  grid, and since v291 the year grid too: each school day says its letter as
+  text in a box, a closed weekday an en dash on a hatched cell, a weekend
+  nothing; the letters come from one function, `scv-weeks.js` `abLetters()`,
+  that the month grid, the year grid and the printed weeks all read. Not
+  done: the anchor date can show the other letter, see the ranked index, row
+  146; and only A and B exist, the store has no field for the cycle's own
+  labels.)*
+- **Done —** **Week-at-a-glance print** in addition to the month/year views.
+  *(One week since 2026-08; since v291 "Week of" through "the week of" or
+  "Every week of the year" prints a page per week, up to 60, Monday to Friday,
+  by calendar date and not by `Date` arithmetic. There is no setting for the day
+  a week starts on, and the page does not force an orientation: choose
+  landscape in the print dialog.)*
 
 #### Major Features
 
