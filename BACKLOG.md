@@ -568,7 +568,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 128 | Crop and straighten; scanner mode | 011 | ½ | | [011 Image → PDF Assembler](#011--image--pdf-assembler) |
 | 130 | Date-received per student; contract-gate reporting | 013 | ½ | | [013 Lab Safety Contract Tracker](#013--lab-safety-contract-tracker) |
 | 131 | Printed ordering activity; blanking dates, not just titles | 015 | ½ | | [015 Timeline Builder](#015--timeline-builder) |
-| 132 | A label under each code; batch codes from a spreadsheet | 016 | ½ | | [016 QR Code Generator](#016--qr-code-generator) |
 | 133 | Peer feedback slips; gallery-walk reactions | 017 | ½ | | [017 Gallery Walk QR Codes](#017--gallery-walk-qr-codes) |
 | 134 | Hints with a time penalty; branching and station images | 018 | ½ | | [018 QR Scavenger Hunt Builder](#018--qr-scavenger-hunt-builder) |
 | 135 | Attempt limits and feedback; a non-QR fallback | 019 | ½ | | [019 Digital Escape Room / Puzzle Lock Builder](#019--digital-escape-room--puzzle-lock-builder) |
@@ -8401,8 +8400,11 @@ work, and don't promote one without Devon saying so.
 
 #### Quick Wins
 
-- **Label under each code**, in the single view and in the bulk grid, so a
-  printed sheet of thirty codes is identifiable without scanning.
+- **Done (v283).** **Label under each code**, in the single view and in the bulk
+  grid, so a printed sheet of thirty codes is identifiable without scanning.
+  *(The single code's caption and the bulk labels predate v283; v283 stated the
+  rule, 60 characters shrinking then ending in an ellipsis, and measured the
+  four-module quiet zone and the smallest size.)*
 - **Partly done.** **Sizing guidance.** "At this size this code is scannable from about 3
   feet" — a printed classroom code is useless if it's too small, and the
   arithmetic is simple. *(Shipped for the new Avery label presets only,
@@ -8422,11 +8424,13 @@ work, and don't promote one without Devon saying so.
   share-by-link mechanism produces long URLs that make dense, hard-to-scan
   codes. A shared "is this payload too big for a reliable code?" check
   belongs here.
-- **Done (roster half) —** **Batch codes from a roster or a spreadsheet**
+- **Done —** **Batch codes from a roster or a spreadsheet**
   (P2/P13) — one code per student, labelled with their name, printed as a grid.
   That's the pattern Gallery Walk and Scavenger Hunt each reimplement.
-  *(The `np_rosters` path shipped in Pass 2 — Round 2 below; a spreadsheet
-  import is still only the existing comma/tab paste.)*
+  *(The `np_rosters` path shipped in Pass 2 — Round 2 below. v283 added the
+  spreadsheet half: a CSV file or a paste, a header row skipped, quoted cells,
+  either column order, a Check rows list naming each row that will not make a
+  code, up to 400 codes.)*
 - **Scanner mode as a first-class feature.** `jsqr.js` is already vendored;
   a "scan a code and act on it" mode would let this tool serve the check-in
   and collection-tracking flows other tools need (P7).

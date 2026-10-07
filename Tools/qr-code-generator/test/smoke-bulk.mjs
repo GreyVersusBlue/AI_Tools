@@ -245,12 +245,13 @@ console.log('016 — batch codes from a spreadsheet');
   const page = await openBulk();
   try {
     const L61 = 'Long label ' + '0123456789'.repeat(5);
-    const lines = ['A, https://example.com/a', L61 + ', https://example.com/long', XSS.replace(/,/g, ';') + ', https://example.com/xss'];
+    const lines = ['A, https://example.com/a', L61 + ', https://example.com/long', XSS.replace(/,/g, ';') + ', https://example.com/xss', XSS.replace(/,/g, ';') + ', https://example.com/xss'];
     ok(L61.length === 61, 'the long label is 61 characters');
     await page.fill('#bulk-text', lines.join('\n'));
     await page.click('#btn-bulk-check');
     ok(/1 label is shown shortened/.test(await checkText(page)), 'Check rows says one label is shown shortened: ' + await checkText(page));
-    ok(/3 rows will make a code/.test(await checkText(page)), '…and that all three make a code');
+    ok(/3 rows will make a code/.test(await checkText(page)), '…and that three make a code');
+    ok((await problems(page)).some(l => l.indexOf('<img') !== -1) && await page.locator('#bulk-check img').count() === 0, 'a row left out under a markup label names it as text, and makes no element');
     await generate(page);
     const labels = await gridLabels(page);
     eq(labels[1], L61.slice(0, 59) + '…', 'the long label is its first 59 characters and an ellipsis');

@@ -2015,7 +2015,7 @@
     }
     var reader = new FileReader();
     reader.onload = function () {
-      var text = String(reader.result || '').replace(/^\uFEFF/, '');
+      var text = String(reader.result || ''); // readAsText has already dropped a byte order mark
       var existing = els.bulkText.value.replace(/\s+$/, '');
       if (existing) { // a second file's column names are not a row to make a code of
         var nl = text.search(/\r?\n/);
