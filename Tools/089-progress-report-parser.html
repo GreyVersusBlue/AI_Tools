@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Family Progress Reports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<style>
+:root{
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#EEF2EC;--surface:#FFFFFF;--ink:#1B221E;--muted:#58645D;--line:#CFD9D1;
+  --green:#1E4D38;--green-2:#2C6B4F;--gold:#C99A2E;--alert:#A83A32;--warn:#8A5F08;--ok:#2C6B4F;
+  --chip:#E3EBE4;--on-green:#FFFFFF;
+  --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111713;--surface:#19211C;--ink:#E4EBE6;--muted:#9AA79F;--line:#2E3A33;
+  --green:#8CC7A8;--green-2:#6FB08E;--gold:#E0B85A;--alert:#E58A80;--warn:#E0B85A;--ok:#8CC7A8;--chip:#243029;--on-green:#10231A;
+}}
+:root[data-theme="dark"]{
+  --bg:#111713;--surface:#19211C;--ink:#E4EBE6;--muted:#9AA79F;--line:#2E3A33;
+  --green:#8CC7A8;--green-2:#6FB08E;--gold:#E0B85A;--alert:#E58A80;--warn:#E0B85A;--ok:#8CC7A8;--chip:#243029;--on-green:#10231A;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans);font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+h1{font:700 30px/1.15 var(--serif);margin:0;color:var(--green)}
+.sub{margin:4px 0 0;color:var(--muted);max-width:62ch}
+.lock{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
+.lock svg{flex:none}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.intake{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:18px}
+@media (max-width:820px){.intake{grid-template-columns:1fr}}
+.drop{padding:22px;border:2px dashed var(--line);border-radius:10px;background:var(--surface);display:flex;flex-direction:column;gap:12px;justify-content:center;transition:border-color .15s,background .15s}
+.drop.over{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 8%,var(--surface))}
+.drop h2{margin:0;font-size:18px}
+.drop p{margin:0;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{border:1px solid var(--green);background:var(--green);color:var(--on-green);border-radius:7px;padding:8px 14px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--green)}
+.btn.sm{padding:4px 10px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.status{font-size:13px;color:var(--muted);min-height:1.5em}
+.status.err{color:var(--alert)}
+details.rules{padding:0;align-self:start}
+details.rules summary{padding:14px 18px;cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
+details.rules summary::after{content:"Edit";color:var(--green);font-weight:600;font-size:13px}
+details.rules[open] summary::after{content:"Close"}
+details.rules summary::-webkit-details-marker{display:none}
+.rulesum{display:block;color:var(--muted);font-size:13px;font-weight:400;margin-top:2px}
+details[open] .rulesum{display:none}
+.rulegrid{padding:0 18px 18px;display:grid;gap:14px}
+.rulegrid fieldset{border:0;padding:0;margin:0;display:grid;gap:6px}
+.rulegrid legend{font-weight:600;font-size:13px;margin-bottom:4px;padding:0}
+.rulegrid label{display:flex;gap:8px;align-items:center;font-size:14px}
+.rulegrid input[type=number]{width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg)}
+.rulegrid select{padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg)}
+.hint{font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:8px 0 16px}
+.tab{background:none;border:0;padding:10px 14px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tab[aria-selected=true]{color:var(--green);border-bottom-color:var(--gold)}
+.empty{padding:48px 20px;text-align:center;color:var(--muted)}
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.tools input[type=search]{padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);min-width:220px}
+.scroll{overflow-x:auto}
+table.cls{width:100%;border-collapse:collapse;background:var(--surface);font-size:14px}
+table.cls th,table.cls td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+table.cls th{font-size:12px;color:var(--muted);font-weight:600;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--surface)}
+table.cls th[data-dir="1"]::after{content:" ▲"}
+table.cls th[data-dir="-1"]::after{content:" ▼"}
+table.cls td.num,table.cls th.num{text-align:right}
+table.cls tbody tr{cursor:pointer}
+table.cls tbody tr:hover{background:var(--chip)}
+.nm{font-weight:600}
+.flag{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:99px;margin-right:4px;background:var(--chip);color:var(--muted)}
+.flag.bad{background:color-mix(in srgb,var(--alert) 15%,transparent);color:var(--alert)}
+.flag.mid{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--warn)}
+.lowv{color:var(--alert);font-weight:700}
+.stats-line{display:flex;flex-wrap:wrap;gap:18px;font-size:13px;color:var(--muted);margin-bottom:12px}
+.stats-line b{color:var(--ink);font-size:15px}
+.rep-layout{display:grid;grid-template-columns:230px 1fr;gap:18px;align-items:start}
+@media (max-width:860px){.rep-layout{grid-template-columns:1fr}.side{display:none}.picker{display:flex!important}}
+.side{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;padding:6px}
+.side button{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;background:none;border:0;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:14px}
+.side button[aria-current=true]{background:var(--green);color:var(--on-green)}
+.side .dot{width:8px;height:8px;border-radius:50%;background:var(--alert);flex:none;align-self:center}
+.picker{display:none;gap:8px;margin-bottom:10px}
+.picker select{flex:1;padding:8px;border:1px solid var(--line);border-radius:7px;background:var(--surface)}
+.notebox{margin-top:12px}
+.notebox label{font-weight:600;font-size:13px;display:block;margin-bottom:4px}
+.notebox textarea{width:100%;min-height:84px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);resize:vertical}
+.cmt{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+.cmt textarea{flex:1;min-height:52px}
+.cmt.off textarea{opacity:.5;text-decoration:line-through}
+.cmt .btn{flex:none}
+.cmtbar{margin-top:4px}
+.wnote{font-size:12px;color:var(--muted)}
+.wnote.bad{color:var(--alert);font-weight:600}
+.srcfile{font-size:12px;color:var(--muted);margin-top:8px}
+@media print{
+  body{background:#fff}
+  .wrap>*:not(#view-reports),.side,.picker,.notebox,.srcfile,.rep-toolbar{display:none!important}
+  .rep-layout{display:block}
+  #view-reports{display:block!important}
+}
+</style>
+<style id="report-css">
+.sheet{background:#fff;color:#1B221E;border:1px solid #CFD9D1;border-radius:4px;overflow:hidden;font:14px/1.5 "Public Sans",system-ui,Arial,sans-serif;font-variant-numeric:tabular-nums;max-width:8.5in}
+.sheet .band{background:#1E4D38;color:#fff;padding:20px 26px 18px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-end;border-bottom:5px solid #C99A2E}
+.sheet .band .school{font-size:12.5px;opacity:.85;margin-bottom:2px}
+.sheet .band h2{margin:0;font:700 28px/1.1 "Source Serif 4",Georgia,serif;color:#fff}
+.sheet .band .asof{font-size:12.5px;text-align:right;opacity:.9}
+.sheet .meta{display:flex;flex-wrap:wrap;gap:6px 28px;padding:12px 26px;border-bottom:1px solid #DCE4DD;font-size:13px}
+.sheet .meta span{color:#58645D}
+.sheet .meta b{font-weight:600}
+.sheet .strip{display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr;border-bottom:1px solid #DCE4DD}
+.sheet .stat{padding:16px 20px;border-right:1px solid #DCE4DD}
+.sheet .stat:last-child{border-right:0}
+.sheet .stat .k{font-size:12.5px;color:#58645D;font-weight:600}
+.sheet .stat .v{font:700 34px/1.1 "Source Serif 4",Georgia,serif;margin-top:4px;color:#1B221E}
+.sheet .stat .v small{font:600 14px "Public Sans",sans-serif;color:#58645D;margin-left:4px}
+.sheet .stat .d{font-size:12px;color:#58645D;margin-top:3px}
+.sheet .stat.overall{background:#F4F7F2}
+.sheet .stat.overall .v{color:#1E4D38}
+.sheet .letter{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;border:2.5px solid #C99A2E;font:700 18px "Source Serif 4",Georgia,serif;vertical-align:6px;margin-left:8px;color:#1E4D38}
+.sheet .stat.miss .v{color:#A83A32}
+.sheet .stat.miss.zero .v{color:#2C6B4F}
+.sheet .sec{padding:16px 26px 4px}
+.sheet h3{margin:0 0 8px;font-size:14.5px;color:#1E4D38}
+.sheet .facts{display:flex;flex-wrap:wrap;gap:8px 26px;font-size:13px;margin-bottom:6px}
+.sheet .facts span{color:#58645D}
+.sheet ul.say{margin:0;padding-left:18px}
+.sheet ul.say li{margin-bottom:5px;max-width:78ch}
+.sheet .attn{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sheet .attn h4{margin:0 0 4px;font-size:13px}
+.sheet .attn ul{margin:0;padding-left:18px;font-size:13.5px}
+.sheet table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}
+.sheet th{text-align:left;font-size:11.5px;color:#58645D;font-weight:600;border-bottom:1.5px solid #1E4D38;padding:5px 6px}
+.sheet td{padding:5px 6px;border-bottom:1px solid #E4EAE5}
+.sheet td.r,.sheet th.r{text-align:right}
+.sheet tr.st-missing td{background:#FBEDEB}
+.sheet tr.st-low td.p{color:#A83A32;font-weight:700}
+.sheet .tag{font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:99px;background:#E8EEE9;color:#3E4A43;white-space:nowrap}
+.sheet .tag.missing{background:#A83A32;color:#fff}
+.sheet .tag.pending{background:#F3EBD6;color:#7A5608}
+.sheet .tag.excused{background:#E8EEE9;color:#58645D}
+.sheet .note{padding:12px 26px 4px}
+.sheet .note p{margin:0 0 6px;white-space:pre-wrap;border-left:3px solid #C99A2E;padding-left:12px}
+.sheet .foot{padding:10px 26px 16px;font-size:11.5px;color:#58645D;border-top:1px solid #DCE4DD;margin-top:10px}
+@media (max-width:640px){.sheet .strip{grid-template-columns:1fr 1fr}.sheet .stat:nth-child(2){border-right:0}.sheet .stat:nth-child(-n+2){border-bottom:1px solid #DCE4DD}.sheet .attn{grid-template-columns:1fr}.sheet .band,.sheet .meta,.sheet .sec,.sheet .note,.sheet .foot{padding-left:16px;padding-right:16px}}
+@media print{.sheet{border:0;max-width:none;break-after:page;page-break-after:always;-webkit-print-color-adjust:exact;print-color-adjust:exact}.sheet:last-child{break-after:auto;page-break-after:auto}.sheet tr{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Family progress reports</h1>
+      <p class="sub">Turn Student Detail Report PDFs into a class overview and a one-page, family-friendly report for each student.</p>
+    </div>
+    <div class="lock"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>PDFs are read in this browser. Student data is never uploaded or saved.</div>
+  </header>
+
+  <section class="intake">
+    <div class="drop" id="drop">
+      <h2>Add grade reports</h2>
+      <p>Drop Student Detail Report PDFs here. One student per file or a whole class in one file both work.</p>
+      <div class="row">
+        <button class="btn" id="pick">Choose PDFs</button>
+        <input type="file" id="file" accept="application/pdf,.pdf" multiple hidden>
+        <button class="btn ghost" id="sample">Try sample data</button>
+        <button class="btn ghost" id="clear" disabled>Clear all</button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </div>
+    <details class="rules panel" id="rules">
+      <summary><span>Grading rules<span class="rulesum" id="rulesum"></span></span></summary>
+      <div class="rulegrid">
+        <fieldset>
+          <legend>Overall grade</legend>
+          <label><input type="radio" name="weighting" value="category"> Weight each bucket separately</label>
+          <label style="padding-left:24px">Summative <input type="number" id="sumW" min="0" max="100" step="any">% of grade &nbsp; Formative <input type="number" id="forW" min="0" max="100" step="any">% of grade</label>
+          <span class="wnote" id="wnote" style="padding-left:24px"></span>
+          <span class="hint" style="padding-left:24px">Each bucket's score is the total points earned ÷ total points possible in that bucket, then the two are blended at these percentages. The two always add to 100.</span>
+          <span class="row" id="repW" style="padding-left:24px" hidden><span class="hint" id="repWtxt"></span><button type="button" class="btn ghost sm" id="repWbtn">Use these</button></span>
+          <label><input type="radio" name="weighting" value="points"> Total points (no category weights)</label>
+        </fieldset>
+        <fieldset>
+          <legend>Missing work</legend>
+          <label><input type="checkbox" id="blankMissing"> Blank score counts as missing once it is <input type="number" id="graceDays" min="0" max="60"> days past due</label>
+          <label><input type="checkbox" id="zeroIsMissing"> A score of 0 counts as missing</label>
+          <label><input type="checkbox" id="missingAsZero"> Missing work counts as 0 in averages</label>
+          <span class="hint">Scores entered as M, Z, MI, MIS or INC always count as missing. EX, EXC and dropped (*) assignments are left out.</span>
+        </fieldset>
+        <fieldset>
+          <legend>Scale</legend>
+          <label>A <input type="number" id="cutA"> B <input type="number" id="cutB"> C <input type="number" id="cutC"> D <input type="number" id="cutD"></label>
+          <label>Failing letter <select id="failLetter"><option>E</option><option>F</option></select> &nbsp; Flag scores below <input type="number" id="lowThreshold" min="0" max="100">%</label>
+        </fieldset>
+      </div>
+    </details>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-class" aria-selected="true" aria-controls="view-class">Class overview</button>
+    <button class="tab" role="tab" id="tab-reports" aria-selected="false" aria-controls="view-reports">Family reports</button>
+  </nav>
+
+  <section id="view-class" role="tabpanel"></section>
+  <section id="view-reports" role="tabpanel" hidden></section>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=(n,d=1)=>n==null||isNaN(n)?"—":(Math.round(n*Math.pow(10,d))/Math.pow(10,d)).toFixed(d);
+const pct=n=>n==null?"—":fmt(n)+"%";
+
+/* ---------- settings ---------- */
+const DEFAULTS={weighting:"category",sumW:60,forW:40,blankMissing:true,graceDays:2,zeroIsMissing:false,missingAsZero:false,cutA:90,cutB:80,cutC:70,cutD:60,failLetter:"E",lowThreshold:70};
+let cfg={...DEFAULTS};
+try{const s=JSON.parse(localStorage.getItem("fpr-settings")||"null");if(s){cfg={...DEFAULTS,...s};delete cfg.useReportWeights;}}catch(e){}
+function saveCfg(){try{localStorage.setItem("fpr-settings",JSON.stringify(cfg));}catch(e){}}
+
+/* ---------- state ---------- */
+const students=new Map();   // key -> parsed student
+const notes={};             // key -> teacher note (memory only)
+const edits={};             // key -> {removed:{id:true}, text:{id:string}, custom:[{id,text,removed}]}
+let cid=0;
+let current=null, sortKey="name", sortDir=1, query="", onlyFlagged=false;
+
+/* ---------- pdf parsing ---------- */
+const MISS=new Set(["M","Z","MI","MIS","MSG","MISSING","INC","I","NHI","NTI"]);
+const EXC=new Set(["EX","EXC","EXCUSED","X","EXEMPT"]);
+const DATE_RE=/^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/;
+const NUM_RE=/^-?\d+(\.\d+)?%?$/;
+
+function tokenize(items){
+  const toks=[];
+  for(const it of items){
+    const s=it.str; if(!s||!s.trim())continue;
+    const cw=s.length?it.w/s.length:0;
+    const re=/\S+/g;let m;
+    while((m=re.exec(s))){toks.push({s:m[0],x:it.x+cw*m.index,y:it.y});}
+  }
+  return toks;
+}
+function groupLines(toks){
+  toks.sort((a,b)=>a.y-b.y||a.x-b.x);
+  const lines=[];
+  for(const t of toks){
+    const ln=lines.length&&Math.abs(lines[lines.length-1].y-t.y)<2.6?lines[lines.length-1]:null;
+    if(ln)ln.toks.push(t);else lines.push({y:t.y,toks:[t]});
+  }
+  for(const l of lines){l.toks.sort((a,b)=>a.x-b.x);l.text=l.toks.map(t=>t.s).join(" ");}
+  return lines;
+}
+async function readPdf(file){
+  if(!window.pdfjsLib)throw new Error("The PDF reader didn't load. Check your connection and reload the page.");
+  const data=new Uint8Array(await file.arrayBuffer());
+  const pdf=await pdfjsLib.getDocument({data,isEvalSupported:false}).promise;
+  const pages=[];
+  for(let i=1;i<=pdf.numPages;i++){
+    const page=await pdf.getPage(i);
+    const vp=page.getViewport({scale:1});
+    const tc=await page.getTextContent();
+    const items=tc.items.map(it=>({str:it.str,x:it.transform[4],y:vp.height-it.transform[5],w:it.width||0}));
+    pages.push(groupLines(tokenize(items)));
+  }
+  return pages;
+}
+function parsePage(lines){
+  const hi=lines.findIndex(l=>/Student Detail Report/i.test(l.text));
+  const st={rows:[],catWeights:{},reported:null};
+  let dx=0, start=0;
+  if(hi>=0){
+    const hl=lines[hi];
+    const sTok=hl.toks.find(t=>t.s==="Student");
+    const near=lines.filter(l=>Math.abs(l.y-hl.y)<9).flatMap(l=>l.toks);
+    st.school=near.filter(t=>sTok&&t.x<sTok.x-8).sort((a,b)=>a.x-b.x).map(t=>t.s).join(" ");
+    const dt=near.find(t=>/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(t.s));st.reportDate=dt?dt.s:"";
+    for(let i=hi+1;i<Math.min(lines.length,hi+8);i++){
+      const t=lines[i].text;
+      if(Math.abs(lines[i].y-hl.y)<9)continue;
+      if(!st.name&&!/:/.test(t)&&!/Course|Teacher|Period/.test(t)){st.name=t.trim();continue;}
+      let m;
+      if((m=t.match(/Course:\s*(.*?)\s*(?:Period:|$)/)))st.course=m[1];
+      if((m=t.match(/(?:^|\s)Period:\s*(.*?)$/))&&!/Marking Period:/.test(t))st.period=m[1];
+      if((m=t.match(/Teacher:\s*(.*?)\s*(?:Marking Period:|$)/)))st.teacher=m[1];
+      if((m=t.match(/Marking Period:\s*(.*?)$/)))st.mp=m[1];
+    }
+    start=hi+1;
+  }
+  // header alignment: "Category" header token expected at x≈232
+  const thi=lines.findIndex((l,i)=>i>=start&&/Assignment/.test(l.text)&&/Category/.test(l.text));
+  if(thi>=0){const c=lines[thi].toks.find(t=>t.s==="Category");if(c)dx=c.x-232;start=thi+1;}
+  let end=lines.findIndex((l,i)=>i>=start&&/Retake entered|Student's|overall average|^Totals/.test(l.text));
+  if(end<0)end=lines.length;
+  const Z=x=>x-dx;
+  let row=null;
+  for(let i=start;i<end;i++){
+    const l=lines[i];
+    const dueTok=l.toks.find(t=>Z(t.x)>=186&&Z(t.x)<221&&DATE_RE.test(t.s));
+    if(dueTok){
+      row={name:"",due:dueTok.s,cat:"",score:"",weight:null,total:null,pct:"",flags:{retake:false,dropped:false}};
+      st.rows.push(row);
+    }
+    if(!row)continue;
+    for(const t of l.toks){
+      const x=Z(t.x);
+      if(t===dueTok)continue;
+      if(t.s==="R"&&x<74&&dueTok){row.flags.retake=true;continue;}
+      if(t.s==="*"){row.flags.dropped=true;continue;}
+      if(x<186)row.name+=(row.name?" ":"")+t.s;
+      else if(x<221)continue;
+      else if(x<285)row.cat+=(row.cat?" ":"")+t.s;
+      else if(!dueTok)continue;
+      else if(x<338)row.score+=(row.score?" ":"")+t.s;
+      else if(x<365)row.weight=parseFloat(t.s);
+      else if(x<408){/* weighted score: derived */}
+      else if(x<448)row.total=parseFloat(t.s);
+      else if(x<490){if(row.total==null)row.total=parseFloat(t.s);}
+      else row.pct=t.s;
+    }
+  }
+  // category weights table
+  const ai=lines.findIndex(l=>/Asmts/.test(l.text));
+  const ti=lines.findIndex(l=>/^Totals/.test(l.text));
+  if(ai>=0&&ti>ai){
+    for(let i=ai+1;i<ti;i++){
+      const words=lines[i].toks.filter(t=>!NUM_RE.test(t.s)&&t.s!=="*"&&t.s!=="/"&&t.s!=="=").map(t=>t.s);
+      const nums=lines[i].toks.filter(t=>NUM_RE.test(t.s)).map(t=>parseFloat(t.s));
+      if(words.length&&nums.length>=5){const w=nums[3];if(w>0)st.catWeights[words.join(" ")]=w;}
+    }
+  }
+  const ol=lines.find(l=>/overall average/.test(l.text));
+  if(ol){
+    const m=ol.text.match(/([\d.]+)\s*\/\s*([\d.]+)\s*=\s*([\d.]+)\s*%/);
+    const g=ol.text.match(/Grade:\s*([^)]*)\)/);
+    if(m)st.reported={pts:+m[1],max:+m[2],pct:+m[3],grade:g?g[1].replace(/\s+/g,""):""};
+  }
+  return st;
+}
+async function ingest(files){
+  const status=$("#status");status.className="status";
+  let added=0,failed=[];
+  for(const f of files){
+    status.textContent=`Reading ${f.name}…`;
+    try{
+      const pages=await readPdf(f);
+      let cur=null,found=0;
+      for(const lines of pages){
+        const p=parsePage(lines);
+        if(p.name){
+          const key=[p.name,p.course,p.period,p.mp].join("|");
+          if(cur&&cur.key===key){cur.rows.push(...p.rows);if(p.reported)cur.reported=p.reported;Object.assign(cur.catWeights,p.catWeights);}
+          else{cur={...p,key,file:f.name};students.set(key,cur);found++;}
+        }else if(cur){cur.rows.push(...p.rows);if(p.reported)cur.reported=p.reported;}
+      }
+      if(!found)failed.push(f.name);else added+=found;
+    }catch(e){console.error(e);failed.push(f.name+(e&&e.message&&/PDF reader/.test(e.message)?" (PDF reader unavailable)":""));}
+  }
+  let msg=`${students.size} student${students.size===1?"":"s"} loaded.`;
+  if(failed.length){msg+=` Couldn't find a Student Detail Report in: ${failed.join(", ")}.`;status.className="status err";}
+  status.textContent=msg;
+  if(!current&&students.size)current=[...students.keys()][0];
+  renderAll();
+}
+
+/* ---------- analysis ---------- */
+function parseDate(s){const m=(s||"").match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(!m)return null;let y=+m[3];if(y<100)y+=2000;return new Date(y,+m[1]-1,+m[2]);}
+function parseDue(s,rd){
+  const m=(s||"").match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);if(!m)return null;
+  let y=m[3]?+m[3]:rd.getFullYear();if(y<100)y+=2000;
+  let d=new Date(y,+m[1]-1,+m[2]);
+  if(!m[3]&&d-rd>200*864e5)d=new Date(y-1,+m[1]-1,+m[2]);
+  return d;
+}
+function catKey(c){return /summ/i.test(c)?"S":/form/i.test(c)?"F":"O";}
+function catLabel(c){return (c||"").replace(/\s*Assignments?$/i,"").trim()||"Other";}
+function letter(p){if(p==null)return "";return p>=cfg.cutA?"A":p>=cfg.cutB?"B":p>=cfg.cutC?"C":p>=cfg.cutD?"D":cfg.failLetter;}
+function firstName(n){const p=(n||"").split(",");return (p[1]||p[0]).trim().split(/\s+/)[0]||n;}
+
+function analyze(st){
+  const rd=parseDate(st.reportDate)||new Date();
+  const A=st.rows.map(r=>{
+    const due=parseDue(r.due,rd);
+    const raw=(r.score||"").trim().toUpperCase();
+    const num=/^-?\d+(\.\d+)?$/.test(raw)?parseFloat(raw):null;
+    const w=r.weight>0?r.weight:1, tot=r.total;
+    let status;
+    if(r.flags.dropped||EXC.has(raw))status="excused";
+    else if(MISS.has(raw))status="missing";
+    else if(num!=null)status=(num===0&&cfg.zeroIsMissing)?"missing":"graded";
+    else if(raw)status="other";
+    else status=(cfg.blankMissing&&due&&(rd-due)/864e5>cfg.graceDays)?"missing":"pending";
+    const p=num!=null&&tot>0?num/tot*100:null;
+    return {name:r.name||"(untitled)",dueStr:r.due,due,cat:catLabel(r.cat),ck:catKey(r.cat),raw:r.score,num,tot,w,p,status,retake:r.flags.retake,dropped:r.flags.dropped};
+  });
+  const counted=a=>a.status==="graded"||(a.status==="missing"&&cfg.missingAsZero&&a.tot>0);
+  const cats={};
+  for(const a of A){
+    const c=cats[a.cat]||(cats[a.cat]={label:a.cat,ck:a.ck,pts:0,max:0,n:0});
+    if(counted(a)&&a.tot>0){c.pts+=(a.status==="graded"?a.num:0)*a.w;c.max+=a.tot*a.w;c.n++;}
+  }
+  for(const c of Object.values(cats))c.avg=c.max>0?c.pts/c.max*100:null;
+  const pick=k=>{const cs=Object.values(cats).filter(c=>c.ck===k&&c.max>0);if(!cs.length)return null;const pts=cs.reduce((s,c)=>s+c.pts,0),max=cs.reduce((s,c)=>s+c.max,0);return {avg:pts/max*100,n:cs.reduce((s,c)=>s+c.n,0)};};
+  const S=pick("S"),F=pick("F");
+  let overall=null,method="",weights=null;
+  const present=Object.values(cats).filter(c=>c.max>0);
+  if(present.length){
+    if(cfg.weighting==="category"&&!present.some(c=>c.ck==="O")){
+      // Summative and Formative are separate buckets, each pooled across its categories
+      const bs=[["Summative",S,cfg.sumW],["Formative",F,cfg.forW]].filter(b=>b[1]);
+      const tw=bs.reduce((s,b)=>s+(b[2]||0),0);
+      if(bs.length&&tw>0){
+        weights={};bs.forEach(b=>weights[b[0]]=b[2]);
+        overall=bs.reduce((s,b)=>s+b[1].avg*(b[2]||0),0)/tw;
+        method="category";
+      }
+    }
+    if(overall==null){const pts=present.reduce((s,c)=>s+c.pts,0),max=present.reduce((s,c)=>s+c.max,0);overall=pts/max*100;method="points";}
+  }
+  const graded=A.filter(a=>a.status==="graded"&&a.p!=null).sort((a,b)=>(a.due||0)-(b.due||0));
+  const missing=A.filter(a=>a.status==="missing");
+  const pending=A.filter(a=>a.status==="pending");
+  const low=graded.filter(a=>a.p<cfg.lowThreshold);
+  const due=A.filter(a=>a.status!=="excused"&&a.status!=="pending");
+  const done=A.filter(a=>a.status==="graded");
+  let trend=null;
+  if(graded.length>=4){
+    const last=graded.slice(-3),prev=graded.slice(0,-3);
+    const m=x=>x.reduce((s,a)=>s+a.p,0)/x.length;
+    const d=m(last)-m(prev);
+    trend={d,dir:d>=5?"up":d<=-5?"down":"steady",last:m(last),prev:m(prev)};
+  }
+  const best=graded.slice().sort((a,b)=>b.p-a.p)[0]||null;
+  return {A,cats,S,F,overall,method,weights,letter:letter(overall),missing,pending,low,graded,done,dueCount:due.length,completion:due.length?done.length/due.length*100:null,trend,best,rd,retakes:A.filter(a=>a.retake)};
+}
+
+/* ---------- family-facing summary ---------- */
+function summary(st,a){
+  const fn=firstName(st.name), out=[];
+  const add=(id,t)=>out.push({id,text:t});
+  const course=titleCase(st.course||"this class");
+  if(a.overall!=null){
+    add("overall",`${fn} currently has a ${pct(a.overall)} (${a.letter}) in ${course}, based on ${a.graded.length} graded assignment${a.graded.length===1?"":"s"}.`);
+  }else add("overall",`No graded work has been posted yet in ${course} for this marking period.`);
+  if(a.S==null&&a.F!=null)add("nosum",`No summative assessments (tests, projects, major writing) have been graded yet, so the current grade reflects classwork only and may change once one is scored.`);
+  if(a.S&&a.F){
+    const gap=a.F.avg-a.S.avg;
+    if(gap>=10)add("gap",`Classwork scores (${pct(a.F.avg)}) are noticeably higher than assessment scores (${pct(a.S.avg)}). Reviewing notes and practicing at home before tests could help close that gap.`);
+    else if(gap<=-10)add("gap",`Assessment scores (${pct(a.S.avg)}) are stronger than classwork (${pct(a.F.avg)}). Completing and turning in practice work is the quickest way to raise the grade.`);
+  }
+  if(a.missing.length){
+    const list=a.missing.map(m=>`${m.name} (due ${m.dueStr})`).join(", ");
+    add("missing",`${a.missing.length===1?"One assignment is":a.missing.length+" assignments are"} missing: ${list}. Please check with the teacher about completing ${a.missing.length===1?"it":"them"}.`);
+  }else if(a.dueCount)add("missing",`All ${a.dueCount} assignment${a.dueCount===1?" that is":"s that are"} due ${a.dueCount===1?"has":"have"} been turned in.`);
+  if(a.low.length)add("low",`${a.low.length===1?"One score falls":a.low.length+" scores fall"} below ${cfg.lowThreshold}%: ${a.low.map(l=>`${l.name} (${pct(l.p)})`).join(", ")}.`);
+  if(a.trend){
+    if(a.trend.dir==="up")add("trend",`Recent work is trending up: the last three assignments average ${pct(a.trend.last)}, compared with ${pct(a.trend.prev)} before that.`);
+    else if(a.trend.dir==="down")add("trend",`Recent work has dipped: the last three assignments average ${pct(a.trend.last)}, compared with ${pct(a.trend.prev)} before that.`);
+    else add("trend",`Performance has been steady across the marking period.`);
+  }
+  if(a.best&&a.best.p>=90&&a.graded.length>1)add("best",`A highlight: ${pct(a.best.p)} on ${a.best.name}.`);
+  if(a.retakes.length)add("retake",`A retake has been recorded for ${a.retakes.map(r=>r.name).join(", ")}.`);
+  if(a.pending.length)add("pending",`${a.pending.length} recent assignment${a.pending.length===1?" has":"s have"} not been scored yet and ${a.pending.length===1?"is":"are"} not included in these averages.`);
+  return out;
+}
+function titleCase(s){return /[a-z]/.test(s)?s:s.toLowerCase().replace(/\b([a-z])/g,c=>c.toUpperCase());}
+
+/* ---------- report sheet ---------- */
+const STATUS_LABEL={graded:"",missing:"Missing",pending:"Not yet scored",excused:"Excused",other:""};
+/* Comments = automatic analysis items with the teacher's removals/edits applied, plus custom ones */
+function cmtState(key){return edits[key]||(edits[key]={removed:{},text:{},custom:[]});}
+function getComments(key,st,a){
+  const e=edits[key]||{removed:{},text:{},custom:[]};
+  const items=summary(st,a).map(c=>({id:c.id,auto:c.text,text:e.text[c.id]!=null?e.text[c.id]:c.text,removed:!!e.removed[c.id],custom:false}));
+  e.custom.forEach(c=>items.push({id:c.id,auto:"",text:c.text,removed:!!c.removed,custom:true}));
+  return items;
+}
+function sheetHTML(st,a,noteText){
+  const nMiss=a.missing.length;
+  const catStat=(k,label,d)=>{const c=a[k];return `<div class="stat"><div class="k">${label}</div><div class="v">${c?fmt(c.avg)+"<small>%</small>":"—"}</div><div class="d">${c?`${c.n} graded${a.weights&&a.method!=="points"?` · counts ${wFor(a,k)}% of grade`:""}`:d}</div></div>`;};
+  const rows=a.A.slice().sort((x,y)=>(x.due||0)-(y.due||0)).map(x=>{
+    const cls=x.status==="missing"?"st-missing":(x.status==="graded"&&x.p!=null&&x.p<cfg.lowThreshold?"st-low":"");
+    const sc=x.status==="graded"?`${fmt(x.num,x.num%1?1:0)} / ${fmt(x.tot,x.tot%1?1:0)}`:(x.raw?esc(x.raw):"")+(x.tot?`${x.raw?" ":""}— / ${fmt(x.tot,0)}`:"");
+    const tag=STATUS_LABEL[x.status]?`<span class="tag ${x.status}">${STATUS_LABEL[x.status]}</span>`:"";
+    return `<tr class="${cls}"><td>${esc(x.dueStr)}</td><td>${esc(x.name)}${x.retake?' <span class="tag">Retake</span>':""}</td><td>${esc(x.cat)}</td><td class="r">${sc}</td><td class="r p">${x.status==="graded"?pct(x.p):""}</td><td>${tag}</td></tr>`;
+  }).join("");
+  const say=getComments(st.key,st,a).filter(c=>!c.removed&&c.text.trim()).map(c=>`<li>${esc(c.text.trim())}</li>`).join("");
+  const attn=(nMiss||a.low.length)?`<div class="sec"><h3>Needs attention</h3><div class="attn">
+    <div><h4>Missing work</h4>${nMiss?`<ul>${a.missing.map(m=>`<li>${esc(m.name)} <span style="color:#58645D">(due ${esc(m.dueStr)})</span></li>`).join("")}</ul>`:'<p style="margin:0;font-size:13.5px">None</p>'}</div>
+    <div><h4>Scores below ${cfg.lowThreshold}%</h4>${a.low.length?`<ul>${a.low.map(m=>`<li>${esc(m.name)}: ${pct(m.p)}</li>`).join("")}</ul>`:'<p style="margin:0;font-size:13.5px">None</p>'}</div>
+  </div></div>`:"";
+  const trendTxt=a.trend?(a.trend.dir==="up"?"Trending up":a.trend.dir==="down"?"Trending down":"Steady"):"Not enough scores yet";
+  const wl=Object.entries(a.weights||{});
+  const how=a.method==="points"?"Overall grade = total points earned ÷ total points possible.":wl.length===1?`Only ${wl[0][0].toLowerCase()} work has been graded so far, so it makes up the whole grade for now.`:`Overall grade = ${wl.map(([k,v])=>`${k.toLowerCase()} ${fmt(v,v%1?1:0)}%`).join(" + ")}.`;
+  const rep=st.reported&&st.reported.max>0?` Gradebook-posted average: ${pct(st.reported.pct)}${st.reported.grade&&st.reported.grade!=="N/A"?` (${esc(st.reported.grade)})`:""}.`:"";
+  return `<article class="sheet">
+    <div class="band"><div><div class="school">${esc(st.school||"")}</div><h2>${esc(st.name)}</h2></div><div class="asof">Progress report<br>Grades as of ${esc(st.reportDate||"")}</div></div>
+    <div class="meta"><div><span>Course</span> <b>${esc(titleCase(st.course||""))}</b></div><div><span>Teacher</span> <b>${esc(st.teacher||"")}</b></div><div><span>Period</span> <b>${esc(st.period||"")}</b></div><div><span>Marking period</span> <b>${esc(st.mp||"")}</b></div></div>
+    <div class="strip">
+      <div class="stat overall"><div class="k">Overall grade</div><div class="v">${a.overall!=null?fmt(a.overall)+"<small>%</small>":"—"}${a.overall!=null?`<span class="letter">${a.letter}</span>`:""}</div><div class="d">${a.graded.length} graded assignment${a.graded.length===1?"":"s"}</div></div>
+      ${catStat("S","Summative average","None graded yet")}
+      ${catStat("F","Formative average","None graded yet")}
+      <div class="stat miss ${nMiss?"":"zero"}"><div class="k">Missing assignments</div><div class="v">${nMiss}</div><div class="d">${a.dueCount?`${fmt(a.completion,0)}% of due work turned in`:"Nothing due yet"}</div></div>
+    </div>
+    <div class="sec"><h3>How ${esc(firstName(st.name))} is doing</h3>
+      <div class="facts"><div><span>Recent trend</span> <b>${trendTxt}</b></div><div><span>Turned in</span> <b>${a.done.length} of ${a.dueCount}</b></div>${a.pending.length?`<div><span>Awaiting a score</span> <b>${a.pending.length}</b></div>`:""}</div>
+      ${say?`<ul class="say">${say}</ul>`:""}</div>
+    ${attn}
+    <div class="sec"><h3>All assignments</h3>
+      <table><thead><tr><th>Due</th><th>Assignment</th><th>Category</th><th class="r">Score</th><th class="r">Percent</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="6">No assignments listed.</td></tr>'}</tbody></table></div>
+    ${noteText&&noteText.trim()?`<div class="note"><h3>Note from the teacher</h3><p>${esc(noteText.trim())}</p></div>`:""}
+    <div class="foot">Scores reflect the gradebook on ${esc(st.reportDate||"the report date")} and may change as work is graded or turned in. ${how}${rep}</div>
+  </article>`;
+}
+function wFor(a,k){const v=a.weights&&a.weights[k==="S"?"Summative":"Formative"];return v==null?"":fmt(v,v%1?1:0);}
+
+/* ---------- views ---------- */
+function list(){
+  const arr=[...students.values()].map(st=>({st,a:analyze(st)}));
+  return arr;
+}
+function flagsOf(a){
+  const f=[];
+  if(a.missing.length)f.push(["bad",`${a.missing.length} missing`]);
+  if(a.overall!=null&&a.overall<cfg.cutC)f.push(["bad",`Below ${cfg.cutC}%`]);
+  if(a.trend&&a.trend.dir==="down")f.push(["mid","Trending down"]);
+  if(a.S&&a.F&&a.F.avg-a.S.avg>=10)f.push(["mid","Tests lag classwork"]);
+  if(!a.S)f.push(["","No summative yet"]);
+  return f;
+}
+function renderClass(){
+  const v=$("#view-class");
+  if(!students.size){v.innerHTML=`<div class="panel empty">Add Student Detail Report PDFs above to see the class overview.</div>`;return;}
+  let rows=list();
+  const val={name:r=>r.st.name.toLowerCase(),period:r=>r.st.period||"",overall:r=>r.a.overall??-1,S:r=>r.a.S?.avg??-1,F:r=>r.a.F?.avg??-1,missing:r=>r.a.missing.length,low:r=>r.a.low.length,trend:r=>r.a.trend?.d??0};
+  const q=query.trim().toLowerCase();
+  if(q)rows=rows.filter(r=>r.st.name.toLowerCase().includes(q));
+  if(onlyFlagged)rows=rows.filter(r=>flagsOf(r.a).some(f=>f[0]==="bad"||f[0]==="mid"));
+  rows.sort((x,y)=>{const a=val[sortKey](x),b=val[sortKey](y);return (a<b?-1:a>b?1:0)*sortDir;});
+  const all=list(),ov=all.filter(r=>r.a.overall!=null);
+  const avg=ov.length?ov.reduce((s,r)=>s+r.a.overall,0)/ov.length:null;
+  const withMiss=all.filter(r=>r.a.missing.length).length, totMiss=all.reduce((s,r)=>s+r.a.missing.length,0);
+  const below=all.filter(r=>r.a.overall!=null&&r.a.overall<cfg.cutC).length;
+  const th=(k,l,num)=>`<th data-k="${k}" class="${num?"num":""}" ${sortKey===k?`data-dir="${sortDir}"`:""} tabindex="0">${l}</th>`;
+  v.innerHTML=`
+    <div class="stats-line"><div>Students <b>${all.length}</b></div><div>Class average <b>${pct(avg)}</b></div><div>Students with missing work <b>${withMiss}</b> (${totMiss} assignments)</div><div>Below ${cfg.cutC}% <b>${below}</b></div></div>
+    <div class="tools"><div class="row"><input type="search" id="q" placeholder="Find a student" value="${esc(query)}" aria-label="Find a student"><label class="row" style="gap:6px;font-size:14px"><input type="checkbox" id="onlyFlagged" ${onlyFlagged?"checked":""}> Only students needing attention</label></div>
+    <div class="row"><button class="btn ghost" id="csv">Download summary (.csv)</button><button class="btn" id="dlAll">Download all family reports</button></div></div>
+    <div class="scroll panel"><table class="cls"><thead><tr>${th("name","Student")}${th("period","Period")}${th("overall","Overall",1)}<th>Grade</th>${th("S","Summative",1)}${th("F","Formative",1)}${th("missing","Missing",1)}${th("low",`Below ${cfg.lowThreshold}%`,1)}${th("trend","Trend",1)}<th>Flags</th></tr></thead>
+    <tbody>${rows.map(r=>{const a=r.a;return `<tr data-key="${esc(r.st.key)}" tabindex="0"><td class="nm">${esc(r.st.name)}</td><td>${esc(r.st.period||"")}</td><td class="num ${a.overall!=null&&a.overall<cfg.cutC?"lowv":""}">${pct(a.overall)}</td><td>${a.letter}</td><td class="num">${pct(a.S?.avg)}</td><td class="num">${pct(a.F?.avg)}</td><td class="num ${a.missing.length?"lowv":""}">${a.missing.length}</td><td class="num">${a.low.length}</td><td class="num">${a.trend?(a.trend.d>0?"+":"")+fmt(a.trend.d):"—"}</td><td>${flagsOf(a).map(f=>`<span class="flag ${f[0]}">${f[1]}</span>`).join("")}</td></tr>`;}).join("")||`<tr><td colspan="10" style="color:var(--muted)">No students match.</td></tr>`}</tbody></table></div>`;
+  v.querySelectorAll("th[data-k]").forEach(h=>{const go=()=>{const k=h.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==="name"||k==="period"?1:-1;}renderClass();};h.onclick=go;h.onkeydown=e=>{if(e.key==="Enter")go();};});
+  v.querySelectorAll("tbody tr[data-key]").forEach(tr=>{const go=()=>{current=tr.dataset.key;showTab("reports");};tr.onclick=go;tr.onkeydown=e=>{if(e.key==="Enter")go();};});
+  const qi=$("#q");qi.oninput=()=>{query=qi.value;const pos=qi.selectionStart;renderClass();const n=$("#q");n.focus();n.setSelectionRange(pos,pos);};
+  $("#onlyFlagged").onchange=e=>{onlyFlagged=e.target.checked;renderClass();};
+  $("#csv").onclick=downloadCSV;$("#dlAll").onclick=()=>downloadReports([...students.keys()]);
+}
+function sortedKeys(){return [...students.values()].sort((a,b)=>a.name.localeCompare(b.name)).map(s=>s.key);}
+function renderReports(){
+  const v=$("#view-reports");
+  if(!students.size){v.innerHTML=`<div class="panel empty">Add Student Detail Report PDFs above to build family reports.</div>`;return;}
+  const keys=sortedKeys();if(!students.has(current))current=keys[0];
+  const st=students.get(current),a=analyze(st);
+  const idx=keys.indexOf(current);
+  v.innerHTML=`<div class="tools rep-toolbar"><div class="row"><button class="btn ghost" id="prev" ${idx<=0?"disabled":""}>Previous student</button><button class="btn ghost" id="next" ${idx>=keys.length-1?"disabled":""}>Next student</button></div>
+    <div class="row"><button class="btn ghost" id="printOne">Print</button><button class="btn ghost" id="dlOne">Download this report</button><button class="btn" id="dlAll2">Download all (${keys.length})</button></div></div>
+    <div class="picker"><select id="pickStudent" aria-label="Student">${keys.map(k=>`<option value="${esc(k)}" ${k===current?"selected":""}>${esc(students.get(k).name)}</option>`).join("")}</select></div>
+    <div class="rep-layout"><nav class="side panel" aria-label="Students">${keys.map(k=>{const s=students.get(k),m=analyze(s).missing.length;return `<button data-key="${esc(k)}" aria-current="${k===current}"><span>${esc(s.name)}</span>${m?'<span class="dot" title="Missing work"></span>':""}</button>`;}).join("")}</nav>
+    <div><div id="sheetHost">${sheetHTML(st,a,notes[current])}</div>
+      <div class="notebox"><label>Analysis comments (edit, remove or add; changes show on the report)</label><div id="cmtList"></div>
+        <div class="row cmtbar"><button class="btn ghost sm" id="addCmt">Add comment</button><button class="btn ghost sm" id="resetCmt">Reset to automatic</button></div></div>
+      <div class="notebox"><label for="note">Note from the teacher (optional, appears on the report)</label><textarea id="note" placeholder="Add a personal comment, a strength you've noticed, or a next step.">${esc(notes[current]||"")}</textarea></div>
+      <div class="srcfile">Source file: ${esc(st.file||"")}</div></div></div>`;
+  v.querySelectorAll(".side button").forEach(b=>b.onclick=()=>{current=b.dataset.key;renderReports();});
+  $("#pickStudent").onchange=e=>{current=e.target.value;renderReports();};
+  $("#prev").onclick=()=>{current=keys[idx-1];renderReports();};
+  $("#next").onclick=()=>{current=keys[idx+1];renderReports();};
+  const refresh=()=>{$("#sheetHost").innerHTML=sheetHTML(st,a,notes[current]);};
+  const drawCmts=()=>{
+    const items=getComments(current,st,a);
+    $("#cmtList").innerHTML=items.map(c=>`<div class="cmt ${c.removed?"off":""}" data-id="${esc(c.id)}"><textarea aria-label="Analysis comment" ${c.removed?"disabled":""}>${esc(c.text)}</textarea><button type="button" class="btn ghost sm rm">${c.removed?"Restore":"Remove"}</button></div>`).join("")||'<p class="hint">No comments.</p>';
+    $("#cmtList").querySelectorAll(".cmt").forEach(row=>{
+      const id=row.dataset.id,item=items.find(i=>i.id===id),e=cmtState(current);
+      row.querySelector("textarea").oninput=ev=>{
+        const v=ev.target.value;
+        if(item.custom){e.custom.find(c=>c.id===id).text=v;}
+        else if(v===item.auto)delete e.text[id];else e.text[id]=v;
+        refresh();
+      };
+      row.querySelector(".rm").onclick=()=>{
+        if(item.custom){const c=e.custom.find(c=>c.id===id);if(item.removed)c.removed=false;else e.custom.splice(e.custom.indexOf(c),1);}
+        else if(item.removed)delete e.removed[id];else e.removed[id]=true;
+        drawCmts();refresh();
+      };
+    });
+  };
+  drawCmts();
+  $("#addCmt").onclick=()=>{cmtState(current).custom.push({id:"c"+(++cid),text:"",removed:false});drawCmts();refresh();const t=$("#cmtList").querySelectorAll("textarea");t[t.length-1].focus();};
+  $("#resetCmt").onclick=()=>{delete edits[current];drawCmts();refresh();};
+  $("#note").oninput=e=>{notes[current]=e.target.value;refresh();};
+  $("#printOne").onclick=()=>{try{window.print();}catch(e){}};
+  $("#dlOne").onclick=()=>downloadReports([current]);
+  $("#dlAll2").onclick=()=>downloadReports(keys);
+}
+function showTab(t){
+  const c=t==="class";
+  $("#tab-class").setAttribute("aria-selected",c);$("#tab-reports").setAttribute("aria-selected",!c);
+  $("#view-class").hidden=!c;$("#view-reports").hidden=c;
+  renderAll();
+}
+function renderRulesSummary(){
+  const w=cfg.weighting==="points"?"Total points":`Summative ${cfg.sumW}% / Formative ${cfg.forW}%`;
+  const m=cfg.blankMissing?`blank ${cfg.graceDays}+ days past due = missing`:"blanks never counted missing";
+  $("#rulesum").textContent=`${w}. ${m[0].toUpperCase()+m.slice(1)}${cfg.missingAsZero?", counted as 0":""}. Scale ${cfg.cutA}/${cfg.cutB}/${cfg.cutC}/${cfg.cutD}.`;
+}
+let repW=null;
+function renderWeightHints(){
+  $("#wnote").textContent=`Summative ${fmt(cfg.sumW,cfg.sumW%1?1:0)}% + Formative ${fmt(cfg.forW,cfg.forW%1?1:0)}% = ${fmt(cfg.sumW+cfg.forW,0)}%`;
+  repW=null;
+  for(const st of students.values()){
+    let s=0,f=0;
+    for(const [k,w] of Object.entries(st.catWeights||{})){const ck=catKey(k);if(ck==="S")s+=w;else if(ck==="F")f+=w;}
+    if(s>0&&f>0&&Math.abs(s+f-100)<0.5){repW={s,f};break;}
+  }
+  const show=repW&&(repW.s!==cfg.sumW||repW.f!==cfg.forW);
+  $("#repW").hidden=!show;
+  if(show)$("#repWtxt").textContent=`The report prints Summative ${repW.s}% / Formative ${repW.f}%.`;
+}
+function renderAll(){
+  $("#clear").disabled=!students.size;
+  renderRulesSummary();renderWeightHints();
+  if(!$("#view-class").hidden)renderClass();else renderReports();
+}
+
+/* ---------- export ---------- */
+async function save(filename,data){
+  try{
+    if(window.claude&&typeof window.claude.use==="function"){
+      const dl=await window.claude.use("downloads");
+      if(dl){await dl.save({filename,data});return;}
+    }
+  }catch(e){if(e&&e.code==="declined")return;console.warn(e);}
+  const blob=new Blob([data],{type:filename.endsWith(".csv")?"text/csv":"text/html"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+function downloadReports(keys){
+  const css=$("#report-css").textContent;
+  const body=keys.map(k=>{const s=students.get(k);return sheetHTML(s,analyze(s),notes[k]);}).join("\n");
+  const first=students.get(keys[0]);
+  const title=keys.length===1?`Progress report - ${first.name}`:`Progress reports - ${titleCase(first.course||"")} ${first.mp||""}`;
+  const doc=`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,700&display=swap" rel="stylesheet"><style>body{margin:0;padding:24px;background:#EEF2EC}.sheet{margin:0 auto 24px}@page{size:letter;margin:.4in}@media print{body{padding:0;background:#fff}.sheet{margin:0}}${css}</style></head><body>${body}</body></html>`;
+  const safe=s=>s.replace(/[^\w\- ]+/g,"").trim().replace(/\s+/g,"_");
+  save(keys.length===1?`Progress_Report_${safe(first.name)}.html`:`Progress_Reports_${safe(first.mp||"class")}.html`,doc);
+}
+function downloadCSV(){
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const lines=[["Student","Course","Period","Marking Period","Overall %","Letter","Summative %","Formative %","Missing","Missing assignments",`Scores below ${cfg.lowThreshold}%`,"Turned in","Due","Trend (pts)","Awaiting score"].map(q).join(",")];
+  for(const {st,a} of list().sort((x,y)=>x.st.name.localeCompare(y.st.name))){
+    lines.push([st.name,st.course,st.period,st.mp,fmt(a.overall),a.letter,a.S?fmt(a.S.avg):"",a.F?fmt(a.F.avg):"",a.missing.length,a.missing.map(m=>m.name).join("; "),a.low.length,a.done.length,a.dueCount,a.trend?fmt(a.trend.d):"",a.pending.length].map(q).join(","));
+  }
+  save("Class_Progress_Summary.csv",lines.join("\r\n"));
+}
+
+/* ---------- settings wiring ---------- */
+function bindSettings(){
+  document.querySelectorAll('input[name=weighting]').forEach(r=>{r.checked=r.value===cfg.weighting;r.onchange=()=>{cfg.weighting=r.value;saveCfg();renderAll();};});
+  const nums=["sumW","forW","graceDays","cutA","cutB","cutC","cutD","lowThreshold"];
+  nums.forEach(id=>{const el=$("#"+id);el.value=cfg[id];el.onchange=()=>{const n=parseFloat(el.value);if(!isNaN(n)){cfg[id]=n;saveCfg();renderAll();}else el.value=cfg[id];};});
+  // Summative and Formative stay linked so they always total 100
+  const setW=(id,other)=>{const el=$("#"+id),oe=$("#"+other);el.onchange=()=>{let n=parseFloat(el.value);if(isNaN(n)){el.value=cfg[id];return;}n=Math.min(100,Math.max(0,n));cfg[id]=n;cfg[other]=Math.round((100-n)*100)/100;el.value=cfg[id];oe.value=cfg[other];saveCfg();renderAll();};};
+  setW("sumW","forW");setW("forW","sumW");
+  $("#repWbtn").onclick=()=>{if(repW){cfg.sumW=repW.s;cfg.forW=repW.f;$("#sumW").value=cfg.sumW;$("#forW").value=cfg.forW;saveCfg();renderAll();}};
+  ["blankMissing","zeroIsMissing","missingAsZero"].forEach(id=>{const el=$("#"+id);el.checked=cfg[id];el.onchange=()=>{cfg[id]=el.checked;saveCfg();renderAll();};});
+  const fl=$("#failLetter");fl.value=cfg.failLetter;fl.onchange=()=>{cfg.failLetter=fl.value;saveCfg();renderAll();};
+}
+
+/* ---------- sample data (fictional) ---------- */
+function loadSample(){
+  const base={school:"Sample Middle School",reportDate:"9/29/2026",course:"SOC STUDIES 7",teacher:"Teacher, Sample",mp:"MP1",catWeights:{},reported:null,file:"sample data"};
+  const A=[["5 Themes Notesheet","9/3","Formative",5],["5 Themes of Geography Quiz","9/3","Formative",16],["Ibn Battuta Sub Packet","9/10","Formative",5],["Islamic Expansion Paragraph","9/11","Formative",15],["Constitution Day Quiz","9/17","Formative",5],["Silk Road Map Check","9/22","Formative",10],["Ibn Battuta Stations","9/28","Formative",20],["Expansion Sources Analysis","9/24","Summative",18]];
+  const mk=(name,period,scores)=>({...base,name,period,key:name+"|sample",rows:A.map((r,i)=>({name:r[0],due:r[1],cat:r[2]+" Assignments",score:scores[i]==null?"":String(scores[i]),weight:1,total:r[3],pct:"",flags:{retake:false,dropped:false}}))});
+  [mk("Rivera, Ana","01 - 03",[5,15,5,14,5,10,null,17]),
+   mk("Okafor, Jada","01 - 03",[5,12,null,11,4,6,null,9]),
+   mk("Chen, Marcus","04 - 06",[4,14,5,15,5,null,null,11]),
+   mk("Lindqvist, Theo","04 - 06",[3,9,4,"M",5,9,null,15])].forEach(s=>students.set(s.key,s));
+  if(!current)current=[...students.keys()][0];
+  $("#status").className="status";$("#status").textContent=`${students.size} students loaded (includes fictional sample data).`;
+  renderAll();
+}
+
+/* ---------- intake wiring ---------- */
+const drop=$("#drop"),fileIn=$("#file");
+$("#pick").onclick=()=>fileIn.click();
+fileIn.onchange=()=>{if(fileIn.files.length)ingest([...fileIn.files]);fileIn.value="";};
+["dragenter","dragover"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",ev=>{const f=[...ev.dataTransfer.files].filter(f=>/pdf$/i.test(f.type)||/\.pdf$/i.test(f.name));if(f.length)ingest(f);else{$("#status").className="status err";$("#status").textContent="Only PDF files can be read. Export the Student Detail Report as a PDF and try again.";}});
+$("#sample").onclick=loadSample;
+$("#clear").onclick=()=>{students.clear();for(const k in notes)delete notes[k];for(const k in edits)delete edits[k];current=null;$("#status").textContent="Cleared.";renderAll();};
+$("#tab-class").onclick=()=>showTab("class");
+$("#tab-reports").onclick=()=>showTab("reports");
+bindSettings();renderAll();
+})();
+</script>
+</body>
+</html>
