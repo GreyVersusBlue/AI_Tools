@@ -1497,6 +1497,17 @@
       ],
     },
     {
+      slug: 'progress-report-parser',
+      title: 'Progress Report Parser',
+      file: 'Tools/089-progress-report-parser.html',
+      category: 'assessment-grading',
+      /* Grading rules only. The PDFs, students, notes and edits are held in
+         memory and never stored. */
+      keys: [
+        { k: 'fpr-settings' },
+      ],
+    },
+    {
       slug: 'pe-tournament-station-rotation',
       title: 'Tournament Bracket & Station Rotation',
       file: 'Tools/021-pe-tournament-stations.html',
