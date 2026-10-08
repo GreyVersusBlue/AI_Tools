@@ -449,6 +449,113 @@
   .pq-guide-table .pq-q { margin: 0; }
   .pq-guide-a { width: 38%; }
 
+
+  /* ---- projector view (the "Projector view" button, key P) ----
+     A presentation of the PLAY screen for a classroom projector, off until a
+     teacher turns it on, and kept for the browser tab (ReviewBoardStore
+     .getProjector; sessionStorage until a registry row allows localStorage). Everything is under `body.projector` and `@media screen`,
+     so with the view off no rule below matches and a printed sheet is never
+     touched. Page-local on purpose: nothing in _shared/ is changed.
+
+     One unit, --u, is 1% of the width or 1.7778% of the height, whichever is
+     smaller, so on a 16:9 screen it is 12.8px at 1280x720 and 19.2px at
+     1920x1080 and on any other shape the type is sized by the tighter side.
+     Floors (checked in test/smoke-projector.mjs at both sizes):
+       category 1.9u (24 / 36 px)   point value 3u (38 / 58 px)
+       team score 3.8u (48 / 73 px) team name 2u (25 / 38 px)
+       clue 3.6u, or 2.6u when long (33 / 50 px, and 33 / 50 px at the long
+       step is 2.6u = 33 px / 50 px) answer 2.8u, or 2.2u when long
+     The teacher's own controls are not hidden: they sit after the board in
+     their usual small type, still reachable by keyboard. */
+  @media screen {
+    body.projector { --u: min(1vw, 1.7778vh); --pj-ring: max(4px, calc(var(--u) * .35)); padding: 8px 12px 24px; }
+    body.projector:has(#boardsSection.active) .wrap { max-width: none; }
+    body.projector :focus-visible {
+      outline: var(--pj-ring) solid #111; outline-offset: 2px;
+      box-shadow: 0 0 0 calc(var(--pj-ring) * 2 + 2px) #fff;
+    }
+    body.projector #boardCard { display: flex; flex-direction: column; }
+    body.projector #boardCard > * { order: 5; }
+    body.projector #boardCard > .board-title { order: 0; }
+    body.projector #boardCard > .scoreboard { order: 1; }
+    body.projector #boardCard > .board-grid { order: 2; }
+    body.projector #boardCard > #wheelSetup { order: 3; }
+    body.projector #boardCard > .score-toolbar,
+    body.projector #boardCard > #boardStatus { order: 4; }
+    body.projector .board-title { font-size: calc(var(--u) * 1.6); margin: 0 0 calc(var(--u) * .4); }
+
+    /* the score strip */
+    body.projector .scoreboard { gap: calc(var(--u) * .7); margin: 0 0 calc(var(--u) * .6); padding: calc(var(--u) * .4) 0 calc(var(--u) * .6); }
+    body.projector .team-chip { flex: 1 1 auto; max-width: 100%; gap: calc(var(--u) * .6); border-width: 3px; padding: calc(var(--u) * .4) calc(var(--u) * .8); }
+    body.projector .team-chip input[type="text"] { flex: 1 1 auto; min-width: 0; max-width: 100%; width: 8ch; font-size: calc(var(--u) * 2); }
+    body.projector .team-chip .score { font-size: calc(var(--u) * 3.8); line-height: 1.2; min-width: 4ch; }
+    body.projector .team-chip button { font-size: calc(var(--u) * 1.4); min-width: max(24px, calc(var(--u) * 2.2)); min-height: max(24px, calc(var(--u) * 2.2)); padding: 0 .3em; }
+    body.projector .team-tally { font-size: calc(var(--u) * 1.3); }
+    body.projector #boardCard > .scoreboard > button.small { font-size: calc(var(--u) * 1.3); min-height: max(24px, calc(var(--u) * 2.2)); }
+
+    /* the grid: bigger type on thinner tiles, so five rows still fit 720px */
+    body.projector .board-grid { padding: max(calc(var(--u) * .8), calc(var(--pj-ring) * 2 + 4px)); }
+    body.projector .board-cols { gap: calc(var(--u) * .5); }
+    body.projector .cat-header {
+      display: flex; align-items: center; justify-content: center;
+      font-size: calc(var(--u) * 1.9); line-height: 1.15; overflow-wrap: anywhere; letter-spacing: 0;
+      border-width: calc(var(--u) * .7); border-image-width: calc(var(--u) * .7);
+    }
+    body.projector .cell {
+      font-size: calc(var(--u) * 3); line-height: 1.1; padding: .15em 0;
+      border-width: calc(var(--u) * .7); border-image-width: calc(var(--u) * .7);
+    }
+    /* A played clue says so in words and a line, not by its dimness alone,
+       and its number is still light enough to read (AA on the flat tile). */
+    body.projector .cell.used, body.projector .cell.used:hover {
+      color: #b4bddf; text-decoration: line-through; text-decoration-thickness: .1em;
+    }
+    body.projector .cell.wheel-landed { outline-width: max(4px, calc(var(--u) * .4)); outline-offset: calc(var(--u) * -.8); }
+    body.projector .cell.wheel-landed::before { font-size: .7em; }
+
+    /* the wheel: the picture and where it landed are the room's */
+    body.projector .wheel-picture { flex-basis: calc(var(--u) * 16); width: calc(var(--u) * 16); }
+    body.projector #wheelStatus { font-size: calc(var(--u) * 2); font-weight: 700; color: var(--ink); min-height: 1.4em; }
+    body.projector .wheel-label { font-size: 13px; }
+
+    /* the clue, the answer and the buttons under them */
+    body.projector .overlay { padding: calc(var(--u) * 1.5); overflow-y: auto; justify-content: safe center; background: #04081e; }
+    body.projector .overlay .cat-points { font-size: calc(var(--u) * 2.2); margin-bottom: calc(var(--u) * .8); }
+    body.projector .overlay .countdown { font-size: calc(var(--u) * 4.5); margin-bottom: calc(var(--u) * .6); }
+    body.projector .overlay .countdown.low { text-decoration: underline wavy; }
+    body.projector .overlay .question-text {
+      font-size: calc(var(--u) * 3.6); line-height: 1.25; max-width: min(100%, calc(var(--u) * 80));
+      margin-bottom: calc(var(--u) * 1.2); overflow-wrap: anywhere;
+    }
+    body.projector .overlay .answer-text {
+      font-size: calc(var(--u) * 2.8); line-height: 1.25; max-width: min(100%, calc(var(--u) * 80));
+      margin-bottom: calc(var(--u) * 1.2); padding-top: calc(var(--u) * .9); overflow-wrap: anywhere;
+    }
+    body.projector .overlay.pj-long .question-text { font-size: calc(var(--u) * 2.6); }
+    body.projector .overlay.pj-long .answer-text { font-size: calc(var(--u) * 2.2); }
+    body.projector .overlay .clue-image {
+      width: auto; height: auto; max-width: min(calc(var(--u) * 60), 90vw); max-height: 34vh;
+      margin-bottom: calc(var(--u) * .8);
+    }
+    body.projector .overlay.pj-long .clue-image { max-height: 24vh; }
+    body.projector .overlay .clue-audio { margin-bottom: calc(var(--u) * .8); }
+    body.projector .overlay button, body.projector .overlay .award-row button { font-size: calc(var(--u) * 1.5); padding: .35em .8em; }
+    body.projector .overlay-actions { margin-bottom: calc(var(--u) * .6); }
+    body.projector .wager-panel { max-width: calc(var(--u) * 34); padding: calc(var(--u) * 1) calc(var(--u) * 1.2); margin-bottom: calc(var(--u) * 1); }
+    body.projector .wager-panel label { font-size: calc(var(--u) * 1.5); }
+    body.projector .wager-panel select, body.projector .wager-panel input[type="number"] { font-size: calc(var(--u) * 1.6); }
+    body.projector .eta-panel { max-width: min(100%, calc(var(--u) * 80)); }
+    body.projector .eta-rule, body.projector .eta-status { font-size: calc(var(--u) * 1.5); }
+    body.projector .eta-team legend { font-size: calc(var(--u) * 1.6); }
+    body.projector .eta-team label { font-size: calc(var(--u) * 1.5); }
+    body.projector .eta-team input[type="radio"] { width: calc(var(--u) * 1.4); height: calc(var(--u) * 1.4); }
+    body.projector .round-box { max-width: min(100%, calc(var(--u) * 80)); }
+    body.projector .round-list { font-size: calc(var(--u) * 2.2); }
+    body.projector .round-list.round-small { font-size: calc(var(--u) * 1.6); }
+    body.projector .round-note { font-size: calc(var(--u) * 1.4); }
+    body.projector .round-wager input { font-size: calc(var(--u) * 1.8); }
+  }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   .print-only { display: none; }
@@ -502,6 +609,7 @@
   <div class="toolbar" id="toolbar" style="display:none;">
     <label for="boardSwitch" style="margin:0;font-weight:600;font-size:.85rem;">Board:</label>
     <select id="boardSwitch"></select>
+    <button class="secondary" id="projectorBtn" type="button" aria-pressed="false">Projector view</button>
     <button class="secondary" id="newBoardBtn">New board</button>
     <button class="secondary" id="editBoardBtn">Edit questions</button>
     <button class="secondary" id="resetGameBtn">Reset game</button>
@@ -855,7 +963,7 @@
   }
 
   var els = {};
-  ['toolbar','boardSwitch','newBoardBtn','editBoardBtn','resetGameBtn','deleteBoardBtn','storageLine','imageNote',
+  ['toolbar','boardSwitch','projectorBtn','newBoardBtn','editBoardBtn','resetGameBtn','deleteBoardBtn','storageLine','imageNote',
    'printAnswerKeyBtn', 'printQuizBtn', 'exportBoardBtn', 'importBoardBtn', 'importBoardFile', 'printArea',
    'setupCard','boardName','categoriesEditor','addCategoryBtn','buildFromManualBtn',
    'importFile','downloadTemplateBtn','importStatus',
@@ -2135,6 +2243,8 @@
       // The team's name IS this input's value, so it cannot label itself
       // (axe label, critical) — the position is what stays true when it changes.
       nameInput.setAttribute('aria-label', 'Team ' + (i + 1) + ' name');
+      fitTeamName(nameInput);
+      nameInput.addEventListener('input', function () { fitTeamName(nameInput); });
       nameInput.addEventListener('change', function () { team.name = nameInput.value.trim() || team.name; save(); });
       var minus = document.createElement('button');
       minus.className = 'small secondary'; minus.textContent = '−';
@@ -2212,6 +2322,60 @@
     state.teams.forEach(function (team, i) { if (chips[i]) chips[i].textContent = team.score; });
   }
 
+  /* ---------- projector view ---------- */
+  /* A body class and nothing else: the styles are in the sheet above, under
+     `body.projector`, and apply only on a screen. The view is the room's
+     picture of the play screen; it changes no rule of the game and no byte of
+     a board. The class, the name widths below and the Leave button exist only
+     while the view is on, so with it off the page is the page it was. */
+  var projectorOn = false;
+
+  /** A team's name is an input, which cannot wrap: while the view is on it is
+      as wide as the name, so a long one is shown whole and the chip wraps. */
+  function fitTeamName(input) {
+    if (projectorOn) input.style.width = Math.min(Math.max(input.value.length, 4) + 1, 80) + 'ch';
+    else if (input.hasAttribute('style')) input.removeAttribute('style');
+  }
+
+  /** The projected question and answer step down one size when they are long,
+      so a three-hundred-character clue still fits a screen; never below the
+      floor the stylesheet states. */
+  function fitOverlayText(box, question, answer) {
+    box.classList.toggle('pj-long', projectorOn && (String(question || '').length > 120 || String(answer || '').length > 90));
+  }
+
+  function setProjector(on, remember) {
+    projectorOn = !!on;
+    document.body.classList.toggle('projector', projectorOn);
+    if (!document.body.className) document.body.removeAttribute('class');
+    els.projectorBtn.setAttribute('aria-pressed', projectorOn ? 'true' : 'false');
+    if (remember) ReviewBoardStore.setProjector(projectorOn);
+    Array.prototype.forEach.call(els.scoreboard.querySelectorAll('.team-chip input[type="text"]'), fitTeamName);
+    var leave = document.getElementById('projectorLeaveBtn');
+    if (projectorOn && !leave) {
+      leave = el('button', 'secondary small', 'Leave projector view');
+      leave.type = 'button';
+      leave.id = 'projectorLeaveBtn';
+      leave.addEventListener('click', function () { setProjector(false, true); els.projectorBtn.focus(); });
+      els.boardCard.querySelector('.board-options').appendChild(leave);
+    } else if (!projectorOn && leave) {
+      leave.remove();
+    }
+    if (!projectorOn) { els.overlay.classList.remove('pj-long'); els.roundOverlay.classList.remove('pj-long'); }
+    if (projectorOn && remember && els.boardCard.style.display !== 'none') els.boardCard.scrollIntoView({ block: 'start' });
+  }
+  els.projectorBtn.addEventListener('click', function () { setProjector(!projectorOn, true); });
+  /* P turns it on and off, when the board is what is on the screen and nothing is being typed. */
+  document.addEventListener('keydown', function (e) {
+    if (!/^p$/i.test(e.key) || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    if (els.overlay.classList.contains('show') || els.roundOverlay.classList.contains('show')) return;
+    if (els.boardCard.style.display === 'none' || !els.boardsSection.classList.contains('active')) return;
+    var t = e.target, tag = t && t.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+    e.preventDefault();
+    setProjector(!projectorOn, true);
+  });
+
   /* ---------- clue reveal overlay ---------- */
   /** Hides and unloads the projected audio control, revoking its object URL
       — called on every openClue() (before deciding whether to show it again)
@@ -2245,6 +2409,7 @@
     var cat = state.categories[catIdx];
     var clue = cat.clues[clueIdx];
     els.overlayQuestion.textContent = clue.question;
+    fitOverlayText(els.overlay, clue.question, clue.answer);
     // A picture not in this browser (or not read yet) is simply not shown.
     var overlaySrc = ReviewBoardImage.url(clue.image);
     if (overlaySrc) {
@@ -2320,6 +2485,7 @@
     hideOverlayAudio();
     els.overlay.classList.remove('show');
     els.etaPanel.classList.remove('show');
+    els.overlay.classList.remove('pj-long');
     currentClue = null;
   }
 
@@ -2805,6 +2971,7 @@
     els.roundActions.textContent = '';
     if (roundPlay.kind === 'final') drawFinal(roundPlay); else drawQuizBowl(roundPlay);
     els.roundStatus.textContent = message || '';
+    fitOverlayText(els.roundOverlay, els.roundQuestion.textContent, els.roundAnswer.textContent);
     var target = (focusSelector && els.roundOverlay.querySelector(focusSelector)) ||
       els.roundOverlay.querySelector('[data-first]') || els.roundCloseBtn;
     target.focus();
@@ -2813,7 +2980,7 @@
     var p = roundPlay;
     if (!p) return;
     roundPlay = null;
-    els.roundOverlay.classList.remove('show');
+    els.roundOverlay.classList.remove('show', 'pj-long');
     renderBoard();
     if (p.kind === 'final' && p.stage !== 'result') {
       setStatus(els.finalStatus, '', 'The final round was closed before it was scored. No wager was stored and no score changed.');
@@ -4236,6 +4403,7 @@
   }
 
   /* ---------- boot ---------- */
+  if (ReviewBoardStore.getProjector()) setProjector(true, false);
   var current = ReviewBoardStore.getCurrentName();
   if (current && ReviewBoardStore.loadBoard(current)) {
     loadBoardByName(current);
