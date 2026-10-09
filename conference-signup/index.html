@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Conference Book Bag</title>
+<meta name="description" content="Sign up for a parent-teacher conference: find a teacher, pick a time, and check out with everything you need.">
+<meta name="theme-color" content="#1f3a5f">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M24 14c0-5 3-8 8-8s8 3 8 8"/>
+      <path d="M16 24c0-6 6-10 16-10s16 4 16 10v26c0 4-3 8-8 8H24c-5 0-8-4-8-8z"/>
+      <path d="M16 36h32"/><path d="M26 36v6h12v-6"/><path d="M22 24h20"/>
+    </svg>
+    <div>
+      <h1 id="title">Conference Book Bag</h1>
+      <p class="sub" id="subtitle">Find your teachers, pick a time, check out.</p>
+    </div>
+  </header>
+
+  <div id="demo" class="banner demo" hidden><b>Demo mode.</b> Nothing here is real: bookings are kept only in this browser.</div>
+  <div id="closed" class="banner closed" hidden></div>
+  <div id="notice" class="banner" hidden></div>
+  <div id="fatal" class="banner err" role="alert" hidden></div>
+
+  <div id="booking">
+    <div class="layout">
+      <div>
+        <section class="card" aria-labelledby="h-who">
+          <h2 id="h-who"><span class="step" aria-hidden="true">1</span>Who is this conference for?</h2>
+          <p class="hint">Use your child's full name so the teacher knows who to expect.</p>
+          <label for="student">Your child's name</label>
+          <input id="student" type="text" autocomplete="off" autocapitalize="words" maxlength="80" placeholder="First and last name">
+          <label for="parent">Your name</label>
+          <input id="parent" type="text" autocomplete="name" autocapitalize="words" maxlength="80" placeholder="Parent or guardian">
+          <p class="fine" id="lockNote" hidden>Your bag is for this child. To book for another child, check out first.</p>
+        </section>
+
+        <fieldset class="card" id="findCard" aria-labelledby="h-find" disabled>
+          <legend><h2 id="h-find"><span class="step" aria-hidden="true">2</span>Find a teacher</h2></legend>
+          <p class="hint">Start typing a name, a subject or a grade.</p>
+          <label for="q">Teacher</label>
+          <div class="combo">
+            <input id="q" type="text" role="combobox" aria-expanded="false" aria-controls="results" aria-autocomplete="list" aria-haspopup="listbox" autocomplete="off" spellcheck="false" placeholder="e.g. Almer, Math, 7th">
+            <ul id="results" role="listbox" aria-label="Matching teachers" hidden></ul>
+          </div>
+          <div id="picked" class="picked" hidden></div>
+          <div id="timeBox" hidden>
+            <label for="time">Available times</label>
+            <div class="row">
+              <select id="time" class="grow"></select>
+              <button type="button" class="btn" id="reserve">Add to book bag</button>
+            </div>
+            <p class="fine">A time stays in your bag for <span class="holdMin">10</span> minutes while you finish.</p>
+          </div>
+          <p class="status" id="status" aria-live="polite"></p>
+        </fieldset>
+      </div>
+
+      <aside class="card bag" id="bag" aria-labelledby="h-bag">
+        <h2 id="h-bag">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 14c0-5 3-8 8-8s8 3 8 8"/><path d="M16 24c0-6 6-10 16-10s16 4 16 10v26c0 4-3 8-8 8H24c-5 0-8-4-8-8z"/><path d="M16 36h32"/></svg>
+          Your book bag <span class="count" id="count">0</span>
+        </h2>
+        <p class="empty" id="bagEmpty">Nothing yet. Pick a teacher and a time and it lands here.</p>
+        <ul id="bagList"></ul>
+        <div id="bagFoot" hidden>
+          <button type="button" class="btn big" id="checkout">Check out and book</button>
+          <p class="fine">Checking out books every time in your bag. Anything still in the bag when its clock runs out goes back for other families.</p>
+        </div>
+        <p class="status" id="bagStatus" aria-live="polite"></p>
+      </aside>
+    </div>
+    <section class="earlier no-print" id="earlier" hidden></section>
+  </div>
+
+  <section class="card done" id="done" hidden aria-live="polite"></section>
+</div>
+<script src="config.js"></script>
+<script src="../_shared/vendor/jspdf/jspdf.umd.min.js" defer></script>
+<script type="module" src="parent.js"></script>
+</body>
+</html>

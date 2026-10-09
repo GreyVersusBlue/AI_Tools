@@ -119,6 +119,18 @@ export default [
     },
   },
   {
+    // The parent conference sign-up (conference-signup/, outside Tools/): browser
+    // modules, plus core.js, which the Worker and the Node tests import too. Its
+    // jsPDF and SheetJS arrive as window.jspdf / window.XLSX, never as bare globals.
+    files: ['conference-signup/*.js'],
+    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { ...globals.browser } },
+  },
+  {
+    // Its Cloudflare Worker and Durable Object: a module in a worker scope.
+    files: ['conference-signup/worker/src/*.js'],
+    languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: { ...globals.serviceworker } },
+  },
+  {
     // The service worker: a classic script in a worker scope.
     files: ['sw.js'],
     languageOptions: {
@@ -134,7 +146,7 @@ export default [
     // lives beside the tools rather than in board-check, so that an art edit
     // is not site-wide in CI; its .mjs files would otherwise match the
     // browser block's Tools/*/*.mjs and fail no-undef on `process`.
-    files: ['Tools/board-check/*.mjs', 'Tools/blender-art/*.mjs', 'Tools/*/test/*.mjs', 'Tools/*/*.test.mjs', 'Tools/*/*/build-*.mjs', 'eslint.config.js'],
+    files: ['Tools/board-check/*.mjs', 'Tools/blender-art/*.mjs', 'Tools/*/test/*.mjs', 'Tools/*/*.test.mjs', 'Tools/*/*/build-*.mjs', 'conference-signup/test/*.mjs', 'eslint.config.js'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',

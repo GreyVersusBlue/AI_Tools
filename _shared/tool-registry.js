@@ -1497,6 +1497,26 @@
       ],
     },
     {
+      slug: 'conference-signup',
+      title: 'Parent Conference Sign-up',
+      file: 'conference-signup/index.html',
+      category: 'platform',
+      backupLabel: 'Parent conference sign-up (this browser)',
+      /* The family-facing booking page and its staff desk live outside the
+         toolkit (conference-signup/) and talk to a Worker, so the real bookings
+         are on that server and none of them are in a backup. These keys are
+         what a browser keeps about itself: who it is to the server (an
+         unguessable id, not a login), the last parent name typed, the
+         confirmations to show again, and, only in demo mode, the whole demo
+         event. The names are family data, so they go at year-end. */
+      keys: [
+        { k: 'conf-token' },
+        { k: 'conf-who', student: true },
+        { k: 'conf-receipts', student: true },
+        { k: 'conf-demo-state', student: true },
+      ],
+    },
+    {
       slug: 'progress-report-parser',
       title: 'Progress Report Parser',
       file: 'Tools/089-progress-report-parser.html',

@@ -9,6 +9,42 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Parent conference sign-up: "Conference Book Bag" (2026-10-09, Devon's request, `CACHE_VERSION` v295)
+
+Built at Devon's request to replace SignUpGenius for parent-teacher conferences (about 600 students, 32
+teachers, 4:00 to 6:45 PM in 15-minute slots, every teacher starting fully open). Not a BACKLOG row, so
+no claim row and no rank change; the header was not rewritten.
+
+**Decisions, all reversible.**
+- **Outside `Tools/`, in `conference-signup/`.** It needs a server, which no toolkit page has, and it is
+  for families, not teachers. Keeping it out of `Tools/` keeps it out of the 86-tool counts, the a11y
+  sweep's page list and the precache. Cost: `check:registry` still sees its `localStorage` keys, so it has
+  a registry row (category `platform`) and three of its keys are student data.
+- **A Durable Object, not D1.** One object handles requests one at a time, so the hold-then-book
+  race cannot happen and the same pure `core.js` runs in the Worker, in the browser's demo mode and in
+  the tests. The whole event is a few KB.
+- **Pages from GitHub Pages, API from the Worker**, not the Worker serving the pages. The vendored jsPDF and
+  SheetJS are then referenced by relative path, and `check:dedupe` stays satisfied without a staging copy.
+- **`sw.js` bypasses `/conference-signup/`.** The service worker is cache-first for same-origin GETs, so
+  a staff browser that had visited any tool would otherwise keep serving an old schedule. This is a
+  site-wide `sw.js` change, which CI treats as "run everything".
+- **A family cannot hold one child in two places at a time; staff can** (Devon's call): the extra booking
+  shares the first's confirmation code and takes the family's spelling of the name.
+- **No family-side cancel, no email.** Devon: confirmations on screen plus a PDF ticket are enough, and
+  the current process handles changes already.
+
+**What I did not verify.** Nothing has run on Cloudflare: the Worker's wiring is tested in Node against a fake
+Durable Object (`worker.test.mjs`), the pages in Chromium in demo mode (`smoke-flow.mjs`), and the rules
+in `core.test.mjs`. Not checked: `wrangler deploy`, the SQLite-backed migration, wrangler bundling the
+`with { type: 'json' }` import, the free plan's limits under a real rush, any real phone, a printed ticket,
+the export opened in Excel (it was read back with SheetJS only).
+
+**Wrong on the way.** The first plan assumed a flat file or spreadsheet could store the bookings; it cannot
+take simultaneous writes. A `crypto.subtle.timingSafeEqual` call in the first Worker draft exists only on
+Cloudflare and failed in Node, so the PIN compare is a loop over two SHA-256 digests. The first smoke
+run had four failures, all in the test's expectations except one real finding: a staff team booking kept
+whatever spelling staff typed, which would have split one child into two in the export.
+
 ## 030 Quiz / Review Game Board: projector view (2026-10-07, AI-31-030, `CACHE_VERSION` v293; the code commit says v291, which AI-31-032 took, and main passed v292 before the merge)
 
 BACKLOG rank 145, one increment: the projector styling is built and the remembering is not (below). Changed: `Tools/030-review-game-board.html`, `Tools/review-game-board/rgb-store.js`

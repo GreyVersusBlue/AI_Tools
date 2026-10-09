@@ -290,7 +290,10 @@
     "Tools/board-check/test/select-suites.test.mjs",
     "Tools/board-check/test/check-entities.test.mjs",
     "Tools/daily-editing-warmup-generator/test/smoke-entities.mjs",
-    "Tools/blender-art/test/validate-art.test.mjs"
+    "Tools/blender-art/test/validate-art.test.mjs",
+    "conference-signup/test/core.test.mjs",
+    "conference-signup/test/worker.test.mjs",
+    "conference-signup/test/smoke-flow.mjs"
   ],
   "expectedFailures": []
 }

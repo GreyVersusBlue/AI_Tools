@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Conference Staff Desk</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="wrap wide">
+  <div id="demo" class="banner demo" hidden><b>Demo mode.</b> Bookings live only in this browser. The staff PIN is <b>1234</b>.</div>
+
+  <section id="gate" class="card" style="max-width:420px;margin:60px auto">
+    <h1 style="font-size:24px">Staff desk</h1>
+    <p class="hint">Conference sign-ups: book for a family, block times, export the schedule.</p>
+    <form id="pinForm">
+      <label for="pin">Staff PIN</label>
+      <input id="pin" type="password" autocomplete="current-password" inputmode="numeric">
+      <p class="status" id="pinStatus" aria-live="polite"></p>
+      <button class="btn" type="submit">Open staff desk</button>
+    </form>
+  </section>
+
+  <div id="desk" hidden>
+    <div class="bar">
+      <h1 id="deskTitle">Staff desk</h1>
+      <div class="switch" role="group" aria-label="Family sign-ups">
+        <span id="openLabel">Family sign-ups</span>
+        <button type="button" id="openBtn" aria-pressed="false" aria-describedby="openLabel">Closed</button>
+      </div>
+      <button type="button" class="btn" id="exportBtn">Export meetings</button>
+      <button type="button" class="btn ghost" id="lockBtn">Lock</button>
+    </div>
+    <p class="status" id="deskStatus" aria-live="polite"></p>
+
+    <div class="tabs" role="tablist" aria-label="Staff desk sections">
+      <button type="button" role="tab" id="tab-grid" aria-selected="true" aria-controls="pane-grid">Schedule</button>
+      <button type="button" role="tab" id="tab-list" aria-selected="false" aria-controls="pane-list" tabindex="-1">Meetings</button>
+      <button type="button" role="tab" id="tab-setup" aria-selected="false" aria-controls="pane-setup" tabindex="-1">Setup</button>
+    </div>
+
+    <section id="pane-grid" role="tabpanel" aria-labelledby="tab-grid">
+      <p class="key" aria-hidden="true">
+        <span><i style="background:var(--ok-soft)"></i>Booked</span>
+        <span><i style="background:var(--warn-soft)"></i>Team conference</span>
+        <span><i style="background:var(--kraft-soft)"></i>Held by a family</span>
+        <span><i style="background:repeating-linear-gradient(135deg,var(--line) 0 4px,transparent 4px 8px)"></i>Blocked</span>
+        <span>Click any cell to book, cancel or block.</span>
+      </p>
+      <div class="grid-scroll"><table class="matrix" id="matrix"></table></div>
+    </section>
+
+    <section id="pane-list" role="tabpanel" aria-labelledby="tab-list" hidden>
+      <div class="row" style="margin-bottom:10px">
+        <label for="filter" class="sr">Filter meetings</label>
+        <input id="filter" type="search" class="grow" placeholder="Filter by student, parent, teacher or code" style="max-width:420px">
+        <span id="listCount" class="fine"></span>
+      </div>
+      <div class="scroll-x"><table class="list" id="list"></table></div>
+    </section>
+
+    <section id="pane-setup" role="tabpanel" aria-labelledby="tab-setup" hidden>
+      <div class="layout">
+        <div>
+          <form class="card" id="cfgForm">
+            <h2>Event</h2>
+            <label for="cSchool">School</label><input id="cSchool" type="text" maxlength="80">
+            <label for="cTitle">Event name</label><input id="cTitle" type="text" maxlength="80">
+            <label for="cDate">Date</label><input id="cDate" type="text" maxlength="80" placeholder="Tuesday, October 13, 2026">
+            <label for="cNotice">Message at the top of the family page (optional)</label><input id="cNotice" type="text" maxlength="300">
+            <div class="row" style="margin-top:12px">
+              <div class="grow"><label for="cHold">Hold a time for (minutes)</label><input id="cHold" type="number" min="1" max="60"></div>
+              <div class="grow"><label for="cMax">Most times one browser can hold</label><input id="cMax" type="number" min="1" max="20"></div>
+            </div>
+            <div class="row end" style="margin-top:14px"><button class="btn" type="submit">Save event details</button></div>
+            <p class="status" id="cfgStatus" aria-live="polite"></p>
+          </form>
+
+          <form class="card" id="blockForm">
+            <h2>Block or reopen times</h2>
+            <p class="hint">For a teacher who is out, or a time nobody can meet. A booked time must be cancelled first.</p>
+            <label for="bTeacher">Teacher</label><select id="bTeacher"></select>
+            <div class="row" style="margin-top:10px">
+              <div class="grow"><label for="bFrom">From</label><select id="bFrom"></select></div>
+              <div class="grow"><label for="bTo">Through</label><select id="bTo"></select></div>
+            </div>
+            <div class="row" style="margin-top:14px">
+              <button class="btn" type="submit" data-on="1">Block these times</button>
+              <button class="btn ghost" type="submit" data-on="0">Reopen them</button>
+            </div>
+            <p class="status" id="blockStatus" aria-live="polite"></p>
+          </form>
+        </div>
+        <div>
+          <form class="card" id="teachForm">
+            <h2>Teachers</h2>
+            <p class="hint">One per line: <b>Name | Subject | Grade</b>. A teacher keeps their meetings if the name stays the same. Someone with meetings cannot be removed.</p>
+            <label for="tText" class="sr">Teachers</label>
+            <textarea id="tText" rows="14" spellcheck="false"></textarea>
+            <div class="row end" style="margin-top:12px"><button class="btn" type="submit">Save teachers</button></div>
+            <p class="status" id="teachStatus" aria-live="polite"></p>
+          </form>
+          <form class="card" id="resetForm">
+            <h2>Start over</h2>
+            <p class="hint">Clears every meeting, hold and block. Teachers and event details stay. Export first.</p>
+            <label for="rConfirm">Type RESET to confirm</label><input id="rConfirm" type="text" autocomplete="off">
+            <div class="row" style="margin-top:12px"><button class="btn danger" type="submit">Clear all meetings</button></div>
+            <p class="status" id="resetStatus" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<dialog id="cell" aria-labelledby="cellTitle">
+  <h2 id="cellTitle"></h2>
+  <div id="cellBody"></div>
+</dialog>
+
+<script src="config.js"></script>
+<script src="../_shared/export.js" defer></script>
+<script type="module" src="admin.js"></script>
+</body>
+</html>
