@@ -248,7 +248,9 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
        pcl_idnames_v1  Path 3 P4's id map in 068 Parent Contact Log:
                        {roster, ids:{id: name}}. A list of student names, so
                        the year-end rollover takes it with the rest. */
-  const SINCE_THE_MIGRATION = ['pcl_idnames_v1'];
+  /* conf-*: the parent conference sign-up's browser keys postdate 009's list; the
+     three that hold a family's names are marked student data in the registry. */
+  const SINCE_THE_MIGRATION = ['pcl_idnames_v1', 'conf-who', 'conf-receipts', 'conf-demo-state'];
 
   /* Keys the old list DID have a chance to cover and did not, which a later
      session has deliberately reclassified. This is a different excuse from the

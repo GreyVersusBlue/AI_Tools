@@ -1,0 +1,22 @@
+# Conference sign-up API: one Worker, one Durable Object that holds the whole event.
+# The pages themselves are static files in the repo (conference-signup/*.html) and are
+# served by GitHub Pages with the rest of the site; this Worker is only /api/*.
+# Deploy steps and what has and has not been verified: README.md.
+name = "conference-signup"
+main = "src/worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Origins allowed to call the API from a browser, comma separated.
+ALLOWED_ORIGINS = "https://aspermylessonplan.com"
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "ConferenceRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ConferenceRoom"]
+
+# Secret, set with `npx wrangler secret put ADMIN_PIN` (never in this file):
+#   ADMIN_PIN   the staff PIN for admin.html

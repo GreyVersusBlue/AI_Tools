@@ -599,3 +599,9 @@ files must be added there too.
   load-bearing. Add a new theme at the end.
 - Nothing leaves the browser: no analytics, no uploads, no external form
   posts. localStorage (or IndexedDB for big blobs) is the persistence layer.
+  **The one exception is `conference-signup/`** (2026-10-09, Devon's request): the parent
+  conference booking page, which has to share state between families' phones and so keeps names on
+  a Cloudflare Worker. It lives outside `Tools/`, is not precached, and `sw.js` bypasses it so a
+  staff browser never shows a stale schedule. Its rules are one pure file, `conference-signup/core.js`,
+  run by the Worker, by the page's demo mode and by the tests; change them there and nowhere else.
+  `npm run test:conference-signup`. Its README lists what has not been verified.
