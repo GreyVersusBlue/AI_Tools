@@ -373,7 +373,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `qr-scan.js` 10 · `tool-registry.js` 9 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
-| Tier 1 rows | **168**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
+| Tier 1 rows | **169**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
 | Art | **130** ledger entries: 046's relief (29,726 B), 030's board backdrop and tiles (5,348 B), 042's ten seals and ribbons (84,170 B), 071's twelve pictures (157,454 B), 080's piece atlas (43,318 B), 87 tool icons, the sprite (58,032 B), 4 shortcut PNGs, the 4 app-mark PNGs (14,457 B), the 4 hero WebPs (64,832 B), the test tile's light/dark pair |
 | Dark mode / fullscreen | 92 of 92 themed pages native dark (`path5:next`; 8 live pages load no `a11y.js`: 035 is rank 5's decision, the rest are standalone on purpose); `stage.js` on 10 pages. Path 5 is finished |
 | CI | Pull requests run `--changed`; a push to `main` runs everything, ~32 min. A PR touching `_shared/`, `index.html`, `package.json` or `Tools/board-check/` is site-wide (#296's took 38 min) |
@@ -464,7 +464,7 @@ session hitting one of these ships rather than stalls.
 
 ## Tier 1 — the ranked index
 
-Ranks are a single contiguous 1..171 order with no ties. **Area** is a tool number,
+Ranks are a single contiguous 1..169 order with no ties. **Area** is a tool number,
 `_shared/`, or `site`. **Size** is quarter / half / one / two-plus sessions. **Claimed** is the
 concurrency mechanism described above — leave it empty unless you are working the row.
 **Detail** links to the section in Tier 2 that carries the idea in full.
@@ -638,6 +638,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 166 | Path 22 P12 — another site tool as a widget (same-origin frame, e.g. 024 Number Talks, 080 Manipulatives) | 087 | 1 | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 | 167 | Path 22 P13 — 004's phase engine (agenda, round robin, random, overtime) onto `_shared/countdown.js` | 004 | ½ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
 | 168 | Path 22 P14 — one remote wrapper: `cc-remote.js` and `cs-remote.js` onto a single `_shared/` file | `_shared/` | ¼ | | [Path 22](#path-22--class-screen-a-widget-board-for-the-projector) |
+| 169 | Conference sign-up — run the Worker under workerd (`wrangler dev --local`) in a suite: the bundle, the JSON import, the Durable Object migration, the PIN and CORS paths. Nothing has run on Cloudflare's runtime yet | `conference-signup/` | ½ | | [Conference sign-up](#conference-sign-up--parent-bookings-outside-tools) |
 
 ## How to work this list
 
@@ -7463,6 +7464,30 @@ lang:'en-US'}`, registered in 009 `KNOWN_GROUPS` (settings-class).
 
 ---
 
+### Conference sign-up — parent bookings, outside Tools/
+
+Shipped in PR #360 (2026-10-09, `CACHE_VERSION` v295, Devon's request; see `HISTORY.md`). Parents name a child,
+search a teacher, hold times in a "book bag" for ten minutes, check out and download PDF tickets; staff get a PIN
+desk with booking, blocks, a team-conference override and an Excel export shaped like the old sheet. All rules are
+one pure file, `conference-signup/core.js`, run by a Cloudflare Worker + Durable Object, by the page's demo mode and
+by the tests (`npm run test:conference-signup`). **It is the one part of the site that is neither offline nor
+browser-only**, and it is student-facing, which Devon authorised for this page only. It does not extend to any other row.
+
+**Remaining steps.** The go-live checklist is a parked person-task (Cross-cutting, "Conference sign-up go-live").
+The one workable row is rank 169: put the Worker under workerd locally, because every Worker test so far runs in
+Node against a fake Durable Object, so bundling, the `with { type: 'json' }` import, the SQLite-backed migration and
+runtime limits are unproven.
+
+**Decided out for v1, in Devon's words or by his answers (reverse cheaply, but ask first):**
+- A family cancelling or changing a time itself, and confirmation email. Staff cancel; families call the office.
+- A roster check on the child's name. Names are free text, so two spellings of one child can hold the same time
+  with two teachers; a roster check would put the student roster on the server.
+- Auto-deploying the Worker on merge (a GitHub Action with the token in repo secrets). Offered, declined for now.
+
+**Known soft spots to look at once it has real use:** the 15-second poll (about 24,000 requests for 600 families over
+ten minutes; check the current free-plan limits), the per-address request cap on a school's shared wifi, and the PDF
+ticket's Latin-1-only text (names outside it lose characters).
+
 ## Cross-cutting work, sweeps and loose ends
 
 Cross-tool observations, extraction candidates and small defects, gathered by the
@@ -7487,6 +7512,22 @@ forgotten — see the Stage 1 entry in `HISTORY.md`, which says the same thing.
   that `sw.js` answers itself with a 303 into Class Roster Hub; `test:sw-tiers` and
   `test:roster-hub` cover the two halves in a browser. Nobody has installed the PWA on a
   phone and shared a CSV into it from the OS share sheet.
+- **Conference sign-up go-live** (added 2026-10-09; `conference-signup/`, PR #360). The pages merge as a
+  **demo**: `conference-signup/config.js` names no server, so nobody can book anything real. Going live
+  needs Devon's Cloudflare account and his choice of staff PIN, so no session can finish it:
+  1. In dash.cloudflare.com, Workers & Pages, Create, **import the GitHub repo**; root directory
+     `conference-signup/worker`, no build command, deploy command `npx wrangler deploy`, Worker name
+     `conference-signup` (it must match `wrangler.toml`). (Or, with a terminal: `CLOUDFLARE_API_TOKEN` and
+     `CLOUDFLARE_ACCOUNT_ID` set, `npx wrangler deploy` from that folder.)
+  2. Add a **secret** (not a plain variable) `ADMIN_PIN` on the Worker. Without it every staff route is a 503.
+  3. Put the Worker's `https://conference-signup.<subdomain>.workers.dev` address in `config.js`
+     (`window.CONF_API`) and merge. If the pages are ever served from another address, add it to
+     `ALLOWED_ORIGINS` in `wrangler.toml`.
+  4. **Dry run before the link goes out:** two phones and a laptop. Reserve the same time from both phones
+     (the second should be told it is held); let a hold run out and watch it return; check out; download the
+     ticket and **print it**; **open the Export meetings workbook in Excel**; close and reopen sign-ups;
+     then Setup, Clear all meetings. Record each result in `HISTORY.md` and delete the bullet.
+  5. After the real evening: export, then clear the event. Names should not sit on the server longer than needed.
 - **The recurring "not verified" list, as one checklist** (added 2026-09-23 after a repo
   review found the same five items in every P3 handoff since #231). About 30 minutes with a
   phone, a laptop and a printer; record each result in `HISTORY.md`:

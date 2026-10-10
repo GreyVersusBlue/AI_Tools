@@ -19,3 +19,6 @@ Tools/board-check/.sw-tiers-staging/
 
 # Python bytecode from the Blender scene scripts (Tools/blender-art/)
 __pycache__/
+
+# Cloudflare Worker local state (conference-signup/worker)
+.wrangler/

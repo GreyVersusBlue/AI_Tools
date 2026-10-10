@@ -109,6 +109,13 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 
 `index.html` at the repo root is the toolkit landing page. Each tool's own entry point is a single `.html` file inside `Tools/`. Supporting scripts, fonts, and libraries for a given tool live in a matching subfolder under `Tools/` (e.g. `Tools/final-grade-checker/`, `Tools/schedule/`, `Tools/seating-chart/`). You shouldn't need to touch those unless you're editing the tool itself.
 
+## Parent conference sign-up
+
+[`conference-signup/`](conference-signup/README.md) is a family-facing booking page (search a
+teacher, hold a time for ten minutes in a "book bag", check out, download tickets) with a staff
+desk and an Excel export. It is **not** a toolkit page: it needs a small Cloudflare Worker to share
+bookings between phones, so it is the one thing here that is neither offline nor browser-only.
+
 ## Backlog
 
 Everything not yet built — per-tool enhancements, platform work, and the multi-phase upgrades to

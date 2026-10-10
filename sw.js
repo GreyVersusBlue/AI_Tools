@@ -724,6 +724,10 @@ self.addEventListener('fetch', (event) => {
   }
   if (request.method !== 'GET') return;
 
+  // The parent conference sign-up is a live booking page, not a tool: it must never
+  // come from a cache, or a staff browser would show a stale schedule (v296).
+  if (url.pathname.indexOf('/conference-signup/') !== -1) return;
+
   // Wikimedia map lookups/images: capped runtime cache, never precached.
   if (WIKI_HOSTS.includes(url.hostname)) {
     event.respondWith(
