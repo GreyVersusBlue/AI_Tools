@@ -7515,6 +7515,9 @@ forgotten — see the Stage 1 entry in `HISTORY.md`, which says the same thing.
 - **Conference sign-up go-live** (added 2026-10-09; `conference-signup/`, PR #360). The pages merge as a
   **demo**: `conference-signup/config.js` names no server, so nobody can book anything real. Going live
   needs Devon's Cloudflare account and his choice of staff PIN, so no session can finish it:
+  **Done 2026-10-09:** the Worker is deployed at `https://conference-signup.devons-moore.workers.dev` (wrangler 4.149.0
+  from huginn) and `config.js` names it; probed live for state reads, origin refusal, preflight and a refused hold while
+  closed. **Still open: step 2 (`ADMIN_PIN`) and step 4 (the dry run).**
   1. In dash.cloudflare.com, Workers & Pages, Create, **import the GitHub repo**; root directory
      `conference-signup/worker`, no build command, deploy command `npx wrangler deploy`, Worker name
      `conference-signup` (it must match `wrangler.toml`). (Or, with a terminal: `CLOUDFLARE_API_TOKEN` and
