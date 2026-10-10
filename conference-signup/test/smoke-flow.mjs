@@ -34,6 +34,11 @@ const server = await serve(PORT);
 const browser = await launch();
 const A = await prepPage(browser, BASE, { width: 420, height: 900, mobile: true });
 const context = A.context();
+// The deployed pages point config.js at the live Worker (#363). This suite is the demo-mode
+// flow, so every page in the context gets the empty address, and nothing here reaches the network.
+const demoConfig = route => route.fulfill({ contentType: 'text/javascript', body: "window.CONF_API = '';" });
+await context.route(/\/config\.js(\?.*)?$/, demoConfig);
+await A.route(/\/config\.js(\?.*)?$/, demoConfig); // prepPage's own page route comes before a context one
 
 console.log('Conference book bag — family and staff flow (demo mode)');
 
