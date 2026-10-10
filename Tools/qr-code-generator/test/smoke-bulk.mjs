@@ -212,7 +212,9 @@ console.log('016 — batch codes from a spreadsheet');
     fs.writeFileSync(csv, '﻿Name,Link\r\n"Lab, north",https://example.com/north\r\nLab south,https://example.com/south\r\n');
     await page.fill('#bulk-text', '');
     await page.setInputFiles('#bulk-file', csv);
-    await page.waitForFunction(() => /will make a code/.test(document.getElementById('bulk-check').textContent));
+    // The check box still holds the last paste's result, so "will make a code" is true before the
+    // file is read; wait for the file's own text to be in the box (a slow FileReader failed this in CI).
+    await page.waitForFunction(() => /Lab south/.test(document.getElementById('bulk-text').value) && /will make a code/.test(document.getElementById('bulk-check').textContent));
     const v = await page.inputValue('#bulk-text');
     ok(v.charCodeAt(0) !== 0xFEFF && /^Name,Link/.test(v), 'the file is read into the box without its byte order mark');
     ok(/2 rows will make a code; the first row \(column names\) is skipped/.test(await checkText(page)), 'a file is checked as soon as it is chosen: ' + await checkText(page));
