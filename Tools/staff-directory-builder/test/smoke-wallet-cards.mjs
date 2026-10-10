@@ -106,7 +106,11 @@ console.log('Staff Directory — wallet and lanyard cards');
   const now = await captureOldPrint(page, URL_PAGE);
   for (const k of ['flat', 'grouped']) {
     eq(now[k].html, gold[k].html, `${k}: Print directory builds the same sheet HTML as the page before the cards`);
-    eq(now[k].text, gold[k].text, `${k}: and the same PDF text, page for page`);
+    // pdftotext -layout pads columns to its own width, and CI installs whatever poppler apt has that day
+    // (one column wider since Oct 2026). Words, order and pages are what this holds, so runs of spaces
+    // are collapsed; the sheet HTML above is the layout check.
+    const flat = t => t.replace(/[ \t]+/g, ' ');
+    eq(flat(now[k].text), flat(gold[k].text), `${k}: and the same PDF text, page for page`);
     eq(now[k].pages, gold[k].pages, `${k}: and the same number of PDF pages (${gold[k].pages})`);
   }
   eq(await page.evaluate(() => document.body.classList.contains('print-cards')), false, 'Print directory never turns the cards mode on');
