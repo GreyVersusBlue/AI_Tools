@@ -33,6 +33,8 @@ no claim row and no rank change; the header was not rewritten.
 - **No family-side cancel, no email.** Devon: confirmations on screen plus a PDF ticket are enough, and
   the current process handles changes already.
 
+**Deployed 2026-10-09** (a follow-up, `config.js` now names `https://conference-signup.devons-moore.workers.dev`): `wrangler deploy` from huginn worked first time, and curl from outside confirmed the state read, the 403 for a foreign origin, the preflight, `closed` on a hold and `no-pin-configured` on a staff route. The Durable Object migration and the JSON import bundled without a change. Still not done at that point: the staff PIN and the two-phone dry run.
+
 **What I did not verify.** Nothing has run on Cloudflare: the Worker's wiring is tested in Node against a fake
 Durable Object (`worker.test.mjs`), the pages in Chromium in demo mode (`smoke-flow.mjs`), and the rules
 in `core.test.mjs`. Not checked: `wrangler deploy`, the SQLite-backed migration, wrangler bundling the

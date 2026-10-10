@@ -3,4 +3,4 @@
    (worker/README.md), set it to the Worker's address, e.g.
      window.CONF_API = 'https://conference-signup.<your-subdomain>.workers.dev';
    and commit this file. Nothing else needs to change. */
-window.CONF_API = '';
+window.CONF_API = 'https://conference-signup.devons-moore.workers.dev';
