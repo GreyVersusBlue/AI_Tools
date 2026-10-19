@@ -4,11 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Family Progress Reports</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="../_shared/vendor/pdfjs/pdf.min.js"></script>
+<script src="../_shared/vendor/pdfjs/pdf.worker.min.js"></script>
 <style>
 :root{
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -268,7 +265,7 @@ function groupLines(toks){
   return lines;
 }
 async function readPdf(file){
-  if(!window.pdfjsLib)throw new Error("The PDF reader didn't load. Check your connection and reload the page.");
+  if(!window.pdfjsLib)throw new Error("The PDF reader didn't load. Reload the page and try again.");
   const data=new Uint8Array(await file.arrayBuffer());
   const pdf=await pdfjsLib.getDocument({data,isEvalSupported:false}).promise;
   const pages=[];
@@ -663,7 +660,7 @@ function downloadReports(keys){
   const body=keys.map(k=>{const s=students.get(k);return sheetHTML(s,analyze(s),notes[k]);}).join("\n");
   const first=students.get(keys[0]);
   const title=keys.length===1?`Progress report - ${first.name}`:`Progress reports - ${titleCase(first.course||"")} ${first.mp||""}`;
-  const doc=`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,700&display=swap" rel="stylesheet"><style>body{margin:0;padding:24px;background:#EEF2EC}.sheet{margin:0 auto 24px}@page{size:letter;margin:.4in}@media print{body{padding:0;background:#fff}.sheet{margin:0}}${css}</style></head><body>${body}</body></html>`;
+  const doc=`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)}</title><style>body{margin:0;padding:24px;background:#EEF2EC}.sheet{margin:0 auto 24px}@page{size:letter;margin:.4in}@media print{body{padding:0;background:#fff}.sheet{margin:0}}${css}</style></head><body>${body}</body></html>`;
   const safe=s=>s.replace(/[^\w\- ]+/g,"").trim().replace(/\s+/g,"_");
   save(keys.length===1?`Progress_Report_${safe(first.name)}.html`:`Progress_Reports_${safe(first.mp||"class")}.html`,doc);
 }
