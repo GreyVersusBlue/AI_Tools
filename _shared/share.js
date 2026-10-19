@@ -262,6 +262,7 @@
       '.share-sheet-qr p{margin:.5rem 0 0;font-size:.82rem;color:inherit;opacity:.75}' +
       '.share-sheet-status{margin:10px 0 0;font-size:.85rem;min-height:1.2em;word-break:break-word}' +
       '.share-sheet-status.error{color:var(--err,#a3372b)}' +
+      '.share-sheet-file{display:block;margin:8px 0 0;padding:.5rem .8rem;font:inherit;font-weight:600;background:var(--card-2,#f1f0ea);color:inherit;border:1px solid var(--line,#dcdad2);border-radius:8px;cursor:pointer}' +
       '.share-sheet-url{display:block;width:100%;margin:6px 0 0;font:inherit;font-size:.8rem;padding:.4rem .5rem;border:1px solid var(--line,#dcdad2);border-radius:6px;background:var(--card,#fff);color:inherit}';
     doc.head.appendChild(st);
   }
@@ -449,8 +450,26 @@
         }
         var r = global.Handoffs.open(sr.entry, sendPayload);
         say(r.message, !r.ok);
+        offerFile(r.file);
       });
     });
+
+    /* A handoff too long for a link may hand back a file to save instead
+       (handoffs.js, `file`; 053 -> 030): one button under the status line,
+       gone again after any other send. */
+    var fileBtn = null;
+    function offerFile(file) {
+      if (fileBtn) { fileBtn.remove(); fileBtn = null; }
+      if (!file) return;
+      fileBtn = el('button', 'share-sheet-file', file.label || ('Save ' + file.name));
+      fileBtn.type = 'button';
+      fileBtn.setAttribute('data-share', 'file');
+      fileBtn.addEventListener('click', function () {
+        download(file.name, file.text, file.mime);
+        say(file.saved || ('Saved as ' + file.name + '.'));
+      });
+      status.parentNode.insertBefore(fileBtn, status.nextSibling);
+    }
 
     if (nativeBtn) {
       nativeBtn.addEventListener('click', function () {

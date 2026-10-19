@@ -62,7 +62,9 @@
    Two optional fields: `sheet: false` (no row in the share sheet; the page
    calls Handoffs.open() from a control of its own), and `maxLink` with
    `tooLong(built)`, the longest URL open() will open and the sentence it
-   returns instead (see open(); only 053 -> 030 sets it).
+   returns instead (see open(); only 053 -> 030 sets it). With those, an
+   entry may set `file(payload)`, the payload as a file the receiver imports,
+   which open() hands back with the refusal and the share sheet offers.
 
    The receiver's FILE and PARAMETER are not in the entry. They come from
    _shared/tool-registry.js: `file` is what every row has always carried, and
@@ -363,7 +365,33 @@
         var n = built.payload.questions.length;
         return 'Your ' + n + ' questions make a link of ' + built.url.length.toLocaleString('en-US') +
           ' characters, and a link longer than about 7,500 may not open. Nothing was sent. ' +
-          'About fifty short questions fit in one link; sending a longer list is not built yet.';
+          'Save them as a bank file instead, then import it on the Quiz / Review Game Board ' +
+          '(Question Bank, then Share the bank).';
+      },
+      /* Past the bound, a FILE instead of a link (Devon, 2026-10-07: "yes,
+         the file"). It is the bank file 030's "Share the bank" card already
+         imports: the envelope QuestionBank.toJSON() writes (format
+         'aplp-question-bank', version 1), holding the link's questions with
+         the sender's slug in `sharedFrom` as fromLink() would set it. No id
+         travels here either, so 030 adds each one as new and skips one it
+         already has; the same file imported twice adds nothing. 053 does not
+         load question-bank.js, so the envelope is written out here, and
+         Tools/share/test/trivia-bank-file.test.mjs holds it to toJSON()'s.
+         030 shows the file before it stores anything, as for any import. */
+      file: function (payload) {
+        return {
+          name: 'custom-trivia-question-bank.json',
+          mime: 'application/json',
+          label: 'Save a bank file instead',
+          saved: 'Saved as custom-trivia-question-bank.json. On the Quiz / Review Game Board, open Question Bank and import it under Share the bank; it shows what it would add before anything is stored.',
+          text: JSON.stringify({
+            format: 'aplp-question-bank', version: 1,
+            title: payload.name, exported: new Date().toISOString(),
+            questions: payload.questions.map(function (q) {
+              return { prompt: q.prompt, answer: q.answer, unit: q.unit, sharedFrom: payload.from };
+            })
+          }, null, 2)
+        };
       }
     }
   ];
@@ -415,8 +443,12 @@
        characters with an error page: a new tab showing that is worse than a
        sentence here. `tooLong(built)` words the refusal. */
     if (entry.maxLink && built.url.length > entry.maxLink) {
+      /* An entry with `file(payload)` offers the same payload as a file
+         instead: { name, mime, text, label, saved }, which the share sheet
+         turns into a button (053 -> 030 is the one). */
       return { ok: false, url: null, tooLong: true,
-        message: typeof entry.tooLong === 'function' ? entry.tooLong(built) : 'That is too much to send in one link. Nothing was sent.' };
+        message: typeof entry.tooLong === 'function' ? entry.tooLong(built) : 'That is too much to send in one link. Nothing was sent.',
+        file: typeof entry.file === 'function' ? entry.file(built.payload) : null };
     }
     var w = global.open(built.url, '_blank', 'noopener');
     if (!w) return { ok: false, url: built.url, message: 'Your browser blocked the new tab. Allow pop-ups for this page and try again.' };

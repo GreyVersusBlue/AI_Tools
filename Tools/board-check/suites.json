@@ -237,6 +237,7 @@
     "Tools/share/test/smoke-pairing-qr.mjs",
     "Tools/share/test/share.test.mjs",
     "Tools/share/test/handoffs.test.mjs",
+    "Tools/share/test/trivia-bank-file.test.mjs",
     "Tools/share/test/smoke-share-rollout.mjs",
     "Tools/share/test/smoke-send-to.mjs",
     "Tools/print-kit/test/print-kit.test.mjs",
