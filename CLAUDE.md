@@ -550,7 +550,9 @@ files must be added there too.
   transform returns `{ v, from, name, questions }`, opened by 030 at `?questions=` (053 is the one sender).
   `QuestionBank.fromLink()` is the only reader of that link and takes no id from it, and 030 stores an arrival
   only when the teacher presses Add; a new sender follows 053's entry, `maxLink` included
-  (`npm run test:received-questions`).
+  (`npm run test:received-questions`). Since v297 a list past `maxLink` is offered as a **bank file** instead
+  (the entry's `file(payload)`, a button in the share sheet), in `toJSON()`'s envelope, which 030's "Share the
+  bank" import reads; a sender's `file` is held to that envelope as 053's is (`npm run test:trivia-bank-file`).
   Since v276 030's bank tab edits everything a question holds (`Tools/review-game-board/rgb-bank-editor.js`): the
   right choice is the one whose text is the answer, so marking one writes the answer and no field was added; a Save
   from a form sends only the fields the form shows, with the id, so the rest of the question stays; and **a file is

@@ -9,6 +9,39 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 053 → 030: a trivia list too long for one link goes to the bank as a file (2026-10-19, AI-14, `CACHE_VERSION` v297)
+
+BACKLOG rank 94, kept and rewritten to its one leftover (a ready-made board with categories and points, not decided).
+Devon, 2026-10-07, asked whether a list past the link bound should go as a file or as a choice of questions: "yes, the file".
+
+- **What changed.** Since v269, 053's "Send to Quiz / Review Game Board" refused a link past 7,500 characters (about fifty
+  short questions) with "sending a longer list is not built yet". Now the refusal says to save a bank file, and the share
+  sheet shows one button under its status line, **Save a bank file instead**, which saves `custom-trivia-question-bank.json`:
+  the envelope `QuestionBank.toJSON()` writes (`format: 'aplp-question-bank'`, version 1, title, date, questions), holding the
+  link's own questions with `sharedFrom: 'cultural-trivia-card-generator'` as `fromLink()` sets it, and no id. 030's existing
+  "Share the bank" import reads it, shows it before storing, and only adds; the same file twice adds nothing. Nothing on 030
+  changed.
+- **Where.** `_shared/handoffs.js`: an entry with `maxLink` may now set `file(payload)`, and `open()` returns it with the
+  refusal. `_shared/share.js`: the sheet turns a returned file into the button (gone again after any other send). 053's
+  page is unchanged. **The call:** the envelope is written out in `handoffs.js` and not by `QuestionBank.toJSON()`, because
+  053 does not load `question-bank.js` (Path 12 P2's rule); the new suite holds the two envelopes to the same keys, format
+  and version, so a change to the bank's format fails there.
+- **Tests.** `npm run test:trivia-bank-file` (pure Node, 26 checks, also in `test:share`): the file a 150-question list
+  makes, run through `QuestionBank.parse()`, `cleanMedia()`, 030's `ReviewBankEditor.importPlan()` and `importQuestions()`.
+  Broken on purpose five ways in `handoffs.js` (format renamed, version 2, answer left out, `sharedFrom` left out, no file
+  offered), all caught. `smoke-send-to.mjs` (112) presses the button, reads the saved file, imports it on 030's bank tab
+  (preview, Add, a second import adding nothing) and runs axe on the sheet with the button; with `offerFile` disabled it
+  goes red. `run-suites --only share` (22), `--only service-worker`, `--only question-bank`, `test:a11y -- --only 053`,
+  all twelve guards, lint and `check:precache -- --base origin/main` green on huginn.
+- **Not verified.** No file saved from a real 053 list was imported by a person; the 7,500 bound is still unmeasured against
+  the live host; the button was seen only by the suite, in Chromium, in the light theme.
+- **Recorded in BACKLOG with this (Devon's answers the 2026-10-07 sweep found unrecorded):** Path 12's numbered questions
+  closed on their defaults ("just keep all 65 defaults"); named sets "B", an ordered list saved with the bank (not built,
+  rank 28); 062's map questions stay in Geography Bee ("keep the geography bee"); 035's theme "bless and document"
+  (2026-10-03; rank 5 is now the write-up); Tesseract on demand is acceptable with a plain first-use note (2026-10-05;
+  rank 52's Standing decision). **Not changed:** the "interleave per-tool work" line under "Decisions only Devon can
+  make", because no answer of his to it was found in either record.
+
 ## Parent conference sign-up: "Conference Book Bag" (2026-10-09, Devon's request, `CACHE_VERSION` v295)
 
 Built at Devon's request to replace SignUpGenius for parent-teacher conferences (about 600 students, 32
