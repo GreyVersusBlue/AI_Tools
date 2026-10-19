@@ -33,7 +33,8 @@
 <script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <script src="backup-restore/br-transfer.js"></script>
 <script src="backup-restore/br-pair.js"></script>
-<script src="backup-restore/br-crypto.js"></script>
+<script src="../_shared/backup-crypto.js"></script>
+<script src="../_shared/restore-kit.js"></script>
 <style>
   /* Path 5 P3: the semantic tints, in 001's values (the reference adopter),
      replacing the near-misses this page carried. --warn is 023's fill colour and
@@ -361,7 +362,7 @@
      figure. Used only to draw a meter and warn early — never to block a write. */
   var LS_BUDGET = 5 * 1024 * 1024;
   var FORMAT_ID = 'aspermylessonplan-backup';
-  var FORMAT_VERSION = 2;
+  var FORMAT_VERSION = RestoreKit.FORMAT_VERSION;
 
   /* This page's own bookkeeping, plus the write probes tools use to ask whether
      storage works at all (__scv_probe__ and friends). A probe exists for a
@@ -915,7 +916,7 @@
   var dlMsgEl = document.getElementById('dlMsg');
   function showDlMsg(kind, text) { showBoxMsg(dlMsgEl, kind, text); }
 
-  /* ---------- the optional passphrase lock (br-crypto.js) ----------
+  /* ---------- the optional passphrase lock (_shared/backup-crypto.js) ----------
      Off by default: a forgotten passphrase is a lost backup, and a lost
      backup is the failure this whole page exists to prevent. The year-end
      archive below is never locked, for the same reason, a year later. */
@@ -980,50 +981,10 @@
   function showMsg(kind, text) { msgEl.className = kind; msgEl.textContent = text; }
   function clearMsg() { msgEl.className = ''; msgEl.textContent = ''; }
 
-  /**
-   * Reads a backup file of any version this page has ever written and hands
-   * back one shape. Version 1 files — everything downloaded before 2026-08 —
-   * have no `format` stamp and no `indexedDB` section; they are recognised by
-   * their `source` string and their `data` object, and they restore unchanged.
-   * Returns `{ envelope, flags }`, where flags are things worth telling the
-   * teacher before they press a button.
-   */
-  function readEnvelope(parsed) {
-    var flags = [];
-    if (!parsed || typeof parsed !== 'object') return { error: 'That file isn’t a backup — it doesn’t contain an object at all.' };
-    if (!parsed.data || typeof parsed.data !== 'object' || Array.isArray(parsed.data)) {
-      return { error: 'That doesn’t look like a backup from this page — no "data" section found.' };
-    }
-    var version = Number(parsed.formatVersion) || 0;
-    if (!version) {
-      if (typeof parsed.source === 'string' && parsed.source.indexOf('AsPerMyLessonPlan') !== -1) version = 1;
-      else { version = 1; flags.push({ text: 'This file has no version stamp and does not name this site as its source. It may be from somewhere else — check the list below carefully before restoring.', bad: true }); }
-    }
-    if (version > FORMAT_VERSION) {
-      flags.push({ text: 'This backup was written by a newer version of this page (format ' + version + ', this page reads ' + FORMAT_VERSION + '). Anything it contains that this page does not understand will be skipped.', bad: false });
-    }
-    var keys = Object.keys(parsed.data);
-    if (!keys.length) return { error: 'That backup is empty — nothing to restore.' };
-
-    var nonString = keys.filter(function (k) { return typeof parsed.data[k] !== 'string'; });
-    if (nonString.length) {
-      flags.push({ text: nonString.length + ' item' + (nonString.length === 1 ? '' : 's') + ' in this file are not stored as text and will be skipped: ' + nonString.slice(0, 5).join(', ') + '.', bad: true });
-    }
-    if (parsed.meta && typeof parsed.meta.itemCount === 'number' && parsed.meta.itemCount !== keys.length) {
-      flags.push({ text: 'This file says it holds ' + parsed.meta.itemCount + ' items but contains ' + keys.length + '. It may have been truncated or edited.', bad: true });
-    }
-    return {
-      envelope: {
-        formatVersion: version,
-        exportedAt: parsed.exportedAt || null,
-        label: typeof parsed.label === 'string' ? parsed.label : '',
-        data: parsed.data,
-        indexedDB: (parsed.indexedDB && typeof parsed.indexedDB === 'object') ? parsed.indexedDB : null,
-        meta: parsed.meta || null
-      },
-      flags: flags
-    };
-  }
+  /* Reading a file of any version this page has ever written is
+     RestoreKit.read() (_shared/restore-kit.js), shared with the per-tool
+     restore card a tool can host. */
+  function readEnvelope(parsed) { return RestoreKit.read(parsed); }
 
   function renderVerify(env, flags, fileSize) {
     var idbNames = env.indexedDB ? Object.keys(env.indexedDB) : [];
@@ -1148,56 +1109,8 @@
     return (document.querySelector('input[name="restoreMode"]:checked') || {}).value || 'replace';
   }
 
-  /**
-   * How restoring one key under `mode` would land, per named record inside it.
-   * Returns { replaced, added, untouched, lost, granular } where the first four
-   * are arrays of record names (or one placeholder name when the key is not a
-   * set of named records — a settings blob is all-or-nothing, and pretending
-   * otherwise is how you corrupt one).
-   */
-  function recordDiff(mode, key, oldRaw, newRaw) {
-    var res = { replaced: [], added: [], untouched: [], lost: [], granular: true };
-
-    // `<prefix>:data:<name>` — the whole key is exactly one named record.
-    var prefixMatch = /^(.*?:data:)(.+)$/.exec(key);
-    if (prefixMatch) {
-      var pName = prefixMatch[2];
-      if (oldRaw === null) res.added.push(pName);
-      else if (oldRaw === newRaw || mode === 'fill') res.untouched.push(pName);
-      else res.replaced.push(pName);
-      return res;
-    }
-
-    var whole = labelFor(key) || key;
-    if (oldRaw === null) { res.added.push(whole); res.granular = false; return res; }
-
-    var oldMap = parseNamedMap(oldRaw);
-    var newMap = parseNamedMap(newRaw);
-    if (!oldMap || !newMap) {
-      res.granular = false;
-      if (oldRaw === newRaw || mode === 'fill') res.untouched.push(whole);
-      else res.replaced.push(whole);
-      return res;
-    }
-
-    Object.keys(newMap.records).forEach(function (n) {
-      if (!Object.prototype.hasOwnProperty.call(oldMap.records, n)) { res.added.push(n); return; }
-      var same = JSON.stringify(oldMap.records[n]) === JSON.stringify(newMap.records[n]);
-      if (same || mode === 'fill') res.untouched.push(n);
-      else res.replaced.push(n);
-    });
-    Object.keys(oldMap.records).forEach(function (n) {
-      if (Object.prototype.hasOwnProperty.call(newMap.records, n)) return;
-      // Replace writes the file's value over the whole key, so anything only
-      // on this computer goes with it. Fill and Combine both keep it.
-      if (mode === 'replace') res.lost.push(n); else res.untouched.push(n);
-    });
-    return res;
-  }
-
-  function uniq(list) {
-    return list.filter(function (n, i) { return list.indexOf(n) === i; });
-  }
+  /* How each key would land, record by record (recordDiff), is
+     RestoreKit's, so a tool's own restore card shows the same numbers. */
 
   function nameList(names, cap) {
     var shown = names.slice(0, cap || 6);
@@ -1207,34 +1120,7 @@
   }
 
   /** Builds the group model for the loaded backup under the current mode. */
-  function buildRestoreGroups(env, mode) {
-    var groups = {};
-    Object.keys(env.data).forEach(function (key) {
-      if (typeof env.data[key] !== 'string') return;
-      var label = labelFor(key) || 'Other saved data';
-      var kind = classifyKey(key);
-      var id = label + ' ' + kind;
-      var existing;
-      try { existing = localStorage.getItem(key); } catch (e) { existing = null; }
-      var d = recordDiff(mode, key, existing, env.data[key]);
-      if (!groups[id]) groups[id] = { id: id, label: label, kind: kind, count: 0, keys: [],
-                                      replaced: [], added: [], untouched: [], lost: [], granular: true };
-      var g = groups[id];
-      g.count++;
-      g.keys.push(key);
-      g.replaced = g.replaced.concat(d.replaced);
-      g.added = g.added.concat(d.added);
-      g.untouched = g.untouched.concat(d.untouched);
-      g.lost = g.lost.concat(d.lost);
-      if (!d.granular) g.granular = false;
-    });
-    Object.keys(groups).forEach(function (id) {
-      var g = groups[id];
-      g.replaced = uniq(g.replaced); g.added = uniq(g.added);
-      g.untouched = uniq(g.untouched); g.lost = uniq(g.lost);
-    });
-    return groups;
-  }
+  function buildRestoreGroups(env, mode) { return RestoreKit.groups(env, mode); }
 
   /** Renders (or re-renders) the preview list and summary. Checkbox state is
       carried across a re-render — changing the mode must not silently re-tick
@@ -1311,55 +1197,8 @@
     radio.addEventListener('change', renderRestorePreview);
   });
 
-  /** `{name: record}`, possibly wrapped one level deeper under `.sets`. Returns
-      `{ container, records, wrapped }` so a merge can put the result back in
-      the shape it came out of. */
-  function parseNamedMap(raw) {
-    var v;
-    try { v = JSON.parse(raw); } catch (e) { return null; }
-    if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
-    if (v.sets && typeof v.sets === 'object' && !Array.isArray(v.sets)) {
-      return { container: v, records: v.sets, wrapped: true };
-    }
-    /* A flat object of primitives is a settings blob, not a set of named
-       records — merging those name by name would produce nonsense. */
-    var vals = Object.keys(v).map(function (k) { return v[k]; });
-    if (!vals.length || !vals.every(function (x) { return x && typeof x === 'object'; })) return null;
-    return { container: v, records: v, wrapped: false };
-  }
-
-  /**
-   * Combine one key's old and new value under the chosen mode.
-   *
-   * `fill` and `merge` differ only in who wins a name that exists on both
-   * sides, and both fall back to a whole-key decision when the value is not a
-   * set of named records — there is no meaningful way to half-merge a settings
-   * blob, and pretending otherwise would quietly corrupt it.
-   */
-  function combineValue(mode, oldRaw, newRaw) {
-    if (mode === 'replace' || oldRaw === null) return newRaw;
-    var oldMap = parseNamedMap(oldRaw);
-    var newMap = parseNamedMap(newRaw);
-    if (!oldMap || !newMap) return mode === 'fill' ? oldRaw : newRaw;
-
-    var merged = {};
-    Object.keys(oldMap.records).forEach(function (n) { merged[n] = oldMap.records[n]; });
-    Object.keys(newMap.records).forEach(function (n) {
-      if (merged[n] === undefined || mode === 'merge') merged[n] = newMap.records[n];
-    });
-    if (newMap.wrapped) {
-      var container = {};
-      Object.keys(newMap.container).forEach(function (k) { if (k !== 'sets') container[k] = newMap.container[k]; });
-      /* `current` names a record that may not exist on this machine; keep this
-         computer's pointer unless it points at nothing. */
-      if (oldMap.wrapped && oldMap.container.current && merged[oldMap.container.current]) {
-        container.current = oldMap.container.current;
-      }
-      container.sets = merged;
-      return JSON.stringify(container);
-    }
-    return JSON.stringify(merged);
-  }
+  /* Combining a key's old and new value under a mode is
+     RestoreKit.combineValue(), applied by RestoreKit.apply(). */
 
   document.getElementById('cancelRestoreBtn').addEventListener('click', function () {
     pending = null;
@@ -1388,19 +1227,9 @@
       if (selected[id]) keysToRestore = keysToRestore.concat(lastRestoreGroups[id].keys);
     });
 
-    var restored = 0, skipped = 0, merged = 0;
-    var failed = [];
-    keysToRestore.forEach(function (key) {
-      var incoming = pending.data[key];
-      if (typeof incoming !== 'string') { skipped++; return; }
-      var existing = null;
-      try { existing = localStorage.getItem(key); } catch (e) {}
-      var value = combineValue(mode, existing, incoming);
-      if (existing !== null && value === existing) { skipped++; return; }
-      if (existing !== null && value !== incoming) merged++;
-      try { localStorage.setItem(key, value); restored++; }
-      catch (e) { failed.push(key); }
-    });
+    var applied = RestoreKit.apply(pending, keysToRestore, mode);
+    var restored = applied.restored, skipped = applied.skipped, merged = applied.merged;
+    var failed = applied.failed;
 
     var idbPromise = idbWanted.length && pending.indexedDB
       ? Promise.all(idbWanted.map(function (n) {

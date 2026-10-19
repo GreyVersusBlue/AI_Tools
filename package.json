@@ -21,6 +21,8 @@
     "test:roster-hub": "node Tools/class-roster-hub/test/smoke-export.mjs && node Tools/class-roster-hub/test/smoke-share-target.mjs && node Tools/class-roster-hub/test/smoke-roster-writes.mjs && node Tools/class-roster-hub/test/smoke-bulk-import.mjs && node Tools/class-roster-hub/test/smoke-share.mjs",
     "test:backup": "node Tools/backup-restore/test/smoke-restore-diff.mjs && node Tools/backup-restore/test/smoke-transfer.mjs",
     "test:backup-encrypted": "node Tools/backup-restore/test/smoke-encrypted.mjs",
+    "test:restore-kit": "node Tools/backup-restore/test/restore-kit.test.mjs",
+    "test:tool-restore": "node Tools/backup-restore/test/smoke-tool-restore.mjs",
     "test:behavior": "node Tools/behavior-points-tracker/test/smoke-shared-record.mjs && node Tools/behavior-points-tracker/test/smoke-seating-layout.mjs && node Tools/behavior-points-tracker/test/smoke-seating-board.mjs",
     "test:behavior-teams-core": "node Tools/behavior-points-tracker/test/smoke-teams-core.mjs",
     "test:behavior-teams": "node Tools/behavior-points-tracker/test/smoke-teams.mjs",

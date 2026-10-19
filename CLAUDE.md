@@ -599,6 +599,13 @@ files must be added there too.
 - The site-wide platform themes **P1–P15** are a section of `BACKLOG.md`, and
   the per-tool sections cite them by ID. Do not renumber one; the IDs are
   load-bearing. Add a new theme at the end.
+- **Restoring a backup is `_shared/restore-kit.js`** (`RestoreKit`, Path 4 P5, v298): the reader, the
+  record-by-record diff and the three modes 009 uses, and `RestoreKit.mount(el, { tool: '<slug>' })`, a
+  "Restore from a backup" card a tool hosts (001 and 008 do). The card restores only keys `ToolRegistry`
+  gives that slug, never one the tool only reads, deletes nothing, leaves IndexedDB to 009, and reloads the
+  page after a restore unless the host passes `onRestored`. Do not write a second restore. A locked file is
+  opened by `_shared/backup-crypto.js` (`BrCrypto`), which the card fetches only when it needs it.
+  `npm run test:tool-restore` (a new host gets a case there) and `npm run test:restore-kit`.
 - Nothing leaves the browser: no analytics, no uploads, no external form
   posts. localStorage (or IndexedDB for big blobs) is the persistence layer.
   **The one exception is `conference-signup/`** (2026-10-09, Devon's request): the parent

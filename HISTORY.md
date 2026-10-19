@@ -9,6 +9,46 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 4 P5, the rest: per-tool restore as a shared card; P5 is whole (2026-10-19, AI-16, `CACHE_VERSION` v298)
+
+BACKLOG rank 2, deleted (the rank is left as a gap, as this sprint's other deleted rows were).
+
+- **What changed.** A teacher who broke one tool had to open 009, read every tool's rows and untick the rest. Now 001
+  Hall Pass and 008 Behavior & Points each have a **Restore from a backup** card: pick a file 009 downloaded, see the
+  same record-by-record preview 009 shows ("1 replaced, 1 added, 1 record that exists only on this computer would be
+  removed"), cut to that tool's own data, choose one of the same three modes, press Restore; the page reloads and shows
+  what came back. The preview also says how many of the file's items belong to other tools and are left alone.
+- **Where.** `_shared/restore-kit.js` (`RestoreKit`): `read()`, `recordDiff()`, `combineValue()`, `groups()`, `apply()`,
+  moved out of 009's inline script **unchanged** (009 now calls them, so there is one restore), plus `ownedBy(slug)`
+  over `ToolRegistry.lookupKey()` and `mount(el, { tool, onRestored })`, the card, built from DOM nodes with no markup
+  sink. `Tools/backup-restore/br-crypto.js` moved to `_shared/backup-crypto.js` (same `BrCrypto` global), because a
+  tool page now needs it too; the card fetches it from beside `restore-kit.js` only when a locked file is picked, so a
+  tool page pays nothing for it, and it is precached in the install tier.
+- **The calls, none written down before, all reversible.** (1) A tool restores **only keys the registry gives its own
+  slug** (legacy ones included, write probes never), not keys it only reads: Hall Pass does not restore the Name
+  Picker's `np_rosters`. (2) **Nothing is deleted**: Replace writes the file's value over a key the file holds and
+  leaves a key only on this computer, as 009 always has. (3) **IndexedDB stays 009's job**; the card says so when the
+  file holds a database. (4) The **same three modes, Replace first**, as on 009, so the two restores cannot disagree
+  about what a mode means. (5) After a restore the page **reloads** (a host can pass `onRestored` instead); both
+  adopters re-read storage on load and neither saves on unload. (6) Adopters are 001 and 008: the BACKLOG named none,
+  and both keep a tool's whole state in one student key of named sections, which is what the per-record preview shows
+  best.
+- **Tests.** `npm run test:restore-kit` (pure Node, 37 checks: the real registry and the kit in a vm over an in-memory
+  storage) and `npm run test:tool-restore` (port 8531, 34 checks, through the real 001 and 008 pages: preview before any
+  write, mode numbers, only the tool's key written, the reload, a locked file with a wrong then right passphrase and the
+  lazy fetch, a file with nothing for the tool, an unticked row, axe on the open card). Broken on purpose: letting
+  `ownedBy` pass every key failed both suites (8 browser checks, among them the Name Picker's rosters being
+  overwritten); pointing the lazy fetch at a missing file failed the browser suite (as a timeout, not a FAIL line).
+  `run-suites --only backup-restore` (5, incl. `smoke-restore-diff` and `smoke-encrypted` on the refactored 009),
+  `--only hall-pass-log` (2), `--only behavior-points-tracker` (5), the a11y sweep on 001, 008 and 009, `test:theme`,
+  `test:registry`, `test:sw-tiers`, lint and every guard incl. `check:precache -- --base origin/main` were green.
+- **Not verified.** Not tried on a phone, in Firefox or Safari, or from the offline zip (`file://`, where the lazy
+  fetch of `backup-crypto.js` is a plain script tag and should load, but nobody has looked). The 008 check is the
+  shape Replace leaves, not the bytes, because 008 fills in a loaded section's defaults and saves it straight away.
+- **For the next adopter.** Two script tags (`tool-registry.js`, `restore-kit.js`), an element, one
+  `RestoreKit.mount(el, { tool: '<slug>' })`, and a case in `smoke-tool-restore.mjs`. A tool whose page writes its
+  in-memory state on unload must pass `onRestored` and reload its state itself, or the old state is saved back.
+
 ## 053 → 030: a trivia list too long for one link goes to the bank as a file (2026-10-19, AI-14, `CACHE_VERSION` v297)
 
 BACKLOG rank 94, kept and rewritten to its one leftover (a ready-made board with categories and points, not decided).

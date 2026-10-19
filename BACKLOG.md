@@ -87,6 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-16 (v298), rank 2 (DELETED: Path 4 P5 is whole): per-tool restore as a shared card.** `_shared/restore-kit.js`
+  (`RestoreKit`) holds 009's envelope reader, record diff and the three modes, moved out of its inline script unchanged;
+  009 calls it, and 001 and 008 host `RestoreKit.mount()`: a backup file cut to the tool's own registry keys, the same
+  preview, Restore, reload. It writes no other tool's key and deletes nothing; a locked file fetches
+  `_shared/backup-crypto.js` (moved from `Tools/backup-restore/br-crypto.js`) only then. `npm run test:tool-restore`
+  (port 8531) and `test:restore-kit`. **Not tried on a phone or in Firefox.** The rank is left as a gap. Next free port: 8532.
 - **AI-14 (v289; the code commit says v288, which AI-31-025 took), rank 30 (DELETED: Path 12 P4 is whole), Path 12 P4: a question in the bank can carry a picture, and it travels in the bank file.**
   First check: the 030 half had shipped in #302 (a clue's picture is `idb:<id>` in the media store, moved on load, in
   Export JSON as a data URL and stored again on import), so none of that was rebuilt. What was left and is built: `media.image` on a
@@ -313,7 +319,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **AI-12 (v217):** README URL, 028's upload hint. **AI-11 (v216):** four dead trees and unused seating fonts deleted.
 
 **Last merged on origin: #328, Path 4 P5 in part (`CACHE_VERSION` v216). Rank 2 stays, cut to its last half.**
-- 009 can lock a backup with a passphrase (`backup-restore/br-crypto.js`, AES-GCM, PBKDF2 600k;
+- 009 can lock a backup with a passphrase (`backup-restore/br-crypto.js`, now `_shared/backup-crypto.js`, AES-GCM, PBKDF2 600k;
   off by default, never on the year-end archive). The landing app bar shows "N KB saved · backed up
   N days ago", linking to 009. Suite `smoke-encrypted.mjs`, port 8461.
 - The row's restore preview/diff had **already shipped** (`smoke-restore-diff.mjs`); the row was stale.
@@ -340,11 +346,10 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 - **Path 22 P1–P5 are done.** His later asks are ranks 160–168 (P6–P14), unranked by him.
 
 **Start here.** Path 21 is finished (046's relief was its last row, AI-03), so no row needs Blender.
-- Rank 1 (Path 6 P4, 053 → 030) shipped at v269 (AI-14) and its row is gone. Start at **rank 2**, the rest of Path 4 P5: per-tool restore
-  as a shared control any tool can host (½). It needs 009's `recordDiff`/merge logic moved out of 009's
-  inline script into `_shared/`, and `ToolRegistry` to pick one tool's keys. Pair it with another ½ or two
-  ¼ rows. A new suite takes port **8481** (8480 is the export kit's `smoke-export.mjs`, 8479 is 016's `smoke-print.mjs`, 8478 is 017's, 8477 is 018's, 8476 is 064's, 8475 is 040's, 8474 is 051's, 8473 is 074's, 8472 is 042's, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
-  `smoke-encrypted.mjs`, 8462 is the print kit's `smoke-print-kit.mjs`, 8463 is `smoke-pairing-qr.mjs`).
+- Ranks 1 and 2 have shipped (rank 2, per-tool restore, at v298, AI-16) and their rows are gone. Start at **rank 3**.
+  A further tool that wants a restore card adds the two script tags and one `RestoreKit.mount()` line (001 and 008 are
+  the model) and a case in `smoke-tool-restore.mjs`. (Older port list, kept for the record: a new suite took port **8481** (8480 is the export kit's `smoke-export.mjs`, 8479 is 016's `smoke-print.mjs`, 8478 is 017's, 8477 is 018's, 8476 is 064's, 8475 is 040's, 8474 is 051's, 8473 is 074's, 8472 is 042's, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
+  `smoke-encrypted.mjs`, 8462 is the print kit's `smoke-print-kit.mjs`, 8463 is `smoke-pairing-qr.mjs`).)
 - **huginn's shared checkout** (`/home/devon/projects/AI_Tools`): local `main` now contains origin's `main`
   (AI-sync's merge) and is ahead of it by the local-only sessions above. It has not been pushed. The
   `backup/ai-03-relief` and `backup/ai-07-ai-09-local-main` branches on origin are #326's copies of work
@@ -504,7 +509,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 2 | Path 4 P5 (rest) — per-tool restore as a shared control any tool can host | 009 | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Document 035’s private four-palette theme system as an exception (Devon, 2026-10-03: “bless and document”; do not adopt `a11y.js` cold) | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
@@ -1204,8 +1208,8 @@ them data.
   only. It is pure apart from `run()`: it takes a snapshot and returns values, so the Node suite drives all of it.
   No new `_shared/` file. Two things move out of 009's inline script so the module and the suites can call them:
   `Tools/backup-restore/br-envelope.js` (`BrEnvelope`: `build`, `read`, `exportDatabase`, `importDatabase`, the
-  blob codec; the functions as they are, moved, not changed), which is also the first half of what per-tool
-  restore (rank 2) needs.
+  blob codec; the functions as they are, moved, not changed), which per-tool restore
+  no longer needs: it shipped in v298 as `_shared/restore-kit.js`, whose reader and codec-free functions this can reuse.
   - `BrRollover.RULES`: a frozen list of `{ match, prefix, tool, kind, reduce, describe }`. `match` is a registry
     key or prefix, `kind` is `'delete' | 'reduce' | 'ask' | 'keep'`, `reduce(value, ctx)` takes the parsed value
     and returns `{ value, removed, kept }` where `value` is the new parsed value (or `null` to delete the key),
@@ -1336,7 +1340,7 @@ them data.
     safe route that exists today is a second browser profile or a private window: open the site, restore the
     archive there, read, close. The receipt says this. A reader inside 009 is question 6.
   - *"Bring one thing back" (a seating layout, a set of certificates).* Setup is kept by the rollover, so the
-    usual reason is gone. The rest is per-tool restore, rank 2, unchanged by this design.
+    usual reason is gone. The rest is per-tool restore, which shipped in v298 (`RestoreKit`, a card on 001 and 008).
 
   **P4's name-keyed history and `Roster.trackRenames`.** Eight tools key history on the name and keep an
   `idNames` map (`{ id: name }`) beside it: seven inside their student key (001, 002, 008, 013, 022, 027, 033) and
@@ -1471,7 +1475,7 @@ the ~5 MB ceiling (005, 015, 019, 028, 041, 042, 056, 071, 080); `bmg-map-cache.
 is the IndexedDB pattern everyone cites and nobody has extracted.
 
 **Status.** P1 shipped 2026-09-04 (#173, `CACHE_VERSION` v142), P2 the same day (#174,
-v143), P3 the same day (#182, v148, with 046 as its single adopter). P4 is in progress: 005 (#280), 019 (#282), 056 (#284), 028 (#290), 042 (#292) and 015 (#294), 041 (#298), 071 (#300), 030 (#302) and 064 (#304) have moved, and the image layer they share is `MediaDB.images()` (#294); 035, added by #302's session, is the last. P5 open. What
+v143), P3 the same day (#182, v148, with 046 as its single adopter). P4 is in progress: 005 (#280), 019 (#282), 056 (#284), 028 (#290), 042 (#292) and 015 (#294), 041 (#298), 071 (#300), 030 (#302) and 064 (#304) have moved, and the image layer they share is `MediaDB.images()` (#294); 035, added by #302's session, is the last. P5 is whole (v298). What
 actually landed, and what each phase got wrong on the way, is in `HISTORY.md`.
 
 **Phases.**
@@ -1524,15 +1528,20 @@ actually landed, and what each phase got wrong on the way, is in `HISTORY.md`.
   counted is left.
   *080 snapshots were on this list and are not stored anywhere — a canvas and a
   download link only — so there is nothing to migrate (found 2026-09-29, #300's session).*
-- **P5 — 009 upgrades that fall out of the above. Three of four done.** The record-level
+- **P5 — 009 upgrades that fall out of the above. Done (v298).** The record-level
   restore preview ("1 replaced, 1 added, 1 untouched", and what Replace would remove) had
   already shipped before the row was written (`smoke-restore-diff.mjs`); the row's text was
-  stale. The optional passphrase lock (`backup-restore/br-crypto.js`: AES-GCM, PBKDF2-SHA-256
+  stale. The optional passphrase lock (`backup-restore/br-crypto.js`, `_shared/backup-crypto.js` since v298: AES-GCM, PBKDF2-SHA-256
   at 600,000 iterations, off by default, never on the year-end archive) and the landing
   page's "N KB saved · backed up N days ago" readout shipped in v216 (`smoke-encrypted.mjs`,
-  port 8461). **Left: per-tool restore as a shared control any tool can host** — "restore
-  just this tool's data from a backup file", using `ToolRegistry` to pick the tool's keys and
-  009's record diff (which would have to move out of 009's inline script into `_shared/`).
+  port 8461). **Per-tool restore shipped in v298 (AI-16):** `_shared/restore-kit.js` holds the
+  reader, the record diff and the modes, moved out of 009's inline script unchanged, and
+  `RestoreKit.mount(el, { tool })` puts a "Restore from a backup" card on a tool: the file is cut
+  to the keys `ToolRegistry` gives that slug, previewed as 009 previews it, and written after
+  Restore, then the page reloads. 001 and 008 host it (`npm run test:tool-restore`, port 8531;
+  `test:restore-kit`). The calls taken, all reversible (`HISTORY.md`): a tool restores only its
+  own keys, never one it merely reads; nothing is deleted; IndexedDB stays 009's job; the same
+  three modes, Replace first, as on 009. The passphrase lock moved to `_shared/backup-crypto.js`.
 
 **Model.** Opus.
 
@@ -8284,7 +8293,7 @@ displayed to the class in a way that shames anyone.
   currently writes; see Where the next round should pick up.)*
 - **Scheduled reminder.** A local, opt-in reminder — end of each grading
   period, or every N days — surfaced on the site rather than emailed.
-- **Per-tool restore from the tool itself.** A small shared control any tool
+- **Per-tool restore from the tool itself.** *(Shipped v298: `RestoreKit.mount()`, on 001 and 008.)* A small shared control any tool
   can mount — "restore just this tool's data from a backup file" — so a
   teacher who breaks one tool doesn't have to reason about all of them.
 
