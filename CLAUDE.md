@@ -550,7 +550,9 @@ files must be added there too.
   transform returns `{ v, from, name, questions }`, opened by 030 at `?questions=` (053 is the one sender).
   `QuestionBank.fromLink()` is the only reader of that link and takes no id from it, and 030 stores an arrival
   only when the teacher presses Add; a new sender follows 053's entry, `maxLink` included
-  (`npm run test:received-questions`).
+  (`npm run test:received-questions`). Since v297 a list past `maxLink` is offered as a **bank file** instead
+  (the entry's `file(payload)`, a button in the share sheet), in `toJSON()`'s envelope, which 030's "Share the
+  bank" import reads; a sender's `file` is held to that envelope as 053's is (`npm run test:trivia-bank-file`).
   Since v276 030's bank tab edits everything a question holds (`Tools/review-game-board/rgb-bank-editor.js`): the
   right choice is the one whose text is the answer, so marking one writes the answer and no field was added; a Save
   from a form sends only the fields the form shows, with the id, so the rest of the question stays; and **a file is
@@ -597,6 +599,13 @@ files must be added there too.
 - The site-wide platform themes **P1–P15** are a section of `BACKLOG.md`, and
   the per-tool sections cite them by ID. Do not renumber one; the IDs are
   load-bearing. Add a new theme at the end.
+- **Restoring a backup is `_shared/restore-kit.js`** (`RestoreKit`, Path 4 P5, v298): the reader, the
+  record-by-record diff and the three modes 009 uses, and `RestoreKit.mount(el, { tool: '<slug>' })`, a
+  "Restore from a backup" card a tool hosts (001 and 008 do). The card restores only keys `ToolRegistry`
+  gives that slug, never one the tool only reads, deletes nothing, leaves IndexedDB to 009, and reloads the
+  page after a restore unless the host passes `onRestored`. Do not write a second restore. A locked file is
+  opened by `_shared/backup-crypto.js` (`BrCrypto`), which the card fetches only when it needs it.
+  `npm run test:tool-restore` (a new host gets a case there) and `npm run test:restore-kit`.
 - Nothing leaves the browser: no analytics, no uploads, no external form
   posts. localStorage (or IndexedDB for big blobs) is the persistence layer.
   **The one exception is `conference-signup/`** (2026-10-09, Devon's request): the parent

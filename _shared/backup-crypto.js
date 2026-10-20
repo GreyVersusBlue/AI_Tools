@@ -1,4 +1,4 @@
-/* br-crypto.js — the optional passphrase lock on a Backup & Restore file.
+/* backup-crypto.js — the optional passphrase lock on a Backup & Restore file.
  *
  * A backup holds student names, so a teacher may want the file unreadable to
  * anyone who finds it on a shared drive or a flash drive. This wraps the whole

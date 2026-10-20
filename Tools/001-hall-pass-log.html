@@ -23,6 +23,8 @@
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
 <script src="../_shared/export.js"></script>
+<script src="../_shared/tool-registry.js"></script>
+<script src="../_shared/restore-kit.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -415,6 +417,12 @@
           <button class="secondary" id="buildRangeBtn" type="button">Build Report</button>
         </div>
         <div id="rangeReportWrap"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Restore from a backup</span></div>
+        <div id="toolRestore"></div>
+        <script>RestoreKit.mount(document.getElementById('toolRestore'), { tool: 'hall-pass-log' });</script>
       </div>
 
       <div id="msg"></div>

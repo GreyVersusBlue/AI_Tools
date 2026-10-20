@@ -30,13 +30,14 @@
 //      "Seat these groups" button seats them in 005 as a new section.
 //   8. trivia to the question bank: 053's sheet sends the teacher's own
 //      questions to 030, which shows them and adds them only when asked; a
-//      list too long for one link is refused in the sheet and opens no tab;
+//      list too long for one link is refused in the sheet and opens no tab,
+//      and is offered as a bank file that 030's import reads and adds from;
 //      a ?trivia= link made before this row existed still opens in 053.
 //      (030's side in full is review-game-board/test/smoke-received-questions.mjs.)
 //
 // Exits 1 on any failure. Every name here is invented.
 
-import { SITE, serve, launch, prepPage, settle, a11yScan } from '../../board-check/harness.mjs';
+import { SITE, serve, launch, prepPage, settle, a11yScan, downloadText } from '../../board-check/harness.mjs';
 import fs from 'fs';
 import path from 'path';
 
@@ -400,6 +401,44 @@ console.log('\n053 → 030 — a teacher\'s own trivia to the question bank');
   const tooLong = await clickSend(trivia, 'review-game-board');
   eq(tooLong.opened.length, 0, 'a list of 150 questions opens no tab');
   ok(tooLong.error && /^Your 150 questions make a link of [\d,]+ characters, and a link longer than about 7,500 may not open\. Nothing was sent\./.test(tooLong.status), 'and the sheet says why, as an error: ' + JSON.stringify(tooLong.status));
+
+  /* ...and offers the list as a bank file instead (2026-10-19), which 030's
+     "Share the bank" import reads. trivia-bank-file.test.mjs holds the file
+     to the bank's format; this drives the button and 030's real import. */
+  await openRows(trivia);
+  await trivia.evaluate(() => { window.open = () => ({}); document.querySelector('.share-sheet button[data-share="send:review-game-board"]').click(); });
+  eq(await trivia.$eval('.share-sheet', s => [...s.querySelectorAll('[data-share="file"]')].map(b => [b.textContent, b.type, b.getClientRects().length > 0])).then(JSON.stringify),
+    JSON.stringify([['Save a bank file instead', 'button', true]]), 'the sheet shows one "Save a bank file instead" button');
+  const fileLight = await a11yScan(trivia, { impact: 'serious', include: '.share-sheet' });
+  eq(fileLight.length, 0, 'with no serious/critical axe violations on the sheet: ' + JSON.stringify(fileLight.map(v => v.id)));
+  const bankFile = await downloadText(trivia, '.share-sheet button[data-share="file"]', { what: 'the bank file' });
+  ok(/^Saved as custom-trivia-question-bank\.json\. On the Quiz \/ Review Game Board, open Question Bank/.test(await trivia.textContent('.share-sheet-status')),
+    'pressing it saves the file and says where to import it: ' + JSON.stringify(await trivia.textContent('.share-sheet-status')));
+  eq(JSON.parse(bankFile).questions.length, 150, 'the file holds all 150');
+  await trivia.evaluate(() => { document.querySelector('.share-sheet button[data-share="copy"]').click(); });
+  await settle(trivia, 100);
+  await trivia.evaluate(() => { document.querySelector('.share-sheet button[data-share="send:review-game-board"]').click(); });
+  eq(await trivia.$$eval('.share-sheet [data-share="file"]', b => b.length), 1, 'pressing Send again shows the button once, not twice');
+  await trivia.evaluate(() => window.Share.close());
+
+  await board.goto(BASE + '/Tools/030-review-game-board.html', { waitUntil: 'load' });
+  await settle(board, 400);
+  await board.click('.top-tab-btn[data-top="bank"]');
+  await settle(board, 200);
+  await board.setInputFiles('#bankImportFile', { name: 'custom-trivia-question-bank.json', mimeType: 'application/json', buffer: Buffer.from(bankFile, 'utf8') });
+  await board.waitForFunction(() => { const t = document.getElementById('bankFileStatus').textContent; return t && !/^Reading /.test(t); }, null, { timeout: 15000 });
+  await settle(board, 200);
+  ok(/Nothing is stored yet/.test(await board.textContent('#bankFileStatus')), '030 reads the file and shows it before storing: ' + JSON.stringify(await board.textContent('#bankFileStatus')));
+  eq(await board.evaluate(() => window.QuestionBank.list().length), 3, 'and stores nothing yet');
+  await board.click('#bankImportAddBtn');
+  await settle(board, 300);
+  const afterFile = await board.evaluate(() => window.QuestionBank.list());
+  eq(afterFile.length, 153, 'Add puts all 150 in the bank beside the three it had');
+  eq(afterFile.filter(q => /^Made-up question number \d+\?$/.test(q.prompt) && q.sharedFrom === 'cultural-trivia-card-generator' && q.unit === 'Global Culture').length, 150, 'each from 053, in its unit');
+  await board.setInputFiles('#bankImportFile', { name: 'custom-trivia-question-bank.json', mimeType: 'application/json', buffer: Buffer.from(bankFile, 'utf8') });
+  await board.waitForFunction(() => { const t = document.getElementById('bankFileStatus').textContent; return t && !/^Reading /.test(t); }, null, { timeout: 15000 });
+  await settle(board, 200);
+  eq(JSON.stringify([await board.isVisible('#bankImportAddBtn'), await board.evaluate(() => window.QuestionBank.list().length)]), '[false,153]', 'the same file a second time has nothing to add');
 
   /* a ?trivia= link from before this row */
   const oldLink = '?trivia=' + await trivia.evaluate(() => window.StateLink.encodeState({ questions: [{ category: 'hispanic', q: 'From an older link?', a: 'Yes' }] }));

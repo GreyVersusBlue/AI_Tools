@@ -87,6 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-16 (v298), rank 2 (DELETED: Path 4 P5 is whole): per-tool restore as a shared card.** `_shared/restore-kit.js`
+  (`RestoreKit`) holds 009's envelope reader, record diff and the three modes, moved out of its inline script unchanged;
+  009 calls it, and 001 and 008 host `RestoreKit.mount()`: a backup file cut to the tool's own registry keys, the same
+  preview, Restore, reload. It writes no other tool's key and deletes nothing; a locked file fetches
+  `_shared/backup-crypto.js` (moved from `Tools/backup-restore/br-crypto.js`) only then. `npm run test:tool-restore`
+  (port 8531) and `test:restore-kit`. **Not tried on a phone or in Firefox.** The rank is left as a gap. Next free port: 8532.
 - **AI-14 (v289; the code commit says v288, which AI-31-025 took), rank 30 (DELETED: Path 12 P4 is whole), Path 12 P4: a question in the bank can carry a picture, and it travels in the bank file.**
   First check: the 030 half had shipped in #302 (a clue's picture is `idb:<id>` in the media store, moved on load, in
   Export JSON as a data URL and stored again on import), so none of that was rebuilt. What was left and is built: `media.image` on a
@@ -308,11 +314,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **AI-35 (v219), old rank 76:** 002, 016, 018, 038 and 044 are native on `ink-paper.css` + `a11y.js`; 007 loads
   `a11y.js`; 010/032/046/087 link `base.css`. Every page still skipping one is a recorded exception.
 - **AI-08 (v218), old ranks 6, 7 and 81:** 014/033 load `a11y.*` once; `.share-note` and the header/back-link/card
-  rules are in `base.css`, the tint tokens in `ink-paper.css`. Rank 5 (035's theme) is Devon's call and untouched.
+  rules are in `base.css`, the tint tokens in `ink-paper.css`. Rank 5 (035's theme) was Devon's call and untouched;
+  he has since made it (2026-10-03: "bless and document").
 - **AI-12 (v217):** README URL, 028's upload hint. **AI-11 (v216):** four dead trees and unused seating fonts deleted.
 
 **Last merged on origin: #328, Path 4 P5 in part (`CACHE_VERSION` v216). Rank 2 stays, cut to its last half.**
-- 009 can lock a backup with a passphrase (`backup-restore/br-crypto.js`, AES-GCM, PBKDF2 600k;
+- 009 can lock a backup with a passphrase (`backup-restore/br-crypto.js`, now `_shared/backup-crypto.js`, AES-GCM, PBKDF2 600k;
   off by default, never on the year-end archive). The landing app bar shows "N KB saved · backed up
   N days ago", linking to 009. Suite `smoke-encrypted.mjs`, port 8461.
 - The row's restore preview/diff had **already shipped** (`smoke-restore-diff.mjs`); the row was stale.
@@ -339,11 +346,10 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 - **Path 22 P1–P5 are done.** His later asks are ranks 160–168 (P6–P14), unranked by him.
 
 **Start here.** Path 21 is finished (046's relief was its last row, AI-03), so no row needs Blender.
-- Rank 1 (Path 6 P4, 053 → 030) shipped at v269 (AI-14) and its row is gone. Start at **rank 2**, the rest of Path 4 P5: per-tool restore
-  as a shared control any tool can host (½). It needs 009's `recordDiff`/merge logic moved out of 009's
-  inline script into `_shared/`, and `ToolRegistry` to pick one tool's keys. Pair it with another ½ or two
-  ¼ rows. A new suite takes port **8481** (8480 is the export kit's `smoke-export.mjs`, 8479 is 016's `smoke-print.mjs`, 8478 is 017's, 8477 is 018's, 8476 is 064's, 8475 is 040's, 8474 is 051's, 8473 is 074's, 8472 is 042's, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
-  `smoke-encrypted.mjs`, 8462 is the print kit's `smoke-print-kit.mjs`, 8463 is `smoke-pairing-qr.mjs`).
+- Ranks 1 and 2 have shipped (rank 2, per-tool restore, at v298, AI-16) and their rows are gone. Start at **rank 3**.
+  A further tool that wants a restore card adds the two script tags and one `RestoreKit.mount()` line (001 and 008 are
+  the model) and a case in `smoke-tool-restore.mjs`. (Older port list, kept for the record: a new suite took port **8481** (8480 is the export kit's `smoke-export.mjs`, 8479 is 016's `smoke-print.mjs`, 8478 is 017's, 8477 is 018's, 8476 is 064's, 8475 is 040's, 8474 is 051's, 8473 is 074's, 8472 is 042's, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
+  `smoke-encrypted.mjs`, 8462 is the print kit's `smoke-print-kit.mjs`, 8463 is `smoke-pairing-qr.mjs`).)
 - **huginn's shared checkout** (`/home/devon/projects/AI_Tools`): local `main` now contains origin's `main`
   (AI-sync's merge) and is ahead of it by the local-only sessions above. It has not been pushed. The
   `backup/ai-03-relief` and `backup/ai-07-ai-09-local-main` branches on origin are #326's copies of work
@@ -370,7 +376,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 88) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `qr-scan.js` 10 · `tool-registry.js` 9 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **169**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -394,11 +400,11 @@ session hitting one of these ships rather than stalls.
 | ~~Path 3 P4~~ **spent** | Do skill/level values (002's balancing) go on the shared student record? | **No, decided**, and #185 kept to it: 002's pairing memory and skill ratings stay in 002's own storage; only the `{id: name}` map is shared-record-derived. |
 | ~~Path 6 P1~~ **spent** | Link payload policy for images. | Strip by policy, say so in the sheet, offer the `.json` download. Shipped in #178; kept here until a session confirms the sheet actually does all three. |
 | ~~Any time~~ **spent** | Is `check:docs-commands` worth thirty lines? | **Yes, and it was ~110 with its header.** Shipped in #187, and it caught three dead `npm run` citations on its first run — `social`, `social:check` and `games`, all survivors of the never-committed `board-check` package. |
-| Rank 5 | 035's private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception? | **Default: bless and document**, unless Path 5 P4 is opening 035 anyway — in which case adopt while you are already in the file. Adopting cold is a re-skin of a 5,500-line tool for no user-visible gain. `test:theme` already stops the situation spreading. *(This row cited "Rank 6 / 21" from the day it was written; rank 6 as it then stood was the `store.js` adoption row and had nothing to do with 035. The two rows it means are the 035 decision itself and Path 5 P4, which is the round that would open 035 anyway.)* |
+| Rank 5 | 035's private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception? | **Decided by Devon, 2026-10-03: bless and document** (do not adopt `a11y.js` cold); what is left is writing the exception up. The default it confirms read: bless and document, unless Path 5 P4 is opening 035 anyway — in which case adopt while you are already in the file. Adopting cold is a re-skin of a 5,500-line tool for no user-visible gain. `test:theme` already stops the situation spreading. *(This row cited "Rank 6 / 21" from the day it was written; rank 6 as it then stood was the `store.js` adoption row and had nothing to do with 035. The two rows it means are the 035 decision itself and Path 5 P4, which is the round that would open 035 anyway.)* |
 | ~~Rank 3~~ **spent** | Rebuild `list-dark-candidates.mjs`, or measure inline? | **Rebuilt**, per the default, and shipped in #195 as `npm run path5:next`. The argument held: the first thing it produced was a corrected figure (1,749 literals, median 17) for a number this file had been carrying as "17–45 per tool" and had already had to delete once. |
 | ~~Rank 5~~ **spent** | Contrast round before or after Path 5 P3? | **After**, and that is how it went: AI-07 (v215) cleared the last 14 allowances once Path 5 had finished. |
 | Path 8 | Is a paired *student* device ever in scope? | **No.** Teacher-device-only. |
-| Rank 52 (Path 17 P5) | Is an on-demand, non-precached Tesseract download acceptable under the offline promise? | **Default: no.** "Every tool keeps working offline once the site has been visited" is the first sentence of `CLAUDE.md` and the reason there is no CDN anywhere on this site; a feature that silently needs the network on first use is a different promise, and a teacher meets it in the one room where the wifi is bad. Vendoring a full Tesseract build (~10 MB+) into the precache is the other option and is worse. **So: no OCR until someone reverses this**, and the honest version of the row is "OCR is out of scope", not "OCR, pending a decision". This is the one question here that is about what the product *is* rather than how it is built — it is the first row to bring to Devon if he ever does want to spend a decision — it sits at rank 52, roughly thirty rounds out at two rows a session, so it is not urgent. |
+| Rank 52 (Path 17 P5) | Is an on-demand, non-precached Tesseract download acceptable under the offline promise? | **Decided by Devon, 2026-10-05: yes, it is acceptable**, and the feature must say plainly that OCR needs a connection the first time. This reverses the default below, which is kept as the record of what it was. **Default (superseded): no.** "Every tool keeps working offline once the site has been visited" is the first sentence of `CLAUDE.md` and the reason there is no CDN anywhere on this site; a feature that silently needs the network on first use is a different promise, and a teacher meets it in the one room where the wifi is bad. Vendoring a full Tesseract build (~10 MB+) into the precache is the other option and is worse. **So: no OCR until someone reverses this**, and the honest version of the row is "OCR is out of scope", not "OCR, pending a decision". This is the one question here that is about what the product *is* rather than how it is built — it is the first row to bring to Devon if he ever does want to spend a decision — it sits at rank 52, roughly thirty rounds out at two rows a session, so it is not urgent. |
 | Any time | Should CI also run `offline:build` + `offline:verify`? | **Default: yes, on `main` only, not on pull requests.** Nobody has wired it; it is not a ranked row and would fit inside any site-level round. |
 | ~~Rank 1~~ **spent** | Path 21: Blender-rendered art first, including student-facing art? | **Decided by Devon, 2026-09-25**, not by a session: Path 21 ranks first, and its student-facing rows (071's picture prompts) are authorized. Blender runs only on his own machines, headless: huginn or Windows for basic work, the Windows machine only for a row that needs a GPU and says so (2026-09-29); a session without `blender` on PATH skips these rows. The build defaults the path section writes down (the generator in `Tools/blender-art/`, the palette parsed from `ink-paper.css`, `currentColor` SVG icons, WebP renders, screenshots staying Playwright, the byte budgets) are a session's calls and are reversible; `HISTORY.md` has the reasoning. |
 | ~~Any time~~ **decided** | Interleave the per-tool ideas with the platform work, or keep platform first? | **Keep platform first** — the order the table is in. The path survey's argument stands: most per-tool work depends on a `_shared/` service that does not exist yet, and the two biggest rollouts of 2026-09-04 were pure adoption precisely because the services had shipped first. This was "left for Devon" until 2026-09-05. Reversing it is a re-rank, which is still not a session's call. |
@@ -503,10 +509,9 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 2 | Path 4 P5 (rest) — per-tool restore as a shared control any tool can host | 009 | ½ | | [Path 4](#path-4--storage-primitive-tool-registry-media-store) |
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 5 | Decide 035’s private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
+| 5 | Document 035’s private four-palette theme system as an exception (Devon, 2026-10-03: “bless and document”; do not adopt `a11y.js` cold) | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -526,7 +531,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; 062's thirty map questions, which are not published (P4 shipped at v289, so a question can carry a picture now and these no longer wait on it); on 030, named sets (no storage design yet: question 8 in the section) and a tag filter on the list. Seventeen questions for Devon are in the section | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; on 030, named sets, stored as an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section; designed in one line, not built) and a tag filter on the list. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -590,7 +595,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 91 | Spreadsheet book-list import via the shared SheetJS build, with a genre-balance warning | 049 | ½ | | [049 Book Tasting Menu Generator](#049--book-tasting-menu-generator) |
 | 92 | Teacher-recorded audio fallback via MediaRecorder, so labels work with no target-language voice | 051 | ½ | | [051 Classroom Label Maker (Target Language)](#051--classroom-label-maker-target-language) |
 | 93 | Practice worksheet variants — matching, fill-in-the-blank and "trap or true cognate" with answer keys | 052 | ½ | | [052 Cognates & False Friends Reference List Builder](#052--cognates--false-friends-reference-list-builder) |
-| 94 | Export into Review Game Board — emit the question set in the board’s category/points format. **Since v269 the sheet’s “Send to Quiz / Review Game Board” row puts a teacher’s own questions in 030’s bank by link (Path 6 P4), up to about fifty: a link past 7,500 characters is refused. Left: a route for a longer list (a file 030’s bank import reads, or a choice of which questions to send), and a board built straight from the questions with categories and points** | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
+| 94 | Export into Review Game Board — a board built straight from 053’s questions, with categories and points. **Since v269 the sheet’s “Send to Quiz / Review Game Board” row puts a teacher’s own questions in 030’s bank by link (Path 6 P4), up to about fifty; since v297 a longer list is offered as a bank file instead (“Save a bank file instead”), which 030’s “Share the bank” import reads, shows first and only adds from (Devon, 2026-10-07: “yes, the file”). Left: the ready-made board (which categories and points it gets is not decided)** | 053 | ½ | | [053 Cultural Trivia Card Generator](#053--cultural-trivia-card-generator) |
 | 95 | Bulk-import a custom bank — paste a whole list of broken-and-fixed pairs | 055 | ½ | | [055 Daily Editing / DOL Warm-Up Generator](#055--daily-editing--dol-warm-up-generator) |
 | 98 | Hand off to Lab Report Builder pre-filled with question, hypothesis, materials and procedure | 059 | ½ | | [059 Scientific Method / Experiment Design Planner](#059--scientific-method--experiment-design-planner) |
 | 104 | Metronome and reference pitch — wire the decorative tempo field to a real click track | 067 | ½ | | [067 Music Sight-Reading / Rhythm Warm-Up Generator](#067--music-sight-reading--rhythm-warm-up-generator) |
@@ -1203,8 +1208,8 @@ them data.
   only. It is pure apart from `run()`: it takes a snapshot and returns values, so the Node suite drives all of it.
   No new `_shared/` file. Two things move out of 009's inline script so the module and the suites can call them:
   `Tools/backup-restore/br-envelope.js` (`BrEnvelope`: `build`, `read`, `exportDatabase`, `importDatabase`, the
-  blob codec; the functions as they are, moved, not changed), which is also the first half of what per-tool
-  restore (rank 2) needs.
+  blob codec; the functions as they are, moved, not changed), which per-tool restore
+  no longer needs: it shipped in v298 as `_shared/restore-kit.js`, whose reader and codec-free functions this can reuse.
   - `BrRollover.RULES`: a frozen list of `{ match, prefix, tool, kind, reduce, describe }`. `match` is a registry
     key or prefix, `kind` is `'delete' | 'reduce' | 'ask' | 'keep'`, `reduce(value, ctx)` takes the parsed value
     and returns `{ value, removed, kept }` where `value` is the new parsed value (or `null` to delete the key),
@@ -1335,7 +1340,7 @@ them data.
     safe route that exists today is a second browser profile or a private window: open the site, restore the
     archive there, read, close. The receipt says this. A reader inside 009 is question 6.
   - *"Bring one thing back" (a seating layout, a set of certificates).* Setup is kept by the rollover, so the
-    usual reason is gone. The rest is per-tool restore, rank 2, unchanged by this design.
+    usual reason is gone. The rest is per-tool restore, which shipped in v298 (`RestoreKit`, a card on 001 and 008).
 
   **P4's name-keyed history and `Roster.trackRenames`.** Eight tools key history on the name and keep an
   `idNames` map (`{ id: name }`) beside it: seven inside their student key (001, 002, 008, 013, 022, 027, 033) and
@@ -1470,7 +1475,7 @@ the ~5 MB ceiling (005, 015, 019, 028, 041, 042, 056, 071, 080); `bmg-map-cache.
 is the IndexedDB pattern everyone cites and nobody has extracted.
 
 **Status.** P1 shipped 2026-09-04 (#173, `CACHE_VERSION` v142), P2 the same day (#174,
-v143), P3 the same day (#182, v148, with 046 as its single adopter). P4 is in progress: 005 (#280), 019 (#282), 056 (#284), 028 (#290), 042 (#292) and 015 (#294), 041 (#298), 071 (#300), 030 (#302) and 064 (#304) have moved, and the image layer they share is `MediaDB.images()` (#294); 035, added by #302's session, is the last. P5 open. What
+v143), P3 the same day (#182, v148, with 046 as its single adopter). P4 is in progress: 005 (#280), 019 (#282), 056 (#284), 028 (#290), 042 (#292) and 015 (#294), 041 (#298), 071 (#300), 030 (#302) and 064 (#304) have moved, and the image layer they share is `MediaDB.images()` (#294); 035, added by #302's session, is the last. P5 is whole (v298). What
 actually landed, and what each phase got wrong on the way, is in `HISTORY.md`.
 
 **Phases.**
@@ -1523,15 +1528,20 @@ actually landed, and what each phase got wrong on the way, is in `HISTORY.md`.
   counted is left.
   *080 snapshots were on this list and are not stored anywhere — a canvas and a
   download link only — so there is nothing to migrate (found 2026-09-29, #300's session).*
-- **P5 — 009 upgrades that fall out of the above. Three of four done.** The record-level
+- **P5 — 009 upgrades that fall out of the above. Done (v298).** The record-level
   restore preview ("1 replaced, 1 added, 1 untouched", and what Replace would remove) had
   already shipped before the row was written (`smoke-restore-diff.mjs`); the row's text was
-  stale. The optional passphrase lock (`backup-restore/br-crypto.js`: AES-GCM, PBKDF2-SHA-256
+  stale. The optional passphrase lock (`backup-restore/br-crypto.js`, `_shared/backup-crypto.js` since v298: AES-GCM, PBKDF2-SHA-256
   at 600,000 iterations, off by default, never on the year-end archive) and the landing
   page's "N KB saved · backed up N days ago" readout shipped in v216 (`smoke-encrypted.mjs`,
-  port 8461). **Left: per-tool restore as a shared control any tool can host** — "restore
-  just this tool's data from a backup file", using `ToolRegistry` to pick the tool's keys and
-  009's record diff (which would have to move out of 009's inline script into `_shared/`).
+  port 8461). **Per-tool restore shipped in v298 (AI-16):** `_shared/restore-kit.js` holds the
+  reader, the record diff and the modes, moved out of 009's inline script unchanged, and
+  `RestoreKit.mount(el, { tool })` puts a "Restore from a backup" card on a tool: the file is cut
+  to the keys `ToolRegistry` gives that slug, previewed as 009 previews it, and written after
+  Restore, then the page reloads. 001 and 008 host it (`npm run test:tool-restore`, port 8531;
+  `test:restore-kit`). The calls taken, all reversible (`HISTORY.md`): a tool restores only its
+  own keys, never one it merely reads; nothing is deleted; IndexedDB stays 009's job; the same
+  three modes, Replace first, as on 009. The passphrase lock moved to `_shared/backup-crypto.js`.
 
 **Model.** Opus.
 
@@ -4107,6 +4117,12 @@ it, and then the baseline is regenerated in that PR.
 
 ### Path 12 — Question bank hub: one bank, played six ways
 
+**Devon's answers, 2026-10-07** (recorded 2026-10-19). The numbered questions below that each had a default
+taken are closed on those defaults: "just keep all 65 defaults". Question 8, named sets, had no default; his
+answer is "B", an ordered list saved with the bank (not built; rank 28). 062's thirty map questions stay in
+Geography Bee: "keep the geography bee". 053's list too long for one link goes as a file: "yes, the file"
+(shipped, v297; rank 94).
+
 **Why.** Review Game Board's `rgb-bank-store.js` already holds questions with
 unit/standard/difficulty metadata and the site's best import (XLSX plus a template
 download). Its notes call "one bank, played six ways" the highest-leverage change
@@ -4206,7 +4222,8 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   - *062's mapping.* As 053's, and `area` → `tags` as its label (`['Africa']`; none for `global`) with the key
     kept in `area`. **The thirty map questions (`bi90` to `bi119`) are not in the set**: "Which country is
     highlighted on the map?" is not a question without the map, and only 062 can draw it. `toQuestion()` maps
-    one with its `map` kept; `questions()` leaves them out. They wait on P4. The page's multiple-choice options
+    one with its `map` kept; `questions()` leaves them out. They stay in 062 (Devon, 2026-10-07: "keep the
+    geography bee"). The page's multiple-choice options
     are drawn when a quiz is built and are not data, so no seed has `choices`.
   - *Not in either set:* a teacher's own questions on 053 or 062, and which built-ins they have hidden there
     (a hidden built-in is still in the set).
@@ -4332,7 +4349,8 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
     (`test:bank-editor`, sixteen pins made with `--print` before the page was edited).
   - *Text.* Everything is built from elements; the page's inline-sink baseline is still 3. A choice, a tag, a unit
     and a standard that are markup are text in the add card, the open form, the list and the preview (asserted).
-  - *Question for Devon, not answered and not built.*
+  - *Question for Devon, answered 2026-10-07 ("B": the second of the three ways below, an ordered list saved
+    with the bank) and not built.*
     8. **Named sets** ("my Unit 3 review", a set to hand a colleague). The design names them and does not say how
        they are stored, and each way changes what a question is: a `sets` list on the question (like tags, nothing
        new in the envelope, but then a set is only a tag by another name); a `sets` map in the envelope beside
@@ -4697,8 +4715,8 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
     board file imported, the store's records).
   - *Not built.* A sound on a bank question (a clip belongs to one board, so the bank needs an owner rule first). A
     picture on the quiz-bowl and final-round overlay, or on the bank's printed sheets. A bank picture kept inline is
-    not moved into the store later. No limit on a sound's size in a board file. 062's map questions are still
-    not published (rank 28).
+    not moved into the store later. No limit on a sound's size in a board file. 062's map questions are not
+    published, and stay in 062 (Devon, 2026-10-07).
   - *Not verified.* No person used the picker; no screen reader (axe on the bank tab in the light theme only, names
     and alts); no file from a real teacher; a bank of hundreds of pictures in one file (it is one JSON text in
     memory); nothing on a phone; the full `npm test` was not run.
@@ -8275,7 +8293,7 @@ displayed to the class in a way that shames anyone.
   currently writes; see Where the next round should pick up.)*
 - **Scheduled reminder.** A local, opt-in reminder — end of each grading
   period, or every N days — surfaced on the site rather than emailed.
-- **Per-tool restore from the tool itself.** A small shared control any tool
+- **Per-tool restore from the tool itself.** *(Shipped v298: `RestoreKit.mount()`, on 001 and 008.)* A small shared control any tool
   can mount — "restore just this tool's data from a backup file" — so a
   teacher who breaks one tool doesn't have to reason about all of them.
 

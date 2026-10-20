@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v296';
+const CACHE_VERSION = 'v298';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -143,6 +143,7 @@ const SHELL_URLS = [
   "_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css",
   "_shared/a11y.css",
   "_shared/a11y.js",
+  "_shared/backup-crypto.js",
   "_shared/base.css",
   "_shared/gvb-save.js",
   "_shared/handoffs.js",
@@ -156,6 +157,7 @@ const SHELL_URLS = [
   "_shared/countdown.js",
   "_shared/qr-draw.js",
   "_shared/qr-scan.js",
+  "_shared/restore-kit.js",
   "_shared/roster.js",
   "_shared/seating-read.js",
   "_shared/share.js",
@@ -210,7 +212,6 @@ const PRECACHE_URLS = [
   "Tools/047-art-critique-worksheet-generator.html",
   "Tools/048-art-portfolio-label-maker.html",
   "Tools/009-backup-restore.html",
-  "Tools/backup-restore/br-crypto.js",
   "Tools/backup-restore/br-pair.js",
   "Tools/backup-restore/br-transfer.js",
   "Tools/008-behavior-points-tracker.html",
@@ -473,6 +474,7 @@ const PRECACHE_URLS = [
   "_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css",
   "_shared/a11y.css",
   "_shared/a11y.js",
+  "_shared/backup-crypto.js",
   "_shared/base.css",
   "_shared/gvb-save.js",
   "_shared/handoffs.js",
@@ -486,6 +488,7 @@ const PRECACHE_URLS = [
   "_shared/countdown.js",
   "_shared/qr-draw.js",
   "_shared/qr-scan.js",
+  "_shared/restore-kit.js",
   "_shared/roster.js",
   "_shared/seating-read.js",
   "_shared/share.js",

@@ -53,6 +53,8 @@ const SITE_GLOBALS = {
   PrintKit: 'readonly',
   ExportKit: 'readonly',
   QuestionBank: 'readonly',
+  RestoreKit: 'readonly',
+  BrCrypto: 'readonly',
   // _shared/vendor/
   jspdf: 'readonly',
   XLSX: 'readonly',
