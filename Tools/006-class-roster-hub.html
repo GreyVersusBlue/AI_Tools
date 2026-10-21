@@ -527,7 +527,7 @@
 
       <div class="card">
         <div class="card-title">Archived rosters &amp; past years</div>
-        <p class="hint">Archiving a roster takes it out of every other tool&rsquo;s roster list without deleting the names. Starting a new year archives them all at once and hands you back the same set of empty classes.</p>
+        <p class="hint">Archiving a roster takes it out of every other tool&rsquo;s roster list without deleting the names. Starting a new year happens in Backup &amp; Restore: it saves the whole year to a file on your disk, checks the file, and only then clears every tool&rsquo;s student names, keeping your class names, periods and courses with empty lists. The file is the only copy of last year.</p>
         <div class="btn-row" style="margin-bottom:.7rem;">
           <button class="secondary small" id="rolloverBtn" type="button">Start a new school year&hellip;</button>
         </div>
@@ -2038,50 +2038,19 @@
     );
   });
 
+  /* Path 3 P6: the year rollover is 009's, which saves the year to a file,
+     reads it back and checks it before it clears anything, and clears every
+     tool's names, not only these rosters. This button saves the open roster
+     (so the archive carries what is on screen) and opens 009's card in this
+     tab, so this page is not left open behind it to save last year again.
+     The years an older version of this button filed in crh_archive_v1 are
+     still listed below until 009's rollover clears them. */
   els.rolloverBtn.addEventListener('click', function () {
-    if (currentName) saveRoster(true); // don't archive a stale copy of the open roster
-    var all = loadAll();
-    var names = Object.keys(all);
-    if (!names.length) { showMsg('There are no rosters to roll over yet.'); return; }
-    var guessLabel = (meta.term || '').trim() || String(new Date().getFullYear() - 1) + '–' + String(new Date().getFullYear()).slice(2);
-    var label = prompt('Label for the year you’re closing out:', guessLabel);
-    if (!label) return;
-    label = label.trim().slice(0, 40);
-    if (!label) return;
-    var nextTerm = prompt('School year for the fresh classes (leave blank to skip):', '');
-    askConfirm(
-      'Start a new school year?',
-      'All ' + plural(names.length, 'roster') + ' get filed under "' + label + '". You keep the same class names, periods, and courses — with empty student lists ready for your new sections. Every other tool will see the same rosters with nobody in them.',
-      [],
-      function () {
-        var db = loadRosterArchive();
-        var snaps = names.map(snapshotRoster);
-        db.years.unshift({ id: 'y' + Date.now().toString(36), label: label, archivedAt: Date.now(), rosters: snaps });
-        saveRosterArchive(db);
-
-        var fresh = {};
-        var recs = loadRecords();
-        names.forEach(function (n) {
-          fresh[n] = [];
-          var m = (recs.rosters[n] || {}).meta || {};
-          recs.rosters[n] = {
-            meta: { period: m.period || '', subject: m.subject || '', term: (nextTerm || '').trim().slice(0, 20), created: Date.now(), updated: Date.now() },
-            students: [], orphans: []
-          };
-        });
-        /* Genuinely a whole-map operation: keep this year's roster names, empty
-           every one. A loop of setRoster calls would leave storage half rolled
-           over if the disk filled in the middle. */
-        Roster.replaceAll(fresh);
-        saveRecords(recs);
-        saveArchive({});
-
-        currentName = null;
-        loadRosterByName(names[0]);
-        renderRosterArchive();
-        showMsg('Filed ' + plural(names.length, 'roster') + ' under "' + label + '" and cleared the student lists. Last year’s names are in "Archived rosters & past years" below.', true);
-      }
-    );
+    if (currentName && !saveRoster(true)) {
+      showMsg('This roster could not be saved, so the year was not started. Save it first, then try again.');
+      return;
+    }
+    location.href = '009-backup-restore.html#rolloverCard';
   });
 
   function renderRosterArchive() {

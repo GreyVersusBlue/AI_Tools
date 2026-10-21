@@ -1098,9 +1098,10 @@
       took(r, 'students on class rosters', n, sample);
       return keeps(r, 'class names', Object.keys(v).length);
     } },
-    /* 006's own rollover writes this: meta's period and subject kept, term
-       the new year, students and orphans emptied. An orphan left behind
-       would hand next year's student of the same name last year's id. */
+    /* The shape 006's own rollover wrote until v303, when its button came
+       here: meta's period and subject kept, term the new year, students
+       and orphans emptied. An orphan left behind would hand next year's
+       student of the same name last year's id. */
     { key: 'crh_students_v1', tool: '006', kind: 'roster', reduce: function (v, ctx) {
       if (!isObj(v) || !isObj(v.rosters)) return UNREADABLE;
       var r = result(shallow(v)), n = 0, sample = [];

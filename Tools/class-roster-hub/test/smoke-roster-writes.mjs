@@ -161,25 +161,54 @@ console.log('Class Roster Hub — the roster write paths');
   await page.close();
 }
 
-/* ── 6. Year rollover empties every roster and keeps every name ────────── */
+/* ── 6. "Start a new school year" is 009's: this page writes nothing ───── */
 {
-  const page = await openWith(
-    { 'Period 3': ['Ada Lovelace', 'Grace Hopper'], 'Period 5': ['Nellie Bly'] }, 'Period 3');
-  page.on('dialog', d => d.accept('2027-28'));
-  await page.click('#rolloverBtn');
+  // Path 3 P6 (v303): the rollover moved to 009, which archives to a file and
+  // checks it before it clears anything. 006's button saves the open roster
+  // and opens 009's card in the same tab; it no longer empties a roster or
+  // files a year in crh_archive_v1 itself. The seed is written on 006 only:
+  // an init script runs on every document, and 009 must see what 006 saved.
+  const legacy = { version: 1, rosters: [], years: [{ id: 'y1', label: '2024-25', archivedAt: 1,
+    rosters: [{ name: 'Period 1', names: ['Old Student'], meta: {}, students: [], archivedStudents: [], archivedAt: 1 }] }] };
+  const page = await prepPage(browser, BASE, { width: 1280, height: 900 });
+  await page.addInitScript(seed => {
+    if (!/006-class-roster-hub/.test(location.pathname) || localStorage.getItem('np_rosters')) return;
+    localStorage.setItem('np_rosters', JSON.stringify(seed.rosters));
+    localStorage.setItem('crh_archive_v1', JSON.stringify(seed.legacy));
+  }, { rosters: { 'Period 3': ['Ada Lovelace', 'Grace Hopper'], 'Period 5': ['Nellie Bly'] }, legacy });
+  const dialogs = [];
+  page.on('dialog', d => { dialogs.push(d.type() + ': ' + d.message()); d.dismiss(); });
+  await page.goto(URL_PAGE, { waitUntil: 'domcontentloaded' });
+  await settle(page, 400);
+  await page.selectOption('#rosterSwitch', 'Period 3');
   await settle(page, 250);
-  await page.click('#confirmOkBtn');
-  await settle(page, 450);
+  ok(/2024-25/.test(await page.textContent('#archiveList')), '6: a year an older version filed is still listed');
 
+  // An edit on screen that was never saved: the archive must carry it.
+  await page.click('#tabText');
+  await page.fill('#namesInput', 'Ada Lovelace\nGrace Hopper\nKatherine Johnson');
+  await Promise.all([page.waitForURL(/009-backup-restore\.html#rolloverCard$/, { timeout: 10000 }).catch(() => {}),
+    page.click('#rolloverBtn')]);
+  await settle(page, 600);
+
+  ok(/009-backup-restore\.html#rolloverCard$/.test(page.url()), `6: the button opens 009's rollover card in this tab (at ${page.url()})`);
+  eq(dialogs, [], '6: ...asking nothing on the way (no prompt, no confirm)');
   const disk = await rostersOnDisk(page);
-  eq(Object.keys(disk).sort(), ['Period 3', 'Period 5'], '6: every roster name survives the rollover');
-  eq(disk['Period 3'], [], '6: ...and every one is emptied');
-  eq(disk['Period 5'], [], '6: ...all of them, not just the open one');
-
-  const archive = await page.evaluate(() => JSON.parse(localStorage.getItem('crh_archive_v1')));
-  ok(archive && archive.years.length === 1, '6: last year is filed in the archive');
-  ok(archive.years[0].rosters.some(r => r.names.includes('Ada Lovelace')),
-    '6: ...with the students who were on it');
+  eq(disk, { 'Period 3': ['Ada Lovelace', 'Grace Hopper', 'Katherine Johnson'], 'Period 5': ['Nellie Bly'] },
+    '6: no roster is emptied, and the open roster\'s unsaved edit was saved first');
+  eq(await page.evaluate(() => JSON.parse(localStorage.getItem('crh_archive_v1'))), legacy,
+    '6: crh_archive_v1 is untouched: 006 files no year of its own');
+  const card = await page.evaluate(() => {
+    const el = document.getElementById('rolloverCard');
+    if (!el) return {};
+    const r = el.getBoundingClientRect();
+    return { focused: document.activeElement === el, inView: r.top >= -1 && r.top < innerHeight,
+      clearLocked: document.getElementById('roClearBtn').disabled };
+  });
+  ok(card.focused, '6: 009 puts focus on the rollover card');
+  ok(card.inView, '6: ...and scrolls it into view');
+  ok(card.clearLocked, '6: ...with the clear still locked behind the archive');
+  eq(page.__errs, [], '6: neither page logged an error');
   await page.close();
 }
 
