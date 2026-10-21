@@ -275,6 +275,9 @@
       keys: [
         { k: 'crh_archive_v1', student: true, rollover: 'reduce' },
         { k: 'crh_archived_students', student: true },
+        /* Path 3 P5's flags (absent today, do not cold call) by student id;
+           _shared/student-flags.js. Never shared; deleted whole at rollover. */
+        { k: 'crh_flags_v1', student: true },
         { k: 'crh_students_v1', student: true, rollover: 'reduce' },
       ],
       /* Still the tool that puts rosters on disk, but it does it through

@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v304';
+const CACHE_VERSION = 'v305';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -165,6 +165,7 @@ const SHELL_URLS = [
   "_shared/state-link.js",
   "_shared/store.js",
   "_shared/student-details.js",
+  "_shared/student-flags.js",
   "_shared/sw-register.js",
   "_shared/theme.css",
   "_shared/tool-registry.js",
@@ -497,6 +498,7 @@ const PRECACHE_URLS = [
   "_shared/state-link.js",
   "_shared/store.js",
   "_shared/student-details.js",
+  "_shared/student-flags.js",
   "_shared/sw-register.js",
   "_shared/theme.css",
   "_shared/tool-registry.js",

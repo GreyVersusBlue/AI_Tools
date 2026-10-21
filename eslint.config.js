@@ -47,6 +47,7 @@ const SITE_GLOBALS = {
   SeatingRead: 'readonly',
   WebRTCPair: 'readonly',
   StudentDetails: 'readonly',
+  StudentFlags: 'readonly',
   ToolRegistry: 'readonly',
   ThemeToggle: 'readonly',
   Countdown: 'readonly',

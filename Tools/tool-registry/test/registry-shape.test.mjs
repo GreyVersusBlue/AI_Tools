@@ -253,8 +253,10 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
                        {roster, ids:{id: name}}. A list of student names, so
                        the year-end rollover takes it with the rest. */
   /* conf-*: the parent conference sign-up's browser keys postdate 009's list; the
-     three that hold a family's names are marked student data in the registry. */
-  const SINCE_THE_MIGRATION = ['pcl_idnames_v1', 'conf-who', 'conf-receipts', 'conf-demo-state'];
+     three that hold a family's names are marked student data in the registry.
+     crh_flags_v1: Path 3 P5's flags (v305), absent today and do not cold call
+     by student id. Marks on named students, so the rollover deletes it whole. */
+  const SINCE_THE_MIGRATION = ['pcl_idnames_v1', 'conf-who', 'conf-receipts', 'conf-demo-state', 'crh_flags_v1'];
 
   /* Keys the old list DID have a chance to cover and did not, which a later
      session has deliberately reclassified. This is a different excuse from the

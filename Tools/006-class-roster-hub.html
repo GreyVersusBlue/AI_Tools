@@ -26,6 +26,7 @@
      np_rosters and the parsing this page used to keep to itself. -->
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/student-flags.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -133,9 +134,24 @@
   .stat .k { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 
   /* Student row editor */
-  .stu-head, .stu-row { display: grid; grid-template-columns: 1.6rem 1.6rem minmax(0,1fr) 2.6rem 5.4rem; gap: .35rem; align-items: center; }
+  .stu-head, .stu-row { display: grid; grid-template-columns: 1.6rem 1.6rem minmax(0,1fr) 7.6rem 2.6rem 5.4rem; gap: .35rem; align-items: center; }
   .stu-head { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; padding: 0 0 .3rem; }
-  body.show-details .stu-head, body.show-details .stu-row { grid-template-columns: 1.6rem 1.6rem minmax(0,1.4fr) minmax(0,.9fr) minmax(0,.9fr) 2.6rem 5.4rem; }
+  body.show-details .stu-head, body.show-details .stu-row { grid-template-columns: 1.6rem 1.6rem minmax(0,1.4fr) minmax(0,.9fr) minmax(0,.9fr) 7.6rem 2.6rem 5.4rem; }
+  /* Flags (Path 3 P5): two toggles a row, pressed = set. Kept on this computer only. */
+  .stu-row .flags { display: flex; gap: .2rem; }
+  .stu-row .flags button { padding: .14rem .32rem; font-size: .7rem; line-height: 1.1; white-space: nowrap; }
+  .stu-row .flags button[aria-pressed="true"] { background: var(--warn-bg); color: var(--ink); border-color: var(--warn-line); font-weight: 700; }
+  .stu-row.flagged .nm { border-left: 4px solid var(--warn-line); }
+  /* On a phone the toggles take a line of their own under the name, which
+     would otherwise be squeezed to nothing beside them. */
+  @media (max-width: 640px) {
+    .stu-head, .stu-row { grid-template-columns: 1.6rem 1.6rem minmax(0,1fr) 2.6rem 5.4rem; }
+    body.show-details .stu-head, body.show-details .stu-row { grid-template-columns: 1.6rem 1.6rem minmax(0,1.4fr) minmax(0,.9fr) minmax(0,.9fr) 2.6rem 5.4rem; }
+    .stu-row .flags { grid-column: 3 / -1; grid-row: 2; }
+    .stu-head .flags-head { display: none; }
+  }
+  .flag-bar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; font-size: .8rem; color: var(--muted); margin: 0 0 .5rem; }
+  .flag-bar strong { color: var(--ink); }
   .stu-list { max-height: 460px; overflow-y: auto; padding-right: .2rem; }
   .stu-row { padding: .16rem 0; border-top: 1px dashed var(--line); }
   .stu-row:first-child { border-top: none; }
@@ -426,10 +442,14 @@
             <button class="secondary small" id="sortLastBtn" type="button">Sort by last name</button>
             <label class="check" style="margin:0 0 0 auto;"><input type="checkbox" id="showDetails"> Preferred name &amp; pronunciation</label>
           </div>
+          <div class="flag-bar" id="flagBar">
+            <span id="flagSummary">No flags set.</span>
+            <button class="secondary tiny" id="clearFlagsBtn" type="button" hidden>Clear all flags</button>
+          </div>
           <div class="stu-head" aria-hidden="true">
             <span></span><span></span><span>Name</span>
             <span class="detail-cell">Goes by</span><span class="detail-cell">Say it</span>
-            <span></span><span></span>
+            <span class="flags-head">Flags</span><span></span><span></span>
           </div>
           <div class="stu-list" id="stuList"></div>
         </div>
@@ -564,6 +584,7 @@
   var ARCHIVE_KEY = 'crh_archived_students';     // { [rosterName]: [name, name, ...] } — this tool only
   var RECORDS_KEY = 'crh_students_v1';           // richer per-student records, kept beside np_rosters (see note below)
   var ROSTER_ARCHIVE_KEY = 'crh_archive_v1';     // archived rosters + past school years
+  var FLAGS_KEY = 'crh_flags_v1';                // StudentFlags.KEY: absent today / do not cold call, by student id
   /* The ceilings come from _shared/roster.js, which is what actually enforces
      them now. Kept as locals because two of them appear in messages a teacher
      reads ("list capped at 400 students") — a hardcoded number here would go on
@@ -584,6 +605,7 @@
   var els = {};
   ['toolbar', 'rosterSwitch', 'newRosterBtn', 'duplicateRosterBtn', 'archiveRosterBtn', 'deleteRosterBtn',
    'rosterName', 'renameBtn', 'metaPeriod', 'metaSubject', 'metaTerm',
+   'flagSummary', 'clearFlagsBtn',
    'tabList', 'tabText', 'listPane', 'textPane', 'stuList', 'addStudentBtn', 'sortAzBtn', 'sortLastBtn', 'showDetails',
    'namesInput', 'nameCount', 'issuesBox', 'saveBtn', 'printBtn', 'printFormat', 'exportScope', 'exportCsvBtn', 'exportXlsxBtn', 'allRosters', 'emptyHint', 'msg',
    'shareBtn', 'importCsvBtn', 'csvFileInput', 'sampleBtn',
@@ -719,6 +741,52 @@
     if (db.rosters[name]) { delete db.rosters[name]; saveRecords(db); }
   }
 
+  // ── Flags (Path 3 P5) ─────────────────────────────────────────────────────
+  /* Two marks a teacher sets on a student here and a tool may honour (the
+     Name Picker does): absent today, which clears itself tomorrow, and do not
+     cold call, which stays until cleared. They live in their own key, by the
+     student's id, so nothing that rebuilds crh_students_v1 can drop them, and
+     nothing that shares or exports a roster carries them: the share link, the
+     CSV and workbook, the printout and the device handoff all leave this key
+     out. _shared/student-flags.js has the record and its rules. A flag is
+     written the moment it is pressed, like the Name Picker's own absences,
+     not held for Save. */
+  function loadFlags() { return StudentFlags.parse(readJson(FLAGS_KEY, null)); }
+  function saveFlags(doc) { return writeJson(FLAGS_KEY, doc); }
+  function flagsOf(s, doc) { return StudentFlags.get(doc || loadFlags(), s && s.id, StudentFlags.dayKey()); }
+
+  /** On load: drop yesterday's absences and the flags of a student on no roster. */
+  function pruneFlags() {
+    var db = loadRecords(), live = {}, rosters = 0;
+    Object.keys(db.rosters).forEach(function (r) {
+      var e = db.rosters[r];
+      if (!e || !Array.isArray(e.students)) return;
+      rosters++;
+      e.students.forEach(function (st) { if (st && st.id) live[st.id] = true; });
+    });
+    var raw = readJson(FLAGS_KEY, null);
+    if (!raw) return;
+    /* With no readable roster record at all, a student "on no roster" cannot be
+       told from a sidecar that failed to read, so only the old days go. */
+    var res = StudentFlags.prune(raw, StudentFlags.dayKey(), rosters ? live : null);
+    if (res.changed) saveFlags(res.doc);
+  }
+
+  function renderFlagBar() {
+    var doc = loadFlags(), today = StudentFlags.dayKey();
+    var here = StudentFlags.counts(doc, today, students.map(function (s) { return s.id; }));
+    var all = StudentFlags.counts(doc, today);
+    var parts = [];
+    if (here.absent) parts.push(here.absent + ' absent today');
+    if (here.noCall) parts.push(here.noCall + ' not to be cold called');
+    var text = parts.length ? 'This class: ' + parts.join(', ') + '.' : 'No flags set in this class.';
+    var elsewhere = all.students - here.students;
+    if (elsewhere > 0) text += ' ' + plural(elsewhere, 'student') + ' flagged in other classes.';
+    text += ' Flags stay on this computer: never in a share link or an export. The Name Picker skips them.';
+    els.flagSummary.textContent = text;
+    els.clearFlagsBtn.hidden = all.students === 0;
+  }
+
   // ── Tolerant name parsing (dedupe case-insensitively, cap lengths) ──────────
   var parseNames = Roster.parseNames;
 
@@ -791,16 +859,23 @@
 
   // ── Student row editor ────────────────────────────────────────────────────
   function renderStudents() {
+    var flagDoc = loadFlags();
     if (!students.length) {
       els.stuList.innerHTML = '<p class="hint" style="margin:.6rem 0;">No students yet — add one, paste a list on the other tab, or import a file.</p>';
     } else {
       els.stuList.innerHTML = students.map(function (s, i) {
-        return '<div class="stu-row" data-i="' + i + '">' +
+        var f = flagsOf(s, flagDoc);
+        var who = escapeHtml(s.name || 'this student');
+        return '<div class="stu-row' + (f.absent || f.noCall ? ' flagged' : '') + '" data-i="' + i + '">' +
           '<input type="checkbox" class="pick" data-i="' + i + '" aria-label="Select ' + escapeHtml(s.name) + '"' + (s.sel ? ' checked' : '') + '>' +
           '<span class="idx">' + (i + 1) + '</span>' +
           '<input type="text" class="nm" data-i="' + i + '" value="' + escapeHtml(s.name) + '" aria-label="Student name">' +
           '<input type="text" class="pf detail-cell" data-i="' + i + '" value="' + escapeHtml(s.preferred) + '" placeholder="goes by" aria-label="Preferred name">' +
           '<input type="text" class="sy detail-cell" data-i="' + i + '" value="' + escapeHtml(s.say) + '" placeholder="say it" aria-label="Pronunciation">' +
+          '<span class="flags">' +
+            '<button type="button" class="secondary" data-flag="absent" data-i="' + i + '" aria-pressed="' + f.absent + '" aria-label="Absent today: ' + who + '" title="Absent today (clears itself tomorrow)">Absent</button>' +
+            '<button type="button" class="secondary" data-flag="noCall" data-i="' + i + '" aria-pressed="' + f.noCall + '" aria-label="Do not cold call: ' + who + '" title="Do not cold call (stays until cleared)">No call</button>' +
+          '</span>' +
           '<span class="move"><button type="button" class="secondary" data-up="' + i + '" aria-label="Move up">&uarr;</button>' +
           '<button type="button" class="secondary" data-down="' + i + '" aria-label="Move down">&darr;</button></span>' +
           '<span class="acts"><button type="button" class="secondary tiny" data-arch="' + i + '">Arch</button>' +
@@ -812,6 +887,7 @@
     renderIssues();
     updateSelCount();
     syncTextarea();
+    renderFlagBar();
   }
 
   function syncTextarea() {
@@ -849,6 +925,18 @@
     if (!btn) return;
     var up = btn.getAttribute('data-up'), down = btn.getAttribute('data-down');
     var del = btn.getAttribute('data-del'), arch = btn.getAttribute('data-arch');
+    var flag = btn.getAttribute('data-flag');
+    if (flag !== null) {
+      var fi = Number(btn.getAttribute('data-i'));
+      var st = students[fi];
+      if (!st || !st.id) return;
+      var on = btn.getAttribute('aria-pressed') !== 'true';
+      if (!saveFlags(StudentFlags.set(loadFlags(), st.id, flag, on, StudentFlags.dayKey()))) return;
+      renderStudents();
+      var again = els.stuList.querySelector('button[data-flag="' + flag + '"][data-i="' + fi + '"]');
+      if (again) again.focus();
+      return;
+    }
     if (up !== null) {
       var i = Number(up);
       if (i > 0) { students.splice(i - 1, 0, students.splice(i, 1)[0]); renderStudents(); }
@@ -1548,7 +1636,7 @@
     { re: /^pe-tournament-stations$/, label: 'Tournament Bracket & Station Rotation', href: '021-pe-tournament-stations.html' },
     { re: /^gvb-bracket[:\-]/, label: 'Bracket / Tournament Generator', href: '020-bracket-tournament-generator.html' }
   ];
-  var OWN_KEYS = [STORE_KEY, ARCHIVE_KEY, RECORDS_KEY, ROSTER_ARCHIVE_KEY];
+  var OWN_KEYS = [STORE_KEY, ARCHIVE_KEY, RECORDS_KEY, ROSTER_ARCHIVE_KEY, FLAGS_KEY];
 
   function scanDependencies(names) {
     var found = {};
@@ -2696,8 +2784,20 @@
     closeHandoff();
   });
 
+  els.clearFlagsBtn.addEventListener('click', function () {
+    var n = StudentFlags.counts(loadFlags(), StudentFlags.dayKey()).students;
+    if (!n) return;
+    if (!confirm('Clear the flags on ' + plural(n, 'student') + ' in every class? Absent today and do not cold call both go. Rosters are not touched.')) return;
+    if (saveFlags(StudentFlags.empty())) { renderStudents(); showMsg('Every flag is cleared.', true); }
+  });
+  /* A flag set in another tab of this tool shows here without a reload. */
+  window.addEventListener('storage', function (e) {
+    if (e.key === FLAGS_KEY || e.key === null) renderStudents();
+  });
+
   // ── Init ─────────────────────────────────────────────────────────────────
   (function init() {
+    pruneFlags();
     renderRosterArchive();
     importSharedFileFromShareTarget();
     if (importSharedRosterFromUrl()) return;
