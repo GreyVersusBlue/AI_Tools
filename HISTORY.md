@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 12 P2 increment 5: named sets on 030, saved with the bank (2026-10-21, AI-14, `CACHE_VERSION` v300)
+
+BACKLOG rank 28 (a 2+ row), kept and rewritten to what is left: a tag filter on 030's list, and 018 and 019's station
+questions. Devon's answer to question 8 was "B" (2026-10-07): an ordered list saved with the bank. Nobody had designed
+how; the design is written under question 8 in BACKLOG's Path 12 section, and `_shared/question-bank.js`'s NAMED SETS
+is the reference.
+
+- **What a teacher sees.** On 030's bank tab, a row under the list: *Add the ticked questions to* (a new named set,
+  named there, or one already made). It works from the bank and from a built-in set; a built-in question goes into the
+  set by its seed id, with nothing copied into the bank. "Questions from" lists each set after the bank, as
+  "Unit 3 review (named set, 4 questions)". Chosen, the list is the set, numbered, with Up, Down and Remove from set on
+  each row (the focus stays with the row that moved, and the move is said in the status line); the filters and the add
+  row are hidden; a rename field, *Delete this set* (asks; the questions stay) and *Pull the whole set into board* are
+  shown. The printed quiz and study guide print the set in its order. The bank file carries the sets and its status
+  line names them; the spreadsheet says sets are only in the bank file. An import shows the sets it would add, under
+  their names here, before Add.
+- **The calls made, each cheap to reverse.**
+  1. *Sets live in the bank's own value, not a key of their own.* "Saved with the bank" read literally; no registry
+     row, and 009's backup and restore already carry the key whole.
+  2. *`schema: 2` only while a set exists.* Every page from v265 to v299 refuses to write a bank whose schema is above
+     1, which is exactly the protection sets need (otherwise an old tab's save would write the bank without them). A
+     bank with no set stays byte for byte what it was, so a teacher who never makes one sees no change anywhere, and
+     an old tab is locked out only once a set exists. The cost: in that window, an old tab can read but not save the
+     bank until it reloads. The existing tests that used schema 2 to mean "a newer page" now use 3.
+  3. *The file's version stays 1*, with `sets` beside `questions`, so an older page still imports a new file's
+     questions (and ignores the sets).
+  4. *A set holds ids, not words*, and may repeat one (Devon's "B" asked for that) and may point at a seed question.
+     Editing a question changes it in every set; deleting it takes it out of every set; an item that names a seed set
+     this page does not load is kept and counted missing.
+  5. *An import never overwrites a set.* A file set equal to one here (same id, or same name, with the same items
+     after the id map) is "already here"; any other is added, with the file's id when this bank lacks it (so the same
+     file twice finds it by id even after a rename to "Name (2)") and a numbered name when the name is taken. The
+     first build gave every imported set a new id, and the pure suite caught that the same file twice then added the
+     set twice.
+  6. *Only 030 lists named sets* (`sources({ named: true })`): 040's and 020's choosers, and 030's final-round and
+     quiz-bowl source pickers, are unchanged. Offering sets there is a later, separate change.
+  7. *A set view has no Edit or Delete for the question*: those stay on the bank's list, where the question lives.
+- **Checks.** `npm run test:question-bank-sets` (pure Node, 67 assertions, an older page run from
+  `Tools/question-bank/test/_question-bank-v299.js`, the v299 module word for word; 35 deliberate breaks of the module,
+  each caught). `npm run test:named-sets` (port 8533, 55 assertions, axe on the set view and the bank). The existing
+  bank suites (`test:question-bank`, `test:question-bank-media`, `run-suites --only` review-game-board and
+  question-bank) were run against the change; the results are in this commit's message.
+- **Not verified.** No teacher has made a set. No screen reader was run over the set view (axe, names and keys only).
+  No file with sets was opened by a real older page in a browser (the v299 module was run in Node). Not run: the full
+  `npm test`.
+
 ## Path 3 P6 increment 1: the year archive and its check, before anything is cleared (2026-10-21, AI-15, `CACHE_VERSION` v299)
 
 BACKLOG rank 4, rewritten to what is left (it is a 1-session row with more increments to come).

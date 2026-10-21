@@ -583,6 +583,12 @@ files must be added there too.
   holds an `idb:` reference, and only 030 deletes a stored picture (its pass at load keeps the bank's). A tool that
   shows no picture needs no code for it and says so on its card, as 040 and 020 do (`npm run test:bank-media`,
   `npm run test:question-bank-media`).
+  Since v300 the bank holds the teacher's **named sets** (`sets` beside `questions`, Devon's "B": an ordered list of
+  question ids saved with the bank, repeats allowed, seed ids allowed); the stored `schema` is 2 only while a set exists,
+  which is what stops a v265–v299 page from saving the bank without them. A file's sets are imported beside the
+  teacher's, never over them (`mergeSets()`, through `merge()`'s new `ids` map). Only 030 lists them, through
+  `sources({ named: true })`; a page that adds them to its own chooser passes that flag
+  (`npm run test:question-bank-sets`, `npm run test:named-sets`).
   030's old key (`gvb-review-board-bank:entries`) is read on every load
   and never written or removed: do not delete it or its registry line, which is what keeps an older page and an
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are

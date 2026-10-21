@@ -87,6 +87,13 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-14 (v300), rank 28 (kept, rewritten), Path 12 P2 increment 5: named sets on 030.** A teacher ticks questions (from
+  the bank or a built-in set) and adds them to a named set, the teacher's own ordered list saved with the bank, a question
+  in it more than once if wanted; "Questions from" lists each set after the bank, where it is reordered (Up, Down), trimmed,
+  renamed, deleted, printed and pulled into a board whole. Storage: `sets` in the bank's envelope at `schema: 2` only while
+  a set exists, so a v265–v299 page reads but cannot overwrite them; the bank file carries them and an import adds beside,
+  never over (`_shared/question-bank.js`, NAMED SETS). `npm run test:question-bank-sets` (35 breaks caught) and
+  `test:named-sets` (port 8533). **Left of rank 28: a tag filter on 030's list; 018 and 019 station questions.** Next free port: 8534.
 - **AI-16 (v298), rank 2 (DELETED: Path 4 P5 is whole): per-tool restore as a shared card.** `_shared/restore-kit.js`
   (`RestoreKit`) holds 009's envelope reader, record diff and the three modes, moved out of its inline script unchanged;
   009 calls it, and 001 and 008 host `RestoreKit.mount()`: a backup file cut to the tool's own registry keys, the same
@@ -116,7 +123,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   and 65 new pins of the final wager round and quiz-bowl taken before the page was edited). Rules in
   `Tools/review-game-board/rgb-play.js`. `npm run test:play-wheel` (port 8522) and `test:play-modes-core`.
   **Left of Path 12: P2's 018 and 019 station questions, 062's map questions, named sets and a tag filter on 030 (rank
-  28); P4 media (rank 30). Fourteen more choices that are Devon's are questions 45 to 58 in the Path 12 section. No
+  28); P4 media (rank 30). (Since then: P4 shipped in v289, 062's map questions were closed, and named sets shipped in v300.) Fourteen more choices that are Devon's are questions 45 to 58 in the Path 12 section. No
   class has spun it. The rank is left as a gap, as the other rows deleted in this sprint were. Next free suite port: 8523.**
 - **AI-14 (v284; the code commit says v283, which AI-31-016 took), rank 29 (kept, rewritten), Path 12 P3 increment 2: the final wager round and quiz-bowl on 030.**
   Two more tick boxes in a board's options, both off until ticked, each with its rule in words under it. **Final
@@ -155,7 +162,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   writes**; a bracket that never had it on is byte for byte what it was (39 pins from the v276 page). The code is
   `Tools/bracket-tournament-generator/bt-academic.js`; `_shared/question-bank.js` is unchanged. `npm run
   test:bracket-academic` (port 8512) and `test:bracket-academic-core`. **Nine choices that are Devon's are questions 9
-  to 17 in the Path 12 section. Left of P2: 018 and 019 station questions, 062's map questions, named sets. Next free
+  to 17 in the Path 12 section. Left of P2: 018 and 019 station questions, 062's map questions, named sets (named sets shipped in v300). Next free
   suite port: 8515 (8513 and 8514 were handed to AI-31's workers).**
 - **AI-14 (v276), rank 28 (kept, rewritten), Path 12 P2 increment 3: 030's editor.** The bank tab shows and edits
   everything a question holds: the add card has a choices editor (add, remove, move up and down, mark the right one,
@@ -166,7 +173,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   there, left out and why; Add stores, by `importQuestions()`). The code is `Tools/review-game-board/rgb-bank-editor.js`;
   `_shared/question-bank.js` is unchanged. `npm run test:bank-editor` (port 8509) and `test:bank-editor-core`.
   **Not built: named sets, which have no storage design (question 8 in the Path 12 section), and a tag filter on the
-  list. Left of P2: 018, 019, 020, 062's map questions. Next free suite port: 8512 (8510 and 8511 were handed to
+  list.** (Named sets were designed and built in v300.) Left of P2: 018, 019, 020, 062's map questions. Next free suite port: 8512 (8510 and 8511 were handed to
   AI-31's workers).**
 - **AI-14 (v271), rank 28 (kept, rewritten), Path 12 P2 increment 2: 040's flashcards and the question bank, both
   ways.** 040 has a Question bank card: "Questions from" (the bank and the seed sets, the list 030's chooser shows)
@@ -532,7 +539,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; on 030, named sets, stored as an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section; designed in one line, not built) and a tag filter on the list. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it.** **Left:** 018 and 019 pull station questions from it; a tag filter on 030's list (`QuestionBank.filter()` takes `tag`; no control asks for it). 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -4136,7 +4143,7 @@ it, and then the baseline is regenerated in that PR.
 
 **Devon's answers, 2026-10-07** (recorded 2026-10-19). The numbered questions below that each had a default
 taken are closed on those defaults: "just keep all 65 defaults". Question 8, named sets, had no default; his
-answer is "B", an ordered list saved with the bank (not built; rank 28). 062's thirty map questions stay in
+answer is "B", an ordered list saved with the bank (built in v300; the storage design is under question 8). 062's thirty map questions stay in
 Geography Bee: "keep the geography bee". 053's list too long for one link goes as a file: "yes, the file"
 (shipped, v297; rank 94).
 
@@ -4367,14 +4374,38 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   - *Text.* Everything is built from elements; the page's inline-sink baseline is still 3. A choice, a tag, a unit
     and a standard that are markup are text in the add card, the open form, the list and the preview (asserted).
   - *Question for Devon, answered 2026-10-07 ("B": the second of the three ways below, an ordered list saved
-    with the bank) and not built.*
+    with the bank), designed and built 2026-10-21 (AI-14, v300; the design follows the question).*
     8. **Named sets** ("my Unit 3 review", a set to hand a colleague). The design names them and does not say how
        they are stored, and each way changes what a question is: a `sets` list on the question (like tags, nothing
        new in the envelope, but then a set is only a tag by another name); a `sets` map in the envelope beside
        `questions` (ordered, can hold a question twice, needs the bank's version to say so and 009's merge to know
        it); or separate keys, one a set (a registry change). Tags and the Unit filter do part of this today.
+       **The storage design (AI-14, 2026-10-21, as built in v300; `_shared/question-bank.js`'s NAMED SETS is the reference):**
+       - *The record.* `{ id: 'set-<time>-<random>', name, items: [question id, ...], createdAt, updatedAt? }`, in
+         a list `sets` in the bank's own stored value beside `questions` and `legacy`: no new key, so no registry
+         row, and 009's backup carries it inside the key it already carries whole. `items` are ids, in order, a
+         repeat allowed; an item may be a seed id (`seed:053:…`), so a set can point at built-in questions with
+         nothing copied. A set holds no words: an edit shows in every set, and `deleteQuestion()` takes the id out
+         of every set, every time it is there. An item this page cannot find (a seed set not loaded) is kept and
+         counted missing; nothing else drops one. Limits: a name of 120 characters, 1,000 items.
+       - *The version, and the migration.* There is none to run: a bank with no set is stored exactly as v265 to
+         v299 stored it (`schema: 1`, no `sets`). While a set exists `schema` is 2, which every page from v265 to v299
+         already treats as a newer page's bank: it reads the questions and refuses every write, so an old tab cannot
+         save the bank without its sets. Deleting the last set takes the bank back to schema 1. Store's own
+         envelope stays at `v: 1`.
+       - *Files.* `toJSON()` writes `sets` beside `questions` when there is one and keeps the file's `version` at 1,
+         so an older page still imports a new file's questions; `parse()` gives `sets` back, `[]` for every file made
+         before. A workbook or CSV has no sets (030's status line says so).
+       - *Import adds, never overwrites.* `merge()` now also returns `ids`, the stored id each file id became (itself,
+         a seed's copy, or the question with the same words already here), and `mergeSets()` takes each file set
+         through that map: identical to a set here (same id, or same name, and the same items) is `same`; any other
+         is added, with the file's id when this bank has no set with it, and `" (2)"` on the name when the name is
+         taken. A set here is never changed or deleted by a file; an item the file and the bank cannot back is
+         dropped from the incoming set and counted. The same file twice adds nothing.
+       - *Seed sets* are untouched: memory only, read-only, and not named sets. `sources({ named: true })` lists the
+         named sets after the bank as `named:<set id>`; only 030 asks, so 040's and 020's choosers are unchanged.
   - *Also left on 030.* The list has no **tag filter** (`QuestionBank.filter()` takes `tag`; no control asks for
-    it). A set cannot be copied whole in one press. The add card and the open form are two copies of six static
+    it). (Still left after v300.) A set cannot be copied whole in one press. The add card and the open form are two copies of six static
     fields (the choices and tags editors are shared).
   - *Not verified.* No person used the editor, and no screen reader was run over it (axe, names and keys only). No
     real teacher's bank was opened before and after (the suite's are made up). The preview was not tried with a
