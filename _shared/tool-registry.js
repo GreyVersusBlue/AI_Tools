@@ -1178,7 +1178,7 @@
         { k: 'bmg_workspace_v1' },
       ],
       idb: [
-        { name: 'bmg-maps', note: 'Cached map images for the Blank Map Generator. Safe to leave out — they download again when needed.' },
+        { name: 'bmg-maps', cache: true, note: 'Cached map images for the Blank Map Generator. Safe to leave out — they download again when needed.' },
       ],
       reads: [
         'bmg_project_v1',
@@ -1643,6 +1643,11 @@
       category: 'platform',
       keys: [
         { k: 'br_last_backup_at' },
+        /* The year rollover's journal (Tools/backup-restore/br-rollover.js):
+           which runs were archived, checked and cleared, with hashes of what
+           was removed and no name or value. Internal to 009 like the key
+           above, so it is in no backup and the rollover never clears it. */
+        { k: 'br_rollover_v1' },
       ],
     },
   ];
@@ -1717,7 +1722,8 @@
     return null;
   }
 
-  /** Every declared IndexedDB database, as {name, note, tool}. */
+  /** Every declared IndexedDB database, as {name, note, backupByDefault, cache, tool}.
+      `cache: true` is a database that downloads again: the year archive leaves it out. */
   function databases() {
     var out = [];
     for (var i = 0; i < TOOLS.length; i++) {
@@ -1725,7 +1731,7 @@
       for (var j = 0; j < dbs.length; j++) {
         out.push({
           name: dbs[j].name, note: dbs[j].note || '',
-          backupByDefault: dbs[j].backupByDefault === true, tool: TOOLS[i]
+          backupByDefault: dbs[j].backupByDefault === true, cache: dbs[j].cache === true, tool: TOOLS[i]
         });
       }
     }

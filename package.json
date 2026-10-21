@@ -23,6 +23,8 @@
     "test:backup-encrypted": "node Tools/backup-restore/test/smoke-encrypted.mjs",
     "test:restore-kit": "node Tools/backup-restore/test/restore-kit.test.mjs",
     "test:tool-restore": "node Tools/backup-restore/test/smoke-tool-restore.mjs",
+    "test:rollover": "node Tools/backup-restore/test/rollover.test.mjs",
+    "test:rollover-smoke": "node Tools/backup-restore/test/smoke-rollover.mjs",
     "test:behavior": "node Tools/behavior-points-tracker/test/smoke-shared-record.mjs && node Tools/behavior-points-tracker/test/smoke-seating-layout.mjs && node Tools/behavior-points-tracker/test/smoke-seating-board.mjs",
     "test:behavior-teams-core": "node Tools/behavior-points-tracker/test/smoke-teams-core.mjs",
     "test:behavior-teams": "node Tools/behavior-points-tracker/test/smoke-teams.mjs",

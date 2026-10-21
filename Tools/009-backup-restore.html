@@ -35,6 +35,7 @@
 <script src="backup-restore/br-pair.js"></script>
 <script src="../_shared/backup-crypto.js"></script>
 <script src="../_shared/restore-kit.js"></script>
+<script src="backup-restore/br-rollover.js"></script>
 <style>
   /* Path 5 P3: the semantic tints, in 001's values (the reference adopter),
      replacing the near-misses this page carried. --warn is 023's fill colour and
@@ -186,6 +187,21 @@
   .xfer-status.bad { color: var(--err); }
   .xfer-status.good { color: var(--good); }
 
+  /* ---------- start a new school year ---------- */
+  .ro-steps { margin: .4rem 0 0; padding-left: 1.3rem; }
+  .ro-steps > li { margin-bottom: .9rem; }
+  .ro-steps > li > b { display: block; }
+  .ro-steps .hint { display: block; color: var(--muted); font-size: .85rem; margin: .15rem 0 .4rem; }
+  .ro-box { font-size: .85rem; padding: .5rem .8rem; border-radius: 6px; margin-top: .5rem; color: var(--ink); border: 1px solid var(--line); border-left-width: 4px; }
+  .ro-box.good { background: var(--good-bg); border-left-color: var(--good); }
+  .ro-box.error { background: var(--err-bg); border-left-color: var(--err); }
+  .ro-box.info { background: var(--card-2); border-left-color: var(--accent-2); }
+  .ro-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .ro-row input[type="text"] { width: 9rem; }
+  .ro-reasons { margin: .4rem 0 0; padding-left: 1.2rem; color: var(--err); font-size: .85rem; }
+  .ro-banner { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); border-radius: 6px; padding: .6rem .8rem; font-size: .88rem; margin-bottom: .8rem; }
+  .ro-banner .btn-row { margin-top: .5rem; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 </style>
 </head>
@@ -292,14 +308,41 @@
     <div id="xferMsg"></div>
   </div>
 
-  <div class="card">
-    <div class="card-title">End of the school year</div>
-    <p class="hint">Archiving a year is one workflow, not two: take a full backup, then clear the student data and keep everything you spent the year building. Nothing is cleared until the backup file has actually downloaded.</p>
+  <div class="card" id="rolloverCard">
+    <div class="card-title">Start a new school year</div>
+    <p class="hint">Three steps, in order: save an archive of everything in this browser, check the saved file, then clear the student data. The clear stays locked until the file on your disk has been read back and found complete, so a blocked download or a full disk cannot cost you the year.</p>
+    <div id="rolloverResume"></div>
     <div id="rolloverSummary"></div>
-    <div class="btn-row">
-      <button class="danger" id="rolloverBtn" type="button">Back up, then clear student data&hellip;</button>
-    </div>
-    <div id="rolloverMsg"></div>
+    <ol class="ro-steps">
+      <li id="roStep1">
+        <b>Save the year archive.</b>
+        <span class="hint">Every saved item and every image this site keeps, in one file. It is never locked: a passphrase forgotten over the summer would lose the year.</span>
+        <div class="ro-row">
+          <label for="roLabel">Year being closed</label>
+          <input type="text" id="roLabel" maxlength="20" autocomplete="off">
+          <button class="secondary" id="roSaveBtn" type="button">Save the archive&hellip;</button>
+        </div>
+        <div id="roSaveMsg" aria-live="polite"></div>
+      </li>
+      <li id="roStep2">
+        <b>Check the saved file.</b>
+        <span class="hint">The page reads the file back from your disk and checks every item, database and picture against what it saved.</span>
+        <div class="ro-row">
+          <button class="secondary" id="roCheckBtn" type="button" disabled>Check the saved file</button>
+          <label class="ro-pick" for="roCheckFile">or pick the file you saved:</label>
+          <input type="file" id="roCheckFile" accept=".json,application/json" disabled>
+        </div>
+        <div id="roCheckMsg" aria-live="polite"></div>
+      </li>
+      <li id="roStep3">
+        <b>Clear the student data.</b>
+        <span class="hint">Removes every item marked <i>student data</i> in the list above, whole. For now that includes the setup some of them hold beside the names (a seating chart&rsquo;s room layout, hall-pass destinations, behaviour tags): the archive has all of it, and a clear that keeps that setup is the next piece of this work. Close every other tab of this site first: an open tool saves what it has in memory again.</span>
+        <div class="ro-row">
+          <button class="danger" id="roClearBtn" type="button" disabled>Clear the student data</button>
+        </div>
+        <div id="rolloverMsg" aria-live="polite"></div>
+      </li>
+    </ol>
   </div>
 
   <footer class="note">Runs entirely in your browser &mdash; nothing here is uploaded anywhere. A backup file is just a copy of what this browser already has stored.</footer>
@@ -368,7 +411,7 @@
      storage works at all (__scv_probe__ and friends). A probe exists for a
      microsecond and is nobody's data; before the registry marked them
      `transient` they could land in a backup file if one was taken mid-probe. */
-  function isInternalKey(key) { return key === LAST_BACKUP_KEY || ToolRegistry.isTransient(key); }
+  function isInternalKey(key) { return key === LAST_BACKUP_KEY || key === BrRollover.JOURNAL_KEY || ToolRegistry.isTransient(key); }
 
   function labelFor(key) { return ToolRegistry.labelFor(key); }
 
@@ -906,7 +949,7 @@
 
   /* Shared little status box used by every card that needs one-off feedback
      (download, device transfer, …) rather than each rolling its own markup. */
-  function showBoxMsg(el, kind, text) {
+  function roBox(el, kind, text) {
     el.innerHTML = '<div class="' + kind + '" style="font-size:.85rem;padding:.6rem .8rem;border-radius:6px;margin-top:.8rem;' +
       (kind === 'good' ? 'background:#e4f5ea;color:var(--good);border:1px solid #bfe3cd;'
        : kind === 'error' ? 'background:#fbeceA;color:var(--err);border:1px solid #e6c6c1;'
@@ -914,7 +957,7 @@
   }
 
   var dlMsgEl = document.getElementById('dlMsg');
-  function showDlMsg(kind, text) { showBoxMsg(dlMsgEl, kind, text); }
+  function showDlMsg(kind, text) { roBox(dlMsgEl, kind, text); }
 
   /* ---------- the optional passphrase lock (_shared/backup-crypto.js) ----------
      Off by default: a forgotten passphrase is a lost backup, and a lost
@@ -992,6 +1035,9 @@
       '<dt>Format</dt><dd>version ' + env.formatVersion + (env.formatVersion === 1 ? ' (written before this page understood versions — still restores fine)' : '') + '</dd>' +
       '<dt>Taken</dt><dd>' + (env.exportedAt ? escapeHtml(new Date(env.exportedAt).toLocaleString()) : 'not recorded') + '</dd>' +
       (env.label ? '<dt>Label</dt><dd>' + escapeHtml(env.label) + '</dd>' : '') +
+      (env.rollover ? '<dt>Year archive</dt><dd>The ' + escapeHtml(env.rollover.label || '') + ' year archive, taken ' +
+        escapeHtml(String(env.rollover.plannedAt || env.exportedAt || '').slice(0, 10)) +
+        '. Its images are ticked below: without them a seating chart comes back with no faces.</dd>' : '') +
       '<dt>Contains</dt><dd>' + Object.keys(env.data).length + ' saved item' + (Object.keys(env.data).length === 1 ? '' : 's') +
       (idbNames.length ? ' and ' + idbNames.length + ' cached database' + (idbNames.length === 1 ? '' : 's') : '') + '</dd>' +
       '<dt>File size</dt><dd>' + formatSize(fileSize) + '</dd>' +
@@ -1044,8 +1090,11 @@
     if (read.error) return { error: read.error };
 
     var env = read.envelope;
+    /* A year archive (Path 3 P6) is an ordinary backup with a stamp. */
+    env.rollover = parsed.rollover && typeof parsed.rollover === 'object' ? parsed.rollover : null;
     renderVerify(env, read.flags, byteSize);
     pending = env;
+    previewList.innerHTML = '';   // a new file starts from its own defaults, not the last file's ticks
     renderRestorePreview();
     preview.classList.add('active');
     return { ok: true, envelope: env };
@@ -1135,9 +1184,14 @@
       if (!cb.checked) wasUnchecked[cb.dataset.id] = true;
     });
     var idbChecked = {};
-    document.querySelectorAll('.restore-idb-check').forEach(function (cb) {
+    var idbBoxes = document.querySelectorAll('.restore-idb-check');
+    idbBoxes.forEach(function (cb) {
       if (cb.checked) idbChecked[cb.dataset.db] = true;
     });
+    /* A year archive's databases start ticked; any other backup's start off. */
+    if (!idbBoxes.length && env.rollover && env.indexedDB) {
+      Object.keys(env.indexedDB).forEach(function (n) { idbChecked[n] = true; });
+    }
 
     var groups = buildRestoreGroups(env, mode);
     lastRestoreGroups = groups;
@@ -1306,8 +1360,8 @@
 
   document.getElementById('sendDeviceBtn').addEventListener('click', function () {
     xferMsgEl.innerHTML = '';
-    if (!lastScanGroups.length) { showBoxMsg(xferMsgEl, 'error', 'Nothing saved in this browser yet — there’s nothing to send.'); return; }
-    if (!selectedGroups().length) { showBoxMsg(xferMsgEl, 'error', 'Check at least one row in “What’s saved right now” above before sending.'); return; }
+    if (!lastScanGroups.length) { roBox(xferMsgEl, 'error', 'Nothing saved in this browser yet — there’s nothing to send.'); return; }
+    if (!selectedGroups().length) { roBox(xferMsgEl, 'error', 'Check at least one row in “What’s saved right now” above before sending.'); return; }
     teardownTransfer();
     transferOverlay.hidden = false;
     renderSendIntro();
@@ -1524,7 +1578,95 @@
       '<p class="xfer-status" id="xferStatus">Receiving…</p>';
   }
 
-  /* ---------- end-of-year archive and clear ---------- */
+  /* ---------- start a new school year (Path 3 P6, increment 1) ----------
+     Three steps, each locked until the one before it is done. The archive is
+     built once, serialised once, hashed, checked in memory, and storage is
+     read again to make sure nothing was saved while it was being built; then
+     it is saved, read back from disk and checked again. Only a file on disk
+     that passed unlocks the clear, and the clear removes a key only while it
+     still holds exactly what the archive holds. Every removal is journalled in
+     br_rollover_v1 (BrRollover, backup-restore/br-rollover.js), so a page
+     closed half way opens on a banner rather than on a half-cleared year. */
+  var ro = null;                // { id, label, text, hash, manifest, name, handle, checked }
+  var roLabel = document.getElementById('roLabel');
+  var roSaveBtn = document.getElementById('roSaveBtn');
+  var roCheckBtn = document.getElementById('roCheckBtn');
+  var roCheckFile = document.getElementById('roCheckFile');
+  var roClearBtn = document.getElementById('roClearBtn');
+  var roSaveMsg = document.getElementById('roSaveMsg');
+  var roCheckMsg = document.getElementById('roCheckMsg');
+  var roMsg = document.getElementById('rolloverMsg');
+  var roResume = document.getElementById('rolloverResume');
+
+  /* The year being closed: from August on it is this year and next. */
+  (function () {
+    var d = new Date(), y = d.getFullYear();
+    roLabel.value = d.getMonth() >= 6 ? y + '-' + String(y + 1).slice(2) : (y - 1) + '-' + String(y).slice(2);
+  })();
+
+  function roFilename(label) {
+    var lbl = String(label || '').trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').slice(0, 20);
+    return 'aspermylessonplan-year-archive-' + (lbl ? lbl + '-' : '') + new Date().toISOString().slice(0, 10) + '.json';
+  }
+
+  function studentKeys() {
+    var out = [];
+    lastScanGroups.forEach(function (g) { if (g.kind === 'student') out = out.concat(g.keys); });
+    return out;
+  }
+
+  function currentLocal() {
+    var data = {};
+    var keys = [];
+    try { keys = Object.keys(localStorage); } catch (e) { keys = []; }
+    keys.forEach(function (k) {
+      if (isInternalKey(k)) return;
+      try { data[k] = localStorage.getItem(k); } catch (e) {}
+    });
+    return data;
+  }
+
+  /* The databases an archive must hold: every one the registry declares and
+     this browser has, except a cache that downloads again. */
+  function archiveDatabases() {
+    var wanted = {};
+    ToolRegistry.databases().forEach(function (d) { if (!d.cache) wanted[d.name] = true; });
+    return scanIndexedDb().then(function (dbs) {
+      if (dbs === null) return idbSupported ? { error: 'This browser would not open its IndexedDB, so the archive could not include the images. Nothing was saved and nothing was cleared.' } : [];
+      var bad = dbs.filter(function (d) { return wanted[d.name] && d.unreadable; });
+      if (bad.length) return { error: 'The database “' + bad[0].name + '” could not be opened, so the archive would be missing it. Nothing was saved and nothing was cleared.' };
+      return dbs.filter(function (d) { return wanted[d.name]; }).map(function (d) { return d.name; });
+    });
+  }
+
+  function verifyDeps() {
+    return {
+      read: RestoreKit.read,
+      isEncrypted: function (p) { return !!(window.BrCrypto && window.BrCrypto.isEncrypted(p)); }
+    };
+  }
+
+  /* Ink on a tint with a coloured edge: the page's showBoxMsg puts --good on
+     --good-bg, which is 4.46:1, under the 4.5:1 a11y floor. */
+  function roBox(el, kind, msg) {
+    el.innerHTML = '<div class="ro-box ' + kind + '">' + escapeHtml(msg) + '</div>';
+  }
+
+  function reasonsHtml(reasons) {
+    return '<ul class="ro-reasons">' + reasons.slice(0, 4).map(function (r) { return '<li>' + escapeHtml(r.text) + '</li>'; }).join('') + '</ul>';
+  }
+
+  function roRender() {
+    var saved = !!ro, checked = !!(ro && ro.checked);
+    roCheckBtn.disabled = !saved || !ro.handle;
+    roCheckFile.disabled = !saved;
+    roClearBtn.disabled = !checked || !studentKeys().length;
+    document.getElementById('roStep2').classList.toggle('ro-off', !saved);
+    document.getElementById('roStep3').classList.toggle('ro-off', !checked);
+    var n = studentKeys().length;
+    roClearBtn.textContent = n ? 'Clear ' + n + ' item' + (n === 1 ? '' : 's') + ' of student data' : 'Clear the student data';
+  }
+
   function renderRolloverSummary(groups) {
     var student = groups.filter(function (g) { return g.kind === 'student'; });
     var settings = groups.filter(function (g) { return g.kind === 'settings'; });
@@ -1532,63 +1674,242 @@
     var el = document.getElementById('rolloverSummary');
     if (!studentItems) {
       el.innerHTML = '<p class="hint">No student data is saved in this browser, so there is nothing to clear.</p>';
-      return;
+    } else {
+      el.innerHTML =
+        '<p class="hint" style="margin-bottom:.4rem;"><b>Would be cleared</b> (' + studentItems + ' item' + (studentItems === 1 ? '' : 's') + '): ' +
+        escapeHtml(student.map(function (g) { return g.label; }).join(', ')) + '.</p>' +
+        '<p class="hint"><b>Would be kept</b>: ' +
+        (settings.length ? escapeHtml(settings.map(function (g) { return g.label; }).join(', ')) : 'nothing else is saved') + '.</p>';
     }
-    el.innerHTML =
-      '<p class="hint" style="margin-bottom:.4rem;"><b>Would be cleared</b> (' + studentItems + ' item' + (studentItems === 1 ? '' : 's') + '): ' +
-      escapeHtml(student.map(function (g) { return g.label; }).join(', ')) + '.</p>' +
-      '<p class="hint"><b>Would be kept</b>: ' +
-      (settings.length ? escapeHtml(settings.map(function (g) { return g.label; }).join(', ')) : 'nothing else is saved') + '.</p>';
+    if (roClearBtn) roRender();
   }
 
-  var rolloverBtn = document.getElementById('rolloverBtn');
-  rolloverBtn.addEventListener('click', function () {
-    var groups = lastScanGroups.filter(function (g) { return g.kind === 'student'; });
-    if (!groups.length) {
-      document.getElementById('rolloverMsg').innerHTML = '<p class="hint" style="color:var(--err);">Nothing to clear.</p>';
-      return;
-    }
-    var itemCount = groups.reduce(function (n, g) { return n + g.count; }, 0);
-    if (!confirm('This downloads a full backup of everything first, then erases ' + itemCount +
-                 ' item' + (itemCount === 1 ? '' : 's') + ' of student data — rosters, points, hall passes, reading logs, seating charts.\n\n' +
-                 'Your rubrics, templates, calendars and settings are kept.\n\nContinue?')) return;
+  function writeFile(handle, text) {
+    return handle.createWritable().then(function (w) {
+      return w.write(text).then(function () { return w.close(); });
+    });
+  }
 
-    rolloverBtn.disabled = true;
-    /* The backup is of *everything*, not just what is about to be deleted — the
-       point of a year-end archive is to be able to go back to the whole state,
-       and taking a partial one here would be a trap. */
-    buildEnvelope(lastScanGroups, []).then(function (envelope) {
-      var stamp = new Date().toISOString().slice(0, 10);
-      envelope.label = envelope.label || 'year-end';
-      downloadJson(envelope, 'aspermylessonplan-year-archive-' + stamp + '.json');
-      try { localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString()); } catch (e) {}
-      /* A second confirm after the download, because the first one was a
-         promise and this one is the irreversible part. */
-      if (!confirm('The archive file has been downloaded. Check it is in your Downloads folder before continuing.\n\nErase ' +
-                   itemCount + ' item' + (itemCount === 1 ? '' : 's') + ' of student data now?')) {
-        document.getElementById('rolloverMsg').innerHTML = '<p class="hint">Archive downloaded. Nothing was erased.</p>';
-        return;
-      }
-      var removed = 0;
-      groups.forEach(function (g) {
-        g.keys.forEach(function (key) {
-          try { localStorage.removeItem(key); removed++; } catch (e) {}
+  roSaveBtn.addEventListener('click', function () {
+    var label = roLabel.value.trim().slice(0, 20);
+    if (!lastScanGroups.length) { roBox(roSaveMsg, 'error', 'Nothing is saved in this browser, so there is no year to archive.'); return; }
+    if (!label) { roBox(roSaveMsg, 'error', 'Name the year being closed first, for example 2026-27.'); roLabel.focus(); return; }
+    ro = null;
+    roCheckMsg.innerHTML = '';
+    roMsg.innerHTML = '';
+    roRender();
+    roSaveBtn.disabled = true;
+    roBox(roSaveMsg, 'info', 'Building the archive, images included — this can take a moment…');
+    var id = BrRollover.newId();
+    var name = roFilename(label);
+    /* showSaveFilePicker has to be called while the click still counts as
+       the teacher's own action, so it is asked for before the build. */
+    var pickerP = typeof window.showSaveFilePicker === 'function'
+      ? window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'Year archive', accept: { 'application/json': ['.json'] } }] })
+          .then(function (h) { return { handle: h }; }, function (err) { return { cancelled: err && err.name === 'AbortError', error: err }; })
+      : Promise.resolve({ handle: null });
+    var built = null;
+    pickerP.then(function (pick) {
+      if (pick.cancelled) throw { msg: 'Not saved: the save was cancelled. Nothing was cleared.' };
+      if (pick.error) pick = { handle: null };
+      return archiveDatabases().then(function (dbNames) {
+        if (dbNames && dbNames.error) throw { msg: dbNames.error };
+        renderScan();
+        return buildEnvelope(lastScanGroups, dbNames).then(function (envelope) {
+          var missing = dbNames.filter(function (n) { return !envelope.indexedDB || !envelope.indexedDB[n]; });
+          if (missing.length) throw { msg: 'The database “' + missing[0] + '” could not be read, so the archive would be missing it. Nothing was saved and nothing was cleared.' };
+          envelope.label = label;
+          return BrRollover.manifest(envelope).then(function (m) {
+            envelope.rollover = BrRollover.stamp({ id: id, label: label, manifest: m });
+            var text = JSON.stringify(envelope, null, 2);
+            return BrRollover.hash(text).then(function (h) {
+              built = { id: id, label: label, text: text, hash: h, manifest: m, name: name, handle: pick.handle, checked: false };
+              return BrRollover.verify(text, built, verifyDeps());
+            });
+          });
         });
       });
+    }).then(function (res) {
+      if (!res.ok) throw { msg: 'The archive did not pass its own check, so it was not saved. Nothing was cleared.', reasons: res.reasons };
+      /* Anything saved while the archive was being built would be cleared
+         without being in it. Compare storage now with what was archived. */
+      return BrRollover.localManifest(currentLocal()).then(function (now) {
+        var diff = BrRollover.compareLocal(built.manifest.local, now);
+        if (diff.length) throw { msg: 'Something was saved in another tab while the archive was being built (' + diff.length + ' item' + (diff.length === 1 ? '' : 's') + '). Close the other tabs of this site and save the archive again. Nothing was cleared.' };
+      });
+    }).then(function () {
+      if (built.handle) return writeFile(built.handle, built.text);
+      var blob = new Blob([built.text], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = built.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    }).then(function () {
+      BrRollover.recordRun(localStorage, { id: built.id, label: built.label, state: 'archived', archiveName: built.handle ? (built.handle.name || built.name) : built.name,
+                                            archiveHash: built.hash, startedAt: new Date().toISOString() });
+      try { localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString()); } catch (e) {}
+      renderBackupBanner();
+      ro = built;
+      var dbs = Object.keys(built.manifest.databases);
+      roBox(roSaveMsg, 'good', 'Saved ' + (built.handle ? '“' + (built.handle.name || built.name) + '”' : 'to your Downloads as “' + built.name + '”') + ': ' +
+        Object.keys(built.manifest.local).length + ' saved items' + (dbs.length ? ' and ' + dbs.length + ' database' + (dbs.length === 1 ? '' : 's') + ' of images and recordings' : '') +
+        '. Now check it in step 2.');
+      roRender();
+      if (built.handle) roCheckBtn.focus(); else roCheckFile.focus();
+    }).catch(function (err) {
+      ro = null;
+      roRender();
+      roBox(roSaveMsg, 'error', (err && err.msg) || 'The archive could not be saved. Nothing was cleared.');
+      if (err && err.reasons) roSaveMsg.insertAdjacentHTML('beforeend', reasonsHtml(err.reasons));
+    }).then(function () { roSaveBtn.disabled = false; });
+  });
+
+  function checkText(text) {
+    if (!ro) return;
+    var run = ro;
+    roBox(roCheckMsg, 'info', 'Checking the file…');
+    BrRollover.verify(text, run, verifyDeps()).then(function (res) {
+      if (ro !== run) return;
+      if (!res.ok) {
+        run.checked = false;
+        roBox(roCheckMsg, 'error', 'That file did not pass, so the clear stays locked. Save the archive again in step 1, or pick the file you saved.');
+        roCheckMsg.insertAdjacentHTML('beforeend', reasonsHtml(res.reasons));
+      } else {
+        run.checked = true;
+        BrRollover.recordRun(localStorage, { id: run.id, checkedAt: new Date().toISOString() });
+        roBox(roCheckMsg, 'good', 'The file on your disk is complete: every item, database and picture matches. Keep it somewhere safe (a USB stick or your school drive) before you clear.');
+      }
+      roRender();
+    });
+  }
+
+  roCheckBtn.addEventListener('click', function () {
+    if (!ro || !ro.handle) return;
+    ro.handle.getFile().then(function (f) { return f.text(); }).then(checkText, function () {
+      roBox(roCheckMsg, 'error', 'The saved file could not be read back. Pick it below instead.');
+    });
+  });
+  roCheckFile.addEventListener('change', function () {
+    var f = roCheckFile.files && roCheckFile.files[0];
+    if (!f) return;
+    f.text().then(checkText);
+    roCheckFile.value = '';
+  });
+
+  function clearFromManifest(id, m) {
+    renderScan();
+    var keys = studentKeys();
+    return BrRollover.planClear(id, currentLocal(), keys, m).then(function (plan) {
+      return BrRollover.run(plan, { storage: localStorage }).then(function (res) { return { plan: plan, res: res }; });
+    });
+  }
+
+  function receiptHtml(run, removedKeys) {
+    var byTool = {};
+    removedKeys.forEach(function (k) { var l = labelFor(k) || 'Other saved data'; byTool[l] = (byTool[l] || 0) + 1; });
+    return '<div class="ro-banner" style="background:var(--card-2);color:inherit;border-color:var(--line);">' +
+      '<b>Cleared.</b> ' + removedKeys.length + ' item' + (removedKeys.length === 1 ? '' : 's') + ' of student data: ' +
+      escapeHtml(Object.keys(byTool).sort().map(function (l) { return l + ' (' + byTool[l] + ')'; }).join(', ')) + '.' +
+      '<br>Archive: “' + escapeHtml(run.archiveName || '') + '”, ' + escapeHtml(BrRollover.hashKind(run.archiveHash || '')) + ' ' + escapeHtml(String(run.archiveHash || '').slice(0, 12)) + '.' +
+      '<br>To see last year again, open this site in a private window, restore the archive there, read what you need and close the window. Restoring it here would replace this year’s data.' +
+      '<br>Each browser keeps its own data: another computer you use still has last year until you do this there too.</div>';
+  }
+
+  roClearBtn.addEventListener('click', function () {
+    if (!ro || !ro.checked) return;
+    var run = ro;
+    roClearBtn.disabled = true;
+    clearFromManifest(run.id, run.manifest).then(function (out) {
+      var res = out.res;
+      if (res.stale && res.stale.length) {
+        roBox(roMsg, 'error', 'Something was saved since the archive was made (' + res.stale.length + ' item' + (res.stale.length === 1 ? '' : 's') +
+          '), so it would be cleared without being in the archive. Nothing was cleared. Close the other tabs and save the archive again.');
+        ro = null;
+      } else if (!res.done) {
+        roBox(roMsg, 'error', 'The clear stopped part way: this browser refused to change ' + (res.failed || 'an item') + '. ' + res.removed + ' item' + (res.removed === 1 ? '' : 's') + ' were cleared. Your archive was checked before it began; reload this page to finish or to put last year back.');
+      } else {
+        var j = BrRollover.getRun(localStorage, run.id);
+        roMsg.innerHTML = receiptHtml(j, res.receipt.keys);
+        ro = null;
+      }
       renderScan();
       renderBackupBanner();
-      document.getElementById('rolloverMsg').innerHTML =
-        '<p class="hint" style="color:var(--good);">Archive downloaded and ' + removed + ' item' + (removed === 1 ? '' : 's') +
-        ' of student data erased. Your templates and settings are untouched. Restore the file any time to get last year back.</p>';
+      renderResume();
     }).catch(function () {
-      document.getElementById('rolloverMsg').innerHTML = '<p class="hint" style="color:var(--err);">Could not build the archive file, so nothing was erased.</p>';
-    }).then(function () { rolloverBtn.disabled = false; });
+      roBox(roMsg, 'error', 'Something went wrong before anything was cleared. Reload the page and look at the banner at the top of this card.');
+    }).then(roRender);
   });
+
+  /* An interrupted run, a saved archive never used, or a cleared item that a
+     still-open tab saved back with last year's value. */
+  function renderResume() {
+    roResume.innerHTML = '';
+    var r = BrRollover.resume(localStorage);
+    if (r && r.state === 'clearing') {
+      roResume.innerHTML = '<div class="ro-banner" role="alert"><b>The new-year clear was interrupted</b> after ' + r.doneSteps + ' of ' + r.totalSteps +
+        ' items. Your archive “' + escapeHtml(r.archiveName) + '” was checked before it began.' +
+        '<div class="btn-row"><label class="secondary" for="roFinishFile" style="cursor:pointer;">Finish clearing: pick the archive</label>' +
+        '<input type="file" id="roFinishFile" accept=".json,application/json" style="max-width:14rem;">' +
+        '<button type="button" class="secondary" id="roPutBack">Put last year back</button></div><div id="roFinishMsg"></div></div>';
+      document.getElementById('roPutBack').addEventListener('click', function () {
+        roBox(document.getElementById('roFinishMsg'), 'info', 'Pick the archive “' + r.archiveName + '” under “Restore from a backup”, choose Replace and keep the databases ticked.');
+        fileInput.focus();
+      });
+      document.getElementById('roFinishFile').addEventListener('change', function (e) {
+        var f = e.target.files && e.target.files[0];
+        var msg = document.getElementById('roFinishMsg');
+        if (!f) return;
+        f.text().then(function (text) {
+          var parsed = null;
+          try { parsed = JSON.parse(text); } catch (err) { parsed = null; }
+          var m = parsed && parsed.rollover && parsed.rollover.manifest;
+          if (!m) return { ok: false, reasons: [{ text: 'That is not a year archive.' }] };
+          return BrRollover.verify(text, { id: r.id, hash: r.archiveHash, manifest: m }, verifyDeps()).then(function (res) {
+            return res.ok ? clearFromManifest(r.id, m).then(function (out) { return { ok: true, out: out }; }) : res;
+          });
+        }).then(function (res) {
+          if (!res.ok) { roBox(msg, 'error', 'That file is not the archive this clear began with. Nothing was changed.'); msg.insertAdjacentHTML('beforeend', reasonsHtml(res.reasons)); return; }
+          var out = res.out.res;
+          if (out.done) { renderResume(); roMsg.innerHTML = receiptHtml(BrRollover.getRun(localStorage, r.id), out.receipt.keys); }
+          else if (out.stale.length) roBox(msg, 'error', out.stale.length + ' item' + (out.stale.length === 1 ? ' has' : 's have') + ' been saved since the archive was made, so they are not in it. Nothing more was cleared. Put last year back, or save a new archive and start again.');
+          else roBox(msg, 'error', 'This browser refused to change ' + out.failed + '. Try again.');
+          renderScan();
+        });
+      });
+      return;
+    }
+    if (r && r.state === 'archived') {
+      roResume.innerHTML = '<p class="hint">A year archive, “' + escapeHtml(r.archiveName) + '”, was saved on ' + escapeHtml(String(r.startedAt || '').slice(0, 10)) + '. Nothing was cleared.</p>';
+    }
+    BrRollover.writtenBack(localStorage).then(function (keys) {
+      if (!keys.length) return;
+      var tools = {};
+      keys.forEach(function (k) { tools[labelFor(k) || 'Other saved data'] = 1; });
+      roResume.innerHTML = '<div class="ro-banner" role="status"><b>Last year came back.</b> ' + escapeHtml(Object.keys(tools).sort().join(', ')) +
+        ' saved last year’s student data again after the clear: a tab that stayed open does that. It is exactly what the archive holds.' +
+        '<div class="btn-row"><button type="button" class="secondary" id="roReclear">Clear ' + keys.length + ' item' + (keys.length === 1 ? '' : 's') + ' again</button></div></div>';
+      document.getElementById('roReclear').addEventListener('click', function () {
+        var run = BrRollover.lastRun(localStorage);
+        var m = { local: {} };
+        var local = currentLocal();
+        keys.forEach(function (k) { if (k in local) m.local[k] = [String(local[k]).length, run.cleared[k]]; });
+        BrRollover.planClear(run.id, local, keys, m).then(function (plan) {
+          return BrRollover.run(plan, { storage: localStorage });
+        }).then(function () { renderScan(); renderResume(); });
+      });
+    });
+  }
 
   /* ---------- boot ---------- */
   renderScan();
   renderBackupBanner();
   renderIdb();
+  renderResume();
+  roRender();
   document.getElementById('rescanBtn').addEventListener('click', function () {
     renderScan();
     renderBackupBanner();

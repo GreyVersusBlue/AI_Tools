@@ -172,6 +172,10 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
   eq(onByDefault, ['gvb-media'], '6: only the irreplaceable one is backed up by default');
   ok(REG.databases().every(d => typeof d.backupByDefault === 'boolean'),
     '6: ...and every row answers the question, rather than leaving it undefined');
+  /* The year archive (Path 3 P6) takes every database but a cache, so a
+     database wrongly called a cache would be cleared out of nobody's archive. */
+  eq(REG.databases().filter(d => d.cache).map(d => d.name), ['bmg-maps'],
+    '6: the one cache is the map cache, and the year archive leaves only it out');
   ok(REG.databases().find(d => d.name === 'gvb-media').note.length > 20,
     '6: the shared media store says what it holds, so a backup can name it');
   /* 009 prints `note` under the database's name, and with none the teacher is

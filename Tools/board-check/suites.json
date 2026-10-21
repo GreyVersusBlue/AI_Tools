@@ -42,6 +42,8 @@
     "Tools/backup-restore/test/smoke-encrypted.mjs",
     "Tools/backup-restore/test/restore-kit.test.mjs",
     "Tools/backup-restore/test/smoke-tool-restore.mjs",
+    "Tools/backup-restore/test/rollover.test.mjs",
+    "Tools/backup-restore/test/smoke-rollover.mjs",
     "Tools/behavior-points-tracker/test/smoke-shared-record.mjs",
     "Tools/behavior-points-tracker/test/smoke-seating-layout.mjs",
     "Tools/behavior-points-tracker/test/smoke-seating-board.mjs",
