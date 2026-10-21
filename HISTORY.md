@@ -9,6 +9,72 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 3 P6 increment 2: the year rollover's clear keeps the setup (2026-10-21, AI-15, `CACHE_VERSION` v301)
+
+BACKLOG rank 4, rewritten to what is left (items 3 to 6). Built on increment 1 (v299, below), whose archive and check
+are unchanged.
+
+- **What changed for a teacher.** Step 3 of 009's "Start a new school year" is now *Review, then clear*. Once the saved
+  file passes, the page shows one table, a row per tool: *Removed* (counts, and "Show what goes" with the real values),
+  *Kept* (the setup found, counted) and *Your choice*. Above it: how many items are reduced and deleted, the student
+  photos by count and size, and a roster file shared to 006 and never opened. The clear then empties the names,
+  scores, logs and histories and keeps what they sit in: a seating chart's desks and layouts, hall-pass destinations,
+  behaviour tags, a lab contract's wording and fee, every class name with its period and subject. Seating Chart's
+  photos (`gvb-media`, namespace `seating/`, and only that namespace) and the parked share file go. The receipt counts
+  what went by tool and names nobody.
+- **How.** `Tools/backup-restore/br-rollover.js` gained `RULES` (85: one per student key or prefix in the registry,
+  the mixed keys, the roster shells, the free text that may name a student, the switchers' lists), `rosterNames`,
+  `scanNames`, `plan()` and a `run()` that writes as well as deletes. Every empty value is the one the tool's own new
+  document or clear code writes, read off that code by five read-only passes over the tools (each trap is in the
+  rule's comment: 005 must never have zero sections, 073 keeps its Store envelope, 044's key is never deleted, 042's
+  fields are `''` not removed, 021's bracket is `null`, 048 keeps one blank row, 016's item goes back to `in`).
+  `plan()` is computed from the checked archive's own values, not from storage: a key still holding the archive's
+  value is planned, a key already holding the reduction plans as `done` (so an interrupted clear finishes from the
+  file and gives the uninterrupted result), and anything else is a problem that stops the clear. 023's `discussion` is
+  marked student data in the registry (Devon's "wipe them"); its category tally keeps its categories.
+- **The calls made, each cheap to reverse.**
+  1. *The review sits in step 3, after the check*, not before the save as the design's step 2 had it: the plan is
+     made from the file that passed, so the table cannot describe a different archive.
+  2. *Kind E is one Keep or Clear per key*, and Clear takes out only the entries a name is found in (038's datasets,
+     064's cards, 044's past plans, 029's presets and history, 016's recent codes, 085's templates, 007's prompts,
+     024's notes); 029's draft, 045's note and 064's saved game go whole, as each tool's own Clear does. The design
+     allowed a choice per dataset or card; per key with per-entry removal was enough to build and test now.
+  3. *A Keep choice is journalled by key name* (`keptByChoice`), so finishing an interrupted clear keeps it. No
+     value is journalled.
+  4. *058's duty list and 075's directory lose only the names on this year's rosters.* Devon's "Yes" to question 7
+     was "when they were filled from a class roster"; a name on a class roster is how the page can tell.
+  5. *043's chaperones and the lead chaperone's name and phone are cleared*: a parent's details for one trip, which
+     is "items specific to people".
+  6. *020's brackets are deleted*, not reduced: a bracket is its entrants and the page has no empty bracket it can
+     draw. The bracket list drops them and the open-bracket key is forgotten when its bracket is gone.
+  7. *030's typed team name that holds this year's names goes back to "Team N" without asking*, like a roster split's;
+     the design had it as a kind E choice.
+  8. *085's last values lose Student, Parent/Guardian and Grade* and keep the teacher's name, class, date and
+     assignment. 005's `currentQuarter` is emptied so the page guesses it again from the date.
+  9. *The scan skips one-word names*: "Will" or "May" in a lesson plan is never a hit, and a roster of first names
+     only is never found in free text. That is the safe direction for a scan that only proposes.
+  10. *conference-signup's three keys are deleted* (a family's name and bookings); the design predates them.
+- **Tests.** `npm run test:rollover` (pure Node, 700): every registry student entry has a rule and every rule an
+  entry; each reducer on its tool's shape with made-up names (no name left, setup kept, idempotent, never longer, and
+  `null`, a number, a string and bad JSON each left alone without a throw); the scan; the plan's order and totals;
+  every change refused or silently kept at each step, the photos and the share slot failing, the journal refusing a
+  write at each step, and finishing from each, equal to the uninterrupted run; a Keep choice surviving an
+  interruption; the indexes. `npm run test:rollover-smoke` (57): the review table (with axe), Keep taking a key out,
+  the clear keeping the destination and emptying the class, no student's name left in any saved item, the seating
+  photos gone and the review board's image kept, the share file gone, the interrupted run finished to the same
+  storage. Deliberate breaks, each red: 14 in the module (the changed-since problem, the `done` detection, the write
+  read-back, the stale stop, the Clear default, the seating history, the medical alerts, the index's post-state, the
+  roster order, the orphans, an unreadable key deleted, a photo not in the archive, a photo clear not read back, the
+  open bracket) and 3 in the page (photos not cleared, problems not locking the clear, choices ignored; the last
+  crashed the suite on a wait before its assertion was made a real one).
+- **Found, not fixed.** The Name Picker drops a roster whose list is empty the next time it saves `np_rosters`, so a
+  class kept with no names survives in 006 (`crh_students_v1`) but can vanish from 007's list; 006's own rollover
+  has always had the same effect. `htcm_cards_v1`/`v2` (064's legacy keys, re-imported only when its list is empty)
+  have no rule.
+- **Not verified.** No tool page has been opened after a rollover: every reduced shape is read off code, and
+  `smoke-rollover-tools.mjs` (rank 4, item 6) is what will open them. The review table was scanned by axe in the
+  light theme only. A real save picker, Firefox and Safari, the offline copy on `file://`. Not run: the full `npm test`.
+
 ## Path 12 P2 increment 5: named sets on 030, saved with the bank, and a Tag filter (2026-10-21, AI-14, `CACHE_VERSION` v300)
 
 BACKLOG rank 28 (a 2+ row), kept and rewritten to what is left: 018 and 019's station questions. Devon's answer to question 8 was "B" (2026-10-07): an ordered list saved with the bank. Nobody had designed

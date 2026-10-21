@@ -236,10 +236,13 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   (Path 17 P4's controls, built), and 064's zip and PNG downloads are the file helpers' first adopter.** 011's
   default output is the old page's in 120 states, to the pixel. `npm run test:image-to-pdf-impose` (port 8483).
   **Left in rank 6: CSV and XLSX for the tools that hold a table. No booklet has been printed or folded.**
-- **AI-15 (v299), rank 4, Path 3 P6 increment 1: the year archive and its check.** 009's "Start a new school year"
-  saves an archive with the images, reads it back from disk and verifies it before the clear unlocks; the clear is
-  journalled (`br_rollover_v1`) and an interrupted one finishes from the archive. `npm run test:rollover`,
-  `test:rollover-smoke` (port 8532). **The clear still deletes setup held inside student keys; the reducers are next.**
+- **AI-15 (v301), rank 4, Path 3 P6 increment 2: the clear keeps the setup.** `BrRollover.RULES` reduces every
+  student key to its tool's own empty values and keeps the setup (desks, destinations, tags, contract wording, class
+  names), takes 044's `medicalAlerts` and the other mixed fields, asks about free text that names this year's
+  students (pre-set to Clear), clears the `seating/` photos and the parked share file, and fixes the switchers' lists.
+  009's step 3 is the review table. `npm run test:rollover` (700), `test:rollover-smoke` (57). **No tool page was
+  opened after a rollover yet: that is `smoke-rollover-tools.mjs`, still to write.** (v299 was increment 1: the
+  archive, its check from disk, the journal.)
 - **AI-13 (v245), rank 6, Path 7 P4 increments 1 to 3: `_shared/export.js` (`ExportKit`) is whole, 064 and 040 are
   on it, and `_shared/duplex-print.js` is deleted.** The imposition and pagination math, `toPdf(pages, opts)` for
   drawn pages (**not a DOM element**), `toCsv` (formula guard), `toXlsx`, `toZip`, `download`, `filename`. 064's
@@ -519,7 +522,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Increment 1 shipped, v299 (AI-15, 2026-10-21): the archive and its check.** 009's card is "Start a new school year", three locked steps: the archive (every key and every database but the map cache, so the seating photos are in it), the file read back from disk and verified, then the clear, which removes a key only while it equals the archive, journals each removal in `br_rollover_v1`, finishes an interrupted run from the archive and reports a key a still-open tab saved back. **The clear is still the old whole-key delete of every student-marked key, setup inside them included.** Left, in order: **(2)** `BrRollover.RULES` and the reducers (kinds B to F; the seven mixed keys of the 2026-09-23 audit and the four the design found, most sensitive first, 044's `medicalAlerts`), the roster shells, `seating/` and the `aplp-share` entry, dangling indexes, and the review table with the kind E choices (design steps 2 and 5a–f); **(3)** step 1's `CLIENTS` message in `sw.js`; **(4)** 006's button opens 009's card (it stays in both), its inline rollover goes and `crh_archive_v1`'s years are cleared; **(5)** the landing page's "Clear all rosters" button with a confirmation screen; **(6)** `smoke-rollover-tools.mjs`, the registry's `rollover:` marks, `br-envelope.js`. Devon's answers are in the P6 bullet; none is open | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Increments 1 and 2 shipped (AI-15, 2026-10-21): v299 the archive, its check from disk and the journal; v301 the clear that keeps the setup** — `BrRollover.RULES` (85 rules: every student key of the registry, the mixed keys with 044's `medicalAlerts` first, the roster shells, the free text that names a student, the switchers' lists), `plan()` from the checked archive's values, the `seating/` photos and the `aplp-share` file cleared, and 009's review table with Keep or Clear for the free text. Left, in order: **(3)** step 1's `CLIENTS` message in `sw.js` (009 names the tools still open before the clear); **(4)** 006's "Start a new school year" opens 009's card (it stays in both) and its inline rollover goes (`crh_archive_v1`'s years are already cleared by 009's); **(5)** the landing page's "Clear all rosters" button with a confirmation screen; **(6)** `smoke-rollover-tools.mjs` (every tool with a reduced key opened after a rollover: no page error, no name, one setup marker each, which is the only proof that each reducer's shape loads), the registry's `rollover:` marks and `ToolRegistry.rolloverRule()` with the registry-shape assertions, `br-envelope.js`. Devon's answers are in the P6 bullet; none is open | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Document 035’s private four-palette theme system as an exception (Devon, 2026-10-03: “bless and document”; do not adopt `a11y.js` cold) | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -1131,8 +1134,9 @@ them data.
 - **P6 — Year rollover.** "Start next year": archive this year's rosters and every
   per-student history to a Backup & Restore file, clear student data, keep setup. Owned
   jointly with 009. **Designed 2026-10-05 (AI-15, a design pass: no code, nothing run in a browser). Increment 1 built
-  2026-10-21 (AI-15, v299): the archive and its check, steps 3, 4, 5's journal and 7, on the old whole-key clear;
-  `HISTORY.md` has what it does and where it departs from this text. Every question below is answered.**
+  2026-10-21 (AI-15, v299): the archive and its check, steps 3, 4, 5's journal and 7, on the old whole-key clear.
+  Increment 2 built the same day (AI-15, v301): `RULES`, the reducers, `plan()`, step 5's order with the photos, the
+  share slot and the indexes, and the review table. `HISTORY.md` has what each does and where it departs from this text. Every question below is answered.**
   The design is the rest of this bullet. It was written from reading 009, 006, `_shared/roster.js`,
   `_shared/media-db.js`, `_shared/tool-registry.js` and the code that writes each key named below; two
   read-only probes (kept outside the repo) loaded the registry in Node to count it.
