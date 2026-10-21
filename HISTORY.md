@@ -9,6 +9,41 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 3 P6 increment 3: the year rollover asks which other tabs are open (2026-10-21, AI-15, `CACHE_VERSION` v302)
+
+BACKLOG rank 4, rewritten to what is left (items 4 to 6). Built on increments 1 and 2 (v299, v301, below), unchanged.
+
+- **What changed for a teacher.** 009's "Start a new school year" has four steps now. The new first one, *Close this
+  site's other tabs*, names every other open tab or window of the site ("Still open: Name Picker (2 tabs), The landing
+  page") and keeps *Save the year archive* locked until there are none. It looks again on *Check again* and whenever
+  the teacher comes back to the tab. Pressing *Clear* looks once more: a tab opened since the archive was checked stops
+  the clear with nothing removed ("Nothing was cleared: Name Picker is open in another tab"), and the clear runs once
+  it is closed. Where the page cannot see other tabs (the offline copy on `file://`, or a browser still running a
+  worker from before v302) it says so, and *I have closed every other tab* unlocks the archive; the written-back check
+  after the clear (increment 1's step 7) is the net there.
+- **How.** `sw.js` answers a new `CLIENTS` message, on the `MessageChannel` port the page sends, with the URL of every
+  window client of the site (`includeUncontrolled`) except the asker. `BrRollover.otherTabs(navigator.serviceWorker)`
+  asks the controller, or the active worker of `ready` on a page with no controller, and resolves "cannot see" on no
+  container, no worker, a refused registration, a reply that is not a `CLIENTS` list, or 2 s of silence; every exit
+  closes the port and the timer. `nameTabs()` names a window by the registry's `file` (decoded, query and hash
+  dropped), counts tabs per page, and shows a page the registry does not know by its path, so nothing open is left off.
+- **Calls made, each cheap to reverse.** (1) The clear re-asks before it runs; the design asks only at step 1, but the
+  archive-to-clear gap is where a tab opened "just to check something" would write last year back. (2) Every other
+  window counts, a second copy of 009 and the landing page included: both save. (3) No tick box for the fallback: a
+  button that says what the teacher is confirming, shown only when the page cannot see. (4) A worker from before v302
+  never answers, so the 2 s wait reads as "cannot see", never as "none open".
+- **Tests.** `npm run test:rollover` 714 (14 new: the question's every failure mode, the naming). `npm run
+  test:rollover-tabs` (new, port 8534, 24): alone, another tool's tab, two tabs and the landing page and a second 009,
+  closing them, a tab opened after the check stopping the clear with storage and the journal (`archived`) unchanged,
+  the clear running once it closes, and the blocked-worker path. `test:rollover-smoke` now answers the fallback in its
+  seed (workers are blocked there). Each guard was broken on purpose and seen red: the worker listing the asker, no
+  `CLIENTS` handler, no re-check before the clear, the archive not gated, `nameTabs` not counting, a timeout read as
+  "seen". The first of those runs crashed instead of failing by name; the suite's first wait was made soft so it fails
+  by name.
+- **Not verified.** Firefox and Safari; an installed-PWA window; the `file://` copy itself (the fallback was driven with
+  workers blocked, not from a file); `visibilitychange` (no suite drives it). Tabs in another browser or profile are not
+  seen, and need not be: they do not share this storage.
+
 ## Path 3 P6 increment 2: the year rollover's clear keeps the setup (2026-10-21, AI-15, `CACHE_VERSION` v301)
 
 BACKLOG rank 4, rewritten to what is left (items 3 to 6). Built on increment 1 (v299, below), whose archive and check
