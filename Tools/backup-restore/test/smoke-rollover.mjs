@@ -1,6 +1,6 @@
 // smoke-rollover.mjs — 009's "Start a new school year" card in a browser
-// (Path 3 P6, increment 1: the archive and its check before anything is
-// cleared).
+// (Path 3 P6: increment 1, the archive and its check before anything is
+// cleared; increment 2, the review and the clear that keeps the setup).
 //
 //   node Tools/backup-restore/test/smoke-rollover.mjs
 //
@@ -14,8 +14,11 @@
 //     with their reasons, and the clear stays locked;
 //   - a student key saved after the check stops the clear with nothing
 //     removed;
-//   - the clear removes the student keys and nothing else, and the journal
-//     holds no name;
+//   - the review table shows what goes, what stays and the free text that
+//     names a student, with Keep and Clear; the clear keeps every tool's
+//     setup, empties the class lists, removes the seating photos (and only
+//     them) and the parked share file, and leaves no student's name in
+//     storage; the journal holds no name;
 //   - a clear that fails part way opens on the interrupted banner, and
 //     finishing from the archive gives the storage an uninterrupted run gives;
 //   - a cleared key saved back with last year's value is reported on the next
@@ -45,7 +48,10 @@ const NAMES = ['Avery Stone', 'Blake Rivers', 'Casey Lund'];
 const SEED = {
   np_rosters: JSON.stringify({ 'Period 3': NAMES }),
   np_history: JSON.stringify([{ name: 'Avery Stone', at: 1 }]),
-  'hall-pass-log-sections': JSON.stringify({ sections: [{ name: 'Period 3', log: [{ who: 'Blake Rivers' }] }] }),
+  'hall-pass-log-sections': JSON.stringify({ current: 'Period 3', sets: { 'Period 3': { name: 'Period 3', namesText: NAMES.join('\n'),
+    destinations: [{ id: 'lib', label: 'Library annex' }], log: [{ name: 'Blake Rivers' }] } } }),
+  'subPlanBuilder.standingDetails.v1': JSON.stringify({ teacherName: 'Ms. Teacher', medicalAlerts: 'Casey Lund: inhaler in the top drawer' }),
+  np_prompts: JSON.stringify(['Avery Stone goes first', 'Pair and share']),
   'gvb-rubric-builder:data:Essay': JSON.stringify({ title: 'Essay', rows: 4 }),
 };
 const STUDENT = ['hall-pass-log-sections', 'np_history', 'np_rosters'];
@@ -73,6 +79,10 @@ async function seed(page) {
         };
       };
     });
+    /* A roster file shared to 006 and never collected. */
+    await caches.delete('aplp-share');
+    const c = await caches.open('aplp-share');
+    await c.put(new URL('../share/roster', location.href).href, new Response('Avery Stone\nBlake Rivers'));
   }, SEED);
   await page.reload();
   await page.waitForSelector('#roSaveBtn');
@@ -84,15 +94,16 @@ const local = page => page.evaluate(() => {
   Object.keys(localStorage).sort().forEach(k => { o[k] = localStorage.getItem(k); });
   return o;
 });
-const mediaCount = page => page.evaluate(() => new Promise(resolve => {
+const mediaIds = page => page.evaluate(() => new Promise(resolve => {
   const req = indexedDB.open('gvb-media');
   req.onsuccess = () => {
     const db = req.result;
-    if (!db.objectStoreNames.contains('blobs')) { db.close(); resolve(0); return; }
-    const c = db.transaction('blobs').objectStore('blobs').count();
-    c.onsuccess = () => { db.close(); resolve(c.result); };
+    const r = db.transaction('blobs').objectStore('blobs').getAllKeys();
+    r.onsuccess = () => { db.close(); resolve(r.result.slice().sort()); };
   };
 }));
+const shareParked = page => page.evaluate(async () => !!(await (await caches.open('aplp-share')).match(new URL('../share/roster', location.href).href)));
+const waitReview = page => page.waitForSelector('#roReview .ro-table', { timeout: 10000 });
 const disabled = (page, sel) => page.$eval(sel, el => el.disabled);
 const text = (page, sel) => page.$eval(sel, el => el.textContent);
 const pick = async (page, sel, body, name = 'archive.json') => {
@@ -156,26 +167,52 @@ try {
   /* ── 4. the right file unlocks the clear ──────────────────────────── */
   await pick(page, '#roCheckFile', archive);
   ok(/is complete/.test(await text(page, '#roCheckMsg')), '4: the saved archive passes');
+  await waitReview(page);
   ok(!(await disabled(page, '#roClearBtn')), '4: ...and unlocks the clear');
+  const review = await text(page, '#roReview');
+  ok(/Hall Pass/i.test(review) && /destinations/.test(review), '4: the review names the tool and the setup it keeps');
+  ok(/3 student photos/.test(review) && /never opened/.test(review), '4: ...the photos and the parked share file');
+  ok(/Names found: Avery Stone/.test(review), '4: free text naming a student is listed with the name found');
+  ok(await page.$eval('#roReview input[value="clear"]', el => el.checked), '4: ...pre-set to Clear (Devon, 2026-10-07)');
+  const steps4 = await text(page, '#roClearBtn');
+  await page.check('#roReview input[value="keep"]');
+  await page.waitForFunction(s => document.getElementById('roClearBtn').textContent !== s, steps4, { timeout: 10000 }).catch(() => {});
+  ok(/\(6 steps\)/.test(await text(page, '#roClearBtn')) && /\(7 steps\)/.test(steps4), '4: choosing Keep takes that key out of the clear (7 steps to 6)');
+  await page.check('#roReview input[value="clear"]');
+  await page.waitForFunction(() => /\(7 steps\)/.test(document.getElementById('roClearBtn').textContent), null, { timeout: 10000 }).catch(() => {});
+  const vio4 = await a11yScan(page, { include: '#rolloverCard' });
+  eq(vio4.map(v => v.id + ':' + v.nodes.join(',')), [], '4: the review table has no serious a11y violation');
 
   /* ── 5. a key saved after the check stops the clear ───────────────── */
   await page.evaluate(() => localStorage.setItem('np_history', '[{"name":"Casey Lund","at":9}]'));
   await page.click('#roClearBtn');
   await page.waitForFunction(() => /saved since/.test(document.getElementById('rolloverMsg').textContent), null, { timeout: 10000 });
+  await settle(page, 400);
   const after5 = await local(page);
-  ok(STUDENT.every(k => after5[k] !== undefined), '5: a key saved since the archive stops the clear with nothing removed');
+  ok(STUDENT.every(k => after5[k] === SEED[k] || k === 'np_history'), '5: a key saved since the archive stops the clear with nothing changed');
+  eq((await mediaIds(page)).length, 4, '5: ...no photo removed');
   ok(await disabled(page, '#roClearBtn'), '5: ...and the clear locks until a new archive is saved');
 
   /* ── 6. the clear itself ──────────────────────────────────────────── */
   await seed(page);
   const archive6 = await save(page);
   await pick(page, '#roCheckFile', archive6);
+  await waitReview(page);
   await page.click('#roClearBtn');
   await page.waitForFunction(() => /Cleared\./.test(document.getElementById('rolloverMsg').textContent), null, { timeout: 10000 });
   const after6 = await local(page);
-  eq(Object.keys(after6).filter(k => !/^br_/.test(k)).sort(), ['gvb-rubric-builder:data:Essay'], '6: the student keys are gone and the rubric is kept');
-  eq(after6['gvb-rubric-builder:data:Essay'], SEED['gvb-rubric-builder:data:Essay'], '6: ...unchanged');
-  eq(await mediaCount(page), 4, '6: this increment clears no image');
+  const kept6 = Object.fromEntries(Object.entries(after6).filter(([k]) => !/^br_/.test(k)));
+  eq(Object.keys(kept6).sort(), ['gvb-rubric-builder:data:Essay', 'hall-pass-log-sections', 'np_prompts', 'np_rosters', 'subPlanBuilder.standingDetails.v1'],
+     '6: the student-only key is gone, the rest are kept');
+  eq(after6['gvb-rubric-builder:data:Essay'], SEED['gvb-rubric-builder:data:Essay'], '6: the rubric is unchanged');
+  const hp6 = JSON.parse(after6['hall-pass-log-sections']).sets['Period 3'];
+  ok(hp6.destinations[0].label === 'Library annex' && hp6.namesText === '' && hp6.log.length === 0, '6: the hall pass keeps its custom destination and loses its names and log');
+  eq(after6.np_rosters, '{"Period 3":[]}', '6: the class is kept, empty');
+  eq(JSON.parse(after6['subPlanBuilder.standingDetails.v1']).medicalAlerts, '', '6: the medical alerts are gone');
+  eq(after6.np_prompts, '["Pair and share"]', '6: the prompt naming a student is gone, the other kept');
+  ok(!NAMES.some(n => Object.values(kept6).some(v => v.includes(n))), '6: no student\'s name is left in any saved item');
+  eq(await mediaIds(page), ['rgb/clue1'], '6: the seating photos are gone and the review board\'s image is kept');
+  ok(!(await shareParked(page)), '6: the parked roster file is gone');
   const receipt = await text(page, '#rolloverMsg');
   ok(!NAMES.some(n => receipt.includes(n)), '6: the receipt has no student name on it');
   ok(/private window/.test(receipt), '6: the receipt says how to see last year again');
@@ -198,22 +235,24 @@ try {
   await seed(page);
   const archive8 = await save(page);
   await pick(page, '#roCheckFile', archive8);
+  await waitReview(page);
   await page.evaluate(() => {
-    const real = Storage.prototype.removeItem;
+    const real = Storage.prototype.setItem;
     let n = 0;
-    Storage.prototype.removeItem = function (k) { if (n++ === 1) throw new Error('QuotaExceededError'); return real.call(this, k); };
+    Storage.prototype.setItem = function (k, v) { if (k !== 'br_rollover_v1' && n++ === 1) throw new Error('QuotaExceededError'); return real.call(this, k, v); };
   });
   await page.click('#roClearBtn');
   await page.waitForFunction(() => /stopped part way/.test(document.getElementById('rolloverMsg').textContent), null, { timeout: 10000 });
   await page.reload();
   await page.waitForSelector('#roFinishFile', { timeout: 10000 }).catch(() => {});
-  ok(/interrupted/.test(await text(page, '#rolloverResume')) && /1 of 3/.test(await text(page, '#rolloverResume')), '8: a reload opens on the interrupted banner, 1 of 3');
+  ok(/interrupted/.test(await text(page, '#rolloverResume')) && /1 of 7/.test(await text(page, '#rolloverResume')), '8: a reload opens on the interrupted banner, 1 of 7');
   await pick(page, '#roFinishFile', archive6);
   ok(/not the archive this clear began with/.test(await text(page, '#roFinishMsg')), '8: finishing from another run\'s archive is refused');
   await pick(page, '#roFinishFile', archive8);
   await page.waitForFunction(() => /Cleared\./.test(document.getElementById('rolloverMsg').textContent), null, { timeout: 10000 });
   const after8 = await local(page);
-  eq(Object.keys(after8).filter(k => !/^br_/.test(k)).sort(), ['gvb-rubric-builder:data:Essay'], '8: finishing gives what an uninterrupted clear gives');
+  eq(Object.fromEntries(Object.entries(after8).filter(([k]) => !/^br_/.test(k))), kept6, '8: finishing gives what an uninterrupted clear gives');
+  eq(await mediaIds(page), ['rgb/clue1'], '8: ...the photos included');
   ok(!/interrupted/.test(await text(page, '#rolloverResume')), '8: ...and the banner goes');
 
   /* ── 9. restoring the archive ─────────────────────────────────────── */

@@ -320,9 +320,16 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
        016's checkout inventory, the sub plan's medical alerts, 038's datasets,
        018's live-run teams). They are deliberately NOT marked, because the
        rollover deletes whole keys and promises to keep templates. The fix is a
-       tool change that splits the student field out; BACKLOG rank 6 carries it. */
+       tool change that splits the student field out; BACKLOG rank 6 carries it.
+       (Since v301 the year rollover reduces those keys field by field instead,
+       through BrRollover.RULES, and they stay unmarked.)
+       gvb-exit-ticket:discussion 023's transcribed student responses, with no
+                                  names. Devon, 2026-10-07, asked whether that
+                                  is student data at a new year: "Oh, yeah
+                                  wipe them" (v301). */
   const RECLASSIFIED_DELIBERATELY = ['apl_portfolios_v1', 'gvb-roleplay:roster', 'gvb-exit-ticket:triage', 'gvb-writing-prompts:record',
-    'gvb-rubric-builder:scores:SAMPLE', 'pct:lastValues', 'gvb-number-talks:strategyLibrary', 'socsem:data:SAMPLE', 'gvb-field-trip:data:SAMPLE'];
+    'gvb-rubric-builder:scores:SAMPLE', 'pct:lastValues', 'gvb-number-talks:strategyLibrary', 'socsem:data:SAMPLE', 'gvb-field-trip:data:SAMPLE',
+    'gvb-exit-ticket:discussion'];
 
   const changed = [...probes]
     .filter(k => !SINCE_THE_MIGRATION.includes(k))

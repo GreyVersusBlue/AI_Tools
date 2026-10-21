@@ -35,6 +35,7 @@
 <script src="backup-restore/br-pair.js"></script>
 <script src="../_shared/backup-crypto.js"></script>
 <script src="../_shared/restore-kit.js"></script>
+<script src="../_shared/media-db.js"></script>
 <script src="backup-restore/br-rollover.js"></script>
 <style>
   /* Path 5 P3: the semantic tints, in 001's values (the reference adopter),
@@ -201,6 +202,15 @@
   .ro-reasons { margin: .4rem 0 0; padding-left: 1.2rem; color: var(--err); font-size: .85rem; }
   .ro-banner { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); border-radius: 6px; padding: .6rem .8rem; font-size: .88rem; margin-bottom: .8rem; }
   .ro-banner .btn-row { margin-top: .5rem; }
+  .ro-table { width: 100%; border-collapse: collapse; font-size: .85rem; margin: .5rem 0; }
+  .ro-table th, .ro-table td { text-align: left; vertical-align: top; padding: .35rem .4rem; border-top: 1px solid var(--line); }
+  .ro-table th { font-weight: 600; }
+  .ro-table ul { margin: 0; padding-left: 1rem; }
+  .ro-table details { margin-top: .2rem; }
+  .ro-table summary { cursor: pointer; }
+  .ro-table .ro-sample { color: var(--muted); }
+  .ro-choice { display: block; margin: .15rem 0; }
+  .ro-choice input { margin-right: .3rem; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 </style>
@@ -310,7 +320,7 @@
 
   <div class="card" id="rolloverCard">
     <div class="card-title">Start a new school year</div>
-    <p class="hint">Three steps, in order: save an archive of everything in this browser, check the saved file, then clear the student data. The clear stays locked until the file on your disk has been read back and found complete, so a blocked download or a full disk cannot cost you the year.</p>
+    <p class="hint">Three steps, in order: save an archive of everything in this browser, check the saved file, then review and clear the student data: names, scores and photos go, the setup they sit in stays. The clear stays locked until the file on your disk has been read back and found complete, so a blocked download or a full disk cannot cost you the year.</p>
     <div id="rolloverResume"></div>
     <div id="rolloverSummary"></div>
     <ol class="ro-steps">
@@ -335,8 +345,9 @@
         <div id="roCheckMsg" aria-live="polite"></div>
       </li>
       <li id="roStep3">
-        <b>Clear the student data.</b>
-        <span class="hint">Removes every item marked <i>student data</i> in the list above, whole. For now that includes the setup some of them hold beside the names (a seating chart&rsquo;s room layout, hall-pass destinations, behaviour tags): the archive has all of it, and a clear that keeps that setup is the next piece of this work. Close every other tab of this site first: an open tool saves what it has in memory again.</span>
+        <b>Review, then clear the student data.</b>
+        <span class="hint">The table is exactly what the clear will do. Names, scores, logs, photos and class lists go; the setup they sit in stays: a seating chart&rsquo;s desks, hall-pass destinations, behaviour tags, a lab contract&rsquo;s wording, every class name. Text you typed that holds this year&rsquo;s names is listed under <i>Your choice</i>, set to Clear. Close every other tab of this site first: an open tool saves what it has in memory again.</span>
+        <div id="roReview"></div>
         <div class="ro-row">
           <button class="danger" id="roClearBtn" type="button" disabled>Clear the student data</button>
         </div>
@@ -1578,7 +1589,7 @@
       '<p class="xfer-status" id="xferStatus">Receiving…</p>';
   }
 
-  /* ---------- start a new school year (Path 3 P6, increment 1) ----------
+  /* ---------- start a new school year (Path 3 P6, increments 1 and 2) ----------
      Three steps, each locked until the one before it is done. The archive is
      built once, serialised once, hashed, checked in memory, and storage is
      read again to make sure nothing was saved while it was being built; then
@@ -1587,7 +1598,7 @@
      still holds exactly what the archive holds. Every removal is journalled in
      br_rollover_v1 (BrRollover, backup-restore/br-rollover.js), so a page
      closed half way opens on a banner rather than on a half-cleared year. */
-  var ro = null;                // { id, label, text, hash, manifest, name, handle, checked }
+  var ro = null;                // { id, label, text, hash, manifest, name, handle, checked, plan, choices }
   var roLabel = document.getElementById('roLabel');
   var roSaveBtn = document.getElementById('roSaveBtn');
   var roCheckBtn = document.getElementById('roCheckBtn');
@@ -1660,11 +1671,12 @@
     var saved = !!ro, checked = !!(ro && ro.checked);
     roCheckBtn.disabled = !saved || !ro.handle;
     roCheckFile.disabled = !saved;
-    roClearBtn.disabled = !checked || !studentKeys().length;
+    var p = checked ? ro.plan : null;
+    var n = p ? acting(p) : 0;
+    roClearBtn.disabled = !p || !!p.problems.length || !n;
     document.getElementById('roStep2').classList.toggle('ro-off', !saved);
     document.getElementById('roStep3').classList.toggle('ro-off', !checked);
-    var n = studentKeys().length;
-    roClearBtn.textContent = n ? 'Clear ' + n + ' item' + (n === 1 ? '' : 's') + ' of student data' : 'Clear the student data';
+    roClearBtn.textContent = n ? 'Clear the student data (' + n + ' step' + (n === 1 ? '' : 's') + ')' : 'Clear the student data';
   }
 
   function renderRolloverSummary(groups) {
@@ -1697,6 +1709,7 @@
     ro = null;
     roCheckMsg.innerHTML = '';
     roMsg.innerHTML = '';
+    document.getElementById('roReview').innerHTML = '';
     roRender();
     roSaveBtn.disabled = true;
     roBox(roSaveMsg, 'info', 'Building the archive, images included — this can take a moment…');
@@ -1776,12 +1789,16 @@
       if (ro !== run) return;
       if (!res.ok) {
         run.checked = false;
+        run.plan = null;
+        document.getElementById('roReview').innerHTML = '';
         roBox(roCheckMsg, 'error', 'That file did not pass, so the clear stays locked. Save the archive again in step 1, or pick the file you saved.');
         roCheckMsg.insertAdjacentHTML('beforeend', reasonsHtml(res.reasons));
       } else {
         run.checked = true;
         BrRollover.recordRun(localStorage, { id: run.id, checkedAt: new Date().toISOString() });
         roBox(roCheckMsg, 'good', 'The file on your disk is complete: every item, database and picture matches. Keep it somewhere safe (a USB stick or your school drive) before you clear.');
+        roRender();
+        return renderReview();
       }
       roRender();
     });
@@ -1800,48 +1817,208 @@
     roCheckFile.value = '';
   });
 
-  function clearFromManifest(id, m) {
+  /* ---------- the review and the clear (increment 2) ----------
+     The plan is BrRollover.plan() over the CHECKED archive's own data: what
+     the table shows is what run() writes, and a key is changed only while it
+     holds what the file holds. Photos are Seating Chart's `seating/`
+     namespace in gvb-media, cleared through that namespace only; the share
+     slot is the roster file the share target parked for 006. */
+  var SHARE_URL = new URL('../share/roster', location.href).href;
+
+  function mediaNow() {
+    if (!window.MediaDB) return Promise.resolve({ ids: [], bytes: 0 });
+    return MediaDB.store({ ns: 'seating' }).list().then(function (recs) {
+      var bytes = 0;
+      recs.forEach(function (r) { bytes += Number(r.size) || 0; });
+      return { ids: recs.map(function (r) { return 'seating/' + r.id; }), bytes: bytes };
+    }, function () { return { ids: [], bytes: 0 }; });
+  }
+
+  function shareNow() {
+    if (!window.caches || typeof caches.has !== 'function') return Promise.resolve(false);
+    return caches.has('aplp-share').then(function (has) {
+      return has ? caches.open('aplp-share').then(function (c) { return c.match(SHARE_URL); }).then(function (r) { return !!r; }) : false;
+    }).then(null, function () { return false; });
+  }
+
+  function archiveMedia(parsed) {
+    var out = [];
+    var db = parsed && parsed.indexedDB && parsed.indexedDB['gvb-media'];
+    ((db && db.stores) || []).forEach(function (s) {
+      (s.records || []).forEach(function (r) { if (r && r.v && typeof r.v.id === 'string') out.push(r.v.id); });
+    });
+    return out;
+  }
+
+  /* "2026-27" → "2027-28", the term 006's classes are stamped with. */
+  function nextTermOf(label) {
+    var m = /^(\d{4})\s*[-–]\s*(\d{2}|\d{4})$/.exec(String(label || '').trim());
+    if (!m) return '';
+    var y = Number(m[1]) + 1;
+    return y + '-' + String(y + 1).slice(2);
+  }
+
+  function rolloverIo() {
+    return {
+      storage: localStorage,
+      media: { clear: function (ns) {
+        var st = MediaDB.store({ ns: ns });
+        return st.clear().then(function () { return st.list(); }).then(function (left) { return left.length === 0; });
+      } },
+      share: { remove: function () {
+        return caches.open('aplp-share').then(function (c) {
+          return c['delete'](SHARE_URL).then(function () { return c.match(SHARE_URL); });
+        }).then(function (left) { return !left; });
+      } }
+    };
+  }
+
+  function planFor(id, parsed, choices) {
     renderScan();
-    var keys = studentKeys();
-    return BrRollover.planClear(id, currentLocal(), keys, m).then(function (plan) {
-      return BrRollover.run(plan, { storage: localStorage }).then(function (res) { return { plan: plan, res: res }; });
+    return Promise.all([mediaNow(), shareNow()]).then(function (got) {
+      return BrRollover.plan(id, currentLocal(), parsed.data || {}, {
+        studentKeys: studentKeys(), choices: choices || {}, nextTerm: nextTermOf(parsed.rollover && parsed.rollover.label),
+        media: { seating: got[0] }, archiveMedia: archiveMedia(parsed), share: got[1]
+      });
     });
   }
 
-  function receiptHtml(run, removedKeys) {
+  function acting(p) {
+    return p.items.filter(function (it) { return it.action === 'write' || it.action === 'delete'; }).length +
+      p.media.length + (p.share ? 1 : 0);
+  }
+
+  function fmtSize(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+
+  function countsHtml(list) {
+    return '<ul>' + list.map(function (x) { return '<li>' + x.count + ' ' + escapeHtml(x.what) + '</li>'; }).join('') + '</ul>';
+  }
+
+  /* One row per tool: Removed (with the real values behind "Show"), Kept,
+     and Your choice for free text that holds this year's names. */
+  function reviewHtml(p) {
+    var rows = {}, order = [];
+    p.items.forEach(function (it, i) {
+      if (it.action === 'keep' && !it.unreadable) return;
+      var label = labelFor(it.key) || 'Other saved data';
+      if (!rows[label]) { rows[label] = { removed: [], kept: [], samples: [], choices: [], notes: [] }; order.push(label); }
+      var row = rows[label];
+      if (it.unreadable) { row.notes.push('One saved item could not be read, so it is left as it is (the archive has it).'); return; }
+      if (it.kind === 'ask') {
+        row.choices.push({ i: i, it: it });
+        if (it.action === 'choose') return;
+      }
+      it.removed.forEach(function (x) { row.removed.push(x); row.samples = row.samples.concat(x.sample || []); });
+      it.kept.forEach(function (x) { row.kept.push(x); });
+    });
+    var body = order.sort().map(function (label) {
+      var row = rows[label];
+      var removed = row.removed.length ? countsHtml(row.removed) : '';
+      if (row.samples.length) {
+        removed += '<details><summary>Show what goes</summary><span class="ro-sample">' +
+          escapeHtml(row.samples.slice(0, 40).join(' · ')) + '</span></details>';
+      }
+      var choice = row.choices.map(function (c) {
+        var names = c.it.hits.map(function (h) { return h.name; });
+        var nm = 'roChoice' + c.i;
+        return '<fieldset style="border:0;padding:0;margin:0 0 .4rem;"><legend style="font-size:.85rem;">Names found: ' +
+          escapeHtml(names.slice(0, 6).join(', ') + (names.length > 6 ? ', and ' + (names.length - 6) + ' more' : '')) + '</legend>' +
+          '<label class="ro-choice"><input type="radio" name="' + nm + '" value="clear" data-key="' + escapeHtml(c.it.key) + '"' + (c.it.choice !== 'keep' ? ' checked' : '') + '>Clear the entries naming them</label>' +
+          '<label class="ro-choice"><input type="radio" name="' + nm + '" value="keep" data-key="' + escapeHtml(c.it.key) + '"' + (c.it.choice === 'keep' ? ' checked' : '') + '>Keep as it is</label></fieldset>';
+      }).join('');
+      return '<tr><th scope="row">' + escapeHtml(label) + '</th><td>' + (removed || '—') + row.notes.map(function (n) { return '<p class="ro-sample">' + escapeHtml(n) + '</p>'; }).join('') +
+        '</td><td>' + (row.kept.length ? countsHtml(row.kept) : '—') + '</td><td>' + (choice || '—') + '</td></tr>';
+    }).join('');
+    var head = [];
+    var t = p.totals;
+    head.push(t.write + ' saved item' + (t.write === 1 ? '' : 's') + ' keep their setup and lose their student data; ' + t['delete'] + ' hold only student data and go.');
+    p.media.forEach(function (m) { head.push(m.count + ' student photo' + (m.count === 1 ? '' : 's') + ' (' + fmtSize(m.bytes) + ') from Seating Chart go.'); });
+    if (p.share) head.push('A roster file shared to Class Roster Hub and never opened goes.');
+    if (t.done) head.push(t.done + ' item' + (t.done === 1 ? ' was' : 's were') + ' already cleared by a run that stopped part way.');
+    return '<p class="hint">' + escapeHtml(head.join(' ')) + '</p>' +
+      (body ? '<table class="ro-table"><thead><tr><th scope="col">Tool</th><th scope="col">Removed</th><th scope="col">Kept</th><th scope="col">Your choice</th></tr></thead><tbody>' + body + '</tbody></table>' : '') +
+      '<p class="hint">Not touched at all: your settings, question banks, rubrics, templates, calendars, and every image but the student photos.</p>';
+  }
+
+  function problemText(p) {
+    var n = p.problems.length;
+    return 'Something was saved since the archive was made (' + n + ' item' + (n === 1 ? '' : 's') +
+      '), so it would be cleared without being in the archive. Nothing was cleared. Close the other tabs and save the archive again.';
+  }
+
+  /* Build (or rebuild, after a choice) the review for the checked archive. */
+  function renderReview() {
+    var el = document.getElementById('roReview');
+    if (!ro || !ro.checked) { el.innerHTML = ''; return Promise.resolve(); }
+    var run = ro;
+    var parsed = JSON.parse(run.text);
+    return planFor(run.id, parsed, run.choices).then(function (p) {
+      if (ro !== run) return;
+      run.plan = p;
+      el.innerHTML = reviewHtml(p);
+      if (p.problems.length) roBox(roMsg, 'error', problemText(p));
+      roRender();
+    });
+  }
+
+  document.getElementById('roReview').addEventListener('change', function (e) {
+    var t = e.target;
+    if (!ro || !t || t.type !== 'radio' || !t.getAttribute('data-key')) return;
+    ro.choices = ro.choices || {};
+    ro.choices[t.getAttribute('data-key')] = t.value;
+    var focusName = t.name, focusValue = t.value;
+    renderReview().then(function () {
+      var again = document.querySelector('#roReview input[name="' + focusName + '"][value="' + focusValue + '"]');
+      if (again) again.focus();
+    });
+  });
+
+  function receiptHtml(run, p) {
     var byTool = {};
-    removedKeys.forEach(function (k) { var l = labelFor(k) || 'Other saved data'; byTool[l] = (byTool[l] || 0) + 1; });
+    p.items.forEach(function (it) {
+      if (it.action !== 'write' && it.action !== 'delete' && it.action !== 'done') return;
+      var l = labelFor(it.key) || 'Other saved data';
+      var t = byTool[l] || (byTool[l] = {});
+      it.removed.forEach(function (x) { t[x.what] = (t[x.what] || 0) + x.count; });
+    });
+    var parts = Object.keys(byTool).sort().map(function (l) {
+      var w = Object.keys(byTool[l]).map(function (k) { return byTool[l][k] + ' ' + k; });
+      return l + (w.length ? ' (' + w.join(', ') + ')' : '');
+    });
+    p.media.forEach(function (m) { parts.push(m.count + ' student photo' + (m.count === 1 ? '' : 's')); });
+    if (p.share) parts.push('a shared roster file never opened');
     return '<div class="ro-banner" style="background:var(--card-2);color:inherit;border-color:var(--line);">' +
-      '<b>Cleared.</b> ' + removedKeys.length + ' item' + (removedKeys.length === 1 ? '' : 's') + ' of student data: ' +
-      escapeHtml(Object.keys(byTool).sort().map(function (l) { return l + ' (' + byTool[l] + ')'; }).join(', ')) + '.' +
+      '<b>Cleared.</b> ' + escapeHtml(parts.join('; ')) + '. Class names, periods and every tool&rsquo;s setup were kept.' +
       '<br>Archive: “' + escapeHtml(run.archiveName || '') + '”, ' + escapeHtml(BrRollover.hashKind(run.archiveHash || '')) + ' ' + escapeHtml(String(run.archiveHash || '').slice(0, 12)) + '.' +
       '<br>To see last year again, open this site in a private window, restore the archive there, read what you need and close the window. Restoring it here would replace this year’s data.' +
       '<br>Each browser keeps its own data: another computer you use still has last year until you do this there too.</div>';
   }
 
   roClearBtn.addEventListener('click', function () {
-    if (!ro || !ro.checked) return;
-    var run = ro;
+    if (!ro || !ro.checked || !ro.plan) return;
+    var run = ro, p = ro.plan;
     roClearBtn.disabled = true;
-    clearFromManifest(run.id, run.manifest).then(function (out) {
-      var res = out.res;
+    BrRollover.run(p, rolloverIo()).then(function (res) {
       if (res.stale && res.stale.length) {
-        roBox(roMsg, 'error', 'Something was saved since the archive was made (' + res.stale.length + ' item' + (res.stale.length === 1 ? '' : 's') +
-          '), so it would be cleared without being in the archive. Nothing was cleared. Close the other tabs and save the archive again.');
-        ro = null;
-      } else if (!res.done) {
-        roBox(roMsg, 'error', 'The clear stopped part way: this browser refused to change ' + (res.failed || 'an item') + '. ' + res.removed + ' item' + (res.removed === 1 ? '' : 's') + ' were cleared. Your archive was checked before it began; reload this page to finish or to put last year back.');
-      } else {
-        var j = BrRollover.getRun(localStorage, run.id);
-        roMsg.innerHTML = receiptHtml(j, res.receipt.keys);
-        ro = null;
+        roBox(roMsg, 'error', 'Something was saved since you reviewed this (' + res.stale.length + ' item' + (res.stale.length === 1 ? '' : 's') +
+          '). Nothing was cleared. Close the other tabs, then look at the table again.');
+        return renderReview();
       }
+      if (!res.done) {
+        roBox(roMsg, 'error', 'The clear stopped part way: this browser refused to change ' + (labelFor(res.failed) || res.failed || 'an item') + '. ' + res.removed + ' step' + (res.removed === 1 ? ' was' : 's were') + ' done. Your archive was checked before it began; reload this page to finish or to put last year back.');
+        return;
+      }
+      roMsg.innerHTML = receiptHtml(BrRollover.getRun(localStorage, run.id), p);
+      document.getElementById('roReview').innerHTML = '';
+      ro = null;
+    }).catch(function () {
+      roBox(roMsg, 'error', 'Something went wrong before anything was cleared. Reload the page and look at the banner at the top of this card.');
+    }).then(function () {
       renderScan();
       renderBackupBanner();
       renderResume();
-    }).catch(function () {
-      roBox(roMsg, 'error', 'Something went wrong before anything was cleared. Reload the page and look at the banner at the top of this card.');
-    }).then(roRender);
+      roRender();
+    });
   });
 
   /* An interrupted run, a saved archive never used, or a cleared item that a
@@ -1851,7 +2028,7 @@
     var r = BrRollover.resume(localStorage);
     if (r && r.state === 'clearing') {
       roResume.innerHTML = '<div class="ro-banner" role="alert"><b>The new-year clear was interrupted</b> after ' + r.doneSteps + ' of ' + r.totalSteps +
-        ' items. Your archive “' + escapeHtml(r.archiveName) + '” was checked before it began.' +
+        ' steps. Your archive “' + escapeHtml(r.archiveName) + '” was checked before it began.' +
         '<div class="btn-row"><label class="secondary" for="roFinishFile" style="cursor:pointer;">Finish clearing: pick the archive</label>' +
         '<input type="file" id="roFinishFile" accept=".json,application/json" style="max-width:14rem;">' +
         '<button type="button" class="secondary" id="roPutBack">Put last year back</button></div><div id="roFinishMsg"></div></div>';
@@ -1863,22 +2040,25 @@
         var f = e.target.files && e.target.files[0];
         var msg = document.getElementById('roFinishMsg');
         if (!f) return;
+        var parsed = null;
         f.text().then(function (text) {
-          var parsed = null;
           try { parsed = JSON.parse(text); } catch (err) { parsed = null; }
           var m = parsed && parsed.rollover && parsed.rollover.manifest;
           if (!m) return { ok: false, reasons: [{ text: 'That is not a year archive.' }] };
-          return BrRollover.verify(text, { id: r.id, hash: r.archiveHash, manifest: m }, verifyDeps()).then(function (res) {
-            return res.ok ? clearFromManifest(r.id, m).then(function (out) { return { ok: true, out: out }; }) : res;
-          });
+          return BrRollover.verify(text, { id: r.id, hash: r.archiveHash, manifest: m }, verifyDeps());
         }).then(function (res) {
           if (!res.ok) { roBox(msg, 'error', 'That file is not the archive this clear began with. Nothing was changed.'); msg.insertAdjacentHTML('beforeend', reasonsHtml(res.reasons)); return; }
-          var out = res.out.res;
-          if (out.done) { renderResume(); roMsg.innerHTML = receiptHtml(BrRollover.getRun(localStorage, r.id), out.receipt.keys); }
-          else if (out.stale.length) roBox(msg, 'error', out.stale.length + ' item' + (out.stale.length === 1 ? ' has' : 's have') + ' been saved since the archive was made, so they are not in it. Nothing more was cleared. Put last year back, or save a new archive and start again.');
-          else roBox(msg, 'error', 'This browser refused to change ' + out.failed + '. Try again.');
-          renderScan();
-        });
+          /* The journal has the keys the teacher chose to Keep; a key
+             already cleared plans as 'done'. */
+          return planFor(r.id, parsed, r.choices).then(function (p) {
+            if (p.problems.length) { roBox(msg, 'error', p.problems.length + ' item' + (p.problems.length === 1 ? ' has' : 's have') + ' been saved since the archive was made, so they are not in it. Nothing more was cleared. Put last year back, or save a new archive and start again.'); return; }
+            return BrRollover.run(p, rolloverIo()).then(function (out) {
+              if (out.done) { renderResume(); roMsg.innerHTML = receiptHtml(BrRollover.getRun(localStorage, r.id), p); }
+              else if (out.stale.length) roBox(msg, 'error', 'Something was saved while finishing. Nothing more was cleared; pick the archive again.');
+              else roBox(msg, 'error', 'This browser refused to change ' + (labelFor(out.failed) || out.failed) + '. Try again.');
+            });
+          });
+        }).then(function () { renderScan(); });
       });
       return;
     }
@@ -1894,11 +2074,11 @@
         '<div class="btn-row"><button type="button" class="secondary" id="roReclear">Clear ' + keys.length + ' item' + (keys.length === 1 ? '' : 's') + ' again</button></div></div>';
       document.getElementById('roReclear').addEventListener('click', function () {
         var run = BrRollover.lastRun(localStorage);
-        var m = { local: {} };
         var local = currentLocal();
-        keys.forEach(function (k) { if (k in local) m.local[k] = [String(local[k]).length, run.cleared[k]]; });
-        BrRollover.planClear(run.id, local, keys, m).then(function (plan) {
-          return BrRollover.run(plan, { storage: localStorage });
+        /* The value now is last year's (its hash is the one cleared), so it
+           is its own archive for this. */
+        BrRollover.plan(run.id, local, local, { only: keys, studentKeys: studentKeys() }).then(function (p) {
+          return BrRollover.run(p, { storage: localStorage });
         }).then(function () { renderScan(); renderResume(); });
       });
     });

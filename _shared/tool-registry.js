@@ -506,7 +506,11 @@
         { k: 'gvb-exit-ticket:activeSet' },
         { k: 'gvb-exit-ticket:categoryTally' },
         { k: 'gvb-exit-ticket:customPrompts' },
-        { k: 'gvb-exit-ticket:discussion' },
+        /* What students wrote, with no names on it. Devon, 2026-10-07, asked
+           whether that is student data at a new year: "Oh, yeah wipe them".
+           The category tally beside it is unmarked: its categories are setup,
+           and the year rollover's own rule empties only its counts. */
+        { k: 'gvb-exit-ticket:discussion', student: true },
         { k: 'gvb-exit-ticket:sets' },
         { k: 'gvb-exit-ticket:settings' },
         { k: 'gvb-exit-ticket:tally', student: true },
