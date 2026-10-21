@@ -170,6 +170,11 @@
   .bank-source-row label { margin: 0; }
   .bank-copy-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .6rem; }
   .bank-copy-row[hidden] { display: none; }
+  .bank-set-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .6rem; }
+  .bank-set-row label { margin: 0; }
+  .bank-set-row input[type="text"] { width: 14rem; }
+  .bank-set-row[hidden], .bank-filter-row[hidden], .bank-pull-row button[hidden] { display: none; }
+  .bank-set-pos { font-weight: 700; color: var(--muted); min-width: 1.6rem; text-align: right; margin-top: .1rem; }
   .arrival-card { border-color: var(--accent); }
   .arrival-card[hidden] { display: none; }
   .arrival-list {
@@ -808,7 +813,8 @@
     <div class="card">
       <p class="hint">
         A reusable pool of questions for this tool's boards, separate from any one board — tag a question by
-        unit, standard and difficulty once, then reuse it across boards and across years. Pulling a question
+        unit, standard and difficulty once, then reuse it across boards and across years. Tick questions to gather them
+        into a <b>named set</b> (“Unit 3 review”): your own list, in your order, saved with the bank. Pulling a question
         into a board <b>copies</b> it in; editing or deleting it here afterward doesn't change a board that
         already pulled it.
       </p>
@@ -817,7 +823,7 @@
         <select id="bankSource"></select>
       </div>
       <p class="hint" id="bankSourceNote" hidden></p>
-      <div class="bank-filter-row">
+      <div class="bank-filter-row" id="bankFilterRow">
         <div class="field">
           <label for="bankFilterUnit">Unit</label>
           <select id="bankFilterUnit"><option value="">All units</option></select>
@@ -848,6 +854,7 @@
         <input type="text" id="bankPullCategory" placeholder="e.g. Vocabulary" list="bankCategoryOptions">
         <datalist id="bankCategoryOptions"></datalist>
         <button type="button" id="bankPullBtn">Pull selected into board</button>
+        <button type="button" id="bankPullSetBtn" hidden>Pull the whole set into board</button>
         <span class="import-status" id="bankPullStatus"></span>
       </div>
       <div class="sheet-row">
@@ -863,16 +870,31 @@
         <button type="button" class="secondary" id="bankCopyBtn">Copy selected to my bank</button>
         <span class="import-status" id="bankCopyStatus" role="status"></span>
       </div>
+      <div class="bank-set-row" id="bankSetAddRow">
+        <label for="bankSetTarget">Add the ticked questions to</label>
+        <select id="bankSetTarget"></select>
+        <label for="bankSetName" id="bankSetNameLabel">New set’s name</label>
+        <input type="text" id="bankSetName" maxlength="120" placeholder="e.g. Unit 3 review">
+        <button type="button" class="secondary" id="bankSetAddBtn">Add to the set</button>
+      </div>
+      <div class="bank-set-row" id="bankSetEditRow" hidden>
+        <label for="bankSetRename">This set’s name</label>
+        <input type="text" id="bankSetRename" maxlength="120">
+        <button type="button" class="secondary" id="bankSetRenameBtn">Rename</button>
+        <button type="button" class="danger" id="bankSetDeleteBtn">Delete this set</button>
+      </div>
+      <p class="import-status" id="bankSetStatus" role="status"></p>
     </div>
 
     <div class="card">
       <h2>Share the bank</h2>
       <p class="hint">
         Save the whole bank as a file for a colleague or another computer, and bring one in. The bank file
-        keeps everything, each question’s picture included; the spreadsheet is for reading and editing in Excel or Sheets. A file you choose is
+        keeps everything, each question’s picture and your named sets included; the spreadsheet is for reading and editing in Excel or Sheets. A file you choose is
         <b>shown first</b>: what it would add, what it would change and what it would leave out, and nothing is
         stored until you press Add. Importing <b>adds to</b> this bank and never deletes from it: a question
-        already here is updated or skipped, so the same file can be imported twice.
+        already here is updated or skipped, and a named set from a file is added beside yours, never over one,
+        so the same file can be imported twice.
       </p>
       <div class="import-row">
         <button type="button" class="secondary" id="bankExportBtn">Save bank file</button>
@@ -978,6 +1000,8 @@
    'bankFilterUnit','bankFilterStandard','bankFilterDifficulty','bankFilterQuery','bankClearFiltersBtn','bankList',
    'bankPullCategory','bankCategoryOptions','bankPullBtn','bankPullStatus',
    'bankSource','bankSourceNote','bankCopyRow','bankCopyBtn','bankCopyStatus',
+   'bankFilterRow','bankSetAddRow','bankSetTarget','bankSetNameLabel','bankSetName','bankSetAddBtn',
+   'bankSetEditRow','bankSetRename','bankSetRenameBtn','bankSetDeleteBtn','bankSetStatus','bankPullSetBtn',
    'bankExportBtn','bankExportSheetBtn','bankImportFile','bankFileStatus',
    'bankAddChoices','bankAddTags','bankAddPictureSlot','bankListStatus','importNote',
    'bankImportPreview','bankImportSummary','bankImportList','bankImportMore','bankImportAddBtn','bankImportCancelBtn',
@@ -3628,13 +3652,182 @@
     });
     els.bankSource.value = list.some(function (src) { return src.id === current; }) ? current : '';
     var chosen = list.filter(function (src) { return src.id === els.bankSource.value; })[0];
-    var seed = !!chosen && chosen.readOnly;
-    els.bankSourceNote.hidden = !seed;
+    var seed = !!chosen && chosen.readOnly, named = !!chosen && !!chosen.named;
+    els.bankSourceNote.hidden = !seed && !named;
     els.bankSourceNote.textContent = seed
       ? 'These come with ' + chosen.source + ' and cannot be changed or deleted here. ' + chosen.note +
         ' Pull them into a board as they are, or copy the ones you want into your own bank.'
-      : '';
+      : named
+        ? 'A named set is your own list, in the order it is pulled and printed; a question may be in it more than once. ' +
+          'Move a question with Up and Down, or take it out of the set (it stays in your bank). Editing a question in ' +
+          'your bank changes it here too, and deleting it there takes it out of every set.'
+        : '';
     els.bankCopyRow.hidden = !seed;
+    els.bankFilterRow.hidden = named;
+    els.bankSetAddRow.hidden = named;
+    els.bankSetEditRow.hidden = !named;
+    els.bankPullBtn.hidden = named;
+    els.bankPullSetBtn.hidden = !named;
+    if (named && document.activeElement !== els.bankSetRename) els.bankSetRename.value = chosen.title;
+    populateBankSetTargets();
+  }
+
+  /* ---------- named sets (Path 12 P2, v300) ----------
+     The teacher's own ordered lists of questions, saved with the bank
+     (_shared/question-bank.js, NAMED SETS, has the storage). A set holds
+     question ids, so it may repeat one and it shows every edit; deleting a
+     question takes it out of every set. "Questions from" lists each set
+     after the bank: chosen, the list shows the set in its order with Up,
+     Down and Remove from set, and "Pull the whole set into board" pulls it
+     in that order. Ticked questions from the bank or a built-in set are
+     added to a set at its end, and nothing is copied to do it. */
+  function namedSource() { return QuestionBank.isNamedSource(bankSource()) ? bankSource().slice(QuestionBank.NAMED_PREFIX.length) : ''; }
+
+  function bankSetStatus(kind, message) {
+    els.bankSetStatus.className = 'import-status' + (kind ? ' ' + kind : '');
+    els.bankSetStatus.textContent = message;
+  }
+
+  function populateBankSetTargets() {
+    var current = els.bankSetTarget.value, sets = QuestionBank.namedSets();
+    setOptions(els.bankSetTarget, [{ value: '', label: 'A new named set' }].concat(sets.map(function (s) {
+      return { value: s.id, label: s.name + ' (' + countOf(s.items.length, 'question') + ')' };
+    })));
+    els.bankSetTarget.value = sets.some(function (s) { return s.id === current; }) ? current : '';
+    var isNew = !els.bankSetTarget.value;
+    els.bankSetName.hidden = !isNew;
+    els.bankSetNameLabel.hidden = !isNew;
+  }
+
+  /** What a refused set write says. */
+  function setWriteProblem(res) {
+    if (res.newer) return 'Your bank was saved by a newer version of this page. Reload the page, then try again.';
+    if (res.noName) return 'Give the set a name first.';
+    return 'Your bank could not be saved, so the set was not changed.';
+  }
+
+  /** Stores `set` (a whole set: name and items) and redraws. Returns the
+      write's result. */
+  function storeSet(set) {
+    var res = QuestionBank.saveSet(set);
+    if (!res.ok) bankSetStatus('error', setWriteProblem(res));
+    return res;
+  }
+
+  els.bankSetTarget.addEventListener('change', populateBankSetTargets);
+
+  els.bankSetAddBtn.addEventListener('click', function () {
+    // In the order the list shows them, not the order they were ticked.
+    var shown = QuestionBank.filter(QuestionBank.questionsOf(bankSource()), currentBankFilters());
+    var ids = shown.filter(function (q) { return bankSelected[q.id]; }).map(function (q) { return q.id; });
+    if (!ids.length) { bankSetStatus('error', 'Tick at least one question first.'); return; }
+    var target = els.bankSetTarget.value, set;
+    if (target) {
+      set = QuestionBank.findNamedSet(target);
+      if (!set) { bankSetStatus('error', 'That set is not there any more.'); populateBankSetTargets(); return; }
+      if (set.items.length + ids.length > QuestionBank.SET_LIMIT.items) {
+        bankSetStatus('error', 'A set holds at most ' + QuestionBank.SET_LIMIT.items + ' questions, so nothing was added.');
+        return;
+      }
+      set.items = set.items.concat(ids);
+    } else {
+      var name = els.bankSetName.value.trim();
+      if (!name) { bankSetStatus('error', 'Name the new set first.'); els.bankSetName.focus(); return; }
+      set = { name: name, items: ids };
+    }
+    var res = storeSet(set);
+    if (!res.ok) return;
+    bankSelected = {};
+    els.bankSetName.value = '';
+    renderBankList();
+    els.bankSetTarget.value = res.set.id;
+    populateBankSetTargets();
+    bankSetStatus('ok', (target ? 'Added ' : 'Made “' + res.set.name + '” with ') + countOf(ids.length, 'question') +
+      (target ? ' to “' + res.set.name + '”' : '') + '. Choose it under “Questions from” to put it in order.');
+  });
+
+  els.bankSetRenameBtn.addEventListener('click', function () {
+    var set = QuestionBank.findNamedSet(namedSource());
+    if (!set) return;
+    var name = els.bankSetRename.value.trim();
+    if (!name) { bankSetStatus('error', 'Give the set a name first.'); return; }
+    set.name = name;
+    if (!storeSet(set).ok) return;
+    renderBankList();
+    bankSetStatus('ok', 'Renamed the set “' + set.name + '”.');
+  });
+
+  els.bankSetDeleteBtn.addEventListener('click', function () {
+    var set = QuestionBank.findNamedSet(namedSource());
+    if (!set) return;
+    if (!confirm('Delete the set “' + set.name + '”? Its questions stay in your bank.')) return;
+    var res = QuestionBank.deleteSet(set.id);
+    if (!res.ok) { bankSetStatus('error', setWriteProblem(res)); return; }
+    els.bankSource.value = '';
+    bankSelected = {};
+    renderBankList();
+    bankSetStatus('ok', 'Deleted the set “' + set.name + '”. Its questions are still in your bank.');
+    els.bankSource.focus();
+  });
+
+  /** Moves the item at `from` to `to` in the set showing, or takes it out
+      when `to` is -1, and puts the focus back where the teacher was. */
+  function changeSetItem(from, to, focusClass) {
+    var set = QuestionBank.findNamedSet(namedSource());
+    if (!set || from < 0 || from >= set.items.length) return;
+    var item = set.items.splice(from, 1)[0];
+    if (to !== -1) set.items.splice(to, 0, item);
+    if (!storeSet(set).ok) return;
+    renderBankList();
+    var rows = els.bankList.querySelectorAll('.bank-entry');
+    var row = rows[to === -1 ? Math.min(from, rows.length - 1) : to];
+    var target = row && (row.querySelector('.' + focusClass + ':not([disabled])') || row.querySelector('button:not([disabled])'));
+    (target || els.bankList).focus();
+    bankListStatus('', to === -1 ? 'Taken out of the set. It is still in your bank.' : 'Moved to number ' + (to + 1) + ' of ' + set.items.length + '.');
+  }
+
+  /** The list for a named set: its questions in its order, numbered, each
+      with Up, Down and Remove from set. Edit and Delete are on the bank's
+      own list, where the question lives. */
+  function renderSetList(setId) {
+    var set = QuestionBank.findNamedSet(setId);
+    var read = QuestionBank.namedSetQuestions(setId);
+    els.bankList.innerHTML = '';
+    if (!set || !set.items.length) {
+      var empty = document.createElement('div');
+      empty.className = 'bank-empty';
+      empty.textContent = 'This set is empty. Choose “My question bank” above, tick questions, and add them to it.';
+      els.bankList.appendChild(empty);
+      return;
+    }
+    var byId = {};
+    read.questions.forEach(function (q) { byId[q.id] = q; });
+    set.items.forEach(function (id, i) {
+      var q = byId[id];
+      var row = el('div', 'bank-entry');
+      row.setAttribute('data-id', id);
+      row.appendChild(el('span', 'bank-set-pos', (i + 1) + '.'));
+      var title = q ? q.prompt : 'A question that is not on this page';
+      var body = q
+        ? questionBody(document.createElement('div'), q.prompt, q.answer, [q.unit, q.standard, q.difficulty, QuestionBank.isSeedId(id) ? 'built in' : ''])
+        : questionBody(document.createElement('div'), title, 'Its built-in set is not loaded here.', []);
+      if (q) appendQuestionExtras(body, q);
+      row.appendChild(body);
+      var actions = el('div', 'bank-row-actions');
+      [['Up', 'bank-set-up', i - 1, i === 0], ['Down', 'bank-set-down', i + 1, i === set.items.length - 1], ['Remove from set', 'bank-set-remove', -1, false]].forEach(function (b) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'secondary small ' + b[1];
+        btn.textContent = b[0];
+        btn.setAttribute('aria-label', b[0] + ': ' + (i + 1) + '. ' + title);
+        btn.disabled = b[3];
+        btn.addEventListener('click', function () { changeSetItem(i, b[2], b[1]); });
+        actions.appendChild(btn);
+      });
+      row.appendChild(actions);
+      els.bankList.appendChild(row);
+    });
+    if (read.missing) bankListStatus('', countOf(read.missing, 'question') + ' in this set ' + (read.missing === 1 ? 'is' : 'are') + ' from a built-in set this page does not have; ' + (read.missing === 1 ? 'it is' : 'they are') + ' kept, and left out when the set is pulled or printed.');
   }
 
   function populateBankFilterOptions() {
@@ -3734,8 +3927,9 @@
     populateBankSourceOptions();
     populateBankFilterOptions();
     populateBankCategoryOptions();
-    var source = bankSource(), isSeed = !!source;
-    if (isSeed) bankEdit = null;
+    var source = bankSource(), isSeed = !!source && !QuestionBank.isNamedSource(source);
+    if (source) bankEdit = null;
+    if (namedSource()) { renderSetList(namedSource()); return; }
     var full = {};
     QuestionBank.questionsOf(source).forEach(function (q) { full[q.id] = q; });
     var all = ReviewBankStore.listEntries(source);
@@ -3862,6 +4056,8 @@
   els.bankSource.addEventListener('change', function () {
     bankSelected = {};                       // a selection never crosses from one source to another
     els.bankCopyStatus.textContent = '';
+    els.bankSetStatus.textContent = '';
+    bankListStatus('', '');
     els.bankPullStatus.textContent = '';
     renderBankList();
   });
@@ -3924,12 +4120,13 @@
      whichever source is chosen. Nothing is stored and nothing is copied. */
   function bankPrintQuestions() {
     var source = bankSource();
+    if (namedSource()) return QuestionBank.questionsOf(source);      // the set, whole and in its order
     var shown = QuestionBank.filter(QuestionBank.questionsOf(source), currentBankFilters());
     var ticked = shown.filter(function (q) { return bankSelected[q.id]; });
     return ticked.length ? ticked : shown;
   }
   function bankPrintTitle() {
-    if (els.bankFilterUnit.value) return els.bankFilterUnit.value;
+    if (els.bankFilterUnit.value && !namedSource()) return els.bankFilterUnit.value;
     var source = bankSource();
     var chosen = ReviewBankStore.sources().filter(function (src) { return src.id === source; })[0];
     return chosen ? chosen.title : 'Questions';
@@ -3974,15 +4171,31 @@
       els.bankPullStatus.textContent = 'Select at least one question first.';
       return;
     }
+    // From whichever source is showing: a seed set's question is pulled as
+    // it is, with nothing copied into the bank on the way.
+    pullIntoBoard(ids.map(ReviewBankStore.findEntry).filter(Boolean));
+  });
+
+  // A named set is pulled whole, in its order, a repeated question twice.
+  els.bankPullSetBtn.addEventListener('click', function () {
+    var list = QuestionBank.questionsOf(bankSource());
+    if (!list.length) {
+      els.bankPullStatus.className = 'import-status error';
+      els.bankPullStatus.textContent = 'This set has no question to pull.';
+      return;
+    }
+    pullIntoBoard(list.map(QuestionBank.toLegacy));
+  });
+
+  /** Puts `entries` (this page's entry shape) into the board editor as new
+      clue rows of the category the pull field names. */
+  function pullIntoBoard(entries) {
     var category = els.bankPullCategory.value.trim();
     if (!category) {
       els.bankPullStatus.className = 'import-status error';
       els.bankPullStatus.textContent = 'Name the category to pull these into.';
       return;
     }
-    // From whichever source is showing: a seed set's question is pulled as
-    // it is, with nothing copied into the bank on the way.
-    var entries = ids.map(ReviewBankStore.findEntry).filter(Boolean);
     var pulledFrom = {};
     QuestionBank.questionsOf(bankSource()).forEach(function (q) { pulledFrom[q.id] = q; });
 
@@ -4025,7 +4238,7 @@
       ' into "' + category + '". Remember to click Save board.';
     showTopSection('boards');
     renderBankList();
-  });
+  }
 
   /* ---------- the bank as a file (Path 12 P1) ----------
      The bank is the site's shared one (_shared/question-bank.js); these three
@@ -4042,9 +4255,10 @@
   els.bankExportBtn.addEventListener('click', function () {
     var all = QuestionBank.list();
     if (!all.length) { bankFileStatus('error', 'The bank is empty, so there is nothing to save yet.'); return; }
+    var sets = QuestionBank.namedSets();
     function write(list, pictures, gone) {
-      ExportKit.download(QuestionBank.toJSON(list, { title: 'Question bank' }), 'question-bank.json', 'application/json');
-      bankFileStatus('ok', 'Saved ' + countOf(all.length, 'question') + ' as question-bank.json' +
+      ExportKit.download(QuestionBank.toJSON(list, { title: 'Question bank', sets: sets }), 'question-bank.json', 'application/json');
+      bankFileStatus('ok', 'Saved ' + countOf(all.length, 'question') + (sets.length ? ' and ' + countOf(sets.length, 'named set') : '') + ' as question-bank.json' +
         (pictures ? ', with ' + countOf(pictures, 'picture') + ' in the file' : '') + '.' +
         (gone ? ' ' + countOf(gone, 'picture') + ' missing from this browser’s storage ' + (gone === 1 ? 'is' : 'are') + ' not in it.' : ''));
     }
@@ -4070,7 +4284,7 @@
     if (!all.length) { bankFileStatus('error', 'The bank is empty, so there is nothing to save yet.'); return; }
     loadXlsx().then(function () {
       ExportKit.toXlsx({ name: 'Questions', rows: QuestionBank.toRows(all), widths: [48, 32, 8, 14, 14, 11, 20, 30, 24] }, { filename: 'question-bank.xlsx' });
-      bankFileStatus('ok', 'Saved ' + countOf(all.length, 'question') + ' as question-bank.xlsx. Pictures and sounds are only in the bank file.');
+      bankFileStatus('ok', 'Saved ' + countOf(all.length, 'question') + ' as question-bank.xlsx. Pictures, sounds and named sets are only in the bank file.');
     }).catch(function (err) { bankFileStatus('error', err.message); });
   });
 
@@ -4090,8 +4304,27 @@
     els.bankImportList.textContent = '';
   }
 
+  /** What Add would do with the file's named sets: mergeSets() over a copy,
+      through the ids the questions' merge would give. */
+  function importSetPlan(parsed) {
+    var sets = parsed.sets || [];
+    if (!sets.length) return { added: 0, same: 0, dropped: 0, names: [] };
+    var merged = QuestionBank.merge(QuestionBank.list(), parsed.questions);
+    return QuestionBank.mergeSets(QuestionBank.namedSets(), sets, merged.ids, merged.questions);
+  }
+  function setPlanSentence(sp) {
+    if (!sp.added && !sp.same) return '';
+    var parts = [];
+    if (sp.added) parts.push(countOf(sp.added, 'named set') + ' would be added (' + sp.names.map(function (n) { return '“' + n + '”'; }).join(', ') + ')');
+    if (sp.same) parts.push(countOf(sp.same, 'named set') + ' already here');
+    return ' ' + parts.join('; ') + '.' + (sp.added ? ' A set already here is never changed by a file.' : '') +
+      (sp.dropped ? ' ' + countOf(sp.dropped, 'question') + ' in the file’s sets would be left out of them: ' + (sp.dropped === 1 ? 'it is' : 'they are') + ' not in this file or this bank.' : '');
+  }
+
   function renderImportPreview() {
     var plan = ReviewBankEditor.importPlan(QuestionBank.list(), pendingImport.parsed);
+    var setPlan = plan.setPlan = importSetPlan(pendingImport.parsed);
+    plan.signature += '/' + JSON.stringify(QuestionBank.namedSets());     // a set made in another tab is a change too
     pendingImport.signature = plan.signature;
     els.bankImportList.textContent = '';
     plan.rows.forEach(function (row) {
@@ -4105,12 +4338,13 @@
     });
     els.bankImportMore.hidden = !plan.more;
     els.bankImportMore.textContent = plan.more ? 'And ' + countOf(plan.more, 'more question') + ', counted above and not listed here.' : '';
-    els.bankImportSummary.textContent = ReviewBankEditor.planSentence(plan, pendingImport.name);
-    var will = plan.added + plan.updated;
+    els.bankImportSummary.textContent = ReviewBankEditor.planSentence(plan, pendingImport.name) + setPlanSentence(setPlan);
+    var will = plan.added + plan.updated + setPlan.added;
     els.bankImportAddBtn.hidden = !will;
-    els.bankImportAddBtn.textContent = plan.updated
+    els.bankImportAddBtn.textContent = (plan.updated
       ? 'Add ' + plan.added + ' and change ' + plan.updated + ' in my bank'
-      : 'Add ' + countOf(plan.added, 'question') + ' to my bank';
+      : 'Add ' + countOf(plan.added, 'question') + ' to my bank') +
+      (setPlan.added ? ', with ' + countOf(setPlan.added, 'named set') : '');
     els.bankImportCancelBtn.textContent = will ? 'Don’t import' : 'Close';
     els.bankImportPreview.hidden = false;
     return plan;
@@ -4121,6 +4355,8 @@
     var parts = [countOf(res.added, 'question') + ' added'];
     if (res.updated) parts.push(res.updated + ' updated');
     if (res.same + res.skipped) parts.push((res.same + res.skipped) + ' already in the bank');
+    if (res.sets && res.sets.added) parts.push(countOf(res.sets.added, 'named set') + ' added (' + res.sets.names.map(function (n) { return '“' + n + '”'; }).join(', ') + ')');
+    if (res.sets && res.sets.same) parts.push(countOf(res.sets.same, 'named set') + ' already here');
     var message = parts.join(', ') + '.';
     if (res.invalid.length) {
       var where = res.invalid.slice(0, 8).map(function (bad) { return 'row ' + rows[bad.row - 1] + ' (' + bad.errors.join(', ') + ')'; });
@@ -4144,13 +4380,14 @@
     var cleaned = QuestionBank.cleanMedia(parsed.questions, parsed.rows);
     var note = QuestionBank.leftSentence(cleaned.left);
     function show(questions) {
-      pendingImport = { parsed: { questions: questions, rows: parsed.rows, error: '' }, name: name || 'That file', signature: '', note: note };
+      pendingImport = { parsed: { questions: questions, rows: parsed.rows, error: '', sets: parsed.sets || [] }, name: name || 'That file', signature: '', note: note };
       var plan = renderImportPreview();
-      if (plan.added + plan.updated) {
+      if (plan.added + plan.updated + plan.setPlan.added) {
         bankFileStatus(note ? 'error' : '', 'Read ' + pendingImport.name + '. Nothing is stored yet: check the list below, then press Add.' + (note ? ' ' + note : ''));
       } else {
         // Nothing to store, so this is already the whole outcome.
         var none = QuestionBank.merge(QuestionBank.list(), questions);
+        none.sets = plan.setPlan;
         bankFileStatus(none.invalid.length || note ? 'error' : 'ok', importResultMessage(none, parsed.rows) + (note ? ' ' + note : ''));
       }
     }
@@ -4167,11 +4404,11 @@
       bankFileStatus('error', 'Your bank has changed since this list was drawn, so nothing was stored. Check the list again, then press Add.');
       return;
     }
-    var res = QuestionBank.importQuestions(parsed.questions);
+    var res = QuestionBank.importQuestions(parsed.questions, { sets: parsed.sets });
     if (res.newer) { bankFileStatus('error', 'This bank was saved by a newer version of this page. Reload the page, then import again.'); return; }
     if (!res.ok) { bankFileStatus('error', 'The bank could not be saved, so nothing was imported.'); return; }
     closeImportPreview();
-    bankFileStatus(!note && (res.added || res.updated || !res.invalid.length) ? 'ok' : 'error', importResultMessage(res, parsed.rows) + (note ? ' ' + note : ''));
+    bankFileStatus(!note && (res.added || res.updated || res.sets.added || !res.invalid.length) ? 'ok' : 'error', importResultMessage(res, parsed.rows) + (note ? ' ' + note : ''));
     renderBankList();
     els.bankImportFile.focus();
   });

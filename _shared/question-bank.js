@@ -18,10 +18,12 @@
 
    WHAT IS STORED
      key 'gvb-question-bank', a Store envelope { v: 1, data: {
-       schema: 1,
+       schema: 1,                             // 2 while `sets` has one in it
        questions: [ question, ... ],          // the teacher's order
-       legacy: { 'gvb-review-board-bank:entries': [ id, ... ] } } }
+       legacy: { 'gvb-review-board-bank:entries': [ id, ... ] },
+       sets: [ named set, ... ] } }           // only when there is one
    `legacy` lists every id this bank has ever taken from 030's old key.
+   `sets` is the teacher's NAMED SETS (below).
 
    THE MIGRATION, exactly
    Until v265 the bank was 030's own key, 'gvb-review-board-bank:entries': a
@@ -138,6 +140,52 @@
    already in the bank keeps the picture it has) and named, by row. This
    file stores no picture and reads none: it has no MediaDB in it.
 
+   NAMED SETS (Path 12 P2, v300; Devon, 2026-10-07: "B")
+   A named set is the teacher's own ordered list of questions ("my Unit 3
+   review"), saved with the bank, in `sets`:
+     { id: 'set-<time, base 36>-<random>', name, items: [ question id, ... ],
+       createdAt, updatedAt? }
+   `items` are ids, in the teacher's order, and an id may be there more than
+   once (a question asked twice in a review). An item is a question of the
+   bank or a SEED question ('seed:…', which is as stable as the tool's own
+   list), so a set can mix the teacher's questions with built-in ones and
+   nothing is copied to make one. A set holds no words: editing a question
+   changes it in every set it is in, and deleteQuestion() takes its id out of
+   every set, every time it is there. An item whose question this page cannot
+   find (a seed set not loaded here) is kept, and is counted as missing when
+   the set is read; nothing else ever drops an item. A name is at most
+   SET_LIMIT.name characters and a set at most SET_LIMIT.items items.
+     - THE SCHEMA. A bank with no set is stored exactly as before (`schema: 1`,
+       no `sets`), so nothing changes for anyone who never makes one. While a
+       set exists `schema` is 2. A page from v265 to v299 reads a schema it
+       does not know as a newer page's bank: it shows the questions and
+       refuses every write, so it cannot save the bank without its sets and
+       lose them. Deleting the last set puts the bank back to schema 1.
+     - FILES. toJSON() writes `sets` beside `questions` when there is one;
+       the file's `version` stays 1, so an older page still imports the
+       questions of a new file (and leaves the sets, which it cannot read).
+       parse() gives `sets` ([] for a file with none, which is every file made
+       before v300). A spreadsheet or CSV has no sets.
+     - IMPORT ADDS, NEVER OVERWRITES. importQuestions(questions, { sets })
+       merges the questions first; merge() says, in `ids`, which stored id
+       each file id became (the same id, a seed's copy, or the question with
+       the same words that was already here), and mergeSets() puts each
+       file set in through that map: one identical to a set here (same id, or
+       same name and items) is `same`; any other is added as a NEW set (with
+       the file's id when this bank has no set with it, and a new one when it
+       has), its name given ' (2)', ' (3)' … when the name is taken.
+       A set here is never changed or deleted by a file. An item that names
+       no question here or in the file (a row left out as invalid) is dropped
+       from the incoming set and counted.
+     - 009's backup carries the key whole, sets in it, as it always has; a
+       "replace" restore of an older backup takes the bank back to that
+       backup, sets and all.
+     - SEED SETS are not named sets and are untouched: registerSet() is
+       memory only and a named set may only POINT at seed questions.
+   sources({ named: true }) lists the named sets after the bank, as
+   'named:<set id>', and questionsOf() reads one (repeats included, in
+   order). Only 030 asks for them; 040's and 020's choosers are unchanged.
+
    Plain global script, not an ES module, for store.js's reason. */
 (function (global) {
   'use strict';
@@ -145,6 +193,9 @@
   var KEY = 'gvb-question-bank';
   var LEGACY_KEY = 'gvb-review-board-bank:entries';
   var VERSION = 1;
+  var SCHEMA = 2;                                   // the highest stored `schema` this file writes
+  var NAMED_PREFIX = 'named:';
+  var SET_LIMIT = { name: 120, items: 1000 };
   var FORMAT = 'aplp-question-bank';
   var DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
   var SEED_PREFIX = 'seed:';
@@ -333,16 +384,20 @@
   }
 
   /** `incoming` questions put into `list` by the rules under IDS above.
-      Returns { questions, added, updated, same, skipped, invalid }: counts,
-      and `invalid` as [{ row, errors }] with `row` counted from 1. A question
+      Returns { questions, added, updated, same, skipped, invalid, ids }:
+      counts, `invalid` as [{ row, errors }] with `row` counted from 1, and
+      `ids`, each file id of a row that was taken mapped to the id it has in
+      the result (see NAMED SETS). A question
       with no prompt or no answer is never stored. `list` is not changed. */
   function merge(list, incoming, opts) {
-    var out = list.slice(), res = { questions: out, added: 0, updated: 0, same: 0, skipped: 0, invalid: [] };
+    var out = list.slice(), res = { questions: out, added: 0, updated: 0, same: 0, skipped: 0, invalid: [], ids: {} };
     var byContent = {};
-    out.forEach(function (q) { byContent[contentKey(q)] = true; });
+    out.forEach(function (q) { if (!own(byContent, contentKey(q))) byContent[contentKey(q)] = q.id; });
     (Array.isArray(incoming) ? incoming : []).forEach(function (raw, i) {
       var errors = validate(raw);
       if (errors.length) { res.invalid.push({ row: i + 1, errors: errors }); return; }
+      var fileId = isRecord(raw) ? text(raw.id) : '';
+      function took(id) { if (fileId && !UNSAFE[fileId]) res.ids[fileId] = id; }
       if (isSeedId(raw.id)) raw = detach(raw);                 // a seed is never stored as itself
       var q = normalize(raw), at = q.id ? indexOfId(out, q.id) : -1;
       if (at !== -1) {
@@ -357,16 +412,18 @@
         var done = upsert(out, patch, opts).question;
         var after = {}; for (k in done) if (own(done, k) && k !== 'updatedAt') after[k] = done[k];
         var was = JSON.parse(before); delete was.updatedAt;
+        took(q.id);
         if (JSON.stringify(after) === JSON.stringify(was)) { res.same++; return; }
         out[at] = done;
-        byContent[contentKey(done)] = true;
+        if (!own(byContent, contentKey(done))) byContent[contentKey(done)] = done.id;
         res.updated++;
         return;
       }
-      if (own(byContent, contentKey(q))) { res.skipped++; return; }
+      if (own(byContent, contentKey(q))) { took(byContent[contentKey(q)]); res.skipped++; return; }
       var added = upsert(out, q, opts);
       out.push(added.question);
-      byContent[contentKey(q)] = true;
+      byContent[contentKey(q)] = added.question.id;
+      took(added.question.id);
       res.added++;
     });
     return res;
@@ -453,6 +510,140 @@
     var list = setQuestions(seedSetOf(id));
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
     return null;
+  }
+
+  /* ---- named sets (see NAMED SETS above; pure) ------------------------- */
+
+  /** 'set-' + the time in base 36 + '-' + seven random characters. */
+  function makeSetId(now, random) {
+    return 'set' + makeId(now, random).slice(1);
+  }
+
+  /** `s` as a named set, or null when it cannot be one (not a record, no
+      name). Items are kept as texts, in order, repeats and all, to the
+      limit; a blank or unsafe item is dropped. Never throws. */
+  function normalizeSet(s) {
+    if (!isRecord(s)) return null;
+    var name = text(s.name).replace(/\s*[\r\n]+\s*/g, ' ').slice(0, SET_LIMIT.name).trim();
+    if (!name) return null;
+    var items = [];
+    (Array.isArray(s.items) ? s.items : []).forEach(function (v) {
+      var id = typeof v === 'string' ? v.trim() : '';
+      if (id && !UNSAFE[id] && items.length < SET_LIMIT.items) items.push(id);
+    });
+    var out = { id: text(s.id), name: name, items: items, createdAt: text(s.createdAt) };
+    if (text(s.updatedAt)) out.updatedAt = text(s.updatedAt);
+    return out;
+  }
+
+  /** A list of named sets, each normalized, with no two sharing an id (a
+      set with none, or a repeated one, is given a new id). */
+  function normalizeSets(list, opts) {
+    var out = [];
+    (Array.isArray(list) ? list : []).forEach(function (raw) {
+      var set = normalizeSet(raw);
+      if (!set) return;
+      if (!set.id || indexOfId(out, set.id) !== -1) set.id = freshSetId(out, opts);
+      out.push(set);
+    });
+    return out;
+  }
+
+  function freshSetId(list, opts) {
+    var id, tries = 0;
+    do { id = makeSetId(opts && opts.nowMs, opts && opts.random); } while (indexOfId(list, id) !== -1 && ++tries < 50);
+    while (indexOfId(list, id) !== -1) id += 'x';
+    return id;
+  }
+
+  /** `sets` with `set` put in: over the set with its id (its first date
+      kept), or at the end with a new id. Returns { sets, set }, or
+      { sets, set: null } when `set` has no name. `sets` is not changed. */
+  function upsertSet(sets, set, opts) {
+    var out = sets.slice(), n = normalizeSet(set);
+    if (!n) return { sets: out, set: null };
+    var at = n.id ? indexOfId(out, n.id) : -1;
+    if (at !== -1) {
+      n.createdAt = out[at].createdAt || n.createdAt || stamp(opts);
+      n.updatedAt = stamp(opts);
+      out[at] = n;
+    } else {
+      n.id = n.id && n.id.indexOf(NAMED_PREFIX) !== 0 ? n.id : freshSetId(out, opts);
+      if (!n.createdAt) n.createdAt = stamp(opts);
+      delete n.updatedAt;
+      out.push(n);
+    }
+    return { sets: out, set: n };
+  }
+
+  /** `sets` with question `id` taken out of every set, every time it is
+      there. A set that changes is stamped; the rest are the same objects. */
+  function removeFromSets(sets, id, opts) {
+    return sets.map(function (set) {
+      if (set.items.indexOf(id) === -1) return set;
+      var copy = normalizeSet(set);
+      copy.id = set.id;
+      copy.items = set.items.filter(function (x) { return x !== id; });
+      copy.updatedAt = stamp(opts);
+      return copy;
+    });
+  }
+
+  function sameItems(a, b) {
+    if (a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  }
+
+  /** A file's sets put into `sets` (see NAMED SETS: import adds, never
+      overwrites). `ids` is merge()'s map from the file's ids to stored ones;
+      `questions` is the bank after that merge. An item is taken through the
+      map, kept when it is a seed id or a question `questions` has, and
+      dropped otherwise. Returns { sets, added, same, dropped, names }: the
+      counts, `dropped` the items left out, `names` the names the added
+      sets were stored under. `sets` is not changed. */
+  function mergeSets(sets, incoming, ids, questions, opts) {
+    var out = (Array.isArray(sets) ? sets : []).slice(), res = { sets: out, added: 0, same: 0, dropped: 0, names: [] };
+    ids = isRecord(ids) ? ids : {};
+    var have = {};
+    (Array.isArray(questions) ? questions : []).forEach(function (q) { if (q && q.id) have['$' + q.id] = true; });
+    (Array.isArray(incoming) ? incoming : []).forEach(function (raw) {
+      var set = normalizeSet(raw);
+      if (!set) return;
+      var items = [];
+      set.items.forEach(function (id) {
+        var to = own(ids, id) ? ids[id] : id;
+        if (isSeedId(to) || own(have, '$' + to)) items.push(to); else res.dropped++;
+      });
+      var twin = out.filter(function (x) {
+        return sameItems(x.items, items) && (x.id === set.id || fold(x.name) === fold(set.name));
+      })[0];
+      if (twin) { res.same++; return; }
+      var name = set.name, n = 1;
+      function taken(nm) { return out.some(function (x) { return fold(x.name) === fold(nm); }); }
+      while (taken(name)) { n++; name = set.name.slice(0, SET_LIMIT.name - 5) + ' (' + n + ')'; }
+      // The file's id when this bank has no set with it, so the same file
+      // again finds this set by id, whatever name it was given here.
+      var keepId = set.id && indexOfId(out, set.id) === -1 ? set.id : '';
+      var added = upsertSet(out, { id: keepId, name: name, items: items, createdAt: set.createdAt }, opts).set;
+      out.push(added);
+      res.added++;
+      res.names.push(name);
+    });
+    return res;
+  }
+
+  /** A set's questions from `bank` (the teacher's questions) and the seed
+      sets: { questions, missing }, `questions` in the set's order with a
+      repeat repeated, each a copy; `missing` counts items found nowhere. */
+  function resolveSet(set, bank) {
+    var byId = {}, res = { questions: [], missing: 0 };
+    (Array.isArray(bank) ? bank : []).forEach(function (q) { byId['$' + q.id] = q; });
+    (set && Array.isArray(set.items) ? set.items : []).forEach(function (id) {
+      var q = own(byId, '$' + id) ? byId['$' + id] : (isSeedId(id) ? findSeed(id) : null);
+      if (q) res.questions.push(JSON.parse(JSON.stringify(q))); else res.missing++;
+    });
+    return res;
   }
 
   /* ---- pictures (see PICTURES above) ----------------------------------- */
@@ -607,14 +798,18 @@
 
   /* ---- files ----------------------------------------------------------- */
 
-  /** The bank as one JSON file: every question, every field. */
+  /** The bank as one JSON file: every question, every field, and the named
+      sets in `meta.sets` when there is one. */
   function toJSON(list, meta) {
     meta = meta || {};
-    return JSON.stringify({
+    var file = {
       format: FORMAT, version: VERSION,
       title: text(meta.title), exported: meta.exported || new Date().toISOString(),
       questions: list.map(normalize)
-    }, null, 2);
+    };
+    var named = normalizeSets(meta.sets);
+    if (named.length) file.sets = named;
+    return JSON.stringify(file, null, 2);
   }
 
   var COLUMNS = [
@@ -726,7 +921,8 @@
 
   /** A file's text as questions: this module's JSON, a bare JSON list of
       questions (030's old entries among them), or CSV. Returns { questions,
-      rows, error }, as fromRows() does. */
+      rows, error }, as fromRows() does, and `sets`, the file's named sets
+      ([] for none, and for a CSV). */
   function parse(fileText) {
     var s = String(fileText === null || fileText === undefined ? '' : fileText).replace(/^\uFEFF/, '');
     if (/^\s*[\[{]/.test(s)) {
@@ -737,9 +933,12 @@
       if (isRecord(data) && typeof data.version === 'number' && data.version > VERSION) {
         return { questions: [], rows: [], error: 'That bank was saved by a newer version of this site. Update this page, then import it again.' };
       }
-      return { questions: list.filter(isRecord), rows: list.filter(isRecord).map(function (q, i) { return i + 1; }), error: '' };
+      return { questions: list.filter(isRecord), rows: list.filter(isRecord).map(function (q, i) { return i + 1; }), error: '',
+        sets: isRecord(data) ? normalizeSets(data.sets) : [] };
     }
-    return fromRows(parseCsv(s));
+    var rows = fromRows(parseCsv(s));
+    rows.sets = [];
+    return rows;
   }
 
   /* ---- storage --------------------------------------------------------- */
@@ -751,14 +950,15 @@
     if (!global.Store) throw new Error('QuestionBank: _shared/store.js must be loaded first');
   }
 
-  /** What is on disk, as { schema, questions, legacy }, with nothing
-      adopted and nothing written. */
+  /** What is on disk, as { schema, questions, legacy, sets }, with nothing
+      adopted and nothing written. `schema` is VERSION for any bank this file
+      can write (1, or 2 with sets), and the stored number for a newer one. */
   function read() {
     needStore();
     var data = global.Store.get(KEY, { version: VERSION, default: null, migrate: function (v, d) { return d; } });
-    var bank = { schema: VERSION, questions: [], legacy: {} };
+    var bank = { schema: VERSION, questions: [], legacy: {}, sets: [] };
     if (!isRecord(data)) return bank;
-    if (typeof data.schema === 'number' && data.schema > VERSION) bank.schema = data.schema;
+    if (typeof data.schema === 'number' && data.schema > SCHEMA) bank.schema = data.schema;
     if (Array.isArray(data.questions)) {
       var seen = {};
       data.questions.forEach(function (q, i) {
@@ -773,6 +973,7 @@
     if (isRecord(data.legacy)) {
       for (var k in data.legacy) if (own(data.legacy, k) && !UNSAFE[k] && Array.isArray(data.legacy[k])) bank.legacy[k] = data.legacy[k].map(String);
     }
+    bank.sets = normalizeSets(data.sets);
     return bank;
   }
 
@@ -804,10 +1005,15 @@
     return took;
   }
 
+  /** Stores `bank`. With no named set it is the v265 shape exactly; with
+      one, `sets` is added and `schema` is 2 (see NAMED SETS). */
   function write(bank) {
     if (bank.schema > VERSION) return { ok: false, newer: true, quota: false, blocked: false };
     needStore();
-    return global.Store.set(KEY, { schema: VERSION, questions: bank.questions, legacy: bank.legacy }, { version: VERSION });
+    var sets = Array.isArray(bank.sets) ? bank.sets : [];
+    var data = { schema: sets.length ? SCHEMA : VERSION, questions: bank.questions, legacy: bank.legacy };
+    if (sets.length) data.sets = sets;
+    return global.Store.set(KEY, data, { version: VERSION });
   }
 
   /** The bank, after the migration above. Writes only when it took an old
@@ -833,15 +1039,24 @@
   /** The questions of `source`: the teacher's bank for '' (or nothing), a
       seed set's for its id. `opts.peek` reads the bank without writing. */
   function questionsOf(source, opts) {
+    if (isNamedSource(source)) return namedSetQuestions(source.slice(NAMED_PREFIX.length), opts).questions;
     if (source) return setQuestions(source);
     return opts && opts.peek ? peek() : list();
   }
 
+  function isNamedSource(source) { return typeof source === 'string' && source.indexOf(NAMED_PREFIX) === 0; }
+
   /** What a page can list questions from: the teacher's bank first, then
       every seed set. [{ id, title, source, note, count, readOnly }], `id`
-      being '' for the bank. `opts.peek` counts the bank without writing. */
+      being '' for the bank. `opts.peek` counts the bank without writing.
+      `opts.named` puts the teacher's named sets after the bank, each with
+      `named: true` and the id 'named:<set id>'. */
   function sources(opts) {
+    var named = opts && opts.named ? namedSets(opts).map(function (s) {
+      return { id: NAMED_PREFIX + s.id, title: s.name, source: '', note: '', count: s.items.length, readOnly: false, named: true };
+    }) : [];
     return [{ id: '', title: 'My question bank', source: '', note: '', count: questionsOf('', opts).length, readOnly: false }]
+      .concat(named)
       .concat(sets().map(function (s) {
         return { id: s.id, title: s.title, source: s.source, note: s.note, count: s.count, readOnly: true };
       }));
@@ -853,6 +1068,7 @@
   function sourceLabel(src) {
     src = isRecord(src) ? src : {};
     var n = Number(src.count) || 0, count = n + ' question' + (n === 1 ? '' : 's');
+    if (src.named) return text(src.title) + ' (named set, ' + count + ')';
     return text(src.title) + (src.readOnly ? ' (built in, ' + count + ', read-only)' : ' (' + count + ')');
   }
 
@@ -867,19 +1083,28 @@
     return res;
   }
 
+  /** Deletes a question, and takes its id out of every named set. */
   function deleteQuestion(id) {
     var bank = load();
     bank.questions = remove(bank.questions, id);
+    bank.sets = removeFromSets(bank.sets, id);
     return write(bank);
   }
 
-  /** Merges questions into the stored bank (see merge). Returns merge()'s
-      counts with `ok` from the write; nothing is written when nothing
-      changed. */
+  /** Merges questions into the stored bank (see merge), and `opts.sets`, a
+      file's named sets, after them (see mergeSets). Returns merge()'s counts,
+      `sets` as { added, same, dropped, names }, and `ok` from the write;
+      nothing is written when nothing changed. */
   function importQuestions(incoming, opts) {
     var bank = load(), res = merge(bank.questions, incoming, opts);
     res.ok = true;
-    if (res.added || res.updated) {
+    res.sets = { added: 0, same: 0, dropped: 0, names: [] };
+    if (opts && Array.isArray(opts.sets) && opts.sets.length) {
+      var s = mergeSets(bank.sets, opts.sets, res.ids, res.questions, opts);
+      res.sets = { added: s.added, same: s.same, dropped: s.dropped, names: s.names };
+      bank.sets = s.sets;
+    }
+    if (res.added || res.updated || res.sets.added) {
       bank.questions = res.questions;
       var w = write(bank);
       res.ok = w.ok; res.newer = !!w.newer; res.quota = !!w.quota; res.blocked = !!w.blocked;
@@ -899,6 +1124,50 @@
     var res = importQuestions(found, opts);
     res.missing = missing;
     return res;
+  }
+
+  /** The teacher's named sets, in their order, as copies. `opts.peek`
+      reads without writing. */
+  function namedSets(opts) {
+    var bank = opts && opts.peek ? read() : load();
+    return JSON.parse(JSON.stringify(bank.sets));
+  }
+
+  /** One named set by id (a copy), or null. */
+  function findNamedSet(id, opts) {
+    var list = namedSets(opts);
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
+  }
+
+  /** A named set's questions: { questions, missing } (see resolveSet), and
+      { questions: [], missing: 0 } for no such set. */
+  function namedSetQuestions(id, opts) {
+    var bank = opts && opts.peek ? read() : load(), set = null;
+    for (var i = 0; i < bank.sets.length; i++) if (bank.sets[i].id === id) set = bank.sets[i];
+    if (!set) return { questions: [], missing: 0 };
+    if (opts && opts.peek && bank.schema === VERSION) adopt(bank, readLegacy());
+    return resolveSet(set, bank.questions);
+  }
+
+  /** Makes a named set ({ name, items }) or replaces one by id: renaming,
+      reordering, adding and removing are all this. Returns { ok, set } and
+      Store's own flags; a set with no name is refused ({ ok: false,
+      noName: true }) and nothing is written. */
+  function saveSet(set, opts) {
+    var bank = load(), done = upsertSet(bank.sets, set, opts);
+    if (!done.set) return { ok: false, noName: true, set: null };
+    bank.sets = done.sets;
+    var res = write(bank);
+    res.set = done.set;
+    return res;
+  }
+
+  /** Deletes a named set. Its questions stay in the bank. */
+  function deleteSet(id) {
+    var bank = load();
+    bank.sets = bank.sets.filter(function (s) { return s.id !== id; });
+    return write(bank);
   }
 
   /** Calls `fn(questions)` when the bank changes, in this tab or another.
@@ -936,6 +1205,22 @@
     setQuestions: setQuestions,
     findSeed: findSeed,
     copyFromSet: copyFromSet,
+    SCHEMA: SCHEMA,
+    NAMED_PREFIX: NAMED_PREFIX,
+    SET_LIMIT: SET_LIMIT,
+    makeSetId: makeSetId,
+    normalizeSet: normalizeSet,
+    normalizeSets: normalizeSets,
+    upsertSet: upsertSet,
+    removeFromSets: removeFromSets,
+    mergeSets: mergeSets,
+    resolveSet: resolveSet,
+    isNamedSource: isNamedSource,
+    namedSets: namedSets,
+    findNamedSet: findNamedSet,
+    namedSetQuestions: namedSetQuestions,
+    saveSet: saveSet,
+    deleteSet: deleteSet,
     LINK_VERSION: LINK_VERSION,
     LINK: LINK,
     isLink: isLink,

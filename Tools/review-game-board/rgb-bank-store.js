@@ -15,6 +15,10 @@
    is never saved to or deleted from: copyToBank() is the one way a seed
    question reaches the teacher's storage, as a new question of their own.
 
+   Since v300 `source` may also be 'named:<set id>', one of the teacher's
+   NAMED SETS (the shared module's header has them): an ordered list of
+   question ids saved with the bank, read here like any other source.
+
    A board that pulls from the bank still gets its own COPY of the entry
    (plain points/question/answer fields on the clue), not a live reference, so
    editing or deleting a bank entry later never changes a board that already
@@ -34,10 +38,11 @@
     return questionsOf(source).map(QB.toLegacy);
   }
 
-  /** What the page can list: the teacher's bank first, then every seed set.
-      [{ id, title, source, note, count, readOnly }] */
+  /** What the page can list: the teacher's bank first, then the teacher's
+      named sets (since v300), then every seed set.
+      [{ id, title, source, note, count, readOnly, named? }] */
   function sources() {
-    return QB.sources();
+    return QB.sources({ named: true });
   }
 
   /** Any entry the page can show, by id: a seed's or the bank's. */

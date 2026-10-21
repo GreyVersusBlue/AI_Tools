@@ -278,6 +278,8 @@
     "Tools/qr-code-generator/test/smoke-bulk.mjs",
     "Tools/question-bank/test/question-bank.test.mjs",
     "Tools/question-bank/test/question-bank-media.test.mjs",
+    "Tools/question-bank/test/question-bank-sets.test.mjs",
+    "Tools/review-game-board/test/smoke-named-sets.mjs",
     "Tools/question-bank/test/smoke-seed-sets.mjs",
     "Tools/export/test/export.test.mjs",
     "Tools/export/test/smoke-export.mjs",

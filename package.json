@@ -186,6 +186,8 @@
     "test:bank-media": "node Tools/review-game-board/test/smoke-bank-media.mjs",
     "test:projector-view": "node Tools/review-game-board/test/smoke-projector.mjs",
     "test:question-bank-media": "node Tools/question-bank/test/question-bank-media.test.mjs",
+    "test:question-bank-sets": "node Tools/question-bank/test/question-bank-sets.test.mjs",
+    "test:named-sets": "node Tools/review-game-board/test/smoke-named-sets.mjs",
     "test:export": "node Tools/export/test/export.test.mjs && node Tools/export/test/smoke-export.mjs",
     "test:trading-card-pdf": "node Tools/historical-trading-card-maker/test/smoke-pdf-export.mjs",
     "test:image-to-pdf-impose": "node Tools/image-to-pdf/test/smoke-impose.mjs",
