@@ -77,8 +77,8 @@
     QB.deleteQuestion(id);
   }
 
-  /** Distinct, non-blank values already used for `field` (unit or standard),
-      sorted — what the filter dropdowns are populated from. */
+  /** Distinct, non-blank values already used for `field` (unit, standard or,
+      since v300, tags), sorted — what the filter dropdowns are populated from. */
   function distinctValues(field, source) {
     return QB.distinct(questionsOf(source), field);
   }

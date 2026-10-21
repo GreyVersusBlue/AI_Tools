@@ -9,10 +9,9 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
-## Path 12 P2 increment 5: named sets on 030, saved with the bank (2026-10-21, AI-14, `CACHE_VERSION` v300)
+## Path 12 P2 increment 5: named sets on 030, saved with the bank, and a Tag filter (2026-10-21, AI-14, `CACHE_VERSION` v300)
 
-BACKLOG rank 28 (a 2+ row), kept and rewritten to what is left: a tag filter on 030's list, and 018 and 019's station
-questions. Devon's answer to question 8 was "B" (2026-10-07): an ordered list saved with the bank. Nobody had designed
+BACKLOG rank 28 (a 2+ row), kept and rewritten to what is left: 018 and 019's station questions. Devon's answer to question 8 was "B" (2026-10-07): an ordered list saved with the bank. Nobody had designed
 how; the design is written under question 8 in BACKLOG's Path 12 section, and `_shared/question-bank.js`'s NAMED SETS
 is the reference.
 
@@ -46,9 +45,14 @@ is the reference.
   6. *Only 030 lists named sets* (`sources({ named: true })`): 040's and 020's choosers, and 030's final-round and
      quiz-bowl source pickers, are unchanged. Offering sets there is a later, separate change.
   7. *A set view has no Edit or Delete for the question*: those stay on the bank's list, where the question lives.
+- **The Tag filter** (the second unit, a separate commit). A *Tag* select in the list's filter row, beside Difficulty:
+  "All tags" and the tags the chosen source's questions carry, each once, sorted; a choice that no longer exists drops
+  back to All tags; Clear filters clears it. It narrows the list, the ticks a set is made from and the printed sheets,
+  as the other filters do (`QuestionBank.filter()` took `tag` already; nothing in the module changed for it). Held by
+  section 7 of `test:named-sets`.
 - **Checks.** `npm run test:question-bank-sets` (pure Node, 67 assertions, an older page run from
   `Tools/question-bank/test/_question-bank-v299.js`, the v299 module word for word; 35 deliberate breaks of the module,
-  each caught). `npm run test:named-sets` (port 8533, 55 assertions, axe on the set view and the bank). The existing
+  each caught). `npm run test:named-sets` (port 8533, 65 assertions, axe on the set view and the bank). The existing
   bank suites (`test:question-bank`, `test:question-bank-media`, `run-suites --only` review-game-board and
   question-bank) were run against the change; the results are in this commit's message.
 - **Not verified.** No teacher has made a set. No screen reader was run over the set view (axe, names and keys only).

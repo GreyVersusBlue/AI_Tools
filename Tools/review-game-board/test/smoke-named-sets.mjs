@@ -1,4 +1,4 @@
-// smoke-named-sets.mjs — named sets on the Review Game Board's question bank
+// smoke-named-sets.mjs — named sets, and the Tag filter, on the Review Game Board's question bank
 // (Path 12 P2, v300; Devon, 2026-10-07: "B", an ordered list saved with the
 // bank). The storage is _shared/question-bank.js's NAMED SETS; its pure half
 // is Tools/question-bank/test/question-bank-sets.test.mjs.
@@ -20,6 +20,9 @@
 //      the set first, adds it beside one of the same name (never over it),
 //      and the same file again adds nothing;
 //   6. a set name that is markup is text, and the set view is clean under axe.
+//   7. the list's Tag filter (v300 too): the chosen source's tags, each once,
+//      and only the questions carrying the chosen one, for the list, a set
+//      and the printed sheets; Clear filters clears it.
 // A bank with no set is unchanged: smoke-bank-editor.mjs's sixteen pins hold
 // that. Every question is made up. Exits 1 on any failure.
 
@@ -238,6 +241,49 @@ eq((await a11yScan(page, { include: '#bankSection' })).map(v => v.id + ' ' + v.n
 // the last sets deleted: the bank is back to schema 1 and no `sets`
 await page.evaluate(() => window.QuestionBank.namedSets().forEach(x => window.QuestionBank.deleteSet(x.id)));
 eq([(await stored()).data.schema, 'sets' in (await stored()).data], [1, false], 'with no set left the bank is stored as it was before sets');
+
+/* ── 7. the Tag filter ──────────────────────────────────────────────────── */
+console.log('7. the Tag filter');
+const TAGGED = JSON.parse(JSON.stringify(BANK));
+TAGGED.data.questions[0].tags = ['map', 'review'];
+TAGGED.data.questions[1].tags = ['map'];
+TAGGED.data.questions[3].tags = ['<b>bold</b>'];
+await open({ [KEY]: JSON.stringify(TAGGED) });
+const tagOptions = () => page.$$eval('#bankFilterTag option', o => o.map(x => [x.value, x.textContent]));
+eq(await tagOptions(), [['', 'All tags'], ['<b>bold</b>', '<b>bold</b>'], ['map', 'map'], ['review', 'review']], 'the Tag filter lists the bank\'s tags, each once, sorted, a markup tag as text');
+eq(await page.$eval('label[for="bankFilterTag"]', l => l.textContent), 'Tag', 'and has a label');
+await page.selectOption('#bankFilterTag', 'map');
+await settle(page, 150);
+eq(await rowsShown(), ['Capital of Peru?', 'Longest river?'], 'choosing a tag lists only the questions that carry it');
+await page.selectOption('#bankFilterUnit', 'Unit 3');
+await page.selectOption('#bankFilterTag', 'review');
+await settle(page, 150);
+eq(await rowsShown(), ['Capital of Peru?'], 'and works with the other filters');
+await page.click('#bankPrintGuideBtn');
+await settle(page, 200);
+const tagPrinted = await page.textContent('#printArea');
+ok(tagPrinted.includes('Capital of Peru?') && !tagPrinted.includes('Longest river?'), 'the printed sheet is what the filter shows');
+await page.click('.top-tab-btn[data-top="bank"]');
+await settle(page, 150);
+await (await page.$('#bankList .bank-entry input[type="checkbox"]')).check();
+await page.fill('#bankSetName', 'Tagged');
+await page.click('#bankSetAddBtn');
+await settle(page, 150);
+eq((await sets()).map(x => [x.name, x.items]), [['Tagged', ['q-a']]], 'a set made from a filtered list takes only what was ticked');
+await page.click('#bankClearFiltersBtn');
+await settle(page, 150);
+eq([await page.inputValue('#bankFilterTag'), (await rowsShown()).length], ['', 4], 'Clear filters clears the tag too');
+await page.selectOption('#bankFilterTag', 'map');
+await choose('053');
+ok((await page.inputValue('#bankFilterTag')) === '' || (await tagOptions()).some(o => o[0] === 'map'), 'on another source a tag it does not have is not left chosen');
+await choose('');
+await page.evaluate(() => window.QuestionBank.saveQuestion({ id: 'q-d', tags: [] }));
+await page.selectOption('#bankFilterTag', '<b>bold</b>');
+await page.evaluate(() => window.QuestionBank.saveQuestion({ id: 'q-a', answer: 'Lima!' }));
+await page.click('#bankClearFiltersBtn');
+await settle(page, 150);
+eq((await tagOptions()).map(o => o[0]), ['', 'map', 'review'], 'a tag no question carries any more drops out of the list');
+eq((await a11yScan(page, { include: '#bankSection' })).map(v => v.id + ' ' + v.nodes.join(' ')), [], 'the filter row with the Tag filter has no serious or critical axe violation');
 eq(pageErrors, [], 'no page error');
 
 await browser.close();

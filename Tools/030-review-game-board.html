@@ -841,6 +841,10 @@
             <option value="Hard">Hard</option>
           </select>
         </div>
+        <div class="field">
+          <label for="bankFilterTag">Tag</label>
+          <select id="bankFilterTag"><option value="">All tags</option></select>
+        </div>
         <div class="field" style="flex:1 1 12rem;">
           <label for="bankFilterQuery">Search</label>
           <input type="text" id="bankFilterQuery" placeholder="Search question/answer text">
@@ -997,7 +1001,7 @@
    'showAnswerBtn','closeNoAskBtn','awardRow','closeUsedRow','closeUsedBtn',
    'boardsSection','bankSection',
    'bankQuestion','bankAnswer','bankPoints','bankUnit','bankStandard','bankDifficulty','bankAddBtn','bankAddStatus',
-   'bankFilterUnit','bankFilterStandard','bankFilterDifficulty','bankFilterQuery','bankClearFiltersBtn','bankList',
+   'bankFilterUnit','bankFilterStandard','bankFilterDifficulty','bankFilterQuery','bankClearFiltersBtn','bankList','bankFilterTag',
    'bankPullCategory','bankCategoryOptions','bankPullBtn','bankPullStatus',
    'bankSource','bankSourceNote','bankCopyRow','bankCopyBtn','bankCopyStatus',
    'bankFilterRow','bankSetAddRow','bankSetTarget','bankSetNameLabel','bankSetName','bankSetAddBtn',
@@ -3838,6 +3842,11 @@
     setOptions(els.bankFilterStandard, [{ value: '', label: 'All standards' }].concat(standards));
     els.bankFilterUnit.value = units.indexOf(uVal) !== -1 ? uVal : '';
     els.bankFilterStandard.value = standards.indexOf(sVal) !== -1 ? sVal : '';
+    // The tags the chosen source's questions carry (Path 12 P2, v300): a tag
+    // gone from every question drops out, and so does a choice of it.
+    var tags = ReviewBankStore.distinctValues('tags', bankSource()), tVal = els.bankFilterTag.value;
+    setOptions(els.bankFilterTag, [{ value: '', label: 'All tags' }].concat(tags));
+    els.bankFilterTag.value = tags.indexOf(tVal) !== -1 ? tVal : '';
   }
 
   /** What the "pull into category" field's datalist suggests — the category
@@ -3853,6 +3862,7 @@
       unit: els.bankFilterUnit.value,
       standard: els.bankFilterStandard.value,
       difficulty: els.bankFilterDifficulty.value,
+      tag: els.bankFilterTag.value,
       query: els.bankFilterQuery.value
     };
   }
@@ -4105,13 +4115,13 @@
     renderBankList();
   }
 
-  [els.bankFilterUnit, els.bankFilterStandard, els.bankFilterDifficulty].forEach(function (el) {
+  [els.bankFilterUnit, els.bankFilterStandard, els.bankFilterDifficulty, els.bankFilterTag].forEach(function (el) {
     el.addEventListener('change', renderBankList);
   });
   els.bankFilterQuery.addEventListener('input', renderBankList);
   els.bankClearFiltersBtn.addEventListener('click', function () {
     els.bankFilterUnit.value = ''; els.bankFilterStandard.value = '';
-    els.bankFilterDifficulty.value = ''; els.bankFilterQuery.value = '';
+    els.bankFilterDifficulty.value = ''; els.bankFilterQuery.value = ''; els.bankFilterTag.value = '';
     renderBankList();
   });
 
