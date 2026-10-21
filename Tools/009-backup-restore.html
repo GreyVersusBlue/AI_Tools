@@ -1598,8 +1598,8 @@
       '<p class="xfer-status" id="xferStatus">Receiving…</p>';
   }
 
-  /* ---------- start a new school year (Path 3 P6, increments 1 and 2) ----------
-     Three steps, each locked until the one before it is done. The archive is
+  /* ---------- start a new school year (Path 3 P6, increments 1 to 3) ----------
+     Four steps, each locked until the one before it is done. The archive is
      built once, serialised once, hashed, checked in memory, and storage is
      read again to make sure nothing was saved while it was being built; then
      it is saved, read back from disk and checked again. Only a file on disk
