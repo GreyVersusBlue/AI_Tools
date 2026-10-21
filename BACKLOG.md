@@ -228,9 +228,10 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   (Path 17 P4's controls, built), and 064's zip and PNG downloads are the file helpers' first adopter.** 011's
   default output is the old page's in 120 states, to the pixel. `npm run test:image-to-pdf-impose` (port 8483).
   **Left in rank 6: CSV and XLSX for the tools that hold a table. No booklet has been printed or folded.**
-- **AI-15 (no version, a design pass), rank 4, Path 3 P6: the year rollover is designed, not built.** The design is
-  Path 3's P6 bullet: the inventory by kind, `br-rollover.js`'s surface, the order of operations, the tests, and
-  ten questions for Devon. **009's rollover today loses student photos and deletes room layouts and other setup.**
+- **AI-15 (v299), rank 4, Path 3 P6 increment 1: the year archive and its check.** 009's "Start a new school year"
+  saves an archive with the images, reads it back from disk and verifies it before the clear unlocks; the clear is
+  journalled (`br_rollover_v1`) and an interrupted one finishes from the archive. `npm run test:rollover`,
+  `test:rollover-smoke` (port 8532). **The clear still deletes setup held inside student keys; the reducers are next.**
 - **AI-13 (v245), rank 6, Path 7 P4 increments 1 to 3: `_shared/export.js` (`ExportKit`) is whole, 064 and 040 are
   on it, and `_shared/duplex-print.js` is deleted.** The imposition and pagination math, `toPdf(pages, opts)` for
   drawn pages (**not a DOM element**), `toCsv` (formula guard), `toXlsx`, `toZip`, `download`, `filename`. 064's
@@ -510,7 +511,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Increment 1 shipped, v299 (AI-15, 2026-10-21): the archive and its check.** 009's card is "Start a new school year", three locked steps: the archive (every key and every database but the map cache, so the seating photos are in it), the file read back from disk and verified, then the clear, which removes a key only while it equals the archive, journals each removal in `br_rollover_v1`, finishes an interrupted run from the archive and reports a key a still-open tab saved back. **The clear is still the old whole-key delete of every student-marked key, setup inside them included.** Left, in order: **(2)** `BrRollover.RULES` and the reducers (kinds B to F; the seven mixed keys of the 2026-09-23 audit and the four the design found, most sensitive first, 044's `medicalAlerts`), the roster shells, `seating/` and the `aplp-share` entry, dangling indexes, and the review table with the kind E choices (design steps 2 and 5a–f); **(3)** step 1's `CLIENTS` message in `sw.js`; **(4)** 006's button opens 009's card (it stays in both), its inline rollover goes and `crh_archive_v1`'s years are cleared; **(5)** the landing page's "Clear all rosters" button with a confirmation screen; **(6)** `smoke-rollover-tools.mjs`, the registry's `rollover:` marks, `br-envelope.js`. Devon's answers are in the P6 bullet; none is open | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Document 035’s private four-palette theme system as an exception (Devon, 2026-10-03: “bless and document”; do not adopt `a11y.js` cold) | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -1121,7 +1122,9 @@ them data.
   accommodation note) with Name Picker's Data tab as the wipe-it model.
 - **P6 — Year rollover.** "Start next year": archive this year's rosters and every
   per-student history to a Backup & Restore file, clear student data, keep setup. Owned
-  jointly with 009. **Designed 2026-10-05 (AI-15, a design pass: no code, nothing run in a browser), not built.**
+  jointly with 009. **Designed 2026-10-05 (AI-15, a design pass: no code, nothing run in a browser). Increment 1 built
+  2026-10-21 (AI-15, v299): the archive and its check, steps 3, 4, 5's journal and 7, on the old whole-key clear;
+  `HISTORY.md` has what it does and where it departs from this text. Every question below is answered.**
   The design is the rest of this bullet. It was written from reading 009, 006, `_shared/roster.js`,
   `_shared/media-db.js`, `_shared/tool-registry.js` and the code that writes each key named below; two
   read-only probes (kept outside the repo) loaded the registry in Node to count it.
@@ -1130,11 +1133,11 @@ them data.
   - *009, "Back up, then clear student data".* It builds one envelope of every localStorage key, downloads it,
     asks twice with `confirm()`, and removes every key `ToolRegistry.classifyKey()` calls `student`. Four faults,
     all read off the code:
-    1. **The archive holds no IndexedDB.** The call is `buildEnvelope(lastScanGroups, [])`; the second argument is
+    1. **The archive holds no IndexedDB.** *(Fixed in v299.)* The call is `buildEnvelope(lastScanGroups, [])`; the second argument is
        the database list. Seating Chart's student photos (`gvb-media`, namespace `seating/`) are not in the file,
        and once `seating-chart-v1` is gone 005's boot sweep deletes every photo older than ten minutes. **A
        teacher who runs today's rollover and opens 005 has the photos in neither place.**
-    2. **Nothing is verified.** The second `confirm()` says "check it is in your Downloads folder". The page never
+    2. **Nothing is verified.** *(Fixed in v299.)* The second `confirm()` says "check it is in your Downloads folder". The page never
        reads the file back, so a blocked download, a full disk or a cancelled save dialog clears the year.
     3. **It deletes setup it promises to keep.** The dialog says "Your rubrics, templates, calendars and settings
        are kept" and the result line says "Your templates and settings are untouched". Of the 54 student-marked
@@ -1415,33 +1418,47 @@ them data.
   travels is what was authored to be published; a medical alert is not. Not ranked here, because re-ranking is not
   a design pass's call. `gvb-certificate-maker:last` is a legacy key the registry does not mark `legacy`.
 
-  **Questions that are Devon's. Not answered here; each is a default the build must not pick for him.**
+  **Questions that were Devon's: all answered** (2026-10-07, two parts, and 2026-10-21). His overall answer: "A rollover
+  shouldn't be automatic, it should require a manual input, which clears all rosters and items specific to people on the
+  site", read as the guided "Start a new school year" for all classes at once **and** a quick "Clear all rosters" button
+  with a confirmation screen on the landing page. The answer to each is under it, and the question is kept so the
+  reasoning stays readable. Nothing in this list waits on him now.
   1. After a rollover, does this browser keep any copy of last year's names? 006 files past years in
      `crh_archive_v1`, in the browser, and tells the teacher they are there. "Clear student data" and that archive
      cannot both hold. Either the file is the only copy, or past rosters stay in 006.
+     *Answered: the file is the only copy; last year's names do not stay viewable in 006 (`crh_archive_v1`'s years are cleared).*
   2. Free text that cannot be separated (038's datasets, 044's plan history, 029's drafts and history, 045's
      note): when this year's names are found in one, is the default Keep or Clear? And when none is found, is it
      shown at all?
+     *Answered (the questions session's reading of "See #1", told to him): free text in which a name is found is pre-selected Clear.*
   3. 016: a calculator still checked out in June. Does the rollover keep who has it until it is checked in, or
      clear the borrower with the rest?
+     *Answered (the same reading): the borrower's name is cleared with the rest.*
   4. Is last year's student work with no names on it student data? 023's `discussion` (what students wrote) and
      `categoryTally`, and the strategy texts in 024's library, which is marked and so goes today. This decides two
      registry marks.
+     *Answered: "Oh, yeah wipe them": 023's `discussion` and tallies and 024's library are cleared.*
   5. Does a teacher who keeps the same students (looping, a two-year course) need to roll over some classes and
      not others? It makes every rule roster-aware, about twice the work.
+     *Answered: no; all classes at once, no per-class or looping rollover.*
   6. Looking at last year in September: is a private window and a restore enough, or should 009 open an archive to
      read without restoring it?
+     *Answered: "private window is enough"; no archive reader.*
   7. 058 and 075 are staff lists, but both can be filled from a class roster (a student duty rota). Are they
      student data when they were?
+     *Answered: "Yes", cleared as student data.*
   8. In a browser with no save picker (Firefox, Safari), must the teacher pick the saved file back before the
      clear is allowed, or may they tick "I have checked the file"? The first is safe and one more step; the second
      is today's promise with a checkbox.
+     *Answered: "Pick the file back"; no tick box. Built that way in v299.*
   9. 030 and 064: does the rollover reset a review board's scores and played clues, and what happens to a trading
      card named for a student?
+     *Answered: "Yes": 030's scores and played clues reset; each card made for a student is asked Keep or Clear.*
   10. One name for it. 009 says "End of the school year", 006 says "Start a new school year". Which, and does the
       button stay in both places?
+     *Answered: "Start a new school year", and it stays in both 009 and 006 (2026-10-21). 009's card took the name in v299.*
 
-  **Not verified.** Nothing was run in a browser. Every "safe empty value" is from reading the tool's load path,
+  **Not verified (the design pass).** Nothing was run in a browser. Every "safe empty value" is from reading the tool's load path,
   not from loading it. `showSaveFilePicker`, `clients.matchAll()` from a page's message, and reading a handle
   back were not tried. The size of a real archive with images was not measured (a `psa` or `dbq` image is stored
   at up to full size, and a blob is base64 in the file, a third larger). 017's, 020's and 060's inner shapes were

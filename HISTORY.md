@@ -9,6 +9,56 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 3 P6 increment 1: the year archive and its check, before anything is cleared (2026-10-21, AI-15, `CACHE_VERSION` v299)
+
+BACKLOG rank 4, rewritten to what is left (it is a 1-session row with more increments to come).
+
+- **What changed.** 009's "End of the school year" card, one button and two `confirm()`s, is now **"Start a new school
+  year"** (Devon's name), three numbered steps, each locked until the one before is done. *Save the archive*: every saved
+  item and every database the registry declares except the map cache, so Seating Chart's photos are in it (before this
+  the call passed no database at all, and 005's sweep then deleted the photos). *Check the saved file*: the page reads
+  the file back from disk, through the save picker's handle where the browser has one, otherwise the teacher picks it
+  (Devon: "Pick the file back", no tick box), and checks it. *Clear*: unlocked only by a file that passed. A restore of
+  a year archive says so and ticks its databases.
+- **What the check is.** `Tools/backup-restore/br-rollover.js` (`BrRollover`). The archive is serialised once and
+  hashed (SHA-256, or a 53-bit string hash with an `h53-` prefix where there is no `crypto.subtle`); the envelope
+  carries a `rollover` stamp with a manifest (each key's length and hash, each database's record counts, each
+  database's blob count and decoded bytes). `verify()` is run on the string before it is saved and on the file after,
+  and storage is read again after the build, so a save in another tab mid-build stops it. Each refusal has its own
+  reason: 0 bytes, changed, cut short, locked, an ordinary backup, another run's archive, a key missing or changed, a
+  database missing or short, a picture the wrong size.
+- **What the clear is, still.** The same whole-key delete of every key `classifyKey()` calls student, setup inside them
+  included, and the card now says so instead of promising the setup is kept. What is new: a key is removed only while it
+  holds exactly what the archive holds (the plan's `beforeHash` is the archive's), so anything saved after the check
+  stops the clear with nothing removed; each removal is read back and journalled in `br_rollover_v1` before the next
+  (no names, no values); a page closed half way opens on "The new-year clear was interrupted", whose Finish asks for the
+  archive, checks it against the journal's hash and finishes from its manifest; and a cleared key that comes back with
+  exactly last year's value (a tab left open) is reported by tool on the next load, with a button to clear it again.
+- **Where this departs from the design text, and why.** (1) The manifest counts blobs per database, not per `gvb-media`
+  namespace: the clear touches no image yet, and per-database is what the file can be checked against without
+  knowing a tool's record shape. (2) `br_rollover_v1` is internal to 009 like `br_last_backup_at` (in no backup); the
+  design said both "in every backup" and "hidden like `br_last_backup_at`", and a journal inside the archive it
+  describes would change the archive's own hash. (3) Finish needs the archive picked; the design had it re-plan from a
+  snapshot, but the journal holds no manifest, and finishing against the file is the version that cannot delete
+  something the archive lacks. (4) `br-envelope.js` was not extracted: 009 still builds the envelope inline, and reading
+  is `RestoreKit.read`. (5) The save picker is asked for before the build, while the click still counts as the
+  teacher's. (6) `planClear(id, local, keys, manifest)` stands in for `plan()` until the reducers exist; its items carry
+  `action` so they can be added without changing `run()`. (7) The registry gained `cache: true` on `bmg-maps` (the
+  archive leaves only it out), and 009's restore preview now starts a new file from its own defaults rather than
+  the last file's ticks.
+- **Tests.** `npm run test:rollover` (pure Node, 78 assertions: every refusal, the stale stop, a removal refused or
+  silently kept at each step, the journal refusing a write at each step, finishing from each, no name in the journal);
+  `npm run test:rollover-smoke` (port 8532, 43: the locks, the archive's contents, wrong files, the stale stop, the
+  clear, the written-back report, an interrupted clear and its finish, the restore ticks, and a faked save-picker
+  handle with the file changed on disk). Each guard was broken on purpose and the suites went red: the byte hash (10
+  failures), the run id, the not-in-archive problem, the stale stop, the read-back (caught only after a test for a
+  removal the browser accepts and does not do was added: it had passed with the guard deleted), the blob size, the
+  page's lock on step 3 (4) and the restore tick.
+- **Found, not fixed.** 009's shared `showBoxMsg` puts `--good` on `--good-bg`, 4.46:1, under axe's 4.5:1; the new card
+  uses its own box, and the download card's messages still fail. The a11y sweep cannot see it: it is behind a click.
+- **Not verified.** A real `showSaveFilePicker` (the suite fakes the handle), Firefox and Safari themselves, the
+  offline copy on `file://`, and the size of a real archive with full-size images. Nothing was printed.
+
 ## Path 4 P5, the rest: per-tool restore as a shared card; P5 is whole (2026-10-19, AI-16, `CACHE_VERSION` v298)
 
 BACKLOG rank 2, deleted (the rank is left as a gap, as this sprint's other deleted rows were).
