@@ -355,5 +355,71 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
   eq(unnamed, [], '9: every key 009 used to name is still named');
 }
 
+/* ── 10. The year rollover's marks agree with its rules (Path 3 P6) ──────
+   Each entry's `rollover` mark and BrRollover.RULES (br-rollover.js) say the
+   same thing, so neither can be changed alone: a rule with no entry, an entry
+   marked with no rule, or the two disagreeing. And every gvb-media namespace a
+   tool uses is declared, with the student ones exactly those the rollover
+   clears. */
+{
+  const rctx = vm.createContext({ window: { crypto: globalThis.crypto, TextEncoder }, document: { currentScript: null }, TextEncoder, setTimeout, clearTimeout });
+  vm.runInContext('var self = window;', rctx);
+  for (const f of ['_shared/tool-registry.js', 'Tools/backup-restore/br-rollover.js']) {
+    vm.runInContext(fs.readFileSync(path.join(SITE, f), 'utf8'), rctx, { filename: f });
+  }
+  const RULES = rctx.window.BrRollover.RULES;
+  const R = rctx.window.ToolRegistry;
+  const MARK = { reduce: 'reduce', roster: 'reduce', index: 'reduce', ask: 'ask', keep: 'keep', delete: 'delete' };
+  const VALUES = ['reduce', 'ask', 'keep', 'delete'];
+
+  const noEntry = [], disagree = [];
+  for (const r of RULES) {
+    const name = r.key || r.prefix;
+    const hit = R.lookupKey(r.key || r.prefix + '\u0001');
+    const e = hit && hit.entry;
+    if (!e || (r.key ? e.k !== r.key : e.p !== r.prefix)) { noEntry.push(name); continue; }
+    const got = R.rolloverRule(r.key || r.prefix + 'x');
+    if (got !== MARK[r.kind]) disagree.push(`${name}: rule ${r.kind}, registry ${got}`);
+  }
+  eq(noEntry, [], '10: every rollover rule has its own registry entry');
+  eq(disagree, [], '10: every rule agrees with the entry\'s rollover mark (or its default)');
+
+  const marked = [], badValue = [];
+  for (const t of R.tools) {
+    for (const e of [...(t.keys || []), ...(t.prefixes || [])]) {
+      if (!('rollover' in e)) continue;
+      const name = e.k || e.p;
+      if (!VALUES.includes(e.rollover)) badValue.push(`${name}: ${e.rollover}`);
+      const def = e.student ? 'delete' : 'keep';
+      if (e.rollover === def) marked.push(`${name}: marked ${def}, which is its default`);
+      if (!RULES.some(r => (e.k ? r.key === e.k : r.prefix === e.p))) marked.push(`${name}: marked ${e.rollover} with no rule`);
+    }
+  }
+  eq(badValue, [], '10: a rollover mark is reduce, ask, keep or delete');
+  eq(marked, [], '10: every mark has a rule and is not the default');
+  eq(R.rolloverRule('no-such-key'), 'keep', '10: an unknown key is kept');
+  eq(R.rolloverRule('np_history'), 'delete', '10: an unmarked student key is deleted');
+
+  /* The namespaces in the tree: MediaDB.store/images({ ns: '…' }), or a
+     file's `NS = '…'` when it passes { ns: NS }. */
+  const found = new Set();
+  const walk = dir => {
+    for (const d of fs.readdirSync(path.join(SITE, dir), { withFileTypes: true })) {
+      const rel = path.join(dir, d.name);
+      if (d.isDirectory()) { if (!/^(node_modules|test|vendor|\.git)$/.test(d.name)) walk(rel); continue; }
+      if (!/\.(js|mjs|html)$/.test(d.name)) continue;
+      const src = fs.readFileSync(path.join(SITE, rel), 'utf8');
+      for (const m of src.matchAll(/MediaDB\.(?:store|images)\(\{\s*ns:\s*'([a-z0-9-]+)'/g)) found.add(m[1]);
+      if (/MediaDB\.(?:store|images)\(\{\s*ns:\s*NS\b/.test(src)) for (const m of src.matchAll(/\bNS\s*=\s*'([a-z0-9-]+)'/g)) found.add(m[1]);
+    }
+  };
+  walk('Tools'); walk('_shared');
+  const declared = R.mediaNamespaces().map(n => n.ns);
+  eq([...found].filter(n => !declared.includes(n)).sort(), [], '10: every gvb-media namespace a tool uses is declared');
+  eq(declared.filter(n => !found.has(n)).sort(), [], '10: every declared namespace is used');
+  const clears = [...fs.readFileSync(path.join(SITE, 'Tools/backup-restore/br-rollover.js'), 'utf8').matchAll(/media\.push\(\{ ns: '([a-z0-9-]+)', action: 'clear'/g)].map(m => m[1]);
+  eq(R.mediaNamespaces().filter(n => n.student).map(n => n.ns), clears, '10: the student namespaces are exactly the ones the rollover clears');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) { fails.forEach(f => console.log('  - ' + f)); process.exit(1); }
