@@ -9,6 +9,30 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 3 P6 increment 4: one rollover, 009's; 006's button opens it (2026-10-21, AI-15, `CACHE_VERSION` v303)
+
+BACKLOG rank 4, rewritten to what is left (items 5 and 6). Built on increments 1 to 3 (v299, v301, v302, below), unchanged.
+
+- **What changed for a teacher.** Class Roster Hub's "Start a new school year…" no longer asks for two labels and
+  empties the rosters itself. It saves the roster that is open (so the archive carries an edit not yet saved) and opens
+  Backup & Restore at the "Start a new school year" card, scrolled to and focused, in the same tab. The card's hint
+  says the year archive file is the only copy of last year. A roster that cannot be saved stops the button with a
+  message instead of leaving with the edit unsaved.
+- **What went.** 006's two `prompt()`s, its confirm, the filing of every roster as a year in `crh_archive_v1`, the
+  emptying through `Roster.replaceAll` and the clear of `crh_archived_students`. Per-roster Archive and Restore stay.
+  Years an older 006 filed are still listed, with Restore all and Delete, until 009's rollover clears them (its rule
+  for `crh_archive_v1` already does).
+- **Calls made, each cheap to reverse.** (1) Same tab, not a new one: a new tab would leave 006 open behind 009, and
+  step 1 would then name it as a tab to close. (2) The link is the card's id, `#rolloverCard`, so even without the
+  script the browser jumps there; 009 adds the focus. (3) The old years stay readable in 006 until the rollover runs,
+  rather than being cleared by 006: deleting stored data is the rollover's job, done after the archive is checked.
+- **Tests.** `smoke-roster-writes.mjs` section 6 (in `npm run test:roster-hub`) rewritten: the button opens 009's card,
+  asks nothing, empties no roster, saves the unsaved edit first, leaves `crh_archive_v1` byte-equal, and 009 focuses
+  the card in view with the clear still locked. Broken on purpose and seen red: 006 as it was (5 failures), the save
+  skipped (1), 009 ignoring the hash (1). Run green: run-suites `class-roster-hub` (5), `backup-restore` (8),
+  `service-worker` (3); a11y on 006 and 009; `test:theme`; `test:rollover` 714; `test:select-suites`; the guards.
+- **Not verified.** Firefox and Safari; the `file://` copy (a same-folder relative link, so it should hold).
+
 ## Path 3 P6 increment 3: the year rollover asks which other tabs are open (2026-10-21, AI-15, `CACHE_VERSION` v302)
 
 BACKLOG rank 4, rewritten to what is left (items 4 to 6). Built on increments 1 and 2 (v299, v301, below), unchanged.
