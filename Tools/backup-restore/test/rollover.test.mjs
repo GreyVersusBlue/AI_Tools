@@ -52,7 +52,7 @@ function memStorage(init, { failChangeAt = -1, failJournalAt = -1, keepChangeAt 
 }
 
 const window = { crypto: globalThis.crypto, TextEncoder };
-const ctx = { window, document: { currentScript: null }, TextEncoder, globalThis: {} };
+const ctx = { window, document: { currentScript: null }, TextEncoder, setTimeout, clearTimeout, globalThis: {} };
 vm.createContext(ctx);
 for (const f of ['_shared/tool-registry.js', '_shared/restore-kit.js', '_shared/backup-crypto.js', 'Tools/backup-restore/br-rollover.js']) {
   vm.runInContext(readFileSync(path.join(SITE, f), 'utf8'), ctx);
@@ -575,6 +575,48 @@ for (let k = 1; k <= STEPS + 1; k++) {
   eq(RO.readJournal(s).runs.map(r => r.id), ['ro-3', 'ro-4', 'ro-5'], 'journal: the last three runs');
   s.setItem('br_rollover_v1', '{not json');
   eq(RO.readJournal(s).runs, [], 'journal: an unreadable journal reads as empty, not a throw');
+}
+
+/* ── the other tabs (increment 3): the CLIENTS question and the names ── */
+{
+  const reply = (clients, type = 'CLIENTS') => ({ postMessage(msg, ports) {
+    if (msg && msg.type === 'CLIENTS' && ports && ports[0]) ports[0].postMessage({ type, clients });
+  } });
+  const silent = { postMessage() {} };
+  const T = { timeoutMs: 80, MessageChannel };
+  eq(await RO.otherTabs(null, T), { seen: false, urls: [] }, 'tabs: no service worker container is "cannot see", never "none open"');
+  eq(await RO.otherTabs({ controller: reply([{ url: 'http://x/Tools/a.html' }]) }, T), { seen: true, urls: ['http://x/Tools/a.html'] },
+    'tabs: the controlling worker answers with the other windows');
+  eq(await RO.otherTabs({ controller: reply([]) }, T), { seen: true, urls: [] }, 'tabs: an answer with no window is "none open"');
+  eq(await RO.otherTabs({ controller: null, ready: Promise.resolve({ active: reply([{ url: 'http://x/index.html' }]) }) }, T),
+    { seen: true, urls: ['http://x/index.html'] }, 'tabs: an uncontrolled page (a hard reload) asks the active worker');
+  eq(await RO.otherTabs({ controller: silent }, T), { seen: false, urls: [] }, 'tabs: a worker from before v302 never answers, and that is "cannot see"');
+  eq(await RO.otherTabs({ controller: reply([], 'PRECACHE_PROGRESS') }, T), { seen: false, urls: [] }, 'tabs: another message on the port is not an answer');
+  eq(await RO.otherTabs({ controller: reply('nope') }, T), { seen: false, urls: [] }, 'tabs: an answer without a list is not an answer');
+  eq(await RO.otherTabs({ controller: null, ready: Promise.reject(new Error('blocked')) }, T), { seen: false, urls: [] }, 'tabs: a refused registration is "cannot see"');
+  eq(await RO.otherTabs({ controller: null, ready: Promise.resolve({ active: null }) }, T), { seen: false, urls: [] }, 'tabs: no active worker is "cannot see"');
+  eq(await RO.otherTabs({ controller: null, ready: new Promise(() => {}) }, T), { seen: false, urls: [] }, 'tabs: a registration that never settles times out as "cannot see"');
+
+  const root = 'https://aspermylessonplan.com/';
+  const tools = window.ToolRegistry.tools;
+  const named = RO.nameTabs([
+    root + 'Tools/007-Name%20Picker.html',
+    root + 'Tools/007-Name%20Picker.html?roster=1#top',
+    root + 'Tools/009-backup-restore.html',
+    root,
+    root + 'index.html',
+    root + 'Tools/old-page.html',
+  ], root, tools);
+  eq(named, [
+    { title: 'Backup & Restore', count: 1 },
+    { title: 'Name Picker', count: 2 },
+    { title: 'The landing page', count: 2 },
+    { title: 'Tools/old-page.html', count: 1 },
+  ], 'tabs: windows named by the registry, counted per page, query and hash ignored, an unknown page by its path');
+  eq(RO.nameTabs([], root, tools), [], 'tabs: no window, no row');
+  const sub = RO.nameTabs(['http://127.0.0.1:8534/site/Tools/007-Name%20Picker.html'], 'http://127.0.0.1:8534/site/', tools);
+  eq(sub, [{ title: 'Name Picker', count: 1 }], 'tabs: a site served under a folder is named from its own root');
+  ok(tools.every(t => !t.file || RO.nameTabs([root + t.file], root, tools)[0].title === t.title), 'tabs: every registry page is named by its own title');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

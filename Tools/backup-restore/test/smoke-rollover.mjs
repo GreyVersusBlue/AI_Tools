@@ -86,6 +86,10 @@ async function seed(page) {
   }, SEED);
   await page.reload();
   await page.waitForSelector('#roSaveBtn');
+  /* Workers are blocked here, so step 1 cannot see other tabs and asks
+     (smoke-rollover-tabs.mjs drives it with the worker). */
+  await page.waitForSelector('#roTabsOkBtn:not([hidden])', { timeout: 10000 });
+  await page.click('#roTabsOkBtn');
   await settle(page, 300);
 }
 

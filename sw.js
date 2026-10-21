@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v301';
+const CACHE_VERSION = 'v302';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -652,6 +652,19 @@ self.addEventListener('message', (event) => {
   if (type === 'PRECACHE_STATUS') {
     event.waitUntil(precacheStatus().then((status) => {
       if (event.source) event.source.postMessage(status);
+    }));
+  }
+  // 009's year rollover asks which other pages of this site are open before
+  // it archives and again before it clears: an open tool holds last year in
+  // memory and saves it back. Every window but the asker, controlled or not,
+  // answered on the port the page sent (a reply it can match to its question).
+  if (type === 'CLIENTS') {
+    const port = event.ports && event.ports[0];
+    const asker = event.source && event.source.id;
+    event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const reply = { type: 'CLIENTS', clients: clients.filter((c) => c.id !== asker).map((c) => ({ url: c.url })) };
+      if (port) port.postMessage(reply);
+      else if (event.source) event.source.postMessage(reply);
     }));
   }
 });

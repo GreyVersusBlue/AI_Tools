@@ -320,10 +320,19 @@
 
   <div class="card" id="rolloverCard">
     <div class="card-title">Start a new school year</div>
-    <p class="hint">Three steps, in order: save an archive of everything in this browser, check the saved file, then review and clear the student data: names, scores and photos go, the setup they sit in stays. The clear stays locked until the file on your disk has been read back and found complete, so a blocked download or a full disk cannot cost you the year.</p>
+    <p class="hint">Four steps, in order: close the site&rsquo;s other tabs, save an archive of everything in this browser, check the saved file, then review and clear the student data: names, scores and photos go, the setup they sit in stays. The clear stays locked until the file on your disk has been read back and found complete, so a blocked download or a full disk cannot cost you the year.</p>
     <div id="rolloverResume"></div>
     <div id="rolloverSummary"></div>
     <ol class="ro-steps">
+      <li id="roStepTabs">
+        <b>Close this site&rsquo;s other tabs.</b>
+        <span class="hint">A tool left open still holds this year&rsquo;s names and saves them again after the clear. Close every other tab and window of this site, then check again.</span>
+        <div id="roTabsMsg" aria-live="polite"></div>
+        <div class="ro-row">
+          <button class="secondary" id="roTabsBtn" type="button">Check again</button>
+          <button class="secondary" id="roTabsOkBtn" type="button" hidden>I have closed every other tab</button>
+        </div>
+      </li>
       <li id="roStep1">
         <b>Save the year archive.</b>
         <span class="hint">Every saved item and every image this site keeps, in one file. It is never locked: a passphrase forgotten over the summer would lose the year.</span>
@@ -346,7 +355,7 @@
       </li>
       <li id="roStep3">
         <b>Review, then clear the student data.</b>
-        <span class="hint">The table is exactly what the clear will do. Names, scores, logs, photos and class lists go; the setup they sit in stays: a seating chart&rsquo;s desks, hall-pass destinations, behaviour tags, a lab contract&rsquo;s wording, every class name. Text you typed that holds this year&rsquo;s names is listed under <i>Your choice</i>, set to Clear. Close every other tab of this site first: an open tool saves what it has in memory again.</span>
+        <span class="hint">The table is exactly what the clear will do. Names, scores, logs, photos and class lists go; the setup they sit in stays: a seating chart&rsquo;s desks, hall-pass destinations, behaviour tags, a lab contract&rsquo;s wording, every class name. Text you typed that holds this year&rsquo;s names is listed under <i>Your choice</i>, set to Clear. The page looks for other open tabs again before it clears.</span>
         <div id="roReview"></div>
         <div class="ro-row">
           <button class="danger" id="roClearBtn" type="button" disabled>Clear the student data</button>
@@ -1608,6 +1617,50 @@
   var roCheckMsg = document.getElementById('roCheckMsg');
   var roMsg = document.getElementById('rolloverMsg');
   var roResume = document.getElementById('rolloverResume');
+  var roTabsMsg = document.getElementById('roTabsMsg');
+  var roTabsOkBtn = document.getElementById('roTabsOkBtn');
+  var roSaving = false;
+
+  /* Step 1, the other tabs. sw.js names every other open window of the site
+     (BrRollover.otherTabs); with no worker to ask (file://, a worker from
+     before v302) the page says it cannot see them and the teacher says they
+     are closed. writtenBack() after the clear is the net either way. */
+  var roTabs = { checked: false, seen: false, open: [], confirmed: false };
+  function tabsClear() { return roTabs.checked && (roTabs.seen ? !roTabs.open.length : roTabs.confirmed); }
+  function tabsText(open) {
+    return open.map(function (t) { return t.title + (t.count > 1 ? ' (' + t.count + ' tabs)' : ''); }).join(', ');
+  }
+  function onlyOne(open) { return open.length === 1 && open[0].count === 1; }
+  function checkTabs() {
+    var sw = null;
+    try { sw = navigator.serviceWorker || null; } catch (e) { sw = null; }
+    return BrRollover.otherTabs(sw).then(function (r) {
+      roTabs.checked = true;
+      roTabs.seen = r.seen;
+      roTabs.open = r.seen ? BrRollover.nameTabs(r.urls, new URL('../', location.href).href, ToolRegistry.tools) : [];
+      renderTabs();
+      roRender();
+      return roTabs;
+    });
+  }
+  function renderTabs() {
+    roTabsOkBtn.hidden = !roTabs.checked || roTabs.seen || roTabs.confirmed;
+    if (!roTabs.checked) roBox(roTabsMsg, 'info', 'Looking for other open tabs of this site…');
+    else if (roTabs.seen && roTabs.open.length) roBox(roTabsMsg, 'error', 'Still open: ' + tabsText(roTabs.open) + '. Close ' + (onlyOne(roTabs.open) ? 'it' : 'them') + ', then check again.');
+    else if (roTabs.seen) roBox(roTabsMsg, 'good', 'No other tab of this site is open.');
+    else if (!roTabs.confirmed) roBox(roTabsMsg, 'info', 'This page cannot see other tabs here (it is running without the site’s offline helper, for example from a copy on disk). Close every other tab of this site yourself, then say so below.');
+    else roBox(roTabsMsg, 'good', 'You closed the other tabs. If one was still open, this page finds what it saved again after the clear and offers to clear it.');
+  }
+  document.getElementById('roTabsBtn').addEventListener('click', function () { checkTabs(); });
+  roTabsOkBtn.addEventListener('click', function () {
+    roTabs.confirmed = true;
+    renderTabs();
+    roRender();
+  });
+  /* Coming back from closing the other tabs is the usual moment to look again. */
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') checkTabs();
+  });
 
   /* The year being closed: from August on it is this year and next. */
   (function () {
@@ -1668,7 +1721,9 @@
   }
 
   function roRender() {
-    var saved = !!ro, checked = !!(ro && ro.checked);
+    var saved = !!ro, checked = !!(ro && ro.checked), tabs = tabsClear();
+    roSaveBtn.disabled = roSaving || !tabs;
+    document.getElementById('roStep1').classList.toggle('ro-off', !tabs);
     roCheckBtn.disabled = !saved || !ro.handle;
     roCheckFile.disabled = !saved;
     var p = checked ? ro.plan : null;
@@ -1704,6 +1759,7 @@
 
   roSaveBtn.addEventListener('click', function () {
     var label = roLabel.value.trim().slice(0, 20);
+    if (!tabsClear()) return;
     if (!lastScanGroups.length) { roBox(roSaveMsg, 'error', 'Nothing is saved in this browser, so there is no year to archive.'); return; }
     if (!label) { roBox(roSaveMsg, 'error', 'Name the year being closed first, for example 2026-27.'); roLabel.focus(); return; }
     ro = null;
@@ -1711,6 +1767,7 @@
     roMsg.innerHTML = '';
     document.getElementById('roReview').innerHTML = '';
     roRender();
+    roSaving = true;
     roSaveBtn.disabled = true;
     roBox(roSaveMsg, 'info', 'Building the archive, images included — this can take a moment…');
     var id = BrRollover.newId();
@@ -1778,7 +1835,7 @@
       roRender();
       roBox(roSaveMsg, 'error', (err && err.msg) || 'The archive could not be saved. Nothing was cleared.');
       if (err && err.reasons) roSaveMsg.insertAdjacentHTML('beforeend', reasonsHtml(err.reasons));
-    }).then(function () { roSaveBtn.disabled = false; });
+    }).then(function () { roSaving = false; roRender(); });
   });
 
   function checkText(text) {
@@ -1998,7 +2055,17 @@
     if (!ro || !ro.checked || !ro.plan) return;
     var run = ro, p = ro.plan;
     roClearBtn.disabled = true;
-    BrRollover.run(p, rolloverIo()).then(function (res) {
+    /* A tab opened since step 1 would save last year back: look again, and
+       clear nothing while one is open. */
+    checkTabs().then(function (t) {
+      if (t.seen && t.open.length) {
+        roBox(roMsg, 'error', 'Nothing was cleared: ' + tabsText(t.open) + (onlyOne(t.open) ? ' is' : ' are') + ' open in another tab. Close ' +
+          (onlyOne(t.open) ? 'it' : 'them') + ', then press Clear again.');
+        return { skipped: true };
+      }
+      return BrRollover.run(p, rolloverIo());
+    }).then(function (res) {
+      if (res.skipped) return;
       if (res.stale && res.stale.length) {
         roBox(roMsg, 'error', 'Something was saved since you reviewed this (' + res.stale.length + ' item' + (res.stale.length === 1 ? '' : 's') +
           '). Nothing was cleared. Close the other tabs, then look at the table again.');
@@ -2089,6 +2156,8 @@
   renderBackupBanner();
   renderIdb();
   renderResume();
+  renderTabs();
+  checkTabs();
   roRender();
   document.getElementById('rescanBtn').addEventListener('click', function () {
     renderScan();

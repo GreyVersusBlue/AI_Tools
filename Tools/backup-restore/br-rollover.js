@@ -1,6 +1,6 @@
 /* br-rollover.js — the year rollover: the archive, its check, the journal
-   that makes an interrupted clear visible, and the clear itself (Path 3 P6,
-   increments 1 and 2).
+   that makes an interrupted clear visible, the clear itself, and the check
+   for other open tabs before either (Path 3 P6, increments 1 to 3).
 
    The design is BACKLOG.md, Path 3, the P6 bullet. The archive half:
 
@@ -54,6 +54,13 @@
      writtenBack(storage)       after a 'done' run, the changed keys that are
                                 back with exactly last year's value (a tab
                                 that stayed open saved it again).
+
+   The other tabs (increment 3):
+
+     otherTabs(container)       asks sw.js (the CLIENTS message) for every
+                                other open window of the site: { seen, urls }.
+     nameTabs(urls, root, tools)
+                                those windows as [{ title, count }].
 
    Storage it owns: one key, `br_rollover_v1`, `{ v: 1, runs: [...] }`, the
    last three runs. It holds no name and no value: key names, counts, dates,
@@ -1478,8 +1485,72 @@
     });
   }
 
+  /* ── the other tabs (design step 1) ──────────────────────────────────
+     An open tool holds last year in memory and saves it back, so the page
+     asks the service worker (sw.js, the CLIENTS message) which other windows
+     of the site are open. `container` is navigator.serviceWorker. Resolves
+     { seen: true, urls } when a worker answered, { seen: false } when there
+     is none to ask (file://, a worker blocked, one from before v302 that
+     does not know the message): the page cannot tell, and says so. */
+  function otherTabs(container, opts) {
+    var wait = (opts && opts.timeoutMs) || 2000;
+    var Channel = (opts && opts.MessageChannel) || global.MessageChannel;
+    var no = { seen: false, urls: [] };
+    if (!container || typeof Channel !== 'function') return Promise.resolve(no);
+    return new Promise(function (resolve) {
+      var done = false, ch = null;
+      /* Every way out closes the port and the timer: an open port is a
+         listener nobody will ever call. */
+      function finish(v) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        if (ch && ch.port1.close) ch.port1.close();
+        resolve(v);
+      }
+      var timer = setTimeout(function () { finish(no); }, wait);
+      var workerP = container.controller ? Promise.resolve(container.controller)
+        : Promise.resolve(container.ready).then(function (reg) { return reg && reg.active; });
+      workerP.then(function (worker) {
+        if (!worker || done) return finish(no);
+        ch = new Channel();
+        ch.port1.onmessage = function (e) {
+          var d = e && e.data;
+          if (!d || d.type !== 'CLIENTS' || !Array.isArray(d.clients)) return;
+          finish({ seen: true, urls: d.clients.map(function (c) { return String(c && c.url || ''); }).filter(Boolean) });
+        };
+        worker.postMessage({ type: 'CLIENTS' }, [ch.port2]);
+      }, function () { finish(no); });
+    });
+  }
+
+  /* The open windows by name: [{ title, count }], one row per page, in the
+     order a teacher reads them. `root` is the site's base URL; `tools` the
+     registry's rows. A page the registry does not name is shown by its path,
+     so nothing open is ever left off the list. Query and hash are ignored. */
+  function nameTabs(urls, root, tools) {
+    var byPath = {};
+    (tools || []).forEach(function (t) { if (t && t.file) byPath[safeDecode(t.file)] = t.title; });
+    var rows = {}, order = [];
+    (urls || []).forEach(function (u) {
+      var rel = String(u).split('#')[0].split('?')[0];
+      if (root && rel.indexOf(root) === 0) rel = rel.slice(root.length);
+      rel = safeDecode(rel.replace(/^\/+/, ''));
+      var title = byPath[rel] || (rel === '' || rel === 'index.html' ? 'The landing page' : rel);
+      if (!rows[title]) { rows[title] = { title: title, count: 0 }; order.push(title); }
+      rows[title].count++;
+    });
+    return order.sort().map(function (t) { return rows[t]; });
+  }
+
+  function safeDecode(s) {
+    try { return decodeURI(s); } catch (e) { return s; }
+  }
+
   global.BrRollover = {
     JOURNAL_KEY: JOURNAL_KEY,
+    otherTabs: otherTabs,
+    nameTabs: nameTabs,
     hash: hash,
     hashKind: hashKind,
     newId: newId,
