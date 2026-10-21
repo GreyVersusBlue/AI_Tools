@@ -45,6 +45,7 @@
     "Tools/backup-restore/test/rollover.test.mjs",
     "Tools/backup-restore/test/smoke-rollover.mjs",
     "Tools/backup-restore/test/smoke-rollover-tabs.mjs",
+    "Tools/backup-restore/test/smoke-clear-rosters.mjs",
     "Tools/behavior-points-tracker/test/smoke-shared-record.mjs",
     "Tools/behavior-points-tracker/test/smoke-seating-layout.mjs",
     "Tools/behavior-points-tracker/test/smoke-seating-board.mjs",

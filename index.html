@@ -228,7 +228,30 @@
   .app-bar .backup-status{color:var(--faint);text-decoration:none;}
   .app-bar .backup-status:hover,.app-bar .backup-status:focus-visible{color:var(--ink);text-decoration:underline;}
   .app-bar .backup-status::before{content:"·";margin-right:.6rem;color:var(--faint);}
-  .app-bar .backup-status.stale{color:var(--err);}
+  .app-bar .backup-status.stale{color:var(--pen);}
+  .app-bar .clear-rosters{
+    font:inherit;color:var(--dim);background:none;border:0;padding:0;cursor:pointer;text-decoration:none;
+  }
+  .app-bar .clear-rosters::before{content:"·";margin-right:.6rem;color:var(--faint);}
+  .app-bar .clear-rosters:hover,.app-bar .clear-rosters:focus-visible{color:var(--pen);text-decoration:underline;}
+
+  /* "Clear all rosters": the confirmation screen (Path 3 P6, item 5). */
+  .clear-dlg{
+    width:min(560px,calc(100vw - 2.5rem));max-height:calc(100vh - 4rem);overflow:auto;
+    background:var(--panel);color:var(--ink);border:1px solid var(--line-strong);border-radius:8px;
+    padding:1.2rem 1.3rem 1rem;box-shadow:0 20px 60px rgba(22,34,46,.35);
+  }
+  .clear-dlg::backdrop{background:rgba(22,34,46,.5);}
+  .clear-dlg h2{font-family:var(--display);font-size:1.15rem;margin:0 0 .6rem;}
+  .clear-dlg p{margin:.5rem 0;font-size:.92rem;line-height:1.45;}
+  .clear-dlg ul{margin:.3rem 0 .6rem 1.2rem;padding:0;font-size:.9rem;}
+  .clear-dlg .safe{border-left:3px solid var(--good);padding:.4rem .7rem;background:var(--good-soft);}
+  .clear-dlg .btns{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.6rem;margin-top:1rem;}
+  .clear-dlg .btns a,.clear-dlg .btns button{
+    font:inherit;font-size:.9rem;padding:.45rem .9rem;border-radius:5px;cursor:pointer;text-decoration:none;
+    border:1px solid var(--line-strong);background:var(--panel);color:var(--ink);
+  }
+  .clear-dlg .btns a{background:var(--pen);border-color:var(--pen);color:var(--panel);}
   .wordmark{color:var(--ink);font-weight:500;letter-spacing:.055em;}
   .wordmark .tld{color:var(--faint);font-weight:400;}
 
@@ -767,7 +790,7 @@
 
   <div class="app-bar ink" style="--d:40ms">
     <span><span class="wordmark">ASPERMYLESSONPLAN<span class="tld">.COM</span></span> · Unofficial Toolbook · Term 2026–27 · Q1</span>
-    <span class="rhs"><span class="dot" aria-hidden="true"></span>88 records · local only · nothing syncs<span class="offline-status" id="offlineStatus" data-sw-offline-status role="status" aria-live="polite" hidden></span><a class="backup-status" id="backupStatus" href="Tools/009-backup-restore.html" hidden></a><button type="button" class="cmdk-hint" id="cmdkOpenBtn" aria-haspopup="dialog" aria-controls="cmdkOverlay" aria-label="Open quick jump search (Control or Command plus K)"><span aria-hidden="true">&#8984;K</span> Quick jump</button></span>
+    <span class="rhs"><span class="dot" aria-hidden="true"></span>88 records · local only · nothing syncs<span class="offline-status" id="offlineStatus" data-sw-offline-status role="status" aria-live="polite" hidden></span><a class="backup-status" id="backupStatus" href="Tools/009-backup-restore.html" hidden></a><button type="button" class="clear-rosters" id="clearRostersBtn" aria-haspopup="dialog" aria-controls="clearRostersDlg" hidden>Clear all rosters</button><button type="button" class="cmdk-hint" id="cmdkOpenBtn" aria-haspopup="dialog" aria-controls="cmdkOverlay" aria-label="Open quick jump search (Control or Command plus K)"><span aria-hidden="true">&#8984;K</span> Quick jump</button></span>
   </div>
 
   <div class="letterhead ink" style="--d:90ms" aria-hidden="true">
@@ -2782,6 +2805,19 @@
 
 </main>
 
+<dialog class="clear-dlg" id="clearRostersDlg" aria-labelledby="clearRostersTitle">
+  <h2 id="clearRostersTitle">Clear all rosters?</h2>
+  <p id="clearRostersCount"></p>
+  <ul id="clearRostersList"></ul>
+  <p><b>What goes:</b> every class list&rsquo;s names, and everything the tools saved about students in this browser: points, notes, logs, groups, seating and photos.</p>
+  <p><b>What stays:</b> each class&rsquo;s name and period, and every tool&rsquo;s setup: desks, hall-pass destinations, behaviour tags, question banks and settings.</p>
+  <p class="safe">Nothing is cleared yet. The next screen saves a copy of everything to a file and reads it back from your disk to check it; the clear only runs once that file passes. That file is the only copy of this year afterwards.</p>
+  <div class="btns">
+    <button type="button" id="clearRostersCancel">Cancel</button>
+    <a id="clearRostersGo" href="Tools/009-backup-restore.html#rolloverCard">Save a copy, then clear&hellip;</a>
+  </div>
+</dialog>
+
 <div class="cmdk-overlay" id="cmdkOverlay" role="presentation">
   <div class="cmdk" role="dialog" aria-modal="true" aria-label="Quick jump to a tool">
     <div class="cmdk-field">
@@ -2826,6 +2862,71 @@
     el.title = 'Open Backup & Restore';
     el.classList.toggle('stale', isNaN(days) || days >= 30);
     el.hidden = false;
+  })();
+
+  /* ---------- "Clear all rosters" (Path 3 P6, item 5) ----------
+     Devon, 2026-10-07: a button on the main page with a confirmation screen.
+     The screen names what this browser holds and what goes; its button opens
+     009's "Start a new school year" card, which is the one clear on the site:
+     it saves the year archive, checks the file on disk and only then clears.
+     Nothing here writes storage. Shown once anything is saved, like the
+     readout above. */
+  (function () {
+    var btn = document.getElementById('clearRostersBtn');
+    var dlg = document.getElementById('clearRostersDlg');
+    if (!btn || !dlg || typeof dlg.showModal !== 'function') return;
+    function read(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; } }
+    function isObj(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+    function classes() {
+      var out = {};
+      var np = read('np_rosters');
+      if (isObj(np)) Object.keys(np).forEach(function (c) {
+        if (Array.isArray(np[c])) out[c] = Math.max(out[c] || 0, np[c].filter(function (n) { return typeof n === 'string' && n.trim(); }).length);
+      });
+      var crh = read('crh_students_v1');
+      if (isObj(crh) && isObj(crh.rosters)) Object.keys(crh.rosters).forEach(function (c) {
+        var e = crh.rosters[c];
+        if (isObj(e) && Array.isArray(e.students)) out[c] = Math.max(out[c] || 0, e.students.length);
+      });
+      return Object.keys(out).sort(function (a, b) { return a.localeCompare(b); }).map(function (c) { return { name: c, n: out[c] }; });
+    }
+    var saved = 0;
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k === 'br_last_backup_at' || k.indexOf('gvb-home-') === 0 || k === 'gvb-a11y-prefs') continue;
+        saved++;
+      }
+    } catch (e) { return; }
+    if (!saved) return;
+    btn.hidden = false;
+    btn.addEventListener('click', function () {
+      var list = classes();
+      var students = list.reduce(function (t, c) { return t + c.n; }, 0);
+      var count = document.getElementById('clearRostersCount');
+      var ul = document.getElementById('clearRostersList');
+      ul.textContent = '';
+      if (!list.length) {
+        count.textContent = 'No class list is saved in this browser. The tools may still hold records about students, and the next screen lists every one before anything goes.';
+      } else {
+        count.textContent = 'This browser holds ' + list.length + (list.length === 1 ? ' class' : ' classes') + ' with ' +
+          students + (students === 1 ? ' student' : ' students') + ':';
+        list.slice(0, 8).forEach(function (c) {
+          var li = document.createElement('li');
+          li.textContent = c.name + ' (' + c.n + ')';
+          ul.appendChild(li);
+        });
+        if (list.length > 8) {
+          var more = document.createElement('li');
+          more.textContent = 'and ' + (list.length - 8) + ' more';
+          ul.appendChild(more);
+        }
+      }
+      ul.hidden = !list.length;
+      dlg.showModal();
+      document.getElementById('clearRostersCancel').focus();
+    });
+    document.getElementById('clearRostersCancel').addEventListener('click', function () { dlg.close(); });
   })();
 
   /* ---------- filter ---------- */
