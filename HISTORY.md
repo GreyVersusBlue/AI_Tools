@@ -9,6 +9,57 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 3 P5 increment 1: flags on the shared student record; 006 sets them, 007 honours them (2026-10-21, AI-15, `CACHE_VERSION` v305)
+
+BACKLOG rank 3 kept and rewritten to what is left (002 and 022's groups, 010's readout; the accommodation note waits
+on Devon). Its photo half is closed at Devon's word ("Keep what exists, add no more photo features", 2026-10-21):
+nothing about photos was built, extended or removed.
+
+- **What changed for a teacher.** In Class Roster Hub every student row has two toggles, **Absent** and **No call**.
+  Absent means absent today and clears itself tomorrow; No call stays until it is pressed again. A line above the list
+  counts them for the class and says they stay on this computer; **Clear all flags** removes every one. In the Name
+  Picker an absent student is off the board, and a do-not-cold-call student is on it, dimmed, labelled "no cold call",
+  and never picked; the count under the board ("2 active (1 absent, 1 not cold called) / 4 total") and a notice on the
+  Names tab say who and where to change it. A flag pressed in 006 reaches a 007 tab already open, without a reload.
+- **Calls made, each cheap to reverse.** (1) *Two fixed flags, no free text.* The themes list named "accommodations";
+  an accommodation note is the most sensitive text the site could hold, which kinds exist and whether a projected tool
+  may show one is Devon's call, so it is a question in the row and not built. (2) *Their own key, by student id*, not
+  fields on `crh_students_v1`'s records: those records are rebuilt as `{id, name, preferred, say}` in about ten places
+  (006's `writeStudents`, the merge, the duplicate, the import, `roster.js`'s `reconcile()`), and a field the eleventh
+  forgot would silently drop a do-not-cold-call. P6's design allowed either. (3) *Absent is a date*, not a boolean,
+  like 007's own `np_absent`, so a teacher who forgets to untick it does not lose the student from the picker
+  tomorrow. (4) *Written when pressed*, not on Save, because it is about today, not an edit to the roster. (5) *006
+  prunes on load*: an absence from an earlier day, and the flags of an id on no roster (a student removed or archived
+  loses them; with no readable sidecar at all, only old days go). (6) *A duplicated roster's students get new ids*, as
+  before, so flags do not follow a copy; a student moved between rosters keeps id and flags. (7) *In 007, do-not-cold-
+  call keeps a student out of every pick* (jump, slot, disappear, multi-pick, tournament) *but not out of the team
+  draft*, which is not being called on; absent from the hub keeps a student out of everything 007's own absence does.
+  (8) *The hub's absence locks 007's Absent box for the day* ("Absent (Roster Hub)"), so the two cannot disagree.
+  (9) *No flag is stripped from links because none travels*: 006's share link, CSV, workbook, print and device handoff
+  never read the key; a 009 backup carries it, as every registered key, being the teacher's own file.
+- **How.** `_shared/student-flags.js` (`StudentFlags`: `parse`, `read`, `get`, `set`, `prune`, `counts`, `labels`,
+  `dayKey`), a classic script like `roster.js`, loaded by 006 and 007. 007 looks a name up with `loadIds()`/`lookupId()`
+  from `student-details.js`, so a name on no roster has no flags. Registry: `crh_flags_v1` student data on 006's row;
+  `BrRollover.RULES` deletes it whole; `registry-shape.test.mjs` section 9 names it as a key newer than 009's old list.
+  007's Stats row for an absent student no longer dims itself with `opacity: 0.55`, which took the white OUT badge
+  under 4.5:1 (axe found it in the new suite; it was there before, in any absent row); the bar alone is dimmed now.
+  On a phone 006 puts the toggles on a second line under the name: the first try squeezed the name field to nothing at
+  375 px, seen on a screenshot, not by any suite.
+- **Tests.** `npm run test:student-flags` (new, pure, 55 checks, and 15 deliberate breaks of the module each caught by
+  the suite itself, among them `absent` holding on any day, `dayKey` in UTC, which needed the time zone pinned in the
+  file and a 31 December date to be seen, and an inherited property read as an entry). `npm run test:student-flags-smoke`
+  (new, port 8537, 33, the clock pinned): 006's prune, toggles, focus, aria-pressed, reload, no trace in
+  `np_rosters`, `crh_students_v1` or the CSV, Clear all flags; 007's board, count, notice, twelve real picks, Stats row,
+  the cross-tab arrival, a name on no roster; axe on 006's list in light and dark and on 007's rows and notice. Broken
+  on purpose and seen red: 007 ignoring no-call (2 red), 006 without its prune (2), 007 without its storage listener (3).
+  Run green: run-suites `class-roster-hub` (5), `name-picker` (3), `roster` (15), `backup-restore` (10),
+  `tool-registry`, `service-worker` (3); a11y on 006 and 007; `test:theme`; `test:rollover` 714; `test:select-suites`;
+  precache `--base origin/main`, registry, tests, dedupe, entities, hidden-flex, print-clip, inline-sinks,
+  docs-commands, art, adoption `--check`, lint.
+- **Not verified.** Firefox, Safari, a real phone, the `file://` copy, an installed PWA. A flag pressed with a
+  roster's new rows unsaved is stored under ids the sidecar only gets on Save, and is pruned at the next load if the
+  teacher never saves (by design, not tested). Not run: the full `npm test`.
+
 ## Path 3 P6 finished: the landing page's "Clear all rosters", every tool opened after a rollover, the registry's marks (2026-10-21, AI-15, `CACHE_VERSION` v304)
 
 BACKLOG rank 4 deleted (a gap, as ranks 2 and 6 were). Items 5 and 6 of the row, on increments 1 to 4 (v299 to v303, below), unchanged.

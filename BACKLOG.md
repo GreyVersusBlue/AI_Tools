@@ -87,6 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-15 (v305), rank 3 (kept, rewritten), Path 3 P5 increment 1: flags on the shared student record.** Two fixed
+  flags, *absent today* (a date, true only that day) and *do not cold call*, in `crh_flags_v1` by student id
+  (`_shared/student-flags.js`, `StudentFlags`). 006 has Absent / No call toggles on every row and "Clear all flags";
+  007 leaves an absent student off the board and keeps a no-call student on it, dimmed, where no pick lands. Never in a
+  link or export; the rollover deletes the key. `npm run test:student-flags`, `test:student-flags-smoke` (port 8537).
+  **Photos: closed (Devon, 2026-10-21). No accommodation note yet (a question for Devon). Next free suite port: 8538.**
 - **AI-14 (v300), rank 28 (kept, rewritten), Path 12 P2 increment 5: named sets and a Tag filter on 030.** A teacher ticks questions (from
   the bank or a built-in set) and adds them to a named set, the teacher's own ordered list saved with the bank, a question
   in it more than once if wanted; "Questions from" lists each set after the bank, where it is reordered (Up, Down), trimmed,
@@ -390,7 +396,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `student-flags.js` 2 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **169**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -523,7 +529,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
+| 3 | Path 3 P5 — flags on the shared student record, the other adopters: 002 and 022 leave an absent-today student out of their groups, 010 shows today's absences; the accommodation note waits on Devon (record, 006's toggles and 007 shipped in v305; photos: closed at Devon's word) | site | ½ | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Document 035’s private four-palette theme system as an exception (Devon, 2026-10-03: “bless and document”; do not adopt `a11y.js` cold) | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -1128,10 +1134,40 @@ them data.
   orphaning history) with nothing to undo if it is wrong. The ceiling — which
   renames the identity layer can actually see — is in `HISTORY.md` and in the
   header above.
-- **P5 — Photos and flags (needs Path 4's media store).** Move Seating Chart's
-  photo storage to the shared record so every tool can render a face sheet; add the
-  small flag set the platform themes list (absent today, do-not-cold-call,
-  accommodation note) with Name Picker's Data tab as the wipe-it model.
+- **P5 — Flags on the shared student record. Photos: closed at Devon's word** ("No photos!", 2026-10-07; "Keep what
+  exists, add no more photo features", 2026-10-21): Seating Chart keeps its own photos, nothing moves to a shared record,
+  and no photo work is picked here or in another row without asking him. **Increment 1 built 2026-10-21 (AI-15, v305).**
+  The design, as built:
+  - *Which flags.* A fixed set of two, because a tool has to know what a flag means to honour it: **absent today**
+    (stored as the teacher's local date, `'2026-10-21'`, and true only on that day, so it clears itself overnight) and
+    **do not cold call** (`true` until cleared). No teacher-defined flags, and no accommodation note yet: free text about
+    a student's needs is the most sensitive thing the site could hold, and which categories exist and which tools may
+    show one (a projector is in front of the class) is Devon's call (question below).
+  - *Where.* Their own key, `crh_flags_v1`, bare JSON `{ version: 1, flags: { <student id>: { absent?, noCall? } } }`,
+    keyed by the stable id 006 mints in `crh_students_v1`. Not inside the sidecar's records: those are rebuilt as
+    `{id, name, preferred, say}` in about ten places in 006 and in `_shared/roster.js`'s `reconcile()`, and a flag
+    kept there would be lost at whichever one was missed. By id, so a rename keeps the flags; a student on two rosters
+    has an id on each, so a flag is per class. No migration: nothing held flags before (007's own `np_absent` stays
+    as it is, beside them). `_shared/student-flags.js` is the record's one definition, pure, with `read(storage)`.
+  - *Who writes.* Only 006: an **Absent** and a **No call** toggle on every row, written when pressed (not held for
+    Save), a bar counting them for this class, and **Clear all flags** (the wipe; Name Picker's Data tab was the model).
+    On load 006 drops an absence from an earlier day and the flags of a student on no roster.
+  - *Who reads.* 007 (v305): an absent-today student is off the board as if ticked absent on its Stats tab (the box
+    shows checked, locked, "Absent (Roster Hub)"); a do-not-cold-call student stays on the board, dimmed and labelled,
+    and no pick of any mode lands on them, but the team draft still drafts them; the count and a Names-tab notice name
+    both; a press in 006 in another tab arrives without a reload. Matched by name to id with student-details.js's
+    roster-first fallback, so a name typed into 007 that is on no roster has no flags.
+  - *Where they go.* Never in a share link, a roster export, 006's print or its device handoff (none reads the key).
+    In a 009 backup, as every registered key is: the file is the teacher's own. Student data in the registry, and the
+    year rollover deletes the key whole (`BrRollover.RULES`). No flag is sensitive enough to strip from a link today,
+    since none travels; an accommodation note, if built, must not either (Devon's 2026-10-07 "Strip them").
+  - **Left:** 002 Group / Team Generator and 022 Lab Group & Role Randomizer leave an absent-today student out of the
+    groups they make, saying so on the page; 010 Command Center shows today's absences. Each reads through
+    `StudentFlags.read()` and `lookupId()`, as 007 does, and gets a case in `smoke-student-flags.mjs` or its own suite.
+  - **Questions for Devon** (defaults in force until he answers): (1) an accommodation note: free text or a fixed list of
+    kinds, and may any tool show it on a projector (default: not built); (2) should do-not-cold-call also keep a student
+    out of 007's team draft and the group makers (default: no, it is about being called on); (3) when 006 says absent,
+    007's own Absent box is locked rather than overridable for the day (default: locked, change it in 006).
 - **P6 — Year rollover.** "Start next year": archive this year's rosters and every
   per-student history to a Backup & Restore file, clear student data, keep setup. Owned
   jointly with 009. **Designed 2026-10-05 (AI-15, a design pass: no code, nothing run in a browser). Increment 1 built
@@ -1382,8 +1418,9 @@ them data.
     archive, not something this design fixes.
   - A whole-archive restore brings the sidecar and every `idNames` back together, as one consistent state.
 
-  **Path 3 P5 (photos and flags) is not built. What P6 needs from it, and what works without it.** Everything
-  above works today: the only student images are `seating/`. From P5, when it is built: (1) flags live in
+  **Path 3 P5 and P6.** P5's flags were built in v305 in a key of their own, `crh_flags_v1`, marked `student: true`
+  and deleted whole by the rollover; P5's photo half is closed (Devon, 2026-10-21), so the only student images stay
+  `seating/`. What this design asked of P5, kept for the record: (1) flags live in
   `crh_students_v1`'s `students[]` records or in a key of their own marked `student: true`, never in a roster's
   `meta`, which the rollover keeps; (2) shared photos go in a namespace that holds student photos and nothing
   else, declared `student: true` in the registry's `namespaces`, so clearing stays one call per namespace; if P5
