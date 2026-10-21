@@ -9,6 +9,63 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 3 P6 finished: the landing page's "Clear all rosters", every tool opened after a rollover, the registry's marks (2026-10-21, AI-15, `CACHE_VERSION` v304)
+
+BACKLOG rank 4 deleted (a gap, as ranks 2 and 6 were). Items 5 and 6 of the row, on increments 1 to 4 (v299 to v303, below), unchanged.
+
+- **What changed for a teacher.** Once anything is saved, the landing page's top bar has **Clear all rosters**
+  (Devon, 2026-10-07: "a 'clear all rosters' button on main page, with a confirmation screen"; his "Read it like B"
+  keeps the guided "Start a new school year" beside it). It opens a modal confirmation screen: how many classes and
+  students this browser holds, each class with its count (eight, then "and N more"), what goes, what stays, and that
+  nothing is cleared until a copy is saved and checked. *Cancel* (or Escape) changes nothing; *Save a copy, then
+  clear…* opens 009's "Start a new school year" card, focused, where the clear runs after the archive passes.
+- **Calls made, each cheap to reverse.** (1) *The button leads into 009's clear rather than clearing on the landing
+  page.* Devon asked for a quick button; the rule this whole row was built on is that nothing is cleared until an
+  archive on disk has been checked, and a second clear that skipped it, or a copy of 009's four steps on the landing
+  page, is the two-rollovers state increment 4 removed. "Quick" is the screen: one click from the main page to the
+  clear, with the counts in front of the teacher. If he wants the clear itself on the landing page, the screen's
+  button is the one line to change, and it would load `br-rollover.js` there. (2) *It clears what the rollover clears*
+  (the students in every tool, the setup kept), not the two roster keys alone: his words were "clears all rosters and
+  items specific to people", and emptying the rosters with the per-tool records still keyed by name is what lets next
+  year's namesake inherit last year's points. (3) *Shown once anything is saved*, not only when a roster exists: student
+  records can exist without a class list, and the screen then says so. (4) *`br-envelope.js` is not extracted, and
+  leaves the design.* It was to let the module and the suites build and read an envelope; reading has been
+  `RestoreKit.read` since v298, the suites build their own, and with (1) there is no second page that builds an
+  archive. Moving 009's builder out is a refactor with one caller. (5) *The module still names `seating` itself.* The
+  design wanted the photo namespace read from the registry; `plan()`'s media input is shaped around it, so instead
+  `registry-shape.test.mjs` holds the registry's student namespaces equal to the ones the module clears. (6) *The
+  registry's vocabulary is the design's three marks*: the module's `roster` and `index` kinds are marked `reduce`.
+  (7) The landing readout's "stale" colour named `--err`, which the landing page does not define; it is `--pen`.
+- **How.** `index.html`: the button, a native `<dialog>` opened with `showModal()` (focus starts on Cancel and goes
+  back to the button), and a read of `np_rosters` and `crh_students_v1` that writes nothing. `smoke-rollover-tools.mjs`
+  seeds one profile with what the clear writes, each fixture through its real rule (the fixtures moved to
+  `_rollover-fixtures.mjs`, shared with `rollover.test.mjs`), plus the switchers that open each document, and opens
+  the 36 tools that own a reduced key. A marker is the kept setup the fixture put there; a control pass on an empty
+  profile proves each is absent from its page without the data. Eight fixture values had to be made distinctive
+  because they were built-in page text ("Got it", "Mystery", "Hypothesis", "Extended time", "Star", "Connector", 037's
+  93 and 064's starter Harriet Tubman). The registry: `rollover:` on the 60 entries whose rule is not the default,
+  `ToolRegistry.rolloverRule(key)`, `gvb-media`'s twelve `namespaces` (`seating` the one student namespace) and
+  `ToolRegistry.mediaNamespaces()`; its header's `:excluded:` line now says that list is in sessionStorage.
+- **Tests.** `npm run test:clear-rosters` (new, port 8535, 27): hidden with nothing saved, the counts and list, modal,
+  focus, Cancel and Escape with storage byte-equal, the continue link reaching 009's card focused with the clear locked
+  and storage still byte-equal, eight-plus classes, no class list, axe on the open screen in light and dark. `npm run
+  test:rollover-tools` (new, port 8536, 143). `registry-shape.test.mjs` section 10 (51). Broken on purpose and seen
+  red: the screen clearing a key on open (3), `show()` for `showModal()` (2), the count ignoring the sidecar (2, after
+  a sidecar-only class was added to the seed; it passed before), the button shown with nothing saved; a reducer
+  dropping 001's destinations (the marker), keeping 001's names (the name check), and writing 030's categories as an
+  object (a page error and the marker); a registry mark removed, a mark with no rule, a namespace undeclared, `seating`
+  not student, a rule's kind changed. Not red, and why: 043's and 042's `batchNames` left out (both pages load without
+  it; 042's comment says its `split` throws, which must be on a button, and this suite presses none); the focus
+  listener (a `<dialog>` returns focus itself, so the listener was removed). Run green: run-suites `backup-restore`
+  (10), `tool-registry`, `command-center`, `service-worker`; a11y on the landing page; `test:theme`; `test:rollover`
+  714; `test:select-suites`; precache `--base origin/main`, registry, tests, dedupe, entities, hidden-flex,
+  print-clip, inline-sinks, docs-commands, art, adoption `--check`, lint.
+- **Not verified.** No button on a tool page was pressed after a rollover (the suite loads each page). The real save
+  picker, Firefox, Safari, an installed PWA and the `file://` copy, for the whole of P6. Not run: the full `npm test`.
+- **Found, not fixed.** Rank 3 (Path 3 P5) still reads "photos and flags"; Devon closed its photo half on 2026-10-21
+  (keep what exists, add none), so only flags are left in it. 007 drops a roster with an empty list on its next save
+  (increment 2's finding) still stands, and so does 009's `showBoxMsg` at 4.46:1 outside the card.
+
 ## Path 3 P6 increment 4: one rollover, 009's; 006's button opens it (2026-10-21, AI-15, `CACHE_VERSION` v303)
 
 BACKLOG rank 4, rewritten to what is left (items 5 and 6). Built on increments 1 to 3 (v299, v301, v302, below), unchanged.

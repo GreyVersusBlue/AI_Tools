@@ -236,20 +236,15 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   (Path 17 P4's controls, built), and 064's zip and PNG downloads are the file helpers' first adopter.** 011's
   default output is the old page's in 120 states, to the pixel. `npm run test:image-to-pdf-impose` (port 8483).
   **Left in rank 6: CSV and XLSX for the tools that hold a table. No booklet has been printed or folded.**
-- **AI-15 (v303), rank 4, Path 3 P6 increment 4: one rollover.** 006's "Start a new school year…" saves the open
-  roster and opens 009's card (`009-backup-restore.html#rolloverCard`, focused) in the same tab; its prompts, its
-  emptying of the rosters and its filing of a year in `crh_archive_v1` are gone. `smoke-roster-writes.mjs` section 6.
-- **AI-15 (v302), rank 4, Path 3 P6 increment 3: step 1, the other tabs.** `sw.js` answers a `CLIENTS` message with
-  every other window of the site; 009 names them (`BrRollover.otherTabs()`, `nameTabs()`), keeps the archive locked
-  while one is open, and looks again before the clear, which removes nothing while one is. With no worker (`file://`)
-  the page says it cannot see and the teacher says they are closed. `npm run test:rollover-tabs` (port 8534).
-- **AI-15 (v301), rank 4, Path 3 P6 increment 2: the clear keeps the setup.** `BrRollover.RULES` reduces every
-  student key to its tool's own empty values and keeps the setup (desks, destinations, tags, contract wording, class
-  names), takes 044's `medicalAlerts` and the other mixed fields, asks about free text that names this year's
-  students (pre-set to Clear), clears the `seating/` photos and the parked share file, and fixes the switchers' lists.
-  009's step 3 is the review table. `npm run test:rollover` (700), `test:rollover-smoke` (57). **No tool page was
-  opened after a rollover yet: that is `smoke-rollover-tools.mjs`, still to write.** (v299 was increment 1: the
-  archive, its check from disk, the journal.)
+- **AI-15 (v299 to v304), rank 4 (DELETED: Path 3 P6 is whole), the year rollover.** 009's "Start a new school year": close
+  the other tabs (`sw.js` `CLIENTS`), save the year archive with every database but the map cache, read it back from disk
+  and check it, review, then clear: `BrRollover.RULES` empties the students and keeps the setup, journalled in
+  `br_rollover_v1`, finishable from the archive if interrupted. 006's button opens that card (v303); the landing page's
+  **Clear all rosters** (v304) is a confirmation screen that leads into it, so no clear on the site skips the archive.
+  Since v304 every tool with a reduced key is opened after a rollover (`npm run test:rollover-tools`), and the registry
+  carries the `rollover:` marks and the media namespaces, held to `RULES` by `registry-shape.test.mjs`. `br-envelope.js`
+  was not extracted (no second caller; `HISTORY.md`). **No real save picker, Firefox, Safari or `file://` run; no tool
+  button pressed after a rollover.** The rank is left as a gap. Next free suite port: 8537.
 - **AI-13 (v245), rank 6, Path 7 P4 increments 1 to 3: `_shared/export.js` (`ExportKit`) is whole, 064 and 040 are
   on it, and `_shared/duplex-print.js` is deleted.** The imposition and pagination math, `toPdf(pages, opts)` for
   drawn pages (**not a DOM element**), `toCsv` (formula guard), `toXlsx`, `toZip`, `download`, `filename`. 064's
@@ -529,7 +524,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
 | 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Increments 1 to 4 shipped (AI-15, 2026-10-21): v299 the archive, its check from disk and the journal; v301 the clear that keeps the setup** — `BrRollover.RULES` (85 rules: every student key of the registry, the mixed keys with 044's `medicalAlerts` first, the roster shells, the free text that names a student, the switchers' lists), `plan()` from the checked archive's values, the `seating/` photos and the `aplp-share` file cleared, and 009's review table with Keep or Clear for the free text; **v302 step 1, the other tabs** (`sw.js`'s `CLIENTS` message; the archive locked and the clear refused while another tab of the site is open); **v303 006's button opens 009's card** (it stays in both; 006's inline rollover is gone). Left, in order: **(5)** the landing page's "Clear all rosters" button with a confirmation screen; **(6)** `smoke-rollover-tools.mjs` (every tool with a reduced key opened after a rollover: no page error, no name, one setup marker each, which is the only proof that each reducer's shape loads), the registry's `rollover:` marks and `ToolRegistry.rolloverRule()` with the registry-shape assertions, `br-envelope.js`. Devon's answers are in the P6 bullet; none is open | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Document 035’s private four-palette theme system as an exception (Devon, 2026-10-03: “bless and document”; do not adopt `a11y.js` cold) | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -1145,7 +1139,9 @@ them data.
   Increment 2 built the same day (AI-15, v301): `RULES`, the reducers, `plan()`, step 5's order with the photos, the
   share slot and the indexes, and the review table. Increment 3 the same day (AI-15, v302): step 1, the `CLIENTS`
   message, asked before the archive and again before the clear. Increment 4 the same day (AI-15, v303): 006's
-  button opens 009's card and its own rollover is gone. `HISTORY.md` has what each does and where it departs from this text. Every question below is answered.**
+  button opens 009's card and its own rollover is gone. Items 5 and 6 the same day (AI-15, v304): the landing page's
+  "Clear all rosters" confirmation screen, `smoke-rollover-tools.mjs`, the registry's `rollover:` marks and namespaces;
+  `br-envelope.js` dropped. **P6 is finished.** `HISTORY.md` has what each does and where it departs from this text. Every question below is answered.**
   The design is the rest of this bullet. It was written from reading 009, 006, `_shared/roster.js`,
   `_shared/media-db.js`, `_shared/tool-registry.js` and the code that writes each key named below; two
   read-only probes (kept outside the repo) loaded the registry in Node to count it.
