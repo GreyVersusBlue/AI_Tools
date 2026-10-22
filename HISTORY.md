@@ -9,6 +9,45 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 3 P5 increment 2: 002, 022 and 010 honour the student flags (2026-10-22, AI-15, `CACHE_VERSION` v306)
+
+BACKLOG rank 3 deleted (a gap, ranks not renumbered): Path 3 P5 is built, and what is left of it is Devon's three
+questions, kept in the Path 3 P5 bullet (the accommodation note; no-call in drafts and group makers; 007's locked box).
+
+- **What changed for a teacher.** In Group / Team Generator a student marked absent today in Class Roster Hub is left
+  out of Make Groups and Reshuffle; their box under "Mark absent today" shows checked, locked and "(Roster Hub)", a note
+  names who is left out and where to change it, and the count says "· 1 absent today". Lab Group & Role Randomizer says
+  so before a shuffle, leaves them out of it with a line in the warnings, and a student marked after the shuffle shows
+  in their group as "Absent (Roster Hub)" with the role handed to a groupmate. Command Center's Quick Call lists an
+  absent student struck through and locked, a no-call student labelled, picks neither from the button or the phone
+  remote, and counts and names both. A press in 006 in another tab reaches all three without a reload.
+- **Calls made, each cheap to reverse.** (1) *No-call does not change a group* in 002 or 022: that is question 2's
+  default ("it is about being called on"), so the behaviour that changes least. (2) *010's Quick Call does skip a
+  no-call student*, though the row named only absences there: it is a random call-on like 007's, and the flag's own
+  description says "never chosen by a random pick"; leaving it out would have made the flag's promise false on the one
+  page most often projected. (3) *The hub's absence locks the tool's own absent box*, as in 007 (question 3's
+  default). (4) *Never written into the tool's own saved absences* (002's `absentNames`, 022's `state.absent`): both
+  are saved and travel in a share link, and a flag must not. Computed on every draw instead. (5) *Groups already on the
+  page in 002 stay as they are* when a flag arrives; the next Make Groups leaves the student out. 022 re-renders
+  its groups, because its absent column already hands roles on live. (6) *010's note is hidden on the projector*, as
+  its roster list already is; the count stays. (7) *The id lookup is `Roster.idIndex()`/`idFor()`*, now exported from
+  `_shared/roster.js`: it is the same roster-first rule as `student-details.js`'s `lookupId()`, which is an ES module
+  and these three pages are classic scripts. (8) *`StudentFlags.byName()`* turns a page's names into the two lists,
+  so the three pages do not each write the loop.
+- **How it was checked.** `npm run test:student-flags` (62 checks, 19 deliberate breaks caught, four of them new for
+  `byName`); new `npm run test:flag-adopters` (`Tools/roster/test/smoke-flag-adopters.mjs`, port 8538, 38 checks,
+  clock pinned at 15:00 on 2026-10-21), with one break per page seen red (002 not excluding, 022 not excluding, 010
+  picking a no-call student). Run-suites `--only` roster (16), group-team-generator (4), lab-group-role-randomizer (2),
+  command-center (2); the a11y sweep on 002, 022 and 010; `test:theme`; `test:select-suites`; every guard
+  (precache with `--base origin/main`, registry, tests, dedupe, entities, hidden-flex, print-clip, inline-sinks,
+  docs-commands, art, adoption `--check`, lint).
+- **What went wrong.** The first run died because `Roster.idIndex()` and `idFor()` were private to `roster.js`; they are
+  exported now. axe caught two contrast failures in the new pieces before commit: 010's tag on a dimmed `.excluded`
+  row (a hub absence is now struck through but not dimmed) and a dimmed no-call label (no longer dimmed).
+- **Found, not fixed.** 022's `.absent-hint` line above its groups fails colour contrast under axe in light theme; it
+  predates this change and the site-wide sweep does not see it because it appears only after a shuffle.
+- **Not verified.** Firefox and Safari, a real phone driving 010's remote, the `file://` offline copy, a full `npm test`.
+
 ## Path 3 P5 increment 1: flags on the shared student record; 006 sets them, 007 honours them (2026-10-21, AI-15, `CACHE_VERSION` v305)
 
 BACKLOG rank 3 kept and rewritten to what is left (002 and 022's groups, 010's readout; the accommodation note waits
