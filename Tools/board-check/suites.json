@@ -239,6 +239,7 @@
     "Tools/roster/test/roster.test.mjs",
     "Tools/roster/test/student-flags.test.mjs",
     "Tools/roster/test/smoke-student-flags.mjs",
+    "Tools/roster/test/smoke-flag-adopters.mjs",
     "Tools/roster/test/smoke-picker-rollout.mjs",
     "Tools/roster/test/smoke-rename-follow.mjs",
     "Tools/share/test/qr-draw.test.mjs",

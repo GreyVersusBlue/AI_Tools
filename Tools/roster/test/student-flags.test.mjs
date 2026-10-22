@@ -131,6 +131,18 @@ function checks(F) {
   eq(F.counts(d, T), { absent: 1, noCall: 2, students: 2 }, 'counts over the document');
   eq(F.counts(d, T, ['a6', 'a6', 'a4', 'zz']), { absent: 0, noCall: 1, students: 1 }, 'counts among ids, a repeat once');
 
+  // byName: a page's own names, through its id lookup.
+  const idOf = n => ({ 'Ann': 'a', 'Ben': 'b', 'Cal': 'c', 'Dee': 'd' })[n] || null;
+  const bdoc = { version: 1, flags: { a: { absent: T }, b: { noCall: true }, c: { absent: T, noCall: true }, d: { absent: Y } } };
+  eq(F.byName(bdoc, ['Dee', 'Cal', 'Ben', 'Ann', 'Zed'], idOf, T), { absent: ['Cal', 'Ann'], noCall: ['Ben'] },
+    'byName: absent today and no-call, in the page\'s order; both is absent; yesterday and no id are nothing');
+  eq(F.byName(bdoc, ['Ann', 'Ann'], idOf, T), { absent: ['Ann'], noCall: [] }, 'byName lists a repeated name once');
+  eq(F.byName(bdoc, ['Ann'], () => { throw new Error('x'); }, T), { absent: [], noCall: [] }, 'byName: a lookup that throws is no id');
+  eq(F.byName(bdoc, ['Ann'], () => 'x'.repeat(65), T), { absent: [], noCall: [] }, 'byName: a bad id is no id');
+  eq(F.byName(null, ['Ann'], idOf, T), { absent: [], noCall: [] }, 'byName of no document');
+  eq(F.byName(bdoc, 'Ann', idOf, T), { absent: [], noCall: [] }, 'byName of a non-list');
+  eq(F.byName(JSON.stringify(bdoc), ['Ann'], idOf, T), { absent: ['Ann'], noCall: [] }, 'byName reads stored text');
+
   // labels.
   eq(F.labels({ absent: true, noCall: true }), ['Absent today', 'Do not cold call'], 'labels');
   eq(F.labels({ noCall: true }, 'short'), ['No cold call'], 'short labels');
@@ -162,6 +174,10 @@ const MUTANTS = [
   ['cap not enforced on set', "if (!own(next.flags, id) && Object.keys(next.flags).length >= MAX_ENTRIES) return next;", ""],
   ['ids too long accepted', "id.length <= MAX_ID", "true"],
   ['counts counts repeats', "if (!goodId(id) || seen[id]) return;", "if (!goodId(id)) return;"],
+  ['byName: absent on any day', "if (f.absent) out.absent.push(n);", "if (doc && d.flags[id] && d.flags[id].absent) out.absent.push(n);"],
+  ['byName: both listed twice', "else if (f.noCall) out.noCall.push(n);", "if (f.noCall) out.noCall.push(n);"],
+  ['byName: repeats listed', "if (typeof n !== 'string' || own(seen, n)) return;", "if (typeof n !== 'string') return;"],
+  ['byName: a throwing lookup throws', "try { id = idOf(n); } catch (e) { id = null; }", "id = idOf(n);"],
 ];
 
 let failed = 0;

@@ -135,6 +135,10 @@
   .absent-item { display: inline-flex; align-items: center; gap: 0.35rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.55rem; font-size: 0.78rem; color: var(--text); cursor: pointer; user-select: none; }
   .absent-item input { accent-color: var(--accent); cursor: pointer; }
   .absent-item.is-absent { opacity: 0.55; text-decoration: line-through; border-color: var(--danger); }
+  .absent-item.from-hub { cursor: default; }
+  .absent-item.from-hub input { cursor: default; }
+  .hub-flag-note { margin: 0.5rem 0 0; font-size: 0.78rem; color: var(--text); }
+  .hub-flag-note[hidden] { display: none; }
 
   .explain-box { font-size: 0.78rem; padding: 0.6rem 0.75rem; border-radius: 6px; margin-bottom: 0.85rem; background: rgba(108, 142, 245, 0.08); color: var(--text); border: 1px solid rgba(108, 142, 245, 0.28); line-height: 1.5; }
   .explain-box ul { margin: 0.4rem 0 0 1.1rem; }
@@ -245,6 +249,7 @@
 <script src="../_shared/handoffs.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/student-flags.js"></script>
 <script src="group-team-generator/gtg-memory.js"></script>
 </head>
 <body>
@@ -280,6 +285,7 @@
       <div class="control-group" id="absent-wrap" style="display:none;">
         <label>Mark absent today <span style="font-weight:400;">(excluded from grouping only — stays on the roster)</span></label>
         <div class="absent-list" id="absent-list"></div>
+        <p class="hub-flag-note" id="hub-flag-note" role="status" hidden></p>
       </div>
     </div>
 
@@ -443,6 +449,7 @@
     nameCount: document.getElementById('name-count'),
     absentWrap: document.getElementById('absent-wrap'),
     absentList: document.getElementById('absent-list'),
+    hubFlagNote: document.getElementById('hub-flag-note'),
     splitValueLabel: document.getElementById('split-value-label'),
     splitValue: document.getElementById('split-value'),
     splitLockHint: document.getElementById('split-lock-hint'),
@@ -837,9 +844,8 @@
       students.forEach(function (s) { currentNames[s.name] = true; });
       state.absentNames = state.absentNames.filter(function (n) { return currentNames[n]; });
     }
-    var absentCount = students.length - getActiveStudents().length;
-    els.nameCount.textContent = students.length + ' name' + (students.length === 1 ? '' : 's') +
-      (absentCount ? ' · ' + absentCount + ' absent today' : '');
+    refreshHubFlags();
+    renderNameCount();
     syncStrategyAvailability();
     renderAbsentList();
     els.generateBtn.disabled = getActiveStudents().length < 2;
@@ -848,12 +854,54 @@
   }
 
   els.namesInput.addEventListener('input', onNamesChanged);
+  /* A flag pressed in Class Roster Hub in another tab (or a roster's ids
+     changing there) reaches the absent list without a reload. Groups already
+     on the page stay as they are; the next Generate leaves the student out. */
+  window.addEventListener('storage', function (e) {
+    if (e.key !== null && e.key !== 'crh_flags_v1' && e.key !== 'crh_students_v1') return;
+    if (!state) return;
+    refreshHubFlags();
+    renderNameCount();
+    renderAbsentList();
+    els.generateBtn.disabled = getActiveStudents().length < 2;
+  });
 
   // ── Excluding absent students without touching the roster text ──────────
+  /* Class Roster Hub's "absent today" (Path 3 P5, _shared/student-flags.js):
+     a student marked there is out of today's groups as if ticked below, and
+     the box shows it checked and locked. Matched by the student's id through
+     _shared/roster.js's roster-first lookup, so a name typed here that is on no
+     roster has no flags. Read only, and never copied into absentNames: that
+     list is saved with the config and travels in a share link, and a flag
+     does neither. "Do not cold call" does not change a group. */
+  var hubAbsent = {};
+  function refreshHubFlags() {
+    hubAbsent = {};
+    if (!window.StudentFlags || !students.length) return;
+    var doc = null;
+    try { doc = StudentFlags.read(window.localStorage); } catch (e) { return; }
+    var index = Roster.idIndex();
+    var rosterName = state && state.rosterName || '';
+    StudentFlags.byName(doc, students.map(function (s) { return s.name; }), function (n) {
+      return Roster.idFor(index, n, rosterName);
+    }).absent.forEach(function (n) { hubAbsent[n] = true; });
+  }
   function getActiveStudents() {
     var absentSet = {};
     (state && state.absentNames || []).forEach(function (n) { absentSet[n] = true; });
-    return students.filter(function (s) { return !absentSet[s.name]; });
+    return students.filter(function (s) { return !absentSet[s.name] && !hubAbsent[s.name]; });
+  }
+  function renderNameCount() {
+    var absentCount = students.length - getActiveStudents().length;
+    els.nameCount.textContent = students.length + ' name' + (students.length === 1 ? '' : 's') +
+      (absentCount ? ' · ' + absentCount + ' absent today' : '');
+  }
+  function renderHubFlagNote() {
+    var out = students.filter(function (s) { return hubAbsent[s.name]; }).map(function (s) { return s.name; });
+    els.hubFlagNote.textContent = out.length
+      ? 'Absent today in Class Roster Hub, so left out of the groups: ' + out.join(', ') + '. Change it in Class Roster Hub.'
+      : '';
+    els.hubFlagNote.hidden = !out.length;
   }
 
   function renderAbsentList() {
@@ -866,10 +914,14 @@
     var absentSet = {};
     (state && state.absentNames || []).forEach(function (n) { absentSet[n] = true; });
     els.absentList.innerHTML = students.map(function (s) {
-      var isAbsent = !!absentSet[s.name];
-      return '<label class="absent-item' + (isAbsent ? ' is-absent' : '') + '"><input type="checkbox" data-absent="' +
-        escapeAttr(s.name) + '"' + (isAbsent ? ' checked' : '') + '>' + escapeHtml(s.name) + '</label>';
+      var fromHub = !!hubAbsent[s.name];
+      var isAbsent = fromHub || !!absentSet[s.name];
+      return '<label class="absent-item' + (isAbsent ? ' is-absent' : '') + (fromHub ? ' from-hub' : '') + '"' +
+        (fromHub ? ' title="Marked absent today in Class Roster Hub"' : '') + '><input type="checkbox" data-absent="' +
+        escapeAttr(s.name) + '"' + (isAbsent ? ' checked' : '') + (fromHub ? ' disabled' : '') + '>' + escapeHtml(s.name) +
+        (fromHub ? ' (Roster Hub)' : '') + '</label>';
     }).join('');
+    renderHubFlagNote();
   }
 
   els.absentList.addEventListener('change', function (e) {
@@ -881,9 +933,7 @@
     if (cb.checked) { if (idx === -1) state.absentNames.push(name); }
     else if (idx !== -1) { state.absentNames.splice(idx, 1); }
     cb.closest('.absent-item').classList.toggle('is-absent', cb.checked);
-    var absentCount = students.length - getActiveStudents().length;
-    els.nameCount.textContent = students.length + ' name' + (students.length === 1 ? '' : 's') +
-      (absentCount ? ' · ' + absentCount + ' absent today' : '');
+    renderNameCount();
     els.generateBtn.disabled = getActiveStudents().length < 2;
     clearTransientGroupState();
     saveCurrentConfig();

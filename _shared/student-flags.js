@@ -11,7 +11,10 @@
      noCall   "Do not cold call". Stored as true; stays until it is cleared.
    A tool that honours them: 007 Name Picker leaves an absent student off the
    board and leaves a do-not-cold-call student on it, dimmed and labelled,
-   where no pick can land. Both are a teacher's own marks on their own
+   where no pick can land. 002 Group / Team Generator and 022 Lab Group & Role
+   Randomizer leave an absent student out of the groups they make (no-call
+   does not change a group), and 010 Command Center's Quick Call shows both
+   and picks neither; those three find the names with byName(). Both are a teacher's own marks on their own
    computer. There is no free-text note here on purpose: an accommodation
    note is the most sensitive thing this site could hold, and what it may say
    is a question for Devon (BACKLOG, Path 3 P5).
@@ -185,6 +188,32 @@
     return out;
   }
 
+  /**
+   * Which of `names` (a page's own list, in its order) are flagged on `today`,
+   * found through `idOf(name)` (the page's roster-first id lookup:
+   * Roster.idIndex()/idFor() in a classic script, student-details.js's
+   * lookupId in a module). A name with no id has no flags. Returns
+   * { absent: [names], noCall: [names] }; a student both absent and no-call is
+   * listed under absent only, since absent already keeps them out.
+   */
+  function byName(doc, names, idOf, today) {
+    var out = { absent: [], noCall: [] };
+    if (!Array.isArray(names) || typeof idOf !== 'function') return out;
+    var d = parse(doc), t = today || dayKey(), seen = {};
+    if (!Object.keys(d.flags).length) return out;
+    names.forEach(function (n) {
+      if (typeof n !== 'string' || own(seen, n)) return;
+      seen[n] = true;
+      var id = null;
+      try { id = idOf(n); } catch (e) { id = null; }
+      if (!goodId(id)) return;
+      var f = get(d, id, t);
+      if (f.absent) out.absent.push(n);
+      else if (f.noCall) out.noCall.push(n);
+    });
+    return out;
+  }
+
   /** The words a page shows for the flags that hold, in KINDS order. */
   function labels(flags, which) {
     var key = which === 'short' ? 'short' : 'label';
@@ -205,6 +234,7 @@
     set: set,
     prune: prune,
     counts: counts,
+    byName: byName,
     labels: labels
   };
 })(typeof window !== 'undefined' ? window : globalThis);

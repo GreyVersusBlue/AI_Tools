@@ -28,6 +28,7 @@
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/student-flags.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -156,6 +157,11 @@
   .roster-list li { padding: .35rem .1rem; border-bottom: 1px dashed var(--line); font-size: .86rem; display: flex; justify-content: space-between; }
   .roster-list li.picked { color: var(--muted); text-decoration: line-through; }
   .roster-list li.excluded { opacity: .5; text-decoration: line-through; }
+  /* A hub absence is struck through but not dimmed: at .excluded's opacity the
+     small tag beside it went under 4.5:1. */
+  .roster-list li.excluded.hub-out { opacity: 1; }
+  .roster-list li .hub-tag { font-size: .74rem; font-style: italic; }
+  .roster-flag-note { margin: .5rem 0 0; font-size: .82rem; }
   .roster-count { font-size: .78rem; color: var(--muted); margin: .5rem 0 0; }
   .exclude-toggle { display: flex; align-items: center; gap: .4rem; cursor: pointer; }
   .exclude-toggle input { margin: 0; }
@@ -251,7 +257,7 @@
   body.projector .now-clock { font-size: clamp(2.4rem, 7vw, 4.5rem); }
   body.projector .now-period { font-size: clamp(1.4rem, 3.6vw, 2.4rem); }
   body.projector .card-title a, body.projector .card-title button { display: none; }
-  body.projector .hint, body.projector .roster-list, body.projector .period-row:not(.current) { display: none; }
+  body.projector .hint, body.projector .roster-list, body.projector .roster-flag-note, body.projector .period-row:not(.current) { display: none; }
   body.projector .seating-pick { display: none; }
   body.projector .seat-map { max-height: 76vh; }
   body.projector .seat-foot { font-size: 1rem; }
@@ -860,6 +866,7 @@
       '<div class="btn-row" style="justify-content:center;"><button type="button" id="pickBtn" disabled>Pick a student</button>' +
       '<button type="button" class="secondary" id="resetPicksBtn" disabled>Reset turns</button></div>' +
       '<div class="roster-count" id="rosterCount"></div>' +
+      '<p class="roster-flag-note" id="rosterFlagNote" role="status" hidden></p>' +
       '<ul class="roster-list" id="rosterList"></ul>';
 
     var select = el.querySelector('#rosterSelect');
@@ -904,8 +911,30 @@
     renderRosterList(el);
   }
 
+  /* Class Roster Hub's flags (Path 3 P5, _shared/student-flags.js), read
+     fresh each time the list is drawn or a student picked: an "absent today"
+     student is listed as absent and never picked, as if ticked out here, and
+     a "do not cold call" student stays listed, labelled, and is never picked,
+     as on 007. The names are not shown on the projector, where the list is
+     hidden too. Matched by id through _shared/roster.js's roster-first lookup.
+     Read only: they are changed in Class Roster Hub. */
+  function hubFlags() {
+    var none = { absent: {}, noCall: {} };
+    if (!window.StudentFlags || !currentRoster.length) return none;
+    var doc = null;
+    try { doc = StudentFlags.read(window.localStorage); } catch (e) { return none; }
+    var index = Roster.idIndex();
+    var found = StudentFlags.byName(doc, currentRoster, function (n) {
+      return Roster.idFor(index, n, settings.rosterName || '');
+    });
+    found.absent.forEach(function (n) { none.absent[n] = true; });
+    found.noCall.forEach(function (n) { none.noCall[n] = true; });
+    return none;
+  }
+
   function pickStudent(el) {
-    var pool = currentRoster.filter(function (n) { return !excludedSet[n]; });
+    var hub = hubFlags();
+    var pool = currentRoster.filter(function (n) { return !excludedSet[n] && !hub.absent[n] && !hub.noCall[n]; });
     if (!pool.length) { el.querySelector('#pickedName').textContent = '—'; return; }
     var remaining = pool.filter(function (n) { return !pickedSet[n]; });
     if (!remaining.length) { pickedSet = {}; remaining = pool.slice(); }
@@ -919,18 +948,31 @@
   function renderRosterList(el) {
     var listEl = el.querySelector('#rosterList');
     var countEl = el.querySelector('#rosterCount');
-    if (!currentRoster.length) { listEl.innerHTML = ''; countEl.textContent = ''; return; }
+    var noteEl = el.querySelector('#rosterFlagNote');
+    if (!currentRoster.length) { listEl.innerHTML = ''; countEl.textContent = ''; noteEl.hidden = true; noteEl.textContent = ''; return; }
+    var hub = hubFlags();
     listEl.innerHTML = currentRoster.map(function (n) {
-      var isExcluded = !!excludedSet[n];
-      var cls = (pickedSet[n] ? 'picked ' : '') + (isExcluded ? 'excluded' : '');
+      var hubOut = !!hub.absent[n], noCall = !!hub.noCall[n];
+      var isExcluded = hubOut || !!excludedSet[n];
+      var cls = (pickedSet[n] ? 'picked ' : '') + (isExcluded ? 'excluded' : '') + (hubOut ? ' hub-out' : '') + (noCall ? ' nocall' : '');
       return '<li class="' + cls + '">' +
-        '<label class="exclude-toggle"><input type="checkbox" data-name="' + escapeHtml(n) + '"' + (isExcluded ? ' checked' : '') + '> ' + escapeHtml(n) + '</label>' +
+        '<label class="exclude-toggle"' + (hubOut ? ' title="Marked absent today in Class Roster Hub"' : '') + '><input type="checkbox" data-name="' + escapeHtml(n) + '"' +
+        (isExcluded ? ' checked' : '') + (hubOut ? ' disabled' : '') + '> ' + escapeHtml(n) + '</label>' +
+        (hubOut ? '<span class="hub-tag">absent (Roster Hub)</span>' : noCall ? '<span class="hub-tag">no cold call</span>' : '') +
         (pickedSet[n] ? '<span>done</span>' : '') + '</li>';
     }).join('');
     var picked = Object.keys(pickedSet).length;
-    var excludedCount = Object.keys(excludedSet).length;
+    var hubAbsent = Object.keys(hub.absent), hubNoCall = Object.keys(hub.noCall);
+    var excludedCount = Object.keys(excludedSet).filter(function (n) { return !hub.absent[n]; }).length;
     countEl.textContent = picked + ' of ' + currentRoster.length + ' picked this round' +
-      (excludedCount ? ' · ' + excludedCount + ' excluded today' : '');
+      (hubAbsent.length ? ' · ' + hubAbsent.length + ' absent today' : '') +
+      (excludedCount ? ' · ' + excludedCount + ' excluded today' : '') +
+      (hubNoCall.length ? ' · ' + hubNoCall.length + ' not cold called' : '');
+    var parts = [];
+    if (hubAbsent.length) parts.push('absent today: ' + hubAbsent.join(', '));
+    if (hubNoCall.length) parts.push('not cold called: ' + hubNoCall.join(', '));
+    noteEl.textContent = parts.length ? 'From Class Roster Hub, ' + parts.join('; ') + '. Quick Call picks none of them.' : '';
+    noteEl.hidden = !parts.length;
   }
 
   PANELS.roster = {
@@ -1633,6 +1675,7 @@
   window.addEventListener('storage', function (e) {
     if (e.key === HALLPASS_STORAGE_KEY && mounted.hallpass) buildHallPassPanel(mounted.hallpass);
     if (e.key === SEATING_KEY && mounted.seating) buildSeatingPanel(mounted.seating);
+    if ((e.key === 'crh_flags_v1' || e.key === 'crh_students_v1' || e.key === null) && mounted.roster) renderRosterList(mounted.roster);
   });
   /* Roster.onChange covers the same-tab write the storage event never fires
      for, which is why the roster line moved out of the listener above. */

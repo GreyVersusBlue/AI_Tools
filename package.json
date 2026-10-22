@@ -168,6 +168,7 @@
     "test:roster": "node Tools/roster/test/roster.test.mjs",
     "test:student-flags": "node Tools/roster/test/student-flags.test.mjs",
     "test:student-flags-smoke": "node Tools/roster/test/smoke-student-flags.mjs",
+    "test:flag-adopters": "node Tools/roster/test/smoke-flag-adopters.mjs",
     "test:picker-rollout": "node Tools/roster/test/smoke-picker-rollout.mjs",
     "test:rename-follow": "node Tools/roster/test/smoke-rename-follow.mjs",
     "test:share": "node Tools/share/test/qr-draw.test.mjs && node Tools/share/test/share.test.mjs && node Tools/share/test/handoffs.test.mjs && node Tools/share/test/trivia-bank-file.test.mjs",
