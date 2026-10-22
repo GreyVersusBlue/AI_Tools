@@ -26,6 +26,7 @@
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/a11y.css">
 <script src="../_shared/store.js"></script>
+<script src="../_shared/student-flags.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/qr-draw.js"></script>
@@ -345,8 +346,13 @@ body.sudden-death{animation:bgPulseChaos 0.6s ease-in-out infinite;}
 .absent-control{display:flex;align-items:center;gap:5px;font-size:0.74em;}
 .absent-control input{width:16px;height:16px;accent-color:#dc2626;cursor:pointer;margin:0;}
 .absent-control label{color:var(--muted);cursor:pointer;user-select:none;font-weight:600;}
-.stats-item.is-absent{opacity:0.55;}
+/* Not dimmed with opacity: that took the OUT badge under 4.5:1. The grey bar and the badge say it. */
+.stats-item.is-absent .stat-bar{opacity:0.5;}
 .stats-item.is-absent .stat-bar-fill{background:#666 !important;}
+.name-card.nocall-card,.tournament-tile.nocall-card{opacity:0.45;border-style:dashed;cursor:default;}
+.name-card .nocall-tag,.tournament-tile .nocall-tag{display:block;font-size:0.45em;letter-spacing:1px;font-family:'Bungee',sans-serif;opacity:0.9;}
+.nocall-badge{background:var(--name-bg);color:var(--name-text);border:1px dashed currentColor;font-size:0.62em;padding:1px 6px;border-radius:4px;font-family:'Bungee',sans-serif;letter-spacing:1px;margin-left:4px;}
+#rosterFlagNotice[hidden]{display:none;}
 .absent-badge{background:#dc2626;color:#fff;font-size:0.62em;padding:2px 7px;border-radius:4px;font-family:'Bungee',sans-serif;letter-spacing:1px;margin-left:4px;}
 
 /* === ACHIEVEMENT TOAST === */
@@ -524,6 +530,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
     <button data-tab="data">🔒 Data</button>
   </div>
   <div class="tab-content active" id="tab-names">
+    <div class="notice-banner" id="rosterFlagNotice" role="status" hidden></div>
     <div class="info-banner">Type one name per line, then click "Load Names"</div>
     <textarea id="namesInput" placeholder="Aiden Smith&#10;Brooklyn Jones&#10;Charlie Patel&#10;..."></textarea>
     <div class="button-row">
@@ -722,7 +729,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
 import { createStore, OPTION_DEFAULTS } from './name-picker/np-store.js';
 import { freshRotation, pickOne, pickMany, shuffle, makeGroups as splitGroups, leastPicked, fairnessWeights } from './name-picker/np-pick.js';
 import { report as equityReport, summaryLine as equitySummaryLine, dayKey } from './name-picker/np-equity.js';
-import { loadDetails, lookupDetail, displayName } from './name-picker/np-details.js';
+import { loadDetails, lookupDetail, displayName, loadIds, lookupId } from './name-picker/np-details.js';
 import { loadSeatingState, seatEquityReport, seatSummaryLine } from './name-picker/np-seat-equity.js';
 
 /* _shared/store.js is linked in the head but nothing on this page calls it
@@ -750,6 +757,8 @@ let draftTeams=[],draftTurnIndex=0,draftStarted=false,draftTeamCount=2;
 const reduceMotionQuery=(window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):{matches:false});
 let currentRosterName='';
 let rosterDetails={rosters:{},order:[]};
+let rosterIds={rosters:{},order:[]};
+let rosterFlagDoc=null;
 let lastPickUndo=null;
 let staleAbsent=null;
 let equityWindowDays=14;
@@ -763,9 +772,38 @@ function motionOff(){return !!reduceMotionQuery.matches||!!opts.calm;}
    the localStorage property itself throws in a browser configured to block
    storage, which is why even getting hold of it is wrapped. */
 function safeLocalStorage(){try{return window.localStorage;}catch(e){return null;}}
-function refreshRosterDetails(){rosterDetails=loadDetails(safeLocalStorage());}
+function refreshRosterDetails(){const ls=safeLocalStorage();rosterDetails=loadDetails(ls);rosterIds=loadIds(ls);rosterFlagDoc=window.StudentFlags?window.StudentFlags.read(ls):null;}
 function detailFor(name){return lookupDetail(rosterDetails,name,currentRosterName);}
 function todayKey(){return dayKey(new Date());}
+
+/* Class Roster Hub's flags (Path 3 P5, _shared/student-flags.js): a student
+   marked "absent today" there is off the board here, as if ticked absent on the
+   Stats tab, and a "do not cold call" student stays on the board, dimmed and
+   labelled, where no pick of any mode can land. Matched by the student's id in
+   crh_students_v1, looked up by name with the same roster-first fallback as
+   the preferred names. Read only: they are set and cleared in Class Roster Hub,
+   and the Stats tab says so beside each one. */
+const NO_FLAGS={absent:false,noCall:false};
+function rosterFlags(name){
+  if(!rosterFlagDoc||!window.StudentFlags)return NO_FLAGS;
+  const id=lookupId(rosterIds,name,currentRosterName);
+  return id?window.StudentFlags.get(rosterFlagDoc,id,todayKey()):NO_FLAGS;
+}
+function isAbsent(n){return absentSet.has(n)||rosterFlags(n).absent;}
+function isNoCall(n){return !isAbsent(n)&&rosterFlags(n).noCall;}
+function isSkipped(n){return isAbsent(n)||rosterFlags(n).noCall;}
+function renderRosterFlagNotice(){
+  const box=document.getElementById('rosterFlagNotice');
+  if(!box)return;
+  const out=[],noCall=[];
+  names.forEach(n=>{const f=rosterFlags(n);if(f.absent)out.push(n);else if(f.noCall)noCall.push(n);});
+  if(!out.length&&!noCall.length){box.hidden=true;box.textContent='';return;}
+  const parts=[];
+  if(out.length)parts.push('absent today: '+out.join(', '));
+  if(noCall.length)parts.push('not cold called: '+noCall.join(', '));
+  box.textContent='Flags from Class Roster Hub skip '+(out.length+noCall.length)+' student'+(out.length+noCall.length===1?'':'s')+' — '+parts.join('; ')+'. Change them in Class Roster Hub.';
+  box.hidden=false;
+}
 const KONAMI=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
 
 const themes={
@@ -820,7 +858,7 @@ function scatterNames(){
   board.querySelectorAll('.draft-board').forEach(el=>el.remove());
   nameCards=[];
   const emptyState=document.getElementById('emptyState');
-  const visibleNames=names.filter(n=>!absentSet.has(n));
+  const visibleNames=names.filter(n=>!isAbsent(n));
   if(visibleNames.length===0){if(emptyState){emptyState.style.display=names.length===0?'':'none';if(names.length>0&&!board.querySelector('.all-absent-msg')){const msg=document.createElement('div');msg.className='all-absent-msg';msg.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:40px;font-family:Bungee,sans-serif;color:var(--accent2);font-size:1.5em;';msg.textContent='🚫 All students marked absent';board.appendChild(msg);}}updateCountDisplay();return;}
   board.querySelectorAll('.all-absent-msg').forEach(el=>el.remove());
   if(emptyState)emptyState.style.display='none';
@@ -835,6 +873,8 @@ function scatterNames(){
     card.className='name-card';
     if(luckyStudent===name)card.classList.add('lucky-card');
     card.textContent=name;
+    const noCall=isNoCall(name);
+    if(noCall){card.classList.add('nocall-card');const tag=document.createElement('span');tag.className='nocall-tag';tag.textContent='no cold call';card.appendChild(tag);}
     card.style.fontSize=fontSize+'em';
     card.style.animationDelay=(Math.random()*-3)+'s';
     card.style.visibility='hidden';
@@ -862,18 +902,23 @@ function scatterNames(){
     card.style.top=y+'px';
     card.style.visibility='visible';
     placed.push({x,y,w,h});
-    nameCards.push({name,el:card,active:true});
+    nameCards.push({name,el:card,active:!noCall});
   });
   updateCountDisplay();
 }
 
 function updateCountDisplay(){
   const total=names.length;
-  const active=names.filter(n=>!absentSet.has(n)).length;
-  const absent=total-active;
+  const active=names.filter(n=>!isSkipped(n)).length;
+  const absent=names.filter(n=>isAbsent(n)).length;
+  const noCall=names.filter(n=>isNoCall(n)).length;
   const el=document.getElementById('countDisplay');
+  renderRosterFlagNotice();
   if(!total){el.textContent='';return;}
-  el.textContent=absent>0?`${active} active (${absent} absent) / ${total} total`:`${active} name${active===1?'':'s'} in pool`;
+  const out=[];
+  if(absent)out.push(`${absent} absent`);
+  if(noCall)out.push(`${noCall} not cold called`);
+  el.textContent=out.length?`${active} active (${out.join(', ')}) / ${total} total`:`${active} name${active===1?'':'s'} in pool`;
 }
 
 function shake(intensity=1){
@@ -1118,8 +1163,8 @@ function chooseWinner(cards){
 function pickName(){
   if(isRolling||names.length===0)return;
   if(mode==='draft')return;
-  const activeNames=names.filter(n=>!absentSet.has(n));
-  if(activeNames.length===0){alert('All students are marked absent. Toggle some back as present in the Stats tab.');return;}
+  const activeNames=names.filter(n=>!isSkipped(n));
+  if(activeNames.length===0){alert(names.some(n=>isNoCall(n))?'Every student is marked absent or not to be cold called. Absences can be toggled on the Stats tab; Class Roster Hub flags are changed there.':'All students are marked absent. Toggle some back as present in the Stats tab.');return;}
   const multi=parseInt(document.getElementById('multiPickCount').value,10)||1;
   if(multi>1){multiPick(multi);return;}
   if(tournamentMode){tournamentPick();return;}
@@ -1233,14 +1278,14 @@ async function slotPick(){
 
 async function multiPick(count){
   isRolling=true;setRollingState(true);
-  const activeNames=nameCards.filter(c=>c.active).map(c=>c.name).filter(n=>!absentSet.has(n));
+  const activeNames=nameCards.filter(c=>c.active).map(c=>c.name).filter(n=>!isSkipped(n));
   /* Draws through the same rotation, so picking four partners spends four turns
      rather than sidestepping the round. */
   const drawn=pickMany(rotation,activeNames,count,{fair:opts.fair,weights:drawWeights(activeNames)});
   rotation=drawn.state;
   const winners=drawn.names;
   if(!winners.length){finishRolling();return;}
-  const activeCards=nameCards.filter(c=>c.active&&!absentSet.has(c.name));
+  const activeCards=nameCards.filter(c=>c.active&&!isSkipped(c.name));
   const sweepCount=Math.min(18,Math.floor(20/(speed/100))+8);
   for(let i=0;i<sweepCount;i++){
     activeCards.forEach(c=>c.el.classList.remove('highlighted'));
@@ -1402,7 +1447,7 @@ function incrementStats(name){statsCache[name]=(statsCache[name]||0)+1;saveStats
 function updateStatsUI(){
   const list=document.getElementById('statsList');
   if(!names.length){list.innerHTML='<p class="muted-text">Load a roster to see pick counts.</p>';return;}
-  const rows=names.map(n=>({name:n,count:statsCache[n]||0,absent:absentSet.has(n)}));
+  const rows=names.map(n=>{const f=rosterFlags(n);return {name:n,count:statsCache[n]||0,absent:isAbsent(n),hubAbsent:f.absent,noCall:!isAbsent(n)&&f.noCall};});
   if(currentStatsSort==='most')rows.sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name));
   else if(currentStatsSort==='least')rows.sort((a,b)=>a.count-b.count||a.name.localeCompare(b.name));
   else rows.sort((a,b)=>a.name.localeCompare(b.name));
@@ -1411,7 +1456,7 @@ function updateStatsUI(){
     const pct=(r.count/maxCount)*100;
     const safeName=escapeHtml(r.name);
     const id='absent_'+btoa(unescape(encodeURIComponent(r.name))).replace(/[^a-zA-Z0-9]/g,'');
-    return `<div class="stats-item${r.absent?' is-absent':''}"><span style="min-width:90px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:5px;">${safeName}${r.absent?'<span class="absent-badge">OUT</span>':''}</span><div class="stat-bar"><div class="stat-bar-fill" style="width:${pct}%"></div></div><span class="stat-count">${r.count}</span><span class="absent-control"><input type="checkbox" id="${id}" data-absent-name="${safeName}" ${r.absent?'checked':''}><label for="${id}">Absent</label></span></div>`;
+    return `<div class="stats-item${r.absent?' is-absent':''}"><span style="min-width:90px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:5px;">${safeName}${r.absent?'<span class="absent-badge">OUT</span>':''}${r.noCall?'<span class="nocall-badge" title="Do not cold call (Class Roster Hub)">NO CALL</span>':''}</span><div class="stat-bar"><div class="stat-bar-fill" style="width:${pct}%"></div></div><span class="stat-count">${r.count}</span><span class="absent-control"><input type="checkbox" id="${id}" data-absent-name="${safeName}" ${r.absent?'checked':''}${r.hubAbsent?' disabled title="Marked absent today in Class Roster Hub"':''}><label for="${id}">${r.hubAbsent?'Absent (Roster Hub)':'Absent'}</label></span></div>`;
   }).join('');
   list.querySelectorAll('input[data-absent-name]').forEach(cb=>{
     cb.addEventListener('change',()=>toggleAbsent(cb.dataset.absentName,cb.checked));
@@ -1947,18 +1992,19 @@ function renderTournamentGrid(){
   names.forEach((name,idx)=>{
     const tile=document.createElement('div');
     tile.className='tournament-tile';
-    if(absentSet.has(name))tile.classList.add('absent-tile');
+    if(isAbsent(name))tile.classList.add('absent-tile');
     if(luckyStudent===name)tile.classList.add('lucky-card');
     tile.innerHTML=`<span class="tile-num">#${idx+1}</span>${escapeHtml(name)}`;
+    if(isNoCall(name)){tile.classList.add('nocall-card');const tag=document.createElement('span');tag.className='nocall-tag';tag.textContent='no cold call';tile.appendChild(tag);}
     grid.appendChild(tile);
-    nameCards.push({name,el:tile,active:!absentSet.has(name)});
+    nameCards.push({name,el:tile,active:!isSkipped(name)});
   });
   board.appendChild(grid);
   updateCountDisplay();
 }
 async function tournamentPick(){
   isRolling=true;setRollingState(true);
-  const activeCards=nameCards.filter(c=>c.active&&!absentSet.has(c.name));
+  const activeCards=nameCards.filter(c=>c.active&&!isSkipped(c.name));
   if(activeCards.length===0){finishRolling();return;}
   const winnerCard=chooseWinner(activeCards);
   if(!winnerCard){finishRolling();return;}
@@ -2033,7 +2079,7 @@ function selectTournamentWinner(winnerCard){
    ===================================================================== */
 function draftRemaining(){
   const picked=new Set(draftTeams.flatMap(t=>t.picks));
-  return names.filter(n=>!picked.has(n)&&!absentSet.has(n));
+  return names.filter(n=>!picked.has(n)&&!isAbsent(n));
 }
 function resetDraft(){
   draftTeams.forEach(t=>t.picks=[]);
@@ -2095,7 +2141,7 @@ function draftSetupHTML(){
     const existing=(draftTeams[i]&&draftTeams[i].name)||`Team ${i+1}`;
     rows.push(`<input type="text" class="draft-team-name-input" data-team-idx="${i}" value="${escapeHtml(existing)}" maxlength="40">`);
   }
-  const ready=names.filter(n=>!absentSet.has(n)).length>0;
+  const ready=names.filter(n=>!isAbsent(n)).length>0;
   return `<div class="draft-setup">
     <h2>🧑‍🤝‍🧑 TEAM DRAFT</h2>
     <p>Set up teams below, then captains take turns clicking a student on the board to draft them.</p>
@@ -2681,6 +2727,14 @@ document.getElementById('loadDefaults').addEventListener('click',()=>{document.g
 document.getElementById('undoPickBtn').addEventListener('click',undoLastPick);
 document.getElementById('equityWindow').addEventListener('change',(e)=>{equityWindowDays=parseInt(e.target.value,10)||0;renderEquity();});
 document.getElementById('refreshEquity').addEventListener('click',()=>{refreshRosterDetails();renderEquity();});
+/* A flag pressed in Class Roster Hub in another tab reaches this board without a reload. */
+window.addEventListener('storage',e=>{
+  if(e.key!==null&&e.key!=='crh_flags_v1'&&e.key!=='crh_students_v1')return;
+  refreshRosterDetails();
+  if(!isRolling)scatterNames();
+  updateStatsUI();
+  updateCountDisplay();
+});
 document.getElementById('printEquity').addEventListener('click',()=>{
   const rep=currentEquityReport();
   if(!rep.rows.length){alert('Load a roster first — there is nothing to report on.');return;}

@@ -33,12 +33,22 @@
                                    it disagrees with the page's source.
 
    `student` is per key, NOT per tool, and that is deliberate: the Name Picker's
-   np_rosters is student data and its np_theme is not; 010's :excluded: is and
-   its :settings is not. A per-tool boolean cannot express either, and the
+   np_rosters is student data and its np_theme is not; 010's :excluded: list
+   (held in sessionStorage, so in no row here) is and its :settings is not. A
+   per-tool boolean cannot express either, and the
    end-of-year rollover — "keep my rubrics, drop last year's kids" — is exactly
    the question it has to answer. Anything not marked is settings, which is the
    conservative direction: the rollover never deletes a key it was not told
    about.
+
+   `rollover` says what 009's "Start a new school year" does to the key, where
+   that is not the default: a `student` entry is deleted, any other is kept.
+   'reduce' (rewritten to keep its setup and lose the students: the roster
+   shells, the mixed keys and the switchers' lists), 'ask' (free text that may
+   name a student: the teacher chooses Keep or Clear), 'keep' (a student entry
+   left alone, such as a switcher's current name). The rule that does it is in
+   Tools/backup-restore/br-rollover.js's RULES, and registry-shape.test.mjs
+   fails when a mark and a rule disagree. ToolRegistry.rolloverRule(key).
 
    `transient` marks a key that only ever exists for a moment — the write probes
    that ask whether storage works at all. It is real, it is written, and it must
@@ -132,7 +142,17 @@
          again, so an empty declaration costs nothing and a missing one costs a
          teacher their photos. */
       idb: [
-        { name: 'gvb-media', backupByDefault: true, note: 'Images teachers have added — student photos, source documents, logos. Nothing re-downloads these, so they are included in a backup unless you untick them.' },
+        { name: 'gvb-media', backupByDefault: true, note: 'Images teachers have added — student photos, source documents, logos. Nothing re-downloads these, so they are included in a backup unless you untick them.',
+          /* Every namespace a tool keeps in it (MediaDB.store/images({ ns })).
+             `student: true` is cleared by the year rollover, whole: Seating
+             Chart's photos are the only student images on the site.
+             registry-shape.test.mjs fails on a namespace in the tree that is
+             not listed here. ToolRegistry.mediaNamespaces(). */
+          namespaces: [
+            { ns: 'seating', student: true },
+            { ns: 'cam' }, { ns: 'class-screen' }, { ns: 'dbq' }, { ns: 'escape-room' }, { ns: 'fsb' }, { ns: 'htcm' },
+            { ns: 'ppg' }, { ns: 'psa' }, { ns: 'rgb' }, { ns: 'stviz-trace' }, { ns: 'tlb' },
+          ] },
       ],
       /* _shared/roster.js writes both of these on a tool's behalf, so a
          call-site scan now attributes them here rather than to 006. Neither is
@@ -163,10 +183,10 @@
         { k: 'np_lucky', student: true },
         { k: 'np_lucky_enabled' },
         { k: 'np_options' },
-        { k: 'np_prompts' },
+        { k: 'np_prompts', rollover: 'ask' },
         { k: 'np_retro_active' },
         { k: 'np_retro_unlocked' },
-        { k: 'np_rosters', student: true },
+        { k: 'np_rosters', student: true, rollover: 'reduce' },
         { k: 'np_stats', student: true },
         { k: 'np_theme' },
       ],
@@ -183,7 +203,7 @@
          data; a year-end clear that empties this key leaves them as orphans,
          which the tool deletes on its next load. */
       keys: [
-        { k: 'seating-chart-v1', student: true },
+        { k: 'seating-chart-v1', student: true, rollover: 'reduce' },
       ],
       reads: [
         'np_rosters',
@@ -207,12 +227,12 @@
       share: { param: 'groups' },
       keys: [
         { k: 'gtg-settings', student: true },
-        { k: 'gtg:current', student: true },
-        { k: 'gtg:list', student: true },
+        { k: 'gtg:current', student: true, rollover: 'keep' },
+        { k: 'gtg:list', student: true, rollover: 'reduce' },
       ],
       prefixes: [
         { p: 'gtg:', student: true, legacy: true },
-        { p: 'gtg:data:', student: true },
+        { p: 'gtg:data:', student: true, rollover: 'reduce' },
       ],
       reads: [
         'crh_students_v1',
@@ -225,7 +245,7 @@
       file: 'Tools/008-behavior-points-tracker.html',
       category: 'classroom-mgmt',
       keys: [
-        { k: 'behavior-points-tracker-sections', student: true },
+        { k: 'behavior-points-tracker-sections', student: true, rollover: 'reduce' },
       ],
       reads: [
         'crh_students_v1',
@@ -239,7 +259,7 @@
       file: 'Tools/001-hall-pass-log.html',
       category: 'classroom-mgmt',
       keys: [
-        { k: 'hall-pass-log-sections', student: true },
+        { k: 'hall-pass-log-sections', student: true, rollover: 'reduce' },
       ],
       reads: [
         'crh_students_v1',
@@ -253,9 +273,12 @@
       category: 'classroom-mgmt',
       share: { param: 'roster' },
       keys: [
-        { k: 'crh_archive_v1', student: true },
+        { k: 'crh_archive_v1', student: true, rollover: 'reduce' },
         { k: 'crh_archived_students', student: true },
-        { k: 'crh_students_v1', student: true },
+        /* Path 3 P5's flags (absent today, do not cold call) by student id;
+           _shared/student-flags.js. Never shared; deleted whole at rollover. */
+        { k: 'crh_flags_v1', student: true },
+        { k: 'crh_students_v1', student: true, rollover: 'reduce' },
       ],
       /* Still the tool that puts rosters on disk, but it does it through
          _shared/roster.js now, so the scan sees the write on the shared row
@@ -311,7 +334,7 @@
       category: 'classroom-mgmt',
       share: { param: 'duties' },
       keys: [
-        { k: 'drb_roster_v1' },
+        { k: 'drb_roster_v1', rollover: 'reduce' },
       ],
       /* Path 3 P3 wired this tool's "Load from a saved roster" control to
          _shared/roster.js; it reads np_rosters and never writes it. */
@@ -326,10 +349,10 @@
       category: 'classroom-mgmt',
       keys: [
         { k: 'socsem:current' },
-        { k: 'socsem:list' },
+        { k: 'socsem:list', rollover: 'reduce' },
       ],
       prefixes: [
-        { p: 'socsem:data:', student: true },   // a dated seminar: its roster, speaking order and per-student tallies (2026-09-23 audit)
+        { p: 'socsem:data:', student: true, rollover: 'reduce' },   // a dated seminar: its roster, speaking order and per-student tallies (2026-09-23 audit)
       ],
       reads: [
         'np_rosters',
@@ -396,9 +419,9 @@
       category: 'scheduling-subs',
       share: { param: 'plan' },
       keys: [
-        { k: 'subPlanBuilder.history.v1' },
+        { k: 'subPlanBuilder.history.v1', rollover: 'ask' },
         { k: 'subPlanBuilder.lastAbsence.v1' },
-        { k: 'subPlanBuilder.standingDetails.v1' },
+        { k: 'subPlanBuilder.standingDetails.v1', rollover: 'reduce' },
       ],
     },
     {
@@ -408,7 +431,7 @@
       category: 'scheduling-subs',
       keys: [
         { k: 'gvb-sub-binder:included-sections.v1' },
-        { k: 'gvb-sub-binder:today-lesson' },
+        { k: 'gvb-sub-binder:today-lesson', rollover: 'ask' },
       ],
       reads: [
         'behavior-points-tracker-sections',
@@ -438,7 +461,7 @@
       category: 'scheduling-subs',
       share: { param: 'directory' },
       keys: [
-        { k: 'sdb_directory_v1' },
+        { k: 'sdb_directory_v1', rollover: 'reduce' },
         { k: 'sdb_prefs_v1' },
       ],
       /* Path 3 P3 wired this tool's "Load from a saved roster" control to
@@ -486,12 +509,12 @@
       file: 'Tools/037-grade-distribution-visualizer.html',
       category: 'assessment-grading',
       keys: [
-        { k: 'gvb-grade-distribution:current', student: true },
-        { k: 'gvb-grade-distribution:list', student: true },
+        { k: 'gvb-grade-distribution:current', student: true, rollover: 'keep' },
+        { k: 'gvb-grade-distribution:list', student: true, rollover: 'reduce' },
       ],
       prefixes: [
         { p: 'gvb-grade-distribution:', student: true, legacy: true },
-        { p: 'gvb-grade-distribution:data:', student: true },
+        { p: 'gvb-grade-distribution:data:', student: true, rollover: 'reduce' },
       ],
     },
     {
@@ -504,9 +527,13 @@
       share: { param: 'prompts' },
       keys: [
         { k: 'gvb-exit-ticket:activeSet' },
-        { k: 'gvb-exit-ticket:categoryTally' },
+        { k: 'gvb-exit-ticket:categoryTally', rollover: 'reduce' },
         { k: 'gvb-exit-ticket:customPrompts' },
-        { k: 'gvb-exit-ticket:discussion' },
+        /* What students wrote, with no names on it. Devon, 2026-10-07, asked
+           whether that is student data at a new year: "Oh, yeah wipe them".
+           The category tally beside it is unmarked: its categories are setup,
+           and the year rollover's own rule empties only its counts. */
+        { k: 'gvb-exit-ticket:discussion', student: true },
         { k: 'gvb-exit-ticket:sets' },
         { k: 'gvb-exit-ticket:settings' },
         { k: 'gvb-exit-ticket:tally', student: true },
@@ -536,7 +563,7 @@
          of it that has no student in it at all. */
       share: { param: 'accommodations' },
       keys: [
-        { k: 'tacg_cards_v1', student: true },
+        { k: 'tacg_cards_v1', student: true, rollover: 'reduce' },
       ],
       /* Path 3 P3 wired this tool's "Load from a saved roster" control to
          _shared/roster.js; it reads np_rosters and never writes it. */
@@ -551,12 +578,12 @@
       category: 'games-rewards',
       share: { param: 'bracket' },
       keys: [
-        { k: 'gvb-bracket:current', student: true },
-        { k: 'gvb-bracket:list', student: true },
+        { k: 'gvb-bracket:current', student: true, rollover: 'reduce' },
+        { k: 'gvb-bracket:list', student: true, rollover: 'reduce' },
       ],
       prefixes: [
         { p: 'gvb-bracket:', student: true, legacy: true },
-        { p: 'gvb-bracket:data:', student: true },
+        { p: 'gvb-bracket:data:', student: true, rollover: 'reduce' },
       ],
       /* The site's question bank (Path 12 P2): 020's academic-tournament
          mode lists it and reads a match's questions from it, through
@@ -598,7 +625,7 @@
       ],
       prefixes: [
         { p: 'gvb-review-board:', legacy: true },
-        { p: 'gvb-review-board:data:' },
+        { p: 'gvb-review-board:data:', rollover: 'reduce' },
       ],
       idb: [
         { name: 'rgb-audio', note: 'Clue recordings for the Review Game Board. Nothing re-downloads these, so tick this to keep them: without it a restored board comes back with no audio.' },
@@ -614,7 +641,7 @@
       category: 'games-rewards',
       share: { param: 'hunt' },
       keys: [
-        { k: 'qr-scavenger-hunt-sets' },
+        { k: 'qr-scavenger-hunt-sets', rollover: 'reduce' },
         { k: 'qr-scavenger-hunt-settings' },
       ],
     },
@@ -646,8 +673,8 @@
          code (it holds the password), the inventory or a bulk list. */
       share: { param: 'codes' },
       keys: [
-        { k: 'qr-code-generator-inventory' },
-        { k: 'qr-code-generator-recent' },
+        { k: 'qr-code-generator-inventory', rollover: 'reduce' },
+        { k: 'qr-code-generator-recent', rollover: 'ask' },
         { k: 'qr-code-generator-settings' },
       ],
       reads: [
@@ -670,12 +697,12 @@
          key here and no longer only in `reads`. */
       keys: [
         { k: 'gvb-certificate-maker:current' },
-        { k: 'gvb-certificate-maker:last' },
-        { k: 'gvb-certificate-maker:list' },
+        { k: 'gvb-certificate-maker:last', rollover: 'reduce' },
+        { k: 'gvb-certificate-maker:list', rollover: 'reduce' },
       ],
       prefixes: [
         { p: 'gvb-certificate-maker:', legacy: true },
-        { p: 'gvb-certificate-maker:data:' },
+        { p: 'gvb-certificate-maker:data:', rollover: 'reduce' },
       ],
       reads: [
         'np_rosters',
@@ -710,9 +737,9 @@
          has its own ?field= prefill link, which is not this. */
       share: { param: 'presets' },
       keys: [
-        { k: 'promptBuilderCustomPresets_v1' },
-        { k: 'promptBuilderDraft_v2' },
-        { k: 'promptBuilderHistory_v1' },
+        { k: 'promptBuilderCustomPresets_v1', rollover: 'ask' },
+        { k: 'promptBuilderDraft_v2', rollover: 'ask' },
+        { k: 'promptBuilderHistory_v1', rollover: 'ask' },
         { k: 'promptBuilderMode_v1' },
       ],
       prefixes: [
@@ -726,11 +753,11 @@
       category: 'docs-comm',
       keys: [
         { k: 'gvb-field-trip:current' },
-        { k: 'gvb-field-trip:list' },
+        { k: 'gvb-field-trip:list', rollover: 'reduce' },
       ],
       prefixes: [
         { p: 'gvb-field-trip:', legacy: true },
-        { p: 'gvb-field-trip:data:', student: true },   // a dated trip: studentName, pasted class list, slips collected, chaperone per student (2026-09-23 audit)
+        { p: 'gvb-field-trip:data:', student: true, rollover: 'reduce' },   // a dated trip: studentName, pasted class list, slips collected, chaperone per student (2026-09-23 audit)
       ],
       reads: [
         'np_rosters',
@@ -762,8 +789,8 @@
       file: 'Tools/085-parent-communication-templates.html',
       category: 'docs-comm',
       keys: [
-        { k: 'pct:custom' },
-        { k: 'pct:lastValues', student: true },   // the last letter's fill-ins: Student, Parent/Guardian, Grade… (2026-09-23 audit)
+        { k: 'pct:custom', rollover: 'ask' },
+        { k: 'pct:lastValues', student: true, rollover: 'reduce' },   // the last letter's fill-ins: Student, Parent/Guardian, Grade… (2026-09-23 audit)
       ],
       reads: [
         'np_rosters',
@@ -835,7 +862,7 @@
       file: 'Tools/024-number-talks-board.html',
       category: 'math',
       keys: [
-        { k: 'gvb-number-talks:myBank' },
+        { k: 'gvb-number-talks:myBank', rollover: 'ask' },
         { k: 'gvb-number-talks:settings' },
         { k: 'gvb-number-talks:strategyLibrary', student: true },   // this year's strategies, each under a "Student name" (2026-09-23 audit)
         { k: 'gvb-number-talks:stringHistory' },
@@ -970,8 +997,8 @@
       file: 'Tools/033-ssr-log-tracker.html',
       category: 'ela',
       keys: [
-        { k: 'sslt_current_v1', student: true },
-        { k: 'sslt_sections_v1', student: true },
+        { k: 'sslt_current_v1', student: true, rollover: 'keep' },
+        { k: 'sslt_sections_v1', student: true, rollover: 'reduce' },
       ],
       reads: [
         'crh_students_v1',
@@ -984,9 +1011,9 @@
       file: 'Tools/027-novel-study-circles-manager.html',
       category: 'ela',
       keys: [
-        { k: 'novel-study-circles', student: true },
-        { k: 'novel-study-circles-current', student: true },
-        { k: 'novel-study-units' },
+        { k: 'novel-study-circles', student: true, rollover: 'reduce' },
+        { k: 'novel-study-circles-current', student: true, rollover: 'keep' },
+        { k: 'novel-study-units', rollover: 'reduce' },
         { k: 'novel-study-units-current' },
       ],
       writes: [
@@ -1071,8 +1098,8 @@
       category: 'science',
       share: { param: 'labgroups' },
       keys: [
-        { k: 'lgrr_current', student: true },
-        { k: 'lgrr_rosters', student: true },
+        { k: 'lgrr_current', student: true, rollover: 'keep' },
+        { k: 'lgrr_rosters', student: true, rollover: 'reduce' },
       ],
       reads: [
         'crh_students_v1',
@@ -1086,8 +1113,8 @@
       file: 'Tools/013-lab-safety-contract-tracker.html',
       category: 'science',
       keys: [
-        { k: 'lsct_current_v1', student: true },
-        { k: 'lsct_sections_v1', student: true },
+        { k: 'lsct_current_v1', student: true, rollover: 'keep' },
+        { k: 'lsct_sections_v1', student: true, rollover: 'reduce' },
       ],
       reads: [
         'crh_students_v1',
@@ -1103,7 +1130,7 @@
          — never the saved-dataset library. */
       share: { param: 'chart' },
       keys: [
-        { k: 'data-chart-builder-datasets' },
+        { k: 'data-chart-builder-datasets', rollover: 'ask' },
         { k: 'data-chart-builder-settings' },
       ],
     },
@@ -1148,7 +1175,7 @@
       category: 'science',
       share: { param: 'milestones' },
       keys: [
-        { k: 'sfpt_tracker_v1', student: true },
+        { k: 'sfpt_tracker_v1', student: true, rollover: 'reduce' },
       ],
       /* Path 3 P3 wired this tool's "Load from a saved roster" control to
          _shared/roster.js; it reads np_rosters and never writes it. */
@@ -1178,7 +1205,7 @@
         { k: 'bmg_workspace_v1' },
       ],
       idb: [
-        { name: 'bmg-maps', note: 'Cached map images for the Blank Map Generator. Safe to leave out — they download again when needed.' },
+        { name: 'bmg-maps', cache: true, note: 'Cached map images for the Blank Map Generator. Safe to leave out — they download again when needed.' },
       ],
       reads: [
         'bmg_project_v1',
@@ -1271,12 +1298,12 @@
         { k: 'htcm_cards_v1', legacy: true },
         { k: 'htcm_cards_v2', legacy: true },
         { k: 'htcm:current' },
-        { k: 'htcm:game' },
+        { k: 'htcm:game', rollover: 'ask' },
         { k: 'htcm:list' },
       ],
       prefixes: [
         { p: 'htcm:', legacy: true },
-        { p: 'htcm:data:' },
+        { p: 'htcm:data:', rollover: 'ask' },
       ],
       reads: [
         'htcm_card_size_v1',
@@ -1310,13 +1337,13 @@
       category: 'social-studies',
       share: { param: 'roles' },
       keys: [
-        { k: 'crcg_roles_v1', legacy: true },
+        { k: 'crcg_roles_v1', legacy: true, rollover: 'reduce' },
         { k: 'crcg:current' },
         { k: 'crcg:list' },
       ],
       prefixes: [
         { p: 'crcg:', legacy: true },
-        { p: 'crcg:data:' },
+        { p: 'crcg:data:', rollover: 'reduce' },
       ],
       reads: [
         'crcg_roles_v1',
@@ -1397,7 +1424,7 @@
         { k: 'gvb-roleplay:frames' },
         { k: 'gvb-roleplay:levelFilter' },
         /* { className: [studentName, ...] } — a per-class copy of the roster. */
-        { k: 'gvb-roleplay:roster', student: true },
+        { k: 'gvb-roleplay:roster', student: true, rollover: 'reduce' },
         { k: 'gvb-roleplay:ttsLang' },
         { k: 'gvb-roleplay:usefulFills' },
       ],
@@ -1533,7 +1560,7 @@
       file: 'Tools/021-pe-tournament-stations.html',
       category: 'arts-pe',
       keys: [
-        { k: 'pe-tournament-stations', student: true },
+        { k: 'pe-tournament-stations', student: true, rollover: 'reduce' },
       ],
       /* Path 3 P3 wired this tool's "Load from a saved roster" control to
          _shared/roster.js; it reads np_rosters and never writes it. */
@@ -1547,7 +1574,7 @@
       file: 'Tools/017-gallery-walk-qr.html',
       category: 'arts-pe',
       keys: [
-        { k: 'gallery-walk-qr-sets', student: true },
+        { k: 'gallery-walk-qr-sets', student: true, rollover: 'reduce' },
       ],
       reads: [
         'np_rosters',
@@ -1577,7 +1604,7 @@
       file: 'Tools/060-fitness-skill-assessment-tracker.html',
       category: 'arts-pe',
       keys: [
-        { k: 'fsat_tracker_v1', student: true },
+        { k: 'fsat_tracker_v1', student: true, rollover: 'reduce' },
       ],
       /* Path 3 P3 wired this tool's "Load from a saved roster" control to
          _shared/roster.js; it reads np_rosters and never writes it. */
@@ -1600,7 +1627,7 @@
          file (gtg:, gvb-grade-distribution:, gvb-bracket:) marks both sides. */
       keys: [
         { k: 'apl_portfolio_v1', student: true, legacy: true },
-        { k: 'apl_portfolios_v1', student: true },
+        { k: 'apl_portfolios_v1', student: true, rollover: 'reduce' },
       ],
       reads: [
         'apl_portfolio_v1',
@@ -1643,6 +1670,11 @@
       category: 'platform',
       keys: [
         { k: 'br_last_backup_at' },
+        /* The year rollover's journal (Tools/backup-restore/br-rollover.js):
+           which runs were archived, checked and cleared, with hashes of what
+           was removed and no name or value. Internal to 009 like the key
+           above, so it is in no backup and the rollover never clears it. */
+        { k: 'br_rollover_v1' },
       ],
     },
   ];
@@ -1693,6 +1725,27 @@
     return hit && hit.entry.student ? 'student' : 'settings';
   }
 
+  /** What the year rollover does to `key`: its entry's `rollover` mark, or
+      'delete' for a student entry and 'keep' for any other (an unknown key
+      included, the safe direction). */
+  function rolloverRule(key) {
+    var hit = lookupKey(key);
+    if (!hit) return 'keep';
+    return hit.entry.rollover || (hit.entry.student ? 'delete' : 'keep');
+  }
+
+  /** Every declared gvb-media namespace, as {ns, student}. */
+  function mediaNamespaces() {
+    var out = [];
+    for (var i = 0; i < TOOLS.length; i++) {
+      var dbs = TOOLS[i].idb || [];
+      for (var j = 0; j < dbs.length; j++) {
+        (dbs[j].namespaces || []).forEach(function (n) { out.push({ ns: n.ns, student: n.student === true }); });
+      }
+    }
+    return out;
+  }
+
   /** True for a write probe that must never end up in a backup. */
   function isTransient(key) {
     var hit = lookupKey(key);
@@ -1717,7 +1770,8 @@
     return null;
   }
 
-  /** Every declared IndexedDB database, as {name, note, tool}. */
+  /** Every declared IndexedDB database, as {name, note, backupByDefault, cache, tool}.
+      `cache: true` is a database that downloads again: the year archive leaves it out. */
   function databases() {
     var out = [];
     for (var i = 0; i < TOOLS.length; i++) {
@@ -1725,7 +1779,7 @@
       for (var j = 0; j < dbs.length; j++) {
         out.push({
           name: dbs[j].name, note: dbs[j].note || '',
-          backupByDefault: dbs[j].backupByDefault === true, tool: TOOLS[i]
+          backupByDefault: dbs[j].backupByDefault === true, cache: dbs[j].cache === true, tool: TOOLS[i]
         });
       }
     }
@@ -1737,6 +1791,8 @@
     lookupKey: lookupKey,
     labelFor: labelFor,
     classifyKey: classifyKey,
+    rolloverRule: rolloverRule,
+    mediaNamespaces: mediaNamespaces,
     isTransient: isTransient,
     bySlug: bySlug,
     href: href,

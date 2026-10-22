@@ -172,6 +172,10 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
   eq(onByDefault, ['gvb-media'], '6: only the irreplaceable one is backed up by default');
   ok(REG.databases().every(d => typeof d.backupByDefault === 'boolean'),
     '6: ...and every row answers the question, rather than leaving it undefined');
+  /* The year archive (Path 3 P6) takes every database but a cache, so a
+     database wrongly called a cache would be cleared out of nobody's archive. */
+  eq(REG.databases().filter(d => d.cache).map(d => d.name), ['bmg-maps'],
+    '6: the one cache is the map cache, and the year archive leaves only it out');
   ok(REG.databases().find(d => d.name === 'gvb-media').note.length > 20,
     '6: the shared media store says what it holds, so a backup can name it');
   /* 009 prints `note` under the database's name, and with none the teacher is
@@ -249,8 +253,10 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
                        {roster, ids:{id: name}}. A list of student names, so
                        the year-end rollover takes it with the rest. */
   /* conf-*: the parent conference sign-up's browser keys postdate 009's list; the
-     three that hold a family's names are marked student data in the registry. */
-  const SINCE_THE_MIGRATION = ['pcl_idnames_v1', 'conf-who', 'conf-receipts', 'conf-demo-state'];
+     three that hold a family's names are marked student data in the registry.
+     crh_flags_v1: Path 3 P5's flags (v305), absent today and do not cold call
+     by student id. Marks on named students, so the rollover deletes it whole. */
+  const SINCE_THE_MIGRATION = ['pcl_idnames_v1', 'conf-who', 'conf-receipts', 'conf-demo-state', 'crh_flags_v1'];
 
   /* Keys the old list DID have a chance to cover and did not, which a later
      session has deliberately reclassified. This is a different excuse from the
@@ -316,9 +322,16 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
        016's checkout inventory, the sub plan's medical alerts, 038's datasets,
        018's live-run teams). They are deliberately NOT marked, because the
        rollover deletes whole keys and promises to keep templates. The fix is a
-       tool change that splits the student field out; BACKLOG rank 6 carries it. */
+       tool change that splits the student field out; BACKLOG rank 6 carries it.
+       (Since v301 the year rollover reduces those keys field by field instead,
+       through BrRollover.RULES, and they stay unmarked.)
+       gvb-exit-ticket:discussion 023's transcribed student responses, with no
+                                  names. Devon, 2026-10-07, asked whether that
+                                  is student data at a new year: "Oh, yeah
+                                  wipe them" (v301). */
   const RECLASSIFIED_DELIBERATELY = ['apl_portfolios_v1', 'gvb-roleplay:roster', 'gvb-exit-ticket:triage', 'gvb-writing-prompts:record',
-    'gvb-rubric-builder:scores:SAMPLE', 'pct:lastValues', 'gvb-number-talks:strategyLibrary', 'socsem:data:SAMPLE', 'gvb-field-trip:data:SAMPLE'];
+    'gvb-rubric-builder:scores:SAMPLE', 'pct:lastValues', 'gvb-number-talks:strategyLibrary', 'socsem:data:SAMPLE', 'gvb-field-trip:data:SAMPLE',
+    'gvb-exit-ticket:discussion'];
 
   const changed = [...probes]
     .filter(k => !SINCE_THE_MIGRATION.includes(k))
@@ -342,6 +355,72 @@ console.log('Tool registry — shape and lookups (Path 4 P2)');
     'crh_students_v1', 'br_home_teacher', 'pe-tournament-stations'];
   const unnamed = OLD_LABELLED.filter(k => REG.labelFor(k) === null);
   eq(unnamed, [], '9: every key 009 used to name is still named');
+}
+
+/* ── 10. The year rollover's marks agree with its rules (Path 3 P6) ──────
+   Each entry's `rollover` mark and BrRollover.RULES (br-rollover.js) say the
+   same thing, so neither can be changed alone: a rule with no entry, an entry
+   marked with no rule, or the two disagreeing. And every gvb-media namespace a
+   tool uses is declared, with the student ones exactly those the rollover
+   clears. */
+{
+  const rctx = vm.createContext({ window: { crypto: globalThis.crypto, TextEncoder }, document: { currentScript: null }, TextEncoder, setTimeout, clearTimeout });
+  vm.runInContext('var self = window;', rctx);
+  for (const f of ['_shared/tool-registry.js', 'Tools/backup-restore/br-rollover.js']) {
+    vm.runInContext(fs.readFileSync(path.join(SITE, f), 'utf8'), rctx, { filename: f });
+  }
+  const RULES = rctx.window.BrRollover.RULES;
+  const R = rctx.window.ToolRegistry;
+  const MARK = { reduce: 'reduce', roster: 'reduce', index: 'reduce', ask: 'ask', keep: 'keep', delete: 'delete' };
+  const VALUES = ['reduce', 'ask', 'keep', 'delete'];
+
+  const noEntry = [], disagree = [];
+  for (const r of RULES) {
+    const name = r.key || r.prefix;
+    const hit = R.lookupKey(r.key || r.prefix + '\u0001');
+    const e = hit && hit.entry;
+    if (!e || (r.key ? e.k !== r.key : e.p !== r.prefix)) { noEntry.push(name); continue; }
+    const got = R.rolloverRule(r.key || r.prefix + 'x');
+    if (got !== MARK[r.kind]) disagree.push(`${name}: rule ${r.kind}, registry ${got}`);
+  }
+  eq(noEntry, [], '10: every rollover rule has its own registry entry');
+  eq(disagree, [], '10: every rule agrees with the entry\'s rollover mark (or its default)');
+
+  const marked = [], badValue = [];
+  for (const t of R.tools) {
+    for (const e of [...(t.keys || []), ...(t.prefixes || [])]) {
+      if (!('rollover' in e)) continue;
+      const name = e.k || e.p;
+      if (!VALUES.includes(e.rollover)) badValue.push(`${name}: ${e.rollover}`);
+      const def = e.student ? 'delete' : 'keep';
+      if (e.rollover === def) marked.push(`${name}: marked ${def}, which is its default`);
+      if (!RULES.some(r => (e.k ? r.key === e.k : r.prefix === e.p))) marked.push(`${name}: marked ${e.rollover} with no rule`);
+    }
+  }
+  eq(badValue, [], '10: a rollover mark is reduce, ask, keep or delete');
+  eq(marked, [], '10: every mark has a rule and is not the default');
+  eq(R.rolloverRule('no-such-key'), 'keep', '10: an unknown key is kept');
+  eq(R.rolloverRule('np_history'), 'delete', '10: an unmarked student key is deleted');
+
+  /* The namespaces in the tree: MediaDB.store/images({ ns: '…' }), or a
+     file's `NS = '…'` when it passes { ns: NS }. */
+  const found = new Set();
+  const walk = dir => {
+    for (const d of fs.readdirSync(path.join(SITE, dir), { withFileTypes: true })) {
+      const rel = path.join(dir, d.name);
+      if (d.isDirectory()) { if (!/^(node_modules|test|vendor|\.git)$/.test(d.name)) walk(rel); continue; }
+      if (!/\.(js|mjs|html)$/.test(d.name)) continue;
+      const src = fs.readFileSync(path.join(SITE, rel), 'utf8');
+      for (const m of src.matchAll(/MediaDB\.(?:store|images)\(\{\s*ns:\s*'([a-z0-9-]+)'/g)) found.add(m[1]);
+      if (/MediaDB\.(?:store|images)\(\{\s*ns:\s*NS\b/.test(src)) for (const m of src.matchAll(/\bNS\s*=\s*'([a-z0-9-]+)'/g)) found.add(m[1]);
+    }
+  };
+  walk('Tools'); walk('_shared');
+  const declared = R.mediaNamespaces().map(n => n.ns);
+  eq([...found].filter(n => !declared.includes(n)).sort(), [], '10: every gvb-media namespace a tool uses is declared');
+  eq(declared.filter(n => !found.has(n)).sort(), [], '10: every declared namespace is used');
+  const clears = [...fs.readFileSync(path.join(SITE, 'Tools/backup-restore/br-rollover.js'), 'utf8').matchAll(/media\.push\(\{ ns: '([a-z0-9-]+)', action: 'clear'/g)].map(m => m[1]);
+  eq(R.mediaNamespaces().filter(n => n.student).map(n => n.ns), clears, '10: the student namespaces are exactly the ones the rollover clears');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

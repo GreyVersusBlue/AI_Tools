@@ -9,6 +9,378 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 3 P5 increment 2: 002, 022 and 010 honour the student flags (2026-10-22, AI-15, `CACHE_VERSION` v306)
+
+BACKLOG rank 3 deleted (a gap, ranks not renumbered): Path 3 P5 is built, and what is left of it is Devon's three
+questions, kept in the Path 3 P5 bullet (the accommodation note; no-call in drafts and group makers; 007's locked box).
+
+- **What changed for a teacher.** In Group / Team Generator a student marked absent today in Class Roster Hub is left
+  out of Make Groups and Reshuffle; their box under "Mark absent today" shows checked, locked and "(Roster Hub)", a note
+  names who is left out and where to change it, and the count says "· 1 absent today". Lab Group & Role Randomizer says
+  so before a shuffle, leaves them out of it with a line in the warnings, and a student marked after the shuffle shows
+  in their group as "Absent (Roster Hub)" with the role handed to a groupmate. Command Center's Quick Call lists an
+  absent student struck through and locked, a no-call student labelled, picks neither from the button or the phone
+  remote, and counts and names both. A press in 006 in another tab reaches all three without a reload.
+- **Calls made, each cheap to reverse.** (1) *No-call does not change a group* in 002 or 022: that is question 2's
+  default ("it is about being called on"), so the behaviour that changes least. (2) *010's Quick Call does skip a
+  no-call student*, though the row named only absences there: it is a random call-on like 007's, and the flag's own
+  description says "never chosen by a random pick"; leaving it out would have made the flag's promise false on the one
+  page most often projected. (3) *The hub's absence locks the tool's own absent box*, as in 007 (question 3's
+  default). (4) *Never written into the tool's own saved absences* (002's `absentNames`, 022's `state.absent`): both
+  are saved and travel in a share link, and a flag must not. Computed on every draw instead. (5) *Groups already on the
+  page in 002 stay as they are* when a flag arrives; the next Make Groups leaves the student out. 022 re-renders
+  its groups, because its absent column already hands roles on live. (6) *010's note is hidden on the projector*, as
+  its roster list already is; the count stays. (7) *The id lookup is `Roster.idIndex()`/`idFor()`*, now exported from
+  `_shared/roster.js`: it is the same roster-first rule as `student-details.js`'s `lookupId()`, which is an ES module
+  and these three pages are classic scripts. (8) *`StudentFlags.byName()`* turns a page's names into the two lists,
+  so the three pages do not each write the loop.
+- **How it was checked.** `npm run test:student-flags` (62 checks, 19 deliberate breaks caught, four of them new for
+  `byName`); new `npm run test:flag-adopters` (`Tools/roster/test/smoke-flag-adopters.mjs`, port 8538, 38 checks,
+  clock pinned at 15:00 on 2026-10-21), with one break per page seen red (002 not excluding, 022 not excluding, 010
+  picking a no-call student). Run-suites `--only` roster (16), group-team-generator (4), lab-group-role-randomizer (2),
+  command-center (2); the a11y sweep on 002, 022 and 010; `test:theme`; `test:select-suites`; every guard
+  (precache with `--base origin/main`, registry, tests, dedupe, entities, hidden-flex, print-clip, inline-sinks,
+  docs-commands, art, adoption `--check`, lint).
+- **What went wrong.** The first run died because `Roster.idIndex()` and `idFor()` were private to `roster.js`; they are
+  exported now. axe caught two contrast failures in the new pieces before commit: 010's tag on a dimmed `.excluded`
+  row (a hub absence is now struck through but not dimmed) and a dimmed no-call label (no longer dimmed).
+- **Found, not fixed.** 022's `.absent-hint` line above its groups fails colour contrast under axe in light theme; it
+  predates this change and the site-wide sweep does not see it because it appears only after a shuffle.
+- **Not verified.** Firefox and Safari, a real phone driving 010's remote, the `file://` offline copy, a full `npm test`.
+
+## Path 3 P5 increment 1: flags on the shared student record; 006 sets them, 007 honours them (2026-10-21, AI-15, `CACHE_VERSION` v305)
+
+BACKLOG rank 3 kept and rewritten to what is left (002 and 022's groups, 010's readout; the accommodation note waits
+on Devon). Its photo half is closed at Devon's word ("Keep what exists, add no more photo features", 2026-10-21):
+nothing about photos was built, extended or removed.
+
+- **What changed for a teacher.** In Class Roster Hub every student row has two toggles, **Absent** and **No call**.
+  Absent means absent today and clears itself tomorrow; No call stays until it is pressed again. A line above the list
+  counts them for the class and says they stay on this computer; **Clear all flags** removes every one. In the Name
+  Picker an absent student is off the board, and a do-not-cold-call student is on it, dimmed, labelled "no cold call",
+  and never picked; the count under the board ("2 active (1 absent, 1 not cold called) / 4 total") and a notice on the
+  Names tab say who and where to change it. A flag pressed in 006 reaches a 007 tab already open, without a reload.
+- **Calls made, each cheap to reverse.** (1) *Two fixed flags, no free text.* The themes list named "accommodations";
+  an accommodation note is the most sensitive text the site could hold, which kinds exist and whether a projected tool
+  may show one is Devon's call, so it is a question in the row and not built. (2) *Their own key, by student id*, not
+  fields on `crh_students_v1`'s records: those records are rebuilt as `{id, name, preferred, say}` in about ten places
+  (006's `writeStudents`, the merge, the duplicate, the import, `roster.js`'s `reconcile()`), and a field the eleventh
+  forgot would silently drop a do-not-cold-call. P6's design allowed either. (3) *Absent is a date*, not a boolean,
+  like 007's own `np_absent`, so a teacher who forgets to untick it does not lose the student from the picker
+  tomorrow. (4) *Written when pressed*, not on Save, because it is about today, not an edit to the roster. (5) *006
+  prunes on load*: an absence from an earlier day, and the flags of an id on no roster (a student removed or archived
+  loses them; with no readable sidecar at all, only old days go). (6) *A duplicated roster's students get new ids*, as
+  before, so flags do not follow a copy; a student moved between rosters keeps id and flags. (7) *In 007, do-not-cold-
+  call keeps a student out of every pick* (jump, slot, disappear, multi-pick, tournament) *but not out of the team
+  draft*, which is not being called on; absent from the hub keeps a student out of everything 007's own absence does.
+  (8) *The hub's absence locks 007's Absent box for the day* ("Absent (Roster Hub)"), so the two cannot disagree.
+  (9) *No flag is stripped from links because none travels*: 006's share link, CSV, workbook, print and device handoff
+  never read the key; a 009 backup carries it, as every registered key, being the teacher's own file.
+- **How.** `_shared/student-flags.js` (`StudentFlags`: `parse`, `read`, `get`, `set`, `prune`, `counts`, `labels`,
+  `dayKey`), a classic script like `roster.js`, loaded by 006 and 007. 007 looks a name up with `loadIds()`/`lookupId()`
+  from `student-details.js`, so a name on no roster has no flags. Registry: `crh_flags_v1` student data on 006's row;
+  `BrRollover.RULES` deletes it whole; `registry-shape.test.mjs` section 9 names it as a key newer than 009's old list.
+  007's Stats row for an absent student no longer dims itself with `opacity: 0.55`, which took the white OUT badge
+  under 4.5:1 (axe found it in the new suite; it was there before, in any absent row); the bar alone is dimmed now.
+  On a phone 006 puts the toggles on a second line under the name: the first try squeezed the name field to nothing at
+  375 px, seen on a screenshot, not by any suite.
+- **Tests.** `npm run test:student-flags` (new, pure, 55 checks, and 15 deliberate breaks of the module each caught by
+  the suite itself, among them `absent` holding on any day, `dayKey` in UTC, which needed the time zone pinned in the
+  file and a 31 December date to be seen, and an inherited property read as an entry). `npm run test:student-flags-smoke`
+  (new, port 8537, 33, the clock pinned): 006's prune, toggles, focus, aria-pressed, reload, no trace in
+  `np_rosters`, `crh_students_v1` or the CSV, Clear all flags; 007's board, count, notice, twelve real picks, Stats row,
+  the cross-tab arrival, a name on no roster; axe on 006's list in light and dark and on 007's rows and notice. Broken
+  on purpose and seen red: 007 ignoring no-call (2 red), 006 without its prune (2), 007 without its storage listener (3).
+  Run green: run-suites `class-roster-hub` (5), `name-picker` (3), `roster` (15), `backup-restore` (10),
+  `tool-registry`, `service-worker` (3); a11y on 006 and 007; `test:theme`; `test:rollover` 714; `test:select-suites`;
+  precache `--base origin/main`, registry, tests, dedupe, entities, hidden-flex, print-clip, inline-sinks,
+  docs-commands, art, adoption `--check`, lint.
+- **Not verified.** Firefox, Safari, a real phone, the `file://` copy, an installed PWA. A flag pressed with a
+  roster's new rows unsaved is stored under ids the sidecar only gets on Save, and is pruned at the next load if the
+  teacher never saves (by design, not tested). Not run: the full `npm test`.
+
+## Path 3 P6 finished: the landing page's "Clear all rosters", every tool opened after a rollover, the registry's marks (2026-10-21, AI-15, `CACHE_VERSION` v304)
+
+BACKLOG rank 4 deleted (a gap, as ranks 2 and 6 were). Items 5 and 6 of the row, on increments 1 to 4 (v299 to v303, below), unchanged.
+
+- **What changed for a teacher.** Once anything is saved, the landing page's top bar has **Clear all rosters**
+  (Devon, 2026-10-07: "a 'clear all rosters' button on main page, with a confirmation screen"; his "Read it like B"
+  keeps the guided "Start a new school year" beside it). It opens a modal confirmation screen: how many classes and
+  students this browser holds, each class with its count (eight, then "and N more"), what goes, what stays, and that
+  nothing is cleared until a copy is saved and checked. *Cancel* (or Escape) changes nothing; *Save a copy, then
+  clear…* opens 009's "Start a new school year" card, focused, where the clear runs after the archive passes.
+- **Calls made, each cheap to reverse.** (1) *The button leads into 009's clear rather than clearing on the landing
+  page.* Devon asked for a quick button; the rule this whole row was built on is that nothing is cleared until an
+  archive on disk has been checked, and a second clear that skipped it, or a copy of 009's four steps on the landing
+  page, is the two-rollovers state increment 4 removed. "Quick" is the screen: one click from the main page to the
+  clear, with the counts in front of the teacher. If he wants the clear itself on the landing page, the screen's
+  button is the one line to change, and it would load `br-rollover.js` there. (2) *It clears what the rollover clears*
+  (the students in every tool, the setup kept), not the two roster keys alone: his words were "clears all rosters and
+  items specific to people", and emptying the rosters with the per-tool records still keyed by name is what lets next
+  year's namesake inherit last year's points. (3) *Shown once anything is saved*, not only when a roster exists: student
+  records can exist without a class list, and the screen then says so. (4) *`br-envelope.js` is not extracted, and
+  leaves the design.* It was to let the module and the suites build and read an envelope; reading has been
+  `RestoreKit.read` since v298, the suites build their own, and with (1) there is no second page that builds an
+  archive. Moving 009's builder out is a refactor with one caller. (5) *The module still names `seating` itself.* The
+  design wanted the photo namespace read from the registry; `plan()`'s media input is shaped around it, so instead
+  `registry-shape.test.mjs` holds the registry's student namespaces equal to the ones the module clears. (6) *The
+  registry's vocabulary is the design's three marks*: the module's `roster` and `index` kinds are marked `reduce`.
+  (7) The landing readout's "stale" colour named `--err`, which the landing page does not define; it is `--pen`.
+- **How.** `index.html`: the button, a native `<dialog>` opened with `showModal()` (focus starts on Cancel and goes
+  back to the button), and a read of `np_rosters` and `crh_students_v1` that writes nothing. `smoke-rollover-tools.mjs`
+  seeds one profile with what the clear writes, each fixture through its real rule (the fixtures moved to
+  `_rollover-fixtures.mjs`, shared with `rollover.test.mjs`), plus the switchers that open each document, and opens
+  the 36 tools that own a reduced key. A marker is the kept setup the fixture put there; a control pass on an empty
+  profile proves each is absent from its page without the data. Eight fixture values had to be made distinctive
+  because they were built-in page text ("Got it", "Mystery", "Hypothesis", "Extended time", "Star", "Connector", 037's
+  93 and 064's starter Harriet Tubman). The registry: `rollover:` on the 60 entries whose rule is not the default,
+  `ToolRegistry.rolloverRule(key)`, `gvb-media`'s twelve `namespaces` (`seating` the one student namespace) and
+  `ToolRegistry.mediaNamespaces()`; its header's `:excluded:` line now says that list is in sessionStorage.
+- **Tests.** `npm run test:clear-rosters` (new, port 8535, 27): hidden with nothing saved, the counts and list, modal,
+  focus, Cancel and Escape with storage byte-equal, the continue link reaching 009's card focused with the clear locked
+  and storage still byte-equal, eight-plus classes, no class list, axe on the open screen in light and dark. `npm run
+  test:rollover-tools` (new, port 8536, 143). `registry-shape.test.mjs` section 10 (51). Broken on purpose and seen
+  red: the screen clearing a key on open (3), `show()` for `showModal()` (2), the count ignoring the sidecar (2, after
+  a sidecar-only class was added to the seed; it passed before), the button shown with nothing saved; a reducer
+  dropping 001's destinations (the marker), keeping 001's names (the name check), and writing 030's categories as an
+  object (a page error and the marker); a registry mark removed, a mark with no rule, a namespace undeclared, `seating`
+  not student, a rule's kind changed. Not red, and why: 043's and 042's `batchNames` left out (both pages load without
+  it; 042's comment says its `split` throws, which must be on a button, and this suite presses none); the focus
+  listener (a `<dialog>` returns focus itself, so the listener was removed). Run green: run-suites `backup-restore`
+  (10), `tool-registry`, `command-center`, `service-worker`; a11y on the landing page; `test:theme`; `test:rollover`
+  714; `test:select-suites`; precache `--base origin/main`, registry, tests, dedupe, entities, hidden-flex,
+  print-clip, inline-sinks, docs-commands, art, adoption `--check`, lint.
+- **Not verified.** No button on a tool page was pressed after a rollover (the suite loads each page). The real save
+  picker, Firefox, Safari, an installed PWA and the `file://` copy, for the whole of P6. Not run: the full `npm test`.
+- **Found, not fixed.** Rank 3 (Path 3 P5) still reads "photos and flags"; Devon closed its photo half on 2026-10-21
+  (keep what exists, add none), so only flags are left in it. 007 drops a roster with an empty list on its next save
+  (increment 2's finding) still stands, and so does 009's `showBoxMsg` at 4.46:1 outside the card.
+
+## Path 3 P6 increment 4: one rollover, 009's; 006's button opens it (2026-10-21, AI-15, `CACHE_VERSION` v303)
+
+BACKLOG rank 4, rewritten to what is left (items 5 and 6). Built on increments 1 to 3 (v299, v301, v302, below), unchanged.
+
+- **What changed for a teacher.** Class Roster Hub's "Start a new school year…" no longer asks for two labels and
+  empties the rosters itself. It saves the roster that is open (so the archive carries an edit not yet saved) and opens
+  Backup & Restore at the "Start a new school year" card, scrolled to and focused, in the same tab. The card's hint
+  says the year archive file is the only copy of last year. A roster that cannot be saved stops the button with a
+  message instead of leaving with the edit unsaved.
+- **What went.** 006's two `prompt()`s, its confirm, the filing of every roster as a year in `crh_archive_v1`, the
+  emptying through `Roster.replaceAll` and the clear of `crh_archived_students`. Per-roster Archive and Restore stay.
+  Years an older 006 filed are still listed, with Restore all and Delete, until 009's rollover clears them (its rule
+  for `crh_archive_v1` already does).
+- **Calls made, each cheap to reverse.** (1) Same tab, not a new one: a new tab would leave 006 open behind 009, and
+  step 1 would then name it as a tab to close. (2) The link is the card's id, `#rolloverCard`, so even without the
+  script the browser jumps there; 009 adds the focus. (3) The old years stay readable in 006 until the rollover runs,
+  rather than being cleared by 006: deleting stored data is the rollover's job, done after the archive is checked.
+- **Tests.** `smoke-roster-writes.mjs` section 6 (in `npm run test:roster-hub`) rewritten: the button opens 009's card,
+  asks nothing, empties no roster, saves the unsaved edit first, leaves `crh_archive_v1` byte-equal, and 009 focuses
+  the card in view with the clear still locked. Broken on purpose and seen red: 006 as it was (5 failures), the save
+  skipped (1), 009 ignoring the hash (1). Run green: run-suites `class-roster-hub` (5), `backup-restore` (8),
+  `service-worker` (3); a11y on 006 and 009; `test:theme`; `test:rollover` 714; `test:select-suites`; the guards.
+- **Not verified.** Firefox and Safari; the `file://` copy (a same-folder relative link, so it should hold).
+
+## Path 3 P6 increment 3: the year rollover asks which other tabs are open (2026-10-21, AI-15, `CACHE_VERSION` v302)
+
+BACKLOG rank 4, rewritten to what is left (items 4 to 6). Built on increments 1 and 2 (v299, v301, below), unchanged.
+
+- **What changed for a teacher.** 009's "Start a new school year" has four steps now. The new first one, *Close this
+  site's other tabs*, names every other open tab or window of the site ("Still open: Name Picker (2 tabs), The landing
+  page") and keeps *Save the year archive* locked until there are none. It looks again on *Check again* and whenever
+  the teacher comes back to the tab. Pressing *Clear* looks once more: a tab opened since the archive was checked stops
+  the clear with nothing removed ("Nothing was cleared: Name Picker is open in another tab"), and the clear runs once
+  it is closed. Where the page cannot see other tabs (the offline copy on `file://`, or a browser still running a
+  worker from before v302) it says so, and *I have closed every other tab* unlocks the archive; the written-back check
+  after the clear (increment 1's step 7) is the net there.
+- **How.** `sw.js` answers a new `CLIENTS` message, on the `MessageChannel` port the page sends, with the URL of every
+  window client of the site (`includeUncontrolled`) except the asker. `BrRollover.otherTabs(navigator.serviceWorker)`
+  asks the controller, or the active worker of `ready` on a page with no controller, and resolves "cannot see" on no
+  container, no worker, a refused registration, a reply that is not a `CLIENTS` list, or 2 s of silence; every exit
+  closes the port and the timer. `nameTabs()` names a window by the registry's `file` (decoded, query and hash
+  dropped), counts tabs per page, and shows a page the registry does not know by its path, so nothing open is left off.
+- **Calls made, each cheap to reverse.** (1) The clear re-asks before it runs; the design asks only at step 1, but the
+  archive-to-clear gap is where a tab opened "just to check something" would write last year back. (2) Every other
+  window counts, a second copy of 009 and the landing page included: both save. (3) No tick box for the fallback: a
+  button that says what the teacher is confirming, shown only when the page cannot see. (4) A worker from before v302
+  never answers, so the 2 s wait reads as "cannot see", never as "none open".
+- **Tests.** `npm run test:rollover` 714 (14 new: the question's every failure mode, the naming). `npm run
+  test:rollover-tabs` (new, port 8534, 24): alone, another tool's tab, two tabs and the landing page and a second 009,
+  closing them, a tab opened after the check stopping the clear with storage and the journal (`archived`) unchanged,
+  the clear running once it closes, and the blocked-worker path. `test:rollover-smoke` now answers the fallback in its
+  seed (workers are blocked there). Each guard was broken on purpose and seen red: the worker listing the asker, no
+  `CLIENTS` handler, no re-check before the clear, the archive not gated, `nameTabs` not counting, a timeout read as
+  "seen". The first of those runs crashed instead of failing by name; the suite's first wait was made soft so it fails
+  by name.
+- **Not verified.** Firefox and Safari; an installed-PWA window; the `file://` copy itself (the fallback was driven with
+  workers blocked, not from a file); `visibilitychange` (no suite drives it). Tabs in another browser or profile are not
+  seen, and need not be: they do not share this storage.
+
+## Path 3 P6 increment 2: the year rollover's clear keeps the setup (2026-10-21, AI-15, `CACHE_VERSION` v301)
+
+BACKLOG rank 4, rewritten to what is left (items 3 to 6). Built on increment 1 (v299, below), whose archive and check
+are unchanged.
+
+- **What changed for a teacher.** Step 3 of 009's "Start a new school year" is now *Review, then clear*. Once the saved
+  file passes, the page shows one table, a row per tool: *Removed* (counts, and "Show what goes" with the real values),
+  *Kept* (the setup found, counted) and *Your choice*. Above it: how many items are reduced and deleted, the student
+  photos by count and size, and a roster file shared to 006 and never opened. The clear then empties the names,
+  scores, logs and histories and keeps what they sit in: a seating chart's desks and layouts, hall-pass destinations,
+  behaviour tags, a lab contract's wording and fee, every class name with its period and subject. Seating Chart's
+  photos (`gvb-media`, namespace `seating/`, and only that namespace) and the parked share file go. The receipt counts
+  what went by tool and names nobody.
+- **How.** `Tools/backup-restore/br-rollover.js` gained `RULES` (85: one per student key or prefix in the registry,
+  the mixed keys, the roster shells, the free text that may name a student, the switchers' lists), `rosterNames`,
+  `scanNames`, `plan()` and a `run()` that writes as well as deletes. Every empty value is the one the tool's own new
+  document or clear code writes, read off that code by five read-only passes over the tools (each trap is in the
+  rule's comment: 005 must never have zero sections, 073 keeps its Store envelope, 044's key is never deleted, 042's
+  fields are `''` not removed, 021's bracket is `null`, 048 keeps one blank row, 016's item goes back to `in`).
+  `plan()` is computed from the checked archive's own values, not from storage: a key still holding the archive's
+  value is planned, a key already holding the reduction plans as `done` (so an interrupted clear finishes from the
+  file and gives the uninterrupted result), and anything else is a problem that stops the clear. 023's `discussion` is
+  marked student data in the registry (Devon's "wipe them"); its category tally keeps its categories.
+- **The calls made, each cheap to reverse.**
+  1. *The review sits in step 3, after the check*, not before the save as the design's step 2 had it: the plan is
+     made from the file that passed, so the table cannot describe a different archive.
+  2. *Kind E is one Keep or Clear per key*, and Clear takes out only the entries a name is found in (038's datasets,
+     064's cards, 044's past plans, 029's presets and history, 016's recent codes, 085's templates, 007's prompts,
+     024's notes); 029's draft, 045's note and 064's saved game go whole, as each tool's own Clear does. The design
+     allowed a choice per dataset or card; per key with per-entry removal was enough to build and test now.
+  3. *A Keep choice is journalled by key name* (`keptByChoice`), so finishing an interrupted clear keeps it. No
+     value is journalled.
+  4. *058's duty list and 075's directory lose only the names on this year's rosters.* Devon's "Yes" to question 7
+     was "when they were filled from a class roster"; a name on a class roster is how the page can tell.
+  5. *043's chaperones and the lead chaperone's name and phone are cleared*: a parent's details for one trip, which
+     is "items specific to people".
+  6. *020's brackets are deleted*, not reduced: a bracket is its entrants and the page has no empty bracket it can
+     draw. The bracket list drops them and the open-bracket key is forgotten when its bracket is gone.
+  7. *030's typed team name that holds this year's names goes back to "Team N" without asking*, like a roster split's;
+     the design had it as a kind E choice.
+  8. *085's last values lose Student, Parent/Guardian and Grade* and keep the teacher's name, class, date and
+     assignment. 005's `currentQuarter` is emptied so the page guesses it again from the date.
+  9. *The scan skips one-word names*: "Will" or "May" in a lesson plan is never a hit, and a roster of first names
+     only is never found in free text. That is the safe direction for a scan that only proposes.
+  10. *conference-signup's three keys are deleted* (a family's name and bookings); the design predates them.
+- **Tests.** `npm run test:rollover` (pure Node, 700): every registry student entry has a rule and every rule an
+  entry; each reducer on its tool's shape with made-up names (no name left, setup kept, idempotent, never longer, and
+  `null`, a number, a string and bad JSON each left alone without a throw); the scan; the plan's order and totals;
+  every change refused or silently kept at each step, the photos and the share slot failing, the journal refusing a
+  write at each step, and finishing from each, equal to the uninterrupted run; a Keep choice surviving an
+  interruption; the indexes. `npm run test:rollover-smoke` (57): the review table (with axe), Keep taking a key out,
+  the clear keeping the destination and emptying the class, no student's name left in any saved item, the seating
+  photos gone and the review board's image kept, the share file gone, the interrupted run finished to the same
+  storage. Deliberate breaks, each red: 14 in the module (the changed-since problem, the `done` detection, the write
+  read-back, the stale stop, the Clear default, the seating history, the medical alerts, the index's post-state, the
+  roster order, the orphans, an unreadable key deleted, a photo not in the archive, a photo clear not read back, the
+  open bracket) and 3 in the page (photos not cleared, problems not locking the clear, choices ignored; the last
+  crashed the suite on a wait before its assertion was made a real one).
+- **Found, not fixed.** The Name Picker drops a roster whose list is empty the next time it saves `np_rosters`, so a
+  class kept with no names survives in 006 (`crh_students_v1`) but can vanish from 007's list; 006's own rollover
+  has always had the same effect. `htcm_cards_v1`/`v2` (064's legacy keys, re-imported only when its list is empty)
+  have no rule.
+- **Not verified.** No tool page has been opened after a rollover: every reduced shape is read off code, and
+  `smoke-rollover-tools.mjs` (rank 4, item 6) is what will open them. The review table was scanned by axe in the
+  light theme only. A real save picker, Firefox and Safari, the offline copy on `file://`. Not run: the full `npm test`.
+
+## Path 12 P2 increment 5: named sets on 030, saved with the bank, and a Tag filter (2026-10-21, AI-14, `CACHE_VERSION` v300)
+
+BACKLOG rank 28 (a 2+ row), kept and rewritten to what is left: 018 and 019's station questions. Devon's answer to question 8 was "B" (2026-10-07): an ordered list saved with the bank. Nobody had designed
+how; the design is written under question 8 in BACKLOG's Path 12 section, and `_shared/question-bank.js`'s NAMED SETS
+is the reference.
+
+- **What a teacher sees.** On 030's bank tab, a row under the list: *Add the ticked questions to* (a new named set,
+  named there, or one already made). It works from the bank and from a built-in set; a built-in question goes into the
+  set by its seed id, with nothing copied into the bank. "Questions from" lists each set after the bank, as
+  "Unit 3 review (named set, 4 questions)". Chosen, the list is the set, numbered, with Up, Down and Remove from set on
+  each row (the focus stays with the row that moved, and the move is said in the status line); the filters and the add
+  row are hidden; a rename field, *Delete this set* (asks; the questions stay) and *Pull the whole set into board* are
+  shown. The printed quiz and study guide print the set in its order. The bank file carries the sets and its status
+  line names them; the spreadsheet says sets are only in the bank file. An import shows the sets it would add, under
+  their names here, before Add.
+- **The calls made, each cheap to reverse.**
+  1. *Sets live in the bank's own value, not a key of their own.* "Saved with the bank" read literally; no registry
+     row, and 009's backup and restore already carry the key whole.
+  2. *`schema: 2` only while a set exists.* Every page from v265 to v299 refuses to write a bank whose schema is above
+     1, which is exactly the protection sets need (otherwise an old tab's save would write the bank without them). A
+     bank with no set stays byte for byte what it was, so a teacher who never makes one sees no change anywhere, and
+     an old tab is locked out only once a set exists. The cost: in that window, an old tab can read but not save the
+     bank until it reloads. The existing tests that used schema 2 to mean "a newer page" now use 3.
+  3. *The file's version stays 1*, with `sets` beside `questions`, so an older page still imports a new file's
+     questions (and ignores the sets).
+  4. *A set holds ids, not words*, and may repeat one (Devon's "B" asked for that) and may point at a seed question.
+     Editing a question changes it in every set; deleting it takes it out of every set; an item that names a seed set
+     this page does not load is kept and counted missing.
+  5. *An import never overwrites a set.* A file set equal to one here (same id, or same name, with the same items
+     after the id map) is "already here"; any other is added, with the file's id when this bank lacks it (so the same
+     file twice finds it by id even after a rename to "Name (2)") and a numbered name when the name is taken. The
+     first build gave every imported set a new id, and the pure suite caught that the same file twice then added the
+     set twice.
+  6. *Only 030 lists named sets* (`sources({ named: true })`): 040's and 020's choosers, and 030's final-round and
+     quiz-bowl source pickers, are unchanged. Offering sets there is a later, separate change.
+  7. *A set view has no Edit or Delete for the question*: those stay on the bank's list, where the question lives.
+- **The Tag filter** (the second unit, a separate commit). A *Tag* select in the list's filter row, beside Difficulty:
+  "All tags" and the tags the chosen source's questions carry, each once, sorted; a choice that no longer exists drops
+  back to All tags; Clear filters clears it. It narrows the list, the ticks a set is made from and the printed sheets,
+  as the other filters do (`QuestionBank.filter()` took `tag` already; nothing in the module changed for it). Held by
+  section 7 of `test:named-sets`.
+- **Checks.** `npm run test:question-bank-sets` (pure Node, 67 assertions, an older page run from
+  `Tools/question-bank/test/_question-bank-v299.js`, the v299 module word for word; 35 deliberate breaks of the module,
+  each caught). `npm run test:named-sets` (port 8533, 65 assertions, axe on the set view and the bank). The existing
+  bank suites (`test:question-bank`, `test:question-bank-media`, `run-suites --only` review-game-board and
+  question-bank) were run against the change; the results are in this commit's message.
+- **Not verified.** No teacher has made a set. No screen reader was run over the set view (axe, names and keys only).
+  No file with sets was opened by a real older page in a browser (the v299 module was run in Node). Not run: the full
+  `npm test`.
+
+## Path 3 P6 increment 1: the year archive and its check, before anything is cleared (2026-10-21, AI-15, `CACHE_VERSION` v299)
+
+BACKLOG rank 4, rewritten to what is left (it is a 1-session row with more increments to come).
+
+- **What changed.** 009's "End of the school year" card, one button and two `confirm()`s, is now **"Start a new school
+  year"** (Devon's name), three numbered steps, each locked until the one before is done. *Save the archive*: every saved
+  item and every database the registry declares except the map cache, so Seating Chart's photos are in it (before this
+  the call passed no database at all, and 005's sweep then deleted the photos). *Check the saved file*: the page reads
+  the file back from disk, through the save picker's handle where the browser has one, otherwise the teacher picks it
+  (Devon: "Pick the file back", no tick box), and checks it. *Clear*: unlocked only by a file that passed. A restore of
+  a year archive says so and ticks its databases.
+- **What the check is.** `Tools/backup-restore/br-rollover.js` (`BrRollover`). The archive is serialised once and
+  hashed (SHA-256, or a 53-bit string hash with an `h53-` prefix where there is no `crypto.subtle`); the envelope
+  carries a `rollover` stamp with a manifest (each key's length and hash, each database's record counts, each
+  database's blob count and decoded bytes). `verify()` is run on the string before it is saved and on the file after,
+  and storage is read again after the build, so a save in another tab mid-build stops it. Each refusal has its own
+  reason: 0 bytes, changed, cut short, locked, an ordinary backup, another run's archive, a key missing or changed, a
+  database missing or short, a picture the wrong size.
+- **What the clear is, still.** The same whole-key delete of every key `classifyKey()` calls student, setup inside them
+  included, and the card now says so instead of promising the setup is kept. What is new: a key is removed only while it
+  holds exactly what the archive holds (the plan's `beforeHash` is the archive's), so anything saved after the check
+  stops the clear with nothing removed; each removal is read back and journalled in `br_rollover_v1` before the next
+  (no names, no values); a page closed half way opens on "The new-year clear was interrupted", whose Finish asks for the
+  archive, checks it against the journal's hash and finishes from its manifest; and a cleared key that comes back with
+  exactly last year's value (a tab left open) is reported by tool on the next load, with a button to clear it again.
+- **Where this departs from the design text, and why.** (1) The manifest counts blobs per database, not per `gvb-media`
+  namespace: the clear touches no image yet, and per-database is what the file can be checked against without
+  knowing a tool's record shape. (2) `br_rollover_v1` is internal to 009 like `br_last_backup_at` (in no backup); the
+  design said both "in every backup" and "hidden like `br_last_backup_at`", and a journal inside the archive it
+  describes would change the archive's own hash. (3) Finish needs the archive picked; the design had it re-plan from a
+  snapshot, but the journal holds no manifest, and finishing against the file is the version that cannot delete
+  something the archive lacks. (4) `br-envelope.js` was not extracted: 009 still builds the envelope inline, and reading
+  is `RestoreKit.read`. (5) The save picker is asked for before the build, while the click still counts as the
+  teacher's. (6) `planClear(id, local, keys, manifest)` stands in for `plan()` until the reducers exist; its items carry
+  `action` so they can be added without changing `run()`. (7) The registry gained `cache: true` on `bmg-maps` (the
+  archive leaves only it out), and 009's restore preview now starts a new file from its own defaults rather than
+  the last file's ticks.
+- **Tests.** `npm run test:rollover` (pure Node, 78 assertions: every refusal, the stale stop, a removal refused or
+  silently kept at each step, the journal refusing a write at each step, finishing from each, no name in the journal);
+  `npm run test:rollover-smoke` (port 8532, 43: the locks, the archive's contents, wrong files, the stale stop, the
+  clear, the written-back report, an interrupted clear and its finish, the restore ticks, and a faked save-picker
+  handle with the file changed on disk). Each guard was broken on purpose and the suites went red: the byte hash (10
+  failures), the run id, the not-in-archive problem, the stale stop, the read-back (caught only after a test for a
+  removal the browser accepts and does not do was added: it had passed with the guard deleted), the blob size, the
+  page's lock on step 3 (4) and the restore tick.
+- **Found, not fixed.** 009's shared `showBoxMsg` puts `--good` on `--good-bg`, 4.46:1, under axe's 4.5:1; the new card
+  uses its own box, and the download card's messages still fail. The a11y sweep cannot see it: it is behind a click.
+- **Not verified.** A real `showSaveFilePicker` (the suite fakes the handle), Firefox and Safari themselves, the
+  offline copy on `file://`, and the size of a real archive with full-size images. Nothing was printed.
+
 ## Path 4 P5, the rest: per-tool restore as a shared card; P5 is whole (2026-10-19, AI-16, `CACHE_VERSION` v298)
 
 BACKLOG rank 2, deleted (the rank is left as a gap, as this sprint's other deleted rows were).

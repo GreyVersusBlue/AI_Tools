@@ -28,6 +28,7 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/store.js"></script>
 <script src="../_shared/roster.js"></script>
+<script src="../_shared/student-flags.js"></script>
 <!-- Path 6 P4's roster chain: share.js receives 002's groups (?labgroups=),
      and the registry and handoff table send this page's groups to 005 as a
      seating section. This page has no share sheet of its own; only
@@ -80,6 +81,8 @@
   }
   textarea { min-height: 9rem; resize: vertical; font-family: Consolas, monospace; font-size: .85rem; }
   #name-count { font-size: .76rem; color: var(--muted); margin: -.55rem 0 .6rem; text-align: right; }
+  .hub-flag-note { font-size: .8rem; margin: 0 0 .7rem; }
+  .hub-flag-note[hidden] { display: none; }
 
   .toggle-group { display: flex; background: var(--card); border: 1px solid var(--line-strong); border-radius: 7px; overflow: hidden; margin-bottom: .8rem; }
   .toggle-group label { flex: 1; text-align: center; padding: .5rem; cursor: pointer; font-size: .82rem; font-weight: 600; color: var(--muted); margin: 0; transition: background .15s, color .15s; user-select: none; }
@@ -269,6 +272,7 @@
         <label for="namesInput">Students — one name per line</label>
         <textarea id="namesInput" placeholder="Aiden Smith&#10;Brooklyn Jones&#10;Charlie Patel&#10;..." spellcheck="false"></textarea>
         <div id="name-count">0 names</div>
+        <p class="hub-flag-note" id="hub-flag-note" role="status" hidden></p>
       </div>
 
       <div class="card">
@@ -419,6 +423,7 @@
   ].forEach(function (id) { els[id] = document.getElementById(id); });
   els.printTitle = document.getElementById('print-title');
   els.nameCount = document.getElementById('name-count');
+  els.hubFlagNote = document.getElementById('hub-flag-note');
   els.msg = document.getElementById('msg');
 
   // state: { name, students: "raw text", roles: [{name, description}, ...],
@@ -1074,6 +1079,15 @@
   function shuffleAll() {
     var names = studentNames();
     if (names.length < 1) { showMsg('Add at least one student name first.'); return; }
+    refreshHubFlags();
+    var hubOut = names.filter(function (n) { return hubAbsent[n]; });
+    if (hubOut.length) {
+      names = names.filter(function (n) { return !hubAbsent[n]; });
+      if (names.length < 1) {
+        showMsg('Every student on this roster is marked absent today in Class Roster Hub, so nobody is left to group. Change it in Class Roster Hub.');
+        return;
+      }
+    }
     var roleNames = (state.roles || []).map(function (r) { return (r.name || '').trim(); }).filter(Boolean);
     if (!roleNames.length) { showMsg('Add at least one role first.'); return; }
 
@@ -1132,6 +1146,10 @@
     }
     if (stationInfo.shortage) {
       warnings.push('⚠ Fewer stations than groups — some groups are sharing a station and its equipment.');
+    }
+    if (hubOut.length) {
+      warnings.push('🛈 Left out ' + hubOut.length + ' student' + (hubOut.length === 1 ? '' : 's') +
+        ' marked absent today in Class Roster Hub: ' + hubOut.map(escapeHtml).join(', ') + '.');
     }
     if (safetyUnavailable) {
       warnings.push('⚠ The safety gate is on, but no class named “' + escapeHtml(gate.section) +
@@ -1194,6 +1212,39 @@
       (station.equipment ? ' &mdash; ' + escapeHtml(station.equipment) : '') + '</div>';
   }
 
+  /* Class Roster Hub's "absent today" (Path 3 P5, _shared/student-flags.js):
+     a student marked there is left out when the groups are made, as the
+     safety gate's "exclude" leaves an unsigned student out, and one marked
+     after the shuffle shows here as absent with the role handed on, the box
+     checked and locked. Matched by id through _shared/roster.js's roster-first
+     lookup, so a name on no roster has no flags. Read only, and never written
+     into state.absent, which is saved and travels in a share link. "Do not
+     cold call" does not change a group. */
+  var hubAbsent = {};
+  function refreshHubFlags() {
+    hubAbsent = {};
+    if (!window.StudentFlags) return;
+    var names = studentNames();
+    (state.lastGroups || []).forEach(function (g) {
+      (g.members || []).forEach(function (m) { if (m && typeof m.name === 'string') names.push(m.name); });
+    });
+    if (!names.length) return;
+    var doc = null;
+    try { doc = StudentFlags.read(window.localStorage); } catch (e) { return; }
+    var index = Roster.idIndex();
+    StudentFlags.byName(doc, names, function (n) {
+      return Roster.idFor(index, n, state.rosterName || '');
+    }).absent.forEach(function (n) { hubAbsent[n] = true; });
+  }
+  function isAbsentNow(name) { return !!hubAbsent[name] || (state.absent || []).indexOf(name) !== -1; }
+  function renderHubFlagNote() {
+    var out = studentNames().filter(function (n) { return hubAbsent[n]; });
+    els.hubFlagNote.textContent = out.length
+      ? 'Absent today in Class Roster Hub, so left out of the next shuffle: ' + out.join(', ') + '. Change it in Class Roster Hub.'
+      : '';
+    els.hubFlagNote.hidden = !out.length;
+  }
+
   // Derives each member's *effective* role for the current absent list, without
   // mutating the stored assignment — so toggling a student back to present
   // instantly un-does the reassignment with no extra bookkeeping. Vacated
@@ -1201,15 +1252,14 @@
   // group (cursor keeps advancing even when a slot is reused, so multiple
   // absences spread out rather than piling every vacancy on one student).
   function computeEffectiveMembers(group) {
-    var absentList = state.absent || [];
     var members = group.members;
     var presentIdx = [];
-    members.forEach(function (m, i) { if (absentList.indexOf(m.name) === -1) presentIdx.push(i); });
+    members.forEach(function (m, i) { if (!isAbsentNow(m.name)) presentIdx.push(i); });
     var coverage = {};
     if (presentIdx.length) {
       var cursor = 0;
       members.forEach(function (m, i) {
-        if (absentList.indexOf(m.name) !== -1 && m.role) {
+        if (isAbsentNow(m.name) && m.role) {
           var targetIdx = presentIdx[cursor % presentIdx.length];
           cursor++;
           (coverage[targetIdx] = coverage[targetIdx] || []).push(m.role);
@@ -1217,11 +1267,11 @@
       });
     }
     return members.map(function (m, i) {
-      var isAbsent = absentList.indexOf(m.name) !== -1;
+      var isAbsent = isAbsentNow(m.name);
       var extra = coverage[i] || [];
       var effectiveRole = m.role || null;
       if (extra.length) effectiveRole = (effectiveRole ? [effectiveRole] : []).concat(extra).join(' + ');
-      return { name: m.name, role: m.role, effectiveRole: isAbsent ? null : effectiveRole, absent: isAbsent };
+      return { name: m.name, role: m.role, effectiveRole: isAbsent ? null : effectiveRole, absent: isAbsent, fromHub: !!hubAbsent[m.name] };
     });
   }
 
@@ -1241,6 +1291,7 @@
       els.resultsArea.innerHTML = '<p class="empty-hint">Add a roster on the left, then click "Shuffle groups &amp; roles."</p>';
       return;
     }
+    refreshHubFlags();
     // Live, not baked in at shuffle time: a contract signed in the tracker
     // after this shuffle un-flags a student here on the very next render,
     // no reshuffle needed. Only meaningful in "flag" mode — "exclude" mode
@@ -1258,9 +1309,9 @@
           var badge = (!m.absent && isNameUnsigned(m.name, safetyStatus))
             ? '<span class="no-contract-badge" title="No signed contract on file for this class in the Lab Safety Contract Tracker">No contract</span>' : '';
           return '<li class="' + (m.absent ? 'absent-row' : '') + '">' +
-            '<label class="absent-check"><input type="checkbox" data-absent-name="' + escapeHtml(m.name) + '"' + (m.absent ? ' checked' : '') + '>' +
+            '<label class="absent-check"' + (m.fromHub ? ' title="Marked absent today in Class Roster Hub"' : '') + '><input type="checkbox" data-absent-name="' + escapeHtml(m.name) + '"' + (m.absent ? ' checked' : '') + (m.fromHub ? ' disabled' : '') + '>' +
             '<span class="name">' + escapeHtml(m.name) + '</span>' + badge + '</label>' +
-            '<span class="' + cls + '">' + escapeHtml(roleText) + '</span></li>';
+            '<span class="' + cls + '">' + escapeHtml(m.fromHub ? 'Absent (Roster Hub)' : roleText) + '</span></li>';
         }).join('') + '</ul>' +
         checkoutRowHtml(i, group.station) +
         '</div>';
@@ -1693,7 +1744,11 @@
 
   function onNamesChanged(persist) {
     var names = studentNames();
-    els.nameCount.textContent = names.length + ' name' + (names.length === 1 ? '' : 's');
+    refreshHubFlags();
+    var out = names.filter(function (n) { return hubAbsent[n]; }).length;
+    els.nameCount.textContent = names.length + ' name' + (names.length === 1 ? '' : 's') +
+      (out ? ' · ' + out + ' absent today' : '');
+    renderHubFlagNote();
     els.shuffleBtn.disabled = names.length < 1;
     if (state.mode === 'equip') renderEquipReadout();
     renderSafetyReadout();
@@ -1704,6 +1759,13 @@
     }
   }
   els.namesInput.addEventListener('input', function () { onNamesChanged(true); });
+  /* A flag pressed in Class Roster Hub in another tab reaches the note and
+     the groups on the page without a reload. */
+  window.addEventListener('storage', function (e) {
+    if (e.key !== null && e.key !== 'crh_flags_v1' && e.key !== 'crh_students_v1') return;
+    onNamesChanged(false);
+    if (state.lastGroups && state.lastGroups.length) renderResults(state.lastGroups);
+  });
 
   // ── Groups in and out: Path 6 P4's roster chain ────────────────────────
   /* 002 -> 022 and 022 -> 005 are declared in _shared/handoffs.js, which says

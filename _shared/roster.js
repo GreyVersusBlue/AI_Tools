@@ -844,6 +844,8 @@
     resolve: resolve,
     matchName: matchName,
     trackRenames: trackRenames,
+    idIndex: idIndex,
+    idFor: idFor,
     /* text */
     parseDelimited: parseDelimited,
     splitCells: splitCells,

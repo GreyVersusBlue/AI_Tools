@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v298';
+const CACHE_VERSION = 'v306';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -165,6 +165,7 @@ const SHELL_URLS = [
   "_shared/state-link.js",
   "_shared/store.js",
   "_shared/student-details.js",
+  "_shared/student-flags.js",
   "_shared/sw-register.js",
   "_shared/theme.css",
   "_shared/tool-registry.js",
@@ -213,6 +214,7 @@ const PRECACHE_URLS = [
   "Tools/048-art-portfolio-label-maker.html",
   "Tools/009-backup-restore.html",
   "Tools/backup-restore/br-pair.js",
+  "Tools/backup-restore/br-rollover.js",
   "Tools/backup-restore/br-transfer.js",
   "Tools/008-behavior-points-tracker.html",
   "Tools/behavior-points-tracker/seating-layout.js",
@@ -496,6 +498,7 @@ const PRECACHE_URLS = [
   "_shared/state-link.js",
   "_shared/store.js",
   "_shared/student-details.js",
+  "_shared/student-flags.js",
   "_shared/sw-register.js",
   "_shared/theme.css",
   "_shared/tool-registry.js",
@@ -651,6 +654,19 @@ self.addEventListener('message', (event) => {
   if (type === 'PRECACHE_STATUS') {
     event.waitUntil(precacheStatus().then((status) => {
       if (event.source) event.source.postMessage(status);
+    }));
+  }
+  // 009's year rollover asks which other pages of this site are open before
+  // it archives and again before it clears: an open tool holds last year in
+  // memory and saves it back. Every window but the asker, controlled or not,
+  // answered on the port the page sent (a reply it can match to its question).
+  if (type === 'CLIENTS') {
+    const port = event.ports && event.ports[0];
+    const asker = event.source && event.source.id;
+    event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const reply = { type: 'CLIENTS', clients: clients.filter((c) => c.id !== asker).map((c) => ({ url: c.url })) };
+      if (port) port.postMessage(reply);
+      else if (event.source) event.source.postMessage(reply);
     }));
   }
 });

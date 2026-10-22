@@ -583,6 +583,12 @@ files must be added there too.
   holds an `idb:` reference, and only 030 deletes a stored picture (its pass at load keeps the bank's). A tool that
   shows no picture needs no code for it and says so on its card, as 040 and 020 do (`npm run test:bank-media`,
   `npm run test:question-bank-media`).
+  Since v300 the bank holds the teacher's **named sets** (`sets` beside `questions`, Devon's "B": an ordered list of
+  question ids saved with the bank, repeats allowed, seed ids allowed); the stored `schema` is 2 only while a set exists,
+  which is what stops a v265–v299 page from saving the bank without them. A file's sets are imported beside the
+  teacher's, never over them (`mergeSets()`, through `merge()`'s new `ids` map). Only 030 lists them, through
+  `sources({ named: true })`; a page that adds them to its own chooser passes that flag
+  (`npm run test:question-bank-sets`, `npm run test:named-sets`).
   030's old key (`gvb-review-board-bank:entries`) is read on every load
   and never written or removed: do not delete it or its registry line, which is what keeps an older page and an
   older backup working. The module's header has the migration, the ids and the file formats. Its suites are
@@ -599,6 +605,12 @@ files must be added there too.
 - The site-wide platform themes **P1–P15** are a section of `BACKLOG.md`, and
   the per-tool sections cite them by ID. Do not renumber one; the IDs are
   load-bearing. Add a new theme at the end.
+- **A flag on a student is `_shared/student-flags.js`** (`StudentFlags`, Path 3 P5, v305): a fixed set,
+  *absent today* (a local date, true only that day) and *do not cold call*, in `crh_flags_v1` by the stable id
+  from `crh_students_v1`, never in that sidecar's records (they are rebuilt in ten places). Only 006 writes it;
+  a tool that honours it reads `StudentFlags.read()` and finds the id with `lookupId()`, as 007 does. No share
+  link, export or handoff carries it, and the rollover deletes it. `npm run test:student-flags`,
+  `npm run test:student-flags-smoke`.
 - **Restoring a backup is `_shared/restore-kit.js`** (`RestoreKit`, Path 4 P5, v298): the reader, the
   record-by-record diff and the three modes 009 uses, and `RestoreKit.mount(el, { tool: '<slug>' })`, a
   "Restore from a backup" card a tool hosts (001 and 008 do). The card restores only keys `ToolRegistry`

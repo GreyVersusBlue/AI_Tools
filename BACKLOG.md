@@ -87,6 +87,26 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-15 (v306), rank 3 (DELETED: Path 3 P5 is built; a gap, ranks not renumbered), increment 2: the flag adopters.**
+  002 and 022 leave a student marked absent today in 006 out of the groups they make (their own absent box shows it
+  checked and locked, a note says who and where to change it; never written into the config or a share link); 010's
+  Quick Call lists both flags, picks neither and names them in a note hidden on the projector. All read through
+  `StudentFlags.byName()` and `Roster.idIndex()`/`idFor()` (now exported). `npm run test:flag-adopters` (port 8538).
+  **Left of P5: only Devon's three questions, kept in the Path 3 P5 bullet. Next free suite port: 8539.**
+- **AI-15 (v305), rank 3 (kept, rewritten), Path 3 P5 increment 1: flags on the shared student record.** Two fixed
+  flags, *absent today* (a date, true only that day) and *do not cold call*, in `crh_flags_v1` by student id
+  (`_shared/student-flags.js`, `StudentFlags`). 006 has Absent / No call toggles on every row and "Clear all flags";
+  007 leaves an absent student off the board and keeps a no-call student on it, dimmed, where no pick lands. Never in a
+  link or export; the rollover deletes the key. `npm run test:student-flags`, `test:student-flags-smoke` (port 8537).
+  **Photos: closed (Devon, 2026-10-21). No accommodation note yet (a question for Devon). Next free suite port: 8538.**
+- **AI-14 (v300), rank 28 (kept, rewritten), Path 12 P2 increment 5: named sets and a Tag filter on 030.** A teacher ticks questions (from
+  the bank or a built-in set) and adds them to a named set, the teacher's own ordered list saved with the bank, a question
+  in it more than once if wanted; "Questions from" lists each set after the bank, where it is reordered (Up, Down), trimmed,
+  renamed, deleted, printed and pulled into a board whole. Storage: `sets` in the bank's envelope at `schema: 2` only while
+  a set exists, so a v265–v299 page reads but cannot overwrite them; the bank file carries them and an import adds beside,
+  never over (`_shared/question-bank.js`, NAMED SETS). `npm run test:question-bank-sets` (35 breaks caught) and
+  `test:named-sets` (port 8533), which holds the list's new **Tag** filter too. **Left of rank 28: 018 and 019 station
+  questions.** Next free port: 8534.
 - **AI-16 (v298), rank 2 (DELETED: Path 4 P5 is whole): per-tool restore as a shared card.** `_shared/restore-kit.js`
   (`RestoreKit`) holds 009's envelope reader, record diff and the three modes, moved out of its inline script unchanged;
   009 calls it, and 001 and 008 host `RestoreKit.mount()`: a backup file cut to the tool's own registry keys, the same
@@ -116,7 +136,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   and 65 new pins of the final wager round and quiz-bowl taken before the page was edited). Rules in
   `Tools/review-game-board/rgb-play.js`. `npm run test:play-wheel` (port 8522) and `test:play-modes-core`.
   **Left of Path 12: P2's 018 and 019 station questions, 062's map questions, named sets and a tag filter on 030 (rank
-  28); P4 media (rank 30). Fourteen more choices that are Devon's are questions 45 to 58 in the Path 12 section. No
+  28); P4 media (rank 30). (Since then: P4 shipped in v289, 062's map questions were closed, and named sets and the tag filter shipped in v300.) Fourteen more choices that are Devon's are questions 45 to 58 in the Path 12 section. No
   class has spun it. The rank is left as a gap, as the other rows deleted in this sprint were. Next free suite port: 8523.**
 - **AI-14 (v284; the code commit says v283, which AI-31-016 took), rank 29 (kept, rewritten), Path 12 P3 increment 2: the final wager round and quiz-bowl on 030.**
   Two more tick boxes in a board's options, both off until ticked, each with its rule in words under it. **Final
@@ -155,7 +175,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   writes**; a bracket that never had it on is byte for byte what it was (39 pins from the v276 page). The code is
   `Tools/bracket-tournament-generator/bt-academic.js`; `_shared/question-bank.js` is unchanged. `npm run
   test:bracket-academic` (port 8512) and `test:bracket-academic-core`. **Nine choices that are Devon's are questions 9
-  to 17 in the Path 12 section. Left of P2: 018 and 019 station questions, 062's map questions, named sets. Next free
+  to 17 in the Path 12 section. Left of P2: 018 and 019 station questions, 062's map questions, named sets (named sets shipped in v300). Next free
   suite port: 8515 (8513 and 8514 were handed to AI-31's workers).**
 - **AI-14 (v276), rank 28 (kept, rewritten), Path 12 P2 increment 3: 030's editor.** The bank tab shows and edits
   everything a question holds: the add card has a choices editor (add, remove, move up and down, mark the right one,
@@ -166,7 +186,7 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   there, left out and why; Add stores, by `importQuestions()`). The code is `Tools/review-game-board/rgb-bank-editor.js`;
   `_shared/question-bank.js` is unchanged. `npm run test:bank-editor` (port 8509) and `test:bank-editor-core`.
   **Not built: named sets, which have no storage design (question 8 in the Path 12 section), and a tag filter on the
-  list. Left of P2: 018, 019, 020, 062's map questions. Next free suite port: 8512 (8510 and 8511 were handed to
+  list.** (Both were built in v300.) Left of P2: 018, 019, 020, 062's map questions. Next free suite port: 8512 (8510 and 8511 were handed to
   AI-31's workers).**
 - **AI-14 (v271), rank 28 (kept, rewritten), Path 12 P2 increment 2: 040's flashcards and the question bank, both
   ways.** 040 has a Question bank card: "Questions from" (the bank and the seed sets, the list 030's chooser shows)
@@ -228,9 +248,15 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
   (Path 17 P4's controls, built), and 064's zip and PNG downloads are the file helpers' first adopter.** 011's
   default output is the old page's in 120 states, to the pixel. `npm run test:image-to-pdf-impose` (port 8483).
   **Left in rank 6: CSV and XLSX for the tools that hold a table. No booklet has been printed or folded.**
-- **AI-15 (no version, a design pass), rank 4, Path 3 P6: the year rollover is designed, not built.** The design is
-  Path 3's P6 bullet: the inventory by kind, `br-rollover.js`'s surface, the order of operations, the tests, and
-  ten questions for Devon. **009's rollover today loses student photos and deletes room layouts and other setup.**
+- **AI-15 (v299 to v304), rank 4 (DELETED: Path 3 P6 is whole), the year rollover.** 009's "Start a new school year": close
+  the other tabs (`sw.js` `CLIENTS`), save the year archive with every database but the map cache, read it back from disk
+  and check it, review, then clear: `BrRollover.RULES` empties the students and keeps the setup, journalled in
+  `br_rollover_v1`, finishable from the archive if interrupted. 006's button opens that card (v303); the landing page's
+  **Clear all rosters** (v304) is a confirmation screen that leads into it, so no clear on the site skips the archive.
+  Since v304 every tool with a reduced key is opened after a rollover (`npm run test:rollover-tools`), and the registry
+  carries the `rollover:` marks and the media namespaces, held to `RULES` by `registry-shape.test.mjs`. `br-envelope.js`
+  was not extracted (no second caller; `HISTORY.md`). **No real save picker, Firefox, Safari or `file://` run; no tool
+  button pressed after a rollover.** The rank is left as a gap. Next free suite port: 8537.
 - **AI-13 (v245), rank 6, Path 7 P4 increments 1 to 3: `_shared/export.js` (`ExportKit`) is whole, 064 and 040 are
   on it, and `_shared/duplex-print.js` is deleted.** The imposition and pagination math, `toPdf(pages, opts)` for
   drawn pages (**not a DOM element**), `toCsv` (formula guard), `toXlsx`, `toZip`, `download`, `filename`. 064's
@@ -346,7 +372,8 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 - **Path 22 P1–P5 are done.** His later asks are ranks 160–168 (P6–P14), unranked by him.
 
 **Start here.** Path 21 is finished (046's relief was its last row, AI-03), so no row needs Blender.
-- Ranks 1 and 2 have shipped (rank 2, per-tool restore, at v298, AI-16) and their rows are gone. Start at **rank 3**.
+- Ranks 1 to 4 have shipped (rank 2, per-tool restore, at v298, AI-16; rank 4, the year rollover, at v304; rank 3, the
+  student flags, at v306, AI-15) and their rows are gone. Start at **rank 5**.
   A further tool that wants a restore card adds the two script tags and one `RestoreKit.mount()` line (001 and 008 are
   the model) and a case in `smoke-tool-restore.mjs`. (Older port list, kept for the record: a new suite took port **8481** (8480 is the export kit's `smoke-export.mjs`, 8479 is 016's `smoke-print.mjs`, 8478 is 017's, 8477 is 018's, 8476 is 064's, 8475 is 040's, 8474 is 051's, 8473 is 074's, 8472 is 042's, 8471 is 023's, 8470 is 043's, 8469 is 077's `smoke-print.mjs`, 8468 is 070's, 8467 is 076's, 8466 is `smoke-print-tail.mjs`, 8465 is 035's `smoke-print.mjs`, 8464 is `audit-print.mjs`, 8459 is 046's `smoke-relief.mjs`, 8460 is 088's, 8461 is 009's
   `smoke-encrypted.mjs`, 8462 is the print kit's `smoke-print-kit.mjs`, 8463 is `smoke-pairing-qr.mjs`).)
@@ -376,7 +403,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 14 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `student-flags.js` 5 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **169**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -509,8 +536,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 3 | Path 3 P5 — photos and flags on the shared student record (needs Path 4 P3) | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
-| 4 | Path 3 P6 — year rollover: archive, clear student data, keep setup (jointly with 009). **Includes the seven mixed keys the 2026-09-23 audit found:** student names inside teacher content, which a whole-key delete cannot separate. Split the student field out of each, or teach 009 a per-field clear. Start with the most sensitive: `subPlanBuilder.standingDetails.v1`'s `medicalAlerts` (044). The rest: `gvb-certificate-maker:data:` (042), `crcg:data:` (050), `gvb-review-board:data:` teams (030), `qr-code-generator-inventory` checkouts (016), `data-chart-builder-datasets` (038), `qr-scavenger-hunt-sets` live-run teams (018). See `HISTORY.md`, 2026-09-23. **Designed 2026-10-05 (AI-15), not built:** the design is Path 3's P6 bullet. It found that today's rollover in 009 archives no IndexedDB (student photos are lost), verifies nothing, and deletes setup held inside 21 student-marked keys; four more mixed keys; and ten questions that are Devon's, which the build waits on | site | 1 | | [Path 3](#path-3--roster-service-and-stable-student-identity) |
 | 5 | Document 035’s private four-palette theme system as an exception (Devon, 2026-10-03: “bless and document”; do not adopt `a11y.js` cold) | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
@@ -531,7 +556,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
-| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Left:** 018 and 019 pull station questions from it; on 030, named sets, stored as an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section; designed in one line, not built) and a tag filter on the list. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
+| 28 | Path 12 P2 — read-side adopters. **Increment 1 (AI-14, v267): 053 and 062 publish their built-in questions as read-only seed sets (`QuestionBank.registerSet()`), and 030 lists them, plays a board from one and copies a question into the teacher's bank.** **Increment 2 (AI-14, v271): 040 flashcards ↔ bank, both ways: a Question bank card on 040 lists the bank and the seed sets (030's chooser, through the module's `sources()` and `sourceLabel()`), adds ticked questions to the list as cards and says which cannot be one; Send shows what a list would add to the bank and stores on Add only, with ids made from the list and the term, so the same list twice adds nothing.** **Increment 3 (AI-14, v276): 030's editor: choices (add, remove, reorder, mark the right one) and tags as tokens on the add card and in a form that opens a question where it stands in the list (Save keeps the id; a seed row is read-only), a row that shows both, and a preview before a bank file, workbook or CSV is stored.** **Increment 4 (AI-14, v278): 020's academic-tournament mode: an opt-in card on a bracket; a match shows questions from the bank or a built-in set with the answer hidden until revealed, the teacher marks who got each, the winner follows from the score (a tie decides nothing), and the ready matches print as sheets for a reader with the answers on a page of their own; stored on the bracket, nothing in the bank.** **Increment 5 (AI-14, v300): named sets on 030, an ordered list saved with the bank (Devon, 2026-10-07: “B”; question 8 in the section, and its storage design under it): made from ticked questions of the bank or a built-in set, a question in a set more than once if wanted; reordered, trimmed, renamed, deleted, printed and pulled into a board whole from “Questions from”; carried in the bank file and imported beside a set already here, never over it; and a Tag filter on 030's list (the chosen source's tags).** **Left:** 018 and 019 pull station questions from it. 062's thirty map questions stay in Geography Bee (Devon, 2026-10-07: “keep the geography bee”), and the section's other questions are closed on their defaults (“just keep all 65 defaults”) | site | 2+ | | [Path 12](#path-12--question-bank-hub-one-bank-played-six-ways) |
 | 31 | Path 13 P1 — one grouping engine: `formGroups`, `rotateRoles`, id-keyed history (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P1 bullet) | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 32 | Path 13 P2 — adopt in 002, 022, 027, 007; seating-aware grouping and project teams | site | 2+ | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
 | 33 | Path 13 P3 — `_shared/bracket.js` + `_shared/rotation.js`; fix 021’s silent overwrite bug | `_shared/` | 1 | | [Path 13](#path-13--grouping-rotation-and-bracket-engine) |
@@ -1115,13 +1140,55 @@ them data.
   orphaning history) with nothing to undo if it is wrong. The ceiling — which
   renames the identity layer can actually see — is in `HISTORY.md` and in the
   header above.
-- **P5 — Photos and flags (needs Path 4's media store).** Move Seating Chart's
-  photo storage to the shared record so every tool can render a face sheet; add the
-  small flag set the platform themes list (absent today, do-not-cold-call,
-  accommodation note) with Name Picker's Data tab as the wipe-it model.
+- **P5 — Flags on the shared student record. Photos: closed at Devon's word** ("No photos!", 2026-10-07; "Keep what
+  exists, add no more photo features", 2026-10-21): Seating Chart keeps its own photos, nothing moves to a shared record,
+  and no photo work is picked here or in another row without asking him. **Increment 1 built 2026-10-21 (AI-15, v305).**
+  The design, as built:
+  - *Which flags.* A fixed set of two, because a tool has to know what a flag means to honour it: **absent today**
+    (stored as the teacher's local date, `'2026-10-21'`, and true only on that day, so it clears itself overnight) and
+    **do not cold call** (`true` until cleared). No teacher-defined flags, and no accommodation note yet: free text about
+    a student's needs is the most sensitive thing the site could hold, and which categories exist and which tools may
+    show one (a projector is in front of the class) is Devon's call (question below).
+  - *Where.* Their own key, `crh_flags_v1`, bare JSON `{ version: 1, flags: { <student id>: { absent?, noCall? } } }`,
+    keyed by the stable id 006 mints in `crh_students_v1`. Not inside the sidecar's records: those are rebuilt as
+    `{id, name, preferred, say}` in about ten places in 006 and in `_shared/roster.js`'s `reconcile()`, and a flag
+    kept there would be lost at whichever one was missed. By id, so a rename keeps the flags; a student on two rosters
+    has an id on each, so a flag is per class. No migration: nothing held flags before (007's own `np_absent` stays
+    as it is, beside them). `_shared/student-flags.js` is the record's one definition, pure, with `read(storage)`.
+  - *Who writes.* Only 006: an **Absent** and a **No call** toggle on every row, written when pressed (not held for
+    Save), a bar counting them for this class, and **Clear all flags** (the wipe; Name Picker's Data tab was the model).
+    On load 006 drops an absence from an earlier day and the flags of a student on no roster.
+  - *Who reads.* 007 (v305): an absent-today student is off the board as if ticked absent on its Stats tab (the box
+    shows checked, locked, "Absent (Roster Hub)"); a do-not-cold-call student stays on the board, dimmed and labelled,
+    and no pick of any mode lands on them, but the team draft still drafts them; the count and a Names-tab notice name
+    both; a press in 006 in another tab arrives without a reload. Matched by name to id with student-details.js's
+    roster-first fallback, so a name typed into 007 that is on no roster has no flags.
+  - *Where they go.* Never in a share link, a roster export, 006's print or its device handoff (none reads the key).
+    In a 009 backup, as every registered key is: the file is the teacher's own. Student data in the registry, and the
+    year rollover deletes the key whole (`BrRollover.RULES`). No flag is sensitive enough to strip from a link today,
+    since none travels; an accommodation note, if built, must not either (Devon's 2026-10-07 "Strip them").
+  - **Increment 2 built 2026-10-22 (AI-15, v306), and the row is deleted:** 002 Group / Team Generator and 022 Lab Group
+    & Role Randomizer leave an absent-today student out of the groups they make, saying so on the page (002's own
+    absent box locked and named, 022's warning and, after a shuffle, the row shown absent with the role handed on);
+    010 Command Center's Quick Call lists both flags and picks neither (a no-call student is not cold called there
+    either, as the flag's own description promises). Each reads through `StudentFlags.read()` and `byName()` with
+    `Roster.idIndex()`/`idFor()`, the classic-script twin of `lookupId()` (`npm run test:flag-adopters`). No-call
+    changes no group, per question 2's default. **Nothing is left of P5 but the questions below**; a further adopter
+    (a seating chart, a hall pass) follows these three.
+  - **Questions for Devon** (defaults in force until he answers): (1) an accommodation note: free text or a fixed list of
+    kinds, and may any tool show it on a projector (default: not built); (2) should do-not-cold-call also keep a student
+    out of 007's team draft and the group makers (default: no, it is about being called on); (3) when 006 says absent,
+    007's own Absent box is locked rather than overridable for the day (default: locked, change it in 006).
 - **P6 — Year rollover.** "Start next year": archive this year's rosters and every
   per-student history to a Backup & Restore file, clear student data, keep setup. Owned
-  jointly with 009. **Designed 2026-10-05 (AI-15, a design pass: no code, nothing run in a browser), not built.**
+  jointly with 009. **Designed 2026-10-05 (AI-15, a design pass: no code, nothing run in a browser). Increment 1 built
+  2026-10-21 (AI-15, v299): the archive and its check, steps 3, 4, 5's journal and 7, on the old whole-key clear.
+  Increment 2 built the same day (AI-15, v301): `RULES`, the reducers, `plan()`, step 5's order with the photos, the
+  share slot and the indexes, and the review table. Increment 3 the same day (AI-15, v302): step 1, the `CLIENTS`
+  message, asked before the archive and again before the clear. Increment 4 the same day (AI-15, v303): 006's
+  button opens 009's card and its own rollover is gone. Items 5 and 6 the same day (AI-15, v304): the landing page's
+  "Clear all rosters" confirmation screen, `smoke-rollover-tools.mjs`, the registry's `rollover:` marks and namespaces;
+  `br-envelope.js` dropped. **P6 is finished.** `HISTORY.md` has what each does and where it departs from this text. Every question below is answered.**
   The design is the rest of this bullet. It was written from reading 009, 006, `_shared/roster.js`,
   `_shared/media-db.js`, `_shared/tool-registry.js` and the code that writes each key named below; two
   read-only probes (kept outside the repo) loaded the registry in Node to count it.
@@ -1130,11 +1197,11 @@ them data.
   - *009, "Back up, then clear student data".* It builds one envelope of every localStorage key, downloads it,
     asks twice with `confirm()`, and removes every key `ToolRegistry.classifyKey()` calls `student`. Four faults,
     all read off the code:
-    1. **The archive holds no IndexedDB.** The call is `buildEnvelope(lastScanGroups, [])`; the second argument is
+    1. **The archive holds no IndexedDB.** *(Fixed in v299.)* The call is `buildEnvelope(lastScanGroups, [])`; the second argument is
        the database list. Seating Chart's student photos (`gvb-media`, namespace `seating/`) are not in the file,
        and once `seating-chart-v1` is gone 005's boot sweep deletes every photo older than ten minutes. **A
        teacher who runs today's rollover and opens 005 has the photos in neither place.**
-    2. **Nothing is verified.** The second `confirm()` says "check it is in your Downloads folder". The page never
+    2. **Nothing is verified.** *(Fixed in v299.)* The second `confirm()` says "check it is in your Downloads folder". The page never
        reads the file back, so a blocked download, a full disk or a cancelled save dialog clears the year.
     3. **It deletes setup it promises to keep.** The dialog says "Your rubrics, templates, calendars and settings
        are kept" and the result line says "Your templates and settings are untouched". Of the 54 student-marked
@@ -1362,8 +1429,9 @@ them data.
     archive, not something this design fixes.
   - A whole-archive restore brings the sidecar and every `idNames` back together, as one consistent state.
 
-  **Path 3 P5 (photos and flags) is not built. What P6 needs from it, and what works without it.** Everything
-  above works today: the only student images are `seating/`. From P5, when it is built: (1) flags live in
+  **Path 3 P5 and P6.** P5's flags were built in v305 (adopted by 002, 022 and 010 in v306) in a key of their own, `crh_flags_v1`, marked `student: true`
+  and deleted whole by the rollover; P5's photo half is closed (Devon, 2026-10-21), so the only student images stay
+  `seating/`. What this design asked of P5, kept for the record: (1) flags live in
   `crh_students_v1`'s `students[]` records or in a key of their own marked `student: true`, never in a roster's
   `meta`, which the rollover keeps; (2) shared photos go in a namespace that holds student photos and nothing
   else, declared `student: true` in the registry's `namespaces`, so clearing stays one call per namespace; if P5
@@ -1415,33 +1483,47 @@ them data.
   travels is what was authored to be published; a medical alert is not. Not ranked here, because re-ranking is not
   a design pass's call. `gvb-certificate-maker:last` is a legacy key the registry does not mark `legacy`.
 
-  **Questions that are Devon's. Not answered here; each is a default the build must not pick for him.**
+  **Questions that were Devon's: all answered** (2026-10-07, two parts, and 2026-10-21). His overall answer: "A rollover
+  shouldn't be automatic, it should require a manual input, which clears all rosters and items specific to people on the
+  site", read as the guided "Start a new school year" for all classes at once **and** a quick "Clear all rosters" button
+  with a confirmation screen on the landing page. The answer to each is under it, and the question is kept so the
+  reasoning stays readable. Nothing in this list waits on him now.
   1. After a rollover, does this browser keep any copy of last year's names? 006 files past years in
      `crh_archive_v1`, in the browser, and tells the teacher they are there. "Clear student data" and that archive
      cannot both hold. Either the file is the only copy, or past rosters stay in 006.
+     *Answered: the file is the only copy; last year's names do not stay viewable in 006 (`crh_archive_v1`'s years are cleared).*
   2. Free text that cannot be separated (038's datasets, 044's plan history, 029's drafts and history, 045's
      note): when this year's names are found in one, is the default Keep or Clear? And when none is found, is it
      shown at all?
+     *Answered (the questions session's reading of "See #1", told to him): free text in which a name is found is pre-selected Clear.*
   3. 016: a calculator still checked out in June. Does the rollover keep who has it until it is checked in, or
      clear the borrower with the rest?
+     *Answered (the same reading): the borrower's name is cleared with the rest.*
   4. Is last year's student work with no names on it student data? 023's `discussion` (what students wrote) and
      `categoryTally`, and the strategy texts in 024's library, which is marked and so goes today. This decides two
      registry marks.
+     *Answered: "Oh, yeah wipe them": 023's `discussion` and tallies and 024's library are cleared.*
   5. Does a teacher who keeps the same students (looping, a two-year course) need to roll over some classes and
      not others? It makes every rule roster-aware, about twice the work.
+     *Answered: no; all classes at once, no per-class or looping rollover.*
   6. Looking at last year in September: is a private window and a restore enough, or should 009 open an archive to
      read without restoring it?
+     *Answered: "private window is enough"; no archive reader.*
   7. 058 and 075 are staff lists, but both can be filled from a class roster (a student duty rota). Are they
      student data when they were?
+     *Answered: "Yes", cleared as student data.*
   8. In a browser with no save picker (Firefox, Safari), must the teacher pick the saved file back before the
      clear is allowed, or may they tick "I have checked the file"? The first is safe and one more step; the second
      is today's promise with a checkbox.
+     *Answered: "Pick the file back"; no tick box. Built that way in v299.*
   9. 030 and 064: does the rollover reset a review board's scores and played clues, and what happens to a trading
      card named for a student?
+     *Answered: "Yes": 030's scores and played clues reset; each card made for a student is asked Keep or Clear.*
   10. One name for it. 009 says "End of the school year", 006 says "Start a new school year". Which, and does the
       button stay in both places?
+     *Answered: "Start a new school year", and it stays in both 009 and 006 (2026-10-21). 009's card took the name in v299.*
 
-  **Not verified.** Nothing was run in a browser. Every "safe empty value" is from reading the tool's load path,
+  **Not verified (the design pass).** Nothing was run in a browser. Every "safe empty value" is from reading the tool's load path,
   not from loading it. `showSaveFilePicker`, `clients.matchAll()` from a page's message, and reading a handle
   back were not tried. The size of a real archive with images was not measured (a `psa` or `dbq` image is stored
   at up to full size, and a blob is base64 in the file, a third larger). 017's, 020's and 060's inner shapes were
@@ -4119,7 +4201,7 @@ it, and then the baseline is regenerated in that PR.
 
 **Devon's answers, 2026-10-07** (recorded 2026-10-19). The numbered questions below that each had a default
 taken are closed on those defaults: "just keep all 65 defaults". Question 8, named sets, had no default; his
-answer is "B", an ordered list saved with the bank (not built; rank 28). 062's thirty map questions stay in
+answer is "B", an ordered list saved with the bank (built in v300; the storage design is under question 8). 062's thirty map questions stay in
 Geography Bee: "keep the geography bee". 053's list too long for one link goes as a file: "yes, the file"
 (shipped, v297; rank 94).
 
@@ -4350,14 +4432,38 @@ and Geography Bee (062) ship their own banks in incompatible shapes.
   - *Text.* Everything is built from elements; the page's inline-sink baseline is still 3. A choice, a tag, a unit
     and a standard that are markup are text in the add card, the open form, the list and the preview (asserted).
   - *Question for Devon, answered 2026-10-07 ("B": the second of the three ways below, an ordered list saved
-    with the bank) and not built.*
+    with the bank), designed and built 2026-10-21 (AI-14, v300; the design follows the question).*
     8. **Named sets** ("my Unit 3 review", a set to hand a colleague). The design names them and does not say how
        they are stored, and each way changes what a question is: a `sets` list on the question (like tags, nothing
        new in the envelope, but then a set is only a tag by another name); a `sets` map in the envelope beside
        `questions` (ordered, can hold a question twice, needs the bank's version to say so and 009's merge to know
        it); or separate keys, one a set (a registry change). Tags and the Unit filter do part of this today.
+       **The storage design (AI-14, 2026-10-21, as built in v300; `_shared/question-bank.js`'s NAMED SETS is the reference):**
+       - *The record.* `{ id: 'set-<time>-<random>', name, items: [question id, ...], createdAt, updatedAt? }`, in
+         a list `sets` in the bank's own stored value beside `questions` and `legacy`: no new key, so no registry
+         row, and 009's backup carries it inside the key it already carries whole. `items` are ids, in order, a
+         repeat allowed; an item may be a seed id (`seed:053:…`), so a set can point at built-in questions with
+         nothing copied. A set holds no words: an edit shows in every set, and `deleteQuestion()` takes the id out
+         of every set, every time it is there. An item this page cannot find (a seed set not loaded) is kept and
+         counted missing; nothing else drops one. Limits: a name of 120 characters, 1,000 items.
+       - *The version, and the migration.* There is none to run: a bank with no set is stored exactly as v265 to
+         v299 stored it (`schema: 1`, no `sets`). While a set exists `schema` is 2, which every page from v265 to v299
+         already treats as a newer page's bank: it reads the questions and refuses every write, so an old tab cannot
+         save the bank without its sets. Deleting the last set takes the bank back to schema 1. Store's own
+         envelope stays at `v: 1`.
+       - *Files.* `toJSON()` writes `sets` beside `questions` when there is one and keeps the file's `version` at 1,
+         so an older page still imports a new file's questions; `parse()` gives `sets` back, `[]` for every file made
+         before. A workbook or CSV has no sets (030's status line says so).
+       - *Import adds, never overwrites.* `merge()` now also returns `ids`, the stored id each file id became (itself,
+         a seed's copy, or the question with the same words already here), and `mergeSets()` takes each file set
+         through that map: identical to a set here (same id, or same name, and the same items) is `same`; any other
+         is added, with the file's id when this bank has no set with it, and `" (2)"` on the name when the name is
+         taken. A set here is never changed or deleted by a file; an item the file and the bank cannot back is
+         dropped from the incoming set and counted. The same file twice adds nothing.
+       - *Seed sets* are untouched: memory only, read-only, and not named sets. `sources({ named: true })` lists the
+         named sets after the bank as `named:<set id>`; only 030 asks, so 040's and 020's choosers are unchanged.
   - *Also left on 030.* The list has no **tag filter** (`QuestionBank.filter()` takes `tag`; no control asks for
-    it). A set cannot be copied whole in one press. The add card and the open form are two copies of six static
+    it). (Built in v300: a Tag select in the filter row, the chosen source's tags.) A set cannot be copied whole in one press. The add card and the open form are two copies of six static
     fields (the choices and tags editors are shared).
   - *Not verified.* No person used the editor, and no screen reader was run over it (axe, names and keys only). No
     real teacher's bank was opened before and after (the suite's are made up). The preview was not tried with a

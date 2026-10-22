@@ -338,7 +338,7 @@ for (const [label, raw] of [['not JSON', '{oops'], ['a bare list', '[{"id":"a","
   eq(newPage(storage).QuestionBank.list().map(q => q.id + ':' + q.prompt), ['a:p', 'q-noid-4:no id'], 'stored junk is passed over, and an id in `legacy` is not taken again');
 }
 {
-  const future = JSON.stringify({ v: 2, data: { schema: 2, questions: [{ id: 'f1', prompt: 'From a newer page', answer: 'a', rubric: { rows: 3 } }], legacy: {}, somethingNew: true } });
+  const future = JSON.stringify({ v: 2, data: { schema: 3, questions: [{ id: 'f1', prompt: 'From a newer page', answer: 'a', rubric: { rows: 3 } }], legacy: {}, somethingNew: true } });
   const storage = fakeStorage({ [KEY]: future, [OLD_KEY]: JSON.stringify([{ id: 'bank-old', question: 'old', answer: 'a' }]) });
   const win = newPage(storage);
   eq(win.QuestionBank.list().map(q => q.prompt), ['From a newer page'], "a newer page's bank is read");
@@ -730,7 +730,7 @@ console.log('QuestionBank — a page that only reads: peek(), sources(), sourceL
   const q = page(storage, [QB_SRC]).QuestionBank;
   eq([q.peek(), storage.writes], [[], []], 'an empty browser: peek() is an empty list and writes nothing');
   // a newer page's bank is read, never adopted into
-  const newer = fakeStorage({ [KEY]: JSON.stringify({ v: 1, data: { schema: 2, questions: [{ id: 'q-n', prompt: 'New?', answer: 'Y' }], legacy: {} } }), [OLD_KEY]: JSON.stringify([{ id: 'bank-1', question: 'Old?', answer: 'N' }]) });
+  const newer = fakeStorage({ [KEY]: JSON.stringify({ v: 1, data: { schema: 3, questions: [{ id: 'q-n', prompt: 'New?', answer: 'Y' }], legacy: {} } }), [OLD_KEY]: JSON.stringify([{ id: 'bank-1', question: 'Old?', answer: 'N' }]) });
   const qn = page(newer, [QB_SRC]).QuestionBank;
   eq([qn.peek().map(x => x.id), plain(qn.list()).map(x => x.id)], [['q-n'], ['q-n']], 'a newer bank is read as load() reads it: nothing adopted into it');
 }
