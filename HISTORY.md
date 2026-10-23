@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P1 increment 1: bell schedules per day type in 032, and `_shared/school-day.js` (2026-10-23, AI-18, `CACHE_VERSION` v307)
+
+BACKLOG rank 12 kept and rewritten to what is left (¼): 035 reading 032's schedules, a seeded 032 in the a11y sweep, and
+six defaults for Devon, listed in the Path 9 P1 bullet with the design.
+
+- **What changed for a teacher.** 032 School Calendar Visualizer has a **Bell Schedules** card under Day Types: named
+  schedules of periods (a name, a start and an end each; "+ Add period" starts five minutes after the last one and runs
+  fifty), and "Which schedule each day uses": the ordinary school day, an A day and a B day (only while the A/B cycle is
+  on), and each day type that is not "No school". A period with a missing time, or one that ends before it starts, is
+  kept as typed and marked "Not used". Clicking a day shows the schedule it gets and where from ("Early dismissal, from
+  its "Half Day / Early Dismissal" tag"). **Import from the Schedule Visualizer** adds 035's A/B mod times, named as 035
+  names its mods, after the schedules already there, and fills only the assignments not yet made.
+- **The design** is in the P1 bullet (record, resolution order, module surface, storage, which P3 consumer calls what).
+  Storage is one optional field, `cal.bell = { v: 1, schedules, regular, letters, types }`, with **no `__v` bump**, for the
+  reason the P2 design measured: an older page that meets `__v: 3` shows the seed and saves it over the calendar, while one
+  that meets an unknown field saves it back. 032 stored no bell data before, so there is nothing to migrate: no field means
+  no schedules. 010 and 045 read the key with a plain `JSON.parse` and ignore the field.
+- **Calls made, each cheap to reverse.** (1) *A type beats a letter, a letter beats the ordinary day*, so an early dismissal
+  on an A day gets the early-dismissal times. (2) *Two types with schedules on one day: the first in the legend wins*, the
+  other listed in `conflict` (no UI shows it yet). (3) *A day outside the year's range is not a school day* for bells, though
+  032's `isTeachableDay()` does not look at the range; `SchoolDay.isSchoolDay()` matches that function exactly and
+  `dayOf()` adds the range. (4) *A grading-period boundary* is a type with id `mpend` or a label saying "marking period" or
+  "grading period", the same kind of test 032 already uses for half days by label; the seed gives 45, 46, 47 and 46 days,
+  the figures the P2 design measured. (5) *A half day is one day in `daysRemaining()`, with the count of half days beside it*
+  (P9-1's default, as the P2 design reads it: never half a count). (6) *A new year carries the schedules*, as it carries the
+  legend; "Load 2026–27 CCPS" replaces them, as it replaces everything. (7) *A field the page cannot read is kept as
+  `bellBroken`* when the teacher next adds a schedule; *one with `v` above 1* is shown, its buttons off, and saved back
+  untouched. (8) *The A/B letter is computed again in `school-day.js`* (a classic script cannot import `scv-weeks.js`); the
+  suite holds the two to the same letters on the seed and five anchors, and the P2 design already left "whether the pure
+  functions move to `_shared/`" to P3.
+- **How it was checked.** New `npm run test:school-day` (`Tools/school-calendar/test/school-day.test.mjs`, pure Node: 118
+  checks, 27 deliberate breaks caught, the checks run again under `Pacific/Kiritimati`), including a school day with no
+  schedule, an A and a B day, a half day on its own schedule over its letter, the snow day that flips every later letter
+  and schedule, and grading periods on the seed. New `npm run test:school-calendar-bell`
+  (`Tools/school-calendar/test/smoke-bell.mjs`, Chromium, port 8539, 55 checks, clock pinned), seen red with two breaks
+  of the page put in by hand (no carry into a new year; a removed day type's assignment left behind). Run-suites `--only`
+  school-calendar (6 green), tool-registry, service-worker; the a11y sweep on 032; `test:theme`; `path7:next --only 032`;
+  every guard (precache with `--base origin/main`, registry, tests, dedupe, entities, hidden-flex, print-clip,
+  inline-sinks, docs-commands, art, adoption `--check`, lint).
+- **What went wrong.** `today(cal, now)` first tested `now instanceof Date`, which is false for a Date from another realm
+  (the vm the suite runs it in, or an iframe), so it read the real clock; it now asks whether `now` has `getFullYear`. One
+  `npm run test:theme` run died with a bare Node stack while other sessions' browser suites were running; both of its
+  suites then passed run alone (62 and 966), and the crash did not come back.
+- **Not verified.** No other tool reads `SchoolDay` yet (that is P3). Firefox and Safari, a phone, the `file://` offline copy,
+  a full `npm test`. 035's import was driven with a hand-written `stviz_settings`, not one 035 saved.
+
 ## Path 3 P5 increment 2: 002, 022 and 010 honour the student flags (2026-10-22, AI-15, `CACHE_VERSION` v306)
 
 BACKLOG rank 3 deleted (a gap, ranks not renumbered): Path 3 P5 is built, and what is left of it is Devon's three
