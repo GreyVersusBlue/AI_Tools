@@ -25,8 +25,9 @@
               types: { <dayTypeId>: scheduleId } }  a day tagged with that type
    A calendar saved before v307 has no `bell`: no day has a schedule, which is
    the truth. 032 owns the schedules (Devon, 2026-10-21, P9-10); 035 Schedule
-   Visualizer keeps its own A/B mod times and 032 imports them
-   (fromScheduleVisualizer, below). 035 is not changed.
+   Visualizer keeps its own A/B mod times, 032 imports them
+   (fromScheduleVisualizer, below), and since v308 035 can take 032's back
+   into its settings (forScheduleVisualizer), a copy it saves as its own.
 
    HOW A DATE RESOLVES, in this order, and `why` names the first that fails:
      invalid   not a real YYYY-MM-DD date
@@ -419,6 +420,58 @@
     return next;
   }
 
+  /** The other way (rank 12, "032 owns, 035 imports"): 032's schedules as 035's
+      settings.bellSchedule, for 035's "From the School Calendar" control.
+      forScheduleVisualizer(cal, modCount, pick?) returns
+        { state: 'nocalendar'|'none'|'broken'|'newer'|'ok',
+          choices: [{ id, name, periods }],     every schedule 032 holds
+          pick: { A: id|null, B: id|null },     B null is "same as A"
+          bellSchedule: { A: rows|null, B: rows|null },
+          extra: { A: n, B: n } }               periods past modCount, left out
+      `pick` is what the teacher chose; an id 032 no longer has falls back to the
+      default, which is A: the A-day schedule, else the ordinary day's, else the
+      first; B: the B-day schedule, else the ordinary day's, else A's; a B that
+      is A's schedule is "same as A". Periods go to mods by position: 032's
+      first period is mod 1 whatever it is called. `rows` is 035's own shape,
+      [{ start, end }|null] of length modCount, a mod past the schedule's end
+      null. Writes nothing; 035 keeps the result only when its Save is pressed. */
+  function forScheduleVisualizer(cal, modCount, pick) {
+    var out = { state: 'nocalendar', choices: [], pick: { A: null, B: null },
+      bellSchedule: { A: null, B: null }, extra: { A: 0, B: 0 } };
+    if (!isCalendar(cal)) return out;
+    var c = cleanBell(cal.bell);
+    if (c.state === 'broken' || c.state === 'newer') { out.state = c.state; return out; }
+    var bell = c.bell;
+    if (!bell.schedules.length) { out.state = 'none'; return out; }
+    out.state = 'ok';
+    out.choices = bell.schedules.map(function (sc) { return { id: sc.id, name: sc.name, periods: sc.periods.length }; });
+    function has(id) { return typeof id === 'string' && !!scheduleById(bell, id); }
+    var p = isObj(pick) ? pick : {};
+    var a = has(p.A) ? p.A
+      : has(bell.letters.A) ? bell.letters.A
+      : has(bell.regular) ? bell.regular
+      : bell.schedules[0].id;
+    var b;
+    if (own(p, 'B') && (p.B === null || has(p.B))) b = p.B;
+    else b = has(bell.letters.B) ? bell.letters.B : has(bell.regular) ? bell.regular : null;
+    if (b === a) b = null;
+    out.pick = { A: a, B: b };
+    var n = Math.max(1, Math.min(MAX_PERIODS, parseInt(modCount, 10) || 8));
+    function rows(id, letter) {
+      var periods = scheduleById(bell, id).periods;
+      var r = [];
+      for (var i = 0; i < n; i++) {
+        var q = periods[i];
+        r.push(q ? { start: q.start, end: q.end } : null);
+      }
+      out.extra[letter] = Math.max(0, periods.length - n);
+      return r;
+    }
+    out.bellSchedule.A = rows(a, 'A');
+    if (b !== null) out.bellSchedule.B = rows(b, 'B');
+    return out;
+  }
+
   global.SchoolDay = {
     KEY: KEY,
     BELL_VERSION: BELL_VERSION,
@@ -438,6 +491,7 @@
     gradingPeriodOf: gradingPeriodOf,
     daysRemaining: daysRemaining,
     fromScheduleVisualizer: fromScheduleVisualizer,
-    addImported: addImported
+    addImported: addImported,
+    forScheduleVisualizer: forScheduleVisualizer
   };
 })(typeof window !== 'undefined' ? window : globalThis);

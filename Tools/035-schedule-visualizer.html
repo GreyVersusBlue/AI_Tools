@@ -51,6 +51,10 @@
   <!-- Path 7 P4: ExportKit writes the groups template CSV. -->
   <script src="../_shared/export.js" defer></script>
   <script src="schedule-visualizer/sv-trace-image.js" defer></script>
+  <!-- Path 9 P1: reads 032's bell schedules for "From the School Calendar"
+       under the bell schedule editor. Pure; not deferred, since the inline
+       script below may draw the settings before deferred scripts run. -->
+  <script src="../_shared/school-day.js"></script>
   <script type="module">
     import { drawQR, startHost, startJoin } from './schedule-visualizer/sv-handoff.js';
     window.SVHandoff = { drawQR, startHost, startJoin };
@@ -4504,6 +4508,19 @@
               </label>
               <div id="bell-schedule-table"></div>
               <div id="bell-schedule-warn" style="display:none;font-size:11px;color:var(--warn,#b45309);margin-top:6px;"></div>
+              <!-- Path 9 P1 (rank 12): 032 owns the school's bell schedules; this copies
+                   one into the A and B rows above. Kept only when Save Settings is pressed. -->
+              <div id="bell-from-calendar" style="margin-top:var(--sp-3);">
+                <p class="form-hint" style="margin:0 0 4px;"><strong>From the School Calendar.</strong> <span id="bell-cal-status"></span></p>
+                <div id="bell-cal-controls" hidden>
+                  <label for="bell-cal-a" style="font-size:12px;">A Day</label>
+                  <select id="bell-cal-a" class="form-control" style="width:auto;display:inline-block;margin:0 8px 4px 4px;"></select>
+                  <label for="bell-cal-b" style="font-size:12px;">B Day</label>
+                  <select id="bell-cal-b" class="form-control" style="width:auto;display:inline-block;margin:0 8px 4px 4px;"></select>
+                  <button type="button" class="btn-secondary" id="bell-cal-use">Use these times</button>
+                </div>
+                <p class="form-hint" id="bell-cal-result" role="status" style="margin:4px 0 0;"></p>
+              </div>
             </div>
           </div>
           <!-- R59: default group size — shared weight for all size-blank groups -->
@@ -10795,6 +10812,7 @@ els.btnReset.addEventListener('click', () => {
    and non-blocking: end ≤ start flags red, overlaps flag amber.
 =============================================================== */
 let _bellActiveDay = 'A';
+let _bellCalPick = null;   // Path 9 P1: the School Calendar schedules last chosen, below
 
 /** Materialize the stored day array (may be null / short) to modCount rows. */
 function _bellDayRows(day) {
@@ -10839,6 +10857,7 @@ function renderBellScheduleEditor() {
   if (day === 'B' && bIsSame) {
     host.innerHTML = `<div style="font-size:11.5px;color:var(--slate-400);padding:6px 0;">B Day uses the A Day times.</div>`;
     _bellValidate();
+    renderBellFromCalendar();
     return;
   }
 
@@ -10862,6 +10881,7 @@ function renderBellScheduleEditor() {
     });
   });
   _bellValidate();
+  renderBellFromCalendar();
 }
 
 /** Inline, non-blocking validation: end > start per row (red), and warn on
@@ -10921,6 +10941,69 @@ function initBellScheduleEditor() {
   });
 }
 initBellScheduleEditor();
+
+/* Path 9 P1 (rank 12): "From the School Calendar". 032 owns the school's bell
+   schedules (Devon, 2026-10-21); SchoolDay.forScheduleVisualizer() turns the
+   chosen ones into this page's A/B rows, by position, cut or padded to the mod
+   count. The rows go into AppState.settings.bellSchedule like a typed edit, so
+   Save Settings keeps them and nothing is written here. 032's blob is never
+   written by this page. */
+function renderBellFromCalendar() {
+  const status = document.getElementById('bell-cal-status');
+  const controls = document.getElementById('bell-cal-controls');
+  if (!status || !controls) return;
+  const SD = window.SchoolDay;
+  const cal = SD ? SD.read(localStorage) : null;
+  const res = SD ? SD.forScheduleVisualizer(cal, AppState.settings.modCount, _bellCalPick) : { state: 'nocalendar' };
+  controls.hidden = res.state !== 'ok';
+  status.textContent = {
+    nocalendar: 'No School Calendar is saved in this browser. Bell schedules made on the School Calendar Visualizer\u2019s Bell Schedules card can be brought in here.',
+    none: 'The School Calendar has no bell schedules yet. Add them on its Bell Schedules card to bring them in here.',
+    broken: 'The School Calendar\u2019s bell schedules could not be read.',
+    newer: 'The School Calendar\u2019s bell schedules were saved by a newer version of this site. Reload this page to bring them in.',
+    ok: 'Copy the school\u2019s times from the School Calendar Visualizer into the A and B rows above.',
+  }[res.state] || '';
+  if (res.state !== 'ok') return;
+  const fill = (sel, value, sameOption) => {
+    sel.textContent = '';
+    if (sameOption) sel.appendChild(new Option('Same as A Day', ''));
+    res.choices.forEach(c => sel.appendChild(new Option(`${c.name} (${c.periods} ${c.periods === 1 ? 'period' : 'periods'})`, c.id)));
+    sel.value = value || '';
+  };
+  fill(document.getElementById('bell-cal-a'), res.pick.A, false);
+  fill(document.getElementById('bell-cal-b'), res.pick.B, true);
+}
+
+function _bellHasTimes() {
+  const bs = AppState.settings.bellSchedule || {};
+  return ['A', 'B'].some(k => Array.isArray(bs[k]) && bs[k].some(e => e && (e.start || e.end)));
+}
+
+document.getElementById('bell-cal-a')?.addEventListener('change', e => {
+  _bellCalPick = { A: e.target.value, B: document.getElementById('bell-cal-b').value || null };
+});
+document.getElementById('bell-cal-b')?.addEventListener('change', e => {
+  _bellCalPick = { A: document.getElementById('bell-cal-a').value, B: e.target.value || null };
+});
+document.getElementById('bell-cal-use')?.addEventListener('click', () => {
+  const SD = window.SchoolDay;
+  const result = document.getElementById('bell-cal-result');
+  const pick = { A: document.getElementById('bell-cal-a').value, B: document.getElementById('bell-cal-b').value || null };
+  const res = SD ? SD.forScheduleVisualizer(SD.read(localStorage), AppState.settings.modCount, pick) : null;
+  if (!res || res.state !== 'ok') { renderBellFromCalendar(); return; }
+  if (_bellHasTimes() && !confirm('Replace the A Day and B Day times above with the School Calendar\u2019s?')) return;
+  _bellCalPick = res.pick;
+  AppState.settings.bellSchedule = { A: res.bellSchedule.A, B: res.bellSchedule.B };
+  _bellActiveDay = 'A';
+  renderBellScheduleEditor();
+  const name = id => (res.choices.find(c => c.id === id) || {}).name || '';
+  let msg = `A Day now has the times of \u201c${name(res.pick.A)}\u201d`
+    + (res.pick.B ? `, B Day those of \u201c${name(res.pick.B)}\u201d.` : ', and B Day is the same as A Day.')
+    + ' Press Save Settings to keep them.';
+  const extra = Math.max(res.extra.A, res.extra.B);
+  if (extra) msg += ` ${extra} ${extra === 1 ? 'period' : 'periods'} past ${AppState.settings.modCount} were left out: raise the number above and use them again to bring ${extra === 1 ? 'it' : 'them'} in.`;
+  result.textContent = msg;
+});
 
 /* ==============================================================
    ROUND 59 — SUBJECTS EDITOR (Settings)

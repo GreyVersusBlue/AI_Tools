@@ -9,6 +9,34 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P1 increment 2: 035 reads 032's bell schedules (2026-10-23, AI-18, `CACHE_VERSION` v308)
+
+BACKLOG rank 12 deleted (a gap; ranks not renumbered): Path 9 P1 is built. What stays is defaults B1–B5 in the P1 bullet.
+
+- **What changed for a teacher.** 035's Settings tab has **From the School Calendar** under its A/B bell editor. With no
+  calendar on the device, or one with no bell schedules, it says so and offers nothing. Otherwise two choices, A Day and B
+  Day (B offers "Same as A Day"), default to 032's A-day and B-day schedules, else its ordinary day's, else the first.
+  **Use these times** fills 035's A and B rows by position (032's first period is mod 1, whatever it is called), padded or
+  cut to the mod count, and says how many periods past the count were left out. If 035 already had times it asks first.
+  Nothing is stored until **Save Settings**, the contract 035's bell editor already had; 032's blob is never written.
+- **Calls made, each cheap to reverse.** (1) *A copy, not a live link* (B6): 035 keeps its own times and they still work on
+  a device with no calendar, and the next press copies again. A live read would have changed 035's transition windows the
+  moment 032 was edited, with no Save. (2) *By position, not by label*: 035 names its mods itself (Mod 1, Block A, ...) and
+  032's labels are free text ("Lunch"), so no label match is reliable. (3) *The mod count is never changed* by the import:
+  it is the shape of every saved schedule in 035; the note tells the teacher to raise it. (4) *B equal to A is "Same as A
+  Day"* (035's `B: null`), which is what 035's own checkbox stores.
+- **Code.** `SchoolDay.forScheduleVisualizer(cal, modCount, pick)` in `_shared/school-day.js` (pure, 14 checks and four
+  deliberate breaks added to `test:school-day`, 132 and 31 now). 035 loads `school-day.js` without `defer`, since its inline
+  script can draw Settings before deferred scripts run; the control is built with `textContent` and `new Option()`, so
+  `check:inline-sinks` is unchanged. The registry's 035 row reads `scv_calendar_v1`. `Tools/a11y-sweep/seeds.mjs` has a
+  032 seed (the shipped calendar with the cycle on and three schedules assigned), so the seeded pass sees the filled card;
+  it imports `seedCalendar2026()` rather than copying the year.
+- **Checks.** New `npm run test:layout-bell-from-calendar` (Chromium, port 8540, 24 checks). `run-suites --only`
+  school-calendar (6), schedule-visualizer (5), schedule (10), tool-registry; a11y sweep `--only 032` (seeded too) and
+  `--only 035`; `test:theme`; every guard; lint; `check:adoption --check` (`school-day.js` 2).
+- **Not verified.** 035's Settings tab is not in the a11y sweep's view (the page opens on another tab); the new suite scans
+  the control itself. Nobody has compared the copied times with a real school's bells.
+
 ## Path 9 P1 increment 1: bell schedules per day type in 032, and `_shared/school-day.js` (2026-10-23, AI-18, `CACHE_VERSION` v307)
 
 BACKLOG rank 12 kept and rewritten to what is left (¼): 035 reading 032's schedules, a seeded 032 in the a11y sweep, and

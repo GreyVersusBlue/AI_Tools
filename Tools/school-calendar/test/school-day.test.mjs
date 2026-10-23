@@ -275,6 +275,29 @@ function checks(S) {
   eq(into3.regular, null, 'two different letter schedules leave the ordinary day alone');
   eq(S.cleanBell(into2).state, 'ok', 'what addImported writes cleans as ok');
 
+  // ---- 032's schedules back into 035 (rank 12) ----
+  const out1 = S.forScheduleVisualizer(bellCal(), 3);
+  eq([out1.state, out1.pick], ['ok', { A: 'aday', B: 'bday' }], 'to 035: A and B from the letters');
+  eq(out1.choices.map(c => [c.id, c.periods]), [['reg', 6], ['half', 3], ['aday', 2], ['bday', 2]], '...every schedule offered, with its count');
+  eq(out1.bellSchedule.A, [{ start: '07:30', end: '09:00' }, { start: '09:05', end: '10:35' }, null], '...by position, padded to the mod count');
+  eq(out1.bellSchedule.B[0], { start: '07:30', end: '09:00' }, '...B its own');
+  const reg = S.forScheduleVisualizer(bellCal({ letters: false }), 4);
+  eq([reg.pick, reg.bellSchedule.B, reg.extra.A], [{ A: 'reg', B: null }, null, 2], 'no letters: the ordinary day, B same as A, two periods past mod 4 counted');
+  eq(reg.bellSchedule.A.length, 4, '...cut at the mod count');
+  const picked = S.forScheduleVisualizer(bellCal(), 8, { A: 'half', B: 'half' });
+  eq([picked.pick, picked.bellSchedule.B], [{ A: 'half', B: null }, null], 'a teacher\'s pick holds, and B = A is "same as A"');
+  eq(S.forScheduleVisualizer(bellCal(), 8, { A: 'gone', B: null }).pick, { A: 'aday', B: null }, 'a pick 032 no longer has falls back; B null holds');
+  const only = bellCal({ letters: false, regular: false });
+  eq(S.forScheduleVisualizer(only, 8).pick, { A: 'reg', B: null }, 'nothing assigned: the first schedule');
+  const none = seedCalendar2026();
+  eq(S.forScheduleVisualizer(none, 8).state, 'none', 'a calendar without schedules: none');
+  eq(S.forScheduleVisualizer(null, 8).state, 'nocalendar', 'no calendar');
+  eq(S.forScheduleVisualizer(Object.assign(seedCalendar2026(), { bell: { v: 2, schedules: [] } }), 8).state, 'newer', 'a newer bell field is not read');
+  eq(S.forScheduleVisualizer(Object.assign(seedCalendar2026(), { bell: 'x' }), 8).state, 'broken', 'a broken bell field');
+  const calIn = bellCal(); const calBefore = clone(calIn);
+  S.forScheduleVisualizer(calIn, 2, { A: 'reg', B: 'half' });
+  eq(calIn, calBefore, 'to 035 changes nothing it is given');
+
   return fails;
 }
 
@@ -309,6 +332,10 @@ const MUTANTS = [
   ['035 labels off by one', "periods.push({ label: modLabel(i + 1, style), start: e.start, end: e.end });", "periods.push({ label: modLabel(i, style), start: e.start, end: e.end });"],
   ['import overwrites a letter', "if (!next.letters[k] && typeof L[k] === 'number'", "if (typeof L[k] === 'number'"],
   ['today ignores the time it is given', "var d = now && typeof now.getFullYear === 'function' ? now : new Date();", 'var d = new Date();'],
+  ['to 035: B never "same as A"', "    if (b === a) b = null;\n    out.pick", "    out.pick"],
+  ['to 035: letter ignored', "      : has(bell.letters.A) ? bell.letters.A\n", "\n"],
+  ['to 035: no padding', "        r.push(q ? { start: q.start, end: q.end } : null);", "        if (q) r.push({ start: q.start, end: q.end });"],
+  ['to 035: extra not counted', "      out.extra[letter] = Math.max(0, periods.length - n);", ''],
   ['import mutates its input', "var next = base.state === 'ok' ? JSON.parse(JSON.stringify(bell)) : emptyBell();", "var next = base.state === 'ok' ? bell : emptyBell();"],
 ];
 

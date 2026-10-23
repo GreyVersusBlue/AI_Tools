@@ -395,6 +395,11 @@
         { p: 'stviz_settings' },
         { p: 'STVIZ_SNAPSHOT_' },
       ],
+      /* 032's calendar, for "From the School Calendar" under the bell schedule
+         editor (Path 9 P1): read through SchoolDay.read(), never written. */
+      reads: [
+        'scv_calendar_v1',
+      ],
       idb: [
         { name: 'stviz-recovery', note: 'Automatic recovery points for the Schedule Visualizer, its last three. Safe to leave out: the layout itself is saved in ordinary storage and is already in the backup.' },
       ],
