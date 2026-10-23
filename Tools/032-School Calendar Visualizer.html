@@ -32,6 +32,7 @@
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <script src="../_shared/store.js"></script>
+<script src="../_shared/school-day.js"></script>
 <style>
   /* Path 5 P3. --ok is the "on pace" green, --accent-deep the darker navy a
      primary button goes to on hover (in dark the accent is already light, so
@@ -118,6 +119,28 @@
   .unit-row .unit-stats { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
   .unit-row .unit-stats b { color: var(--ink); }
   .units-hint { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+
+  /* --- bell schedules (Path 9 P1) --- */
+  .bell-list { display: flex; flex-direction: column; gap: 12px; }
+  .bell-sched { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin: 0; }
+  .bell-sched legend { padding: 0 4px; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+  .bell-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .bell-head input[type=text] { width: 220px; }
+  .bell-periods { border-collapse: collapse; font-size: 0.84rem; }
+  .bell-periods th { text-align: left; font-size: 0.74rem; color: var(--muted); font-weight: 600; padding: 2px 6px 4px 0; }
+  .bell-periods td { padding: 2px 6px 2px 0; }
+  .bell-periods input[type=text] { width: 150px; }
+  .bell-periods input[type=time] {
+    font-family: inherit; font-size: 0.88rem; padding: 5px 7px; border: 1px solid var(--line);
+    border-radius: 5px; background: var(--card); color: var(--ink);
+  }
+  .bell-periods .bell-warn { color: var(--err); font-size: 0.76rem; }
+  .bell-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .bell-card h3 { font-size: 0.88rem; margin: 16px 0 6px; color: var(--ink); }
+  .bell-assign { display: grid; grid-template-columns: max-content minmax(0, 260px); gap: 6px 12px; align-items: center; font-size: 0.85rem; }
+  .bell-status { font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
+  .drawer-bell { font-size: 0.82rem; }
+  .drawer-bell ol { margin: 4px 0 0; padding-left: 1.4em; }
   .day .unit-bars {
     position: absolute; left: 0; right: 0; bottom: 0; display: flex;
     flex-direction: column; gap: 1px; pointer-events: none;
@@ -383,6 +406,23 @@
     <button id="btnAddType" class="small" style="margin-top:10px;">+ Add Day Type</button>
   </div>
 
+  <div class="card bell-card no-print">
+    <h2>Bell Schedules</h2>
+    <div class="bell-list" id="bellList"></div>
+    <div class="bell-actions">
+      <button type="button" id="btnAddBell" class="small">+ Add Bell Schedule</button>
+      <button type="button" id="btnImportBell" class="small">Import from the Schedule Visualizer</button>
+    </div>
+    <h3 id="bellAssignTitle">Which schedule each day uses</h3>
+    <div class="bell-assign" id="bellAssign" role="group" aria-labelledby="bellAssignTitle"></div>
+    <div class="ab-hint">
+      A day tagged with a day type that has a schedule uses that one first (an early dismissal on an A day uses
+      the early-dismissal times). Otherwise an A or B day uses its letter's schedule, when the A/B cycle below is
+      on and one is chosen, and any other school day uses the ordinary one. Click a day to see the times it gets.
+    </div>
+    <div class="bell-status" id="bellStatus" role="status" aria-live="polite"></div>
+  </div>
+
   <div class="card ab-card no-print">
     <h2>A/B Day Cycle</h2>
     <div class="ab-row">
@@ -464,6 +504,7 @@
   <label class="f" for="drawerNote">Other note</label>
   <textarea id="drawerNote"></textarea>
   <div id="drawerPacing"></div>
+  <div id="drawerBell" class="drawer-bell"></div>
   <div style="margin-top:14px; display:flex; gap:8px;">
     <button id="drawerSave" class="primary small">Save</button>
     <button id="drawerClear" class="danger small">Clear Day/Range</button>
@@ -563,6 +604,7 @@ function renderLegend() {
       if (!confirm(`Remove "${removed.label}"? Days tagged with it will lose that tag.`)) return;
       cal.dayTypes.splice(i, 1);
       Object.values(cal.days).forEach(d => { d.types = d.types.filter(id => id !== removed.id); });
+      if (cal.bell && cal.bell.types && typeof cal.bell.types === "object") delete cal.bell.types[removed.id];
       save(); render();
     });
   });
@@ -815,7 +857,7 @@ function renderStats() {
   el.innerHTML = text;
 }
 
-function render() { computePlacement(); renderLegend(); renderMonths(); renderYearGrid(); renderWeekStrip(); syncMeta(); syncAbControls(); renderJumpControl(); renderStats(); renderPacing(); renderUnits(); renderUnitsPrint(); }
+function render() { computePlacement(); renderLegend(); renderBell(); renderMonths(); renderYearGrid(); renderWeekStrip(); syncMeta(); syncAbControls(); renderJumpControl(); renderStats(); renderPacing(); renderUnits(); renderUnitsPrint(); }
 
 /* ── Week-at-a-glance ────────────────────────────────────────────────────────
    The month grid answers "where does this fall in the year". A planner page
@@ -982,6 +1024,7 @@ function openDrawer(dateISO) {
   document.getElementById("drawerLesson").value = entry.lesson || "";
   document.getElementById("drawerNote").value = entry.note || "";
   renderDrawerPacing(dateISO);
+  renderDrawerBell(dateISO);
   document.getElementById("drawer").classList.add("open");
   renderMonths();
 }
@@ -1046,6 +1089,7 @@ function openDrawerRange(fromISO, toISO) {
   document.getElementById("drawerLesson").value = "";
   document.getElementById("drawerNote").value = "";
   document.getElementById("drawerPacing").innerHTML = "";
+  document.getElementById("drawerBell").innerHTML = "";
   document.getElementById("drawer").classList.add("open", "range-mode");
   renderMonths();
 }
@@ -1126,6 +1170,208 @@ document.getElementById("btnApplyAb").addEventListener("click", () => {
     anchorLetter: document.getElementById("abAnchorLetter").value === "B" ? "B" : "A"
   };
   save(); render();
+});
+
+/* --- bell schedules (Path 9 P1) ---
+   The schedules live in one optional field of the calendar, `cal.bell`, read and resolved by
+   _shared/school-day.js (window.SchoolDay), which other tools will read the same way. There
+   is no __v bump for it: an older page saves the blob whole and keeps the field. This card
+   edits the field as typed (a half-typed period stays, marked "not used"); SchoolDay.cleanBell()
+   is what decides what a day gets. A field this page cannot read is kept as `bellBroken`, so a
+   backup still carries it; one written by a later version is shown and never edited. */
+const BELL_SV_KEY = "stviz_settings"; // 035 Schedule Visualizer's settings, read only, for the import
+
+function bellState() { return SchoolDay.cleanBell(cal.bell).state; }
+
+/** The field to edit, made whole; null when it belongs to a later version. */
+function ensureBell() {
+  const state = bellState();
+  if (state === "newer") return null;
+  if (state === "broken") { cal.bellBroken = cal.bell; cal.bell = SchoolDay.emptyBell(); }
+  if (state === "none") cal.bell = SchoolDay.emptyBell();
+  const b = cal.bell;
+  if (!b.letters || typeof b.letters !== "object") b.letters = { A: null, B: null };
+  if (!b.types || typeof b.types !== "object" || Array.isArray(b.types)) b.types = {};
+  if (b.regular === undefined) b.regular = null;
+  return b;
+}
+
+function bellEl(tag, attrs, kids) {
+  const n = document.createElement(tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => {
+    if (v === null || v === undefined || v === false) return;
+    if (k === "text") n.textContent = v; else n.setAttribute(k, v === true ? "" : v);
+  });
+  (kids || []).forEach(c => n.appendChild(c));
+  return n;
+}
+
+function scheduleName(s, i) { return (s && typeof s.name === "string" && s.name.trim()) || "Schedule " + (i + 1); }
+
+/** Why a typed period is not used, or "" when it is. */
+function periodProblem(p) {
+  const a = SchoolDay.toMinutes(p && p.start), b = SchoolDay.toMinutes(p && p.end);
+  if (a === null || b === null) return "Not used until both times are set";
+  if (b <= a) return "Not used: it ends before it starts";
+  return "";
+}
+
+function renderBell() {
+  const list = document.getElementById("bellList");
+  const assign = document.getElementById("bellAssign");
+  const status = document.getElementById("bellStatus");
+  const state = bellState();
+  const locked = state === "newer";
+  document.getElementById("btnAddBell").disabled = locked;
+  document.getElementById("btnImportBell").disabled = locked;
+  list.replaceChildren();
+  assign.replaceChildren();
+  status.textContent = locked
+    ? "These bell schedules were saved by a newer version of this page. They are kept as they are; update this page to edit them."
+    : state === "broken" ? "The bell schedules saved with this calendar could not be read. Adding a schedule starts a new list; the old value is kept in the backup file."
+    : "";
+  const schedules = state === "ok" ? cal.bell.schedules.filter(s => s && typeof s === "object") : [];
+  if (!schedules.length) {
+    list.appendChild(bellEl("p", { class: "ab-hint", text: locked ? "" : "No bell schedules yet. Add one, or import the times you set in the Schedule Visualizer." }));
+  }
+  schedules.forEach((s, si) => {
+    if (!Array.isArray(s.periods)) s.periods = [];
+    const name = bellEl("input", { type: "text", value: scheduleName(s, si), "aria-label": "Name of bell schedule " + (si + 1), disabled: locked });
+    name.addEventListener("change", () => { s.name = name.value.trim(); save(); renderBellAssign(); });
+    const del = bellEl("button", { type: "button", class: "small danger", text: "Remove schedule", disabled: locked });
+    del.addEventListener("click", () => {
+      if (!confirm(`Remove the bell schedule "${scheduleName(s, si)}"? Days that use it will fall back to the next schedule that applies.`)) return;
+      const b = ensureBell();
+      b.schedules = b.schedules.filter(x => x !== s);
+      if (b.regular === s.id) b.regular = null;
+      ["A", "B"].forEach(k => { if (b.letters[k] === s.id) b.letters[k] = null; });
+      Object.keys(b.types).forEach(k => { if (b.types[k] === s.id) delete b.types[k]; });
+      save(); renderBell();
+      document.getElementById("btnAddBell").focus();
+    });
+    const rows = s.periods.map((p, pi) => {
+      const lab = bellEl("input", { type: "text", value: (p && p.label) || "", "aria-label": `Name of period ${pi + 1} in ${scheduleName(s, si)}`, disabled: locked });
+      const st = bellEl("input", { type: "time", value: (p && p.start) || "", "aria-label": `Start of period ${pi + 1} in ${scheduleName(s, si)}`, disabled: locked });
+      const en = bellEl("input", { type: "time", value: (p && p.end) || "", "aria-label": `End of period ${pi + 1} in ${scheduleName(s, si)}`, disabled: locked });
+      const warn = bellEl("span", { class: "bell-warn", text: periodProblem(p) });
+      const rm = bellEl("button", { type: "button", class: "small", text: "Remove", "aria-label": `Remove period ${pi + 1} from ${scheduleName(s, si)}`, disabled: locked });
+      const write = () => {
+        s.periods[pi] = { label: lab.value.trim(), start: st.value || "", end: en.value || "" };
+        warn.textContent = periodProblem(s.periods[pi]);
+        save(); refreshOpenDrawerBell();
+      };
+      [lab, st, en].forEach(x => x.addEventListener("change", write));
+      rm.addEventListener("click", () => { s.periods.splice(pi, 1); save(); renderBell(); focusBell(si, "add"); });
+      return bellEl("tr", {}, [lab, st, en, warn, rm].map(x => bellEl("td", {}, [x])));
+    });
+    const add = bellEl("button", { type: "button", class: "small", text: "+ Add period", "data-bell-add": si, disabled: locked });
+    add.addEventListener("click", () => {
+      const last = s.periods[s.periods.length - 1];
+      const end = last && SchoolDay.toMinutes(last.end);
+      const hm = m => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+      const start = end !== null && end !== undefined && end + 55 < 24 * 60 ? hm(end + 5) : "";
+      s.periods.push({ label: "Period " + (s.periods.length + 1), start, end: start ? hm(end + 55) : "" });
+      save(); renderBell(); focusBell(si, "last");
+    });
+    const table = bellEl("table", { class: "bell-periods" }, [
+      bellEl("thead", {}, [bellEl("tr", {}, ["Period", "Starts", "Ends", "", ""].map(t => bellEl("th", { scope: "col", text: t })))]),
+      bellEl("tbody", {}, rows),
+    ]);
+    list.appendChild(bellEl("fieldset", { class: "bell-sched", "data-bell": si }, [
+      bellEl("legend", { text: "Bell schedule " + (si + 1) }),
+      bellEl("div", { class: "bell-head" }, [name, del]),
+      s.periods.length ? table : bellEl("p", { class: "ab-hint", text: "No periods yet." }),
+      bellEl("div", { class: "bell-actions" }, [add]),
+    ]));
+  });
+  renderBellAssign();
+}
+
+function focusBell(si, what) {
+  const box = document.querySelector(`#bellList fieldset[data-bell="${si}"]`);
+  if (!box) return;
+  const target = what === "last" ? [...box.querySelectorAll("tbody input[type=text]")].pop() : box.querySelector("[data-bell-add]");
+  if (target) target.focus();
+}
+
+/** The "which schedule each day uses" selects. */
+function renderBellAssign() {
+  const assign = document.getElementById("bellAssign");
+  assign.replaceChildren();
+  const state = bellState();
+  const schedules = state === "ok" ? cal.bell.schedules.filter(s => s && typeof s === "object" && typeof s.id === "string") : [];
+  if (!schedules.length) {
+    assign.appendChild(bellEl("p", { class: "ab-hint", text: "Add a bell schedule first." }));
+    return;
+  }
+  const b = cal.bell;
+  const rows = [{ key: "regular", label: "An ordinary school day", none: "No bell schedule", get: () => b.regular, put: v => { ensureBell().regular = v; } }];
+  if (cal.abCycle && cal.abCycle.enabled) {
+    ["A", "B"].forEach(k => rows.push({ key: "letter-" + k, label: k === "A" ? "An A day" : "A B day", none: "The ordinary day's",
+      get: () => b.letters && b.letters[k], put: v => { ensureBell().letters[k] = v; } }));
+  }
+  cal.dayTypes.filter(t => !t.noSchool).forEach(t => rows.push({ key: "type-" + t.id, label: `A day tagged "${t.label}"`, none: "No change",
+    get: () => b.types && b.types[t.id], put: v => { const bb = ensureBell(); if (v) bb.types[t.id] = v; else delete bb.types[t.id]; } }));
+  rows.forEach(r => {
+    const id = "bellAssign-" + r.key.replace(/[^\w-]/g, "_");
+    const sel = bellEl("select", { id, disabled: state === "newer" }, [bellEl("option", { value: "", text: r.none }),
+      ...schedules.map(s => bellEl("option", { value: s.id, text: scheduleName(s, cal.bell.schedules.indexOf(s)) }))]);
+    const cur = r.get();
+    sel.value = schedules.some(s => s.id === cur) ? cur : "";
+    sel.addEventListener("change", () => { r.put(sel.value || null); save(); refreshOpenDrawerBell(); });
+    assign.appendChild(bellEl("label", { for: id, text: r.label }));
+    assign.appendChild(sel);
+  });
+}
+
+const BELL_SOURCE = { type: id => { const t = typeById(id); return `its "${t ? t.label : id}" tag`; }, letter: k => `${k} day`, regular: () => "ordinary school day" };
+
+function renderDrawerBell(dateISO) {
+  const el = document.getElementById("drawerBell");
+  el.replaceChildren();
+  if (bellState() !== "ok" || !cal.bell.schedules.length) return;
+  const d = SchoolDay.dayOf(cal, dateISO);
+  if (!d.school) return;
+  el.appendChild(bellEl("label", { class: "f", text: "Bell schedule" }));
+  if (!d.schedule) { el.appendChild(bellEl("div", { text: "None for this day. Choose one under Bell Schedules." })); return; }
+  el.appendChild(bellEl("div", { text: `${d.schedule.name}, from ${BELL_SOURCE[d.source](d.sourceId)}` + (d.half ? " (early dismissal)" : "") }));
+  if (!d.schedule.periods.length) { el.appendChild(bellEl("div", { text: "It has no periods with both times set." })); return; }
+  el.appendChild(bellEl("ol", {}, d.schedule.periods.map(p => bellEl("li", { text: `${p.label}: ${p.start} to ${p.end}` }))));
+}
+
+function refreshOpenDrawerBell() { if (selectedDate) renderDrawerBell(selectedDate); }
+
+document.getElementById("btnAddBell").addEventListener("click", () => {
+  const b = ensureBell();
+  if (!b) return;
+  b.schedules.push({ id: uid("bell"), name: b.schedules.length ? "Schedule " + (b.schedules.length + 1) : "Regular day",
+    periods: [{ label: "Period 1", start: "", end: "" }] });
+  if (b.schedules.length === 1 && !b.regular) b.regular = b.schedules[0].id;
+  save(); renderBell();
+  const boxes = document.querySelectorAll("#bellList fieldset");
+  const nameBox = boxes.length && boxes[boxes.length - 1].querySelector(".bell-head input");
+  if (nameBox) { nameBox.focus(); nameBox.select(); }
+});
+
+document.getElementById("btnImportBell").addEventListener("click", () => {
+  const status = document.getElementById("bellStatus");
+  let settings = null;
+  try { settings = JSON.parse(localStorage.getItem(BELL_SV_KEY) || "null"); } catch (e) { settings = null; }
+  const imp = SchoolDay.fromScheduleVisualizer(settings);
+  if (!imp.schedules.length) {
+    status.textContent = "The Schedule Visualizer on this browser has no bell times yet. Set them in its Settings, under Bell schedule, then import again.";
+    return;
+  }
+  const b = ensureBell();
+  if (!b) return;
+  const names = new Set(b.schedules.map(s => s && s.name));
+  if (imp.schedules.some(s => names.has(s.name))
+      && !confirm("These times have been imported before. Add them again as new schedules?")) return;
+  cal.bell = SchoolDay.addImported(b, imp, () => uid("bell"));
+  save(); renderBell();
+  status.textContent = `Added ${imp.schedules.length === 1 ? "1 schedule" : imp.schedules.length + " schedules"} from the Schedule Visualizer: ` +
+    imp.schedules.map(s => `${s.name.replace(" (from the Schedule Visualizer)", "")}, ${s.periods.length} period${s.periods.length === 1 ? "" : "s"}`).join("; ") + "." +
+    (imp.skipped ? ` ${imp.skipped} period${imp.skipped === 1 ? " was" : "s were"} left out because a time was missing or ended before it started.` : "");
 });
 
 /* --- unit pacing layer ---
@@ -1441,6 +1687,7 @@ document.getElementById("btnNewYear").addEventListener("click", () => {
   if (end === null) return;
   const fresh = blankCalendar(label || "School Year", start, end);
   fresh.dayTypes = cal.dayTypes.map(t => ({ ...t })); // carry the legend forward, drop the days
+  if (cal.bell !== undefined) fresh.bell = JSON.parse(JSON.stringify(cal.bell)); // and the bell schedules, which belong to the legend
 
   if (cal.pacing && cal.pacing.lessons.length
       && confirm(`Carry the ${cal.pacing.lessons.length}-lesson paced sequence into the new year?\n\nBumps are cleared and distribution restarts from the new year's first school day — set a different start date in the Lesson Pacing card if needed.`)) {

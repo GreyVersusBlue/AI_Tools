@@ -48,6 +48,7 @@ const SITE_GLOBALS = {
   WebRTCPair: 'readonly',
   StudentDetails: 'readonly',
   StudentFlags: 'readonly',
+  SchoolDay: 'readonly',
   ToolRegistry: 'readonly',
   ThemeToggle: 'readonly',
   Countdown: 'readonly',
