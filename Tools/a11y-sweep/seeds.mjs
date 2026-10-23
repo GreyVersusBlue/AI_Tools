@@ -28,6 +28,8 @@
 // The names are invented. Nothing here is, or may become, real student data.
 
 import { seedCalendar2026 } from '../school-calendar/scv-seed.js';
+import { parseLessonList } from '../school-calendar/scv-pacing.js';
+import { newCourse, syncUnits, emptyPlan } from '../school-calendar/scv-plan.js';
 
 const j = v => JSON.stringify(v);
 
@@ -388,6 +390,13 @@ export const PAGE_SEEDS = {
       ],
       regular: 'reg', letters: { A: 'aday', B: null }, types: { halfday: 'half' },
     };
+    // ...and two courses (Path 9 P2), the first with two units of lessons, a bump and a lost
+    // date, so the Courses card draws its tabs, unit table and both lists.
+    const course = newCourse('World History', { id: 'course_1' });
+    course.lessons = parseLessonList(['U1-01-A-Trade', 'U1-02-B-Empires', 'U1-03-A-Review', 'U2-01-B-Faith', 'U2-02-A-Law'].join('\n')).lessons;
+    course.adjustments = [{ id: 'adj_1', beforeLessonId: 'les_2', reason: 'Ran long', createdOn: '2026-09-01' }];
+    course.lost = [{ id: 'lost_1', date: '2026-09-08', reason: 'Assembly' }];
+    cal.plan = { ...emptyPlan(), active: 'course_1', courses: [syncUnits(course), newCourse('Science', { id: 'course_2', meets: 'B' })] };
     return { scv_calendar_v1: j(cal) };
   },
 

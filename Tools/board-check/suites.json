@@ -163,6 +163,7 @@
     "Tools/school-calendar/test/smoke-bell.mjs",
     "Tools/schedule-visualizer/test/smoke-bell-from-calendar.mjs",
     "Tools/school-calendar/test/plan.test.mjs",
+    "Tools/school-calendar/test/smoke-plan.mjs",
     "Tools/blank-map-generator/test/smoke-starters.mjs",
     "Tools/picture-prompt-generator/test/smoke-prompt-sets.mjs",
     "Tools/picture-prompt-generator/test/smoke-picture-store.mjs",

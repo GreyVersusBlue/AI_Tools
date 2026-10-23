@@ -9,6 +9,53 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P2 increment 1, the page: 032's Courses card, the notice bar and Undo (2026-10-23, AI-18, `CACHE_VERSION` v309)
+
+BACKLOG rank 13 kept (2+) and rewritten: increment 1 is built; increments 2–4 are left.
+
+- **What was built.** 032 imports `scv-plan.js` (now in `PRECACHE_URLS` and `SHELL_URLS`). On load and on a JSON
+  import the page runs `absorbLegacy()`; a sequence in `cal.pacing` becomes "Course 1", and it is saved only if every
+  lesson lands where `placeLessons()` put it (checked on the page, against the old placement built from the blob as
+  loaded), with one line in a new notice bar and Undo. **`save()` is the one commit point**: it places every course,
+  diffs the dates stamped at the last save against the placer's, stamps, writes, and when anything moved the bar says
+  what (“Marking Sep 14 as Snow Day: Moved 31 lessons one class day later.”) with **Undo**, which writes the previous
+  bytes back, one step deep (P9-6: the past is recomputed, and past lessons are counted in the sentence). On load, stamped
+  dates that are not the placer's (an older page, a hand edit, another `plan.algo`) show the bar with "Keep these dates"
+  and nothing is written until then. The Lesson Pacing card is now **Courses**: tabs, "+ New course", name, "Meets on"
+  (every day / A / B, with a warning when the cycle is off), delete; the lesson box, start date and both imports work on
+  the active course; a unit table (the runs of `U<n>`: name, class days with half days, start, end, short); the days the
+  course did not meet; the bumps. The grid, week strip, drawer and `.ics` read the active course's placement in
+  `placeLessons()`'s shape, unchanged. The drawer has **"This lesson needs another day…"** (the bump as it was) and
+  **"This class didn't meet…"** (a lost date, this course only), the snow-day shortcut, and "It met after all" on a lost
+  day. A newer plan is shown read-only and written back untouched; a broken one is kept in `planBroken`, with a line.
+- **Calls made.** (1) *An empty plan is not written*: `bareOf()` leaves out a plan with no course, so a calendar with no
+  pacing keeps the exact bytes it had (`smoke-weeks.mjs`'s golden of the stored string failed until this, and it is the
+  design's "nothing looks different for a calendar with no pacing"). So `scv-seed.js` did **not** get `plan:
+  emptyPlan()`, which the design listed; the page absorbs the seed instead. (2) *Any edit while the stale-dates bar is up
+  keeps the new dates*, as "Keep these dates" does; the design said nothing is saved "until the teacher takes it", and an
+  edit is taking it. (3) *The Units card (dated units) stays shown always*, with "+ Add Unit", until increment 2 brings
+  typed units and the conversion; hiding it now would take away the only way to add one. (4) *Distribute and the
+  spreadsheet import make "Course 1" when there is no course*, so a teacher who never opens the tabs sees what they saw.
+  (5) *A new year carries every course's lessons* (bumps, lost dates, start and stamps dropped), today's carry widened to
+  courses; `carryForward()` proper is increment 4. (6) *Deleting or clearing a course always offers Undo*, moved or not.
+  (7) *A course's start date repaces on change* (it used to be read only by Distribute), through the bar.
+- **Checks.** New `npm run test:school-calendar-plan-page` (`smoke-plan.mjs`, port 8541): 54 checks, and 5 deliberate
+  breaks of `scv-plan.js` altered on the wire (describeDiff silent, stamp writes no dates, absorb leaves `cal.pacing`,
+  closures ignored, the diff sees no move), each caught; green under `TZ=UTC` too. It holds the migration (every lesson in
+  its cell, `cal.units`, days, day types, year and `__v` unchanged in storage, Undo writes the old bytes), the `.ics`
+  (every lesson on its old date, the old number of events), both drawer actions and the lost date taken back, the
+  snow-day bar and Undo byte for byte, stale dates not written until kept, a second course as its own track, an A course
+  with the cycle off, newer and broken plans, nothing written on a first visit, the page throwing nothing, and axe on the
+  card and bar. The 032 a11y seed has two courses (lessons, a bump, a lost date): `test:a11y --only 032` clean with no
+  allowance. `run-suites --only` school-calendar (8 suites, `smoke-weeks` golden included), tool-registry,
+  service-worker, schedule-visualizer; `test:theme`; `path7:next --only 032` (0 findings); lint; every guard,
+  `check:precache --base origin/main`.
+- **Not done or not verified.** 010's and 045's panels were not opened: the suite holds the fields they read (days, day
+  types, meta) equal instead. The `.ics` was compared lesson by lesson with the old placement, not byte for byte with a
+  v245 page. No real teacher's blob, phone, or county sheet has been through it. "Count for pacing" on day types, pins,
+  typed units, the dated-unit conversion (2), the baseline and "behind" (3), buffers, the A/B split and
+  `carryForward()` (4) are not built.
+
 ## Path 9 P2 increment 1, the module: `scv-plan.js`, pacing that recomputes (2026-10-23, AI-18, no `CACHE_VERSION`)
 
 BACKLOG rank 13 kept (2+) and rewritten: what is left of increment 1 is 032's page; increments 2–4 follow.
