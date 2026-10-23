@@ -9,6 +9,38 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P2 increment 1, the module: `scv-plan.js`, pacing that recomputes (2026-10-23, AI-18, no `CACHE_VERSION`)
+
+BACKLOG rank 13 kept (2+) and rewritten: what is left of increment 1 is 032's page; increments 2–4 follow.
+
+- **What was built.** `Tools/school-calendar/scv-plan.js`, a pure ES module beside `scv-pacing.js` (which is unchanged
+  and stays the reference): `emptyPlan`, `newCourse`, `newUnit`, `readPlan` (`none`/`ok`/`broken`/`newer`),
+  `absorbLegacy` (the migration: lessons and bumps in `cal.pacing` become a course, `cal.pacing` is emptied, `cal.units`
+  untouched, idempotent, a second write by an older page makes a second course, a broken plan kept in `planBroken`, a
+  newer one left alone), `courseRange`, `dayValue` and `classDays` (the design's order of reasons: outside, weekend,
+  closed, skip, rotation, lost), `syncUnits` (runs of `U<n>`, matched by code and run so a name survives a re-import),
+  `placeCourse`/`placePlan`, `stamp`, `stored`, `diffPlacement`, `describeDiff`, `shortDate`. No page imports it, so
+  nothing changed for a teacher and no precached file changed: **no `CACHE_VERSION` bump** (the prompt allowed v309 "if
+  the repo's rules want one"; they do not, since `check:precache --base` is about precached files).
+- **Devon's answers recorded.** P9-1 to P9-10 (2026-10-21, every default kept) and question 3 (2026-10-07) are written
+  into the P2 bullet as settled, and the module's header names them where they decide behaviour.
+- **Calls made.** (1) *`byDate` keeps `placeLessons()`'s shape* and the design's fuller per-date record is `slots`, since
+  the design also promised the grid would read the active course "with no change of its own", and those two lines of the
+  design disagreed. (2) *A bump in a course with no lessons is an orphan*, which is what `placeLessons()` does with bumps
+  and no lessons; without it the equivalence fails on a blob holding bumps only. (3) *`diffPlacement`'s `by`* counts the
+  course's class days after the change between the two dates, the later one counted, so a lesson that sat on the lost
+  day itself moved "one class day", not zero. (4) *Ids are made by counting* (`course_<n>`, `unit_<n>`, the first free),
+  never by chance, so the migration is deterministic and the suite can hold "twice gives the same blob".
+- **Checks.** `npm run test:school-calendar-plan` (pure Node): 76 checks, 16 deliberate breaks of the module all caught
+  (each imported from a `data:` URL, so no file is written), the whole file again under `Pacific/Kiritimati`. It holds the
+  design's figures (184 class days, 92 A and 92 B, 13 half days; units of 10, 8 and 12 days are Aug 31–Sep 14, Sep 15–24,
+  Sep 25–Oct 12; an A course's 10-day unit ends Sep 25; a 20-day unit from Jan 4 ends Feb 2, then Feb 3 after a Jan 12
+  snow day, which flips all 99 later letters) and holds `placeCourse()` of a migrated course to `placeLessons()` on 500
+  seeded random lists with bumps, orphans, closures and start dates (byDate, dates, vacated, overflow, orphans). Lint.
+- **Not done or not verified.** Pins and open days, the baseline and "behind", buffers, the A/B split, the new-year
+  carry, `convertDatedUnits`, and every part of the page. The design's `smoke-pacing.mjs` sections 6–10 were not copied
+  case by case; the 500 random cases stand in for them. Nothing here has met a real county pacing sheet.
+
 ## Path 9 P1 increment 2: 035 reads 032's bell schedules (2026-10-23, AI-18, `CACHE_VERSION` v308)
 
 BACKLOG rank 12 deleted (a gap; ranks not renumbered): Path 9 P1 is built. What stays is defaults B1–B5 in the P1 bullet.

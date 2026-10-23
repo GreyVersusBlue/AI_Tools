@@ -93,6 +93,7 @@
     "test:school-calendar-weeks-core": "node Tools/school-calendar/test/smoke-weeks-core.mjs",
     "test:school-calendar-weeks": "node Tools/school-calendar/test/smoke-weeks.mjs",
     "test:school-day": "node Tools/school-calendar/test/school-day.test.mjs",
+    "test:school-calendar-plan": "node Tools/school-calendar/test/plan.test.mjs",
     "test:school-calendar-bell": "node Tools/school-calendar/test/smoke-bell.mjs",
     "test:layout-bell-from-calendar": "node Tools/schedule-visualizer/test/smoke-bell-from-calendar.mjs",
     "test:image-to-pdf": "node Tools/image-to-pdf/test/smoke.mjs && node Tools/image-to-pdf/test/smoke-enhance.mjs && node Tools/image-to-pdf/test/smoke-portfolio.mjs",

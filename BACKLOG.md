@@ -87,6 +87,11 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-18 (no `CACHE_VERSION`), rank 13 (kept, rewritten), Path 9 P2 increment 1, the module half:**
+  `Tools/school-calendar/scv-plan.js`, pure, imported by no page yet: the `cal.plan` record, `absorbLegacy()` (held to
+  `placeLessons()` on 500 seeded cases), class days per course (skip, lost dates, A/B), the placer, `stamp`,
+  `diffPlacement`/`describeDiff`. `npm run test:school-calendar-plan` (pure Node, two zones, 16 breaks). Devon's P9-1 to
+  P9-10 recorded as settled. **Left of increment 1: 032's page (rank 13).**
 - **AI-18 (v308), rank 12 (DELETED: Path 9 P1 is built; a gap, ranks not renumbered): 035 reads 032's bell schedules.**
   035's Settings has "From the School Calendar" under its bell editor: pick 032's schedule for A and B ("Same as A Day"
   allowed), "Use these times" fills the A/B rows by position (asks before replacing typed times), Save Settings keeps
@@ -551,7 +556,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 11 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 13 | Path 9 P2 — pacing that recomputes around lost days (**designed 2026-10-05, not built**: the design and ten questions for Devon are under the P2 bullet; it still waits on its place in the order) | 032 | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
+| 13 | Path 9 P2 — pacing that recomputes around lost days. **Increment 1's module is built (AI-18, 2026-10-23, no `CACHE_VERSION`: no page loads it yet): `Tools/school-calendar/scv-plan.js`** (record, `absorbLegacy`, class days, the placer for lessons and typed lengths, `stamp`, `diffPlacement`), `npm run test:school-calendar-plan`. **Left of increment 1:** 032's page — run `absorbLegacy` on load and import, `commit()` with the notice bar and Undo, the Courses card in lesson mode, the two drawer actions (lost date / needs another day), `scv-plan.js` into `PRECACHE_URLS` and `SHELL_URLS`, `smoke-plan.mjs`, a 032 seed with a course. Then increments 2–4 as the P2 bullet lists them. Devon's ten answers are in (all defaults) | 032 | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 14 | Path 9 P3 — consumers: 004, 010, 001, 036/037, 044/045, 032 itself | site | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 15 | Path 9 P4 — `.ics` import/export and a one-page year wall calendar print | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 16 | Path 10 P1 — Packet Builder `087` with the section-provider registry | 087 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
@@ -2978,7 +2983,14 @@ fixed unit dates; the valuable half (a unit defined by instructional days that
   automatically around holidays/half days/testing windows; "you are N days behind"
   against the plan; rebinding when a day is lost. *Fable for the placement
   algorithm and its interaction with the existing bump/adjustment model.*
-  **Designed, not built (AI-18, 2026-10-05). Everything from here to P3 is the design; no code exists for it.**
+  **Designed (AI-18, 2026-10-05); increment 1's module built (AI-18, 2026-10-23): `Tools/school-calendar/scv-plan.js`
+  and `test/plan.test.mjs` (`npm run test:school-calendar-plan`). No page imports it yet, so nothing changed for a teacher
+  and there was no `CACHE_VERSION` bump.** Where the module differs from the text below, on purpose: `byDate` keeps
+  `placeLessons()`'s shape (`{ ISO: lesson }`) so 032's grid reads it unchanged, and the fuller per-date view the design
+  gave `byDate` is `slots`; `abLetters` is imported from `scv-weeks.js`, where it already moved; the placement also
+  carries `classDates` and `adjDates` (what `diffPlacement`'s `by` and `stamp` need); a bump in a course with no lessons
+  is an orphan; pins, `open`, `setBaseline`, `slip`, `splitByLetter`, `convertDatedUnits` and `carryForward` are not
+  written (increments 2–4). The rest of increment 1 is the page (rank 13's text). Everything below is the design.
   Read from the tree at v245: 032's page, `scv-pacing.js`, `scv-store.js`, `scv-seed.js`, both suites, and the
   two readers (010, 045). Figures marked *measured* came from two pure-Node probes over the shipped 2026-27 seed
   and the shipped modules; they were not kept. Questions that are Devon's are listed at the end and not answered.
@@ -3205,7 +3217,12 @@ fixed unit dates; the valuable half (a unit defined by instructional days that
     `commit()`, the Courses card for one or more courses in lesson mode, lost dates: nothing looks different for
     a calendar with no pacing, and a migrated one keeps every date. (2) Typed units with pins, the dated-unit
     conversion, the pace setting. (3) The baseline and "behind". (4) Buffers, the A/B split, the new-year carry.
-  - **Questions for Devon. None is answered here; each says what the design assumes until he does.**
+  - **Questions for Devon: all ten settled.** Question 3 on 2026-10-07 (the A/B days slide), and the other nine as P9-1
+    to P9-10 on 2026-10-21 (`~/projects/DEVON-ANSWERS-2026-10-21.md`, outside this repo): **keep the default**, every one,
+    and P9-10 adds that 032 owns the bell schedules. So: a half day is a whole class day marked ½; testing days count;
+    "behind" is against the plan as it stood; buffers do not absorb a loss on their own; an old closure recomputes, with
+    Undo; an A/B course stays one list; dated units stay; lengths and lessons carry into a new year; the words are
+    "Course" and "class day". The questions as asked:
     1. *Half days.* Does a half day count as a class day for pacing? Assumed: yes, as today, with the ½ mark,
        and a teacher can set the day type to skip. Is skip the better default for a new calendar?
     2. *Testing days.* Count or skip by default, and is a testing window the whole school's or different by
