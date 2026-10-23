@@ -36,6 +36,15 @@ on:
   pull_request:
   push:
     branches: [main]
+    # A push that changes only these files has no code for the 32-minute full suite
+    # to test. Pull requests are not filtered, so the guards still run on them
+    # before such a change merges. (Devon, 2026-10-01; see BACKLOG.md,
+    # "Single-operator wave mode".)
+    paths-ignore:
+      - 'BACKLOG.md'
+      - 'HISTORY.md'
+      - 'CLAUDE.md'
+      - 'README.md'
 
 # A second push to the same branch makes the first run's answer stale.
 concurrency:
