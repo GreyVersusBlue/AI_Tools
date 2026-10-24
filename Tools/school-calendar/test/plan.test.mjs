@@ -420,6 +420,8 @@ function checks(M, full = true) {
   okk(/No longer fitting before it: Cells, day 9, Cells, day 10\./.test(M.describeSlip(seed, tyEarly, sCut)), '...and the sentence names the days that no longer fit');
   // when the baseline is set
   eq([M.wantsBaseline(wh0, P0, '2026-08-20'), M.wantsBaseline(wh, P0, '2026-08-20'), M.wantsBaseline(wh, P0, '2026-08-31'), M.wantsBaseline(wh, P0, '2026-10-01')], [true, true, false, false], 'a baseline is set when a course has none, and again while today is before its first class day');
+  const emptyBased = based(seed, M.newCourse('E'), '2026-08-20');
+  eq([emptyBased.baseline.seq, M.wantsBaseline(emptyBased, P0, '2026-10-01')], [[], true], 'a baseline with nothing planned in it is set again when the lessons come');
   const ab = based(seed, { ...lessonCourse(60), meets: 'A' }, '2026-08-20');
   const abCal = { ...seed, abCycle: { enabled: true, anchorDate: '2026-08-31', anchorLetter: 'A' } };
   const abBased = based(abCal, { ...lessonCourse(60), meets: 'A' }, '2026-08-20');

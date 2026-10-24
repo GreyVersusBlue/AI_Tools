@@ -9,6 +9,48 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P2 increment 3: the baseline, "behind" and "Make this the plan" (2026-10-24, AI-18, `CACHE_VERSION` v311)
+
+BACKLOG rank 13 kept (2+) and rewritten: increments 1–3 are built; increment 4 and two page pieces are left.
+
+- **What changed for a teacher.** 032's Courses card has one line a course with something planned, for example: "World History: 1
+  class day behind the plan of Aug 20. U2-11-A-Lesson 31 was planned for today and is now Oct 2. Lost: Sep 15 (Holiday /
+  No School)." It says on the plan, behind or ahead, counted in that course's class days, and why (days lost or gained,
+  bumps added or given back, lessons or unit days added or taken out before that point, days that no longer fit before a
+  pin, open days before a pin used up). A line that is behind is bold. **"Make this the plan"** (naming the course when
+  there are several) makes the dates shown the plan, as of today, with Undo. A course saved before v311 says it has no
+  plan to measure against until its next change.
+- **Module.** `setBaseline()` stores `{ setOn, start, mask, seq, adjIds, units: [{ id, days, pin }] }`: a class-day mask
+  from the course's first possible day to the year's end and the slot order as keys (`U3-06-A`, `U3-06-A#2` for a code's
+  second run, `G:<bump id>`, `D:<unit id>#<n>`), about 2.6 KB for 184 lessons. `baselinePlacement()` rebuilds the
+  baseline's placement through the placer's first pass, now one function (`assignDays`) both share; `placeCourse()`
+  returns that order with each slot's date (`order`). `slip()` and `describeSlip()`; `wantsBaseline()` says when a save
+  re-bases.
+- **Calls made.** (1) *`behind` is signed and net of the baseline's own days:* it is (class days up to X now − class days
+  up to today now) − (the same in the baseline), not the design's "class days after today up to X, 0 when X is on or
+  before today". The two agree whenever the baseline put something on each class day up to today; they differ when the
+  baseline had a bump between X and today, where the design's count reads 0 after a lost day and this reads 1, and when
+  a lesson is taken out before X, where this says ahead instead of 0. It is also what makes `behind` equal the sum of the
+  causes exactly. (2) *X is never a bump*: a bump's id can be deleted, so the last lesson or unit day before it stands in.
+  (3) *When X is gone or no longer fits*, the last earlier slot that is still placed stands in and the line says "about";
+  the design's "count placed slots" fallback was not needed. (4) *A baseline is set when a course first has something
+  planned*, and an empty baseline counts as none, so a course made empty and given lessons in October is measured from
+  October. (5) *A course from v309–v310 gets its baseline at its next change*, not on load, because the load path writes
+  nothing unless the migration made a course; until then its line says so. (6) *No "migrated" note on the row* (the
+  design's "its row says so"): a migrated course starts at 0 like any new one, and the line shows no cause. (7) *The help
+  text gained one paragraph* on what the line measures.
+- **Checks.** `npm run test:school-calendar-plan` now 132 checks and 35 deliberate breaks (9 new), both zones: the
+  rebuild matches the placement exactly (with and without pins), each cause on its own, the sentences, an A course behind
+  in A days, and 500 seeded edit sequences (closures added and removed, lost dates, bumps, lessons taken out, typed days
+  changed, pins) where `behind` equals the sum of its causes, and, where only days changed, equals the class days lost
+  less those gained up to today, counted independently. New `npm run test:school-calendar-plan-behind`
+  (`smoke-plan-behind.mjs`, Chromium, port 8543): 25 checks and 4 breaks of `scv-plan.js` altered on the wire, each
+  caught; also green under `TZ=UTC`. `run-suites --only school-calendar` 10 green (the `smoke-weeks` golden included),
+  `--only service-worker` 3 green, the a11y sweep on 032 (seeded) clean, `test:theme` 966, `path7:next --only 032` 0
+  findings, lint, every guard and `check:precache --base origin/main`.
+- **Not verified.** No teacher has read the line. The ledger's wording for the rarer causes ("No longer fitting before it",
+  "Now fitting before it") is held only by the module suite. The behind line is not on 010 or 045 (P3) and not printed.
+
 ## Path 9 P2 increment 2: typed units, pins, "Count for pacing" and the dated-unit conversion (2026-10-24, AI-18, `CACHE_VERSION` v310)
 
 BACKLOG rank 13 kept (2+) and rewritten: increments 1 and 2 are built; increments 3–4 are left.

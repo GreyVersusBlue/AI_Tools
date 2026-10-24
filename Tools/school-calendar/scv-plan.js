@@ -530,10 +530,12 @@ export function setBaseline(cal, course, placement, todayISO) {
   return c;
 }
 
-/** Whether a save should (re)set a course's baseline: it has none, or today is before its
+/** Whether a save should (re)set a course's baseline: it has none, or one with nothing
+    planned in it (a course made empty and then given its lessons), or today is before its
     first class day, while the teacher is still planning. */
 export function wantsBaseline(course, placement, todayISO) {
   if (!course.baseline || typeof course.baseline !== "object") return true;
+  if (!Array.isArray(course.baseline.seq) || !course.baseline.seq.length) return true;
   const first = (placement.classDates || [])[0];
   return !!(first && todayISO && todayISO < first);
 }

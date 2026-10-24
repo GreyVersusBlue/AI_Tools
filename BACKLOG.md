@@ -87,6 +87,11 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-18 (v311), rank 13 (kept, rewritten), Path 9 P2 increment 3: the baseline and "behind".** Each course with
+  something planned has a line in the Courses card: on the plan, or N class days behind or ahead of it, with the lesson,
+  its two dates and the causes (lost days, bumps, lessons added, open days used); "Make this the plan" re-bases it, with
+  Undo. `scv-plan.js` has `setBaseline`, `slip` and `describeSlip`. New `npm run test:school-calendar-plan-behind` (port
+  8543). **Left: increment 4 and two page pieces (rank 13). Next free suite port: 8544.**
 - **AI-18 (v310), rank 13 (kept, rewritten), Path 9 P2 increment 2: typed units, pins, "Count for pacing", the
   dated-unit conversion.** A course with no lessons is planned in units (class days typed, order, remove); any unit can be
   pinned to a start date, with open days or a shortened unit before it said in the card; "Let these flow…" clears the
@@ -569,7 +574,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 11 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 13 | Path 9 P2 — pacing that recomputes around lost days. **Increments 1 and 2 are built (AI-18: `scv-plan.js` and 032's page in v309; typed units, pins and open days, "Count for pacing" with its per-course override, the dated-unit conversion and "Let these flow", the Units card hidden when empty, in v310).** **Left: increment 3** (the baseline, "Make this the plan", the behind line and `slip()`), **increment 4** (buffers, "Split into A and B", `carryForward()` for the new year), and two pieces of the design's page list nobody has built: the printed unit table per course with Short, and bands for every course rather than the active one. Do them in that order, one a session; the P2 bullet has the design and Devon's ten answers (all defaults) | 032 | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
+| 13 | Path 9 P2 — pacing that recomputes around lost days. **Increments 1–3 are built (AI-18: `scv-plan.js` and 032's page in v309; typed units, pins and open days, "Count for pacing", the dated-unit conversion and "Let these flow" in v310; the baseline, the behind line with its causes, `slip()` and "Make this the plan" in v311).** **Left: increment 4** (buffers, "Split into A and B", `carryForward()` for the new year), then two pieces of the design's page list nobody has built: the printed unit table per course with Short, and bands for every course rather than the active one. Do them in that order, one a session; the P2 bullet has the design and Devon's ten answers (all defaults) | 032 | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 14 | Path 9 P3 — consumers: 004, 010, 001, 036/037, 044/045, 032 itself | site | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 15 | Path 9 P4 — `.ics` import/export and a one-page year wall calendar print | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 16 | Path 10 P1 — Packet Builder `087` with the section-provider registry | 087 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
@@ -3013,7 +3018,15 @@ fixed unit dates; the valuable half (a unit defined by instructional days that
   "+ Add Unit" outside a course); the conversion sweep checks 168 start/end pairs across the year and every empty one,
   not all 40,528; bands are drawn for the active course only, and only when it has no lessons; the typed-mode drawer
   button is "This unit needs another day" (`days + 1`); and a course's override is a choice per day type, "As the day
-  type", "Counts" or "Skips" (`HISTORY.md` has the calls). Everything below is the design.
+  type", "Counts" or "Skips" (`HISTORY.md` has the calls). **Increment 3 is built (AI-18, v311, `npm run
+  test:school-calendar-plan-behind`; `setBaseline`, `baselinePlacement`, `slip`, `describeSlip` and `wantsBaseline` in
+  `test:school-calendar-plan`).** Where it differs from the text below, on purpose: `behind` is signed and net of the
+  baseline's own days ((class days up to X now − up to today now) − the same in the baseline), which is what makes it
+  equal the sum of the causes exactly and reads 1, not 0, when the baseline had a bump between X and today; X is never a
+  bump; when X is gone the last earlier placed slot stands in ("about"); an empty baseline counts as none; a v309–v310
+  course is based at its next change, not on load; the baseline stores slot keys (`U3-06-A`, `G:<id>`, `D:<unit>#<n>`),
+  about 2.6 KB for 184 lessons; and there is no "migrated" note on the row (`HISTORY.md` has the calls). Everything below
+  is the design.
   Read from the tree at v245: 032's page, `scv-pacing.js`, `scv-store.js`, `scv-seed.js`, both suites, and the
   two readers (010, 045). Figures marked *measured* came from two pure-Node probes over the shipped 2026-27 seed
   and the shipped modules; they were not kept. Questions that are Devon's are listed at the end and not answered.

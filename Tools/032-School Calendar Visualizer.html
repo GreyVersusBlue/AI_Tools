@@ -194,6 +194,10 @@
   .unit-notes { font-size: 0.78rem; color: var(--muted); margin-top: 4px; white-space: pre-line; }
   .unit-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   .course-pace { margin-top: 10px; font-size: 0.8rem; }
+  .course-slip { margin-top: 8px; font-size: 0.85rem; }
+  .course-slip ul { margin: 0 0 6px; padding-left: 1.1rem; }
+  .course-slip li + li { margin-top: 3px; }
+  .course-slip li.slip-behind { font-weight: 600; }
   .course-pace .pace-pick { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 4px; }
   .course-pace label { display: flex; gap: 4px; align-items: center; }
   .plan-preview { border: 2px solid var(--accent-2); border-radius: 8px; padding: 10px; margin-top: 10px; background: var(--card); }
@@ -504,6 +508,10 @@
       <button type="button" id="btnCourseDelete" class="danger small">Delete this course</button>
     </div>
     <div id="courseProblems" class="pace-errors"></div>
+    <div id="courseSlip" class="course-slip" hidden>
+      <ul id="courseSlipList"></ul>
+      <button type="button" id="btnMakePlan" class="small">Make this the plan</button>
+    </div>
     <details class="pace-help">
       <summary>Lesson naming convention &amp; how pacing works</summary>
       <p>One lesson per line, named <code>U&lt;unit&gt;-&lt;lesson&gt;-&lt;A|B&gt;-&lt;Title&gt;</code>:</p>
@@ -522,6 +530,7 @@
       up short if they run long. The table says which. A day type can be left out of pacing (untick <em>Count for pacing</em>
       in Day Types), and a course can count or skip a type for itself below its units.</p>
       <p>Each course is one prep's plan, with its own lessons, bumps and lost days; the calendar shows the course picked above. A course that meets on A days only counts A days as its class days. In a day's editor, <em>This lesson needs another day</em> puts an empty class day in front of that lesson and stays with it; <em>This class didn't meet</em> takes that date away from this course only (an assembly), whatever lesson was planned. When a change moves lessons, a bar at the top says what moved and offers Undo.</p>
+      <p>Each course says how many class days it is behind its plan, or ahead of it, and why: the plan is the dates as they stood when you first gave the course its lessons or units, kept up to date while you are still planning and held fixed from its first class day, until you press <em>Make this the plan</em>. Behind is counted in that course's class days, so an A-day course is behind in A days.</p>
     </details>
     <textarea id="paceInput" rows="6" placeholder="U1-01-A-Early Islamic Expansion&#10;U1-01-B-Early Islamic Expansion&#10;U1-02-A-Geographic Factors in Early Islamic Expansion&#10;…"></textarea>
     <div class="pace-row">
@@ -587,6 +596,7 @@ import {
   absorbLegacy, readPlan, newCourse, syncUnits, placeCourse, placePlan, stamp, stored,
   diffPlacement, describeDiff, shortDate, PLACER_ALGO,
   newUnit, convertDatedUnits, unpinAfterFirst, unitProblemText,
+  setBaseline, wantsBaseline, slip, describeSlip,
 } from './school-calendar/scv-plan.js';
 
 Store.configure({ toolName: 'School Calendar Visualizer' });
@@ -629,7 +639,17 @@ function save(label, always) {
   const before = savedBytes;
   const fresh = placePlan(cal);
   const moved = diffsFor(cal, fresh);
-  if (readPlan(cal).state === "ok") cal.plan = stamp(cal, fresh).plan;
+  if (readPlan(cal).state === "ok") {
+    // Increment 3: a course's baseline, the plan "behind" is measured against, is set
+    // when it first has something planned, and again at every save until its first class
+    // day; after that only "Make this the plan" moves it.
+    const t = todayISO();
+    cal.plan.courses = cal.plan.courses.map(c => {
+      const p = fresh[c.id];
+      return p && p.order.length && wantsBaseline(c, p, t) ? setBaseline(cal, c, p, t) : c;
+    });
+    cal.plan = stamp(cal, fresh).plan;
+  }
   store.set(bareOf(cal));
   savedBytes = storedBytes();
   loadPending = false;
@@ -1800,6 +1820,31 @@ function fmtShort(dateISO) {
 
 /** The Courses card (Path 9 P2 increment 1, lesson mode). With no course it reads as the
     Lesson Pacing card always did, and the first Distribute or import makes "Course 1". */
+/** Path 9 P2 increment 3: one "behind" line a course with something planned, measured
+    against its baseline (slip() in scv-plan.js), and "Make this the plan" for the course
+    shown. A course saved before v311 has no baseline until its next change. */
+function renderSlip(courses, course, readOnly) {
+  const box = document.getElementById("courseSlip");
+  const list = document.getElementById("courseSlipList");
+  list.textContent = "";
+  const t = todayISO();
+  const planned = courses.filter(c => placements[c.id] && placements[c.id].order.length);
+  planned.forEach(c => {
+    const li = document.createElement("li");
+    li.dataset.course = c.id;
+    const s = slip(cal, c, placements[c.id], t);
+    li.textContent = s ? describeSlip(cal, c, s, c.name)
+      : c.name + ": no plan to measure against yet. It is set at your next change, or press Make this the plan.";
+    if (s && s.behind > 0) li.className = "slip-behind";
+    list.appendChild(li);
+  });
+  box.hidden = !planned.length;
+  const btn = document.getElementById("btnMakePlan");
+  const mine = !!(course && placements[course.id] && placements[course.id].order.length);
+  btn.hidden = !mine || readOnly;
+  if (mine) btn.textContent = "Make this the plan" + (courses.length > 1 ? " for " + course.name : "");
+}
+
 function renderPacing() {
   const state = planState();
   const readOnly = state === "newer";
@@ -1843,6 +1888,7 @@ function renderPacing() {
   if (course && placement.problems.some(x => x.code === "no-rotation")) probs.push(`${course.name} meets on ${course.meets} days, but the A/B Day Cycle is off, so it is paced on every school day. Turn the cycle on above.`);
   if (course && placement.problems.some(x => x.code === "no-class-days")) probs.push(`${course.name} has no class days between its start date and the year's last day.`);
   document.getElementById("courseProblems").textContent = probs.join("\n");
+  renderSlip(courses, course, readOnly);
 
   const lessons = course ? course.lessons : [];
   const adjustments = course ? course.adjustments : [];
@@ -2146,6 +2192,15 @@ document.getElementById("btnPacePreview").addEventListener("click", () => {
   errors.forEach(e => lines.push(`Line ${e.line}: "${e.text}" ${e.message}`));
   if (!lessons.length && !errors.length) lines.push("Nothing to parse — paste one lesson code per line.");
   errEl.textContent = lines.join("\n");
+});
+
+document.getElementById("btnMakePlan").addEventListener("click", () => {
+  const c = activeCourse(); if (!c) return;
+  const p = placePlan(cal)[c.id]; if (!p) return;
+  const i = cal.plan.courses.findIndex(x => x.id === c.id);
+  cal.plan.courses[i] = setBaseline(cal, c, p, todayISO());
+  save(null, c.name + ": the dates shown are now the plan, as of " + shortDate(todayISO()) + ", so it is 0 days behind.");
+  render();
 });
 
 document.getElementById("btnPaceDistribute").addEventListener("click", () => {
