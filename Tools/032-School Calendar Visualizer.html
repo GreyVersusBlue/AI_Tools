@@ -164,6 +164,8 @@
   body.view-units .units-print { display: block; }
   body.view-units .months, body.view-units .year-grid, body.view-units .week-strip { display: none; }
   .units-print h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .units-print h3 { font-size: 0.95rem; margin: 16px 0 6px; break-after: avoid; }
+  .units-print td.short { font-weight: 700; }
   .units-print table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
   .units-print th, .units-print td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; }
   .units-print th { background: var(--accent); color: var(--accent-ink); }
@@ -1812,14 +1814,38 @@ function renderUnitsPrint() {
         <td>${(validRange && stats.halfDays) ? stats.halfDays : ""}</td>
       </tr>`).join("")
     : `<tr><td colspan="5">No units defined yet — add one in the Units card above.</td></tr>`;
-  wrap.innerHTML = `
-    <h2>${escapeHtml(cal.meta.yearLabel || "School year")} &mdash; unit pacing calendar</h2>
+  // Path 9 P2: each course's units, as placed, with what does not fit (Short). A calendar
+  // with no course keeps the dated table alone, unchanged; with courses and no dated units
+  // the dated table, which would only say to add one in a card that is hidden, is left out.
+  const courses = planState() === "ok" ? cal.plan.courses.filter(c => c.units.length && placements[c.id]) : [];
+  const dated = rows.length || !courses.length ? `${courses.length ? "\n    <h3>Dated units</h3>" : ""}
     <table>
       <thead><tr><th>Unit</th><th>Start</th><th>End</th><th>Instructional days</th><th>Half days</th></tr></thead>
       <tbody>${body}</tbody>
       ${rows.length ? `<tfoot><tr><td colspan="3">Total</td><td>${total}</td><td></td></tr></tfoot>` : ""}
     </table>
-  `;
+  ` : "";
+  const perCourse = courses.map(c => {
+    const p = placements[c.id];
+    const st = c.units.map((u, i) => ({ u, i, s: (p.units || []).find(x => x.id === u.id) || {} }));
+    const sum = k => st.reduce((n, x) => n + (x.s[k] || 0), 0);
+    const meets = c.meets === "all" ? "" : " (" + c.meets + " days)";
+    return `<h3 class="units-print-course">${escapeHtml(c.name)}${meets}</h3>
+    <table data-course="${escapeAttr(c.id)}">
+      <thead><tr><th>Unit</th><th>Start</th><th>End</th><th>Class days</th><th>Half days</th><th>Short</th></tr></thead>
+      <tbody>${st.map(({ u, i, s }) => `<tr>
+        <td class="swatch-cell"><span class="u-swatch" style="background:${escapeAttr(u.color || UNIT_COLORS[i % UNIT_COLORS.length])}"></span>${escapeHtml(u.name || "Unit " + (i + 1))}</td>
+        <td>${s.start ? fmtShort(s.start) : "—"}</td>
+        <td>${s.end ? fmtShort(s.end) : "—"}</td>
+        <td>${s.days || 0}</td>
+        <td>${s.half ? s.half : ""}</td>
+        <td${s.short ? ' class="short"' : ""}>${s.short || 0}</td>
+      </tr>`).join("")}</tbody>
+      <tfoot><tr><td colspan="3">Total</td><td>${sum("days")}</td><td>${sum("half") || ""}</td><td>${sum("short")}</td></tr></tfoot>
+    </table>`;
+  }).join("");
+  wrap.innerHTML = `
+    <h2>${escapeHtml(cal.meta.yearLabel || "School year")} &mdash; unit pacing calendar</h2>${dated}${perCourse}`;
 }
 
 /* --- lesson pacing --- */

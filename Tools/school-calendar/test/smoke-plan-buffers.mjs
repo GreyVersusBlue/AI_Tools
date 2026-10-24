@@ -14,7 +14,8 @@
 // A course and a B course with every lesson on its old date, and Undo puts the one course
 // back. "Start New Year" carries the course with its lessons and buffer days, drops its pin,
 // bump, lost day and baseline (the confirm counts each), and starts it on the new year's
-// first day. The card has no serious axe finding. Then the deliberate breaks: the scenario
+// first day. The printed unit pacing table is one per course, with a Short column. The card
+// has no serious axe finding. Then the deliberate breaks: the scenario
 // is run against a page whose scv-plan.js is altered on the wire, and each must fail.
 //
 // The clock is pinned (2026-08-20 10:00 local while planning, then the seed's third school
@@ -104,6 +105,9 @@ async function scenario(label, routes = {}) {
   const planned = await raw(a);
   eq(await bufferCells(a), ['2', '0'], `${label}: the Buffer column counts the BUF lessons`);
   ok(!(await a.isChecked('#courseAbsorb')), `${label}: buffers are off by default`);
+  const printed = await a.$$eval('#unitsPrint table[data-course] tbody tr', (rows) => rows.map((r) => [...r.cells].map((c) => c.textContent.trim())));
+  eq([printed.map((r) => [r[0], r[3], r[5]]), await a.$$eval('#unitsPrint table', (t) => t.length), await a.textContent('#unitsPrint h3')],
+    [[['Unit 1', '10', '0'], ['Unit 2', '10', '0']], 1, 'Course 1'], `${label}: the printed unit table is the course's, with Short, and no empty dated table`);
   await a.context().close();
 
   // a later day: buffers off
