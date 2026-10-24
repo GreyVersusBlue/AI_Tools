@@ -9,6 +9,53 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P2 increment 4: buffers, "Split into A and B", the new year, and the printed unit table per course (2026-10-24, AI-18, `CACHE_VERSION` v312)
+
+BACKLOG rank 13 kept and rewritten (now ¼): increments 1–4 and the printed unit table are built; bands for every course are left.
+
+- **What changed for a teacher.** 032's Courses card has **"Buffer days take a lost day"** per course, off unless ticked
+  (P9-5). A unit's buffer days are its `BUF1`, `BUF2`… lessons, or, in a course planned in units, the number in the new
+  **Buffer** column (its last days). With the box ticked, a class day the course loses inside a unit (a closure, a day it
+  didn't meet, a lesson that needed another day) uses up the unit's last buffer day, so the unit still ends when planned:
+  the bar says "Unit 1 used 1 buffer day", the column says "2 (1 used)" and the notes name the date. **"Split into A and
+  B…"**, shown for an every-day course with A and B lessons, previews two courses (A days with the A lessons, B days with
+  the B lessons, each with its bumps), says whether any lesson changes date, refuses with the A/B cycle off, and commits
+  with Undo. **"Start New Year"** now carries every course with lessons or units through `carryForward()` (it carried
+  lesson courses only before), and its confirm counts what it keeps and the pins, bumps, lost days, plans and start dates
+  it clears. **"Unit pacing calendar"** prints a table per course (unit, start, end, class days, half days, Short).
+- **Module.** `placeCourse()` takes buffers out before the placer's first pass and reports `buffers` (each with what it was
+  used for) and each unit's `flex` and `buffered`; `stamp()` writes `buffered`; `stored()` returns `bufferIds`;
+  `diffPlacement()` has `bufferUnits`; `slip()` has a `buffer` cause, so `behind` still equals the sum of its causes.
+  `splitByLetter()`, `splitPreview()` and `carryForward()` are new.
+- **Calls made.** (1) *A lesson course's buffer days are counted at placement* from its `BUF` lessons; its units' `flex`
+  is not written, so a re-import cannot leave it stale. (2) *A unit never gives up its every day*: buffers taken are at most
+  its days less one, so a unit cannot vanish and drop its pin. (3) *`buffered` is stamped on the unit, not on the lesson*;
+  `stored()` names the buffer lessons by the placer's rule (the last unplaced `BUF` lessons), so a buffer coming back is
+  "has 1 buffer day back", not "1 lesson fits again". (4) *"Make this the plan" while a buffer is in use gives it back*,
+  and the bar shows the dates moving later: the new baseline already lacks the lost day, so there is nothing for the
+  buffer to take. That is the design's rule followed through, not a special case. (5) *The A half of a split keeps the
+  course's id*, so the shown course stays shown; *both halves start with no baseline* (behind restarts at 0, said in the
+  preview) *and no stamped unit dates* (otherwise the bar reported every unit end as moved, which was true per track and
+  misleading); lost dates go to both; a bump whose lesson is gone is left out and named. (6) *The page, not the module,
+  refuses a split with the A/B cycle off*: the module would make two courses that each meet every day. (7)
+  *`carryForward()` also drops start dates* (a date in the old year) and keeps `pace` and `absorb`. (8) *The printed
+  table's "Class days" is what the unit asks for* (placed plus short), and with courses and no dated units the old dated
+  table, which said to add one in a card that is now hidden, is left out; with no course the sheet is byte-identical.
+- **Checks.** `npm run test:school-calendar-plan` now 161 checks and 45 deliberate breaks (10 new), both zones: buffers off
+  and on, two and three losses, a loss outside the span, no baseline, a two-day unit, BUF lessons and a bump, stamping,
+  the diff both ways, the slip ledger, a migrated course never absorbing, 200 random loss sequences with buffers on
+  keeping behind = Σ causes; the split on the seed (92 and 92, no date moves, one bump on the joint list mismatches 143
+  lessons and none split, refusals, orphans); `carryForward`'s counts and what it keeps. New `npm run
+  test:school-calendar-plan-buffers` (`smoke-plan-buffers.mjs`, Chromium, port 8544): 21 checks and 4 breaks of
+  `scv-plan.js` altered on the wire, each caught; also green under `TZ=UTC`. `run-suites --only school-calendar` 11 green
+  (the `smoke-weeks` golden included), `--only service-worker` 3 green, the a11y sweep on 032 (seeded) clean,
+  `test:theme` 966, `path7:next --only 032` 0 findings, lint, every guard and `check:precache --base origin/main`.
+- **Not verified.** No teacher has used a buffer or split a course; no sheet was printed on paper. The split preview was
+  driven only with the cycle anchored on the first school day and an alternating list starting with A; a list that does
+  not alternate, or starts on B, is held only by the module suite. The new-year confirm was checked with one course.
+
+---
+
 ## Path 9 P2 increment 3: the baseline, "behind" and "Make this the plan" (2026-10-24, AI-18, `CACHE_VERSION` v311)
 
 BACKLOG rank 13 kept (2+) and rewritten: increments 1–3 are built; increment 4 and two page pieces are left.
