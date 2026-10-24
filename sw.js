@@ -68,7 +68,7 @@
 // accepted (or is the first one, with no page to disrupt), it should control
 // the page immediately.
 
-const CACHE_VERSION = 'v306';
+const CACHE_VERSION = 'v309';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = 'aplp-wiki';   // stable across versions — see CACHE NAMES above
@@ -135,6 +135,7 @@ const SHELL_URLS = [
   "Tools/name-picker/np-seat-equity.js",
   "Tools/name-picker/np-store.js",
   "Tools/school-calendar/scv-pacing.js",
+  "Tools/school-calendar/scv-plan.js",
   "Tools/school-calendar/scv-seed.js",
   "Tools/school-calendar/scv-store.js",
   "Tools/school-calendar/scv-weeks.js",
@@ -159,6 +160,7 @@ const SHELL_URLS = [
   "_shared/qr-scan.js",
   "_shared/restore-kit.js",
   "_shared/roster.js",
+  "_shared/school-day.js",
   "_shared/seating-read.js",
   "_shared/share.js",
   "_shared/stage.js",
@@ -425,6 +427,7 @@ const PRECACHE_URLS = [
   "Tools/schedule/fonts/public-sans-latin-700-normal.woff2",
   "Tools/schedule/fonts/published-fonts.js",
   "Tools/school-calendar/scv-pacing.js",
+  "Tools/school-calendar/scv-plan.js",
   "Tools/school-calendar/scv-seed.js",
   "Tools/school-calendar/scv-store.js",
   "Tools/school-calendar/scv-weeks.js",
@@ -492,6 +495,7 @@ const PRECACHE_URLS = [
   "_shared/qr-scan.js",
   "_shared/restore-kit.js",
   "_shared/roster.js",
+  "_shared/school-day.js",
   "_shared/seating-read.js",
   "_shared/share.js",
   "_shared/stage.js",

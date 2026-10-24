@@ -32,6 +32,7 @@
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <script src="../_shared/store.js"></script>
+<script src="../_shared/school-day.js"></script>
 <style>
   /* Path 5 P3. --ok is the "on pace" green, --accent-deep the darker navy a
      primary button goes to on hover (in dark the accent is already light, so
@@ -118,6 +119,28 @@
   .unit-row .unit-stats { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
   .unit-row .unit-stats b { color: var(--ink); }
   .units-hint { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+
+  /* --- bell schedules (Path 9 P1) --- */
+  .bell-list { display: flex; flex-direction: column; gap: 12px; }
+  .bell-sched { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin: 0; }
+  .bell-sched legend { padding: 0 4px; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+  .bell-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .bell-head input[type=text] { width: 220px; }
+  .bell-periods { border-collapse: collapse; font-size: 0.84rem; }
+  .bell-periods th { text-align: left; font-size: 0.74rem; color: var(--muted); font-weight: 600; padding: 2px 6px 4px 0; }
+  .bell-periods td { padding: 2px 6px 2px 0; }
+  .bell-periods input[type=text] { width: 150px; }
+  .bell-periods input[type=time] {
+    font-family: inherit; font-size: 0.88rem; padding: 5px 7px; border: 1px solid var(--line);
+    border-radius: 5px; background: var(--card); color: var(--ink);
+  }
+  .bell-periods .bell-warn { color: var(--err); font-size: 0.76rem; }
+  .bell-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .bell-card h3 { font-size: 0.88rem; margin: 16px 0 6px; color: var(--ink); }
+  .bell-assign { display: grid; grid-template-columns: max-content minmax(0, 260px); gap: 6px 12px; align-items: center; font-size: 0.85rem; }
+  .bell-status { font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
+  .drawer-bell { font-size: 0.82rem; }
+  .drawer-bell ol { margin: 4px 0 0; padding-left: 1.4em; }
   .day .unit-bars {
     position: absolute; left: 0; right: 0; bottom: 0; display: flex;
     flex-direction: column; gap: 1px; pointer-events: none;
@@ -154,7 +177,18 @@
     }
   }
 
-  /* --- lesson pacing --- */
+  /* --- lesson pacing: courses and the notice bar (Path 9 P2) --- */
+  [hidden] { display: none !important; }
+  .plan-notice { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center;
+    background: var(--card); border: 2px solid var(--accent-2); border-radius: 8px; padding: 8px 12px; margin: 0 0 12px; font-size: .88rem; }
+  .plan-notice-actions { display: flex; gap: 6px; margin-left: auto; }
+  .course-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .course-tabs button[aria-pressed="true"] { font-weight: 700; outline: 2px solid var(--accent-2); outline-offset: 1px; }
+  .unit-table { border-collapse: collapse; margin-top: 10px; font-size: .8rem; }
+  .unit-table th, .unit-table td { border: 1px solid var(--line); padding: 3px 6px; text-align: left; }
+  .unit-table input { font-size: .8rem; width: 12em; }
+  .unit-table .short { color: var(--err); font-weight: 700; }
+  .drawer-lost { font-size: .82rem; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .pace-help summary { cursor: pointer; font-size: 0.85rem; color: var(--accent-2); }
   .pace-help p, .pace-help ul { font-size: 0.82rem; color: var(--muted); margin: 8px 0; }
   .pace-help code { background: var(--card-2); border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; font-size: 0.95em; }
@@ -329,6 +363,15 @@
     Your browser is blocking local storage (private/incognito mode, or storage disabled), so changes here will be lost when you close this tab. Export a backup before you leave.
   </div>
 
+  <div id="planNotice" class="plan-notice no-print" role="status" aria-live="polite" hidden>
+    <span id="planNoticeText"></span>
+    <span class="plan-notice-actions">
+      <button type="button" id="planUndo" class="small">Undo</button>
+      <button type="button" id="planKeep" class="primary small">Keep these dates</button>
+      <button type="button" id="planDismiss" class="small" aria-label="Dismiss this notice">Dismiss</button>
+    </span>
+  </div>
+
   <div class="toolbar no-print">
     <button id="btnNewYear">Start New Year From This Template</button>
     <button id="btnSeed">Load 2026–27 CCPS Calendar</button>
@@ -383,6 +426,23 @@
     <button id="btnAddType" class="small" style="margin-top:10px;">+ Add Day Type</button>
   </div>
 
+  <div class="card bell-card no-print">
+    <h2>Bell Schedules</h2>
+    <div class="bell-list" id="bellList"></div>
+    <div class="bell-actions">
+      <button type="button" id="btnAddBell" class="small">+ Add Bell Schedule</button>
+      <button type="button" id="btnImportBell" class="small">Import from the Schedule Visualizer</button>
+    </div>
+    <h3 id="bellAssignTitle">Which schedule each day uses</h3>
+    <div class="bell-assign" id="bellAssign" role="group" aria-labelledby="bellAssignTitle"></div>
+    <div class="ab-hint">
+      A day tagged with a day type that has a schedule uses that one first (an early dismissal on an A day uses
+      the early-dismissal times). Otherwise an A or B day uses its letter's schedule, when the A/B cycle below is
+      on and one is chosen, and any other school day uses the ordinary one. Click a day to see the times it gets.
+    </div>
+    <div class="bell-status" id="bellStatus" role="status" aria-live="polite"></div>
+  </div>
+
   <div class="card ab-card no-print">
     <h2>A/B Day Cycle</h2>
     <div class="ab-row">
@@ -414,7 +474,17 @@
   </div>
 
   <div class="card pacing-card no-print">
-    <h2>Lesson Pacing</h2>
+    <h2 id="coursesTitle">Courses</h2>
+    <p class="ab-hint" id="planReadOnly" hidden>This calendar's pacing was saved by a newer version of this page, so it is shown here but cannot be changed. It is kept as it is when you save.</p>
+    <div class="course-tabs" id="courseTabs" role="group" aria-labelledby="coursesTitle"></div>
+    <div class="pace-row" id="courseFields" hidden>
+      <div class="field"><label for="courseName">Course name</label><input type="text" id="courseName" maxlength="80"></div>
+      <div class="field"><label for="courseMeets">Meets on</label>
+        <select id="courseMeets"><option value="all">Every school day</option><option value="A">A days</option><option value="B">B days</option></select>
+      </div>
+      <button type="button" id="btnCourseDelete" class="danger small">Delete this course</button>
+    </div>
+    <div id="courseProblems" class="pace-errors"></div>
     <details class="pace-help">
       <summary>Lesson naming convention &amp; how pacing works</summary>
       <p>One lesson per line, named <code>U&lt;unit&gt;-&lt;lesson&gt;-&lt;A|B&gt;-&lt;Title&gt;</code>:</p>
@@ -427,6 +497,7 @@
       To push a lesson back a day (it ran long, an assembly ate the block), open that day and use <em>Bump forward</em> — everything after it slides one school day, and your reason shows on the vacated day.
       For a snow day, tag the date with a no-school type (the day editor has a shortcut) and the whole sequence reflows around it automatically, A/B letters included.</p>
       <p>Placement is always computed from the sequence, so editing a past day reflows everything after it. To freeze what you actually taught on a given day, write it in that day's <em>Lesson / unit note</em> field — that note never moves.</p>
+      <p>Each course is one prep's plan, with its own lessons, bumps and lost days; the calendar shows the course picked above. A course that meets on A days only counts A days as its class days. In a day's editor, <em>This lesson needs another day</em> puts an empty class day in front of that lesson and stays with it; <em>This class didn't meet</em> takes that date away from this course only (an assembly), whatever lesson was planned. When a change moves lessons, a bar at the top says what moved and offers Undo.</p>
     </details>
     <textarea id="paceInput" rows="6" placeholder="U1-01-A-Early Islamic Expansion&#10;U1-01-B-Early Islamic Expansion&#10;U1-02-A-Geographic Factors in Early Islamic Expansion&#10;…"></textarea>
     <div class="pace-row">
@@ -439,6 +510,8 @@
     </div>
     <div id="paceStatus" class="pace-status"></div>
     <div id="paceErrors" class="pace-errors"></div>
+    <div id="unitTable"></div>
+    <div id="lostLog" class="adj-list"></div>
     <div id="adjLog" class="adj-list"></div>
   </div>
 
@@ -464,6 +537,7 @@
   <label class="f" for="drawerNote">Other note</label>
   <textarea id="drawerNote"></textarea>
   <div id="drawerPacing"></div>
+  <div id="drawerBell" class="drawer-bell"></div>
   <div style="margin-top:14px; display:flex; gap:8px;">
     <button id="drawerSave" class="primary small">Save</button>
     <button id="drawerClear" class="danger small">Clear Day/Range</button>
@@ -478,12 +552,24 @@ import {
   parsePacingRows, emptyPacing, unitInstructionalStats,
 } from './school-calendar/scv-pacing.js';
 import { abLetters, yearBadge, mondayOf, weekDates, weekRange, isoToMs, MAX_WEEKS } from './school-calendar/scv-weeks.js';
+import {
+  absorbLegacy, readPlan, newCourse, syncUnits, placeCourse, placePlan, stamp, stored,
+  diffPlacement, describeDiff, shortDate, PLACER_ALGO,
+} from './school-calendar/scv-plan.js';
 
 Store.configure({ toolName: 'School Calendar Visualizer' });
 
 const store = createStore(seedCalendar2026);
-let cal = store.get();
-let placement = null; // computed lesson placement, rebuilt at the top of every render
+const CAL_KEY = "scv_calendar_v1";
+/** The bytes on disk, for Undo (null when nothing is stored, or storage is blocked). */
+function storedBytes() { try { return localStorage.getItem(CAL_KEY); } catch (e) { return null; } }
+let savedBytes = storedBytes();
+const loaded = absorbLegacy(store.get()); // Path 9 P2: `cal.pacing` becomes a course in `cal.plan`
+let cal = loaded.cal;
+let placement = null; // the active course's placement, rebuilt at the top of every render
+let placements = {};  // every course's, keyed by id
+let undoBytes = undefined; // what Undo writes back; undefined when there is nothing to undo
+let loadPending = false;   // the stored dates are not what the placer gives, and nothing is saved yet
 let selectedDate = null;
 let rangeAnchor = null; // last plain-clicked date — the shift-click anchor for range selection
 let rangeDates = null;  // array of ISO dates when the drawer is open in range mode, else null
@@ -492,7 +578,60 @@ const PATTERNS = ["solid", "diagonal", "dots", "cross", "stripe"];
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const WEEKDAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-function save() { store.set(cal); }
+/* --- Path 9 P2: every change is a commit ---
+   save() is the one commit point (BACKLOG.md, Path 9 P2, "Recomputing when the calendar
+   changes under a plan"): it places every course, compares the dates stamped into the blob
+   at the last save with what the placer gives now, stamps the new ones and writes. If any
+   lesson or unit end moved, the notice bar says what, with Undo, which writes the previous
+   bytes back (one step deep). `label` names the change in that sentence. */
+function diffsFor(c, places) {
+  const { plan } = readPlan(c);
+  return plan.courses.map(course => {
+    const p = places[course.id];
+    if (!p) return null;
+    const d = diffPlacement(stored(course), p, todayISO(), course.lessons);
+    return { course, diff: d, text: describeDiff(d) };
+  }).filter(x => x && x.text);
+}
+function save(label, always) {
+  const before = savedBytes;
+  const fresh = placePlan(cal);
+  const moved = diffsFor(cal, fresh);
+  if (readPlan(cal).state === "ok") cal.plan = stamp(cal, fresh).plan;
+  store.set(bareOf(cal));
+  savedBytes = storedBytes();
+  loadPending = false;
+  if (moved.length || always) {
+    undoBytes = before;
+    showNotice(moved.length ? (label ? label + ": " : "") + noticeText(moved) : always, { undo: true });
+  } else if (noticeKind === "undo" || noticeKind === "pending") {
+    hideNotice();
+  }
+}
+/** What is written: an empty plan (no course, none active) is left out, so a calendar with no
+    pacing keeps the bytes it had before Path 9 P2 (smoke-weeks.mjs's golden holds that). */
+function bareOf(c) {
+  const p = c.plan;
+  if (!p || typeof p !== "object" || !Array.isArray(p.courses) || p.courses.length || p.active
+      || Object.keys(p).some(k => !["v", "active", "algo", "courses"].includes(k))) return c;
+  const out = { ...c };
+  delete out.plan;
+  return out;
+}
+function noticeText(moved) {
+  const many = readPlan(cal).plan.courses.length > 1;
+  return moved.map(m => (many ? m.course.name + ": " : "") + m.text).join(" ");
+}
+let noticeKind = null;
+function showNotice(text, opts = {}) {
+  const bar = document.getElementById("planNotice");
+  document.getElementById("planNoticeText").textContent = text;
+  document.getElementById("planUndo").hidden = !opts.undo;
+  document.getElementById("planKeep").hidden = !opts.keep;
+  noticeKind = opts.undo ? "undo" : opts.keep ? "pending" : "info";
+  bar.hidden = false;
+}
+function hideNotice() { document.getElementById("planNotice").hidden = true; noticeKind = null; }
 
 function typeById(id) { return cal.dayTypes.find(t => t.id === id); }
 
@@ -546,7 +685,7 @@ function renderLegend() {
     el.addEventListener("change", e => {
       const i = +e.target.dataset.i;
       cal.dayTypes[i].noSchool = e.target.checked;
-      save(); render();
+      save("Making \u201c" + cal.dayTypes[i].label + "\u201d " + (e.target.checked ? "a no-school type" : "a school day type")); render();
     });
   });
   list.querySelectorAll("input:not([data-f=noSchool]),select").forEach(el => {
@@ -563,6 +702,7 @@ function renderLegend() {
       if (!confirm(`Remove "${removed.label}"? Days tagged with it will lose that tag.`)) return;
       cal.dayTypes.splice(i, 1);
       Object.values(cal.days).forEach(d => { d.types = d.types.filter(id => id !== removed.id); });
+      if (cal.bell && cal.bell.types && typeof cal.bell.types === "object") delete cal.bell.types[removed.id];
       save(); render();
     });
   });
@@ -756,15 +896,51 @@ function isEarlyDismissalDay(dateISO) {
   });
 }
 
+/** The pacing before Path 9 P2, kept for one job: checking on load that a sequence turned
+    into a course still lands every lesson where it did (absorbLegacy's promise). */
+function legacyPlacement(pacing, c) {
+  return placeLessons({
+    lessons: pacing.lessons, adjustments: pacing.adjustments,
+    startISO: pacing.startDate || c.meta.start, endISO: c.meta.end,
+    isTeachable: d => isTeachableDay(d, c.days, c.dayTypes),
+  });
+}
+
+const NO_PLACEMENT = { byDate: {}, dateByLessonId: {}, vacated: {}, overflow: [], orphanedAdjustmentIds: [], units: [], slots: {}, classDates: [], problems: [] };
+
+/** Every course placed; `placement` is the active one's, the shape placeLessons() gave,
+    so the month grid, week strip, drawer and .ics read it as they always have. */
 function computePlacement() {
   if (!cal.pacing) cal.pacing = emptyPacing();
-  placement = placeLessons({
-    lessons: cal.pacing.lessons,
-    adjustments: cal.pacing.adjustments,
-    startISO: cal.pacing.startDate || cal.meta.start,
-    endISO: cal.meta.end,
-    isTeachable: isEligibleForAbCycle,
-  });
+  placements = placePlan(cal);
+  const course = activeCourse();
+  placement = (course && placements[course.id]) || NO_PLACEMENT;
+}
+
+/** The plan as the page edits it: an ok plan, or null (none yet is made on first use;
+    a newer one is read-only). */
+function planState() { return readPlan(cal).state; }
+function activeCourse() {
+  const plan = cal.plan;
+  if (!plan || !Array.isArray(plan.courses) || planState() !== "ok") return null;
+  return plan.courses.find(c => c.id === plan.active) || plan.courses[0] || null;
+}
+/** The active course, made ("Course 1") if there is none, for an action that needs one. */
+function ensureCourse() {
+  if (planState() === "newer") return null;
+  if (planState() !== "ok") cal.plan = readPlan(cal).plan;
+  let c = activeCourse();
+  if (!c) {
+    c = newCourse("Course " + (cal.plan.courses.length + 1), { taken: cal.plan.courses.map(x => x.id) });
+    cal.plan.courses.push(c);
+  }
+  cal.plan.active = c.id;
+  return c;
+}
+/** Replace a course record (by id) with a rebuilt one, keeping its place in the list. */
+function putCourse(c) {
+  const i = cal.plan.courses.findIndex(x => x.id === c.id);
+  cal.plan.courses[i] = syncUnits(c);
 }
 
 /** Maps every eligible date in the calendar's displayed range (extended to include the anchor
@@ -815,7 +991,7 @@ function renderStats() {
   el.innerHTML = text;
 }
 
-function render() { computePlacement(); renderLegend(); renderMonths(); renderYearGrid(); renderWeekStrip(); syncMeta(); syncAbControls(); renderJumpControl(); renderStats(); renderPacing(); renderUnits(); renderUnitsPrint(); }
+function render() { computePlacement(); renderLegend(); renderBell(); renderMonths(); renderYearGrid(); renderWeekStrip(); syncMeta(); syncAbControls(); renderJumpControl(); renderStats(); renderPacing(); renderUnits(); renderUnitsPrint(); }
 
 /* ── Week-at-a-glance ────────────────────────────────────────────────────────
    The month grid answers "where does this fall in the year". A planner page
@@ -982,23 +1158,29 @@ function openDrawer(dateISO) {
   document.getElementById("drawerLesson").value = entry.lesson || "";
   document.getElementById("drawerNote").value = entry.note || "";
   renderDrawerPacing(dateISO);
+  renderDrawerBell(dateISO);
   document.getElementById("drawer").classList.add("open");
   renderMonths();
 }
 
-/** The pacing section of the day editor: what lesson landed here, a bump
-    button (one skipped school-day slot, with an optional reason), and the
-    snow-day shortcut (tag no-school + label; the sequence reflows on its
-    own — untagging the day is the undo). */
+/** The pacing section of the day editor, for the active course: what lesson landed here,
+    and the two actions Path 9 P2 tells apart. "This lesson needs another day" is the bump
+    as it always was (one empty class day before the lesson, anchored to it). "This class
+    didn't meet" is a lost date: that date stops being a class day for this course only,
+    whatever was planned. Plus the snow-day shortcut, which closes the day for every course
+    (tag no-school + label). Each goes through save(), whose bar says what moved, with Undo. */
 function renderDrawerPacing(dateISO) {
   const el = document.getElementById("drawerPacing");
+  const course = activeCourse();
   const placed = placement && placement.byDate[dateISO];
   const vacated = placement && placement.vacated[dateISO];
+  const lost = course && course.lost.find(x => x.date === dateISO);
   let html = "";
   if (placed) {
-    html += `<label class="f">Paced lesson</label><div class="drawer-paced">${escapeHtml(placed.raw)}</div>
+    html += `<label class="f">Paced lesson${cal.plan.courses.length > 1 ? " (" + escapeHtml(course.name) + ")" : ""}</label><div class="drawer-paced">${escapeHtml(placed.raw)}</div>
       <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
-        <button id="drawerBump" class="small">Bump forward…</button>
+        <button id="drawerBump" class="small">This lesson needs another day…</button>
+        <button id="drawerLost" class="small">This class didn't meet…</button>
         <button id="drawerSnow" class="small">Snow day…</button>
       </div>`;
   }
@@ -1006,23 +1188,40 @@ function renderDrawerPacing(dateISO) {
     html += `<label class="f">Bumped off this day</label><div style="font-size:0.82rem;">` +
       vacated.map(v => escapeHtml(v.reason || "(no reason given)")).join("<br>") + `</div>`;
   }
+  if (lost) {
+    html += `<label class="f">${escapeHtml(course.name)} didn't meet</label><div class="drawer-lost">${escapeHtml(lost.reason || "(no reason given)")}
+      <button id="drawerUnlost" class="small" type="button">It met after all</button></div>`;
+  }
   el.innerHTML = html;
+  if (lost) {
+    document.getElementById("drawerUnlost").addEventListener("click", () => {
+      course.lost = course.lost.filter(x => x.id !== lost.id);
+      save(course.name + " met on " + shortDate(dateISO) + " after all"); closeDrawer();
+    });
+  }
   if (!placed) return;
   document.getElementById("drawerBump").addEventListener("click", () => {
-    const reason = prompt(`Bump "${placed.raw}" — it and every lesson after it slide forward one school day, skipping weekends and no-school days.\n\nOptional reason (shows on the vacated day):`, "");
+    const reason = prompt(`"${placed.raw}" needs another day: an empty class day goes in front of it, so it and every lesson after it move one class day later. The empty day stays with this lesson if earlier days change.\n\nOptional reason (shows on the day it leaves):`, "");
     if (reason === null) return;
-    cal.pacing.adjustments.push({ id: uid("adj"), beforeLessonId: placed.id, reason: reason.trim(), createdOn: dateISO });
-    save(); closeDrawer();
+    course.adjustments.push({ id: uid("adj"), beforeLessonId: placed.id, reason: reason.trim(), createdOn: dateISO });
+    putCourse(course);
+    save(placed.raw + " needs another day"); closeDrawer();
+  });
+  document.getElementById("drawerLost").addEventListener("click", () => {
+    const reason = prompt(`${course.name} didn't meet on ${shortDate(dateISO)} (an assembly, a fire drill): this date stops being a class day for this course, and "${placed.raw}" and everything after it move to the next class days.\n\nOptional reason:`, "");
+    if (reason === null) return;
+    course.lost.push({ id: uid("lost"), date: dateISO, reason: reason.trim() });
+    save(course.name + " didn't meet on " + shortDate(dateISO)); closeDrawer();
   });
   document.getElementById("drawerSnow").addEventListener("click", () => {
-    const label = prompt("Tag this day as no school — the whole lesson sequence (and the A/B cycle) reflows around it.\n\nLabel for the day:", "Snow Day");
+    const label = prompt("Tag this day as no school: every course's lessons (and the A/B cycle) move around it.\n\nLabel for the day:", "Snow Day");
     if (label === null) return;
     const existing = cal.days[dateISO] || { types: [], label: "", note: "", lesson: "" };
     const holidayType = typeById("holiday") || cal.dayTypes.find(t => t.noSchool);
     if (holidayType && !existing.types.includes(holidayType.id)) existing.types = [...existing.types, holidayType.id];
     if (label.trim()) existing.label = label.trim();
     cal.days[dateISO] = existing;
-    save(); closeDrawer();
+    save("Marking " + shortDate(dateISO) + " as " + (label.trim() || "no school")); closeDrawer();
   });
 }
 
@@ -1046,6 +1245,7 @@ function openDrawerRange(fromISO, toISO) {
   document.getElementById("drawerLesson").value = "";
   document.getElementById("drawerNote").value = "";
   document.getElementById("drawerPacing").innerHTML = "";
+  document.getElementById("drawerBell").innerHTML = "";
   document.getElementById("drawer").classList.add("open", "range-mode");
   renderMonths();
 }
@@ -1091,7 +1291,7 @@ document.getElementById("drawerSave").addEventListener("click", () => {
       cal.days[selectedDate] = { types: checkedTypes, label, lesson, note };
     }
   }
-  save();
+  save(rangeDates ? "Changing " + rangeDates.length + " days" : "Changing " + shortDate(selectedDate));
   closeDrawer();
 });
 
@@ -1103,7 +1303,7 @@ document.getElementById("drawerClear").addEventListener("click", () => {
     if (!selectedDate) return;
     delete cal.days[selectedDate];
   }
-  save();
+  save(rangeDates ? "Clearing " + rangeDates.length + " days" : "Clearing " + shortDate(selectedDate));
   closeDrawer();
 });
 
@@ -1112,7 +1312,7 @@ document.getElementById("btnApplyMeta").addEventListener("click", () => {
   cal.meta.yearLabel = document.getElementById("metaLabel").value.trim() || cal.meta.yearLabel;
   cal.meta.start = document.getElementById("metaStart").value || cal.meta.start;
   cal.meta.end = document.getElementById("metaEnd").value || cal.meta.end;
-  save(); render();
+  save("Changing the year's dates"); render();
 });
 
 /* --- A/B day cycle --- */
@@ -1125,7 +1325,209 @@ document.getElementById("btnApplyAb").addEventListener("click", () => {
     anchorDate,
     anchorLetter: document.getElementById("abAnchorLetter").value === "B" ? "B" : "A"
   };
-  save(); render();
+  save("Changing the A/B cycle"); render();
+});
+
+/* --- bell schedules (Path 9 P1) ---
+   The schedules live in one optional field of the calendar, `cal.bell`, read and resolved by
+   _shared/school-day.js (window.SchoolDay), which other tools will read the same way. There
+   is no __v bump for it: an older page saves the blob whole and keeps the field. This card
+   edits the field as typed (a half-typed period stays, marked "not used"); SchoolDay.cleanBell()
+   is what decides what a day gets. A field this page cannot read is kept as `bellBroken`, so a
+   backup still carries it; one written by a later version is shown and never edited. */
+const BELL_SV_KEY = "stviz_settings"; // 035 Schedule Visualizer's settings, read only, for the import
+
+function bellState() { return SchoolDay.cleanBell(cal.bell).state; }
+
+/** The field to edit, made whole; null when it belongs to a later version. */
+function ensureBell() {
+  const state = bellState();
+  if (state === "newer") return null;
+  if (state === "broken") { cal.bellBroken = cal.bell; cal.bell = SchoolDay.emptyBell(); }
+  if (state === "none") cal.bell = SchoolDay.emptyBell();
+  const b = cal.bell;
+  if (!b.letters || typeof b.letters !== "object") b.letters = { A: null, B: null };
+  if (!b.types || typeof b.types !== "object" || Array.isArray(b.types)) b.types = {};
+  if (b.regular === undefined) b.regular = null;
+  return b;
+}
+
+function bellEl(tag, attrs, kids) {
+  const n = document.createElement(tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => {
+    if (v === null || v === undefined || v === false) return;
+    if (k === "text") n.textContent = v; else n.setAttribute(k, v === true ? "" : v);
+  });
+  (kids || []).forEach(c => n.appendChild(c));
+  return n;
+}
+
+function scheduleName(s, i) { return (s && typeof s.name === "string" && s.name.trim()) || "Schedule " + (i + 1); }
+
+/** Why a typed period is not used, or "" when it is. */
+function periodProblem(p) {
+  const a = SchoolDay.toMinutes(p && p.start), b = SchoolDay.toMinutes(p && p.end);
+  if (a === null || b === null) return "Not used until both times are set";
+  if (b <= a) return "Not used: it ends before it starts";
+  return "";
+}
+
+function renderBell() {
+  const list = document.getElementById("bellList");
+  const assign = document.getElementById("bellAssign");
+  const status = document.getElementById("bellStatus");
+  const state = bellState();
+  const locked = state === "newer";
+  document.getElementById("btnAddBell").disabled = locked;
+  document.getElementById("btnImportBell").disabled = locked;
+  list.replaceChildren();
+  assign.replaceChildren();
+  status.textContent = locked
+    ? "These bell schedules were saved by a newer version of this page. They are kept as they are; update this page to edit them."
+    : state === "broken" ? "The bell schedules saved with this calendar could not be read. Adding a schedule starts a new list; the old value is kept in the backup file."
+    : "";
+  const schedules = state === "ok" ? cal.bell.schedules.filter(s => s && typeof s === "object") : [];
+  if (!schedules.length) {
+    list.appendChild(bellEl("p", { class: "ab-hint", text: locked ? "" : "No bell schedules yet. Add one, or import the times you set in the Schedule Visualizer." }));
+  }
+  schedules.forEach((s, si) => {
+    if (!Array.isArray(s.periods)) s.periods = [];
+    const name = bellEl("input", { type: "text", value: scheduleName(s, si), "aria-label": "Name of bell schedule " + (si + 1), disabled: locked });
+    name.addEventListener("change", () => { s.name = name.value.trim(); save(); renderBellAssign(); });
+    const del = bellEl("button", { type: "button", class: "small danger", text: "Remove schedule", disabled: locked });
+    del.addEventListener("click", () => {
+      if (!confirm(`Remove the bell schedule "${scheduleName(s, si)}"? Days that use it will fall back to the next schedule that applies.`)) return;
+      const b = ensureBell();
+      b.schedules = b.schedules.filter(x => x !== s);
+      if (b.regular === s.id) b.regular = null;
+      ["A", "B"].forEach(k => { if (b.letters[k] === s.id) b.letters[k] = null; });
+      Object.keys(b.types).forEach(k => { if (b.types[k] === s.id) delete b.types[k]; });
+      save(); renderBell();
+      document.getElementById("btnAddBell").focus();
+    });
+    const rows = s.periods.map((p, pi) => {
+      const lab = bellEl("input", { type: "text", value: (p && p.label) || "", "aria-label": `Name of period ${pi + 1} in ${scheduleName(s, si)}`, disabled: locked });
+      const st = bellEl("input", { type: "time", value: (p && p.start) || "", "aria-label": `Start of period ${pi + 1} in ${scheduleName(s, si)}`, disabled: locked });
+      const en = bellEl("input", { type: "time", value: (p && p.end) || "", "aria-label": `End of period ${pi + 1} in ${scheduleName(s, si)}`, disabled: locked });
+      const warn = bellEl("span", { class: "bell-warn", text: periodProblem(p) });
+      const rm = bellEl("button", { type: "button", class: "small", text: "Remove", "aria-label": `Remove period ${pi + 1} from ${scheduleName(s, si)}`, disabled: locked });
+      const write = () => {
+        s.periods[pi] = { label: lab.value.trim(), start: st.value || "", end: en.value || "" };
+        warn.textContent = periodProblem(s.periods[pi]);
+        save(); refreshOpenDrawerBell();
+      };
+      [lab, st, en].forEach(x => x.addEventListener("change", write));
+      rm.addEventListener("click", () => { s.periods.splice(pi, 1); save(); renderBell(); focusBell(si, "add"); });
+      return bellEl("tr", {}, [lab, st, en, warn, rm].map(x => bellEl("td", {}, [x])));
+    });
+    const add = bellEl("button", { type: "button", class: "small", text: "+ Add period", "data-bell-add": si, disabled: locked });
+    add.addEventListener("click", () => {
+      const last = s.periods[s.periods.length - 1];
+      const end = last && SchoolDay.toMinutes(last.end);
+      const hm = m => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+      const start = end !== null && end !== undefined && end + 55 < 24 * 60 ? hm(end + 5) : "";
+      s.periods.push({ label: "Period " + (s.periods.length + 1), start, end: start ? hm(end + 55) : "" });
+      save(); renderBell(); focusBell(si, "last");
+    });
+    const table = bellEl("table", { class: "bell-periods" }, [
+      bellEl("thead", {}, [bellEl("tr", {}, ["Period", "Starts", "Ends", "", ""].map(t => bellEl("th", { scope: "col", text: t })))]),
+      bellEl("tbody", {}, rows),
+    ]);
+    list.appendChild(bellEl("fieldset", { class: "bell-sched", "data-bell": si }, [
+      bellEl("legend", { text: "Bell schedule " + (si + 1) }),
+      bellEl("div", { class: "bell-head" }, [name, del]),
+      s.periods.length ? table : bellEl("p", { class: "ab-hint", text: "No periods yet." }),
+      bellEl("div", { class: "bell-actions" }, [add]),
+    ]));
+  });
+  renderBellAssign();
+}
+
+function focusBell(si, what) {
+  const box = document.querySelector(`#bellList fieldset[data-bell="${si}"]`);
+  if (!box) return;
+  const target = what === "last" ? [...box.querySelectorAll("tbody input[type=text]")].pop() : box.querySelector("[data-bell-add]");
+  if (target) target.focus();
+}
+
+/** The "which schedule each day uses" selects. */
+function renderBellAssign() {
+  const assign = document.getElementById("bellAssign");
+  assign.replaceChildren();
+  const state = bellState();
+  const schedules = state === "ok" ? cal.bell.schedules.filter(s => s && typeof s === "object" && typeof s.id === "string") : [];
+  if (!schedules.length) {
+    assign.appendChild(bellEl("p", { class: "ab-hint", text: "Add a bell schedule first." }));
+    return;
+  }
+  const b = cal.bell;
+  const rows = [{ key: "regular", label: "An ordinary school day", none: "No bell schedule", get: () => b.regular, put: v => { ensureBell().regular = v; } }];
+  if (cal.abCycle && cal.abCycle.enabled) {
+    ["A", "B"].forEach(k => rows.push({ key: "letter-" + k, label: k === "A" ? "An A day" : "A B day", none: "The ordinary day's",
+      get: () => b.letters && b.letters[k], put: v => { ensureBell().letters[k] = v; } }));
+  }
+  cal.dayTypes.filter(t => !t.noSchool).forEach(t => rows.push({ key: "type-" + t.id, label: `A day tagged "${t.label}"`, none: "No change",
+    get: () => b.types && b.types[t.id], put: v => { const bb = ensureBell(); if (v) bb.types[t.id] = v; else delete bb.types[t.id]; } }));
+  rows.forEach(r => {
+    const id = "bellAssign-" + r.key.replace(/[^\w-]/g, "_");
+    const sel = bellEl("select", { id, disabled: state === "newer" }, [bellEl("option", { value: "", text: r.none }),
+      ...schedules.map(s => bellEl("option", { value: s.id, text: scheduleName(s, cal.bell.schedules.indexOf(s)) }))]);
+    const cur = r.get();
+    sel.value = schedules.some(s => s.id === cur) ? cur : "";
+    sel.addEventListener("change", () => { r.put(sel.value || null); save(); refreshOpenDrawerBell(); });
+    assign.appendChild(bellEl("label", { for: id, text: r.label }));
+    assign.appendChild(sel);
+  });
+}
+
+const BELL_SOURCE = { type: id => { const t = typeById(id); return `its "${t ? t.label : id}" tag`; }, letter: k => `${k} day`, regular: () => "ordinary school day" };
+
+function renderDrawerBell(dateISO) {
+  const el = document.getElementById("drawerBell");
+  el.replaceChildren();
+  if (bellState() !== "ok" || !cal.bell.schedules.length) return;
+  const d = SchoolDay.dayOf(cal, dateISO);
+  if (!d.school) return;
+  el.appendChild(bellEl("label", { class: "f", text: "Bell schedule" }));
+  if (!d.schedule) { el.appendChild(bellEl("div", { text: "None for this day. Choose one under Bell Schedules." })); return; }
+  el.appendChild(bellEl("div", { text: `${d.schedule.name}, from ${BELL_SOURCE[d.source](d.sourceId)}` + (d.half ? " (early dismissal)" : "") }));
+  if (!d.schedule.periods.length) { el.appendChild(bellEl("div", { text: "It has no periods with both times set." })); return; }
+  el.appendChild(bellEl("ol", {}, d.schedule.periods.map(p => bellEl("li", { text: `${p.label}: ${p.start} to ${p.end}` }))));
+}
+
+function refreshOpenDrawerBell() { if (selectedDate) renderDrawerBell(selectedDate); }
+
+document.getElementById("btnAddBell").addEventListener("click", () => {
+  const b = ensureBell();
+  if (!b) return;
+  b.schedules.push({ id: uid("bell"), name: b.schedules.length ? "Schedule " + (b.schedules.length + 1) : "Regular day",
+    periods: [{ label: "Period 1", start: "", end: "" }] });
+  if (b.schedules.length === 1 && !b.regular) b.regular = b.schedules[0].id;
+  save(); renderBell();
+  const boxes = document.querySelectorAll("#bellList fieldset");
+  const nameBox = boxes.length && boxes[boxes.length - 1].querySelector(".bell-head input");
+  if (nameBox) { nameBox.focus(); nameBox.select(); }
+});
+
+document.getElementById("btnImportBell").addEventListener("click", () => {
+  const status = document.getElementById("bellStatus");
+  let settings = null;
+  try { settings = JSON.parse(localStorage.getItem(BELL_SV_KEY) || "null"); } catch (e) { settings = null; }
+  const imp = SchoolDay.fromScheduleVisualizer(settings);
+  if (!imp.schedules.length) {
+    status.textContent = "The Schedule Visualizer on this browser has no bell times yet. Set them in its Settings, under Bell schedule, then import again.";
+    return;
+  }
+  const b = ensureBell();
+  if (!b) return;
+  const names = new Set(b.schedules.map(s => s && s.name));
+  if (imp.schedules.some(s => names.has(s.name))
+      && !confirm("These times have been imported before. Add them again as new schedules?")) return;
+  cal.bell = SchoolDay.addImported(b, imp, () => uid("bell"));
+  save(); renderBell();
+  status.textContent = `Added ${imp.schedules.length === 1 ? "1 schedule" : imp.schedules.length + " schedules"} from the Schedule Visualizer: ` +
+    imp.schedules.map(s => `${s.name.replace(" (from the Schedule Visualizer)", "")}, ${s.periods.length} period${s.periods.length === 1 ? "" : "s"}`).join("; ") + "." +
+    (imp.skipped ? ` ${imp.skipped} period${imp.skipped === 1 ? " was" : "s were"} left out because a time was missing or ended before it started.` : "");
 });
 
 /* --- unit pacing layer ---
@@ -1241,16 +1643,61 @@ function fmtShort(dateISO) {
   return new Date(dateISO + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "numeric", day: "numeric" });
 }
 
+/** The Courses card (Path 9 P2 increment 1, lesson mode). With no course it reads as the
+    Lesson Pacing card always did, and the first Distribute or import makes "Course 1". */
 function renderPacing() {
-  const p = cal.pacing;
-  const startInput = document.getElementById("paceStart");
-  startInput.value = p.startDate || cal.meta.start;
+  const state = planState();
+  const readOnly = state === "newer";
+  document.getElementById("planReadOnly").hidden = !readOnly;
+  document.querySelectorAll(".pacing-card textarea, .pacing-card .pace-row button, .pacing-card .pace-row input, .pacing-card .pace-row select")
+    .forEach(el => { el.disabled = readOnly; });
+  const course = activeCourse();
+  const courses = state === "ok" ? cal.plan.courses : [];
+
+  const tabs = document.getElementById("courseTabs");
+  tabs.textContent = "";
+  if (!readOnly) {
+    courses.forEach(c => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "small"; b.textContent = c.name;
+      b.setAttribute("aria-pressed", String(c === course));
+      b.addEventListener("click", () => { cal.plan.active = c.id; save(); render(); });
+      tabs.appendChild(b);
+    });
+    const add = document.createElement("button");
+    add.type = "button"; add.className = "small"; add.id = "btnCourseAdd"; add.textContent = "+ New course";
+    add.addEventListener("click", () => {
+      const name = prompt("Name for the new course (one prep's plan, e.g. “World History, 3rd period”):", "Course " + (courses.length + 1));
+      if (name === null) return;
+      if (planState() !== "ok") cal.plan = readPlan(cal).plan;
+      const c = newCourse(name.trim() || "Course " + (cal.plan.courses.length + 1), { taken: cal.plan.courses.map(x => x.id) });
+      cal.plan.courses.push(c);
+      cal.plan.active = c.id;
+      save(); render();
+    });
+    tabs.appendChild(add);
+  }
+
+  document.getElementById("courseFields").hidden = !course;
+  if (course) {
+    document.getElementById("courseName").value = course.name;
+    document.getElementById("courseMeets").value = course.meets;
+  }
+  const probs = [];
+  if (course && placement.problems.some(x => x.code === "no-rotation")) probs.push(`${course.name} meets on ${course.meets} days, but the A/B Day Cycle is off, so it is paced on every school day. Turn the cycle on above.`);
+  if (course && placement.problems.some(x => x.code === "no-class-days")) probs.push(`${course.name} has no class days between its start date and the year's last day.`);
+  document.getElementById("courseProblems").textContent = probs.join("\n");
+
+  const lessons = course ? course.lessons : [];
+  const adjustments = course ? course.adjustments : [];
+  const startISO = (course && course.start) || cal.meta.start;
+  document.getElementById("paceStart").value = startISO;
 
   const statusEl = document.getElementById("paceStatus");
-  if (!p.lessons.length) {
+  if (!lessons.length) {
     statusEl.innerHTML = "No lessons paced yet — paste a list above or import the county spreadsheet.";
   } else {
-    const parts = [`<b>${p.lessons.length}</b> lessons paced from ${fmtShort(p.startDate || cal.meta.start)}`];
+    const parts = [`<b>${lessons.length}</b> lessons paced from ${fmtShort(startISO)}`];
     const placedCount = Object.keys(placement.byDate).length;
     parts.push(`${placedCount} placed`);
     if (placement.overflow.length) {
@@ -1260,11 +1707,37 @@ function renderPacing() {
     statusEl.innerHTML = parts.join(" &middot; ");
   }
 
+  renderUnitTable(course);
+
+  const lostEl = document.getElementById("lostLog");
+  lostEl.textContent = "";
+  if (course && course.lost.length) {
+    const why = {};
+    (placement.excluded || []).forEach(x => { why[x.date] = x.why; });
+    const h = document.createElement("h3"); h.textContent = "Days this course didn't meet"; lostEl.appendChild(h);
+    [...course.lost].sort((a, b) => a.date < b.date ? -1 : 1).forEach(x => {
+      const row = document.createElement("div"); row.className = "adj-row";
+      const w = why[x.date] || "";
+      const note = w.startsWith("lost:") || !w ? "" : " (not a class day anyway, so this changes nothing)";
+      row.textContent = fmtShort(x.date) + (x.reason ? " — " + x.reason : "") + note + " ";
+      const rm = document.createElement("button");
+      rm.type = "button"; rm.className = "small danger"; rm.textContent = "Remove";
+      rm.setAttribute("aria-label", "Remove " + fmtShort(x.date));
+      rm.addEventListener("click", () => {
+        const c = activeCourse();
+        c.lost = c.lost.filter(y => y.id !== x.id);
+        save(c.name + " met on " + shortDate(x.date) + " after all"); render();
+      });
+      row.appendChild(rm);
+      lostEl.appendChild(row);
+    });
+  }
+
   const log = document.getElementById("adjLog");
-  if (!p.adjustments.length) { log.innerHTML = ""; return; }
+  if (!adjustments.length) { log.innerHTML = ""; return; }
   const orphaned = new Set(placement.orphanedAdjustmentIds);
-  log.innerHTML = "<h3>Bumps (newest last)</h3>" + p.adjustments.map(a => {
-    const lesson = p.lessons.find(l => l.id === a.beforeLessonId);
+  log.innerHTML = "<h3>Bumps (newest last)</h3>" + adjustments.map(a => {
+    const lesson = lessons.find(l => l.id === a.beforeLessonId);
     const what = lesson
       ? `bumped <code>${escapeHtml(lesson.raw)}</code>`
       : `<span class="orphan">no longer matches a lesson</span>`;
@@ -1276,11 +1749,69 @@ function renderPacing() {
   }).join("");
   log.querySelectorAll("[data-adj]").forEach(btn => {
     btn.addEventListener("click", () => {
-      cal.pacing.adjustments = cal.pacing.adjustments.filter(a => a.id !== btn.dataset.adj);
-      save(); render();
+      const c = activeCourse();
+      c.adjustments = c.adjustments.filter(a => a.id !== btn.dataset.adj);
+      putCourse(c);
+      save("Removing that bump"); render();
     });
   });
 }
+
+/** The course's units, the runs of equal U<n> in its list: a name the teacher can change
+    (kept across a re-import), how many class days it takes, where it lands, and how many
+    of its days do not fit (Short). Pins and typed lengths are increment 2. */
+function renderUnitTable(course) {
+  const wrap = document.getElementById("unitTable");
+  wrap.textContent = "";
+  if (!course || !course.units.length) return;
+  const t = document.createElement("table");
+  t.className = "unit-table";
+  const cap = document.createElement("caption");
+  cap.textContent = "Units in " + course.name;
+  cap.style.textAlign = "left"; cap.style.fontWeight = "700";
+  t.appendChild(cap);
+  const head = t.createTHead().insertRow();
+  ["Unit", "Class days", "Starts", "Ends", "Short"].forEach(x => { const th = document.createElement("th"); th.scope = "col"; th.textContent = x; head.appendChild(th); });
+  const body = t.createTBody();
+  course.units.forEach(u => {
+    const st = (placement.units || []).find(x => x.id === u.id) || {};
+    const r = body.insertRow();
+    const name = document.createElement("input");
+    name.type = "text"; name.value = u.name; name.maxLength = 80;
+    name.setAttribute("aria-label", "Name of unit " + (u.code || u.name));
+    name.addEventListener("change", () => {
+      const c = activeCourse(); const rec = c && c.units.find(x => x.id === u.id);
+      if (!rec) return;
+      rec.name = name.value.trim() || rec.name; save(); render();
+    });
+    r.insertCell().appendChild(name);
+    r.insertCell().textContent = String(st.days != null ? st.days : u.days) + (st.half ? ", " + st.half + (st.half === 1 ? " half day" : " half days") : "");
+    r.insertCell().textContent = st.start ? fmtShort(st.start) : "—";
+    r.insertCell().textContent = st.end ? fmtShort(st.end) : "—";
+    const sh = r.insertCell();
+    sh.textContent = st.short ? String(st.short) : "0";
+    if (st.short) sh.className = "short";
+  });
+  wrap.appendChild(t);
+}
+
+document.getElementById("courseName").addEventListener("change", e => {
+  const c = activeCourse(); if (!c) return;
+  c.name = e.target.value.trim().slice(0, 80) || c.name;
+  save(); render();
+});
+document.getElementById("courseMeets").addEventListener("change", e => {
+  const c = activeCourse(); if (!c) return;
+  c.meets = e.target.value === "A" || e.target.value === "B" ? e.target.value : "all";
+  save(c.name + " now meets on " + (c.meets === "all" ? "every school day" : c.meets + " days")); render();
+});
+document.getElementById("btnCourseDelete").addEventListener("click", () => {
+  const c = activeCourse(); if (!c) return;
+  if (!confirm(`Delete the course “${c.name}”, with its ${c.lessons.length} lessons, ${c.adjustments.length} bumps and ${c.lost.length} lost days? Day tags and notes are kept. Undo can bring it back.`)) return;
+  cal.plan.courses = cal.plan.courses.filter(x => x.id !== c.id);
+  cal.plan.active = cal.plan.courses.length ? cal.plan.courses[0].id : null;
+  save(null, `Deleted the course \u201c${c.name}\u201d.`); render();
+});
 
 document.getElementById("btnPacePreview").addEventListener("click", () => {
   const { lessons, errors } = parseLessonList(document.getElementById("paceInput").value);
@@ -1297,23 +1828,33 @@ document.getElementById("btnPaceDistribute").addEventListener("click", () => {
   if (!lessons.length) { alert("Paste at least one lesson code first (one per line — open the naming-convention help above for the format)."); return; }
   if (errors.length && !confirm(`${errors.length} line(s) don't match the naming convention and will be skipped:\n\n` +
     errors.slice(0, 5).map(e => `line ${e.line}: ${e.text}`).join("\n") + (errors.length > 5 ? "\n…" : "") + "\n\nContinue with the rest?")) return;
-  if (cal.pacing.lessons.length && !confirm(`Replace the current ${cal.pacing.lessons.length}-lesson sequence with these ${lessons.length}?\n\nExisting bumps are re-matched by lesson code; any that no longer match are dropped.`)) return;
-  const { kept, dropped } = rebindAdjustments(cal.pacing.adjustments, cal.pacing.lessons, lessons);
-  cal.pacing = {
-    startDate: document.getElementById("paceStart").value || cal.meta.start,
-    lessons,
-    adjustments: kept,
-  };
+  const existing = activeCourse();
+  if (existing && existing.lessons.length && !confirm(`Replace the ${existing.lessons.length}-lesson sequence of “${existing.name}” with these ${lessons.length}?\n\nExisting bumps are re-matched by lesson code; any that no longer match are dropped.`)) return;
+  const course = ensureCourse();
+  if (!course) return;
+  const { kept, dropped } = rebindAdjustments(course.adjustments, course.lessons, lessons);
+  const start = document.getElementById("paceStart").value || cal.meta.start;
+  course.start = start === cal.meta.start ? null : start;
+  course.lessons = lessons;
+  course.adjustments = kept;
+  putCourse(course);
   save(); render();
   document.getElementById("paceErrors").textContent =
     dropped.length ? `${dropped.length} bump(s) no longer matched a lesson and were dropped.` : "";
 });
 
+document.getElementById("paceStart").addEventListener("change", e => {
+  const c = activeCourse(); if (!c || !e.target.value) return;
+  c.start = e.target.value === cal.meta.start ? null : e.target.value;
+  save(c.name + " now starts " + shortDate(e.target.value)); render();
+});
+
 document.getElementById("btnPaceClear").addEventListener("click", () => {
-  if (!cal.pacing.lessons.length && !cal.pacing.adjustments.length) return;
-  if (!confirm("Remove the paced lesson sequence and all bumps? Day tags and notes are kept.")) return;
-  cal.pacing = emptyPacing();
-  save(); render();
+  const c = activeCourse();
+  if (!c || (!c.lessons.length && !c.adjustments.length && !c.lost.length)) return;
+  if (!confirm(`Remove the lessons, bumps and lost days of “${c.name}”? The course itself, day tags and notes are kept.`)) return;
+  c.lessons = []; c.adjustments = []; c.lost = []; c.units = [];
+  save(null, `Cleared the lessons of \u201c${c.name}\u201d.`); render();
 });
 
 /* --- county pacing spreadsheet import (SheetJS, lazy-loaded from the
@@ -1361,7 +1902,7 @@ document.getElementById("filePaceXlsx").addEventListener("change", async e => {
     const closures = dayTags.filter(t => t.kind === "closure-holiday" || t.kind === "closure-workday").length;
     const halves = dayTags.filter(t => t.kind === "halfday").length;
     if (!confirm(`Import from sheet "${sheetName}":\n\n` +
-      `• ${lessonRows.length} lessons (replaces the current sequence)\n` +
+      `• ${lessonRows.length} lessons (replace the sequence of ${activeCourse() ? "\u201c" + activeCourse().name + "\u201d" : "a new course"})\n` +
       `• ${closures} closure day(s) and ${halves} early dismissal(s) tagged\n` +
       `• ${errors.length} unreadable row(s) skipped\n\n` +
       `Existing day tags and notes are kept — imported tags are added to them.`)) return;
@@ -1375,9 +1916,14 @@ document.getElementById("filePaceXlsx").addEventListener("change", async e => {
     });
 
     const lessons = lessonRows.map(r => r.lesson);
-    const { kept, dropped } = rebindAdjustments(cal.pacing.adjustments, cal.pacing.lessons, lessons);
-    cal.pacing = { startDate: lessonRows[0].date, lessons, adjustments: kept };
-    save(); render();
+    const course = ensureCourse();
+    if (!course) return;
+    const { kept, dropped } = rebindAdjustments(course.adjustments, course.lessons, lessons);
+    course.start = lessonRows[0].date;
+    course.lessons = lessons;
+    course.adjustments = kept;
+    putCourse(course);
+    save("Importing \u201c" + sheetName + "\u201d"); render();
 
     // Cross-check: does our teachable-day walk land every lesson on the
     // spreadsheet's own date? A mismatch usually means a no-school tag is
@@ -1407,8 +1953,8 @@ document.getElementById("btnAddType").addEventListener("click", () => {
 
 document.getElementById("btnSeed").addEventListener("click", () => {
   if (!confirm("Replace the current calendar with the 2026–27 CCPS calendar? This overwrites everything below.")) return;
-  cal = seedCalendar2026();
-  save(); render();
+  cal = absorbLegacy(seedCalendar2026()).cal;
+  save(null, "Loaded the 2026\u201327 CCPS calendar."); render();
 });
 
 document.getElementById("btnBlank").addEventListener("click", () => {
@@ -1441,10 +1987,20 @@ document.getElementById("btnNewYear").addEventListener("click", () => {
   if (end === null) return;
   const fresh = blankCalendar(label || "School Year", start, end);
   fresh.dayTypes = cal.dayTypes.map(t => ({ ...t })); // carry the legend forward, drop the days
+  if (cal.bell !== undefined) fresh.bell = JSON.parse(JSON.stringify(cal.bell)); // and the bell schedules, which belong to the legend
 
-  if (cal.pacing && cal.pacing.lessons.length
-      && confirm(`Carry the ${cal.pacing.lessons.length}-lesson paced sequence into the new year?\n\nBumps are cleared and distribution restarts from the new year's first school day — set a different start date in the Lesson Pacing card if needed.`)) {
-    fresh.pacing = { startDate: null, lessons: cal.pacing.lessons.map(l => ({ ...l })), adjustments: [] };
+  const withLessons = activeCourse() ? cal.plan.courses.filter(c => c.lessons.length) : [];
+  const lessonCount = withLessons.reduce((n, c) => n + c.lessons.length, 0);
+  if (withLessons.length
+      && confirm(`Carry ${withLessons.length === 1 ? "the " + lessonCount + "-lesson paced sequence" : "the lessons of " + withLessons.length + " courses (" + lessonCount + " lessons)"} into the new year?\n\nBumps and days a course didn't meet are cleared, and distribution restarts from the new year's first school day — set a different start date in the Courses card if needed.`)) {
+    fresh.plan = readPlan(fresh).plan;
+    withLessons.forEach(c => {
+      const n = newCourse(c.name, { id: c.id, color: c.color, meets: c.meets });
+      n.lessons = c.lessons.map(l => { const x = { ...l }; delete x.on; return x; });
+      n.units = c.units.map(u => ({ ...u, pin: null, start: null, end: null, placed: 0, short: 0 }));
+      fresh.plan.courses.push(syncUnits(n));
+    });
+    fresh.plan.active = withLessons.some(c => c.id === cal.plan.active) ? cal.plan.active : withLessons[0].id;
   }
 
   const lessonEntries = Object.entries(cal.days).filter(([, d]) => d.lesson);
@@ -1458,8 +2014,8 @@ document.getElementById("btnNewYear").addEventListener("click", () => {
     });
   }
 
-  cal = fresh;
-  save(); render();
+  cal = absorbLegacy(fresh).cal;
+  save(null, "Started the new year " + (label || "School Year") + "."); render();
 });
 
 document.getElementById("btnExport").addEventListener("click", () => {
@@ -1484,8 +2040,10 @@ document.getElementById("fileImport").addEventListener("change", e => {
         alert("That file doesn't look like a School Calendar Visualizer backup.");
         return;
       }
-      cal = migrateCalendar(parsed); // older backups predate lesson pacing
-      save(); render();
+      // older backups predate lesson pacing, and older than Path 9 P2 keep it in `pacing`
+      const r = absorbLegacy(migrateCalendar(parsed));
+      cal = r.cal;
+      save("Importing that backup", r.report.made ? madeSentence(r.report) : "Imported the backup."); render();
     } catch (err) {
       alert("Couldn't read that file as JSON.");
     }
@@ -1665,6 +2223,72 @@ document.getElementById("btnAllWeeks").addEventListener("click", () => {
 document.getElementById("btnPrint").addEventListener("click", () => window.print());
 
 if (store.isMemoryOnly) document.getElementById("storageWarn").hidden = false;
+
+/* --- the notice bar's buttons, and what the page does on load (Path 9 P2) --- */
+function madeSentence(report) {
+  const c = readPlan(cal).plan.courses.find(x => x.id === report.made);
+  const name = c ? c.name : "Course 1";
+  return (report.second
+    ? `Lessons saved by an older copy of this page became a second course, \u201c${name}\u201d.`
+    : `Your lesson sequence is now the course \u201c${name}\u201d.`) + " No date changed.";
+}
+
+document.getElementById("planUndo").addEventListener("click", () => {
+  if (undoBytes === undefined) return;
+  if (undoBytes === null) { store.clear(); cal = absorbLegacy(seedCalendar2026()).cal; }
+  else {
+    const prev = JSON.parse(undoBytes);
+    store.set(prev);
+    cal = absorbLegacy(prev).cal;
+  }
+  savedBytes = storedBytes();
+  undoBytes = undefined;
+  hideNotice();
+  if (selectedDate || rangeDates) closeDrawer(); else render();
+  showNotice("Undone.", {});
+});
+document.getElementById("planKeep").addEventListener("click", () => { save(); hideNotice(); render(); });
+document.getElementById("planDismiss").addEventListener("click", hideNotice);
+
+/** On load: a sequence an older page left in `cal.pacing` has become a course. It is saved
+    only if every lesson is where placeLessons() put it, which the suite holds the placer to;
+    otherwise, and whenever the stamped dates are not what the placer gives now (an older
+    page wrote the blob, a file was edited by hand, or plan.algo names another placer),
+    nothing is saved until the teacher keeps the new dates (any later change keeps them too). */
+function onLoadPlan(report, before) {
+  if (report.state === "newer") return;
+  const fresh = placePlan(cal);
+  if (report.made) {
+    const old = legacyPlacement(before.pacing, before);
+    const same = JSON.stringify(old.dateByLessonId) === JSON.stringify(fresh[report.made].dateByLessonId);
+    if (same && !diffsFor(cal, fresh).length) {
+      save(); // stamps the dates; the old bytes are kept for Undo
+      undoBytes = before.__bytes;
+      showNotice(madeSentence(report), { undo: true });
+      return;
+    }
+    if (!same) {
+      const n = Object.keys(old.dateByLessonId).filter(id => old.dateByLessonId[id] !== fresh[report.made].dateByLessonId[id]).length;
+      loadPending = true;
+      showNotice(`Your lesson sequence is now a course, but ${n === 1 ? "1 lesson lands" : n + " lessons land"} on a different date than before. Nothing has been saved yet. Keep these dates, or export a backup first.`, { keep: true });
+      return;
+    }
+  }
+  const moved = diffsFor(cal, fresh);
+  const algo = readPlan(cal).plan.algo;
+  if (moved.length || (algo !== PLACER_ALGO && readPlan(cal).plan.courses.length)) {
+    loadPending = true;
+    showNotice("The lesson dates saved here are not the ones this calendar gives now" +
+      (moved.length ? ": " + noticeText(moved) : ".") +
+      " Nothing has been saved yet. Keep these dates, or export a backup first.", { keep: true });
+    return;
+  }
+  if (report.broken) {
+    save();
+    showNotice("The pacing plan saved here could not be read. It is kept as it was, under \u201cplanBroken\u201d in an exported backup, and the Courses card starts empty.", {});
+  }
+}
+onLoadPlan(loaded.report, (() => { try { const b = JSON.parse(savedBytes); b.__bytes = savedBytes; return b; } catch (e) { return { pacing: emptyPacing(), meta: cal.meta, days: {}, dayTypes: [], __bytes: savedBytes }; } })());
 
 render();
 </script>

@@ -27,6 +27,10 @@
 //
 // The names are invented. Nothing here is, or may become, real student data.
 
+import { seedCalendar2026 } from '../school-calendar/scv-seed.js';
+import { parseLessonList } from '../school-calendar/scv-pacing.js';
+import { newCourse, syncUnits, emptyPlan } from '../school-calendar/scv-plan.js';
+
 const j = v => JSON.stringify(v);
 
 export const ROSTERS = {
@@ -368,6 +372,32 @@ export const PAGE_SEEDS = {
         dailyDoubleEnabled: false, lightningRoundEnabled: false, lightningRoundSeconds: 15,
       }),
     };
+  },
+
+  // 032 — the shipped 2026-27 calendar with the A/B cycle on and three bell schedules
+  // assigned to the ordinary day, the letters and the half day, so the Bell Schedules
+  // card draws its tables and assignment selects (Path 9 P1; shapes from smoke-bell.mjs).
+  '032': () => {
+    const cal = seedCalendar2026();
+    const p = (label, start, end) => ({ label, start, end });
+    cal.abCycle = { enabled: true, anchorDate: '2026-08-31', anchorLetter: 'A' };
+    cal.bell = {
+      v: 1,
+      schedules: [
+        { id: 'reg', name: 'Regular', periods: [p('Period 1', '07:30', '08:20'), p('Period 2', '08:25', '09:15'), p('Lunch', '11:05', '11:35')] },
+        { id: 'aday', name: 'A day', periods: [p('Block 1', '07:30', '09:00'), p('Block 2', '09:05', '10:35')] },
+        { id: 'half', name: 'Early dismissal', periods: [p('Period 1', '07:30', '08:05'), p('Period 2', '08:10', '08:45')] },
+      ],
+      regular: 'reg', letters: { A: 'aday', B: null }, types: { halfday: 'half' },
+    };
+    // ...and two courses (Path 9 P2), the first with two units of lessons, a bump and a lost
+    // date, so the Courses card draws its tabs, unit table and both lists.
+    const course = newCourse('World History', { id: 'course_1' });
+    course.lessons = parseLessonList(['U1-01-A-Trade', 'U1-02-B-Empires', 'U1-03-A-Review', 'U2-01-B-Faith', 'U2-02-A-Law'].join('\n')).lessons;
+    course.adjustments = [{ id: 'adj_1', beforeLessonId: 'les_2', reason: 'Ran long', createdOn: '2026-09-01' }];
+    course.lost = [{ id: 'lost_1', date: '2026-09-08', reason: 'Assembly' }];
+    cal.plan = { ...emptyPlan(), active: 'course_1', courses: [syncUnits(course), newCourse('Science', { id: 'course_2', meets: 'B' })] };
+    return { scv_calendar_v1: j(cal) };
   },
 
   // 033 — a section with a roster, a week of logs and two finished books (033's saveCurrentState; bookKey is the lowercased title).

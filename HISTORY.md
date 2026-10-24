@@ -9,6 +9,159 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P2 increment 1, the page: 032's Courses card, the notice bar and Undo (2026-10-23, AI-18, `CACHE_VERSION` v309)
+
+BACKLOG rank 13 kept (2+) and rewritten: increment 1 is built; increments 2–4 are left.
+
+- **What was built.** 032 imports `scv-plan.js` (now in `PRECACHE_URLS` and `SHELL_URLS`). On load and on a JSON
+  import the page runs `absorbLegacy()`; a sequence in `cal.pacing` becomes "Course 1", and it is saved only if every
+  lesson lands where `placeLessons()` put it (checked on the page, against the old placement built from the blob as
+  loaded), with one line in a new notice bar and Undo. **`save()` is the one commit point**: it places every course,
+  diffs the dates stamped at the last save against the placer's, stamps, writes, and when anything moved the bar says
+  what (“Marking Sep 14 as Snow Day: Moved 31 lessons one class day later.”) with **Undo**, which writes the previous
+  bytes back, one step deep (P9-6: the past is recomputed, and past lessons are counted in the sentence). On load, stamped
+  dates that are not the placer's (an older page, a hand edit, another `plan.algo`) show the bar with "Keep these dates"
+  and nothing is written until then. The Lesson Pacing card is now **Courses**: tabs, "+ New course", name, "Meets on"
+  (every day / A / B, with a warning when the cycle is off), delete; the lesson box, start date and both imports work on
+  the active course; a unit table (the runs of `U<n>`: name, class days with half days, start, end, short); the days the
+  course did not meet; the bumps. The grid, week strip, drawer and `.ics` read the active course's placement in
+  `placeLessons()`'s shape, unchanged. The drawer has **"This lesson needs another day…"** (the bump as it was) and
+  **"This class didn't meet…"** (a lost date, this course only), the snow-day shortcut, and "It met after all" on a lost
+  day. A newer plan is shown read-only and written back untouched; a broken one is kept in `planBroken`, with a line.
+- **Calls made.** (1) *An empty plan is not written*: `bareOf()` leaves out a plan with no course, so a calendar with no
+  pacing keeps the exact bytes it had (`smoke-weeks.mjs`'s golden of the stored string failed until this, and it is the
+  design's "nothing looks different for a calendar with no pacing"). So `scv-seed.js` did **not** get `plan:
+  emptyPlan()`, which the design listed; the page absorbs the seed instead. (2) *Any edit while the stale-dates bar is up
+  keeps the new dates*, as "Keep these dates" does; the design said nothing is saved "until the teacher takes it", and an
+  edit is taking it. (3) *The Units card (dated units) stays shown always*, with "+ Add Unit", until increment 2 brings
+  typed units and the conversion; hiding it now would take away the only way to add one. (4) *Distribute and the
+  spreadsheet import make "Course 1" when there is no course*, so a teacher who never opens the tabs sees what they saw.
+  (5) *A new year carries every course's lessons* (bumps, lost dates, start and stamps dropped), today's carry widened to
+  courses; `carryForward()` proper is increment 4. (6) *Deleting or clearing a course always offers Undo*, moved or not.
+  (7) *A course's start date repaces on change* (it used to be read only by Distribute), through the bar.
+- **Checks.** New `npm run test:school-calendar-plan-page` (`smoke-plan.mjs`, port 8541): 54 checks, and 5 deliberate
+  breaks of `scv-plan.js` altered on the wire (describeDiff silent, stamp writes no dates, absorb leaves `cal.pacing`,
+  closures ignored, the diff sees no move), each caught; green under `TZ=UTC` too. It holds the migration (every lesson in
+  its cell, `cal.units`, days, day types, year and `__v` unchanged in storage, Undo writes the old bytes), the `.ics`
+  (every lesson on its old date, the old number of events), both drawer actions and the lost date taken back, the
+  snow-day bar and Undo byte for byte, stale dates not written until kept, a second course as its own track, an A course
+  with the cycle off, newer and broken plans, nothing written on a first visit, the page throwing nothing, and axe on the
+  card and bar. The 032 a11y seed has two courses (lessons, a bump, a lost date): `test:a11y --only 032` clean with no
+  allowance. `run-suites --only` school-calendar (8 suites, `smoke-weeks` golden included), tool-registry,
+  service-worker, schedule-visualizer; `test:theme`; `path7:next --only 032` (0 findings); lint; every guard,
+  `check:precache --base origin/main`.
+- **Not done or not verified.** 010's and 045's panels were not opened: the suite holds the fields they read (days, day
+  types, meta) equal instead. The `.ics` was compared lesson by lesson with the old placement, not byte for byte with a
+  v245 page. No real teacher's blob, phone, or county sheet has been through it. "Count for pacing" on day types, pins,
+  typed units, the dated-unit conversion (2), the baseline and "behind" (3), buffers, the A/B split and
+  `carryForward()` (4) are not built.
+
+## Path 9 P2 increment 1, the module: `scv-plan.js`, pacing that recomputes (2026-10-23, AI-18, no `CACHE_VERSION`)
+
+BACKLOG rank 13 kept (2+) and rewritten: what is left of increment 1 is 032's page; increments 2–4 follow.
+
+- **What was built.** `Tools/school-calendar/scv-plan.js`, a pure ES module beside `scv-pacing.js` (which is unchanged
+  and stays the reference): `emptyPlan`, `newCourse`, `newUnit`, `readPlan` (`none`/`ok`/`broken`/`newer`),
+  `absorbLegacy` (the migration: lessons and bumps in `cal.pacing` become a course, `cal.pacing` is emptied, `cal.units`
+  untouched, idempotent, a second write by an older page makes a second course, a broken plan kept in `planBroken`, a
+  newer one left alone), `courseRange`, `dayValue` and `classDays` (the design's order of reasons: outside, weekend,
+  closed, skip, rotation, lost), `syncUnits` (runs of `U<n>`, matched by code and run so a name survives a re-import),
+  `placeCourse`/`placePlan`, `stamp`, `stored`, `diffPlacement`, `describeDiff`, `shortDate`. No page imports it, so
+  nothing changed for a teacher and no precached file changed: **no `CACHE_VERSION` bump** (the prompt allowed v309 "if
+  the repo's rules want one"; they do not, since `check:precache --base` is about precached files).
+- **Devon's answers recorded.** P9-1 to P9-10 (2026-10-21, every default kept) and question 3 (2026-10-07) are written
+  into the P2 bullet as settled, and the module's header names them where they decide behaviour.
+- **Calls made.** (1) *`byDate` keeps `placeLessons()`'s shape* and the design's fuller per-date record is `slots`, since
+  the design also promised the grid would read the active course "with no change of its own", and those two lines of the
+  design disagreed. (2) *A bump in a course with no lessons is an orphan*, which is what `placeLessons()` does with bumps
+  and no lessons; without it the equivalence fails on a blob holding bumps only. (3) *`diffPlacement`'s `by`* counts the
+  course's class days after the change between the two dates, the later one counted, so a lesson that sat on the lost
+  day itself moved "one class day", not zero. (4) *Ids are made by counting* (`course_<n>`, `unit_<n>`, the first free),
+  never by chance, so the migration is deterministic and the suite can hold "twice gives the same blob".
+- **Checks.** `npm run test:school-calendar-plan` (pure Node): 76 checks, 16 deliberate breaks of the module all caught
+  (each imported from a `data:` URL, so no file is written), the whole file again under `Pacific/Kiritimati`. It holds the
+  design's figures (184 class days, 92 A and 92 B, 13 half days; units of 10, 8 and 12 days are Aug 31–Sep 14, Sep 15–24,
+  Sep 25–Oct 12; an A course's 10-day unit ends Sep 25; a 20-day unit from Jan 4 ends Feb 2, then Feb 3 after a Jan 12
+  snow day, which flips all 99 later letters) and holds `placeCourse()` of a migrated course to `placeLessons()` on 500
+  seeded random lists with bumps, orphans, closures and start dates (byDate, dates, vacated, overflow, orphans). Lint.
+- **Not done or not verified.** Pins and open days, the baseline and "behind", buffers, the A/B split, the new-year
+  carry, `convertDatedUnits`, and every part of the page. The design's `smoke-pacing.mjs` sections 6–10 were not copied
+  case by case; the 500 random cases stand in for them. Nothing here has met a real county pacing sheet.
+
+## Path 9 P1 increment 2: 035 reads 032's bell schedules (2026-10-23, AI-18, `CACHE_VERSION` v308)
+
+BACKLOG rank 12 deleted (a gap; ranks not renumbered): Path 9 P1 is built. What stays is defaults B1–B5 in the P1 bullet.
+
+- **What changed for a teacher.** 035's Settings tab has **From the School Calendar** under its A/B bell editor. With no
+  calendar on the device, or one with no bell schedules, it says so and offers nothing. Otherwise two choices, A Day and B
+  Day (B offers "Same as A Day"), default to 032's A-day and B-day schedules, else its ordinary day's, else the first.
+  **Use these times** fills 035's A and B rows by position (032's first period is mod 1, whatever it is called), padded or
+  cut to the mod count, and says how many periods past the count were left out. If 035 already had times it asks first.
+  Nothing is stored until **Save Settings**, the contract 035's bell editor already had; 032's blob is never written.
+- **Calls made, each cheap to reverse.** (1) *A copy, not a live link* (B6): 035 keeps its own times and they still work on
+  a device with no calendar, and the next press copies again. A live read would have changed 035's transition windows the
+  moment 032 was edited, with no Save. (2) *By position, not by label*: 035 names its mods itself (Mod 1, Block A, ...) and
+  032's labels are free text ("Lunch"), so no label match is reliable. (3) *The mod count is never changed* by the import:
+  it is the shape of every saved schedule in 035; the note tells the teacher to raise it. (4) *B equal to A is "Same as A
+  Day"* (035's `B: null`), which is what 035's own checkbox stores.
+- **Code.** `SchoolDay.forScheduleVisualizer(cal, modCount, pick)` in `_shared/school-day.js` (pure, 14 checks and four
+  deliberate breaks added to `test:school-day`, 132 and 31 now). 035 loads `school-day.js` without `defer`, since its inline
+  script can draw Settings before deferred scripts run; the control is built with `textContent` and `new Option()`, so
+  `check:inline-sinks` is unchanged. The registry's 035 row reads `scv_calendar_v1`. `Tools/a11y-sweep/seeds.mjs` has a
+  032 seed (the shipped calendar with the cycle on and three schedules assigned), so the seeded pass sees the filled card;
+  it imports `seedCalendar2026()` rather than copying the year.
+- **Checks.** New `npm run test:layout-bell-from-calendar` (Chromium, port 8540, 24 checks). `run-suites --only`
+  school-calendar (6), schedule-visualizer (5), schedule (10), tool-registry; a11y sweep `--only 032` (seeded too) and
+  `--only 035`; `test:theme`; every guard; lint; `check:adoption --check` (`school-day.js` 2).
+- **Not verified.** 035's Settings tab is not in the a11y sweep's view (the page opens on another tab); the new suite scans
+  the control itself. Nobody has compared the copied times with a real school's bells.
+
+## Path 9 P1 increment 1: bell schedules per day type in 032, and `_shared/school-day.js` (2026-10-23, AI-18, `CACHE_VERSION` v307)
+
+BACKLOG rank 12 kept and rewritten to what is left (¼): 035 reading 032's schedules, a seeded 032 in the a11y sweep, and
+six defaults for Devon, listed in the Path 9 P1 bullet with the design.
+
+- **What changed for a teacher.** 032 School Calendar Visualizer has a **Bell Schedules** card under Day Types: named
+  schedules of periods (a name, a start and an end each; "+ Add period" starts five minutes after the last one and runs
+  fifty), and "Which schedule each day uses": the ordinary school day, an A day and a B day (only while the A/B cycle is
+  on), and each day type that is not "No school". A period with a missing time, or one that ends before it starts, is
+  kept as typed and marked "Not used". Clicking a day shows the schedule it gets and where from ("Early dismissal, from
+  its "Half Day / Early Dismissal" tag"). **Import from the Schedule Visualizer** adds 035's A/B mod times, named as 035
+  names its mods, after the schedules already there, and fills only the assignments not yet made.
+- **The design** is in the P1 bullet (record, resolution order, module surface, storage, which P3 consumer calls what).
+  Storage is one optional field, `cal.bell = { v: 1, schedules, regular, letters, types }`, with **no `__v` bump**, for the
+  reason the P2 design measured: an older page that meets `__v: 3` shows the seed and saves it over the calendar, while one
+  that meets an unknown field saves it back. 032 stored no bell data before, so there is nothing to migrate: no field means
+  no schedules. 010 and 045 read the key with a plain `JSON.parse` and ignore the field.
+- **Calls made, each cheap to reverse.** (1) *A type beats a letter, a letter beats the ordinary day*, so an early dismissal
+  on an A day gets the early-dismissal times. (2) *Two types with schedules on one day: the first in the legend wins*, the
+  other listed in `conflict` (no UI shows it yet). (3) *A day outside the year's range is not a school day* for bells, though
+  032's `isTeachableDay()` does not look at the range; `SchoolDay.isSchoolDay()` matches that function exactly and
+  `dayOf()` adds the range. (4) *A grading-period boundary* is a type with id `mpend` or a label saying "marking period" or
+  "grading period", the same kind of test 032 already uses for half days by label; the seed gives 45, 46, 47 and 46 days,
+  the figures the P2 design measured. (5) *A half day is one day in `daysRemaining()`, with the count of half days beside it*
+  (P9-1's default, as the P2 design reads it: never half a count). (6) *A new year carries the schedules*, as it carries the
+  legend; "Load 2026–27 CCPS" replaces them, as it replaces everything. (7) *A field the page cannot read is kept as
+  `bellBroken`* when the teacher next adds a schedule; *one with `v` above 1* is shown, its buttons off, and saved back
+  untouched. (8) *The A/B letter is computed again in `school-day.js`* (a classic script cannot import `scv-weeks.js`); the
+  suite holds the two to the same letters on the seed and five anchors, and the P2 design already left "whether the pure
+  functions move to `_shared/`" to P3.
+- **How it was checked.** New `npm run test:school-day` (`Tools/school-calendar/test/school-day.test.mjs`, pure Node: 118
+  checks, 27 deliberate breaks caught, the checks run again under `Pacific/Kiritimati`), including a school day with no
+  schedule, an A and a B day, a half day on its own schedule over its letter, the snow day that flips every later letter
+  and schedule, and grading periods on the seed. New `npm run test:school-calendar-bell`
+  (`Tools/school-calendar/test/smoke-bell.mjs`, Chromium, port 8539, 55 checks, clock pinned), seen red with two breaks
+  of the page put in by hand (no carry into a new year; a removed day type's assignment left behind). Run-suites `--only`
+  school-calendar (6 green), tool-registry, service-worker; the a11y sweep on 032; `test:theme`; `path7:next --only 032`;
+  every guard (precache with `--base origin/main`, registry, tests, dedupe, entities, hidden-flex, print-clip,
+  inline-sinks, docs-commands, art, adoption `--check`, lint).
+- **What went wrong.** `today(cal, now)` first tested `now instanceof Date`, which is false for a Date from another realm
+  (the vm the suite runs it in, or an iframe), so it read the real clock; it now asks whether `now` has `getFullYear`. One
+  `npm run test:theme` run died with a bare Node stack while other sessions' browser suites were running; both of its
+  suites then passed run alone (62 and 966), and the crash did not come back.
+- **Not verified.** No other tool reads `SchoolDay` yet (that is P3). Firefox and Safari, a phone, the `file://` offline copy,
+  a full `npm test`. 035's import was driven with a hand-written `stviz_settings`, not one 035 saved.
+
 ## Path 3 P5 increment 2: 002, 022 and 010 honour the student flags (2026-10-22, AI-15, `CACHE_VERSION` v306)
 
 BACKLOG rank 3 deleted (a gap, ranks not renumbered): Path 3 P5 is built, and what is left of it is Devon's three
