@@ -3,7 +3,8 @@
 // `cal.pacing`, what counts as a class day for a course, the placer for lessons and for
 // typed unit lengths with pins and open days, stamping, the diff that says what a change
 // moved, turning dated units into a course, and the baseline with slip(), whose `behind`
-// must equal the sum of its causes over 500 random edit sequences (increment 3).
+// must equal the sum of its causes over 500 random edit sequences (increment 3), and
+// buffers, the A/B split and carryForward() for a new year (increment 4).
 //
 //   node Tools/school-calendar/test/plan.test.mjs   (or: npm run test:school-calendar-plan)
 //
@@ -466,6 +467,103 @@ function checks(M, full = true) {
   }
   }
 
+  // ---- buffers, the A/B split and the new year (increment 4) ----
+  {
+  const snowOn = (cal, ...ds) => { const c = clone(cal); ds.forEach(d => { c.days[d] = { types: ['holiday'], label: 'Snow Day', note: '', lesson: '' }; }); return c; };
+  const based = (cal, c, today) => M.setBaseline(cal, c, M.placeCourse(cal, c, abLetters(cal)), today);
+  const total = s => s.causes.reduce((a, cz) => a + cz.n, 0);
+  const D = M.classDays(seed, M.newCourse('x')).days.map(d => d.date);
+  // typed: Cells 10 days, the last 2 buffer; Energy 10
+  const ty0 = { ...M.newCourse('Science', { id: 'sci' }), units: [{ ...M.newUnit('Cells', 10, { id: 'u1' }), flex: 2 }, M.newUnit('Energy', 10, { id: 'u2' })] };
+  const tyB = based(seed, ty0, '2026-08-20');
+  const ends = (cal, c) => M.placeCourse(cal, c, abLetters(cal)).units.map(u => [u.end, u.buffered]);
+  eq(ends(seed, tyB), [[D[9], 0], [D[19], 0]], 'buffers: nothing lost, nothing used');
+  eq(ends(snowOn(seed, D[3]), tyB), [[D[10], 0], [D[20], 0]], 'buffers off (the default, P9-5): a snow day inside the unit moves its end and the next unit');
+  const tyOn = { ...tyB, absorb: true };
+  const p1 = M.placeCourse(snowOn(seed, D[3]), tyOn, L);
+  eq([p1.units.map(u => [u.end, u.short, u.buffered, u.flex]), p1.buffers], [[[D[9], 0, 1, 2], [D[19], 0, 0, 0]], [{ unitId: 'u1', key: 'D:u1#10', lessonId: null, for: { date: D[3] } }]], 'buffers on: the unit\'s last buffer day takes the snow day, and its end holds');
+  eq(ends(snowOn(seed, D[3], D[5]), tyOn).map(e => e[1]), [2, 0], 'two lost days: both buffer days');
+  const three = M.placeCourse(snowOn(seed, D[3], D[5], D[7]), tyOn, L).units;
+  eq([three[0].buffered, three[0].end, three[1].start], [2, D[10], D[11]], 'three lost days and two buffer days: the unit ends one class day later');
+  eq(ends(snowOn(seed, D[14]), tyOn)[0][1], 0, 'a loss outside the unit\'s baseline span takes none of its buffer');
+  eq(M.placeCourse(snowOn(seed, D[3]), { ...ty0, absorb: true }, L).buffers, [], 'with no baseline, no buffer is used');
+  const tiny = based(seed, { ...M.newCourse('T', { id: 't' }), absorb: true, units: [{ ...M.newUnit('Tiny', 2, { id: 'u1' }), flex: 2 }] }, '2026-08-20');
+  eq(M.placeCourse(snowOn(seed, D[0], D[1], D[2]), tiny, L).units[0].buffered, 1, 'a unit never gives up its every day to buffers');
+  // lesson mode: BUF lessons are the buffer days
+  const raw = [];
+  for (let k = 1; k <= 8; k++) raw.push(`U1-${String(k).padStart(2, '0')}-${k % 2 ? 'A' : 'B'}-L${k}`);
+  raw.push('U1-BUF1-A-Review', 'U1-BUF2-B-Review');
+  for (let k = 1; k <= 10; k++) raw.push(`U2-${String(k).padStart(2, '0')}-${k % 2 ? 'A' : 'B'}-M${k}`);
+  const les = parseLessonList(raw.join('\n')).lessons;
+  const lc0 = { ...M.syncUnits({ ...M.newCourse('History', { id: 'h' }), lessons: les }), absorb: true };
+  const lcB = based(seed, lc0, '2026-08-20');
+  const lcStamped = M.stamp({ ...seed, plan: { v: 1, active: 'h', algo: 1, courses: [lcB] } }, { h: M.placeCourse(seed, lcB, L) }).plan.courses[0];
+  const bump = { ...lcStamped, adjustments: [{ id: 'adj_1', beforeLessonId: les[2].id, reason: 'ran long', createdOn: '2026-09-02' }] };
+  const pb = M.placeCourse(seed, bump, L);
+  eq([pb.buffers.map(b => [b.lessonId, b.for]), pb.dateByLessonId[les[9].id], pb.dateByLessonId[les[10].id], pb.overflow.length], [[[les[9].id, { gap: 'adj_1' }]], undefined, D[10], 0], 'a bump added in a unit: its last BUF lesson takes it, and the next unit starts on time');
+  const bumpStamped = M.stamp({ ...seed, plan: { v: 1, active: 'h', algo: 1, courses: [bump] } }, { h: pb }).plan.courses[0];
+  const st = M.stored(bumpStamped);
+  eq([bumpStamped.lessons[9].on, bumpStamped.units[0].buffered, st.bufferIds, st.overflowIds], [null, 1, [les[9].id], []], 'stamped: the buffer lesson has no date, its unit says 1 used, and stored() tells it from overflow');
+  const d1 = M.diffPlacement(M.stored(lcStamped), pb, '2026-08-20', les);
+  eq([d1.bufferUnits, d1.newlyShort], [[{ id: lcB.units[0].id, label: 'Unit 1', from: 0, to: 1 }], []], 'the diff says a buffer day was used, and no lesson is short');
+  okk(/Unit 1 used 1 buffer day/.test(M.describeDiff(d1)), '...and the sentence says so');
+  const d2 = M.diffPlacement(M.stored(bumpStamped), M.placeCourse(seed, { ...bumpStamped, adjustments: [] }, L), '2026-08-20', les);
+  eq([d2.nowFits, d2.bufferUnits.map(u => [u.from, u.to])], [[], [[1, 0]]], 'the bump taken away: the buffer is back, not a lesson that "fits again"');
+  okk(/Unit 1 has 1 buffer day back/.test(M.describeDiff(d2)), '...and the sentence says the buffer day is back');
+  const sB = M.slip(snowOn(seed, D[3]), tyOn, p1, D[12]);
+  eq([sB.behind, sB.causes.map(c => [c.kind, c.n]), total(sB)], [0, [['lost', 1], ['buffer', -1]], 0], 'slip: a loss a buffer took leaves the course on the plan, and the ledger names both');
+  okk(/Buffer days used: 1 day\./.test(M.describeSlip(seed, tyOn, sB)), '...and the sentence names the buffer');
+  eq(M.absorbLegacy({ ...seed, pacing: { ...emptyPacing(), lessons: les } }).cal.plan.courses[0].absorb, false, 'a migrated course never absorbs');
+  if (full) {
+    const r = rng(41);
+    let bad = 0;
+    for (let t = 0; t < 200; t++) {
+      let cal = clone(seed);
+      let c = { ...M.newCourse('T', { id: 't' }), absorb: true, units: [10, 12, 8].map((n, k) => ({ ...M.newUnit('U' + k, n, { id: 'u' + k }), flex: Math.floor(r() * 4), pin: k && r() < 0.3 ? D[10 + Math.floor(r() * 30)] : null })) };
+      c = based(cal, c, '2026-08-20');
+      for (let e = 0, n = 1 + Math.floor(r() * 5); e < n; e++) {
+        if (r() < 0.7) cal = snowOn(cal, D[Math.floor(r() * 40)]);
+        else c = { ...c, lost: [...c.lost, { id: 'l' + e, date: D[Math.floor(r() * 40)], reason: 'Assembly' }] };
+      }
+      const s = M.slip(cal, c, M.placeCourse(cal, c, abLetters(cal)), D[Math.floor(r() * 45)]);
+      if (s.behind !== total(s)) bad++;
+    }
+    eq(bad, 0, '200 random losses with buffers on: behind is still the sum of its causes');
+  }
+
+  // the A/B split
+  const abCal = { ...seed, abCycle: { enabled: true, anchorDate: '2026-08-31', anchorLetter: 'A' } };
+  const AL = abLetters(abCal);
+  const joint = M.syncUnits({ ...M.newCourse('World History', { id: 'wh' }), lessons: codes(184, [20, 20, 20]) });
+  joint.units[1].name = 'Empires';
+  const sp = M.splitPreview(abCal, based(abCal, joint, '2026-08-20'), { taken: ['wh'], todayISO: '2026-08-20' });
+  eq([sp.refused, sp.courses.map(c => [c.id, c.name, c.meets, c.lessons.length, c.baseline]), sp.diff.moved.length, sp.diff.newlyShort.length, sp.text], [null, [['wh', 'World History (A)', 'A', 92, null], ['course_1', 'World History (B)', 'B', 92, null]], 0, 0, ''], 'split with no bumps: two courses of 92, the A half keeps the id, and no date moves');
+  eq(sp.courses[1].units.map(u => u.name).slice(0, 2), ['Unit 1', 'Empires'], '...each keeps its units\' names');
+  const mismatch = (cal, c) => { const p = M.placeCourse(cal, c, abLetters(cal)); return c.lessons.filter(l => p.dateByLessonId[l.id] && abLetters(cal)[p.dateByLessonId[l.id]] !== l.letter).length; };
+  const jb = { ...joint, adjustments: [{ id: 'adj_1', beforeLessonId: joint.lessons[40].id, reason: 'ran long' }] };
+  eq(mismatch(abCal, jb), 143, 'one bump on the joined list puts 143 lessons on the other letter\'s day');
+  const split = M.splitByLetter(jb, { taken: ['wh'] });
+  eq([split.courses.map(c => c.adjustments.map(a => a.id)), split.courses.map(c => mismatch(abCal, c))], [[['adj_1'], []], [0, 0]], '...split, the bump goes with its lesson and no lesson is on the wrong letter');
+  const bP = M.placeCourse(abCal, split.courses[1], AL), bP0 = M.placeCourse(abCal, M.splitByLetter(joint, { taken: ['wh'] }).courses[1], AL);
+  eq(bP.dateByLessonId, bP0.dateByLessonId, '...and the bump moves the A track only');
+  eq([M.splitByLetter({ ...joint, meets: 'A' }).refused, M.splitByLetter(M.newCourse('E')).refused, M.splitByLetter({ ...joint, lessons: joint.lessons.filter(l => l.letter === 'A') }).refused], ['already-split', 'no-lessons', 'one-letter'], 'split refuses an A course, an empty one and a one-letter list');
+  eq(M.splitByLetter({ ...joint, adjustments: [{ id: 'gone', beforeLessonId: 'les_999' }] }).orphans, ['gone'], 'a bump with no lesson is named, and neither half keeps it');
+
+  // the new year
+  const old = clone(lcB);
+  old.start = '2026-09-08'; old.lost = [{ id: 'l1', date: D[4], reason: 'Assembly' }];
+  old.adjustments = [{ id: 'adj_1', beforeLessonId: les[2].id, reason: 'ran long' }];
+  old.units[0].pin = '2026-09-08'; old.pace = { halfday: 'skip' }; old.color = '#123456';
+  const oldStamped = M.stamp({ ...seed, plan: { v: 1, active: 'sci', algo: 1, courses: [old, tyB] } }, { h: M.placeCourse(seed, old, L), sci: M.placeCourse(seed, tyB, L) }).plan;
+  const cf = M.carryForward(oldStamped);
+  eq(cf.dropped, { pins: 1, lost: 1, bumps: 1, baselines: 2, starts: 1 }, 'carryForward counts what it drops');
+  const [nh, ns] = cf.plan.courses;
+  eq([cf.plan.active, nh.name, nh.color, nh.meets, nh.pace, nh.absorb, nh.lessons.length, nh.lessons.some(l => 'on' in l), nh.adjustments, nh.lost, nh.baseline, nh.start],
+    ['sci', 'History', '#123456', 'all', { halfday: 'skip' }, true, 20, false, [], [], null, null], 'a lesson course keeps its name, colour, meets, pace, absorb and lessons, and loses its dates');
+  eq([nh.units.map(u => [u.name, u.days, u.pin, u.start, u.end, u.placed, 'buffered' in u])[0], ns.units.map(u => [u.name, u.days, u.flex, u.pin])], [['Unit 1', 10, null, null, null, 0, false], [['Cells', 10, 2, null], ['Energy', 10, 0, null]]], '...units keep names, days and flex, and lose pins and dates');
+  eq(M.carryForward('nope').plan.courses, [], 'a broken plan carries nothing');
+  }
+
   checks.count = count;
   return fails;
 }
@@ -511,7 +609,17 @@ const MUTANTS = [
   ['baseline set once only', 'return !!(first && todayISO && todayISO < first);', 'return false;'],
   ['ahead said as behind', '(s.behind > 0 ? "behind" : "ahead of")', '"behind"'],
   ['baseline rebuilt without pins', 'b.units.forEach((u) => { unitById[u.id] = u;', 'b.units.forEach((u) => { unitById[u.id] = { ...u, pin: null };'],
-  ['unfitting days called removed', 'add(inNow.has(key) ? "unplaced"', 'add(inNow.has(key) ? "removed"'],
+  ['unfitting days called removed', 'add(buffered.has(key) ? "buffer" : inNow.has(key) ? "unplaced"', 'add(buffered.has(key) ? "buffer" : inNow.has(key) ? "removed"'],
+  ['buffers when off', 'if (!course.absorb) return [];', ''],
+  ['buffers take every day', 'reasons.length, idx.length - 1);', 'reasons.length, idx.length);'],
+  ['buffers first not last', 'const k = flex[flex.length - 1 - m];', 'const k = flex[m];'],
+  ['buffer counted short', 'if (isBuf.has(k)) { if (st) st.buffered++; return; }', 'if (isBuf.has(k)) { if (st) st.short++; return; }'],
+  ['buffer lessons stored as overflow', '    else if (buf.has(l.id)) out.bufferIds.push(l.id);\n', ''],
+  ['buffer not in the ledger', 'add(buffered.has(key) ? "buffer" :', 'add(false ? "buffer" :'],
+  ['split drops bumps', 'c.adjustments = c.adjustments.filter((a) => mine.has(a.beforeLessonId));', 'c.adjustments = [];'],
+  ['split keeps the baseline', '    c.baseline = null;\n    c.lessons = c.lessons.filter', '    c.lessons = c.lessons.filter'],
+  ['carry keeps pins', '...u, pin: null, start: null,', '...u, start: null,'],
+  ['carry keeps bumps', '    n.absorb = !!c.absorb;\n', '    n.absorb = !!c.absorb;\n    n.adjustments = c.adjustments;\n'],
   ['behind ignores the baseline', '- (upTo(baseDates, X.date) - upTo(baseDates, todayISO));', ';'],
 ];
 

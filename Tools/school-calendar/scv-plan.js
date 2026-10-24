@@ -15,7 +15,9 @@
 //                pace: { [dayTypeId]: 'count'|'skip' }, lost: [{ id, date, reason }],
 //                units: [Unit], lessons: [Lesson], adjustments: [Adjustment], baseline }
 //   Lesson and Adjustment are scv-pacing.js's shapes plus `on`, the date last stamped.
-//   Unit     = { id, name, color, code, days, pin, flex, start, end, placed, short }
+//   Unit     = { id, name, color, code, days, pin, flex, start, end, placed, short, buffered }
+// A course may carry `absorb: true` (increment 4): its units' buffer days then take a lost
+// day so the unit's end holds. Absent is false (P9-5), and the migration never sets it.
 // A day type may carry `pace: 'skip'`; absent is 'count'. A course's own `pace` map
 // overrides the type's. `start: null` is the year's first day.
 //
@@ -32,8 +34,8 @@
 // lessons and for typed unit lengths, with pins and open days, stamping the placed dates
 // into the blob, the diff that says what a change moved (increment 1), turning dated
 // units into a course and letting its pins go (increment 2), and the baseline with
-// "behind" and its ledger, slip() (increment 3). NOT HERE YET: buffers, the A/B split
-// and the new-year carry (4).
+// "behind" and its ledger, slip() (increment 3), and buffers, the A/B split and the
+// new-year carry (increment 4).
 
 import { emptyPacing, unitInstructionalStats } from "./scv-pacing.js";
 import { abLetters } from "./scv-weeks.js";
@@ -85,6 +87,7 @@ export function newCourse(name, opts = {}) {
     lessons: [],
     adjustments: [],
     baseline: null,
+    absorb: false,
   };
 }
 
@@ -289,7 +292,8 @@ function slotsOf(course) {
   } else {
     course.adjustments.forEach((a) => orphans.push(a.id));
     course.units.forEach((u) => {
-      for (let n = 1; n <= u.days; n++) slots.push({ kind: "day", unitId: u.id, n, of: u.days });
+      const flex = Math.max(0, Math.min(u.days, Math.floor(Number(u.flex) || 0)));
+      for (let n = 1; n <= u.days; n++) slots.push({ kind: "day", unitId: u.id, n, of: u.days, flex });
     });
   }
   return { slots, orphans };
@@ -349,13 +353,59 @@ function slotKeys(slots) {
 }
 function lessonCode(l) { return "U" + l.unit + "-" + l.num + "-" + l.letter; }
 
+/** Whether a slot is a buffer day: in lesson mode a lesson whose number starts `BUF`
+    (the convention the page documents), in typed mode one of the unit's last `flex` days. */
+function isFlex(sl) {
+  if (sl.kind === "lesson") return /^BUF/i.test(String(sl.lesson.num || ""));
+  if (sl.kind === "day") return sl.n > sl.of - (sl.flex || 0);
+  return false;
+}
+
+/** Increment 4, buffers: in a course with `absorb` on and a usable baseline, a unit's
+    buffer days take its losses so its end holds. For each unit,
+      taken = min(buffer days, class days lost inside the unit's baseline span
+                  + bumps added in the unit since the baseline)
+    and never the unit's every slot; that many buffer days, last first, are left out of the
+    placement. Returns [{ k (slot index, dropped before return), unitId, key, lessonId,
+    for: { date } | { gap: adjId } }]: what each buffer day was used for, losses in date
+    order, then bumps. Off (the default, P9-5), or with no baseline: []. */
+function bufferSlots(course, slots, keys, classDates) {
+  if (!course.absorb) return [];
+  const base = baselinePlacement(course.baseline);
+  if (!base) return [];
+  const nowSet = new Set(classDates);
+  const inBase = new Set(base.order.map((o) => o.key));
+  const out = [];
+  course.units.forEach((u) => {
+    const idx = [];
+    slots.forEach((sl, k) => { if (sl.unitId === u.id) idx.push(k); });
+    const flex = idx.filter((k) => isFlex(slots[k]));
+    if (!flex.length) return;
+    const span = base.order.filter((o) => o.unitId === u.id && o.date).map((o) => o.date);
+    const reasons = [];
+    if (span.length) {
+      const lo = span[0], hi = span[span.length - 1];
+      base.classDates.forEach((d) => { if (d >= lo && d <= hi && !nowSet.has(d)) reasons.push({ date: d }); });
+    }
+    idx.forEach((k) => { if (slots[k].kind === "gap" && !inBase.has(keys[k])) reasons.push({ gap: slots[k].adj.id }); });
+    const taken = Math.min(flex.length, reasons.length, idx.length - 1);
+    for (let m = 0; m < taken; m++) {
+      const k = flex[flex.length - 1 - m];
+      out.push({ k, unitId: u.id, key: keys[k], lessonId: slots[k].kind === "lesson" ? slots[k].lesson.id : null, for: reasons[m] });
+    }
+  });
+  return out;
+}
+
 /** Place one course. Returns
       { courseId, classDates: [ISO], excluded: [{ date, why }],
         slots:  { ISO: { kind: 'lesson'|'day'|'gap', unitId, lessonId, n, of, half, reason } },
         byDate: { ISO: lesson }, dateByLessonId: { lessonId: ISO },
         vacated: { ISO: [{ id, reason }] }, adjDates: { adjId: ISO },
-        units: [{ id, start, end, days, placed, short, open, half, pin, pinShift, pinIgnored }],
-        overflow: [lesson], orphanedAdjustmentIds: [id], problems: [{ code, unitId, detail }] }
+        units: [{ id, start, end, days, placed, short, open, half, pin, pinShift, pinIgnored,
+                  flex, buffered }],
+        overflow: [lesson], orphanedAdjustmentIds: [id], problems: [{ code, unitId, detail }],
+        buffers: [{ unitId, key, lessonId, for }], order: [{ key, kind, unitId, date, label, buffer? }] }
     `byDate`, `dateByLessonId`, `vacated`, `overflow` and `orphanedAdjustmentIds` have
     placeLessons()'s shapes, so 032's month grid, week strip, drawer and .ics can read the
     active course with no change of their own; `slots` is the fuller view.
@@ -385,18 +435,28 @@ export function placeCourse(cal, course0, letters) {
   const stats = {}, unitById = {};
   course.units.forEach((u) => {
     unitById[u.id] = u;
-    stats[u.id] = { id: u.id, start: null, end: null, days: 0, placed: 0, short: 0, open: 0, half: 0, pin: u.pin || null, pinShift: false, pinIgnored: false };
+    stats[u.id] = { id: u.id, start: null, end: null, days: 0, placed: 0, short: 0, open: 0, half: 0, pin: u.pin || null, pinShift: false, pinIgnored: false, flex: 0, buffered: 0 };
   });
+  const keys = slotKeys(slots);
+  // Increment 4: buffer days that take a loss, and are left out of the placement.
+  out.buffers = bufferSlots(course, slots, keys, out.classDates);
+  const isBuf = new Set(out.buffers.map((b) => b.k));
   // Pass 1: which class day (index into cd.days) each slot gets, or -1.
-  const dayOf = assignDays(slots, unitById, stats, out.classDates, out.problems);
+  const live = [], liveAt = [];
+  slots.forEach((sl, k) => { if (!isBuf.has(k)) { live.push(sl); liveAt.push(k); } });
+  const liveDay = assignDays(live, unitById, stats, out.classDates, out.problems);
+  const dayOf = new Array(slots.length).fill(-1);
+  liveAt.forEach((k, m) => { dayOf[k] = liveDay[m]; });
   // Pass 2: the placement from those days.
   const seq = {};
-  const keys = slotKeys(slots);
   slots.forEach((sl, k) => {
     const st = sl.unitId && stats[sl.unitId];
     if (st) st.days++;
     const day = dayOf[k] >= 0 ? cd.days[dayOf[k]] : null;
-    out.order.push({ key: keys[k], kind: sl.kind, unitId: sl.unitId || null, date: day ? day.date : null, label: sl.kind === "lesson" ? (sl.lesson.raw || lessonCode(sl.lesson)) : null });
+    const entry = { key: keys[k], kind: sl.kind, unitId: sl.unitId || null, date: day ? day.date : null, label: sl.kind === "lesson" ? (sl.lesson.raw || lessonCode(sl.lesson)) : null };
+    if (isBuf.has(k)) entry.buffer = true;
+    out.order.push(entry);
+    if (isBuf.has(k)) { if (st) st.buffered++; return; }
     if (!day) {
       if (st) st.short++;
       if (sl.kind === "lesson") out.overflow.push(sl.lesson);
@@ -417,6 +477,8 @@ export function placeCourse(cal, course0, letters) {
     }
   });
   out.units = course.units.map((u) => stats[u.id]);
+  slots.forEach((sl) => { if (sl.unitId && stats[sl.unitId] && isFlex(sl)) stats[sl.unitId].flex++; });
+  out.buffers.forEach((b) => { delete b.k; });
   out.units.forEach((u) => {
     if (u.days === 0) out.problems.push({ code: "empty-unit", unitId: u.id, detail: null });
     else if (u.short) out.problems.push({ code: "short", unitId: u.id, detail: u.short });
@@ -487,6 +549,94 @@ export function unpinAfterFirst(course) {
   const c = clone(course);
   (c.units || []).forEach((u, k) => { if (k > 0) u.pin = null; });
   return c;
+}
+
+/* --- the A/B split and the new year (increment 4) ----------------------------- */
+
+/** "Split into A and B" (P9-7: an A/B course stays one list until the teacher asks): two
+    new courses from one in lesson mode, `meets: 'A'` with the A lessons and `'B'` with the
+    B ones, each keeping its lessons' ids, the bumps anchored to them, the course's start,
+    pace, lost dates and absorb setting, and its units' names, colours, pins and flex by
+    code (syncUnits). Neither has a baseline: the page sets each from its placement at the
+    commit, so behind restarts at 0 for both. Returns { courses: [a, b], refused } where
+    `refused` is 'no-lessons', 'one-letter' (every lesson has the same letter) or
+    'already-split' (the course meets on one letter already), and `orphans`, the ids of
+    bumps whose lesson is gone, which neither half keeps. `opts.taken` names the ids in use;
+    the A half takes the course's own id, so the active course stays active. */
+export function splitByLetter(course0, opts = {}) {
+  const course = normalCourse(course0);
+  const out = { courses: [], refused: null, orphans: [] };
+  if (course.meets !== "all") { out.refused = "already-split"; return out; }
+  if (!course.lessons.length) { out.refused = "no-lessons"; return out; }
+  const letters = new Set(course.lessons.map((l) => l.letter));
+  if (!(letters.has("A") && letters.has("B"))) { out.refused = "one-letter"; return out; }
+  const ids = new Set(course.lessons.map((l) => l.id));
+  out.orphans = course.adjustments.filter((a) => !ids.has(a.beforeLessonId)).map((a) => a.id);
+  const taken = [...(opts.taken || []), course.id];
+  ["A", "B"].forEach((L) => {
+    const id = L === "A" ? course.id : nextId("course_", taken);
+    taken.push(id);
+    const c = clone(course);
+    c.id = id;
+    c.name = (course.name + " (" + L + ")").slice(0, 80);
+    c.meets = L;
+    c.baseline = null;
+    c.lessons = c.lessons.filter((l) => l.letter === L);
+    const mine = new Set(c.lessons.map((l) => l.id));
+    c.adjustments = c.adjustments.filter((a) => mine.has(a.beforeLessonId));
+    // syncUnits keeps a record by code and run number; the split runs are the joint runs
+    // with the other letter taken out, so they match in order.
+    out.courses.push(syncUnits(c));
+  });
+  return out;
+}
+
+/** The A/B split, placed and compared with the joint course: { courses, refused, orphans,
+    diff, text }. `diff` is diffPlacement() of the joint course's placement against the two
+    halves' merged, by lesson id; with no bumps on an alternating list the halves place
+    every lesson where it was (the suite holds that on the seed). */
+export function splitPreview(cal, course, opts = {}) {
+  const r = splitByLetter(course, opts);
+  if (r.refused) return { ...r, diff: null, text: "" };
+  const L = abLetters(cal);
+  const before = placeCourse(cal, course, L);
+  const halves = r.courses.map((c) => placeCourse(cal, c, L));
+  const merged = { classDates: [...new Set(halves.flatMap((h) => h.classDates))].sort(), dateByLessonId: {}, overflow: [], units: [] };
+  halves.forEach((h) => { Object.assign(merged.dateByLessonId, h.dateByLessonId); merged.overflow.push(...h.overflow); });
+  const diff = diffPlacement(before, merged, opts.todayISO || null, normalCourse(course).lessons);
+  return { ...r, diff, text: describeDiff(diff) };
+}
+
+/** The plan for a new year (P9-9: unit lengths and lessons carry). Keeps every course, its
+    name, colour, `meets`, pace, absorb, its lessons and its units' names, colours, codes,
+    days and flex; drops pins, lost dates, bumps, baselines, start dates and every stamped
+    date, and makes `active` the same course. Returns { plan, dropped: { pins, lost, bumps,
+    baselines, starts } } with counts for the confirm. A newer or broken plan carries
+    nothing. */
+export function carryForward(plan0) {
+  const dropped = { pins: 0, lost: 0, bumps: 0, baselines: 0, starts: 0 };
+  const read = readPlan({ plan: plan0 });
+  if (read.state !== "ok") return { plan: emptyPlan(), dropped };
+  const plan = emptyPlan();
+  read.plan.courses.forEach((c0) => {
+    const c = normalCourse(clone(c0));
+    dropped.lost += c.lost.length;
+    dropped.bumps += c.adjustments.length;
+    if (c.baseline) dropped.baselines++;
+    if (c.start) dropped.starts++;
+    c.units.forEach((u) => { if (u.pin) dropped.pins++; });
+    const n = newCourse(c.name, { id: c.id, color: c.color, meets: c.meets });
+    n.pace = clone(c.pace);
+    n.absorb = !!c.absorb;
+    n.lessons = c.lessons.map((l) => { const x = { ...l }; delete x.on; return x; });
+    n.units = c.units.map((u) => ({
+      ...u, pin: null, start: null, end: null, placed: 0, short: 0,
+    }));
+    n.units.forEach((u) => { delete u.buffered; });
+    plan.courses.push(syncUnits(n));
+  });
+  plan.active = plan.courses.some((c) => c.id === read.plan.active) ? read.plan.active : (plan.courses[0] ? plan.courses[0].id : null);
+  return { plan, dropped };
 }
 
 /** The sentence for a problem the placer reports about a unit, or "" for none. */
@@ -573,6 +723,7 @@ export function baselinePlacement(baseline) {
       gap-added / gap-removed     bumps before X now and not then, and the reverse
       added / removed             lessons or unit days before X now and not then, and the reverse
       unplaced / placed           ones still in the plan that no longer fit before X, or now do
+      buffer    buffer days before X in the baseline, now taking a loss (-1 each)
       open      open days before a pin, now less then (open days used up absorb a loss)
     and `behind` equals the sum of every cause's `n`, always: the suite holds that identity
     over random edit sequences. Each cause is { kind, n, items: [{ date?, why?, key, label? }] }. */
@@ -613,6 +764,7 @@ export function slip(cal, course, placement, todayISO) {
   const beforeNow = new Set(nowOrder.filter((o) => o.date && o.date < now.date).map((o) => o.key));
   const beforeBase = new Set(base.order.filter((o) => o.date && o.date < X.date).map((o) => o.key));
   const inNow = new Set(nowOrder.map((o) => o.key)), inBase = new Set(base.order.map((o) => o.key));
+  const buffered = new Set(nowOrder.filter((o) => o.buffer).map((o) => o.key));
   const nowLabel = {};
   nowOrder.forEach((o) => { nowLabel[o.key] = o.label; });
   beforeNow.forEach((key) => {
@@ -624,12 +776,12 @@ export function slip(cal, course, placement, todayISO) {
   beforeBase.forEach((key) => {
     if (beforeNow.has(key)) return;
     const item = { key, label: labelOf(key, nowLabel[key], c) };
-    add(inNow.has(key) ? "unplaced" : key[0] === "G" ? "gap-removed" : "removed", -1, item);
+    add(buffered.has(key) ? "buffer" : inNow.has(key) ? "unplaced" : key[0] === "G" ? "gap-removed" : "removed", -1, item);
   });
   const empty = (dates, order, d) => upTo(dates, d) - 1 - order.filter((o) => o.date && o.date < d).length;
   const dOpen = empty(nowDates, nowOrder, now.date) - empty(baseDates, base.order, X.date);
   if (dOpen) causes.open = { kind: "open", n: dOpen, items: [] };
-  const ORDER = ["lost", "gained", "gap-added", "gap-removed", "added", "removed", "unplaced", "placed", "open"];
+  const ORDER = ["lost", "gained", "gap-added", "gap-removed", "added", "removed", "unplaced", "placed", "buffer", "open"];
   out.causes = ORDER.filter((kd) => causes[kd]).map((kd) => causes[kd]);
   const unitId = X.unitId;
   const bu = base.order.filter((o) => o.unitId === unitId && o.date).map((o) => o.date);
@@ -713,6 +865,7 @@ export function describeSlip(cal, course, s, name) {
     else if (cz.kind === "removed") parts.push("Taken out before it: " + itemList(cz.items) + ".");
     else if (cz.kind === "unplaced") parts.push("No longer fitting before it: " + itemList(cz.items) + ".");
     else if (cz.kind === "placed") parts.push("Now fitting before it: " + itemList(cz.items) + ".");
+    else if (cz.kind === "buffer") parts.push("Buffer days used: " + plural(cz.items.length, "day", "days") + ".");
     else if (cz.kind === "open") parts.push(cz.n < 0 ? "Open days used: " + (-cz.n) + "." : "Open days added: " + cz.n + ".");
   });
   if (parts.length) text += " " + parts.join(" ");
@@ -741,19 +894,38 @@ export function stamp(cal, placements) {
       const s = p.units.find((x) => x.id === u.id);
       if (!s) return;
       u.start = s.start; u.end = s.end; u.placed = s.placed; u.short = s.short;
+      if (s.buffered) u.buffered = s.buffered; else delete u.buffered;
     });
   });
   return out;
 }
 
 /** The dates stamped into a course, as a placement-shaped view: { courseId,
-    dateByLessonId, adjDates, units: [{ id, start, end, placed, short }], overflowIds }. */
+    dateByLessonId, adjDates, units: [{ id, start, end, placed, short, buffered }],
+    overflowIds, bufferIds }. */
 export function stored(course) {
   const c = normalCourse(course);
-  const out = { courseId: c.id, dateByLessonId: {}, adjDates: {}, units: [], overflowIds: [] };
-  c.lessons.forEach((l) => { if (l.on) out.dateByLessonId[l.id] = l.on; else if (l.on === null) out.overflowIds.push(l.id); });
+  const out = { courseId: c.id, dateByLessonId: {}, adjDates: {}, units: [], overflowIds: [], bufferIds: [] };
+  // A unit's stamped `buffered` count names its last that many unplaced BUF lessons, the
+  // ones the placer leaves out; the rest of the unplaced lessons are overflow.
+  const buf = new Set();
+  const unitOfLesson = {};
+  let ui = -1, prev = null;
+  c.lessons.forEach((l) => { if (l.unit !== prev) { ui++; prev = l.unit; } unitOfLesson[l.id] = c.units[ui] || null; });
+  c.units.forEach((u) => {
+    let n = Math.max(0, Number(u.buffered) || 0);
+    for (let k = c.lessons.length - 1; k >= 0 && n > 0; k--) {
+      const l = c.lessons[k];
+      if (unitOfLesson[l.id] === u && l.on === null && /^BUF/i.test(String(l.num || ""))) { buf.add(l.id); n--; }
+    }
+  });
+  c.lessons.forEach((l) => {
+    if (l.on) out.dateByLessonId[l.id] = l.on;
+    else if (buf.has(l.id)) out.bufferIds.push(l.id);
+    else if (l.on === null) out.overflowIds.push(l.id);
+  });
   c.adjustments.forEach((a) => { if (a.on) out.adjDates[a.id] = a.on; });
-  out.units = c.units.map((u) => ({ id: u.id, name: u.name, start: u.start || null, end: u.end || null, placed: u.placed || 0, short: u.short || 0 }));
+  out.units = c.units.map((u) => ({ id: u.id, name: u.name, start: u.start || null, end: u.end || null, placed: u.placed || 0, short: u.short || 0, buffered: u.buffered || 0 }));
   return out;
 }
 
@@ -776,24 +948,27 @@ export function diffPlacement(before, after, todayISO, lessons) {
   const typed = !(lessons && lessons.length);
   const bOver = new Set(before.overflowIds || (before.overflow || []).map((l) => l.id));
   const aOver = new Set((after.overflow || []).map((l) => l.id));
+  const bBuf = new Set(before.bufferIds || (before.buffers || []).map((b) => b.lessonId).filter(Boolean));
   Object.keys(before.dateByLessonId || {}).forEach((id) => {
     const from = before.dateByLessonId[id], to = after.dateByLessonId[id];
     if (to && to !== from) moved.push({ kind: "lesson", id, label: label[id] || id, from, to, by: by(from, to) });
   });
   const newlyShort = [...aOver].filter((id) => !bOver.has(id));
-  const nowFits = [...bOver].filter((id) => !aOver.has(id) && after.dateByLessonId[id]);
+  const nowFits = [...bOver].filter((id) => !aOver.has(id) && !bBuf.has(id) && after.dateByLessonId[id]);
+  const bufferUnits = [];
   const names = {};
   (before.units || []).forEach((u) => { if (u.name) names[u.id] = u.name; });
   (after.units || []).forEach((u) => {
     const b = (before.units || []).find((x) => x.id === u.id);
     if (b && b.end && u.end && b.end !== u.end) moved.push({ kind: "unit", id: u.id, label: names[u.id] || u.id, from: b.end, to: u.end, by: by(b.end, u.end) });
     if (typed && b && (b.short || 0) !== (u.short || 0)) shortUnits.push({ id: u.id, label: names[u.id] || u.id, from: b.short || 0, to: u.short || 0 });
+    if (b && (b.buffered || 0) !== (u.buffered || 0)) bufferUnits.push({ id: u.id, label: names[u.id] || u.id, from: b.buffered || 0, to: u.buffered || 0 });
   });
   const lessonsMoved = moved.filter((m) => m.kind === "lesson");
   const past = todayISO ? lessonsMoved.filter((m) => m.from < todayISO).length : 0;
   const pinned = (after.units || []).some((u) => u.pin && !u.pinIgnored);
   return {
-    moved, newlyShort, nowFits, past, shortUnits, pinned,
+    moved, newlyShort, nowFits, past, shortUnits, bufferUnits, pinned,
     summary: { lessons: lessonsMoved.length, units: moved.length - lessonsMoved.length, newlyShort: newlyShort.length, nowFits: nowFits.length, past },
   };
 }
@@ -820,6 +995,10 @@ export function describeDiff(diff) {
   if (diff.newlyShort.length) parts.push(plural(diff.newlyShort.length, "lesson no longer fits", "lessons no longer fit") + (diff.pinned ? " before a pinned unit or the year's end" : " before the year ends"));
   (diff.shortUnits || []).forEach((u) => {
     parts.push(u.label + (u.to ? " is now " + plural(u.to, "day", "days") + " short" : " fits again") + (u.from && u.to ? ", was " + u.from : ""));
+  });
+  (diff.bufferUnits || []).forEach((u) => {
+    parts.push(u.to > u.from ? u.label + " used " + plural(u.to - u.from, "buffer day", "buffer days") + (u.from ? " (" + u.to + " in all)" : "")
+      : u.label + " has " + plural(u.from - u.to, "buffer day", "buffer days") + " back");
   });
   if (diff.nowFits.length) parts.push(plural(diff.nowFits.length, "lesson fits", "lessons fit") + " again");
   if (!parts.length) return "";
