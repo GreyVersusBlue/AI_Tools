@@ -198,6 +198,7 @@
   .course-slip ul { margin: 0 0 6px; padding-left: 1.1rem; }
   .course-slip li + li { margin-top: 3px; }
   .course-slip li.slip-behind { font-weight: 600; }
+  #courseFields .enable { display: flex; flex-direction: row; align-items: center; gap: 6px; font-weight: normal; }
   .course-pace .pace-pick { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 4px; }
   .course-pace label { display: flex; gap: 4px; align-items: center; }
   .plan-preview { border: 2px solid var(--accent-2); border-radius: 8px; padding: 10px; margin-top: 10px; background: var(--card); }
@@ -505,8 +506,11 @@
       <div class="field"><label for="courseMeets">Meets on</label>
         <select id="courseMeets"><option value="all">Every school day</option><option value="A">A days</option><option value="B">B days</option></select>
       </div>
+      <label class="enable"><input type="checkbox" id="courseAbsorb"> Buffer days take a lost day</label>
+      <button type="button" id="btnCourseSplit" class="small" hidden>Split into A and B…</button>
       <button type="button" id="btnCourseDelete" class="danger small">Delete this course</button>
     </div>
+    <div id="splitPreview"></div>
     <div id="courseProblems" class="pace-errors"></div>
     <div id="courseSlip" class="course-slip" hidden>
       <ul id="courseSlipList"></ul>
@@ -529,6 +533,14 @@
       whatever happens before it: the days before it stay open if earlier units finish early, and the unit before it comes
       up short if they run long. The table says which. A day type can be left out of pacing (untick <em>Count for pacing</em>
       in Day Types), and a course can count or skip a type for itself below its units.</p>
+      <p><em>Buffer days</em> are a unit's spare days: in a lesson list, the lessons numbered <code>BUF1</code>, <code>BUF2</code>…;
+      in a course planned in units, the number in the unit's <em>Buffer</em> column, its last days. They are planned like any other day.
+      Tick <em>Buffer days take a lost day</em> and a day the course loses inside a unit (a closure, a day it didn't meet, a lesson that
+      needed another day) uses up that unit's last buffer day instead, so the unit still ends when it was planned to; the table says how
+      many were used. It is off unless you turn it on, so a lost day moves everything later and you decide.</p>
+      <p>An A/B course is one list of lessons for both letters. <em>Split into A and B</em> makes it two courses, one meeting on A days
+      with the A lessons and one on B days with the B lessons, each with its own bumps, so a lesson that needs another day moves one
+      track only. You see what would change first.</p>
       <p>Each course is one prep's plan, with its own lessons, bumps and lost days; the calendar shows the course picked above. A course that meets on A days only counts A days as its class days. In a day's editor, <em>This lesson needs another day</em> puts an empty class day in front of that lesson and stays with it; <em>This class didn't meet</em> takes that date away from this course only (an assembly), whatever lesson was planned. When a change moves lessons, a bar at the top says what moved and offers Undo.</p>
       <p>Each course says how many class days it is behind its plan, or ahead of it, and why: the plan is the dates as they stood when you first gave the course its lessons or units, kept up to date while you are still planning and held fixed from its first class day, until you press <em>Make this the plan</em>. Behind is counted in that course's class days, so an A-day course is behind in A days.</p>
     </details>
@@ -597,6 +609,7 @@ import {
   diffPlacement, describeDiff, shortDate, PLACER_ALGO,
   newUnit, convertDatedUnits, unpinAfterFirst, unitProblemText,
   setBaseline, wantsBaseline, slip, describeSlip,
+  splitPreview, carryForward,
 } from './school-calendar/scv-plan.js';
 
 Store.configure({ toolName: 'School Calendar Visualizer' });
@@ -1883,7 +1896,11 @@ function renderPacing() {
   if (course) {
     document.getElementById("courseName").value = course.name;
     document.getElementById("courseMeets").value = course.meets;
+    document.getElementById("courseAbsorb").checked = !!course.absorb;
   }
+  const letters = course ? new Set(course.lessons.map(l => l.letter)) : new Set();
+  document.getElementById("btnCourseSplit").hidden = !course || readOnly || course.meets !== "all" || !(letters.has("A") && letters.has("B"));
+  renderSplitPreview(false);
   const probs = [];
   if (course && placement.problems.some(x => x.code === "no-rotation")) probs.push(`${course.name} meets on ${course.meets} days, but the A/B Day Cycle is off, so it is paced on every school day. Turn the cycle on above.`);
   if (course && placement.problems.some(x => x.code === "no-class-days")) probs.push(`${course.name} has no class days between its start date and the year's last day.`);
@@ -1989,7 +2006,7 @@ function renderUnitTable(course) {
   cap.style.textAlign = "left"; cap.style.fontWeight = "700";
   t.appendChild(cap);
   const head = t.createTHead().insertRow();
-  const cols = ["Unit", "Class days", "Pinned to", "Starts", "Ends", "Open", "Short"];
+  const cols = ["Unit", "Class days", "Pinned to", "Starts", "Ends", "Open", "Short", "Buffer"];
   if (typed) cols.push("Order");
   cols.forEach(x => { const th = document.createElement("th"); th.scope = "col"; th.textContent = x; head.appendChild(th); });
   const body = t.createTBody();
@@ -2046,6 +2063,23 @@ function renderUnitTable(course) {
     const sh = r.insertCell();
     sh.textContent = st.short ? String(st.short) : "0";
     if (st.short) sh.className = "short";
+    // Increment 4: a unit's buffer days. Typed, the teacher sets how many of its last days;
+    // in lesson mode they are its BUF lessons. "(N used)" when a lost day took some.
+    const bufCell = r.insertCell();
+    const used = st.buffered ? " (" + st.buffered + " used)" : "";
+    if (typed) {
+      const f = document.createElement("input");
+      f.type = "number"; f.min = "0"; f.max = String(u.days); f.step = "1"; f.value = String(u.flex || 0);
+      f.setAttribute("aria-label", "Buffer days in " + who);
+      f.addEventListener("change", () => {
+        const v = Math.max(0, Math.min(u.days, Math.floor(Number(f.value) || 0)));
+        edit(u.id, rec => { rec.flex = v; }, who + " now has " + v + (v === 1 ? " buffer day" : " buffer days"));
+      });
+      bufCell.appendChild(f);
+      if (used) bufCell.appendChild(document.createTextNode(used));
+    } else {
+      bufCell.textContent = String(st.flex || 0) + used;
+    }
     if (typed) {
       const acts = r.insertCell(); acts.className = "acts";
       const mk = (txt, aria, dis, fn) => {
@@ -2068,6 +2102,8 @@ function renderUnitTable(course) {
     if (st.pinShift && !st.pinIgnored && st.start) lines.push(`${who} is pinned to ${fmtShort(u.pin)}, which is not a class day for ${course.name}, so it starts ${fmtShort(st.start)}.`);
     if (st.open) lines.push(`${st.open === 1 ? "1 class day is" : st.open + " class days are"} open before ${who}: nothing is planned there.`);
     (placement.problems || []).filter(p => p.unitId === u.id).forEach(p => { const x = unitProblemText(p, who); if (x) lines.push(x); });
+    const usedFor = (placement.buffers || []).filter(b => b.unitId === u.id).map(b => b.for && b.for.date ? fmtShort(b.for.date) : "a lesson that needed another day");
+    if (usedFor.length) lines.push(`${who} used ${usedFor.length === 1 ? "a buffer day" : usedFor.length + " buffer days"}, for ${usedFor.join(", ")}, so it still ends ${st.end ? fmtShort(st.end) : "as planned"}.`);
   });
   wrap.appendChild(t);
   notes.textContent = lines.join("\n");
@@ -2165,6 +2201,60 @@ function renderCoursePace(course) {
   });
   wrap.append(h, box);
 }
+
+/* "Split into A and B…" (increment 4, P9-7: only when asked): the A lessons and the B
+   lessons as two courses, shown before and after first (splitPreview in scv-plan.js). */
+function renderSplitPreview(open) {
+  const wrap = document.getElementById("splitPreview");
+  wrap.textContent = "";
+  const course = activeCourse();
+  if (!open || !course || planState() !== "ok") return;
+  const sp = splitPreview(cal, course, { taken: cal.plan.courses.map(c => c.id), todayISO: todayISO() });
+  const box = document.createElement("div");
+  box.className = "plan-preview"; box.id = "splitBox";
+  box.setAttribute("role", "region"); box.setAttribute("aria-labelledby", "splitTitle");
+  const h = document.createElement("h3"); h.id = "splitTitle"; h.textContent = "Split " + course.name + " into A and B"; box.appendChild(h);
+  const cycle = !!(cal.abCycle && cal.abCycle.enabled);
+  const p = document.createElement("p");
+  if (sp.refused) p.textContent = "This course cannot be split: " + (sp.refused === "one-letter" ? "all of its lessons are for one letter." : sp.refused === "no-lessons" ? "it has no lessons." : "it already meets on one letter.");
+  else if (!cycle) p.textContent = "Turn the A/B Day Cycle on above first: without it there are no A days and B days to split the course across.";
+  else {
+    const [a, b] = sp.courses;
+    const bumps = c => c.adjustments.length ? ", " + c.adjustments.length + (c.adjustments.length === 1 ? " bump" : " bumps") : "";
+    p.textContent = `“${a.name}” meets on A days with ${a.lessons.length} lessons${bumps(a)}; “${b.name}” meets on B days with ${b.lessons.length} lessons${bumps(b)}. ` +
+      `Days this course didn't meet go with both, and each starts again at 0 days behind. ` +
+      (sp.text ? "Splitting " + sp.text.charAt(0).toLowerCase() + sp.text.slice(1) : "No lesson changes date.") +
+      (sp.orphans.length ? ` ${sp.orphans.length === 1 ? "One bump" : sp.orphans.length + " bumps"} no longer matching a lesson ${sp.orphans.length === 1 ? "is" : "are"} left out.` : "");
+  }
+  box.appendChild(p);
+  const row = document.createElement("div"); row.className = "unit-actions";
+  const ok = document.createElement("button"); ok.type = "button"; ok.className = "primary small"; ok.id = "splitApply"; ok.textContent = "Split it";
+  ok.disabled = !!sp.refused || !cycle;
+  ok.addEventListener("click", () => {
+    const c = activeCourse(); if (!c) return;
+    const fresh = splitPreview(cal, c, { taken: cal.plan.courses.map(x => x.id), todayISO: todayISO() });
+    if (fresh.refused) return;
+    const i = cal.plan.courses.findIndex(x => x.id === c.id);
+    cal.plan.courses.splice(i, 1, ...fresh.courses);
+    cal.plan.active = fresh.courses[0].id;
+    renderSplitPreview(false);
+    save("Splitting " + c.name + " into A and B", "Split “" + c.name + "” into “" + fresh.courses[0].name + "” and “" + fresh.courses[1].name + "”." + (fresh.text ? " " + fresh.text : " No lesson changed date."));
+    render();
+  });
+  const cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "small"; cancel.textContent = "Cancel";
+  cancel.addEventListener("click", () => renderSplitPreview(false));
+  row.append(ok, cancel); box.appendChild(row);
+  wrap.appendChild(box);
+}
+document.getElementById("btnCourseSplit").addEventListener("click", () => {
+  renderSplitPreview(true);
+  const b = document.getElementById("splitApply"); if (b && !b.disabled) b.focus();
+});
+document.getElementById("courseAbsorb").addEventListener("change", e => {
+  const c = activeCourse(); if (!c) return;
+  c.absorb = !!e.target.checked;
+  save(c.name + (c.absorb ? ": buffer days now take a lost day" : ": buffer days no longer take a lost day")); render();
+});
 
 document.getElementById("courseName").addEventListener("change", e => {
   const c = activeCourse(); if (!c) return;
@@ -2370,18 +2460,23 @@ document.getElementById("btnNewYear").addEventListener("click", () => {
   fresh.dayTypes = cal.dayTypes.map(t => ({ ...t })); // carry the legend forward, drop the days
   if (cal.bell !== undefined) fresh.bell = JSON.parse(JSON.stringify(cal.bell)); // and the bell schedules, which belong to the legend
 
-  const withLessons = activeCourse() ? cal.plan.courses.filter(c => c.lessons.length) : [];
-  const lessonCount = withLessons.reduce((n, c) => n + c.lessons.length, 0);
-  if (withLessons.length
-      && confirm(`Carry ${withLessons.length === 1 ? "the " + lessonCount + "-lesson paced sequence" : "the lessons of " + withLessons.length + " courses (" + lessonCount + " lessons)"} into the new year?\n\nBumps and days a course didn't meet are cleared, and distribution restarts from the new year's first school day — set a different start date in the Courses card if needed.`)) {
-    fresh.plan = readPlan(fresh).plan;
-    withLessons.forEach(c => {
-      const n = newCourse(c.name, { id: c.id, color: c.color, meets: c.meets });
-      n.lessons = c.lessons.map(l => { const x = { ...l }; delete x.on; return x; });
-      n.units = c.units.map(u => ({ ...u, pin: null, start: null, end: null, placed: 0, short: 0 }));
-      fresh.plan.courses.push(syncUnits(n));
-    });
-    fresh.plan.active = withLessons.some(c => c.id === cal.plan.active) ? cal.plan.active : withLessons[0].id;
+  // Increment 4: carryForward() keeps every course's lessons, unit names, lengths and buffer
+  // days (P9-9) and drops what belongs to this year's dates, counted for the confirm.
+  const carried = planState() === "ok" ? carryForward(cal.plan) : null;
+  const keep = carried ? carried.plan.courses.filter(c => c.lessons.length || c.units.length) : [];
+  if (keep.length) {
+    const lessonCount = keep.reduce((n, c) => n + c.lessons.length, 0);
+    const unitCount = keep.reduce((n, c) => n + c.units.length, 0);
+    const d = carried.dropped;
+    const cleared = [[d.pins, "pin", "pins"], [d.bumps, "bump", "bumps"], [d.lost, "day a course didn't meet", "days a course didn't meet"], [d.baselines, "plan behind is measured against", "plans behind is measured against"], [d.starts, "start date", "start dates"]]
+      .filter(x => x[0]).map(x => x[0] + " " + (x[0] === 1 ? x[1] : x[2]));
+    const what = keep.length === 1 ? `the course “${keep[0].name}”` : keep.length + " courses";
+    if (confirm(`Carry ${what} (${lessonCount} lesson${lessonCount === 1 ? "" : "s"}, ${unitCount} unit${unitCount === 1 ? "" : "s"}) into the new year?\n\nKept: lessons, unit names, lengths and buffer days, and which days each course meets and counts.` +
+      (cleared.length ? `\nCleared: ${cleared.join(", ")}.` : "") +
+      `\n\nEach course starts on the new year's first school day — set a different start date in the Courses card if needed.`)) {
+      fresh.plan = { ...carried.plan, courses: keep };
+      if (!keep.some(c => c.id === fresh.plan.active)) fresh.plan.active = keep[0].id;
+    }
   }
 
   const lessonEntries = Object.entries(cal.days).filter(([, d]) => d.lesson);

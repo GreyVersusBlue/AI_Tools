@@ -557,8 +557,8 @@ export function unpinAfterFirst(course) {
     new courses from one in lesson mode, `meets: 'A'` with the A lessons and `'B'` with the
     B ones, each keeping its lessons' ids, the bumps anchored to them, the course's start,
     pace, lost dates and absorb setting, and its units' names, colours, pins and flex by
-    code (syncUnits). Neither has a baseline: the page sets each from its placement at the
-    commit, so behind restarts at 0 for both. Returns { courses: [a, b], refused } where
+    code (syncUnits). Neither has a baseline or a unit's stamped dates: the page sets each
+    from its placement at the commit, so behind restarts at 0 for both. Returns { courses: [a, b], refused } where
     `refused` is 'no-lessons', 'one-letter' (every lesson has the same letter) or
     'already-split' (the course meets on one letter already), and `orphans`, the ids of
     bumps whose lesson is gone, which neither half keeps. `opts.taken` names the ids in use;
@@ -586,7 +586,10 @@ export function splitByLetter(course0, opts = {}) {
     c.adjustments = c.adjustments.filter((a) => mine.has(a.beforeLessonId));
     // syncUnits keeps a record by code and run number; the split runs are the joint runs
     // with the other letter taken out, so they match in order.
-    out.courses.push(syncUnits(c));
+    // A unit's stamped dates were the joint course's; each half's are stamped at the commit.
+    const half = syncUnits(c);
+    half.units.forEach((u) => { u.start = null; u.end = null; u.placed = 0; u.short = 0; delete u.buffered; });
+    out.courses.push(half);
   });
   return out;
 }
