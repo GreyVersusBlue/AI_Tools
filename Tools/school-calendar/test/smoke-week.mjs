@@ -180,16 +180,20 @@ const halfDaySeeded = await page.evaluate((thuISO) => {
   cal.days = cal.days || {};
   const existing = cal.days[thuISO] || { types: [], label: '', note: '', lesson: '' };
   cal.days[thuISO] = { ...existing, types: Array.from(new Set([...existing.types, halfType.id])) };
+  // Since Path 9 P2 increment 2 the dated Units card is shown only while it holds a unit (new
+  // units live in a course), so the unit an older calendar would hold is stored here, as
+  // "+ Add Unit" made it.
+  cal.units = [{ id: 'unit_fixture', name: 'Unit 1', start: cal.meta.start, end: cal.meta.start, color: '#1f6f8b' }];
   localStorage.setItem('scv_calendar_v1', JSON.stringify(cal));
   return true;
 }, dayOf(3));
+ok(!(await page.isVisible('#unitsCard')), 'with no dated unit the Dated units card is hidden');
 ok(halfDaySeeded, 'the seeded legend has a half-day type to tag Thursday with');
 await page.reload({ waitUntil: 'networkidle' });
 await settle(page, 500);
 
-await page.click('#btnAddUnit');
-await settle(page, 300);
-eq(await page.$$eval('#unitsList .unit-row', rows => rows.length), 1, 'adding a unit creates one row');
+ok(await page.isVisible('#unitsCard'), 'a calendar holding a dated unit shows the card');
+eq(await page.$$eval('#unitsList .unit-row', rows => rows.length), 1, 'with one row for it');
 
 await page.fill('#unitsList .unit-row input[data-f="name"]', 'Unit 3: Fractions');
 await page.dispatchEvent('#unitsList .unit-row input[data-f="name"]', 'change');

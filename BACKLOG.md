@@ -87,6 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-18 (v310), rank 13 (kept, rewritten), Path 9 P2 increment 2: typed units, pins, "Count for pacing", the
+  dated-unit conversion.** A course with no lessons is planned in units (class days typed, order, remove); any unit can be
+  pinned to a start date, with open days or a shortened unit before it said in the card; "Let these flow…" clears the
+  pins after the first, previewed; each school day type has "Count for pacing" and a course can override it; the dated
+  Units card is shown only while it holds units and has "Turn into a course…" (previewed, overlap refused). New `npm run
+  test:school-calendar-plan-units` (port 8542). **Left: increments 3–4 (rank 13). Next free suite port: 8543.**
 - **AI-18 (v309), rank 13 (kept, rewritten), Path 9 P2 increment 1, the page half: increment 1 is built.** 032 loads
   `scv-plan.js`: its old lesson sequence becomes "Course 1" on load (saved only if no date moves), every save goes
   through one commit that stamps the dates and, when lessons move, shows a notice bar with Undo (one step, the old bytes);
@@ -563,7 +569,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 11 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 13 | Path 9 P2 — pacing that recomputes around lost days. **Increment 1 is built (AI-18, 2026-10-23: `scv-plan.js`, then 032's page in v309):** courses in lesson mode, the migration from `cal.pacing`, lost dates and "needs another day" in the drawer, every save a commit with the notice bar and Undo, stale dates held until kept. **Left: increment 2** (typed units with pins and open days, "Count for pacing" on each day type and its per-course override, the dated-unit conversion with its preview, then hiding the Units card once it is empty), **increment 3** (the baseline, "Make this the plan", the behind line and `slip()`), **increment 4** (buffers, "Split into A and B", `carryForward()` for the new year). Do them in that order, one a session; the P2 bullet has the design and Devon's ten answers (all defaults) | 032 | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
+| 13 | Path 9 P2 — pacing that recomputes around lost days. **Increments 1 and 2 are built (AI-18: `scv-plan.js` and 032's page in v309; typed units, pins and open days, "Count for pacing" with its per-course override, the dated-unit conversion and "Let these flow", the Units card hidden when empty, in v310).** **Left: increment 3** (the baseline, "Make this the plan", the behind line and `slip()`), **increment 4** (buffers, "Split into A and B", `carryForward()` for the new year), and two pieces of the design's page list nobody has built: the printed unit table per course with Short, and bands for every course rather than the active one. Do them in that order, one a session; the P2 bullet has the design and Devon's ten answers (all defaults) | 032 | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 14 | Path 9 P3 — consumers: 004, 010, 001, 036/037, 044/045, 032 itself | site | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 15 | Path 9 P4 — `.ics` import/export and a one-page year wall calendar print | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 16 | Path 10 P1 — Packet Builder `087` with the section-provider registry | 087 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
@@ -3000,8 +3006,14 @@ fixed unit dates; the valuable half (a unit defined by instructional days that
   written (increments 2–4). **Increment 1's page is built too (AI-18, v309, `npm run test:school-calendar-plan-page`):**
   where it differs from the text below, on purpose: an empty plan is never written (so `scv-seed.js` was not changed and
   a calendar with no pacing keeps its bytes), the Units card stays shown until increment 2, and an edit made while the
-  stale-dates bar is up keeps the new dates as "Keep these dates" does (`HISTORY.md` has all seven calls). Everything
-  below is the design.
+  stale-dates bar is up keeps the new dates as "Keep these dates" does (`HISTORY.md` has all seven calls). **Increment 2
+  is built (AI-18, v310, `npm run test:school-calendar-plan-units`; the module's pins, `convertDatedUnits` and
+  `unpinAfterFirst` in `test:school-calendar-plan`).** Where it differs from the text below, on purpose: "Make this
+  course" removes the converted units from `cal.units` (the card then goes when it is empty, so a new calendar has no
+  "+ Add Unit" outside a course); the conversion sweep checks 168 start/end pairs across the year and every empty one,
+  not all 40,528; bands are drawn for the active course only, and only when it has no lessons; the typed-mode drawer
+  button is "This unit needs another day" (`days + 1`); and a course's override is a choice per day type, "As the day
+  type", "Counts" or "Skips" (`HISTORY.md` has the calls). Everything below is the design.
   Read from the tree at v245: 032's page, `scv-pacing.js`, `scv-store.js`, `scv-seed.js`, both suites, and the
   two readers (010, 045). Figures marked *measured* came from two pure-Node probes over the shipped 2026-27 seed
   and the shipped modules; they were not kept. Questions that are Devon's are listed at the end and not answered.

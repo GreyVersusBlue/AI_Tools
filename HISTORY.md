@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P2 increment 2: typed units, pins, "Count for pacing" and the dated-unit conversion (2026-10-24, AI-18, `CACHE_VERSION` v310)
+
+BACKLOG rank 13 kept (2+) and rewritten: increments 1 and 2 are built; increments 3–4 are left.
+
+- **What changed for a teacher.** In 032's Courses card a course with no lessons is planned **in units**: "+ Add unit"
+  (10 class days to start), the class days typed in the unit table, ↑/↓ and Remove. Every unit, in either mode, has a
+  **Pinned to** date: the unit starts on the first class day on or after it; the table's **Open** column counts the class
+  days left with nothing planned before it, **Short** the days the unit before it lost to it, and a line under the table
+  says when a pin fell on a day that is not a class day, sits on or before the unit before it (not used), or is past the
+  course's last class day. **"Let these flow…"** (shown while a unit after the first is pinned) previews every date that
+  would change and then clears those pins, with Undo. Each school day type in Day Types has **Count for pacing** (unticked
+  stores `pace: "skip"` on the type), and each course has its own choice per type ("As the day type", "Counts",
+  "Skips"). A typed course's units are drawn as bands on the month grid, and the drawer on one of their days says
+  "Unit 2 — class day 3 of 10" with "This unit needs another day", "This class didn't meet…" and the snow day. The old
+  Units card is now **Dated units**, shown only while it holds units, with **"Turn into a course…"**: a preview of every
+  unit (tick which), its old span, its school days and its dates as a course; two that overlap are named and Apply is
+  refused; "Make this course" adds a course whose units are pinned at their starts and empties those units from
+  `cal.units`, with Undo.
+- **Module.** `placeCourse()` honours pins (open days, take-back of the unit before, `pin-before-previous`,
+  `pin-after-year`, `pinShift`); `convertDatedUnits()`, `unpinAfterFirst()`, `unitProblemText()`; `diffPlacement()`
+  lists a typed unit whose short count changed (`shortUnits`), and says "before a pinned unit or the year's end" when a
+  pin is in play.
+- **Calls made.** (1) *Converting removes the units from `cal.units`*: the design hid the card "once it is empty", which
+  only conversion can make true, and leaving them would draw every unit twice. (2) *The card goes when empty, "+ Add Unit"
+  with it*: a new calendar plans units inside a course. (3) *Bands only for the active course, only when it has no lessons*
+  (a lesson course already shows its lessons in the cells); every course's bands are left with rank 13. (4) *Removing a
+  typed unit, converting and letting units flow always offer Undo*, moved or not, as deleting a course does. (5) *The
+  conversion's school days are counted inside the year*: a dated unit that starts before the first day is pinned at the
+  first day. (6) *Distribute on a course planned in units asks first*, since a lesson list replaces typed units with the
+  runs of its codes. (7) *The per-course override is a select per type* with "As the day type (counts/skips)" as the
+  default, which writes nothing.
+- **Checks.** `npm run test:school-calendar-plan` now 102 checks and 26 deliberate breaks (10 new: pins ignored, open days
+  not counted, no take-back, an earlier pin honoured, a silent pin shift, the conversion counting weekdays, overlap allowed,
+  an unsorted conversion, unpin clearing the first, short units unreported), both zones; the conversion sweep (168
+  start/end pairs and every empty window) runs against the real module only, since it is what made the mutant passes slow.
+  New `npm run test:school-calendar-plan-units` (`smoke-plan-units.mjs`, Chromium, port 8542): 47 checks and 4 breaks of
+  `scv-plan.js` altered on the wire, each caught. **`smoke-week.mjs` changed**: its unit section clicked "+ Add Unit" on
+  a calendar with no dated unit, which the hidden card no longer allows, so it now stores the unit that click made and
+  checks the card is hidden before and shown after (54 checks, all green). `run-suites --only school-calendar` (9 green),
+  the a11y sweep on 032 (seeded too, 4/4), `test:theme` (966), `path7:next --only 032` (0 findings), lint and every
+  guard, `check:precache --base origin/main`.
+- **Not done or not verified.** The printed unit table is still the dated units' (no course's typed units, no Short);
+  bands for courses other than the active one; the baseline and "behind" (3); buffers, the A/B split and
+  `carryForward()` (4). No teacher has planned a real course in units, and the conversion has not met a real calendar's
+  dated units.
+
 ## Path 9 P2 increment 1, the page: 032's Courses card, the notice bar and Undo (2026-10-23, AI-18, `CACHE_VERSION` v309)
 
 BACKLOG rank 13 kept (2+) and rewritten: increment 1 is built; increments 2–4 are left.
