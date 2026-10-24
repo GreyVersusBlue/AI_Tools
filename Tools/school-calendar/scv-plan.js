@@ -30,9 +30,10 @@
 // WHAT IS HERE: the record's reader, the migration from `cal.pacing`, what counts as a
 // class day for a course (a day type's `pace` and the course's override), the placer for
 // lessons and for typed unit lengths, with pins and open days, stamping the placed dates
-// into the blob, the diff that says what a change moved (increment 1), and turning dated
-// units into a course and letting its pins go (increment 2). NOT HERE YET: the baseline
-// and "behind" (3), buffers, the A/B split and the new-year carry (4).
+// into the blob, the diff that says what a change moved (increment 1), turning dated
+// units into a course and letting its pins go (increment 2), and the baseline with
+// "behind" and its ledger, slip() (increment 3). NOT HERE YET: buffers, the A/B split
+// and the new-year carry (4).
 
 import { emptyPacing, unitInstructionalStats } from "./scv-pacing.js";
 import { abLetters } from "./scv-weeks.js";
@@ -294,6 +295,60 @@ function slotsOf(course) {
   return { slots, orphans };
 }
 
+/** The placer's first pass, shared by placeCourse() and the baseline's rebuild: which
+    index into `dates` (the class days, in order) each slot gets, or -1. `stats` (by unit
+    id) takes `open`, `pinShift` and `pinIgnored`; `problems` takes the pin problems. */
+function assignDays(slots, unitById, stats, dates, problems) {
+  const dayOf = new Array(slots.length).fill(-1);
+  const N = dates.length;
+  let i = 0, prevStart = -1, s = 0;
+  const firstOnOrAfter = (iso) => { const k = dates.findIndex((d) => d >= iso); return k < 0 ? N : k; };
+  while (s < slots.length) {
+    const unitId = slots[s].unitId;
+    let e = s;
+    while (e < slots.length && slots[e].unitId === unitId) e++;
+    const u = unitId ? unitById[unitId] : null;
+    const st = (unitId && stats[unitId]) || { open: 0 };
+    if (u && typeof u.pin === "string" && /^\d{4}-\d{2}-\d{2}$/.test(u.pin)) {
+      const j = firstOnOrAfter(u.pin);
+      if (i >= N && prevStart >= N) {
+        // A pin after the year's end came before: this unit is short whatever its pin says.
+      } else if (j <= prevStart) {
+        st.pinIgnored = true;
+        problems.push({ code: "pin-before-previous", unitId, detail: u.pin });
+      } else if (j >= N) {
+        problems.push({ code: "pin-after-year", unitId, detail: u.pin });
+        i = N;
+      } else {
+        if (dates[j] !== u.pin) st.pinShift = true;
+        if (j > i) st.open += j - i;
+        else for (let k = 0; k < s; k++) if (dayOf[k] >= j) dayOf[k] = -1;
+        i = j;
+      }
+    }
+    prevStart = i;
+    for (let k = s; k < e; k++) { if (i < N) dayOf[k] = i++; }
+    s = e;
+  }
+  return dayOf;
+}
+
+/** A slot's name, the same in a placement and in the baseline rebuilt from it: a lesson by
+    its code (`U3-06-A`, then `U3-06-A#2` the second time that code comes up), a bump by
+    its id (`G:adj_1`), a typed unit's day by the unit and the day's number (`D:unit_2#5`).
+    Only a lesson's starts with `U`. */
+function slotKeys(slots) {
+  const seen = {};
+  return slots.map((sl) => {
+    if (sl.kind === "gap") return "G:" + sl.adj.id;
+    if (sl.kind === "day") return "D:" + sl.unitId + "#" + sl.n;
+    const code = lessonCode(sl.lesson);
+    seen[code] = (seen[code] || 0) + 1;
+    return seen[code] === 1 ? code : code + "#" + seen[code];
+  });
+}
+function lessonCode(l) { return "U" + l.unit + "-" + l.num + "-" + l.letter; }
+
 /** Place one course. Returns
       { courseId, classDates: [ISO], excluded: [{ date, why }],
         slots:  { ISO: { kind: 'lesson'|'day'|'gap', unitId, lessonId, n, of, half, reason } },
@@ -322,7 +377,7 @@ export function placeCourse(cal, course0, letters) {
   const out = {
     courseId: course.id, classDates: cd.days.map((d) => d.date), excluded: cd.excluded,
     slots: {}, byDate: {}, dateByLessonId: {}, vacated: {}, adjDates: {},
-    units: [], overflow: [], orphanedAdjustmentIds: [], problems: [],
+    units: [], overflow: [], orphanedAdjustmentIds: [], problems: [], order: [],
   };
   if ((course.meets === "A" || course.meets === "B") && !cycleOn(cal)) out.problems.push({ code: "no-rotation", unitId: null, detail: course.meets });
   const { slots, orphans } = slotsOf(course);
@@ -333,43 +388,15 @@ export function placeCourse(cal, course0, letters) {
     stats[u.id] = { id: u.id, start: null, end: null, days: 0, placed: 0, short: 0, open: 0, half: 0, pin: u.pin || null, pinShift: false, pinIgnored: false };
   });
   // Pass 1: which class day (index into cd.days) each slot gets, or -1.
-  const dayOf = new Array(slots.length).fill(-1);
-  const N = cd.days.length;
-  let i = 0, prevStart = -1, s = 0;
-  const firstOnOrAfter = (iso) => { const k = cd.days.findIndex((d) => d.date >= iso); return k < 0 ? N : k; };
-  while (s < slots.length) {
-    const unitId = slots[s].unitId;
-    let e = s;
-    while (e < slots.length && slots[e].unitId === unitId) e++;
-    const u = unitId ? unitById[unitId] : null;
-    const st = unitId ? stats[unitId] : null;
-    if (u && typeof u.pin === "string" && /^\d{4}-\d{2}-\d{2}$/.test(u.pin)) {
-      const j = firstOnOrAfter(u.pin);
-      if (i >= N && prevStart >= N) {
-        // A pin after the year's end came before: this unit is short whatever its pin says.
-      } else if (j <= prevStart) {
-        st.pinIgnored = true;
-        out.problems.push({ code: "pin-before-previous", unitId, detail: u.pin });
-      } else if (j >= N) {
-        out.problems.push({ code: "pin-after-year", unitId, detail: u.pin });
-        i = N;
-      } else {
-        if (cd.days[j].date !== u.pin) st.pinShift = true;
-        if (j > i) st.open += j - i;
-        else for (let k = 0; k < s; k++) if (dayOf[k] >= j) dayOf[k] = -1;
-        i = j;
-      }
-    }
-    prevStart = i;
-    for (let k = s; k < e; k++) { if (i < N) dayOf[k] = i++; }
-    s = e;
-  }
+  const dayOf = assignDays(slots, unitById, stats, out.classDates, out.problems);
   // Pass 2: the placement from those days.
   const seq = {};
+  const keys = slotKeys(slots);
   slots.forEach((sl, k) => {
     const st = sl.unitId && stats[sl.unitId];
     if (st) st.days++;
     const day = dayOf[k] >= 0 ? cd.days[dayOf[k]] : null;
+    out.order.push({ key: keys[k], kind: sl.kind, unitId: sl.unitId || null, date: day ? day.date : null, label: sl.kind === "lesson" ? (sl.lesson.raw || lessonCode(sl.lesson)) : null });
     if (!day) {
       if (st) st.short++;
       if (sl.kind === "lesson") out.overflow.push(sl.lesson);
@@ -469,6 +496,229 @@ export function unitProblemText(p, unitName) {
   if (p.code === "pin-after-year") return n + " is pinned to " + shortDate(p.detail) + ", after the course's last class day, so none of it fits.";
   if (p.code === "empty-unit") return n + " has no days.";
   return "";
+}
+
+/* --- the baseline and "behind" (increment 3) --------------------------------- */
+
+/** A copy of `course` with its baseline set from `placement` (placeCourse's, for this
+    course): the plan as it stands, which "behind" is measured against (P9-4). Stored as
+      baseline = { setOn, start, mask, seq, adjIds, units: [{ id, days, pin }] }
+    `mask` is one character a calendar day from `start` (the course's first possible day)
+    to the year's end, `1` for a class day; `seq` is the slot order (lesson codes with the
+    time each has come up, bump ids, typed days), so lesson ids, which are positions and
+    change on re-import, are never kept. About 2 KB a course; baselinePlacement() rebuilds
+    the baseline's own placement from it exactly. */
+export function setBaseline(cal, course, placement, todayISO) {
+  const c = clone(course);
+  const r = courseRange(cal, course);
+  const on = new Set(placement.classDates || []);
+  let mask = "";
+  if (r.from && r.to && r.from <= r.to) {
+    for (let ms = isoToMs(r.from), end = isoToMs(r.to); ms <= end; ms += DAY_MS) mask += on.has(msToIso(ms)) ? "1" : "0";
+  }
+  const order = placement.order || [];
+  c.baseline = {
+    setOn: todayISO || null,
+    start: r.from || null,
+    mask,
+    seq: order.map((o) => o.key),
+    adjIds: order.filter((o) => o.kind === "gap").map((o) => o.key.slice(2)),
+    units: (normalCourse(course).units).map((u) => ({
+      id: u.id, days: order.filter((o) => o.unitId === u.id).length, pin: u.pin || null,
+    })),
+  };
+  return c;
+}
+
+/** Whether a save should (re)set a course's baseline: it has none, or today is before its
+    first class day, while the teacher is still planning. */
+export function wantsBaseline(course, placement, todayISO) {
+  if (!course.baseline || typeof course.baseline !== "object") return true;
+  const first = (placement.classDates || [])[0];
+  return !!(first && todayISO && todayISO < first);
+}
+
+/** The baseline's own placement, rebuilt: { classDates, order: [{ key, unitId, date }] },
+    or null when there is no usable baseline. */
+export function baselinePlacement(baseline) {
+  const b = baseline;
+  if (!b || typeof b !== "object" || typeof b.mask !== "string" || !Array.isArray(b.seq) || !Array.isArray(b.units)) return null;
+  const dates = [];
+  if (b.start) for (let k = 0, ms = isoToMs(b.start); k < b.mask.length; k++, ms += DAY_MS) if (b.mask[k] === "1") dates.push(msToIso(ms));
+  const slots = [];
+  let si = 0;
+  b.units.forEach((u) => { for (let n = 0; n < u.days && si < b.seq.length; n++) slots.push({ unitId: u.id, key: b.seq[si++] }); });
+  const unitById = {}, stats = {};
+  b.units.forEach((u) => { unitById[u.id] = u; stats[u.id] = { open: 0 }; });
+  const dayOf = assignDays(slots, unitById, stats, dates, []);
+  return { classDates: dates, order: slots.map((sl, k) => ({ key: sl.key, unitId: sl.unitId, kind: sl.key[0] === "G" || sl.key[0] === "D" ? sl.key[0] : "L", date: dayOf[k] >= 0 ? dates[dayOf[k]] : null })) };
+}
+
+/** How far a course has slipped from its baseline, as of `todayISO` (P9-4):
+      { behind, about, asOf, setOn, item, key, plannedOn, nowOn, causes, unit, short }
+    or null when the course has no baseline. X is what the baseline put on its last class
+    day on or before today (a lesson or a typed unit's day; a bump is passed over). Then
+      behind = (class days up to X now - class days up to today now)
+             - (the same two counted in the baseline)
+    so an unchanged plan is 0 whatever the baseline put on the days just before today, a
+    positive number is how many class days later X now falls, and a negative one is ahead.
+    It counts the course's class days, so an A course is behind in A days. Before the
+    course's first planned day it is 0. If X is gone from the plan, or no longer fits, the
+    last earlier slot that still is placed stands in and `about` is set.
+    `causes` is the ledger, worked out by comparing the two placements, never kept by hand:
+      lost      class days up to today in the baseline and not now (+1 each, with why)
+      gained    the reverse (-1 each)
+      gap-added / gap-removed     bumps before X now and not then, and the reverse
+      added / removed             lessons or unit days before X now and not then, and the reverse
+      unplaced / placed           ones still in the plan that no longer fit before X, or now do
+      open      open days before a pin, now less then (open days used up absorb a loss)
+    and `behind` equals the sum of every cause's `n`, always: the suite holds that identity
+    over random edit sequences. Each cause is { kind, n, items: [{ date?, why?, key, label? }] }. */
+export function slip(cal, course, placement, todayISO) {
+  const c = normalCourse(course);
+  const base = baselinePlacement(c.baseline);
+  if (!base) return null;
+  const out = { behind: 0, about: false, asOf: todayISO, setOn: c.baseline.setOn || null, item: null, key: null, plannedOn: null, nowOn: null, causes: [], unit: null, short: 0 };
+  const nowOrder = placement.order || [];
+  (placement.units || []).forEach((u) => { out.short += u.short || 0; });
+  const nowAt = {};
+  nowOrder.forEach((o) => { if (o.date) nowAt[o.key] = o; });
+  // X: the baseline's last non-bump slot on or before today, that is still placed now.
+  let xi = -1;
+  for (let k = base.order.length - 1; k >= 0; k--) {
+    const o = base.order[k];
+    if (o.date && o.date <= todayISO && o.kind !== "G") { xi = k; break; }
+  }
+  if (xi < 0) return out;
+  let k = xi;
+  while (k >= 0 && !(base.order[k].date && base.order[k].kind !== "G" && nowAt[base.order[k].key])) k--;
+  if (k < 0) { out.about = true; return out; }
+  if (k !== xi) out.about = true;
+  const X = base.order[k], now = nowAt[X.key];
+  out.key = X.key; out.plannedOn = X.date; out.nowOn = now.date;
+  out.item = labelOf(X.key, now.label, c);
+  const upTo = (dates, d) => dates.filter((x) => x <= d).length;
+  const nowDates = placement.classDates || [], baseDates = base.classDates;
+  out.behind = (upTo(nowDates, now.date) - upTo(nowDates, todayISO)) - (upTo(baseDates, X.date) - upTo(baseDates, todayISO));
+  // The ledger.
+  const causes = {};
+  const add = (kind, n, item) => { (causes[kind] = causes[kind] || { kind, n: 0, items: [] }); causes[kind].n += n; causes[kind].items.push(item); };
+  const nowSet = new Set(nowDates), baseSet = new Set(baseDates);
+  const why = {};
+  (placement.excluded || []).forEach((e) => { why[e.date] = e.why; });
+  baseDates.forEach((d) => { if (d <= todayISO && !nowSet.has(d)) add("lost", 1, { date: d, why: why[d] || "outside" }); });
+  nowDates.forEach((d) => { if (d <= todayISO && !baseSet.has(d)) add("gained", -1, { date: d }); });
+  const beforeNow = new Set(nowOrder.filter((o) => o.date && o.date < now.date).map((o) => o.key));
+  const beforeBase = new Set(base.order.filter((o) => o.date && o.date < X.date).map((o) => o.key));
+  const inNow = new Set(nowOrder.map((o) => o.key)), inBase = new Set(base.order.map((o) => o.key));
+  const nowLabel = {};
+  nowOrder.forEach((o) => { nowLabel[o.key] = o.label; });
+  beforeNow.forEach((key) => {
+    if (beforeBase.has(key)) return;
+    const item = { key, label: labelOf(key, nowLabel[key], c) };
+    if (key[0] === "G") item.lesson = gapLesson(key, c);
+    add(inBase.has(key) ? "placed" : key[0] === "G" ? "gap-added" : "added", 1, item);
+  });
+  beforeBase.forEach((key) => {
+    if (beforeNow.has(key)) return;
+    const item = { key, label: labelOf(key, nowLabel[key], c) };
+    add(inNow.has(key) ? "unplaced" : key[0] === "G" ? "gap-removed" : "removed", -1, item);
+  });
+  const empty = (dates, order, d) => upTo(dates, d) - 1 - order.filter((o) => o.date && o.date < d).length;
+  const dOpen = empty(nowDates, nowOrder, now.date) - empty(baseDates, base.order, X.date);
+  if (dOpen) causes.open = { kind: "open", n: dOpen, items: [] };
+  const ORDER = ["lost", "gained", "gap-added", "gap-removed", "added", "removed", "unplaced", "placed", "open"];
+  out.causes = ORDER.filter((kd) => causes[kd]).map((kd) => causes[kd]);
+  const unitId = X.unitId;
+  const bu = base.order.filter((o) => o.unitId === unitId && o.date).map((o) => o.date);
+  const nu = (placement.units || []).find((u) => u.id === unitId);
+  out.unit = { id: unitId, endWas: bu.length ? bu[bu.length - 1] : null, endNow: nu ? nu.end : null };
+  return out;
+}
+
+function labelOf(key, label, course) {
+  if (label) return label;
+  if (key[0] === "D") {
+    const m = /^D:(.*)#(\d+)$/.exec(key);
+    const u = m && course.units.find((x) => x.id === m[1]);
+    return (u ? u.name : "A unit") + ", day " + (m ? m[2] : "?");
+  }
+  if (key[0] === "G") return "a bumped day";
+  return key.replace(/#\d+$/, "");
+}
+function gapLesson(key, course) {
+  const a = course.adjustments.find((x) => "G:" + x.id === key);
+  if (!a) return null;
+  const l = course.lessons.find((x) => x.id === a.beforeLessonId);
+  return { code: l ? lessonCode(l) : null, reason: a.reason || "" };
+}
+
+function datesWords(list) {
+  // "Jan 12 and 13", "Jan 12, 13 and Feb 2"
+  const words = [];
+  let lastMonth = null;
+  list.forEach((d) => {
+    const m = d.slice(0, 7);
+    words.push(m === lastMonth ? String(+d.slice(8, 10)) : shortDate(d));
+    lastMonth = m;
+  });
+  if (words.length < 2) return words.join("");
+  return words.slice(0, -1).join(", ") + " and " + words[words.length - 1];
+}
+
+/** What a `why` from dayValue() says, for the ledger: a day type's label, a lost date's
+    reason, and so on. */
+export function whyWords(cal, course, why) {
+  const w = String(why || "");
+  const [kind, id] = [w.split(":")[0], w.slice(w.indexOf(":") + 1)];
+  const type = (cal.dayTypes || []).find((t) => t && t.id === id);
+  if (kind === "closed") return type ? type.label : "No school";
+  if (kind === "skip") return (type ? type.label : "A day type") + ", not counted";
+  if (kind === "lost") { const x = (course.lost || []).find((l) => l.id === id); return (x && x.reason) || "class didn't meet"; }
+  if (kind === "rotation") return "the other letter's day";
+  if (kind === "outside") return "outside the course's dates";
+  return w;
+}
+
+/** The behind line for a course: "World History: 3 class days behind the plan of Sep 8.
+    U3-06 was planned for today and is now Jan 22. Lost: Jan 12 and 13 (Snow Day). Added:
+    one day for U3-02 (ran long)." `name` is left off when null. */
+export function describeSlip(cal, course, s, name) {
+  if (!s) return "";
+  const head = name ? name + ": " : "";
+  const of = s.setOn ? " the plan of " + shortDate(s.setOn) : " the plan";
+  const a = Math.abs(s.behind);
+  const about = s.about ? "about " : "";
+  let text;
+  if (!s.key) return head + "on" + of + (s.about ? " (nothing planned so far is still in the course)." : "; nothing was planned before today.");
+  if (!s.behind) text = head + (s.about ? "about " : "") + "on" + of + ".";
+  else text = head + about + (a === 1 ? "1 class day " : a + " class days ") + (s.behind > 0 ? "behind" : "ahead of") + of + ".";
+  if (s.plannedOn !== s.nowOn) {
+    text += " " + s.item + " was planned for " + (s.plannedOn === s.asOf ? "today" : shortDate(s.plannedOn)) +
+      " and is now " + (s.nowOn === s.asOf ? "today" : shortDate(s.nowOn)) + ".";
+  }
+  const parts = [];
+  s.causes.forEach((cz) => {
+    if (cz.kind === "lost") {
+      const by = {};
+      cz.items.forEach((it) => { const w = whyWords(cal, course, it.why); (by[w] = by[w] || []).push(it.date); });
+      parts.push("Lost: " + Object.keys(by).map((w) => datesWords(by[w]) + " (" + w + ")").join("; ") + ".");
+    } else if (cz.kind === "gained") parts.push("Gained: " + datesWords(cz.items.map((it) => it.date)) + ".");
+    else if (cz.kind === "gap-added") {
+      parts.push("Added: " + cz.items.map((it) => "one day" + (it.lesson && it.lesson.code ? " for " + it.lesson.code : "") + (it.lesson && it.lesson.reason ? " (" + it.lesson.reason + ")" : "")).join(", ") + ".");
+    } else if (cz.kind === "gap-removed") parts.push("Given back: " + plural(cz.items.length, "bumped day", "bumped days") + ".");
+    else if (cz.kind === "added") parts.push("Added before it: " + itemList(cz.items) + ".");
+    else if (cz.kind === "removed") parts.push("Taken out before it: " + itemList(cz.items) + ".");
+    else if (cz.kind === "unplaced") parts.push("No longer fitting before it: " + itemList(cz.items) + ".");
+    else if (cz.kind === "placed") parts.push("Now fitting before it: " + itemList(cz.items) + ".");
+    else if (cz.kind === "open") parts.push(cz.n < 0 ? "Open days used: " + (-cz.n) + "." : "Open days added: " + cz.n + ".");
+  });
+  if (parts.length) text += " " + parts.join(" ");
+  return text;
+}
+function itemList(items) {
+  const names = items.slice(0, 3).map((it) => it.label);
+  return names.join(", ") + (items.length > 3 ? " and " + (items.length - 3) + " more" : "");
 }
 
 /* --- stamping and the diff --------------------------------------------------- */

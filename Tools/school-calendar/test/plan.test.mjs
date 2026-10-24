@@ -2,7 +2,8 @@
 // increment 1, the module half): the plan record's reader, the migration from
 // `cal.pacing`, what counts as a class day for a course, the placer for lessons and for
 // typed unit lengths with pins and open days, stamping, the diff that says what a change
-// moved, and turning dated units into a course.
+// moved, turning dated units into a course, and the baseline with slip(), whose `behind`
+// must equal the sum of its causes over 500 random edit sequences (increment 3).
 //
 //   node Tools/school-calendar/test/plan.test.mjs   (or: npm run test:school-calendar-plan)
 //
@@ -349,6 +350,120 @@ function checks(M, full = true) {
   eq(d3.nowFits.length, 1, 'removing the snow day: that lesson fits again');
   eq(M.shortDate('2027-02-03'), 'Feb 3', 'dates are written "Feb 3"');
 
+  // ---- the baseline and "behind" (increment 3) ----
+  {
+  const snowOn = (cal, d) => { const c = clone(cal); c.days[d] = { types: ['holiday'], label: 'Snow Day', note: '', lesson: '' }; return c; };
+  const lessonCourse = (n, units) => M.syncUnits({ ...M.newCourse('World History', { id: 'wh' }), lessons: codes(n, units) });
+  const based = (cal, c, today) => { const p = M.placeCourse(cal, c, abLetters(cal)); return M.setBaseline(cal, c, p, today); };
+  const slipOf = (cal, c, today) => M.slip(cal, c, M.placeCourse(cal, c, abLetters(cal)), today);
+  const total = s => s.causes.reduce((a, cz) => a + cz.n, 0);
+  const wh0 = lessonCourse(120, [20, 20, 20]);
+  const P0 = M.placeCourse(seed, wh0, L);
+  const D = P0.classDates;
+  const wh = M.setBaseline(seed, wh0, P0, '2026-08-20');
+  eq([wh.baseline.setOn, wh.baseline.start, wh.baseline.seq.length, wh.baseline.units.map(u => u.days)], ['2026-08-20', '2026-08-31', 120, [20, 20, 20, 20, 20, 20]], 'the baseline keeps the slot order and each unit\'s count');
+  const rb = M.baselinePlacement(wh.baseline);
+  eq([rb.classDates, rb.order.map(o => o.date)], [D, P0.order.map(o => o.date)], 'the baseline\'s placement is rebuilt exactly from its mask and order');
+  okk(JSON.stringify(M.setBaseline(seed, lessonCourse(184), M.placeCourse(seed, lessonCourse(184), L), '2026-08-20').baseline).length < 4096, 'a 184-lesson baseline is under 4 KB');
+  eq(M.slip(seed, wh0, P0, '2026-10-01'), null, 'no baseline: no slip');
+  const today = D[30];
+  const s0 = slipOf(seed, wh, today);
+  eq([s0.behind, s0.causes, s0.about, s0.nowOn, s0.plannedOn], [0, [], false, today, today], 'no change: 0 behind, no causes');
+  eq(slipOf(seed, wh, '2026-08-20').key, null, 'before the course starts: nothing to measure, 0');
+  const sLost = slipOf(snowOn(seed, D[12]), wh, today);
+  eq([sLost.behind, sLost.causes.map(c => [c.kind, c.n]), sLost.causes[0].items[0]], [1, [['lost', 1]], { date: D[12], why: 'closed:holiday' }], 'a closure before today: 1 behind, its cause the snow day');
+  okk(/^World History: 1 class day behind the plan of Aug 20\. U2-11-A-Lesson 31 was planned for today and is now [A-Z][a-z]+ \d+\. Lost: [A-Z][a-z]+ \d+ \(Holiday \/ No School\)\.$/.test(M.describeSlip(seed, wh, sLost, 'World History')), 'the sentence names the item, its two dates and the lost day');
+  const sTwo = slipOf(snowOn(snowOn(seed, D[12]), D[13]), wh, today);
+  okk(sTwo.behind === 2 && /Lost: [A-Z][a-z]+ \d+ and \d+ \(Holiday/.test(M.describeSlip(seed, wh, sTwo)), 'two days in one month are "Jan 12 and 13"');
+  const tMid = D[25];
+  const later = snowOn(seed, D[35]);
+  const sAfter = slipOf(later, wh, tMid);
+  eq([sAfter.behind, sAfter.causes, sAfter.unit.id, sAfter.unit.endWas, sAfter.unit.endNow], [0, [], wh.units[1].id, D[39], D[40]], 'a closure after today: 0 today, and X\'s unit ends a class day later');
+  const whGap = { ...wh, adjustments: [{ id: 'adj_1', beforeLessonId: wh.lessons[10].id, reason: 'ran long', createdOn: '2026-09-10' }] };
+  const sGap = slipOf(seed, whGap, today);
+  eq([sGap.behind, sGap.causes.map(c => [c.kind, c.n]), sGap.causes[0].items[0].lesson], [1, [['gap-added', 1]], { code: 'U1-11-A', reason: 'ran long' }], 'a bump before X: 1 behind, the bump is the cause');
+  okk(/Added: one day for U1-11-A \(ran long\)\./.test(M.describeSlip(seed, whGap, sGap)), '...and the sentence says "Added: one day for U1-11-A (ran long)"');
+  const whGapB = based(seed, whGap, '2026-08-20');
+  const back = { ...whGapB, adjustments: [] };
+  const sBack = slipOf(seed, back, today);
+  eq([sBack.behind, sBack.causes.map(c => [c.kind, c.n])], [-1, [['gap-removed', -1]]], 'a bump given back: 1 ahead');
+  okk(/^1 class day ahead of the plan of Aug 20\./.test(M.describeSlip(seed, back, sBack)), '...and the sentence says ahead');
+  const onGap = M.placeCourse(seed, whGapB, L).adjDates.adj_1;
+  const sOnGap = slipOf(seed, whGapB, onGap);
+  eq([sOnGap.behind, sOnGap.about, sOnGap.key.startsWith('U')], [0, false, true], 'today on a planned bump: X is the lesson before it, nothing is about');
+  const sOnGapSnow = slipOf(snowOn(seed, D[3]), whGapB, onGap);
+  eq(sOnGapSnow.behind, 1, '...and a closure before it is 1 behind, not 0');
+  const snowBase = based(snowOn(seed, D[12]), wh0, '2026-08-20');
+  const sGain = slipOf(seed, snowBase, today);
+  eq([sGain.behind, sGain.causes.map(c => [c.kind, c.n])], [-1, [['gained', -1]]], 'a closure taken away again: a class day gained, 1 ahead');
+  const ins = clone(wh); ins.lessons.splice(4, 0, { id: 'les_new', raw: 'U1-99-A-Extra', unit: '1', num: '99', letter: 'A', title: 'Extra' });
+  const sIns = slipOf(seed, M.syncUnits(ins), today);
+  eq([sIns.behind, sIns.causes.map(c => [c.kind, c.n]), sIns.causes[0].items[0].label], [1, [['added', 1]], 'U1-99-A-Extra'], 'a lesson inserted before X: 1 behind');
+  const xKey = s0.key;
+  const rem = clone(wh); rem.lessons = rem.lessons.filter(l => 'U' + l.unit + '-' + l.num + '-' + l.letter !== xKey);
+  const sRem = slipOf(seed, M.syncUnits(rem), today);
+  eq([sRem.about, sRem.behind, total(sRem), sRem.plannedOn], [true, 0, 0, D[29]], 'X taken out: the lesson before it stands in, "about"');
+  okk(/^about on the plan of Aug 20\.$/.test(M.describeSlip(seed, rem, sRem)), '...and the sentence says about');
+  // typed units: open days before a pin take a loss
+  const ty0 = { ...M.newCourse('Science', { id: 'sci' }), units: [M.newUnit('Cells', 10, { id: 'u1' }), { ...M.newUnit('Energy', 10, { id: 'u2' }), pin: D[14] }] };
+  const ty = based(seed, ty0, '2026-08-20');
+  eq(M.baselinePlacement(ty.baseline).order.map(o => o.date), M.placeCourse(seed, ty0, L).order.map(o => o.date), 'a pinned course\'s baseline is rebuilt exactly');
+  const sOpen = slipOf(snowOn(seed, D[3]), ty, D[17]);
+  eq([sOpen.behind, sOpen.causes.map(c => [c.kind, c.n]), sOpen.item], [0, [['lost', 1], ['open', -1]], 'Energy, day 4'], 'open days before a pin take a loss: 0 behind');
+  okk(/Open days used: 1\./.test(M.describeSlip(seed, ty, sOpen)), '...and the sentence says an open day was used');
+  const tyLong = clone(ty); tyLong.units[0].days = 16;
+  const sLong = slipOf(seed, tyLong, D[17]);
+  eq([sLong.behind, sLong.causes.map(c => [c.kind, c.n])], [0, [['added', 4], ['open', -4]]], 'a unit run up to the next pin: its open days take the new days, and the pin holds');
+  const tyEarly = clone(ty); tyEarly.units[1].pin = D[8];
+  const sCut = slipOf(seed, tyEarly, D[17]);
+  eq([sCut.behind, sCut.causes.map(c => [c.kind, c.n])], [-6, [['unplaced', -2], ['open', -4]]], 'a pin moved earlier: the unit before it loses its last 2 days and the open 4, 6 ahead');
+  okk(/No longer fitting before it: Cells, day 9, Cells, day 10\./.test(M.describeSlip(seed, tyEarly, sCut)), '...and the sentence names the days that no longer fit');
+  // when the baseline is set
+  eq([M.wantsBaseline(wh0, P0, '2026-08-20'), M.wantsBaseline(wh, P0, '2026-08-20'), M.wantsBaseline(wh, P0, '2026-08-31'), M.wantsBaseline(wh, P0, '2026-10-01')], [true, true, false, false], 'a baseline is set when a course has none, and again while today is before its first class day');
+  const ab = based(seed, { ...lessonCourse(60), meets: 'A' }, '2026-08-20');
+  const abCal = { ...seed, abCycle: { enabled: true, anchorDate: '2026-08-31', anchorLetter: 'A' } };
+  const abBased = based(abCal, { ...lessonCourse(60), meets: 'A' }, '2026-08-20');
+  const abD = M.placeCourse(abCal, abBased, abLetters(abCal)).classDates;
+  const sAB = slipOf(snowOn(abCal, abD[5]), abBased, abD[20]);
+  okk(ab.baseline && sAB.behind === 1 && sAB.causes[0].items[0].date === abD[5], 'an A course is behind in A days');
+  // the identity, over random edit sequences
+  if (full) {
+    const r = rng(9);
+    let bad = 0, oracleBad = 0, runs = 0;
+    for (let t = 0; t < 500; t++) {
+      let c = lessonCourse(60 + Math.floor(r() * 120), [5 + Math.floor(r() * 20), 8, 12]);
+      let cal = clone(seed);
+      if (r() < 0.3) cal = snowOn(cal, D[Math.floor(r() * 100)]);
+      const typed = r() < 0.3;
+      if (typed) c = { ...M.newCourse('T', { id: 't' }), units: [10, 12, 8, 15].map((n, k) => ({ ...M.newUnit('U' + k, n + Math.floor(r() * 5), { id: 'u' + k }), pin: r() < 0.4 ? D[Math.floor(r() * 80)] : null })) };
+      c = based(cal, c, '2026-08-20');
+      let listEdited = false, pinned = typed && c.units.some(u => u.pin);
+      for (let e = 0, n = 1 + Math.floor(r() * 6); e < n; e++) {
+        const kind = Math.floor(r() * 6);
+        const d = D[Math.floor(r() * D.length)];
+        if (kind === 0) cal = snowOn(cal, d);
+        else if (kind === 1) { const ks = Object.keys(cal.days).filter(k => (cal.days[k].types || []).includes('holiday')); if (ks.length) delete cal.days[ks[Math.floor(r() * ks.length)]]; }
+        else if (kind === 2) c = { ...c, lost: [...c.lost, { id: 'l' + e, date: d, reason: 'Assembly' }] };
+        else if (kind === 3 && !typed) { c = { ...c, adjustments: [...c.adjustments, { id: 'a' + t + '_' + e, beforeLessonId: c.lessons[Math.floor(r() * c.lessons.length)].id, reason: 'ran long' }] }; listEdited = true; }
+        else if (kind === 4 && !typed && c.lessons.length > 10) { const cc = clone(c); cc.lessons.splice(Math.floor(r() * cc.lessons.length), 1); c = M.syncUnits(cc); listEdited = true; }
+        else if (kind === 5 && typed) { const cc = clone(c); cc.units[Math.floor(r() * cc.units.length)].days += r() < 0.5 ? 1 : -1; c = cc; listEdited = true; }
+      }
+      const td = D[Math.floor(r() * D.length)];
+      const p = M.placeCourse(cal, c, abLetters(cal));
+      const s = M.slip(cal, c, p, td);
+      runs++;
+      if (s.behind !== total(s)) bad++;
+      if (!listEdited && !pinned && s.key && !s.about) {
+        const base = M.baselinePlacement(c.baseline).classDates;
+        const now = new Set(p.classDates), was = new Set(base);
+        const oracle = base.filter(x => x <= td && !now.has(x)).length - p.classDates.filter(x => x <= td && !was.has(x)).length;
+        if (oracle !== s.behind) oracleBad++;
+      }
+    }
+    eq([runs, bad, oracleBad], [500, 0, 0], '500 random edit sequences: behind is the sum of its causes, and with only days changed it is the class days lost less those gained up to today');
+  }
+  }
+
   checks.count = count;
   return fails;
 }
@@ -381,12 +496,21 @@ const MUTANTS = [
   ['open days not counted', "        if (j > i) st.open += j - i;\n", "        if (j > i) st.open += 0;\n"],
   ['no take-back', "        else for (let k = 0; k < s; k++) if (dayOf[k] >= j) dayOf[k] = -1;\n        i = j;", "        else j = i;\n        i = j;"],
   ['earlier pin honoured', "      } else if (j <= prevStart) {", "      } else if (j < 0) {"],
-  ['pin shift silent', "if (cd.days[j].date !== u.pin) st.pinShift = true;", ""],
+  ['pin shift silent', "if (dates[j] !== u.pin) st.pinShift = true;", ""],
   ['convert counts weekdays', "unitInstructionalStats(from, to, cal.days, cal.dayTypes).instructionalDays", "unitInstructionalStats(from, to, cal.days, cal.dayTypes).weekdays"],
   ['overlap allowed', "if (ranged[m].u.end >= ranged[k].u.start) refused.push", "if (false) refused.push"],
   ['convert unsorted', "  ranged.sort((x, y) => (x.u.start < y.u.start ? -1 : x.u.start > y.u.start ? 1 : 0));\n", ""],
   ['unpin clears the first', "if (k > 0) u.pin = null;", "u.pin = null;"],
   ['short units unreported', "if (typed && b && (b.short || 0) !== (u.short || 0))", "if (false)"],
+  ['lost days not in the ledger', 'if (d <= todayISO && !nowSet.has(d)) add("lost"', 'if (false) add("lost"'],
+  ['open days not in the ledger', 'if (dOpen) causes.open', 'if (false) causes.open'],
+  ['X may be a bump', 'if (o.date && o.date <= todayISO && o.kind !== "G") { xi = k; break; }', 'if (o.date && o.date <= todayISO) { xi = k; break; }'],
+  ['mask of every day', 'mask += on.has(msToIso(ms)) ? "1" : "0";', 'mask += "1";'],
+  ['baseline set once only', 'return !!(first && todayISO && todayISO < first);', 'return false;'],
+  ['ahead said as behind', '(s.behind > 0 ? "behind" : "ahead of")', '"behind"'],
+  ['baseline rebuilt without pins', 'b.units.forEach((u) => { unitById[u.id] = u;', 'b.units.forEach((u) => { unitById[u.id] = { ...u, pin: null };'],
+  ['unfitting days called removed', 'add(inNow.has(key) ? "unplaced"', 'add(inNow.has(key) ? "removed"'],
+  ['behind ignores the baseline', '- (upTo(baseDates, X.date) - upTo(baseDates, todayISO));', ';'],
 ];
 
 let caught = 0;
