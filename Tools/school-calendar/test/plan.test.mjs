@@ -1,7 +1,8 @@
 // plan.test.mjs — pure-logic tests for Tools/school-calendar/scv-plan.js (Path 9 P2,
 // increment 1, the module half): the plan record's reader, the migration from
 // `cal.pacing`, what counts as a class day for a course, the placer for lessons and for
-// typed unit lengths, stamping, and the diff that says what a change moved.
+// typed unit lengths with pins and open days, stamping, the diff that says what a change
+// moved, and turning dated units into a course.
 //
 //   node Tools/school-calendar/test/plan.test.mjs   (or: npm run test:school-calendar-plan)
 //
@@ -54,7 +55,7 @@ function addDays(iso, n) {
 }
 
 /** Every check, against one copy of the module. Returns the failed labels. */
-function checks(M) {
+function checks(M, full = true) {
   const fails = [];
   let count = 0;
   const eq = (a, b, label) => { count++; if (!isDeepStrictEqual(plain(a), plain(b))) fails.push(`${label} (got ${JSON.stringify(a)}, want ${JSON.stringify(b)})`); };
@@ -164,6 +165,95 @@ function checks(M) {
   eq(lp.slots[lp.dateByLessonId[lessons[0].id]].n, 1, 'a lesson slot is numbered in its unit');
   eq(Object.values(lp.adjDates), ['2026-09-09'], 'the bump takes the class day before its lesson');
   eq(lp.slots['2026-09-09'], { kind: 'gap', unitId: lessonCourse.units[1].id, lessonId: lessons[6].id, n: 2, of: 5, half: false, reason: 'Ran long' }, '...shown as a gap in its unit');
+
+  // ---- pins and open days (increment 2) ----
+  const pinned = (pin3, pin2) => {
+    const c = clone(flow);
+    c.units[2].pin = pin3 || null;
+    if (pin2) c.units[1].pin = pin2;
+    return M.placeCourse(seed, c);
+  };
+  const po = pinned('2026-10-01');
+  eq([po.units[2].start, po.units[2].open, po.units[2].pinShift, po.units[1].short], ['2026-10-01', 4, false, 0], 'unit 3 pinned at Oct 1 leaves 4 open days');
+  eq(po.slots['2026-09-28'], undefined, '...which hold nothing');
+  const ps = pinned('2026-09-21');
+  eq([ps.units[1].placed, ps.units[1].short, ps.units[1].end, ps.units[2].start, ps.units[2].short], [4, 4, '2026-09-18', '2026-09-21', 0], 'pinned at Sep 21: unit 2 is short 4 and keeps its first days');
+  okk(ps.problems.some(p => p.code === 'short' && p.unitId === 'u2'), '...and the placer says so');
+  const sat = pinned('2026-10-03');
+  eq([sat.units[2].start, sat.units[2].pinShift], ['2026-10-05', true], 'a pin on a Saturday starts on the next class day, and says so');
+  const early = pinned('2026-09-15');
+  eq([early.units[2].pinIgnored, early.units[2].start, early.problems.map(p => p.code)], [true, '2026-09-25', ['pin-before-previous']], 'a pin on the start of the unit before it is not honoured');
+  const late = pinned('2027-07-01');
+  eq([late.units[2].placed, late.units[2].short, late.problems.map(p => p.code).sort()], [0, 12, ['pin-after-year', 'short']], 'a pin after the year: the whole unit is short');
+  const twin = pinned('2026-10-01', '2026-10-01');
+  eq([twin.units[1].start, twin.units[2].pinIgnored, twin.units[1].open], ['2026-10-01', true, 12], 'two units pinned to one date: the second is not honoured');
+  eq(pinned(null).units, fp.units.map(u => ({ ...u })), 'no pin: the flow is unchanged');
+  const pinJan = clone(jan); pinJan.units[1].pin = '2027-02-03';
+  const pj0 = M.placeCourse(seed, pinJan), pj1 = M.placeCourse(snow, pinJan);
+  eq([pj0.units[0].short, pj0.units[1].start], [0, '2027-02-03'], 'back-to-back pinned windows fit');
+  eq([pj1.units[0].short, pj1.units[0].end, pj1.units[1].start], [1, '2027-02-02', '2027-02-03'], 'a snow day inside the first: it is short 1 and the pinned one does not move');
+  const flowJan = M.unpinAfterFirst(pinJan);
+  eq([flowJan.units[1].pin, M.placeCourse(snow, flowJan).units[1].start, pinJan.units[1].pin], [null, '2027-02-04', '2027-02-03'], 'letting them flow: the next unit moves, and the input is untouched');
+  const firstPinned = { ...clone(flow), units: clone(flow.units) };
+  firstPinned.units[0].pin = '2026-09-08'; firstPinned.units[2].pin = '2026-10-20';
+  eq(M.unpinAfterFirst(firstPinned).units.map(u => u.pin), ['2026-09-08', null, null], 'the first unit keeps its pin');
+  const fpp = M.placeCourse(seed, firstPinned);
+  eq([fpp.units[0].start, fpp.units[0].open], ['2026-09-08', 5], 'a pinned first unit leaves the days before it open');
+  const lpin = clone(lessonCourse); lpin.units[1].pin = '2026-09-21';
+  const lpp = M.placeCourse(seed, lpin);
+  const firstOf2 = lessons.find(l => l.unit === '2');
+  eq([lpp.adjDates.adj1 < lpp.dateByLessonId[firstOf2.id] ? 'gap' : 'lesson', lpp.units[1].start, lpp.units[1].open], ['lesson', '2026-09-21', 9], 'lesson mode: unit 2 pinned at Sep 21 starts there, its first lesson first, after 9 open days');
+  okk(Object.keys(lpp.byDate).every(d => d < '2026-09-14' || d >= '2026-09-21'), '...and the open days hold no lesson');
+  const lshort = clone(lessonCourse); lshort.units[1].pin = '2026-09-03';
+  const lsp = M.placeCourse(seed, lshort);
+  eq([lsp.overflow.map(l => l.unit), lsp.units[0].short, lsp.units[0].end], [['1', '1'], 2, '2026-09-02'], 'lesson mode: a pin inside unit 1 makes its last lessons overflow');
+  // the diff of a typed course reports short units
+  const tStamp = clone(seed); tStamp.plan = { ...M.emptyPlan(), active: 'tj', courses: [{ ...clone(pinJan), id: 'tj' }] };
+  const tS = M.stamp(tStamp, M.placePlan(tStamp));
+  const tSnow = clone(tS); tSnow.days['2027-01-12'] = snow.days['2027-01-12'];
+  const td = M.diffPlacement(M.stored(tSnow.plan.courses[0]), M.placeCourse(tSnow, tSnow.plan.courses[0]), '2027-01-05', []);
+  eq(td.shortUnits.map(u => [u.label, u.from, u.to]), [['Twenty', 0, 1]], 'a typed unit that became short is in the diff');
+  okk(/Twenty is now 1 day short/.test(M.describeDiff(td)), 'the sentence: ' + M.describeDiff(td));
+
+  // ---- converting dated units ----
+  const dated = clone(seed);
+  const tdays = d => isTeachableDay(d, seed.days, seed.dayTypes);
+  let convBad = 0, convN = 0;
+  // The sweep runs against the real module only; the mutants get the cases below it.
+  for (let s0 = 0; full && s0 < 290; s0 += 7) {
+    const st = addDays('2026-08-24', s0);
+    for (const len of [0, 4, 20, 61]) {
+      const en = addDays(st, len);
+      const lo = st < seed.meta.start ? seed.meta.start : st, hi = en > seed.meta.end ? seed.meta.end : en;
+      const want = allDates.filter(d => d >= lo && d <= hi && tdays(d));
+      dated.units = [{ id: 'd1', name: 'W', start: st, end: en, color: '#000000' }];
+      const cv = M.convertDatedUnits(dated, ['d1']);
+      if (!want.length) { if (!(cv.refused.length === 1 && cv.refused[0].why === 'no-school-day')) convBad++; continue; }
+      convN++;
+      const pc = M.placeCourse(dated, cv.course);
+      const got = Object.keys(pc.slots).sort();
+      if (!isDeepStrictEqual(got, want) || cv.refused.length || pc.units[0].short) convBad++;
+    }
+  }
+  if (full) eq(convBad, 0, `a converted unit covers the same school days it did (${convN} start/end pairs across the year, and every empty one refused)`);
+  if (full) okk(convN > 100, '...over enough pairs');
+  dated.units = [
+    { id: 'b', name: 'Second', start: '2026-10-01', end: '2026-10-30', color: '#222222' },
+    { id: 'a', name: 'First', start: '2026-09-01', end: '2026-09-30', color: '#111111' },
+    { id: 'c', name: 'Left alone', start: '2026-11-02', end: '2026-11-20', color: '#333333' },
+  ];
+  const two = M.convertDatedUnits(dated, ['b', 'a'], { name: 'Science', taken: ['course_1'] });
+  eq([two.course.id, two.course.name, two.course.units.map(u => [u.name, u.pin, u.days, u.color]), two.removeIds, two.refused],
+    ['course_2', 'Science', [['First', '2026-09-01', 21, '#111111'], ['Second', '2026-10-01', 21, '#222222']], ['a', 'b'], []],
+    'two dated units become a course, sorted by start, pinned, with their counted days and colours');
+  const twoP = M.placeCourse(dated, two.course);
+  eq(twoP.units.map(u => [u.start, u.end, u.short, u.open]), [['2026-09-01', '2026-09-30', 0, 1], ['2026-10-01', '2026-10-30', 0, 0]], '...and each lands on its old span');
+  eq(dated.units.length, 3, 'convertDatedUnits writes nothing');
+  dated.units[1].end = '2026-10-02';
+  const ov = M.convertDatedUnits(dated, ['a', 'b']);
+  eq([ov.refused, ov.removeIds], [[{ a: 'a', b: 'b', why: 'overlap' }], []], 'overlapping units are refused, the pair named');
+  dated.units.push({ id: 'e', name: 'Weekend', start: '2026-11-28', end: '2026-11-29', color: '#444444' }, { id: 'f', name: 'No dates', start: '', end: '', color: '#555555' });
+  eq(M.convertDatedUnits(dated, ['e', 'f', 'c']).refused, [{ a: 'e', b: null, why: 'no-school-day' }, { a: 'f', b: null, why: 'no-dates' }], 'a window with no school day, and one with no dates, are refused');
 
   // ---- equivalence with placeLessons ----
   const r = rng(20261023);
@@ -287,6 +377,16 @@ const MUTANTS = [
   ['stamp mutates', "  const out = clone(cal);\n  if (!isObj(out.plan)", "  const out = cal;\n  if (!isObj(out.plan)"],
   ['dates walked in local time', "return d.getUTCFullYear() + \"-\" + String(d.getUTCMonth() + 1).padStart(2, \"0\") + \"-\" + String(d.getUTCDate()).padStart(2, \"0\");",
     "return d.getFullYear() + \"-\" + String(d.getMonth() + 1).padStart(2, \"0\") + \"-\" + String(d.getDate()).padStart(2, \"0\");"],
+  ['pins ignored', "    if (u && typeof u.pin === \"string\"", "    if (false && u && typeof u.pin === \"string\""],
+  ['open days not counted', "        if (j > i) st.open += j - i;\n", "        if (j > i) st.open += 0;\n"],
+  ['no take-back', "        else for (let k = 0; k < s; k++) if (dayOf[k] >= j) dayOf[k] = -1;\n        i = j;", "        else j = i;\n        i = j;"],
+  ['earlier pin honoured', "      } else if (j <= prevStart) {", "      } else if (j < 0) {"],
+  ['pin shift silent', "if (cd.days[j].date !== u.pin) st.pinShift = true;", ""],
+  ['convert counts weekdays', "unitInstructionalStats(from, to, cal.days, cal.dayTypes).instructionalDays", "unitInstructionalStats(from, to, cal.days, cal.dayTypes).weekdays"],
+  ['overlap allowed', "if (ranged[m].u.end >= ranged[k].u.start) refused.push", "if (false) refused.push"],
+  ['convert unsorted', "  ranged.sort((x, y) => (x.u.start < y.u.start ? -1 : x.u.start > y.u.start ? 1 : 0));\n", ""],
+  ['unpin clears the first', "if (k > 0) u.pin = null;", "u.pin = null;"],
+  ['short units unreported', "if (typed && b && (b.short || 0) !== (u.short || 0))", "if (false)"],
 ];
 
 let caught = 0;
@@ -297,7 +397,7 @@ for (const [name, from, to] of process.env.PLAN_CHILD ? [] : MUTANTS) {
   if (!SRC.includes(from)) { console.log(`  FAIL mutant "${name}": its text is not in the module any more`); failed++; continue; }
   const src = SRC.replace(from, to).replace('"./scv-pacing.js"', abs('scv-pacing.js')).replace('"./scv-weeks.js"', abs('scv-weeks.js'));
   let red;
-  try { red = checks(await import('data:text/javascript,' + encodeURIComponent(src))).length > 0; } catch (e) { red = true; }
+  try { red = checks(await import('data:text/javascript,' + encodeURIComponent(src)), false).length > 0; } catch (e) { red = true; }
   if (red) caught++;
   else { console.log(`  FAIL mutant "${name}" passed every check`); failed++; }
 }

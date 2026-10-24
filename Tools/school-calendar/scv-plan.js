@@ -27,14 +27,14 @@
 // one list (P9-7); dated units already saved stay (P9-8); unit lengths and lessons carry
 // into a new year (P9-9); the words are "Course" and "class day" (P9-10).
 //
-// WHAT IS HERE (increment 1, module): the record's reader, the migration from
-// `cal.pacing`, what counts as a class day for a course, the placer for lessons and for
-// typed unit lengths, stamping the placed dates into the blob, and the diff that says
-// what a change moved. NOT HERE YET: pins and open days, converting dated units, the
-// pace setting's UI (increment 2), the baseline and "behind" (3), buffers, the A/B split
-// and the new-year carry (4). The page does not import this file yet.
+// WHAT IS HERE: the record's reader, the migration from `cal.pacing`, what counts as a
+// class day for a course (a day type's `pace` and the course's override), the placer for
+// lessons and for typed unit lengths, with pins and open days, stamping the placed dates
+// into the blob, the diff that says what a change moved (increment 1), and turning dated
+// units into a course and letting its pins go (increment 2). NOT HERE YET: the baseline
+// and "behind" (3), buffers, the A/B split and the new-year carry (4).
 
-import { emptyPacing } from "./scv-pacing.js";
+import { emptyPacing, unitInstructionalStats } from "./scv-pacing.js";
 import { abLetters } from "./scv-weeks.js";
 
 export const PLAN_VERSION = 1;
@@ -299,14 +299,22 @@ function slotsOf(course) {
         slots:  { ISO: { kind: 'lesson'|'day'|'gap', unitId, lessonId, n, of, half, reason } },
         byDate: { ISO: lesson }, dateByLessonId: { lessonId: ISO },
         vacated: { ISO: [{ id, reason }] }, adjDates: { adjId: ISO },
-        units: [{ id, start, end, days, placed, short, open, half, pinIgnored }],
+        units: [{ id, start, end, days, placed, short, open, half, pin, pinShift, pinIgnored }],
         overflow: [lesson], orphanedAdjustmentIds: [id], problems: [{ code, unitId, detail }] }
     `byDate`, `dateByLessonId`, `vacated`, `overflow` and `orphanedAdjustmentIds` have
     placeLessons()'s shapes, so 032's month grid, week strip, drawer and .ics can read the
-    active course with no change of their own; `slots` is the fuller view. Slots take
-    class days one each, in order, until the days run out; what does not fit is short.
-    The placer never changes a count or the order: it reports what does not fit. Pins
-    are increment 2: `open` is 0 and `pinIgnored` false. */
+    active course with no change of their own; `slots` is the fuller view.
+    THE PLACER (increment 2 adds the pins). Take the class days in order and the units in
+    order. A unit with a `pin` starts on the first class day on or after it (`pinShift`
+    when that is not the pin itself): if that day is later than where the unit before
+    ended, the class days between are `open` (counted on the pinned unit); if earlier work
+    has run past it, the pinned unit wins and the slots placed on that day or later are
+    taken back and counted `short` on their own unit (in lesson mode, `overflow`: "does not
+    fit before the next pin or the year's end"). A pin on or before the start of the unit
+    before it is not honoured (`pin-before-previous`, `pinIgnored`), so a pin can shorten
+    the unit before it but never remove it or reorder the list. A pin with no class day
+    after it leaves the unit, and every unit after it, short (`pin-after-year`). The placer
+    never changes a count, a pin or the order: it reports what does not fit. */
 export function placeCourse(cal, course0, letters) {
   const course = normalCourse(course0);
   const L = letters || abLetters(cal);
@@ -319,30 +327,66 @@ export function placeCourse(cal, course0, letters) {
   if ((course.meets === "A" || course.meets === "B") && !cycleOn(cal)) out.problems.push({ code: "no-rotation", unitId: null, detail: course.meets });
   const { slots, orphans } = slotsOf(course);
   out.orphanedAdjustmentIds = orphans;
-  const stats = {};
-  course.units.forEach((u) => { stats[u.id] = { id: u.id, start: null, end: null, days: 0, placed: 0, short: 0, open: 0, half: 0, pinIgnored: false }; });
+  const stats = {}, unitById = {};
+  course.units.forEach((u) => {
+    unitById[u.id] = u;
+    stats[u.id] = { id: u.id, start: null, end: null, days: 0, placed: 0, short: 0, open: 0, half: 0, pin: u.pin || null, pinShift: false, pinIgnored: false };
+  });
+  // Pass 1: which class day (index into cd.days) each slot gets, or -1.
+  const dayOf = new Array(slots.length).fill(-1);
+  const N = cd.days.length;
+  let i = 0, prevStart = -1, s = 0;
+  const firstOnOrAfter = (iso) => { const k = cd.days.findIndex((d) => d.date >= iso); return k < 0 ? N : k; };
+  while (s < slots.length) {
+    const unitId = slots[s].unitId;
+    let e = s;
+    while (e < slots.length && slots[e].unitId === unitId) e++;
+    const u = unitId ? unitById[unitId] : null;
+    const st = unitId ? stats[unitId] : null;
+    if (u && typeof u.pin === "string" && /^\d{4}-\d{2}-\d{2}$/.test(u.pin)) {
+      const j = firstOnOrAfter(u.pin);
+      if (i >= N && prevStart >= N) {
+        // A pin after the year's end came before: this unit is short whatever its pin says.
+      } else if (j <= prevStart) {
+        st.pinIgnored = true;
+        out.problems.push({ code: "pin-before-previous", unitId, detail: u.pin });
+      } else if (j >= N) {
+        out.problems.push({ code: "pin-after-year", unitId, detail: u.pin });
+        i = N;
+      } else {
+        if (cd.days[j].date !== u.pin) st.pinShift = true;
+        if (j > i) st.open += j - i;
+        else for (let k = 0; k < s; k++) if (dayOf[k] >= j) dayOf[k] = -1;
+        i = j;
+      }
+    }
+    prevStart = i;
+    for (let k = s; k < e; k++) { if (i < N) dayOf[k] = i++; }
+    s = e;
+  }
+  // Pass 2: the placement from those days.
   const seq = {};
-  slots.forEach((s, i) => {
-    const st = s.unitId && stats[s.unitId];
+  slots.forEach((sl, k) => {
+    const st = sl.unitId && stats[sl.unitId];
     if (st) st.days++;
-    const day = cd.days[i];
+    const day = dayOf[k] >= 0 ? cd.days[dayOf[k]] : null;
     if (!day) {
       if (st) st.short++;
-      if (s.kind === "lesson") out.overflow.push(s.lesson);
+      if (sl.kind === "lesson") out.overflow.push(sl.lesson);
       return;
     }
-    const n = s.unitId ? (seq[s.unitId] = (seq[s.unitId] || 0) + 1) : null;
+    const n = sl.unitId ? (seq[sl.unitId] = (seq[sl.unitId] || 0) + 1) : null;
     if (st) { st.placed++; if (!st.start) st.start = day.date; st.end = day.date; if (day.half) st.half++; }
-    if (s.kind === "lesson") {
-      out.byDate[day.date] = s.lesson;
-      out.dateByLessonId[s.lesson.id] = day.date;
-      out.slots[day.date] = { kind: "lesson", unitId: s.unitId, lessonId: s.lesson.id, n, of: null, half: day.half, reason: null };
-    } else if (s.kind === "gap") {
-      (out.vacated[day.date] = out.vacated[day.date] || []).push({ id: s.adj.id, reason: s.adj.reason || "" });
-      out.adjDates[s.adj.id] = day.date;
-      out.slots[day.date] = { kind: "gap", unitId: s.unitId, lessonId: s.lessonId, n, of: null, half: day.half, reason: s.adj.reason || "" };
+    if (sl.kind === "lesson") {
+      out.byDate[day.date] = sl.lesson;
+      out.dateByLessonId[sl.lesson.id] = day.date;
+      out.slots[day.date] = { kind: "lesson", unitId: sl.unitId, lessonId: sl.lesson.id, n, of: null, half: day.half, reason: null };
+    } else if (sl.kind === "gap") {
+      (out.vacated[day.date] = out.vacated[day.date] || []).push({ id: sl.adj.id, reason: sl.adj.reason || "" });
+      out.adjDates[sl.adj.id] = day.date;
+      out.slots[day.date] = { kind: "gap", unitId: sl.unitId, lessonId: sl.lessonId, n, of: null, half: day.half, reason: sl.adj.reason || "" };
     } else {
-      out.slots[day.date] = { kind: "day", unitId: s.unitId, lessonId: null, n: s.n, of: s.of, half: day.half, reason: null };
+      out.slots[day.date] = { kind: "day", unitId: sl.unitId, lessonId: null, n: sl.n, of: sl.of, half: day.half, reason: null };
     }
   });
   out.units = course.units.map((u) => stats[u.id]);
@@ -350,7 +394,7 @@ export function placeCourse(cal, course0, letters) {
     if (u.days === 0) out.problems.push({ code: "empty-unit", unitId: u.id, detail: null });
     else if (u.short) out.problems.push({ code: "short", unitId: u.id, detail: u.short });
   });
-  Object.values(out.slots).forEach((s) => { if (s.unitId && stats[s.unitId]) s.of = s.of || stats[s.unitId].days; });
+  Object.values(out.slots).forEach((x) => { if (x.unitId && stats[x.unitId]) x.of = x.of || stats[x.unitId].days; });
   if (!cd.days.length) out.problems.push({ code: "no-class-days", unitId: null, detail: null });
   return out;
 }
@@ -363,6 +407,68 @@ export function placePlan(cal) {
   const L = abLetters(cal);
   plan.courses.forEach((c) => { out[c.id] = placeCourse(cal, c, L); });
   return out;
+}
+
+/* --- dated units into a course, and letting pins go (increment 2) ------------ */
+
+/** Turn some of `cal.units` (the dated units of the Units card, P9-8: kept until the
+    teacher asks) into one new course with no lessons. The chosen units are sorted by
+    start; the conversion is refused, with the pairs named, if two of them overlap
+    (`overlap`), if one has no valid range (`no-dates`), or if one holds no school day
+    inside the year (`no-school-day`). Otherwise each becomes a typed unit pinned at its
+    start (or the year's first day, if it starts before it) with the school days its
+    range counts inside the year, so the course places every unit on the same school days
+    it covered (the suite holds that for every start/end pair in the seed year), unless a
+    day type is paced as skip. Nothing is written: returns { course, refused: [{ a, b,
+    why }], removeIds }, and the page previews the course before it adds it and drops
+    `removeIds` from `cal.units`. `opts.name` names the course, `opts.taken` its ids. */
+export function convertDatedUnits(cal, unitIds, opts = {}) {
+  const want = new Set(unitIds || []);
+  const chosen = (Array.isArray(cal.units) ? cal.units : []).filter((u) => u && want.has(u.id));
+  const refused = [];
+  const ok = /^\d{4}-\d{2}-\d{2}$/;
+  const lo = cal.meta.start, hi = cal.meta.end;
+  const ranged = [];
+  chosen.forEach((u) => {
+    if (!ok.test(String(u.start)) || !ok.test(String(u.end)) || u.start > u.end) { refused.push({ a: u.id, b: null, why: "no-dates" }); return; }
+    const from = u.start < lo ? lo : u.start, to = u.end > hi ? hi : u.end;
+    const days = from <= to ? unitInstructionalStats(from, to, cal.days, cal.dayTypes).instructionalDays : 0;
+    if (!days) { refused.push({ a: u.id, b: null, why: "no-school-day" }); return; }
+    ranged.push({ u, from, days });
+  });
+  ranged.sort((x, y) => (x.u.start < y.u.start ? -1 : x.u.start > y.u.start ? 1 : 0));
+  for (let k = 1; k < ranged.length; k++) {
+    for (let m = 0; m < k; m++) {
+      if (ranged[m].u.end >= ranged[k].u.start) refused.push({ a: ranged[m].u.id, b: ranged[k].u.id, why: "overlap" });
+    }
+  }
+  const course = newCourse(opts.name || "Units", { taken: opts.taken || [] });
+  const taken = [];
+  ranged.forEach(({ u, from, days }) => {
+    const unit = newUnit(u.name || "Unit", days, { taken, color: u.color || null });
+    taken.push(unit.id);
+    unit.pin = from;
+    course.units.push(unit);
+  });
+  return { course, refused, removeIds: refused.length ? [] : ranged.map((r) => r.u.id) };
+}
+
+/** "Let these flow": a copy of `course` with every pin after the first unit's cleared,
+    so a lost day moves the units after it instead of shortening the one before a pin.
+    The first unit keeps its pin, which holds the start. */
+export function unpinAfterFirst(course) {
+  const c = clone(course);
+  (c.units || []).forEach((u, k) => { if (k > 0) u.pin = null; });
+  return c;
+}
+
+/** The sentence for a problem the placer reports about a unit, or "" for none. */
+export function unitProblemText(p, unitName) {
+  const n = unitName || "This unit";
+  if (p.code === "pin-before-previous") return n + " is pinned to " + shortDate(p.detail) + ", on or before the start of the unit before it, so the pin is not used.";
+  if (p.code === "pin-after-year") return n + " is pinned to " + shortDate(p.detail) + ", after the course's last class day, so none of it fits.";
+  if (p.code === "empty-unit") return n + " has no days.";
+  return "";
 }
 
 /* --- stamping and the diff --------------------------------------------------- */
@@ -404,7 +510,8 @@ export function stored(course) {
     label, from, to, by }], newlyShort: [lessonId], nowFits: [lessonId], past, summary }.
     `by` is the number of the course's class days (in `after`) between the two dates, the
     later one counted, negative when earlier; null when `after` has no classDates. A unit
-    is listed when its end moved. `past` counts moved lessons whose old date is before
+    is listed when its end moved; in a course with no lessons, also in `shortUnits` when
+    its short count changed. `pinned` says a unit holds a pin, for the sentence. `past` counts moved lessons whose old date is before
     `todayISO`, the surprising ones (P9-6: recomputed, not frozen). `lessons` (the
     course's) gives a lesson its label. */
 export function diffPlacement(before, after, todayISO, lessons) {
@@ -413,7 +520,8 @@ export function diffPlacement(before, after, todayISO, lessons) {
   const dates = after.classDates || null;
   const countIn = (lo, hi) => dates.filter((d) => d > lo && d <= hi).length;
   const by = (from, to) => (!dates ? null : to >= from ? countIn(from, to) : -countIn(to, from));
-  const moved = [];
+  const moved = [], shortUnits = [];
+  const typed = !(lessons && lessons.length);
   const bOver = new Set(before.overflowIds || (before.overflow || []).map((l) => l.id));
   const aOver = new Set((after.overflow || []).map((l) => l.id));
   Object.keys(before.dateByLessonId || {}).forEach((id) => {
@@ -427,11 +535,13 @@ export function diffPlacement(before, after, todayISO, lessons) {
   (after.units || []).forEach((u) => {
     const b = (before.units || []).find((x) => x.id === u.id);
     if (b && b.end && u.end && b.end !== u.end) moved.push({ kind: "unit", id: u.id, label: names[u.id] || u.id, from: b.end, to: u.end, by: by(b.end, u.end) });
+    if (typed && b && (b.short || 0) !== (u.short || 0)) shortUnits.push({ id: u.id, label: names[u.id] || u.id, from: b.short || 0, to: u.short || 0 });
   });
   const lessonsMoved = moved.filter((m) => m.kind === "lesson");
   const past = todayISO ? lessonsMoved.filter((m) => m.from < todayISO).length : 0;
+  const pinned = (after.units || []).some((u) => u.pin && !u.pinIgnored);
   return {
-    moved, newlyShort, nowFits, past,
+    moved, newlyShort, nowFits, past, shortUnits, pinned,
     summary: { lessons: lessonsMoved.length, units: moved.length - lessonsMoved.length, newlyShort: newlyShort.length, nowFits: nowFits.length, past },
   };
 }
@@ -455,7 +565,10 @@ export function describeDiff(diff) {
   diff.moved.filter((m) => m.kind === "unit").forEach((m) => {
     parts.push(m.label + " now ends " + shortDate(m.to) + ", was " + shortDate(m.from));
   });
-  if (diff.newlyShort.length) parts.push(plural(diff.newlyShort.length, "lesson no longer fits", "lessons no longer fit") + " before the year ends");
+  if (diff.newlyShort.length) parts.push(plural(diff.newlyShort.length, "lesson no longer fits", "lessons no longer fit") + (diff.pinned ? " before a pinned unit or the year's end" : " before the year ends"));
+  (diff.shortUnits || []).forEach((u) => {
+    parts.push(u.label + (u.to ? " is now " + plural(u.to, "day", "days") + " short" : " fits again") + (u.from && u.to ? ", was " + u.from : ""));
+  });
   if (diff.nowFits.length) parts.push(plural(diff.nowFits.length, "lesson fits", "lessons fit") + " again");
   if (!parts.length) return "";
   let s = parts.join("; ");
