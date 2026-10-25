@@ -492,7 +492,7 @@ session hitting one of these ships rather than stalls.
 | ~~Path 3 P4~~ **spent** | Do skill/level values (002's balancing) go on the shared student record? | **No, decided**, and #185 kept to it: 002's pairing memory and skill ratings stay in 002's own storage; only the `{id: name}` map is shared-record-derived. |
 | ~~Path 6 P1~~ **spent** | Link payload policy for images. | Strip by policy, say so in the sheet, offer the `.json` download. Shipped in #178; kept here until a session confirms the sheet actually does all three. |
 | ~~Any time~~ **spent** | Is `check:docs-commands` worth thirty lines? | **Yes, and it was ~110 with its header.** Shipped in #187, and it caught three dead `npm run` citations on its first run — `social`, `social:check` and `games`, all survivors of the never-committed `board-check` package. |
-| Rank 5 | 035's private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception? | **Decided by Devon, 2026-10-03: bless and document** (do not adopt `a11y.js` cold); what is left is writing the exception up. The default it confirms read: bless and document, unless Path 5 P4 is opening 035 anyway — in which case adopt while you are already in the file. Adopting cold is a re-skin of a 5,500-line tool for no user-visible gain. `test:theme` already stops the situation spreading. *(This row cited "Rank 6 / 21" from the day it was written; rank 6 as it then stood was the `store.js` adoption row and had nothing to do with 035. The two rows it means are the 035 decision itself and Path 5 P4, which is the round that would open 035 anyway.)* |
+| ~~Rank 5~~ **spent** | 035's private four-palette theme system: adopt `a11y.js`, or bless it as a documented exception? | **Decided by Devon, 2026-10-03: bless and document; written up by AI-20 on 2026-10-25** (no change to 035). `CLAUDE.md`'s a11y.js bullet names the exception, and `test:theme`'s `OWN_THEME` list holds it: it fails if any other page writes `data-theme` without a11y.js, or if 035 stops. If Path 5 P4 ever opens 035 anyway, adopting there is still allowed; delete the `OWN_THEME` entry in the same commit. This was the "theme decision" Path 11's builds waited on. |
 | ~~Rank 3~~ **spent** | Rebuild `list-dark-candidates.mjs`, or measure inline? | **Rebuilt**, per the default, and shipped in #195 as `npm run path5:next`. The argument held: the first thing it produced was a corrected figure (1,749 literals, median 17) for a number this file had been carrying as "17–45 per tool" and had already had to delete once. |
 | ~~Rank 5~~ **spent** | Contrast round before or after Path 5 P3? | **After**, and that is how it went: AI-07 (v215) cleared the last 14 allowances once Path 5 had finished. |
 | Path 8 | Is a paired *student* device ever in scope? | **No.** Teacher-device-only. |
@@ -525,11 +525,11 @@ session hitting one of these ships rather than stalls.
   doubled everything. The tell is the first line: **97 live pages is right, 188 is the bug.** The script counts a literal only in a
   colour-bearing property, only inside `<style>`, never inside `@media print` and never
   inside a rule that is already dark work; its header says so in full.
-- **`035-schedule-visualizer.html` is a third theme owner.** It does not load `a11y.js`
-  and runs its own four-palette `data-theme` system. Not a bug today — it is not
-  double-darkened — but the site has two answers to "who sets `data-theme`".
-  `test:theme` asserts no page that loads a11y.js writes the attribute itself, so the
-  situation cannot spread while 035 is undecided.
+- **`035-schedule-visualizer.html` is the one documented second theme owner** (Devon,
+  2026-10-03, "bless and document"; written up 2026-10-25). It does not load `a11y.js`
+  and runs its own four-palette `data-theme` system; it is not double-darkened.
+  `test:theme` asserts no page that loads a11y.js writes the attribute itself, and its
+  `OWN_THEME` list that 035 is the only page writing it without a11y.js.
 
 ### Environment notes that have cost sessions time
 
@@ -601,7 +601,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 
 | Rank | Item | Area | Size | Claimed | Detail |
 |---:|---|---|---|---|---|
-| 5 | Document 035’s private four-palette theme system as an exception (Devon, 2026-10-03: “bless and document”; do not adopt `a11y.js` cold) | 035 | ¼ | | [Cross-cutting](#cross-cutting-work-sweeps-and-loose-ends) |
 | 8 | Path 8 P1 — `_shared/remote.js` + a generic `remote.html` join page; reconnect on drop | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |

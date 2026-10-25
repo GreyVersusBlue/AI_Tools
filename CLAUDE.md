@@ -222,6 +222,13 @@ copy of the boilerplate:
   (`_shared/theme-toggle.js`, a second toggle on its own `gvb-tools-theme`
   key, was deleted in Path 5 P1 — its key is still migrated once by a11y.js.
   Read `_shared/ink-paper.css`'s header before touching any of this.)
+  **One page is the documented exception: 035** (Devon, 2026-10-03, "bless and
+  document"). It loads no a11y.js and writes `data-theme` from its own
+  four-palette switcher (the `palette` field of its settings: default,
+  green-gold, dark, green-gold-dark), which its embedded schedule browser
+  follows. Leave it alone; do not adopt a11y.js there cold. `test:theme`'s
+  `OWN_THEME` list names it and fails if any other page writes `data-theme`
+  without a11y.js, or if 035 stops (delete the entry then).
 - `<script src="../_shared/sw-register.js" defer></script>` — service-worker
   registration, the update bar, the deferred precache pass, and (since v180) the
   request for persistent storage. It exists and is precached; link it rather than

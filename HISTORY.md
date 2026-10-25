@@ -9,6 +9,26 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 035's theme, a documented exception (2026-10-25, AI-20, no `CACHE_VERSION`)
+
+BACKLOG rank 5 deleted (a gap, ranks not renumbered, as ranks 12 to 15 were). Devon decided it on 2026-10-03: **bless
+and document** 035's private four-palette theme system, and do not adopt `a11y.js` there cold. This writes it up; 035
+itself is untouched (no page changes, so no `CACHE_VERSION`).
+
+- **Where the exception is written.** `CLAUDE.md`'s a11y.js bullet, which says a11y.js is "the only owner of theme on
+  this site", now names 035 as the one exception and what it does (`data-theme` from the `palette` field of its
+  settings: default, green-gold, dark, green-gold-dark; its embedded schedule browser follows the two dark ones).
+  `BACKLOG.md`'s Standing decisions row is marked spent and its Cross-cutting bullet rewritten; `path5:next`'s line for
+  035 says "a documented exception" instead of pointing at an open decision.
+- **The guard that says why.** `test:theme` (`Tools/theme/test/smoke-theme.mjs`) gains `OWN_THEME`, a one-entry list
+  with its reason: the pages that write `data-theme` with no a11y.js must be exactly that list. Before this nothing
+  stopped a second page doing what 035 does; the old assertion covered only pages that load a11y.js. It fails both
+  ways, so if 035 ever adopts a11y.js (Path 5 P4 opening it anyway is still allowed) the entry has to go with it.
+  Measured before writing it: 035 is the only such page today. The suite ran green (63 passed).
+- **Not done.** No break-on-purpose run of the new assertion beyond reading it; it is a set equality over the same
+  sweep the `rival` check uses. This was the "theme decision" the audit's AI-20 entry lists as a dependency of the
+  Path 11 builds; it is settled.
+
 ## Path 9 P4 finished: the pasted-table import in 032 (2026-10-25, AI-18, `CACHE_VERSION` v318)
 
 BACKLOG rank 15 deleted (a gap, ranks not renumbered, as ranks 12 to 14 were). P4 is whole, and with it every phase of
