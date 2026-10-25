@@ -1586,13 +1586,24 @@ function drawStaircaseTile(col, row, tile, tx, ty, tw, th, r, colors, cellSize) 
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  // Staircase steps icon
+  // Staircase steps icon, or (Path 11 P3) the elevator or ramp glyph of a
+  // marked pair, crossed out when the elevator is out of service.
+  const pairIdx = getPairIndex(col, row);
+  const glyph = stairGlyph(pairIdx >= 0 ? AppState.blueprint.crossFloorPairs[pairIdx] : null);
   if (cellSize >= 32) {
-    drawStaircaseIcon(tx + 3, ty + 3, tw - 6, th - 6, colors.stroke);
+    if (glyph === 'stairs') drawStaircaseIcon(tx + 3, ty + 3, tw - 6, th - 6, colors.stroke);
+    else if (glyph === 'ramp') drawRampIcon(tx + 3, ty + 3, tw - 6, th - 6, colors.stroke);
+    else drawElevatorIcon(tx + 3, ty + 3, tw - 6, th - 6, colors.stroke, glyph === 'elevator-out');
+  } else if (glyph !== 'stairs' && cellSize >= 16) {
+    // Too small for the picture: a letter in the bottom-left corner.
+    ctx.fillStyle = colors.stroke;
+    ctx.font = `700 ${Math.max(7, cellSize * 0.32)}px 'DM Mono', monospace`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(glyph === 'ramp' ? 'R' : glyph === 'elevator-out' ? 'E×' : 'E', tx + 2, ty + th - 1);
   }
 
   // Pair badge or warning icon
-  const pairIdx = getPairIndex(col, row);
   if (pairIdx >= 0) {
     // Paired: show colored letter badge
     const label  = getPairLabel(pairIdx);
@@ -1631,6 +1642,51 @@ function drawWarningIcon(x, y, size, color) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('!', x + size / 2, y + size * 0.62);
+  ctx.globalAlpha = 1;
+}
+
+/* Path 11 P3: which picture a staircase tile carries: 'stairs', 'ramp',
+   'elevator', or 'elevator-out' (an elevator out of service). */
+function stairGlyph(pair) {
+  const access = window.SVGraph.pairAccess(pair);
+  if (access === 'elevator') return window.SVGraph.pairInService(pair) ? 'elevator' : 'elevator-out';
+  return access;
+}
+
+function drawRampIcon(x, y, w, h, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.lineTo(x + w, y + h * 0.35);
+  ctx.lineTo(x + w, y + h);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawElevatorIcon(x, y, w, h, color, outOfService) {
+  const s = Math.min(w, h), ox = x + (w - s) / 2, oy = y + (h - s) / 2;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.7;
+  ctx.strokeRect(ox, oy, s, s);
+  const cx = ox + s / 2, a = s * 0.18;
+  ctx.beginPath();   // up and down arrows
+  ctx.moveTo(cx, oy + s * 0.14); ctx.lineTo(cx + a, oy + s * 0.40); ctx.lineTo(cx - a, oy + s * 0.40); ctx.closePath();
+  ctx.moveTo(cx, oy + s * 0.86); ctx.lineTo(cx + a, oy + s * 0.60); ctx.lineTo(cx - a, oy + s * 0.60); ctx.closePath();
+  ctx.fill();
+  if (outOfService) {
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#b91c1c';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ox, oy); ctx.lineTo(ox + s, oy + s);
+    ctx.moveTo(ox + s, oy); ctx.lineTo(ox, oy + s);
+    ctx.stroke();
+  }
   ctx.globalAlpha = 1;
 }
 

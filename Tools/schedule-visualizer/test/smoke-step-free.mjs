@@ -1,5 +1,7 @@
 // smoke-step-free.mjs — the School Layout Visualizer's step-free routes and
-// report (Path 11 P3 increment 1, v325), driven through 035's own controls.
+// report (Path 11 P3 increment 1, v325) and its route sheets, Settings'
+// elevator wait and the canvas glyphs (increment 2, v326), driven through
+// 035's own controls.
 //
 //   node Tools/schedule-visualizer/test/smoke-step-free.mjs
 //
@@ -13,11 +15,17 @@
 // state away; marked as an elevator, every room is step-free, and out of
 // service, floor 2 is reached by no route at all; the evacuation door cards'
 // graph never has the elevator in it; and in print media the sheet is the
-// only thing on paper. No console error, no offsite request.
+// only thing on paper. Increment 2: Settings' elevator wait reaches the
+// step-free graph and a blank field puts the default back; the Schedules
+// tab's "Needs step-free routes" writes the flag and takes it off; the route
+// sheets give a flagged group's move up to 201 by the elevator, say plainly
+// when only stairs would do, and start each group on a new page; and the
+// staircase tile's picture changes with what the pair is and comes back.
+// No console error, no offsite request.
 //
 // Exits 1 on any failure.
 
-/* global applyFullProject, AppState, selectCell -- page globals read inside page.evaluate() */
+/* global applyFullProject, AppState, selectCell, renderCanvas -- page globals read inside page.evaluate() */
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
 import { fixtureProject } from './fixture-northwind.mjs';
 
@@ -149,6 +157,102 @@ try {
   eq(await page.evaluate(() => getComputedStyle(document.getElementById('sf-print-sheet')).display), 'none',
     'without sf-printing, Ctrl+P does not print the report');
   await page.emulateMedia({ media: 'screen' });
+
+
+  /* ── 6. increment 2: Settings' elevator wait ────────────────────────────── */
+  await page.evaluate(() => selectCell(0, 4));
+  await settle(page, 100);
+  await page.uncheck('#rp-pair-out-of-service');
+  await settle(page, 100);
+  const liftCost = () => page.evaluate(() => {
+    const g = window.getStepFreeGraph();
+    for (const edges of g.adjacency.values()) for (const e of edges) if (e.teleport) return e.cost;
+    return null;
+  });
+  eq(await liftCost(), 10, 'an elevator costs the default wait, 10');
+  await page.click('#tab-settings');
+  await settle(page, 200);
+  eq(await page.inputValue('#setting-elevator-wait'), '10', 'Settings shows the default elevator wait');
+  await page.fill('#setting-elevator-wait', '4');
+  await page.click('#btn-save-settings');
+  await settle(page, 150);
+  eq(await page.evaluate(() => AppState.settings.elevatorWait), 4, 'saving writes elevatorWait');
+  eq(await liftCost(), 4, 'and the step-free graph charges it');
+  await page.fill('#setting-elevator-wait', '');
+  await page.click('#btn-save-settings');
+  await settle(page, 150);
+  ok(await page.evaluate(() => !('elevatorWait' in AppState.settings)), 'a blank wait removes the key');
+  eq(await page.inputValue('#setting-elevator-wait'), '10', 'and the field shows the default again');
+  eq(await liftCost(), 10, 'and the graph is back to 10');
+
+  /* ── 7. increment 2: the group's flag, on the Schedules tab ─────────────── */
+  await page.click('#tab-schedules');
+  await settle(page, 200);
+  const gid = await page.evaluate(() => AppState.schedules.groups.find(g => g.name === '7-1').id);
+  await page.click(`.group-card-btn.edit[data-group-id="${gid}"]`);
+  await settle(page, 150);
+  ok(!(await page.isChecked('#sch-input-step-free')), 'an unmarked group opens with the box clear');
+  await page.check('#sch-input-step-free');
+  await page.click('#sch-btn-save');
+  await settle(page, 150);
+  eq(await page.evaluate(id => AppState.schedules.groups.find(g => g.id === id).stepFree, gid), true, 'saving writes stepFree: true on the group');
+  ok(await page.isVisible(`.group-card[data-group-id="${gid}"] .group-card-step-free`), 'its card says Step-free');
+  await page.uncheck('#sch-input-step-free');
+  await page.click('#sch-btn-save');
+  await settle(page, 150);
+  ok(await page.evaluate(id => !('stepFree' in AppState.schedules.groups.find(g => g.id === id)), gid), 'clearing it and saving takes the key off');
+  await page.check('#sch-input-step-free');
+  await page.click('#sch-btn-save');
+  await settle(page, 150);
+
+  /* ── 8. increment 2: the route sheets ───────────────────────────────────── */
+  await page.click('#tab-blueprint');
+  await settle(page, 200);
+  await page.click('#btn-step-free-routes');
+  await page.waitForSelector('dialog[open]', { timeout: 5000 });
+  await settle(page, 600);
+  let text = await page.textContent('#sf-print-sheet');
+  ok(/Step-free routes: 7-1/.test(text), 'the sheet is headed with the flagged group');
+  ok(/Take the elevator to Floor 2\./.test(text) && /Arrive at room 201\./.test(text) && !/Take the stairs/.test(text),
+    'its move up to 201 goes by the elevator, never the stairs');
+  ok(await page.evaluate(() => document.body.classList.contains('sf-printing')), 'the sheet is asked for while the preview is open');
+  await page.keyboard.press('Escape');
+  await settle(page, 200);
+  ok(await page.evaluate(() => !document.body.classList.contains('sf-printing') && !document.getElementById('pk-page-style')), 'closing it takes the print state away');
+  await page.evaluate(() => selectCell(0, 4));
+  await settle(page, 100);
+  await page.selectOption('#rp-pair-access', 'stairs');
+  await settle(page, 100);
+  await page.evaluate(() => { AppState.schedules.groups.find(g => g.name === '6-1').stepFree = true; });
+  const sheets = await page.evaluate(() => window.SVAccess.buildRouteSheets());
+  text = await page.textContent('#sf-print-sheet');
+  ok(sheets.length === 2 && /No step-free route between these rooms\. Only stairs connect them\./.test(text),
+    'as stairs, the move to 201 has no step-free route, said plainly');
+  await page.emulateMedia({ media: 'print' });
+  const brk = await page.evaluate(() => [...document.querySelectorAll('#sf-print-sheet .sf-route-group')].map(g => getComputedStyle(g).breakBefore));
+  await page.emulateMedia({ media: 'screen' });
+  eq(JSON.stringify(brk), '["auto","page"]', 'two flagged groups, the second on a new page');
+  await page.evaluate(() => { for (const g of AppState.schedules.groups) delete g.stepFree; });
+  await page.evaluate(() => window.SVAccess.buildRouteSheets());
+  ok(/No group is marked as needing step-free routes/.test(await page.textContent('#sf-print-sheet')), 'with no group marked, the sheet says how to mark one');
+
+  /* ── 9. increment 2: the staircase tile's picture ───────────────────────── */
+  const shot = () => page.evaluate(() => { renderCanvas(); return document.getElementById('bp-canvas').toDataURL(); });
+  const asStairs = await shot();
+  await page.selectOption('#rp-pair-access', 'elevator');
+  await settle(page, 100);
+  const asLift = await shot();
+  await page.check('#rp-pair-out-of-service');
+  await settle(page, 100);
+  const asOut = await shot();
+  await page.selectOption('#rp-pair-access', 'ramp');
+  await settle(page, 100);
+  const asRamp = await shot();
+  await page.selectOption('#rp-pair-access', 'stairs');
+  await settle(page, 100);
+  const again = await shot();
+  ok(new Set([asStairs, asLift, asOut, asRamp]).size === 4, 'stairs, elevator, elevator out of service and ramp each draw a different tile');
+  ok(again === asStairs, 'and stairs again draws exactly what it drew before');
 
   eq(page.__errs.length, 0, 'no page or console errors: ' + JSON.stringify(page.__errs.slice(0, 4)));
   eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked.slice(0, 4)));

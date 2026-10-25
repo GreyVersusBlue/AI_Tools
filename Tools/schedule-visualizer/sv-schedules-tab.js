@@ -122,7 +122,7 @@ function renderGroupList(filterQuery) {
           <div class="group-card-name">${escHtml(group.name)}${warnIcon}${conflictIcon}</div>
           <div class="group-card-meta">
             <span class="group-card-grade">${escHtml(gradeStr)}</span>
-            ${bDayBadge}
+            ${bDayBadge}${group.stepFree === true ? `<span class="group-card-step-free" title="Needs step-free routes">Step-free</span>` : ''}
           </div>
         </div>
       </div>
@@ -184,6 +184,8 @@ function openEditorForNew() {
   if (gradeInput) gradeInput.value = '';
   if (colorInput) colorInput.value = nextColor;
   if (sizeInput)  sizeInput.value = '';   // R59
+  const sfInput = document.getElementById('sch-input-step-free');   // Path 11 P3
+  if (sfInput) sfInput.checked = false;
 
   updateGradeBtnGroup(null);
   updateColorPresetSelection(nextColor);
@@ -216,6 +218,8 @@ function openEditorForEdit(groupId) {
   if (gradeInput) gradeInput.value = group.grade ?? '';
   if (colorInput) colorInput.value = col;
   if (sizeInput)  sizeInput.value = (Number.isFinite(Number(group.size)) && Number(group.size) > 0) ? group.size : '';   // R59
+  const sfInput = document.getElementById('sch-input-step-free');   // Path 11 P3
+  if (sfInput) sfInput.checked = group.stepFree === true;
 
   // updateGradeBtnGroup handles the "other" case — non-6/7/8 grades show the text input
   updateGradeBtnGroup(group.grade ?? null);
@@ -553,7 +557,9 @@ function validateGroupForm() {
 
   // Store grade as a number if it's a pure number, otherwise keep as string
   const gradeVal = grade ? (isNaN(Number(grade)) ? grade : Number(grade)) : null;
-  return { name, grade: gradeVal, color, size, modsA, modsB, mods: modsA };
+  // Path 11 P3: the step-free flag is written only when set (saveGroup drops it otherwise).
+  const stepFree = !!document.getElementById('sch-input-step-free')?.checked;
+  return { name, grade: gradeVal, color, size, modsA, modsB, mods: modsA, ...(stepFree ? { stepFree: true } : {}) };
 }
 
 function saveGroup() {
@@ -566,6 +572,7 @@ function saveGroup() {
     const idx = AppState.schedules.groups.findIndex(g => g.id === editingId);
     if (idx >= 0) {
       AppState.schedules.groups[idx] = { ...AppState.schedules.groups[idx], ...data };
+      if (!data.stepFree) delete AppState.schedules.groups[idx].stepFree;   // Path 11 P3
       showToast(`Group "${data.name}" saved.`, 'success');
     }
   } else {
@@ -622,6 +629,7 @@ function duplicateGroup(groupId) {
     modsB: [...(group.modsB || [])],
     mods:  [...(group.modsA || group.mods || [])],
   };
+  if (group.stepFree === true) newGroup.stepFree = true;   // Path 11 P3
 
   const idx = AppState.schedules.groups.findIndex(g => g.id === groupId);
   AppState.schedules.groups.splice(idx + 1, 0, newGroup);
@@ -664,6 +672,7 @@ function exportGroups() {
     modsA: g.modsA || g.mods || [],
     modsB: g.modsB || [],
     mods:  g.modsA || g.mods || [],
+    ...(g.stepFree === true ? { stepFree: true } : {}),   // Path 11 P3
   }));
 
   const school = AppState.settings.schoolName
@@ -765,6 +774,7 @@ function applyGroupImport(rawData, resolution) {
       modsB: Array.isArray(raw.modsB) ? raw.modsB.slice(0, 20) : [],
       mods:  Array.isArray(raw.modsA) ? raw.modsA.slice(0, 20) : (Array.isArray(raw.mods) ? raw.mods.slice(0, 20) : []),
     };
+    if (raw.stepFree === true) newGroup.stepFree = true;   // Path 11 P3
 
     if (conflict && resolution === 'overwrite') {
       const idx = AppState.schedules.groups.findIndex(g => g.name.trim().toLowerCase() === nameKey);

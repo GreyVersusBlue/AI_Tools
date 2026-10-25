@@ -12,7 +12,7 @@
 // Its suite is test/routes.test.mjs (npm run test:schedule-visualizer-routes).
 
 import { modLabels, groupWeight, pairLabel } from './sv-model.js';
-import { astar, buildGraph, floorCellKey, pairAccess, pairInService, parseKey, resolveRoomPath } from './sv-graph.js';
+import { astar, buildGraph, floorCellKey, pairAccess, pairInService, parseKey, resolveRoomPath, settingsElevatorWait } from './sv-graph.js';
 
 /**
  * Check if a cell is inside any heat-exclude zone of a blueprint.
@@ -233,9 +233,11 @@ export function evacDirectionLabel(dx, dy) {
  * flag sv-graph.js's buildGraph() set when it built the edge) rather than
  * inferring a floor change from coordinates, since paired staircases are
  * not required to sit at the same col/row on each floor. `floorLabel(id)`
- * names a floor (the page's floorLabelById).
+ * names a floor (the page's floorLabelById). routeSteps() is the walk
+ * alone; the evacuation card and the step-free route sheet (Path 11 P3)
+ * each add their own last line.
  */
-export function buildEvacuationSteps(path, exit, graph, floorLabel) {
+export function routeSteps(path, graph, floorLabel) {
   const steps = [];
   let i = 0;
   while (i < path.length - 1) {
@@ -263,6 +265,11 @@ export function buildEvacuationSteps(path, exit, graph, floorLabel) {
     steps.push(`Head ${dir} ${count} tile${count === 1 ? '' : 's'}.`);
     i = j;
   }
+  return steps;
+}
+
+export function buildEvacuationSteps(path, exit, graph, floorLabel) {
+  const steps = routeSteps(path, graph, floorLabel);
   steps.push(`Exit at ${(exit && exit.label) ? exit.label : 'the marked exit'}.`);
   return steps;
 }
@@ -289,7 +296,7 @@ function groupDays(group) {
 }
 
 /**
- * stepFreeReport({ blueprint, groups, settings, elevatorWait? }) →
+ * stepFreeReport({ blueprint, groups, settings, elevatorWait? }) → (the wait defaults to settings.elevatorWait)
  *   { exitCount, connectors: [{ label, access, outOfService, floors: [a, b] }],
  *     rooms: [{ room, floorId, status }], moves: [{ group, day, fromModLabel,
  *     toModLabel, fromRoom, toRoom }], movesChecked, counts: { stepFree,
@@ -298,7 +305,7 @@ function groupDays(group) {
  */
 export function stepFreeReport({ blueprint, groups, settings, elevatorWait }) {
   const plain = buildGraph(blueprint);
-  const free  = buildGraph(blueprint, { stepFree: true, elevatorWait });
+  const free  = buildGraph(blueprint, { stepFree: true, elevatorWait: elevatorWait != null ? elevatorWait : settingsElevatorWait(settings) });
   const pairs = blueprint.crossFloorPairs || [];
 
   const connectors = [];
@@ -345,4 +352,71 @@ export function stepFreeReport({ blueprint, groups, settings, elevatorWait }) {
     }
   }
   return { exitCount: exitsPlain.length, connectors, rooms, moves, movesChecked, counts };
+}
+
+
+/* ==============================================================
+   STEP-FREE ROUTE SHEETS (Path 11 P3 increment 2)
+   ──────────────────────────────────────────────────────────────
+   A group marked `stepFree: true` (on the Schedules tab: "Needs
+   step-free routes") gets a sheet of its day: for each move between
+   two rooms, the turn-by-turn route on the step-free graph, or, where
+   there is none, the plain sentence and no route. The flag is on the
+   group, a cohort, never on a student: nothing here names anyone.
+   A move is one of
+     { status: 'route', steps, connectors, cost }   a step-free route
+     { status: 'stay' }                              same room, no travel
+     { status: 'none', problem }                     no step-free route (the
+                                                     ordinary graph's error
+                                                     when it has none either)
+     { status: 'skip', problem }                     a mod with no room, or a
+                                                     room not on the blueprint
+   each beside { fromModLabel, toModLabel, fromRoom, toRoom }.
+=============================================================== */
+
+/** True when the group is marked as needing step-free routes. */
+export function needsStepFree(group) {
+  return !!(group && group.stepFree === true);
+}
+
+/**
+ * stepFreeRouteSheets({ blueprint, groups, settings, elevatorWait?, floorLabel? }) →
+ *   [{ group, groupId, days: [{ day, moves: [...] }], counts: { route, stay, none, skip } }]
+ * Only groups marked needsStepFree(), in schedule order. floorLabel(id)
+ * names a floor in the steps (default: the id).
+ */
+export function stepFreeRouteSheets({ blueprint, groups, settings, elevatorWait, floorLabel }) {
+  const flagged = (groups || []).filter(needsStepFree);
+  if (!flagged.length) return [];
+  const name  = floorLabel || (id => id);
+  const pairs = blueprint.crossFloorPairs || [];
+  const plain = buildGraph(blueprint);
+  const free  = buildGraph(blueprint, { stepFree: true, elevatorWait: elevatorWait != null ? elevatorWait : settingsElevatorWait(settings) });
+  return flagged.map(group => {
+    const counts = { route: 0, stay: 0, none: 0, skip: 0 };
+    const days = groupDays(group).map(day => {
+      const segs = groupDayPath(group, day, { graph: free, settings, pairs }) || [];
+      const moves = segs.map(seg => {
+        const m = { fromModLabel: seg.fromModLabel, toModLabel: seg.toModLabel,
+          fromRoom: seg.fromRoom, toRoom: seg.toRoom };
+        if (seg.noTravel) m.status = 'stay';
+        else if (!seg.error) {
+          const keys = seg.path.map(c => floorCellKey(c.floorId, c.x, c.y));
+          m.status = 'route';
+          m.steps = routeSteps(keys, free, name).concat(`Arrive at room ${seg.toRoom}.`);
+          m.connectors = seg.connectorsUsed || [];
+          m.cost = seg.pathCost;
+        } else if (seg.stepFree) {
+          m.status = 'none';
+          const ordinary = resolveRoomPath(plain, seg.fromRoom, seg.toRoom, pairs);
+          m.problem = ordinary.error ? ordinary.error : seg.error;
+        } else if (seg.severity === 'warning') { m.status = 'skip'; m.problem = seg.error; }
+        else { m.status = 'none'; m.problem = seg.error; }
+        counts[m.status]++;
+        return m;
+      });
+      return { day, moves };
+    });
+    return { group: group.name, groupId: group.id, days, counts };
+  });
 }

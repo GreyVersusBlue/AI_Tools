@@ -279,6 +279,12 @@ export function pairAccess(pair) {
 export function pairInService(pair) {
   return !(pairAccess(pair) === 'elevator' && pair.outOfService === true);
 }
+/** The building's elevator wait from 035's settings (`settings.elevatorWait`,
+ *  Settings → Travel Time): a number from 0 to 999, else ELEVATOR_WAIT. */
+export function settingsElevatorWait(settings) {
+  const w = settings && settings.elevatorWait;
+  return (typeof w === 'number' && isFinite(w) && w >= 0 && w <= 999) ? w : ELEVATOR_WAIT;
+}
 /** An elevator's wait in cells: its own `wait` when that is a number from 0 to 999. */
 export function elevatorWait(pair, fallback = ELEVATOR_WAIT) {
   const w = pair && pair.wait;

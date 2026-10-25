@@ -1,5 +1,5 @@
-// Path 11 P3 increment 1: step-free routing in sv-graph.js and the step-free
-// report in sv-routes.js. Pure Node, no browser.
+// Path 11 P3: step-free routing in sv-graph.js and the step-free report and
+// route sheets in sv-routes.js (increments 1 and 2). Pure Node, no browser.
 //
 // One invented two-floor building, drawn below, joined by three pairs: stairs
 // at column 1 (pair A), an elevator at column 4 (B) and a ramp at column 12
@@ -189,6 +189,63 @@ check(G.elevatorWait({ wait: 3 }) === 3 && G.elevatorWait({ wait: -1 }) === G.EL
   check(blind.exitCount === 0 && blind.rooms.every(r => r.status === 'unjudged') && blind.counts.unjudged === 5,
     'with no exit marked, no room is judged (the report says so; it guesses no front door)');
   check(blind.moves.length === 1, 'moves are judged room to room, exits or not');
+}
+
+/* -- Increment 2: the elevator wait from Settings. (Broken on purpose:
+      reading the setting with parseInt let '5' through.) -- */
+check(G.settingsElevatorWait({ elevatorWait: 4 }) === 4 && G.settingsElevatorWait({ elevatorWait: 0 }) === 0 &&
+  G.settingsElevatorWait({ elevatorWait: '5' }) === G.ELEVATOR_WAIT && G.settingsElevatorWait({ elevatorWait: 1000 }) === G.ELEVATOR_WAIT &&
+  G.settingsElevatorWait({}) === G.ELEVATOR_WAIT && G.settingsElevatorWait(null) === G.ELEVATOR_WAIT,
+  'Settings\' elevator wait is used only when it is a number from 0 to 999');
+{
+  const bp = building({ ramp: null });
+  const settings = { modCount: 2, modLabel: 'mod', elevatorWait: 3 };
+  const groups = [{ name: 'g', stepFree: true, modsA: ['204', '301'] }];
+  check(R.stepFreeRouteSheets({ blueprint: bp, groups, settings })[0].days[0].moves[0].cost === 13,
+    'the route sheet charges the elevator Settings\' wait (10 steps + 3)');
+  check(R.stepFreeRouteSheets({ blueprint: bp, groups, settings, elevatorWait: 0 })[0].days[0].moves[0].cost === 10,
+    'an explicit elevatorWait still wins over Settings');
+}
+
+/* -- Increment 2: the route sheets. (Broken on purpose: a truthy test let
+      stepFree: 'yes' in; routing on the ordinary graph sent 301 to Z up the
+      stairs; dropping the walk's last line lost "Arrive at room".) -- */
+{
+  const settings = { modCount: 4, modLabel: 'mod' };
+  const groups = [
+    { id: 'g1', name: 'Room 12 cohort', stepFree: true, modsA: ['204', '301', 'Z', ''], modsB: ['204', '204', 'W'] },
+    { id: 'g2', name: 'Not flagged', modsA: ['204', '301'] },
+    { id: 'g3', name: 'Flag is not true', stepFree: 'yes', modsA: ['204', '301'] },
+  ];
+  const fl = id => (id === 'f1' ? 'Floor 1' : 'Floor 2');
+  const sheets = R.stepFreeRouteSheets({ blueprint: building(), groups, settings, floorLabel: fl });
+  check(sheets.length === 1 && sheets[0].group === 'Room 12 cohort' && sheets[0].groupId === 'g1', 'only a group whose flag is exactly true gets a sheet');
+  check(R.needsStepFree({ stepFree: true }) && !R.needsStepFree({ stepFree: 1 }) && !R.needsStepFree(null), 'needsStepFree() is the one test of the flag');
+  const [a, b] = sheets[0].days;
+  check(sheets[0].days.length === 2 && a.day === 'A' && b.day === 'B', 'a group with its own B day gets both days');
+  const m1 = a.moves[0];
+  check(m1.status === 'route' && m1.fromRoom === '204' && m1.toRoom === '301' && m1.fromModLabel === 'Mod 1' && m1.toModLabel === 'Mod 2',
+    'the first move is routed, with its rooms and mods');
+  check(m1.steps.some(t => /^Take the (elevator|ramp) to Floor 2\.$/.test(t)) && !m1.steps.some(t => /stairs/.test(t)),
+    'its steps take the elevator or the ramp to Floor 2, never the stairs: ' + m1.steps.join(' '));
+  check(m1.steps[m1.steps.length - 1] === 'Arrive at room 301.' && m1.steps[0].startsWith('Head '), 'the walk starts with a heading and ends at the room');
+  check(m1.connectors.length === 1 && m1.connectors[0].access !== 'stairs' && typeof m1.cost === 'number', 'it names what carried it between floors and what it cost');
+  check(a.moves[1].status === 'none' && a.moves[1].problem === G.STEP_FREE_NONE && !a.moves[1].steps,
+    '301 to Z: no step-free route, said plainly, with no steps (the stairs reach it)');
+  check(a.moves[2].status === 'skip' && a.moves[2].problem === 'Mod not assigned', 'a mod with no room is not routed, and says why');
+  check(b.moves[0].status === 'stay', 'staying in 204 is no travel');
+  check(b.moves[1].status === 'none' && b.moves[1].problem === 'Room unreachable — not connected to any hallway',
+    'a room walled off on every graph keeps its own message, not the step-free one');
+  check(JSON.stringify(sheets[0].counts) === '{"route":1,"stay":1,"none":2,"skip":2}', 'the counts add up: ' + JSON.stringify(sheets[0].counts));
+  check(R.stepFreeRouteSheets({ blueprint: building(), groups: groups.slice(1), settings }).length === 0, 'no flagged group, no sheets');
+
+  // routeSteps() is the walk the evacuation card has always printed, less its last line.
+  const g = G.buildGraph(building());
+  const exits = R.collectExitPoints(building(), g);
+  const ev = R.computeEvacuationRouteForRoom(g.roomToKey.get('301'), exits, g);
+  const evSteps = R.buildEvacuationSteps(ev.path, ev.exit, g, fl);
+  check(JSON.stringify(evSteps) === JSON.stringify([...R.routeSteps(ev.path, g, fl), 'Exit at Front door.']),
+    'buildEvacuationSteps() is routeSteps() plus the exit line');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

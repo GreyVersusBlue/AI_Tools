@@ -427,8 +427,13 @@
                 <circle cx="12" cy="4" r="2"/><path d="M12 7v6h5l2 6"/><path d="M9 11a5 5 0 1 0 6 7"/>
               </svg>Step-free Report
             </button>
+            <button class="bp-icon-btn" id="btn-step-free-routes" style="width:100%;justify-content:flex-start;padding:8px var(--sp-3);margin-top:var(--sp-1);" title="A turn-by-turn step-free route for every move of each group marked Needs step-free routes">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 6h16M4 12h10M4 18h7"/><path d="M17 15l3 3-3 3"/>
+              </svg>Step-free Route Sheets
+            </button>
             <div style="font-size:11px;color:var(--slate-400);line-height:1.5;margin-top:var(--sp-2);">
-              Select a paired staircase and say whether it is stairs, an elevator or a ramp. Rooms are judged from the marked exterior exits.
+              Select a paired staircase and say whether it is stairs, an elevator or a ramp. Rooms are judged from the marked exterior exits. Route sheets are for groups marked "Needs step-free routes" on the Schedules tab.
             </div>
           </div>
 
@@ -1062,6 +1067,17 @@
                       style="display:none; margin-top: 6px;" />
                     <input type="hidden" id="sch-input-grade" value="" />
                   </div>
+                </div>
+
+                <!-- Path 11 P3: a flag on the group (a cohort), never on a student -->
+                <div class="sch-field">
+                  <label style="display:flex;align-items:flex-start;gap:var(--sp-2);cursor:pointer;user-select:none;">
+                    <input type="checkbox" id="sch-input-step-free" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent);" />
+                    <span>
+                      <span class="sch-label" style="display:block;margin:0;">Needs step-free routes <span class="sch-label-opt">(opt.)</span></span>
+                      <span class="sch-label-opt" style="display:block;line-height:1.4;">This group travels with someone who cannot use stairs. Its route sheet (Blueprint tab, Step-free access) gives every move by elevators and ramps only.</span>
+                    </span>
+                  </label>
                 </div>
 
                 <div class="sch-field">
@@ -1815,6 +1831,16 @@
                 <div class="range-value" id="staircase-time-display">8 sec</div>
               </div>
               <input type="number" id="setting-staircase-time" class="form-control" min="2" max="30" step="1" value="8" style="margin-top:8px;width:100px;"/>
+            </div>
+          </div>
+          <!-- Path 11 P3: what an elevator ride costs a step-free route -->
+          <div class="form-row">
+            <div class="form-label-group">
+              <label class="form-label" for="setting-elevator-wait">Elevator wait, in tiles</label>
+              <p class="form-hint">Step-free routes count each elevator ride as this many tiles of walking (the wait and the ride). Default 10.</p>
+            </div>
+            <div>
+              <input type="number" id="setting-elevator-wait" class="form-control" min="0" max="999" step="1" value="10" style="width:100px;"/>
             </div>
           </div>
           <p class="form-hint" style="margin-top:var(--sp-2);">Congestion delay is added automatically when multiple groups share the same hallway tile during the same transition.</p>
@@ -2640,8 +2666,16 @@ function getPathfindingGraph() { return graphCache().get(AppState.blueprint); }
 /* Path 11 P3: the step-free graph, cached beside the ordinary one and
    invalidated with it. The Visualize tab's "Step-free routes" switch
    (AppState.viz.stepFree) makes group day paths and congestion use it. */
-let _svStepFreeCache = null;
-function getStepFreeGraph() { return (_svStepFreeCache || (_svStepFreeCache = svGraph().createCache({ stepFree: true }))).get(AppState.blueprint); }
+let _svStepFreeCache = null, _svStepFreeWait = null;
+function getStepFreeGraph() {
+  // The cache is remade when Settings' elevator wait changes (increment 2).
+  const wait = svGraph().settingsElevatorWait(AppState.settings);
+  if (!_svStepFreeCache || _svStepFreeWait !== wait) {
+    _svStepFreeCache = svGraph().createCache({ stepFree: true, elevatorWait: wait });
+    _svStepFreeWait = wait;
+  }
+  return _svStepFreeCache.get(AppState.blueprint);
+}
 function routeGraph() { return AppState.viz.stepFree ? getStepFreeGraph() : getPathfindingGraph(); }
 /* The evacuation door cards route on a graph with no elevators: one is not used in a fire. */
 let _svEvacuationCache = null;
@@ -3713,6 +3747,7 @@ const els = {
   staircaseRange:   document.getElementById('setting-staircase-time-range'),  // R30
   staircaseDisplay: document.getElementById('staircase-time-display'),        // R30
   defaultGroupSizeInput: document.getElementById('setting-default-group-size'), // R59
+  elevatorWaitInput: document.getElementById('setting-elevator-wait'),          // Path 11 P3
   modPreviewChips:  document.getElementById('mod-preview-chips'),
   headerSchoolName: document.getElementById('header-school-name'),
   headerModCount:   document.getElementById('header-mod-count'),
@@ -3747,6 +3782,7 @@ function populateSettingsForm() {
 
   // R59: default group size + bell schedule + subjects
   if (els.defaultGroupSizeInput) els.defaultGroupSizeInput.value = AppState.settings.defaultGroupSize ?? 25;
+  if (els.elevatorWaitInput) els.elevatorWaitInput.value = svGraph().settingsElevatorWait(AppState.settings);
   renderBellScheduleEditor();
   renderSubjectsEditor();
 
@@ -3894,6 +3930,14 @@ els.btnSave.addEventListener('click', () => {
     const dgs = parseInt(els.defaultGroupSizeInput.value, 10);
     AppState.settings.defaultGroupSize = (Number.isFinite(dgs) && dgs >= 1 && dgs <= 999) ? dgs : DEFAULT_SETTINGS.defaultGroupSize;
     els.defaultGroupSizeInput.value = AppState.settings.defaultGroupSize;
+  }
+  // Path 11 P3: the elevator wait; blank or out of range keeps the default (no key).
+  if (els.elevatorWaitInput) {
+    const raw = els.elevatorWaitInput.value.trim();
+    const ew = raw === '' ? NaN : Number(raw);
+    if (Number.isFinite(ew) && ew >= 0 && ew <= 999) AppState.settings.elevatorWait = Math.round(ew);
+    else delete AppState.settings.elevatorWait;
+    els.elevatorWaitInput.value = svGraph().settingsElevatorWait(AppState.settings);
   }
   saveSettings();
   saveLastSavedTime();

@@ -1,4 +1,5 @@
-// sv-access.js — the School Layout Visualizer's step-free report sheet
+// sv-access.js — the School Layout Visualizer's step-free report sheet and
+// the route sheets for a group that needs step-free routes
 // (Path 11 P3, BACKLOG.md "Path 11", the P3 bullet).
 //
 // The report itself is sv-routes.js's pure stepFreeReport(); this file only
@@ -116,6 +117,76 @@ export function renderStepFreeSheet(sheet, report, opts = {}) {
     'An elevator ride is counted as ' + (opts.wait != null ? opts.wait : 10) + ' cells of walking. Mark a pair as an elevator or ramp on the Blueprint tab (select a paired staircase).'));
 }
 
+/* ---- step-free route sheets (increment 2) ---- */
+
+const DAY_WORDS = { A: 'A day', B: 'B day' };
+
+/**
+ * Fills `sheet` (emptied first) with one route sheet per flagged group, from
+ * sv-routes.js's stepFreeRouteSheets(). Each group after the first starts a
+ * new page (.sf-route-group). A move with no room at either end is left out;
+ * every other move is listed, a missing route said plainly.
+ */
+export function renderRouteSheets(sheet, sheets, opts = {}) {
+  const doc = sheet.ownerDocument;
+  sheet.textContent = '';
+  if (!sheets.length) {
+    sheet.appendChild(el(doc, 'h1', 'sf-title', 'Step-free route sheets'));
+    sheet.appendChild(el(doc, 'p', 'sf-summary', 'No group is marked as needing step-free routes. ' +
+      'On the Schedules tab, edit a group and tick "Needs step-free routes", then print this again.'));
+    return;
+  }
+  for (const g of sheets) {
+    const box = el(doc, 'div', 'sf-route-group');
+    box.appendChild(el(doc, 'h1', 'sf-title', `Step-free routes: ${g.group}`));
+    box.appendChild(el(doc, 'p', 'sf-sub', [opts.school, opts.date].filter(Boolean).join(' · ')));
+    box.appendChild(el(doc, 'p', 'sf-summary', g.counts.none
+      ? `${g.counts.none} move${g.counts.none === 1 ? ' has' : 's have'} no step-free route. ${g.counts.route} can be made by hallways, elevators and ramps.`
+      : g.counts.route
+        ? `Every move can be made by hallways, elevators and ramps (${g.counts.route}).`
+        : 'This group has no room-to-room moves.'));
+    for (const d of g.days) {
+      if (g.days.length > 1) box.appendChild(el(doc, 'h2', 'sf-h2', DAY_WORDS[d.day] || d.day));
+      const list = el(doc, 'ol', 'sf-moves');
+      for (const m of d.moves) {
+        if (!m.fromRoom && !m.toRoom) continue;
+        const li = el(doc, 'li', 'sf-move sf-move-' + m.status);
+        li.appendChild(el(doc, 'p', 'sf-move-head',
+          `${m.fromModLabel} → ${m.toModLabel}: ${m.fromRoom || 'no room'} to ${m.toRoom || 'no room'}`));
+        if (m.status === 'stay') li.appendChild(el(doc, 'p', 'sf-note', 'Stays in the room.'));
+        else if (m.status === 'route') {
+          const ol = el(doc, 'ol', 'sf-steps');
+          for (const step of m.steps) ol.appendChild(el(doc, 'li', null, step));
+          li.appendChild(ol);
+        } else if (m.status === 'none') {
+          li.appendChild(el(doc, 'p', 'sf-warning', 'No step-free route between these rooms.' +
+            (m.problem && m.problem !== 'No step-free route between these rooms' ? ` (${m.problem}.)` : ' Only stairs connect them.')));
+        } else li.appendChild(el(doc, 'p', 'sf-note', `Not routed: ${m.problem}.`));
+        list.appendChild(li);
+      }
+      box.appendChild(list);
+    }
+    box.appendChild(el(doc, 'p', 'sf-foot',
+      'Routes use hallways, ramps and elevators only, never a stair tile. Directions are compass directions on the blueprint ' +
+      '(north is the top of the map). Check a route on foot before relying on it.'));
+    sheet.appendChild(box);
+  }
+}
+
+/** Builds every flagged group's route sheet into #sf-print-sheet. */
+export function buildRouteSheets() {
+  const sheet = document.getElementById('sf-print-sheet');
+  const sheets = window.SVRoutes.stepFreeRouteSheets({
+    blueprint: AppState.blueprint, groups: AppState.schedules.groups, settings: AppState.settings,
+    floorLabel: floorLabelById,
+  });
+  renderRouteSheets(sheet, sheets, {
+    school: AppState.settings.schoolName || '',
+    date: new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }),
+  });
+  return sheets;
+}
+
 /* ---- the page glue: build, preview, print ---- */
 
 function asking(on) {
@@ -134,7 +205,7 @@ export function buildStepFreeSheet() {
     floorLabel: floorLabelById,
     school: AppState.settings.schoolName || '',
     date: new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }),
-    wait: window.SVGraph.ELEVATOR_WAIT,
+    wait: window.SVGraph.settingsElevatorWait(AppState.settings),
   });
   return report;
 }
@@ -156,4 +227,15 @@ export function openStepFreeReport(trigger) {
   });
 }
 
+/** The Blueprint sidebar's "Step-free route sheets" button. */
+export function openRouteSheets(trigger) {
+  buildRouteSheets();
+  asking(true);
+  return PrintKit.preview({
+    area: document.getElementById('sf-print-sheet'), trigger, title: 'Step-free route sheets',
+    onClose: () => asking(false), onPrint: printSheet,
+  });
+}
+
 document.getElementById('btn-step-free-report')?.addEventListener('click', e => openStepFreeReport(e.currentTarget));
+document.getElementById('btn-step-free-routes')?.addEventListener('click', e => openRouteSheets(e.currentTarget));

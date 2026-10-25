@@ -2849,6 +2849,13 @@
 #sf-print-sheet .sf-table th, #sf-print-sheet .sf-table td { border: 0.75pt solid #000; padding: 2pt 5pt; text-align: left; vertical-align: top; }
 #sf-print-sheet .sf-table th { background: #e8e8e8; }
 #sf-print-sheet .sf-table tr { break-inside: avoid; }
+/* increment 2: route sheets, one group to a page */
+#sf-print-sheet .sf-route-group + .sf-route-group { break-before: page; }
+#sf-print-sheet .sf-moves { margin: 0; padding-left: 18pt; }
+#sf-print-sheet .sf-move { margin: 0 0 6pt; break-inside: avoid; }
+#sf-print-sheet .sf-move-head { font-weight: 600; margin: 0 0 2pt; }
+#sf-print-sheet .sf-steps { margin: 0; padding-left: 16pt; list-style: lower-alpha; }
+.group-card-step-free { background: var(--slate-100); color: var(--slate-700); font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; font-family: var(--font-mono); margin-left: 4px; }
 @media print {
   body.sf-printing > :not(#sf-print-sheet) { display: none !important; }
   body.sf-printing #sf-print-sheet { display: block; }
