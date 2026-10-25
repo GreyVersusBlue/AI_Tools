@@ -68,6 +68,7 @@
     "test:escape-room-station-qr": "node Tools/escape-room-builder/test/smoke-station-qr.mjs",
     "test:schedule-visualizer-trace": "node Tools/schedule-visualizer/test/smoke-trace-image.mjs",
     "test:schedule-visualizer-print": "node Tools/schedule-visualizer/test/smoke-print.mjs",
+    "test:schedule-visualizer-editor": "node Tools/schedule-visualizer/test/smoke-editor.mjs",
     "test:schedule-visualizer-size": "node Tools/schedule-visualizer/test/size.test.mjs",
     "test:schedule-visualizer-model": "node Tools/schedule-visualizer/test/model.test.mjs",
     "test:schedule-visualizer-graph": "node Tools/schedule-visualizer/test/graph.test.mjs",
