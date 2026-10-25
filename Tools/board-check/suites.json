@@ -320,6 +320,7 @@
     "Tools/board-check/test/select-suites.test.mjs",
     "Tools/schedule-visualizer/test/size.test.mjs",
     "Tools/schedule-visualizer/test/model.test.mjs",
+    "Tools/schedule-visualizer/test/graph.test.mjs",
     "Tools/schedule-visualizer/test/bridge.test.mjs",
     "Tools/board-check/test/check-entities.test.mjs",
     "Tools/board-check/test/check-publisher.test.mjs",

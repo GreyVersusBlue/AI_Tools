@@ -24,7 +24,7 @@ import { parse, inlineScripts } from '../../board-check/check-publisher.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const PAGE = 'Tools/035-schedule-visualizer.html';
 /** A page function is a wrapper if it calls one of these namespace getters. */
-export const GETTERS = { svModel: 'SVModel' };
+export const GETTERS = { svModel: 'SVModel', svGraph: 'SVGraph' };
 
 let passed = 0, failed = 0;
 function check(ok, label) {
