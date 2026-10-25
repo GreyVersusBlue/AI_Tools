@@ -2874,6 +2874,27 @@
 #sf-print-sheet .ev-plan { margin: 0 0 4pt; white-space: pre-line; }
 #sf-print-sheet .ev-line { border-bottom: 0.75pt solid #000; min-height: 18pt; }
 #sf-print-sheet .ev-foot { margin-top: 10pt; font-size: 8.5pt; }
+/* Path 11 P4 increments 2 and 3: lockdown maps (one floor to a page) and door signs (two to a page). */
+#sf-print-sheet .lk-page + .lk-page { break-before: page; }
+#sf-print-sheet .lk-floor { font-size: 22pt; line-height: 1.1; margin: 0 0 6pt; }
+#sf-print-sheet .lk-map { margin: 0 0 8pt; text-align: center; break-inside: avoid; }
+#sf-print-sheet .lk-map img { max-width: 100%; max-height: 6.2in; border: 0.75pt solid #000; }
+#sf-print-sheet .lk-note, #sf-print-sheet .lk-rooms { margin: 0 0 8pt; break-inside: avoid; }
+#sf-print-sheet .lk-room-notes { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 2pt 10pt; }
+#sf-print-sheet .lk-room-notes dt { font-weight: 700; }
+#sf-print-sheet .lk-room-notes dd { margin: 0; white-space: pre-line; }
+#sf-print-sheet .ds-set .pk-cards { row-gap: 0.25in; }
+#sf-print-sheet .ds-sign { min-height: 4.75in; border: 1.5pt solid #000; padding: 10pt 14pt; break-inside: avoid; }
+#sf-print-sheet .ds-head { display: flex; justify-content: space-between; gap: 8pt; font-size: 10pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 0.75pt solid #000; padding-bottom: 3pt; margin-bottom: 6pt; }
+#sf-print-sheet .ds-room { font-size: 40pt; line-height: 1.05; margin: 0; }
+#sf-print-sheet .ds-teacher { font-size: 18pt; font-weight: 600; margin: 0 0 8pt; }
+#sf-print-sheet .ds-days { display: flex; gap: 12pt; align-items: flex-start; }
+#sf-print-sheet .ds-table { border-collapse: collapse; flex: 1 1 0; font-size: 10.5pt; }
+#sf-print-sheet .ds-table caption { font-weight: 700; text-align: left; margin-bottom: 2pt; }
+#sf-print-sheet .ds-table th, #sf-print-sheet .ds-table td { border: 0.75pt solid #000; padding: 1.5pt 5pt; text-align: left; vertical-align: top; }
+#sf-print-sheet .ds-table thead th { background: #e8e8e8; }
+#sf-print-sheet .ds-empty { color: #444; }
+#sf-print-sheet .ds-foot { margin: 8pt 0 0; font-size: 8.5pt; }
 .rp-door-item { flex-wrap: wrap; }
 .rp-door-step { display: flex; align-items: center; gap: 4px; flex-basis: 100%; font-size: 11px; color: var(--slate-500); cursor: pointer; margin-top: 2px; }
 .group-card-step-free { background: var(--slate-100); color: var(--slate-700); font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; font-family: var(--font-mono); margin-left: 4px; }

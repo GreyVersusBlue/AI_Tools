@@ -825,6 +825,60 @@ function renderEvacuationMapCrop(card, floor) {
   return { dataURL: crop.toDataURL('image/png'), w: sw, h: sh };
 }
 
+/**
+ * Path 11 P4 increment 2: a whole floor as a PNG for its lockdown map, with
+ * each room's number drawn large over the room (white box, black type) and no
+ * route, mark or highlight of any kind. `page` is one of sv-model.js's
+ * lockdownPages() pages; its rooms carry the cells they cover. Returns
+ * { dataURL, w, h } or null when the floor has no size.
+ */
+function renderLockdownMap(page, floor) {
+  if (!page || !floor) return null;
+  const EXPORT_SCALE = 3;
+  const cellSize = getEffectiveCellSize();
+  const W = floor.gridCols * cellSize * EXPORT_SCALE;
+  const H = floor.gridRows * cellSize * EXPORT_SCALE;
+  if (!(W > 0 && H > 0)) return null;
+  const off = document.createElement('canvas');
+  off.width = W; off.height = H;
+  const offCtx = off.getContext('2d');
+  offCtx.scale(EXPORT_SCALE, EXPORT_SCALE);
+  const savedCtx = ctx;
+  ctx = offCtx;
+  try {
+    withFloorShown(floor, renderPlainFloor);
+    offCtx.save();
+    offCtx.textAlign = 'center';
+    offCtx.textBaseline = 'middle';
+    for (const room of page.rooms) {
+      const x = room.minCol * cellSize, y = room.minRow * cellSize;
+      const w = (room.maxCol - room.minCol + 1) * cellSize, h = (room.maxRow - room.minRow + 1) * cellSize;
+      // As large as the room allows, never under a cell's height.
+      let size = Math.max(cellSize * 0.9, Math.min(h * 0.6, cellSize * 2.2));
+      offCtx.font = `700 ${size}px Arial, Helvetica, sans-serif`;
+      let tw = offCtx.measureText(room.room).width;
+      if (tw > w * 0.92 && w >= cellSize) {
+        size = Math.max(cellSize * 0.55, size * (w * 0.92) / tw);
+        offCtx.font = `700 ${size}px Arial, Helvetica, sans-serif`;
+        tw = offCtx.measureText(room.room).width;
+      }
+      const bw = tw + size * 0.4, bh = size * 1.15;
+      const cx = x + w / 2, cy = y + h / 2;
+      offCtx.fillStyle = '#fff';
+      offCtx.strokeStyle = '#000';
+      offCtx.lineWidth = 1.2;
+      offCtx.fillRect(cx - bw / 2, cy - bh / 2, bw, bh);
+      offCtx.strokeRect(cx - bw / 2, cy - bh / 2, bw, bh);
+      offCtx.fillStyle = '#000';
+      offCtx.fillText(room.room, cx, cy + size * 0.04);
+    }
+    offCtx.restore();
+  } finally {
+    ctx = savedCtx;
+  }
+  return { dataURL: off.toDataURL('image/png'), w: W, h: H };
+}
+
 function drawGrid(cols, rows, cellSize, W, H) {
   ctx.beginPath();
   ctx.strokeStyle = GRID_LINE_COLOR;
@@ -2182,6 +2236,7 @@ function showClassroomEditor(col, row, tile) {
   document.getElementById('rp-teacher-dept').value = tile.dept         || '';
   document.getElementById('rp-wing-label').value   = tile.wing         || '';
   document.getElementById('rp-exclude-conflict').checked = !!(tile.excludeFromConflict);
+  document.getElementById('rp-lockdown-note').value = window.SVModel.lockdownNoteOf(tile);   // Path 11 P4
 
   document.getElementById('rp-room-number').classList.remove('required-empty');
 
@@ -2243,6 +2298,9 @@ document.getElementById('rp-btn-save-room').addEventListener('click', () => {
   tile.dept       = document.getElementById('rp-teacher-dept').value || null;
   tile.wing       = document.getElementById('rp-wing-label').value.trim()   || null;
   tile.excludeFromConflict = document.getElementById('rp-exclude-conflict').checked || false;
+  // Path 11 P4: the school's own lockdown note for this room; blank removes the key.
+  const lockdownNote = document.getElementById('rp-lockdown-note').value.trim().slice(0, 300);
+  if (lockdownNote) tile.lockdownNote = lockdownNote; else delete tile.lockdownNote;
 
   setTile(target.col, target.row, tile);
 
@@ -2258,6 +2316,7 @@ document.getElementById('rp-btn-save-room').addEventListener('click', () => {
           t.dept    = tile.dept;
           t.wing    = tile.wing;
           t.roomNumber = null; // only anchor holds roomNumber
+          delete t.lockdownNote; // and its lockdown note
           redrawCell(c, r);
         }
       }
@@ -2296,6 +2355,7 @@ document.getElementById('rp-btn-clear-room').addEventListener('click', () => {
   tile.wing       = null;
   tile.doors      = null;
   tile.excludeFromConflict = false;
+  delete tile.lockdownNote;
 
   setTile(target.col, target.row, tile);
   commitAction();
@@ -2305,6 +2365,7 @@ document.getElementById('rp-btn-clear-room').addEventListener('click', () => {
   document.getElementById('rp-teacher-dept').value = '';
   document.getElementById('rp-wing-label').value   = '';
   document.getElementById('rp-exclude-conflict').checked = false;
+  document.getElementById('rp-lockdown-note').value = '';
   renderDoorList(target.col, target.row, tile);
   redrawCell(target.col, target.row);
   renderCanvas();
@@ -3965,7 +4026,7 @@ export {
   _snapGrid, _restoreGrid, beginAction, commitAction, runAction, undoBlueprint, redoBlueprint, afterHistoryRestore,
   clearHistory, updateUndoRedoButtons, initCanvas, getEffectiveCellSize, applyZoom, resizeCanvas, _traceImageCache,
   traceImageSrc, getTraceImageEl, drawTraceImage, renderPlainFloor, renderCanvas, renderBlueprintExportCanvas, exportBlueprintAsPNG,
-  exportBlueprintAsPDF, renderBlueprintPrintSheet, withFloorShown, firstFloorRun, renderEvacuationMapCrop, drawGrid, drawSearchHighlight, drawCorridorLabelHighlights,
+  exportBlueprintAsPDF, renderBlueprintPrintSheet, withFloorShown, firstFloorRun, renderEvacuationMapCrop, renderLockdownMap, drawGrid, drawSearchHighlight, drawCorridorLabelHighlights,
   drawSelectionHighlight, drawMoveSourceHighlight, drawPairingSourceHighlight, roundRectStroke, drawTile,
   drawClassroomTile, isSameGroup, isGroupAnchor, getGroupBounds, getGroupCenterX, getGroupCenterY,
   getGroupPixelWidth, getGroupPixelHeight, getGroupBottomY, stampGroupLabel, stampAllGroupLabels, getClassroomDoors,

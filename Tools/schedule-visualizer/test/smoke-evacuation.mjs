@@ -21,6 +21,11 @@
 //     screen), the preview's page count matches Chromium's PDF, the school's
 //     plan from Settings prints as text, and with no exit marked the sheet
 //     says so; zero console errors and zero offsite requests
+//   - Path 11 P4 increments 2 and 3: "Lockdown Maps" previews one page per
+//     floor with a picture of each floor, the building's note from Settings
+//     and a room's note from its panel, as text, and nothing of its own;
+//     "Door Signs" previews two signs to a page, every teacher or the one
+//     chosen; each preview's page count matches Chromium's PDF
 //
 // Exits 1 on any failure.
 
@@ -216,6 +221,101 @@ const none = await page.evaluate(() => {
   return { exits: data.exitCount, text: document.getElementById('sf-print-sheet').textContent };
 });
 ok(none.exits === 0 && /No exterior exit is marked on the blueprint/.test(none.text), 'with no exit marked the sheet says so and guesses nothing');
+
+/* ── 9. Path 11 P4 increment 2: lockdown maps ─────────────────────────────── */
+// Preview, then its Print (print() stubbed), then Chromium's PDF of that print.
+async function previewAndPdf(button) {
+  await page.evaluate(() => { window.__printCalls = 0; window.print = () => { window.__printCalls++; }; });
+  await page.click(button);
+  await page.waitForSelector('dialog.pk-preview[data-pk-pages]', { timeout: 15000 });
+  const previewPages = Number(await page.getAttribute('dialog.pk-preview', 'data-pk-pages'));
+  await page.click('.pk-preview-print');
+  await page.waitForFunction(() => window.__printCalls > 0, null, { timeout: 15000 }).catch(() => {});
+  await settle(page, 200);
+  await page.emulateMedia({ media: null });
+  const pdfPages = (pdf => (pdf.match(/\/Type\s*\/Page[^s]/g) || []).length)((await page.pdf({ preferCSSPageSize: true })).toString('latin1'));
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  await settle(page, 200);
+  return { previewPages, pdfPages };
+}
+// A note typed in room 101's panel, and the building's in Settings, as a teacher would.
+await page.click('#tab-blueprint');
+await settle(page, 200);
+const at101 = await page.evaluate(() => roomRegistry.find(r => r.roomNumber === '101').cellCoordinates);
+await page.evaluate(({ col, row }) => { window.switchActiveFloor && window.switchActiveFloor(0); window.selectCell(col, row); }, at101);
+await settle(page, 200);
+await page.fill('#rp-lockdown-note', '  Blinds down <i>first</i>  ');
+await page.click('#rp-btn-save-room');
+await settle(page, 200);
+eq(await page.evaluate(({ col, row }) => AppState.blueprint.floors[0].gridData[row][col].lockdownNote, at101),
+  'Blinds down <i>first</i>', 'Save Room keeps the room\'s lockdown note, trimmed');
+const lk1 = await page.evaluate(() => {
+  window.SVSafety.buildLockdownMaps();
+  const sheet = document.getElementById('sf-print-sheet');
+  const pages = [...sheet.querySelectorAll('.lk-page')];
+  return {
+    floors: pages.map(p => p.querySelector('.lk-floor').textContent),
+    imgs: pages.map(p => (p.querySelector('.lk-map img') || {}).src || '').map(s => s.slice(0, 22)),
+    dt: [...sheet.querySelectorAll('.lk-room-notes dt')].map(d => d.textContent),
+    dd: [...sheet.querySelectorAll('.lk-room-notes dd')].map(d => d.textContent),
+    italic: !!sheet.querySelector('.lk-page i'),
+    lines: pages[0] ? pages[0].querySelectorAll('.lk-note .ev-line').length : -1,
+    text: sheet.textContent,
+  };
+});
+eq(lk1.floors.join(), 'Floor 1,Floor 2', 'one lockdown map per floor, in order');
+ok(lk1.imgs.every(s => s === 'data:image/png;base64,'), 'each floor\'s map is a picture of that floor, the one not on screen too');
+ok(lk1.dt.join() === 'Room 101' && lk1.dd[0] === 'Blinds down <i>first</i>' && !lk1.italic, 'the room\'s note prints beside its number, as text');
+eq(lk1.lines, 3, 'with no building note, three blank lines under its heading');
+ok(/No room on this floor has a note\./.test(lk1.text), 'a floor with no room notes says so');
+ok(!/shelter|hide|safe (?:corner|area)|lock the door/i.test(lk1.text), 'the map names no shelter area, hiding place or lock of its own');
+await page.click('#tab-settings');
+await settle(page, 200);
+await page.fill('#setting-lockdown-note', '  Follow the binder in each room.  ');
+await page.click('#btn-save-settings');
+await settle(page, 200);
+await page.click('#tab-blueprint');
+await settle(page, 200);
+const lkPages = await previewAndPdf('#btn-print-lockdown-maps');
+const lk2 = await page.evaluate(() => ({ saved: AppState.settings.lockdownNote,
+  notes: [...document.querySelectorAll('#sf-print-sheet .lk-note .ev-plan')].map(p => p.textContent) }));
+eq(lk2.saved, 'Follow the binder in each room.', 'Settings saves the building\'s note, trimmed');
+ok(lk2.notes.length === 2 && lk2.notes.every(n => n === lk2.saved), 'every floor\'s map prints the building\'s note');
+eq(lkPages.pdfPages, lkPages.previewPages, `the lockdown maps' preview count is Chromium's PDF count (${lkPages.previewPages})`);
+ok(lkPages.previewPages >= 2, 'at least a page a floor');
+ok(await page.evaluate(() => !document.body.classList.contains('sf-printing') && !document.querySelector('dialog[open]')), 'after printing the maps the print state is gone');
+
+/* ── 10. Path 11 P4 increment 3: door signs ────────────────────────────────── */
+const ds = await page.evaluate(() => {
+  const data = window.SVModel.doorSigns({ blueprint: AppState.blueprint, groups: AppState.schedules.groups, settings: AppState.settings });
+  const select = document.getElementById('door-sign-teacher');
+  window.SVSafety.fillDoorSignTeachers(select);
+  return { teachers: data.teachers.map(t => t.teacher), signs: data.signCount, untaught: data.untaught,
+    options: [...select.options].map(o => o.value) };
+});
+ok(ds.signs >= 2 && ds.teachers.length >= 2, `the fixture gives door signs for several teachers (${ds.signs} signs, ${ds.teachers.length} teachers)`);
+eq(ds.options.slice(1).join('|'), ds.teachers.join('|'), 'the "Door signs for" list names every teacher with a room');
+const dsAll = await previewAndPdf('#btn-print-door-signs');
+const dsSheet = await page.evaluate(() => {
+  const sheet = document.getElementById('sf-print-sheet');
+  const heads = [...sheet.querySelectorAll('.ds-sign:first-child .ds-table thead th')].map(h => h.textContent);
+  const timed = AppState.settings.bellSchedule && Array.isArray(AppState.settings.bellSchedule.A) && AppState.settings.bellSchedule.A.some(e => e && e.start && e.end);
+  return { heads, timed, signs: sheet.querySelectorAll('.ds-sign').length, grids: sheet.querySelectorAll('.pk-cards.pk-page').length,
+    first: sheet.querySelector('.ds-sign') && sheet.querySelector('.ds-sign').textContent };
+});
+eq(dsSheet.signs, ds.signs, 'every teacher\'s signs are on the sheet');
+ok(dsSheet.heads.includes('Time') === !!dsSheet.timed, `a Time column only when bell times are set (${dsSheet.heads.join('|')})`);
+eq(dsSheet.grids, Math.ceil(ds.signs / 2), 'two signs to a page, through the print kit\'s card grid');
+eq(dsAll.pdfPages, dsAll.previewPages, `the door signs' preview count is Chromium's PDF count (${dsAll.previewPages})`);
+eq(dsAll.previewPages, dsSheet.grids, 'and that is a page per two signs');
+ok(!/evacuat|lockdown|exit|assembly/i.test(dsSheet.first || ''), 'a door sign has no safety wording');
+const one = ds.teachers[0];
+await page.selectOption('#door-sign-teacher', one);
+const dsOne = await page.evaluate(() => {
+  const data = window.SVSafety.buildDoorSigns(document.getElementById('door-sign-teacher').value);
+  return { teachers: [...document.querySelectorAll('#sf-print-sheet .ds-teacher')].map(t => t.textContent), want: data.teachers[0].signs.length };
+});
+ok(dsOne.teachers.length === dsOne.want && dsOne.teachers.every(t => t === one), `choosing ${one} prints only their signs (${dsOne.teachers.length})`);
 
 eq(page.__errs.length, beforeErrs, 'no page/console errors while building the cards: ' +
    JSON.stringify(page.__errs.slice(beforeErrs, beforeErrs + 4)));

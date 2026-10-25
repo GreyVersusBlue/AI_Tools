@@ -78,6 +78,7 @@
     "test:schedule-visualizer-bridge": "node Tools/schedule-visualizer/test/bridge.test.mjs",
     "test:schedule-visualizer-step-free": "node Tools/schedule-visualizer/test/step-free.test.mjs",
     "test:schedule-visualizer-evac-cards": "node Tools/schedule-visualizer/test/evacuation-cards.test.mjs",
+    "test:schedule-visualizer-safety-sheets": "node Tools/schedule-visualizer/test/safety-sheets.test.mjs",
     "test:schedule-visualizer-step-free-ui": "node Tools/schedule-visualizer/test/smoke-step-free.mjs",
     "test:schedule-publish": "node Tools/schedule-visualizer/test/smoke-publish-baseline.mjs",
     "test:dbq-images": "node Tools/dbq-source-packet-builder/test/smoke-images.mjs",

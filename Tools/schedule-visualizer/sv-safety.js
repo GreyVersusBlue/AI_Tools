@@ -1,6 +1,7 @@
 // sv-safety.js — the School Layout Visualizer's safety printing
-// (Path 11 P4, BACKLOG.md "Path 11", the P4 bullet): increment 1, the
-// evacuation cards, one per room on every floor.
+// (Path 11 P4, BACKLOG.md "Path 11", the P4 bullet): the evacuation cards,
+// one per room on every floor (increment 1); the lockdown maps, one per floor
+// (increment 2); and the door-sign sets, per teacher (increment 3).
 //
 // The cards' content is sv-routes.js's pure evacuationCards(); this file only
 // lays it out and opens it in the shared print kit's preview, on the same
@@ -12,10 +13,15 @@
 // line under that label. Every typed value reaches the sheet through
 // textContent, never as markup.
 //
+// A lockdown map marks no shelter area, corner or lock: it is the plan, the
+// room numbers, and the school's notes (the building's in Settings, each
+// room's in its panel) or blank lines. A door sign is a timetable, with no
+// safety wording at all.
+//
 // Its browser check is test/smoke-evacuation.mjs (in npm run test:schedule-visualizer);
-// the content's is test/evacuation-cards.test.mjs.
+// the content's are test/evacuation-cards.test.mjs and test/safety-sheets.test.mjs.
 
-/* global AppState, floorLabelById, renderEvacuationMapCrop, showToast, TOOL_VERSION -- 035's classic-script state and sv-editor.js (PrintKit is a SITE_GLOBAL) */
+/* global AppState, floorLabelById, renderEvacuationMapCrop, renderLockdownMap, showToast, TOOL_VERSION -- 035's classic-script state and sv-editor.js (PrintKit is a SITE_GLOBAL) */
 
 import { el, asking, printSheet } from './sv-access.js';
 
@@ -163,3 +169,212 @@ export function openEvacuationCards(trigger) {
 }
 
 document.getElementById('btn-print-evacuation-cards')?.addEventListener('click', e => openEvacuationCards(e.currentTarget));
+
+/* ── Lockdown maps (increment 2) ─────────────────────────────────────── */
+
+/** The building's lockdown note, or '' (Settings → Safety printing). */
+export function buildingLockdownNote(settings) {
+  const v = settings && settings.lockdownNote;
+  return typeof v === 'string' ? v.trim() : '';
+}
+
+function sheetDate() {
+  return new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function footer(doc, cls, opts, what) {
+  return el(doc, 'p', cls, [what, opts.date, opts.version ? `School Layout Visualizer ${opts.version}` : '']
+    .filter(Boolean).join(' · '));
+}
+
+/**
+ * Fills `sheet` (emptied first) with one lockdown map per floor from
+ * sv-model.js's lockdownPages(). opts: { school, date, version, note,
+ * mapFor(page) → { src, alt } | null }.
+ */
+export function renderLockdownMaps(sheet, data, opts = {}) {
+  const doc = sheet.ownerDocument;
+  sheet.textContent = '';
+  if (!data.pages.length) {
+    sheet.appendChild(el(doc, 'h1', 'sf-title', 'Lockdown maps'));
+    sheet.appendChild(el(doc, 'p', 'sf-summary', 'The blueprint has no numbered rooms yet, so there is nothing to print.'));
+    return;
+  }
+  for (const page of data.pages) {
+    const box = el(doc, 'article', 'lk-page');
+    box.dataset.floor = page.floorId;
+    const head = el(doc, 'header', 'ev-head');
+    head.appendChild(el(doc, 'span', 'ev-school', opts.school || ''));
+    head.appendChild(el(doc, 'span', 'ev-kind', 'Lockdown map'));
+    box.appendChild(head);
+    box.appendChild(el(doc, 'h1', 'lk-floor', page.floorName));
+    const map = opts.mapFor ? opts.mapFor(page) : null;
+    if (map && map.src) {
+      const fig = el(doc, 'figure', 'lk-map');
+      const img = el(doc, 'img');
+      img.src = map.src;
+      img.alt = map.alt || `Plan of ${page.floorName} with every room's number`;
+      fig.appendChild(img);
+      box.appendChild(fig);
+    }
+    const sec = el(doc, 'section', 'lk-note');
+    sec.appendChild(el(doc, 'h2', 'ev-h2', 'Lockdown note for the building'));
+    if (opts.note) sec.appendChild(el(doc, 'p', 'ev-plan', opts.note));
+    else {
+      for (let i = 0; i < 3; i++) sec.appendChild(el(doc, 'div', 'ev-line'));
+    }
+    box.appendChild(sec);
+    const noted = page.rooms.filter(r => r.note);
+    const rooms = el(doc, 'section', 'lk-rooms');
+    rooms.appendChild(el(doc, 'h2', 'ev-h2', 'Notes for rooms on this floor'));
+    if (noted.length) {
+      const dl = el(doc, 'dl', 'lk-room-notes');
+      for (const r of noted) {
+        dl.appendChild(el(doc, 'dt', null, `Room ${r.room}`));
+        dl.appendChild(el(doc, 'dd', null, r.note));
+      }
+      rooms.appendChild(dl);
+    } else {
+      rooms.appendChild(el(doc, 'p', 'ev-note', 'No room on this floor has a note.'));
+    }
+    box.appendChild(rooms);
+    box.appendChild(footer(doc, 'ev-foot', opts, 'Drawn from the blueprint'));
+    sheet.appendChild(box);
+  }
+}
+
+/** Builds every floor's lockdown map from the page's blueprint into #sf-print-sheet. */
+export function buildLockdownMaps() {
+  const sheet = document.getElementById('sf-print-sheet');
+  const data = window.SVModel.lockdownPages(AppState.blueprint, { floorLabel: floorLabelById });
+  const floors = new Map((AppState.blueprint.floors || []).map(f => [f.id, f]));
+  renderLockdownMaps(sheet, data, {
+    school: AppState.settings.schoolName || '',
+    date: sheetDate(),
+    version: typeof TOOL_VERSION === 'string' ? TOOL_VERSION : '',
+    note: buildingLockdownNote(AppState.settings),
+    mapFor: page => {
+      const img = renderLockdownMap(page, floors.get(page.floorId));
+      return img ? { src: img.dataURL } : null;
+    },
+  });
+  return data;
+}
+
+/** The Blueprint sidebar's "Lockdown Maps" button: build, then preview with a Print button. */
+export function openLockdownMaps(trigger) {
+  buildLockdownMaps();
+  asking(true);
+  return PrintKit.preview({
+    area: document.getElementById('sf-print-sheet'), trigger, title: 'Lockdown maps',
+    onClose: () => asking(false),
+    onPrint: printSheet,
+  });
+}
+
+document.getElementById('btn-print-lockdown-maps')?.addEventListener('click', e => openLockdownMaps(e.currentTarget));
+
+/* ── Door-sign sets (increment 3) ────────────────────────────────────── */
+
+/** One door sign: the room, the teacher, the subject, and a table of mods per day. */
+function doorSignCard(doc, sign, opts) {
+  const card = el(doc, 'article', 'ds-sign');
+  card.dataset.room = sign.room;
+  const head = el(doc, 'header', 'ds-head');
+  head.appendChild(el(doc, 'span', 'ds-school', opts.school || ''));
+  if (sign.subject) head.appendChild(el(doc, 'span', 'ds-subject', sign.subject));
+  card.appendChild(head);
+  card.appendChild(el(doc, 'h1', 'ds-room', `Room ${sign.room}`));
+  card.appendChild(el(doc, 'p', 'ds-teacher', sign.teacher));
+  const days = el(doc, 'div', 'ds-days');
+  for (const day of sign.days) {
+    const t = el(doc, 'table', 'ds-table');
+    if (day.label) t.appendChild(el(doc, 'caption', null, day.label));
+    const timed = day.mods.some(m => m.time);   // no bell times set: no empty Time column
+    const thead = t.createTHead().insertRow();
+    for (const h of timed ? ['', 'Time', 'Group'] : ['', 'Group']) thead.appendChild(el(doc, 'th', null, h));
+    const body = t.createTBody();
+    for (const m of day.mods) {
+      const tr = body.insertRow();
+      tr.appendChild(el(doc, 'th', null, m.label));
+      if (timed) tr.appendChild(el(doc, 'td', null, m.time));
+      tr.appendChild(el(doc, 'td', m.groups.length ? null : 'ds-empty', m.groups.length ? m.groups.join(', ') : '—'));
+    }
+    days.appendChild(t);
+  }
+  card.appendChild(days);
+  card.appendChild(footer(doc, 'ds-foot', opts, 'From the schedule'));
+  return card;
+}
+
+/**
+ * Fills `sheet` (emptied first) with door signs, two to a letter page through
+ * PrintKit.renderCards, from sv-model.js's doorSigns(). opts: { teacher (one
+ * name, or '' for every teacher), school, date, version }.
+ */
+export function renderDoorSigns(sheet, data, opts = {}) {
+  const doc = sheet.ownerDocument;
+  sheet.textContent = '';
+  const sets = opts.teacher ? data.teachers.filter(t => t.teacher === opts.teacher) : data.teachers;
+  const signs = sets.flatMap(t => t.signs);
+  if (!signs.length) {
+    sheet.appendChild(el(doc, 'h1', 'sf-title', 'Door signs'));
+    sheet.appendChild(el(doc, 'p', 'sf-summary', data.teachers.length
+      ? 'That teacher has no room on the blueprint any more, so there is nothing to print.'
+      : 'No classroom on the blueprint has a teacher name, so there is nothing to print. Select a classroom and type its teacher, then print this again.'));
+    return;
+  }
+  const holder = el(doc, 'div', 'ds-set');
+  sheet.appendChild(holder);
+  PrintKit.renderCards(holder, signs, { cols: 1, perPage: 2 }, sign => doorSignCard(doc, sign, opts));
+}
+
+/** The "Door signs for" list: every teacher with a room, keeping the choice if it is still there. */
+export function fillDoorSignTeachers(select) {
+  if (!select) return;
+  const data = window.SVModel.doorSigns({ blueprint: AppState.blueprint, groups: AppState.schedules.groups, settings: AppState.settings });
+  const keep = select.value;
+  while (select.options.length > 1) select.remove(1);
+  for (const t of data.teachers) {
+    const o = document.createElement('option');
+    o.value = t.teacher;
+    o.textContent = `${t.teacher} (${t.signs.length} room${t.signs.length === 1 ? '' : 's'})`;
+    select.appendChild(o);
+  }
+  select.value = data.teachers.some(t => t.teacher === keep) ? keep : '';
+}
+
+/** Builds the chosen teacher's signs (or everyone's) into #sf-print-sheet. */
+export function buildDoorSigns(teacher) {
+  const sheet = document.getElementById('sf-print-sheet');
+  const data = window.SVModel.doorSigns({ blueprint: AppState.blueprint, groups: AppState.schedules.groups, settings: AppState.settings });
+  renderDoorSigns(sheet, data, {
+    teacher: teacher || '',
+    school: AppState.settings.schoolName || '',
+    date: sheetDate(),
+    version: typeof TOOL_VERSION === 'string' ? TOOL_VERSION : '',
+  });
+  return data;
+}
+
+/** The Blueprint sidebar's "Door Signs" button: build, then preview with a Print button. */
+export function openDoorSigns(trigger) {
+  const select = document.getElementById('door-sign-teacher');
+  const data = buildDoorSigns(select ? select.value : '');
+  if (data.untaught && typeof showToast === 'function') {
+    showToast(`${data.untaught} numbered room${data.untaught === 1 ? ' has' : 's have'} no teacher name, so no sign.`, 'info');
+  }
+  asking(true);
+  return PrintKit.preview({
+    area: document.getElementById('sf-print-sheet'), trigger, title: 'Door signs',
+    onClose: () => asking(false),
+    onPrint: printSheet,
+  });
+}
+
+{
+  const select = document.getElementById('door-sign-teacher');
+  // Filled when it is about to be used, so it follows the blueprint without a hook in the editor.
+  for (const type of ['focus', 'pointerdown']) select?.addEventListener(type, () => fillDoorSignTeachers(select));
+  document.getElementById('btn-print-door-signs')?.addEventListener('click', e => openDoorSigns(e.currentTarget));
+}

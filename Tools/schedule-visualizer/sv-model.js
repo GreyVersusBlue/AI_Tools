@@ -205,6 +205,109 @@ export function roomRegistryOf(blueprint) {
   return registry;
 }
 
+/* ── Safety printing (Path 11 P4, increments 2 and 3) ───────────────── */
+
+const byRoom = (a, b) => a.localeCompare(b, undefined, { numeric: true });
+
+/** A room's lockdown note as the school typed it (`tile.lockdownNote`), or ''. */
+export function lockdownNoteOf(tile) {
+  return tile && typeof tile.lockdownNote === 'string' ? tile.lockdownNote.trim() : '';
+}
+
+/**
+ * The lockdown maps' content: one page per floor that has a numbered room, in
+ * floor order, each room with the cells it covers (so its number can be drawn
+ * large over the whole room) and the school's own note for it. Nothing here is
+ * advice: a room without a note has `note: ''`, and no shelter area, corner or
+ * lock is worked out or marked.
+ *   → { pages: [{ floorId, floorName, rooms: [{ room, minCol, minRow, maxCol, maxRow, note }] }], roomCount }
+ */
+export function lockdownPages(blueprint, opts = {}) {
+  const floorLabel = opts.floorLabel || (id => id);
+  const pages = [];
+  let roomCount = 0;
+  for (const floor of (blueprint && blueprint.floors) || []) {
+    const grid = floor.gridData;
+    if (!grid) continue;
+    const cellsOf = new Map();                         // groupId → bounds
+    for (let r = 0; r < floor.gridRows; r++) {
+      for (let c = 0; c < floor.gridCols; c++) {
+        const t = grid[r] && grid[r][c];
+        if (!t || t.type !== 'classroom' || !t.groupId) continue;
+        const b = cellsOf.get(t.groupId);
+        if (!b) cellsOf.set(t.groupId, { minCol: c, minRow: r, maxCol: c, maxRow: r });
+        else {
+          b.minCol = Math.min(b.minCol, c); b.minRow = Math.min(b.minRow, r);
+          b.maxCol = Math.max(b.maxCol, c); b.maxRow = Math.max(b.maxRow, r);
+        }
+      }
+    }
+    const rooms = [];
+    for (let r = 0; r < floor.gridRows; r++) {
+      for (let c = 0; c < floor.gridCols; c++) {
+        const t = grid[r] && grid[r][c];
+        if (!t || t.type !== 'classroom' || !t.roomNumber || !String(t.roomNumber).trim()) continue;
+        const b = (t.groupId && cellsOf.get(t.groupId)) || { minCol: c, minRow: r, maxCol: c, maxRow: r };
+        rooms.push({ room: String(t.roomNumber).trim(), ...b, note: lockdownNoteOf(t) });
+      }
+    }
+    if (!rooms.length) continue;
+    rooms.sort((a, b) => byRoom(a.room, b.room));
+    roomCount += rooms.length;
+    pages.push({ floorId: floor.id, floorName: floorLabel(floor.id), rooms });
+  }
+  return { pages, roomCount };
+}
+
+/**
+ * The door-sign sets: per teacher (the name typed on a classroom, matched
+ * exactly), one sign for each room with that name on it, holding the room's
+ * subject and, for every mod, the groups the schedule puts in that room. A B
+ * day is shown only when some group has a B day of its own (modsB empty means
+ * "as A"). A room with no teacher typed gets no sign; `untaught` counts them.
+ * No safety wording: a door sign is a timetable.
+ *   → { teachers: [{ teacher, signs: [{ teacher, room, floorId, subject,
+ *        days: [{ day, label, mods: [{ mod, label, time, groups: [name] }] }] }] }],
+ *       signCount, untaught }
+ */
+export function doorSigns({ blueprint, groups, settings }) {
+  const registry = roomRegistryOf(blueprint || { floors: [] });
+  const subjects = new Map(((settings && settings.subjects) || []).map(s => [s.code, s.name || s.code]));
+  const labels = modLabels(settings);
+  const list = (groups || []).filter(g => g && typeof g.name === 'string');
+  const hasB = list.some(g => (g.modsB || []).some(Boolean));
+  const dayList = hasB ? [['A', 'A day'], ['B', 'B day']] : [['A', '']];
+  const byTeacher = new Map();
+  let untaught = 0;
+  for (const entry of registry) {
+    const teacher = entry.teacherName ? String(entry.teacherName).trim() : '';
+    if (!teacher) { untaught++; continue; }
+    const room = entry.roomNumber;
+    const days = dayList.map(([day, label]) => ({
+      day, label,
+      mods: labels.map((modName, i) => ({
+        mod: i + 1, label: modName,
+        time: formatModTime(settings, day, i),
+        groups: list.filter(g => {
+          const mods = day === 'B' && (g.modsB || []).some(Boolean) ? g.modsB : (g.modsA || g.mods || []);
+          return mods[i] === room;
+        }).map(g => g.name),
+      })),
+    }));
+    const sign = {
+      teacher, room, floorId: entry.floorId,
+      subject: entry.teacherDept ? (subjects.get(entry.teacherDept) || entry.teacherDept) : '',
+      days,
+    };
+    if (!byTeacher.has(teacher)) byTeacher.set(teacher, []);
+    byTeacher.get(teacher).push(sign);
+  }
+  const teachers = [...byTeacher.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([teacher, signs]) => ({ teacher, signs: signs.sort((a, b) => byRoom(a.room, b.room)) }));
+  return { teachers, signCount: teachers.reduce((n, t) => n + t.signs.length, 0), untaught };
+}
+
 /* ── Blueprint ──────────────────────────────────────────────────────── */
 
 /** Legacy staircasePairs format (['col,row','col,row']) for same-floor pairs on one floor. */

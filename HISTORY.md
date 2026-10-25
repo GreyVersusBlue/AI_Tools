@@ -9,6 +9,41 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P4 increments 2 and 3: lockdown maps and door signs; P4 is whole (2026-10-25, AI-20, `CACHE_VERSION` v328)
+
+BACKLOG rank 24 deleted (a gap, ranks not renumbered). Built to the P4 bullet's design; its four questions for Devon stay
+open on their defaults. Shares v328 with the id fix below (one bump for the session).
+
+- **What shipped.** The Blueprint sidebar's "Lockdown and door signs" section. **Lockdown Maps** previews one page per
+  floor that has a numbered room: the whole floor (`renderLockdownMap()` in `sv-editor.js`: `renderPlainFloor()` under
+  `withFloorShown()`, then each room's number in a white box sized to the room's cells), "Lockdown note for the
+  building" (Settings → Safety printing, `settings.lockdownNote`, 600 characters, blank removes the key) or three
+  blank lines under that heading, and "Notes for rooms on this floor": each room's own note (the room panel's new
+  "Lockdown note", `tile.lockdownNote` on the anchor, 300 characters) as typed, or "No room on this floor has a note."
+  **Door Signs** previews a half-page sign for each room with a teacher name, two to a page through
+  `PrintKit.renderCards(…, { cols: 1, perPage: 2 }, …)`, for every teacher or the one picked in "Door signs for": the
+  room, the teacher, the room's subject by its Settings name, and a table per day of each mod's label, bell time (the
+  column left out when no times are set) and the groups the schedule puts there. Content is pure: `lockdownPages()`
+  and `doorSigns()` in `sv-model.js`; layout in `sv-safety.js`, every typed value through `textContent`.
+- **Calls made, cheap to reverse.** (1) The map marks nothing but room numbers: no shelter area, corner or lock, as the
+  design says; the school's words are the only content beyond labels. (2) Room notes print as a list under the map,
+  not on it, so a long note cannot cover the plan. (3) A door sign's B day appears only when some group has a B list of
+  its own; then a group with none is shown where its A list puts it, which is how paths read it (the publisher reads
+  an empty B list as "no B day"; a sign is about the room, so the path rule is the one that matches the building).
+  (4) Teacher names match exactly, as P11-19 settled for the checks. (5) A room with no teacher gets no sign, and a
+  toast counts them.
+- **Checked.** `npm run test:schedule-visualizer-safety-sheets` (21, pure; five rules broken on purpose and seen to
+  fail: the room bounds walk, empty floors, the B-day switch, the B-day lists, grouping by teacher), `smoke-evacuation.mjs`
+  sections 9–10 (57 in all: notes typed through the room panel and Settings, a `<i>` in a note printed as text, a map
+  per floor including the one not on screen, both previews' page counts equal to Chromium's PDF, one teacher's signs
+  alone); `run-suites --only` schedule-visualizer (19) and schedule (23); a11y sweep and print audit for 035, clean;
+  lint and every guard, `check:publisher` unchanged; `offline:verify` passes 035 (046 still fails, unchanged). Both
+  sheets looked at as PDF pages rendered to PNG (Northwind). The size ledger's line rose 289,312 → 293,109 bytes for
+  the new markup. **What did not work first:** a mutation I wrote to prove the room-note rule was itself wrong (it
+  could never change the answer), so that claim is not in the suite's header.
+- **Not verified.** Either sheet on paper; a real building; a room two teachers share (a tile holds one name, so its
+  sign names one); the full `npm test`.
+
 ## 035's ids cannot collide: `groupId()` and four more id makers (2026-10-25, AI-20, `CACHE_VERSION` v328)
 
 `model.test.mjs`'s "groupId() gives 200 distinct grp_ ids" failed about one run in fifteen (seen by the Selector, then

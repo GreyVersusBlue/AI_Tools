@@ -421,6 +421,30 @@
             </div>
           </div>
 
+          <!-- Path 11 P4: lockdown maps and door signs, built by sv-safety.js -->
+          <div class="bp-sidebar-section">
+            <div class="bp-sidebar-label">Lockdown and door signs</div>
+            <button class="bp-icon-btn" id="btn-print-lockdown-maps" style="width:100%;justify-content:flex-start;padding:8px var(--sp-3);" title="One page per floor: the plan with every room's number large, the building's lockdown note and each room's own note.">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <path d="M3 9h18M9 21V9"/>
+              </svg>Lockdown Maps
+            </button>
+            <label class="bp-sidebar-label" for="door-sign-teacher" style="margin-top:var(--sp-2);display:block;">Door signs for</label>
+            <select id="door-sign-teacher" class="rp-input" style="width:100%;margin-bottom:var(--sp-2);">
+              <option value="">Every teacher</option>
+            </select>
+            <button class="bp-icon-btn" id="btn-print-door-signs" style="width:100%;justify-content:flex-start;padding:8px var(--sp-3);" title="A half-page sign for each room a teacher has: room number, teacher, subject and each mod's groups.">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2"/>
+                <path d="M9 7h6M9 11h6M9 15h4"/>
+              </svg>Door Signs
+            </button>
+            <div style="font-size:11px;color:var(--slate-400);line-height:1.5;margin-top:var(--sp-2);">
+              Lockdown maps print your notes as typed (Settings → Safety printing, and each room's panel) and mark nothing else. Door signs list a room's groups by mod from the Schedules tab; a room needs a teacher name to get one.
+            </div>
+          </div>
+
           <!-- Path 11 P3: step-free access -->
           <div class="bp-sidebar-section">
             <div class="bp-sidebar-label">Step-free access</div>
@@ -542,6 +566,13 @@
                   <span style="font-size:11px;color:var(--slate-400);line-height:1.4;display:block;margin-top:2px;">Multiple groups can share this room simultaneously without triggering a schedule conflict warning (e.g. a shared arts or resource room).</span>
                 </span>
               </label>
+            </div>
+
+            <!-- Path 11 P4: the school's own lockdown note for this room, printed on the lockdown map -->
+            <div class="rp-field" style="margin-top:var(--sp-3);">
+              <label class="rp-label" for="rp-lockdown-note">Lockdown note <span class="rp-label-opt">(optional)</span></label>
+              <textarea id="rp-lockdown-note" class="rp-input" rows="2" maxlength="300" aria-describedby="rp-lockdown-note-hint"></textarea>
+              <span id="rp-lockdown-note-hint" style="font-size:11px;color:var(--slate-400);line-height:1.4;display:block;margin-top:2px;">Printed as you type it beside this room on the lockdown map. Saved with Save Room.</span>
             </div>
 
             <div class="rp-section">
@@ -1874,6 +1905,15 @@
             </div>
             <div>
               <textarea id="setting-evac-no-step-free" class="form-control" rows="3" maxlength="600" style="width:100%;"></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-label-group">
+              <label class="form-label" for="setting-lockdown-note">Lockdown note for the building</label>
+              <p class="form-hint">Printed, in your words, on every lockdown map. Left blank, each map prints blank lines under this heading. The maps mark no shelter area of their own.</p>
+            </div>
+            <div>
+              <textarea id="setting-lockdown-note" class="form-control" rows="3" maxlength="600" style="width:100%;"></textarea>
             </div>
           </div>
         </div>
@@ -3781,6 +3821,7 @@ const els = {
   defaultGroupSizeInput: document.getElementById('setting-default-group-size'), // R59
   elevatorWaitInput: document.getElementById('setting-elevator-wait'),          // Path 11 P3
   evacPlanInput:    document.getElementById('setting-evac-no-step-free'),       // Path 11 P4
+  lockdownNoteInput: document.getElementById('setting-lockdown-note'),         // Path 11 P4
   modPreviewChips:  document.getElementById('mod-preview-chips'),
   headerSchoolName: document.getElementById('header-school-name'),
   headerModCount:   document.getElementById('header-mod-count'),
@@ -3817,6 +3858,7 @@ function populateSettingsForm() {
   if (els.defaultGroupSizeInput) els.defaultGroupSizeInput.value = AppState.settings.defaultGroupSize ?? 25;
   if (els.elevatorWaitInput) els.elevatorWaitInput.value = svGraph().settingsElevatorWait(AppState.settings);
   if (els.evacPlanInput) els.evacPlanInput.value = typeof AppState.settings.evacNoStepFreePlan === 'string' ? AppState.settings.evacNoStepFreePlan : '';
+  if (els.lockdownNoteInput) els.lockdownNoteInput.value = typeof AppState.settings.lockdownNote === 'string' ? AppState.settings.lockdownNote : '';
   renderBellScheduleEditor();
   renderSubjectsEditor();
 
@@ -3979,6 +4021,13 @@ els.btnSave.addEventListener('click', () => {
     if (plan) AppState.settings.evacNoStepFreePlan = plan;
     else delete AppState.settings.evacNoStepFreePlan;
     els.evacPlanInput.value = plan;
+  }
+  // Path 11 P4: the building's lockdown note, printed on every lockdown map; blank removes the key.
+  if (els.lockdownNoteInput) {
+    const note = els.lockdownNoteInput.value.trim().slice(0, 600);
+    if (note) AppState.settings.lockdownNote = note;
+    else delete AppState.settings.lockdownNote;
+    els.lockdownNoteInput.value = note;
   }
   saveSettings();
   saveLastSavedTime();
