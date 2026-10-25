@@ -426,9 +426,43 @@ export function nextGroupColor(groups, presets) {
   return `hsl(${hue}, 70%, 50%)`;
 }
 
-/** A new unique group id. */
-export function groupId() {
-  return 'grp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+/*
+ * A new id: prefix, the clock in base 36, four random base-36 characters and a
+ * four-character count of the ids this page has made. Before 2026-10-25 a group
+ * id was the clock and `Math.random().toString(36).slice(2, 6)` only, so ids
+ * made in the same millisecond (a CSV import, a project load, the bulk editor)
+ * shared their clock part and collided about one run in fifteen across 200 of
+ * them; the slice could also be shorter than four characters. The count makes
+ * two ids from one page differ whatever the clock and the random source do, and
+ * `taken` (ids, records with an `id`, or anything with `has()`) is checked so an
+ * id saved by an earlier visit is never handed out again. Ids already saved are
+ * read as they are: nothing parses one, and only uniqueness is promised.
+ */
+let idCount = 0;
+function takenIds(taken) {
+  if (!taken) return new Set();
+  if (typeof taken.has === 'function') return taken;
+  const ids = new Set();
+  for (const t of taken) {
+    if (typeof t === 'string') ids.add(t);
+    else if (t && t.id != null) ids.add(String(t.id));
+  }
+  return ids;
+}
+export function freshId(prefix, taken) {
+  const used = takenIds(taken);
+  for (;;) {
+    idCount = (idCount + 1) % 1679616;           // 36^4: always four characters
+    let rand = '';
+    for (let i = 0; i < 4; i++) rand += Math.floor(Math.random() * 36).toString(36);
+    const id = prefix + Date.now().toString(36) + rand + idCount.toString(36).padStart(4, '0');
+    if (!used.has(id)) return id;
+  }
+}
+
+/** A new group id no group in `taken` has (see freshId). */
+export function groupId(taken) {
+  return freshId('grp_', taken);
 }
 
 /** One group as the project file writes it (R59: size a positive integer or null). */

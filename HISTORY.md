@@ -9,6 +9,33 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## 035's ids cannot collide: `groupId()` and four more id makers (2026-10-25, AI-20, `CACHE_VERSION` v328)
+
+`model.test.mjs`'s "groupId() gives 200 distinct grp_ ids" failed about one run in fifteen (seen by the Selector, then
+1 in 23 in a 40-run loop). It was a real bug, not a test problem.
+
+- **Why.** A group id was `'grp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)`: the clock and
+  four random characters, checked against nothing. Ids made in one millisecond (a CSV import, the bulk editor, a
+  project load, the test's loop of 200) share the clock part, so 200 of them leave four base-36 characters to keep
+  apart, and the slice is shorter than four whenever the random number's base-36 form is short. Two groups with one id
+  are one group to every lookup by id (edit, delete, what-if overrides).
+- **What shipped.** `freshId(prefix, taken)` in `sv-model.js`: prefix, clock, four random characters drawn one at a
+  time (always four), and a four-character count of the ids this page has made, so two ids from one visit differ
+  whatever the clock and random source do; `taken` (ids, records with `id`, or anything with `has()`) is checked so an
+  id saved on an earlier visit is never handed out. `groupId(taken)` is `freshId('grp_', taken)`; the page's
+  `generateGroupId()` passes the current groups (a project load passes the list it is building). The same pattern was
+  in four more places, all now through `freshId` or a count: a floor's id (`floor_`, clock plus *three* random digits),
+  a classroom tile group in the editor (`grp_<ms>_…`, now checked against every tile group on every floor), the bulk
+  editor's row ids (`be_`, random only) and a recovery point's id in `sv-recovery.js` (a count appended; a repeat id
+  would have overwritten the earlier point in IndexedDB). Saved ids are read as they are: nothing parses an id.
+- **The test.** It stubs `Date.now` and `Math.random` (constant 0.5, 0, just under 1) and asks for 200 ids; the old
+  function returns one id 200 times, so the test fails on it every run (checked: five runs against the old module, five
+  failures), and passes 50 of 50 on the new. A `taken` whose `has()` refuses the first five ids proves the check.
+- **Checked.** `test:schedule-visualizer-model` 50 runs, `run-suites --only` schedule-visualizer (18) and schedule
+  (22), lint, `check:publisher` (unchanged), `check:precache --base origin/main`. The size ledger's line rose 289,290 →
+  289,312 bytes. **Not verified:** a browser drive of a CSV import of many groups (covered only by the suites that
+  already import).
+
 ## Path 11 P4 designed, increment 1: evacuation cards (2026-10-25, AI-20, `CACHE_VERSION` v327)
 
 BACKLOG rank 24 kept and rewritten (lockdown maps and door-sign sets left). P4 had no design; it is in the P4 bullet now,

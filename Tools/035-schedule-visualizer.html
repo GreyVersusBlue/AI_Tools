@@ -2678,7 +2678,7 @@ function computeScheduleConflicts(day) {
   return svModel().scheduleConflicts(AppState.schedules.groups, day, { registry: roomRegistry, labels: getAllModLabels() });
 }
 function getNextGroupColor() { return svModel().nextGroupColor(AppState.schedules.groups, GROUP_COLOR_PRESETS); }
-function generateGroupId() { return svModel().groupId(); }
+function generateGroupId(taken) { return svModel().groupId(taken || AppState.schedules.groups); }
 
 /* The pathfinding engine (Rounds 7, 8 and 31) is schedule-visualizer/sv-graph.js,
    on window.SVGraph. Its graph cache is created on first use, so nothing here
@@ -3369,7 +3369,7 @@ document.getElementById('btn-clear-saved-groups')?.addEventListener('click', () 
 /* ── Round 31: FloorManager — blueprint floor tabs ───────────────── */
 const FloorManager = {
   generateFloorId() {
-    return 'floor_' + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36);
+    return svModel().freshId('floor_', AppState.blueprint.floors);
   },
 
   addFloor() {
@@ -4734,7 +4734,7 @@ function applyFullProject(data) {
   for (const raw of rawGroups) {
     if (!raw || typeof raw !== 'object' || typeof raw.name !== 'string' || !raw.name.trim()) continue;
     cleanGroups.push({
-      id:    generateGroupId(),
+      id:    generateGroupId(cleanGroups),
       name:  raw.name.trim(),
       grade: (raw.grade !== undefined && raw.grade !== null && raw.grade !== '') ? (Number(raw.grade) || null) : null,
       color: raw.color || getNextGroupColor(),

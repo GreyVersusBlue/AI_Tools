@@ -1202,7 +1202,7 @@ const AUTO_COLORS_BE = [
 ];
 
 function uid_be() {
-  return 'be_' + Math.random().toString(36).slice(2, 10);
+  return window.SVModel.freshId('be_', beState.groups);
 }
 
 function initBulkEditor() {

@@ -1794,6 +1794,18 @@ function eraseClassroomGroup(groupId) {
   scheduleBlueprintAutosave();
 }
 
+/** Every classroom tile group id on every floor, so a new one is never one of them. */
+function blueprintTileGroupIds() {
+  const ids = new Set();
+  const grids = [AppState.blueprint.gridData, ...(AppState.blueprint.floors || []).map(f => f.gridData)];
+  for (const grid of grids) {
+    for (const row of grid || []) {
+      for (const t of row || []) if (t && t.groupId) ids.add(t.groupId);
+    }
+  }
+  return ids;
+}
+
 /**
  * Place a multi-cell classroom group from (col1,row1) to (col2,row2).
  * All cells share a groupId; only (minCol,minRow) carries the room data.
@@ -1803,7 +1815,7 @@ function placeClassroomGroup(col1, row1, col2, row2) {
   const minRow = Math.min(row1, row2), maxRow = Math.max(row1, row2);
 
   // Generate a unique group ID
-  const groupId = `grp_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  const groupId = window.SVModel.freshId('grp_', blueprintTileGroupIds());
 
   beginAction();
   for (let r = minRow; r <= maxRow; r++) {

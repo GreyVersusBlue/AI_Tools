@@ -35,8 +35,37 @@ for (const c of CASES) {
 check(Object.keys(golden).length === CASES.length, `every golden case is run (${Object.keys(golden).length} in the file, ${CASES.length} cases)`);
 
 // What the golden file cannot pin: a fresh id each call, and in the page's shape.
-const ids = new Set(Array.from({ length: 200 }, () => M.groupId()));
-check(ids.size === 200 && [...ids].every(id => /^grp_[0-9a-z]+$/.test(id)), 'groupId() gives 200 distinct grp_ ids');
+// The clock and the random source are stubbed, because the old id (clock plus
+// four random characters) collided only when 200 calls shared a millisecond and
+// a random draw, about one run in fifteen. With both held still it hands out the
+// same id 200 times, every run; an id maker that is unique by construction does not
+// care what they return.
+function withStubs(clock, rand, fn) {
+  const now = Date.now, random = Math.random;
+  Date.now = clock; Math.random = rand;
+  try { return fn(); } finally { Date.now = now; Math.random = random; }
+}
+const SHAPE = /^grp_[0-9a-z]+$/;
+for (const [label, rand] of [['a constant random source', () => 0.5], ['a random source of 0', () => 0], ['a random source just under 1', () => 0.9999999999]]) {
+  const ids = withStubs(() => 1792963800000, rand, () => new Set(Array.from({ length: 200 }, () => M.groupId())));
+  check(ids.size === 200 && [...ids].every(id => SHAPE.test(id)), `groupId() gives 200 distinct grp_ ids with a still clock and ${label}`);
+}
+const real = new Set(Array.from({ length: 2000 }, () => M.groupId()));
+check(real.size === 2000 && [...real].every(id => SHAPE.test(id)), 'groupId() gives 2000 distinct grp_ ids on the real clock and random source');
+// An id already taken is never handed out: the first five candidates are refused.
+{
+  const asked = [];
+  const taken = { has(id) { asked.push(id); return asked.length <= 5; } };
+  const id = M.groupId(taken);
+  check(asked.length === 6 && id === asked[5] && new Set(asked).size === 6, 'groupId(taken) skips every id taken already and returns the first free one');
+}
+// taken may be the groups themselves, plain ids, or a mix with junk in it.
+{
+  const groups = [{ id: 'grp_old1' }, 'grp_old2', null, { name: 'no id' }];
+  const id = M.groupId(groups);
+  check(SHAPE.test(id) && id !== 'grp_old1' && id !== 'grp_old2', 'groupId(groups) reads records with an id, plain ids and junk alike');
+}
+check(/^floor_[0-9a-z]+$/.test(M.freshId('floor_', [])) && /^be_[0-9a-z]+$/.test(M.freshId('be_')), 'freshId keeps the prefix it is given');
 // The module must not reach for page state.
 const src = fs.readFileSync(path.join(HERE, '..', 'sv-model.js'), 'utf8').replace(/\/\/.*$|\/\*[\s\S]*?\*\//gm, '');
 for (const name of ['AppState', 'document', 'window', 'localStorage', 'roomRegistry'])
