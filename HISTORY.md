@@ -9,6 +9,40 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P3 designed, increment 1: step-free routes and report (2026-10-25, AI-20, `CACHE_VERSION` v325)
+
+BACKLOG rank 23 kept and rewritten: the P3 bullet had no design, so one was written into it first (marking, weights,
+the no-route sentence, the report, three increments, five questions for Devon), then increment 1 was built.
+
+- **What shipped.** A staircase pair may be `access: 'elevator' | 'ramp'`, an elevator `outOfService` and its own
+  `wait`. `buildGraph(bp, { stepFree: true })` drops stairs pairs and every stair tile that is not an elevator or ramp
+  end, and charges an elevator its wait (10 cells); `resolveRoomPath()` then says "No step-free route between these
+  rooms". `stepFreeReport()` judges every room from the marked exits. 035: the staircase panel's "What this pair is",
+  Visualize's "Step-free routes" switch, and the Blueprint sidebar's "Step-free Report" (new `sv-access.js`, through
+  `PrintKit.preview()`). 035 now links the print kit (adoption row 14 → 15). Page 278,920 → 283,223 bytes.
+- **Found while writing the design: door cards and elevators.** The evacuation door cards routed on the ordinary graph,
+  where a marked elevator is still the 0-cost link it was as a pair, so marking one would have printed "Take the
+  elevator" on a fire card. They now route on `{ evacuation: true }`, which leaves every elevator out. Nothing was ever
+  printed that way: the marking and the card wording arrived in the same version.
+- **Calls made, cheap to reverse.** A stair tile is steps even when drawn in a corridor (Northwind draws them at the
+  ends; a corridor drawn through one is cut on the step-free graph, which shows up as stairs-only rooms in the report).
+  Marking changes nothing about ordinary routes. With no exit marked the report judges nothing rather than guessing a
+  front door. A room no route reaches, stairs included, is listed apart as "not connected" (a blueprint problem, or an
+  elevator out of service). Which needs besides wheelchair access, the wait, and the per-student sheets are the P3
+  bullet's questions; only the step-free need is built.
+- **What did not work first.** The browser check expected floor 2 to be "stairs only" with Northwind's only pair
+  marked as an elevator out of service; with that pair gone nothing reaches floor 2 at all, so the right answer is
+  "not connected", and the summary sentence now names an elevator out of service as a cause. The step-free test's first
+  "broken on purpose" claim (drop the stairs teleport) did not break it, because the stair-tile rule also stops that
+  route; the claim was rewritten to say either rule alone suffices, and both were removed together to see it fail.
+- **Checks.** `test:schedule-visualizer-step-free` (44, every rule broken on purpose), `-step-free-ui` (31, port 8553;
+  routeGraph() broken on purpose failed two), `run-suites --only` schedule-visualizer (17), schedule (21),
+  schedule-browser (4), theme (3); the 11 guards and `check:publisher` (unchanged), `check:precache --base origin/main`,
+  `check:adoption --check`, lint, the a11y sweep and `audit-print` for 035, `test:select-suites`, `offline:verify` for
+  035 (046 still fails, unchanged). Not run: full `npm test`. Not verified: the sheet on paper, a real building.
+- **Tidy.** README's and `select-suites.mjs`'s last mentions of the folded `Tools/schedule/` name
+  `Tools/schedule-visualizer/`.
+
 ## Path 11 P2 increments 10–11 and the folder fold: P2 is whole (2026-10-25, AI-20, `CACHE_VERSION` v324)
 
 BACKLOG rank 22 DELETED (a gap; ranks not renumbered): the last two rungs of the P2 bullet's eleven, and the fold the
