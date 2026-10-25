@@ -71,6 +71,7 @@
     "test:schedule-visualizer-size": "node Tools/schedule-visualizer/test/size.test.mjs",
     "test:schedule-visualizer-model": "node Tools/schedule-visualizer/test/model.test.mjs",
     "test:schedule-visualizer-graph": "node Tools/schedule-visualizer/test/graph.test.mjs",
+    "test:schedule-visualizer-routes": "node Tools/schedule-visualizer/test/routes.test.mjs",
     "test:schedule-visualizer-bridge": "node Tools/schedule-visualizer/test/bridge.test.mjs",
     "test:schedule-publish": "node Tools/schedule/test/smoke-publish-baseline.mjs",
     "test:dbq-images": "node Tools/dbq-source-packet-builder/test/smoke-images.mjs",
