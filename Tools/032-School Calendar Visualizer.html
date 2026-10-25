@@ -140,12 +140,14 @@
   .bell-assign { display: grid; grid-template-columns: max-content minmax(0, 260px); gap: 6px 12px; align-items: center; font-size: 0.85rem; }
   .bell-status { font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
   .drawer-bell { font-size: 0.82rem; }
+  .drawer-others { font-size: 0.82rem; margin: 2px 0 0; padding-left: 1.2em; }
   .drawer-bell ol { margin: 4px 0 0; padding-left: 1.4em; }
   .day .unit-bars {
     position: absolute; left: 0; right: 0; bottom: 0; display: flex;
     flex-direction: column; gap: 1px; pointer-events: none;
   }
-  .day .unit-bar { height: 3px; }
+  .day .unit-bar, .day .unit-gap { height: 3px; flex: none; }
+  .day .unit-bars.many .unit-bar, .day .unit-bars.many .unit-gap { height: 2px; }
   .day .unit-tag {
     position: absolute; left: 2px; bottom: 3px; font-size: 0.56rem; font-weight: 700;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(100% - 4px);
@@ -544,6 +546,7 @@
       with the A lessons and one on B days with the B lessons, each with its own bumps, so a lesson that needs another day moves one
       track only. You see what would change first.</p>
       <p>Each course is one prep's plan, with its own lessons, bumps and lost days; the calendar shows the course picked above. A course that meets on A days only counts A days as its class days. In a day's editor, <em>This lesson needs another day</em> puts an empty class day in front of that lesson and stays with it; <em>This class didn't meet</em> takes that date away from this course only (an assembly), whatever lesson was planned. When a change moves lessons, a bar at the top says what moved and offers Undo.</p>
+      <p>Every other course's units show as thin coloured bands along the bottom of each day, one row a course in the order of the tabs, so you can see where your preps' units line up; hover a band for its course and unit, or open the day for every course's plan in words.</p>
       <p>Each course says how many class days it is behind its plan, or ahead of it, and why: the plan is the dates as they stood when you first gave the course its lessons or units, kept up to date while you are still planning and held fixed from its first class day, until you press <em>Make this the plan</em>. Behind is counted in that course's class days, so an A-day course is behind in A days.</p>
     </details>
     <textarea id="paceInput" rows="6" placeholder="U1-01-A-Early Islamic Expansion&#10;U1-01-B-Early Islamic Expansion&#10;U1-02-A-Geographic Factors in Early Islamic Expansion&#10;…"></textarea>
@@ -793,6 +796,7 @@ function renderMonths() {
   const startDate = new Date(cal.meta.start + "T00:00:00");
   const endDate = new Date(cal.meta.end + "T00:00:00");
   const abMap = buildAbMap();
+  const lanes = otherCourseLanes();
 
   list.forEach(({ y, m }) => {
     const monthEl = document.createElement("div");
@@ -856,15 +860,20 @@ function renderMonths() {
       // they cover, with the unit's name labeled only on its first day —
       // a full label on every cell would drown out everything else in a
       // 58px-tall box.
+      // Other courses add one lane each below the active course's bands; a lane with no
+      // unit on this day is an empty gap, so lanes line up across a week. Only one name
+      // fits on a cell: the active course's first, and "+N" when more units start here.
       const activeUnits = unitsForDate(dateISO);
-      const unitBars = activeUnits.length
-        ? `<div class="unit-bars">${activeUnits.map(u =>
-            `<span class="unit-bar" style="background:${u.color}" title="${escapeAttr((u.name || "Unit") + " (" + fmtShort(u.start) + "–" + fmtShort(u.end) + ")")}"></span>`
-          ).join("")}</div>`
+      const laneUnits = lanes.map(l => l.spans.find(u => dateISO >= u.start && dateISO <= u.end) || null);
+      const barOf = u => `<span class="unit-bar" style="background:${u.color}" title="${escapeAttr((u.course && lanes.length ? u.course + ": " : "") + (u.name || "Unit") + " (" + fmtShort(u.start) + "–" + fmtShort(u.end) + ")")}"></span>`;
+      const unitBars = activeUnits.length || laneUnits.some(Boolean)
+        ? `<div class="unit-bars${lanes.length > 3 ? " many" : ""}">${activeUnits.map(barOf).join("")}${laneUnits.map(u => u ? barOf(u) : `<span class="unit-gap"></span>`).join("")}</div>`
         : "";
-      const unitStartHere = activeUnits.find(u => u.start === dateISO);
+      const startsHere = activeUnits.concat(laneUnits.filter(Boolean)).filter(u => u.start === dateISO);
+      const unitStartHere = startsHere[0];
+      const tagName = u => (u.course && lanes.length ? u.course + ": " : "") + (u.name || "Unit");
       const unitTag = unitStartHere
-        ? `<span class="unit-tag" style="color:${unitStartHere.color}" title="${escapeAttr(unitStartHere.name || "Unit")}">${escapeHtml(unitStartHere.name || "Unit")}</span>`
+        ? `<span class="unit-tag" style="color:${unitStartHere.color}" title="${escapeAttr(startsHere.map(tagName).join("; "))}">${escapeHtml(unitStartHere.name || "Unit")}${startsHere.length > 1 ? " +" + (startsHere.length - 1) : ""}</span>`
         : "";
       cell.innerHTML = `<span class="num">${d}</span>${abBadge}${chips}${label}${paced}${bumpNotes}${lesson}${unitBars}${unitTag}`;
       cell.addEventListener("click", (e) => {
@@ -1238,6 +1247,27 @@ function openDrawer(dateISO) {
   renderMonths();
 }
 
+/** What every other course has on a date, read-only: the words behind the bands the month
+    grid draws for them (Path 9 P2's last page piece), so a band's course and unit are not
+    only in a hover title. Empty with one course. */
+function otherCoursesHtml(dateISO, course) {
+  if (!course || planState() !== "ok") return "";
+  const rows = cal.plan.courses.filter(c => c.id !== course.id && placements[c.id]).map(c => {
+    const p = placements[c.id];
+    const slot = p.slots && p.slots[dateISO];
+    const unit = slot && slot.unitId ? (c.units || []).find(u => u.id === slot.unitId) : null;
+    let what;
+    if ((c.lost || []).some(x => x.date === dateISO)) what = "didn't meet";
+    else if (slot && slot.kind === "lesson") what = (p.byDate[dateISO] ? p.byDate[dateISO].raw : "a lesson") + (unit ? " (" + unit.name + ")" : "");
+    else if (slot && slot.kind === "gap") what = "the extra day before a lesson" + (unit ? " (" + unit.name + ")" : "");
+    else if (slot && unit) what = unit.name + " — class day " + slot.n + " of " + slot.of + (slot.half ? " ½" : "");
+    else if (p.classDates.includes(dateISO)) what = "nothing planned";
+    else what = "no class";
+    return `<li><b>${escapeHtml(c.name)}</b>: ${escapeHtml(what)}</li>`;
+  });
+  return rows.length ? `<label class="f">Other courses</label><ul class="drawer-others">${rows.join("")}</ul>` : "";
+}
+
 /** The pacing section of the day editor, for the active course: what lesson landed here,
     and the two actions Path 9 P2 tells apart. "This lesson needs another day" is the bump
     as it always was (one empty class day before the lesson, anchored to it). "This class
@@ -1277,6 +1307,7 @@ function renderDrawerPacing(dateISO) {
     html += `<label class="f">${escapeHtml(course.name)} didn't meet</label><div class="drawer-lost">${escapeHtml(lost.reason || "(no reason given)")}
       <button id="drawerUnlost" class="small" type="button">It met after all</button></div>`;
   }
+  html += otherCoursesHtml(dateISO, course);
   el.innerHTML = html;
   if (lost) {
     document.getElementById("drawerUnlost").addEventListener("click", () => {
@@ -1644,10 +1675,25 @@ function unitsForDate(dateISO) {
 function typedUnitSpans() {
   const course = activeCourse();
   if (!course || course.lessons.length || !placement) return [];
+  return unitSpansOf(course, placement);
+}
+function unitSpansOf(course, p) {
   return course.units.map((u, i) => {
-    const st = (placement.units || []).find(x => x.id === u.id);
-    return st && st.start ? { name: u.name, color: u.color || UNIT_COLORS[i % UNIT_COLORS.length], start: st.start, end: st.end } : null;
+    const st = (p.units || []).find(x => x.id === u.id);
+    return st && st.start ? { name: u.name, color: u.color || UNIT_COLORS[i % UNIT_COLORS.length], start: st.start, end: st.end, course: course.name } : null;
   }).filter(Boolean);
+}
+/** Every other course's units as bands, one lane a course in the plan's order, so a
+    course's band sits at the same height on every day (Path 9 P2's last page piece). The
+    active course is drawn as it was (its lessons in the cells, or its bands when it is
+    typed), so a one-course calendar is unchanged. A lesson course's units run from its
+    unit's first placed lesson to its last. */
+function otherCourseLanes() {
+  const course = activeCourse();
+  if (!course || planState() !== "ok") return [];
+  return cal.plan.courses.filter(c => c.id !== course.id && placements[c.id])
+    .map(c => ({ course: c, spans: unitSpansOf(c, placements[c.id]) }))
+    .filter(l => l.spans.length);
 }
 
 function renderUnits() {
