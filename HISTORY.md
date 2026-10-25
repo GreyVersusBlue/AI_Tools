@@ -9,6 +9,49 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P3 increment 1: 004 and 010 read the school-year spine (2026-10-25, AI-18, `CACHE_VERSION` v314)
+
+BACKLOG rank 14 kept and rewritten (now 1): 001, 036/037 and 044/045 are left. The P3 design, per consumer, is in its bullet.
+
+- **What changed for a teacher.** *004 Classroom Timer*: with 032's calendar saved on the device, the Countdown card has a
+  **Rest of this period** button and a line beside it ("B day. Period 2 ends at 9:40 AM (40 min left)."); the button sets
+  the card's own "Count down to a specific time" to the period's end and starts. It is off in a passing time, before or
+  after the day, on a day with no schedule and on a day with no school, and the line says which. A half day reads its own
+  schedule. *010 Command Center*: the strip names the day ("B day", "No school: Labor Day") and, on a day 032 has a
+  schedule for, runs 032's periods: the period, minutes left, the next one, the roster switch and the seating panel's
+  memory. The Bell Schedule panel shows today's schedule from the calendar above the page's own rows, with "Use the School
+  Calendar's bell times" to turn that off; the Today panel adds the letter and the schedule's name.
+- **Calls made.** (1) *004's row is made by script and only while a calendar exists*, so a teacher without one has the card
+  byte for byte as before and `golden-single-view.json` holds unchanged. (2) *004 goes through the "until" setting* rather
+  than a new kind of countdown, so the end time shows in the card and survives a reload the way "until" always did; it
+  does leave "until" ticked afterwards, as a teacher who ticked it by hand would. (3) *004 offers nothing in a passing
+  time* (no "until the next period starts"): the row says when the next period starts, and the button is about the
+  period in front of the class. (4) *010 keeps its own rows* (they predate 032's schedules and hold the roster mapping):
+  032 wins on a day it has a schedule for; the rows run on a day it has none for (no calendar, a school day without a
+  schedule, outside the year); a weekend or closed day runs no period at all, even where the rows would. (5) *A calendar
+  period borrows a page row's roster and id by name* (trimmed, any case), so "Period 2" in 032 brings up the roster
+  mapped to a row called "period 2"; with no such row the period has no roster, and its seating memory is kept under
+  `cal:<name>`. (6) *010's switch is one optional settings field*, `bellSource: 'page'` when unticked, absent otherwise,
+  so a saved settings blob from before reads as "use the calendar". (7) *The day in words is one function*,
+  `SchoolDay.describe()` (with `typeLabel()`), so 004, 010 and every later consumer say a day the same way: the letter,
+  the day's types in legend order, then the day's own name; a closed day by its own name, else its type's. (8) *032's
+  "multi-course pacing side by side" is counted done* by v313's lanes and the day editor's "Other courses"; nothing more
+  is planned for it in P3. Reverse by adding it back to rank 14.
+- **Checks.** `npm run test:school-day` 145 checks, 35 breaks (4 new for `describe`/`typeLabel`), two zones. New `npm run
+  test:school-day-consumers` (`smoke-consumers.mjs`, Chromium, port 8546): 45 checks (004 with no calendar, a B day, a
+  half day, a passing time, a closed day, another tab's save, the button's "until" and the running timer; 010's strip,
+  panels, roster by name, closed day, no schedule, the switch, another tab's save; neither page writes the calendar; axe
+  on the new parts) and 10 breaks of the pages and `school-day.js` altered on the wire, each caught; also green under
+  `TZ=UTC`. `run-suites --only` classroom-timer 4 green (the single-view golden included), command-center 2, school-calendar
+  13, service-worker 3, tool-registry 1; the a11y sweep on 004 and 010 clean; `test:theme` 966; lint; every guard,
+  `check:precache --base origin/main` and `check:adoption --check` (`school-day.js` 4).
+- **What did not work.** The first axe pass on 004 failed colour contrast: it scanned after the button was pressed, when a
+  running timer dims the whole settings panel to half opacity (as it always has). The scan now runs before the press; the
+  dimmed panel is unchanged and not this row's to fix.
+- **Not verified.** Neither page has been used in a real period; the minute-by-minute refresh was checked with a fixed
+  clock, not across a real bell; 010's roster switch was checked on load, not at a bell during the day; nothing was read
+  by a screen reader. 004's mirror and the timer board do not show the row.
+
 ## Path 9 P2 finished: unit bands for every course (2026-10-24, AI-18, `CACHE_VERSION` v313)
 
 BACKLOG rank 13 deleted: Path 9 P2 is whole (increments 1–4 in v309–v312, this piece in v313). A gap, ranks not renumbered,

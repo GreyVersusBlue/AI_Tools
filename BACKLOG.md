@@ -87,6 +87,11 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-18 (v314), rank 14 (kept, rewritten, now 1), Path 9 P3 increment 1: 004 and 010 read the school-year spine.** 004's
+  Countdown card has "Rest of this period" while 032 has a calendar on the device; 010's strip, Bell Schedule and Today
+  panels follow 032's schedule for today, its own rows the fallback and a same-named row lending its roster. Both read
+  through `SchoolDay` only (`typeLabel()` and `describe()` are new) and write nothing of 032's. New `npm run
+  test:school-day-consumers` (port 8546). **Left of P3: 001, 036/037, 044/045. Next free suite port: 8547.**
 - **AI-18 (v313), rank 13 (DELETED: Path 9 P2 is whole; a gap, ranks not renumbered): unit bands for every course.**
   032's month grid draws each other course's units as a lane of thin bands under the shown course's (which draws as
   before), "+N" when several units start on a day, and the day editor lists every other course's day in words. New `npm
@@ -445,7 +450,7 @@ directly by Devon. World Language, now 8 tools. Its translator is hand-checked, 
 | Inline markup sinks | **434** across the 54 pages that take link input (`check:inline-sinks` baseline) |
 | Accessibility allowlist | **0**. The sweep scans 89 pages (index and 88 tools) empty and 48 of them again seeded (`Tools/a11y-sweep/seeds.mjs`) |
 | Tool registry | 89 rows, **220 keys and 32 prefixes across 122 files** (`check:registry`); **54** key/prefix entries carry `student: true` (a grep for `{ k:`/`{ p:` lines with the flag; the 49 this cell used to say came from an unwritten rule) |
-| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `student-flags.js` 5 · `theme.css` 5 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `school-day.js` 2 · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
+| Shared-file adoption (of 89) | `sw-register.js` 87 · `a11y.css` 86 · `a11y.js` 86 · `ink-paper.css` 78 · `base.css` 72 · `qr-draw.js` 60 · `share.js` 55 · `state-link.js` 55 · `store.js` 40 · `roster.js` 34 · `print-area.css` 31 · `export.js` 15 · `media-db.js` 15 · `print-kit.css` 13 · `print-kit.js` 13 · `stage.js` 11 · `tool-registry.js` 11 · `qr-scan.js` 10 · `webrtc-pair.js` 8 · `handoffs.js` 7 · `student-flags.js` 5 · `theme.css` 5 · `school-day.js` 4 · `countdown.js` 3 · `question-bank.js` 3 · `restore-kit.js` 3 · `backup-crypto.js` 1 · `gvb-save.js` 1 (+1 via a module) · `seating-read.js` 1 · `student-details.js` 1 (+1 via a module) |
 | Printing | 78 tools call `window.print()`; 55 tool pages contain `@media print` (`grep -lE '@media\s+print' Tools/[0-9]*.html`, 2026-10-05, after 017 and 016 lost theirs; the 55 this cell said was counted some other way, not written down). `path7:next`: 4 pages with a finding (015, 042, 046, 064, all fixed-size on purpose), TAIL 0, 0 not measured, 10 with no print path, 0 blank sheets, 4 print buttons that open a panel or dialog instead of printing (015 ×3, 044) |
 | Tools | 88 (`001`–`088`); next free number **089** |
 | Tier 1 rows | **169**, contiguous (counted 2026-10-05; the 170 this cell said before P3's row went was one too many). Path 21 is finished; per-tool rows start at rank **78**; 160–168 are Path 22 P6–P14 |
@@ -583,7 +588,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 11 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 14 | Path 9 P3 — consumers: 004, 010, 001, 036/037, 044/045, 032 itself | site | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
+| 14 | Path 9 P3 — consumers left: 001, 036/037, 044/045 (004 and 010 built in v314; 032's own side by side counted done by v313's lanes) | site | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 15 | Path 9 P4 — `.ics` import/export and a one-page year wall calendar print | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 16 | Path 10 P1 — Packet Builder `087` with the section-provider registry | 087 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 17 | Path 10 P2 — 045 re-based on the providers; its six raw key reads go away. **Then give 045 the share sheet** — the last tool Path 6 P3 left, held back only so its payload is not re-shaped the week after it ships; follow the P3 working notes in the Path 6 section | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
@@ -3306,6 +3311,30 @@ fixed unit dates; the valuable half (a unit defined by instructional days that
   the long-range report; 036/037: grading window from the calendar; 044/045: "is
   tomorrow a grading deadline" and today's lesson code pre-filled; 032 itself:
   multi-course pacing side by side.
+  **Increment 1 built (AI-18, v314, `npm run test:school-day-consumers`): 004 and 010.** The design, per consumer. Every
+  consumer loads `_shared/school-day.js`, reads with `SchoolDay.read(localStorage)`, and **writes nothing of 032's**
+  (P9-10: 032 owns the schedules); `null` is "no calendar" and the page is what it was. A day is put in words only by
+  `SchoolDay.describe(cal, day)` ("B day · Half Day / Early Dismissal", "No school: Labor Day"); do not write another.
+  - *004 (built).* `today(cal, now).at`. A "Rest of this period" row in the Countdown card, **made only while a calendar is
+    saved** (so `golden-single-view.json` holds without one): the button counts to the period's end through the card's
+    own "until" setting and is on only while a period is in progress; beside it the day and the period in words, or why
+    not (passing time, before or after the day, no schedule, no school). Refreshed every 15 s and on another tab's save.
+  - *010 (built).* `today()` once a minute, `describe()`. 032's schedule for today drives the strip, the Bell Schedule panel
+    (a read-only list at the top, current marked) and the bell's roster switch; the page's own rows are the times on a day
+    032 has none for (no calendar, no schedule, outside its year), and a row with the same name (trimmed, any case) lends a
+    calendar period its roster and its seating memory. A weekend or closed day runs no period, even where the rows would.
+    "Use the School Calendar's bell times" (on; off is `settings.bellSource: 'page'`) puts the rows back in charge every
+    day. The Today panel adds the letter and the schedule's name.
+  - *001 (next).* `periodAt(cal, tripDate, tripTime)` at display time, never stored (the calendar can change after a trip;
+    the trip's time is the fact): a Period column in the log and the long-range report grouped by period; a trip on a day
+    with no schedule shows "—".
+  - *036/037 (next).* `gradingPeriodOf(cal, today)` and `daysRemaining()` fill "remaining quarter" (days left, half days
+    named beside it, P9-1), the field still typeable; no calendar, the manual input as now.
+  - *044/045 (next).* "Is tomorrow a grading deadline": the next school day after today (by `dayOf`) is a `gradingPeriods()`
+    end. Today's lesson code comes from P2's stamped dates on the record, through a new read function in `school-day.js`
+    with pure-Node tests; a consumer never runs the placer.
+  - *032 itself: counted done.* v313's lanes of bands for every course and the day editor's "Other courses" are the
+    side-by-side view; nothing more is planned for it here (`HISTORY.md`, v314).
 - **P4 — Calendar import/export.** `.ics` import (district calendars are published
   as ICS) and pasted-table import replacing the hard-coded 2026–27 preset that
   expires; `.ics` export of the pacing. A one-page year wall calendar print.
