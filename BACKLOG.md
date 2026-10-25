@@ -87,6 +87,13 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-20 (v323), rank 22 (kept, 2+), Path 11 P2 increments 7–9 of 11.** 035's Schedule Browser and its publisher are
+  `schedule-visualizer/sv-browser.js` and its Visualize tab (canvas, controls, congestion dock, export, playback bar) is
+  `sv-viz.js`, both moved verbatim with their exports copied onto `window`; the page is 522,868 bytes (from 722,664).
+  `check:publisher` follows the page's module imports, with its output unchanged and the publish baseline matching with no
+  `--update`; `check:precache` follows module imports site-wide; the offline copy ships `sv-browser.js` unbundled so its
+  Publish is source text (`offline:verify` checks it). **Next: P2 increment 10, `sv-editor.js` (the blueprint editor and
+  the door cards) with a new `smoke-editor.mjs`. The next free suite port is still 8552.**
 - **AI-20 (v322), rank 22 (kept, 2+), Path 11 P2 increments 5–6 of 11.** 035's congestion arithmetic (congestion and
   hotspot data, travel and delay times, the what-if lab's metrics and diff) is `schedule-visualizer/sv-congestion.js`,
   and its playback renderer (one animated frame, the collision simulation, the staircase portal effects) is
@@ -637,7 +644,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 22 | Path 11 P2 — extract the pure engines; target the HTML at about 270 KB (Devon, P11-7). **Increments 1–6 of 11 built (AI-20, v320–v322): `sv.css`, `sv-model.js`, `sv-graph.js`, `sv-routes.js`, `sv-congestion.js` and `sv-playback.js` behind a `BRIDGE` section; the page is 722,664 bytes (from 974,675), held by `size-ledger.json`, about 23 KB above the ladder's 699 KB because `PlaybackController` and the travel-time panel stayed (they are the DOM: take them with `sv-viz.js`). Left: increments 7–11 as the P2 bullet's ladder lays them out, starting with `sv-browser.js` (the publisher, with `check:publisher`'s `sources`); then `check-precache` following `import`, `sv-viz.js`, `sv-editor.js`, and `sv-whatif.js`/`sv-schedules-tab.js` with the folder fold last** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 22 | Path 11 P2 — extract the pure engines; target the HTML at about 270 KB (Devon, P11-7). **Increments 1–9 of 11 built (AI-20, v320–v323): `sv.css`, `sv-model.js`, `sv-graph.js`, `sv-routes.js`, `sv-congestion.js`, `sv-playback.js` behind a `BRIDGE` section; `sv-browser.js` (the publisher, which `check:publisher` now follows) and `sv-viz.js` (the Visualize tab), both copied onto `window`; `check:precache` follows module imports (increment 8). The page is 522,868 bytes (from 974,675), held by `size-ledger.json`, about 5 KB above the ladder's 518 KB. Left: increment 10, `sv-editor.js` (the blueprint editor with the tile-drawing helpers and the evacuation door cards, about 113 KB + 35 KB) and its new `smoke-editor.mjs` (port 8552); increment 11, `sv-whatif.js` and `sv-schedules-tab.js`, then the fold of `Tools/schedule/` into `Tools/schedule-visualizer/`, last** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 23 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
@@ -4168,8 +4175,41 @@ a real pathfinder that the published browser never exposes.
     for a segment that uses any staircase, and the module keeps that. Both suites compare with golden files written by
     the **v321 page's own functions** run in `vm` (a scratch script, not committed); the playback golden records every
     method call and property set a frame makes on a recording 2D context, as a count and a hash per frame, with the
-    page's `floorOffsetY` and `offsetPolyline` replaced by the same stand-ins on both sides. *Next: increment 7*,
-    `sv-browser.js`.
+    page's `floorOffsetY` and `offsetPolyline` replaced by the same stand-ins on both sides.
+    *Increments 7–9 (AI-20, 2026-10-25, v323, one bump for the three):* `sv-browser.js` (86,424 bytes: the whole "ROUND 41:
+    SCHEDULE BROWSER JS" script, verbatim, with an `export { … }` list of its 49 functions and 15 constants at the end) and
+    `sv-viz.js` (120,082 bytes: "ROUND 9 — PATH VISUALIZATION MODULE" and "ROUND 30 — PLAYBACK ENGINE", 53 functions and 8
+    constants, `PlaybackController` among them, four dead locals dropped). The page went **722,664 → 639,357 → 522,868
+    bytes** (the ladder said 623 and 518 KB). **Against the design:** neither module is pure or takes a `ctx` object. Both
+    are views moved as they were: they read 035's classic-script globals at call time (a module sees a classic script's
+    top-level declarations, and may assign its `let`s), listed in `/* global */` comments, and the page's module script
+    does `Object.assign(window, SVBrowser)` and `(window, SVViz)`, which is the global surface the classic script had, so
+    the markup's `onclick`s, the page's bare calls and the suites' `window.brBuildPublishedHTML()` are untouched. No
+    `SVBrowser.load(data)`, no `createPlayback({ now, raf })`. `AppState.viz` and the six canvas `let`s stay on the page,
+    because the what-if lab swaps `vizCtx` and `ctx` to draw its diff map off screen. `bridge.test.mjs` counts every
+    window-copied export as a wrapper, so a parse-time call to one fails (a bare `toggleApp();` added on purpose did).
+    **The publisher guard** reads every module the module script imports (`moduleSources()`), with `export`ed
+    declarations as declarations; its output is unchanged (35 pieces; 034 21 same, 12 forked, 2 absent) and
+    `test:schedule-publish` matches the committed baseline with no `--update`. Its test now edits the module; two breaks
+    are PARSE where they were LIST and STRICT (a module is strict, so a second declaration or a duplicate parameter is a
+    syntax error, which is earlier and stronger), and three cases are new (the page read without its modules is SHAPE;
+    `export` in front of a listed function changes nothing; the page declaring a name the module declares is LIST). The
+    baseline suite's four `page.route()` breaks of 035 now land in whichever file holds their text, exactly once.
+    **Increment 8** is `check:precache`: MISSING follows every module a live page's `<script type="module">` imports
+    through each module's own imports (static, `export … from`, `import('…')`), naming the importer, and SHELLDEP counts a
+    shell page's static imports as eager. The tree passed unchanged; dropping `sv-browser.js`, 046's `bmg-colors.js`
+    (reached only through `bmg-labels.js`) or 032's `scv-pacing.js` from a scratch `sw.js` failed by name, where the old
+    guard found nothing. **Held by:** all 18 `--only schedule` suites, `test:theme`, `test:csv-adopters`,
+    `test:pairing-qr`, the a11y sweep and `audit-print --only 035`; a browser A/B of increment 9 against the page before it
+    (scratch, seeded `Math.random`) gave identical canvas pixels, panel text and stats in all four display modes, the PNG
+    export, three playback steps and the what-if diff map. **Found:** unseeded, the page differs from itself in "all" mode,
+    because rows tied on time are ordered by random group ids (not a regression; not fixed). **The offline copy:**
+    `make-offline-copy` bundles module scripts with esbuild, which reprints code, so after increment 7 the offline copy's
+    Publish wrote esbuild's text (the file worked; it was not the source). It now ships `sv-browser.js` as the classic
+    deferred script it was before v323 (`unbundleScheduleBrowser()`), and `offline:verify` checks that all 28 published
+    functions are their source text on the offline 035. `offline:verify` still fails 046 (`Invalid URL`), unchanged.
+    **Not verified:** a full `npm test`; a real Publish emailed and opened on a phone; the Visualize tab driven by hand.
+    *Next: increment 10*, `sv-editor.js`.
 - **P3 — Accessibility routing.** Wheelchair/elevator-weighted routes over the
   existing graph, per-student route sheets, and "which rooms can't be reached
   without stairs" as a printable report — the notes call this "a real legal and

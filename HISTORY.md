@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P2 increments 7–9: 035's publisher and Visualize tab out of the page, `check:precache` follows imports (2026-10-25, AI-20, `CACHE_VERSION` v323)
+
+BACKLOG rank 22 kept (2+), its text rewritten: increments 7, 8 and 9 of the eleven in the P2 bullet's ladder.
+
+- **What moved.** `Tools/schedule-visualizer/sv-browser.js` (the whole embedded Schedule Browser script: `BR_CSS`, the
+  data derivation, the views, the geometry map, the legacy map and the publisher) and `sv-viz.js` (the Visualize tab: its
+  canvas, controls, congestion dock and pulse, tooltip, PNG/PDF export, path health check, `PlaybackController` and the
+  travel-time panel). Both verbatim, each with an `export { … }` list at its end, which the page's module script copies
+  onto `window`. The page went **722,664 → 639,357 → 522,868 bytes**.
+- **The publisher guard.** `check:publisher` reads every module the page's module script imports (`moduleSources()`,
+  exported for its test and the baseline suite) and treats `export function` / `export const` as declarations. Its report
+  is unchanged and `test:schedule-publish` matches `baseline-northwind.html` with no `--update`, which is P1's
+  "regenerate and diff" doing what it was built for. `check-publisher.test.mjs` edits the module now; three cases are new
+  and two expectations moved (below).
+- **Increment 8.** `check:precache`'s MISSING follows module imports from every live page, through modules' own
+  imports, and SHELLDEP counts a shell page's static imports. Nothing in the tree was missing. Each break on purpose (in a
+  scratch `sw.js`) failed by name; with the old guard, dropping `sv-browser.js` gave no finding at all.
+- **Calls made.** (1) Three rungs: 7, 8 and 9. Increment 10 (the editor, with a new browser suite) is a session of its
+  own. (2) One bump, v323, for the three. (3) **Neither new module is pure, against the design**: they are views, so they
+  read 035's classic-script globals at call time, named in `/* global */` comments (the writable ones marked), and are
+  reached through `Object.assign(window, …)`, which keeps every old global name working with no wrappers. The design's
+  `SVBrowser.load(data)`, the `ctx` object for `sv-viz.js` and `createPlayback({ now, raf })` were not built. (4) Module
+  `let`s are not exported (a copy on `window` would go stale); nothing outside each file read them. (5) `AppState.viz` and
+  the six canvas `let`s stay on the page, because the what-if lab swaps `vizCtx` and `ctx`. (6) Two expectations in
+  `check-publisher.test.mjs` changed: a listed function declared twice and a duplicate parameter are PARSE now, not LIST
+  and STRICT. A module is strict, so both are syntax errors there. That failure is earlier and stronger, and LIST still
+  covers a name the page and the module both declare (a new case). (7) Four unused locals in `sv-viz.js` (`maxCount`,
+  `cellSizeBase`, `cellSize`, `logicalScale`) were dropped once lint saw them. Each initialiser had no side effect.
+- **Found, and fixed.** The offline copy bundles module scripts with esbuild, and esbuild reprints code, so after
+  increment 7 a Publish from the offline copy `.toString()`ed esbuild's text. The file worked (opened from `file://`;
+  teacher, group and map views drew; no errors) but did not match the site's. `make-offline-copy.mjs` now ships
+  `sv-browser.js` unbundled, as the classic deferred script it was before v323, and `verify-offline-copy.mjs` checks
+  that all 28 published functions are their source text on the offline 035. Re-run after the fix: it passes, and a
+  Publish from the unzipped copy has `brRenderTeacher` byte-equal to the baseline's.
+- **Found, not fixed.** Unseeded, 035's Visualize tab in "all" mode differs from itself between loads. Rows tied on
+  time are ordered by group id, which is random (`grp_` + `Math.random`). It is older than this change; the A/B seeded
+  `Math.random` on both sides to compare.
+- **What did not work, and what was not verified.** The first A/B run stalled on the onboarding modal (`stviz_onboarded`
+  was not set), and the first export probe compared a string of an object. Both fixed in the scratch script, which is not
+  kept. A full `npm test` was not run. Run green: the eleven guards plus `check:publisher`, `check:precache --base
+  origin/main`, `check:adoption --check`, lint, `test:check-publisher` (78), `test:select-suites` (92), the 18 `--only
+  schedule` suites (twice), `--only theme`, `smoke-csv-adopters`, `smoke-pairing-qr`, the a11y sweep `--only 035` and
+  `audit-print --only 035`. `offline:build` OK. `offline:verify` passes 035, including the new check, and fails 046
+  (`Uncaught TypeError: Failed to construct 'URL': Invalid URL`) as it did before; this change does not reach 046. No
+  suite port was taken; the next free is still 8552.
+
 ## Path 11 P2 increments 5–6: 035's congestion arithmetic and playback renderer out of the page (2026-10-25, AI-20, `CACHE_VERSION` v322)
 
 BACKLOG rank 22 kept (2+), its text rewritten: increments 5 and 6 of the eleven in the P2 bullet's ladder.
