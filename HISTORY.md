@@ -9,6 +9,62 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P6 designed, increment 1: a published copy opens a newer schedule file (2026-10-25, AI-20, `CACHE_VERSION` v332)
+
+**Designed** in the P6 bullet of `BACKLOG.md`'s Path 11: three increments, each behind its own box in 035's new
+Settings → Publishing, all off by default, so a file published after P6 shows staff the default view it always did
+unless the publisher chooses otherwise; the pieces are published either way (one publisher for `check:publisher` to
+read), hidden. 034 is not touched (its own page for good, P11 question 1); P6's pieces go in the ledger's `absent`.
+Increment 2 is directions (two optional geometry fields, no `FORMAT` bump, a published tile search held to
+`sv-graph.js`), increment 3 a sub plan from the schedule alone. Five questions for Devon end the bullet; the build
+takes their defaults (all boxes off; a newer format is refused; copied text, not a link, for the sub plan's return).
+
+**Built, increment 1.** `settings.publishCanOpen` (the key is absent when the box is off). A published file now
+carries `brCheckSchedule`, `brReadSchedule`, `brUseSchedule`, `brPickScheduleFile` and `brOpenScheduleFile`, the
+value `BR_READS_FORMAT = 1`, `let brData = PUBLISHED_DATA;` in the preamble, one CSS rule (`.br-open-note` and its
+link), and in the markup an "Open a newer schedule…" button, a file input and a status note, all `hidden` unless the
+box was ticked. `brCheckStaleness()` now reads `brData` instead of `PUBLISHED_DATA` and clears the banner before
+deciding, so it can run again after a swap.
+
+**What changed in the published output, exactly.** The committed `baseline-northwind.html` was regenerated with
+`--update` in the build commit and moved by those bytes and nothing else (60,588 → 66,648 bytes, +108 −2 lines:
+the two removed lines are `brCheckStaleness`'s `typeof PUBLISHED_DATA` test and its read of
+`PUBLISHED_DATA.publishedOn`). The data section is byte-identical: same keys, `format: 1`, `tool: 'v62'`. A ticked
+publish differs from the default in one line (the button's ` hidden`), which the suite asserts.
+`TOOL_VERSION` stays v62: the data format did not change and the footnote's version names the writer of the data.
+That is a call, made here: a v62 file published today has an opener a v62 file published yesterday lacks.
+
+**The reader's rules.** It accepts a file whose one line starts `const PUBLISHED_DATA = ` (two such lines is not a
+schedule) or text starting `{`. A format above `BR_READS_FORMAT` gets "made by a newer version… Ask for a new copy of
+the schedule browser" and the schedule showing does not change: P11 question 4's default was "nothing is built",
+which stopped being possible once a reader existed, so the smallest safe reading (refuse) was taken and is P6
+question 2. `brCheckSchedule()` is a subset of the contract's hard rules (types and shapes the views read, no
+cross-references) plus one rule the contract does not have: **any `<` or `>` in a loaded file is refused**, because
+`brRenderMenu()` and `brDayRows()` write names and slots into markup unescaped. Breaking that check on purpose made a
+teacher named `<img src=x onerror=…>` fire its handler in the published page, which is the evidence it is needed. The
+file's own embedded data is not put through the check (it was published by the tool).
+
+**Guards.** `check:publisher`'s DATA fails when `BR_READS_FORMAT` is missing (with FREE, since the reader names it)
+or is not `FORMAT`; `test:check-publisher` 78 → 81 (counts updated, one new check, two new breaks). `test:schedule-publish` is 53
+checks, with a rewritten coverage walk (40 pieces, the opener driven by name with a file chooser) and a new section:
+the default copy hides it all; a ticked copy shows the button; seven refusals (format 2, not a schedule, two data
+lines, broken JSON, a teacher with no B list, a name holding markup, no mod count) each leave the masthead and title
+alone; an older Southgate file opens with its own title, initial, note and stale banner and resets to an empty By
+Teacher; Back restores the file's own schedule with no banner; v61's format-0 Northwind data opens and shows
+Fernwood's day exactly as the file's own data does. Both breaks of the reader (format check off, `<` check off) were
+made on purpose and failed the suite. Size ledger: 035 is 295,289 bytes (the Settings section), line raised from
+293,511; still under 300 KB.
+
+**Ran green:** lint; all thirteen `check:*` guards (`check:precache --base origin/main`); `test:check-publisher` (81);
+`test:schedule-publish` (53); every pure 035 suite; the browser suites of 035 and 034 one by one (smoke, recovery,
+evacuation, trace-image, print, editor, step-free, bell-from-calendar, checks, mode-tabs, dark-theme, personal-notes,
+substitute-view); `run-suites --only theme` (3, 966 checks); a11y sweep `--only 035` (0 findings); `test:select-suites`
+(93); `offline:build` + `offline:verify` (035 passes, "all 33 published functions are their source text"; 046 still
+fails with `Invalid URL`, unchanged and not touched). **Not run:** full `npm test`; `audit-print` (no print CSS
+changed; the note is not hidden in print, on purpose, so a printed loaded schedule names its school). **Not
+verified:** a real second building's file; opening a file on a phone or under a school's file-picker restrictions; the
+note in the dark palette (the rule uses the `--br-` tokens the dark theme sets).
+
 ## Path 11 P5 increment 3: 035's suggestions, Fix… and "Try in What-If" (2026-10-25, AI-20, `CACHE_VERSION` v331)
 
 BACKLOG rank 25 kept and cut to ½: only increment 2 is left, and it waits on Devon (the P5 bullet's "A question for

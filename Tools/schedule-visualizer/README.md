@@ -131,6 +131,20 @@ unpublished legacy map calls it), publishes a school named `</script><b>`,
 publishes at 23:30 in Los Angeles, and breaks 035 itself on the way in with
 `page.route()`, each break named by its own section.
 
+Since v332 (Path 11 P6 increment 1) a published file can open a newer one.
+Settings → Publishing → "Published copies can open a newer schedule file"
+(`settings.publishCanOpen`, off by default) shows an "Open a newer schedule…"
+button in the files Publish makes; off, the button, its file input and the note
+are still in the file, hidden, so the default view is what it was. The reader
+is published: `brReadSchedule()` takes the one `const PUBLISHED_DATA = ` line
+out of a published file (or reads a bare data `.json`), refuses a format above
+`BR_READS_FORMAT` (which `check:publisher` holds equal to the contract's
+`FORMAT`), and `brCheckSchedule()` refuses a file whose shapes the views cannot
+read or whose text holds `<` or `>`; `brUseSchedule()` swaps the tables, the
+masthead and the stale banner (which reads `brData`, the schedule showing),
+until Back or the tab closes. Nothing is stored. The suite drives it by name in
+the coverage walk and by its button in a ticked copy.
+
 `npm run check:publisher` reads 035's publisher as text and fails on a listed
 function that is not one top-level declaration, a free name, a construct that
 is not strict, a handler or element id the published file lacks, a preamble
