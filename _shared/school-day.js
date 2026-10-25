@@ -260,6 +260,34 @@
 
   function scheduleFor(cal, iso, opts) { return dayOf(cal, iso, opts).schedule; }
 
+  /** A day type's label, or '' when the calendar has no type with that id. */
+  function typeLabel(cal, id) {
+    if (!isCalendar(cal)) return '';
+    for (var i = 0; i < cal.dayTypes.length; i++) {
+      var t = cal.dayTypes[i];
+      if (isObj(t) && t.id === id) return text(t.label);
+    }
+    return '';
+  }
+
+  /** dayOf()'s result in a few words, the one wording every page that shows the day uses
+      (Path 9 P3): 'B day · Half Day / Early Dismissal', 'No school: Labor Day' (the day's
+      own name, else its type's), 'No school (weekend)', 'Outside the school year', or
+      'A school day' when nothing is tagged and the cycle is off. '' for no calendar. */
+  function describe(cal, day) {
+    if (!isCalendar(cal) || !isObj(day) || !isIso(day.date) || day.why === 'invalid') return '';
+    var entry = isObj(cal.days[day.date]) ? cal.days[day.date] : {};
+    var name = text(entry.label);
+    if (day.why === 'outside') return 'Outside the school year';
+    if (day.why === 'weekend') return 'No school (weekend)';
+    if (day.why === 'closed') return 'No school: ' + (name || typeLabel(cal, day.closedBy) || 'closed');
+    var parts = [];
+    if (day.letter) parts.push(day.letter + ' day');
+    (day.types || []).forEach(function (id) { var l = typeLabel(cal, id); if (l) parts.push(l); });
+    if (name) parts.push(name);
+    return parts.length ? parts.join(' \u00b7 ') : 'A school day';
+  }
+
   /** Where `hm` ('HH:MM') falls in the day's schedule. Returns
       { state, period, index, next, minutesLeft, minutesUntil, day }, state one of
       'noschool' (not a school day), 'noschedule' (a school day with no periods),
@@ -485,6 +513,8 @@
     cleanBell: cleanBell,
     dayOf: dayOf,
     scheduleFor: scheduleFor,
+    typeLabel: typeLabel,
+    describe: describe,
     periodAt: periodAt,
     today: today,
     gradingPeriods: gradingPeriods,

@@ -100,6 +100,7 @@
     "test:school-calendar-plan-behind": "node Tools/school-calendar/test/smoke-plan-behind.mjs",
     "test:school-calendar-plan-buffers": "node Tools/school-calendar/test/smoke-plan-buffers.mjs",
     "test:school-calendar-plan-bands": "node Tools/school-calendar/test/smoke-plan-bands.mjs",
+    "test:school-day-consumers": "node Tools/school-calendar/test/smoke-consumers.mjs",
     "test:layout-bell-from-calendar": "node Tools/schedule-visualizer/test/smoke-bell-from-calendar.mjs",
     "test:image-to-pdf": "node Tools/image-to-pdf/test/smoke.mjs && node Tools/image-to-pdf/test/smoke-enhance.mjs && node Tools/image-to-pdf/test/smoke-portfolio.mjs",
     "test:manipulatives": "node Tools/virtual-manipulatives-board/test/smoke-boards.mjs && node Tools/virtual-manipulatives-board/test/smoke-snap-grid.mjs && node Tools/virtual-manipulatives-board/test/smoke-rendered-pieces.mjs",

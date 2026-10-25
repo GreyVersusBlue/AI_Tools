@@ -747,6 +747,74 @@ function initCountdownPanel() {
   });
 }
 
+/* "Rest of this period" (Path 9 P3). The bell schedule is 032 School Calendar's,
+   read through _shared/school-day.js (window.SchoolDay, a classic script the page
+   loads before this module) and nothing else; this page never writes it. The row
+   is made only while a calendar is saved on the device, so without one the
+   Countdown card is the markup it always was. The button counts down to the end
+   of the period in progress, through the card's own "until" setting, and works
+   only while a period is in progress; the line beside it says why when it does not.
+   A half day reads its own schedule, because school-day.js picks it. */
+function clockWords(hm) {
+  const [h, m] = hm.split(':').map(Number);
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function periodOffer(now) {
+  const SD = window.SchoolDay;
+  const cal = SD ? SD.read(localStorage) : null;
+  if (!cal) return null;
+  const t = SD.today(cal, now || new Date());
+  const at = t.at;
+  let note = '';
+  if (at.state === 'in') note = `${at.period.label} ends at ${clockWords(at.period.end)} (${at.minutesLeft} min left).`;
+  else if (at.state === 'between') note = `Passing time. ${at.next.label} starts at ${clockWords(at.next.start)}.`;
+  else if (at.state === 'before') note = `School starts at ${clockWords(at.next.start)} (${at.next.label}).`;
+  else if (at.state === 'after') note = 'The last period has ended.';
+  else if (at.state === 'noschedule') note = 'No bell schedule for today in the School Calendar.';
+  const day = SD.describe(cal, t.day);
+  return { can: at.state === 'in', end: at.state === 'in' ? at.period.end : null, text: note ? `${day}. ${note}` : `${day}.` };
+}
+
+function renderPeriodOffer() {
+  const o = periodOffer();
+  let row = document.getElementById('cdPeriodRow');
+  if (!o) { if (row) row.remove(); return; }
+  if (!row) {
+    row = document.createElement('div');
+    row.id = 'cdPeriodRow';
+    row.className = 'period-offer';
+    row.innerHTML = '<button type="button" id="cdRestOfPeriod" aria-describedby="cdPeriodNote">Rest of this period</button>' +
+      '<span id="cdPeriodNote" class="period-note"></span>';
+    els.cdUntilToggle.closest('.checkbox-row').before(row);
+    row.querySelector('#cdRestOfPeriod').addEventListener('click', startRestOfPeriod);
+  }
+  row.querySelector('#cdRestOfPeriod').disabled = !o.can;
+  row.querySelector('#cdPeriodNote').textContent = o.text;
+}
+
+function startRestOfPeriod() {
+  const o = periodOffer();
+  renderPeriodOffer();
+  if (!o || !o.can || mode !== 'countdown') return;
+  if (phase.status !== 'idle' && phase.status !== 'done') return;
+  prefs = save({ countdown: { ...prefs.countdown, untilEnabled: true, untilTime: o.end } });
+  els.cdUntilToggle.checked = true;
+  els.cdUntilTime.value = o.end;
+  refreshCountdownUntilUI();
+  resetPhaseForMode();
+  onStart();
+}
+
+function initPeriodOffer() {
+  renderPeriodOffer();
+  setInterval(renderPeriodOffer, 15000);
+  window.addEventListener('storage', (e) => {
+    if (e.key === null || (window.SchoolDay && e.key === window.SchoolDay.KEY)) renderPeriodOffer();
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) renderPeriodOffer(); });
+}
+
 function initTransitionPanel() {
   els.trMinutes.value = prefs.transition.minutes;
   els.trSeconds.value = prefs.transition.seconds;
@@ -1120,6 +1188,7 @@ function init() {
   const restored = tryRestoreRunning();
   initTabs();
   initCountdownPanel();
+  initPeriodOffer();
   initTransitionPanel();
   initRandomPanel();
   initStopwatchPanel();

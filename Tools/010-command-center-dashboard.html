@@ -24,6 +24,7 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/stage.js"></script>
 <script src="../_shared/countdown.js"></script>
+<script src="../_shared/school-day.js"></script>
 <script src="../_shared/tool-registry.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/store.js"></script>
@@ -72,6 +73,7 @@
   }
   .now-clock { font-family: Consolas, monospace; font-weight: 700; font-size: clamp(1.6rem, 4.5vw, 2.4rem); line-height: 1; }
   .now-period { font-size: clamp(1rem, 2.4vw, 1.35rem); font-weight: 700; color: var(--accent); }
+  .now-day { font-size: .95rem; font-weight: 600; }
   .now-left { color: var(--muted); font-size: .95rem; }
   .now-left.soon { color: var(--err); font-weight: 700; }
   .now-next { color: var(--muted); font-size: .88rem; margin-left: auto; text-align: right; }
@@ -146,6 +148,7 @@
   /* ── Today ─────────────────────────────────────────────────────────── */
   .today-date { font-size: 1.2rem; font-weight: 700; margin-bottom: .1rem; }
   .today-weekday { color: var(--muted); font-size: .88rem; margin-bottom: .8rem; }
+  .today-kind { font-weight: 700; font-size: .9rem; margin: -.4rem 0 .6rem; }
   .day-badges { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
   .day-badge { display: inline-block; padding: .3rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 700; color: #fff; }
   .today-note { background: var(--card-2); border-radius: 8px; padding: .7rem .8rem; font-size: .88rem; white-space: pre-wrap; }
@@ -189,6 +192,11 @@
   .period-row input, .period-row select { margin-bottom: 0; padding: .35rem .4rem; font-size: .84rem; }
   .period-row.head { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
   .period-row.current { background: var(--info-bg); border-radius: 6px; }
+  .cal-bell { margin-bottom: .8rem; padding-bottom: .7rem; border-bottom: 1px solid var(--line); }
+  .cal-bell ol { list-style: none; margin: .4rem 0 0; padding: 0; }
+  .cal-bell li { display: flex; justify-content: space-between; gap: .6rem; padding: .2rem .4rem; font-size: .86rem; }
+  .cal-bell li.current { background: var(--info-bg); border-radius: 6px; font-weight: 700; }
+  .cal-bell-toggle { display: flex; align-items: center; gap: .4rem; margin: .1rem 0 .7rem; font-weight: 600; font-size: .82rem; }
   @media (max-width: 700px) { .period-row { grid-template-columns: 1fr 1fr; } .period-row.head { display: none; } }
 
   /* ── Start the day ─────────────────────────────────────────────────── */
@@ -304,6 +312,7 @@
 
   <div class="now-strip" id="nowStrip">
     <span class="now-clock" id="nowClock">--:--</span>
+    <span class="now-day" id="nowDay"></span>
     <span class="now-period" id="nowPeriod"></span>
     <span class="now-left" id="nowLeft"></span>
     <span class="now-next" id="nowNext"></span>
@@ -460,11 +469,16 @@
   /* =====================================================================
      BELL SCHEDULE AND THE CLOCK
 
-     The schedule lives here rather than being read out of another tool: the
-     School Calendar Visualizer models day types and pacing, not bell times,
-     and inventing a dependency on a shape that does not exist yet would be
-     the brittleness the open questions warn about. Six rows of start and end
-     times is a small enough thing to own outright.
+     The page's own rows came first, when the School Calendar Visualizer had
+     no bell times. Since Path 9 P3, 032 owns the bell schedules (P9-10), so
+     on a day it has a schedule for, the strip, this panel and the period's
+     roster follow 032's periods, read through _shared/school-day.js and never
+     written from here. The rows stay: they are the times on a day 032 has
+     none for (no calendar, no schedule, outside its year), and a row with the
+     same name as one of 032's periods lends it its roster and its seating
+     memory. On a day 032 says there is no school, no period runs. Unticking
+     "Use the School Calendar's bell times" (settings.bellSource = 'page')
+     puts the rows back in charge every day.
      ===================================================================== */
   var DEFAULT_PERIODS = [
     { id: 'p1', label: 'Period 1', start: '08:00', end: '08:50', roster: '' },
@@ -502,20 +516,69 @@
     return { current: current, next: next };
   }
 
+  /* 032's calendar, read once and again only when another tab saves it. */
+  var calCache;
+  var calTodayMemo = null;
+  function schoolCalendar() {
+    if (calCache === undefined) calCache = window.SchoolDay ? SchoolDay.read(localStorage) : null;
+    return calCache;
+  }
+  function forgetCalendar() { calCache = undefined; calTodayMemo = null; }
+  /** SchoolDay.today() for now, worked out once a minute (it walks the year for the A/B letter). */
+  function calendarToday() {
+    var cal = schoolCalendar();
+    if (!cal) return null;
+    var now = new Date();
+    var key = todayKey() + ' ' + now.getHours() + ':' + now.getMinutes();
+    if (!calTodayMemo || calTodayMemo.key !== key) calTodayMemo = { key: key, t: SchoolDay.today(cal, now) };
+    return calTodayMemo.t;
+  }
+  function usesCalendar() { return settings.bellSource !== 'page'; }
+  function sameName(a, b) { return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase(); }
+  /** One of 032's periods in the shape the page's rows have, borrowing the roster and id of a row of the same name. */
+  function fromCalendar(p) {
+    if (!p) return null;
+    var row = periods().filter(function (r) { return sameName(r.label, p.label); })[0];
+    return { id: row ? row.id : 'cal:' + String(p.label).trim().toLowerCase(), label: p.label, start: p.start, end: p.end,
+      roster: row ? row.roster : '' };
+  }
+  /** What is on now: { current, next, source: 'calendar'|'page'|'closed', t }. `t` is
+      SchoolDay.today()'s result whenever 032 has a calendar and it is being used. */
+  function nowAt() {
+    var t = usesCalendar() ? calendarToday() : null;
+    if (t && (t.day.why === 'weekend' || t.day.why === 'closed')) return { current: null, next: null, source: 'closed', t: t };
+    if (t && t.day.schedule && t.day.schedule.periods.length) {
+      return { current: fromCalendar(t.at.period), next: fromCalendar(t.at.next), source: 'calendar', t: t };
+    }
+    var at = periodAt(nowMinutes());
+    return { current: at.current, next: at.next, source: 'page', t: t };
+  }
+  /** The first period of the day, from whichever list nowAt() used. */
+  function firstPeriod(at) {
+    if (at.source === 'calendar') return fromCalendar(at.t.day.schedule.periods[0]);
+    if (at.source === 'closed') return null;
+    return periods().slice().sort(function (a, b) { return (minutesOf(a.start) || 0) - (minutesOf(b.start) || 0); })[0] || null;
+  }
+
   var lastPeriodId = null;
   function renderNow() {
     var d = new Date();
     document.getElementById('nowClock').textContent =
       d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    var at = periodAt(nowMinutes());
+    var at = nowAt();
     var periodEl = document.getElementById('nowPeriod');
     var leftEl = document.getElementById('nowLeft');
     var nextEl = document.getElementById('nowNext');
+    var cal = schoolCalendar();
+    document.getElementById('nowDay').textContent = cal ? SchoolDay.describe(cal, calendarToday().day) : '';
 
-    if (!periods().length) {
+    if (at.source === 'closed' || (at.source === 'page' && !periods().length)) {
       periodEl.textContent = '';
       leftEl.textContent = '';
-      nextEl.textContent = 'Add your bell times in the Bell Schedule panel to see the period here.';
+      leftEl.classList.remove('soon');
+      nextEl.textContent = at.source === 'closed' ? ''
+        : 'Add your bell times in the Bell Schedule panel, or in the School Calendar, to see the period here.';
+      if (lastPeriodId !== null) { lastPeriodId = null; onPeriodChange(null); }
       return;
     }
     if (at.current) {
@@ -779,11 +842,21 @@
   var DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+  /* 032's calendar through _shared/school-day.js (Path 9 P3), which also says
+     what kind of day it is: the A/B letter, no school, and the bell schedule. */
   function calendarEntryForToday() {
-    var cal;
-    try { cal = JSON.parse(localStorage.getItem('scv_calendar_v1') || 'null'); } catch (e) { cal = null; }
-    if (!cal || !cal.dayTypes || !cal.days) return { cal: null, entry: null };
-    return { cal: cal, entry: cal.days[todayKey()] || null };
+    var cal = schoolCalendar();
+    if (!cal) return { cal: null, entry: null };
+    var entry = cal.days[todayKey()];
+    return { cal: cal, entry: entry && typeof entry === 'object' ? entry : null };
+  }
+  function todayKindHtml(cal) {
+    var day = SchoolDay.dayOf(cal, todayKey());
+    var parts = [];
+    if (!day.school && day.why !== 'invalid') parts.push(SchoolDay.describe(cal, day));
+    if (day.letter) parts.push(day.letter + ' day');
+    if (day.schedule) parts.push(day.schedule.name + ' bell schedule');
+    return parts.length ? '<div class="today-kind">' + escapeHtml(parts.join(' · ')) + '</div>' : '';
   }
 
   PANELS.today = {
@@ -811,7 +884,7 @@
       var noteHtml = noteText
         ? '<div class="today-note-label">Lesson / pacing note</div><div class="today-note">' + escapeHtml(noteText) + '</div>'
         : '<p class="empty-hint">Nothing tagged for today &mdash; a regular day, or nothing entered yet.</p>';
-      el.innerHTML = head + badgesHtml + noteHtml;
+      el.innerHTML = head + todayKindHtml(found.cal) + badgesHtml + noteHtml;
     }
   };
 
@@ -1019,7 +1092,7 @@
     return (settings.seatingByPeriod && typeof settings.seatingByPeriod === 'object') ? settings.seatingByPeriod : {};
   }
   function seatingPeriodKey() {
-    var at = periodAt(nowMinutes());
+    var at = nowAt();
     return at.current ? at.current.id : '-';
   }
   /* Nothing picked yet for this period: guess from the names the teacher has
@@ -1027,7 +1100,7 @@
      signal — it was set deliberately — so it is tried first, and the shared
      reader takes the chain in that order. */
   function sectionForNow(state) {
-    var period = periodAt(nowMinutes()).current;
+    var period = nowAt().current;
     return SeatingRead.pickSection(state, {
       chosenId: seatingChoices()[period ? period.id : '-'],
       names: period ? [period.roster, period.label] : []
@@ -1331,16 +1404,46 @@
   /* =====================================================================
      PANEL: Bell schedule
      ===================================================================== */
+  /** The top of the Bell Schedule panel while 032 has a calendar: today's
+      schedule from it, read only, and the switch that puts this page's rows
+      back in charge. '' with no calendar, so the panel is what it was. */
+  function calendarBellHtml(at) {
+    if (!schoolCalendar()) return '';
+    var toggle = '<label class="cal-bell-toggle"><input type="checkbox" id="calBellBox"' + (usesCalendar() ? ' checked' : '') +
+      ' style="width:auto;margin:0;">Use the School Calendar’s bell times when it has them for today</label>';
+    if (!usesCalendar()) return '<div class="cal-bell">' + toggle + '</div>';
+    var t = at.t;
+    var words = escapeHtml(SchoolDay.describe(schoolCalendar(), t.day));
+    var body;
+    if (at.source === 'calendar') {
+      body = '<p class="hint" style="margin:0;"><strong>Today: ' + escapeHtml(t.day.schedule.name) + '</strong> (' + words + '), from the ' +
+        '<a href="' + ToolRegistry.href('school-calendar-visualizer') + '">School Calendar</a>.</p><ol>' +
+        t.day.schedule.periods.map(function (p) {
+          var isNow = at.current && sameName(at.current.label, p.label) && at.current.start === p.start;
+          return '<li' + (isNow ? ' class="current"' : '') + '><span>' + escapeHtml(p.label) + '</span><span>' +
+            escapeHtml(formatClock(p.start)) + '–' + escapeHtml(formatClock(p.end)) + '</span></li>';
+        }).join('') + '</ol>';
+    } else if (at.source === 'closed') {
+      body = '<p class="hint" style="margin:0;"><strong>' + words + '.</strong> No periods today.</p>';
+    } else {
+      body = '<p class="hint" style="margin:0;">' + (t.day.school ? words + ': the School Calendar has no bell schedule for today, so the times below are used.'
+        : words + ': the times below are used.') + '</p>';
+    }
+    return '<div class="cal-bell">' + toggle + body +
+      '<p class="hint" style="margin:.5rem 0 0;">The times below are used on a day the School Calendar has none for. A period here with the same name as one of the calendar’s brings up its roster.</p></div>';
+  }
+
   function buildSchedulePanel(el) {
     var list = Array.isArray(settings.periods) ? settings.periods : [];
     var rosters = Object.keys(loadRosters());
-    var at = periodAt(nowMinutes());
+    var at = nowAt();
+    var calHtml = calendarBellHtml(at);
     if (!list.length) {
-      el.innerHTML = '<p class="empty-hint">No bell times set. Adding them turns the strip at the top of this page into a live period clock, and lets each period bring up its own roster automatically.</p>' +
+      el.innerHTML = calHtml + '<p class="empty-hint">No bell times set. Adding them turns the strip at the top of this page into a live period clock, and lets each period bring up its own roster automatically.</p>' +
         '<div class="btn-row"><button type="button" id="seedPeriodsBtn">Start from a 7-period day</button>' +
         '<button type="button" class="secondary" id="addPeriodBtn">Add one period</button></div>';
     } else {
-      el.innerHTML =
+      el.innerHTML = calHtml +
         '<div class="period-row head"><span>Name</span><span>Starts</span><span>Ends</span><span>Roster</span><span></span></div>' +
         list.map(function (p, i) {
           var isNow = at.current && at.current.id === p.id;
@@ -1361,6 +1464,13 @@
         '<p class="hint" style="margin-top:.3rem;">Never mid-question: if you have picked a roster by hand since opening the page, the bell leaves it alone.</p>';
     }
 
+    var calBox = el.querySelector('#calBellBox');
+    if (calBox) calBox.addEventListener('change', function () {
+      if (calBox.checked) delete settings.bellSource; else settings.bellSource = 'page';
+      saveSettings();
+      buildSchedulePanel(el);
+      renderNow();
+    });
     var seed = el.querySelector('#seedPeriodsBtn');
     if (seed) seed.addEventListener('click', function () {
       settings.periods = DEFAULT_PERIODS.map(function (p) { return { id: p.id, label: p.label, start: p.start, end: p.end, roster: '' }; });
@@ -1461,12 +1571,13 @@
     if ((settings.motd || '').trim()) checks.push({ state: 'ok', text: 'Message of the day is set.' });
     else checks.push({ state: 'info', text: 'No message of the day yet.' });
 
-    var at = periodAt(nowMinutes());
-    if (!periods().length) {
+    var at = nowAt();
+    if (at.source === 'closed') {
+      checks.push({ state: 'info', text: SchoolDay.describe(schoolCalendar(), at.t.day) + ' — the School Calendar has no periods today.' });
+    } else if (at.source === 'page' && !periods().length) {
       checks.push({ state: 'info', text: 'No bell times set, so periods will not switch automatically.' });
     } else {
-      var first = periods().slice().sort(function (a, b) { return (minutesOf(a.start) || 0) - (minutesOf(b.start) || 0); })[0];
-      var target = at.current || at.next || first;
+      var target = at.current || at.next || firstPeriod(at);
       checks.push({ state: 'ok', text: (at.current ? 'Currently in ' : 'Next up: ') + target.label +
         (target.roster ? ' — roster "' + target.roster + '"' : ' — no roster mapped to it yet') });
     }
@@ -1521,7 +1632,7 @@
       anything), same panels refreshed. Returns false only when there is no
       next period *and* no current one to fall back to (an empty schedule). */
   function advanceToNextPeriod() {
-    var at = periodAt(nowMinutes());
+    var at = nowAt();
     var target = at.next || at.current;
     if (!target) return false;
     if (target.roster) {
@@ -1591,7 +1702,7 @@
       Timer's getDisplaySnapshot() (a pull the remote-pairing script polls,
       not something the panels themselves need to know exists). */
   function remoteSnapshot() {
-    var at = periodAt(nowMinutes());
+    var at = nowAt();
     var out = hallPassOutNow();
     var pickedEl = mounted.roster && mounted.roster.querySelector('#pickedName');
     return {
@@ -1675,6 +1786,12 @@
   window.addEventListener('storage', function (e) {
     if (e.key === HALLPASS_STORAGE_KEY && mounted.hallpass) buildHallPassPanel(mounted.hallpass);
     if (e.key === SEATING_KEY && mounted.seating) buildSeatingPanel(mounted.seating);
+    if (e.key === SchoolDay.KEY || e.key === null) {
+      forgetCalendar();
+      renderNow();
+      if (mounted.today) PANELS.today.build(mounted.today);
+      if (mounted.schedule) buildSchedulePanel(mounted.schedule);
+    }
     if ((e.key === 'crh_flags_v1' || e.key === 'crh_students_v1' || e.key === null) && mounted.roster) renderRosterList(mounted.roster);
   });
   /* Roster.onChange covers the same-tab write the storage event never fires

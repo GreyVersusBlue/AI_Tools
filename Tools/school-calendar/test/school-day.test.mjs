@@ -298,10 +298,32 @@ function checks(S) {
   S.forScheduleVisualizer(calIn, 2, { A: 'reg', B: 'half' });
   eq(calIn, calBefore, 'to 035 changes nothing it is given');
 
+  // ---- the day in words (Path 9 P3: 004 and 010 show it) ----
+  const W = (c, d) => S.describe(c, S.dayOf(c, d));
+  eq(S.typeLabel(seed, 'halfday'), 'Half Day / Early Dismissal', 'typeLabel reads the legend');
+  eq(S.typeLabel(seed, 'nope'), '', 'typeLabel of an unknown id is empty');
+  eq(S.typeLabel(null, 'halfday'), '', 'typeLabel with no calendar is empty');
+  eq(W(seed, '2026-09-07'), 'No school: Labor Day', 'a closed day is named by its own label');
+  const unnamed = clone(seed); unnamed.days['2026-09-07'].label = '';
+  eq(W(unnamed, '2026-09-07'), 'No school: Holiday / No School', '...else by its type');
+  eq(W(seed, '2026-09-05'), 'No school (weekend)', 'a weekend in words');
+  eq(W(seed, '2026-07-01'), 'Outside the school year', 'summer in words');
+  eq(W(seed, '2026-09-01'), 'A school day', 'an untagged day with the cycle off');
+  eq(W(cal, '2026-09-01'), 'B day', 'an untagged B day');
+  eq(W(cal, '2026-11-20'), S.dayOf(cal, '2026-11-20').letter + ' day \u00b7 Half Day / Early Dismissal \u00b7 Early Dismissal \u2014 Professional Learning',
+    'a half day: letter, type, then the day\'s name');
+  eq(S.describe(seed, S.dayOf(seed, '2026-02-30')), '', 'an invalid date has no words');
+  eq(S.describe(null, S.dayOf(seed, '2026-09-01')), '', 'no calendar has no words');
+  eq(S.describe(seed, null), '', 'no day has no words');
+
   return fails;
 }
 
 const MUTANTS = [
+  ['describe drops the letter', "    if (day.letter) parts.push(day.letter + ' day');\n", ''],
+  ['describe ignores the day\'s own name', "'No school: ' + (name || typeLabel", "'No school: ' + (typeLabel"],
+  ['describe calls a weekend closed', "if (day.why === 'weekend') return 'No school (weekend)';", ''],
+  ['typeLabel takes the first type', "if (isObj(t) && t.id === id) return text(t.label);", "if (isObj(t)) return text(t.label);"],
   ['outside not tested', "if (iso < cal.meta.start || iso > cal.meta.end) { out.why = 'outside'; return out; }", ''],
   ['weekend not tested', "if (!isWeekday(iso)) { out.why = 'weekend'; return out; }", ''],
   ['closure not tested', "if (types[i].noSchool) { out.why = 'closed'; out.closedBy = types[i].id; return out; }", ''],

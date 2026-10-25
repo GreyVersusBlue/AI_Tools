@@ -218,6 +218,9 @@
         { k: 'ct_prefs' },
         { k: 'ct_running_v1' },
       ],
+      reads: [
+        'scv_calendar_v1',
+      ],
     },
     {
       slug: 'group-team-generator',
