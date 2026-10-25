@@ -155,6 +155,11 @@
   }
   button:hover { background: var(--card-2); }
   button.small { padding: 3px 8px; font-size: 0.78rem; }
+  .cal-info { margin: -4px 0 14px; padding: 8px 10px; border-radius: 6px; background: var(--card-2); font-size: 0.82rem; line-height: 1.45; }
+  .cal-info .cal-day-line { margin: 2px 0; }
+  .cal-info .cal-deadline { font-weight: 600; }
+  .cal-info ul { margin: 4px 0 0; padding-left: 1.2rem; }
+  .cal-info button.small { margin-left: 6px; }
   button.danger { color: var(--err); }
   button.primary {
     background: var(--accent);
@@ -344,6 +349,8 @@
     </div>
   </div>
 
+  <div id="calInfo" class="cal-info" hidden></div>
+
   <div id="dayTabsWrap" style="display:none; margin: -4px 0 16px;">
     <p class="field-hint" style="margin:0 0 6px;">Multi-day absence — fill in each day separately, then generate once. Editing: <strong id="dayTabsHint"></strong></p>
     <div id="dayTabs" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
@@ -445,6 +452,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   </ul>
 </details>
 
+<script src="../_shared/school-day.js"></script>
 <script>
 (() => {
   const W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
@@ -800,6 +808,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   }
 
   function applyDayFieldsToForm(dateStr) {
+    const fresh = !dayPlans[dateStr];
     const dp = dayPlans[dateStr] || blankDayPlan();
     el('lessonTitle').value = dp.lessonTitle;
     el('announcement').value = dp.announcement;
@@ -811,6 +820,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     el('materialsNote').value = dp.materialsNote;
     el('dayType').value = dp.dayType || 'lesson';
     renderPerPeriodBlocks();
+    if (fresh) suggestTitle(dateStr);
   }
 
   function switchToDay(dateStr) {
@@ -843,6 +853,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
       });
     }
     persistLastAbsence(dates);
+    renderCalendarInfo();
   }
 
   // The one piece of shared state between this tool and Sub Binder Generator:
@@ -854,6 +865,66 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
       localStorage.setItem(LAST_ABSENCE_KEY, JSON.stringify({ dates: dates, updatedAt: new Date().toISOString() }));
     } catch (e) { /* storage full/blocked */ }
   }
+
+  // ---------- From the School Calendar (Path 9 P3) ----------
+  // Read through _shared/school-day.js, never written: for each day out, the day in
+  // 032's words, what its pacing plan has on it (the dates 032 stamped, never placed
+  // here), and whether that day or the school day after it is the last school day of a
+  // grading period. A day that is new to this page (its fields start blank) gets its paced
+  // lesson as the title when that lesson is all the plan has on the day; otherwise (two
+  // courses, a unit day beside it) each lesson has a "Use as title" button. A day the
+  // teacher has already been on keeps what they left, an emptied title included.
+  function schoolCalendar() { return window.SchoolDay ? SchoolDay.read(localStorage) : null; }
+  function suggestTitle(dateStr) {
+    const cal = schoolCalendar();
+    const items = cal ? SchoolDay.lessonsOn(cal, dateStr) : [];
+    if (items.length === 1 && items[0].kind === 'lesson') el('lessonTitle').value = SchoolDay.describeLesson(items[0]);
+  }
+  function calLine(text, cls) {
+    const p = document.createElement('p');
+    p.className = 'cal-day-line' + (cls ? ' ' + cls : '');
+    p.textContent = text;
+    return p;
+  }
+  function renderCalendarInfo() {
+    const box = el('calInfo');
+    const cal = schoolCalendar();
+    box.textContent = '';
+    if (!cal || !currentDay) { box.hidden = true; return; }
+    const date = currentDay;
+    const words = SchoolDay.describe(cal, SchoolDay.dayOf(cal, date));
+    box.appendChild(calLine('From the School Calendar, ' + dayLabelLong(date) + ': ' + (words || 'no entry') + '.'));
+    const g = SchoolDay.gradingDeadline(cal, date);
+    if (g) box.appendChild(calLine('Grading deadline: this is the last school day of ' + SchoolDay.gradingPeriodName(cal, g) + '.', 'cal-deadline'));
+    const nx = SchoolDay.nextSchoolDay(cal, date);
+    const g2 = nx && SchoolDay.gradingDeadline(cal, nx);
+    if (g2) box.appendChild(calLine('Grading deadline: the next school day, ' + dayLabelShort(nx) + ', is the last school day of ' + SchoolDay.gradingPeriodName(cal, g2) + '.', 'cal-deadline'));
+    const items = SchoolDay.lessonsOn(cal, date);
+    if (items.length) {
+      const many = Array.isArray(cal.plan.courses) && cal.plan.courses.length > 1;
+      box.appendChild(calLine('From the pacing plan:'));
+      const ul = document.createElement('ul');
+      items.forEach(it => {
+        const li = document.createElement('li');
+        const words = SchoolDay.describeLesson(it);
+        li.textContent = (many ? it.course + ': ' : '') + words;
+        if (it.kind === 'lesson') {
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = 'small';
+          b.textContent = 'Use as title';
+          b.setAttribute('aria-label', 'Use ' + words + ' as the lesson title');
+          b.addEventListener('click', () => { el('lessonTitle').value = words; });
+          li.appendChild(b);
+        }
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+    }
+    box.hidden = false;
+  }
+  window.addEventListener('storage', e => {
+    if (e.key === null || (window.SchoolDay && e.key === SchoolDay.KEY)) renderCalendarInfo();
+  });
 
   el('planDate').valueAsDate = new Date();
   el('planDate').addEventListener('change', renderDayTabs);
