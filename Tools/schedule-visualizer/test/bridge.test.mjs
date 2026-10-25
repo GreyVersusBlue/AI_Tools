@@ -135,8 +135,8 @@ export function moduleGraph(html) {
 const html = fs.readFileSync(path.join(ROOT, PAGE), 'utf8');
 const r = parseTimeReaches(html);
 check(r.wrappers.size > Object.keys(GETTERS).length, `the page has bridge wrappers (${r.wrappers.size - Object.keys(GETTERS).length} found through ${Object.keys(GETTERS).join(', ')})`);
-check(r.onWindow.has('brBuildPublishedHTML') && r.onWindow.has('toggleApp'),
-  `the module script copies sv-browser.js's ${r.onWindow.size} exports onto window, and they count as wrappers`);
+check(r.onWindow.has('brBuildPublishedHTML') && r.onWindow.has('toggleApp') && r.onWindow.has('renderVizCanvas'),
+  `the module script copies sv-browser.js's and sv-viz.js's ${r.onWindow.size} exports onto window, and they count as wrappers`);
 check(r.roots > 0 && r.fns > 100, `read ${r.fns} top-level functions and ${r.roots} top-level statements that call something`);
 check(r.bad.length === 0, 'no top-level statement reaches a bridge wrapper at parse time'
   + r.bad.map(b => `\n         line ${b.line}: ${b.path.join(' → ')}`).join(''));
@@ -146,7 +146,7 @@ const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 for (const f of g.files) {
   check(sw.includes(`"${f}"`), `${f} (imported by the page's module script) is in sw.js's PRECACHE_URLS`);
 }
-for (const ns of [...Object.values(GETTERS), 'SVBrowser']) check(g.sets.includes(ns), `the module script sets window.${ns}`);
+for (const ns of [...Object.values(GETTERS), 'SVBrowser', 'SVViz']) check(g.sets.includes(ns), `the module script sets window.${ns}`);
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

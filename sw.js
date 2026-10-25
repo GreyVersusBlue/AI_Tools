@@ -419,6 +419,7 @@ const PRECACHE_URLS = [
   "Tools/schedule-visualizer/sv-playback.js",
   "Tools/schedule-visualizer/sv-recovery.js",
   "Tools/schedule-visualizer/sv-routes.js",
+  "Tools/schedule-visualizer/sv-viz.js",
   "Tools/schedule-visualizer/sv-trace-image.js",
   "Tools/schedule-visualizer/sv.css",
   "Tools/schedule/fonts/dm-mono-latin-400-normal.woff2",
