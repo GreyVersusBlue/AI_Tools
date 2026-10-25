@@ -87,6 +87,13 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-20 (v324), rank 22 (DELETED: Path 11 P2 is whole; a gap, ranks not renumbered), increments 10–11 and the fold.**
+  035's blueprint editor and door cards are `schedule-visualizer/sv-editor.js`, its Schedules tab `sv-schedules-tab.js`
+  and its what-if lab and room search `sv-whatif.js`, all verbatim views copied onto `window`; the page is **278,920
+  bytes** (from 974,675 when P2 began), under the 300 KB line. `Tools/schedule/` is folded into
+  `Tools/schedule-visualizer/` (fonts, the publish suite, P1's contract, ledger and baseline), with a new README. New
+  `test:schedule-visualizer-editor` (port 8552). **Path 11's next rows are P3 (rank 23) and P4 (rank 24), both
+  undesigned; P5 (rank 25) is designed. The next free suite port is 8553.**
 - **AI-20 (v323), rank 22 (kept, 2+), Path 11 P2 increments 7–9 of 11.** 035's Schedule Browser and its publisher are
   `schedule-visualizer/sv-browser.js` and its Visualize tab (canvas, controls, congestion dock, export, playback bar) is
   `sv-viz.js`, both moved verbatim with their exports copied onto `window`; the page is 522,868 bytes (from 722,664).
@@ -644,7 +651,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 22 | Path 11 P2 — extract the pure engines; target the HTML at about 270 KB (Devon, P11-7). **Increments 1–9 of 11 built (AI-20, v320–v323): `sv.css`, `sv-model.js`, `sv-graph.js`, `sv-routes.js`, `sv-congestion.js`, `sv-playback.js` behind a `BRIDGE` section; `sv-browser.js` (the publisher, which `check:publisher` now follows) and `sv-viz.js` (the Visualize tab), both copied onto `window`; `check:precache` follows module imports (increment 8). The page is 522,868 bytes (from 974,675), held by `size-ledger.json`, about 5 KB above the ladder's 518 KB. Left: increment 10, `sv-editor.js` (the blueprint editor with the tile-drawing helpers and the evacuation door cards, about 113 KB + 35 KB) and its new `smoke-editor.mjs` (port 8552); increment 11, `sv-whatif.js` and `sv-schedules-tab.js`, then the fold of `Tools/schedule/` into `Tools/schedule-visualizer/`, last** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 23 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
@@ -3779,7 +3785,7 @@ a real pathfinder that the published browser never exposes.
   one PR with a Node unit suite for the pure part (today all coverage is Playwright).
   Fold the two folders (`schedule/` and `schedule-visualizer/`) into one and fix the
   stale README. Target: the HTML under ~300 KB.
-  **P2 is designed, not built (AI-20, 2026-10-05, a design pass: no code, no suite, no browser).** It sits on P1's
+  **P2 is built (AI-20, v320–v324, 2026-10-25). The design below was written on 2026-10-05, before any code (a design pass: no code, no suite, no browser); "Built so far" at its end records where the build parted from it.** It sits on P1's
   design above and changes none of it. Written from the code at v61 (`TOOL_VERSION`; site `CACHE_VERSION` v251) and
   from five pure-Node probes over the page's text, kept in a scratch folder and not committed (what they measured is
   marked *measured*; everything else is read off the code). Every name in an example is made up.
@@ -4209,7 +4215,22 @@ a real pathfinder that the published browser never exposes.
     deferred script it was before v323 (`unbundleScheduleBrowser()`), and `offline:verify` checks that all 28 published
     functions are their source text on the offline 035. `offline:verify` still fails 046 (`Invalid URL`), unchanged.
     **Not verified:** a full `npm test`; a real Publish emailed and opened on a phone; the Visualize tab driven by hand.
-    *Next: increment 10*, `sv-editor.js`.
+    *Increments 10–11 and the fold (AI-20, 2026-10-25, v324, one bump):* `sv-editor.js` (151,713 bytes: the blueprint
+    editor with the tile-drawing helpers and the evacuation door cards), `sv-schedules-tab.js` (65,260: the groups list and
+    editor, export and import, CSV import, the bulk editor) and `sv-whatif.js` (37,796: room search and the lab's
+    controls), all verbatim views like `sv-viz.js`. The page went **522,868 → 376,298 → 278,876 → 278,920 bytes** (the
+    ladder said 368 KB and about 270 KB; the last 44 bytes are the folded font paths). **Stayed on the page,** because other
+    code assigns or reads them as bindings: `let canvas, ctx`, `FloorManager`, the heat-zone id counter,
+    `GROUP_COLOR_PRESETS` with the schedules storage pair, `AppState.whatif`, and the trace-image and hand-off glue. **Found:**
+    three page listeners handed a moved function out by reference at parse time (`addEventListener('click',
+    exportBlueprintAsPNG)` and two more), which `bridge.test.mjs` does not see (it follows calls); they moved into the
+    module. `smoke-csv-adopters.mjs` read 035's own text for `ExportKit.toCsv(` and now reads the page's modules too. **The
+    fold:** `Tools/schedule/fonts/` and `Tools/schedule/test/` are in `Tools/schedule-visualizer/`, `Tools/schedule/` is
+    gone, and its README is `Tools/schedule-visualizer/README.md` (file list, module map, parse-time rule, suites); paths
+    written in this bullet and P1's before v324 name the old folder. `smoke-editor.mjs` (`npm run
+    test:schedule-visualizer-editor`, port 8552) paints, pairs, undoes, redoes and reloads with real mouse events.
+    **P2 is whole.** Not verified: a pixel comparison of the Blueprint and Schedules tabs; any browser drive of the what-if
+    lab's or the bulk editor's controls.
 - **P3 — Accessibility routing.** Wheelchair/elevator-weighted routes over the
   existing graph, per-student route sheets, and "which rooms can't be reached
   without stairs" as a printable report — the notes call this "a real legal and

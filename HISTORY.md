@@ -9,6 +9,60 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P2 increments 10–11 and the folder fold: P2 is whole (2026-10-25, AI-20, `CACHE_VERSION` v324)
+
+BACKLOG rank 22 DELETED (a gap; ranks not renumbered): the last two rungs of the P2 bullet's eleven, and the fold the
+design put last (Devon, P11-8). 035 is **278,920 bytes**, from 974,675 when P2 started and 522,868 this morning.
+
+- **What moved.** Increment 10: `sv-editor.js` (151,713 bytes, 128 functions and constants: floor helpers, staircase
+  pairing, undo/redo, the canvas and its rendering, the plain floor-plan export and Ctrl+P sheet, the evacuation door
+  cards, tool placement, the right-panel editors, corridor labels, the canvas wiring, heat-exclude zones, zoom, the
+  palette, the context menu, tile stats). Increment 11: `sv-schedules-tab.js` (65,260 bytes: "SCHEDULES MODULE —
+  Rendering" through the bulk editor) and `sv-whatif.js` (37,796 bytes: room search and the what-if lab's controls).
+  All three verbatim views, like `sv-viz.js`: `/* global */` comments for the page names they read, exports copied onto
+  `window`. The page went **522,868 → 376,298 → 278,571 bytes**, then +305 for the six module-script lines and +44
+  for the folded font paths. The ladder said 368 KB and about 270 KB.
+- **What stayed on the page, and why.** A classic script cannot see a module's `let`, so whatever other code assigns
+  or reads as a binding stayed: `let canvas, ctx` (the door cards and the what-if lab swap `ctx`), `FloorManager`
+  (called by the sidebar init and by the editor), the heat-zone id counter (loading a blueprint resets it),
+  `GROUP_COLOR_PRESETS` and the schedules storage pair (the BRIDGE reads the first; the design keeps storage pairs on
+  the page), `AppState.whatif`, and the trace-image and hand-off glue, which the design keeps. The `window.findPath`
+  and `window.wiComputeMetrics` lines stay too; they point at BRIDGE wrappers.
+- **Found, by a scratch probe and not by any committed test.** Three page listeners passed a moved function **by
+  reference** at parse time (`addEventListener('click', exportBlueprintAsPNG)`, the PDF one, the door cards').
+  `bridge.test.mjs` follows calls, not references, so it would have passed a page whose classic script threw a
+  `ReferenceError` there and stopped. The three lines moved into the module beside their functions. The bridge test
+  still does not check bare references; the README says so.
+- **Found: two static readers of 035's text.** `smoke-csv-adopters.mjs` looked for `ExportKit.toCsv(` in the page and
+  failed once the groups template moved. Its static checks now read the page plus every module it imports, through
+  `check-publisher.mjs`'s `moduleSources()`. And `offline:build` stages tracked files only: before `git add`, the new
+  modules were missing and esbuild failed to resolve them (a session that builds before adding sees a crash, not a
+  clear message).
+- **The fold.** `Tools/schedule/fonts/` and `Tools/schedule/test/` are in `Tools/schedule-visualizer/`, `Tools/schedule/`
+  is gone, and `Tools/schedule/README.md` became `Tools/schedule-visualizer/README.md` with the file list, the module
+  map, the parse-time rule and the suites. Paths rewritten in `sw.js` (13 font lines), `suites.json`, `package.json`,
+  `check-publisher.mjs`, `check-tests.mjs`, `print-audit-prep.mjs`, the engine suites' fixture reads, harness and
+  select-suites comments, `CLAUDE.md` and two vendor READMEs. `select-suites.test.mjs`'s rule-2 case ("an edit to
+  `Tools/schedule/*.js` reaches 035") is now an edit to `sv-graph.js`. `published-fonts.js` rebuilt byte-identical;
+  the publish baseline needed no `--update`. Older text in `BACKLOG.md` and this file still names `Tools/schedule/`
+  paths; they were true when written.
+- **Calls made.** (1) One bump, v324, for both rungs and the fold. (2) The new suite took port **8552**, which the repo
+  recorded as next free and nothing used; the session's prompt expected 8553. The next free is 8553. (3) Six dead locals
+  in the editor (`pageW`, `phase`, `r`, `statusText`, `endCol`, `endRow`) were dropped once lint saw them; no
+  initialiser had a side effect (`inBounds` and `getElementById` are reads). (4) The size ledger was raised by 44 bytes
+  in the fold commit, since the fold lengthened two paths in the page.
+- **Tests.** New `smoke-editor.mjs` (`npm run test:schedule-visualizer-editor`, port 8552, 18 checks): from an empty
+  floor, real mouse events paint a hallway, place stairs and a classroom, pair the stairs through "Pair with", undo and
+  redo, and reload; it failed three ways with the module's `Object.assign(window, …)` line removed. Run green: the
+  eleven guards plus `check:publisher`, `check:precache --base origin/main`, `check:adoption --check`, lint,
+  `test:check-publisher` (78), `test:select-suites` (93), `--only schedule-visualizer` (13), `--only schedule` (19, after
+  the fold), `--only schedule-browser`, `--only theme`, `test:csv-adopters` (172), the a11y sweep and `audit-print` for
+  035, `offline:build`, and `offline:verify` for 035 (all 28 published functions source text). `offline:verify` still
+  fails 046 (`Invalid URL`), unchanged. **The full suite list, all 318, ran green, in two passes on one tree:** `npm test` passed suites 1–136 and was then killed by the session's own 50-minute `timeout` (a full pass on huginn took far longer than the documented ~20 minutes, with other loops sharing the machine); suites 137–318 were then run one by one as `run-suites` runs them (`node <suite>` from the root, 900 s cap each), all exit 0. Only `.md` files changed between the passes.
+- **Not verified.** No before/after pixel comparison of the Blueprint or Schedules tabs (increment 9 had one for
+  Visualize; this one relies on the suites and the editor smoke). Nothing drives the what-if lab's or the bulk editor's
+  controls in a browser. Not opened on a phone.
+
 ## Path 11 P2 increments 7–9: 035's publisher and Visualize tab out of the page, `check:precache` follows imports (2026-10-25, AI-20, `CACHE_VERSION` v323)
 
 BACKLOG rank 22 kept (2+), its text rewritten: increments 7, 8 and 9 of the eleven in the P2 bullet's ladder.
