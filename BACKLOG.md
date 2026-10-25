@@ -87,6 +87,26 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-18 (v313), rank 13 (DELETED: Path 9 P2 is whole; a gap, ranks not renumbered): unit bands for every course.**
+  032's month grid draws each other course's units as a lane of thin bands under the shown course's (which draws as
+  before), "+N" when several units start on a day, and the day editor lists every other course's day in words. New `npm
+  run test:school-calendar-plan-bands` (port 8545). **Path 9 P3 (rank 14) and P4 (rank 15) are next. Next free suite
+  port: 8546.**
+- **AI-18 (v312), rank 13 (kept, rewritten, now ¼), Path 9 P2 increment 4: buffers, the A/B split, the new year, and the
+  printed unit table per course.** "Buffer days take a lost day" per course (off), a Buffer column, "Split into A and B…"
+  (previewed, Undo), "Start New Year" through `carryForward()`, and "Unit pacing calendar" prints a table per course with
+  Short. New `npm run test:school-calendar-plan-buffers` (port 8544). **Left then: bands for every course (built in v313).**
+- **AI-18 (v311), rank 13 (kept, rewritten), Path 9 P2 increment 3: the baseline and "behind".** Each course with
+  something planned has a line in the Courses card: on the plan, or N class days behind or ahead of it, with the lesson,
+  its two dates and the causes (lost days, bumps, lessons added, open days used); "Make this the plan" re-bases it, with
+  Undo. `scv-plan.js` has `setBaseline`, `slip` and `describeSlip`. New `npm run test:school-calendar-plan-behind` (port
+  8543). **Left: increment 4 and two page pieces (rank 13). Next free suite port: 8544.**
+- **AI-18 (v310), rank 13 (kept, rewritten), Path 9 P2 increment 2: typed units, pins, "Count for pacing", the
+  dated-unit conversion.** A course with no lessons is planned in units (class days typed, order, remove); any unit can be
+  pinned to a start date, with open days or a shortened unit before it said in the card; "Let these flow…" clears the
+  pins after the first, previewed; each school day type has "Count for pacing" and a course can override it; the dated
+  Units card is shown only while it holds units and has "Turn into a course…" (previewed, overlap refused). New `npm run
+  test:school-calendar-plan-units` (port 8542). **Left: increments 3–4 (rank 13). Next free suite port: 8543.**
 - **AI-18 (v309), rank 13 (kept, rewritten), Path 9 P2 increment 1, the page half: increment 1 is built.** 032 loads
   `scv-plan.js`: its old lesson sequence becomes "Course 1" on load (saved only if no date moves), every save goes
   through one commit that stamps the dates and, when lessons move, shows a notice bar with Undo (one step, the old bytes);
@@ -563,7 +583,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 11 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 13 | Path 9 P2 — pacing that recomputes around lost days. **Increment 1 is built (AI-18, 2026-10-23: `scv-plan.js`, then 032's page in v309):** courses in lesson mode, the migration from `cal.pacing`, lost dates and "needs another day" in the drawer, every save a commit with the notice bar and Undo, stale dates held until kept. **Left: increment 2** (typed units with pins and open days, "Count for pacing" on each day type and its per-course override, the dated-unit conversion with its preview, then hiding the Units card once it is empty), **increment 3** (the baseline, "Make this the plan", the behind line and `slip()`), **increment 4** (buffers, "Split into A and B", `carryForward()` for the new year). Do them in that order, one a session; the P2 bullet has the design and Devon's ten answers (all defaults) | 032 | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 14 | Path 9 P3 — consumers: 004, 010, 001, 036/037, 044/045, 032 itself | site | 2+ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 15 | Path 9 P4 — `.ics` import/export and a one-page year wall calendar print | 032 | 1 | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 16 | Path 10 P1 — Packet Builder `087` with the section-provider registry | 087 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
@@ -3000,8 +3019,33 @@ fixed unit dates; the valuable half (a unit defined by instructional days that
   written (increments 2–4). **Increment 1's page is built too (AI-18, v309, `npm run test:school-calendar-plan-page`):**
   where it differs from the text below, on purpose: an empty plan is never written (so `scv-seed.js` was not changed and
   a calendar with no pacing keeps its bytes), the Units card stays shown until increment 2, and an edit made while the
-  stale-dates bar is up keeps the new dates as "Keep these dates" does (`HISTORY.md` has all seven calls). Everything
-  below is the design.
+  stale-dates bar is up keeps the new dates as "Keep these dates" does (`HISTORY.md` has all seven calls). **Increment 2
+  is built (AI-18, v310, `npm run test:school-calendar-plan-units`; the module's pins, `convertDatedUnits` and
+  `unpinAfterFirst` in `test:school-calendar-plan`).** Where it differs from the text below, on purpose: "Make this
+  course" removes the converted units from `cal.units` (the card then goes when it is empty, so a new calendar has no
+  "+ Add Unit" outside a course); the conversion sweep checks 168 start/end pairs across the year and every empty one,
+  not all 40,528; bands are drawn for the active course only, and only when it has no lessons; the typed-mode drawer
+  button is "This unit needs another day" (`days + 1`); and a course's override is a choice per day type, "As the day
+  type", "Counts" or "Skips" (`HISTORY.md` has the calls). **Increment 3 is built (AI-18, v311, `npm run
+  test:school-calendar-plan-behind`; `setBaseline`, `baselinePlacement`, `slip`, `describeSlip` and `wantsBaseline` in
+  `test:school-calendar-plan`).** Where it differs from the text below, on purpose: `behind` is signed and net of the
+  baseline's own days ((class days up to X now − up to today now) − the same in the baseline), which is what makes it
+  equal the sum of the causes exactly and reads 1, not 0, when the baseline had a bump between X and today; X is never a
+  bump; when X is gone the last earlier placed slot stands in ("about"); an empty baseline counts as none; a v309–v310
+  course is based at its next change, not on load; the baseline stores slot keys (`U3-06-A`, `G:<id>`, `D:<unit>#<n>`),
+  about 2.6 KB for 184 lessons; and there is no "migrated" note on the row (`HISTORY.md` has the calls). **Increment 4 is
+  built (AI-18, v312, `npm run test:school-calendar-plan-buffers`; buffers, `splitByLetter`, `splitPreview` and
+  `carryForward` in `test:school-calendar-plan`), and so is the printed unit table per course.** Where it differs from the
+  text below, on purpose: a lesson course's buffer days are its `BUF` lessons counted at placement (its units' `flex` is not
+  written), a typed unit's are its last `flex` days, and a unit never gives up its every day; a unit stamps `buffered`, and
+  `stored()` tells buffer lessons from overflow by the same rule; "Make this the plan" while a buffer is in use gives it
+  back, since the new baseline already lacks the lost day; the A half of a split keeps the course's id, both halves start
+  with no baseline and no stamped unit dates, lost dates go to both, and the page refuses the split with the A/B cycle off;
+  `carryForward` also drops start dates and keeps `pace` and `absorb`. **Bands for every course are built (AI-18, v313,
+  `npm run test:school-calendar-plan-bands`), and P2 is whole.** Where they differ from the text below, on purpose: the
+  shown course draws as before, every other course (lesson courses too) has a lane of bands in the plan's order with gaps
+  so lanes line up, one name a cell with "+N", and the day editor lists the other courses' day in words (`HISTORY.md`).
+  Everything below is the design.
   Read from the tree at v245: 032's page, `scv-pacing.js`, `scv-store.js`, `scv-seed.js`, both suites, and the
   two readers (010, 045). Figures marked *measured* came from two pure-Node probes over the shipped 2026-27 seed
   and the shipped modules; they were not kept. Questions that are Devon's are listed at the end and not answered.

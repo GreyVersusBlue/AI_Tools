@@ -92,7 +92,7 @@
   .legend-row .swatch { width: 22px; height: 22px; border-radius: 4px; border: 1px solid rgba(0,0,0,.25); flex-shrink: 0; }
   .legend-row input[type=text].label { width: 220px; }
   .legend-row input[type=text].abbr { width: 46px; text-align: center; }
-  .legend-row .no-school { display: flex; align-items: center; gap: 4px; font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
+  .legend-row .no-school, .legend-row .pace-count { display: flex; align-items: center; gap: 4px; font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
   .legend-row .day-count { font-size: 0.76rem; color: var(--muted); white-space: nowrap; min-width: 5.5em; }
   .legend-hint { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
 
@@ -140,12 +140,14 @@
   .bell-assign { display: grid; grid-template-columns: max-content minmax(0, 260px); gap: 6px 12px; align-items: center; font-size: 0.85rem; }
   .bell-status { font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
   .drawer-bell { font-size: 0.82rem; }
+  .drawer-others { font-size: 0.82rem; margin: 2px 0 0; padding-left: 1.2em; }
   .drawer-bell ol { margin: 4px 0 0; padding-left: 1.4em; }
   .day .unit-bars {
     position: absolute; left: 0; right: 0; bottom: 0; display: flex;
     flex-direction: column; gap: 1px; pointer-events: none;
   }
-  .day .unit-bar { height: 3px; }
+  .day .unit-bar, .day .unit-gap { height: 3px; flex: none; }
+  .day .unit-bars.many .unit-bar, .day .unit-bars.many .unit-gap { height: 2px; }
   .day .unit-tag {
     position: absolute; left: 2px; bottom: 3px; font-size: 0.56rem; font-weight: 700;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(100% - 4px);
@@ -164,6 +166,8 @@
   body.view-units .units-print { display: block; }
   body.view-units .months, body.view-units .year-grid, body.view-units .week-strip { display: none; }
   .units-print h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .units-print h3 { font-size: 0.95rem; margin: 16px 0 6px; break-after: avoid; }
+  .units-print td.short { font-weight: 700; }
   .units-print table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
   .units-print th, .units-print td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; }
   .units-print th { background: var(--accent); color: var(--accent-ink); }
@@ -188,6 +192,23 @@
   .unit-table th, .unit-table td { border: 1px solid var(--line); padding: 3px 6px; text-align: left; }
   .unit-table input { font-size: .8rem; width: 12em; }
   .unit-table .short { color: var(--err); font-weight: 700; }
+  .unit-table input[type=number] { width: 4.5em; }
+  .unit-table input[type=date] { width: auto; }
+  .unit-table td.acts { white-space: nowrap; }
+  .unit-notes { font-size: 0.78rem; color: var(--muted); margin-top: 4px; white-space: pre-line; }
+  .unit-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .course-pace { margin-top: 10px; font-size: 0.8rem; }
+  .course-slip { margin-top: 8px; font-size: 0.85rem; }
+  .course-slip ul { margin: 0 0 6px; padding-left: 1.1rem; }
+  .course-slip li + li { margin-top: 3px; }
+  .course-slip li.slip-behind { font-weight: 600; }
+  #courseFields .enable { display: flex; flex-direction: row; align-items: center; gap: 6px; font-weight: normal; }
+  .course-pace .pace-pick { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 4px; }
+  .course-pace label { display: flex; gap: 4px; align-items: center; }
+  .plan-preview { border: 2px solid var(--accent-2); border-radius: 8px; padding: 10px; margin-top: 10px; background: var(--card); }
+  .plan-preview h3 { margin: 0 0 6px; font-size: 0.95rem; }
+  .plan-preview p { font-size: 0.8rem; margin: 6px 0; }
+  .plan-preview .refused { color: var(--err); white-space: pre-line; }
   .drawer-lost { font-size: .82rem; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .pace-help summary { cursor: pointer; font-size: 0.85rem; color: var(--accent-2); }
   .pace-help p, .pace-help ul { font-size: 0.82rem; color: var(--muted); margin: 8px 0; }
@@ -460,11 +481,18 @@
     </div>
   </div>
 
-  <div class="card units-card no-print">
-    <h2>Units</h2>
+  <div class="card units-card no-print" id="unitsCard" hidden>
+    <h2>Dated units</h2>
     <div class="units-list" id="unitsList"></div>
-    <button id="btnAddUnit" class="small" style="margin-top:10px;">+ Add Unit</button>
+    <div class="unit-actions">
+      <button id="btnAddUnit" class="small">+ Add Unit</button>
+      <button id="btnConvertUnits" class="small" type="button">Turn into a course…</button>
+    </div>
+    <div id="convertPreview"></div>
     <div class="units-hint">
+      These units were laid on fixed dates, before courses could hold units of their own. <em>Turn into a course</em>
+      makes them units of a course, each pinned to its start with the school days it covers, so nothing moves
+      until you choose; once this list is empty, this card goes away and units live in the Courses card.
       Each unit is a named span of the calendar — lay them across the date ranges you plan to teach them.
       They render as a colored band under the days they cover (the name shows on the first day), and the
       instructional-day count next to each one excludes weekends and any day type marked "No school" above;
@@ -482,9 +510,16 @@
       <div class="field"><label for="courseMeets">Meets on</label>
         <select id="courseMeets"><option value="all">Every school day</option><option value="A">A days</option><option value="B">B days</option></select>
       </div>
+      <label class="enable"><input type="checkbox" id="courseAbsorb"> Buffer days take a lost day</label>
+      <button type="button" id="btnCourseSplit" class="small" hidden>Split into A and B…</button>
       <button type="button" id="btnCourseDelete" class="danger small">Delete this course</button>
     </div>
+    <div id="splitPreview"></div>
     <div id="courseProblems" class="pace-errors"></div>
+    <div id="courseSlip" class="course-slip" hidden>
+      <ul id="courseSlipList"></ul>
+      <button type="button" id="btnMakePlan" class="small">Make this the plan</button>
+    </div>
     <details class="pace-help">
       <summary>Lesson naming convention &amp; how pacing works</summary>
       <p>One lesson per line, named <code>U&lt;unit&gt;-&lt;lesson&gt;-&lt;A|B&gt;-&lt;Title&gt;</code>:</p>
@@ -497,7 +532,22 @@
       To push a lesson back a day (it ran long, an assembly ate the block), open that day and use <em>Bump forward</em> — everything after it slides one school day, and your reason shows on the vacated day.
       For a snow day, tag the date with a no-school type (the day editor has a shortcut) and the whole sequence reflows around it automatically, A/B letters included.</p>
       <p>Placement is always computed from the sequence, so editing a past day reflows everything after it. To freeze what you actually taught on a given day, write it in that day's <em>Lesson / unit note</em> field — that note never moves.</p>
+      <p>A course with no lessons can be planned in units instead: give each unit a number of class days and it takes
+      that many, one after another, moving later when a day is lost. <em>Pin</em> a unit to a date to make it start there
+      whatever happens before it: the days before it stay open if earlier units finish early, and the unit before it comes
+      up short if they run long. The table says which. A day type can be left out of pacing (untick <em>Count for pacing</em>
+      in Day Types), and a course can count or skip a type for itself below its units.</p>
+      <p><em>Buffer days</em> are a unit's spare days: in a lesson list, the lessons numbered <code>BUF1</code>, <code>BUF2</code>…;
+      in a course planned in units, the number in the unit's <em>Buffer</em> column, its last days. They are planned like any other day.
+      Tick <em>Buffer days take a lost day</em> and a day the course loses inside a unit (a closure, a day it didn't meet, a lesson that
+      needed another day) uses up that unit's last buffer day instead, so the unit still ends when it was planned to; the table says how
+      many were used. It is off unless you turn it on, so a lost day moves everything later and you decide.</p>
+      <p>An A/B course is one list of lessons for both letters. <em>Split into A and B</em> makes it two courses, one meeting on A days
+      with the A lessons and one on B days with the B lessons, each with its own bumps, so a lesson that needs another day moves one
+      track only. You see what would change first.</p>
       <p>Each course is one prep's plan, with its own lessons, bumps and lost days; the calendar shows the course picked above. A course that meets on A days only counts A days as its class days. In a day's editor, <em>This lesson needs another day</em> puts an empty class day in front of that lesson and stays with it; <em>This class didn't meet</em> takes that date away from this course only (an assembly), whatever lesson was planned. When a change moves lessons, a bar at the top says what moved and offers Undo.</p>
+      <p>Every other course's units show as thin coloured bands along the bottom of each day, one row a course in the order of the tabs, so you can see where your preps' units line up; hover a band for its course and unit, or open the day for every course's plan in words.</p>
+      <p>Each course says how many class days it is behind its plan, or ahead of it, and why: the plan is the dates as they stood when you first gave the course its lessons or units, kept up to date while you are still planning and held fixed from its first class day, until you press <em>Make this the plan</em>. Behind is counted in that course's class days, so an A-day course is behind in A days.</p>
     </details>
     <textarea id="paceInput" rows="6" placeholder="U1-01-A-Early Islamic Expansion&#10;U1-01-B-Early Islamic Expansion&#10;U1-02-A-Geographic Factors in Early Islamic Expansion&#10;…"></textarea>
     <div class="pace-row">
@@ -511,6 +561,13 @@
     <div id="paceStatus" class="pace-status"></div>
     <div id="paceErrors" class="pace-errors"></div>
     <div id="unitTable"></div>
+    <div id="unitNotes" class="unit-notes"></div>
+    <div class="unit-actions" id="unitActions" hidden>
+      <button type="button" id="btnUnitAdd" class="small">+ Add unit</button>
+      <button type="button" id="btnUnitFlow" class="small">Let these flow…</button>
+    </div>
+    <div id="flowPreview"></div>
+    <div id="coursePace" class="course-pace"></div>
     <div id="lostLog" class="adj-list"></div>
     <div id="adjLog" class="adj-list"></div>
   </div>
@@ -555,6 +612,9 @@ import { abLetters, yearBadge, mondayOf, weekDates, weekRange, isoToMs, MAX_WEEK
 import {
   absorbLegacy, readPlan, newCourse, syncUnits, placeCourse, placePlan, stamp, stored,
   diffPlacement, describeDiff, shortDate, PLACER_ALGO,
+  newUnit, convertDatedUnits, unpinAfterFirst, unitProblemText,
+  setBaseline, wantsBaseline, slip, describeSlip,
+  splitPreview, carryForward,
 } from './school-calendar/scv-plan.js';
 
 Store.configure({ toolName: 'School Calendar Visualizer' });
@@ -597,7 +657,17 @@ function save(label, always) {
   const before = savedBytes;
   const fresh = placePlan(cal);
   const moved = diffsFor(cal, fresh);
-  if (readPlan(cal).state === "ok") cal.plan = stamp(cal, fresh).plan;
+  if (readPlan(cal).state === "ok") {
+    // Increment 3: a course's baseline, the plan "behind" is measured against, is set
+    // when it first has something planned, and again at every save until its first class
+    // day; after that only "Make this the plan" moves it.
+    const t = todayISO();
+    cal.plan.courses = cal.plan.courses.map(c => {
+      const p = fresh[c.id];
+      return p && p.order.length && wantsBaseline(c, p, t) ? setBaseline(cal, c, p, t) : c;
+    });
+    cal.plan = stamp(cal, fresh).plan;
+  }
   store.set(bareOf(cal));
   savedBytes = storedBytes();
   loadPending = false;
@@ -676,6 +746,7 @@ function renderLegend() {
         ${PATTERNS.map(p => `<option value="${p}" ${p === t.pattern ? "selected" : ""}>${p}</option>`).join("")}
       </select>
       <label class="no-school"><input type="checkbox" data-i="${idx}" data-f="noSchool" ${t.noSchool ? "checked" : ""}> No school</label>
+      ${t.noSchool ? "" : `<label class="pace-count"><input type="checkbox" data-i="${idx}" data-f="pace" ${t.pace === "skip" ? "" : "checked"}> Count for pacing</label>`}
       <span class="day-count">${n} day${n === 1 ? "" : "s"}</span>
       <button class="small danger" data-i="${idx}" data-act="del">Remove</button>
     `;
@@ -688,7 +759,14 @@ function renderLegend() {
       save("Making \u201c" + cal.dayTypes[i].label + "\u201d " + (e.target.checked ? "a no-school type" : "a school day type")); render();
     });
   });
-  list.querySelectorAll("input:not([data-f=noSchool]),select").forEach(el => {
+  list.querySelectorAll("input[data-f=pace]").forEach(el => {
+    el.addEventListener("change", e => {
+      const t = cal.dayTypes[+e.target.dataset.i];
+      if (e.target.checked) delete t.pace; else t.pace = "skip";
+      save((e.target.checked ? "Counting \u201c" : "Leaving \u201c") + t.label + (e.target.checked ? "\u201d days as class days" : "\u201d days out of pacing")); render();
+    });
+  });
+  list.querySelectorAll("input:not([data-f=noSchool]):not([data-f=pace]),select").forEach(el => {
     el.addEventListener("change", e => {
       const i = +e.target.dataset.i, f = e.target.dataset.f;
       cal.dayTypes[i][f] = e.target.value;
@@ -718,6 +796,7 @@ function renderMonths() {
   const startDate = new Date(cal.meta.start + "T00:00:00");
   const endDate = new Date(cal.meta.end + "T00:00:00");
   const abMap = buildAbMap();
+  const lanes = otherCourseLanes();
 
   list.forEach(({ y, m }) => {
     const monthEl = document.createElement("div");
@@ -781,15 +860,20 @@ function renderMonths() {
       // they cover, with the unit's name labeled only on its first day —
       // a full label on every cell would drown out everything else in a
       // 58px-tall box.
+      // Other courses add one lane each below the active course's bands; a lane with no
+      // unit on this day is an empty gap, so lanes line up across a week. Only one name
+      // fits on a cell: the active course's first, and "+N" when more units start here.
       const activeUnits = unitsForDate(dateISO);
-      const unitBars = activeUnits.length
-        ? `<div class="unit-bars">${activeUnits.map(u =>
-            `<span class="unit-bar" style="background:${u.color}" title="${escapeAttr((u.name || "Unit") + " (" + fmtShort(u.start) + "–" + fmtShort(u.end) + ")")}"></span>`
-          ).join("")}</div>`
+      const laneUnits = lanes.map(l => l.spans.find(u => dateISO >= u.start && dateISO <= u.end) || null);
+      const barOf = u => `<span class="unit-bar" style="background:${u.color}" title="${escapeAttr((u.course && lanes.length ? u.course + ": " : "") + (u.name || "Unit") + " (" + fmtShort(u.start) + "–" + fmtShort(u.end) + ")")}"></span>`;
+      const unitBars = activeUnits.length || laneUnits.some(Boolean)
+        ? `<div class="unit-bars${lanes.length > 3 ? " many" : ""}">${activeUnits.map(barOf).join("")}${laneUnits.map(u => u ? barOf(u) : `<span class="unit-gap"></span>`).join("")}</div>`
         : "";
-      const unitStartHere = activeUnits.find(u => u.start === dateISO);
+      const startsHere = activeUnits.concat(laneUnits.filter(Boolean)).filter(u => u.start === dateISO);
+      const unitStartHere = startsHere[0];
+      const tagName = u => (u.course && lanes.length ? u.course + ": " : "") + (u.name || "Unit");
       const unitTag = unitStartHere
-        ? `<span class="unit-tag" style="color:${unitStartHere.color}" title="${escapeAttr(unitStartHere.name || "Unit")}">${escapeHtml(unitStartHere.name || "Unit")}</span>`
+        ? `<span class="unit-tag" style="color:${unitStartHere.color}" title="${escapeAttr(startsHere.map(tagName).join("; "))}">${escapeHtml(unitStartHere.name || "Unit")}${startsHere.length > 1 ? " +" + (startsHere.length - 1) : ""}</span>`
         : "";
       cell.innerHTML = `<span class="num">${d}</span>${abBadge}${chips}${label}${paced}${bumpNotes}${lesson}${unitBars}${unitTag}`;
       cell.addEventListener("click", (e) => {
@@ -1163,6 +1247,27 @@ function openDrawer(dateISO) {
   renderMonths();
 }
 
+/** What every other course has on a date, read-only: the words behind the bands the month
+    grid draws for them (Path 9 P2's last page piece), so a band's course and unit are not
+    only in a hover title. Empty with one course. */
+function otherCoursesHtml(dateISO, course) {
+  if (!course || planState() !== "ok") return "";
+  const rows = cal.plan.courses.filter(c => c.id !== course.id && placements[c.id]).map(c => {
+    const p = placements[c.id];
+    const slot = p.slots && p.slots[dateISO];
+    const unit = slot && slot.unitId ? (c.units || []).find(u => u.id === slot.unitId) : null;
+    let what;
+    if ((c.lost || []).some(x => x.date === dateISO)) what = "didn't meet";
+    else if (slot && slot.kind === "lesson") what = (p.byDate[dateISO] ? p.byDate[dateISO].raw : "a lesson") + (unit ? " (" + unit.name + ")" : "");
+    else if (slot && slot.kind === "gap") what = "the extra day before a lesson" + (unit ? " (" + unit.name + ")" : "");
+    else if (slot && unit) what = unit.name + " — class day " + slot.n + " of " + slot.of + (slot.half ? " ½" : "");
+    else if (p.classDates.includes(dateISO)) what = "nothing planned";
+    else what = "no class";
+    return `<li><b>${escapeHtml(c.name)}</b>: ${escapeHtml(what)}</li>`;
+  });
+  return rows.length ? `<label class="f">Other courses</label><ul class="drawer-others">${rows.join("")}</ul>` : "";
+}
+
 /** The pacing section of the day editor, for the active course: what lesson landed here,
     and the two actions Path 9 P2 tells apart. "This lesson needs another day" is the bump
     as it always was (one empty class day before the lesson, anchored to it). "This class
@@ -1175,7 +1280,17 @@ function renderDrawerPacing(dateISO) {
   const placed = placement && placement.byDate[dateISO];
   const vacated = placement && placement.vacated[dateISO];
   const lost = course && course.lost.find(x => x.date === dateISO);
+  const slot = placement && placement.slots && placement.slots[dateISO];
+  const unitDay = slot && slot.kind === "day" && course ? course.units.find(u => u.id === slot.unitId) : null;
   let html = "";
+  if (unitDay) {
+    html += `<label class="f">Planned${cal.plan.courses.length > 1 ? " (" + escapeHtml(course.name) + ")" : ""}</label><div class="drawer-paced">${escapeHtml(unitDay.name)} — class day ${slot.n} of ${slot.of}${slot.half ? " ½" : ""}</div>
+      <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button id="drawerUnitDay" class="small">This unit needs another day</button>
+        <button id="drawerLost" class="small">This class didn't meet…</button>
+        <button id="drawerSnow" class="small">Snow day…</button>
+      </div>`;
+  }
   if (placed) {
     html += `<label class="f">Paced lesson${cal.plan.courses.length > 1 ? " (" + escapeHtml(course.name) + ")" : ""}</label><div class="drawer-paced">${escapeHtml(placed.raw)}</div>
       <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
@@ -1192,6 +1307,7 @@ function renderDrawerPacing(dateISO) {
     html += `<label class="f">${escapeHtml(course.name)} didn't meet</label><div class="drawer-lost">${escapeHtml(lost.reason || "(no reason given)")}
       <button id="drawerUnlost" class="small" type="button">It met after all</button></div>`;
   }
+  html += otherCoursesHtml(dateISO, course);
   el.innerHTML = html;
   if (lost) {
     document.getElementById("drawerUnlost").addEventListener("click", () => {
@@ -1199,8 +1315,13 @@ function renderDrawerPacing(dateISO) {
       save(course.name + " met on " + shortDate(dateISO) + " after all"); closeDrawer();
     });
   }
-  if (!placed) return;
-  document.getElementById("drawerBump").addEventListener("click", () => {
+  if (!placed && !unitDay) return;
+  const what = placed ? `"${placed.raw}"` : unitDay.name + "'s day " + slot.n;
+  if (unitDay) document.getElementById("drawerUnitDay").addEventListener("click", () => {
+    unitDay.days += 1;
+    save(unitDay.name + " takes one more class day"); closeDrawer();
+  });
+  if (placed) document.getElementById("drawerBump").addEventListener("click", () => {
     const reason = prompt(`"${placed.raw}" needs another day: an empty class day goes in front of it, so it and every lesson after it move one class day later. The empty day stays with this lesson if earlier days change.\n\nOptional reason (shows on the day it leaves):`, "");
     if (reason === null) return;
     course.adjustments.push({ id: uid("adj"), beforeLessonId: placed.id, reason: reason.trim(), createdOn: dateISO });
@@ -1208,7 +1329,7 @@ function renderDrawerPacing(dateISO) {
     save(placed.raw + " needs another day"); closeDrawer();
   });
   document.getElementById("drawerLost").addEventListener("click", () => {
-    const reason = prompt(`${course.name} didn't meet on ${shortDate(dateISO)} (an assembly, a fire drill): this date stops being a class day for this course, and "${placed.raw}" and everything after it move to the next class days.\n\nOptional reason:`, "");
+    const reason = prompt(`${course.name} didn't meet on ${shortDate(dateISO)} (an assembly, a fire drill): this date stops being a class day for this course, and ${what} and everything after it move to the next class days.\n\nOptional reason:`, "");
     if (reason === null) return;
     course.lost.push({ id: uid("lost"), date: dateISO, reason: reason.trim() });
     save(course.name + " didn't meet on " + shortDate(dateISO)); closeDrawer();
@@ -1545,11 +1666,42 @@ function ensureUnits() {
 
 function unitsForDate(dateISO) {
   ensureUnits();
-  return cal.units.filter(u => u.start && u.end && u.start <= u.end && dateISO >= u.start && dateISO <= u.end);
+  const dated = cal.units.filter(u => u.start && u.end && u.start <= u.end && dateISO >= u.start && dateISO <= u.end);
+  return dated.concat(typedUnitSpans().filter(u => dateISO >= u.start && dateISO <= u.end));
+}
+/** The active course's units as bands, when it is planned in units (no lessons): each from
+    its first placed class day to its last (Path 9 P2 increment 2). A lesson course shows
+    its lessons in the cells instead. */
+function typedUnitSpans() {
+  const course = activeCourse();
+  if (!course || course.lessons.length || !placement) return [];
+  return unitSpansOf(course, placement);
+}
+function unitSpansOf(course, p) {
+  return course.units.map((u, i) => {
+    const st = (p.units || []).find(x => x.id === u.id);
+    return st && st.start ? { name: u.name, color: u.color || UNIT_COLORS[i % UNIT_COLORS.length], start: st.start, end: st.end, course: course.name } : null;
+  }).filter(Boolean);
+}
+/** Every other course's units as bands, one lane a course in the plan's order, so a
+    course's band sits at the same height on every day (Path 9 P2's last page piece). The
+    active course is drawn as it was (its lessons in the cells, or its bands when it is
+    typed), so a one-course calendar is unchanged. A lesson course's units run from its
+    unit's first placed lesson to its last. */
+function otherCourseLanes() {
+  const course = activeCourse();
+  if (!course || planState() !== "ok") return [];
+  return cal.plan.courses.filter(c => c.id !== course.id && placements[c.id])
+    .map(c => ({ course: c, spans: unitSpansOf(c, placements[c.id]) }))
+    .filter(l => l.spans.length);
 }
 
 function renderUnits() {
   ensureUnits();
+  // P9-8: dated units stay until the teacher turns them into a course; the card is shown
+  // only while there are some (Path 9 P2 increment 2).
+  document.getElementById("unitsCard").hidden = !cal.units.length;
+  document.getElementById("btnConvertUnits").disabled = planState() === "newer";
   const list = document.getElementById("unitsList");
   list.innerHTML = "";
   cal.units.forEach((u, idx) => {
@@ -1601,6 +1753,90 @@ document.getElementById("btnAddUnit").addEventListener("click", () => {
   save(); render();
 });
 
+/* --- "Turn into a course…" (Path 9 P2 increment 2): the dated units become a course's
+   units, each pinned at its start with the school days it covers, shown before and after
+   in a preview; nothing is stored until Apply. */
+const CONVERT_WHY = { overlap: "overlap", "no-school-day": "holds no school day inside the year", "no-dates": "has no start and end date" };
+function renderConvertPreview(picked, name) {
+  const wrap = document.getElementById("convertPreview");
+  wrap.textContent = "";
+  if (!picked) return;
+  ensureUnits();
+  const box = document.createElement("div");
+  box.className = "plan-preview"; box.id = "convertBox";
+  box.setAttribute("role", "region"); box.setAttribute("aria-labelledby", "convertTitle");
+  const h = document.createElement("h3"); h.id = "convertTitle"; h.textContent = "Turn these units into a course"; box.appendChild(h);
+  const nameField = document.createElement("div"); nameField.className = "field";
+  const nl = document.createElement("label"); nl.htmlFor = "convertName"; nl.textContent = "Course name";
+  const ni = document.createElement("input"); ni.type = "text"; ni.id = "convertName"; ni.maxLength = 80; ni.value = name;
+  nameField.append(nl, ni); box.appendChild(nameField);
+  const taken = planState() === "ok" ? cal.plan.courses.map(c => c.id) : [];
+  const cv = convertDatedUnits(cal, picked, { name, taken });
+  const placed = placeCourse(cal, cv.course);
+  const t = document.createElement("table"); t.className = "unit-table";
+  const cap = document.createElement("caption"); cap.textContent = "Each unit's dates now and as a course"; t.appendChild(cap);
+  const head = t.createTHead().insertRow();
+  ["Use", "Unit", "Laid on", "School days", "As a course"].forEach(x => { const th = document.createElement("th"); th.scope = "col"; th.textContent = x; head.appendChild(th); });
+  const body = t.createTBody();
+  const sorted = [...cal.units].sort((a, b) => (a.start || "") < (b.start || "") ? -1 : 1);
+  let k = 0;
+  sorted.forEach(u => {
+    const r = body.insertRow();
+    const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = picked.includes(u.id);
+    cb.setAttribute("aria-label", "Include " + (u.name || "Untitled unit"));
+    cb.addEventListener("change", () => {
+      const next = cb.checked ? [...picked, u.id] : picked.filter(x => x !== u.id);
+      renderConvertPreview(next, ni.value);
+    });
+    r.insertCell().appendChild(cb);
+    r.insertCell().textContent = u.name || "Untitled unit";
+    r.insertCell().textContent = u.start && u.end ? fmtShort(u.start) + " – " + fmtShort(u.end) : "—";
+    const used = picked.includes(u.id) && !cv.refused.some(x => x.a === u.id && x.why !== "overlap");
+    const unit = used ? cv.course.units[k] : null;
+    const st = unit ? placed.units.find(x => x.id === unit.id) : null;
+    if (unit) k++;
+    r.insertCell().textContent = unit ? String(unit.days) : "—";
+    r.insertCell().textContent = st && st.start ? fmtShort(st.start) + " – " + fmtShort(st.end) + (st.short ? " (" + st.short + " short)" : "") : "—";
+  });
+  box.appendChild(t);
+  const msg = document.createElement("p");
+  const nameOf = id => (cal.units.find(u => u.id === id) || {}).name || "Untitled unit";
+  if (cv.refused.length) {
+    msg.className = "refused";
+    msg.textContent = "These cannot be turned into a course yet:\n" + cv.refused.map(x => x.b
+      ? "\u201c" + nameOf(x.a) + "\u201d and \u201c" + nameOf(x.b) + "\u201d " + CONVERT_WHY[x.why] + "."
+      : "\u201c" + nameOf(x.a) + "\u201d " + CONVERT_WHY[x.why] + ".").join("\n") + "\nChange their dates, or untick one.";
+  } else if (!cv.removeIds.length) {
+    msg.textContent = "Tick at least one unit.";
+  } else {
+    msg.textContent = "Each unit is pinned to its start, so it keeps the school days it has now. Nothing moves until you change it; \u201cLet these flow\u201d in the Courses card lets the units after the first move with lost days.";
+  }
+  box.appendChild(msg);
+  const row = document.createElement("div"); row.className = "unit-actions";
+  const ok = document.createElement("button"); ok.type = "button"; ok.className = "primary small"; ok.id = "convertApply"; ok.textContent = "Make this course";
+  ok.disabled = !!cv.refused.length || !cv.removeIds.length;
+  ok.addEventListener("click", () => {
+    const fresh = convertDatedUnits(cal, picked, { name: ni.value.trim() || name, taken: planState() === "ok" ? cal.plan.courses.map(c => c.id) : [] });
+    if (fresh.refused.length || !fresh.removeIds.length) return;
+    if (planState() !== "ok") cal.plan = readPlan(cal).plan;
+    cal.plan.courses.push(fresh.course);
+    cal.plan.active = fresh.course.id;
+    cal.units = cal.units.filter(u => !fresh.removeIds.includes(u.id));
+    renderConvertPreview(null);
+    save(null, `Turned ${fresh.removeIds.length === 1 ? "1 unit" : fresh.removeIds.length + " units"} into the course \u201c${fresh.course.name}\u201d. Every unit kept its school days.`); render();
+  });
+  const cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "small"; cancel.textContent = "Cancel";
+  cancel.addEventListener("click", () => renderConvertPreview(null));
+  row.append(ok, cancel); box.appendChild(row);
+  wrap.appendChild(box);
+}
+document.getElementById("btnConvertUnits").addEventListener("click", () => {
+  ensureUnits();
+  const n = planState() === "ok" ? cal.plan.courses.length : 0;
+  renderConvertPreview(cal.units.map(u => u.id), "Course " + (n + 1));
+  const first = document.getElementById("convertName"); if (first) first.focus();
+});
+
 /** The printable pacing calendar: one row per unit, sorted by start date,
     with its computed instructional-day count — the number a teacher pastes
     into a syllabus, and the thing worth handing a substitute or a
@@ -1624,14 +1860,38 @@ function renderUnitsPrint() {
         <td>${(validRange && stats.halfDays) ? stats.halfDays : ""}</td>
       </tr>`).join("")
     : `<tr><td colspan="5">No units defined yet — add one in the Units card above.</td></tr>`;
-  wrap.innerHTML = `
-    <h2>${escapeHtml(cal.meta.yearLabel || "School year")} &mdash; unit pacing calendar</h2>
+  // Path 9 P2: each course's units, as placed, with what does not fit (Short). A calendar
+  // with no course keeps the dated table alone, unchanged; with courses and no dated units
+  // the dated table, which would only say to add one in a card that is hidden, is left out.
+  const courses = planState() === "ok" ? cal.plan.courses.filter(c => c.units.length && placements[c.id]) : [];
+  const dated = rows.length || !courses.length ? `${courses.length ? "\n    <h3>Dated units</h3>" : ""}
     <table>
       <thead><tr><th>Unit</th><th>Start</th><th>End</th><th>Instructional days</th><th>Half days</th></tr></thead>
       <tbody>${body}</tbody>
       ${rows.length ? `<tfoot><tr><td colspan="3">Total</td><td>${total}</td><td></td></tr></tfoot>` : ""}
     </table>
-  `;
+  ` : "";
+  const perCourse = courses.map(c => {
+    const p = placements[c.id];
+    const st = c.units.map((u, i) => ({ u, i, s: (p.units || []).find(x => x.id === u.id) || {} }));
+    const sum = k => st.reduce((n, x) => n + (x.s[k] || 0), 0);
+    const meets = c.meets === "all" ? "" : " (" + c.meets + " days)";
+    return `<h3 class="units-print-course">${escapeHtml(c.name)}${meets}</h3>
+    <table data-course="${escapeAttr(c.id)}">
+      <thead><tr><th>Unit</th><th>Start</th><th>End</th><th>Class days</th><th>Half days</th><th>Short</th></tr></thead>
+      <tbody>${st.map(({ u, i, s }) => `<tr>
+        <td class="swatch-cell"><span class="u-swatch" style="background:${escapeAttr(u.color || UNIT_COLORS[i % UNIT_COLORS.length])}"></span>${escapeHtml(u.name || "Unit " + (i + 1))}</td>
+        <td>${s.start ? fmtShort(s.start) : "—"}</td>
+        <td>${s.end ? fmtShort(s.end) : "—"}</td>
+        <td>${s.days || 0}</td>
+        <td>${s.half ? s.half : ""}</td>
+        <td${s.short ? ' class="short"' : ""}>${s.short || 0}</td>
+      </tr>`).join("")}</tbody>
+      <tfoot><tr><td colspan="3">Total</td><td>${sum("days")}</td><td>${sum("half") || ""}</td><td>${sum("short")}</td></tr></tfoot>
+    </table>`;
+  }).join("");
+  wrap.innerHTML = `
+    <h2>${escapeHtml(cal.meta.yearLabel || "School year")} &mdash; unit pacing calendar</h2>${dated}${perCourse}`;
 }
 
 /* --- lesson pacing --- */
@@ -1645,6 +1905,31 @@ function fmtShort(dateISO) {
 
 /** The Courses card (Path 9 P2 increment 1, lesson mode). With no course it reads as the
     Lesson Pacing card always did, and the first Distribute or import makes "Course 1". */
+/** Path 9 P2 increment 3: one "behind" line a course with something planned, measured
+    against its baseline (slip() in scv-plan.js), and "Make this the plan" for the course
+    shown. A course saved before v311 has no baseline until its next change. */
+function renderSlip(courses, course, readOnly) {
+  const box = document.getElementById("courseSlip");
+  const list = document.getElementById("courseSlipList");
+  list.textContent = "";
+  const t = todayISO();
+  const planned = courses.filter(c => placements[c.id] && placements[c.id].order.length);
+  planned.forEach(c => {
+    const li = document.createElement("li");
+    li.dataset.course = c.id;
+    const s = slip(cal, c, placements[c.id], t);
+    li.textContent = s ? describeSlip(cal, c, s, c.name)
+      : c.name + ": no plan to measure against yet. It is set at your next change, or press Make this the plan.";
+    if (s && s.behind > 0) li.className = "slip-behind";
+    list.appendChild(li);
+  });
+  box.hidden = !planned.length;
+  const btn = document.getElementById("btnMakePlan");
+  const mine = !!(course && placements[course.id] && placements[course.id].order.length);
+  btn.hidden = !mine || readOnly;
+  if (mine) btn.textContent = "Make this the plan" + (courses.length > 1 ? " for " + course.name : "");
+}
+
 function renderPacing() {
   const state = planState();
   const readOnly = state === "newer";
@@ -1653,6 +1938,7 @@ function renderPacing() {
     .forEach(el => { el.disabled = readOnly; });
   const course = activeCourse();
   const courses = state === "ok" ? cal.plan.courses : [];
+  renderFlowPreview(false);
 
   const tabs = document.getElementById("courseTabs");
   tabs.textContent = "";
@@ -1682,11 +1968,16 @@ function renderPacing() {
   if (course) {
     document.getElementById("courseName").value = course.name;
     document.getElementById("courseMeets").value = course.meets;
+    document.getElementById("courseAbsorb").checked = !!course.absorb;
   }
+  const letters = course ? new Set(course.lessons.map(l => l.letter)) : new Set();
+  document.getElementById("btnCourseSplit").hidden = !course || readOnly || course.meets !== "all" || !(letters.has("A") && letters.has("B"));
+  renderSplitPreview(false);
   const probs = [];
   if (course && placement.problems.some(x => x.code === "no-rotation")) probs.push(`${course.name} meets on ${course.meets} days, but the A/B Day Cycle is off, so it is paced on every school day. Turn the cycle on above.`);
   if (course && placement.problems.some(x => x.code === "no-class-days")) probs.push(`${course.name} has no class days between its start date and the year's last day.`);
   document.getElementById("courseProblems").textContent = probs.join("\n");
+  renderSlip(courses, course, readOnly);
 
   const lessons = course ? course.lessons : [];
   const adjustments = course ? course.adjustments : [];
@@ -1694,8 +1985,13 @@ function renderPacing() {
   document.getElementById("paceStart").value = startISO;
 
   const statusEl = document.getElementById("paceStatus");
-  if (!lessons.length) {
-    statusEl.innerHTML = "No lessons paced yet — paste a list above or import the county spreadsheet.";
+  if (!lessons.length && course && course.units.length) {
+    const total = course.units.reduce((n, u) => n + u.days, 0);
+    statusEl.textContent = `Planned in units: ${course.units.length} unit${course.units.length === 1 ? "" : "s"}, ${total} class day${total === 1 ? "" : "s"} from ${fmtShort(startISO)}. Pasting a lesson list instead makes the units from its lesson codes.`;
+  } else if (!lessons.length) {
+    statusEl.innerHTML = course
+      ? "No lessons paced yet — paste a list above or import the county spreadsheet, or plan in units: <em>+ Add unit</em> below."
+      : "No lessons paced yet — paste a list above or import the county spreadsheet.";
   } else {
     const parts = [`<b>${lessons.length}</b> lessons paced from ${fmtShort(startISO)}`];
     const placedCount = Object.keys(placement.byDate).length;
@@ -1708,6 +2004,7 @@ function renderPacing() {
   }
 
   renderUnitTable(course);
+  renderCoursePace(course);
 
   const lostEl = document.getElementById("lostLog");
   lostEl.textContent = "";
@@ -1757,12 +2054,22 @@ function renderPacing() {
   });
 }
 
-/** The course's units, the runs of equal U<n> in its list: a name the teacher can change
-    (kept across a re-import), how many class days it takes, where it lands, and how many
-    of its days do not fit (Short). Pins and typed lengths are increment 2. */
+/** The course's units. In lesson mode they are the runs of equal U<n> in its list: a name
+    the teacher can change (kept across a re-import) and a pin; the class days are the run's.
+    In a course with no lessons (Path 9 P2 increment 2) the teacher types each unit's class
+    days too, and orders and removes them. Every row says where the unit lands, how many
+    open days a pin left before it, and how many of its days do not fit (Short). */
 function renderUnitTable(course) {
   const wrap = document.getElementById("unitTable");
-  wrap.textContent = "";
+  const notes = document.getElementById("unitNotes");
+  const actions = document.getElementById("unitActions");
+  wrap.textContent = ""; notes.textContent = "";
+  const editable = !!course && planState() === "ok";
+  const typed = !!course && !course.lessons.length;
+  actions.hidden = !editable;
+  document.getElementById("btnUnitAdd").hidden = !typed;
+  const pinsAfterFirst = !!course && course.units.some((u, i) => i > 0 && u.pin);
+  document.getElementById("btnUnitFlow").hidden = !pinsAfterFirst;
   if (!course || !course.units.length) return;
   const t = document.createElement("table");
   t.className = "unit-table";
@@ -1771,29 +2078,255 @@ function renderUnitTable(course) {
   cap.style.textAlign = "left"; cap.style.fontWeight = "700";
   t.appendChild(cap);
   const head = t.createTHead().insertRow();
-  ["Unit", "Class days", "Starts", "Ends", "Short"].forEach(x => { const th = document.createElement("th"); th.scope = "col"; th.textContent = x; head.appendChild(th); });
+  const cols = ["Unit", "Class days", "Pinned to", "Starts", "Ends", "Open", "Short", "Buffer"];
+  if (typed) cols.push("Order");
+  cols.forEach(x => { const th = document.createElement("th"); th.scope = "col"; th.textContent = x; head.appendChild(th); });
   const body = t.createTBody();
-  course.units.forEach(u => {
+  const edit = (id, fn, label) => {
+    const c = activeCourse(); const rec = c && c.units.find(x => x.id === id);
+    if (!rec) return;
+    fn(rec, c);
+    save(label); render();
+  };
+  const lines = [];
+  course.units.forEach((u, idx) => {
     const st = (placement.units || []).find(x => x.id === u.id) || {};
+    const who = u.name || "Unit " + (idx + 1);
     const r = body.insertRow();
     const name = document.createElement("input");
     name.type = "text"; name.value = u.name; name.maxLength = 80;
-    name.setAttribute("aria-label", "Name of unit " + (u.code || u.name));
-    name.addEventListener("change", () => {
-      const c = activeCourse(); const rec = c && c.units.find(x => x.id === u.id);
-      if (!rec) return;
-      rec.name = name.value.trim() || rec.name; save(); render();
-    });
+    name.setAttribute("aria-label", "Name of unit " + (u.code || idx + 1));
+    name.addEventListener("change", () => edit(u.id, rec => { rec.name = name.value.trim() || rec.name; }));
     r.insertCell().appendChild(name);
-    r.insertCell().textContent = String(st.days != null ? st.days : u.days) + (st.half ? ", " + st.half + (st.half === 1 ? " half day" : " half days") : "");
+    const daysCell = r.insertCell();
+    const half = st.half ? ", " + st.half + (st.half === 1 ? " half day" : " half days") : "";
+    if (typed) {
+      const n = document.createElement("input");
+      n.type = "number"; n.min = "0"; n.max = "400"; n.step = "1"; n.value = String(u.days);
+      n.setAttribute("aria-label", "Class days for " + who);
+      n.addEventListener("change", () => {
+        const v = Math.max(0, Math.min(400, Math.floor(Number(n.value) || 0)));
+        edit(u.id, rec => { rec.days = v; }, who + " now takes " + v + (v === 1 ? " class day" : " class days"));
+      });
+      daysCell.appendChild(n);
+      if (half) daysCell.appendChild(document.createTextNode(half));
+    } else {
+      daysCell.textContent = String(st.days != null ? st.days : u.days) + half;
+    }
+    const pinCell = r.insertCell();
+    const pin = document.createElement("input");
+    pin.type = "date"; pin.value = u.pin || "";
+    pin.setAttribute("aria-label", "Pin " + who + " to a start date");
+    pin.addEventListener("change", () => {
+      const v = pin.value || null;
+      edit(u.id, rec => { rec.pin = v; }, v ? "Pinning " + who + " to " + shortDate(v) : "Unpinning " + who);
+    });
+    pinCell.appendChild(pin);
+    if (u.pin) {
+      const un = document.createElement("button");
+      un.type = "button"; un.className = "small"; un.textContent = "Unpin";
+      un.setAttribute("aria-label", "Unpin " + who);
+      un.addEventListener("click", () => edit(u.id, rec => { rec.pin = null; }, "Unpinning " + who));
+      pinCell.appendChild(un);
+    }
     r.insertCell().textContent = st.start ? fmtShort(st.start) : "—";
     r.insertCell().textContent = st.end ? fmtShort(st.end) : "—";
+    r.insertCell().textContent = String(st.open || 0);
     const sh = r.insertCell();
     sh.textContent = st.short ? String(st.short) : "0";
     if (st.short) sh.className = "short";
+    // Increment 4: a unit's buffer days. Typed, the teacher sets how many of its last days;
+    // in lesson mode they are its BUF lessons. "(N used)" when a lost day took some.
+    const bufCell = r.insertCell();
+    const used = st.buffered ? " (" + st.buffered + " used)" : "";
+    if (typed) {
+      const f = document.createElement("input");
+      f.type = "number"; f.min = "0"; f.max = String(u.days); f.step = "1"; f.value = String(u.flex || 0);
+      f.setAttribute("aria-label", "Buffer days in " + who);
+      f.addEventListener("change", () => {
+        const v = Math.max(0, Math.min(u.days, Math.floor(Number(f.value) || 0)));
+        edit(u.id, rec => { rec.flex = v; }, who + " now has " + v + (v === 1 ? " buffer day" : " buffer days"));
+      });
+      bufCell.appendChild(f);
+      if (used) bufCell.appendChild(document.createTextNode(used));
+    } else {
+      bufCell.textContent = String(st.flex || 0) + used;
+    }
+    if (typed) {
+      const acts = r.insertCell(); acts.className = "acts";
+      const mk = (txt, aria, dis, fn) => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "small"; b.textContent = txt;
+        b.setAttribute("aria-label", aria); b.disabled = dis; b.addEventListener("click", fn); acts.appendChild(b); return b;
+      };
+      const move = (d) => {
+        const c = activeCourse(); const i = c.units.findIndex(x => x.id === u.id);
+        const [x] = c.units.splice(i, 1); c.units.splice(i + d, 0, x);
+        save("Moving " + who + (d < 0 ? " earlier" : " later")); render();
+      };
+      mk("↑", "Move " + who + " earlier", idx === 0, () => move(-1));
+      mk("↓", "Move " + who + " later", idx === course.units.length - 1, () => move(1));
+      mk("Remove", "Remove " + who, false, () => {
+        if (!confirm(`Remove the unit “${who}” from ${course.name}? Undo can bring it back.`)) return;
+        const c = activeCourse(); c.units = c.units.filter(x => x.id !== u.id);
+        save(null, `Removed the unit “${who}”.`); render();
+      }).classList.add("danger");
+    }
+    if (st.pinShift && !st.pinIgnored && st.start) lines.push(`${who} is pinned to ${fmtShort(u.pin)}, which is not a class day for ${course.name}, so it starts ${fmtShort(st.start)}.`);
+    if (st.open) lines.push(`${st.open === 1 ? "1 class day is" : st.open + " class days are"} open before ${who}: nothing is planned there.`);
+    (placement.problems || []).filter(p => p.unitId === u.id).forEach(p => { const x = unitProblemText(p, who); if (x) lines.push(x); });
+    const usedFor = (placement.buffers || []).filter(b => b.unitId === u.id).map(b => b.for && b.for.date ? fmtShort(b.for.date) : "a lesson that needed another day");
+    if (usedFor.length) lines.push(`${who} used ${usedFor.length === 1 ? "a buffer day" : usedFor.length + " buffer days"}, for ${usedFor.join(", ")}, so it still ends ${st.end ? fmtShort(st.end) : "as planned"}.`);
   });
   wrap.appendChild(t);
+  notes.textContent = lines.join("\n");
 }
+
+document.getElementById("btnUnitAdd").addEventListener("click", () => {
+  const c = activeCourse(); if (!c || c.lessons.length) return;
+  const u = newUnit("Unit " + (c.units.length + 1), 10, { taken: c.units.map(x => x.id), color: UNIT_COLORS[c.units.length % UNIT_COLORS.length] });
+  c.units.push(u);
+  save("Adding " + u.name + " (10 class days)"); render();
+  const inputs = document.querySelectorAll("#unitTable tbody tr:last-child input[type=text]");
+  if (inputs.length) inputs[0].focus();
+});
+
+/* "Let these flow…": clear every pin after the first unit's, shown before and after first. */
+function renderFlowPreview(open) {
+  const wrap = document.getElementById("flowPreview");
+  wrap.textContent = "";
+  const course = activeCourse();
+  if (!open || !course) return;
+  const next = unpinAfterFirst(course);
+  const after = placeCourse(cal, next);
+  const box = document.createElement("div");
+  box.className = "plan-preview"; box.id = "flowBox";
+  box.setAttribute("role", "region"); box.setAttribute("aria-labelledby", "flowTitle");
+  const h = document.createElement("h3"); h.id = "flowTitle"; h.textContent = "Let the units of " + course.name + " flow"; box.appendChild(h);
+  const p = document.createElement("p");
+  p.textContent = "The pins after the first unit come off: each unit starts the class day after the one before it ends, and a lost day moves every unit after it. These dates change:";
+  box.appendChild(p);
+  const t = document.createElement("table"); t.className = "unit-table";
+  const cap = document.createElement("caption"); cap.textContent = "Units before and after"; t.appendChild(cap);
+  const head = t.createTHead().insertRow();
+  ["Unit", "Now", "After", "Short after"].forEach(x => { const th = document.createElement("th"); th.scope = "col"; th.textContent = x; head.appendChild(th); });
+  const body = t.createTBody();
+  const span = st => st && st.start ? fmtShort(st.start) + " – " + fmtShort(st.end) : "—";
+  let changes = 0;
+  course.units.forEach((u, i) => {
+    const b = (placement.units || []).find(x => x.id === u.id), a = after.units.find(x => x.id === u.id);
+    if (span(b) === span(a) && (b && b.short) === (a && a.short)) return;
+    changes++;
+    const r = body.insertRow();
+    r.insertCell().textContent = u.name || "Unit " + (i + 1);
+    r.insertCell().textContent = span(b);
+    r.insertCell().textContent = span(a);
+    r.insertCell().textContent = String((a && a.short) || 0);
+  });
+  if (changes) box.appendChild(t);
+  else { const q = document.createElement("p"); q.textContent = "No date changes today; the pins would only matter once a day is lost."; box.appendChild(q); }
+  const row = document.createElement("div"); row.className = "unit-actions";
+  const ok = document.createElement("button"); ok.type = "button"; ok.className = "primary small"; ok.id = "flowApply"; ok.textContent = "Let them flow";
+  ok.addEventListener("click", () => {
+    const c = activeCourse(); if (!c) return;
+    putCourse(unpinAfterFirst(c));
+    renderFlowPreview(false);
+    save("Letting the units of " + c.name + " flow", "Took the pins off the units of “" + c.name + "” after the first. No date moved.");
+    render();
+  });
+  const cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "small"; cancel.textContent = "Cancel";
+  cancel.addEventListener("click", () => renderFlowPreview(false));
+  row.append(ok, cancel); box.appendChild(row);
+  wrap.appendChild(box);
+}
+document.getElementById("btnUnitFlow").addEventListener("click", () => {
+  renderFlowPreview(true);
+  const b = document.getElementById("flowApply"); if (b) b.focus();
+});
+
+/** "Which day types this course counts": a course's own `pace` overrides the type's
+    (Count for pacing in Day Types). Only types that are not No school are listed. */
+function renderCoursePace(course) {
+  const wrap = document.getElementById("coursePace");
+  wrap.textContent = "";
+  const types = cal.dayTypes.filter(t => !t.noSchool);
+  if (!course || planState() !== "ok" || !types.length) return;
+  const h = document.createElement("div"); h.id = "coursePaceTitle"; h.className = "f";
+  h.textContent = "Day types " + course.name + " counts as class days";
+  const box = document.createElement("div"); box.className = "pace-pick";
+  box.setAttribute("role", "group"); box.setAttribute("aria-labelledby", "coursePaceTitle");
+  types.forEach(t => {
+    const lab = document.createElement("label");
+    const sel = document.createElement("select");
+    const typeSays = t.pace === "skip" ? "skips" : "counts";
+    [["", "As the day type (" + typeSays + ")"], ["count", "Counts"], ["skip", "Skips"]].forEach(([v, txt]) => sel.add(new Option(txt, v)));
+    sel.value = course.pace && course.pace[t.id] ? course.pace[t.id] : "";
+    sel.setAttribute("aria-label", course.name + ": " + t.label);
+    sel.addEventListener("change", () => {
+      const c = activeCourse(); if (!c) return;
+      if (!c.pace || typeof c.pace !== "object") c.pace = {};
+      if (sel.value) c.pace[t.id] = sel.value; else delete c.pace[t.id];
+      const word = sel.value === "skip" ? "skips" : sel.value === "count" ? "counts" : (t.pace === "skip" ? "skips" : "counts");
+      save(c.name + " " + word + " “" + t.label + "” days"); render();
+    });
+    lab.append(document.createTextNode(t.label + " "), sel);
+    box.appendChild(lab);
+  });
+  wrap.append(h, box);
+}
+
+/* "Split into A and B…" (increment 4, P9-7: only when asked): the A lessons and the B
+   lessons as two courses, shown before and after first (splitPreview in scv-plan.js). */
+function renderSplitPreview(open) {
+  const wrap = document.getElementById("splitPreview");
+  wrap.textContent = "";
+  const course = activeCourse();
+  if (!open || !course || planState() !== "ok") return;
+  const sp = splitPreview(cal, course, { taken: cal.plan.courses.map(c => c.id), todayISO: todayISO() });
+  const box = document.createElement("div");
+  box.className = "plan-preview"; box.id = "splitBox";
+  box.setAttribute("role", "region"); box.setAttribute("aria-labelledby", "splitTitle");
+  const h = document.createElement("h3"); h.id = "splitTitle"; h.textContent = "Split " + course.name + " into A and B"; box.appendChild(h);
+  const cycle = !!(cal.abCycle && cal.abCycle.enabled);
+  const p = document.createElement("p");
+  if (sp.refused) p.textContent = "This course cannot be split: " + (sp.refused === "one-letter" ? "all of its lessons are for one letter." : sp.refused === "no-lessons" ? "it has no lessons." : "it already meets on one letter.");
+  else if (!cycle) p.textContent = "Turn the A/B Day Cycle on above first: without it there are no A days and B days to split the course across.";
+  else {
+    const [a, b] = sp.courses;
+    const bumps = c => c.adjustments.length ? ", " + c.adjustments.length + (c.adjustments.length === 1 ? " bump" : " bumps") : "";
+    p.textContent = `“${a.name}” meets on A days with ${a.lessons.length} lessons${bumps(a)}; “${b.name}” meets on B days with ${b.lessons.length} lessons${bumps(b)}. ` +
+      `Days this course didn't meet go with both, and each starts again at 0 days behind. ` +
+      (sp.text ? "Splitting " + sp.text.charAt(0).toLowerCase() + sp.text.slice(1) : "No lesson changes date.") +
+      (sp.orphans.length ? ` ${sp.orphans.length === 1 ? "One bump" : sp.orphans.length + " bumps"} no longer matching a lesson ${sp.orphans.length === 1 ? "is" : "are"} left out.` : "");
+  }
+  box.appendChild(p);
+  const row = document.createElement("div"); row.className = "unit-actions";
+  const ok = document.createElement("button"); ok.type = "button"; ok.className = "primary small"; ok.id = "splitApply"; ok.textContent = "Split it";
+  ok.disabled = !!sp.refused || !cycle;
+  ok.addEventListener("click", () => {
+    const c = activeCourse(); if (!c) return;
+    const fresh = splitPreview(cal, c, { taken: cal.plan.courses.map(x => x.id), todayISO: todayISO() });
+    if (fresh.refused) return;
+    const i = cal.plan.courses.findIndex(x => x.id === c.id);
+    cal.plan.courses.splice(i, 1, ...fresh.courses);
+    cal.plan.active = fresh.courses[0].id;
+    renderSplitPreview(false);
+    save("Splitting " + c.name + " into A and B", "Split “" + c.name + "” into “" + fresh.courses[0].name + "” and “" + fresh.courses[1].name + "”." + (fresh.text ? " " + fresh.text : " No lesson changed date."));
+    render();
+  });
+  const cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "small"; cancel.textContent = "Cancel";
+  cancel.addEventListener("click", () => renderSplitPreview(false));
+  row.append(ok, cancel); box.appendChild(row);
+  wrap.appendChild(box);
+}
+document.getElementById("btnCourseSplit").addEventListener("click", () => {
+  renderSplitPreview(true);
+  const b = document.getElementById("splitApply"); if (b && !b.disabled) b.focus();
+});
+document.getElementById("courseAbsorb").addEventListener("change", e => {
+  const c = activeCourse(); if (!c) return;
+  c.absorb = !!e.target.checked;
+  save(c.name + (c.absorb ? ": buffer days now take a lost day" : ": buffer days no longer take a lost day")); render();
+});
 
 document.getElementById("courseName").addEventListener("change", e => {
   const c = activeCourse(); if (!c) return;
@@ -1823,12 +2356,22 @@ document.getElementById("btnPacePreview").addEventListener("click", () => {
   errEl.textContent = lines.join("\n");
 });
 
+document.getElementById("btnMakePlan").addEventListener("click", () => {
+  const c = activeCourse(); if (!c) return;
+  const p = placePlan(cal)[c.id]; if (!p) return;
+  const i = cal.plan.courses.findIndex(x => x.id === c.id);
+  cal.plan.courses[i] = setBaseline(cal, c, p, todayISO());
+  save(null, c.name + ": the dates shown are now the plan, as of " + shortDate(todayISO()) + ", so it is 0 days behind.");
+  render();
+});
+
 document.getElementById("btnPaceDistribute").addEventListener("click", () => {
   const { lessons, errors } = parseLessonList(document.getElementById("paceInput").value);
   if (!lessons.length) { alert("Paste at least one lesson code first (one per line — open the naming-convention help above for the format)."); return; }
   if (errors.length && !confirm(`${errors.length} line(s) don't match the naming convention and will be skipped:\n\n` +
     errors.slice(0, 5).map(e => `line ${e.line}: ${e.text}`).join("\n") + (errors.length > 5 ? "\n…" : "") + "\n\nContinue with the rest?")) return;
   const existing = activeCourse();
+  if (existing && !existing.lessons.length && existing.units.length && !confirm(`“${existing.name}” is planned in ${existing.units.length} typed unit(s). A lesson list replaces them with the units its lesson codes name. Continue?`)) return;
   if (existing && existing.lessons.length && !confirm(`Replace the ${existing.lessons.length}-lesson sequence of “${existing.name}” with these ${lessons.length}?\n\nExisting bumps are re-matched by lesson code; any that no longer match are dropped.`)) return;
   const course = ensureCourse();
   if (!course) return;
@@ -1989,18 +2532,23 @@ document.getElementById("btnNewYear").addEventListener("click", () => {
   fresh.dayTypes = cal.dayTypes.map(t => ({ ...t })); // carry the legend forward, drop the days
   if (cal.bell !== undefined) fresh.bell = JSON.parse(JSON.stringify(cal.bell)); // and the bell schedules, which belong to the legend
 
-  const withLessons = activeCourse() ? cal.plan.courses.filter(c => c.lessons.length) : [];
-  const lessonCount = withLessons.reduce((n, c) => n + c.lessons.length, 0);
-  if (withLessons.length
-      && confirm(`Carry ${withLessons.length === 1 ? "the " + lessonCount + "-lesson paced sequence" : "the lessons of " + withLessons.length + " courses (" + lessonCount + " lessons)"} into the new year?\n\nBumps and days a course didn't meet are cleared, and distribution restarts from the new year's first school day — set a different start date in the Courses card if needed.`)) {
-    fresh.plan = readPlan(fresh).plan;
-    withLessons.forEach(c => {
-      const n = newCourse(c.name, { id: c.id, color: c.color, meets: c.meets });
-      n.lessons = c.lessons.map(l => { const x = { ...l }; delete x.on; return x; });
-      n.units = c.units.map(u => ({ ...u, pin: null, start: null, end: null, placed: 0, short: 0 }));
-      fresh.plan.courses.push(syncUnits(n));
-    });
-    fresh.plan.active = withLessons.some(c => c.id === cal.plan.active) ? cal.plan.active : withLessons[0].id;
+  // Increment 4: carryForward() keeps every course's lessons, unit names, lengths and buffer
+  // days (P9-9) and drops what belongs to this year's dates, counted for the confirm.
+  const carried = planState() === "ok" ? carryForward(cal.plan) : null;
+  const keep = carried ? carried.plan.courses.filter(c => c.lessons.length || c.units.length) : [];
+  if (keep.length) {
+    const lessonCount = keep.reduce((n, c) => n + c.lessons.length, 0);
+    const unitCount = keep.reduce((n, c) => n + c.units.length, 0);
+    const d = carried.dropped;
+    const cleared = [[d.pins, "pin", "pins"], [d.bumps, "bump", "bumps"], [d.lost, "day a course didn't meet", "days a course didn't meet"], [d.baselines, "plan behind is measured against", "plans behind is measured against"], [d.starts, "start date", "start dates"]]
+      .filter(x => x[0]).map(x => x[0] + " " + (x[0] === 1 ? x[1] : x[2]));
+    const what = keep.length === 1 ? `the course “${keep[0].name}”` : keep.length + " courses";
+    if (confirm(`Carry ${what} (${lessonCount} lesson${lessonCount === 1 ? "" : "s"}, ${unitCount} unit${unitCount === 1 ? "" : "s"}) into the new year?\n\nKept: lessons, unit names, lengths and buffer days, and which days each course meets and counts.` +
+      (cleared.length ? `\nCleared: ${cleared.join(", ")}.` : "") +
+      `\n\nEach course starts on the new year's first school day — set a different start date in the Courses card if needed.`)) {
+      fresh.plan = { ...carried.plan, courses: keep };
+      if (!keep.some(c => c.id === fresh.plan.active)) fresh.plan.active = keep[0].id;
+    }
   }
 
   const lessonEntries = Object.entries(cal.days).filter(([, d]) => d.lesson);

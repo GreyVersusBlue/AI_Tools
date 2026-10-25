@@ -9,6 +9,174 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P2 finished: unit bands for every course (2026-10-24, AI-18, `CACHE_VERSION` v313)
+
+BACKLOG rank 13 deleted: Path 9 P2 is whole (increments 1–4 in v309–v312, this piece in v313). A gap, ranks not renumbered,
+as the table has done since rank 12.
+
+- **What changed for a teacher.** 032's month grid draws every other course's units as thin bands along the bottom of each
+  day, one row a course in the order of the tabs, under the shown course's own (which draws as before). A band's hover
+  title names its course and unit; one unit name fits on a cell, with "+N" when more units start that day. The day editor
+  has an **Other courses** list saying, in words, what each other course has that day ("Science: Cells — class day 2 of
+  6", a lesson code with its unit, "didn't meet", "nothing planned", "no class"). The Courses card's help says so.
+- **Calls made.** (1) *The shown course draws exactly as before* (its lessons in the cells; its bands only when it is
+  planned in units), so a one-course calendar is unchanged, as the design asked. (2) *A lesson course that is not shown
+  gets bands too*, each unit from its first placed lesson to its last: the cells can show one course's lessons, and a
+  band is all the other courses get. (3) *A lane a course, in the plan's order, with an empty gap* (`.unit-gap`, not a
+  `.unit-bar`) where it has nothing, so a course's band is at the same height all week; with four or more other courses
+  the lanes are 2 px, not 3, and six courses stay in the lower half of the cell. (4) *One name a cell*: the shown
+  course's first, then dated units, then the lanes in order, with "+N" and every name in the title; names on top of
+  each other were unreadable. (5) *The words are in the day editor, not in the bands*: a title is hover-only, so a
+  keyboard or screen-reader user gets the same facts from the drawer. (6) *The week strip, the year grid and `.ics` still
+  show the shown course only*, as the design says; colours are each course's own, so two courses' "Unit 1" can share the
+  default blue and are told apart by their row.
+- **Checks.** New `npm run test:school-calendar-plan-bands` (`smoke-plan-bands.mjs`, Chromium, port 8545): 21 checks
+  (three courses, lanes, gaps, titles, +1 and +4, a lost day, switching the shown course, one typed and one lesson course
+  as before, six courses' geometry, the drawer, axe on the grid and the drawer) and 5 breaks of the page altered on the
+  wire, each caught; also green under `TZ=UTC`. `run-suites --only school-calendar` 12 green (the `smoke-weeks` golden
+  included), `--only service-worker` 3 green, the a11y sweep on 032 (seeded) clean, `test:theme` 966, `path7:next --only
+  032` 0 findings, lint, every guard and `check:precache --base origin/main`.
+- **Not verified.** No teacher with several preps has looked at it; no month was printed on paper with lanes; the
+  drawer list was not read by a screen reader; colours were not checked for colour-blind distinctness (row position is
+  what tells courses apart).
+
+---
+
+## Path 9 P2 increment 4: buffers, "Split into A and B", the new year, and the printed unit table per course (2026-10-24, AI-18, `CACHE_VERSION` v312)
+
+BACKLOG rank 13 kept and rewritten (now ¼): increments 1–4 and the printed unit table are built; bands for every course are left.
+
+- **What changed for a teacher.** 032's Courses card has **"Buffer days take a lost day"** per course, off unless ticked
+  (P9-5). A unit's buffer days are its `BUF1`, `BUF2`… lessons, or, in a course planned in units, the number in the new
+  **Buffer** column (its last days). With the box ticked, a class day the course loses inside a unit (a closure, a day it
+  didn't meet, a lesson that needed another day) uses up the unit's last buffer day, so the unit still ends when planned:
+  the bar says "Unit 1 used 1 buffer day", the column says "2 (1 used)" and the notes name the date. **"Split into A and
+  B…"**, shown for an every-day course with A and B lessons, previews two courses (A days with the A lessons, B days with
+  the B lessons, each with its bumps), says whether any lesson changes date, refuses with the A/B cycle off, and commits
+  with Undo. **"Start New Year"** now carries every course with lessons or units through `carryForward()` (it carried
+  lesson courses only before), and its confirm counts what it keeps and the pins, bumps, lost days, plans and start dates
+  it clears. **"Unit pacing calendar"** prints a table per course (unit, start, end, class days, half days, Short).
+- **Module.** `placeCourse()` takes buffers out before the placer's first pass and reports `buffers` (each with what it was
+  used for) and each unit's `flex` and `buffered`; `stamp()` writes `buffered`; `stored()` returns `bufferIds`;
+  `diffPlacement()` has `bufferUnits`; `slip()` has a `buffer` cause, so `behind` still equals the sum of its causes.
+  `splitByLetter()`, `splitPreview()` and `carryForward()` are new.
+- **Calls made.** (1) *A lesson course's buffer days are counted at placement* from its `BUF` lessons; its units' `flex`
+  is not written, so a re-import cannot leave it stale. (2) *A unit never gives up its every day*: buffers taken are at most
+  its days less one, so a unit cannot vanish and drop its pin. (3) *`buffered` is stamped on the unit, not on the lesson*;
+  `stored()` names the buffer lessons by the placer's rule (the last unplaced `BUF` lessons), so a buffer coming back is
+  "has 1 buffer day back", not "1 lesson fits again". (4) *"Make this the plan" while a buffer is in use gives it back*,
+  and the bar shows the dates moving later: the new baseline already lacks the lost day, so there is nothing for the
+  buffer to take. That is the design's rule followed through, not a special case. (5) *The A half of a split keeps the
+  course's id*, so the shown course stays shown; *both halves start with no baseline* (behind restarts at 0, said in the
+  preview) *and no stamped unit dates* (otherwise the bar reported every unit end as moved, which was true per track and
+  misleading); lost dates go to both; a bump whose lesson is gone is left out and named. (6) *The page, not the module,
+  refuses a split with the A/B cycle off*: the module would make two courses that each meet every day. (7)
+  *`carryForward()` also drops start dates* (a date in the old year) and keeps `pace` and `absorb`. (8) *The printed
+  table's "Class days" is what the unit asks for* (placed plus short), and with courses and no dated units the old dated
+  table, which said to add one in a card that is now hidden, is left out; with no course the sheet is byte-identical.
+- **Checks.** `npm run test:school-calendar-plan` now 161 checks and 45 deliberate breaks (10 new), both zones: buffers off
+  and on, two and three losses, a loss outside the span, no baseline, a two-day unit, BUF lessons and a bump, stamping,
+  the diff both ways, the slip ledger, a migrated course never absorbing, 200 random loss sequences with buffers on
+  keeping behind = Σ causes; the split on the seed (92 and 92, no date moves, one bump on the joint list mismatches 143
+  lessons and none split, refusals, orphans); `carryForward`'s counts and what it keeps. New `npm run
+  test:school-calendar-plan-buffers` (`smoke-plan-buffers.mjs`, Chromium, port 8544): 21 checks and 4 breaks of
+  `scv-plan.js` altered on the wire, each caught; also green under `TZ=UTC`. `run-suites --only school-calendar` 11 green
+  (the `smoke-weeks` golden included), `--only service-worker` 3 green, the a11y sweep on 032 (seeded) clean,
+  `test:theme` 966, `path7:next --only 032` 0 findings, lint, every guard and `check:precache --base origin/main`.
+- **Not verified.** No teacher has used a buffer or split a course; no sheet was printed on paper. The split preview was
+  driven only with the cycle anchored on the first school day and an alternating list starting with A; a list that does
+  not alternate, or starts on B, is held only by the module suite. The new-year confirm was checked with one course.
+
+---
+
+## Path 9 P2 increment 3: the baseline, "behind" and "Make this the plan" (2026-10-24, AI-18, `CACHE_VERSION` v311)
+
+BACKLOG rank 13 kept (2+) and rewritten: increments 1–3 are built; increment 4 and two page pieces are left.
+
+- **What changed for a teacher.** 032's Courses card has one line a course with something planned, for example: "World History: 1
+  class day behind the plan of Aug 20. U2-11-A-Lesson 31 was planned for today and is now Oct 2. Lost: Sep 15 (Holiday /
+  No School)." It says on the plan, behind or ahead, counted in that course's class days, and why (days lost or gained,
+  bumps added or given back, lessons or unit days added or taken out before that point, days that no longer fit before a
+  pin, open days before a pin used up). A line that is behind is bold. **"Make this the plan"** (naming the course when
+  there are several) makes the dates shown the plan, as of today, with Undo. A course saved before v311 says it has no
+  plan to measure against until its next change.
+- **Module.** `setBaseline()` stores `{ setOn, start, mask, seq, adjIds, units: [{ id, days, pin }] }`: a class-day mask
+  from the course's first possible day to the year's end and the slot order as keys (`U3-06-A`, `U3-06-A#2` for a code's
+  second run, `G:<bump id>`, `D:<unit id>#<n>`), about 2.6 KB for 184 lessons. `baselinePlacement()` rebuilds the
+  baseline's placement through the placer's first pass, now one function (`assignDays`) both share; `placeCourse()`
+  returns that order with each slot's date (`order`). `slip()` and `describeSlip()`; `wantsBaseline()` says when a save
+  re-bases.
+- **Calls made.** (1) *`behind` is signed and net of the baseline's own days:* it is (class days up to X now − class days
+  up to today now) − (the same in the baseline), not the design's "class days after today up to X, 0 when X is on or
+  before today". The two agree whenever the baseline put something on each class day up to today; they differ when the
+  baseline had a bump between X and today, where the design's count reads 0 after a lost day and this reads 1, and when
+  a lesson is taken out before X, where this says ahead instead of 0. It is also what makes `behind` equal the sum of the
+  causes exactly. (2) *X is never a bump*: a bump's id can be deleted, so the last lesson or unit day before it stands in.
+  (3) *When X is gone or no longer fits*, the last earlier slot that is still placed stands in and the line says "about";
+  the design's "count placed slots" fallback was not needed. (4) *A baseline is set when a course first has something
+  planned*, and an empty baseline counts as none, so a course made empty and given lessons in October is measured from
+  October. (5) *A course from v309–v310 gets its baseline at its next change*, not on load, because the load path writes
+  nothing unless the migration made a course; until then its line says so. (6) *No "migrated" note on the row* (the
+  design's "its row says so"): a migrated course starts at 0 like any new one, and the line shows no cause. (7) *The help
+  text gained one paragraph* on what the line measures.
+- **Checks.** `npm run test:school-calendar-plan` now 132 checks and 35 deliberate breaks (9 new), both zones: the
+  rebuild matches the placement exactly (with and without pins), each cause on its own, the sentences, an A course behind
+  in A days, and 500 seeded edit sequences (closures added and removed, lost dates, bumps, lessons taken out, typed days
+  changed, pins) where `behind` equals the sum of its causes, and, where only days changed, equals the class days lost
+  less those gained up to today, counted independently. New `npm run test:school-calendar-plan-behind`
+  (`smoke-plan-behind.mjs`, Chromium, port 8543): 25 checks and 4 breaks of `scv-plan.js` altered on the wire, each
+  caught; also green under `TZ=UTC`. `run-suites --only school-calendar` 10 green (the `smoke-weeks` golden included),
+  `--only service-worker` 3 green, the a11y sweep on 032 (seeded) clean, `test:theme` 966, `path7:next --only 032` 0
+  findings, lint, every guard and `check:precache --base origin/main`.
+- **Not verified.** No teacher has read the line. The ledger's wording for the rarer causes ("No longer fitting before it",
+  "Now fitting before it") is held only by the module suite. The behind line is not on 010 or 045 (P3) and not printed.
+
+## Path 9 P2 increment 2: typed units, pins, "Count for pacing" and the dated-unit conversion (2026-10-24, AI-18, `CACHE_VERSION` v310)
+
+BACKLOG rank 13 kept (2+) and rewritten: increments 1 and 2 are built; increments 3–4 are left.
+
+- **What changed for a teacher.** In 032's Courses card a course with no lessons is planned **in units**: "+ Add unit"
+  (10 class days to start), the class days typed in the unit table, ↑/↓ and Remove. Every unit, in either mode, has a
+  **Pinned to** date: the unit starts on the first class day on or after it; the table's **Open** column counts the class
+  days left with nothing planned before it, **Short** the days the unit before it lost to it, and a line under the table
+  says when a pin fell on a day that is not a class day, sits on or before the unit before it (not used), or is past the
+  course's last class day. **"Let these flow…"** (shown while a unit after the first is pinned) previews every date that
+  would change and then clears those pins, with Undo. Each school day type in Day Types has **Count for pacing** (unticked
+  stores `pace: "skip"` on the type), and each course has its own choice per type ("As the day type", "Counts",
+  "Skips"). A typed course's units are drawn as bands on the month grid, and the drawer on one of their days says
+  "Unit 2 — class day 3 of 10" with "This unit needs another day", "This class didn't meet…" and the snow day. The old
+  Units card is now **Dated units**, shown only while it holds units, with **"Turn into a course…"**: a preview of every
+  unit (tick which), its old span, its school days and its dates as a course; two that overlap are named and Apply is
+  refused; "Make this course" adds a course whose units are pinned at their starts and empties those units from
+  `cal.units`, with Undo.
+- **Module.** `placeCourse()` honours pins (open days, take-back of the unit before, `pin-before-previous`,
+  `pin-after-year`, `pinShift`); `convertDatedUnits()`, `unpinAfterFirst()`, `unitProblemText()`; `diffPlacement()`
+  lists a typed unit whose short count changed (`shortUnits`), and says "before a pinned unit or the year's end" when a
+  pin is in play.
+- **Calls made.** (1) *Converting removes the units from `cal.units`*: the design hid the card "once it is empty", which
+  only conversion can make true, and leaving them would draw every unit twice. (2) *The card goes when empty, "+ Add Unit"
+  with it*: a new calendar plans units inside a course. (3) *Bands only for the active course, only when it has no lessons*
+  (a lesson course already shows its lessons in the cells); every course's bands are left with rank 13. (4) *Removing a
+  typed unit, converting and letting units flow always offer Undo*, moved or not, as deleting a course does. (5) *The
+  conversion's school days are counted inside the year*: a dated unit that starts before the first day is pinned at the
+  first day. (6) *Distribute on a course planned in units asks first*, since a lesson list replaces typed units with the
+  runs of its codes. (7) *The per-course override is a select per type* with "As the day type (counts/skips)" as the
+  default, which writes nothing.
+- **Checks.** `npm run test:school-calendar-plan` now 102 checks and 26 deliberate breaks (10 new: pins ignored, open days
+  not counted, no take-back, an earlier pin honoured, a silent pin shift, the conversion counting weekdays, overlap allowed,
+  an unsorted conversion, unpin clearing the first, short units unreported), both zones; the conversion sweep (168
+  start/end pairs and every empty window) runs against the real module only, since it is what made the mutant passes slow.
+  New `npm run test:school-calendar-plan-units` (`smoke-plan-units.mjs`, Chromium, port 8542): 47 checks and 4 breaks of
+  `scv-plan.js` altered on the wire, each caught. **`smoke-week.mjs` changed**: its unit section clicked "+ Add Unit" on
+  a calendar with no dated unit, which the hidden card no longer allows, so it now stores the unit that click made and
+  checks the card is hidden before and shown after (54 checks, all green). `run-suites --only school-calendar` (9 green),
+  the a11y sweep on 032 (seeded too, 4/4), `test:theme` (966), `path7:next --only 032` (0 findings), lint and every
+  guard, `check:precache --base origin/main`.
+- **Not done or not verified.** The printed unit table is still the dated units' (no course's typed units, no Short);
+  bands for courses other than the active one; the baseline and "behind" (3); buffers, the A/B split and
+  `carryForward()` (4). No teacher has planned a real course in units, and the conversion has not met a real calendar's
+  dated units.
+
 ## Path 9 P2 increment 1, the page: 032's Courses card, the notice bar and Undo (2026-10-23, AI-18, `CACHE_VERSION` v309)
 
 BACKLOG rank 13 kept (2+) and rewritten: increment 1 is built; increments 2–4 are left.
