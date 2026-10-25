@@ -87,6 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-20 (v321), rank 22 (kept, 2+), Path 11 P2 increments 2–4 of 11.** 035's model, pathfinding engine and routes are
+  `schedule-visualizer/sv-model.js`, `sv-graph.js` and `sv-routes.js`, reached through a `BRIDGE` section of wrappers
+  with the old names; the page is 771,651 bytes (from 817,015). Each module is held to answers the v320 page wrote
+  (`test:schedule-visualizer-model`, `-graph`, `-routes`), and `test:schedule-visualizer-bridge` fails if a top-level
+  statement reaches a wrapper at parse time or a module is missing from `PRECACHE_URLS`. **Next: P2 increment 5,
+  `sv-congestion.js`. No new port; the next free suite port is still 8552.**
 - **AI-20 (v320), rank 22 (kept, 2+), Path 11 P2 increment 1 of 11.** 035's first `<style>` block is now
   `Tools/schedule-visualizer/sv.css`, verbatim; the page is 817,015 bytes (from 974,675). New pure-Node `npm run
   test:schedule-visualizer-size` holds it to `size-ledger.json` (lower the line when the page shrinks). **Next: P2
@@ -625,7 +631,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 22 | Path 11 P2 — extract the pure engines; target the HTML at about 270 KB (Devon, P11-7). **Increment 1 of 11 built (AI-20, v320): the app stylesheet is `schedule-visualizer/sv.css`; the page is 817,015 bytes (from 974,675), held by `size-ledger.json`. Left: increments 2–11 as the P2 bullet's ladder lays them out, starting with `sv-model.js`, the bridge and the publisher guard's `sources`; the folder fold is last** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 22 | Path 11 P2 — extract the pure engines; target the HTML at about 270 KB (Devon, P11-7). **Increments 1–4 of 11 built (AI-20, v320–v321): `sv.css`, `sv-model.js`, `sv-graph.js` and `sv-routes.js` behind a `BRIDGE` section; the page is 771,651 bytes (from 974,675), held by `size-ledger.json`. Left: increments 5–11 as the P2 bullet's ladder lays them out, starting with `sv-congestion.js` (the four pure cores of viz, playback and what-if); the publisher guard's `sources` comes with `sv-browser.js` (increment 7); the folder fold is last** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 23 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
@@ -4110,8 +4116,35 @@ a real pathfinder that the published browser never exposes.
     `check:hidden-flex` and `check:print-clip` follow the link and report what they did before; `audit-print --only
     035`, the a11y sweep for 035, `test:theme` and the eleven `--only schedule` suites green. Not verified: a
     pixel comparison of the page before and after (an ad-hoc screenshot script hung on its second page load and was
-    dropped). *Next: increment 2*, `sv-model.js`, the `BRIDGE` section, `model.test.mjs`, `imports.test.mjs` and
-    `check-publisher.mjs`'s `sources`, in one commit, since the publisher reaches `formatModTime` and `getSubjects`.
+    dropped).
+    *Increments 2–4 (AI-20, 2026-10-25, v321, one bump for the three):* `sv-model.js` (18,853 bytes), `sv-graph.js`
+    (25,331) and `sv-routes.js` (11,110), each moved with its rules unchanged and what it read from `AppState` an
+    argument; the page went **817,015 → 803,500 → 779,928 → 771,651 bytes** (the ladder said 794, 771 and 762 KB,
+    so it is now about 9 KB above the design's line, the 6 KB the page had grown plus the bridge). The `BRIDGE`
+    section holds 39 functions: three getters (`svModel()`, `svGraph()`, `svRoutes()`, each throwing
+    `SV<Name> is not loaded` by name), the graph cache's two, and one wrapper per old name. The graph cache is `SVGraph.createCache()`, made on first use; the nine
+    `_blueprintDirty = true` writes are `invalidatePathfindingGraph()`, which is a no-op before the cache exists.
+    Each module's Node suite (`test:schedule-visualizer-model`, `-graph`, `-routes`) compares the module with a golden
+    file written by running the same cases through the **v320 page's own functions** (read out of the page, with
+    `AppState` set per call), so the move is held to the old answers and not to itself; a browser A/B (not
+    committed) gave byte-identical JSON for Northwind's day paths, congestion, conflicts, registry, exits, saved
+    blueprint and evacuation steps on the v320 page and this one. **What the design got wrong, found by building
+    it:** (a) "no top-level statement of the main script calls a function" is false: `populateDeptDropdown()` ran
+    bare under its declaration, before any module, and reached `normalizeSettings`; `init()` already repeats it, so
+    it is deleted. `initBellScheduleEditor()` and `initSubjectsEditor()` also run at parse, but reach the model only
+    from listeners. `bridge.test.mjs` (`test:schedule-visualizer-bridge`) follows synchronous calls (and
+    `forEach`-style callbacks) from every top-level statement and fails naming the path; it also walks the module
+    imports and checks `PRECACHE_URLS`, which is the design's `imports.test.mjs` folded into it. (b) The publisher
+    guard did **not** need `sources` at increment 2: no published piece reaches the model (the publisher's
+    *builder* reads `formatModTime` and `getSubjects`, but the builder is not published), and `check:publisher`'s
+    output is unchanged through increment 4. `sources` is increment 7's. (c) Kept as the page had them, against the
+    surface above: `validateBlueprint` throws as `validateBlueprintData` did (no `{ ok, errors }`); no `dayMods()`
+    (the two day-mods rules stay inline where they were, in `scheduleConflicts` and `groupDayPath`); the evacuation
+    functions keep their page names (`computeEvacuationRouteForRoom`, `buildEvacuationSteps`, which takes the
+    floor-label function); and `isCellHeatExcluded(blueprint, …)` keeps the active-floor rule for a cell with no
+    `floorId` (P11-9). **Not pinned:** A*'s reopen branch (deleting `closed.delete(nKey)` changes no golden
+    answer; no fixture reaches it), and a `stviz_blueprint` captured from a real v61 save (the round trip is held on
+    Northwind and a pre-floors save). *Next: increment 5*, `sv-congestion.js`.
 - **P3 — Accessibility routing.** Wheelchair/elevator-weighted routes over the
   existing graph, per-student route sheets, and "which rooms can't be reached
   without stairs" as a printable report — the notes call this "a real legal and

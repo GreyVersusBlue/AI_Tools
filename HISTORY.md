@@ -9,6 +9,39 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P2 increments 2–4: 035's model, graph and routes out of the page (2026-10-25, AI-20, `CACHE_VERSION` v321)
+
+BACKLOG rank 22 kept (2+), its text rewritten: increments 2, 3 and 4 of the eleven in the P2 bullet's ladder.
+
+- **What moved.** `Tools/schedule-visualizer/sv-model.js` (labels, settings, bell times, group weights, the room
+  registry, blueprint serialise/migrate/validate and the floors rebuild, conflicts, group colours, ids and the project
+  file's group record), `sv-graph.js` (Rounds 7, 8 and 31: the multi-floor graph, the teleport-aware heuristic, A*,
+  `findPath`, `resolveRoomPath` and its metadata) and `sv-routes.js` (a group's day of segments, the congestion map,
+  the heat-exclude test and the evacuation section). The page went **817,015 → 803,500 → 779,928 → 771,651 bytes**.
+  The page's inline module script sets `window.SVModel`, `SVGraph` and `SVRoutes`; a `BRIDGE` section keeps every old
+  name as a wrapper that reads `AppState` and hands it in, so no call site and no suite global changed. The graph's
+  two shared `let`s are `SVGraph.createCache()`, created on first use.
+- **How the move is held.** Each module's Node suite compares it with a golden file written by the **v320 page's own
+  functions** on the same cases (a scratch script read the functions out of the page and ran them in `vm` with
+  `AppState` set per call; it is not committed, because the goldens are what it was for). A golden is never
+  regenerated from the module; a change that is meant edits it by hand. Each suite was broken on purpose (a 0.3 made
+  0.31, the cache's dirty check removed, a direction word changed) and failed. A browser A/B against the v320 page
+  gave byte-identical JSON for Northwind. The eleven `--only schedule` suites (the publish baseline among them), the
+  ten `schedule-visualizer` and four `schedule-browser` suites, the a11y sweep for 035, the eleven guards,
+  `check:publisher`, `check:precache --base origin/main`, lint and `test:select-suites` are green.
+- **Calls made.** (1) Three rungs, not two: each was a whole step and all three fit. (2) One `CACHE_VERSION` bump,
+  v321, for the three, which land together. (3) The design's `imports.test.mjs` is part of `bridge.test.mjs`. (4)
+  Where the design's surface renamed or reshaped a function (`validateBlueprint` returning `{ ok, errors }`, a new
+  `dayMods()`, `evacuationRoute`/`evacuationSteps`), the page's shape was kept: P2 changes no rule, and a reshape is
+  P5's to make.
+- **What did not work, and what was not verified.** The design's "no top-level statement calls a function" was
+  wrong: the first browser run failed on a bare `populateDeptDropdown()` that ran before the modules (deleted;
+  `init()` repeats it). Its claim that the publisher guard would fail FREE on increment 2 without `sources` was wrong
+  too: no published piece reaches the model, so `sources` waits for increment 7. The first version of the bridge test
+  followed calls inside listeners and reported two false paths; it now follows only synchronous calls. A*'s reopen
+  branch is not reached by any fixture. No real v61 `stviz_blueprint` was captured for the round trip. Full `npm test`
+  not run; the offline zip (whose bundler turns the module script into a classic deferred script) was not rebuilt.
+
 ## Path 11 P2 increment 1: 035's stylesheet out of the page (2026-10-25, AI-20, `CACHE_VERSION` v320)
 
 BACKLOG rank 22 kept (2+), its text rewritten: increment 1 of the eleven in the P2 bullet's ladder.
