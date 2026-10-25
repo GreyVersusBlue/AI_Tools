@@ -87,6 +87,12 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-20 (v322), rank 22 (kept, 2+), Path 11 P2 increments 5–6 of 11.** 035's congestion arithmetic (congestion and
+  hotspot data, travel and delay times, the what-if lab's metrics and diff) is `schedule-visualizer/sv-congestion.js`,
+  and its playback renderer (one animated frame, the collision simulation, the staircase portal effects) is
+  `sv-playback.js`; the page is 722,664 bytes (from 771,651). `test:schedule-visualizer-congestion` and `-playback` hold
+  them to answers the v321 page wrote, the renderer by every call it makes on a recording 2D context. **Next: P2
+  increment 7, `sv-browser.js` and `check:publisher`'s `sources`. No new port; the next free suite port is still 8552.**
 - **AI-20 (v321), rank 22 (kept, 2+), Path 11 P2 increments 2–4 of 11.** 035's model, pathfinding engine and routes are
   `schedule-visualizer/sv-model.js`, `sv-graph.js` and `sv-routes.js`, reached through a `BRIDGE` section of wrappers
   with the old names; the page is 771,651 bytes (from 817,015). Each module is held to answers the v320 page wrote
@@ -631,7 +637,7 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 22 | Path 11 P2 — extract the pure engines; target the HTML at about 270 KB (Devon, P11-7). **Increments 1–4 of 11 built (AI-20, v320–v321): `sv.css`, `sv-model.js`, `sv-graph.js` and `sv-routes.js` behind a `BRIDGE` section; the page is 771,651 bytes (from 974,675), held by `size-ledger.json`. Left: increments 5–11 as the P2 bullet's ladder lays them out, starting with `sv-congestion.js` (the four pure cores of viz, playback and what-if); the publisher guard's `sources` comes with `sv-browser.js` (increment 7); the folder fold is last** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
+| 22 | Path 11 P2 — extract the pure engines; target the HTML at about 270 KB (Devon, P11-7). **Increments 1–6 of 11 built (AI-20, v320–v322): `sv.css`, `sv-model.js`, `sv-graph.js`, `sv-routes.js`, `sv-congestion.js` and `sv-playback.js` behind a `BRIDGE` section; the page is 722,664 bytes (from 974,675), held by `size-ledger.json`, about 23 KB above the ladder's 699 KB because `PlaybackController` and the travel-time panel stayed (they are the DOM: take them with `sv-viz.js`). Left: increments 7–11 as the P2 bullet's ladder lays them out, starting with `sv-browser.js` (the publisher, with `check:publisher`'s `sources`); then `check-precache` following `import`, `sv-viz.js`, `sv-editor.js`, and `sv-whatif.js`/`sv-schedules-tab.js` with the folder fold last** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 23 | Path 11 P3 — accessibility routing: wheelchair/elevator-weighted routes and a printable report | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
@@ -4144,7 +4150,26 @@ a real pathfinder that the published browser never exposes.
     floor-label function); and `isCellHeatExcluded(blueprint, …)` keeps the active-floor rule for a cell with no
     `floorId` (P11-9). **Not pinned:** A*'s reopen branch (deleting `closed.delete(nKey)` changes no golden
     answer; no fixture reaches it), and a `stviz_blueprint` captured from a real v61 save (the round trip is held on
-    Northwind and a pre-floors save). *Next: increment 5*, `sv-congestion.js`.
+    Northwind and a pre-floors save).
+    *Increments 5–6 (AI-20, 2026-10-25, v322, one bump for the two):* `sv-congestion.js` (17,744 bytes:
+    `congestionData`, `travelTimes`, `baseMods`, `effectiveMods`, `whatIfMetrics`, `congForFilter`, `whatIfDiff`, the
+    pure bodies of `buildCongestionData`, `computeTravelTimes`, `wiBaseMods`, `wiEffectiveMods`, `wiComputeMetrics`,
+    `wiCongForFilter` and `wiComputeDiff`; the page's `cellCongestionLabel` is handed in, since it reads the room
+    registry) and `sv-playback.js` (36,822 bytes: `drawPlaybackFrame(ctx, data, pb, view)`, `buildCollisionSimulation`,
+    `buildTeleportLegs`, `mapSequentialDwell`, `drawPortalDwellArc`, which now takes the reduced-motion answer, and
+    `drawPortalPulse`). The page went **771,651 → 756,973 → 722,664 bytes** (the ladder said 748 and 699 KB).
+    `drawPlaybackFrame`'s wrapper builds its `view` (cell size, zoom, constant width, settings, the two lane constants,
+    the page's `floorOffsetY` and `offsetPolyline`, the travel-panel callback, `prefersReducedMotionViz`, the clock) at
+    call time and passes `vizCtx`, so the PNG export's swapped context still reaches it. **What stayed, against the
+    design:** `PlaybackController` (the play bar, its buttons and the `requestAnimationFrame` loop: ~10 KB, all DOM)
+    and `updateTravelTimePanel` (DOM) are still the page's; no `createPlayback({ now, raf })`. They read the viz canvas
+    and its controls, so they go with `sv-viz.js` (increment 9), where the injected clock the design wanted can come
+    with them. The design's `travelTimes` "`stairSec` per teleport" is wrong about the page: it adds `stairSec` once
+    for a segment that uses any staircase, and the module keeps that. Both suites compare with golden files written by
+    the **v321 page's own functions** run in `vm` (a scratch script, not committed); the playback golden records every
+    method call and property set a frame makes on a recording 2D context, as a count and a hash per frame, with the
+    page's `floorOffsetY` and `offsetPolyline` replaced by the same stand-ins on both sides. *Next: increment 7*,
+    `sv-browser.js`.
 - **P3 — Accessibility routing.** Wheelchair/elevator-weighted routes over the
   existing graph, per-student route sheets, and "which rooms can't be reached
   without stairs" as a printable report — the notes call this "a real legal and

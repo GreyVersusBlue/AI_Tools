@@ -9,6 +9,47 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P2 increments 5–6: 035's congestion arithmetic and playback renderer out of the page (2026-10-25, AI-20, `CACHE_VERSION` v322)
+
+BACKLOG rank 22 kept (2+), its text rewritten: increments 5 and 6 of the eleven in the P2 bullet's ladder.
+
+- **What moved.** `Tools/schedule-visualizer/sv-congestion.js` (the visualize tab's congestion and hotspot data, the
+  travel and delay times, and the what-if lab's base and effective mods, metrics and diff) and `sv-playback.js` (one
+  animated playback frame, the R50/R53/R54 collision simulation, the R57/R58 staircase portal effects). The page went
+  **771,651 → 756,973 → 722,664 bytes**. The module script sets `window.SVCongestion` and `SVPlayback`; the `BRIDGE`
+  section keeps every old name (`window.wiComputeMetrics` and `wiComputeDiff` are where they were). `drawPlaybackFrame`
+  takes the context it draws on and a `view` object its wrapper builds at call time, so the PNG export, which swaps
+  `vizCtx` for an offscreen context, still reaches it.
+- **How the move is held.** `test:schedule-visualizer-congestion` and `test:schedule-visualizer-playback` (pure Node)
+  compare each module with a golden file written by the **v321 page's own functions** on the same cases, read out of
+  the page and run in `vm` (scratch script, not committed). The playback golden is every call and property set a frame
+  makes on a recording 2D context, kept as a count and a hash per frame. Each suite was broken on purpose (the delay
+  curve scaled by 1.01, the transition filter removed, the conflict threshold raised, the dwell ring 3% wider, the
+  same-direction clearance 0.51, the reduced-motion answer ignored, the waiting pulse's colour and clock) and failed.
+  Two breaks passed the first time: the hotspot tie order and the waiting pulse were reached by no case. A tie case and
+  a plus-shaped junction where one group waits for another were added, and both breaks fail now. Browser A/B against
+  the v321 page (seeded `Math.random`, pinned `Date.now`, Northwind): congestion data, travel times, what-if diffs on
+  both days were byte-identical JSON, and 48 playback frames (four modes × three transitions × four points) were
+  pixel-identical canvases, with no page errors on either side. The what-if and visualize tabs open with no errors.
+- **Offline copy** (the Selector asked, since the last entry had not rebuilt it): `npm run offline:build` OK;
+  `npm run offline:verify` passes 035 and every other module page **except 046**, which fails with `Uncaught
+  TypeError: Failed to construct 'URL': Invalid URL`. This change touches no file 046 loads, so the failure is older
+  than it; it was not run on `origin/main` to prove that, and it is not fixed here. A further `file://` run of the
+  staged 035 found all six namespaces set and ran congestion, travel times, a playback frame and a what-if diff with
+  no error.
+- **Calls made.** (1) Two rungs, not three: increment 7 moves the publisher and teaches `check:publisher` to follow
+  modules, which is a session's work on its own. (2) One `CACHE_VERSION` bump, v322, for both. (3) `PlaybackController`
+  and `updateTravelTimePanel` stay on the page: they are the play bar and a panel, all DOM, so the design's
+  `createPlayback({ now, raf })` waits for `sv-viz.js` (increment 9), with them. (4) `drawPortalDwellArc` takes the
+  reduced-motion answer as an argument; the cached `matchMedia` test (`prefersReducedMotionViz`) stays on the page. (5)
+  An unused `isRealtime` local in `drawPlaybackFrame` was dropped (lint caught it once it was a module); nothing read it.
+  (6) A segment that uses a staircase gets `stairSec` once, as the page did; the design's "per teleport" was wrong.
+- **What did not work, and what was not verified.** The first congestion golden came out with every `Map` empty: a Map
+  made in the `vm` context is not `instanceof Map` in the main realm, so the serialiser now checks the tag. The first
+  goldens were 786 KB and 430 KB; paths and draw logs are now hashed. Full `npm test` not run; the a11y sweep and print
+  audit were not re-run (no markup or style changed). The waiting pulse is pinned on a hand-made junction only; no
+  Northwind frame reaches it.
+
 ## Path 11 P2 increments 2–4: 035's model, graph and routes out of the page (2026-10-25, AI-20, `CACHE_VERSION` v321)
 
 BACKLOG rank 22 kept (2+), its text rewritten: increments 2, 3 and 4 of the eleven in the P2 bullet's ladder.
