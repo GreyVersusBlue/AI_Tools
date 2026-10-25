@@ -25,7 +25,9 @@
 // graph (it is a flight of steps, not a corridor), and an elevator costs its
 // wait. An elevator out of service joins nothing in either graph. A blueprint
 // that marks nothing builds the same graph it always did, in both fields the
-// golden files hold. tests: test/step-free.test.mjs
+// golden files hold. buildGraph(blueprint, { evacuation: true }) is the
+// graph the evacuation door cards route on: no elevator joins anything,
+// because an elevator is not used in a fire. tests: test/step-free.test.mjs
 // (npm run test:schedule-visualizer-step-free).
 
 import { pairLabel } from './sv-model.js';
@@ -285,10 +287,12 @@ export function elevatorWait(pair, fallback = ELEVATOR_WAIT) {
 
 /** Build the unified multi-floor navigation graph for a blueprint
  *  ({ floors: [{ id, gridData, gridCols, gridRows }], crossFloorPairs }).
- *  opts.stepFree builds the step-free graph (see the header);
+ *  opts.stepFree builds the step-free graph, opts.evacuation the one with
+ *  no elevators (see the header);
  *  opts.elevatorWait replaces ELEVATOR_WAIT for pairs naming no wait. */
 export function buildGraph(blueprint, opts = {}) {
   const stepFree = !!(opts && opts.stepFree);
+  const evacuation = !!(opts && opts.evacuation);
   const waitDefault = (opts && typeof opts.elevatorWait === 'number') ? opts.elevatorWait : ELEVATOR_WAIT;
   const adjacency = new Map();
   const types     = new Map();
@@ -314,6 +318,7 @@ export function buildGraph(blueprint, opts = {}) {
       if (!pairInService(pair)) continue;
       if (access !== 'stairs') { stepFreeEnds.add(a); stepFreeEnds.add(b); }
       if (stepFree && access === 'stairs') continue;
+      if (evacuation && access === 'elevator') continue;
       const cost = (stepFree && access === 'elevator') ? elevatorWait(pair, waitDefault) : 0;
       const ea = { key: b, cost, teleport: true }, eb = { key: a, cost, teleport: true };
       if (access !== 'stairs') { ea.access = access; eb.access = access; }

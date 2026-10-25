@@ -2634,6 +2634,7 @@ function graphCache() { return _svGraphCache || (_svGraphCache = svGraph().creat
 function invalidatePathfindingGraph() {
   if (_svGraphCache) _svGraphCache.invalidate();
   if (_svStepFreeCache) _svStepFreeCache.invalidate();
+  if (_svEvacuationCache) _svEvacuationCache.invalidate();
 }
 function getPathfindingGraph() { return graphCache().get(AppState.blueprint); }
 /* Path 11 P3: the step-free graph, cached beside the ordinary one and
@@ -2642,6 +2643,9 @@ function getPathfindingGraph() { return graphCache().get(AppState.blueprint); }
 let _svStepFreeCache = null;
 function getStepFreeGraph() { return (_svStepFreeCache || (_svStepFreeCache = svGraph().createCache({ stepFree: true }))).get(AppState.blueprint); }
 function routeGraph() { return AppState.viz.stepFree ? getStepFreeGraph() : getPathfindingGraph(); }
+/* The evacuation door cards route on a graph with no elevators: one is not used in a fire. */
+let _svEvacuationCache = null;
+function getEvacuationGraph() { return (_svEvacuationCache || (_svEvacuationCache = svGraph().createCache({ evacuation: true }))).get(AppState.blueprint); }
 function rebuildPathfindingGraph() { return graphCache().rebuild(AppState.blueprint); }
 window.rebuildPathfindingGraph = rebuildPathfindingGraph;
 function cellKey(x, y) { return svGraph().cellKey(x, y); }

@@ -11,7 +11,8 @@
 // "Step-free Report" opens the print kit's preview of a sheet listing floor
 // 2's rooms as stairs only and 7-1's move, and closing it takes the print
 // state away; marked as an elevator, every room is step-free, and out of
-// service, floor 2 is reached by no route at all; and in print media the sheet is the
+// service, floor 2 is reached by no route at all; the evacuation door cards'
+// graph never has the elevator in it; and in print media the sheet is the
 // only thing on paper. No console error, no offsite request.
 //
 // Exits 1 on any failure.
@@ -125,6 +126,8 @@ try {
   ok(rep.counts.stairsOnly === 0 && rep.counts.stepFree === rep.rooms.length && rep.moves.length === 0,
     `with an elevator every room is step-free (${JSON.stringify(rep.counts)})`);
   ok(/Every room reached from an exit can be reached without stairs/.test(await page.textContent('#sf-print-sheet')), 'and the sheet says so');
+  const lifts = await page.evaluate(() => [window.getPathfindingGraph().portalCount, window.getEvacuationGraph().portalCount]);
+  ok(lifts[0] === 1 && lifts[1] === 0, `the door cards' graph leaves the elevator out (an elevator is not used in a fire): ${JSON.stringify(lifts)}`);
   await page.check('#rp-pair-out-of-service');
   await settle(page, 100);
   rep = await page.evaluate(() => window.SVAccess.buildStepFreeSheet());

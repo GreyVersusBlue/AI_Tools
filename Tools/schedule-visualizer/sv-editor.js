@@ -25,7 +25,7 @@
 
 /* global AppState, FloorManager, TOOL_VERSION, ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, TILE_COLORS, DUMMY_COLOR_PRESETS, GRID_LINE_COLOR, PAIR_COLORS -- 035's classic-script state and constants */
 /* global canvas:writable, ctx:writable, _heatExcludeIdCounter:writable, activeDummyColor:writable -- lets the page declares (the door cards and the what-if lab swap ctx; loading a blueprint resets the counter) */
-/* global deriveSameFloorPairs, invalidatePathfindingGraph, rebuildRoomRegistry, parseKey, getPathfindingGraph, collectExitPoints, computeEvacuationRouteForRoom, buildEvacuationSteps, getPairLabel -- 035's BRIDGE wrappers */
+/* global deriveSameFloorPairs, invalidatePathfindingGraph, rebuildRoomRegistry, parseKey, getEvacuationGraph, collectExitPoints, computeEvacuationRouteForRoom, buildEvacuationSteps, getPairLabel -- 035's BRIDGE wrappers */
 /* global PlaybackController, showToast, scheduleBlueprintAutosave, openModal, closeModal, populateDeptDropdown, saveSnapshot -- 035's page helpers and sv-viz.js */
 
 /* ==============================================
@@ -903,7 +903,8 @@ function drawDoorCardFooter(doc, opts) {
 function printEvacuationDoorCards() {
   if (!canvas) { showToast('Canvas not ready.', 'warn'); return; }
 
-  const graph = getPathfindingGraph();
+  // Path 11 P3: no elevator on a door card's route (see sv-graph.js).
+  const graph = getEvacuationGraph();
   const exits = collectExitPoints();
   if (!exits.length) {
     showToast('Mark at least one exterior exit first — select a hallway tile and check "Exterior exit".', 'warn');

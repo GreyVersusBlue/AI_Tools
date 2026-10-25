@@ -137,6 +137,31 @@ check(G.elevatorWait({ wait: 3 }) === 3 && G.elevatorWait({ wait: -1 }) === G.EL
   check(R.buildEvacuationSteps(res2.path, res2.exit, gp, () => 'Floor 1').includes('Take the stairs to Floor 1.'), 'the ordinary card still says "Take the stairs"');
 }
 
+/* -- Door cards never use an elevator: one is not used in a fire.
+      (Broken on purpose: without the evacuation rule the card from 301
+      said "Take the elevator", and with no stairs it still found a route.) -- */
+{
+  // The stairs moved to the far end (column 12), so the elevator (column 4) is
+  // the ordinary graph's nearer way down.
+  const bp = building({ stairs: { a: { floorId: 'f1', col: 12, row: 0 }, b: { floorId: 'f2', col: 12, row: 0 } }, ramp: null });
+  const plain = G.buildGraph(bp);
+  const pres = R.computeEvacuationRouteForRoom(plain.roomToKey.get('302'), R.collectExitPoints(bp, plain), plain);
+  check(R.buildEvacuationSteps(pres.path, pres.exit, plain, () => 'Floor 1').includes('Take the elevator to Floor 1.'),
+    '(the case is real: the ordinary graph would send 302 down the elevator)');
+  const g = G.buildGraph(bp, { evacuation: true });
+  const res = R.computeEvacuationRouteForRoom(g.roomToKey.get('302'), R.collectExitPoints(bp, g), g);
+  const steps = R.buildEvacuationSteps(res.path, res.exit, g, () => 'Floor 1');
+  check(steps.includes('Take the stairs to Floor 1.') && !steps.some(s => /elevator/.test(s)), 'an evacuation route takes the stairs, never the elevator');
+  const liftOnly = building({ elevator: { access: 'elevator' }, ramp: null });
+  liftOnly.crossFloorPairs.shift();
+  const gl = G.buildGraph(liftOnly, { evacuation: true });
+  check(R.computeEvacuationRouteForRoom(gl.roomToKey.get('301'), R.collectExitPoints(liftOnly, gl), gl) === null,
+    'with only an elevator between the floors, floor 2 has no evacuation route (the card says so; it is not sent to the lift)');
+  const ramp = building({ elevator: null });
+  const gr = G.buildGraph(ramp, { evacuation: true });
+  check(gr.portalCount === 2, 'stairs and ramps still join the floors on the evacuation graph');
+}
+
 /* -- The report. (Broken on purpose: judging rooms against the ordinary
       graph reported Z step-free; with no exits, reporting every room
       step-free.) -- */
