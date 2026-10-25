@@ -30,7 +30,8 @@ shapes:
   `BRIDGE` section, so the bare-name call sites did not change.
   `sv-model.js` (settings, labels, bell, weights, conflicts, the blueprint's
   serialise/migrate/validate), `sv-graph.js` (the multi-floor graph, A*, the
-  graph cache), `sv-routes.js` (group day paths, congestion, evacuation),
+  graph cache, and the step-free and evacuation graphs), `sv-routes.js` (group
+  day paths, congestion, evacuation, the step-free report and route sheets),
   `sv-congestion.js` (congestion data, travel times, the what-if arithmetic),
   `sv-playback.js` (a playback frame, the collision simulation).
 - **Views**, moved verbatim: they own a tab's DOM and read the page's
@@ -41,7 +42,8 @@ shapes:
   `sv-viz.js` (the Visualize tab and the playback bar), `sv-editor.js` (the
   blueprint editor and the evacuation door cards), `sv-schedules-tab.js` (the
   groups list and editor, CSV import, the bulk editor), `sv-whatif.js` (room
-  search and the what-if lab's controls).
+  search and the what-if lab's controls), `sv-access.js` (the step-free report
+  and route sheets as printed sheets, through the print kit; Path 11 P3).
 
 Older and separate: `sv-recovery.js` (recovery points), `sv-handoff.js`
 (WebRTC hand-off), `sv-trace-image.js` (a classic `defer` script, the trace

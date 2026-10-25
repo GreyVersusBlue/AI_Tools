@@ -9,6 +9,44 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 11 P3 increments 2 and 3: route sheets, elevator wait, steps that are not stairs; P3 is whole (2026-10-25, AI-20, `CACHE_VERSION` v326)
+
+BACKLOG rank 23 deleted (a gap, ranks not renumbered); the P3 bullet records both increments as built. Built to the
+design written in that bullet the same day; its five questions for Devon stay open on their defaults.
+
+- **What shipped, increment 2.** A group can be marked "Needs step-free routes" (`group.stepFree: true`, the flag on
+  a cohort as question 5's default says, never on a student). The Blueprint sidebar's "Step-free Route Sheets" prints
+  one page per flagged group through `PrintKit.preview()`: every move between two rooms as turn-by-turn steps on the
+  step-free graph ending "Arrive at room N", or the plain "No step-free route between these rooms" with no steps.
+  Pure `stepFreeRouteSheets()` and `needsStepFree()` in `sv-routes.js`; `routeSteps()` is the walk the door cards
+  always printed, now shared (the routes goldens did not move). Settings → Travel Time has "Elevator wait, in tiles"
+  (`settings.elevatorWait`; blank removes the key and means 10). A staircase tile draws an elevator, crossed out when out
+  of service, or a ramp, in place of the steps picture.
+- **What shipped, increment 3.** "A step here" on a hallway tile (`step: true`, saved by the panel's Apply, drawn as two
+  amber treads) and "Step at this door" on each door in a room's list (`stepFree: false` on the door, with undo). On
+  the step-free graph only, the tile is cut like a stair tile and the door loses its edge to the corridor both ways;
+  `markedSteps()` in `sv-graph.js` is their one reader. The report and sheets now say "stairs or a step".
+- **Calls made, cheap to reverse.** The flag is written only when set (absent is the old group). It goes through
+  Copy and the JSON export and import, and not through the CSV groups template, whose columns `ExportKit`'s adopters
+  suite pins. A blank or out-of-range wait stores nothing rather than a clamped number, so normalising old settings did
+  not change (the model golden is untouched). Directions are compass words on the blueprint, as the door cards already
+  were, and the sheet says north is the top of the map. Marking a hallway step has no undo, the same as the exit mark
+  beside it, which Apply has never had; a door step has undo, like removing a door. The Visualize canvas shows the
+  pair glyphs (it draws staircases with the editor's own function) but not the hallway step.
+- **What did not work first.** One pure check's counts expected one skipped move where the fixture has two (a blank
+  last mod on each day): the test was wrong, not the engine. The first try at "cutting a door one way only" did not
+  fail anything, because a one-door room that loses its way out is caught by the isolation check anyway; a check that
+  the corridor has no edge back into the room was added, and the break then failed it. Removing the explicit graph
+  invalidation from the hallway Apply failed nothing either: another path in the editor already invalidates it. It
+  is kept, and that is recorded here rather than claimed as tested.
+- **Checks.** `test:schedule-visualizer-step-free` (76, from 44; every new rule broken on purpose),
+  `-step-free-ui` (65, from 31, port 8553; the wait cache, the flag's removal, the glyph, the hallway step's picture and
+  the door's undo each broken on purpose), `run-suites --only` schedule-visualizer (17), schedule (21), schedule-browser
+  (4), theme (3), csv-adopters (after increment 2); the 11 guards and `check:publisher` (unchanged), `check:precache --base origin/main`,
+  `check:adoption --check`, lint, the a11y sweep and `audit-print` for 035 (0 findings), `test:select-suites`, `offline:verify` for 035
+  (046 still fails, unchanged). Not run: full `npm test`. Not verified: any sheet on paper, a real building, the
+  wording read by someone who uses the routes.
+
 ## Path 11 P3 designed, increment 1: step-free routes and report (2026-10-25, AI-20, `CACHE_VERSION` v325)
 
 BACKLOG rank 23 kept and rewritten: the P3 bullet had no design, so one was written into it first (marking, weights,

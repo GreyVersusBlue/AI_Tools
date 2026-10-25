@@ -87,18 +87,20 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
-- **AI-20 (v325), rank 23 (kept, rewritten), Path 11 P3 designed and increment 1 built.** A staircase pair can be an
-  elevator (maybe out of service) or a ramp; `sv-graph.js` builds a step-free graph (no stairs, an elevator costs its
-  wait) and an evacuation graph (no elevators, which the door cards now use); 035 has a "Step-free routes" switch and a
-  "Step-free Report" printed through the print kit (`sv-access.js`). New `test:schedule-visualizer-step-free` and
-  `-step-free-ui` (port 8553). **Next free suite port 8554.** Rank 23's increments 2–3 are left; P4 (rank 24) is undesigned.
+- **AI-20 (v325–v326), rank 23 (DELETED: Path 11 P3 is whole; a gap, ranks not renumbered).** A staircase pair can be
+  an elevator (maybe out of service) or a ramp, a hallway tile a step and a door a stepped one; `sv-graph.js` builds a
+  step-free graph (none of those, an elevator costs Settings' "Elevator wait") and an evacuation graph (no elevators,
+  used by the door cards). 035 has a "Step-free routes" switch, a "Step-free Report" and, for a group marked "Needs
+  step-free routes", turn-by-turn "Step-free Route Sheets", both through the print kit (`sv-access.js`). Suites
+  `test:schedule-visualizer-step-free` (76) and `-step-free-ui` (65, port 8553). **Next free suite port 8554.** Path 11's
+  next rows: P4 (rank 24, undesigned), P5 (rank 25, designed), P6 (rank 26). Five P3 questions for Devon stay open.
 - **AI-20 (v324), rank 22 (DELETED: Path 11 P2 is whole; a gap, ranks not renumbered), increments 10–11 and the fold.**
   035's blueprint editor and door cards are `schedule-visualizer/sv-editor.js`, its Schedules tab `sv-schedules-tab.js`
   and its what-if lab and room search `sv-whatif.js`, all verbatim views copied onto `window`; the page is **278,920
   bytes** (from 974,675 when P2 began), under the 300 KB line. `Tools/schedule/` is folded into
   `Tools/schedule-visualizer/` (fonts, the publish suite, P1's contract, ledger and baseline), with a new README. New
   `test:schedule-visualizer-editor` (port 8552). **Path 11's next rows are P3 (rank 23) and P4 (rank 24), both
-  undesigned; P5 (rank 25) is designed. The next free suite port is 8553.**
+  undesigned; P5 (rank 25) is designed. The next free suite port is 8553.** (P3 has since shipped whole, v325–v326.)
 - **AI-20 (v323), rank 22 (kept, 2+), Path 11 P2 increments 7–9 of 11.** 035's Schedule Browser and its publisher are
   `schedule-visualizer/sv-browser.js` and its Visualize tab (canvas, controls, congestion dock, export, playback bar) is
   `sv-viz.js`, both moved verbatim with their exports copied onto `window`; the page is 522,868 bytes (from 722,664).
@@ -656,7 +658,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 19 | Path 10 P4 — 044 pulls from the calendar, prompt banks and seating instead of being typed | 044 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 20 | Path 10 P5 — round trip: share the plan by link/QR, capture what the sub said | 044 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
-| 23 | Path 11 P3 — accessibility routing. **Designed, increment 1 built (v325): step-free graph, pair marking, the Visualize switch and the printed report.** Left: increment 2 (step-free route sheets for a flagged group, a canvas glyph for elevator/ramp pairs, the wait in Settings) and 3 (a step on a hallway tile, a door with a step); five questions for Devon in the P3 bullet | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 24 | Path 11 P4 — safety printing: evacuation cards, lockdown maps, door-sign sets | 035 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 25 | Path 11 P5 — master-schedule assistance: constraint checks, congestion, multi-year comparison. **Designed 2026-10-06 (AI-20), not built: the P5 bullet has the whole design (fourteen checks with their sentences, a bounded two-stage suggestion search that lands as a what-if override, two printed sheets, comparison by group name on one building, four increments) and nine questions for Devon** | 035 | 2+ | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
 | 26 | Path 11 P6 — published browser: runtime-swappable data, expose the pathfinder, sub coverage | 034 | 1 | | [Path 11](#path-11--schedule-visualizer-modularize-guard-the-publisher-route-accessibly) |
@@ -4240,7 +4241,7 @@ a real pathfinder that the published browser never exposes.
   existing graph, per-student route sheets, and "which rooms can't be reached
   without stairs" as a printable report — the notes call this "a real legal and
   human need that nobody has a tool for".
-  **P3 is designed and increment 1 is built (AI-20, 2026-10-25, v325).** The design, written before the build:
+  **P3 is whole (AI-20, 2026-10-25: increment 1 in v325, increments 2 and 3 in v326).** The design, written before the build:
   - **Marking, reusing what the editor stores.** A vertical connection is already a *pair* of staircase tiles in
     `crossFloorPairs`, so the pair says what it is: `access: 'elevator' | 'ramp'` (absent, or any other value, is
     stairs), and an elevator may carry `outOfService: true` and its own `wait` in cells. No new tile type: the
@@ -4281,6 +4282,19 @@ a real pathfinder that the published browser never exposes.
     first) and `npm run test:schedule-visualizer-step-free-ui` (port 8553, 31 checks). Not verified: a printed sheet on
     paper; the report on a real building; the door card's wording for a floor only an elevator reaches (it says "No
     evacuation route found", which is true but does not say why).
+  - **Increments 2 and 3 as built (v326).** A group's `stepFree: true` (the Schedules tab's "Needs step-free routes";
+    written only when set, carried by Copy and the JSON export and import, not by the CSV template; a "Step-free" badge
+    on its card). `sv-routes.js`: `needsStepFree()`, `stepFreeRouteSheets()` (each move `route` with steps ending
+    "Arrive at room N", `stay`, `none` with the plain sentence or the ordinary graph's own error, or `skip`), and
+    `routeSteps()`, the walk `buildEvacuationSteps()` always printed, less its exit line. `sv-access.js`'s
+    `renderRouteSheets()`, one group to a page, opened from the Blueprint sidebar's "Step-free Route Sheets" in
+    `PrintKit.preview()`. Settings → Travel Time's "Elevator wait, in tiles" (`settings.elevatorWait`, 0–999, blank
+    removes the key; `settingsElevatorWait()`; the page's step-free cache is remade when it changes). The staircase tile
+    draws an elevator, crossed out when out of service, or a ramp. Increment 3: a hallway tile's `step: true` ("A step
+    here", saved by Apply, two amber treads on the tile) and a door's `stepFree: false` ("Step at this door" in the door
+    list, with undo), both read by `markedSteps()` and cut on the step-free graph only; the sheets now say "stairs or a
+    step". Not verified: any sheet on paper; a real building; the route wording read by someone who uses it (the
+    directions are compass directions on the blueprint, north at the top, which the sheet says).
 - **P4 — Safety printing.** Multi-floor batch evacuation cards, lockdown maps,
   per-teacher door-sign sets, published map packs as PDFs.
 - **P5 — Master-schedule assistance.** Constraint checks (a teacher with three
