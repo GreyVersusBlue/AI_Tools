@@ -25,6 +25,11 @@
 // the live site — same category as the existing Playwright devDependency).
 // Fix for #2: patch the staged copy's bmg-vector.js to statically `import`
 // its 4 GeoJSON files instead of fetching them, so esbuild inlines them.
+// One module is not bundled: 035's sv-browser.js (Path 11 P2 increment 7).
+// Its Publish .toString()s live functions into the file staff are emailed,
+// and esbuild reprints code, so a bundled copy would publish esbuild's text
+// instead of the source the publisher guard holds. It ships as the classic
+// <script defer> it was before v323 instead (see unbundleScheduleBrowser()).
 // Fix for #3: filter the git-tracked file list down to what's needed, and
 // rename index.html to something self-explanatory (see renameEntryPoint()).
 //
@@ -237,6 +242,37 @@ function bundleModule(source, resolveDir) {
     logLevel: 'silent',
   });
   return result.outputFiles[0].text;
+}
+
+// 035's browser and publisher: rewrite the staged sv-browser.js as a classic
+// script (its export list becomes window.__SVBrowser), load it with defer just
+// before the module script, and point the module script's import at that
+// object, so esbuild never sees it. Deferred scripts run in document order, so
+// it runs where the module's evaluation did: after parsing, before the rest of
+// the module script. Run before bundleSimpleTools().
+function unbundleScheduleBrowser() {
+  const modRel = path.join('Tools', 'schedule-visualizer', 'sv-browser.js');
+  const modPath = path.join(STAGE_DIR, modRel);
+  let src = fs.readFileSync(modPath, 'utf8');
+  assertExactlyOne(src, '\nexport {\n', 'sv-browser.js export list');
+  const at = src.indexOf('\nexport {\n');
+  const close = src.indexOf('\n};', at);
+  if (close < 0 || src.slice(close + 3).trim()) fail('sv-browser.js: the export list must be the last thing in the file');
+  const names = src.slice(at + '\nexport {\n'.length, close).split(',').map(s => s.trim()).filter(Boolean);
+  if (!names.length || !names.every(n => /^[A-Za-z_$][\w$]*$/.test(n))) fail('sv-browser.js: the export list is not a plain list of names');
+  if (/^\s*(?:import|export)\b/m.test(src.slice(0, at))) fail('sv-browser.js: an import or export besides the final list');
+  src = src.slice(0, at) + '\n// Offline copy: the module\'s export list, as an object for the module script.\n'
+    + 'window.__SVBrowser = { ' + names.join(', ') + ' };\n';
+  fs.writeFileSync(modPath, src);
+
+  const htmlPath = path.join(STAGE_DIR, 'Tools', '035-schedule-visualizer.html');
+  let html = fs.readFileSync(htmlPath, 'utf8');
+  const importLine = "    import * as SVBrowser from './schedule-visualizer/sv-browser.js';\n";
+  assertExactlyOne(html, importLine, '035 sv-browser.js import');
+  assertExactlyOne(html, '<script type="module">', '035 module script');
+  html = html.replace(importLine, '    const SVBrowser = window.__SVBrowser;\n')
+    .replace('<script type="module">', '<script src="schedule-visualizer/sv-browser.js" defer></script>\n  <script type="module">');
+  fs.writeFileSync(htmlPath, html);
 }
 
 // Every tool's inline module lives directly in Tools/, or a subfolder of
@@ -490,6 +526,7 @@ const before = gitStatus();
 
 const fileCount = stageCopy();
 patchBmgVector();
+unbundleScheduleBrowser();
 bundleSimpleTools();
 bundleMirror();
 bundleClassroomTimer();
