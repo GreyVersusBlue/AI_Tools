@@ -87,11 +87,16 @@ verbatim to `HISTORY.md` ("BACKLOG header handoffs, 2026-09-04 → 2026-09-12").
 - **Not pushed.** `selector-presync-2026-10-03` tags local `main` as it was before the merge.
 
 **Local only, newest first (detail in `HISTORY.md`):**
+- **AI-18 (v318), rank 15 (DELETED: Path 9 P4 is whole, and with it Path 9; a gap, ranks not renumbered): pasted-table
+  import in 032.** "Paste a Date Table…" reads a district PDF's date table through the new pure `readTable()` in
+  `scv-ics.js` (tabs, runs of spaces, bars; date first or last; ranges; a yearless date put in the school year; a line it
+  cannot read listed with its number and why, never guessed) and previews and adds it through `planIcsImport()`, with
+  Undo. New `npm run test:school-calendar-table`, `npm run test:school-calendar-table-page` (port 8550). **Next free
+  suite port: 8551.**
 - **AI-18 (v317), rank 15 (kept, rewritten, now ¼), Path 9 P4: `.ics` export and import, and the wall calendar.** 032's
   `.ics` goes through the new pure `scv-ics.js` (runs of days, grading periods, optional paced lessons; an import shown
   before it is stored that adds and never overwrites, with Undo) and prints a one-page landscape wall calendar through the
-  print kit. New `npm run test:school-calendar-ics`, `npm run test:school-calendar-ics-wall` (port 8549). **Left of P4:
-  pasted-table import. Next free suite port: 8550.**
+  print kit. New `npm run test:school-calendar-ics`, `npm run test:school-calendar-ics-wall` (port 8549).
 - **AI-18 (v316), rank 14 (DELETED: Path 9 P3 is whole; a gap, ranks not renumbered), increment 3: 044 and 045 read the
   school-year spine.** Both name the day out, its grading deadline and each course's paced lesson through new
   `SchoolDay.lessonsOn()`/`gradingDeadline()`; 044 fills the title from a lone lesson. New `npm run test:school-day-sub-plans`
@@ -601,7 +606,6 @@ phase, is the alternative; it is a re-rank, and a re-rank is still not a session
 | 9 | Path 8 P2 — phone-as-remote rollout: 007, 030, 021, 004, 023/025/024, 001, 010 | site | 2+ | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 10 | Path 8 P3 — `Remote.display()`: the room sees one thing, the teacher another | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
 | 11 | Path 8 P4 — device-to-device project transfer through the share sheet | `_shared/` | 1 | | [Path 8](#path-8--phone-as-remote-and-pairing-rollout) |
-| 15 | Path 9 P4, the rest — pasted-table import in 032 (a district PDF's date table pasted in, previewed and added through `planIcsImport()` as the `.ics` import is; `.ics` and the wall calendar shipped in v317) | 032 | ¼ | | [Path 9](#path-9--the-school-year-spine-calendar-bell-schedules-grading-periods) |
 | 16 | Path 10 P1 — Packet Builder `087` with the section-provider registry | 087 | 2+ | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 17 | Path 10 P2 — 045 re-based on the providers; its raw key reads go away (the calendar's has gone through `SchoolDay` since v316). **Then give 045 the share sheet** — the last tool Path 6 P3 left, held back only so its payload is not re-shaped the week after it ships; follow the P3 working notes in the Path 6 section | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
 | 18 | Path 10 P3 — the evergreen emergency binder, with a staleness reminder | 045 | 1 | | [Path 10](#path-10--packet-builder-and-the-sub-day-product) |
@@ -3360,8 +3364,9 @@ fixed unit dates; the valuable half (a unit defined by instructional days that
 - **P4 — Calendar import/export.** `.ics` import (district calendars are published
   as ICS) and pasted-table import replacing the hard-coded 2026–27 preset that
   expires; `.ics` export of the pacing. A one-page year wall calendar print.
-  **`.ics` and the wall calendar built in v317 (AI-18, 2026-10-25), as designed below; `HISTORY.md` has the story.
-  Pasted-table import is left (rank 15).**
+  **`.ics` and the wall calendar built in v317 (AI-18, 2026-10-25), as designed below, and the pasted-table import in
+  v318 (`readTable()` in `scv-ics.js`, through the same `planIcsImport()` preview); P4 is whole. The 2026–27 preset button
+  stays (a call recorded in `HISTORY.md`). `HISTORY.md` has the story.**
   *Design (AI-18, 2026-10-25), before the build.* 032 had a first `.ics` export and import inline since
   before Path 9 (one event a date, a label-replacing import behind a `confirm()`, no folding). P4 moves both
   into a pure module, `Tools/school-calendar/scv-ics.js`, and replaces the page's copies.

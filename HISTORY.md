@@ -9,6 +9,52 @@ to add a to-do to this file, it belongs there instead.
 
 ---
 
+## Path 9 P4 finished: the pasted-table import in 032 (2026-10-25, AI-18, `CACHE_VERSION` v318)
+
+BACKLOG rank 15 deleted (a gap, ranks not renumbered, as ranks 12 to 14 were). P4 is whole, and with it every phase of
+Path 9: bell schedules (P1), pacing (P2), the consumers (P3) and import/export with the wall calendar (P4).
+
+- **What changed for a teacher.** 032's toolbar has *Paste a Date Table…* beside *Import Calendar (.ics)*. It opens a
+  box: copy the table of dates out of the district's PDF or web page, paste it, press *Read this table*. The preview is
+  the `.ics` import's own (every date that would change, now and after; the lines it could not read, each with its
+  line number and why), and nothing is stored until *Add these days*, after which the box closes and empties and the
+  notice bar offers Undo. "Labor Day - Schools Closed" becomes a closure, "1/2 Day for Students" a half day, "Teacher
+  Workday" a workday, by the same title guesses a file's events get.
+- **`readTable(text, { start, end })`** in `Tools/school-calendar/scv-ics.js` (pure; no new file, so no precache entry)
+  returns `readIcs()`'s `{ ok, events, skipped }`, so `planIcsImport()` and the page's `renderIcsPreview()` take it
+  unchanged (the preview gained a third argument for where it goes and its wording: "table", "name", "lines").
+  A line is cells split on tabs, runs of two or more spaces and bars; the one date or range is found anywhere in it
+  (ISO, `M/D[/YY[YY]]`, `Month D[, YYYY]`, an optional weekday, an ordinal; a range by `-`, `–`, `—`, `to`, `through`
+  or `thru`, its end a full date or a bare day), and the other cells, less a weekday column, are the name.
+- **Calls made.** (1) *Never guess a date.* A line is skipped and listed when it has no date, two dates that are not a
+  range (a PDF's two columns run together), a weekday that is not its date's (held at both ends of a range), a date
+  that is not real, or no name. (2) *A yearless date takes the one year that puts it in the school year*; it is
+  skipped when no year does ("Jul 4 has no year, and it is not in this school year") and when two do (a 14-month year
+  holds Aug 31 twice). A range's end may cross into the next year only when its month comes earlier ("Dec 21 – Jan 1");
+  "Oct 12 - 2" and "Oct 12 - Oct 2" are "ends before it starts", not stretched to next October. A yearless start lends
+  its year from the end ("Dec 21 – Jan 1, 2027"). (3) *"1/2 Day" is a half day, not January 2*: it is hidden from the
+  date search only, so the label keeps the teacher's words, and the half-day guess reads `1/2 day` and `½ day` (a change
+  `planIcsImport` also applies to a file's titles). (4) *Text no line of which can be read is refused in words* rather
+  than shown as "nothing would change". (5) *The "Load 2026–27 CCPS Calendar" preset button stays.* The P4 bullet said
+  the pasted table "replaces" it; removing it would take the one-click start away from every teacher on this year's
+  calendar while the paste covers next year's, so it is kept and the paste is what a teacher uses when it expires. Reversing
+  this is deleting one button and its handler.
+- **Checks.** New `npm run test:school-calendar-table` (`table.test.mjs`, pure Node, 46 checks, 8 breaks caught, again
+  under `TZ=Pacific/Kiritimati`): four table shapes (tabs with a header and weekday column; spaced, yearless, three range
+  spellings; name first, numeric, two-digit years; bars and ISO), every skip reason, the refusals, and the result through
+  `planIcsImport()` (types guessed, a label kept, a second paste changing nothing, a dated line outside the year skipped
+  by the plan). New `npm run test:school-calendar-table-page` (`smoke-ics-table.mjs`, Chromium, port 8550, 27 checks, 5
+  breaks caught; green in America/New_York and `TZ=UTC`): the box, the preview against the module's plan, nothing stored
+  before Add, Add stores exactly the plan, Undo the old bytes, a second paste, a refusal, one preview at a time, axe.
+  `ics.test.mjs` 81/81 unchanged. Guards, lint, `check:precache --base origin/main`, `check:adoption --check`.
+- **What did not work.** The first draft rewrote "1/2 Day" to "half Day" in the text, which put words in the label the
+  teacher never typed; it masks it now. The first rollover rule let "Oct 12 - 2" become an 11-month range (it tried next
+  year for any end before the start). Two of my own fixtures were wrong, not the reader: a 14-month year holds Sep 2
+  twice, too.
+- **Not verified.** No real district PDF was copied: the four shapes are written the way such tables paste, not taken
+  from one, and a PDF whose text comes out a column at a time (all the dates, then all the names) reads as dates with no
+  name and is skipped line by line, which is honest but not useful; a day-first date ("7 September") is not read.
+
 ## Path 9 P4: `.ics` export and import, and the one-page wall calendar (2026-10-25, AI-18, `CACHE_VERSION` v317)
 
 BACKLOG rank 15 kept and rewritten (now ¼): `.ics` and the wall calendar are built; the pasted-table import the P4 bullet
